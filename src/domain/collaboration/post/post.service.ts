@@ -21,7 +21,7 @@ import { VisualType } from '@common/enums/visual.type';
 import { RoomService } from '@domain/communication/room/room.service';
 import { RoomType } from '@common/enums/room.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 
 @Injectable()
 export class PostService {
@@ -36,14 +36,14 @@ export class PostService {
 
   public async createPost(
     postInput: CreatePostInput,
-    parentStorageBucket: IStorageBucket,
+    storageAggregator: IStorageAggregator,
     userID: string
   ): Promise<IPost> {
     const post: IPost = Post.create(postInput);
     post.profile = await this.profileService.createProfile(
       postInput.profileData,
       ProfileType.POST,
-      parentStorageBucket
+      storageAggregator
     );
     await this.profileService.addVisualOnProfile(
       post.profile,

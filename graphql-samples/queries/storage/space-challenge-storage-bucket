@@ -1,21 +1,14 @@
 query spaces {
   spaces {
-    storageBucket
+    storageAggregator
     {
       size
-      documents
-      {
-        displayName
-        size
-      }
-    }
-    storageBucket
-    {
-      size
-      documents
-      {
-        displayName
-        size
+      storageBuckets {
+        documents
+        {
+          displayName
+          size
+        }
       }
     }
   }

@@ -7,7 +7,6 @@ import { LibraryService } from './library.service';
 import { ILibrary } from './library.interface';
 import { InnovationPackAuthorizationService } from '@library/innovation-pack/innovation.pack.service.authorization';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
-import { StorageBucketAuthorizationService } from '@domain/storage/storage-bucket/storage.bucket.service.authorization';
 import { EntityNotInitializedException } from '@common/exceptions';
 import {
   AuthorizationCredential,
@@ -16,13 +15,14 @@ import {
 } from '@common/enums';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { CREDENTIAL_RULE_TYPES_LIBRARY_FILE_UPLOAD_ANY_USER } from '@common/constants';
+import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 
 @Injectable()
 export class LibraryAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private innovationPackAuthorizationService: InnovationPackAuthorizationService,
-    private storageBucketAuthorizationService: StorageBucketAuthorizationService,
+    private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
     private libraryService: LibraryService,
     @InjectRepository(Library)
     private libraryRepository: Repository<Library>
@@ -63,16 +63,19 @@ export class LibraryAuthorizationService {
       );
     }
 
-    library.storageBucket = await this.libraryService.getStorageBucket(library);
-    library.storageBucket =
-      await this.storageBucketAuthorizationService.applyAuthorizationPolicy(
-        library.storageBucket,
-        library.authorization
-      );
-    library.storageBucket.authorization = this.extendStorageAuthorizationPolicy(
-      library.storageBucket.authorization,
+    library.storageAggregator = await this.libraryService.getStorageAggregator(
       library
     );
+    library.storageAggregator =
+      await this.storageAggregatorAuthorizationService.applyAuthorizationPolicy(
+        library.storageAggregator,
+        library.authorization
+      );
+    library.storageAggregator.authorization =
+      this.extendStorageAuthorizationPolicy(
+        library.storageAggregator.authorization,
+        library
+      );
 
     return library;
   }

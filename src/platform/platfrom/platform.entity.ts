@@ -1,9 +1,9 @@
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { Communication } from '@domain/communication/communication/communication.entity';
-import { StorageBucket } from '@domain/storage/storage-bucket/storage.bucket.entity';
 import { Library } from '@library/library/library.entity';
 import { Entity, JoinColumn, OneToOne } from 'typeorm';
 import { IPlatform } from './platform.interface';
+import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
 
 @Entity()
 export class Platform extends AuthorizableEntity implements IPlatform {
@@ -23,11 +23,11 @@ export class Platform extends AuthorizableEntity implements IPlatform {
   @JoinColumn()
   library?: Library;
 
-  @OneToOne(() => StorageBucket, {
+  @OneToOne(() => StorageAggregator, {
     eager: false,
     cascade: true,
     onDelete: 'SET NULL',
   })
   @JoinColumn()
-  storageBucket!: StorageBucket;
+  storageAggregator!: StorageAggregator;
 }

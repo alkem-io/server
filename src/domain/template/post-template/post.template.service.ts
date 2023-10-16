@@ -9,7 +9,7 @@ import { IPostTemplate } from './post.template.interface';
 import { TemplateBaseService } from '../template-base/template.base.service';
 import { CreatePostTemplateInput } from './dto/post.template.dto.create';
 import { UpdatePostTemplateInput } from './dto/post.template.dto.update';
-import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 
 @Injectable()
 export class PostTemplateService {
@@ -23,14 +23,14 @@ export class PostTemplateService {
 
   async createPostTemplate(
     postTemplateData: CreatePostTemplateInput,
-    parentStorageBucket: IStorageBucket
+    storageAggregator: IStorageAggregator
   ): Promise<IPostTemplate> {
     const postTemplate: IPostTemplate = PostTemplate.create(postTemplateData);
     await this.templateBaseService.initialise(
       postTemplate,
       postTemplateData,
       ProfileType.POST_TEMPLATE,
-      parentStorageBucket
+      storageAggregator
     );
 
     return await this.postTemplateRepository.save(postTemplate);

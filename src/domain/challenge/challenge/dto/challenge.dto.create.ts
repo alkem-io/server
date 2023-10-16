@@ -2,7 +2,7 @@ import { NameID, UUID, UUID_NAMEID } from '@domain/common/scalars';
 import { Field, InputType } from '@nestjs/graphql';
 import { CreateBaseChallengeInput } from '@domain/challenge/base-challenge/base.challenge.dto.create';
 import { IsOptional } from 'class-validator';
-import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 
 @InputType()
 export class CreateChallengeInput extends CreateBaseChallengeInput {
@@ -26,5 +26,5 @@ export class CreateChallengeInput extends CreateBaseChallengeInput {
   })
   nameID!: string;
 
-  storageBucketParent!: IStorageBucket;
+  storageAggregatorParent!: IStorageAggregator;
 }

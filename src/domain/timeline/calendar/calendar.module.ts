@@ -12,7 +12,7 @@ import { CalendarAuthorizationService } from './calendar.service.authorization';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
-import { StorageBucketResolverModule } from '@services/infrastructure/storage-bucket-resolver/storage.bucket.resolver.module';
+import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
 
 @Module({
   imports: [
@@ -23,7 +23,7 @@ import { StorageBucketResolverModule } from '@services/infrastructure/storage-bu
     AuthorizationPolicyModule,
     EntityResolverModule,
     ActivityAdapterModule,
-    StorageBucketResolverModule,
+    StorageAggregatorResolverModule,
     TypeOrmModule.forFeature([Calendar]),
   ],
   providers: [

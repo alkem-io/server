@@ -1,10 +1,12 @@
 query organizations {
   organizations {
-    storageBucket {
+    storageAggregator {
       size
-      documents {
-        displayName
-        size
+      storageBuckets {
+        documents {
+          displayName
+          size
+        }
       }
     }
   }

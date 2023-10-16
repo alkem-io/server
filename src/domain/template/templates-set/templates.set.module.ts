@@ -12,7 +12,7 @@ import { TemplatesSetResolverMutations } from './templates.set.resolver.mutation
 import { TemplatesSetService } from './templates.set.service';
 import { TemplatesSetAuthorizationService } from './templates.set.service.authorization';
 import { CalloutTemplateModule } from '../callout-template/callout.template.module';
-import { StorageBucketResolverModule } from '@services/infrastructure/storage-bucket-resolver/storage.bucket.resolver.module';
+import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
 
 @Module({
   imports: [
@@ -23,7 +23,7 @@ import { StorageBucketResolverModule } from '@services/infrastructure/storage-bu
     WhiteboardTemplateModule,
     InnovationFlowTemplateModule,
     TemplateBaseModule,
-    StorageBucketResolverModule,
+    StorageAggregatorResolverModule,
     TypeOrmModule.forFeature([TemplatesSet]),
   ],
   providers: [
