@@ -264,14 +264,15 @@ export class SpaceService {
 
   async deleteSpace(deleteData: DeleteSpaceInput): Promise<ISpace> {
     const space = await this.getSpaceOrFail(deleteData.ID, {
-      relations: [
-        'challenges',
-        'preferenceSet',
-        'preferenceSet.preferences',
-        'templatesSet',
-        'profile',
-        'storageAggregator',
-      ],
+      relations: {
+        challenges: true,
+        preferenceSet: {
+          preferences: true,
+        },
+        templatesSet: true,
+        profile: true,
+        storageAggregator: true,
+      },
     });
 
     // Do not remove a space that has child challenges, require these to be individually first removed

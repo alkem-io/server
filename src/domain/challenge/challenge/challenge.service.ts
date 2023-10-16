@@ -273,14 +273,16 @@ export class ChallengeService {
     const challengeID = deleteData.ID;
     // Note need to load it in with all contained entities so can remove fully
     const challenge = await this.getChallengeOrFail(challengeID, {
-      relations: [
-        'childChallenges',
-        'opportunities',
-        'innovationFlow',
-        'preferenceSet',
-        'preferenceSet.preferences',
-        'storageAggregator',
-      ],
+      relations: {
+        childChallenges: true,
+        opportunities: true,
+        innovationFlow: true,
+        preferenceSet: {
+          preferences: true,
+        },
+        profile: true,
+        storageAggregator: true,
+      },
     });
 
     // Do not remove a challenge that has child challenges , require these to be individually first removed
@@ -579,7 +581,11 @@ export class ChallengeService {
     const challenge = await this.getChallengeOrFail(
       opportunityData.challengeID,
       {
-        relations: ['storageAggregator', 'opportunities', 'community'],
+        relations: {
+          storageAggregator: true,
+          opportunities: true,
+          community: true,
+        },
       }
     );
 
