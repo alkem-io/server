@@ -72,7 +72,7 @@ export class BootstrapService {
       await this.platformService.ensureCommunicationCreated();
       // reset auth as last in the actions
       await this.ensureAuthorizationsPopulated();
-      this.ensureSpaceNamesInElastic();
+      await this.ensureSpaceNamesInElastic();
     } catch (error: any) {
       this.logger.error(
         `Unable to complete bootstrap process: ${error}`,
