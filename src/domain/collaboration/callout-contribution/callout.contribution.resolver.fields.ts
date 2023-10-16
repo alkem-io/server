@@ -58,7 +58,9 @@ export class CalloutContributionResolverFields {
   async post(
     @Parent() calloutContribution: ICalloutContribution
   ): Promise<IPost | null> {
-    return await this.calloutContributionService.getPost(calloutContribution);
+    return await this.calloutContributionService.getPost(calloutContribution, [
+      'post.comments',
+    ]);
   }
 
   @ResolveField('createdBy', () => IUser, {

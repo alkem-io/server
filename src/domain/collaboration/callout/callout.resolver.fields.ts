@@ -70,12 +70,7 @@ export class CalloutResolverFields {
   ): Promise<ICalloutContribution[]> {
     return await this.calloutService.getContributions(
       callout,
-      //toDo - vyanakiev - this should be sufficient, in theory, to load the message auth
-      [
-        'contributions.post',
-        'contributions.post.comments',
-        'contributions.post.comments.authorization',
-      ],
+      [],
       ids,
       filter,
       limit,
