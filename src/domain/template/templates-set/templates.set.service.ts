@@ -222,10 +222,10 @@ export class TemplatesSetService {
         LogContext.CONTEXT
       );
     }
-    const storageBucket = await this.getStorageAggregator(templatesSet);
+    const storageAggregator = await this.getStorageAggregator(templatesSet);
     const postTemplate = await this.postTemplateService.createPostTemplate(
       postTemplateInput,
-      storageBucket
+      storageAggregator
     );
     templatesSet.postTemplates.push(postTemplate);
     await this.templatesSetRepository.save(templatesSet);
@@ -368,11 +368,11 @@ export class TemplatesSetService {
         LogContext.CONTEXT
       );
     }
-    const storageBucket = await this.getStorageAggregator(templatesSet);
+    const storageAggregator = await this.getStorageAggregator(templatesSet);
     const innovationFlowTemplate =
       await this.innovationFlowTemplateService.createInnovationFLowTemplate(
         innovationFlowTemplateInput,
-        storageBucket
+        storageAggregator
       );
 
     templatesSet.innovationFlowTemplates.push(innovationFlowTemplate);

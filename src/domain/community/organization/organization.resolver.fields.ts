@@ -248,7 +248,7 @@ export class OrganizationResolverFields {
       'The StorageAggregator for managing storage buckets in use by this Organization',
   })
   @UseGuards(GraphqlGuard)
-  async storageBucket(
+  async storageAggregator(
     @Parent() organization: Organization,
     @Loader(OrganizationStorageAggregatorLoaderCreator)
     loader: ILoader<IStorageAggregator>

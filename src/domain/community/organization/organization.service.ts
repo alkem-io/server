@@ -247,13 +247,14 @@ export class OrganizationService {
   ): Promise<IOrganization> {
     const orgID = deleteData.ID;
     const organization = await this.getOrganizationOrFail(orgID, {
-      relations: [
-        'profile',
-        'groups',
-        'agent',
-        'verification',
-        'preferenceSet',
-      ],
+      relations: {
+        preferenceSet: true,
+        profile: true,
+        agent: true,
+        verification: true,
+        groups: true,
+        storageAggregator: true,
+      },
     });
     const isSpaceHost = await this.isSpaceHost(organization);
     if (isSpaceHost) {
@@ -294,6 +295,12 @@ export class OrganizationService {
 
     if (organization.profile) {
       await this.profileService.deleteProfile(organization.profile.id);
+    }
+
+    if (organization.storageAggregator) {
+      await this.storageAggregatorService.delete(
+        organization.storageAggregator.id
+      );
     }
 
     if (organization.groups) {
