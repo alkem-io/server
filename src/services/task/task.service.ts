@@ -13,7 +13,6 @@ import { TaskStatus } from '@domain/task/dto/task.status.enum';
 import { Task } from './task.interface';
 import { TASK_LIST_CACHE_KEY } from './task.list.key';
 
-// todo: improve error handling; set, get can throw and reject
 @Injectable()
 export class TaskService {
   constructor(
@@ -144,7 +143,7 @@ export class TaskService {
     const list = await this.getTaskList();
 
     if (!list) {
-      // todo: logging
+      this.logger.error('Could not add task to list. List not found.');
       return false;
     }
 
@@ -154,8 +153,14 @@ export class TaskService {
       .set(TASK_LIST_CACHE_KEY, list, { ttl: 1000 })
       .then(
         () => true,
-        () => false // todo: logging
+        reason => {
+          this.logger.error(`Could not add task to list. ${reason}`);
+          return false;
+        }
       )
-      .catch(() => false); // todo: logging
+      .catch(error => {
+        this.logger.error(`Could not add task to list. ${error}`);
+        return false;
+      });
   }
 }
