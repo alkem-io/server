@@ -212,7 +212,9 @@ export class BootstrapService {
   private async ensureSpaceNamesInElastic() {
     const spaces = await this.spaceService.getAllSpaces({
       relations: {
-        profile: true,
+        profile: {
+          location: true,
+        },
       },
     });
 

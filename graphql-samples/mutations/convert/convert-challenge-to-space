@@ -1,6 +1,6 @@
 mutation ConvertChallengeToSpace($convertData: ConvertChallengeToSpaceInput!) {
   convertChallengeToSpace(convertData: $convertData) {
-    displayName,
+    nameID,
     id
   }
 }
