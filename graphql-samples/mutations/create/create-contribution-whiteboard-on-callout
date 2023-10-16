@@ -1,0 +1,18 @@
+mutation createWhiteboardOnCallout($data: CreateContributionOnCalloutInput!){
+  createContributionOnCallout(contributionData:$data){
+    id
+  }
+}
+
+Variables:
+{
+  "data": {
+    "calloutID": "uuid",
+    "post": {
+      "profileData": {
+          "displayName": "test whiteboard",
+          "description": "sample whiteboard"
+      }
+    }
+  }
+}

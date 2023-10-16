@@ -44,7 +44,6 @@ import { SessionExtendMiddleware } from '@src/core/middleware';
 import { ActivityLogModule } from '@services/api/activity-log/activity.log.module';
 import { MessageModule } from '@domain/communication/message/message.module';
 import { LibraryModule } from '@library/library/library.module';
-import { PostMoveModule } from '@domain/collaboration/post/post.move.module';
 import { GeoLocationModule } from '@services/external/geo-location';
 import { PlatformModule } from '@platform/platfrom/platform.module';
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
@@ -66,6 +65,7 @@ import { LookupModule } from '@services/api/lookup';
 import { AuthResetSubscriberModule } from '@services/auth-reset/subscriber/auth-reset.subscriber.module';
 import { APP_ID_PROVIDER } from '@common/app.id.provider';
 import { IpfsLogModule } from '@services/api-rest/ipfs-log/ipfs.log.module';
+import { ContributionMoveModule } from '@domain/collaboration/callout-contribution/callout.contribution.move.module';
 
 @Module({
   imports: [
@@ -216,7 +216,7 @@ import { IpfsLogModule } from '@services/api-rest/ipfs-log/ipfs.log.module';
     ConversionModule,
     LibraryModule,
     PlatformModule,
-    PostMoveModule,
+    ContributionMoveModule,
     GeoLocationModule,
     ContributionReporterModule,
     InnovationHubModule,

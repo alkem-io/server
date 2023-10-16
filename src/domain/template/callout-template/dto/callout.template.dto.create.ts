@@ -5,9 +5,15 @@ import { CreateCalloutFramingInput } from '@domain/collaboration/callout-framing
 import { CreateCalloutContributionDefaultsInput } from '@domain/collaboration/callout-contribution-defaults/dto';
 import { CreateCalloutContributionPolicyInput } from '@domain/collaboration/callout-contribution-policy/dto';
 import { CreateTemplateBaseInput } from '@domain/template/template-base/dto';
+import { CalloutType } from '@common/enums/callout.type';
 
 @InputType()
 export class CreateCalloutTemplateInput extends CreateTemplateBaseInput {
+  @Field(() => CalloutType, {
+    description: 'Callout type.',
+  })
+  type!: CalloutType;
+
   @Field(() => CreateCalloutFramingInput, { nullable: false })
   @ValidateNested({ each: true })
   @Type(() => CreateCalloutFramingInput)

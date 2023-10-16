@@ -1,22 +1,22 @@
 import { EntityManager } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
-import { Callout } from '@domain/collaboration/callout';
 import { createTypedRelationDataLoader } from '../../../utils';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
-import { IPostTemplate } from '@domain/template/post-template/post.template.interface';
+import { CalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.entity';
+import { IWhiteboardRt } from '@domain/common/whiteboard-rt/whiteboard.rt.interface';
 
 @Injectable()
-export class CalloutPostTemplateLoaderCreator
-  implements DataLoaderCreator<IPostTemplate>
+export class CalloutFramingWhiteboardRtLoaderCreator
+  implements DataLoaderCreator<IWhiteboardRt>
 {
   constructor(@InjectEntityManager() private manager: EntityManager) {}
 
-  create(options?: DataLoaderCreatorOptions<IPostTemplate>) {
+  create(options?: DataLoaderCreatorOptions<IWhiteboardRt>) {
     return createTypedRelationDataLoader(
       this.manager,
-      Callout,
-      { postTemplate: true },
+      CalloutFraming,
+      { whiteboardRt: true },
       this.constructor.name,
       options
     );

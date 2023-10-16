@@ -1,18 +1,9 @@
-import {
-  AfterInsert,
-  AfterLoad,
-  AfterUpdate,
-  BeforeInsert,
-  BeforeUpdate,
-  Column,
-  Entity,
-  JoinColumn,
-  OneToOne,
-} from 'typeorm';
+import { Entity, JoinColumn, OneToOne } from 'typeorm';
 import { ICalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.interface';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity/authorizable.entity';
 import { Profile } from '@domain/common/profile/profile.entity';
-import { compressText, decompressText } from '@common/utils/compression.util';
+import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
+import { WhiteboardRt } from '@domain/common/whiteboard-rt/whiteboard.rt.entity';
 
 @Entity()
 export class CalloutFraming
@@ -27,22 +18,19 @@ export class CalloutFraming
   @JoinColumn()
   profile!: Profile;
 
-  @Column('longtext', { nullable: true })
-  content?: string;
+  @OneToOne(() => Whiteboard, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  whiteboard?: Whiteboard;
 
-  @BeforeInsert()
-  @BeforeUpdate()
-  async compressContent() {
-    if (this.content) {
-      this.content = await compressText(this.content);
-    }
-  }
-  @AfterInsert()
-  @AfterUpdate()
-  @AfterLoad()
-  async decompressContent() {
-    if (this.content) {
-      this.content = await decompressText(this.content);
-    }
-  }
+  @OneToOne(() => WhiteboardRt, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  whiteboardRt?: WhiteboardRt;
 }

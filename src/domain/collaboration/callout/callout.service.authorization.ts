@@ -6,8 +6,6 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { CalloutService } from './callout.service';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
-import { WhiteboardAuthorizationService } from '@domain/common/whiteboard/whiteboard.service.authorization';
-import { PostAuthorizationService } from '@domain/collaboration/post/post.service.authorization';
 import {
   LogContext,
   AuthorizationPrivilege,
@@ -24,33 +22,51 @@ import {
   POLICY_RULE_CALLOUT_CREATE,
   POLICY_RULE_CALLOUT_CONTRIBUTE,
 } from '@common/constants';
-import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
-import { PostTemplateAuthorizationService } from '@domain/template/post-template/post.template.service.authorization';
-import { WhiteboardTemplateAuthorizationService } from '@domain/template/whiteboard-template/whiteboard.template.service.authorization';
 import { RoomAuthorizationService } from '@domain/communication/room/room.service.authorization';
-import { WhiteboardRtAuthorizationService } from '@domain/common/whiteboard-rt';
+import { CalloutFramingAuthorizationService } from '../callout-framing/callout.framing.service.authorization';
+import { CalloutContributionAuthorizationService } from '../callout-contribution/callout.contribution.service.authorization';
 
 @Injectable()
 export class CalloutAuthorizationService {
   constructor(
     private calloutService: CalloutService,
     private authorizationPolicyService: AuthorizationPolicyService,
-    private whiteboardAuthorizationService: WhiteboardAuthorizationService,
-    private whiteboardRtAuthorizationService: WhiteboardRtAuthorizationService,
-    private postAuthorizationService: PostAuthorizationService,
-    private postTemplateAuthorizationService: PostTemplateAuthorizationService,
-    private whiteboardTemplateAuthorizationService: WhiteboardTemplateAuthorizationService,
-    private profileAuthorizationService: ProfileAuthorizationService,
+    private contributionAuthorizationService: CalloutContributionAuthorizationService,
+    private calloutFramingAuthorizationService: CalloutFramingAuthorizationService,
     private roomAuthorizationService: RoomAuthorizationService,
     @InjectRepository(Callout)
     private calloutRepository: Repository<Callout>
   ) {}
 
   public async applyAuthorizationPolicy(
-    callout: ICallout,
+    calloutInput: ICallout,
     parentAuthorization: IAuthorizationPolicy | undefined,
     communityPolicy: ICommunityPolicy
   ): Promise<ICallout> {
+    const callout = await this.calloutService.getCalloutOrFail(
+      calloutInput.id,
+      {
+        relations: {
+          comments: true,
+          contributions: true,
+          contributionDefaults: true,
+          contributionPolicy: true,
+          framing: true,
+        },
+      }
+    );
+
+    if (
+      !callout.contributions ||
+      !callout.contributionDefaults ||
+      !callout.contributionPolicy
+    ) {
+      throw new EntityNotInitializedException(
+        `authorization: Unable to load callout: ${callout.id}`,
+        LogContext.COLLABORATION
+      );
+    }
+
     callout.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         callout.authorization,
@@ -64,44 +80,20 @@ export class CalloutAuthorizationService {
 
     callout.authorization = this.appendCredentialRules(callout);
 
-    callout.posts = await this.calloutService.getPostsFromCallout(callout, [
-      'posts.comments',
-    ]);
-    for (const post of callout.posts) {
-      await this.postAuthorizationService.applyAuthorizationPolicy(
-        post,
+    for (const contribution of callout.contributions) {
+      await this.contributionAuthorizationService.applyAuthorizationPolicy(
+        contribution,
         callout.authorization,
         communityPolicy
       );
     }
 
-    callout.profile = await this.calloutService.getProfile(callout);
-    callout.profile =
-      await this.profileAuthorizationService.applyAuthorizationPolicy(
-        callout.profile,
+    callout.framing =
+      await this.calloutFramingAuthorizationService.applyAuthorizationPolicy(
+        callout.framing,
         callout.authorization
       );
 
-    callout.whiteboards = await this.calloutService.getWhiteboardsFromCallout(
-      callout,
-      ['whiteboards.checkout']
-    );
-    for (const whiteboard of callout.whiteboards) {
-      await this.whiteboardAuthorizationService.applyAuthorizationPolicy(
-        whiteboard,
-        callout.authorization
-      );
-    }
-    callout.whiteboardRt = await this.calloutService.getWhiteboardRt(callout);
-    if (callout.whiteboardRt) {
-      callout.whiteboardRt =
-        await this.whiteboardRtAuthorizationService.applyAuthorizationPolicy(
-          callout.whiteboardRt,
-          callout.authorization
-        );
-    }
-
-    callout.comments = await this.calloutService.getComments(callout.id);
     if (callout.comments) {
       callout.comments =
         await this.roomAuthorizationService.applyAuthorizationPolicy(
@@ -115,27 +107,6 @@ export class CalloutAuthorizationService {
       callout.comments.authorization =
         this.roomAuthorizationService.allowContributorsToReplyReactToMessages(
           callout.comments.authorization
-        );
-    }
-
-    callout.postTemplate = await this.calloutService.getPostTemplateFromCallout(
-      callout.id
-    );
-    if (callout.postTemplate) {
-      callout.postTemplate =
-        await this.postTemplateAuthorizationService.applyAuthorizationPolicy(
-          callout.postTemplate,
-          callout.authorization
-        );
-    }
-
-    callout.whiteboardTemplate =
-      await this.calloutService.getWhiteboardTemplateFromCallout(callout.id);
-    if (callout.whiteboardTemplate) {
-      callout.whiteboardTemplate =
-        await this.whiteboardTemplateAuthorizationService.applyAuthorizationPolicy(
-          callout.whiteboardTemplate,
-          callout.authorization
         );
     }
 

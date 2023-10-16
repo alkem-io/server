@@ -74,6 +74,10 @@ export class BootstrapService {
       await this.ensureAuthorizationsPopulated();
       this.ensureSpaceNamesInElastic();
     } catch (error: any) {
+      this.logger.error(
+        `Unable to complete bootstrap process: ${error}`,
+        LogContext.BOOTSTRAP
+      );
       throw new BootstrapException(error.message);
     }
   }

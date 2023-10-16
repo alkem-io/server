@@ -8,24 +8,17 @@ import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
-import { IPost } from '@domain/collaboration/post/post.interface';
 import { UUID_NAMEID } from '@domain/common/scalars';
-import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 import { IUser } from '@domain/community/user/user.interface';
 import { EntityNotFoundException } from '@common/exceptions';
-import { IProfile } from '@domain/common/profile/profile.interface';
-import {
-  CalloutPostTemplateLoaderCreator,
-  CalloutWhiteboardTemplateLoaderCreator,
-  ProfileLoaderCreator,
-  UserLoaderCreator,
-} from '@core/dataloader/creators';
+import { UserLoaderCreator } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Loader } from '@core/dataloader/decorators';
-import { IPostTemplate } from '@domain/template/post-template/post.template.interface';
-import { IWhiteboardTemplate } from '@domain/template/whiteboard-template/whiteboard.template.interface';
 import { IRoom } from '@domain/communication/room/room.interface';
-import { IWhiteboardRt } from '@domain/common/whiteboard-rt/whiteboard.rt.interface';
+import { ICalloutContribution } from '../callout-contribution/callout.contribution.interface';
+import { ICalloutContributionPolicy } from '../callout-contribution-policy/callout.contribution.policy.interface';
+import { ICalloutContributionDefaults } from '../callout-contribution-defaults/callout.contribution.defaults.interface';
+import { CalloutContributionFilterArgs } from '../callout-contribution/dto/callout.contribution.args.filter';
 
 @Resolver(() => ICallout)
 export class CalloutResolverFields {
@@ -35,41 +28,34 @@ export class CalloutResolverFields {
     private calloutService: CalloutService
   ) {}
 
-  @UseGuards(GraphqlGuard)
-  @ResolveField('profile', () => IProfile, {
-    nullable: false,
-    description: 'The Profile for this Callout.',
-  })
-  @Profiling.api
-  async profile(
-    @Parent() callout: ICallout,
-    @Loader(ProfileLoaderCreator, { parentClassRef: Callout })
-    loader: ILoader<IProfile>
-  ): Promise<IProfile> {
-    return loader.load(callout.id);
-  }
-
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('posts', () => [IPost], {
+  @ResolveField('contributions', () => [ICalloutContribution], {
     nullable: true,
-    description: 'The Posts for this Callout.',
+    description: 'The Contributions that have been made to this Callout.',
   })
   @Profiling.api
-  async posts(
+  async contributions(
     @Parent() callout: Callout,
     @Args({
       name: 'IDs',
       type: () => [UUID_NAMEID],
-      description: 'The IDs (either UUID or nameID) of the Posts to return',
+      description: 'The IDs of the Contributions to return',
       nullable: true,
     })
     ids: string[],
     @Args({
+      name: 'filter',
+      type: () => CalloutContributionFilterArgs,
+      description: 'The Post/Whiteboard/Link ids filter',
+      nullable: true,
+    })
+    filter: CalloutContributionFilterArgs,
+    @Args({
       name: 'limit',
       type: () => Float,
       description:
-        'The number of Posts to return; if omitted returns all Posts.',
+        'The number of Contributions to return; if omitted return all Contributions.',
       nullable: true,
     })
     limit: number,
@@ -77,73 +63,19 @@ export class CalloutResolverFields {
       name: 'shuffle',
       type: () => Boolean,
       description:
-        'If true and limit is specified then return the Posts based on a random selection.',
+        'If true and limit is specified then return the Contributions based on a random selection. Defaults to false.',
       nullable: true,
     })
     shuffle: boolean
-  ): Promise<IPost[]> {
-    return await this.calloutService.getPostsFromCallout(
+  ): Promise<ICalloutContribution[]> {
+    return await this.calloutService.getContributions(
       callout,
-      ['posts.comments'],
+      [],
       ids,
+      filter,
       limit,
       shuffle
     );
-  }
-
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
-  @ResolveField('whiteboards', () => [IWhiteboard], {
-    nullable: true,
-    description: 'The Whiteboard entities for this Callout.',
-  })
-  @Profiling.api
-  async whiteboards(
-    @Parent() callout: Callout,
-    @Args({
-      name: 'IDs',
-      type: () => [UUID_NAMEID],
-      description: 'The IDs of the whiteboards to return',
-      nullable: true,
-    })
-    ids: string[],
-    @Args({
-      name: 'limit',
-      type: () => Float,
-      description:
-        'The number of Whiteboards to return; if omitted return all Whiteboards.',
-      nullable: true,
-    })
-    limit: number,
-    @Args({
-      name: 'shuffle',
-      type: () => Boolean,
-      description:
-        'If true and limit is specified then return the Whiteboards based on a random selection. Defaults to false.',
-      nullable: true,
-    })
-    shuffle: boolean
-  ): Promise<IWhiteboard[]> {
-    return await this.calloutService.getWhiteboardsFromCallout(
-      callout,
-      ['whiteboards.checkout'],
-      ids,
-      limit,
-      shuffle
-    );
-  }
-
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
-  @ResolveField('whiteboardRt', () => IWhiteboardRt, {
-    nullable: true,
-    description: 'The real time Whiteboard associated with this Callout.',
-  })
-  @Profiling.api
-  public whiteboardRt(
-    @Parent() callout: Callout
-  ): Promise<IWhiteboardRt | undefined> {
-    return this.calloutService.getWhiteboardRt(callout);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -158,22 +90,14 @@ export class CalloutResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('postTemplate', () => IPostTemplate, {
-    nullable: true,
-    description: 'The PostTemplate for this Callout.',
+  @ResolveField('contributionPolicy', () => ICalloutContributionPolicy, {
+    nullable: false,
+    description: 'The ContributionPolicy for this Callout.',
   })
-  async postTemplate(
-    @Parent() callout: ICallout,
-    @Loader(CalloutPostTemplateLoaderCreator, { resolveToNull: true })
-    loader: ILoader<IPostTemplate>
-  ): Promise<IPostTemplate | null> {
-    return (
-      loader
-        .load(callout.id)
-        // empty object is result because DataLoader does not allow to return NULL values
-        // handle the value when the result is returned
-        .then(x => (!Object.keys(x).length ? null : x))
-    );
+  async contributionPolicy(
+    @Parent() callout: Callout
+  ): Promise<ICalloutContributionPolicy> {
+    return await this.calloutService.getContributionPolicy(callout.id);
   }
 
   @ResolveField('activity', () => Number, {
@@ -186,22 +110,14 @@ export class CalloutResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('whiteboardTemplate', () => IWhiteboardTemplate, {
-    nullable: true,
-    description: 'The Whiteboard template for this Callout.',
+  @ResolveField('contributionDefaults', () => ICalloutContributionDefaults, {
+    nullable: false,
+    description: 'The Contribution Defaults for this Callout.',
   })
-  async whiteboardTemplate(
-    @Parent() callout: ICallout,
-    @Loader(CalloutWhiteboardTemplateLoaderCreator, { resolveToNull: true })
-    loader: ILoader<IWhiteboardTemplate>
-  ): Promise<IWhiteboardTemplate | null> {
-    return (
-      loader
-        .load(callout.id)
-        // empty object is result because DataLoader does not allow to return NULL values
-        // handle the value when the result is returned
-        .then(x => (!Object.keys(x).length ? null : x))
-    );
+  async contributionDefaults(
+    @Parent() callout: Callout
+  ): Promise<ICalloutContributionDefaults> {
+    return await this.calloutService.getContributionDefaults(callout.id);
   }
 
   @ResolveField('publishedBy', () => IUser, {

@@ -1,0 +1,19 @@
+mutation createPostOnCallout($data: CreateContributionOnCalloutInput!){
+  createContributionOnCallout(contributionData:$data){
+    id
+  }
+}
+
+Variables:
+{
+  "data": {
+    "calloutID": "uuid",
+    "post": {
+      "profileData": {
+          "displayName": "test post 2",
+          "description": "this is a very good post"
+      },
+      "type": "bla"
+    }
+  }
+}

@@ -26,6 +26,7 @@ import {
 } from '@common/constants';
 import { CommunityRole } from '@common/enums/community.role';
 import { TimelineAuthorizationService } from '@domain/timeline/timeline/timeline.service.authorization';
+import { ICallout } from '../callout/callout.interface';
 
 @Injectable()
 export class CollaborationAuthorizationService {
@@ -66,13 +67,17 @@ export class CollaborationAuthorizationService {
 
     collaboration.callouts =
       await this.collaborationService.getCalloutsOnCollaboration(collaboration);
+    const updatedCallouts: ICallout[] = [];
     for (const callout of collaboration.callouts) {
-      await this.calloutAuthorizationService.applyAuthorizationPolicy(
-        callout,
-        collaboration.authorization,
-        communityPolicy
-      );
+      const updatedCallout =
+        await this.calloutAuthorizationService.applyAuthorizationPolicy(
+          callout,
+          collaboration.authorization,
+          communityPolicy
+        );
+      updatedCallouts.push(updatedCallout);
     }
+    collaboration.callouts = updatedCallouts;
 
     collaboration.timeline = await this.collaborationService.getTimelineOrFail(
       collaboration.id

@@ -71,7 +71,7 @@ export class RoomResolverMutations {
         );
       }
 
-      if (callout.state === CalloutState.CLOSED) {
+      if (callout.contributionPolicy.state === CalloutState.CLOSED) {
         throw new CalloutClosedException(
           `New collaborations to a closed Callout with id: '${callout.id}' are not allowed!`
         );
@@ -97,7 +97,9 @@ export class RoomResolverMutations {
         );
 
         this.roomServiceEvents.processNotificationMentions(
-          post,
+          post.id,
+          post.nameID,
+          post.profile,
           room,
           message,
           agentInfo
@@ -122,7 +124,9 @@ export class RoomResolverMutations {
         );
 
         this.roomServiceEvents.processNotificationMentions(
-          calendar,
+          calendar.id,
+          calendar.nameID,
+          calendar.profile,
           room,
           message,
           agentInfo
@@ -135,7 +139,9 @@ export class RoomResolverMutations {
         );
 
         this.roomServiceEvents.processNotificationMentions(
-          discussion,
+          discussion.id,
+          discussion.nameID,
+          discussion.profile,
           room,
           message,
           agentInfo
@@ -146,7 +152,9 @@ export class RoomResolverMutations {
           messageData.roomID
         );
         this.roomServiceEvents.processNotificationMentions(
-          discussionForum,
+          discussionForum.id,
+          discussionForum.nameID,
+          discussionForum.profile,
           room,
           message,
           agentInfo
@@ -184,7 +192,9 @@ export class RoomResolverMutations {
             agentInfo
           );
           this.roomServiceEvents.processNotificationMentions(
-            callout,
+            callout.id,
+            callout.nameID,
+            callout.framing.profile,
             room,
             message,
             agentInfo
@@ -292,7 +302,9 @@ export class RoomResolverMutations {
         );
 
         this.roomServiceEvents.processNotificationCommentReply(
-          post,
+          post.id,
+          post.nameID,
+          post.profile,
           room,
           reply,
           agentInfo,
@@ -312,7 +324,9 @@ export class RoomResolverMutations {
         );
 
         this.roomServiceEvents.processNotificationCommentReply(
-          calendar,
+          calendar.id,
+          calendar.nameID,
+          calendar.profile,
           room,
           reply,
           agentInfo,
@@ -326,7 +340,9 @@ export class RoomResolverMutations {
         );
 
         this.roomServiceEvents.processNotificationCommentReply(
-          discussion,
+          discussion.id,
+          discussion.nameID,
+          discussion.profile,
           room,
           reply,
           agentInfo,
@@ -339,7 +355,9 @@ export class RoomResolverMutations {
           messageData.roomID
         );
         this.roomServiceEvents.processNotificationCommentReply(
-          discussionForum,
+          discussionForum.id,
+          discussionForum.nameID,
+          discussionForum.profile,
           room,
           reply,
           agentInfo,
@@ -360,14 +378,18 @@ export class RoomResolverMutations {
           );
 
           this.roomServiceEvents.processNotificationCommentReply(
-            callout,
+            callout.id,
+            callout.nameID,
+            callout.framing.profile,
             room,
             reply,
             agentInfo,
             messageOwnerId
           );
           this.roomServiceEvents.processNotificationMentions(
-            callout,
+            callout.id,
+            callout.nameID,
+            callout.framing.profile,
             room,
             reply,
             agentInfo

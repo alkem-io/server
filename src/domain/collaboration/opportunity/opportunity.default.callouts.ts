@@ -11,148 +11,165 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
   {
     nameID: 'getting-started',
     type: CalloutType.LINK_COLLECTION,
-    state: CalloutState.CLOSED,
+    contributionPolicy: {
+      state: CalloutState.CLOSED,
+    },
     sortOrder: 1,
-    profile: {
-      displayName: 'Getting Started',
-      description: '⬇️ Here are some quick links to help you get started',
-      tagsets: [
-        {
-          name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
-          type: TagsetType.SELECT_ONE,
-          tags: [CommonDisplayLocation.HOME_RIGHT],
-        },
-      ],
+    framing: {
+      profile: {
+        displayName: 'Getting Started',
+        description: '⬇️ Here are some quick links to help you get started',
+        tagsets: [
+          {
+            name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+            type: TagsetType.SELECT_ONE,
+            tags: [CommonDisplayLocation.HOME_RIGHT],
+          },
+        ],
+      },
     },
   },
   {
     nameID: 'general-chat',
     type: CalloutType.POST,
-    state: CalloutState.OPEN,
+    contributionPolicy: {
+      state: CalloutState.OPEN,
+    },
     sortOrder: 1,
-    profile: {
-      displayName: 'General chat 💬',
-      description: 'Things you would like to discuss with the community.',
-      tagsets: [
-        {
-          name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
-          type: TagsetType.SELECT_ONE,
-          tags: [CommonDisplayLocation.HOME_LEFT],
-        },
-      ],
+    framing: {
+      profile: {
+        displayName: 'General chat 💬',
+        description: 'Things you would like to discuss with the community.',
+        tagsets: [
+          {
+            name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+            type: TagsetType.SELECT_ONE,
+            tags: [CommonDisplayLocation.HOME_LEFT],
+          },
+        ],
+      },
     },
   },
   {
     nameID: 'tasks',
     type: CalloutType.POST_COLLECTION,
-    state: CalloutState.OPEN,
-    sortOrder: 2,
-    profile: {
-      displayName: '💪 Jobs to be done...',
-      description: '',
-      tagsets: [
-        {
-          name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
-          type: TagsetType.SELECT_ONE,
-          tags: [CommonDisplayLocation.HOME_RIGHT],
-        },
-      ],
+    contributionPolicy: {
+      state: CalloutState.OPEN,
     },
-    postTemplate: {
-      type: 'Task',
-      defaultDescription:
-        'Task: <p>  Related to: <p> People involved: <p> Deadline:',
+    sortOrder: 2,
+    framing: {
       profile: {
-        displayName: 'task',
-        description: 'To share tasks with the community that can be picked up.',
+        displayName: '💪 Jobs to be done...',
+        description: '',
+        tagsets: [
+          {
+            name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+            type: TagsetType.SELECT_ONE,
+            tags: [CommonDisplayLocation.HOME_RIGHT],
+          },
+        ],
       },
+    },
+    contributionDefaults: {
+      postDescription:
+        'Task: <p>  Related to: <p> People involved: <p> Deadline:',
     },
   },
   {
     nameID: 'roles',
     type: CalloutType.POST,
-    state: CalloutState.OPEN,
+    contributionPolicy: {
+      state: CalloutState.OPEN,
+    },
     sortOrder: 3,
-    profile: {
-      displayName: '👋 Hi, this is us!',
-      description:
-        'Please introduce yourself to each other, sharing a bit about your background, goal, and (envisioned) role in this project',
-      tagsets: [
-        {
-          name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
-          type: TagsetType.SELECT_ONE,
-          tags: [CommonDisplayLocation.HOME_RIGHT],
-        },
-      ],
+    framing: {
+      profile: {
+        displayName: '👋 Hi, this is us!',
+        description:
+          'Please introduce yourself to each other, sharing a bit about your background, goal, and (envisioned) role in this project',
+        tagsets: [
+          {
+            name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+            type: TagsetType.SELECT_ONE,
+            tags: [CommonDisplayLocation.HOME_RIGHT],
+          },
+        ],
+      },
     },
   },
   {
     nameID: 'news',
     type: CalloutType.POST_COLLECTION,
-    state: CalloutState.OPEN,
-    sortOrder: 1,
-    profile: {
-      displayName: 'Relevant news, research or use cases 📰',
-      description:
-        'Please share any relevant insights to help us better understand the context. You can describe why it is relevant and add a link or upload a document with the article. You can also comment on the insights already submitted by other community members!',
-      tagsets: [
-        {
-          name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
-          type: TagsetType.SELECT_ONE,
-          tags: [OpportunityDisplayLocation.CONTRIBUTE_RIGHT],
-        },
-      ],
+    contributionPolicy: {
+      state: CalloutState.OPEN,
     },
-    postTemplate: {
-      type: 'contribution',
-      defaultDescription:
-        'Please share your contribution. The more details the better!',
+    sortOrder: 1,
+    framing: {
       profile: {
-        displayName: 'contribution',
+        displayName: 'Relevant news, research or use cases 📰',
         description:
-          'To share contributions with detailed explanations how they help.',
+          'Please share any relevant insights to help us better understand the context. You can describe why it is relevant and add a link or upload a document with the article. You can also comment on the insights already submitted by other community members!',
+        tagsets: [
+          {
+            name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+            type: TagsetType.SELECT_ONE,
+            tags: [OpportunityDisplayLocation.CONTRIBUTE_RIGHT],
+          },
+        ],
       },
+    },
+    contributionDefaults: {
+      postDescription:
+        'Please share your contribution. The more details the better!',
     },
   },
   {
     nameID: 'documents',
     type: CalloutType.LINK_COLLECTION,
-    state: CalloutState.OPEN,
+    contributionPolicy: {
+      state: CalloutState.OPEN,
+    },
     sortOrder: 3,
-    profile: {
-      displayName: 'Reference / important documents',
-      description: 'Please add links to documents with reference material.💥',
-      tagsets: [
-        {
-          name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
-          type: TagsetType.SELECT_ONE,
-          tags: [OpportunityDisplayLocation.CONTRIBUTE],
-        },
-      ],
+    framing: {
+      profile: {
+        displayName: 'Reference / important documents',
+        description: 'Please add links to documents with reference material.💥',
+        tagsets: [
+          {
+            name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+            type: TagsetType.SELECT_ONE,
+            tags: [OpportunityDisplayLocation.CONTRIBUTE],
+          },
+        ],
+      },
     },
   },
   {
     nameID: 'needs',
     type: CalloutType.WHITEBOARD,
-    state: CalloutState.OPEN,
-    sortOrder: 2,
-    profile: {
-      displayName: 'What do we need?',
-      description:
-        'We can use this whiteboard to further define what is needed to realize this Opportunity! Think about research, insights, stakeholders or other resources.',
-      tagsets: [
-        {
-          name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
-          type: TagsetType.SELECT_ONE,
-          tags: [OpportunityDisplayLocation.CONTRIBUTE_RIGHT],
-        },
-      ],
+    contributionPolicy: {
+      state: CalloutState.OPEN,
     },
-    whiteboard: {
-      content: EMPTY_WHITEBOARD_CONTENT,
-      nameID: 'needs',
-      profileData: {
-        displayName: 'Identify needs',
+    sortOrder: 2,
+    framing: {
+      profile: {
+        displayName: 'What do we need?',
+        description:
+          'We can use this whiteboard to further define what is needed to realize this Opportunity! Think about research, insights, stakeholders or other resources.',
+        tagsets: [
+          {
+            name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+            type: TagsetType.SELECT_ONE,
+            tags: [OpportunityDisplayLocation.CONTRIBUTE_RIGHT],
+          },
+        ],
+      },
+      whiteboard: {
+        content: EMPTY_WHITEBOARD_CONTENT,
+        nameID: 'needs',
+        profileData: {
+          displayName: 'Identify needs',
+        },
       },
     },
   },
