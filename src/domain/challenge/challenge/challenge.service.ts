@@ -424,7 +424,9 @@ export class ChallengeService {
 
   async getInnovationFlow(challengeId: string): Promise<IInnovationFlow> {
     const challenge = await this.getChallengeOrFail(challengeId, {
-      relations: ['innovationFlow'],
+      relations: {
+        innovationFlow: true,
+      },
     });
 
     const innovationFlow = challenge.innovationFlow;

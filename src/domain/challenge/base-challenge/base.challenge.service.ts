@@ -250,7 +250,9 @@ export class BaseChallengeService {
       challengeId,
       repository,
       {
-        relations: ['context'],
+        relations: {
+          context: true,
+        },
       }
     );
     const context = challengeWithContext.context;

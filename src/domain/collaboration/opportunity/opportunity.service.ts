@@ -283,7 +283,10 @@ export class OpportunityService {
 
   async deleteOpportunity(opportunityID: string): Promise<IOpportunity> {
     const opportunity = await this.getOpportunityOrFail(opportunityID, {
-      relations: ['projects', 'innovationFlow'],
+      relations: {
+        projects: true,
+        innovationFlow: true,
+      },
     });
     // disable deletion if projects are present
     const projects = opportunity.projects;
@@ -298,6 +301,12 @@ export class OpportunityService {
       opportunity.id,
       this.opportunityRepository
     );
+
+    if (opportunity.innovationFlow) {
+      await this.innovationFlowService.deleteInnovationFlow(
+        opportunity.innovationFlow.id
+      );
+    }
 
     const result = await this.opportunityRepository.remove(
       opportunity as Opportunity
