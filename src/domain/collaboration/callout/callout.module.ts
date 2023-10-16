@@ -24,7 +24,7 @@ import { RoomModule } from '@domain/communication/room/room.module';
 import { ReferenceModule } from '@domain/common/reference/reference.module';
 import { WhiteboardRtModule } from '@domain/common/whiteboard-rt';
 import { UserLookupModule } from '@services/infrastructure/user-lookup/user.lookup.module';
-import { StorageBucketResolverModule } from '@services/infrastructure/storage-bucket-resolver/storage.bucket.resolver.module';
+import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
 
 @Module({
   imports: [
@@ -47,7 +47,7 @@ import { StorageBucketResolverModule } from '@services/infrastructure/storage-bu
     WhiteboardTemplateModule,
     MessagingModule,
     ReferenceModule,
-    StorageBucketResolverModule,
+    StorageAggregatorResolverModule,
     TypeOrmModule.forFeature([Callout]),
   ],
   providers: [

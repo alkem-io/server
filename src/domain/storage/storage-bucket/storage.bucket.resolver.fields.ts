@@ -74,20 +74,6 @@ export class StorageBucketResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('childStorage', () => [IStorageBucket], {
-    nullable: false,
-    description: 'The list of child entries for this StorageBucket.',
-  })
-  async children(
-    @Parent() storageBucket: IStorageBucket
-  ): Promise<IStorageBucket[]> {
-    return await this.storageBucketService.getChildStorageBuckets(
-      storageBucket
-    );
-  }
-
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
   @ResolveField('parentEntity', () => IStorageBucketParent, {
     nullable: true,
     description:

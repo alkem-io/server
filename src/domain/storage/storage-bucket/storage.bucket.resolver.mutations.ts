@@ -8,7 +8,6 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { StorageBucketService } from './storage.bucket.service';
 import { DocumentAuthorizationService } from '../document/document.service.authorization';
 import { FileUpload, GraphQLUpload } from 'graphql-upload';
-import { StorageBucketResolverService } from '@services/infrastructure/storage-bucket-resolver/storage.bucket.resolver.service';
 import { IVisual } from '@domain/common/visual/visual.interface';
 import { VisualUploadImageInput } from '@domain/common/visual/dto/visual.dto.upload.image';
 import { VisualService } from '@domain/common/visual/visual.service';
@@ -32,7 +31,6 @@ export class StorageBucketResolverMutations {
     private authorizationService: AuthorizationService,
     private storageBucketService: StorageBucketService,
     private documentAuthorizationService: DocumentAuthorizationService,
-    private storageBucketResolverService: StorageBucketResolverService,
     private documentService: DocumentService,
     private visualService: VisualService,
     private referenceService: ReferenceService

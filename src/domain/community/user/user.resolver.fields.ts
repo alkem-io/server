@@ -1,4 +1,8 @@
-import { CurrentUser, Profiling } from '@common/decorators';
+import {
+  AuthorizationAgentPrivilege,
+  CurrentUser,
+  Profiling,
+} from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
 import { AgentInfo } from '@core/authentication';
 import { GraphqlGuard } from '@core/authorization';
@@ -17,6 +21,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { MessagingService } from '@domain/communication/messaging/messaging.service';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
+import { UserStorageAggregatorLoaderCreator } from '@core/dataloader/creators/loader.creators/community/user.storage.aggregator.loader.creator';
 import {
   AgentLoaderCreator,
   AuthorizationLoaderCreator,
@@ -24,6 +29,7 @@ import {
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Loader } from '@core/dataloader/decorators';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 
 @Resolver(() => IUser)
 export class UserResolverFields {
@@ -181,6 +187,21 @@ export class UserResolverFields {
     return await this.messagingService.isContactableWithDirectMessage(
       preferenceSet
     );
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @ResolveField('storageAggregator', () => IStorageAggregator, {
+    nullable: true,
+    description:
+      'The StorageAggregator for managing storage buckets in use by this User',
+  })
+  @UseGuards(GraphqlGuard)
+  async storageBucket(
+    @Parent() user: IUser,
+    @Loader(UserStorageAggregatorLoaderCreator)
+    loader: ILoader<IStorageAggregator>
+  ): Promise<IStorageAggregator> {
+    return loader.load(user.id);
   }
 
   private async isAccessGranted(

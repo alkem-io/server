@@ -72,5 +72,3 @@ export const CREDENTIAL_RULE_DOCUMENT_CREATED_BY =
   'credentialRule-documentCreatedBy';
 export const CREDENTIAL_RULE_LIBRARY_INNOVATION_PACK_PROVIDER_ADMIN =
   'credentialRule-libraryInnovationPackProvider';
-export const CREDENTIAL_RULE_ORGANIZATION_FILE_UPLOAD =
-  'credentialRule-organizationAssociateFileUpload';

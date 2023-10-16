@@ -30,10 +30,9 @@ import { CommunityPolicyModule } from '@domain/community/community-policy/commun
 import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
 import { LoaderCreatorModule } from '@core/dataloader/creators';
-import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
-import { SpaceStorageBucketLoaderCreator } from '@core/dataloader/creators/loader.creators/space/space.storage.space.loader.creator';
 import { NameReporterModule } from '@services/external/elasticsearch/name-reporter/name.reporter.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
+import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
 
 @Module({
   imports: [
@@ -50,7 +49,7 @@ import { ProfileModule } from '@domain/common/profile/profile.module';
     PlatformAuthorizationPolicyModule,
     ProjectModule,
     OrganizationModule,
-    StorageBucketModule,
+    StorageAggregatorModule,
     UserGroupModule,
     UserModule,
     NamingModule,
@@ -72,7 +71,6 @@ import { ProfileModule } from '@domain/common/profile/profile.module';
     SpaceResolverQueries,
     SpaceResolverMutations,
     SpaceResolverSubscriptions,
-    SpaceStorageBucketLoaderCreator,
   ],
   exports: [SpaceService, SpaceAuthorizationService],
 })

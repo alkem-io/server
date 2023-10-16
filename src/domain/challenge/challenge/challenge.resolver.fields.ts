@@ -25,9 +25,8 @@ import {
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
-import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
-import { ChallengeStorageBucketLoaderCreator } from '@core/dataloader/creators/loader.creators/challenge/challenge.storage.space.loader.creator';
 import { IInnovationFlow } from '../innovation-flow/innovation.flow.interface';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 
 @Resolver(() => IChallenge)
 export class ChallengeResolverFields {
@@ -88,16 +87,15 @@ export class ChallengeResolverFields {
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @ResolveField('storageBucket', () => IStorageBucket, {
+  @ResolveField('storageAggregator', () => IStorageAggregator, {
     nullable: true,
-    description: 'The StorageBucket with documents in use by this Challenge',
+    description: 'The StorageAggregator in use by this Challenge',
   })
   @UseGuards(GraphqlGuard)
-  async storageBucket(
-    @Parent() challenge: Challenge,
-    @Loader(ChallengeStorageBucketLoaderCreator) loader: ILoader<IStorageBucket>
-  ): Promise<IStorageBucket> {
-    return loader.load(challenge.id);
+  async storageAggregator(
+    @Parent() challenge: Challenge
+  ): Promise<IStorageAggregator> {
+    return await this.challengeService.getStorageAggregatorOrFail(challenge.id);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

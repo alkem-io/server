@@ -25,7 +25,8 @@ import {
   AgentLoaderCreator,
   ProfileLoaderCreator,
 } from '@core/dataloader/creators/loader.creators';
-import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
+import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
+import { UserStorageAggregatorLoaderCreator } from '@core/dataloader/creators/loader.creators/community/user.storage.aggregator.loader.creator';
 
 @Module({
   imports: [
@@ -44,7 +45,7 @@ import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.buck
     PreferenceSetModule,
     KonfigModule,
     MessagingModule,
-    StorageBucketModule,
+    StorageAggregatorModule,
     TypeOrmModule.forFeature([User]),
   ],
   providers: [
@@ -55,6 +56,7 @@ import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.buck
     UserResolverFields,
     AgentLoaderCreator,
     ProfileLoaderCreator,
+    UserStorageAggregatorLoaderCreator,
   ],
   exports: [UserService, UserAuthorizationService],
 })
