@@ -22,6 +22,11 @@ import { OpportunityService } from '@domain/collaboration/opportunity/opportunit
 import { InnovationFlowType } from '@common/enums/innovation.flow.type';
 import { DiscussionCategoryCommunity } from '@common/enums/communication.discussion.category.community';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { ICallout } from '@domain/collaboration/callout';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { ChallengeDisplayLocation } from '@common/enums/challenge.display.location';
+import { SpaceDisplayLocation } from '@common/enums/space.display.location';
+import { CommonDisplayLocation } from '@common/enums/common.display.location';
 
 export class ConversionService {
   constructor(
@@ -45,7 +50,13 @@ export class ConversionService {
           context: true,
           profile: true,
           collaboration: {
-            callouts: true,
+            callouts: {
+              framing: {
+                profile: {
+                  tagsets: true,
+                },
+              },
+            },
           },
           storageAggregator: true,
         },
@@ -93,9 +104,7 @@ export class ConversionService {
         community: true,
         context: true,
         profile: true,
-        collaboration: {
-          callouts: true,
-        },
+        collaboration: true,
         storageAggregator: true,
       },
     });
@@ -154,7 +163,8 @@ export class ConversionService {
     const spaceCollaboration = space.collaboration;
     space.collaboration = challengeCollaboration;
     challenge.collaboration = spaceCollaboration;
-    // todo: update display locations for callouts to use space locations
+    // Update display locations for callouts to use space locations
+    this.updateSpaceCalloutsDisplayLocation(space.collaboration.callouts);
 
     // Swap the profiles
     const challengeProfile = challenge.profile;
@@ -335,6 +345,54 @@ export class ConversionService {
 
     // Add the new challenge to the space
     return await this.spaceService.addChallengeToSpace(spaceID, challenge);
+  }
+
+  private updateSpaceCalloutsDisplayLocation(
+    callouts: ICallout[] | undefined
+  ): void {
+    if (!callouts) {
+      throw new EntityNotInitializedException(
+        'Callouts not defined',
+        LogContext.CONVERSION
+      );
+    }
+    for (const callout of callouts) {
+      if (
+        !callout.framing ||
+        !callout.framing.profile ||
+        !callout.framing.profile.tagsets
+      ) {
+        throw new EntityNotInitializedException(
+          `Unable to locate all child entities on callout: ${callout.nameID}`,
+          LogContext.CONVERSION
+        );
+      }
+
+      const locationTagset = callout.framing.profile.tagsets.find(
+        t => t.name === TagsetReservedName.CALLOUT_DISPLAY_LOCATION
+      );
+      if (!locationTagset || locationTagset.tags.length !== 1) {
+        throw new EntityNotInitializedException(
+          `Unable to locate all display location tagset on callout: ${callout.id}`,
+          LogContext.CONVERSION
+        );
+      }
+      const location = locationTagset.tags[0];
+      switch (location) {
+        case ChallengeDisplayLocation.OPPORTUNITIES_RIGHT:
+          locationTagset.tags = [SpaceDisplayLocation.CHALLENGES_RIGHT];
+          break;
+        case ChallengeDisplayLocation.OPPORTUNITIES_LEFT:
+          locationTagset.tags = [SpaceDisplayLocation.CHALLENGES_RIGHT];
+          break;
+        case ChallengeDisplayLocation.CONTRIBUTE_RIGHT:
+          locationTagset.tags = [CommonDisplayLocation.KNOWLEDGE];
+          break;
+        case ChallengeDisplayLocation.CONTRIBUTE:
+          locationTagset.tags = [CommonDisplayLocation.KNOWLEDGE];
+          break;
+      }
+    }
   }
 
   private async swapCommunication(
