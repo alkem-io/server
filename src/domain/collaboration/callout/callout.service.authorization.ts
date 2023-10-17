@@ -25,6 +25,7 @@ import {
 import { RoomAuthorizationService } from '@domain/communication/room/room.service.authorization';
 import { CalloutFramingAuthorizationService } from '../callout-framing/callout.framing.service.authorization';
 import { CalloutContributionAuthorizationService } from '../callout-contribution/callout.contribution.service.authorization';
+import { ICalloutContribution } from '../callout-contribution/callout.contribution.interface';
 
 @Injectable()
 export class CalloutAuthorizationService {
@@ -80,13 +81,17 @@ export class CalloutAuthorizationService {
 
     callout.authorization = this.appendCredentialRules(callout);
 
+    const contributions: ICalloutContribution[] = [];
     for (const contribution of callout.contributions) {
-      await this.contributionAuthorizationService.applyAuthorizationPolicy(
-        contribution,
-        callout.authorization,
-        communityPolicy
-      );
+      const updatedContribution =
+        await this.contributionAuthorizationService.applyAuthorizationPolicy(
+          contribution,
+          callout.authorization,
+          communityPolicy
+        );
+      contributions.push(updatedContribution);
     }
+    callout.contributions = contributions;
 
     callout.framing =
       await this.calloutFramingAuthorizationService.applyAuthorizationPolicy(
