@@ -109,7 +109,6 @@ export class SpaceService {
     // default to active space
     space.visibility = SpaceVisibility.ACTIVE;
 
-    // Set up the storage bucket as that is needed for Profile
     space.storageAggregator =
       await this.storageAggregatorService.createStorageAggregator();
 
@@ -265,14 +264,15 @@ export class SpaceService {
 
   async deleteSpace(deleteData: DeleteSpaceInput): Promise<ISpace> {
     const space = await this.getSpaceOrFail(deleteData.ID, {
-      relations: [
-        'challenges',
-        'preferenceSet',
-        'preferenceSet.preferences',
-        'templatesSet',
-        'profile',
-        'storageAggregator',
-      ],
+      relations: {
+        challenges: true,
+        preferenceSet: {
+          preferences: true,
+        },
+        templatesSet: true,
+        profile: true,
+        storageAggregator: true,
+      },
     });
 
     // Do not remove a space that has child challenges, require these to be individually first removed

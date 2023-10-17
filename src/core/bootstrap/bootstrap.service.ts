@@ -72,7 +72,7 @@ export class BootstrapService {
       await this.platformService.ensureCommunicationCreated();
       // reset auth as last in the actions
       await this.ensureAuthorizationsPopulated();
-      this.ensureSpaceNamesInElastic();
+      await this.ensureSpaceNamesInElastic();
     } catch (error: any) {
       this.logger.error(
         `Unable to complete bootstrap process: ${error}`,
@@ -212,7 +212,9 @@ export class BootstrapService {
   private async ensureSpaceNamesInElastic() {
     const spaces = await this.spaceService.getAllSpaces({
       relations: {
-        profile: true,
+        profile: {
+          location: true,
+        },
       },
     });
 
