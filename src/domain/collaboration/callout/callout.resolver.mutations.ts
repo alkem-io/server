@@ -9,13 +9,9 @@ import { CalloutService } from './callout.service';
 import { IPost } from '@domain/collaboration/post/post.interface';
 import {
   CalloutPostCreatedPayload,
-  CreatePostOnCalloutInput,
-  CreateWhiteboardOnCalloutInput,
   DeleteCalloutInput,
   UpdateCalloutInput,
 } from '@domain/collaboration/callout/dto';
-import { WhiteboardAuthorizationService } from '@domain/common/whiteboard/whiteboard.service.authorization';
-import { PostAuthorizationService } from '@domain/collaboration/post/post.service.authorization';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 import { SUBSCRIPTION_CALLOUT_POST_CREATED } from '@common/constants';
@@ -37,10 +33,10 @@ import { ActivityInputCalloutPostCreated } from '@services/adapters/activity-ada
 import { NotificationInputPostCreated } from '@services/adapters/notification-adapter/dto/notification.dto.input.post.created';
 import { NotificationInputWhiteboardCreated } from '@services/adapters/notification-adapter/dto/notification.dto.input.whiteboard.created';
 import { IReference } from '@domain/common/reference';
-import { CreateLinkOnCalloutInput } from './dto/callout.dto.create.link';
 import { ActivityInputCalloutLinkCreated } from '@services/adapters/activity-adapter/dto/activity.dto.input.callout.link.created';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { ReferenceService } from '@domain/common/reference/reference.service';
+import { CreateContributionOnCalloutInput } from './dto/callout.dto.create.contribution';
+import { ICalloutContribution } from '../callout-contribution/callout.contribution.interface';
+import { CalloutContributionAuthorizationService } from '../callout-contribution/callout.contribution.service.authorization';
 
 @Resolver()
 export class CalloutResolverMutations {
@@ -50,12 +46,9 @@ export class CalloutResolverMutations {
     private activityAdapter: ActivityAdapter,
     private notificationAdapter: NotificationAdapter,
     private authorizationService: AuthorizationService,
-    private authorizationPolicyService: AuthorizationPolicyService,
     private calloutService: CalloutService,
     private namingService: NamingService,
-    private whiteboardAuthorizationService: WhiteboardAuthorizationService,
-    private postAuthorizationService: PostAuthorizationService,
-    private referenceService: ReferenceService,
+    private contributionAuthorizationService: CalloutContributionAuthorizationService,
     @Inject(SUBSCRIPTION_CALLOUT_POST_CREATED)
     private postCreatedSubscription: PubSubEngine
   ) {}
@@ -95,7 +88,7 @@ export class CalloutResolverMutations {
       AuthorizationPrivilege.UPDATE,
       `update callout: ${callout.id}`
     );
-    return await this.calloutService.updateCallout(calloutData);
+    return await this.calloutService.updateCallout(calloutData, agentInfo);
   }
 
   @UseGuards(GraphqlGuard)
@@ -109,7 +102,7 @@ export class CalloutResolverMutations {
   ): Promise<ICallout> {
     const callout = await this.calloutService.getCalloutOrFail(
       calloutData.calloutID,
-      { relations: ['profile'] }
+      { relations: ['framing'] }
     );
     this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -177,152 +170,95 @@ export class CalloutResolverMutations {
   }
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => IPost, {
-    description: 'Create a new Post on the Callout.',
+  @Mutation(() => ICalloutContribution, {
+    description: 'Create a new Contribution on the Callout.',
   })
   @Profiling.api
-  async createPostOnCallout(
+  async createContributionOnCallout(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('postData') postData: CreatePostOnCalloutInput
-  ): Promise<IPost> {
+    @Args('contributionData') contributionData: CreateContributionOnCalloutInput
+  ): Promise<ICalloutContribution> {
     const callout = await this.calloutService.getCalloutOrFail(
-      postData.calloutID
+      contributionData.calloutID
     );
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       callout.authorization,
-      AuthorizationPrivilege.CREATE_POST,
-      `create post on callout: ${callout.id}`
+      AuthorizationPrivilege.CONTRIBUTE,
+      `create contribution on callout: ${callout.id}`
     );
 
-    if (callout.state === CalloutState.CLOSED) {
-      throw new CalloutClosedException(
-        `New collaborations to a closed Callout with id: '${callout.id}' are not allowed!`
-      );
+    if (callout.contributionPolicy.state === CalloutState.CLOSED) {
+      if (
+        !this.authorizationService.grantAccessOrFail(
+          agentInfo,
+          callout.authorization,
+          AuthorizationPrivilege.UPDATE,
+          `create contribution on callout: ${callout.id}`
+        )
+      )
+        throw new CalloutClosedException(
+          `New contributions to a closed Callout with id: '${callout.id}' are not allowed!`
+        );
     }
 
-    let post = await this.calloutService.createPostOnCallout(
-      postData,
+    let contribution = await this.calloutService.createContributionOnCallout(
+      contributionData,
       agentInfo.userID
     );
 
     const communityPolicy =
       await this.namingService.getCommunityPolicyForCallout(callout.id);
-    post = await this.postAuthorizationService.applyAuthorizationPolicy(
-      post,
-      callout.authorization,
-      communityPolicy
-    );
-    const postCreatedEvent: CalloutPostCreatedPayload = {
-      eventID: `callout-post-created-${Math.round(Math.random() * 100)}`,
-      calloutID: callout.id,
-      post,
-    };
-    await this.postCreatedSubscription.publish(
-      SubscriptionType.CALLOUT_POST_CREATED,
-      postCreatedEvent
-    );
+    contribution =
+      await this.contributionAuthorizationService.applyAuthorizationPolicy(
+        contribution,
+        callout.authorization,
+        communityPolicy
+      );
 
-    if (callout.visibility === CalloutVisibility.PUBLISHED) {
-      this.processActivityPostCreated(callout, post, agentInfo);
+    if (contributionData.post && contribution.post) {
+      const postCreatedEvent: CalloutPostCreatedPayload = {
+        eventID: `callout-post-created-${Math.round(Math.random() * 100)}`,
+        calloutID: callout.id,
+        post: contribution.post,
+      };
+      await this.postCreatedSubscription.publish(
+        SubscriptionType.CALLOUT_POST_CREATED,
+        postCreatedEvent
+      );
+
+      if (callout.visibility === CalloutVisibility.PUBLISHED) {
+        this.processActivityPostCreated(
+          callout,
+          contribution,
+          contribution.post,
+          agentInfo
+        );
+      }
     }
 
-    return post;
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IWhiteboard, {
-    description: 'Create a new Whiteboard on the Callout.',
-  })
-  @Profiling.api
-  async createWhiteboardOnCallout(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('whiteboardData') whiteboardData: CreateWhiteboardOnCalloutInput
-  ): Promise<IWhiteboard> {
-    const callout = await this.calloutService.getCalloutOrFail(
-      whiteboardData.calloutID
-    );
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      callout.authorization,
-      AuthorizationPrivilege.CREATE_WHITEBOARD,
-      `create whiteboard on callout: ${callout.id}`
-    );
-
-    if (callout.state === CalloutState.CLOSED) {
-      throw new CalloutClosedException(
-        `New collaborations to a closed Callout with id: '${callout.id}' are not allowed!`
-      );
+    if (contributionData.link && contribution.link) {
+      if (callout.visibility === CalloutVisibility.PUBLISHED) {
+        await this.processActivityLinkCreated(
+          callout,
+          contribution.link,
+          agentInfo
+        );
+      }
     }
 
-    const whiteboard = await this.calloutService.createWhiteboardOnCallout(
-      whiteboardData,
-      agentInfo.userID
-    );
-
-    const authorizedWhiteboard =
-      await this.whiteboardAuthorizationService.applyAuthorizationPolicy(
-        whiteboard,
-        callout.authorization
-      );
-
-    if (callout.visibility === CalloutVisibility.PUBLISHED) {
-      this.processActivityWhiteboardCreated(
-        callout,
-        authorizedWhiteboard,
-        agentInfo
-      );
+    if (contributionData.whiteboard && contribution.whiteboard) {
+      if (callout.visibility === CalloutVisibility.PUBLISHED) {
+        this.processActivityWhiteboardCreated(
+          callout,
+          contribution,
+          contribution.whiteboard,
+          agentInfo
+        );
+      }
     }
 
-    return authorizedWhiteboard;
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IReference, {
-    description: 'Create a new Link on the Callout.',
-  })
-  @Profiling.api
-  async createLinkOnCallout(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('linkData') linkData: CreateLinkOnCalloutInput
-  ): Promise<IReference> {
-    const callout = await this.calloutService.getCalloutOrFail(
-      linkData.calloutID,
-      { relations: ['profile'] }
-    );
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      callout.authorization,
-      AuthorizationPrivilege.CREATE,
-      `create link on callout: ${callout.id}`
-    );
-
-    // todo: no check needed as for now a callout collection of links cannot be close; will be needed later.
-    // if (callout.state === CalloutState.CLOSED) {
-    //   throw new CalloutClosedException(
-    //     `New collaborations to a closed Callout with id: '${callout.id}' are not allowed!`
-    //   );
-    // }
-
-    const reference = await this.calloutService.createLinkOnCallout(linkData);
-    reference.authorization =
-      await this.authorizationPolicyService.inheritParentAuthorization(
-        reference.authorization,
-        callout.profile.authorization
-      );
-    const referenceAuthorized = await this.referenceService.saveReference(
-      reference
-    );
-
-    if (callout.visibility === CalloutVisibility.PUBLISHED) {
-      await this.processActivityLinkCreated(
-        callout,
-        referenceAuthorized,
-        agentInfo
-      );
-    }
-
-    return referenceAuthorized;
+    return contribution;
   }
 
   private async processActivityLinkCreated(
@@ -357,10 +293,13 @@ export class CalloutResolverMutations {
 
   private async processActivityWhiteboardCreated(
     callout: ICallout,
+    contribution: ICalloutContribution,
     whiteboard: IWhiteboard,
     agentInfo: AgentInfo
   ) {
     const notificationInput: NotificationInputWhiteboardCreated = {
+      contribution: contribution,
+      callout: callout,
       whiteboard: whiteboard,
       triggeredBy: agentInfo.userID,
     };
@@ -392,10 +331,13 @@ export class CalloutResolverMutations {
 
   private async processActivityPostCreated(
     callout: ICallout,
+    contribution: ICalloutContribution,
     post: IPost,
     agentInfo: AgentInfo
   ) {
     const notificationInput: NotificationInputPostCreated = {
+      contribution: contribution,
+      callout: callout,
       post: post,
       triggeredBy: agentInfo.userID,
     };

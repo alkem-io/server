@@ -1,23 +1,30 @@
 import { Field, InputType } from '@nestjs/graphql';
 import { CalloutType } from '@common/enums/callout.type';
-import { CalloutState } from '@common/enums/callout.state';
-import { CreateProfileInput } from '@domain/common/profile/dto/profile.dto.create';
-import { IsOptional, ValidateNested } from 'class-validator';
+import { ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
-import { CreatePostTemplateInput } from '@domain/template/post-template/dto/post.template.dto.create';
-import { CreateWhiteboardTemplateInput } from '@domain/template/whiteboard-template/dto/whiteboard.template.dto.create';
 import { NameID } from '@domain/common/scalars/scalar.nameid';
-import { CreateWhiteboardInput } from '@domain/common/whiteboard/dto/whiteboard.dto.create';
 import { CalloutDisplayLocation } from '@common/enums/callout.display.location';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
-import { CreateWhiteboardRtInput } from '@domain/common/whiteboard-rt/dto/whiteboard.rt.dto.create';
+import { CreateCalloutFramingInput } from '@domain/collaboration/callout-framing/dto';
+import { CreateCalloutContributionDefaultsInput } from '@domain/collaboration/callout-contribution-defaults/dto';
+import { CreateCalloutContributionPolicyInput } from '@domain/collaboration/callout-contribution-policy/dto/callout.contribution.policy.dto.create';
 
 @InputType()
 export class CreateCalloutInput {
-  @Field(() => CreateProfileInput, { nullable: false })
+  @Field(() => CreateCalloutFramingInput, { nullable: false })
   @ValidateNested({ each: true })
-  @Type(() => CreateProfileInput)
-  profile!: CreateProfileInput;
+  @Type(() => CreateCalloutFramingInput)
+  framing!: CreateCalloutFramingInput;
+
+  @Field(() => CreateCalloutContributionDefaultsInput, { nullable: true })
+  @ValidateNested({ each: true })
+  @Type(() => CreateCalloutContributionDefaultsInput)
+  contributionDefaults?: CreateCalloutContributionDefaultsInput;
+
+  @Field(() => CreateCalloutContributionPolicyInput, { nullable: true })
+  @ValidateNested({ each: true })
+  @Type(() => CreateCalloutContributionPolicyInput)
+  contributionPolicy?: CreateCalloutContributionPolicyInput;
 
   @Field(() => NameID, {
     nullable: true,
@@ -29,12 +36,6 @@ export class CreateCalloutInput {
     description: 'Callout type.',
   })
   type!: CalloutType;
-
-  @Field(() => CalloutState, {
-    nullable: true,
-    description: 'State of the callout.',
-  })
-  state!: CalloutState;
 
   @Field(() => CalloutDisplayLocation, {
     nullable: true,
@@ -60,32 +61,4 @@ export class CreateCalloutInput {
       'Send notification if this flag is true and visibility is PUBLISHED. Defaults to false.',
   })
   sendNotification?: boolean;
-
-  @Field(() => CreatePostTemplateInput, {
-    nullable: true,
-    description: 'PostTemplate data for Post Callouts.',
-  })
-  postTemplate?: CreatePostTemplateInput;
-
-  @Field(() => CreateWhiteboardTemplateInput, {
-    nullable: true,
-    description: 'WhiteboardTemplate data for whiteboard Callouts.',
-  })
-  whiteboardTemplate?: CreateWhiteboardTemplateInput;
-
-  @Field(() => CreateWhiteboardInput, {
-    nullable: true,
-    description: 'Whiteboard data for whiteboard Callouts.',
-  })
-  whiteboard?: CreateWhiteboardInput;
-
-  @Field(() => CreateWhiteboardRtInput, {
-    nullable: true,
-    description: 'Whiteboard data for real time whiteboard Callouts.',
-  })
-  whiteboardRt?: CreateWhiteboardRtInput;
-
-  @Field(() => [String], { nullable: true })
-  @IsOptional()
-  tags?: string[];
 }

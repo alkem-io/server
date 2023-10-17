@@ -10,67 +10,56 @@ import {
   EntityNotInitializedException,
   ValidationException,
 } from '@common/exceptions';
-import { LogContext, ProfileType } from '@common/enums';
+import { LogContext } from '@common/enums';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import {
   CreateCalloutInput,
-  CreatePostOnCalloutInput,
-  CreateWhiteboardOnCalloutInput,
   UpdateCalloutInput,
 } from '@domain/collaboration/callout/dto/index';
-import { IPost } from '@domain/collaboration/post/post.interface';
-import { PostService } from '@domain/collaboration/post/post.service';
-import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
 import { limitAndShuffle } from '@common/utils';
-import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 import { CalloutType } from '@common/enums/callout.type';
 import { UpdateCalloutVisibilityInput } from './dto/callout.dto.update.visibility';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
-import { IProfile } from '@domain/common/profile/profile.interface';
-import { ProfileService } from '@domain/common/profile/profile.service';
-import { PostTemplateService } from '@domain/template/post-template/post.template.service';
-import { WhiteboardTemplateService } from '@domain/template/whiteboard-template/whiteboard.template.service';
-import { IWhiteboardTemplate } from '@domain/template/whiteboard-template/whiteboard.template.interface';
-import { IPostTemplate } from '@domain/template/post-template/post.template.interface';
-import { VisualType } from '@common/enums/visual.type';
 import { RoomService } from '@domain/communication/room/room.service';
 import { RoomType } from '@common/enums/room.type';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { ITagsetTemplate } from '@domain/common/tagset-template';
-import { TagsetType } from '@common/enums/tagset.type';
-import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { CreateTagsetInput } from '@domain/common/tagset';
-import { CalloutDisplayLocation } from '@common/enums/callout.display.location';
-import { IReference } from '@domain/common/reference';
-import { CreateLinkOnCalloutInput } from './dto/callout.dto.create.link';
-import { CreateReferenceOnProfileInput } from '@domain/common/profile/dto/profile.dto.create.reference';
-import { CreateWhiteboardInput } from '@domain/common/whiteboard';
-import { WhiteboardRtService } from '@domain/common/whiteboard-rt';
-import { CreateWhiteboardRtInput } from '@domain/common/whiteboard-rt/types';
 import { UserLookupService } from '@services/infrastructure/user-lookup/user.lookup.service';
+import { CalloutFramingService } from '../callout-framing/callout.framing.service';
+import { ICalloutFraming } from '../callout-framing/callout.framing.interface';
+import { CalloutContributionDefaultsService } from '../callout-contribution-defaults/callout.contribution.defaults.service';
+import { CalloutContributionPolicyService } from '../callout-contribution-policy/callout.contribution.policy.service';
+import { AgentInfo } from '@core/authentication';
+import { ICalloutContribution } from '../callout-contribution/callout.contribution.interface';
+import { CreateContributionOnCalloutInput } from './dto/callout.dto.create.contribution';
+import { CalloutContributionService } from '../callout-contribution/callout.contribution.service';
+import { CreateWhiteboardInput } from '@domain/common/whiteboard/dto/whiteboard.dto.create';
+import { CreatePostInput } from '../post/dto/post.dto.create';
+import { ICalloutContributionPolicy } from '../callout-contribution-policy/callout.contribution.policy.interface';
+import { ICalloutContributionDefaults } from '../callout-contribution-defaults/callout.contribution.defaults.interface';
+import { CalloutContributionFilterArgs } from '../callout-contribution/dto/callout.contribution.args.filter';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
-import { IWhiteboardRt } from '@domain/common/whiteboard-rt/whiteboard.rt.interface';
+import { PostService } from '../post/post.service';
 
 @Injectable()
 export class CalloutService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
-    private postService: PostService,
-    private postTemplateService: PostTemplateService,
-    private whiteboardTemplateService: WhiteboardTemplateService,
-    private whiteboardService: WhiteboardService,
-    private whiteboardRtService: WhiteboardRtService,
     private namingService: NamingService,
     private roomService: RoomService,
     private userLookupService: UserLookupService,
+    private calloutFramingService: CalloutFramingService,
+    private contributionDefaultsService: CalloutContributionDefaultsService,
+    private contributionPolicyService: CalloutContributionPolicyService,
+    private contributionService: CalloutContributionService,
     private storageAggregatorResolverService: StorageAggregatorResolverService,
-    private profileService: ProfileService,
+    private postService: PostService,
     @InjectRepository(Callout)
     private calloutRepository: Repository<Callout>
   ) {}
@@ -81,99 +70,52 @@ export class CalloutService {
     storageAggregator: IStorageAggregator,
     userID?: string
   ): Promise<ICallout> {
-    if (
-      calloutData.type == CalloutType.POST_COLLECTION &&
-      !calloutData.postTemplate
-    ) {
-      throw new Error('Please provide a post template');
-    }
-
-    if (
-      calloutData.type == CalloutType.WHITEBOARD_COLLECTION &&
-      !calloutData.whiteboardTemplate
-    ) {
-      throw new Error('Please provide a whiteboard template');
-    }
-
-    if (calloutData.type == CalloutType.WHITEBOARD && !calloutData.whiteboard) {
-      throw new Error('Please provide a whiteboard');
-    }
-
-    if (
-      calloutData.type == CalloutType.WHITEBOARD_RT &&
-      !calloutData.whiteboardRt
-    ) {
-      throw new Error('Please provide a whiteboard for real time');
-    }
+    this.validateCreateCalloutData(calloutData);
 
     if (!calloutData.sortOrder) {
       calloutData.sortOrder = 10;
     }
-
-    // Save the post template data for creation via service
-    // Note: do NOT save the callout post template that is created through ORM creation flow,
-    // as otherwise get a postTemplate created without any child entities (auth etc)
-    const postTemplateData = calloutData.postTemplate;
-    const whiteboardTemplateData = calloutData.whiteboardTemplate;
     const calloutNameID = this.namingService.createNameID(
-      `${calloutData.profile.displayName}`
+      `${calloutData.framing.profile.displayName}`
     );
     const calloutCreationData = {
       ...calloutData,
       nameID: calloutData.nameID ?? calloutNameID,
     };
+
     const callout: ICallout = Callout.create(calloutCreationData);
+    callout.authorization = new AuthorizationPolicy();
+    callout.createdBy = userID ?? undefined;
+    callout.visibility = calloutData.visibility ?? CalloutVisibility.DRAFT;
+    callout.contributions = [];
 
-    // To consider also having the default tagset as a template tagset
-    const defaultTagset: CreateTagsetInput = {
-      name: TagsetReservedName.DEFAULT,
-      type: TagsetType.FREEFORM,
-      tags: calloutData.tags,
-    };
-    const tagsetInputsFromTemplates =
-      this.profileService.convertTagsetTemplatesToCreateTagsetInput(
-        tagsetTemplates
-      );
-    const tagsetInputs = [defaultTagset, ...tagsetInputsFromTemplates];
-
-    calloutData.profile.tagsets = this.profileService.updateProfileTagsetInputs(
-      calloutData.profile.tagsets,
-      tagsetInputs
+    callout.framing = await this.calloutFramingService.createCalloutFraming(
+      calloutData.framing,
+      tagsetTemplates,
+      storageAggregator,
+      userID
     );
-
-    callout.profile = await this.profileService.createProfile(
-      calloutData.profile,
-      ProfileType.CALLOUT,
-      storageAggregator
-    );
-
     if (calloutData.displayLocation) {
-      this.updateCalloutDisplayLocationTagsetValue(
-        callout,
+      this.calloutFramingService.updateDisplayLocationTagsetValue(
+        callout.framing,
         calloutData.displayLocation
       );
     }
 
-    if (calloutData.type == CalloutType.POST_COLLECTION && postTemplateData) {
-      callout.postTemplate = await this.postTemplateService.createPostTemplate(
-        postTemplateData,
-        storageAggregator
+    callout.contributionDefaults =
+      this.contributionDefaultsService.createCalloutContributionDefaults(
+        calloutData.contributionDefaults
       );
-    }
-    if (
-      calloutData.type == CalloutType.WHITEBOARD_COLLECTION &&
-      whiteboardTemplateData
-    ) {
-      callout.whiteboardTemplate =
-        await this.whiteboardTemplateService.createWhiteboardTemplate(
-          whiteboardTemplateData,
-          storageAggregator
-        );
-    }
 
-    callout.authorization = new AuthorizationPolicy();
-    callout.createdBy = userID ?? undefined;
-    callout.visibility = calloutData.visibility ?? CalloutVisibility.DRAFT;
+    const policyData =
+      this.contributionPolicyService.updateContributionPolicyInput(
+        calloutData.type,
+        calloutData.contributionPolicy
+      );
+    callout.contributionPolicy =
+      this.contributionPolicyService.createCalloutContributionPolicy(
+        policyData
+      );
 
     if (calloutData.type === CalloutType.POST) {
       callout.comments = await this.roomService.createRoom(
@@ -182,27 +124,39 @@ export class CalloutService {
       );
     }
 
-    if (calloutData.type == CalloutType.WHITEBOARD && calloutData.whiteboard) {
-      const whiteboard = await this.createWhiteboardForCallout(
-        calloutData.whiteboard,
-        storageAggregator,
-        userID
+    return this.calloutRepository.save(callout);
+  }
+
+  private validateCreateCalloutData(calloutData: CreateCalloutInput) {
+    if (
+      calloutData.type == CalloutType.WHITEBOARD_COLLECTION &&
+      !calloutData.contributionDefaults?.whiteboardContent
+    ) {
+      throw new ValidationException(
+        'Please provide a whiteboard template',
+        LogContext.COLLABORATION
       );
-      callout.whiteboards = [whiteboard];
+    }
+
+    if (
+      calloutData.type == CalloutType.WHITEBOARD &&
+      !calloutData.framing.whiteboard
+    ) {
+      throw new ValidationException(
+        'Please provide a whiteboard',
+        LogContext.COLLABORATION
+      );
     }
 
     if (
       calloutData.type == CalloutType.WHITEBOARD_RT &&
-      calloutData.whiteboardRt
+      !calloutData.framing.whiteboardRt
     ) {
-      callout.whiteboardRt = await this.createWhiteboardRtForCallout(
-        calloutData.whiteboardRt,
-        storageAggregator,
-        userID
+      throw new ValidationException(
+        'Please provide a whiteboard for real time',
+        LogContext.COLLABORATION
       );
     }
-
-    return this.calloutRepository.save(callout);
   }
 
   private async getStorageAggregator(
@@ -211,58 +165,6 @@ export class CalloutService {
     return await this.storageAggregatorResolverService.getStorageAggregatorForCallout(
       callout.id
     );
-  }
-
-  private async createWhiteboardForCallout(
-    data: CreateWhiteboardInput,
-    storageAggregator: IStorageAggregator,
-    authorID?: string
-  ) {
-    const whiteboardNameID = this.namingService.createNameID(
-      `${data.profileData.displayName}`
-    );
-
-    const whiteboard = await this.whiteboardService.createWhiteboard(
-      {
-        nameID: whiteboardNameID,
-        content: data.content,
-        profileData: data.profileData,
-      },
-      storageAggregator,
-      authorID
-    );
-    await this.profileService.addVisualOnProfile(
-      whiteboard.profile,
-      VisualType.BANNER
-    );
-
-    return whiteboard;
-  }
-
-  private async createWhiteboardRtForCallout(
-    data: CreateWhiteboardRtInput,
-    storageAggregator: IStorageAggregator,
-    authorID?: string
-  ) {
-    const whiteboardRtNameID = this.namingService.createNameID(
-      `${data.profileData.displayName}`
-    );
-
-    const whiteboardRt = await this.whiteboardRtService.createWhiteboardRt(
-      {
-        nameID: whiteboardRtNameID,
-        content: data.content,
-        profileData: data.profileData,
-      },
-      storageAggregator,
-      authorID
-    );
-    await this.profileService.addVisualOnProfile(
-      whiteboardRt.profile,
-      VisualType.BANNER
-    );
-
-    return whiteboardRt;
   }
 
   public async getCalloutOrFail(
@@ -321,80 +223,55 @@ export class CalloutService {
   }
 
   public async updateCallout(
-    calloutUpdateData: UpdateCalloutInput
+    calloutUpdateData: UpdateCalloutInput,
+    agentInfo: AgentInfo
   ): Promise<ICallout> {
     const callout = await this.getCalloutOrFail(calloutUpdateData.ID, {
-      relations: [
-        'postTemplate',
-        'whiteboardTemplate',
-        'postTemplate.profile',
-        'whiteboardTemplate.profile',
-        'profile',
-      ],
+      relations: ['contributionDefaults', 'contributionPolicy', 'framing'],
     });
 
-    if (calloutUpdateData.profileData) {
-      callout.profile = await this.profileService.updateProfile(
-        callout.profile,
-        calloutUpdateData.profileData
+    if (!callout.contributionDefaults || !callout.contributionPolicy) {
+      throw new EntityNotInitializedException(
+        `Unable to load callout: ${callout.id}`,
+        LogContext.COLLABORATION
       );
     }
 
-    if (calloutUpdateData.state) callout.state = calloutUpdateData.state;
+    if (calloutUpdateData.framing) {
+      callout.framing = await this.calloutFramingService.updateCalloutFraming(
+        callout.framing,
+        calloutUpdateData.framing,
+        agentInfo
+      );
+    }
+
+    if (calloutUpdateData.contributionPolicy) {
+      callout.contributionPolicy =
+        this.contributionPolicyService.updateCalloutContributionPolicy(
+          callout.contributionPolicy,
+          calloutUpdateData.contributionPolicy
+        );
+    }
+
+    if (calloutUpdateData.contributionDefaults) {
+      callout.contributionDefaults =
+        this.contributionDefaultsService.updateCalloutContributionDefaults(
+          callout.contributionDefaults,
+          calloutUpdateData.contributionDefaults
+        );
+    }
 
     if (calloutUpdateData.sortOrder)
       callout.sortOrder = calloutUpdateData.sortOrder;
 
-    if (
-      callout.type == CalloutType.POST_COLLECTION &&
-      callout.postTemplate &&
-      calloutUpdateData.postTemplate
-    ) {
-      callout.postTemplate = await this.postTemplateService.updatePostTemplate(
-        callout.postTemplate,
-        { ID: callout.postTemplate.id, ...calloutUpdateData.postTemplate }
-      );
-    }
-
-    if (
-      callout.type == CalloutType.WHITEBOARD_COLLECTION &&
-      callout.whiteboardTemplate &&
-      calloutUpdateData.whiteboardTemplate
-    ) {
-      callout.whiteboardTemplate =
-        await this.whiteboardTemplateService.updateWhiteboardTemplate(
-          callout.whiteboardTemplate,
-          {
-            ID: callout.whiteboardTemplate.id,
-            ...calloutUpdateData.whiteboardTemplate,
-          }
-        );
-    }
-
     if (calloutUpdateData.displayLocation) {
-      this.updateCalloutDisplayLocationTagsetValue(
-        callout,
+      this.calloutFramingService.updateDisplayLocationTagsetValue(
+        callout.framing,
         calloutUpdateData.displayLocation
       );
     }
 
     return await this.calloutRepository.save(callout);
-  }
-
-  updateCalloutDisplayLocationTagsetValue(
-    callout: ICallout,
-    group: CalloutDisplayLocation
-  ) {
-    const displayLocationTagset = callout.profile.tagsets?.find(
-      tagset => tagset.name === TagsetReservedName.CALLOUT_DISPLAY_LOCATION
-    );
-    if (!displayLocationTagset) {
-      throw new EntityNotFoundException(
-        `Callout display location tagset not found for profile: ${callout.profile.id}`,
-        LogContext.TAGSET
-      );
-    }
-    displayLocationTagset.tags = [group];
   }
 
   async save(callout: ICallout): Promise<ICallout> {
@@ -404,51 +281,35 @@ export class CalloutService {
   public async deleteCallout(calloutID: string): Promise<ICallout> {
     const callout = await this.getCalloutOrFail(calloutID, {
       relations: {
-        posts: true,
-        whiteboards: true,
-        whiteboardRt: true,
         comments: true,
-        postTemplate: true,
-        whiteboardTemplate: true,
-        profile: true,
+        contributions: true,
+        contributionDefaults: true,
+        contributionPolicy: true,
+        framing: true,
       },
     });
 
-    if (callout.profile) {
-      await this.profileService.deleteProfile(callout.profile.id);
-    }
-
-    if (callout.whiteboards) {
-      for (const whiteboard of callout.whiteboards) {
-        await this.whiteboardService.deleteWhiteboard(whiteboard.id);
-      }
-    }
-
-    if (callout.whiteboardRt) {
-      await this.whiteboardRtService.deleteWhiteboardRt(
-        callout.whiteboardRt.id
+    if (
+      !callout.contributionDefaults ||
+      !callout.contributionPolicy ||
+      !callout.contributions ||
+      !callout.comments
+    ) {
+      throw new EntityNotInitializedException(
+        `Unable to load callout: ${callout.id}`,
+        LogContext.COLLABORATION
       );
     }
 
-    if (callout.posts) {
-      for (const post of callout.posts) {
-        await this.postService.deletePost({ ID: post.id });
-      }
+    await this.calloutFramingService.delete(callout.framing);
+    for (const contribution of callout.contributions) {
+      await this.contributionService.delete(contribution);
     }
 
-    if (callout.comments) {
-      await this.roomService.deleteRoom(callout.comments);
-    }
+    await this.roomService.deleteRoom(callout.comments);
 
-    if (callout.postTemplate) {
-      await this.postTemplateService.deletePostTemplate(callout.postTemplate);
-    }
-
-    if (callout.whiteboardTemplate) {
-      await this.whiteboardTemplateService.deleteWhiteboardTemplate(
-        callout.whiteboardTemplate
-      );
-    }
+    await this.contributionDefaultsService.delete(callout.contributionDefaults);
+    await this.contributionPolicyService.delete(callout.contributionPolicy);
 
     if (callout.authorization)
       await this.authorizationPolicyService.delete(callout.authorization);
@@ -459,52 +320,27 @@ export class CalloutService {
     return result;
   }
 
-  public async getProfile(
-    calloutInput: ICallout,
-    relations: FindOptionsRelationByString = []
-  ): Promise<IProfile> {
-    const callout = await this.getCalloutOrFail(calloutInput.id, {
-      relations: ['profile', ...relations],
-    });
-    if (!callout.profile)
-      throw new EntityNotFoundException(
-        `Callout profile not initialised: ${calloutInput.id}`,
-        LogContext.COLLABORATION
-      );
-
-    return callout.profile;
-  }
-
   public async getActivityCount(callout: ICallout): Promise<number> {
     const result = 0;
-    if (callout.type === CalloutType.POST_COLLECTION) {
-      return await this.postService.getPostsInCalloutCount(callout.id);
-    } else if (callout.type === CalloutType.WHITEBOARD_COLLECTION) {
-      return await this.whiteboardService.getWhiteboardsInCalloutCount(
-        callout.id
-      );
-    } else if (callout.type === CalloutType.LINK_COLLECTION) {
-      return await this.getReferencesCountInLinkCallout(callout.id);
-    } else {
-      const comments = await this.getComments(callout.id);
-      if (comments) {
-        return comments.messagesCount;
-      }
+    switch (callout.type) {
+      case CalloutType.POST_COLLECTION:
+      case CalloutType.WHITEBOARD_COLLECTION:
+      case CalloutType.LINK_COLLECTION:
+        return await this.contributionService.getContributionsInCalloutCount(
+          callout.id
+        );
     }
+
+    const comments = await this.getComments(callout.id);
+    if (comments) {
+      return comments.messagesCount;
+    }
+
     return result;
   }
 
-  private async getReferencesCountInLinkCallout(calloutId: string) {
-    const callout = await this.calloutRepository.findOne({
-      where: { id: calloutId },
-      relations: { profile: { references: true } },
-    });
-
-    return callout?.profile.references?.length ?? 0;
-  }
-
   private async setNameIdOnPostData(
-    postData: CreatePostOnCalloutInput,
+    postData: CreatePostInput,
     callout: ICallout
   ) {
     if (postData.nameID && postData.nameID.length > 0) {
@@ -536,51 +372,32 @@ export class CalloutService {
       );
   }
 
-  public async createPostOnCallout(
-    postData: CreatePostOnCalloutInput,
-    userID: string
-  ): Promise<IPost> {
-    const calloutID = postData.calloutID;
+  public async getContributionPolicy(
+    calloutID: string
+  ): Promise<ICalloutContributionPolicy> {
     const callout = await this.getCalloutOrFail(calloutID, {
-      relations: ['profile', 'posts', 'posts.profile'],
+      relations: ['contributionPolicy'],
     });
-    if (!callout.posts || !callout.profile)
+    if (!callout.contributionPolicy)
       throw new EntityNotInitializedException(
-        `Callout (${calloutID}) not initialised`,
+        `Callout (${calloutID}) not initialised as it does not have contribution policy`,
         LogContext.COLLABORATION
       );
-
-    await this.setNameIdOnPostData(postData, callout);
-
-    const storageAggregator = await this.getStorageAggregator(callout);
-    const post = await this.postService.createPost(
-      postData,
-      storageAggregator,
-      userID
-    );
-    callout.posts.push(post);
-    await this.calloutRepository.save(callout);
-    return post;
+    return callout.contributionPolicy;
   }
 
-  public async createLinkOnCallout(
-    linkData: CreateLinkOnCalloutInput
-  ): Promise<IReference> {
-    const calloutID = linkData.calloutID;
+  public async getContributionDefaults(
+    calloutID: string
+  ): Promise<ICalloutContributionDefaults> {
     const callout = await this.getCalloutOrFail(calloutID, {
-      relations: ['profile', 'profile.references'],
+      relations: ['contributionDefaults'],
     });
-    if (!callout.profile || !callout.profile.references)
+    if (!callout.contributionDefaults)
       throw new EntityNotInitializedException(
-        `Callout (${calloutID}) not initialised`,
+        `Callout (${calloutID}) not initialised as no contribution defaults`,
         LogContext.COLLABORATION
       );
-    const referenceInput: CreateReferenceOnProfileInput = {
-      profileID: callout.profile.id,
-      ...linkData,
-    };
-    const reference = await this.profileService.createReference(referenceInput);
-    return reference;
+    return callout.contributionDefaults;
   }
 
   public async getComments(calloutID: string): Promise<IRoom | undefined> {
@@ -591,7 +408,7 @@ export class CalloutService {
   }
 
   private async setNameIdOnWhiteboardData(
-    whiteboardData: CreateWhiteboardOnCalloutInput,
+    whiteboardData: CreateWhiteboardInput,
     callout: ICallout
   ) {
     if (whiteboardData.nameID && whiteboardData.nameID.length > 0) {
@@ -612,152 +429,141 @@ export class CalloutService {
     }
   }
 
-  public async createWhiteboardOnCallout(
-    whiteboardData: CreateWhiteboardOnCalloutInput,
+  public async createContributionOnCallout(
+    contributionData: CreateContributionOnCalloutInput,
     userID: string
-  ): Promise<IWhiteboard> {
-    const calloutID = whiteboardData.calloutID;
+  ): Promise<ICalloutContribution> {
+    const calloutID = contributionData.calloutID;
     const callout = await this.getCalloutOrFail(calloutID, {
-      relations: ['profile', 'whiteboards'],
+      relations: ['contributions', 'contributionPolicy'],
     });
-    if (!callout.whiteboards)
+    if (!callout.contributions || !callout.contributionPolicy)
       throw new EntityNotInitializedException(
-        `Callout (${calloutID}) not initialised`,
+        `Callout (${calloutID}) not initialised as no contributions`,
         LogContext.COLLABORATION
       );
 
-    if (callout.type == CalloutType.WHITEBOARD && callout.whiteboards[0]) {
-      throw new Error(
-        'Whiteboard Callout cannot have more than one whiteboard'
-      );
+    if (contributionData.whiteboard) {
+      this.setNameIdOnWhiteboardData(contributionData.whiteboard, callout);
+    }
+    if (contributionData.post) {
+      this.setNameIdOnPostData(contributionData.post, callout);
     }
 
-    this.setNameIdOnWhiteboardData(whiteboardData, callout);
-
-    const storageBucket = await this.getStorageAggregator(callout);
-    const whiteboard = await this.whiteboardService.createWhiteboard(
-      {
-        nameID: whiteboardData.nameID,
-        content: whiteboardData.content,
-        profileData: whiteboardData.profileData,
-      },
-      storageBucket,
-      userID
-    );
-    callout.whiteboards.push(whiteboard);
+    const storageAggregator = await this.getStorageAggregator(callout);
+    const contribution =
+      await this.contributionService.createCalloutContribution(
+        contributionData,
+        storageAggregator,
+        callout.contributionPolicy,
+        userID,
+        callout.framing.profile.id
+      );
+    callout.contributions.push(contribution);
     await this.calloutRepository.save(callout);
-    return whiteboard;
+
+    return contribution;
   }
 
-  public async getWhiteboardsFromCallout(
+  public async getCalloutFraming(
+    calloutID: string,
+    relations: FindOptionsRelationByString = []
+  ): Promise<ICalloutFraming> {
+    const calloutLoaded = await this.getCalloutOrFail(calloutID, {
+      relations: ['framing', ...relations],
+    });
+    if (!calloutLoaded.framing)
+      throw new EntityNotFoundException(
+        `Callout not initialised, no framing: ${calloutID}`,
+        LogContext.COLLABORATION
+      );
+
+    return calloutLoaded.framing;
+  }
+
+  public async getContributions(
     callout: ICallout,
     relations: FindOptionsRelationByString = [],
-    whiteboardIDs?: string[],
+    contributionIDs?: string[],
+    filter?: CalloutContributionFilterArgs,
     limit?: number,
     shuffle?: boolean
-  ): Promise<IWhiteboard[]> {
+  ): Promise<ICalloutContribution[]> {
     const calloutLoaded = await this.getCalloutOrFail(callout.id, {
-      relations: ['whiteboards', ...relations],
+      relations: ['contributions', 'contributions.whiteboard', ...relations],
     });
-    if (!calloutLoaded.whiteboards)
+    if (!calloutLoaded.contributions)
       throw new EntityNotFoundException(
-        `Callout not initialised, no whiteboards: ${callout.id}`,
+        `Callout not initialised, no contributions: ${callout.id}`,
         LogContext.COLLABORATION
       );
 
-    if (!whiteboardIDs) {
-      const limitAndShuffled = limitAndShuffle(
-        calloutLoaded.whiteboards,
-        limit,
-        shuffle
-      );
-      return limitAndShuffled;
+    const results: ICalloutContribution[] = [];
+    if (!contributionIDs) {
+      if (!filter) {
+        const limitAndShuffled = limitAndShuffle(
+          calloutLoaded.contributions,
+          limit,
+          shuffle
+        );
+        return limitAndShuffled;
+      }
+
+      for (const contribution of calloutLoaded.contributions) {
+        if (
+          contribution.whiteboard &&
+          filter.whiteboardIDs &&
+          !filter.whiteboardIDs.includes(contribution.whiteboard.id) &&
+          !filter.whiteboardIDs.includes(contribution.whiteboard.nameID)
+        )
+          continue;
+        if (
+          contribution.post &&
+          filter.postIDs &&
+          !filter.postIDs.includes(contribution.post.id) &&
+          !filter.postIDs.includes(contribution.post.nameID)
+        )
+          continue;
+        if (
+          contribution.link &&
+          filter.linkIDs &&
+          !filter.linkIDs.includes(contribution.link.id)
+        )
+          continue;
+
+        results.push(contribution);
+      }
+      return results;
     }
-    const results: IWhiteboard[] = [];
-    for (const whiteboardID of whiteboardIDs) {
-      const whiteboard = calloutLoaded.whiteboards.find(
-        whiteboard =>
-          whiteboard.id === whiteboardID || whiteboard.nameID === whiteboardID
+
+    for (const contributionID of contributionIDs) {
+      const contribution = calloutLoaded.contributions.find(
+        contribution => contribution.id === contributionID
       );
-      if (!whiteboard) continue;
-      results.push(whiteboard);
+      if (!contribution) continue;
+      if (
+        contribution.whiteboard &&
+        filter?.whiteboardIDs &&
+        (!filter.whiteboardIDs.includes(contribution.whiteboard.id) ||
+          !filter.whiteboardIDs.includes(contribution.whiteboard.nameID))
+      )
+        continue;
+      if (
+        contribution.post &&
+        filter?.postIDs &&
+        (!filter.postIDs.includes(contribution.post.id) ||
+          !filter.postIDs.includes(contribution.post.nameID))
+      )
+        continue;
+      if (
+        contribution.link &&
+        filter?.linkIDs &&
+        !filter.linkIDs.includes(contribution.link.id)
+      )
+        continue;
+
+      results.push(contribution);
     }
     return results;
-  }
-
-  public async getWhiteboardRt(
-    callout: ICallout
-  ): Promise<IWhiteboardRt | undefined> {
-    const res: ICallout = await this.calloutRepository.findOneOrFail({
-      where: { id: callout.id },
-      relations: { whiteboardRt: true },
-    });
-
-    return res.whiteboardRt;
-  }
-
-  public async getPostsFromCallout(
-    callout: ICallout,
-    relations: FindOptionsRelationByString = [],
-    postIDs?: string[],
-    limit?: number,
-    shuffle?: boolean
-  ): Promise<IPost[]> {
-    const loadedCallout = await this.getCalloutOrFail(callout.id, {
-      relations: ['posts', ...relations],
-    });
-    if (!loadedCallout.posts) {
-      throw new EntityNotFoundException(
-        `Context not initialised: ${callout.id}`,
-        LogContext.COLLABORATION
-      );
-    }
-    if (!postIDs) {
-      const limitAndShuffled = limitAndShuffle(
-        loadedCallout.posts,
-        limit,
-        shuffle
-      );
-      const sortedPosts = limitAndShuffled.sort((a, b) =>
-        a.nameID.toLowerCase() > b.nameID.toLowerCase() ? 1 : -1
-      );
-      return sortedPosts;
-    }
-    const results: IPost[] = [];
-    for (const postID of postIDs) {
-      const post = loadedCallout.posts.find(
-        post => post.id === postID || post.nameID === postID.toLowerCase()
-      );
-      if (!post) continue;
-      // toDo - in order to have this flow as 'exceptional' the client need to query only posts in callouts the posts
-      // are. Currently, with the latest set of changes, callouts can be a list and without specifying the correct one in the query,
-      // errors will be thrown.
-
-      // throw new EntityNotFoundException(
-      //   `Post with requested ID (${postID}) not located within current Callout: ${callout.id}`,
-      //   LogContext.COLLABORATION
-      // );
-      results.push(post);
-    }
-
-    return results;
-  }
-
-  public async getPostTemplateFromCallout(
-    calloutID: string
-  ): Promise<IPostTemplate | undefined> {
-    const loadedCallout = await this.getCalloutOrFail(calloutID, {
-      relations: ['postTemplate'],
-    });
-    return loadedCallout.postTemplate;
-  }
-
-  public async getWhiteboardTemplateFromCallout(
-    calloutID: string
-  ): Promise<IWhiteboardTemplate | undefined> {
-    const loadedCallout = await this.getCalloutOrFail(calloutID, {
-      relations: ['whiteboardTemplate'],
-    });
-    return loadedCallout.whiteboardTemplate;
   }
 }

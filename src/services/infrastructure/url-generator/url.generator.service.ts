@@ -105,7 +105,7 @@ export class UrlGeneratorService {
           profile.id
         );
         return `${this.endpoint_cluster}/${this.PATH_ORGANIZATION}/${organizationEntityInfo.entityNameID}`;
-      case ProfileType.CALLOUT:
+      case ProfileType.CALLOUT_FRAMING:
         return await this.getCalloutUrlPath(this.FIELD_PROFILE_ID, profile.id);
       case ProfileType.POST:
         return await this.getPostUrlPath(profile.id);
@@ -440,10 +440,9 @@ export class UrlGeneratorService {
     const [result]: {
       postId: string;
       postNameId: string;
-      calloutId: string;
     }[] = await this.entityManager.connection.query(
       `
-        SELECT post.id as postId, post.nameID as postNameId, post.calloutId as calloutId FROM post
+        SELECT post.id as postId, post.nameID as postNameId FROM post
         WHERE post.profileId = '${profileID}'
       `
     );
@@ -454,9 +453,19 @@ export class UrlGeneratorService {
         LogContext.URL_GENERATOR
       );
     }
+
+    const [contributionResult]: {
+      calloutId: string;
+    }[] = await this.entityManager.connection.query(
+      `
+        SELECT callout_contribution.id as contributionId, callout_contribution.calloutId as calloutId FROM callout_contribution
+        WHERE callout_contribution.postId = '${result.postId}'
+      `
+    );
+
     const calloutUrlPath = await this.getCalloutUrlPath(
       this.FIELD_ID,
-      result.calloutId
+      contributionResult.calloutId
     );
     return `${calloutUrlPath}/${this.PATH_POSTS}/${result.postNameId}`;
   }
@@ -465,10 +474,9 @@ export class UrlGeneratorService {
     const [result]: {
       whiteboardId: string;
       whiteboardNameId: string;
-      calloutId: string;
     }[] = await this.entityManager.connection.query(
       `
-        SELECT whiteboard.id as whiteboardId, whiteboard.nameID as whiteboardNameId, whiteboard.calloutId as calloutId FROM whiteboard
+        SELECT whiteboard.id as whiteboardId, whiteboard.nameID as whiteboardNameId FROM whiteboard
         WHERE whiteboard.profileId = '${profileID}'
       `
     );
@@ -479,9 +487,19 @@ export class UrlGeneratorService {
         LogContext.URL_GENERATOR
       );
     }
+
+    const [contributionResult]: {
+      calloutId: string;
+    }[] = await this.entityManager.connection.query(
+      `
+        SELECT callout_contribution.id as contributionId, callout_contribution.calloutId as calloutId FROM callout_contribution
+        WHERE callout_contribution.whiteboardId = '${result.whiteboardId}'
+      `
+    );
+
     const calloutUrlPath = await this.getCalloutUrlPath(
       this.FIELD_ID,
-      result.calloutId
+      contributionResult.calloutId
     );
     return `${calloutUrlPath}/${this.PATH_WHITEBOARDS}/${result.whiteboardNameId}`;
   }

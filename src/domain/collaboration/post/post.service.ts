@@ -62,7 +62,7 @@ export class PostService {
       RoomType.POST
     );
 
-    return await this.postRepository.save(post);
+    return await this.savePost(post);
   }
 
   public async deletePost(deleteData: DeletePostInput): Promise<IPost> {
@@ -124,7 +124,7 @@ export class PostService {
       post.type = postData.type;
     }
 
-    await this.postRepository.save(post);
+    await this.savePost(post);
 
     return post;
   }
@@ -164,12 +164,5 @@ export class PostService {
     }
 
     return this.roomService.getRoomOrFail(commentsId);
-  }
-
-  public async getPostsInCalloutCount(calloutID: string): Promise<number> {
-    const count = await this.postRepository.countBy({
-      callout: { id: calloutID },
-    });
-    return count;
   }
 }

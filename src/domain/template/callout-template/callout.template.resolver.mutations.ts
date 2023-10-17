@@ -45,7 +45,8 @@ export class CalloutTemplateResolverMutations {
     );
     return this.calloutTemplateService.updateCalloutTemplate(
       calloutTemplate,
-      calloutTemplateInput
+      calloutTemplateInput,
+      agentInfo
     );
   }
 

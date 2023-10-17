@@ -5,7 +5,6 @@ import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entit
 import { Project } from '@domain/collaboration/project';
 import { NameID, UUID } from '@domain/common/scalars';
 import { Post } from '@domain/collaboration/post/post.entity';
-import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
 import { LogContext } from '@common/enums';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { Community } from '@domain/community/community';
@@ -24,6 +23,7 @@ import { InnovationHub } from '@domain/innovation-hub/innovation.hub.entity';
 import { IDiscussion } from '@domain/communication/discussion/discussion.interface';
 import { ICallout } from '@domain/collaboration/callout';
 import { NAMEID_LENGTH } from '@common/constants';
+import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
 
 export class NamingService {
   replaceSpecialCharacters = require('replace-special-characters');
@@ -31,10 +31,6 @@ export class NamingService {
   constructor(
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>,
-    @InjectRepository(Post)
-    private postRepository: Repository<Post>,
-    @InjectRepository(Whiteboard)
-    private whiteboardRepository: Repository<Whiteboard>,
     @InjectRepository(Opportunity)
     private opportunityRepository: Repository<Opportunity>,
     @InjectRepository(Project)
@@ -49,6 +45,8 @@ export class NamingService {
     private innovationHubRepository: Repository<InnovationHub>,
     @InjectRepository(Community)
     private communityRepository: Repository<Community>,
+    @InjectRepository(CalloutContribution)
+    private contributionRepository: Repository<CalloutContribution>,
     @InjectEntityManager('default')
     private entityManager: EntityManager,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -82,9 +80,10 @@ export class NamingService {
     nameID: string,
     calloutID: string
   ): Promise<boolean> {
-    const query = this.postRepository
-      .createQueryBuilder('post')
-      .leftJoinAndSelect('post.callout', 'callout')
+    const query = this.contributionRepository
+      .createQueryBuilder('callout_contribution')
+      .leftJoinAndSelect('callout_contribution.callout', 'callout')
+      .leftJoinAndSelect('callout_contribution.post', 'post')
       .where('callout.id = :id')
       .andWhere('post.nameID= :nameID')
       .setParameters({ id: `${calloutID}`, nameID: `${nameID}` });
@@ -100,9 +99,10 @@ export class NamingService {
     nameID: string,
     calloutID: string
   ): Promise<boolean> {
-    const query = this.whiteboardRepository
-      .createQueryBuilder('whiteboard')
-      .leftJoinAndSelect('whiteboard.callout', 'callout')
+    const query = this.contributionRepository
+      .createQueryBuilder('callout_contribution')
+      .leftJoinAndSelect('callout_contribution.whiteboard', 'whiteboard')
+      .leftJoinAndSelect('callout_contribution.callout', 'callout')
       .where('callout.id = :id')
       .andWhere('whiteboard.nameID= :nameID')
       .setParameters({ id: `${calloutID}`, nameID: `${nameID}` });
@@ -139,7 +139,8 @@ export class NamingService {
     const query = this.calloutRepository
       .createQueryBuilder('callout')
       .leftJoinAndSelect('callout.collaboration', 'collaboration')
-      .leftJoinAndSelect('callout.profile', 'profile')
+      .leftJoinAndSelect('callout.framing', 'framing')
+      .leftJoinAndSelect('framing.profile', 'profile')
       .where('collaboration.id = :id')
       .andWhere('profile.displayName = :displayName')
       .setParameters({
@@ -308,16 +309,16 @@ export class NamingService {
     return community.policy;
   }
 
-  async getPostForRoom(commentsID: string): Promise<IPost> {
+  async getPostForRoom(roomID: string): Promise<IPost> {
     const result = await this.entityManager.findOne(Post, {
       where: {
-        comments: { id: commentsID },
+        comments: { id: roomID },
       },
       relations: ['profile'],
     });
     if (!result) {
       throw new EntityNotFoundException(
-        `Unable to identify Post for Room: : ${commentsID}`,
+        `Unable to identify Post for Room: : ${roomID}`,
         LogContext.COLLABORATION
       );
     }
@@ -329,7 +330,6 @@ export class NamingService {
       where: {
         comments: { id: commentsID },
       },
-      relations: ['profile'],
     });
     if (!result) {
       throw new EntityNotFoundException(

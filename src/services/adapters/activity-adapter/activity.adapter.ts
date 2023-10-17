@@ -116,7 +116,7 @@ export class ActivityAdapter {
 
     const callout = eventData.callout;
     const collaborationID = await this.getCollaborationIdForCallout(callout.id);
-    const description = `[${callout.profile.displayName}] - ${callout.profile.description}`;
+    const description = `[${callout.framing.profile.displayName}] - ${callout.framing.profile.description}`;
     const activity = await this.activityService.createActivity({
       collaborationID,
       triggeredBy: eventData.triggeredBy,
@@ -161,7 +161,7 @@ export class ActivityAdapter {
     this.logEventTriggered(eventData, eventType);
 
     const reference = eventData.reference;
-    const description = `[${eventData.callout.profile.displayName}] - ${reference.name}`;
+    const description = `[${eventData.callout.framing.profile.displayName}] - ${reference.name}`;
     const collaborationID = await this.getCollaborationIdForCallout(
       eventData.callout.id
     );
@@ -416,7 +416,8 @@ export class ActivityAdapter {
   private async getCalloutIdForPost(postID: string): Promise<string> {
     const callout = await this.calloutRepository
       .createQueryBuilder('callout')
-      .innerJoinAndSelect('callout.posts', 'post')
+      .leftJoinAndSelect('callout.contributions', 'contributions')
+      .innerJoinAndSelect('contributions.post', 'post')
       .where('post.id = :id')
       .setParameters({ id: `${postID}` })
       .getOne();
@@ -433,7 +434,8 @@ export class ActivityAdapter {
     const collaboration = await this.collaborationRepository
       .createQueryBuilder('collaboration')
       .leftJoinAndSelect('collaboration.callouts', 'callouts')
-      .innerJoinAndSelect('callouts.posts', 'post')
+      .leftJoinAndSelect('callouts.contributions', 'contributions')
+      .innerJoinAndSelect('contributions.post', 'post')
       .where('post.id = :id')
       .setParameters({ id: `${postID}` })
       .getOne();
@@ -452,8 +454,9 @@ export class ActivityAdapter {
     const collaboration = await this.collaborationRepository
       .createQueryBuilder('collaboration')
       .leftJoinAndSelect('collaboration.callouts', 'callouts')
-      .innerJoinAndSelect('callouts.whiteboards', 'whiteboards')
-      .where('whiteboards.id = :id')
+      .innerJoinAndSelect('callouts.contributions', 'contributions')
+      .innerJoinAndSelect('contributions.whiteboard', 'whiteboard')
+      .where('whiteboard.id = :id')
       .setParameters({ id: `${whiteboardID}` })
       .getOne();
     if (!collaboration) {
