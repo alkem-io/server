@@ -17,6 +17,7 @@ import {
   POLICY_RULE_WHITEBOARD_CONTRIBUTE,
 } from '@common/constants';
 import { ProfileAuthorizationService } from '../profile/profile.service.authorization';
+import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 
 @Injectable()
 export class WhiteboardAuthorizationService {
@@ -28,9 +29,23 @@ export class WhiteboardAuthorizationService {
   ) {}
 
   async applyAuthorizationPolicy(
-    whiteboard: IWhiteboard,
+    whiteboardInput: IWhiteboard,
     parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<IWhiteboard> {
+    const whiteboard = await this.whiteboardService.getWhiteboardOrFail(
+      whiteboardInput.id,
+      {
+        relations: {
+          checkout: true,
+          profile: true,
+        },
+      }
+    );
+    if (!whiteboard.checkout || !whiteboard.profile)
+      throw new RelationshipNotFoundException(
+        `Unable to load checkout or profile for whiteboard ${whiteboard.id} `,
+        LogContext.COLLABORATION
+      );
     whiteboard.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         whiteboard.authorization,
@@ -42,15 +57,12 @@ export class WhiteboardAuthorizationService {
       whiteboard.authorization
     );
 
-    if (whiteboard.checkout) {
-      whiteboard.checkout.authorization =
-        await this.whiteboardCheckoutAuthorizationService.applyAuthorizationPolicy(
-          whiteboard.checkout,
-          whiteboard.authorization
-        );
-    }
+    whiteboard.checkout.authorization =
+      await this.whiteboardCheckoutAuthorizationService.applyAuthorizationPolicy(
+        whiteboard.checkout,
+        whiteboard.authorization
+      );
 
-    whiteboard.profile = await this.whiteboardService.getProfile(whiteboard);
     whiteboard.profile =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
         whiteboard.profile,
