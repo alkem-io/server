@@ -139,6 +139,16 @@ export class CalloutService {
     }
 
     if (
+      calloutData.type == CalloutType.POST_COLLECTION &&
+      !calloutData.contributionDefaults?.postDescription
+    ) {
+      throw new ValidationException(
+        'Please provide a post template',
+        LogContext.COLLABORATION
+      );
+    }
+
+    if (
       calloutData.type == CalloutType.WHITEBOARD &&
       !calloutData.framing.whiteboard
     ) {
