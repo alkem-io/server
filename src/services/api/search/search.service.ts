@@ -117,7 +117,6 @@ export class SearchService {
     searchData: SearchInput,
     agentInfo: AgentInfo
   ): Promise<ISearchResults> {
-    let start = performance.now();
     this.validateSearchParameters(searchData);
 
     // Use maps to aggregate results as searching; data structure chosen for linear lookup o(1)
@@ -165,7 +164,6 @@ export class SearchService {
         userIDsFilter,
         entityTypesFilter
       );
-    start = performance.now();
     if (searchUsers)
       await this.searchUsersByTerms(filteredTerms, userResults, userIDsFilter);
     if (searchGroups)
@@ -176,13 +174,9 @@ export class SearchService {
         organizationResults,
         organizationIDsFilter
       );
-    start = performance.now();
     if (searchSpaces)
       await this.searchSpacesByTerms(filteredTerms, spaceResults, agentInfo);
-    let elapsed = (performance.now() - start).toFixed(3);
-    let msg = `Execution time: ${elapsed} milliseconds`;
-    console.log('Search spaces ' + msg);
-    start = performance.now();
+
     if (searchChallenges)
       await this.searchChallengesByTerms(
         filteredTerms,
@@ -190,9 +184,7 @@ export class SearchService {
         agentInfo,
         challengeIDsFilter
       );
-    elapsed = (performance.now() - start).toFixed(3);
-    msg = `Execution time: ${elapsed} milliseconds`;
-    console.log('Search challenges ' + msg);
+
     if (searchOpportunities)
       await this.searchOpportunitiesByTerms(
         filteredTerms,
@@ -200,10 +192,7 @@ export class SearchService {
         agentInfo,
         opportunityIDsFilter
       );
-    elapsed = (performance.now() - start).toFixed(3);
-    msg = `Execution time: ${elapsed} milliseconds`;
-    console.log('Search opportunities ' + msg);
-    start = performance.now();
+
     if (searchPosts)
       await this.searchPostsByTerms(
         filteredTerms,
@@ -211,13 +200,6 @@ export class SearchService {
         agentInfo,
         postIDsFilter
       );
-    elapsed = (performance.now() - start).toFixed(3);
-    msg = `Execution time: ${elapsed} milliseconds`;
-    console.log('Search posts ' + msg);
-    this.logger.verbose?.(
-      `Executed search query: ${userResults.size} users results; ${groupResults.size} group results; ${organizationResults.size} organization results found; ${spaceResults.size} space results found; ${challengeResults.size} challenge results found; ${opportunityResults.size} opportunity results found; ${postResults.size} post results found`,
-      LogContext.API
-    );
 
     const results: ISearchResults = {
       contributionResults: [],
