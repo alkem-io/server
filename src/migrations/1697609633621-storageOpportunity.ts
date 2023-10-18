@@ -9,12 +9,12 @@ export class storageOpportunity1697609633621 implements MigrationInterface {
   name = 'storageOpportunity1697609633621';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(
-      `ALTER TABLE \`opportunity\` ADD \`storageAggregatorId\` char(36) NULL`
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`opportunity\` ADD CONSTRAINT \`FK_89894d59c0b805c9c1ecb0070e16\` FOREIGN KEY (\`storageAggregatorId\`) REFERENCES \`storage_aggregator\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
-    );
+    // await queryRunner.query(
+    //   `ALTER TABLE \`opportunity\` ADD \`storageAggregatorId\` char(36) NULL`
+    // );
+    // await queryRunner.query(
+    //   `ALTER TABLE \`opportunity\` ADD CONSTRAINT \`FK_89894d59c0b805c9c1ecb0070e16\` FOREIGN KEY (\`storageAggregatorId\`) REFERENCES \`storage_aggregator\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    // );
 
     // Loop over all opportunities
     const opportunities: {
@@ -23,15 +23,16 @@ export class storageOpportunity1697609633621 implements MigrationInterface {
       challengeId: string;
       collaborationId: string;
       communityId: string;
+      innovationFlowId: string;
     }[] = await queryRunner.query(
-      `SELECT id, profileId, challengeId, collaborationId, communityId FROM opportunity`
+      `SELECT id, profileId, challengeId, collaborationId, communityId, innovationFlowId FROM opportunity`
     );
     for (const opportunity of opportunities) {
       const [challenge]: {
         id: string;
         storageAggregatorId: string;
       }[] = await queryRunner.query(
-        `SELECT id, storageAggregatorId FROM challenge WHERE (id = '${opportunity.id}')`
+        `SELECT id, storageAggregatorId FROM challenge WHERE (id = '${opportunity.challengeId}')`
       );
       const challengeStorageAggregatorID = challenge.storageAggregatorId;
 
@@ -41,18 +42,13 @@ export class storageOpportunity1697609633621 implements MigrationInterface {
         challengeStorageAggregatorID
       );
 
-      // Update all the pointers
-      await this.updateProfileStorageAggregator(
-        queryRunner,
-        opportunity.profileId,
-        opportunityStorageAggregatorId
-      );
-
       await this.updateStorageAggregatorParentInOpportunity(
         queryRunner,
         opportunityStorageAggregatorId,
         opportunity.collaborationId,
-        opportunity.communityId
+        opportunity.communityId,
+        opportunity.innovationFlowId,
+        opportunity.profileId
       );
     }
   }
@@ -70,30 +66,26 @@ export class storageOpportunity1697609633621 implements MigrationInterface {
       storageAggregatorId: string;
       collaborationId: string;
       communityId: string;
+      innovationFlowId: string;
     }[] = await queryRunner.query(
-      `SELECT id, profileId, challengeId, storageAggregatorId, collaborationId, communityId FROM opportunity`
+      `SELECT id, profileId, challengeId, storageAggregatorId, collaborationId, communityId, innovationFlowId FROM opportunity`
     );
     for (const opportunity of opportunities) {
       const [challenge]: {
         id: string;
         storageAggregatorId: string;
       }[] = await queryRunner.query(
-        `SELECT id, storageAggregatorId FROM challenge WHERE (id = '${opportunity.id}')`
+        `SELECT id, storageAggregatorId FROM challenge WHERE (id = '${opportunity.challengeId}')`
       );
       const challengeStorageAggregatorID = challenge.storageAggregatorId;
-
-      // Update all the pointers
-      await this.updateProfileStorageAggregator(
-        queryRunner,
-        opportunity.profileId,
-        challengeStorageAggregatorID
-      );
 
       await this.updateStorageAggregatorParentInOpportunity(
         queryRunner,
         challengeStorageAggregatorID,
         opportunity.collaborationId,
-        opportunity.communityId
+        opportunity.communityId,
+        opportunity.innovationFlowId,
+        opportunity.profileId
       );
     }
 
@@ -106,8 +98,84 @@ export class storageOpportunity1697609633621 implements MigrationInterface {
     queryRunner: QueryRunner,
     storageAggregatorID: string,
     collaborationID: string,
-    communityID: string
-  ) {}
+    communityID: string,
+    innovationFlowID: string,
+    profileID: string
+  ) {
+    // Update all the pointers
+    await this.updateProfileStorageAggregator(
+      queryRunner,
+      profileID,
+      storageAggregatorID
+    );
+
+    await this.updateEntityProfileStorageAggregator(
+      queryRunner,
+      'innovation_flow',
+      innovationFlowID,
+      storageAggregatorID
+    );
+
+    const callouts: {
+      id: string;
+      collaborationId: string;
+      framingId: string;
+    }[] = await queryRunner.query(
+      `SELECT id, collaborationId, framingId FROM callout WHERE (collaborationId = '${collaborationID}')`
+    );
+    for (const callout of callouts) {
+      await this.updateEntityProfileStorageAggregator(
+        queryRunner,
+        'callout_framing',
+        callout.framingId,
+        storageAggregatorID
+      );
+      const contributions: {
+        id: string;
+        postId: string;
+        whiteboardId: string;
+      }[] = await queryRunner.query(
+        `SELECT id, postId, whiteboardId FROM callout_contribution WHERE (calloutId = '${callout.id}')`
+      );
+      for (const contribution of contributions) {
+        if (contribution.postId) {
+          await this.updateEntityProfileStorageAggregator(
+            queryRunner,
+            'post',
+            contribution.postId,
+            storageAggregatorID
+          );
+        }
+        if (contribution.whiteboardId) {
+          await this.updateEntityProfileStorageAggregator(
+            queryRunner,
+            'whiteboard',
+            contribution.postId,
+            storageAggregatorID
+          );
+        }
+      }
+    }
+  }
+
+  private async updateEntityProfileStorageAggregator(
+    queryRunner: QueryRunner,
+    entityName: string,
+    entityID: string,
+    storageAggregatorID: string
+  ) {
+    const [entity]: {
+      id: string;
+      profileId: string;
+    }[] = await queryRunner.query(
+      `SELECT id, profileId FROM ${entityName} WHERE (id = '${entityID}')`
+    );
+    await this.updateProfileStorageAggregator(
+      queryRunner,
+      entity.profileId,
+      storageAggregatorID
+    );
+  }
 
   private async updateProfileStorageAggregator(
     queryRunner: QueryRunner,
