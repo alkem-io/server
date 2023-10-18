@@ -184,14 +184,14 @@ export class OpportunityAuthorizationService {
     return rules;
   }
   private async propagateAuthorizationToChildEntities(
-    opportunityBase: IOpportunity,
+    opportunityInput: IOpportunity,
     policy: ICommunityPolicy
   ): Promise<IOpportunity> {
-    await this.opportunityService.save(opportunityBase);
+    await this.opportunityService.save(opportunityInput);
 
     let opportunity =
       await this.propagateAuthorizationToCommunityCollaborationAgent(
-        opportunityBase,
+        opportunityInput,
         policy
       );
     opportunity = await this.propagateAuthorizationToProfileContext(
@@ -221,7 +221,7 @@ export class OpportunityAuthorizationService {
       !opportunity.storageAggregator
     )
       throw new RelationshipNotFoundException(
-        `Unable to load context or profile or storage aggregator for opportunity ${opportunity.id} `,
+        `Unable to load context, profile or storage aggregator for opportunity ${opportunity.id} `,
         LogContext.CONTEXT
       );
     // Clone the authorization policy

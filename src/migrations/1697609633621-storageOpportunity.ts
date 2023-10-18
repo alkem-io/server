@@ -164,11 +164,16 @@ export class storageOpportunity1697609633621 implements MigrationInterface {
     entityID: string,
     storageAggregatorID: string
   ) {
+    if (!entityID) {
+      console.log(`No ${entityName} with ID ${entityID}`);
+      return;
+    }
     const [entity]: {
       id: string;
       profileId: string;
     }[] = await queryRunner.query(
-      `SELECT id, profileId FROM ${entityName} WHERE (id = '${entityID}')`
+      `SELECT id, profileId FROM ${entityName} WHERE (id = ?)`,
+      [entityID]
     );
     await this.updateProfileStorageAggregator(
       queryRunner,
