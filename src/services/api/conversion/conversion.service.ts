@@ -187,8 +187,6 @@ export class ConversionService {
     await this.spaceService.save(space);
     const updatedChallenge = await this.challengeService.save(challenge);
 
-    // Todo: migrate the storage aggregator
-
     // Assign users to roles in new space
     await this.assignContributors(
       space.community,
@@ -290,6 +288,8 @@ export class ConversionService {
           community: true,
           context: true,
           profile: true,
+          collaboration: true,
+          storageAggregator: true,
         },
       }
     );
@@ -297,7 +297,8 @@ export class ConversionService {
       !challenge.community ||
       !challenge.context ||
       !challenge.profile ||
-      !challenge.collaboration
+      !challenge.collaboration ||
+      !challenge.storageAggregator
     ) {
       throw new EntityNotInitializedException(
         `Unable to locate all entities on new Challenge for converting opportunity: ${challenge.nameID}`,
@@ -337,6 +338,11 @@ export class ConversionService {
       agentInfo.userID,
       CommunityRole.MEMBER
     );
+    await this.communityService.removeUserFromRole(
+      challenge.community,
+      agentInfo.userID,
+      CommunityRole.LEAD
+    );
 
     // Swap the communication
     await this.swapCommunication(challenge.community, opportunity.community);
@@ -366,7 +372,21 @@ export class ConversionService {
     challenge.profile = opportunityProfile;
     opportunity.profile = challengeProfile;
 
-    // Todo: Update all storage buckets to use the new storage aggregator
+    // Swap the storage aggregators
+    // Note: need to use the opportunity storage aggregator as that is what all the profiles
+    // in use within that hierarcy will be using
+    const opportunityStorage = opportunity.storageAggregator;
+    const challengeStorage = challenge.storageAggregator;
+    challenge.storageAggregator = opportunityStorage;
+    opportunity.storageAggregator = challengeStorage;
+    // and set the parent storage aggregator on the new challenge
+    if (challenge.storageAggregator) {
+      challenge.storageAggregator.parentStorageAggregator =
+        spaceStorageAggregator;
+    }
+    if (opportunity.storageAggregator) {
+      opportunity.storageAggregator.parentStorageAggregator = undefined;
+    }
 
     // Save both + then re-assign the roles
     await this.challengeService.save(challenge);
@@ -512,7 +532,6 @@ export class ConversionService {
     orgMembers: IOrganization[],
     orgLeads: IOrganization[]
   ) {
-    // TODO: missing
     for (const userMember of userMembers) {
       await this.communityService.removeUserFromRole(
         community,
