@@ -9,12 +9,12 @@ export class storageOpportunity1697609633621 implements MigrationInterface {
   name = 'storageOpportunity1697609633621';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    // await queryRunner.query(
-    //   `ALTER TABLE \`opportunity\` ADD \`storageAggregatorId\` char(36) NULL`
-    // );
-    // await queryRunner.query(
-    //   `ALTER TABLE \`opportunity\` ADD CONSTRAINT \`FK_89894d59c0b805c9c1ecb0070e16\` FOREIGN KEY (\`storageAggregatorId\`) REFERENCES \`storage_aggregator\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
-    // );
+    await queryRunner.query(
+      `ALTER TABLE \`opportunity\` ADD \`storageAggregatorId\` char(36) NULL`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`opportunity\` ADD CONSTRAINT \`FK_89894d59c0b805c9c1ecb0070e16\` FOREIGN KEY (\`storageAggregatorId\`) REFERENCES \`storage_aggregator\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    );
 
     // Loop over all opportunities
     const opportunities: {
