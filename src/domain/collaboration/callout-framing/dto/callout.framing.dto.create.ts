@@ -22,8 +22,4 @@ export class CreateCalloutFramingInput {
   @ValidateNested({ each: true })
   @Type(() => CreateWhiteboardRtInput)
   whiteboardRt?: CreateWhiteboardRtInput;
-
-  @Field(() => [String], { nullable: true })
-  @IsOptional()
-  tags?: string[];
 }
