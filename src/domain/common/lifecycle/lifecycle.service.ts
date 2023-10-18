@@ -125,6 +125,10 @@ export class LifecycleService {
   }
 
   async initializationEvent(lifecycle: ILifecycle): Promise<ILifecycle> {
+    // NOTE: This initialization is done in a way that NO events are triggered as we are not
+    // passing in the lifecycle options due to circular injection dependencies. If the lifecycle
+    // needs to have actions / guards on the way in to the initial state then we need to do further
+    // design work.
     if (lifecycle.machineState) {
       // machine is already initialized, nothing to do
       this.logger.verbose?.(
