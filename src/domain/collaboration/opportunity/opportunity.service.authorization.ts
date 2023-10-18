@@ -22,6 +22,7 @@ import { ProfileAuthorizationService } from '@domain/common/profile/profile.serv
 import { ContextAuthorizationService } from '@domain/context/context/context.service.authorization';
 import { CommunityAuthorizationService } from '@domain/community/community/community.service.authorization';
 import { CollaborationAuthorizationService } from '../collaboration/collaboration.service.authorization';
+import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 
 @Injectable()
 export class OpportunityAuthorizationService {
@@ -33,7 +34,8 @@ export class OpportunityAuthorizationService {
     private profileAuthorizationService: ProfileAuthorizationService,
     private contextAuthorizationService: ContextAuthorizationService,
     private communityAuthorizationService: CommunityAuthorizationService,
-    private collaborationAuthorizationService: CollaborationAuthorizationService
+    private collaborationAuthorizationService: CollaborationAuthorizationService,
+    private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService
   ) {}
 
   async applyAuthorizationPolicy(
@@ -201,42 +203,54 @@ export class OpportunityAuthorizationService {
   }
 
   private async propagateAuthorizationToProfileContext(
-    challengeBase: IOpportunity
+    opportunityBase: IOpportunity
   ): Promise<IOpportunity> {
-    const challenge = await this.opportunityService.getOpportunityOrFail(
-      challengeBase.id,
+    const opportunity = await this.opportunityService.getOpportunityOrFail(
+      opportunityBase.id,
       {
         relations: {
           context: true,
           profile: true,
+          storageAggregator: true,
         },
       }
     );
-    if (!challenge.context || !challenge.profile)
+    if (
+      !opportunity.context ||
+      !opportunity.profile ||
+      !opportunity.storageAggregator
+    )
       throw new RelationshipNotFoundException(
-        `Unable to load context or profile for opportunity ${challenge.id} `,
+        `Unable to load context or profile or storage aggregator for opportunity ${opportunity.id} `,
         LogContext.CONTEXT
       );
     // Clone the authorization policy
     const clonedAuthorization =
       this.authorizationPolicyService.cloneAuthorizationPolicy(
-        challenge.authorization
+        opportunity.authorization
       );
     // To ensure that profile + context on a space are always publicly visible, even for private challenges
     clonedAuthorization.anonymousReadAccess = true;
 
-    challenge.profile =
+    opportunity.profile =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
-        challenge.profile,
+        opportunity.profile,
         clonedAuthorization
       );
 
-    challenge.context =
+    opportunity.context =
       await this.contextAuthorizationService.applyAuthorizationPolicy(
-        challenge.context,
+        opportunity.context,
         clonedAuthorization
       );
-    return challenge;
+
+    opportunity.storageAggregator =
+      await this.storageAggregatorAuthorizationService.applyAuthorizationPolicy(
+        opportunity.storageAggregator,
+        opportunity.authorization
+      );
+
+    return opportunity;
   }
 
   public async propagateAuthorizationToCommunityCollaborationAgent(
