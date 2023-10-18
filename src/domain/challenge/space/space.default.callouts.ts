@@ -21,6 +21,11 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
         description: '⬇️ Here are some quick links to help you get started',
         tagsets: [
           {
+            name: TagsetReservedName.DEFAULT,
+            type: TagsetType.FREEFORM,
+            tags: [],
+          },
+          {
             name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
             type: TagsetType.SELECT_ONE,
             tags: [CommonDisplayLocation.HOME_RIGHT],
@@ -41,6 +46,11 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
         displayName: 'General chat 💬',
         description: 'Things you would like to discuss with the community?',
         tagsets: [
+          {
+            name: TagsetReservedName.DEFAULT,
+            type: TagsetType.FREEFORM,
+            tags: [],
+          },
           {
             name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
             type: TagsetType.SELECT_ONE,
@@ -63,6 +73,11 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
         description: 'Please share it here :)',
         tagsets: [
           {
+            name: TagsetReservedName.DEFAULT,
+            type: TagsetType.FREEFORM,
+            tags: [],
+          },
+          {
             name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
             type: TagsetType.SELECT_ONE,
             tags: [CommonDisplayLocation.HOME_LEFT],
@@ -84,6 +99,11 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
         description:
           'We can use this whiteboard to further define our mission and vision, who we want to involve, and what impact we want to make!',
         tagsets: [
+          {
+            name: TagsetReservedName.DEFAULT,
+            type: TagsetType.FREEFORM,
+            tags: [],
+          },
           {
             name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
             type: TagsetType.SELECT_ONE,
@@ -114,6 +134,11 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
           '👋 Do you have any suggestions or ideas to grow the community and our impact? Please share!',
         tagsets: [
           {
+            name: TagsetReservedName.DEFAULT,
+            type: TagsetType.FREEFORM,
+            tags: [],
+          },
+          {
             name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
             type: TagsetType.SELECT_ONE,
             tags: [SpaceDisplayLocation.COMMUNITY_LEFT],
@@ -135,6 +160,11 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
         description:
           'Choose one of the templates from the library to map our your ecosystem or stakeholders here!',
         tagsets: [
+          {
+            name: TagsetReservedName.DEFAULT,
+            type: TagsetType.FREEFORM,
+            tags: [],
+          },
           {
             name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
             type: TagsetType.SELECT_ONE,
@@ -164,6 +194,11 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
         description: 'Please share any relevant Challenges that you encounter.',
         tagsets: [
           {
+            name: TagsetReservedName.DEFAULT,
+            type: TagsetType.FREEFORM,
+            tags: [],
+          },
+          {
             name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
             type: TagsetType.SELECT_ONE,
             tags: [SpaceDisplayLocation.CHALLENGES_LEFT],
@@ -185,6 +220,11 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
         description:
           'What are the 🚩Challenges that you think we should be working on? Please add them below and use the template provided.',
         tagsets: [
+          {
+            name: TagsetReservedName.DEFAULT,
+            type: TagsetType.FREEFORM,
+            tags: [],
+          },
           {
             name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
             type: TagsetType.SELECT_ONE,
@@ -212,6 +252,11 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
           'Please share any relevant insights to help us better understand the context. You can describe why it is relevant and add a link or upload a document with the article. You can also comment on the insights already submitted by other community members!',
         tagsets: [
           {
+            name: TagsetReservedName.DEFAULT,
+            type: TagsetType.FREEFORM,
+            tags: [],
+          },
+          {
             name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
             type: TagsetType.SELECT_ONE,
             tags: [CommonDisplayLocation.KNOWLEDGE],
@@ -237,6 +282,11 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
         description: 'Please add links to documents with reference material.💥',
         tagsets: [
           {
+            name: TagsetReservedName.DEFAULT,
+            type: TagsetType.FREEFORM,
+            tags: [],
+          },
+          {
             name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
             type: TagsetType.SELECT_ONE,
             tags: [CommonDisplayLocation.KNOWLEDGE],
@@ -258,6 +308,11 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
         description:
           'Below you will find various questions and answers on this topic. Please feel invited to join in and share your answers as well!',
         tagsets: [
+          {
+            name: TagsetReservedName.DEFAULT,
+            type: TagsetType.FREEFORM,
+            tags: [],
+          },
           {
             name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
             type: TagsetType.SELECT_ONE,

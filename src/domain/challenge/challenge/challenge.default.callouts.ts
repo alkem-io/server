@@ -21,6 +21,11 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
         description: '⬇️ Here are some quick links to help you get started',
         tagsets: [
           {
+            name: TagsetReservedName.DEFAULT,
+            type: TagsetType.FREEFORM,
+            tags: [],
+          },
+          {
             name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
             type: TagsetType.SELECT_ONE,
             tags: [CommonDisplayLocation.HOME_RIGHT],
@@ -41,6 +46,11 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
         displayName: 'General chat 💬',
         description: 'Things you would like to discuss with the community.',
         tagsets: [
+          {
+            name: TagsetReservedName.DEFAULT,
+            type: TagsetType.FREEFORM,
+            tags: [],
+          },
           {
             name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
             type: TagsetType.SELECT_ONE,
@@ -63,6 +73,11 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
         description:
           'Here you will find the profiles of all contributors to this Challenge. Are you joining us? 👋 Nice to meet you! Please also provide your details below.',
         tagsets: [
+          {
+            name: TagsetReservedName.DEFAULT,
+            type: TagsetType.FREEFORM,
+            tags: [],
+          },
           {
             name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
             type: TagsetType.SELECT_ONE,
@@ -90,6 +105,11 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
           'Please share any relevant insights to help us better understand the Challenge. You can describe why it is relevant and add a link or upload a document with the article. You can also comment on the insights already submitted by other community members!',
         tagsets: [
           {
+            name: TagsetReservedName.DEFAULT,
+            type: TagsetType.FREEFORM,
+            tags: [],
+          },
+          {
             name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
             type: TagsetType.SELECT_ONE,
             tags: [ChallengeDisplayLocation.CONTRIBUTE_RIGHT],
@@ -115,6 +135,11 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
         description:
           'Choose one of the templates from the library to map your stakeholders here!',
         tagsets: [
+          {
+            name: TagsetReservedName.DEFAULT,
+            type: TagsetType.FREEFORM,
+            tags: [],
+          },
           {
             name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
             type: TagsetType.SELECT_ONE,
@@ -144,6 +169,11 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
         description: 'Please add links to documents with reference material.💥',
         tagsets: [
           {
+            name: TagsetReservedName.DEFAULT,
+            type: TagsetType.FREEFORM,
+            tags: [],
+          },
+          {
             name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
             type: TagsetType.SELECT_ONE,
             tags: [ChallengeDisplayLocation.CONTRIBUTE],
@@ -166,6 +196,11 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
           'Please share any relevant direction for a solution that you can think of or have seen.',
         tagsets: [
           {
+            name: TagsetReservedName.DEFAULT,
+            type: TagsetType.FREEFORM,
+            tags: [],
+          },
+          {
             name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
             type: TagsetType.SELECT_ONE,
             tags: [ChallengeDisplayLocation.OPPORTUNITIES_LEFT],
@@ -187,6 +222,11 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
         description:
           'What are the 💡 Opportunities that you think we should be working on? Please add them below and use the template provided.',
         tagsets: [
+          {
+            name: TagsetReservedName.DEFAULT,
+            type: TagsetType.FREEFORM,
+            tags: [],
+          },
           {
             name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
             type: TagsetType.SELECT_ONE,
