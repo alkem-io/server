@@ -124,6 +124,55 @@ export class LifecycleService {
     return await this.lifecycleRepository.save(lifecycle);
   }
 
+  async initializationEvent(lifecycle: ILifecycle): Promise<ILifecycle> {
+    if (lifecycle.machineState) {
+      // machine is already initialized, nothing to do
+      this.logger.verbose?.(
+        `[Lifecycle] machine is already initialized, no action needed: ${lifecycle.id}`,
+        LogContext.LIFECYCLE
+      );
+      return lifecycle;
+    }
+
+    const machineDef = this.deserializeLifecycleDefinition(
+      lifecycle.machineDef
+    );
+
+    this.logger.verbose?.(
+      `[Lifecycle] Initializing lifecycle: ${lifecycle.id}`,
+      LogContext.LIFECYCLE
+    );
+    const machine = createMachine(machineDef);
+    const machineWithLifecycle = machine.withContext({
+      ...machine.context,
+    });
+
+    const initialStateDef = machine.initialState;
+    const restoredState = State.create(initialStateDef);
+
+    const interpretedLifecycle = interpret(machineWithLifecycle);
+    this.logger.verbose?.(
+      `[Lifecycle] machine interpreted, starting from state: ${restoredState.value.toString()}`,
+      LogContext.LIFECYCLE
+    );
+
+    interpretedLifecycle.start(restoredState);
+
+    const stateToHydrate = interpretedLifecycle.state;
+    // Note: https://git.com/statelyai/xstate/discussions/1757
+    // restoring state has the hydrated actions, which unless removed will be executed again
+    stateToHydrate.actions = [];
+
+    //stateToHydrate._event = un;
+    const newStateStr = JSON.stringify(stateToHydrate);
+
+    // Todo: do not stop as this triggers an exit action from the last state.
+    //machineService.stop();
+    lifecycle.machineState = newStateStr;
+
+    return await this.lifecycleRepository.save(lifecycle);
+  }
+
   async getLifecycleOrFail(
     lifecycleID: string,
     options?: FindOneOptions<Lifecycle>
@@ -217,7 +266,7 @@ export class LifecycleService {
     return await this.lifecycleRepository.save(lifecycle);
   }
 
-  getRestoredState(lifecycle: ILifecycle) {
+  private getRestoredState(lifecycle: ILifecycle) {
     const machineDef = this.deserializeLifecycleDefinition(
       lifecycle.machineDef
     );
