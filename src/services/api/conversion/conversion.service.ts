@@ -228,6 +228,7 @@ export class ConversionService {
           community: true,
           context: true,
           profile: true,
+          storageAggregator: true,
           collaboration: {
             callouts: {
               framing: {
@@ -245,6 +246,7 @@ export class ConversionService {
       !opportunity.context ||
       !opportunity.profile ||
       !opportunity.collaboration ||
+      !opportunity.storageAggregator ||
       !opportunity.collaboration.callouts
     ) {
       throw new EntityNotInitializedException(
