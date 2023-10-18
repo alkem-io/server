@@ -604,10 +604,10 @@ export class ChallengeService {
       spaceID
     );
 
+    opportunityData.storageAggregatorParent = challenge.storageAggregator;
     const opportunity = await this.opportunityService.createOpportunity(
       opportunityData,
       spaceID,
-      challenge.storageAggregator,
       agentInfo
     );
 

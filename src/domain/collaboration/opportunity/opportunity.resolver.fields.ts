@@ -20,6 +20,7 @@ import {
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { IInnovationFlow } from '@domain/challenge/innovation-flow/innovation.flow.interface';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 
 @Resolver(() => IOpportunity)
 export class OpportunityResolverFields {
@@ -64,6 +65,20 @@ export class OpportunityResolverFields {
     loader: ILoader<IContext>
   ) {
     return loader.load(opportunity.id);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @ResolveField('storageAggregator', () => IStorageAggregator, {
+    nullable: true,
+    description: 'The StorageAggregator in use by this Opportunity',
+  })
+  @UseGuards(GraphqlGuard)
+  async storageAggregator(
+    @Parent() opportunity: IOpportunity
+  ): Promise<IStorageAggregator> {
+    return await this.opportunityService.getStorageAggregatorOrFail(
+      opportunity.id
+    );
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

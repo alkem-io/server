@@ -20,6 +20,7 @@ import { InnovationFlowModule } from '@domain/challenge/innovation-flow/innovati
 import { CollaborationModule } from '../collaboration/collaboration.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { ContextModule } from '@domain/context/context/context.module';
+import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { ContextModule } from '@domain/context/context/context.module';
     ProfileModule,
     ContextModule,
     ContributionReporterModule,
+    StorageAggregatorModule,
     TypeOrmModule.forFeature([Opportunity]),
   ],
   providers: [

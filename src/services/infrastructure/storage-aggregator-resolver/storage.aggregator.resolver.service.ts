@@ -180,13 +180,16 @@ export class StorageAggregatorResolverService {
     [result] = await this.entityManager.connection.query(query);
     if (result && result.storageAggregatorId) return result.storageAggregatorId;
 
-    query = `SELECT \`storageAggregatorId\` FROM \`challenge\`
-      LEFT JOIN \`opportunity\` ON \`opportunity\`.\`challengeId\` = \`challenge\`.\`id\`
+    query = `SELECT \`storageAggregatorId\` FROM \`opportunity\`
       LEFT JOIN \`collaboration\` ON \`collaboration\`.\`id\` = \`opportunity\`.\`collaborationId\`
       WHERE \`collaboration\`.\`id\`='${collaborationID}'`;
     [result] = await this.entityManager.connection.query(query);
+    if (result && result.storageAggregatorId) return result.storageAggregatorId;
 
-    return result.storageAggregatorId;
+    throw new StorageAggregatorNotFoundException(
+      `Could not find storage aggregator for collaboration with id: ${collaborationID}`,
+      LogContext.STORAGE_AGGREGATOR
+    );
   }
 
   private async getStorageAggregatorIdForCalendar(
@@ -230,17 +233,20 @@ export class StorageAggregatorResolverService {
 
     query = `SELECT \`storageAggregatorId\` FROM \`space\`
       LEFT JOIN \`community\` ON \`community\`.\`id\` = \`space\`.\`communityId\`
-       WHERE \`community\`.\`id\`='${communityID}'`;
+      WHERE \`community\`.\`id\`='${communityID}'`;
     [result] = await this.entityManager.connection.query(query);
     if (result && result.storageAggregatorId) return result.storageAggregatorId;
 
-    query = `SELECT \`storageAggregatorId\` FROM \`challenge\`
-      LEFT JOIN \`opportunity\` ON \`opportunity\`.\`challengeId\` = \`challenge\`.\`id\`
+    query = `SELECT \`storageAggregatorId\` FROM \`opportunity\`
       LEFT JOIN \`community\` ON \`community\`.\`id\` = \`opportunity\`.\`communityId\`
       WHERE \`community\`.\`id\`='${communityID}'`;
     [result] = await this.entityManager.connection.query(query);
+    if (result && result.storageAggregatorId) return result.storageAggregatorId;
 
-    return result.storageAggregatorId;
+    throw new StorageAggregatorNotFoundException(
+      `Could not find storage aggregator for community with id: ${communityID}`,
+      LogContext.STORAGE_AGGREGATOR
+    );
   }
 
   private async getStorageAggregatorIdForCommunication(
@@ -303,12 +309,15 @@ export class StorageAggregatorResolverService {
     if (result && result.storageAggregatorId) return result.storageAggregatorId;
 
     query = `SELECT \`storageAggregatorId\` FROM \`challenge\`
-      LEFT JOIN \`opportunity\` ON \`opportunity\`.\`challengeId\` = \`challenge\`.\`id\`
       LEFT JOIN \`collaboration\` ON \`collaboration\`.\`id\` = \`opportunity\`.\`collaborationId\`
       LEFT JOIN \`callout\` ON \`callout\`.\`collaborationId\` = \`collaboration\`.\`id\`
       WHERE \`callout\`.\`id\`='${calloutId}'`;
     [result] = await this.entityManager.connection.query(query);
+    if (result && result.storageAggregatorId) return result.storageAggregatorId;
 
-    return result.storageAggregatorId;
+    throw new StorageAggregatorNotFoundException(
+      `Could not find storage aggregator for callout with id: ${calloutId}`,
+      LogContext.STORAGE_AGGREGATOR
+    );
   }
 }
