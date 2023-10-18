@@ -67,7 +67,6 @@ export class OpportunityService {
   async createOpportunity(
     opportunityData: CreateOpportunityInput,
     spaceID: string,
-    parentStorageAggregator: IStorageAggregator,
     agentInfo?: AgentInfo
   ): Promise<IOpportunity> {
     if (!opportunityData.nameID) {
@@ -137,7 +136,7 @@ export class OpportunityService {
             },
           },
           [stateTagsetTemplate],
-          parentStorageAggregator
+          opportunity.storageAggregator
         );
 
       await this.innovationFlowService.updateFlowStateTagsetTemplateForLifecycle(
@@ -162,7 +161,7 @@ export class OpportunityService {
         await this.collaborationService.addDefaultCallouts(
           opportunity.collaboration,
           opportunityDefaultCallouts,
-          parentStorageAggregator,
+          opportunity.storageAggregator,
           agentInfo?.userID
         );
     }
