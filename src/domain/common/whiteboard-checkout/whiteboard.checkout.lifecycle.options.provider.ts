@@ -47,7 +47,7 @@ export class WhiteboardCheckoutLifecycleOptionsProvider {
           ID: whiteboardCheckout.lifecycle.id,
           eventName: eventName,
         },
-        this.whiteboardCheckoutLifecycleMachineOptions,
+        this.WhiteboardCheckoutLifecycleMachineOptions,
         agentInfo,
         whiteboardCheckout.authorization
       );
@@ -84,7 +84,7 @@ export class WhiteboardCheckoutLifecycleOptionsProvider {
     return updatedWhiteboardCheckout;
   }
 
-  public whiteboardCheckoutLifecycleMachineOptions: Partial<
+  private WhiteboardCheckoutLifecycleMachineOptions: Partial<
     MachineOptions<any, any>
   > = {
     actions: {
