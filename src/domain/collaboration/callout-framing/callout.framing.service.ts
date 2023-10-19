@@ -24,7 +24,9 @@ import { IWhiteboardRt } from '@domain/common/whiteboard-rt/whiteboard.rt.interf
 import { VisualType } from '@common/enums/visual.type';
 import { ITagsetTemplate } from '@domain/common/tagset-template/tagset.template.interface';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
+import { CreateTagsetInput } from '@domain/common/tagset/dto/tagset.dto.create';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { TagsetType } from '@common/enums/tagset.type';
 import { CalloutDisplayLocation } from '@common/enums/callout.display.location';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
@@ -52,17 +54,25 @@ export class CalloutFramingService {
 
     calloutFraming.authorization = new AuthorizationPolicy();
 
-    const { profile, whiteboard, whiteboardRt } = calloutFramingData;
+    const { profile, whiteboard, whiteboardRt, tags } = calloutFramingData;
+
+    // To consider also having the default tagset as a template tagset
+    const defaultTagset: CreateTagsetInput = {
+      name: TagsetReservedName.DEFAULT,
+      type: TagsetType.FREEFORM,
+      tags: tags,
+    };
 
     const tagsetInputsFromTemplates =
       this.profileService.convertTagsetTemplatesToCreateTagsetInput(
         tagsetTemplates
       );
+    const tagsetInputs = [defaultTagset, ...tagsetInputsFromTemplates];
 
     calloutFramingData.profile.tagsets =
       this.profileService.updateProfileTagsetInputs(
         calloutFraming.profile.tagsets,
-        tagsetInputsFromTemplates
+        tagsetInputs
       );
 
     calloutFraming.profile = await this.profileService.createProfile(
