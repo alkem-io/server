@@ -47,4 +47,5 @@ export enum LogContext {
   MUTATION = 'mutation',
   DOCUMENT = 'document',
   URL_GENERATOR = 'url-generator',
+  CONVERSION = 'conversion',
 }

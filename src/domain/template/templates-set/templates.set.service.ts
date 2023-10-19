@@ -345,7 +345,7 @@ export class TemplatesSetService {
 
     if (typeCount <= policy.minInnovationFlow) {
       throw new ValidationException(
-        `Cannot delete last innovationFlow template: ${innovationFlowTemplate.id} of type ${innovationFlowTemplate.type} from templateSet: ${templatesSet.id}!`,
+        `Cannot delete last innovationFlow template: ${innovationFlowTemplate.id} of type ${innovationFlowTemplate.type} from templatesSet: ${templatesSet.id}!`,
         LogContext.LIFECYCLE
       );
     }
