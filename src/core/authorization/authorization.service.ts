@@ -10,7 +10,7 @@ import { AuthorizationPolicyRulePrivilege } from './authorization.policy.rule.pr
 import { IVerifiedCredential } from '@domain/agent/verified-credential/verified.credential.interface';
 import { IAuthorizationPolicyRuleCredential } from './authorization.policy.rule.credential.interface';
 import { IAuthorizationPolicyRuleVerifiedCredential } from './authorization.policy.rule.verified.credential.interface';
-import { AuthorizationInvalidPolicyException } from '@common/exceptions/authorization.invalid.policy.exception copy';
+import { AuthorizationInvalidPolicyException } from '@common/exceptions/authorization.invalid.policy.exception';
 import { IAuthorizationPolicyRulePrivilege } from './authorization.policy.rule.privilege.interface';
 import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
 
@@ -86,6 +86,12 @@ export class AuthorizationService {
         'Authorization: no definition provided',
         LogContext.AUTH_POLICY
       );
+    if (authorization.credentialRules === '') {
+      throw new AuthorizationInvalidPolicyException(
+        `AuthorizationPolicy without credential rules provided: ${authorization.id}`,
+        LogContext.AUTH
+      );
+    }
     return authorization;
   }
 
