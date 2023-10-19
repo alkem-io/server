@@ -816,7 +816,9 @@ export class SpaceService {
     lifecycleType: InnovationFlowType
   ): Promise<IInnovationFlowTemplate> {
     const space = await this.getSpaceOrFail(spaceId, {
-      relations: ['templateSet'],
+      relations: {
+        templatesSet: true,
+      },
     });
 
     if (!space.templatesSet)
