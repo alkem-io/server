@@ -84,7 +84,7 @@ export class ConversionService {
       );
     if (challengeCommunityLeadOrgs.length !== 1) {
       throw new ValidationException(
-        `A Challenge must have exactly on Lead organization to be converted to a Space: ${challenge.nameID} has ${challengeCommunityLeadOrgs.length}`,
+        `A Challenge must have exactly one Lead organization to be converted to a Space: ${challenge.nameID} has ${challengeCommunityLeadOrgs.length}`,
         LogContext.CONVERSION
       );
     }
