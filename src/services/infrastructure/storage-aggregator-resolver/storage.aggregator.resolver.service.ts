@@ -298,7 +298,6 @@ export class StorageAggregatorResolverService {
     let [result]: {
       storageAggregatorId: string;
     }[] = await this.entityManager.connection.query(query);
-
     if (result && result.storageAggregatorId) return result.storageAggregatorId;
 
     query = `SELECT \`storageAggregatorId\` FROM \`space\`
@@ -308,7 +307,7 @@ export class StorageAggregatorResolverService {
     [result] = await this.entityManager.connection.query(query);
     if (result && result.storageAggregatorId) return result.storageAggregatorId;
 
-    query = `SELECT \`storageAggregatorId\` FROM \`challenge\`
+    query = `SELECT \`storageAggregatorId\` FROM \`opportunity\`
       LEFT JOIN \`collaboration\` ON \`collaboration\`.\`id\` = \`opportunity\`.\`collaborationId\`
       LEFT JOIN \`callout\` ON \`callout\`.\`collaborationId\` = \`collaboration\`.\`id\`
       WHERE \`callout\`.\`id\`='${calloutId}'`;
