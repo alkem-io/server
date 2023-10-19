@@ -37,6 +37,7 @@ import { ActivityInputCalloutLinkCreated } from '@services/adapters/activity-ada
 import { CreateContributionOnCalloutInput } from './dto/callout.dto.create.contribution';
 import { ICalloutContribution } from '../callout-contribution/callout.contribution.interface';
 import { CalloutContributionAuthorizationService } from '../callout-contribution/callout.contribution.service.authorization';
+import { CalloutContributionService } from '../callout-contribution/callout.contribution.service';
 
 @Resolver()
 export class CalloutResolverMutations {
@@ -49,6 +50,7 @@ export class CalloutResolverMutations {
     private calloutService: CalloutService,
     private namingService: NamingService,
     private contributionAuthorizationService: CalloutContributionAuthorizationService,
+    private calloutContributionService: CalloutContributionService,
     @Inject(SUBSCRIPTION_CALLOUT_POST_CREATED)
     private postCreatedSubscription: PubSubEngine
   ) {}
@@ -258,7 +260,7 @@ export class CalloutResolverMutations {
       }
     }
 
-    return contribution;
+    return await this.calloutContributionService.save(contribution);
   }
 
   private async processActivityLinkCreated(

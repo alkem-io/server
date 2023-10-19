@@ -42,6 +42,10 @@ export class WhiteboardCheckoutService {
       whiteboardCheckout.id,
       WhiteboardCheckoutLifecycleConfig
     );
+    whiteboardCheckout.lifecycle =
+      await this.lifecycleService.initializationEvent(
+        whiteboardCheckout.lifecycle
+      );
 
     return this.save(whiteboardCheckout);
   }

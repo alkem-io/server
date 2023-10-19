@@ -83,6 +83,7 @@ export class WhiteboardCheckoutLifecycleOptionsProvider {
     );
     return updatedWhiteboardCheckout;
   }
+
   private WhiteboardCheckoutLifecycleMachineOptions: Partial<
     MachineOptions<any, any>
   > = {
