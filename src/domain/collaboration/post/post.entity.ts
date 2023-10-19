@@ -1,6 +1,5 @@
-import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
+import { Column, Entity, JoinColumn, OneToOne } from 'typeorm';
 import { IPost } from './post.interface';
-import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
 import { Room } from '@domain/communication/room/room.entity';
 
@@ -19,13 +18,6 @@ export class Post extends NameableEntity implements IPost {
   })
   @JoinColumn()
   comments!: Room;
-
-  @ManyToOne(() => Callout, callout => callout.posts, {
-    eager: false,
-    cascade: false,
-    onDelete: 'CASCADE',
-  })
-  callout?: Callout;
 
   constructor() {
     super();

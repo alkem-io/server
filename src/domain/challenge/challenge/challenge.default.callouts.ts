@@ -11,178 +11,193 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
   {
     nameID: 'getting-started',
     type: CalloutType.LINK_COLLECTION,
-    state: CalloutState.CLOSED,
+    contributionPolicy: {
+      state: CalloutState.CLOSED,
+    },
     sortOrder: 1,
-    profile: {
-      displayName: 'Getting Started',
-      description: '⬇️ Here are some quick links to help you get started',
-      tagsets: [
-        {
-          name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
-          type: TagsetType.SELECT_ONE,
-          tags: [CommonDisplayLocation.HOME_RIGHT],
-        },
-      ],
+    framing: {
+      profile: {
+        displayName: 'Getting Started',
+        description: '⬇️ Here are some quick links to help you get started',
+        tagsets: [
+          {
+            name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+            type: TagsetType.SELECT_ONE,
+            tags: [CommonDisplayLocation.HOME_RIGHT],
+          },
+        ],
+      },
     },
   },
   {
     nameID: 'general-chat',
     type: CalloutType.POST,
-    state: CalloutState.OPEN,
+    contributionPolicy: {
+      state: CalloutState.OPEN,
+    },
     sortOrder: 2,
-    profile: {
-      displayName: 'General chat 💬',
-      description: 'Things you would like to discuss with the community.',
-      tagsets: [
-        {
-          name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
-          type: TagsetType.SELECT_ONE,
-          tags: [CommonDisplayLocation.HOME_LEFT],
-        },
-      ],
+    framing: {
+      profile: {
+        displayName: 'General chat 💬',
+        description: 'Things you would like to discuss with the community.',
+        tagsets: [
+          {
+            name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+            type: TagsetType.SELECT_ONE,
+            tags: [CommonDisplayLocation.HOME_LEFT],
+          },
+        ],
+      },
     },
   },
   {
     nameID: 'contributor-profiles',
     type: CalloutType.POST_COLLECTION,
-    state: CalloutState.OPEN,
-    sortOrder: 2,
-    profile: {
-      displayName: '👥 This is us!',
-      description:
-        'Here you will find the profiles of all contributors to this Challenge. Are you joining us? 👋 Nice to meet you! Please also provide your details below.',
-      tagsets: [
-        {
-          name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
-          type: TagsetType.SELECT_ONE,
-          tags: [CommonDisplayLocation.HOME_RIGHT],
-        },
-      ],
+    contributionPolicy: {
+      state: CalloutState.OPEN,
     },
-    postTemplate: {
-      type: 'Profile',
-      defaultDescription:
-        'Hi! I am... <p> In daily life I... <p> And I also like to... <p> You can contact me for anything related to... <p> My wish for this Challenge is.. <p> <i>And of course feel invited to insert a nice picture!</i>',
+    sortOrder: 2,
+    framing: {
       profile: {
-        displayName: 'Profile',
+        displayName: '👥 This is us!',
         description:
-          'To stimulate contributors to share more details about their profile.',
+          'Here you will find the profiles of all contributors to this Challenge. Are you joining us? 👋 Nice to meet you! Please also provide your details below.',
+        tagsets: [
+          {
+            name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+            type: TagsetType.SELECT_ONE,
+            tags: [CommonDisplayLocation.HOME_RIGHT],
+          },
+        ],
       },
+    },
+    contributionDefaults: {
+      postDescription:
+        'Hi! I am... <p> In daily life I... <p> And I also like to... <p> You can contact me for anything related to... <p> My wish for this Challenge is.. <p> <i>And of course feel invited to insert a nice picture!</i>',
     },
   },
   {
     nameID: 'news',
     type: CalloutType.POST_COLLECTION,
-    state: CalloutState.OPEN,
-    sortOrder: 1,
-    profile: {
-      displayName: 'Relevant news, research or use cases 📰',
-      description:
-        'Please share any relevant insights to help us better understand the Challenge. You can describe why it is relevant and add a link or upload a document with the article. You can also comment on the insights already submitted by other community members!',
-      tagsets: [
-        {
-          name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
-          type: TagsetType.SELECT_ONE,
-          tags: [ChallengeDisplayLocation.CONTRIBUTE_RIGHT],
-        },
-      ],
+    contributionPolicy: {
+      state: CalloutState.OPEN,
     },
-    postTemplate: {
-      type: 'contribution',
-      defaultDescription:
-        '✍️ Please share your contribution. The more details the better!',
+    sortOrder: 1,
+    framing: {
       profile: {
-        displayName: 'contribution',
+        displayName: 'Relevant news, research or use cases 📰',
         description:
-          'To share contributions with detailed explanations how they help.',
+          'Please share any relevant insights to help us better understand the Challenge. You can describe why it is relevant and add a link or upload a document with the article. You can also comment on the insights already submitted by other community members!',
+        tagsets: [
+          {
+            name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+            type: TagsetType.SELECT_ONE,
+            tags: [ChallengeDisplayLocation.CONTRIBUTE_RIGHT],
+          },
+        ],
       },
+    },
+    contributionDefaults: {
+      postDescription:
+        '✍️ Please share your contribution. The more details the better!',
     },
   },
   {
     nameID: 'stakeholder-map',
     type: CalloutType.WHITEBOARD,
-    state: CalloutState.OPEN,
-    sortOrder: 2,
-    profile: {
-      displayName: 'Who are the stakeholders?',
-      description:
-        'Choose one of the templates from the library to map your stakeholders here!',
-      tagsets: [
-        {
-          name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
-          type: TagsetType.SELECT_ONE,
-          tags: [ChallengeDisplayLocation.CONTRIBUTE_RIGHT],
-        },
-      ],
+    contributionPolicy: {
+      state: CalloutState.OPEN,
     },
-    whiteboard: {
-      content: EMPTY_WHITEBOARD_CONTENT,
-      nameID: 'stakeholders',
-      profileData: {
-        displayName: 'stakeholder map',
+    sortOrder: 2,
+    framing: {
+      profile: {
+        displayName: 'Who are the stakeholders?',
+        description:
+          'Choose one of the templates from the library to map your stakeholders here!',
+        tagsets: [
+          {
+            name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+            type: TagsetType.SELECT_ONE,
+            tags: [ChallengeDisplayLocation.CONTRIBUTE_RIGHT],
+          },
+        ],
+      },
+      whiteboard: {
+        content: EMPTY_WHITEBOARD_CONTENT,
+        nameID: 'stakeholders',
+        profileData: {
+          displayName: 'stakeholder map',
+        },
       },
     },
   },
   {
     nameID: 'documents',
     type: CalloutType.LINK_COLLECTION,
-    state: CalloutState.OPEN,
+    contributionPolicy: {
+      state: CalloutState.OPEN,
+    },
     sortOrder: 3,
-    profile: {
-      displayName: 'Reference / important documents',
-      description: 'Please add links to documents with reference material.💥',
-      tagsets: [
-        {
-          name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
-          type: TagsetType.SELECT_ONE,
-          tags: [ChallengeDisplayLocation.CONTRIBUTE],
-        },
-      ],
+    framing: {
+      profile: {
+        displayName: 'Reference / important documents',
+        description: 'Please add links to documents with reference material.💥',
+        tagsets: [
+          {
+            name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+            type: TagsetType.SELECT_ONE,
+            tags: [ChallengeDisplayLocation.CONTRIBUTE],
+          },
+        ],
+      },
     },
   },
   {
     nameID: 'opportunity-ideas',
     type: CalloutType.POST,
-    state: CalloutState.OPEN,
+    contributionPolicy: {
+      state: CalloutState.OPEN,
+    },
     sortOrder: 1,
-    profile: {
-      displayName: '💡 What Opportunities do you see?',
-      description:
-        'Please share any relevant direction for a solution that you can think of or have seen.',
-      tagsets: [
-        {
-          name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
-          type: TagsetType.SELECT_ONE,
-          tags: [ChallengeDisplayLocation.OPPORTUNITIES_LEFT],
-        },
-      ],
+    framing: {
+      profile: {
+        displayName: '💡 What Opportunities do you see?',
+        description:
+          'Please share any relevant direction for a solution that you can think of or have seen.',
+        tagsets: [
+          {
+            name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+            type: TagsetType.SELECT_ONE,
+            tags: [ChallengeDisplayLocation.OPPORTUNITIES_LEFT],
+          },
+        ],
+      },
     },
   },
   {
     nameID: 'proposals',
     type: CalloutType.POST_COLLECTION,
-    state: CalloutState.OPEN,
-    sortOrder: 1,
-    profile: {
-      displayName: 'Opportunity proposals',
-      description:
-        'What are the 💡 Opportunities that you think we should be working on? Please add them below and use the template provided.',
-      tagsets: [
-        {
-          name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
-          type: TagsetType.SELECT_ONE,
-          tags: [ChallengeDisplayLocation.OPPORTUNITIES_RIGHT],
-        },
-      ],
+    contributionPolicy: {
+      state: CalloutState.OPEN,
     },
-    postTemplate: {
-      type: 'opportunity',
-      defaultDescription:
-        '💡 Title <p> 💬 Description <p> 🗣️ Who to involve <p> 🌟 Why this has great potential',
+    sortOrder: 1,
+    framing: {
       profile: {
-        displayName: 'opportunity',
-        description: 'To share proposals for Opportunities to be worked on.',
+        displayName: 'Opportunity proposals',
+        description:
+          'What are the 💡 Opportunities that you think we should be working on? Please add them below and use the template provided.',
+        tagsets: [
+          {
+            name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+            type: TagsetType.SELECT_ONE,
+            tags: [ChallengeDisplayLocation.OPPORTUNITIES_RIGHT],
+          },
+        ],
       },
+    },
+    contributionDefaults: {
+      postDescription:
+        '💡 Title <p> 💬 Description <p> 🗣️ Who to involve <p> 🌟 Why this has great potential',
     },
   },
 ];

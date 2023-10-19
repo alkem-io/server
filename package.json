@@ -1,6 +1,6 @@
 {
   "name": "alkemio-server",
-  "version": "0.60.3",
+  "version": "0.61.0",
   "description": "Alkemio server, responsible for managing the shared Alkemio platform",
   "author": "Alkemio Foundation",
   "private": false,
@@ -84,7 +84,7 @@
     "graphql-ws": "^5.6.2",
     "helmet": "^4.6.0",
     "image-size": "^1.0.0",
-    "ipfs-http-client": "^51.0.1",
+    "ipfs-http-client": "^56.0.2",
     "jwks-rsa": "^2.0.4",
     "jwt-decode": "^3.1.2",
     "lodash": "^4.17.21",

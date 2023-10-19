@@ -26,7 +26,7 @@ import { CommunityInvitationLifecycleOptionsProvider } from './community.lifecyc
 import { InvitationExternalModule } from '../invitation.external/invitation.external.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { CommunityEventsService } from './community.service.events';
-import { StorageBucketResolverModule } from '@services/infrastructure/storage-bucket-resolver/storage.bucket.resolver.module';
+import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
 
 @Module({
   imports: [
@@ -46,7 +46,7 @@ import { StorageBucketResolverModule } from '@services/infrastructure/storage-bu
     LifecycleModule,
     AgentModule,
     EntityResolverModule,
-    StorageBucketResolverModule,
+    StorageAggregatorResolverModule,
     FormModule,
     TypeOrmModule.forFeature([Community]),
     TrustRegistryAdapterModule,

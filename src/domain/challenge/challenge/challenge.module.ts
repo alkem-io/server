@@ -25,11 +25,10 @@ import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platf
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { LoaderCreatorModule } from '@core/dataloader/creators';
-import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
-import { ChallengeStorageBucketLoaderCreator } from '@core/dataloader/creators/loader.creators/challenge/challenge.storage.space.loader.creator';
 import { InnovationFlowModule } from '../innovation-flow/innovation.flow.module';
 import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
+import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
 
 @Module({
   imports: [
@@ -54,7 +53,7 @@ import { ProfileModule } from '@domain/common/profile/profile.module';
     ContributionReporterModule,
     TypeOrmModule.forFeature([Challenge]),
     LoaderCreatorModule,
-    StorageBucketModule,
+    StorageAggregatorModule,
     ContextModule,
     ProfileModule,
     CollaborationModule,
@@ -65,7 +64,6 @@ import { ProfileModule } from '@domain/common/profile/profile.module';
     ChallengeResolverMutations,
     ChallengeResolverFields,
     ChallengeResolverSubscriptions,
-    ChallengeStorageBucketLoaderCreator,
   ],
   exports: [ChallengeService, ChallengeAuthorizationService],
 })

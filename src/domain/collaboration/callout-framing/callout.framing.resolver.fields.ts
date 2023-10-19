@@ -1,26 +1,56 @@
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { LoggerService } from '@nestjs/common';
-import { Inject, UseGuards } from '@nestjs/common/decorators';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { UseGuards } from '@nestjs/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ICalloutFraming } from './callout.framing.interface';
+import { Profiling } from '@common/decorators';
+import { Loader } from '@core/dataloader/decorators';
+import { CalloutFraming } from './callout.framing.entity';
+import { ProfileLoaderCreator } from '@core/dataloader/creators';
+import { ILoader } from '@core/dataloader/loader.interface';
+import { IWhiteboard } from '@domain/common/whiteboard';
 import { CalloutFramingService } from './callout.framing.service';
+import { IWhiteboardRt } from '@domain/common/whiteboard-rt/whiteboard.rt.interface';
 
 @Resolver(() => ICalloutFraming)
 export class CalloutFramingResolverFields {
-  constructor(
-    @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService,
-    private calloutFramingService: CalloutFramingService
-  ) {}
+  constructor(private calloutFramingService: CalloutFramingService) {}
 
   @UseGuards(GraphqlGuard)
   @ResolveField('profile', () => IProfile, {
     nullable: false,
     description: 'The Profile for framing the associated Callout.',
   })
-  async profile(@Parent() calloutFraming: ICalloutFraming): Promise<IProfile> {
-    return this.calloutFramingService.getProfile(calloutFraming);
+  @Profiling.api
+  async profile(
+    @Parent() calloutFraming: ICalloutFraming,
+    @Loader(ProfileLoaderCreator, { parentClassRef: CalloutFraming })
+    loader: ILoader<IProfile>
+  ): Promise<IProfile> {
+    return loader.load(calloutFraming.id);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField('whiteboard', () => IWhiteboard, {
+    nullable: true,
+    description: 'The Whiteboard for framing the associated Callout.',
+  })
+  @Profiling.api
+  async whiteboard(
+    @Parent() calloutFraming: ICalloutFraming
+  ): Promise<IWhiteboard | null> {
+    return await this.calloutFramingService.getWhiteboard(calloutFraming);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField('whiteboardRt', () => IWhiteboardRt, {
+    nullable: true,
+    description: 'The WhiteboardRt for framing the associated Callout.',
+  })
+  @Profiling.api
+  async whiteboardRt(
+    @Parent() calloutFraming: ICalloutFraming
+  ): Promise<IWhiteboardRt | null> {
+    return await this.calloutFramingService.getWhiteboardRt(calloutFraming);
   }
 }

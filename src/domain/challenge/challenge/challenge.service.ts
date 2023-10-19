@@ -53,8 +53,6 @@ import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { IProfile } from '@domain/common/profile/profile.interface';
-import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
-import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { OperationNotAllowedException } from '@common/exceptions/operation.not.allowed.exception';
 import { InnovationFlowService } from '../innovation-flow/innovaton.flow.service';
 import { IInnovationFlow } from '../innovation-flow/innovation.flow.interface';
@@ -66,6 +64,8 @@ import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { challengeDefaultCallouts } from './challenge.default.callouts';
 import { ChallengeDisplayLocation } from '@common/enums/challenge.display.location';
 import { CommonDisplayLocation } from '@common/enums/common.display.location';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 @Injectable()
 export class ChallengeService {
   constructor(
@@ -76,7 +76,7 @@ export class ChallengeService {
     private baseChallengeService: BaseChallengeService,
     private organizationService: OrganizationService,
     private preferenceSetService: PreferenceSetService,
-    private storageBucketService: StorageBucketService,
+    private storageAggregatorService: StorageAggregatorService,
     private innovationFlowService: InnovationFlowService,
     private collaborationService: CollaborationService,
     private namingService: NamingService,
@@ -109,10 +109,9 @@ export class ChallengeService {
 
     challenge.opportunities = [];
 
-    challenge.storageBucket =
-      await this.storageBucketService.createStorageBucket(
-        {},
-        challengeData.storageBucketParent
+    challenge.storageAggregator =
+      await this.storageAggregatorService.createStorageAggregator(
+        challengeData.storageAggregatorParent
       );
 
     await this.baseChallengeService.initialise(
@@ -123,7 +122,7 @@ export class ChallengeService {
       challengeCommunityPolicy,
       challengeCommunityApplicationForm,
       ProfileType.CHALLENGE,
-      challenge.storageBucket
+      challenge.storageAggregator
     );
 
     await this.challengeRepository.save(challenge);
@@ -190,7 +189,7 @@ export class ChallengeService {
           },
         },
         [statesTagssetTemplate],
-        challenge.storageBucket
+        challenge.storageAggregator
       );
 
     const savedChallenge = await this.challengeRepository.save(challenge);
@@ -217,7 +216,7 @@ export class ChallengeService {
       await this.collaborationService.addDefaultCallouts(
         challenge.collaboration,
         challengeDefaultCallouts,
-        challenge.storageBucket,
+        challenge.storageAggregator,
         agentInfo?.userID
       );
 
@@ -274,14 +273,16 @@ export class ChallengeService {
     const challengeID = deleteData.ID;
     // Note need to load it in with all contained entities so can remove fully
     const challenge = await this.getChallengeOrFail(challengeID, {
-      relations: [
-        'childChallenges',
-        'opportunities',
-        'innovationFlow',
-        'preferenceSet',
-        'preferenceSet.preferences',
-        'storageBucket',
-      ],
+      relations: {
+        childChallenges: true,
+        opportunities: true,
+        innovationFlow: true,
+        preferenceSet: {
+          preferences: true,
+        },
+        profile: true,
+        storageAggregator: true,
+      },
     });
 
     // Do not remove a challenge that has child challenges , require these to be individually first removed
@@ -317,9 +318,9 @@ export class ChallengeService {
       );
     }
 
-    if (challenge.storageBucket) {
-      await this.storageBucketService.deleteStorageBucket(
-        challenge.storageBucket.id
+    if (challenge.storageAggregator) {
+      await this.storageAggregatorService.delete(
+        challenge.storageAggregator.id
       );
     }
 
@@ -423,7 +424,9 @@ export class ChallengeService {
 
   async getInnovationFlow(challengeId: string): Promise<IInnovationFlow> {
     const challenge = await this.getChallengeOrFail(challengeId, {
-      relations: ['innovationFlow'],
+      relations: {
+        innovationFlow: true,
+      },
     });
 
     const innovationFlow = challenge.innovationFlow;
@@ -580,13 +583,17 @@ export class ChallengeService {
     const challenge = await this.getChallengeOrFail(
       opportunityData.challengeID,
       {
-        relations: ['storageBucket', 'opportunities', 'community'],
+        relations: {
+          storageAggregator: true,
+          opportunities: true,
+          community: true,
+        },
       }
     );
 
-    if (!challenge.storageBucket) {
+    if (!challenge.storageAggregator) {
       throw new EntityNotInitializedException(
-        'Unable to find StorageBucket for Challenge',
+        'Unable to find StorageAggregator for Challenge',
         LogContext.CHALLENGES
       );
     }
@@ -597,10 +604,10 @@ export class ChallengeService {
       spaceID
     );
 
+    opportunityData.storageAggregatorParent = challenge.storageAggregator;
     const opportunity = await this.opportunityService.createOpportunity(
       opportunityData,
       spaceID,
-      challenge.storageBucket,
       agentInfo
     );
 
@@ -737,23 +744,27 @@ export class ChallengeService {
     return preferenceSet;
   }
 
-  async getStorageBucketOrFail(challengeId: string): Promise<IStorageBucket> {
-    const challengeWithStorageBucket = await this.getChallengeOrFail(
+  async getStorageAggregatorOrFail(
+    challengeId: string
+  ): Promise<IStorageAggregator> {
+    const challengeWithStorageAggregator = await this.getChallengeOrFail(
       challengeId,
       {
-        relations: ['storageBucket'],
+        relations: {
+          storageAggregator: true,
+        },
       }
     );
-    const storageBucket = challengeWithStorageBucket.storageBucket;
+    const storageAggregator = challengeWithStorageAggregator.storageAggregator;
 
-    if (!storageBucket) {
+    if (!storageAggregator) {
       throw new EntityNotFoundException(
-        `Unable to find storagebucket for Challenge with nameID: ${challengeWithStorageBucket.nameID}`,
+        `Unable to find storage aggregator for Challenge with nameID: ${challengeWithStorageAggregator.nameID}`,
         LogContext.COMMUNITY
       );
     }
 
-    return storageBucket;
+    return storageAggregator;
   }
 
   createPreferenceDefaults(): Map<PreferenceType, string> {

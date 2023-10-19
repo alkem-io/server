@@ -55,10 +55,10 @@ import { ContributorQueryArgs } from '../contributor/dto/contributor.query.args'
 import { Organization } from './organization.entity';
 import { IOrganization } from './organization.interface';
 import { VisualType } from '@common/enums/visual.type';
-import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
-import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { OrganizationRole } from '@common/enums/organization.role';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 
 @Injectable()
 export class OrganizationService {
@@ -70,7 +70,7 @@ export class OrganizationService {
     private userGroupService: UserGroupService,
     private profileService: ProfileService,
     private preferenceSetService: PreferenceSetService,
-    private storageBucketService: StorageBucketService,
+    private storageAggregatorService: StorageAggregatorService,
     @InjectRepository(Organization)
     private organizationRepository: Repository<Organization>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -90,12 +90,12 @@ export class OrganizationService {
     const organization: IOrganization = Organization.create(organizationData);
     organization.authorization = new AuthorizationPolicy();
 
-    organization.storageBucket =
-      await this.storageBucketService.createStorageBucket();
+    organization.storageAggregator =
+      await this.storageAggregatorService.createStorageAggregator();
     organization.profile = await this.profileService.createProfile(
       organizationData.profileData,
       ProfileType.ORGANIZATION,
-      organization.storageBucket
+      organization.storageAggregator
     );
     await this.profileService.addTagsetOnProfile(organization.profile, {
       name: TagsetReservedName.KEYWORDS,
@@ -247,13 +247,14 @@ export class OrganizationService {
   ): Promise<IOrganization> {
     const orgID = deleteData.ID;
     const organization = await this.getOrganizationOrFail(orgID, {
-      relations: [
-        'profile',
-        'groups',
-        'agent',
-        'verification',
-        'preferenceSet',
-      ],
+      relations: {
+        preferenceSet: true,
+        profile: true,
+        agent: true,
+        verification: true,
+        groups: true,
+        storageAggregator: true,
+      },
     });
     const isSpaceHost = await this.isSpaceHost(organization);
     if (isSpaceHost) {
@@ -294,6 +295,12 @@ export class OrganizationService {
 
     if (organization.profile) {
       await this.profileService.deleteProfile(organization.profile.id);
+    }
+
+    if (organization.storageAggregator) {
+      await this.storageAggregatorService.delete(
+        organization.storageAggregator.id
+      );
     }
 
     if (organization.groups) {
@@ -522,19 +529,24 @@ export class OrganizationService {
     );
     // Try to find the organization
     const organization = await this.getOrganizationOrFail(orgID, {
-      relations: ['groups', 'groups.profile', 'storageBucket'],
+      relations: {
+        groups: {
+          profile: true,
+        },
+        storageAggregator: true,
+      },
     });
 
-    if (!organization.storageBucket) {
+    if (!organization.storageAggregator) {
       throw new EntityNotInitializedException(
-        `Organization StorageBucket not initialized: ${organization.id}`,
-        LogContext.AUTH
+        `Organization StorageAggregator not initialized: ${organization.id}`,
+        LogContext.COMMUNITY
       );
     }
     const group = await this.userGroupService.addGroupWithName(
       organization,
       groupName,
-      organization.storageBucket
+      organization.storageAggregator
     );
     await this.organizationRepository.save(organization);
 
@@ -598,25 +610,28 @@ export class OrganizationService {
     return preferenceSet;
   }
 
-  async getStorageBucketOrFail(
+  async getStorageAggregatorOrFail(
     organizationID: string
-  ): Promise<IStorageBucket> {
-    const organizationWithStorageBucket = await this.getOrganizationOrFail(
+  ): Promise<IStorageAggregator> {
+    const organizationWithStorageAggregator = await this.getOrganizationOrFail(
       organizationID,
       {
-        relations: ['storageBucket'],
+        relations: {
+          storageAggregator: true,
+        },
       }
     );
-    const storageBucket = organizationWithStorageBucket.storageBucket;
+    const storageAggregator =
+      organizationWithStorageAggregator.storageAggregator;
 
-    if (!storageBucket) {
+    if (!storageAggregator) {
       throw new EntityNotFoundException(
-        `Unable to find storageBucket for Organization with nameID: ${organizationWithStorageBucket.nameID}`,
+        `Unable to find storageAggregator for Organization with nameID: ${organizationWithStorageAggregator.nameID}`,
         LogContext.COMMUNITY
       );
     }
 
-    return storageBucket;
+    return storageAggregator;
   }
 
   async organizationsWithCredentials(

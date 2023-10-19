@@ -152,19 +152,22 @@ export default class SearchResultBuilderService
       SELECT \`space\`.\`id\` as \`spaceID\`, \`challenge\`.\`id\` as \`challengeID\`, null as \'opportunityID\', \`callout\`.\`id\` as \`calloutID\` FROM \`callout\`
       RIGHT JOIN \`challenge\` on \`challenge\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
       JOIN \`space\` on \`challenge\`.\`spaceID\` = \`space\`.\`id\`
-      JOIN \`post\` on \`callout\`.\`id\` = \`post\`.\`calloutId\`
+      JOIN \`callout_contribution\` on \`callout\`.\`id\` = \`callout_contribution\`.\`calloutId\`
+      JOIN \`post\` on \`post\`.\`id\` = \`callout_contribution\`.\`postId\`
       WHERE \`post\`.\`id\` = '${postId}' UNION
 
       SELECT \`space\`.\`id\` as \`spaceID\`, null as \'challengeID\', null as \'opportunityID\', \`callout\`.\`id\` as \`calloutID\`  FROM \`callout\`
       RIGHT JOIN \`space\` on \`space\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
-      JOIN \`post\` on \`callout\`.\`id\` = \`post\`.\`calloutId\`
+      JOIN \`callout_contribution\` on \`callout\`.\`id\` = \`callout_contribution\`.\`calloutId\`
+      JOIN \`post\` on \`post\`.\`id\` = \`callout_contribution\`.\`postId\`
       WHERE \`post\`.\`id\` = '${postId}' UNION
 
       SELECT  \`space\`.\`id\` as \`spaceID\`, \`challenge\`.\`id\` as \`challengeID\`, \`opportunity\`.\`id\` as \`opportunityID\`, \`callout\`.\`id\` as \`calloutID\` FROM \`callout\`
       RIGHT JOIN \`opportunity\` on \`opportunity\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
       JOIN \`challenge\` on \`opportunity\`.\`challengeId\` = \`challenge\`.\`id\`
       JOIN \`space\` on \`opportunity\`.\`spaceID\` = \`space\`.\`id\`
-      JOIN \`post\` on \`callout\`.\`id\` = \`post\`.\`calloutId\`
+      JOIN \`callout_contribution\` on \`callout\`.\`id\` = \`callout_contribution\`.\`calloutId\`
+      JOIN \`post\` on \`post\`.\`id\` = \`callout_contribution\`.\`postId\`
       WHERE \`post\`.\`id\` = '${postId}';
       `
       );

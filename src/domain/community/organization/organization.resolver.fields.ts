@@ -30,9 +30,9 @@ import {
   ProfileLoaderCreator,
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
-import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
-import { OrganizationStorageBucketLoaderCreator } from '@core/dataloader/creators/loader.creators/organization/organization.storage.space.loader.creator';
+import { OrganizationStorageAggregatorLoaderCreator } from '@core/dataloader/creators/loader.creators/community/organization.storage.aggregator.loader.creator';
 import { OrganizationRole } from '@common/enums/organization.role';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 
 @Resolver(() => IOrganization)
 export class OrganizationResolverFields {
@@ -242,16 +242,17 @@ export class OrganizationResolverFields {
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @ResolveField('storageBucket', () => IStorageBucket, {
+  @ResolveField('storageAggregator', () => IStorageAggregator, {
     nullable: true,
-    description: 'The StorageBucket with documents in use by this Organization',
+    description:
+      'The StorageAggregator for managing storage buckets in use by this Organization',
   })
   @UseGuards(GraphqlGuard)
-  async storageBucket(
+  async storageAggregator(
     @Parent() organization: Organization,
-    @Loader(OrganizationStorageBucketLoaderCreator)
-    loader: ILoader<IStorageBucket>
-  ): Promise<IStorageBucket> {
+    @Loader(OrganizationStorageAggregatorLoaderCreator)
+    loader: ILoader<IStorageAggregator>
+  ): Promise<IStorageAggregator> {
     return loader.load(organization.id);
   }
 

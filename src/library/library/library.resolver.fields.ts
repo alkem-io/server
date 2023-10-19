@@ -7,8 +7,8 @@ import { ILibrary } from './library.interface';
 import { UUID_NAMEID } from '@domain/common/scalars';
 import { InnovationPackService } from '@library/innovation-pack/innovaton.pack.service';
 import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
-import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { LibraryService } from './library.service';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 
 @Resolver(() => ILibrary)
 export class LibraryResolverFields {
@@ -36,13 +36,15 @@ export class LibraryResolverFields {
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @ResolveField('storageBucket', () => IStorageBucket, {
+  @ResolveField('storageAggregator', () => IStorageAggregator, {
     nullable: true,
-    description: 'The StorageBucket with documents in use by this User',
+    description: 'The StorageAggregator for storage used by this Library',
   })
   @UseGuards(GraphqlGuard)
-  async storageBucket(@Parent() library: ILibrary): Promise<IStorageBucket> {
-    return await this.libraryService.getStorageBucket(library);
+  async storageAggregator(
+    @Parent() library: ILibrary
+  ): Promise<IStorageAggregator> {
+    return await this.libraryService.getStorageAggregator(library);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

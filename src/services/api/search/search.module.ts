@@ -20,6 +20,7 @@ import { PostModule } from '@domain/collaboration/post/post.module';
 import { Post } from '@domain/collaboration/post/post.entity';
 import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
 import { CalloutModule } from '@domain/collaboration/callout/callout.module';
+import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { CalloutModule } from '@domain/collaboration/callout/callout.module';
     TypeOrmModule.forFeature([Challenge]),
     TypeOrmModule.forFeature([Opportunity]),
     TypeOrmModule.forFeature([Post]),
+    TypeOrmModule.forFeature([CalloutContribution]),
   ],
   providers: [SearchService, SearchResolverQueries],
   exports: [SearchService],

@@ -12,7 +12,8 @@ import { UpdateCalloutTemplateInput } from './dto/callout.template.dto.update';
 import { CalloutFramingService } from '@domain/collaboration/callout-framing/callout.framing.service';
 import { CalloutContributionDefaultsService } from '@domain/collaboration/callout-contribution-defaults/callout.contribution.defaults.service';
 import { CalloutContributionPolicyService } from '@domain/collaboration/callout-contribution-policy/callout.contribution.policy.service';
-import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { AgentInfo } from '@core/authentication';
 
 @Injectable()
 export class CalloutTemplateService {
@@ -29,27 +30,35 @@ export class CalloutTemplateService {
 
   public async createCalloutTemplate(
     calloutTemplateData: CreateCalloutTemplateInput,
-    parentStorageBucket: IStorageBucket
+    storageAggregator: IStorageAggregator,
+    agentInfo: AgentInfo
   ): Promise<ICalloutTemplate> {
     const calloutTemplate: ICalloutTemplate = new CalloutTemplate();
     await this.templateBaseService.initialise(
       calloutTemplate,
       calloutTemplateData,
       ProfileType.CALLOUT_TEMPLATE,
-      parentStorageBucket
+      storageAggregator
     );
     calloutTemplate.framing =
       await this.calloutFramingService.createCalloutFraming(
         calloutTemplateData.framing,
-        parentStorageBucket
+        [],
+        storageAggregator,
+        agentInfo.userID
       );
     calloutTemplate.contributionDefaults =
       this.calloutResponseDefaultsService.createCalloutContributionDefaults(
         calloutTemplateData.responseDefaults
       );
+    const policyData =
+      this.calloutResponsePolicyService.updateContributionPolicyInput(
+        calloutTemplateData.type,
+        calloutTemplateData.responsePolicy
+      );
     calloutTemplate.contributionPolicy =
       this.calloutResponsePolicyService.createCalloutContributionPolicy(
-        calloutTemplateData.responsePolicy
+        policyData
       );
 
     return this.calloutTemplateRepository.save(calloutTemplate);
@@ -76,7 +85,8 @@ export class CalloutTemplateService {
 
   async updateCalloutTemplate(
     calloutTemplateInput: ICalloutTemplate,
-    calloutTemplateData: UpdateCalloutTemplateInput
+    calloutTemplateData: UpdateCalloutTemplateInput,
+    agentInfo: AgentInfo
   ): Promise<ICalloutTemplate> {
     const calloutTemplate = await this.getCalloutTemplateOrFail(
       calloutTemplateInput.id,
@@ -97,7 +107,8 @@ export class CalloutTemplateService {
       calloutTemplate.framing =
         await this.calloutFramingService.updateCalloutFraming(
           calloutTemplate.framing,
-          calloutTemplateData.framing
+          calloutTemplateData.framing,
+          agentInfo
         );
     }
     if (calloutTemplateData.responseDefaults) {

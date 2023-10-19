@@ -37,10 +37,9 @@ import {
   ProfileLoaderCreator,
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
-import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
-import { SpaceStorageBucketLoaderCreator } from '@core/dataloader/creators/loader.creators/space/space.storage.space.loader.creator';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication/agent-info';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 
 @Resolver(() => ISpace)
 export class SpaceResolverFields {
@@ -135,16 +134,13 @@ export class SpaceResolverFields {
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @ResolveField('storageBucket', () => IStorageBucket, {
+  @ResolveField('storageAggregator', () => IStorageAggregator, {
     nullable: true,
-    description: 'The StorageBucket with documents in use by this Space',
+    description: 'The StorageAggregator in use by this Space',
   })
   @UseGuards(GraphqlGuard)
-  async storageBucket(
-    @Parent() space: Space,
-    @Loader(SpaceStorageBucketLoaderCreator) loader: ILoader<IStorageBucket>
-  ): Promise<IStorageBucket> {
-    return loader.load(space.id);
+  async storageAggregator(@Parent() space: Space): Promise<IStorageAggregator> {
+    return await this.spaceService.getStorageAggregatorOrFail(space.id);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

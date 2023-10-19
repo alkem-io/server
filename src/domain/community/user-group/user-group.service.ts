@@ -28,7 +28,7 @@ import {
   RemoveUserGroupMemberInput,
   UpdateUserGroupInput,
 } from './dto';
-import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 
 @Injectable()
 export class UserGroupService {
@@ -44,7 +44,7 @@ export class UserGroupService {
 
   async createUserGroup(
     userGroupData: CreateUserGroupInput,
-    parentStorageBucket: IStorageBucket,
+    storageAggregator: IStorageAggregator,
     spaceID = ''
   ): Promise<IUserGroup> {
     const group = UserGroup.create({ ...userGroupData, spaceID });
@@ -54,7 +54,7 @@ export class UserGroupService {
     (group as IUserGroup).profile = await this.profileService.createProfile(
       userGroupData.profileData,
       ProfileType.USER_GROUP,
-      parentStorageBucket
+      storageAggregator
     );
     const savedUserGroup = await this.userGroupRepository.save(group);
     this.logger.verbose?.(
@@ -214,7 +214,7 @@ export class UserGroupService {
   async addGroupWithName(
     groupable: IGroupable,
     name: string,
-    parentStorageBucket: IStorageBucket,
+    storageAggregator: IStorageAggregator,
     spaceID?: string
   ): Promise<IUserGroup> {
     // Check if the group already exists, if so log a warning
@@ -233,7 +233,7 @@ export class UserGroupService {
           displayName: name,
         },
       },
-      parentStorageBucket,
+      storageAggregator,
       spaceID
     );
     await groupable.groups?.push(newGroup);

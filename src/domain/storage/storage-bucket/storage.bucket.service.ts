@@ -63,8 +63,7 @@ export class StorageBucketService {
   ) {}
 
   public async createStorageBucket(
-    storageBucketData?: CreateStorageBucketInput,
-    parentStorageBucket?: IStorageBucket
+    storageBucketData: CreateStorageBucketInput
   ): Promise<IStorageBucket> {
     const storage: IStorageBucket = new StorageBucket();
     storage.authorization = new AuthorizationPolicy();
@@ -74,7 +73,7 @@ export class StorageBucketService {
       this.DEFAULT_VISUAL_ALLOWED_MIME_TYPES;
     storage.maxFileSize =
       storageBucketData?.maxFileSize || this.DEFAULT_MAX_ALLOWED_FILE_SIZE;
-    storage.parentStorageBucket = parentStorageBucket;
+    storage.storageAggregator = storageBucketData.storageAggregator;
 
     return await this.storageBucketRepository.save(storage);
   }
@@ -350,13 +349,13 @@ export class StorageBucketService {
     }
   }
 
-  public async getChildStorageBuckets(
-    storageBucket: IStorageBucket
+  public async getStorageBucketsForAggregator(
+    storageAggregatorID: string
   ): Promise<IStorageBucket[]> {
     const result = await this.storageBucketRepository.find({
       where: {
-        parentStorageBucket: {
-          id: storageBucket.id,
+        storageAggregator: {
+          id: storageAggregatorID,
         },
       },
     });
@@ -374,15 +373,16 @@ export class StorageBucketService {
         },
       },
     });
-    if (!profile || !profile.type) {
-      return null;
+    if (profile) {
+      const parentEntity: IStorageBucketParent = {
+        id: profile.id,
+        type: profile.type as ProfileType,
+        displayName: profile.displayName,
+        url: await this.urlGeneratorService.generateUrlForProfile(profile),
+      };
+      return parentEntity;
     }
-    const parentEntity: IStorageBucketParent = {
-      id: profile.id,
-      type: profile.type as ProfileType,
-      displayName: profile.displayName,
-      url: await this.urlGeneratorService.generateUrlForProfile(profile),
-    };
-    return parentEntity;
+
+    return null;
   }
 }

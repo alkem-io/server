@@ -6,68 +6,60 @@ import {
   JoinColumn,
   OneToOne,
 } from 'typeorm';
-import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
-import { Post } from '@domain/collaboration/post/post.entity';
 import { ICallout } from './callout.interface';
 import { CalloutType } from '@common/enums/callout.type';
-import { CalloutState } from '@common/enums/callout.state';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
-import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
-import { PostTemplate } from '@domain/template/post-template/post.template.entity';
-import { WhiteboardTemplate } from '@domain/template/whiteboard-template/whiteboard.template.entity';
 import { Room } from '@domain/communication/room/room.entity';
-import { WhiteboardRt } from '@domain/common/whiteboard-rt/types';
+import { CalloutFraming } from '../callout-framing/callout.framing.entity';
+import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity/authorizable.entity';
+import { CalloutContributionPolicy } from '../callout-contribution-policy/callout.contribution.policy.entity';
+import { CalloutContributionDefaults } from '../callout-contribution-defaults/callout.contribution.defaults.entity';
+import { CalloutContribution } from '../callout-contribution/callout.contribution.entity';
 
 @Entity()
-export class Callout extends NameableEntity implements ICallout {
+export class Callout extends AuthorizableEntity implements ICallout {
+  @Column()
+  nameID!: string;
+
   @Column('text', { nullable: false })
   type!: CalloutType;
 
   @Column('char', { length: 36, nullable: true })
   createdBy!: string;
 
-  @Column('text', { nullable: false, default: CalloutState.OPEN })
-  state!: CalloutState;
-
   @Column('text', { nullable: false, default: CalloutVisibility.DRAFT })
   visibility!: CalloutVisibility;
 
-  @OneToMany(() => Whiteboard, whiteboard => whiteboard.callout, {
-    eager: false,
+  @OneToOne(() => CalloutFraming, {
+    eager: true,
     cascade: true,
+    onDelete: 'SET NULL',
   })
-  whiteboards?: Whiteboard[];
+  @JoinColumn()
+  framing!: CalloutFraming;
 
-  @OneToOne(() => WhiteboardRt, {
+  @OneToOne(() => CalloutContributionPolicy, {
+    eager: true,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  contributionPolicy!: CalloutContributionPolicy;
+
+  @OneToOne(() => CalloutContributionDefaults, {
     eager: false,
     cascade: true,
     onDelete: 'SET NULL',
   })
   @JoinColumn()
-  whiteboardRt?: WhiteboardRt;
+  contributionDefaults?: CalloutContributionDefaults;
 
-  @OneToMany(() => Post, post => post.callout, {
+  @OneToMany(() => CalloutContribution, contribution => contribution.callout, {
     eager: false,
     cascade: true,
   })
-  posts?: Post[];
-
-  @OneToOne(() => PostTemplate, {
-    eager: false,
-    cascade: true,
-    onDelete: 'SET NULL',
-  })
-  @JoinColumn()
-  postTemplate?: PostTemplate;
-
-  @OneToOne(() => WhiteboardTemplate, {
-    eager: false,
-    cascade: true,
-    onDelete: 'SET NULL',
-  })
-  @JoinColumn()
-  whiteboardTemplate?: WhiteboardTemplate;
+  contributions?: CalloutContribution[];
 
   @OneToOne(() => Room, {
     eager: true,
@@ -94,4 +86,9 @@ export class Callout extends NameableEntity implements ICallout {
 
   @Column('datetime')
   publishedDate!: Date;
+
+  constructor() {
+    super();
+    this.framing = new CalloutFraming();
+  }
 }

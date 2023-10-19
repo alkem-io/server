@@ -23,7 +23,6 @@ import { DeleteWhiteboardInput } from './dto/whiteboard.dto.delete';
 import { WhiteboardCheckoutService } from '../whiteboard-checkout/whiteboard.checkout.service';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
-import { EntityNotInitializedException } from '@common/exceptions';
 
 @Resolver(() => IWhiteboard)
 export class WhiteboardResolverMutations {
@@ -75,10 +74,7 @@ export class WhiteboardResolverMutations {
     @Args('whiteboardData') whiteboardData: UpdateWhiteboardDirectInput
   ): Promise<IWhiteboard> {
     const whiteboard = await this.whiteboardService.getWhiteboardOrFail(
-      whiteboardData.ID,
-      {
-        relations: ['callout'],
-      }
+      whiteboardData.ID
     );
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -108,14 +104,9 @@ export class WhiteboardResolverMutations {
       subscriptionPayload
     );
 
-    if (!whiteboard || !whiteboard.callout)
-      throw new EntityNotInitializedException(
-        `Whiteboard ${whiteboard.id} not initialized`,
-        LogContext.COLLABORATION
-      );
     const { spaceID } =
-      await this.communityResolverService.getCommunityFromCalloutOrFail(
-        whiteboard?.callout.id
+      await this.communityResolverService.getCommunityFromWhiteboardOrFail(
+        whiteboard.id
       );
 
     this.contributionReporter.calloutWhiteboardEdited(

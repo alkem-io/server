@@ -1,5 +1,5 @@
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
-import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
 import { ObjectType } from '@nestjs/graphql';
 
@@ -7,5 +7,5 @@ import { ObjectType } from '@nestjs/graphql';
 export abstract class ILibrary extends IAuthorizable {
   innovationPacks?: IInnovationPack[];
 
-  storageBucket!: IStorageBucket;
+  storageAggregator!: IStorageAggregator;
 }

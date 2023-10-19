@@ -3,8 +3,6 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { Callout } from './callout.entity';
-import { PostModule } from '../post/post.module';
-import { WhiteboardModule } from '@domain/common/whiteboard/whiteboard.module';
 import { CalloutResolverMutations } from './callout.resolver.mutations';
 import { CalloutService } from './callout.service';
 import { CalloutAuthorizationService } from './callout.service.authorization';
@@ -17,14 +15,15 @@ import { EntityResolverModule } from '@services/infrastructure/entity-resolver/e
 import { CommunityPolicyModule } from '@domain/community/community-policy/community.policy.module';
 import { MessagingModule } from '@domain/communication/messaging/messaging.module';
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
-import { ProfileModule } from '@domain/common/profile/profile.module';
-import { PostTemplateModule } from '@domain/template/post-template/post.template.module';
-import { WhiteboardTemplateModule } from '@domain/template/whiteboard-template/whiteboard.template.module';
 import { RoomModule } from '@domain/communication/room/room.module';
 import { ReferenceModule } from '@domain/common/reference/reference.module';
-import { WhiteboardRtModule } from '@domain/common/whiteboard-rt';
 import { UserLookupModule } from '@services/infrastructure/user-lookup/user.lookup.module';
-import { StorageBucketResolverModule } from '@services/infrastructure/storage-bucket-resolver/storage.bucket.resolver.module';
+import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
+import { CalloutFramingModule } from '../callout-framing/callout.framing.module';
+import { CalloutContributionDefaultsModule } from '../callout-contribution-defaults/callout.contribution.defaults.module';
+import { CalloutContributionPolicyModule } from '../callout-contribution-policy/callout.contribution.policy.module';
+import { CalloutContributionModule } from '../callout-contribution/callout.contribution.module';
+import { PostModule } from '../post/post.module';
 
 @Module({
   imports: [
@@ -34,20 +33,19 @@ import { StorageBucketResolverModule } from '@services/infrastructure/storage-bu
     NotificationAdapterModule,
     AuthorizationPolicyModule,
     AuthorizationModule,
-    PostModule,
-    WhiteboardModule,
-    WhiteboardRtModule,
     RoomModule,
     CommunityPolicyModule,
     EntityResolverModule,
     UserLookupModule,
     NamingModule,
-    ProfileModule,
-    PostTemplateModule,
-    WhiteboardTemplateModule,
     MessagingModule,
     ReferenceModule,
-    StorageBucketResolverModule,
+    CalloutFramingModule,
+    CalloutContributionModule,
+    CalloutContributionDefaultsModule,
+    CalloutContributionPolicyModule,
+    StorageAggregatorResolverModule,
+    PostModule,
     TypeOrmModule.forFeature([Callout]),
   ],
   providers: [

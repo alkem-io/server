@@ -41,8 +41,9 @@ import { CalloutDisplayLocation } from '@common/enums/callout.display.location';
 import { TimelineService } from '@domain/timeline/timeline/timeline.service';
 import { ITimeline } from '@domain/timeline/timeline/timeline.interface';
 import { keyBy } from 'lodash';
-import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
-import { StorageBucketResolverService } from '@services/infrastructure/storage-bucket-resolver/storage.bucket.resolver.service';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
+import { CalloutType } from '@common/enums/callout.type';
 
 @Injectable()
 export class CollaborationService {
@@ -53,7 +54,7 @@ export class CollaborationService {
     private namingService: NamingService,
     private relationService: RelationService,
     private tagsetTemplateSetService: TagsetTemplateSetService,
-    private storageBucketResolverService: StorageBucketResolverService,
+    private storageAggregatorResolverService: StorageAggregatorResolverService,
     @InjectRepository(Collaboration)
     private collaborationRepository: Repository<Collaboration>,
     @InjectEntityManager('default')
@@ -94,7 +95,7 @@ export class CollaborationService {
   public async addDefaultCallouts(
     collaboration: ICollaboration,
     calloutsData: CreateCalloutInput[],
-    parentStorageBucket: IStorageBucket,
+    storageAggregator: IStorageAggregator,
     userID: string | undefined
   ): Promise<ICollaboration> {
     collaboration.callouts = await this.getCalloutsOnCollaboration(
@@ -108,7 +109,7 @@ export class CollaborationService {
       const callout = await this.calloutService.createCallout(
         calloutDefault,
         collaboration.tagsetTemplateSet.tagsetTemplates,
-        parentStorageBucket,
+        storageAggregator,
         userID
       );
       // default callouts are already published
@@ -278,30 +279,30 @@ export class CollaborationService {
         );
     } else {
       calloutData.nameID = this.namingService.createNameID(
-        `${calloutData.profile.displayName}`
+        `${calloutData.framing.profile.displayName}`
       );
     }
 
     const displayNameAvailable =
       await this.namingService.isCalloutDisplayNameAvailableInCollaboration(
-        calloutData.profile.displayName,
+        calloutData.framing.profile.displayName,
         collaboration.id
       );
     if (!displayNameAvailable)
       throw new ValidationException(
-        `Unable to create Callout: the provided displayName is already taken: ${calloutData.profile.displayName}`,
+        `Unable to create Callout: the provided displayName is already taken: ${calloutData.framing.profile.displayName}`,
         LogContext.CHALLENGES
       );
 
     const tagsetTemplates = collaboration.tagsetTemplateSet.tagsetTemplates;
-    const storageBucket =
-      await this.storageBucketResolverService.getStorageBucketForCollaboration(
+    const storageAggregator =
+      await this.storageAggregatorResolverService.getStorageAggregatorForCollaboration(
         collaboration.id
       );
     const callout = await this.calloutService.createCallout(
       calloutData,
       tagsetTemplates,
-      storageBucket,
+      storageAggregator,
       userID
     );
     collaboration.callouts.push(callout);
@@ -336,8 +337,10 @@ export class CollaborationService {
       {
         relations: {
           callouts: {
-            profile: {
-              tagsets: true,
+            framing: {
+              profile: {
+                tagsets: true,
+              },
             },
           },
         },
@@ -360,7 +363,7 @@ export class CollaborationService {
       // Filter by Callout display locations
       const locationCheck =
         args.displayLocations && args.displayLocations.length
-          ? callout.profile.tagsets?.some(
+          ? callout.framing.profile.tagsets?.some(
               tagset =>
                 tagset.name === TagsetReservedName.CALLOUT_DISPLAY_LOCATION &&
                 tagset.tags.length > 0 &&
@@ -375,7 +378,7 @@ export class CollaborationService {
       // Filter by tagsets
       const tagsetCheck =
         args.tagsets && args.tagsets.length
-          ? callout.profile?.tagsets?.some(calloutTagset =>
+          ? callout.framing.profile?.tagsets?.some(calloutTagset =>
               args.tagsets?.some(
                 argTagset =>
                   argTagset.name === calloutTagset.name &&
@@ -540,10 +543,10 @@ export class CollaborationService {
       postsCount: number;
     }[] = await this.entityManager.connection.query(
       `
-      SELECT COUNT(*) as postsCount
-      FROM \`collaboration\` RIGHT JOIN \`callout\` ON \`callout\`.\`collaborationId\` = \`collaboration\`.\`id\`
-      RIGHT JOIN \`post\` ON \`post\`.\`calloutId\` = \`callout\`.\`id\`
-      WHERE \`collaboration\`.\`id\` = '${collaboration.id}' AND \`callout\`.\`visibility\` = '${CalloutVisibility.PUBLISHED}';
+      SELECT COUNT(*) as postsCount FROM \`collaboration\`
+      RIGHT JOIN \`callout\` ON \`callout\`.\`collaborationId\` = \`collaboration\`.\`id\`
+      RIGHT JOIN \`callout_contribution\` ON \`callout_contribution\`.\`calloutId\` = \`callout\`.\`id\`
+      WHERE \`collaboration\`.\`id\` = '${collaboration.id}' AND \`callout\`.\`visibility\` = '${CalloutVisibility.PUBLISHED}' AND \`callout\`.\`type\` = '${CalloutType.POST_COLLECTION}';
       `
     );
 
@@ -559,8 +562,10 @@ export class CollaborationService {
       `
       SELECT COUNT(*) as whiteboardsCount
       FROM \`collaboration\` RIGHT JOIN \`callout\` ON \`callout\`.\`collaborationId\` = \`collaboration\`.\`id\`
-      RIGHT JOIN \`whiteboard\` ON \`whiteboard\`.\`calloutId\` = \`callout\`.\`id\`
-      WHERE \`collaboration\`.\`id\` = '${collaboration.id}'  AND \`callout\`.\`visibility\` = '${CalloutVisibility.PUBLISHED}';
+      RIGHT JOIN \`callout_contribution\` ON \`callout_contribution\`.\`calloutId\` = \`callout\`.\`id\`
+      WHERE \`collaboration\`.\`id\` = '${collaboration.id}'
+        AND \`callout\`.\`visibility\` = '${CalloutVisibility.PUBLISHED}'
+        AND \`callout\`.\`type\` = '${CalloutType.WHITEBOARD_COLLECTION}';
       `
     );
 

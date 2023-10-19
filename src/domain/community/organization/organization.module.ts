@@ -18,8 +18,8 @@ import { PreferenceModule } from '@domain/common/preference';
 import { PreferenceSetModule } from '@domain/common/preference-set/preference.set.module';
 import { PlatformAuthorizationPolicyModule } from '@src/platform/authorization/platform.authorization.policy.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
-import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
-import { OrganizationStorageBucketLoaderCreator } from '@core/dataloader/creators/loader.creators/organization/organization.storage.space.loader.creator';
+import { OrganizationStorageAggregatorLoaderCreator } from '@core/dataloader/creators/loader.creators/community/organization.storage.aggregator.loader.creator';
+import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
 
 @Module({
   imports: [
@@ -35,7 +35,7 @@ import { OrganizationStorageBucketLoaderCreator } from '@core/dataloader/creator
     ProfileModule,
     PreferenceModule,
     PreferenceSetModule,
-    StorageBucketModule,
+    StorageAggregatorModule,
     TypeOrmModule.forFeature([Organization]),
   ],
   providers: [
@@ -44,7 +44,7 @@ import { OrganizationStorageBucketLoaderCreator } from '@core/dataloader/creator
     OrganizationResolverQueries,
     OrganizationResolverMutations,
     OrganizationResolverFields,
-    OrganizationStorageBucketLoaderCreator,
+    OrganizationStorageAggregatorLoaderCreator,
   ],
   exports: [OrganizationService, OrganizationAuthorizationService],
 })

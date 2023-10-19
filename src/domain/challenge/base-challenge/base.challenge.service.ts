@@ -31,7 +31,7 @@ import { ProfileService } from '@domain/common/profile/profile.service';
 import { IProfile } from '@domain/common/profile';
 import { VisualType } from '@common/enums/visual.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 
 @Injectable()
 export class BaseChallengeService {
@@ -54,7 +54,7 @@ export class BaseChallengeService {
     communityPolicy: ICommunityPolicyDefinition,
     applicationFormData: CreateFormInput,
     profileType: ProfileType,
-    parentStorageBucket: IStorageBucket
+    storageAggregator: IStorageAggregator
   ) {
     baseChallenge.authorization = new AuthorizationPolicy();
     await this.isNameAvailableOrFail(baseChallengeData.nameID, spaceID);
@@ -78,7 +78,7 @@ export class BaseChallengeService {
     baseChallenge.profile = await this.profileService.createProfile(
       baseChallengeData.profileData,
       profileType,
-      parentStorageBucket
+      storageAggregator
     );
     await this.profileService.addTagsetOnProfile(baseChallenge.profile, {
       name: TagsetReservedName.DEFAULT,
@@ -250,7 +250,9 @@ export class BaseChallengeService {
       challengeId,
       repository,
       {
-        relations: ['context'],
+        relations: {
+          context: true,
+        },
       }
     );
     const context = challengeWithContext.context;

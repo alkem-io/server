@@ -1,6 +1,7 @@
 import { IPost } from '@domain/collaboration/post/post.interface';
-import { NotificationInputBase } from './notification.dto.input.base';
+import { NotificationInputContributionCreated } from './notification.dto.input.contribution.created';
 
-export interface NotificationInputPostCreated extends NotificationInputBase {
+export interface NotificationInputPostCreated
+  extends NotificationInputContributionCreated {
   post: IPost;
 }

@@ -21,7 +21,7 @@ import { ProfileService } from '../profile/profile.service';
 import { VisualType } from '@common/enums/visual.type';
 import { IVisual } from '../visual';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 
 @Injectable()
 export class WhiteboardService {
@@ -35,7 +35,7 @@ export class WhiteboardService {
 
   async createWhiteboard(
     whiteboardData: CreateWhiteboardInput,
-    parentStorageBucket: IStorageBucket,
+    storageAggregator: IStorageAggregator,
     userID?: string
   ): Promise<IWhiteboard> {
     const whiteboard: IWhiteboard = Whiteboard.create({ ...whiteboardData });
@@ -45,7 +45,7 @@ export class WhiteboardService {
     whiteboard.profile = await this.profileService.createProfile(
       whiteboardData.profileData,
       ProfileType.WHITEBOARD,
-      parentStorageBucket
+      storageAggregator
     );
     await this.profileService.addVisualOnProfile(
       whiteboard.profile,
@@ -211,11 +211,5 @@ export class WhiteboardService {
       );
 
     return whiteboardWithCheckout.checkout;
-  }
-
-  async getWhiteboardsInCalloutCount(calloutId: string): Promise<number> {
-    return await this.whiteboardRepository.countBy({
-      callout: { id: calloutId },
-    });
   }
 }

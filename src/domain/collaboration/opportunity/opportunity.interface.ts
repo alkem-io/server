@@ -3,6 +3,7 @@ import { IBaseChallenge } from '../../challenge/base-challenge/base.challenge.in
 import { IProject } from '@domain/collaboration/project/project.interface';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { IInnovationFlow } from '@domain/challenge/innovation-flow/innovation.flow.interface';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 @ObjectType('Opportunity')
 export abstract class IOpportunity extends IBaseChallenge {
   rowId!: number;
@@ -17,4 +18,6 @@ export abstract class IOpportunity extends IBaseChallenge {
   challenge?: IChallenge;
 
   innovationFlow?: IInnovationFlow;
+
+  storageAggregator?: IStorageAggregator;
 }

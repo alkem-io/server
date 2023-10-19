@@ -2,7 +2,6 @@ import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { ValidationException } from '@common/exceptions/validation.exception';
-import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
 import { InnovationPackService } from '@library/innovation-pack/innovaton.pack.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
@@ -13,6 +12,7 @@ import { FindOneOptions, Repository } from 'typeorm';
 import { CreateInnovationPackOnLibraryInput } from './dto/library.dto.create.innovation.pack';
 import { Library } from './library.entity';
 import { ILibrary } from './library.interface';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 
 @Injectable()
 export class LibraryService {
@@ -66,9 +66,11 @@ export class LibraryService {
     innovationPackData: CreateInnovationPackOnLibraryInput
   ): Promise<IInnovationPack> {
     const library = await this.getLibraryOrFail({
-      relations: ['storageBucket'],
+      relations: {
+        storageAggregator: true,
+      },
     });
-    if (!library.innovationPacks || !library.storageBucket)
+    if (!library.innovationPacks || !library.storageAggregator)
       throw new EntityNotInitializedException(
         `Library (${library}) not initialised`,
         LogContext.LIBRARY
@@ -92,7 +94,7 @@ export class LibraryService {
     const innovationPack =
       await this.innovationPackService.createInnovationPack(
         innovationPackData,
-        library.storageBucket
+        library.storageAggregator
       );
     library.innovationPacks.push(innovationPack);
     await this.libraryRepository.save(library);
@@ -100,19 +102,23 @@ export class LibraryService {
     return innovationPack;
   }
 
-  async getStorageBucket(libraryInput: ILibrary): Promise<IStorageBucket> {
+  async getStorageAggregator(
+    libraryInput: ILibrary
+  ): Promise<IStorageAggregator> {
     const library = await this.getLibraryOrFail({
-      relations: ['storageBucket'],
+      relations: {
+        storageAggregator: true,
+      },
     });
-    const storageBucket = library.storageBucket;
+    const storageAggregator = library.storageAggregator;
 
-    if (!storageBucket) {
+    if (!storageAggregator) {
       throw new EntityNotFoundException(
-        `Unable to find storage bucket for Library: ${libraryInput.id}`,
+        `Unable to find storage aggregator for Library: ${libraryInput.id}`,
         LogContext.STORAGE_BUCKET
       );
     }
 
-    return storageBucket;
+    return storageAggregator;
   }
 }

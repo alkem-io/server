@@ -11,7 +11,6 @@ import { NotificationInputEntityMentions } from '@services/adapters/notification
 import { getMentionsFromText } from '../messaging/get.mentions.from.text';
 import { IRoom } from './room.interface';
 import { NotificationInputForumDiscussionComment } from '@services/adapters/notification-adapter/dto/notification.dto.input.forum.discussion.comment';
-import { INameable } from '@domain/common/entity/nameable-entity';
 import { IDiscussion } from '../discussion/discussion.interface';
 import { NotificationInputUpdateSent } from '@services/adapters/notification-adapter/dto/notification.dto.input.update.sent';
 import { ActivityInputUpdateSent } from '@services/adapters/activity-adapter/dto/activity.dto.input.update.sent';
@@ -22,6 +21,7 @@ import { NotificationInputDiscussionComment } from '@services/adapters/notificat
 import { ICallout } from '@domain/collaboration/callout';
 import { ActivityInputCalloutDiscussionComment } from '@services/adapters/activity-adapter/dto/activity.dto.input.callout.discussion.comment';
 import { NotificationInputCommentReply } from '@services/adapters/notification-adapter/dto/notification.dto.input.comment.reply';
+import { IProfile } from '@domain/common/profile';
 
 @Injectable()
 export class RoomServiceEvents {
@@ -33,7 +33,9 @@ export class RoomServiceEvents {
   ) {}
 
   public processNotificationMentions(
-    parentEntity: INameable,
+    parentEntityId: string,
+    parentEntityNameId: string,
+    parentEntityProfile: IProfile,
     room: IRoom,
     message: IMessage,
     agentInfo: AgentInfo
@@ -45,9 +47,9 @@ export class RoomServiceEvents {
       roomId: room.id,
       mentions,
       originEntity: {
-        id: parentEntity.id,
-        nameId: parentEntity.nameID,
-        displayName: parentEntity.profile.displayName,
+        id: parentEntityId,
+        nameId: parentEntityNameId,
+        displayName: parentEntityProfile.displayName,
       },
       commentType: room.type as RoomType,
     };
@@ -55,7 +57,9 @@ export class RoomServiceEvents {
   }
 
   public async processNotificationCommentReply(
-    parentEntity: INameable,
+    parentEntityId: string,
+    parentEntityNameId: string,
+    parentEntityProfile: IProfile,
     room: IRoom,
     reply: IMessage,
     agentInfo: AgentInfo,
@@ -68,9 +72,9 @@ export class RoomServiceEvents {
       roomId: room.id,
       commentOwnerID: messageOwnerId,
       originEntity: {
-        id: parentEntity.id,
-        nameId: parentEntity.nameID,
-        displayName: parentEntity.profile.displayName,
+        id: parentEntityId,
+        nameId: parentEntityNameId,
+        displayName: parentEntityProfile.displayName,
       },
       commentType: room.type as RoomType,
     };

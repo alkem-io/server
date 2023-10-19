@@ -9,14 +9,14 @@ import { LibraryResolverFields } from './library.resolver.fields';
 import { LibraryResolverMutations } from './library.resolver.mutations';
 import { LibraryService } from './library.service';
 import { LibraryAuthorizationService } from './library.service.authorization';
-import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
+import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
 
 @Module({
   imports: [
     InnovationPackModule,
     NamingModule,
     AuthorizationModule,
-    StorageBucketModule,
+    StorageAggregatorModule,
     AuthorizationPolicyModule,
     TypeOrmModule.forFeature([Library]),
   ],

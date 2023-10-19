@@ -21,7 +21,7 @@ import { VisualType } from '@common/enums/visual.type';
 import { RoomService } from '@domain/communication/room/room.service';
 import { RoomType } from '@common/enums/room.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 
 @Injectable()
 export class PostService {
@@ -36,14 +36,14 @@ export class PostService {
 
   public async createPost(
     postInput: CreatePostInput,
-    parentStorageBucket: IStorageBucket,
+    storageAggregator: IStorageAggregator,
     userID: string
   ): Promise<IPost> {
     const post: IPost = Post.create(postInput);
     post.profile = await this.profileService.createProfile(
       postInput.profileData,
       ProfileType.POST,
-      parentStorageBucket
+      storageAggregator
     );
     await this.profileService.addVisualOnProfile(
       post.profile,
@@ -62,7 +62,7 @@ export class PostService {
       RoomType.POST
     );
 
-    return await this.postRepository.save(post);
+    return await this.savePost(post);
   }
 
   public async deletePost(deleteData: DeletePostInput): Promise<IPost> {
@@ -124,7 +124,7 @@ export class PostService {
       post.type = postData.type;
     }
 
-    await this.postRepository.save(post);
+    await this.savePost(post);
 
     return post;
   }
@@ -164,12 +164,5 @@ export class PostService {
     }
 
     return this.roomService.getRoomOrFail(commentsId);
-  }
-
-  public async getPostsInCalloutCount(calloutID: string): Promise<number> {
-    const count = await this.postRepository.countBy({
-      callout: { id: calloutID },
-    });
-    return count;
   }
 }

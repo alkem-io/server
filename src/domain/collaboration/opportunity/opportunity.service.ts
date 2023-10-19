@@ -44,7 +44,8 @@ import { CreateTagsetTemplateInput } from '@domain/common/tagset-template/dto/ta
 import { opportunityDefaultCallouts } from './opportunity.default.callouts';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { OpportunityDisplayLocation } from '@common/enums/opportunity.display.location';
-import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 @Injectable()
 export class OpportunityService {
   constructor(
@@ -53,6 +54,7 @@ export class OpportunityService {
     private communityService: CommunityService,
     private innovationFlowService: InnovationFlowService,
     private collaborationService: CollaborationService,
+    private storageAggregatorService: StorageAggregatorService,
     private namingService: NamingService,
     @InjectRepository(Opportunity)
     private opportunityRepository: Repository<Opportunity>,
@@ -65,7 +67,6 @@ export class OpportunityService {
   async createOpportunity(
     opportunityData: CreateOpportunityInput,
     spaceID: string,
-    parentStorageBucket: IStorageBucket,
     agentInfo?: AgentInfo
   ): Promise<IOpportunity> {
     if (!opportunityData.nameID) {
@@ -82,6 +83,11 @@ export class OpportunityService {
     opportunity.spaceID = spaceID;
     opportunity.projects = [];
 
+    opportunity.storageAggregator =
+      await this.storageAggregatorService.createStorageAggregator(
+        opportunityData.storageAggregatorParent
+      );
+
     await this.baseChallengeService.initialise(
       opportunity,
       opportunityData,
@@ -90,7 +96,7 @@ export class OpportunityService {
       opportunityCommunityPolicy,
       opportunityCommunityApplicationForm,
       ProfileType.OPPORTUNITY,
-      parentStorageBucket
+      opportunity.storageAggregator
     );
 
     await this.opportunityRepository.save(opportunity);
@@ -130,7 +136,7 @@ export class OpportunityService {
             },
           },
           [stateTagsetTemplate],
-          parentStorageBucket
+          opportunity.storageAggregator
         );
 
       await this.innovationFlowService.updateFlowStateTagsetTemplateForLifecycle(
@@ -155,7 +161,7 @@ export class OpportunityService {
         await this.collaborationService.addDefaultCallouts(
           opportunity.collaboration,
           opportunityDefaultCallouts,
-          parentStorageBucket,
+          opportunity.storageAggregator,
           agentInfo?.userID
         );
     }
@@ -283,7 +289,11 @@ export class OpportunityService {
 
   async deleteOpportunity(opportunityID: string): Promise<IOpportunity> {
     const opportunity = await this.getOpportunityOrFail(opportunityID, {
-      relations: ['projects', 'innovationFlow'],
+      relations: {
+        projects: true,
+        innovationFlow: true,
+        storageAggregator: true,
+      },
     });
     // disable deletion if projects are present
     const projects = opportunity.projects;
@@ -298,6 +308,18 @@ export class OpportunityService {
       opportunity.id,
       this.opportunityRepository
     );
+
+    if (opportunity.innovationFlow) {
+      await this.innovationFlowService.deleteInnovationFlow(
+        opportunity.innovationFlow.id
+      );
+    }
+
+    if (opportunity.storageAggregator) {
+      await this.storageAggregatorService.delete(
+        opportunity.storageAggregator.id
+      );
+    }
 
     const result = await this.opportunityRepository.remove(
       opportunity as Opportunity
@@ -397,6 +419,30 @@ export class OpportunityService {
       );
     }
     return spaceID;
+  }
+
+  async getStorageAggregatorOrFail(
+    challengeId: string
+  ): Promise<IStorageAggregator> {
+    const opportunityWithStorageAggregator = await this.getOpportunityOrFail(
+      challengeId,
+      {
+        relations: {
+          storageAggregator: true,
+        },
+      }
+    );
+    const storageAggregator =
+      opportunityWithStorageAggregator.storageAggregator;
+
+    if (!storageAggregator) {
+      throw new EntityNotFoundException(
+        `Unable to find storage aggregator for Opportunity with nameID: ${opportunityWithStorageAggregator.nameID}`,
+        LogContext.COMMUNITY
+      );
+    }
+
+    return storageAggregator;
   }
 
   async getMetrics(opportunity: IOpportunity): Promise<INVP[]> {

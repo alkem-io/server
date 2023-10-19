@@ -7,7 +7,10 @@ import { IOrganization, Organization } from '@domain/community/organization';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { EntityNotInitializedException } from '@common/exceptions';
+import {
+  EntityNotInitializedException,
+  RelationshipNotFoundException,
+} from '@common/exceptions';
 import { OrganizationService } from './organization.service';
 import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
 import { OrganizationVerificationAuthorizationService } from '../organization-verification/organization.verification.service.authorization';
@@ -21,9 +24,8 @@ import {
   CREDENTIAL_RULE_ORGANIZATION_ADMIN,
   CREDENTIAL_RULE_ORGANIZATION_READ,
   CREDENTIAL_RULE_ORGANIZATION_SELF_REMOVAL,
-  CREDENTIAL_RULE_ORGANIZATION_FILE_UPLOAD,
 } from '@common/constants';
-import { StorageBucketAuthorizationService } from '@domain/storage/storage-bucket/storage.bucket.service.authorization';
+import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 
 @Injectable()
 export class OrganizationAuthorizationService {
@@ -35,15 +37,40 @@ export class OrganizationAuthorizationService {
     private organizationVerificationAuthorizationService: OrganizationVerificationAuthorizationService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private profileAuthorizationService: ProfileAuthorizationService,
-    private storageBucketAuthorizationService: StorageBucketAuthorizationService,
+    private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
     private preferenceSetAuthorizationService: PreferenceSetAuthorizationService,
     @InjectRepository(Organization)
     private organizationRepository: Repository<Organization>
   ) {}
 
   async applyAuthorizationPolicy(
-    organization: IOrganization
+    organizationInput: IOrganization
   ): Promise<IOrganization> {
+    const organization = await this.organizationService.getOrganizationOrFail(
+      organizationInput.id,
+      {
+        relations: {
+          storageAggregator: true,
+          profile: true,
+          agent: true,
+          groups: true,
+          verification: true,
+          preferenceSet: true,
+        },
+      }
+    );
+    if (
+      !organization.profile ||
+      !organization.storageAggregator ||
+      !organization.agent ||
+      !organization.groups ||
+      !organization.verification ||
+      !organization.preferenceSet
+    )
+      throw new RelationshipNotFoundException(
+        `Unable to load entities for organization: ${organization.id} `,
+        LogContext.COMMUNITY
+      );
     organization.authorization = await this.authorizationPolicyService.reset(
       organization.authorization
     );
@@ -56,37 +83,31 @@ export class OrganizationAuthorizationService {
       organization.id
     );
 
-    if (organization.profile) {
-      organization.profile =
-        await this.profileAuthorizationService.applyAuthorizationPolicy(
-          organization.profile,
-          organization.authorization
-        );
-    }
-
-    organization.storageBucket =
-      await this.organizationService.getStorageBucketOrFail(organization.id);
-    organization.storageBucket =
-      await this.storageBucketAuthorizationService.applyAuthorizationPolicy(
-        organization.storageBucket,
+    // NOTE: Clone the authorization policy to ensure the changes are local to profile
+    const clonedOrganizationAuthorizationAnonymousAccess =
+      this.authorizationPolicyService.cloneAuthorizationPolicy(
         organization.authorization
       );
-    organization.storageBucket.authorization =
-      this.extendStorageAuthorizationPolicy(
-        organization.storageBucket.authorization,
-        organization
+    // To ensure that profile on an organization is always publicly visible, even for non-authenticated users
+    clonedOrganizationAuthorizationAnonymousAccess.anonymousReadAccess = true;
+    organization.profile =
+      await this.profileAuthorizationService.applyAuthorizationPolicy(
+        organization.profile,
+        clonedOrganizationAuthorizationAnonymousAccess
       );
 
-    organization.agent = await this.organizationService.getAgent(organization);
+    organization.storageAggregator =
+      await this.storageAggregatorAuthorizationService.applyAuthorizationPolicy(
+        organization.storageAggregator,
+        organization.authorization
+      );
+
     organization.agent.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         organization.agent.authorization,
         organization.authorization
       );
 
-    organization.groups = await this.organizationService.getUserGroups(
-      organization
-    );
     for (const group of organization.groups) {
       const savedGroup =
         await this.userGroupAuthorizationService.applyAuthorizationPolicy(
@@ -96,23 +117,16 @@ export class OrganizationAuthorizationService {
       group.authorization = savedGroup.authorization;
     }
 
-    organization.verification = await this.organizationService.getVerification(
-      organization
-    );
     organization.verification =
       await this.organizationVerificationAuthorizationService.applyAuthorizationPolicy(
         organization.verification,
         organization.id
       );
 
-    const preferenceSet = await this.organizationService.getPreferenceSetOrFail(
-      organization.id
-    );
-
-    if (preferenceSet) {
+    if (organization.preferenceSet) {
       organization.preferenceSet =
         await this.preferenceSetAuthorizationService.applyAuthorizationPolicy(
-          preferenceSet,
+          organization.preferenceSet,
           organization.authorization
         );
     }
@@ -225,41 +239,6 @@ export class OrganizationAuthorizationService {
       );
 
     return updatedAuthorization;
-  }
-
-  private extendStorageAuthorizationPolicy(
-    storageAuthorization: IAuthorizationPolicy | undefined,
-    organization: IOrganization
-  ): IAuthorizationPolicy {
-    if (!storageAuthorization)
-      throw new EntityNotInitializedException(
-        `Authorization definition not found for: ${organization.nameID}`,
-        LogContext.COMMUNITY
-      );
-
-    const newRules: IAuthorizationPolicyRuleCredential[] = [];
-
-    // Any associate can upload
-    const associatesCanUpload =
-      this.authorizationPolicyService.createCredentialRule(
-        [AuthorizationPrivilege.FILE_UPLOAD],
-        [
-          {
-            type: AuthorizationCredential.ORGANIZATION_ASSOCIATE,
-            resourceID: organization.id,
-          },
-        ],
-        CREDENTIAL_RULE_ORGANIZATION_FILE_UPLOAD
-      );
-    associatesCanUpload.cascade = false;
-    newRules.push(associatesCanUpload);
-
-    this.authorizationPolicyService.appendCredentialAuthorizationRules(
-      storageAuthorization,
-      newRules
-    );
-
-    return storageAuthorization;
   }
 
   public extendAuthorizationPolicyForSelfRemoval(

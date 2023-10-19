@@ -1,7 +1,7 @@
 import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { SearchInput } from './dto/search.dto.input';
-import { Brackets, EntityManager, Repository } from 'typeorm';
+import { Brackets, EntityManager, In, Repository } from 'typeorm';
 import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
 import { UserGroup } from '@domain/community/user-group/user-group.entity';
 import { User } from '@domain/community/user/user.entity';
@@ -36,6 +36,8 @@ import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { ISearchResultBuilder } from './search.result.builder.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { SpaceVisibility } from '@common/enums/space.visibility';
+import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
+import { CalloutType } from '@common/enums/callout.type';
 
 enum SearchEntityTypes {
   USER = 'user',
@@ -94,6 +96,8 @@ export class SearchService {
     private opportunityRepository: Repository<Opportunity>,
     @InjectRepository(Post)
     private postRepository: Repository<Post>,
+    @InjectRepository(CalloutContribution)
+    private contributionRepository: Repository<CalloutContribution>,
     private spaceService: SpaceService,
     private challengeService: ChallengeService,
     private opportunityService: OpportunityService,
@@ -160,7 +164,6 @@ export class SearchService {
         userIDsFilter,
         entityTypesFilter
       );
-
     if (searchUsers)
       await this.searchUsersByTerms(filteredTerms, userResults, userIDsFilter);
     if (searchGroups)
@@ -173,6 +176,7 @@ export class SearchService {
       );
     if (searchSpaces)
       await this.searchSpacesByTerms(filteredTerms, spaceResults, agentInfo);
+
     if (searchChallenges)
       await this.searchChallengesByTerms(
         filteredTerms,
@@ -180,6 +184,7 @@ export class SearchService {
         agentInfo,
         challengeIDsFilter
       );
+
     if (searchOpportunities)
       await this.searchOpportunitiesByTerms(
         filteredTerms,
@@ -195,10 +200,6 @@ export class SearchService {
         agentInfo,
         postIDsFilter
       );
-    this.logger.verbose?.(
-      `Executed search query: ${userResults.size} users results; ${groupResults.size} group results; ${organizationResults.size} organization results found; ${spaceResults.size} space results found; ${challengeResults.size} challenge results found; ${opportunityResults.size} opportunity results found; ${postResults.size} post results found`,
-      LogContext.API
-    );
 
     const results: ISearchResults = {
       contributionResults: [],
@@ -238,6 +239,7 @@ export class SearchService {
     this.processResults(results.contributorResults, RESULTS_LIMIT);
     this.processResults(results.journeyResults, RESULTS_LIMIT);
     this.processResults(results.groupResults, RESULTS_LIMIT);
+
     return results;
   }
 
@@ -436,29 +438,34 @@ export class SearchService {
     agentInfo: AgentInfo
   ) {
     for (const term of terms) {
-      const spaceMatches = await this.spaceRepository
-        .createQueryBuilder('space')
-        .leftJoinAndSelect('space.challenges', 'challenges')
-        .leftJoinAndSelect('space.authorization', 'authorization')
-        .leftJoinAndSelect('space.context', 'context')
-        .leftJoinAndSelect('space.collaboration', 'collaboration')
-        .leftJoinAndSelect('space.profile', 'profile')
-        .leftJoinAndSelect('profile.location', 'location')
-        .leftJoinAndSelect('profile.tagsets', 'tagset')
-        .where('space.nameID like :term')
-        .orWhere('profile.displayName like :term')
-        .orWhere('profile.tagline like :term')
-        .orWhere('profile.description like :term')
-        .orWhere('tagset.tags like :term')
-        .orWhere('context.impact like :term')
-        .orWhere('context.vision like :term')
-        .orWhere('context.who like :term')
-        .orWhere('location.country like :term')
-        .orWhere('location.city like :term')
-        .setParameters({ term: `%${term}%` })
-        .getMany();
+      const spaces = await this.spaceRepository.find({
+        relations: {
+          context: true,
+          collaboration: true,
+          profile: {
+            location: true,
+            tagsets: true,
+          },
+        },
+      });
+
+      const filteredSpaceMatches = spaces.filter(space => {
+        return (
+          space.nameID.includes(term) ||
+          space.profile.displayName.includes(term) ||
+          space.profile.tagline.includes(term) ||
+          space.profile.description.includes(term) ||
+          space.profile.tagsets?.some(tagset => tagset.tags.includes(term)) ||
+          space.context?.impact?.includes(term) ||
+          space.context?.vision?.includes(term) ||
+          space.context?.who?.includes(term) ||
+          space.profile.location?.country.includes(term) ||
+          space.profile.location?.city.includes(term)
+        );
+      });
+
       // Only show spaces that the current user has read access to
-      for (const space of spaceMatches) {
+      for (const space of filteredSpaceMatches) {
         // Score depends on various factors, hardcoded for now
         const score_increment = this.getScoreIncrementSpace(space, agentInfo);
 
@@ -515,44 +522,38 @@ export class SearchService {
     }
     for (const term of terms) {
       const readableChallengeMatches: Challenge[] = [];
-      const challengeQuery = this.challengeRepository
-        .createQueryBuilder('challenge')
-        .leftJoinAndSelect('challenge.opportunities', 'opportunities')
-        .leftJoinAndSelect('challenge.authorization', 'authorization')
-        .leftJoinAndSelect('challenge.context', 'context')
-        .leftJoinAndSelect('challenge.collaboration', 'collaboration')
-        .leftJoinAndSelect('challenge.profile', 'profile')
-        .leftJoinAndSelect('profile.location', 'location')
-        .leftJoinAndSelect('profile.tagsets', 'tagset');
+      // First part: Retrieve data using TypeORM
+      const challenges = await this.challengeRepository.find({
+        where: challengeIDsFilter ? { id: In(challengeIDsFilter) } : undefined,
+        relations: {
+          context: true,
+          collaboration: true,
+          profile: {
+            location: true,
+            tagsets: true,
+          },
+        },
+      });
+      // Second part: Filter the results in TypeScript
+      const filteredChallengeMatches = challenges.filter(challenge => {
+        return (
+          challenge.nameID.includes(term) ||
+          challenge.profile.displayName.includes(term) ||
+          challenge.profile.tagline.includes(term) ||
+          challenge.profile.description.includes(term) ||
+          challenge.profile.tagsets?.some(tagset =>
+            tagset.tags.includes(term)
+          ) ||
+          challenge.context?.impact?.includes(term) ||
+          challenge.context?.vision?.includes(term) ||
+          challenge.context?.who?.includes(term) ||
+          challenge.profile.location?.country.includes(term) ||
+          challenge.profile.location?.city.includes(term)
+        );
+      });
 
-      // Optionally restrict to search in just one Space
-      if (challengeIDsFilter) {
-        challengeQuery.where('challenge.id IN (:challengesFilter)', {
-          challengesFilter: challengeIDsFilter,
-        });
-      }
-
-      // Note that brackets are needed to nest the and
-      challengeQuery
-        .andWhere(
-          new Brackets(qb => {
-            qb.where('challenge.nameID like :term')
-              .orWhere('tagset.tags like :term')
-              .orWhere('profile.displayName like :term')
-              .orWhere('profile.tagline like :term')
-              .orWhere('profile.description like :term')
-              .orWhere('context.impact like :term')
-              .orWhere('context.vision like :term')
-              .orWhere('context.who like :term')
-              .orWhere('location.country like :term')
-              .orWhere('location.city like :term');
-          })
-        )
-        .setParameters({ term: `%${term}%` });
-
-      const challengeMatches = await challengeQuery.getMany();
       // Only show challenges that the current user has read access to
-      for (const challenge of challengeMatches) {
+      for (const challenge of filteredChallengeMatches) {
         if (
           this.authorizationService.isAccessGranted(
             agentInfo,
@@ -586,43 +587,41 @@ export class SearchService {
     }
     for (const term of terms) {
       const readableOpportunityMatches: Opportunity[] = [];
-      const opportunitiesQuery = this.opportunityRepository
-        .createQueryBuilder('opportunity')
-        .leftJoinAndSelect('opportunity.projects', 'projects')
-        .leftJoinAndSelect('opportunity.authorization', 'authorization')
-        .leftJoinAndSelect('opportunity.context', 'context')
-        .leftJoinAndSelect('opportunity.collaboration', 'collaboration')
-        .leftJoinAndSelect('opportunity.challenge', 'challenge')
-        .leftJoinAndSelect('opportunity.profile', 'profile')
-        .leftJoinAndSelect('profile.location', 'location')
-        .leftJoinAndSelect('profile.tagsets', 'tagset');
-      // Optionally restrict to search in just one Space
-      if (opportunityIDsFilter) {
-        opportunitiesQuery.where('opportunity.id IN (:opportunitiesFilter)', {
-          opportunitiesFilter: opportunityIDsFilter,
-        });
-      }
-      // Note that brackets are needed to nest the and
-      opportunitiesQuery
-        .andWhere(
-          new Brackets(qb => {
-            qb.where('opportunity.nameID like :term')
-              .orWhere('tagset.tags like :term')
-              .orWhere('profile.tagline like :term')
-              .orWhere('profile.displayName like :term')
-              .orWhere('profile.description like :term')
-              .orWhere('context.impact like :term')
-              .orWhere('context.vision like :term')
-              .orWhere('context.who like :term')
-              .orWhere('location.country like :term')
-              .orWhere('location.city like :term');
-          })
-        )
-        .setParameters({ term: `%${term}%` });
+      // First part: Retrieve data using TypeORM
+      const opportunities = await this.opportunityRepository.find({
+        where: opportunityIDsFilter
+          ? { id: In(opportunityIDsFilter) }
+          : undefined,
+        relations: {
+          context: true,
+          collaboration: true,
+          challenge: true,
+          profile: {
+            location: true,
+            tagsets: true,
+          },
+        },
+      });
 
-      const opportunityMatches = await opportunitiesQuery.getMany();
+      // Second part: Filter the results in TypeScript
+      const filteredOpportunityMatches = opportunities.filter(opportunity => {
+        return (
+          opportunity.nameID.includes(term) ||
+          opportunity.profile.displayName.includes(term) ||
+          opportunity.profile.tagline.includes(term) ||
+          opportunity.profile.description.includes(term) ||
+          opportunity.profile.tagsets?.some(tagset =>
+            tagset.tags.includes(term)
+          ) ||
+          opportunity.context?.impact?.includes(term) ||
+          opportunity.context?.vision?.includes(term) ||
+          opportunity.context?.who?.includes(term) ||
+          opportunity.profile.location?.country.includes(term) ||
+          opportunity.profile.location?.city.includes(term)
+        );
+      });
       // Only show challenges that the current user has read access to
-      for (const opportunity of opportunityMatches) {
+      for (const opportunity of filteredOpportunityMatches) {
         if (
           this.authorizationService.isAccessGranted(
             agentInfo,
@@ -1116,18 +1115,22 @@ export class SearchService {
     );
 
     // Get all the posts IDs in the Space
-    const postsFilter: string[] = [];
-    const postQuery = this.postRepository
-      .createQueryBuilder('post')
-      .leftJoinAndSelect('post.callout', 'callout')
+    const contributionsQuery = this.contributionRepository
+      .createQueryBuilder('callout_contribution')
+      .leftJoinAndSelect('callout_contribution.callout', 'callout')
+      .leftJoinAndSelect('callout_contribution.post', 'post')
       .leftJoinAndSelect('callout.collaboration', 'collaboration')
-      .where('collaboration.id IN (:collaborationFilter)', {
+      .where('callout.type IN (:postCalloutTypes)', {
+        postCalloutTypes: [CalloutType.POST_COLLECTION],
+      })
+      .andWhere('collaboration.id IN (:collaborationFilter)', {
         collaborationFilter: collaborationFilter,
       });
 
-    const postMatches = await postQuery.getMany();
-    postMatches.forEach(match => postsFilter.push(match.id));
+    const contributionMatches = (await contributionsQuery.getMany()).map(
+      x => x.id
+    );
 
-    return postsFilter;
+    return contributionMatches;
   }
 }

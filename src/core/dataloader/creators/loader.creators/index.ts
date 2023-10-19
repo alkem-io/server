@@ -6,8 +6,8 @@ export * from './profile/profile.tagsets.loader.creator';
 
 export * from './collaboration/collaboration.relations.loader.creator';
 
-export * from './callout/callout.post.template.loader.creator';
-export * from './callout/callout.whiteboard.template.loader.creator';
+export * from './callout-framing/callout.framing.whiteboard.loader';
+export * from './callout-framing/callout.framing.whiteboard.rt.loader';
 
 export * from './profile.loader.creator';
 export * from './preferences.loader.creator';

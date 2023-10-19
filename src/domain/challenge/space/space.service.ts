@@ -62,8 +62,6 @@ import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { IInnovationFlowTemplate } from '@domain/template/innovation-flow-template/innovation.flow.template.interface';
-import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
-import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { InnovationHub, InnovationHubType } from '@domain/innovation-hub/types';
 import { OperationNotAllowedException } from '@common/exceptions/operation.not.allowed.exception';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
@@ -78,6 +76,8 @@ import { IPaginatedType } from '@core/pagination/paginated.type';
 import { SpaceFilterInput } from '@services/infrastructure/space-filter/dto/space.filter.dto.input';
 import { PaginationArgs } from '@core/pagination';
 import { getPaginationResults } from '@core/pagination/pagination.fn';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 
 @Injectable()
 export class SpaceService {
@@ -93,7 +93,7 @@ export class SpaceService {
     private preferenceSetService: PreferenceSetService,
     private spacesFilterService: SpaceFilterService,
     private templatesSetService: TemplatesSetService,
-    private storageBucketService: StorageBucketService,
+    private storageAggregatorService: StorageAggregatorService,
     private collaborationService: CollaborationService,
     @InjectRepository(Space)
     private spaceRepository: Repository<Space>,
@@ -109,8 +109,8 @@ export class SpaceService {
     // default to active space
     space.visibility = SpaceVisibility.ACTIVE;
 
-    // Set up the storage bucket as that is needed for Profile
-    space.storageBucket = await this.storageBucketService.createStorageBucket();
+    space.storageAggregator =
+      await this.storageAggregatorService.createStorageAggregator();
 
     // remove context before saving as want to control that creation
     space.context = undefined;
@@ -123,7 +123,7 @@ export class SpaceService {
       spaceCommunityPolicy,
       spaceCommunityApplicationForm,
       ProfileType.SPACE,
-      space.storageBucket
+      space.storageAggregator
     );
 
     if (!space.collaboration) {
@@ -151,7 +151,7 @@ export class SpaceService {
     space.collaboration = await this.collaborationService.addDefaultCallouts(
       space.collaboration,
       spaceDefaultCallouts,
-      space.storageBucket,
+      space.storageAggregator,
       agentInfo?.userID
     );
     await this.save(space);
@@ -191,7 +191,7 @@ export class SpaceService {
         minInnovationFlow: 1,
       },
       true,
-      space.storageBucket
+      space.storageAggregator
     );
 
     // save before assigning host in case that fails
@@ -264,14 +264,15 @@ export class SpaceService {
 
   async deleteSpace(deleteData: DeleteSpaceInput): Promise<ISpace> {
     const space = await this.getSpaceOrFail(deleteData.ID, {
-      relations: [
-        'challenges',
-        'preferenceSet',
-        'preferenceSet.preferences',
-        'templatesSet',
-        'profile',
-        'storageBucket',
-      ],
+      relations: {
+        challenges: true,
+        preferenceSet: {
+          preferences: true,
+        },
+        templatesSet: true,
+        profile: true,
+        storageAggregator: true,
+      },
     });
 
     // Do not remove a space that has child challenges, require these to be individually first removed
@@ -296,10 +297,8 @@ export class SpaceService {
       await this.templatesSetService.deleteTemplatesSet(space.templatesSet.id);
     }
 
-    if (space.storageBucket) {
-      await this.storageBucketService.deleteStorageBucket(
-        space.storageBucket.id
-      );
+    if (space.storageAggregator) {
+      await this.storageAggregatorService.delete(space.storageAggregator.id);
     }
 
     const result = await this.spaceRepository.remove(space as Space);
@@ -612,20 +611,24 @@ export class SpaceService {
     return templatesSet;
   }
 
-  async getStorageBucketOrFail(spaceId: string): Promise<IStorageBucket> {
-    const spaceWithStorageBucket = await this.getSpaceOrFail(spaceId, {
-      relations: ['storageBucket'],
+  async getStorageAggregatorOrFail(
+    spaceId: string
+  ): Promise<IStorageAggregator> {
+    const spaceWithStorageAggregator = await this.getSpaceOrFail(spaceId, {
+      relations: {
+        storageAggregator: true,
+      },
     });
-    const storageBucket = spaceWithStorageBucket.storageBucket;
+    const storageAggregator = spaceWithStorageAggregator.storageAggregator;
 
-    if (!storageBucket) {
+    if (!storageAggregator) {
       throw new EntityNotFoundException(
-        `Unable to find storagebucket for space with nameID: ${spaceWithStorageBucket.nameID}`,
+        `Unable to find storage aggregatorfor space with nameID: ${spaceWithStorageAggregator.nameID}`,
         LogContext.STORAGE_BUCKET
       );
     }
 
-    return storageBucket;
+    return storageAggregator;
   }
 
   async getPreferenceSetOrFail(spaceId: string): Promise<IPreferenceSet> {
@@ -813,7 +816,9 @@ export class SpaceService {
     lifecycleType: InnovationFlowType
   ): Promise<IInnovationFlowTemplate> {
     const space = await this.getSpaceOrFail(spaceId, {
-      relations: ['templateSet'],
+      relations: {
+        templatesSet: true,
+      },
     });
 
     if (!space.templatesSet)
@@ -856,10 +861,21 @@ export class SpaceService {
     challengeData: CreateChallengeOnSpaceInput,
     agentInfo?: AgentInfo
   ): Promise<IChallenge> {
-    const space = await this.getSpaceOrFail(challengeData.spaceID);
+    const space = await this.getSpaceOrFail(challengeData.spaceID, {
+      relations: {
+        storageAggregator: true,
+      },
+    });
     await this.validateChallengeNameIdOrFail(challengeData.nameID, space.id);
+    if (!space.storageAggregator) {
+      throw new EntityNotFoundException(
+        `Unable to retrieve storage aggregator on space: ${space.id}`,
+        LogContext.CHALLENGES
+      );
+    }
 
-    // Update the challenge data being passed in to state set the parent ID to the contained challenge
+    // Update the challenge data being passed in to set the storage aggregator to use
+    challengeData.storageAggregatorParent = space.storageAggregator;
     const newChallenge = await this.challengeService.createChallenge(
       challengeData,
       space.id,

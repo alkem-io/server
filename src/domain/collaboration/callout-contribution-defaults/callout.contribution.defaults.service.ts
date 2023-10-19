@@ -2,7 +2,6 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
-import { UserInputError } from '@common/exceptions/user.input.error';
 import { CreateCalloutContributionDefaultsInput } from './dto';
 import { UpdateCalloutContributionDefaultsInput } from './dto';
 import { ICalloutContributionDefaults } from './callout.contribution.defaults.interface';
@@ -18,22 +17,15 @@ export class CalloutContributionDefaultsService {
   ) {}
 
   public createCalloutContributionDefaults(
-    calloutResponseDefaultsData: CreateCalloutContributionDefaultsInput
+    calloutResponseDefaultsData?: CreateCalloutContributionDefaultsInput
   ): ICalloutContributionDefaults {
     const calloutResponseDefaults = new CalloutContributionDefaults();
-    calloutResponseDefaults.postDescription =
-      calloutResponseDefaultsData.postDescription;
+    if (calloutResponseDefaultsData) {
+      calloutResponseDefaults.postDescription =
+        calloutResponseDefaultsData.postDescription;
 
-    calloutResponseDefaults.whiteboardContent =
-      calloutResponseDefaultsData.whiteboardContent;
-
-    if (
-      !calloutResponseDefaultsData.postDescription &&
-      !calloutResponseDefaultsData.whiteboardContent
-    ) {
-      throw new UserInputError(
-        'You need to provide a post description or/and a whiteboard content'
-      );
+      calloutResponseDefaults.whiteboardContent =
+        calloutResponseDefaultsData.whiteboardContent;
     }
 
     return calloutResponseDefaults;
@@ -46,6 +38,11 @@ export class CalloutContributionDefaultsService {
     if (calloutResponseDefaultsData.postDescription) {
       calloutResponseDefaults.postDescription =
         calloutResponseDefaultsData.postDescription;
+    }
+
+    if (calloutResponseDefaultsData.whiteboardContent) {
+      calloutResponseDefaults.whiteboardContent =
+        calloutResponseDefaultsData.whiteboardContent;
     }
 
     return calloutResponseDefaults;
