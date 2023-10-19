@@ -22,6 +22,12 @@ import { OpportunityService } from '@domain/collaboration/opportunity/opportunit
 import { InnovationFlowType } from '@common/enums/innovation.flow.type';
 import { DiscussionCategoryCommunity } from '@common/enums/communication.discussion.category.community';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { ICallout } from '@domain/collaboration/callout';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { ChallengeDisplayLocation } from '@common/enums/challenge.display.location';
+import { SpaceDisplayLocation } from '@common/enums/space.display.location';
+import { CommonDisplayLocation } from '@common/enums/common.display.location';
+import { OpportunityDisplayLocation } from '@common/enums/opportunity.display.location';
 
 export class ConversionService {
   constructor(
@@ -40,26 +46,46 @@ export class ConversionService {
     const challenge = await this.challengeService.getChallengeOrFail(
       conversionData.challengeID,
       {
-        relations: ['community', 'context', 'profile'],
+        relations: {
+          community: true,
+          context: true,
+          profile: true,
+          collaboration: {
+            callouts: {
+              framing: {
+                profile: {
+                  tagsets: true,
+                },
+              },
+            },
+          },
+          storageAggregator: true,
+        },
       }
     );
-    // check the community is in a fit state
-    const challengeCommunity = challenge.community;
-    if (!challengeCommunity) {
+    if (
+      !challenge.community ||
+      !challenge.context ||
+      !challenge.profile ||
+      !challenge.collaboration ||
+      !challenge.collaboration.callouts ||
+      !challenge.storageAggregator
+    ) {
       throw new EntityNotInitializedException(
-        `Unable to locate Community on Challenge: ${challenge.nameID}`,
-        LogContext.CHALLENGES
+        `Unable to locate all entities on on Challenge: ${challenge.nameID}`,
+        LogContext.CONVERSION
       );
     }
+    // check the community is in a fit state
     const challengeCommunityLeadOrgs =
       await this.communityService.getOrganizationsWithRole(
-        challengeCommunity,
+        challenge.community,
         CommunityRole.LEAD
       );
     if (challengeCommunityLeadOrgs.length !== 1) {
       throw new ValidationException(
-        `A Challenge must have exactly on Lead organization to be converted to a Space: ${challenge.nameID} has ${challengeCommunityLeadOrgs.length}`,
-        LogContext.CHALLENGES
+        `A Challenge must have exactly one Lead organization to be converted to a Space: ${challenge.nameID} has ${challengeCommunityLeadOrgs.length}`,
+        LogContext.CONVERSION
       );
     }
     const hostOrg = challengeCommunityLeadOrgs[0];
@@ -70,51 +96,62 @@ export class ConversionService {
         displayName: challenge.profile.displayName,
       },
     };
-    const space = await this.spaceService.createSpace(
+    const emptySpace = await this.spaceService.createSpace(
       createSpaceInput,
       agentInfo
     );
+    const space = await this.spaceService.getSpaceOrFail(emptySpace.id, {
+      relations: {
+        community: true,
+        context: true,
+        profile: true,
+        collaboration: true,
+        storageAggregator: true,
+      },
+    });
+    if (
+      !space.community ||
+      !space.context ||
+      !space.profile ||
+      !space.collaboration ||
+      !space.storageAggregator
+    ) {
+      throw new EntityNotInitializedException(
+        `Unable to locate all entities on new Space: ${challenge.nameID}`,
+        LogContext.CONVERSION
+      );
+    }
 
     const userMembers = await this.communityService.getUsersWithRole(
-      challengeCommunity,
+      challenge.community,
       CommunityRole.MEMBER
     );
     const userLeads = await this.communityService.getUsersWithRole(
-      challengeCommunity,
+      challenge.community,
       CommunityRole.LEAD
     );
     const orgMembers = await this.communityService.getOrganizationsWithRole(
-      challengeCommunity,
+      challenge.community,
       CommunityRole.MEMBER
     );
 
     // Remove the contributors from old roles
     await this.removeContributors(
-      challengeCommunity,
+      challenge.community,
       userMembers,
       userLeads,
       orgMembers,
       challengeCommunityLeadOrgs
     );
-    // also remove the current user from the members of the space
-    const spaceCommunity = space.community;
-    if (!spaceCommunity) {
-      throw new EntityNotInitializedException(
-        `Unable to locate Community on Space: ${space.nameID}`,
-        LogContext.CHALLENGES
-      );
-    }
+
     await this.communityService.removeUserFromRole(
-      spaceCommunity,
+      space.community,
       agentInfo.userID,
       CommunityRole.MEMBER
     );
 
     // Swap the communications
-    await this.swapCommunication(spaceCommunity, challengeCommunity);
-    const spaceCommunityUpdated = await this.spaceService.getCommunity(space);
-    const spaceStorageAggregator =
-      await this.spaceService.getStorageAggregatorOrFail(space.id);
+    await this.swapCommunication(space.community, challenge.community);
 
     // Swap the contexts
     const challengeContext = challenge.context;
@@ -122,13 +159,37 @@ export class ConversionService {
     space.context = challengeContext;
     challenge.context = spaceContext;
 
+    // Swap the collaborations
+    const challengeCollaboration = challenge.collaboration;
+    const spaceCollaboration = space.collaboration;
+    space.collaboration = challengeCollaboration;
+    challenge.collaboration = spaceCollaboration;
+    // Update display locations for callouts to use space locations
+    this.updateSpaceCalloutsDisplayLocation(space.collaboration.callouts);
+
+    // Swap the profiles
+    const challengeProfile = challenge.profile;
+    const spaceProfile = space.profile;
+    space.profile = challengeProfile;
+    challenge.profile = spaceProfile;
+
+    // Swap the storage aggregators
+    const challengeStorage = challenge.storageAggregator;
+    const spaceStorage = space.storageAggregator;
+    space.storageAggregator = challengeStorage;
+    challenge.storageAggregator = spaceStorage;
+    // and reverse the parent child relationship
+    challenge.storageAggregator.parentStorageAggregator =
+      space.storageAggregator;
+    space.storageAggregator.parentStorageAggregator = undefined;
+
     // Save both + then delete the challenge (save is needed to ensure right context is deleted etc)
     await this.spaceService.save(space);
     const updatedChallenge = await this.challengeService.save(challenge);
 
     // Assign users to roles in new space
     await this.assignContributors(
-      spaceCommunityUpdated,
+      space.community,
       userMembers,
       userLeads,
       orgMembers
@@ -143,7 +204,7 @@ export class ConversionService {
         opportunity.id,
         space.id,
         agentInfo,
-        spaceStorageAggregator
+        space.storageAggregator
       );
     }
     // Finally delete the Challenge
@@ -158,105 +219,135 @@ export class ConversionService {
     spaceID: string,
     agentInfo: AgentInfo,
     spaceStorageAggregator: IStorageAggregator,
-    innovationFlowTemplateID?: string
+    innovationFlowTemplateIdInput?: string
   ): Promise<IChallenge> {
     const opportunity = await this.opportunityService.getOpportunityOrFail(
       opportunityID,
       {
-        relations: ['community', 'context', 'profile'],
+        relations: {
+          community: true,
+          context: true,
+          profile: true,
+          storageAggregator: true,
+          collaboration: {
+            callouts: {
+              framing: {
+                profile: {
+                  tagsets: true,
+                },
+              },
+            },
+          },
+        },
       }
     );
+    if (
+      !opportunity.community ||
+      !opportunity.context ||
+      !opportunity.profile ||
+      !opportunity.collaboration ||
+      !opportunity.storageAggregator ||
+      !opportunity.collaboration.callouts
+    ) {
+      throw new EntityNotInitializedException(
+        `Unable to locate all entities on on Opportunity: ${opportunity.nameID}`,
+        LogContext.CONVERSION
+      );
+    }
 
     const challengeNameID = `${opportunity.nameID}c`;
     await this.spaceService.validateChallengeNameIdOrFail(
       challengeNameID,
       spaceID
     );
-    let challenge: IChallenge;
 
-    if (innovationFlowTemplateID)
-      challenge = await this.challengeService.createChallenge(
-        {
-          nameID: challengeNameID,
-          innovationFlowTemplateID: innovationFlowTemplateID,
-          profileData: {
-            displayName: opportunity.profile.displayName,
-          },
-          storageAggregatorParent: spaceStorageAggregator,
-        },
-        spaceID,
-        agentInfo
-      );
-    else {
+    let innovationFlowTemplateID = innovationFlowTemplateIdInput;
+    if (!innovationFlowTemplateID) {
       const defaultChallengeLifecycleTemplate =
         await this.spaceService.getDefaultInnovationFlowTemplate(
           spaceID,
           InnovationFlowType.CHALLENGE
         );
-      challenge = await this.challengeService.createChallenge(
-        {
-          nameID: challengeNameID,
-          innovationFlowTemplateID: defaultChallengeLifecycleTemplate.id,
-          profileData: {
-            displayName: opportunity.profile.displayName,
-          },
-          storageAggregatorParent: spaceStorageAggregator,
-        },
-        spaceID,
-        agentInfo
-      );
+      innovationFlowTemplateID = defaultChallengeLifecycleTemplate.id;
     }
+    const emptyChallenge = await this.challengeService.createChallenge(
+      {
+        nameID: challengeNameID,
+        innovationFlowTemplateID: innovationFlowTemplateID,
+        profileData: {
+          displayName: opportunity.profile.displayName,
+        },
+        storageAggregatorParent: spaceStorageAggregator,
+      },
+      spaceID,
+      agentInfo
+    );
 
-    const opportunityCommunity = opportunity.community;
-    if (!opportunityCommunity) {
+    const challenge = await this.challengeService.getChallengeOrFail(
+      emptyChallenge.id,
+      {
+        relations: {
+          community: true,
+          context: true,
+          profile: true,
+          collaboration: true,
+          storageAggregator: true,
+        },
+      }
+    );
+    if (
+      !challenge.community ||
+      !challenge.context ||
+      !challenge.profile ||
+      !challenge.collaboration ||
+      !challenge.storageAggregator
+    ) {
       throw new EntityNotInitializedException(
-        `Unable to locate Community on Opportunity: ${opportunity.nameID}`,
-        LogContext.CHALLENGES
+        `Unable to locate all entities on new Challenge for converting opportunity: ${challenge.nameID}`,
+        LogContext.CONVERSION
       );
     }
 
     const userMembers = await this.communityService.getUsersWithRole(
-      opportunityCommunity,
+      opportunity.community,
       CommunityRole.MEMBER
     );
     const userLeads = await this.communityService.getUsersWithRole(
-      opportunityCommunity,
+      opportunity.community,
       CommunityRole.LEAD
     );
     const orgMembers = await this.communityService.getOrganizationsWithRole(
-      opportunityCommunity,
+      opportunity.community,
       CommunityRole.MEMBER
     );
     const orgLeads = await this.communityService.getOrganizationsWithRole(
-      opportunityCommunity,
+      opportunity.community,
       CommunityRole.LEAD
     );
 
     // Remove the contributors from old roles
     await this.removeContributors(
-      opportunityCommunity,
+      opportunity.community,
       userMembers,
       userLeads,
       orgMembers,
       orgLeads
     );
-    const challengeCommunity = challenge.community;
-    if (!challengeCommunity) {
-      throw new EntityNotInitializedException(
-        `Unable to locate Community on Challenge: ${challenge.nameID}`,
-        LogContext.CHALLENGES
-      );
-    }
 
     // also remove the current user from the members of the newly created Challenge, otherwise will end up re-assigning
     await this.communityService.removeUserFromRole(
-      challengeCommunity,
+      challenge.community,
       agentInfo.userID,
       CommunityRole.MEMBER
     );
+    await this.communityService.removeUserFromRole(
+      challenge.community,
+      agentInfo.userID,
+      CommunityRole.LEAD
+    );
 
     // Swap the communication
-    await this.swapCommunication(challengeCommunity, opportunityCommunity);
+    await this.swapCommunication(challenge.community, opportunity.community);
     const challengeCommunityUpdated = await this.challengeService.getCommunity(
       challenge.id
     );
@@ -266,6 +357,38 @@ export class ConversionService {
     const challengeContext = challenge.context;
     challenge.context = opportunityContext;
     opportunity.context = challengeContext;
+
+    // Swap the collaborations
+    const opportunityCollaboration = opportunity.collaboration;
+    const challengeCollaboration = challenge.collaboration;
+    challenge.collaboration = opportunityCollaboration;
+    opportunity.collaboration = challengeCollaboration;
+    // Update display locations for callouts to use space locations
+    this.updateChallengeCalloutsDisplayLocation(
+      challenge.collaboration.callouts
+    );
+
+    // Swap the profiles
+    const opportunityProfile = opportunity.profile;
+    const challengeProfile = challenge.profile;
+    challenge.profile = opportunityProfile;
+    opportunity.profile = challengeProfile;
+
+    // Swap the storage aggregators
+    // Note: need to use the opportunity storage aggregator as that is what all the profiles
+    // in use within that hierarcy will be using
+    const opportunityStorage = opportunity.storageAggregator;
+    const challengeStorage = challenge.storageAggregator;
+    challenge.storageAggregator = opportunityStorage;
+    opportunity.storageAggregator = challengeStorage;
+    // and set the parent storage aggregator on the new challenge
+    if (challenge.storageAggregator) {
+      challenge.storageAggregator.parentStorageAggregator =
+        spaceStorageAggregator;
+    }
+    if (opportunity.storageAggregator) {
+      opportunity.storageAggregator.parentStorageAggregator = undefined;
+    }
 
     // Save both + then re-assign the roles
     await this.challengeService.save(challenge);
@@ -283,6 +406,96 @@ export class ConversionService {
 
     // Add the new challenge to the space
     return await this.spaceService.addChallengeToSpace(spaceID, challenge);
+  }
+
+  private updateSpaceCalloutsDisplayLocation(
+    callouts: ICallout[] | undefined
+  ): void {
+    if (!callouts) {
+      throw new EntityNotInitializedException(
+        'Callouts not defined',
+        LogContext.CONVERSION
+      );
+    }
+    for (const callout of callouts) {
+      if (
+        !callout.framing ||
+        !callout.framing.profile ||
+        !callout.framing.profile.tagsets
+      ) {
+        throw new EntityNotInitializedException(
+          `Unable to locate all child entities on callout: ${callout.nameID}`,
+          LogContext.CONVERSION
+        );
+      }
+
+      const locationTagset = callout.framing.profile.tagsets.find(
+        t => t.name === TagsetReservedName.CALLOUT_DISPLAY_LOCATION
+      );
+      if (!locationTagset || locationTagset.tags.length !== 1) {
+        throw new EntityNotInitializedException(
+          `Unable to locate all display location tagset on callout: ${callout.id}`,
+          LogContext.CONVERSION
+        );
+      }
+      const location = locationTagset.tags[0];
+      switch (location) {
+        case ChallengeDisplayLocation.OPPORTUNITIES_RIGHT:
+          locationTagset.tags = [SpaceDisplayLocation.CHALLENGES_RIGHT];
+          break;
+        case ChallengeDisplayLocation.OPPORTUNITIES_LEFT:
+          locationTagset.tags = [SpaceDisplayLocation.CHALLENGES_RIGHT];
+          break;
+        case ChallengeDisplayLocation.CONTRIBUTE_RIGHT:
+          locationTagset.tags = [CommonDisplayLocation.KNOWLEDGE];
+          break;
+        case ChallengeDisplayLocation.CONTRIBUTE:
+          locationTagset.tags = [CommonDisplayLocation.KNOWLEDGE];
+          break;
+      }
+    }
+  }
+
+  private updateChallengeCalloutsDisplayLocation(
+    callouts: ICallout[] | undefined
+  ): void {
+    if (!callouts) {
+      throw new EntityNotInitializedException(
+        'Callouts not defined',
+        LogContext.CONVERSION
+      );
+    }
+    for (const callout of callouts) {
+      if (
+        !callout.framing ||
+        !callout.framing.profile ||
+        !callout.framing.profile.tagsets
+      ) {
+        throw new EntityNotInitializedException(
+          `Unable to locate all child entities on challenge callout: ${callout.nameID}`,
+          LogContext.CONVERSION
+        );
+      }
+
+      const locationTagset = callout.framing.profile.tagsets.find(
+        t => t.name === TagsetReservedName.CALLOUT_DISPLAY_LOCATION
+      );
+      if (!locationTagset || locationTagset.tags.length !== 1) {
+        throw new EntityNotInitializedException(
+          `Unable to locate all display location tagset on callout: ${callout.id}`,
+          LogContext.CONVERSION
+        );
+      }
+      const location = locationTagset.tags[0];
+      switch (location) {
+        case OpportunityDisplayLocation.CONTRIBUTE:
+          locationTagset.tags = [ChallengeDisplayLocation.CONTRIBUTE];
+          break;
+        case OpportunityDisplayLocation.CONTRIBUTE_RIGHT:
+          locationTagset.tags = [ChallengeDisplayLocation.CONTRIBUTE_RIGHT];
+          break;
+      }
+    }
   }
 
   private async swapCommunication(
@@ -321,7 +534,6 @@ export class ConversionService {
     orgMembers: IOrganization[],
     orgLeads: IOrganization[]
   ) {
-    // TODO: missing
     for (const userMember of userMembers) {
       await this.communityService.removeUserFromRole(
         community,
