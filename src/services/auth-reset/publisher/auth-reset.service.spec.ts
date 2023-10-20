@@ -1,7 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { AuthResetService } from './auth-reset.service';
-import { EntityManagerProvider, MockAuthResetService } from '@test/mocks';
+import {
+  EntityManagerProvider,
+  MockAuthResetService,
+  MockWinstonProvider,
+} from '@test/mocks';
 import { MockTaskService } from '@test/mocks/task.service.mock';
+import { AuthResetService } from './auth-reset.service';
 
 describe('AuthResetService', () => {
   let service: AuthResetService;
@@ -10,9 +14,10 @@ describe('AuthResetService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthResetService,
-        MockTaskService,
         MockAuthResetService,
+        MockTaskService,
         EntityManagerProvider,
+        MockWinstonProvider,
       ],
     }).compile();
 
