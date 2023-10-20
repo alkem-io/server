@@ -389,8 +389,9 @@ export class UrlGeneratorService {
       collaborationId: string;
     }[] = await this.entityManager.connection.query(
       `
-        SELECT callout.id as calloutId, callout.nameID as calloutNameId, callout.collaborationId as collaborationId FROM callout
-        WHERE callout.${fieldName} = '${fieldID}'
+        SELECT c.id AS calloutId, c.nameID AS calloutNameId, c.collaborationId AS collaborationId
+        FROM callout AS c JOIN callout_framing AS cf ON cf.id = c.framingId
+        WHERE cf.${fieldName} = '${fieldID}'
       `
     );
 
