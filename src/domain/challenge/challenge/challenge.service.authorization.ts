@@ -372,11 +372,10 @@ export class ChallengeAuthorizationService {
       !challenge.opportunities ||
       !challenge.storageAggregator ||
       !challenge.preferenceSet ||
-      !challenge.childChallenges ||
       !challenge.innovationFlow
     )
       throw new RelationshipNotFoundException(
-        `Unable to load child entities for challenge ${challenge.id} `,
+        `Unable to load child entities for challenge authorization: ${challenge.id} - ${challenge.opportunities} - ${challenge.storageAggregator} - ${challenge.innovationFlow}`,
         LogContext.CHALLENGES
       );
 
@@ -386,11 +385,13 @@ export class ChallengeAuthorizationService {
         challenge.authorization
       );
 
-    for (const childChallenge of challenge.childChallenges) {
-      await this.applyAuthorizationPolicy(
-        childChallenge,
-        challenge.authorization
-      );
+    if (challenge.childChallenges) {
+      for (const childChallenge of challenge.childChallenges) {
+        await this.applyAuthorizationPolicy(
+          childChallenge,
+          challenge.authorization
+        );
+      }
     }
 
     for (const opportunity of challenge.opportunities) {
