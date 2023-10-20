@@ -152,13 +152,13 @@ export class CommunityResolverService {
           JOIN \`callout_framing\` on \`callout_framing\`.id = \`callout\`.\`framingId\`
           JOIN \`whiteboard\` on \`callout_framing\`.whiteboardId = \`whiteboard\`.\`id\`
           WHERE \`whiteboard\`.\`id\` = '${whiteboardId}' UNION
-  
+
           SELECT \`challenge\`.\`id\` as \`entityId\`, \`challenge\`.\`communityId\` as communityId, 'challenge' as \`entityType\` FROM \`callout\`
           RIGHT JOIN \`challenge\` on \`callout\`.\`collaborationId\` = \`challenge\`.\`collaborationId\`
           JOIN \`callout_framing\` on \`callout_framing\`.id = \`callout\`.\`framingId\`
           JOIN \`whiteboard\` on \`callout_framing\`.whiteboardId = \`whiteboard\`.\`id\`
           WHERE \`whiteboard\`.\`id\` = '${whiteboardId}' UNION
-  
+
           SELECT \`opportunity\`.\`id\`, \`opportunity\`.\`communityId\` as communityId, 'opportunity' as \`entityType\` FROM \`callout\`
           RIGHT JOIN \`opportunity\` on \`callout\`.\`collaborationId\` = \`opportunity\`.\`collaborationId\`
           JOIN \`callout_framing\` on \`callout_framing\`.id = \`callout\`.\`framingId\`
@@ -292,17 +292,20 @@ export class CommunityResolverService {
       `
       SELECT \`challenge\`.\`id\` as \`entityId\`, \`challenge\`.\`communityId\` as communityId, 'challenge' as \`communityType\` FROM \`callout\`
       RIGHT JOIN \`challenge\` on \`challenge\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
-      JOIN \`post\` on \`callout\`.\`id\` = \`post\`.\`calloutId\`
+      JOIN \`callout_contribution\` on \`callout\`.\`id\` = \`callout_contribution\`.\`calloutId\`
+      JOIN \`post\` on \`callout_contribution\`.\`postId\` = \`post\`.\`id\`
       WHERE \`post\`.\`commentsId\` = '${commentsId}' UNION
 
       SELECT \`space\`.\`id\` as \`entityId\`, \`space\`.\`communityId\` as communityId, 'space' as \`communityType\`  FROM \`callout\`
       RIGHT JOIN \`space\` on \`space\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
-      JOIN \`post\` on \`callout\`.\`id\` = \`post\`.\`calloutId\`
+      JOIN \`callout_contribution\` on \`callout\`.\`id\` = \`callout_contribution\`.\`calloutId\`
+      JOIN \`post\` on \`callout_contribution\`.\`postId\` = \`post\`.\`id\`
       WHERE \`post\`.\`commentsId\` = '${commentsId}' UNION
 
       SELECT \`opportunity\`.\`id\` as \`entityId\`, \`opportunity\`.\`communityId\` as communityId, 'opportunity' as \`communityType\`  FROM \`callout\`
       RIGHT JOIN \`opportunity\` on \`opportunity\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
-      JOIN \`post\` on \`callout\`.\`id\` = \`post\`.\`calloutId\`
+      JOIN \`callout_contribution\` on \`callout\`.\`id\` = \`callout_contribution\`.\`calloutId\`
+      JOIN \`post\` on \`callout_contribution\`.\`postId\` = \`post\`.\`id\`
       WHERE \`post\`.\`commentsId\` = '${commentsId}';
       `
     );
