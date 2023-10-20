@@ -89,8 +89,8 @@ export class calloutPolicyDefaults1696674755742 implements MigrationInterface {
 
       if (allowedContributionTypes.length === 0) {
         await queryRunner.query(
-          `INSERT INTO callout_contribution_policy (id, version, state)
-                        VALUES (?, '1', ?)`,
+          `INSERT INTO callout_contribution_policy (id, version, state, allowedContributionTypes)
+                        VALUES (?, '1', ?, '')`,
           [contributionPolicyID, callout.state]
         );
       } else {
