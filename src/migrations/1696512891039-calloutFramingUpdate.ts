@@ -69,6 +69,9 @@ const createNameID = (base: string, useRandomSuffix = true): string => {
 };
 export class calloutFramingUpdate1696512891039 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(
+      'ALTER TABLE `callout_contribution_defaults` CHANGE COLUMN `whiteboardContent` `whiteboardContent` longtext NULL'
+    );
     // Drop the FKs before starting changes
     // Callout ==> Profile
     await queryRunner.query(
@@ -107,13 +110,14 @@ export class calloutFramingUpdate1696512891039 implements MigrationInterface {
       );
 
       await queryRunner.query(
-        `INSERT INTO callout_framing (id, version, authorizationId, profileId, whiteboardId, whiteboardRtId)
+        `INSERT INTO callout_framing (id, version, authorizationId, profileId, whiteboardId, whiteboardRtId, content)
                     VALUES ('${calloutFramingID}',
                             '1',
                             '${calloutFramingAuthID}',
                             '${callout.profileId}',
                             NULL,
-                            NULL)`
+                            NULL,
+                            '')`
       );
       await queryRunner.query(
         `UPDATE callout SET framingId = '${calloutFramingID}' WHERE id = '${callout.id}'`
@@ -340,6 +344,9 @@ export class calloutFramingUpdate1696512891039 implements MigrationInterface {
 
     await queryRunner.query(
       'ALTER TABLE `callout` ADD CONSTRAINT `FK_c7c005697d999f2b836052f4967` FOREIGN KEY (`whiteboardRtId`) REFERENCES `whiteboard_rt`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `callout_contribution_defaults` CHANGE COLUMN `whiteboardContent` `whiteboardContent` longtext NOT NULL'
     );
   }
 }
