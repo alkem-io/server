@@ -229,7 +229,7 @@ export class InnovationFlowService {
     const innovationFlow = await this.getInnovationFlowOrFail(
       innovationFlowId,
       {
-        relations: ['lifecycle'],
+        relations: { lifecycle: true },
       }
     );
     const lifecycle = innovationFlow.lifecycle;
@@ -250,7 +250,7 @@ export class InnovationFlowService {
     const innovationFlow = await this.getInnovationFlowOrFail(
       innovationFlowTemplateData.innovationFlowID,
       {
-        relations: ['lifecycle'],
+        relations: { lifecycle: true },
       }
     );
 

@@ -80,7 +80,7 @@ export class StorageBucketService {
 
   async deleteStorageBucket(storageID: string): Promise<IStorageBucket> {
     const storage = await this.getStorageBucketOrFail(storageID, {
-      relations: ['documents'],
+      relations: { documents: true },
     });
 
     if (storage.authorization)
@@ -123,7 +123,7 @@ export class StorageBucketService {
     storageInput: IStorageBucket
   ): Promise<IDocument[] | never> {
     const storage = await this.getStorageBucketOrFail(storageInput.id, {
-      relations: ['documents'],
+      relations: { documents: true },
     });
     const documents = storage.documents;
     if (!documents)
@@ -161,7 +161,7 @@ export class StorageBucketService {
     anonymousReadAccess = false
   ): Promise<IDocument | never> {
     const storage = await this.getStorageBucketOrFail(storageBucketId, {
-      relations: ['documents'],
+      relations: { documents: true },
     });
     if (!storage.documents)
       throw new EntityNotInitializedException(
@@ -273,7 +273,7 @@ export class StorageBucketService {
     agentInfo: AgentInfo
   ): Promise<IDocument[] | never> {
     const storageLoaded = await this.getStorageBucketOrFail(storage.id, {
-      relations: ['documents'],
+      relations: { documents: true },
     });
     const allDocuments = storageLoaded.documents;
     if (!allDocuments)

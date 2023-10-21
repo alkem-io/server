@@ -699,7 +699,7 @@ export class SpaceService {
     if (args && args.IDs) {
       {
         spaceWithChallenges = await this.getSpaceOrFail(space.id, {
-          relations: ['challenges'],
+          relations: { challenges: true },
         });
         spaceWithChallenges.challenges = spaceWithChallenges.challenges?.filter(
           c => args.IDs?.includes(c.id)
@@ -707,7 +707,7 @@ export class SpaceService {
       }
     } else
       spaceWithChallenges = await this.getSpaceOrFail(space.id, {
-        relations: ['challenges'],
+        relations: { challenges: true },
       });
 
     const challenges = spaceWithChallenges.challenges;

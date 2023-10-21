@@ -314,7 +314,7 @@ export class NamingService {
       where: {
         comments: { id: roomID },
       },
-      relations: ['profile'],
+      relations: { profile: true },
     });
     if (!result) {
       throw new EntityNotFoundException(

@@ -102,7 +102,7 @@ export class CalendarEventService {
     const calendarEvent = await this.getCalendarEventOrFail(
       calendarEventData.ID,
       {
-        relations: ['profile'],
+        relations: { profile: true },
       }
     );
 
@@ -148,7 +148,7 @@ export class CalendarEventService {
     const calendarEventLoaded = await this.getCalendarEventOrFail(
       calendarEvent.id,
       {
-        relations: ['profile'],
+        relations: { profile: true },
       }
     );
     if (!calendarEventLoaded.profile)
@@ -164,7 +164,7 @@ export class CalendarEventService {
     const calendarEventLoaded = await this.getCalendarEventOrFail(
       calendarEventID,
       {
-        relations: ['comments'],
+        relations: { comments: true },
       }
     );
 

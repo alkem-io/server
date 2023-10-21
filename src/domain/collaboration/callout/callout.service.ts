@@ -377,7 +377,7 @@ export class CalloutService {
     calloutID: string
   ): Promise<ICalloutContributionPolicy> {
     const callout = await this.getCalloutOrFail(calloutID, {
-      relations: ['contributionPolicy'],
+      relations: { contributionPolicy: true },
     });
     if (!callout.contributionPolicy)
       throw new EntityNotInitializedException(
@@ -391,7 +391,7 @@ export class CalloutService {
     calloutID: string
   ): Promise<ICalloutContributionDefaults> {
     const callout = await this.getCalloutOrFail(calloutID, {
-      relations: ['contributionDefaults'],
+      relations: { contributionDefaults: true },
     });
     if (!callout.contributionDefaults)
       throw new EntityNotInitializedException(
@@ -403,7 +403,7 @@ export class CalloutService {
 
   public async getComments(calloutID: string): Promise<IRoom | undefined> {
     const callout = await this.getCalloutOrFail(calloutID, {
-      relations: ['comments'],
+      relations: { comments: true },
     });
     return callout.comments;
   }

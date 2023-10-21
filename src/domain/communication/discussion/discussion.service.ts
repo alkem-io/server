@@ -126,7 +126,7 @@ export class DiscussionService {
 
   async deleteDiscussion(discussionID: string): Promise<IDiscussion> {
     const discussion = await this.getDiscussionOrFail(discussionID, {
-      relations: ['profile'],
+      relations: { profile: true },
     });
     if (discussion.profile) {
       await this.profileService.deleteProfile(discussion.profile.id);
@@ -178,7 +178,7 @@ export class DiscussionService {
     const discussionWithComments = await this.getDiscussionOrFail(
       discussionID,
       {
-        relations: ['comments'],
+        relations: { comments: true },
       }
     );
     const room = discussionWithComments.comments;

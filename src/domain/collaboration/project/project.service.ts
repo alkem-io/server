@@ -60,7 +60,7 @@ export class ProjectService {
   async deleteProject(deleteData: DeleteProjectInput): Promise<IProject> {
     const projectID = deleteData.ID;
     const project = await this.getProjectOrFail(projectID, {
-      relations: ['lifecycle'],
+      relations: { lifecycle: true },
     });
     if (!project)
       throw new EntityNotFoundException(
@@ -180,7 +180,7 @@ export class ProjectService {
 
   async getLifecycle(projectId: string): Promise<ILifecycle> {
     const project = await this.getProjectOrFail(projectId, {
-      relations: ['lifecycle'],
+      relations: { lifecycle: true },
     });
 
     if (!project.lifecycle) {

@@ -65,7 +65,7 @@ export class OrganizationVerificationLifecycleOptionsProvider {
           await this.organizationVerificationService.getOrganizationVerificationOrFail(
             event.parentID,
             {
-              relations: ['lifecycle'],
+              relations: { lifecycle: true },
             }
           );
         const lifecycle = organizationVerification.lifecycle;

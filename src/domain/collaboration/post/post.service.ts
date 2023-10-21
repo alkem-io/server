@@ -68,7 +68,7 @@ export class PostService {
   public async deletePost(deleteData: DeletePostInput): Promise<IPost> {
     const postID = deleteData.ID;
     const post = await this.getPostOrFail(postID, {
-      relations: ['profile'],
+      relations: { profile: true },
     });
     if (post.authorization) {
       await this.authorizationPolicyService.delete(post.authorization);
@@ -103,7 +103,7 @@ export class PostService {
 
   public async updatePost(postData: UpdatePostInput): Promise<IPost> {
     const post = await this.getPostOrFail(postData.ID, {
-      relations: ['profile'],
+      relations: { profile: true },
     });
 
     // Copy over the received data

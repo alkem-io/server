@@ -64,7 +64,7 @@ export class PlatformService {
 
   async getCommunicationOrFail(): Promise<ICommunication> {
     const platform = await this.getPlatformOrFail({
-      relations: ['communication'],
+      relations: { communication: true },
     });
     const communication = platform.communication;
     if (!communication) {
@@ -78,7 +78,7 @@ export class PlatformService {
 
   async ensureCommunicationCreated(): Promise<ICommunication> {
     const platform = await this.getPlatformOrFail({
-      relations: ['communication'],
+      relations: { communication: true },
     });
     const communication = platform.communication;
     if (!communication) {

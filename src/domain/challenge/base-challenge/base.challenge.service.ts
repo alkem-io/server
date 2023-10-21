@@ -222,7 +222,7 @@ export class BaseChallengeService {
       baseChallengeId,
       repository,
       {
-        relations: ['community'],
+        relations: { community: true },
       }
     );
     const community = challengeWithCommunity.community;
@@ -272,7 +272,7 @@ export class BaseChallengeService {
       challengeId,
       repository,
       {
-        relations: ['profile'],
+        relations: { profile: true },
       }
     );
     const profile = challengeWithProfile.profile;
@@ -292,7 +292,7 @@ export class BaseChallengeService {
       challengeId,
       repository,
       {
-        relations: ['collaboration'],
+        relations: { collaboration: true },
       }
     );
     const collaboration = challengeWithCollaboration.collaboration;
@@ -312,7 +312,7 @@ export class BaseChallengeService {
       challengeId,
       repository,
       {
-        relations: ['agent'],
+        relations: { agent: true },
       }
     );
     const agent = challengeWithContext.agent;

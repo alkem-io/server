@@ -130,7 +130,7 @@ export class CommunityService {
 
     // Try to find the Community
     const community = await this.getCommunityOrFail(communityID, {
-      relations: ['groups'],
+      relations: { groups: true },
     });
 
     const storageAggregator =
@@ -151,7 +151,7 @@ export class CommunityService {
   // Loads the group into the Community entity if not already present
   async getUserGroups(community: ICommunity): Promise<IUserGroup[]> {
     const communityWithGroups = await this.getCommunityOrFail(community.id, {
-      relations: ['groups'],
+      relations: { groups: true },
     });
     if (!communityWithGroups.groups) {
       throw new EntityNotInitializedException(
@@ -275,7 +275,7 @@ export class CommunityService {
     community: ICommunity
   ): Promise<ICommunity | undefined> {
     const communityWithParent = await this.getCommunityOrFail(community.id, {
-      relations: ['parentCommunity'],
+      relations: { parentCommunity: true },
     });
 
     const parentCommunity = communityWithParent?.parentCommunity;
@@ -544,7 +544,7 @@ export class CommunityService {
     communityID: string
   ): Promise<boolean> {
     const community = await this.getCommunityOrFail(communityID, {
-      relations: ['parentCommunity'],
+      relations: { parentCommunity: true },
     });
 
     // If the parent community is set, then check if the user is also a member there
@@ -888,7 +888,7 @@ export class CommunityService {
     const community = await this.getCommunityOrFail(
       invitationData.communityID,
       {
-        relations: ['invitations'],
+        relations: { invitations: true },
       }
     );
 
@@ -914,7 +914,7 @@ export class CommunityService {
     const community = await this.getCommunityOrFail(
       invitationData.communityID,
       {
-        relations: ['externalInvitations'],
+        relations: { externalInvitations: true },
       }
     );
 
@@ -1046,14 +1046,14 @@ export class CommunityService {
 
   async getApplications(community: ICommunity): Promise<IApplication[]> {
     const communityApps = await this.getCommunityOrFail(community.id, {
-      relations: ['applications'],
+      relations: { applications: true },
     });
     return communityApps?.applications || [];
   }
 
   async getInvitations(community: ICommunity): Promise<IInvitation[]> {
     const communityApps = await this.getCommunityOrFail(community.id, {
-      relations: ['invitations'],
+      relations: { invitations: true },
     });
     return communityApps?.invitations || [];
   }
@@ -1062,14 +1062,14 @@ export class CommunityService {
     community: ICommunity
   ): Promise<IInvitationExternal[]> {
     const communityApps = await this.getCommunityOrFail(community.id, {
-      relations: ['externalInvitations'],
+      relations: { externalInvitations: true },
     });
     return communityApps?.externalInvitations || [];
   }
 
   async getApplicationForm(community: ICommunity): Promise<IForm> {
     const communityForm = await this.getCommunityOrFail(community.id, {
-      relations: ['applicationForm'],
+      relations: { applicationForm: true },
     });
     const applicationForm = communityForm.applicationForm;
     if (!applicationForm) {

@@ -102,7 +102,7 @@ export class InnovationPackService {
     const innovationPack = await this.getInnovationPackOrFail(
       innovationPackData.ID,
       {
-        relations: ['profile'],
+        relations: { profile: true },
       }
     );
 
@@ -225,7 +225,7 @@ export class InnovationPackService {
     const innovationPackWithTemplates = await this.getInnovationPackOrFail(
       innovationPackId,
       {
-        relations: ['templatesSet'],
+        relations: { templatesSet: true },
       }
     );
     const templatesSet = innovationPackWithTemplates.templatesSet;
@@ -246,7 +246,7 @@ export class InnovationPackService {
   ): Promise<IInnovationPack> {
     const organization = await this.organizationService.getOrganizationOrFail(
       hostOrgID,
-      { relations: ['agent'] }
+      { relations: { agent: true } }
     );
 
     const existingHost = await this.getProvider(innovationPackID);

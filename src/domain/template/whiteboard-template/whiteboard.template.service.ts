@@ -75,7 +75,7 @@ export class WhiteboardTemplateService {
     const whiteboardTemplate = await this.getWhiteboardTemplateOrFail(
       whiteboardTemplateInput.id,
       {
-        relations: ['profile'],
+        relations: { profile: true },
       }
     );
     await this.templateBaseService.updateTemplateBase(
@@ -95,7 +95,7 @@ export class WhiteboardTemplateService {
     const whiteboardTemplate = await this.getWhiteboardTemplateOrFail(
       whiteboardTemplateInput.id,
       {
-        relations: ['profile'],
+        relations: { profile: true },
       }
     );
     const whiteboardID = whiteboardTemplate.id;

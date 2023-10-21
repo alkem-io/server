@@ -521,7 +521,7 @@ export class UserService {
     userID: string
   ): Promise<{ user: IUser; credentials: ICredential[] }> {
     const user = await this.getUserOrFail(userID, {
-      relations: ['agent'],
+      relations: { agent: true },
     });
 
     if (!user.agent || !user.agent.credentials) {
@@ -537,7 +537,7 @@ export class UserService {
     userID: string
   ): Promise<{ user: IUser; agent: IAgent }> {
     const user = await this.getUserOrFail(userID, {
-      relations: ['agent'],
+      relations: { agent: true },
     });
 
     if (!user.agent) {
@@ -551,7 +551,7 @@ export class UserService {
 
   async getUserWithAgent(userID: string): Promise<IUser> {
     const user = await this.getUserOrFail(userID, {
-      relations: ['agent'],
+      relations: { agent: true },
     });
 
     if (!user.agent || !user.agent.credentials) {
@@ -713,7 +713,7 @@ export class UserService {
 
   async updateUser(userInput: UpdateUserInput): Promise<IUser> {
     const user = await this.getUserOrFail(userInput.ID, {
-      relations: ['profile'],
+      relations: { profile: true },
     });
 
     if (userInput.nameID) {
@@ -756,7 +756,7 @@ export class UserService {
 
   async getAgent(userID: string): Promise<IAgent> {
     const userWithAgent = await this.getUserOrFail(userID, {
-      relations: ['agent'],
+      relations: { agent: true },
     });
     const agent = userWithAgent.agent;
     if (!agent)
@@ -770,7 +770,7 @@ export class UserService {
 
   async getProfile(user: IUser): Promise<IProfile> {
     const userWithProfile = await this.getUserOrFail(user.id, {
-      relations: ['profile'],
+      relations: { profile: true },
     });
     const profile = userWithProfile.profile;
     if (!profile)
@@ -899,7 +899,7 @@ export class UserService {
       where: {
         id: In(userIds),
       },
-      relations: ['profile'],
+      relations: { profile: true },
       select: ['id'],
     });
 

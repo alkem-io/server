@@ -186,7 +186,7 @@ export class WhiteboardService {
     const whiteboardWithCheckout = await this.getWhiteboardOrFail(
       whiteboard.id,
       {
-        relations: ['checkout'],
+        relations: { checkout: true },
       }
     );
 

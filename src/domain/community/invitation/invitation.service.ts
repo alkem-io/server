@@ -125,7 +125,7 @@ export class InvitationService {
   ): Promise<IInvitation[]> {
     const existingInvitations = await this.invitationRepository.find({
       where: { invitedUser: userID, community: { id: communityID } },
-      relations: ['community'],
+      relations: { community: true },
     });
 
     if (existingInvitations.length > 0) return existingInvitations;

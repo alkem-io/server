@@ -257,7 +257,7 @@ export class ProfileService {
     referenceInput: CreateReferenceOnProfileInput
   ): Promise<IReference> {
     const profile = await this.getProfileOrFail(referenceInput.profileID, {
-      relations: ['references'],
+      relations: { references: true },
     });
 
     if (!profile.references)
@@ -308,7 +308,7 @@ export class ProfileService {
 
   async getReferences(profileInput: IProfile): Promise<IReference[]> {
     const profile = await this.getProfileOrFail(profileInput.id, {
-      relations: ['references'],
+      relations: { references: true },
     });
     if (!profile.references) {
       throw new EntityNotInitializedException(
@@ -321,7 +321,7 @@ export class ProfileService {
 
   async getVisuals(profileInput: IProfile): Promise<IVisual[]> {
     const profile = await this.getProfileOrFail(profileInput.id, {
-      relations: ['visuals'],
+      relations: { visuals: true },
     });
     if (!profile.visuals) {
       throw new EntityNotInitializedException(
@@ -349,7 +349,7 @@ export class ProfileService {
 
   async getTagsets(profileInput: IProfile): Promise<ITagset[]> {
     const profile = await this.getProfileOrFail(profileInput.id, {
-      relations: ['tagsets'],
+      relations: { tagsets: true },
     });
     if (!profile.tagsets) {
       throw new EntityNotInitializedException(
@@ -362,7 +362,7 @@ export class ProfileService {
 
   async getLocation(profileInput: IProfile): Promise<ILocation> {
     const profile = await this.getProfileOrFail(profileInput.id, {
-      relations: ['location'],
+      relations: { location: true },
     });
     if (!profile.location) {
       throw new EntityNotInitializedException(
@@ -375,7 +375,7 @@ export class ProfileService {
 
   async getTagset(profileID: string, tagsetName: string): Promise<ITagset> {
     const profile = await this.getProfileOrFail(profileID, {
-      relations: ['tagsets'],
+      relations: { tagsets: true },
     });
     if (!profile.tagsets) {
       throw new EntityNotInitializedException(
