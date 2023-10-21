@@ -522,7 +522,7 @@ export class OpportunityService {
     communityID: string
   ): Promise<IOpportunity | null> {
     return await this.opportunityRepository.findOne({
-      relations: ['community', 'challenge'],
+      relations: { community: true, challenge: true },
       where: {
         community: { id: communityID },
       },

@@ -217,7 +217,7 @@ export class CollaborationService {
     collaborationID: string
   ): Promise<ICollaboration> {
     const collaboration = await this.getCollaborationOrFail(collaborationID, {
-      relations: ['callouts', 'timeline'],
+      relations: { callouts: true, timeline: true },
     });
 
     if (collaboration.callouts) {
@@ -250,7 +250,7 @@ export class CollaborationService {
   ): Promise<ICallout> {
     const collaborationID = calloutData.collaborationID;
     const collaboration = await this.getCollaborationOrFail(collaborationID, {
-      relations: ['callouts', 'tagsetTemplateSet'],
+      relations: { callouts: true, tagsetTemplateSet: true },
     });
     if (!collaboration.callouts || !collaboration.tagsetTemplateSet)
       throw new EntityNotInitializedException(

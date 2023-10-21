@@ -50,7 +50,7 @@ export class PlatformService {
     relations: FindOptionsRelationByString = []
   ): Promise<ILibrary> {
     const platform = await this.getPlatformOrFail({
-      relations: ['library', ...relations],
+      relations: { library: true, ...relations },
     });
     const library = platform.library;
     if (!library) {

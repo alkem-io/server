@@ -123,7 +123,7 @@ export class UserGroupService {
 
   async getParent(group: IUserGroup): Promise<IGroupable> {
     const groupWithParent = (await this.getUserGroupOrFail(group.id, {
-      relations: ['community', 'organization'],
+      relations: { community: true, organization: true },
     })) as UserGroup;
     if (groupWithParent?.community) return groupWithParent?.community;
     if (groupWithParent?.organization) return groupWithParent?.organization;

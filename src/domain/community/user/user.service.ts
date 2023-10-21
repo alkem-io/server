@@ -384,7 +384,11 @@ export class UserService {
 
   async getPreferenceSetOrFail(userID: string): Promise<IPreferenceSet> {
     const user = await this.getUserOrFail(userID, {
-      relations: ['preferenceSet', 'preferenceSet.preferences'],
+      relations: {
+        preferenceSet: {
+          preferences: true,
+        },
+      },
     });
 
     if (!user.preferenceSet) {

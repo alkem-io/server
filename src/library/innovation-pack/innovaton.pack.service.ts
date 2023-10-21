@@ -143,7 +143,7 @@ export class InnovationPackService {
     deleteData: DeleteInnovationPackInput
   ): Promise<IInnovationPack> {
     const innovationPack = await this.getInnovationPackOrFail(deleteData.ID, {
-      relations: ['templatesSet', 'profile'],
+      relations: { templatesSet: true, profile: true },
     });
 
     // Remove any host credentials

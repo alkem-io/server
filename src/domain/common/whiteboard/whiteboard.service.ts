@@ -88,7 +88,7 @@ export class WhiteboardService {
 
   async deleteWhiteboard(whiteboardID: string): Promise<IWhiteboard> {
     const whiteboard = await this.getWhiteboardOrFail(whiteboardID, {
-      relations: ['checkout', 'profile'],
+      relations: { checkout: true, profile: true },
     });
 
     if (whiteboard.checkout) {
@@ -116,7 +116,7 @@ export class WhiteboardService {
     agentInfo: AgentInfo
   ): Promise<IWhiteboard> {
     const whiteboard = await this.getWhiteboardOrFail(whiteboardInput.id, {
-      relations: ['checkout', 'profile'],
+      relations: { checkout: true, profile: true },
     });
     if (!whiteboard.checkout) {
       throw new EntityNotFoundException(

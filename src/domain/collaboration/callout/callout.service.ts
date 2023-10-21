@@ -227,7 +227,11 @@ export class CalloutService {
     agentInfo: AgentInfo
   ): Promise<ICallout> {
     const callout = await this.getCalloutOrFail(calloutUpdateData.ID, {
-      relations: ['contributionDefaults', 'contributionPolicy', 'framing'],
+      relations: {
+        contributionDefaults: true,
+        contributionPolicy: true,
+        framing: true,
+      },
     });
 
     if (!callout.contributionDefaults || !callout.contributionPolicy) {
@@ -436,7 +440,7 @@ export class CalloutService {
   ): Promise<ICalloutContribution> {
     const calloutID = contributionData.calloutID;
     const callout = await this.getCalloutOrFail(calloutID, {
-      relations: ['contributions', 'contributionPolicy'],
+      relations: { contributions: true, contributionPolicy: true },
     });
     if (!callout.contributions || !callout.contributionPolicy)
       throw new EntityNotInitializedException(
@@ -471,7 +475,7 @@ export class CalloutService {
     relations: FindOptionsRelationByString = []
   ): Promise<ICalloutFraming> {
     const calloutLoaded = await this.getCalloutOrFail(calloutID, {
-      relations: ['framing', ...relations],
+      relations: { framing: true, ...relations },
     });
     if (!calloutLoaded.framing)
       throw new EntityNotFoundException(
@@ -491,7 +495,12 @@ export class CalloutService {
     shuffle?: boolean
   ): Promise<ICalloutContribution[]> {
     const calloutLoaded = await this.getCalloutOrFail(callout.id, {
-      relations: ['contributions', 'contributions.whiteboard', ...relations],
+      relations: {
+        contributions: {
+          whiteboard: true,
+        },
+        ...relations,
+      },
     });
     if (!calloutLoaded.contributions)
       throw new EntityNotFoundException(

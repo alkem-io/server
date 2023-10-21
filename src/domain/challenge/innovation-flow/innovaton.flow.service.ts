@@ -161,7 +161,7 @@ export class InnovationFlowService {
     const innovationFlow = await this.getInnovationFlowOrFail(
       innovationFlowID,
       {
-        relations: ['lifecycle', 'profile'],
+        relations: { lifecycle: true, profile: true },
       }
     );
 
@@ -322,7 +322,7 @@ export class InnovationFlowService {
     const innovationFlow = await this.getInnovationFlowOrFail(
       innovationFlowID,
       {
-        relations: ['lifecycle', 'profile'],
+        relations: { lifecycle: true, profile: true },
       }
     );
 

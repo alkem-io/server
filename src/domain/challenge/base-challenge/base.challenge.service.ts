@@ -114,7 +114,7 @@ export class BaseChallengeService {
       baseChallengeData.ID,
       repository,
       {
-        relations: ['context', 'community', 'profile'],
+        relations: { context: true, community: true, profile: true },
       }
     );
 

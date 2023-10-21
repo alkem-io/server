@@ -234,7 +234,7 @@ export class CalloutFramingService {
     const calloutFraming = await this.getCalloutFramingOrFail(
       calloutFramingInput.id,
       {
-        relations: ['whiteboard', ...relations],
+        relations: { whiteboard: true, ...relations },
       }
     );
     if (!calloutFraming.whiteboard) {
@@ -251,7 +251,7 @@ export class CalloutFramingService {
     const calloutFraming = await this.getCalloutFramingOrFail(
       calloutFramingInput.id,
       {
-        relations: ['whiteboardRt', ...relations],
+        relations: { whiteboardRt: true, ...relations },
       }
     );
     if (!calloutFraming.whiteboardRt) {

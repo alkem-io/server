@@ -202,7 +202,7 @@ export class CalloutContributionService {
     const calloutContribution = await this.getCalloutContributionOrFail(
       calloutContributionInput.id,
       {
-        relations: ['whiteboard', ...relations],
+        relations: { whiteboard: true, ...relations },
       }
     );
     if (!calloutContribution.whiteboard) {
@@ -219,7 +219,7 @@ export class CalloutContributionService {
     const calloutContribution = await this.getCalloutContributionOrFail(
       calloutContributionInput.id,
       {
-        relations: ['link', ...relations],
+        relations: { link: true, ...relations },
       }
     );
     if (!calloutContribution.link) {
@@ -236,7 +236,7 @@ export class CalloutContributionService {
     const calloutContribution = await this.getCalloutContributionOrFail(
       calloutContributionInput.id,
       {
-        relations: ['post', ...relations],
+        relations: { post: true, ...relations },
       }
     );
     if (!calloutContribution.post) {

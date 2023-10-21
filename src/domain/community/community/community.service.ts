@@ -181,14 +181,14 @@ export class CommunityService {
   async removeCommunity(communityID: string): Promise<boolean> {
     // Note need to load it in with all contained entities so can remove fully
     const community = await this.getCommunityOrFail(communityID, {
-      relations: [
-        'applications',
-        'invitations',
-        'externalInvitations',
-        'groups',
-        'communication',
-        'applicationForm',
-      ],
+      relations: {
+        applications: true,
+        invitations: true,
+        externalInvitations: true,
+        groups: true,
+        communication: true,
+        applicationForm: true,
+      },
     });
 
     // Remove all groups
@@ -574,7 +574,7 @@ export class CommunityService {
     relations: FindOptionsRelationByString = []
   ): Promise<ICommunication> {
     const community = await this.getCommunityOrFail(communityID, {
-      relations: ['communication', ...relations],
+      relations: { communication: true, ...relations },
     });
 
     const communication = community.communication;
@@ -858,7 +858,7 @@ export class CommunityService {
       applicationData.userID
     );
     const community = await this.getCommunityOrFail(applicationData.parentID, {
-      relations: ['applications', 'parentCommunity'],
+      relations: { applications: true, parentCommunity: true },
     });
 
     await this.validateApplicationFromUser(user, agent, community);

@@ -532,7 +532,7 @@ export class ChallengeService {
     );
 
     const challenge = await this.getChallengeOrFail(challengeData.challengeID, {
-      relations: ['childChallenges', 'community'],
+      relations: { childChallenges: true, community: true },
     });
 
     const spaceID = this.getSpaceID(challenge);
@@ -730,7 +730,13 @@ export class ChallengeService {
   async getPreferenceSetOrFail(challengeId: string): Promise<IPreferenceSet> {
     const challengeWithPreferences = await this.getChallengeOrFail(
       challengeId,
-      { relations: ['preferenceSet', 'preferenceSet.preferences'] }
+      {
+        relations: {
+          preferenceSet: {
+            preferences: true,
+          },
+        },
+      }
     );
     const preferenceSet = challengeWithPreferences.preferenceSet;
 

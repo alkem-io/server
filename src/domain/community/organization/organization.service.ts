@@ -578,7 +578,11 @@ export class OrganizationService {
     const organizationGroups = await this.getOrganizationOrFail(
       organization.id,
       {
-        relations: ['groups', 'groups.profile'],
+        relations: {
+          groups: {
+            profile: true,
+          },
+        },
       }
     );
     const groups = organizationGroups.groups;
@@ -596,7 +600,11 @@ export class OrganizationService {
 
   async getPreferenceSetOrFail(orgId: string): Promise<IPreferenceSet> {
     const orgWithPreferences = await this.getOrganizationOrFail(orgId, {
-      relations: ['preferenceSet', 'preferenceSet.preferences'],
+      relations: {
+        preferenceSet: {
+          preferences: true,
+        },
+      },
     });
     const preferenceSet = orgWithPreferences.preferenceSet;
 

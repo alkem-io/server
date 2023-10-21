@@ -335,7 +335,13 @@ export class SpaceResolverMutations {
   ): Promise<ISpace> {
     const space = await this.spaceService.getSpaceOrFail(
       authorizationResetData.spaceID,
-      { relations: ['preferenceSet', 'preferenceSet.preferences'] }
+      {
+        relations: {
+          preferenceSet: {
+            preferences: true,
+          },
+        },
+      }
     );
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
