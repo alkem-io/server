@@ -1,0 +1,92 @@
+import { LogContext } from '@common/enums/logging.context';
+import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { FindOneOptions, Repository } from 'typeorm';
+import { License } from './license.entity';
+import { ILicense } from './license.interface';
+import { IFeatureFlag } from '../feature-flag/feature.flag.interface';
+import { LicenseFeatureFlag } from '@common/enums/license.feature.flag';
+import { UpdateLicenseInput } from './dto/license.dto.update';
+
+@Injectable()
+export class LicenseService {
+  constructor(
+    private authorizationPolicyService: AuthorizationPolicyService,
+    @InjectRepository(License)
+    private licenseRepository: Repository<License>,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
+  ) {}
+
+  public async createLicense(): Promise<ILicense> {
+    const license: ILicense = new License();
+    license.authorization = new AuthorizationPolicy();
+    const whiteboardRtFeatureFlag: IFeatureFlag = {
+      name: LicenseFeatureFlag.WHTIEBOART_RT,
+      enabled: false,
+    };
+    const featureFlags: IFeatureFlag[] = [whiteboardRtFeatureFlag];
+    license.featureFlags = this.serializeFeatureFlags(featureFlags);
+
+    return await this.licenseRepository.save(license);
+  }
+
+  async delete(licenseID: string): Promise<ILicense> {
+    const license = await this.getLicenseOrFail(licenseID, {
+      relations: [],
+    });
+
+    if (license.authorization)
+      await this.authorizationPolicyService.delete(license.authorization);
+
+    return await this.licenseRepository.remove(license as License);
+  }
+
+  async getLicenseOrFail(
+    licenseID: string,
+    options?: FindOneOptions<License>
+  ): Promise<ILicense | never> {
+    const license = await this.licenseRepository.findOne({
+      where: { id: licenseID },
+      ...options,
+    });
+    if (!license)
+      throw new EntityNotFoundException(
+        `License not found: ${licenseID}`,
+        LogContext.CALENDAR
+      );
+    return license;
+  }
+
+  updateLicense(
+    license: ILicense,
+    licenseUpdateData: UpdateLicenseInput
+  ): ILicense {
+    const featureFlags = this.getFeatureFlags(license);
+    for (const flag of licenseUpdateData.featureFlags) {
+      const matchedFlag = featureFlags.find(f => f.name === flag.name);
+      if (matchedFlag) matchedFlag.enabled = flag.enabled;
+    }
+    license.featureFlags = this.serializeFeatureFlags(featureFlags);
+    return license;
+  }
+
+  async save(license: ILicense): Promise<ILicense> {
+    return await this.licenseRepository.save(license);
+  }
+
+  getFeatureFlags(license: ILicense): IFeatureFlag[] {
+    return this.deserializeFeatureFlags(license.featureFlags);
+  }
+
+  private deserializeFeatureFlags(featureFlagStr: string): IFeatureFlag[] {
+    return JSON.parse(featureFlagStr);
+  }
+
+  private serializeFeatureFlags(featureFlags: IFeatureFlag[]): string {
+    return JSON.stringify(featureFlags);
+  }
+}

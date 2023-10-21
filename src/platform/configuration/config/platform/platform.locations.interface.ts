@@ -1,5 +1,5 @@
+import { IFeatureFlag } from '@domain/license/feature-flag/feature.flag.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
-import { FeatureFlag } from './platform.dto.feature.flag';
 
 @ObjectType('PlatformLocations')
 export abstract class IPlatformLocations {
@@ -89,11 +89,11 @@ export abstract class IPlatformLocations {
   })
   releases!: string;
 
-  @Field(() => [FeatureFlag], {
+  @Field(() => [IFeatureFlag], {
     nullable: false,
     description: 'The feature flags for the platform',
   })
-  featureFlags?: FeatureFlag[];
+  featureFlags?: IFeatureFlag[];
 
   @Field(() => String, {
     nullable: false,

@@ -78,6 +78,8 @@ import { PaginationArgs } from '@core/pagination';
 import { getPaginationResults } from '@core/pagination/pagination.fn';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
+import { ILicense } from '@domain/license/license/license.interface';
+import { LicenseService } from '@domain/license/license/license.service';
 
 @Injectable()
 export class SpaceService {
@@ -95,6 +97,7 @@ export class SpaceService {
     private templatesSetService: TemplatesSetService,
     private storageAggregatorService: StorageAggregatorService,
     private collaborationService: CollaborationService,
+    private licenseService: LicenseService,
     @InjectRepository(Space)
     private spaceRepository: Repository<Space>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -111,6 +114,8 @@ export class SpaceService {
 
     space.storageAggregator =
       await this.storageAggregatorService.createStorageAggregator();
+
+    space.license = await this.licenseService.createLicense();
 
     // remove context before saving as want to control that creation
     space.context = undefined;
@@ -235,7 +240,18 @@ export class SpaceService {
   public async updateSpacePlatformSettings(
     updateData: UpdateSpacePlatformSettingsInput
   ): Promise<ISpace> {
-    const space = await this.getSpaceOrFail(updateData.spaceID);
+    const space = await this.getSpaceOrFail(updateData.spaceID, {
+      relations: {
+        license: true,
+      },
+    });
+
+    if (!space.license) {
+      throw new RelationshipNotFoundException(
+        `Unable to load license for space ${space.id} `,
+        LogContext.CHALLENGES
+      );
+    }
 
     if (updateData.visibility) {
       space.visibility = updateData.visibility;
@@ -259,6 +275,13 @@ export class SpaceService {
       await this.setSpaceHost(space.id, updateData.hostID);
     }
 
+    if (updateData.license) {
+      space.license = this.licenseService.updateLicense(
+        space.license,
+        updateData.license
+      );
+    }
+
     return await this.save(space);
   }
 
@@ -272,11 +295,26 @@ export class SpaceService {
         templatesSet: true,
         profile: true,
         storageAggregator: true,
+        license: true,
       },
     });
 
+    if (
+      !space.challenges ||
+      !space.preferenceSet ||
+      !space.templatesSet ||
+      !space.profile ||
+      !space.storageAggregator ||
+      !space.license
+    ) {
+      throw new RelationshipNotFoundException(
+        `Unable to load all entities for deletion of space ${space.id} `,
+        LogContext.CHALLENGES
+      );
+    }
+
     // Do not remove a space that has child challenges, require these to be individually first removed
-    if (space.challenges && space.challenges.length > 0)
+    if (space.challenges.length > 0)
       throw new OperationNotAllowedException(
         `Unable to remove Space (${space.nameID}) as it contains ${space.challenges.length} challenges`,
         LogContext.CHALLENGES
@@ -287,19 +325,12 @@ export class SpaceService {
       this.spaceRepository
     );
 
-    if (space.preferenceSet) {
-      await this.preferenceSetService.deletePreferenceSet(
-        space.preferenceSet.id
-      );
-    }
+    await this.preferenceSetService.deletePreferenceSet(space.preferenceSet.id);
 
-    if (space.templatesSet) {
-      await this.templatesSetService.deleteTemplatesSet(space.templatesSet.id);
-    }
+    await this.templatesSetService.deleteTemplatesSet(space.templatesSet.id);
 
-    if (space.storageAggregator) {
-      await this.storageAggregatorService.delete(space.storageAggregator.id);
-    }
+    await this.storageAggregatorService.delete(space.storageAggregator.id);
+    await this.licenseService.delete(space.license.id);
 
     const result = await this.spaceRepository.remove(space as Space);
     result.id = deleteData.ID;
@@ -629,6 +660,24 @@ export class SpaceService {
     }
 
     return storageAggregator;
+  }
+
+  async getLicenseOrFail(spaceId: string): Promise<ILicense> {
+    const space = await this.getSpaceOrFail(spaceId, {
+      relations: {
+        license: true,
+      },
+    });
+    const license = space.license;
+
+    if (!license) {
+      throw new EntityNotFoundException(
+        `Unable to find license for space with nameID: ${space.nameID}`,
+        LogContext.LICENSE
+      );
+    }
+
+    return license;
   }
 
   async getPreferenceSetOrFail(spaceId: string): Promise<IPreferenceSet> {

@@ -1,14 +1,14 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 
-@ObjectType()
-export class FeatureFlag {
+@ObjectType('FeatureFlag')
+export abstract class IFeatureFlag {
   @Field(() => String, {
     description: 'The name of the feature flag',
   })
   name!: string;
 
   @Field(() => Boolean, {
-    description: 'Whether the feature flag is enabled / disabled.',
+    description: 'Is this feature flag enabled?',
   })
   enabled!: boolean;
 }

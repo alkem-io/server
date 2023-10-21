@@ -4,6 +4,7 @@ import { IBaseChallenge } from '@domain/challenge/base-challenge/base.challenge.
 import { ITemplatesSet } from '@domain/template/templates-set';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { ILicense } from '@domain/license/license/license.interface';
 
 @ObjectType('Space')
 export class ISpace extends IBaseChallenge {
@@ -17,5 +18,6 @@ export class ISpace extends IBaseChallenge {
   challenges?: IChallenge[];
 
   templatesSet?: ITemplatesSet;
+  license?: ILicense;
   storageAggregator?: IStorageAggregator;
 }

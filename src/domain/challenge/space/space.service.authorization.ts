@@ -46,6 +46,7 @@ import { ContextAuthorizationService } from '@domain/context/context/context.ser
 import { CommunityAuthorizationService } from '@domain/community/community/community.service.authorization';
 import { CollaborationAuthorizationService } from '@domain/collaboration/collaboration/collaboration.service.authorization';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
+import { LicenseAuthorizationService } from '@domain/license/license/license.service.authorization';
 
 @Injectable()
 export class SpaceAuthorizationService {
@@ -62,6 +63,7 @@ export class SpaceAuthorizationService {
     private contextAuthorizationService: ContextAuthorizationService,
     private communityAuthorizationService: CommunityAuthorizationService,
     private collaborationAuthorizationService: CollaborationAuthorizationService,
+    private licenseAuthorizationService: LicenseAuthorizationService,
     private spaceService: SpaceService,
     @InjectRepository(Space)
     private spaceRepository: Repository<Space>
@@ -225,18 +227,19 @@ export class SpaceAuthorizationService {
     );
   }
 
-  private async propagateAuthorizationToProfileContext(
+  private async propagateAuthorizationToProfileContextLicense(
     spaceBase: ISpace
   ): Promise<ISpace> {
     const space = await this.spaceService.getSpaceOrFail(spaceBase.id, {
       relations: {
         context: true,
         profile: true,
+        license: true,
       },
     });
-    if (!space.context || !space.profile)
+    if (!space.context || !space.profile || !space.license)
       throw new RelationshipNotFoundException(
-        `Unable to load context or profile for space ${space.id} `,
+        `Unable to load context or profile or licese for space ${space.id} `,
         LogContext.CHALLENGES
       );
     // NOTE: Clone the authorization policy to ensure the changes are local to context + profile
@@ -257,6 +260,12 @@ export class SpaceAuthorizationService {
       await this.contextAuthorizationService.applyAuthorizationPolicy(
         space.context,
         clonedAuthorization
+      );
+
+    space.license =
+      await this.licenseAuthorizationService.applyAuthorizationPolicy(
+        space.license,
+        space.authorization
       );
     return await this.spaceService.save(space);
   }
@@ -308,7 +317,7 @@ export class SpaceAuthorizationService {
       spaceBase,
       policy
     );
-    space = await this.propagateAuthorizationToProfileContext(space);
+    space = await this.propagateAuthorizationToProfileContextLicense(space);
     return await this.propagateAuthorizationToChallengesTemplatesStorage(space);
   }
 

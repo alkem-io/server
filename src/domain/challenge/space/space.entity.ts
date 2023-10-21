@@ -6,6 +6,7 @@ import { PreferenceSet } from '@domain/common/preference-set/preference.set.enti
 import { TemplatesSet } from '@domain/template/templates-set/templates.set.entity';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
+import { License } from '@domain/license/license/license.entity';
 @Entity()
 export class Space extends BaseChallenge implements ISpace {
   @Column('varchar', {
@@ -28,6 +29,14 @@ export class Space extends BaseChallenge implements ISpace {
   })
   @JoinColumn()
   preferenceSet?: PreferenceSet;
+
+  @OneToOne(() => License, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  license?: License;
 
   @OneToOne(() => TemplatesSet, {
     eager: false,
