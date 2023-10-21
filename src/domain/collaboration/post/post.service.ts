@@ -138,7 +138,7 @@ export class PostService {
     relations: FindOptionsRelationByString = []
   ): Promise<IProfile> {
     const postLoaded = await this.getPostOrFail(post.id, {
-      relations: ['profile', ...relations],
+      relations: { profile: true, ...relations },
     });
     if (!postLoaded.profile)
       throw new EntityNotFoundException(

@@ -154,7 +154,7 @@ export class WhiteboardService {
     relations: FindOptionsRelationByString = []
   ): Promise<IProfile> {
     const whiteboardLoaded = await this.getWhiteboardOrFail(whiteboard.id, {
-      relations: ['profile', ...relations],
+      relations: { profile: true, ...relations },
     });
     if (!whiteboardLoaded.profile)
       throw new EntityNotFoundException(

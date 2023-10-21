@@ -215,7 +215,7 @@ export class CalloutFramingService {
     const calloutFraming = await this.getCalloutFramingOrFail(
       calloutFramingInput.id,
       {
-        relations: ['profile', ...relations],
+        relations: { profile: true, ...relations },
       }
     );
     if (!calloutFraming.profile)

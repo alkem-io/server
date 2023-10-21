@@ -167,7 +167,7 @@ export class ProjectService {
     relations: FindOptionsRelationByString = []
   ): Promise<IProfile> {
     const project = await this.getProjectOrFail(projectInput.id, {
-      relations: ['profile', ...relations],
+      relations: { profile: true, ...relations },
     });
     if (!project.profile)
       throw new EntityNotFoundException(

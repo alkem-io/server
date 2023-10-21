@@ -208,7 +208,7 @@ export class InnovationPackService {
     const innovationPack = await this.getInnovationPackOrFail(
       innovationPackInput.id,
       {
-        relations: ['profile', ...relations],
+        relations: { profile: true, ...relations },
       }
     );
     if (!innovationPack.profile)

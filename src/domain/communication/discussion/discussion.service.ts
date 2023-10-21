@@ -78,7 +78,7 @@ export class DiscussionService {
   ): Promise<IDiscussion> {
     const discussionID = deleteData.ID;
     const discussion = await this.getDiscussionOrFail(discussionID, {
-      relations: ['profile', 'comments'],
+      relations: { profile: true, comments: true },
     });
 
     if (discussion.profile) {
@@ -163,7 +163,7 @@ export class DiscussionService {
     relations: FindOptionsRelationByString = []
   ): Promise<IProfile> {
     const discussion = await this.getDiscussionOrFail(discussionInput.id, {
-      relations: ['profile', ...relations],
+      relations: { profile: true, ...relations },
     });
     if (!discussion.profile)
       throw new EntityNotFoundException(

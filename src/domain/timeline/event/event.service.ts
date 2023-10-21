@@ -61,7 +61,7 @@ export class CalendarEventService {
   ): Promise<ICalendarEvent> {
     const calendarEventID = deleteData.ID;
     const calendarEvent = await this.getCalendarEventOrFail(calendarEventID, {
-      relations: ['profile', 'comments'],
+      relations: { profile: true, comments: true },
     });
     if (calendarEvent.authorization) {
       await this.authorizationPolicyService.delete(calendarEvent.authorization);
