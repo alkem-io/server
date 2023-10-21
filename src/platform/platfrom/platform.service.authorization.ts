@@ -95,13 +95,14 @@ export class PlatformAuthorizationService {
       );
 
     const innovationHubs = await this.innovationHubService.getInnovationHubs({
-      relations: [
-        'profile',
-        'profile.visuals',
-        'profile.references',
-        'profile.tagsets',
-        'profile.location',
-      ],
+      relations: {
+        profile: {
+          visuals: true,
+          references: true,
+          tagsets: true,
+          location: true,
+        },
+      },
     });
 
     for (const innovationHub of innovationHubs) {

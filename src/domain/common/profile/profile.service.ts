@@ -102,13 +102,13 @@ export class ProfileService {
     profileData: UpdateProfileInput
   ): Promise<IProfile> {
     const profile = await this.getProfileOrFail(profileOrig.id, {
-      relations: [
-        'references',
-        'tagsets',
-        'authorization',
-        'location',
-        'visuals',
-      ],
+      relations: {
+        references: true,
+        tagsets: true,
+        authorization: true,
+        location: true,
+        visuals: true,
+      },
     });
 
     if (profileData.description !== undefined) {
@@ -150,14 +150,14 @@ export class ProfileService {
   async deleteProfile(profileID: string): Promise<IProfile> {
     // Note need to load it in with all contained entities so can remove fully
     const profile = await this.getProfileOrFail(profileID, {
-      relations: [
-        'references',
-        'location',
-        'tagsets',
-        'authorization',
-        'visuals',
-        'storageBucket',
-      ],
+      relations: {
+        references: true,
+        location: true,
+        tagsets: true,
+        authorization: true,
+        visuals: true,
+        storageBucket: true,
+      },
     });
 
     if (profile.tagsets) {

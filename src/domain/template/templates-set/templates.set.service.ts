@@ -96,12 +96,12 @@ export class TemplatesSetService {
 
   async deleteTemplatesSet(templatesSetID: string): Promise<ITemplatesSet> {
     const templatesSet = await this.getTemplatesSetOrFail(templatesSetID, {
-      relations: [
-        'authorization',
-        'postTemplates',
-        'whiteboardTemplates',
-        'innovationFlowTemplates',
-      ],
+      relations: {
+        authorization: true,
+        postTemplates: true,
+        whiteboardTemplates: true,
+        innovationFlowTemplates: true,
+      },
     });
 
     if (templatesSet.authorization)
@@ -324,10 +324,11 @@ export class TemplatesSetService {
     const templatesSetPopulated = await this.getTemplatesSetOrFail(
       templatesSet.id,
       {
-        relations: [
-          'innovationFlowTemplates',
-          'innovationFlowTemplates.profile',
-        ],
+        relations: {
+          innovationFlowTemplates: {
+            profile: true,
+          },
+        },
       }
     );
     if (!templatesSetPopulated.innovationFlowTemplates) {

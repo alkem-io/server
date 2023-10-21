@@ -147,13 +147,13 @@ export class BaseChallengeService {
       baseChallengeID,
       repository,
       {
-        relations: [
-          'collaboration',
-          'community',
-          'context',
-          'agent',
-          'profile',
-        ],
+        relations: {
+          collaboration: true,
+          community: true,
+          context: true,
+          agent: true,
+          profile: true,
+        },
       }
     );
     if (baseChallenge.context) {
