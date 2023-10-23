@@ -16,6 +16,9 @@ import { OrganizationService } from '@domain/community/organization/organization
 import { OrganizationAuthorizationService } from '@domain/community/organization/organization.service.authorization';
 import { UserService } from '@domain/community/user/user.service';
 import { UserAuthorizationService } from '@domain/community/user/user.service.authorization';
+import { AUTH_RESET_EVENT_TYPE } from '../event.type';
+import { TaskService } from '@services/task/task.service';
+import { AuthResetEventPayload } from '../auth-reset.payload.interface';
 
 const MAX_RETRIES = 5;
 const RETRY_HEADER = 'x-retry-count';
@@ -30,51 +33,13 @@ export class AuthResetController {
     private organizationAuthorizationService: OrganizationAuthorizationService,
     private userAuthorizationService: UserAuthorizationService,
     private organizationService: OrganizationService,
-    private userService: UserService
+    private userService: UserService,
+    private taskService: TaskService
   ) {}
-  @EventPattern('test-reset', Transport.RMQ)
-  public testReset(
-    @Payload() payload: { id: string },
-    @Ctx() context: RmqContext
-  ) {
-    const channel: Channel = context.getChannelRef();
-    const originalMsg = context.getMessage() as Message;
 
-    const retryCount = originalMsg.properties.headers[RETRY_HEADER] ?? 0;
-
-    try {
-      if (Math.random() < 0.7) {
-        throw new Error('Processing failed');
-      }
-
-      console.log(
-        'Processing succeeded',
-        retryCount
-          ? `after ${retryCount} retr${retryCount > 1 ? 'ies' : 'y'}`
-          : ''
-      );
-
-      channel.ack(originalMsg); // Acknowledge the message
-    } catch (e) {
-      if (retryCount >= MAX_RETRIES) {
-        console.error('Max retries reached. Rejecting message');
-        channel.reject(originalMsg, false); // Reject and don't requeue
-      } else {
-        console.warn(
-          `Processing failed. Retrying (${retryCount + 1}/${MAX_RETRIES})`
-        );
-        channel.publish('', 'auth-reset', originalMsg.content, {
-          headers: { [RETRY_HEADER]: retryCount + 1 },
-          persistent: true, // Make the message durable
-        });
-        channel.ack(originalMsg); // Acknowledge the original message
-      }
-    }
-  }
-
-  @EventPattern('space-reset', Transport.RMQ)
+  @EventPattern(AUTH_RESET_EVENT_TYPE.SPACE, Transport.RMQ)
   public async authResetSpace(
-    @Payload() payload: { id: string },
+    @Payload() payload: AuthResetEventPayload,
     @Ctx() context: RmqContext
   ) {
     this.logger.verbose?.(
@@ -89,17 +54,17 @@ export class AuthResetController {
     try {
       const space = await this.spaceService.getSpaceOrFail(payload.id);
       await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
-      this.logger.verbose?.(
-        `Finished resetting authorization for space with id ${payload.id}.`,
-        LogContext.AUTH_POLICY
-      );
+
+      const message = `Finished resetting authorization for space with id ${payload.id}.`;
+      this.logger.verbose?.(message, LogContext.AUTH_POLICY);
+      this.taskService.updateTaskResults(payload.task, message);
       channel.ack(originalMsg);
     } catch (error) {
       if (retryCount >= MAX_RETRIES) {
-        this.logger.error(
-          `Resetting authorization for space with id ${payload.id} failed! Max retries reached. Rejecting message.`,
-          LogContext.AUTH
-        );
+        const message = `Resetting authorization for space with id ${payload.id} failed! Max retries reached. Rejecting message.`;
+        this.logger.error(message, LogContext.AUTH);
+        this.taskService.updateTaskErrors(payload.task, message);
+
         channel.reject(originalMsg, false); // Reject and don't requeue
       } else {
         this.logger.warn(
@@ -117,7 +82,7 @@ export class AuthResetController {
     }
   }
 
-  @EventPattern('platform-reset', Transport.RMQ)
+  @EventPattern(AUTH_RESET_EVENT_TYPE.PLATFORM, Transport.RMQ)
   public async authResetPlatform(@Ctx() context: RmqContext) {
     this.logger.verbose?.(
       'Starting reset of authorization for platform',
@@ -158,9 +123,9 @@ export class AuthResetController {
     }
   }
 
-  @EventPattern('user-reset', Transport.RMQ)
+  @EventPattern(AUTH_RESET_EVENT_TYPE.USER, Transport.RMQ)
   public async authResetUser(
-    @Payload() payload: { id: string },
+    @Payload() payload: AuthResetEventPayload,
     @Ctx() context: RmqContext
   ) {
     this.logger.verbose?.(
@@ -175,18 +140,20 @@ export class AuthResetController {
     try {
       const user = await this.userService.getUserOrFail(payload.id);
       await this.userAuthorizationService.applyAuthorizationPolicy(user);
-      this.logger.verbose?.(
-        `Finished resetting authorization for user with id ${payload}.`,
-        LogContext.AUTH_POLICY
-      );
       channel.ack(originalMsg);
+
+      const message = `Finished resetting authorization for user with id ${payload.id}.`;
+      this.logger.verbose?.(message, LogContext.AUTH_POLICY);
+
+      this.taskService.updateTaskResults(payload.task, message);
     } catch (error) {
       if (retryCount >= MAX_RETRIES) {
-        this.logger.error(
-          `Resetting authorization for user with id ${payload.id} failed! Max retries reached. Rejecting message.`,
-          LogContext.AUTH
-        );
         channel.reject(originalMsg, false); // Reject and don't requeue
+
+        const message = `Resetting authorization for user with id ${payload.id} failed! Max retries reached. Rejecting message.`;
+        this.logger.error(message, LogContext.AUTH);
+
+        this.taskService.updateTaskErrors(payload.task, message);
       } else {
         this.logger.warn(
           `Processing  authorization reset for user with id ${
@@ -203,9 +170,9 @@ export class AuthResetController {
     }
   }
 
-  @EventPattern('organization-reset', Transport.RMQ)
+  @EventPattern(AUTH_RESET_EVENT_TYPE.ORGANIZATION, Transport.RMQ)
   public async authResetOrganization(
-    @Payload() payload: { id: string },
+    @Payload() payload: AuthResetEventPayload,
     @Ctx() context: RmqContext
   ) {
     this.logger.verbose?.(
@@ -224,18 +191,20 @@ export class AuthResetController {
       await this.organizationAuthorizationService.applyAuthorizationPolicy(
         organization
       );
-      this.logger.verbose?.(
-        `Finished resetting authorization for organization with id ${payload.id}.`,
-        LogContext.AUTH_POLICY
-      );
       channel.ack(originalMsg);
+
+      const message = `Finished resetting authorization for organization with id ${payload.id}.`;
+      this.logger.verbose?.(message, LogContext.AUTH_POLICY);
+
+      this.taskService.updateTaskResults(payload.task, message);
     } catch (error) {
       if (retryCount >= MAX_RETRIES) {
-        this.logger.error(
-          `Resetting authorization for organization with id ${payload.id} failed! Max retries reached. Rejecting message.`,
-          LogContext.AUTH
-        );
         channel.reject(originalMsg, false); // Reject and don't requeue
+
+        const message = `Resetting authorization for organization with id ${payload.id} failed! Max retries reached. Rejecting message.`;
+        this.logger.error(message, LogContext.AUTH);
+
+        this.taskService.updateTaskErrors(payload.task, message);
       } else {
         this.logger.warn(
           `Processing  authorization reset for organization with id ${
