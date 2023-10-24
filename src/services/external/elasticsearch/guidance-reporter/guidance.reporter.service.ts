@@ -81,7 +81,7 @@ export class GuidanceReporterService {
       const errorId = this.handleError(e);
       this.logger.error(
         `Event FAILED to be ingested into (${this.indexName})`,
-        { uuid: errorId },
+        { errorId },
         LogContext.CHAT_GUIDANCE_REPORTER
       );
     }
@@ -94,23 +94,31 @@ export class GuidanceReporterService {
     };
 
     if (isElasticResponseError(error)) {
-      this.logger.error(error.message, {
-        ...baseParams,
-        name: error.name,
-        status: error.meta.statusCode,
-      });
+      this.logger.error(
+        error.message,
+        {
+          ...baseParams,
+          name: error.name,
+          status: error.meta.statusCode,
+        },
+        LogContext.CHAT_GUIDANCE_REPORTER
+      );
     } else if (isElasticError(error)) {
       this.logger.error(error.error.type, {
         ...baseParams,
         status: error.status,
       });
     } else if (error instanceof Error) {
-      this.logger.error(error.message, {
-        ...baseParams,
-        name: error.name,
-      });
+      this.logger.error(
+        error.message,
+        {
+          ...baseParams,
+          name: error.name,
+        },
+        LogContext.CHAT_GUIDANCE_REPORTER
+      );
     } else {
-      this.logger.error(error, baseParams);
+      this.logger.error(error, baseParams, LogContext.CHAT_GUIDANCE_REPORTER);
     }
 
     return errorId;

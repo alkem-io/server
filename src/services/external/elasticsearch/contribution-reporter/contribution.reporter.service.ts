@@ -4,7 +4,7 @@ import { Client as ElasticClient } from '@elastic/elasticsearch';
 import { WriteResponseBase } from '@elastic/elasticsearch/lib/api/types';
 import { ConfigService } from '@nestjs/config';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { ConfigurationTypes } from '@common/enums';
+import { ConfigurationTypes, LogContext } from '@common/enums';
 import { isElasticError, isElasticResponseError } from '../utils';
 import {
   AuthorDetails,
@@ -332,7 +332,8 @@ export class ContributionReporterService {
       const errorId = this.handleError(e);
       this.logger.error(
         `Event '${contribution.type}' for object with id '(${contribution.id})' FAILED to be ingested into (${this.activityIndexName})`,
-        { uuid: errorId }
+        { errorId },
+        LogContext.CONTRIBUTION_REPORTER
       );
     }
 
@@ -369,7 +370,8 @@ export class ContributionReporterService {
       const errorId = this.handleError(e);
       this.logger.error(
         `Event '${contribution.type}' for object with id '(${contribution.id})' FAILED to be ingested into (${this.activityIndexName})`,
-        { uuid: errorId }
+        { uuid: errorId },
+        LogContext.CONTRIBUTION_REPORTER
       );
     }
 
@@ -383,23 +385,35 @@ export class ContributionReporterService {
     };
 
     if (isElasticResponseError(error)) {
-      this.logger.error(error.message, {
-        ...baseParams,
-        name: error.name,
-        status: error.meta.statusCode,
-      });
+      this.logger.error(
+        error.message,
+        {
+          ...baseParams,
+          name: error.name,
+          status: error.meta.statusCode,
+        },
+        LogContext.CONTRIBUTION_REPORTER
+      );
     } else if (isElasticError(error)) {
-      this.logger.error(error.error.type, {
-        ...baseParams,
-        status: error.status,
-      });
+      this.logger.error(
+        error.error.type,
+        {
+          ...baseParams,
+          status: error.status,
+        },
+        LogContext.CONTRIBUTION_REPORTER
+      );
     } else if (error instanceof Error) {
-      this.logger.error(error.message, {
-        ...baseParams,
-        name: error.name,
-      });
+      this.logger.error(
+        error.message,
+        {
+          ...baseParams,
+          name: error.name,
+        },
+        LogContext.CONTRIBUTION_REPORTER
+      );
     } else {
-      this.logger.error(error, baseParams);
+      this.logger.error(error, baseParams, LogContext.CONTRIBUTION_REPORTER);
     }
 
     return errorId;

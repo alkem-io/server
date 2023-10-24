@@ -532,8 +532,9 @@ export class CommunityService {
     this.communicationService
       .addUserToCommunications(communication, user.communicationID)
       .catch(error =>
-        this.logger.error?.(
+        this.logger.error(
           `Unable to add user to community messaging (${community.id}): ${error}`,
+          error?.stack,
           LogContext.COMMUNICATION
         )
       );
@@ -626,8 +627,9 @@ export class CommunityService {
       this.communicationService
         .removeUserFromCommunications(communication, user)
         .catch(error =>
-          this.logger.error?.(
+          this.logger.error(
             `Unable remove user from community messaging (${community.id}): ${error}`,
+            error?.stack,
             LogContext.COMMUNICATION
           )
         );

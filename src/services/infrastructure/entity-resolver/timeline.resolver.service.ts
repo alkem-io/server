@@ -35,6 +35,7 @@ export class TimelineResolverService {
     if (!result) {
       this.logger.error(
         `Unable to identify Collaboration for provided Timeline ID: ${timelineID}`,
+        undefined,
         LogContext.CALENDAR
       );
       return '';
@@ -58,6 +59,7 @@ export class TimelineResolverService {
     if (!result) {
       this.logger.error(
         `Unable to identify Timeline for provided calendar ID: ${calendarID}`,
+        undefined,
         LogContext.CALENDAR
       );
       return undefined;

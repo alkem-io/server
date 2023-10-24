@@ -162,8 +162,9 @@ export class SsiSovrhdAdapter {
       // );
       return sovrhdRequestResponseData;
     } catch (error: any) {
-      this.logger.error?.(
+      this.logger.error(
         `Unable to retrieve credential on session (${sessionId}): ${error}`,
+        error?.stack,
         LogContext.SSI_SOVRHD
       );
       throw new SsiSovrhdCredentialRequestFailure(
@@ -187,6 +188,7 @@ export class SsiSovrhdAdapter {
         `No validate credentials returned: ${JSON.stringify(
           credentialCallback
         )}`,
+        undefined,
         LogContext.SSI_SOVRHD
       );
       return false;
