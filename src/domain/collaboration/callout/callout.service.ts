@@ -1,10 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import {
-  FindOneOptions,
-  FindOptionsRelationByString,
-  Repository,
-} from 'typeorm';
+import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -472,7 +468,7 @@ export class CalloutService {
 
   public async getCalloutFraming(
     calloutID: string,
-    relations: FindOptionsRelationByString = []
+    relations: FindOneOptions<ICallout>[] = []
   ): Promise<ICalloutFraming> {
     const calloutLoaded = await this.getCalloutOrFail(calloutID, {
       relations: { framing: true, ...relations },
@@ -488,7 +484,7 @@ export class CalloutService {
 
   public async getContributions(
     callout: ICallout,
-    relations: FindOptionsRelationByString = [],
+    relations: FindOptionsRelations<ICallout>[] = [],
     contributionIDs?: string[],
     filter?: CalloutContributionFilterArgs,
     limit?: number,

@@ -59,7 +59,7 @@ export class CalloutContributionResolverFields {
     @Parent() calloutContribution: ICalloutContribution
   ): Promise<IPost | null> {
     return await this.calloutContributionService.getPost(calloutContribution, [
-      'post.comments',
+      [{ post: { comments: true } }],
     ]);
   }
 

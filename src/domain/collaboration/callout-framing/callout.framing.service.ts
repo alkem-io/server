@@ -6,11 +6,7 @@ import { ICalloutFraming } from './callout.framing.interface';
 import { CalloutFraming } from './callout.framing.entity';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { InjectRepository } from '@nestjs/typeorm';
-import {
-  FindOneOptions,
-  FindOptionsRelationByString,
-  Repository,
-} from 'typeorm';
+import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { LogContext } from '@common/enums/logging.context';
 import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
@@ -210,7 +206,7 @@ export class CalloutFramingService {
 
   public async getProfile(
     calloutFramingInput: ICalloutFraming,
-    relations: FindOptionsRelationByString = []
+    relations: FindOptionsRelations<ICalloutFraming>[] = []
   ): Promise<IProfile> {
     const calloutFraming = await this.getCalloutFramingOrFail(
       calloutFramingInput.id,
@@ -229,7 +225,7 @@ export class CalloutFramingService {
 
   public async getWhiteboard(
     calloutFramingInput: ICalloutFraming,
-    relations: FindOptionsRelationByString = []
+    relations: FindOptionsRelations<ICalloutFraming>[] = []
   ): Promise<IWhiteboard | null> {
     const calloutFraming = await this.getCalloutFramingOrFail(
       calloutFramingInput.id,
@@ -246,7 +242,7 @@ export class CalloutFramingService {
 
   public async getWhiteboardRt(
     calloutFramingInput: ICalloutFraming,
-    relations: FindOptionsRelationByString = []
+    relations: FindOptionsRelations<ICalloutFraming>[] = []
   ): Promise<IWhiteboardRt | null> {
     const calloutFraming = await this.getCalloutFramingOrFail(
       calloutFramingInput.id,

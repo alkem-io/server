@@ -13,11 +13,7 @@ import {
 import { IOrganization } from '@domain/community/organization/organization.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import {
-  FindOneOptions,
-  FindOptionsRelationByString,
-  Repository,
-} from 'typeorm';
+import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { InnovationPack } from './innovation.pack.entity';
 import { IInnovationPack } from './innovation.pack.interface';
@@ -203,7 +199,7 @@ export class InnovationPackService {
 
   public async getProfile(
     innovationPackInput: IInnovationPack,
-    relations: FindOptionsRelationByString = []
+    relations: FindOptionsRelations<IInnovationPack>[] = []
   ): Promise<IProfile> {
     const innovationPack = await this.getInnovationPackOrFail(
       innovationPackInput.id,

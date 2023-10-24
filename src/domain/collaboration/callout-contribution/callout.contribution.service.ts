@@ -4,11 +4,7 @@ import { ICalloutContribution } from './callout.contribution.interface';
 import { CalloutContribution } from './callout.contribution.entity';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { InjectRepository } from '@nestjs/typeorm';
-import {
-  FindOneOptions,
-  FindOptionsRelationByString,
-  Repository,
-} from 'typeorm';
+import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { LogContext } from '@common/enums/logging.context';
 import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
@@ -197,7 +193,7 @@ export class CalloutContributionService {
 
   public async getWhiteboard(
     calloutContributionInput: ICalloutContribution,
-    relations: FindOptionsRelationByString = []
+    relations: FindOptionsRelations<ICalloutContribution>[] = []
   ): Promise<IWhiteboard | null> {
     const calloutContribution = await this.getCalloutContributionOrFail(
       calloutContributionInput.id,
@@ -214,7 +210,7 @@ export class CalloutContributionService {
 
   public async getLink(
     calloutContributionInput: ICalloutContribution,
-    relations: FindOptionsRelationByString = []
+    relations: FindOptionsRelations<ICalloutContribution>[] = []
   ): Promise<IReference | null> {
     const calloutContribution = await this.getCalloutContributionOrFail(
       calloutContributionInput.id,
@@ -231,7 +227,7 @@ export class CalloutContributionService {
 
   public async getPost(
     calloutContributionInput: ICalloutContribution,
-    relations: FindOptionsRelationByString = []
+    relations: FindOptionsRelations<ICalloutContribution>
   ): Promise<IPost | null> {
     const calloutContribution = await this.getCalloutContributionOrFail(
       calloutContributionInput.id,
