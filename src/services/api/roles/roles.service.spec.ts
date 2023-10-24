@@ -180,7 +180,12 @@ describe('RolesService', () => {
         organizationID: testData.organization.id,
       });
 
-      const spaces = await rolesService.getJourneyRolesForContributor(roles);
+      const agentInfo = new AgentInfo();
+      // TODO: will this work?
+      const spaces = await rolesService.getJourneyRolesForContributor(
+        roles,
+        agentInfo
+      );
 
       expect(spaces).toEqual(
         expect.arrayContaining([
