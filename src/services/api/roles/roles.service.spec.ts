@@ -21,6 +21,7 @@ import * as getJourneyRolesForContributorEntityData from './util/get.journey.rol
 import * as getOrganizationRolesForUserEntityData from './util/get.organization.roles.for.user.entity.data';
 import { MockInvitationService } from '@test/mocks/invitation.service.mock';
 import { MockCommunityResolverService } from '@test/mocks/community.resolver.service.mock';
+import { AgentInfo } from '@core/authentication/agent-info';
 
 describe('RolesService', () => {
   let rolesService: RolesService;
@@ -107,8 +108,11 @@ describe('RolesService', () => {
       const organizationRoles = await rolesService.getOrganizationRolesForUser(
         roles
       );
+      const agentInfo = new AgentInfo();
+      // TODO: will this work?
       const journeyRoles = await rolesService.getJourneyRolesForContributor(
-        roles
+        roles,
+        agentInfo
       );
 
       expect(organizationRoles).toEqual(
