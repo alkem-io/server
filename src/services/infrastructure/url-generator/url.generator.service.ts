@@ -384,7 +384,9 @@ export class UrlGeneratorService {
     fieldID: string
   ): Promise<string> {
     const query =
-      fieldName === 'profileId'
+      fieldName === 'profileId' ||
+      fieldName === 'whiteboardRtId' ||
+      fieldName === 'whiteboardId'
         ? `
     SELECT c.id AS calloutId, c.nameID AS calloutNameId, c.collaborationId AS collaborationId
     FROM callout AS c JOIN callout_framing AS cf ON cf.id = c.framingId
