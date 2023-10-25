@@ -65,9 +65,10 @@ export class IpfsService {
       const cidObj = CID.parse(cidID);
       await this.ipfsClient.dag.get(cidObj, { timeout: 100 });
       return true;
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(
         `IPFS file with CID: ${cidID} does not exist in this IPFS instance!`,
+        error?.stack,
         LogContext.IPFS
       );
     }
@@ -96,7 +97,7 @@ export class IpfsService {
     try {
       return this.ipfsClient.pin.rm(CID);
     } catch (error: any) {
-      this.logger.error('Unpinning failed', LogContext.IPFS);
+      this.logger.error('Unpinning failed', error?.stack, LogContext.IPFS);
       throw new IpfsDeleteFailedException(`Unpinning failed ${error.message}`);
     }
   }
@@ -113,12 +114,17 @@ export class IpfsService {
         if (gcFile.err) {
           this.logger.error(
             `Error in collection ${gcFile.err}`,
+            gcFile.err.stack,
             LogContext.IPFS
           );
         }
       }
     } catch (error: any) {
-      this.logger.error('Garbage collection failed', LogContext.IPFS);
+      this.logger.error(
+        'Garbage collection failed',
+        error?.stack,
+        LogContext.IPFS
+      );
       throw new IpfsGCFailedException(
         `Garbage collection failed ${error.message}`
       );

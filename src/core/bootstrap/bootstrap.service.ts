@@ -76,6 +76,7 @@ export class BootstrapService {
     } catch (error: any) {
       this.logger.error(
         `Unable to complete bootstrap process: ${error}`,
+        error?.stack,
         LogContext.BOOTSTRAP
       );
       throw new BootstrapException(error.message);

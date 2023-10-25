@@ -675,8 +675,9 @@ export class CommunicationAdapter {
       return responseData.success;
     } catch (err: any) {
       this.logInteractionError(eventType, err, eventID);
-      this.logger.error?.(
+      this.logger.error(
         `[Membership] Exception user joining a room (user: ${matrixUserID}) room: ${roomID}) - ${err.toString()}`,
+        err?.stack,
         LogContext.COMMUNICATION
       );
     }
@@ -801,10 +802,11 @@ export class CommunicationAdapter {
       return responseData.success;
     } catch (err: any) {
       this.logInteractionError(eventType, err, eventID);
-      this.logger.error?.(
+      this.logger.error(
         `Unable to change guest access for rooms to (${
           allowGuests ? 'Public' : 'Private'
         }): ${err}`,
+        err?.stack,
         LogContext.COMMUNICATION
       );
       return false;
@@ -880,7 +882,11 @@ export class CommunicationAdapter {
       catchError(err => {
         if (err instanceof TimeoutError) {
           if (timeoutMessage) {
-            this.logger.error(timeoutMessage);
+            this.logger.error(
+              timeoutMessage,
+              err?.stack,
+              LogContext.COMMUNICATION
+            );
           }
 
           if (retries <= this.retries) {
