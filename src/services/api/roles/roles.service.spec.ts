@@ -6,7 +6,7 @@ import { MockOrganizationService } from '@test/mocks/organization.service.mock';
 import { MockUserService } from '@test/mocks/user.service.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { MockSpaceFilterService } from '@test/mocks/space.filter.service.mock';
-import { EntityManagerProvider } from '@test/mocks';
+import { EntityManagerProvider, MockAuthorizationService } from '@test/mocks';
 import { Test } from '@nestjs/testing';
 import { RolesService } from './roles.service';
 import { UserService } from '@domain/community/user/user.service';
@@ -21,7 +21,6 @@ import * as getJourneyRolesForContributorEntityData from './util/get.journey.rol
 import * as getOrganizationRolesForUserEntityData from './util/get.organization.roles.for.user.entity.data';
 import { MockInvitationService } from '@test/mocks/invitation.service.mock';
 import { MockCommunityResolverService } from '@test/mocks/community.resolver.service.mock';
-import { AgentInfo } from '@core/authentication/agent-info';
 
 describe('RolesService', () => {
   let rolesService: RolesService;
@@ -43,6 +42,7 @@ describe('RolesService', () => {
         MockSpaceFilterService,
         MockOrganizationService,
         MockCommunityResolverService,
+        MockAuthorizationService,
         MockWinstonProvider,
         EntityManagerProvider,
         RolesService,
@@ -108,11 +108,9 @@ describe('RolesService', () => {
       const organizationRoles = await rolesService.getOrganizationRolesForUser(
         roles
       );
-      const agentInfo = new AgentInfo();
-      // TODO: will this work?
       const journeyRoles = await rolesService.getJourneyRolesForContributor(
         roles,
-        agentInfo
+        testData.agentInfo
       );
 
       expect(organizationRoles).toEqual(
@@ -180,11 +178,9 @@ describe('RolesService', () => {
         organizationID: testData.organization.id,
       });
 
-      const agentInfo = new AgentInfo();
-      // TODO: will this work?
       const spaces = await rolesService.getJourneyRolesForContributor(
         roles,
-        agentInfo
+        testData.agentInfo
       );
 
       expect(spaces).toEqual(
