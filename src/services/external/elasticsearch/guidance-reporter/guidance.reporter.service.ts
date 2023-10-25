@@ -67,6 +67,34 @@ export class GuidanceReporterService {
     return;
   }
 
+  public async updateAnswerRelevance(answerId: string, relevance: boolean) {
+    if (!this.client) {
+      return false;
+    }
+
+    try {
+      const result = await this.client.updateByQuery({
+        index: this.indexName,
+        query: {
+          match: { answerId },
+        },
+        script: {
+          source: `ctx._source.relevant = ${relevance}`,
+          lang: 'painless',
+        },
+      });
+      return Boolean(result.updated && result.updated > 0);
+    } catch (e: any) {
+      const errorId = this.handleError(e);
+      this.logger.error(
+        `Error while updating answer relevance '${answerId}'`,
+        { errorId },
+        LogContext.CHAT_GUIDANCE_REPORTER
+      );
+      return false;
+    }
+  }
+
   private async wrapAction(actionOrFail: () => Promise<WriteResponseBase>) {
     try {
       const result = await actionOrFail();

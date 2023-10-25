@@ -44,10 +44,10 @@ export class GuidanceEngineAdapter {
     } catch (e) {
       const errorMessage = `Error received from guidance chat server! ${e}`;
       this.logger.error(errorMessage, undefined, LogContext.CHAT_GUIDANCE);
+      // not a real answer; just return an error
       return {
         answer: errorMessage,
         question: eventData.question,
-        sources: [],
       };
     }
 
@@ -63,23 +63,23 @@ export class GuidanceEngineAdapter {
 
     try {
       const jsonObject = JSON.parse(formattedString);
-      const result: IChatGuidanceQueryResult = {
-        ...jsonObject,
-        sources: this.extractMetadata(jsonObject.sources),
-      };
-      this.chatGuidanceLogService.logAnswer(
+      const answerId = await this.chatGuidanceLogService.logAnswer(
         eventData.question,
         jsonObject as GuidanceEngineQueryResponse,
         eventData.userId
       );
-      return result;
+      return {
+        ...jsonObject,
+        id: answerId,
+        sources: this.extractMetadata(jsonObject.sources),
+      };
     } catch (err: any) {
       const errorMessage = `Could not send query to chat guidance adapter! ${err}`;
       this.logger.error(errorMessage, err?.stack, LogContext.CHAT_GUIDANCE);
+      // not a real answer; just return an error
       return {
         answer: errorMessage,
         question: eventData.question,
-        sources: [],
       };
     }
   }

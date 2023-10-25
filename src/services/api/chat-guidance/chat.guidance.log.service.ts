@@ -17,24 +17,32 @@ export class ChatGuidanceLogService {
     private guidanceReporter: GuidanceReporterService
   ) {}
 
-  public logAnswer(
+  public async logAnswer(
     question: string,
     guidanceEngineResponse: GuidanceEngineQueryResponse,
     userId: string
-  ): void {
-    this.saveToDb(question, guidanceEngineResponse, userId);
-    this.reportToElastic(question, guidanceEngineResponse, userId);
+  ): Promise<string> {
+    const answerId = await this.saveToDb(
+      question,
+      guidanceEngineResponse,
+      userId
+    );
+    this.reportToElastic(question, guidanceEngineResponse, answerId, userId);
+
+    return answerId;
   }
 
   private async reportToElastic(
     question: string,
     guidanceEngineResponse: GuidanceEngineQueryResponse,
+    answerId: string,
     userId: string
   ): Promise<void> {
     const { email } = await this.userService.getUserOrFail(userId);
 
     this.guidanceReporter.reportUsage({
       usage: {
+        answerId,
         answer: guidanceEngineResponse.answer,
         completionTokens: guidanceEngineResponse.completion_tokens,
         promptTokens: guidanceEngineResponse.prompt_tokens,
@@ -54,16 +62,16 @@ export class ChatGuidanceLogService {
     question: string,
     guidanceEngineResponse: GuidanceEngineQueryResponse,
     userId: string
-  ): Promise<void> {
-    const chatGuidanceLog: ChatGuidanceLog = ChatGuidanceLog.create({
+  ): Promise<string> {
+    const { id } = await this.chatGuidanceLogRepository.save({
       question,
       createdBy: userId,
       promptTokens: guidanceEngineResponse.prompt_tokens,
       completionTokens: guidanceEngineResponse.completion_tokens,
       totalTokens: guidanceEngineResponse.total_tokens,
       totalCost: guidanceEngineResponse.total_cost,
-      ...guidanceEngineResponse,
     });
-    await this.chatGuidanceLogRepository.save(chatGuidanceLog);
+
+    return id;
   }
 }
