@@ -6,6 +6,7 @@ import * as opportunity from '@test/data/opportunity.json';
 import * as applications from '@test/data/applications.json';
 import * as userRoles from '@test/data/roles-user.json';
 import * as challenge from '@test/data/challenge.json';
+import * as agentInfo from '@test/data/agentInfo.json';
 
 export const testData = {
   ...space,
@@ -16,4 +17,5 @@ export const testData = {
   ...applications,
   ...userRoles,
   ...challenge,
+  ...agentInfo,
 };
