@@ -192,11 +192,10 @@ export class CalloutResolverMutations {
 
     if (callout.contributionPolicy.state === CalloutState.CLOSED) {
       if (
-        !this.authorizationService.grantAccessOrFail(
+        !this.authorizationService.isAccessGranted(
           agentInfo,
           callout.authorization,
-          AuthorizationPrivilege.UPDATE,
-          `create contribution on callout: ${callout.id}`
+          AuthorizationPrivilege.UPDATE
         )
       )
         throw new CalloutClosedException(

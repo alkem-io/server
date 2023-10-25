@@ -39,8 +39,6 @@ import { CommunityContributorsUpdateType } from '@common/enums/community.contrib
 import { CommunityContributorType } from '@common/enums/community.contributor.type';
 import { ICommunityRolePolicy } from '../community-policy/community.policy.role.interface';
 import { ICommunityPolicy } from '../community-policy/community.policy.interface';
-import { ActivityInputMemberJoined } from '@services/adapters/activity-adapter/dto/activity.dto.input.member.joined';
-import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { AgentInfo } from '@core/authentication';
 import { CommunityPolicyService } from '../community-policy/community.policy.service';
 import { ICommunityPolicyDefinition } from '../community-policy/community.policy.definition';
@@ -65,7 +63,6 @@ import { StorageAggregatorResolverService } from '@services/infrastructure/stora
 @Injectable()
 export class CommunityService {
   constructor(
-    private activityAdapter: ActivityAdapter,
     private authorizationPolicyService: AuthorizationPolicyService,
     private agentService: AgentService,
     private userService: UserService,
@@ -500,23 +497,22 @@ export class CommunityService {
 
     if (role === CommunityRole.MEMBER) {
       this.addMemberToCommunication(user, community);
-      let triggeredUserID = userID;
+
       if (agentInfo) {
-        triggeredUserID = agentInfo.userID;
-      }
-      const activityLogInput: ActivityInputMemberJoined = {
-        triggeredBy: triggeredUserID,
-        community: community,
-        user: user,
-      };
-      await this.activityAdapter.memberJoined(activityLogInput);
-      if (triggerNewMemberEvents && agentInfo) {
-        const displayName = await this.getDisplayName(community);
-        await this.communityEventsService.processCommunityNewMemberEvents(
+        await this.communityEventsService.registerCommunityNewMemberActivity(
           community,
-          displayName,
+          user,
           agentInfo
         );
+
+        if (triggerNewMemberEvents) {
+          const displayName = await this.getDisplayName(community);
+          await this.communityEventsService.processCommunityNewMemberEvents(
+            community,
+            displayName,
+            agentInfo
+          );
+        }
       }
     }
 
