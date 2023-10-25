@@ -168,8 +168,9 @@ export class RoomService {
       );
       return room.externalRoomID;
     } catch (error: any) {
-      this.logger.error?.(
+      this.logger.error(
         `Unable to initialize roomable communication room (${room.displayName}): ${error}`,
+        error?.stack,
         LogContext.COMMUNICATION
       );
     }
@@ -286,6 +287,7 @@ export class RoomService {
     if (senderCommunicationID === '') {
       this.logger.error(
         `Unable to identify sender for ${room.id} - ${messageID}`,
+        undefined,
         LogContext.COMMUNICATION
       );
       return senderCommunicationID;
@@ -304,6 +306,7 @@ export class RoomService {
     if (senderCommunicationID === '') {
       this.logger.error(
         `Unable to identify sender for ${room.id} - ${reactionID}`,
+        undefined,
         LogContext.COMMUNICATION
       );
       return senderCommunicationID;

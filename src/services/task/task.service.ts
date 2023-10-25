@@ -132,7 +132,6 @@ export class TaskService {
     }
 
     task.errors.push(error);
-    console.log(task);
 
     await this.cacheManager.set(task.id, task, {
       ttl: 1000,
@@ -143,7 +142,11 @@ export class TaskService {
     const list = await this.getTaskList();
 
     if (!list) {
-      this.logger.error('Could not add task to list. List not found.');
+      this.logger.error(
+        'Could not add task to list. List not found.',
+        undefined,
+        LogContext.TASKS
+      );
       return false;
     }
 
@@ -154,12 +157,20 @@ export class TaskService {
       .then(
         () => true,
         reason => {
-          this.logger.error(`Could not add task to list. ${reason}`);
+          this.logger.error(
+            `Could not add task to list. ${reason}`,
+            reason?.stack,
+            LogContext.TASKS
+          );
           return false;
         }
       )
       .catch(error => {
-        this.logger.error(`Could not add task to list. ${error}`);
+        this.logger.error(
+          `Could not add task to list. ${error}`,
+          error?.stack,
+          LogContext.TASKS
+        );
         return false;
       });
   }
