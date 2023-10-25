@@ -6,7 +6,7 @@ import {
   GeoLocationService,
 } from '@services/external/geo-location';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { BaseException } from '@common/exceptions/base.exception';
+import { LogContext } from '@common/enums';
 
 @Controller('/rest')
 export class AppController {
@@ -28,7 +28,11 @@ export class AppController {
     const forwardedFor = req.headers['x-forwarded-for'];
 
     if (!forwardedFor) {
-      this.logger.error('X-Forwarded-For header not set');
+      this.logger.error(
+        'X-Forwarded-For header not set',
+        undefined,
+        LogContext.GEO
+      );
       return undefined;
     }
 
@@ -37,7 +41,11 @@ export class AppController {
     this.logger.verbose?.(`X-Forwarded-For header: ${forwardedFor}`);
 
     if (!ip) {
-      this.logger.error('Unable to get IP for header');
+      this.logger.error(
+        'Unable to get IP for header',
+        undefined,
+        LogContext.GEO
+      );
       return undefined;
     }
 
@@ -45,11 +53,11 @@ export class AppController {
 
     try {
       geo = await this.geoLocationService.getGeo(ip);
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(
-        `Unable to fetch geo location for IP: ${ip} :: ${
-          (error as BaseException)?.message
-        }`
+        `Unable to fetch geo location for IP: ${ip} :: ${error?.message}`,
+        error?.stack,
+        LogContext.GEO
       );
     }
 

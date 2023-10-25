@@ -65,7 +65,7 @@ export class GuidanceEngineAdapter {
       return result;
     } catch (err: any) {
       const errorMessage = `Could not send query to chat guidance adapter! ${err}`;
-      this.logger.error(errorMessage, LogContext.CHAT_GUIDANCE);
+      this.logger.error(errorMessage, err?.stack, LogContext.CHAT_GUIDANCE);
       return {
         answer: errorMessage,
         question: eventData.question,
@@ -89,6 +89,7 @@ export class GuidanceEngineAdapter {
     } catch (err: any) {
       this.logger.error(
         `Could not send reset to chat guidance adapter! ${err}`,
+        err?.stack,
         LogContext.CHAT_GUIDANCE
       );
       return false;
@@ -109,6 +110,7 @@ export class GuidanceEngineAdapter {
     } catch (err: any) {
       this.logger.error(
         `Could not send ingest to chat guidance adapter! ${err}`,
+        err?.stack,
         LogContext.CHAT_GUIDANCE
       );
       return false;
@@ -116,6 +118,7 @@ export class GuidanceEngineAdapter {
   }
 
   private extractMetadata(metadata: string): { uri: string }[] {
+    this.logger.error('smgth', new Error().stack, 'context');
     // Use regular expressions to extract metadata sections
     const metadataMatches = metadata.match(/metadata=\{.*?\}/g);
 

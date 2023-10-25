@@ -172,11 +172,11 @@ export class UserService {
 
           await this.userRepository.save(response);
           await this.setUserCache(response);
-        } catch (e) {
-          this.logger.error(e);
+        } catch (e: any) {
+          this.logger.error(e, e?.stack, LogContext.USER);
         }
       },
-      error => this.logger.error(error)
+      error => this.logger.error(error, error?.stack, LogContext.USER)
     );
 
     await this.setUserCache(response);
