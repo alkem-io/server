@@ -8,5 +8,6 @@ export const MockAuthorizationService: ValueProvider<
   provide: AuthorizationService,
   useValue: {
     grantAccessOrFail: jest.fn(),
+    isAccessGranted: jest.fn(),
   },
 };

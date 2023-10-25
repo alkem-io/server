@@ -25,6 +25,8 @@ import { CommunityResolverService } from '@services/infrastructure/entity-resolv
 import { RolesResultOrganization } from './dto/roles.dto.result.organization';
 import { mapOrganizationCredentialsToRoles } from './util/map.organization.credentials.to.roles';
 import { RolesResultSpace } from './dto/roles.dto.result.space';
+import { AgentInfo } from '@core/authentication';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 
 export class RolesService {
   constructor(
@@ -37,6 +39,7 @@ export class RolesService {
     private opportunityService: OpportunityService,
     private spaceFilterService: SpaceFilterService,
     private communityResolverService: CommunityResolverService,
+    private authorizationService: AuthorizationService,
     private organizationService: OrganizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -80,7 +83,8 @@ export class RolesService {
   }
 
   public async getJourneyRolesForContributor(
-    roles: ContributorRoles
+    roles: ContributorRoles,
+    agentInfo: AgentInfo
   ): Promise<RolesResultSpace[]> {
     const allowedVisibilities = this.spaceFilterService.getAllowedVisibilities(
       roles.filter
@@ -89,7 +93,9 @@ export class RolesService {
     return await mapJourneyCredentialsToRoles(
       this.entityManager,
       roles.credentials,
-      allowedVisibilities
+      allowedVisibilities,
+      agentInfo,
+      this.authorizationService
     );
   }
 
