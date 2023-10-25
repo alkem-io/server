@@ -267,6 +267,7 @@ export class StorageAggregatorResolverService {
       if (!platformQueryResult) {
         this.logger.error(
           `lookup for communication ${communicationID} - community / platform not found`,
+          undefined,
           LogContext.STORAGE_BUCKET
         );
       }

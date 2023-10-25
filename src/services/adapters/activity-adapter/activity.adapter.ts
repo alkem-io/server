@@ -486,6 +486,7 @@ export class ActivityAdapter {
     if (!result) {
       this.logger.error(
         `Unable to identify Collaboration for provided communityID: ${communityId}`,
+        undefined,
         LogContext.COMMUNITY
       );
       return '';
@@ -506,6 +507,7 @@ export class ActivityAdapter {
     if (!community) {
       this.logger.error(
         `Unable to identify Community for provided updates: ${updatesID}`,
+        undefined,
         LogContext.COMMUNITY
       );
       return '';

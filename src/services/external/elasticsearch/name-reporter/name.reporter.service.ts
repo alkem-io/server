@@ -3,7 +3,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ConfigService } from '@nestjs/config';
 import { ELASTICSEARCH_CLIENT_PROVIDER } from '@common/constants';
 import { Client as ElasticClient } from '@elastic/elasticsearch';
-import { ConfigurationTypes } from '@common/enums';
+import { ConfigurationTypes, LogContext } from '@common/enums';
 import { NamingDocument } from './types';
 import { handleElasticError } from '@services/external/elasticsearch/utils/handle.elastic.error';
 
@@ -74,11 +74,15 @@ export class NameReporterService {
       }
     } catch (e) {
       const error = handleElasticError(e);
-      this.logger.error(error.message, {
-        uuid: error.uuid,
-        name: error.name,
-        status: error.status,
-      });
+      this.logger.error(
+        error.message,
+        {
+          errorId: error.uuid,
+          name: error.name,
+          status: error.status,
+        },
+        LogContext.NAME_REPORTER
+      );
     }
 
     const document: NamingDocument = {
@@ -98,11 +102,15 @@ export class NameReporterService {
       );
     } catch (e) {
       const error = handleElasticError(e);
-      this.logger.error(error.message, {
-        uuid: error.uuid,
-        name: error.name,
-        status: error.status,
-      });
+      this.logger.error(
+        error.message,
+        {
+          errorId: error.uuid,
+          name: error.name,
+          status: error.status,
+        },
+        LogContext.NAME_REPORTER
+      );
     }
   }
 
@@ -134,7 +142,9 @@ export class NameReporterService {
 
     if (!this.space_name_enrich_policy) {
       this.logger.error(
-        'Could not execute space name policy - policy name not defined!'
+        'Could not execute space name policy - policy name not defined!',
+        undefined,
+        LogContext.NAME_REPORTER
       );
       return false;
     }
@@ -151,11 +161,15 @@ export class NameReporterService {
       return result.status.phase === 'COMPLETE';
     } catch (e) {
       const error = handleElasticError(e);
-      this.logger.error(error.message, {
-        uuid: error.uuid,
-        name: error.name,
-        status: error.status,
-      });
+      this.logger.error(
+        error.message,
+        {
+          uuid: error.uuid,
+          name: error.name,
+          status: error.status,
+        },
+        LogContext.NAME_REPORTER
+      );
     }
 
     return false;
