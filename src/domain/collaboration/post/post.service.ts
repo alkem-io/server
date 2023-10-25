@@ -1,11 +1,7 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import {
-  FindOneOptions,
-  FindOptionsRelationByString,
-  Repository,
-} from 'typeorm';
+import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext, ProfileType } from '@common/enums';
 import { IPost } from '@domain/collaboration/post/post.interface';
@@ -135,7 +131,7 @@ export class PostService {
 
   public async getProfile(
     post: IPost,
-    relations: FindOptionsRelationByString = []
+    relations?: FindOptionsRelations<IPost>
   ): Promise<IProfile> {
     const postLoaded = await this.getPostOrFail(post.id, {
       relations: { profile: true, ...relations },

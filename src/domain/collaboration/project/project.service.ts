@@ -1,11 +1,7 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import {
-  FindOneOptions,
-  FindOptionsRelationByString,
-  Repository,
-} from 'typeorm';
+import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   ValidationException,
@@ -164,7 +160,7 @@ export class ProjectService {
 
   public async getProfile(
     projectInput: IProject,
-    relations: FindOptionsRelationByString = []
+    relations?: FindOptionsRelations<IProject>
   ): Promise<IProfile> {
     const project = await this.getProjectOrFail(projectInput.id, {
       relations: { profile: true, ...relations },

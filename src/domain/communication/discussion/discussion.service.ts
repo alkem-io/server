@@ -1,10 +1,6 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import {
-  FindOneOptions,
-  FindOptionsRelationByString,
-  Repository,
-} from 'typeorm';
+import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext, ProfileType } from '@common/enums';
 import { Discussion } from './discussion.entity';
@@ -160,7 +156,7 @@ export class DiscussionService {
 
   public async getProfile(
     discussionInput: IDiscussion,
-    relations: FindOptionsRelationByString = []
+    relations?: FindOptionsRelations<IDiscussion>
   ): Promise<IProfile> {
     const discussion = await this.getDiscussionOrFail(discussionInput.id, {
       relations: { profile: true, ...relations },

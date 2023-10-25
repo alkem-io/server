@@ -43,7 +43,7 @@ export class AdminCommunicationService {
     );
     const communication = await this.communityService.getCommunication(
       community.id,
-      ['communication.updates']
+      { communication: { updates: true } }
     );
 
     const result = new CommunicationAdminMembershipResult(

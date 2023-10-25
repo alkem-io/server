@@ -1,10 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import {
-  FindOneOptions,
-  FindOptionsRelationByString,
-  Repository,
-} from 'typeorm';
+import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext, ProfileType } from '@common/enums';
 import { Whiteboard } from './whiteboard.entity';
@@ -151,7 +147,7 @@ export class WhiteboardService {
 
   public async getProfile(
     whiteboard: IWhiteboard,
-    relations: FindOptionsRelationByString = []
+    relations?: FindOptionsRelations<IWhiteboard>
   ): Promise<IProfile> {
     const whiteboardLoaded = await this.getWhiteboardOrFail(whiteboard.id, {
       relations: { profile: true, ...relations },

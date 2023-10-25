@@ -7,11 +7,7 @@ import {
 } from '@common/exceptions';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import {
-  FindOneOptions,
-  FindOptionsRelationByString,
-  Repository,
-} from 'typeorm';
+import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { InnovationFlow } from './innovation.flow.entity';
 import { IInnovationFlow } from './innovation.flow.interface';
@@ -209,7 +205,7 @@ export class InnovationFlowService {
 
   public async getProfile(
     innovationFlowInput: IInnovationFlow,
-    relations: FindOptionsRelationByString = []
+    relations?: FindOptionsRelations<IInnovationFlow>
   ): Promise<IProfile> {
     const innovationFlow = await this.getInnovationFlowOrFail(
       innovationFlowInput.id,
