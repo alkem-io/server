@@ -147,7 +147,7 @@ export class WhiteboardService {
 
   public async getProfile(
     whiteboard: IWhiteboard,
-    relations: FindOptionsRelations<IWhiteboard>[] = []
+    relations?: FindOptionsRelations<IWhiteboard>
   ): Promise<IProfile> {
     const whiteboardLoaded = await this.getWhiteboardOrFail(whiteboard.id, {
       relations: { profile: true, ...relations },

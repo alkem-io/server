@@ -131,7 +131,7 @@ export class PostService {
 
   public async getProfile(
     post: IPost,
-    relations: FindOptionsRelations<IPost>[] = []
+    relations?: FindOptionsRelations<IPost>
   ): Promise<IProfile> {
     const postLoaded = await this.getPostOrFail(post.id, {
       relations: { profile: true, ...relations },

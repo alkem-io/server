@@ -193,7 +193,7 @@ export class CalloutContributionService {
 
   public async getWhiteboard(
     calloutContributionInput: ICalloutContribution,
-    relations: FindOptionsRelations<ICalloutContribution>[] = []
+    relations?: FindOptionsRelations<ICalloutContribution>
   ): Promise<IWhiteboard | null> {
     const calloutContribution = await this.getCalloutContributionOrFail(
       calloutContributionInput.id,
@@ -210,7 +210,7 @@ export class CalloutContributionService {
 
   public async getLink(
     calloutContributionInput: ICalloutContribution,
-    relations: FindOptionsRelations<ICalloutContribution>[] = []
+    relations?: FindOptionsRelations<ICalloutContribution>
   ): Promise<IReference | null> {
     const calloutContribution = await this.getCalloutContributionOrFail(
       calloutContributionInput.id,
@@ -227,7 +227,7 @@ export class CalloutContributionService {
 
   public async getPost(
     calloutContributionInput: ICalloutContribution,
-    relations: FindOptionsRelations<ICalloutContribution>
+    relations?: FindOptionsRelations<ICalloutContribution>
   ): Promise<IPost | null> {
     const calloutContribution = await this.getCalloutContributionOrFail(
       calloutContributionInput.id,

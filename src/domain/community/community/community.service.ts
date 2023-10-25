@@ -567,7 +567,7 @@ export class CommunityService {
 
   async getCommunication(
     communityID: string,
-    relations: FindOptionsRelations<ICommunity>[] = []
+    relations?: FindOptionsRelations<ICommunity>
   ): Promise<ICommunication> {
     const community = await this.getCommunityOrFail(communityID, {
       relations: { communication: true, ...relations },

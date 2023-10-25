@@ -43,7 +43,7 @@ export class PlatformService {
   }
 
   async getLibraryOrFail(
-    relations: FindOptionsRelations<IPlatform>[] = []
+    relations?: FindOptionsRelations<IPlatform>
   ): Promise<ILibrary> {
     const platform = await this.getPlatformOrFail({
       relations: { library: true, ...relations },

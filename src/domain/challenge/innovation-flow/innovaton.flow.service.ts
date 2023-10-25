@@ -205,7 +205,7 @@ export class InnovationFlowService {
 
   public async getProfile(
     innovationFlowInput: IInnovationFlow,
-    relations: FindOptionsRelations<IInnovationFlow>[] = []
+    relations?: FindOptionsRelations<IInnovationFlow>
   ): Promise<IProfile> {
     const innovationFlow = await this.getInnovationFlowOrFail(
       innovationFlowInput.id,

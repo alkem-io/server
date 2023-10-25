@@ -160,7 +160,7 @@ export class ProjectService {
 
   public async getProfile(
     projectInput: IProject,
-    relations: FindOptionsRelations<IProject>[] = []
+    relations?: FindOptionsRelations<IProject>
   ): Promise<IProfile> {
     const project = await this.getProjectOrFail(projectInput.id, {
       relations: { profile: true, ...relations },

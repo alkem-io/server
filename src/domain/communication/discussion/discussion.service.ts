@@ -156,7 +156,7 @@ export class DiscussionService {
 
   public async getProfile(
     discussionInput: IDiscussion,
-    relations: FindOptionsRelations<IDiscussion>[] = []
+    relations?: FindOptionsRelations<IDiscussion>
   ): Promise<IProfile> {
     const discussion = await this.getDiscussionOrFail(discussionInput.id, {
       relations: { profile: true, ...relations },

@@ -484,7 +484,7 @@ export class CalloutService {
 
   public async getContributions(
     callout: ICallout,
-    relations: FindOptionsRelations<ICallout>[] = [],
+    relations?: FindOptionsRelations<ICallout>,
     contributionIDs?: string[],
     filter?: CalloutContributionFilterArgs,
     limit?: number,

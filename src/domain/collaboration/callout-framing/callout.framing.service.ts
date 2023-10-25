@@ -206,7 +206,7 @@ export class CalloutFramingService {
 
   public async getProfile(
     calloutFramingInput: ICalloutFraming,
-    relations: FindOptionsRelations<ICalloutFraming>[] = []
+    relations?: FindOptionsRelations<ICalloutFraming>
   ): Promise<IProfile> {
     const calloutFraming = await this.getCalloutFramingOrFail(
       calloutFramingInput.id,
@@ -225,7 +225,7 @@ export class CalloutFramingService {
 
   public async getWhiteboard(
     calloutFramingInput: ICalloutFraming,
-    relations: FindOptionsRelations<ICalloutFraming>[] = []
+    relations?: FindOptionsRelations<ICalloutFraming>
   ): Promise<IWhiteboard | null> {
     const calloutFraming = await this.getCalloutFramingOrFail(
       calloutFramingInput.id,
@@ -242,7 +242,7 @@ export class CalloutFramingService {
 
   public async getWhiteboardRt(
     calloutFramingInput: ICalloutFraming,
-    relations: FindOptionsRelations<ICalloutFraming>[] = []
+    relations?: FindOptionsRelations<ICalloutFraming>
   ): Promise<IWhiteboardRt | null> {
     const calloutFraming = await this.getCalloutFramingOrFail(
       calloutFramingInput.id,

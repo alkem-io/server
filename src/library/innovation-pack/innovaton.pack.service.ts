@@ -199,7 +199,7 @@ export class InnovationPackService {
 
   public async getProfile(
     innovationPackInput: IInnovationPack,
-    relations: FindOptionsRelations<IInnovationPack>[] = []
+    relations?: FindOptionsRelations<IInnovationPack>
   ): Promise<IProfile> {
     const innovationPack = await this.getInnovationPackOrFail(
       innovationPackInput.id,
