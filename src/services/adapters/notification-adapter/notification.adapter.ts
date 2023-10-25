@@ -157,11 +157,10 @@ export class NotificationAdapter {
         );
       // send notification event
       this.notificationsClient.emit<number>(event, payload);
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(
-        `Error while building comment reply notification payload ${
-          (error as Error).message
-        }`,
+        `Error while building comment reply notification payload ${error?.message}`,
+        error?.stack,
         LogContext.NOTIFICATIONS
       );
     }

@@ -59,10 +59,10 @@ export class AuthResetController {
       this.logger.verbose?.(message, LogContext.AUTH_POLICY);
       this.taskService.updateTaskResults(payload.task, message);
       channel.ack(originalMsg);
-    } catch (error) {
+    } catch (error: any) {
       if (retryCount >= MAX_RETRIES) {
         const message = `Resetting authorization for space with id ${payload.id} failed! Max retries reached. Rejecting message.`;
-        this.logger.error(message, LogContext.AUTH);
+        this.logger.error(message, error?.stack, LogContext.AUTH);
         this.taskService.updateTaskErrors(payload.task, message);
 
         channel.reject(originalMsg, false); // Reject and don't requeue
@@ -100,10 +100,11 @@ export class AuthResetController {
         LogContext.AUTH_POLICY
       );
       channel.ack(originalMsg);
-    } catch (error) {
+    } catch (error: any) {
       if (retryCount >= MAX_RETRIES) {
         this.logger.error(
           'Resetting authorization for platform failed! Max retries reached. Rejecting message.',
+          error?.stack,
           LogContext.AUTH
         );
         channel.reject(originalMsg, false); // Reject and don't requeue
@@ -146,12 +147,12 @@ export class AuthResetController {
       this.logger.verbose?.(message, LogContext.AUTH_POLICY);
 
       this.taskService.updateTaskResults(payload.task, message);
-    } catch (error) {
+    } catch (error: any) {
       if (retryCount >= MAX_RETRIES) {
         channel.reject(originalMsg, false); // Reject and don't requeue
 
         const message = `Resetting authorization for user with id ${payload.id} failed! Max retries reached. Rejecting message.`;
-        this.logger.error(message, LogContext.AUTH);
+        this.logger.error(message, error?.stack, LogContext.AUTH);
 
         this.taskService.updateTaskErrors(payload.task, message);
       } else {
@@ -197,12 +198,12 @@ export class AuthResetController {
       this.logger.verbose?.(message, LogContext.AUTH_POLICY);
 
       this.taskService.updateTaskResults(payload.task, message);
-    } catch (error) {
+    } catch (error: any) {
       if (retryCount >= MAX_RETRIES) {
         channel.reject(originalMsg, false); // Reject and don't requeue
 
         const message = `Resetting authorization for organization with id ${payload.id} failed! Max retries reached. Rejecting message.`;
-        this.logger.error(message, LogContext.AUTH);
+        this.logger.error(message, error?.stack, LogContext.AUTH);
 
         this.taskService.updateTaskErrors(payload.task, message);
       } else {

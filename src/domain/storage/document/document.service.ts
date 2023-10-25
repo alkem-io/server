@@ -55,9 +55,10 @@ export class DocumentService {
     // Delete the underlying document
     try {
       await this.removeFile(document.externalID);
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(
         `Unable to delete underlying file for document '${documentID}': ${error}`,
+        error?.stack,
         LogContext.STORAGE_BUCKET
       );
     }
