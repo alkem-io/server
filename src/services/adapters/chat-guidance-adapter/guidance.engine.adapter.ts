@@ -128,7 +128,6 @@ export class GuidanceEngineAdapter {
   }
 
   private extractMetadata(metadata: string): Source[] {
-    this.logger.error('smgth', new Error().stack, 'context');
     // Use regular expressions to extract metadata sections
     const metadataMatches = metadata.match(/metadata=\{.*?\}/g);
 
