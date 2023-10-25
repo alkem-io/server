@@ -1,15 +1,16 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { GuidanceEngineQueryResponse } from './dto/guidance.engine.dto.question.response';
-import { CHAT_GUIDANCE_SERVICE } from '@common/constants';
 import { ClientProxy } from '@nestjs/microservices';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { firstValueFrom } from 'rxjs';
+import { IChatGuidanceQueryResult } from '@services/api/chat-guidance/dto/chat.guidance.query.result.dto';
+import { ChatGuidanceLogService } from '@services/api/chat-guidance/chat.guidance.log.service';
 import { LogContext } from '@common/enums';
+import { CHAT_GUIDANCE_SERVICE } from '@common/constants';
 import { GuidanceEngineInputBase } from './dto/guidance.engine.dto.base';
 import { GuidanceEngineBaseResponse } from './dto/guidance.engine.dto.base.response';
-import { IChatGuidanceQueryResult } from '@services/api/chat-guidance/dto/chat.guidance.query.result.dto';
 import { GuidanceEngineQueryInput } from './dto/guidance.engine.dto.query';
-import { ChatGuidanceLogService } from '@services/api/chat-guidance/chat.guidance.log.service';
+import { GuidanceEngineQueryResponse } from './dto/guidance.engine.dto.question.response';
+import { Source } from './source.type';
 
 enum GuidanceEngineEventType {
   QUERY = 'query',
@@ -32,32 +33,41 @@ export class GuidanceEngineAdapter {
   public async sendQuery(
     eventData: GuidanceEngineQueryInput
   ): Promise<IChatGuidanceQueryResult> {
-    const response = this.GuidanceEngineClient.send(
-      { cmd: GuidanceEngineEventType.QUERY },
-      eventData
-    );
+    let responseData: GuidanceEngineQueryResponse | undefined;
 
     try {
-      const responseData = await firstValueFrom<GuidanceEngineQueryResponse>(
-        response
-      );
-      const message = responseData.result;
-      let formattedString = message;
-      // Check if response is a string containing stringified JSON
-      if (typeof message === 'string' && message.startsWith('{')) {
-        formattedString = message
-          .replace(/\\\\n/g, ' ')
-          .replace(/\\\\/g, '\\')
-          .replace(/<\|im_end\|>/g, '');
-      }
+      const response = this.GuidanceEngineClient.send<
+        GuidanceEngineQueryResponse,
+        GuidanceEngineQueryInput
+      >({ cmd: GuidanceEngineEventType.QUERY }, eventData);
+      responseData = await firstValueFrom(response);
+    } catch (e) {
+      const errorMessage = `Error received from guidance chat server! ${e}`;
+      this.logger.error(errorMessage, undefined, LogContext.CHAT_GUIDANCE);
+      return {
+        answer: errorMessage,
+        question: eventData.question,
+        sources: [],
+      };
+    }
 
+    const message = responseData.result;
+    let formattedString = message;
+    // Check if response is a string containing stringified JSON
+    if (typeof message === 'string' && message.startsWith('{')) {
+      formattedString = message
+        .replace(/\\\\n/g, ' ')
+        .replace(/\\\\"/g, '')
+        .replace(/<\|im_end\|>/g, '');
+    }
+
+    try {
       const jsonObject = JSON.parse(formattedString);
       const result: IChatGuidanceQueryResult = {
         ...jsonObject,
         sources: this.extractMetadata(jsonObject.sources),
       };
-
-      await this.chatGuidanceLogService.logAnswer(
+      this.chatGuidanceLogService.logAnswer(
         eventData.question,
         jsonObject as GuidanceEngineQueryResponse,
         eventData.userId
@@ -117,24 +127,54 @@ export class GuidanceEngineAdapter {
     }
   }
 
-  private extractMetadata(metadata: string): { uri: string }[] {
-    this.logger.error('smgth', new Error().stack, 'context');
+  private extractMetadata(metadata: string): Source[] {
     // Use regular expressions to extract metadata sections
     const metadataMatches = metadata.match(/metadata=\{.*?\}/g);
 
-    // Initialize an empty array to store extracted objects
-    const metadataObjects: { uri: string }[] = [];
+    if (!metadataMatches) {
+      this.logger.warn?.(
+        `Metadata match not found in: ${metadata}`,
+        LogContext.CHAT_GUIDANCE
+      );
+      return [];
+    }
+    // deduplicate sources
+    const sourceSet = new Set<string>();
+    const metadataObjects: Source[] = [];
 
     // Loop through metadata matches and extract source and title
-    if (metadataMatches) {
-      metadataMatches.forEach(metadataMatch => {
-        const sourceMatch = metadataMatch.match(/'source': '([^']*)'/);
+    for (const metadataMatch of metadataMatches) {
+      const [, uri] = metadataMatch.match(/'source': '([^']*)'/) ?? [];
+      const [, title] = metadataMatch.match(/'title': '([^']*)'/) ?? [];
+      // if no matches are found log and skip
+      if (!uri && !title) {
+        this.logger.warn?.(
+          `No title or URI found for metadata match in: ${metadataMatch}`,
+          LogContext.CHAT_GUIDANCE
+        );
+        continue;
+      }
+      // log whatever was not found
+      if (!uri) {
+        this.logger.warn?.(
+          `URI match not found in: ${metadataMatch}`,
+          LogContext.CHAT_GUIDANCE
+        );
+      } else if (!title) {
+        this.logger.warn?.(
+          `Title match not found in: ${metadataMatch}`,
+          LogContext.CHAT_GUIDANCE
+        );
+      }
 
-        if (sourceMatch) {
-          const uri = sourceMatch[1];
-          metadataObjects.push({ uri });
-        }
-      });
+      const sourceKey = uri ?? title;
+
+      if (sourceSet.has(sourceKey)) {
+        continue;
+      }
+
+      sourceSet.add(sourceKey);
+      metadataObjects.push({ uri, title });
     }
 
     return metadataObjects;
