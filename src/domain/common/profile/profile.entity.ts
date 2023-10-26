@@ -27,7 +27,7 @@ export class Profile extends AuthorizableEntity implements IProfile {
   })
   visuals?: Visual[];
 
-  @Column('text', { nullable: true })
+  @Column('text', { nullable: false })
   displayName = '';
 
   @Column('text', { nullable: true })
