@@ -53,15 +53,12 @@ export class visualsDocumentLocation1698256953794
         id: string;
         uri: string;
       }[] = await queryRunner.query(
-        `SELECT id, uri FROM visual WHERE (profileId = '${journey.profileId}' AND uri LIKE '%https://alkem.io/api/private/rest/storage/document/%')`
+        `SELECT id, uri FROM visual WHERE (profileId = '${journey.profileId}' AND uri LIKE '%${documentEndpoint}%')`
       );
       for (const visual of visuals) {
-        // Define the expected prefix
-        const prefix = 'https://alkem.io/api/private/rest/storage/document/';
-
         // Check if the URL starts with the expected prefix
         // If it does, extract the last part of the URL
-        const uriDocumentId = visual.uri.substring(prefix.length);
+        const uriDocumentId = visual.uri.substring(documentEndpoint.length);
         // Get the matching document
         const [document]: {
           id: string;
