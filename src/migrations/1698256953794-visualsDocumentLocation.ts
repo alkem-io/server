@@ -1,4 +1,8 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
+import * as dotenv from 'dotenv';
+dotenv.config(); // Load environment variables from .env file
+
+let documentEndpoint = 'https://alkem.io/api/private/rest/storage/document/';
 
 export class visualsDocumentLocation1698256953794
   implements MigrationInterface
@@ -6,6 +10,9 @@ export class visualsDocumentLocation1698256953794
   name = 'visualsDocumentLocation1698256953794';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
+    if (process.env.ENDPOINT_CLUSTER && process.env.PATH_API_PRIVATE_REST) {
+      documentEndpoint = `${process.env.ENDPOINT_CLUSTER}${process.env.PATH_API_PRIVATE_REST}/storage/document/`;
+    }
     // Loop over all spaces
     await this.updateVisualsOnJourney(queryRunner, 'space');
     await this.updateVisualsOnJourney(queryRunner, 'challenge');
@@ -46,29 +53,26 @@ export class visualsDocumentLocation1698256953794
         id: string;
         uri: string;
       }[] = await queryRunner.query(
-        `SELECT id, uri FROM visual WHERE (profileId = '${journey.profileId}')`
+        `SELECT id, uri FROM visual WHERE (profileId = '${journey.profileId}' AND uri LIKE '%https://alkem.io/api/private/rest/storage/document/%')`
       );
       for (const visual of visuals) {
         // Define the expected prefix
         const prefix = 'https://alkem.io/api/private/rest/storage/document/';
 
         // Check if the URL starts with the expected prefix
-        if (visual.uri.startsWith(prefix)) {
-          // If it does, extract the last part of the URL
-          const uriDocumentId = visual.uri.substring(prefix.length);
-          // Get the matching document
-          const [document]: {
-            id: string;
-            storageBucketId: string;
-          }[] = await queryRunner.query(
-            `SELECT id, storageBucketId FROM document WHERE (id = '${uriDocumentId}')`
+        // If it does, extract the last part of the URL
+        const uriDocumentId = visual.uri.substring(prefix.length);
+        // Get the matching document
+        const [document]: {
+          id: string;
+          storageBucketId: string;
+        }[] = await queryRunner.query(
+          `SELECT id, storageBucketId FROM document WHERE (id = '${uriDocumentId}')`
+        );
+        if (document) {
+          await queryRunner.query(
+            `UPDATE \`document\` SET storageBucketId = '${profile.storageBucketId}' WHERE (id = '${document.id}')`
           );
-          if (document && document.id === directStorage.id) {
-            // Document is in the wrong storagebucket! Move to Profile storage bucket
-            await queryRunner.query(
-              `UPDATE \`document\` SET storageBucketId = '${profile.storageBucketId}' WHERE (id = '${document.id}')`
-            );
-          }
         }
       }
     }
