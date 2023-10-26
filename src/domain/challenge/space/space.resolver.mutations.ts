@@ -133,7 +133,7 @@ export class SpaceResolverMutations {
   @UseGuards(GraphqlGuard)
   @Mutation(() => ISpace, {
     description:
-      'Update the platform settings, such as visibility, of the specified Space.',
+      'Update the platform settings, such as license, of the specified Space.',
   })
   @Profiling.api
   async updateSpacePlatformSettings(

@@ -1,21 +1,13 @@
-import { Column, Entity, JoinColumn, OneToMany, OneToOne } from 'typeorm';
+import { Entity, JoinColumn, OneToMany, OneToOne } from 'typeorm';
 import { ISpace } from '@domain/challenge/space/space.interface';
 import { BaseChallenge } from '@domain/challenge/base-challenge/base.challenge.entity';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { PreferenceSet } from '@domain/common/preference-set/preference.set.entity';
 import { TemplatesSet } from '@domain/template/templates-set/templates.set.entity';
-import { SpaceVisibility } from '@common/enums/space.visibility';
 import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
 import { License } from '@domain/license/license/license.entity';
 @Entity()
 export class Space extends BaseChallenge implements ISpace {
-  @Column('varchar', {
-    length: 255,
-    nullable: false,
-    default: SpaceVisibility.ACTIVE,
-  })
-  visibility?: SpaceVisibility;
-
   @OneToMany(() => Challenge, challenge => challenge.parentSpace, {
     eager: false,
     cascade: true,

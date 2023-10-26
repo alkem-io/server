@@ -1,4 +1,3 @@
-import { SpaceVisibility } from '@common/enums/space.visibility';
 import { NameID } from '@domain/common/scalars/scalar.nameid';
 import { UUID_NAMEID } from '@domain/common/scalars/scalar.uuid.nameid';
 import { UpdateLicenseInput } from '@domain/license/license/dto/license.dto.update';
@@ -11,15 +10,9 @@ export class UpdateSpacePlatformSettingsInput {
   @Field(() => String, {
     nullable: false,
     description:
-      'The identifier for the Space whose visibility is to be updated.',
+      'The identifier for the Space whose license etc is to be updated.',
   })
   spaceID!: string;
-
-  @Field(() => SpaceVisibility, {
-    nullable: true,
-    description: 'Visibility of the Space.',
-  })
-  visibility?: SpaceVisibility;
 
   @Field(() => NameID, {
     nullable: true,

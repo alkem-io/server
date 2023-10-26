@@ -69,14 +69,29 @@ export class SpaceAuthorizationService {
     private spaceRepository: Repository<Space>
   ) {}
 
-  async applyAuthorizationPolicy(space: ISpace): Promise<ISpace> {
-    const preferenceSet = await this.spaceService.getPreferenceSetOrFail(
-      space.id
-    );
-    const spacePolicy = await this.spaceService.getCommunityPolicy(space);
-    this.setCommunityPolicyFlags(spacePolicy, preferenceSet);
+  async applyAuthorizationPolicy(spaceInput: ISpace): Promise<ISpace> {
+    const space = await this.spaceService.getSpaceOrFail(spaceInput.id, {
+      relations: {
+        preferenceSet: true,
+        community: {
+          policy: true,
+        },
+        license: true,
+      },
+    });
+    if (
+      !space.community ||
+      !space.community.policy ||
+      !space.preferenceSet ||
+      !space.license
+    )
+      throw new RelationshipNotFoundException(
+        `Unable to load community with policy or preferenceSet or license for space ${space.id} `,
+        LogContext.CHALLENGES
+      );
 
-    const spaceVisibility = this.spaceService.getVisibility(space);
+    this.setCommunityPolicyFlags(space.community.policy, space.preferenceSet);
+
     const hostOrg = await this.spaceService.getHost(space.id);
 
     // Ensure always applying from a clean state
@@ -95,13 +110,13 @@ export class SpaceAuthorizationService {
       space.id
     );
     // Extend rules depending on the Visibility
-    switch (spaceVisibility) {
+    switch (space.license.visibility) {
       case SpaceVisibility.ACTIVE:
       case SpaceVisibility.DEMO:
         space.authorization = this.extendAuthorizationPolicyLocal(
           space.authorization,
           space.id,
-          spacePolicy
+          space.community.policy
         );
         space.authorization = this.appendVerifiedCredentialRules(
           space.authorization
@@ -116,18 +131,24 @@ export class SpaceAuthorizationService {
     // Cascade down
     const spaceSaved = await this.propagateAuthorizationToChildEntities(
       space,
-      spacePolicy
+      space.community.policy
     );
 
+    spaceSaved.license =
+      await this.licenseAuthorizationService.applyAuthorizationPolicy(
+        space.license, // ok to do
+        spaceSaved.authorization
+      );
+
     // Finally update the child community directly after propagation
-    switch (spaceVisibility) {
+    switch (space.license.visibility) {
       case SpaceVisibility.ACTIVE:
       case SpaceVisibility.DEMO:
         spaceSaved.community = await this.spaceService.getCommunity(spaceSaved);
         spaceSaved.community.authorization =
           this.extendCommunityAuthorizationPolicy(
             spaceSaved.community.authorization,
-            spacePolicy,
+            space.community.policy,
             hostOrg
           );
 
@@ -234,12 +255,11 @@ export class SpaceAuthorizationService {
       relations: {
         context: true,
         profile: true,
-        license: true,
       },
     });
-    if (!space.context || !space.profile || !space.license)
+    if (!space.context || !space.profile)
       throw new RelationshipNotFoundException(
-        `Unable to load context or profile or licese for space ${space.id} `,
+        `Unable to load context or profile for space ${space.id} `,
         LogContext.CHALLENGES
       );
     // NOTE: Clone the authorization policy to ensure the changes are local to context + profile
@@ -262,11 +282,6 @@ export class SpaceAuthorizationService {
         clonedAuthorization
       );
 
-    space.license =
-      await this.licenseAuthorizationService.applyAuthorizationPolicy(
-        space.license,
-        space.authorization
-      );
     return await this.spaceService.save(space);
   }
 

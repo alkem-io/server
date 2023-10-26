@@ -504,6 +504,7 @@ export class OpportunityService {
   async getOpportunitiesCount(
     visibility = SpaceVisibility.ACTIVE
   ): Promise<number> {
+    // TODO
     const sqlQuery = `SELECT COUNT(*) as opportunitiesCount FROM opportunity RIGHT JOIN space ON opportunity.spaceID = space.id WHERE space.visibility = '${visibility}'`;
     const [queryResult]: {
       opportunitiesCount: number;

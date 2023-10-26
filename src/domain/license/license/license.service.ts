@@ -11,6 +11,7 @@ import { ILicense } from './license.interface';
 import { IFeatureFlag } from '../feature-flag/feature.flag.interface';
 import { LicenseFeatureFlag } from '@common/enums/license.feature.flag';
 import { UpdateLicenseInput } from './dto/license.dto.update';
+import { SpaceVisibility } from '@common/enums/space.visibility';
 
 @Injectable()
 export class LicenseService {
@@ -24,6 +25,8 @@ export class LicenseService {
   public async createLicense(): Promise<ILicense> {
     const license: ILicense = new License();
     license.authorization = new AuthorizationPolicy();
+    // default to active space
+    license.visibility = SpaceVisibility.ACTIVE;
     const whiteboardRtFeatureFlag: IFeatureFlag = {
       name: LicenseFeatureFlag.WHTIEBOART_RT,
       enabled: false,
@@ -65,12 +68,17 @@ export class LicenseService {
     license: ILicense,
     licenseUpdateData: UpdateLicenseInput
   ): ILicense {
-    const featureFlags = this.getFeatureFlags(license);
-    for (const flag of licenseUpdateData.featureFlags) {
-      const matchedFlag = featureFlags.find(f => f.name === flag.name);
-      if (matchedFlag) matchedFlag.enabled = flag.enabled;
+    if (licenseUpdateData.visibility) {
+      licenseUpdateData.visibility = licenseUpdateData.visibility;
     }
-    license.featureFlags = this.serializeFeatureFlags(featureFlags);
+    if (licenseUpdateData.featureFlags) {
+      const featureFlags = this.getFeatureFlags(license);
+      for (const flag of licenseUpdateData.featureFlags) {
+        const matchedFlag = featureFlags.find(f => f.name === flag.name);
+        if (matchedFlag) matchedFlag.enabled = flag.enabled;
+      }
+      license.featureFlags = this.serializeFeatureFlags(featureFlags);
+    }
     return license;
   }
 

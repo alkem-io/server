@@ -109,8 +109,6 @@ export class SpaceService {
   ): Promise<ISpace> {
     await this.validateSpaceData(spaceData);
     const space: ISpace = Space.create(spaceData);
-    // default to active space
-    space.visibility = SpaceVisibility.ACTIVE;
 
     space.storageAggregator =
       await this.storageAggregatorService.createStorageAggregator();
@@ -253,10 +251,6 @@ export class SpaceService {
       );
     }
 
-    if (updateData.visibility) {
-      space.visibility = updateData.visibility;
-    }
-
     if (updateData.nameID) {
       if (updateData.nameID !== space.nameID) {
         // updating the nameID, check new value is allowed
@@ -337,16 +331,6 @@ export class SpaceService {
     return result;
   }
 
-  getVisibility(space: ISpace): SpaceVisibility {
-    if (!space.visibility) {
-      throw new EntityNotInitializedException(
-        `SpaceVisibility not found for Space: ${space.id}`,
-        LogContext.CHALLENGES
-      );
-    }
-    return space.visibility;
-  }
-
   public async getSpacesForInnovationHub({
     id,
     type,
@@ -362,7 +346,9 @@ export class SpaceService {
       }
 
       return this.spaceRepository.findBy({
-        visibility: spaceVisibilityFilter,
+        license: {
+          visibility: spaceVisibilityFilter,
+        },
       });
     }
 
@@ -486,6 +472,7 @@ export class SpaceService {
     const spacesDataForSorting = await this.spaceRepository
       .createQueryBuilder('space')
       .leftJoinAndSelect('space.challenges', 'challenge')
+      .leftJoinAndSelect('space.license', 'license')
       .leftJoinAndSelect('space.authorization', 'authorization_policy')
       .leftJoinAndSelect('challenge.opportunities', 'opportunities')
       .whereInIds(IDs)
@@ -500,18 +487,20 @@ export class SpaceService {
   ): string[] {
     const visibleSpaces = spacesData.filter(space => {
       return this.spacesFilterService.isVisible(
-        space.visibility,
+        space.license?.visibility,
         allowedVisibilities
       );
     });
 
     const sortedSpaces = visibleSpaces.sort((a, b) => {
+      const visibilityA = a.license?.visibility;
+      const visibilityB = b.license?.visibility;
       if (
-        a.visibility !== b.visibility &&
-        (a.visibility === SpaceVisibility.DEMO ||
-          b.visibility === SpaceVisibility.DEMO)
+        visibilityA !== visibilityB &&
+        (visibilityA === SpaceVisibility.DEMO ||
+          visibilityB === SpaceVisibility.DEMO)
       )
-        return a.visibility === SpaceVisibility.DEMO ? 1 : -1;
+        return visibilityA === SpaceVisibility.DEMO ? 1 : -1;
 
       if (
         a.authorization?.anonymousReadAccess === true &&
@@ -573,7 +562,9 @@ export class SpaceService {
     return this.spaceRepository.find({
       where: {
         id: In(spaceIds),
-        visibility: visibilities.length ? In(visibilities) : undefined,
+        license: {
+          visibility: visibilities.length ? In(visibilities) : undefined,
+        },
       },
     });
   }
@@ -1046,7 +1037,9 @@ export class SpaceService {
   }
 
   async getSpaceCount(visibility = SpaceVisibility.ACTIVE): Promise<number> {
-    return await this.spaceRepository.countBy({ visibility: visibility });
+    return await this.spaceRepository.countBy({
+      license: { visibility: visibility },
+    });
   }
 
   async getCommunityInNameableScope(
