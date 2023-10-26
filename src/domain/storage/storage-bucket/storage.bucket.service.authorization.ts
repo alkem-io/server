@@ -14,6 +14,7 @@ import {
   POLICY_RULE_PLATFORM_DELETE,
   POLICY_RULE_STORAGE_BUCKET_CONTRIBUTOR_FILE_UPLOAD,
 } from '@common/constants';
+import { IDocument } from '../document';
 
 @Injectable()
 export class StorageBucketAuthorizationService {
@@ -57,6 +58,7 @@ export class StorageBucketAuthorizationService {
     storageBucket.documents = await this.storageBucketService.getDocuments(
       storageBucket
     );
+    const updatedDocuments: IDocument[] = [];
     for (const document of storageBucket.documents) {
       document.authorization = (
         await this.documentAuthorizationService.applyAuthorizationPolicy(
@@ -64,7 +66,10 @@ export class StorageBucketAuthorizationService {
           storageBucket.authorization
         )
       ).authorization;
+      updatedDocuments.push(document);
     }
+
+    storageBucket.documents = updatedDocuments;
 
     return storageBucket;
   }
