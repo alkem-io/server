@@ -35,12 +35,16 @@ export class RolesResolverFields {
   @UseGuards(GraphqlGuard)
   @ResolveField('spaces', () => [RolesResultSpace], {
     description:
-      'Details of Spaces the User or Organization is a member of, with child memberships',
+      'Details of Spaces the User or Organization is a member of, with child memberships - if Space is accessible for the current user.',
   })
   public async spaces(
+    @CurrentUser() agentInfo: AgentInfo,
     @Parent() roles: ContributorRoles
   ): Promise<RolesResultSpace[]> {
-    return await this.rolesService.getJourneyRolesForContributor(roles);
+    return await this.rolesService.getJourneyRolesForContributor(
+      roles,
+      agentInfo
+    );
   }
 
   @UseGuards(GraphqlGuard)

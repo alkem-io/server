@@ -67,6 +67,7 @@ export class SessionExtendMiddleware implements NestMiddleware {
         .catch(error => {
           this.logger.error(
             `Ory Kratos session failed to be extended: ${error}`,
+            error?.stack,
             LogContext.AUTH
           );
         });

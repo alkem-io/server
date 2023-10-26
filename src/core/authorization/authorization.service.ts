@@ -6,7 +6,6 @@ import { ForbiddenException } from '@common/exceptions';
 import { AgentInfo } from '@core/authentication';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { LogContext } from '@common/enums';
-import { AuthorizationPolicyRulePrivilege } from './authorization.policy.rule.privilege';
 import { IVerifiedCredential } from '@domain/agent/verified-credential/verified.credential.interface';
 import { IAuthorizationPolicyRuleCredential } from './authorization.policy.rule.credential.interface';
 import { IAuthorizationPolicyRuleVerifiedCredential } from './authorization.policy.rule.verified.credential.interface';
@@ -281,11 +280,10 @@ export class AuthorizationService {
   ): IAuthorizationPolicyRuleCredential[] {
     if (!rulesStr || rulesStr.length == 0) return [];
     try {
-      const rules: IAuthorizationPolicyRuleCredential[] = JSON.parse(rulesStr);
-      return rules;
-    } catch (error) {
+      return JSON.parse(rulesStr);
+    } catch (error: any) {
       const msg = `Unable to convert rules to json: ${error}`;
-      this.logger.error(msg);
+      this.logger.error(msg, error?.stack, LogContext.AUTH);
       throw new ForbiddenException(msg, LogContext.AUTH);
     }
   }
@@ -295,12 +293,10 @@ export class AuthorizationService {
   ): IAuthorizationPolicyRuleVerifiedCredential[] {
     if (!rulesStr || rulesStr.length == 0) return [];
     try {
-      const rules: IAuthorizationPolicyRuleVerifiedCredential[] =
-        JSON.parse(rulesStr);
-      return rules;
-    } catch (error) {
+      return JSON.parse(rulesStr);
+    } catch (error: any) {
       const msg = `Unable to convert rules to json: ${error}`;
-      this.logger.error(msg);
+      this.logger.error(msg, error?.stack, LogContext.AUTH);
       throw new ForbiddenException(msg, LogContext.AUTH);
     }
   }
@@ -310,11 +306,10 @@ export class AuthorizationService {
   ): IAuthorizationPolicyRulePrivilege[] {
     if (!rulesStr || rulesStr.length == 0) return [];
     try {
-      const rules: AuthorizationPolicyRulePrivilege[] = JSON.parse(rulesStr);
-      return rules;
-    } catch (error) {
+      return JSON.parse(rulesStr);
+    } catch (error: any) {
       const msg = `Unable to convert privilege rules to json: ${error}`;
-      this.logger.error(msg);
+      this.logger.error(msg, error?.stack, LogContext.AUTH);
       throw new ForbiddenException(msg, LogContext.AUTH);
     }
   }

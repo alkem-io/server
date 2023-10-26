@@ -55,17 +55,18 @@ export class StorageAccessController {
         AuthorizationPrivilege.READ,
         `Read document: ${document.displayName} - '${document.id}`
       );
-    } catch (e: unknown) {
+    } catch (e: any) {
       try {
+        this.logger.error(
+          `User '${agentInfo.userID}' - unable to access document '${document.id} in storage bucket '${document.storageBucket.id}`,
+          e?.stack,
+          LogContext.DOCUMENT
+        );
         document = await this.documentService.getDocumentOrFail(id, {
           relations: {
             storageBucket: true,
           },
         });
-        this.logger.error(
-          `User '${agentInfo.userID}' - unable to access document '${document.id} in storage bucket '${document.storageBucket.id}`,
-          LogContext.DOCUMENT
-        );
       } catch (e) {
         throw new NotFoundHttpException(
           `Document with id '${id}' not found`,

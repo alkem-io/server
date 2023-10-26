@@ -1,0 +1,20 @@
+{
+  "agentInfo": {
+    "userID": "91b7e044-61ff-468b-a705-1672b0bda510",
+    "email": "admin@alkem.io",
+    "emailVerified": true,
+    "firstName": "Valentin Admin",
+    "lastName": "Yanakiev",
+    "credentials": [
+      {
+        "id": "7be2b579-b47c-494f-8bd7-5d86edf37eaf",
+        "resourceID": "",
+        "type": "global-admin"
+      }
+    ],
+    "verifiedCredentials": [],
+    "communicationID": "@admin=alkem.io:matrix.alkem.io",
+    "agentID": "66000b15-ae7f-448e-aade-3b4ae1fd4c33",
+    "avatarURL": ""
+  }
+}
