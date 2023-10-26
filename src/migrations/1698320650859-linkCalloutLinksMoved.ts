@@ -33,9 +33,10 @@ export class linkCalloutLinksMoved1698320650859 implements MigrationInterface {
         );
       }
 
+      // Ignoring issues as there are correctly created links + references
       await queryRunner.query(`
-                insert into callout_contribution (id, createdBy, authorizationId, linkId, calloutId)
-                values
+                INSERT IGNORE INTO callout_contribution (id, createdBy, authorizationId, linkId, calloutId)
+                VALUES
                     ${insertStatements.join(',')}
             `);
     }
