@@ -24,6 +24,8 @@ import { EntityNotInitializedException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { StorageBucketUploadFileInput } from './dto/storage.bucket.dto.upload.file';
 import { StorageBucketUploadFileOnReferenceInput } from './dto/storage.bucket.dto.upload.file.on.reference';
+import { IStorageBucket } from './storage.bucket.interface';
+import { DeleteStorageBuckeetInput as DeleteStorageBucketInput } from './dto/storage.bucket.dto.delete';
 
 @Resolver()
 export class StorageBucketResolverMutations {
@@ -209,5 +211,26 @@ export class StorageBucketResolverMutations {
       );
 
     return this.documentService.getPubliclyAccessibleURL(documentAuthorized);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IStorageBucket, {
+    description: 'Deletes a Storage Bucket',
+  })
+  @Profiling.api
+  async deleteStorageBucket(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('deleteData') deleteData: DeleteStorageBucketInput
+  ): Promise<IStorageBucket> {
+    const storageBucket =
+      await this.storageBucketService.getStorageBucketOrFail(deleteData.ID);
+
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      storageBucket.authorization,
+      AuthorizationPrivilege.DELETE,
+      `Delete storage bucket: ${storageBucket.id}`
+    );
+    return await this.storageBucketService.deleteStorageBucket(deleteData.ID);
   }
 }
