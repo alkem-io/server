@@ -285,7 +285,10 @@ export class CalloutService {
         contributions: true,
         contributionDefaults: true,
         contributionPolicy: true,
-        framing: true,
+        framing: {
+          whiteboard: true,
+          whiteboardRt: true,
+        },
       },
     });
 

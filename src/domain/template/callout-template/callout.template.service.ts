@@ -137,7 +137,10 @@ export class CalloutTemplateService {
       {
         relations: {
           profile: true,
-          framing: true,
+          framing: {
+            whiteboard: true,
+            whiteboardRt: true,
+          },
           contributionDefaults: true,
           contributionPolicy: true,
         },
