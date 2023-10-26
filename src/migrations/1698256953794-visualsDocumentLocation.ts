@@ -35,13 +35,6 @@ export class visualsDocumentLocation1698256953794
       `SELECT id, profileId, storageAggregatorId FROM ${journeyType}`
     );
     for (const journey of journeys) {
-      const [directStorage]: {
-        id: string;
-        directStorageId: string;
-      }[] = await queryRunner.query(
-        `SELECT id, directStorageId FROM storage_aggregator WHERE (id = '${journey.storageAggregatorId}')`
-      );
-
       const [profile]: {
         id: string;
         storageBucketId: string;
