@@ -1,3 +1,4 @@
+import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
 import { UpdateNameableInput } from '@domain/common/entity/nameable-entity/dto/nameable.dto.update';
 import { WhiteboardContent } from '@domain/common/scalars/scalar.whiteboard.content';
 import { InputType, Field } from '@nestjs/graphql';
@@ -8,4 +9,8 @@ export class UpdateWhiteboardRtInput extends UpdateNameableInput {
   @Field(() => WhiteboardContent, { nullable: true })
   @IsOptional()
   content?: string;
+
+  @Field(() => ContentUpdatePolicy, { nullable: true })
+  @IsOptional()
+  contentUpdatePolicy?: string;
 }

@@ -504,13 +504,18 @@ export class OpportunityService {
   async getOpportunitiesCount(
     visibility = SpaceVisibility.ACTIVE
   ): Promise<number> {
-    // TODO
-    const sqlQuery = `SELECT COUNT(*) as opportunitiesCount FROM opportunity RIGHT JOIN space ON opportunity.spaceID = space.id WHERE space.visibility = '${visibility}'`;
-    const [queryResult]: {
-      opportunitiesCount: number;
-    }[] = await this.entityManager.connection.query(sqlQuery);
-
-    return queryResult.opportunitiesCount;
+    // TODO: test / optimize?
+    return await this.opportunityRepository
+      .createQueryBuilder('opportunity')
+      .leftJoinAndSelect('opportunity.spaceID', 'spaceID')
+      .leftJoinAndSelect('space.license', 'license')
+      // and where spaceID etc
+      .where({
+        license: {
+          visibility: visibility,
+        },
+      })
+      .getCount();
   }
 
   async getOpportunitiesInChallengeCount(challengeID: string): Promise<number> {

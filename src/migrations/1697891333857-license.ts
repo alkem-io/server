@@ -20,12 +20,25 @@ export class license1697891333857 implements MigrationInterface {
       `ALTER TABLE \`space\` ADD \`licenseId\` char(36) NULL`
     );
 
+    await queryRunner.query(
+      `ALTER TABLE \`whiteboard_rt\` ADD \`contentUpdatePolicy\` varchar(255) NULL`
+    );
+
     const spaces: {
       id: string;
       visibility: string;
     }[] = await queryRunner.query(`SELECT id, visibility FROM space`);
     for (const space of spaces) {
       await this.createLicense(queryRunner, space.id, space.visibility);
+    }
+
+    const whiteboardRts: {
+      id: string;
+    }[] = await queryRunner.query(`SELECT id FROM whiteboard_rt`);
+    for (const whiteboardRt of whiteboardRts) {
+      await queryRunner.query(
+        `UPDATE \`whiteboard_rt\` SET contentUpdatePolicy = 'owner-contributors' WHERE (id = '${whiteboardRt.id}')`
+      );
     }
 
     await queryRunner.query(`ALTER TABLE \`space\` DROP COLUMN \`visibility\``);
@@ -72,6 +85,9 @@ export class license1697891333857 implements MigrationInterface {
 
     await queryRunner.query(`ALTER TABLE \`space\` DROP COLUMN \`licenseId\``);
     await queryRunner.query(`DROP TABLE \`license\``);
+    await queryRunner.query(
+      `ALTER TABLE \`whiteboard_rt\` DROP COLUMN \`contentUpdatePolicy\``
+    );
   }
 
   private async createLicense(

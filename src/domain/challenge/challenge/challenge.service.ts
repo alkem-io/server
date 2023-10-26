@@ -637,13 +637,17 @@ export class ChallengeService {
   async getChallengesCount(
     visibility = SpaceVisibility.ACTIVE
   ): Promise<number> {
-    // TODO
-    const sqlQuery = `SELECT COUNT(*) as challengesCount FROM challenge RIGHT JOIN space ON challenge.spaceID = space.id WHERE space.visibility = '${visibility}'`;
-    const [queryResult]: {
-      challengesCount: number;
-    }[] = await this.entityManager.connection.query(sqlQuery);
-
-    return queryResult.challengesCount;
+    // TODO: test / optimize?
+    return await this.challengeRepository
+      .createQueryBuilder('challenge')
+      .leftJoinAndSelect('challenge.parentSpace', 'space')
+      .leftJoinAndSelect('space.license', 'license')
+      .where({
+        license: {
+          visibility: visibility,
+        },
+      })
+      .getCount();
   }
 
   async getChildChallengesCount(challengeID: string): Promise<number> {
