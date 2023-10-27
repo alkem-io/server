@@ -13,6 +13,7 @@ import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exc
 import { TimelineResolverService } from '../entity-resolver/timeline.resolver.service';
 import { StorageAggregatorNotFoundException } from '@common/exceptions/storage.aggregator.not.found.exception';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { StorageAggregatorParentType } from '@common/enums/storage.aggregator.parent.type';
 
 @Injectable()
 export class StorageAggregatorResolverService {
@@ -72,13 +73,13 @@ export class StorageAggregatorResolverService {
   ): Promise<{
     id: string;
     displayName: string;
-    type: string;
+    type: StorageAggregatorParentType;
     nameID: string;
   }> {
     const spaceInfo = await this.getJourneyInfo('space', storageAggregatorID);
     if (spaceInfo) {
       return {
-        type: 'space',
+        type: StorageAggregatorParentType.SPACE,
         ...spaceInfo,
       };
     }
@@ -88,8 +89,18 @@ export class StorageAggregatorResolverService {
     );
     if (challengeInfo) {
       return {
-        type: 'challenge',
+        type: StorageAggregatorParentType.CHALLENGE,
         ...challengeInfo,
+      };
+    }
+    const opportunityInfo = await this.getJourneyInfo(
+      'opportunity',
+      storageAggregatorID
+    );
+    if (opportunityInfo) {
+      return {
+        type: StorageAggregatorParentType.OPPORTUNITY,
+        ...opportunityInfo,
       };
     }
     throw new NotImplementedException(
@@ -134,7 +145,8 @@ export class StorageAggregatorResolverService {
       nameID: string;
     }[] = await this.entityManager.connection.query(
       `
-        SELECT \`${entityTableName}\`.\`id\` as \`id\`, \`${entityTableName}\`.\`nameID\` as displayName, \`${entityTableName}\`.\`nameID\` as nameID FROM \`${entityTableName}\`
+        SELECT \`${entityTableName}\`.\`id\` as \`id\`, \`profile\`.\`displayName\` as displayName, \`${entityTableName}\`.\`nameID\` as nameID FROM \`${entityTableName}\`
+        LEFT JOIN \`profile\` ON \`profile\`.\`id\` = \`${entityTableName}\`.\`profileId\`
         WHERE \`${entityTableName}\`.\`storageAggregatorId\` = '${storageAggregatorID}'
       `
     );
