@@ -94,7 +94,11 @@ export class StorageBucketService {
       }
     }
 
-    return await this.storageBucketRepository.remove(storage as StorageBucket);
+    const result = await this.storageBucketRepository.remove(
+      storage as StorageBucket
+    );
+    result.id = storageID;
+    return result;
   }
 
   async getStorageBucketOrFail(

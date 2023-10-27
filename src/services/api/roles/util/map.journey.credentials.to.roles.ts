@@ -4,11 +4,15 @@ import { SpaceVisibility } from '@common/enums/space.visibility';
 import { groupCredentialsByEntity } from './group.credentials.by.entity';
 import { getJourneyRolesForContributorEntityData } from './get.journey.roles.for.contributor.entity.data';
 import { getJourneyRolesForContributorQueryResult } from './get.journey.roles.for.contributor.query.result';
+import { AgentInfo } from '@core/authentication/agent-info';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 
 export const mapJourneyCredentialsToRoles = async (
   entityManager: EntityManager,
   credentials: ICredential[],
-  allowedVisibilities: SpaceVisibility[]
+  allowedVisibilities: SpaceVisibility[],
+  agentInfo: AgentInfo,
+  authorizationService: AuthorizationService
 ) => {
   const credentialMap = groupCredentialsByEntity(credentials);
 
@@ -31,6 +35,8 @@ export const mapJourneyCredentialsToRoles = async (
     credentialMap,
     spaces,
     challenges,
-    opportunities
+    opportunities,
+    agentInfo,
+    authorizationService
   );
 };

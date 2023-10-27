@@ -6,7 +6,7 @@ import { MockOrganizationService } from '@test/mocks/organization.service.mock';
 import { MockUserService } from '@test/mocks/user.service.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { MockSpaceFilterService } from '@test/mocks/space.filter.service.mock';
-import { EntityManagerProvider } from '@test/mocks';
+import { EntityManagerProvider, MockAuthorizationService } from '@test/mocks';
 import { Test } from '@nestjs/testing';
 import { RolesService } from './roles.service';
 import { UserService } from '@domain/community/user/user.service';
@@ -42,6 +42,7 @@ describe('RolesService', () => {
         MockSpaceFilterService,
         MockOrganizationService,
         MockCommunityResolverService,
+        MockAuthorizationService,
         MockWinstonProvider,
         EntityManagerProvider,
         RolesService,
@@ -108,7 +109,8 @@ describe('RolesService', () => {
         roles
       );
       const journeyRoles = await rolesService.getJourneyRolesForContributor(
-        roles
+        roles,
+        testData.agentInfo
       );
 
       expect(organizationRoles).toEqual(
@@ -176,7 +178,10 @@ describe('RolesService', () => {
         organizationID: testData.organization.id,
       });
 
-      const spaces = await rolesService.getJourneyRolesForContributor(roles);
+      const spaces = await rolesService.getJourneyRolesForContributor(
+        roles,
+        testData.agentInfo
+      );
 
       expect(spaces).toEqual(
         expect.arrayContaining([

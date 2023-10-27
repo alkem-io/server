@@ -149,6 +149,8 @@ export class CalloutFramingService {
       {
         relations: {
           profile: true,
+          whiteboard: true,
+          whiteboardRt: true,
         },
       }
     );
