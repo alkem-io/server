@@ -1,18 +1,18 @@
 import { Module } from '@nestjs/common';
-import { ChatGuidanceService } from './chat.guidance.service';
-import { ChatGuidanceResolverMutations } from './chat.guidance.resolver.mutations';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
-import { ChatGuidanceResolverQueries } from './chat.guidance.resolver.queries';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { GuidanceEngineAdapterModule } from '@services/adapters/chat-guidance-adapter/guidance.engine.adapter.module';
-import { GuidanceReporterModule } from '@services/external/elasticsearch/guidance-reporter';
+import { ChatGuidanceLogModule } from '@services/api/chat-guidance/chat.guidance.log.module';
+import { ChatGuidanceService } from './chat.guidance.service';
+import { ChatGuidanceResolverQueries } from './chat.guidance.resolver.queries';
+import { ChatGuidanceResolverMutations } from './chat.guidance.resolver.mutations';
 
 @Module({
   imports: [
     AuthorizationModule,
     PlatformAuthorizationPolicyModule,
     GuidanceEngineAdapterModule,
-    GuidanceReporterModule,
+    ChatGuidanceLogModule,
   ],
   providers: [
     ChatGuidanceService,

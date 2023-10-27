@@ -1,11 +1,11 @@
 import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { ChatGuidanceLog } from './chat.guidance.log.entity';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { GuidanceEngineQueryResponse } from '@services/adapters/chat-guidance-adapter/dto/guidance.engine.dto.question.response';
-import { UserService } from '@domain/community/user/user.service';
 import { GuidanceReporterService } from '@services/external/elasticsearch/guidance-reporter';
+import { UserService } from '@domain/community/user/user.service';
+import { ChatGuidanceLog } from './chat.guidance.log.entity';
 
 export class ChatGuidanceLogService {
   constructor(
@@ -30,6 +30,10 @@ export class ChatGuidanceLogService {
     this.reportToElastic(question, guidanceEngineResponse, answerId, userId);
 
     return answerId;
+  }
+
+  public updateAnswerRelevance(answerId: string, relevant: boolean) {
+    return this.guidanceReporter.updateAnswerRelevance(answerId, relevant);
   }
 
   private async reportToElastic(

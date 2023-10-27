@@ -7,9 +7,9 @@ import { AgentInfo } from '@core/authentication';
 import { AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
-import { GuidanceReporterService } from '@services/external/elasticsearch/guidance-reporter';
 import { ChatGuidanceService } from './chat.guidance.service';
 import { ChatGuidanceAnswerRelevanceInput } from './dto/chat.guidance.relevance.dto';
+import { ChatGuidanceLogService } from './chat.guidance.log.service';
 
 @Resolver()
 export class ChatGuidanceResolverMutations {
@@ -19,7 +19,7 @@ export class ChatGuidanceResolverMutations {
     private chatGuidanceService: ChatGuidanceService,
     private authorizationService: AuthorizationService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
-    private guidanceReporterService: GuidanceReporterService
+    private guidanceChatLogger: ChatGuidanceLogService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -69,6 +69,6 @@ export class ChatGuidanceResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('input') { id, relevant }: ChatGuidanceAnswerRelevanceInput
   ): Promise<boolean> {
-    return this.guidanceReporterService.updateAnswerRelevance(id, relevant);
+    return this.guidanceChatLogger.updateAnswerRelevance(id, relevant);
   }
 }
