@@ -3,6 +3,7 @@ import { GuidanceReporterService } from './guidance.reporter.service';
 import {
   MockConfigService,
   MockElasticsearchClientProvider,
+  MockUserService,
   MockWinstonProvider,
 } from '@test/mocks';
 
@@ -22,6 +23,7 @@ describe('ContributionReporterService', () => {
         GuidanceReporterService,
         MockWinstonProvider,
         MockConfigService,
+        MockUserService,
         MockElasticsearchClientProvider,
       ],
     }).compile();
