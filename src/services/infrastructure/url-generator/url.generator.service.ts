@@ -40,6 +40,20 @@ export class UrlGeneratorService {
     )?.endpoint_cluster;
   }
 
+  async generateUrlForOpportunity(opportunityID: string): Promise<string> {
+    const opportunityUrlPath = await this.getOpportunityUrlPath(
+      this.FIELD_ID,
+      opportunityID
+    );
+    if (!opportunityUrlPath) {
+      throw new EntityNotFoundException(
+        `Unable to find opportunity for ID: ${opportunityID}`,
+        LogContext.URL_GENERATOR
+      );
+    }
+    return opportunityUrlPath;
+  }
+
   async generateUrlForChallenge(challengeID: string): Promise<string> {
     const challengeUrlPath = await this.getChallengeUrlPath(
       this.FIELD_ID,
