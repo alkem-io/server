@@ -33,6 +33,8 @@ import { PubSubEngine } from 'graphql-subscriptions';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { NameReporterService } from '@services/external/elasticsearch/name-reporter/name.reporter.service';
+import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
+import { LogContext } from '@common/enums';
 
 @Resolver()
 export class SpaceResolverMutations {
@@ -276,7 +278,20 @@ export class SpaceResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('challengeData') challengeData: CreateChallengeOnSpaceInput
   ): Promise<IChallenge> {
-    const space = await this.spaceService.getSpaceOrFail(challengeData.spaceID);
+    const space = await this.spaceService.getSpaceOrFail(
+      challengeData.spaceID,
+      {
+        relations: {
+          license: true,
+        },
+      }
+    );
+    if (!space.license) {
+      throw new EntityNotInitializedException(
+        `Unabl to load license for Space: ${space.id}`,
+        LogContext.CHALLENGES
+      );
+    }
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       space.authorization,

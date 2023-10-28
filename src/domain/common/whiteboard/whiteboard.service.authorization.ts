@@ -13,7 +13,7 @@ import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authoriz
 import {
   CREDENTIAL_RULE_WHITEBOARD_CREATED_BY,
   CREDENTIAL_RULE_WHITEBOARD_LOCKED_BY,
-  POLICY_RULE_WHITEBOARD_UPDATE,
+  POLICY_RULE_WHITEBOARD_CONTENT_UPDATE,
   POLICY_RULE_WHITEBOARD_CONTRIBUTE,
 } from '@common/constants';
 import { ProfileAuthorizationService } from '../profile/profile.service.authorization';
@@ -148,7 +148,7 @@ export class WhiteboardAuthorizationService {
     const createPrivilege = new AuthorizationPolicyRulePrivilege(
       [AuthorizationPrivilege.UPDATE_WHITEBOARD],
       AuthorizationPrivilege.UPDATE,
-      POLICY_RULE_WHITEBOARD_UPDATE
+      POLICY_RULE_WHITEBOARD_CONTENT_UPDATE
     );
     privilegeRules.push(createPrivilege);
 

@@ -163,10 +163,7 @@ export class PlatformAuthorizationPolicyService {
 
     const interactiveGuidance =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [
-          AuthorizationPrivilege.ACCESS_INTERACTIVE_GUIDANCE,
-          AuthorizationPrivilege.ACCESS_WHITEBOARD_RT,
-        ],
+        [AuthorizationPrivilege.ACCESS_INTERACTIVE_GUIDANCE],
         [AuthorizationCredential.BETA_TESTER],
         CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_GUIDANCE
       );

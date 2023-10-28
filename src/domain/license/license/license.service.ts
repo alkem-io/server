@@ -90,6 +90,16 @@ export class LicenseService {
     return this.deserializeFeatureFlags(license.featureFlags);
   }
 
+  public isFeatureFlagEnabled(
+    license: ILicense,
+    flag: LicenseFeatureFlag
+  ): boolean {
+    const featureFlags = this.getFeatureFlags(license);
+    const requestedFlag = featureFlags.find(f => f.name === flag);
+    if (requestedFlag) return requestedFlag.enabled;
+    return false;
+  }
+
   private deserializeFeatureFlags(featureFlagStr: string): IFeatureFlag[] {
     return JSON.parse(featureFlagStr);
   }

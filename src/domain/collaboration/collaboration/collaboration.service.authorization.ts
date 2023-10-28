@@ -22,11 +22,14 @@ import {
   CREDENTIAL_RULE_COLLABORATION_CONTRIBUTORS,
   POLICY_RULE_COLLABORATION_CREATE,
   POLICY_RULE_CALLOUT_CONTRIBUTE,
-  CREDENTIAL_RULE_WHITEBOARD_RT_ACCESS,
+  POLICY_RULE_COLLABORATION_WHITEBOARD_RT_CREATE,
 } from '@common/constants';
 import { CommunityRole } from '@common/enums/community.role';
 import { TimelineAuthorizationService } from '@domain/timeline/timeline/timeline.service.authorization';
 import { ICallout } from '../callout/callout.interface';
+import { ILicense } from '@domain/license/license/license.interface';
+import { LicenseService } from '@domain/license/license/license.service';
+import { LicenseFeatureFlag } from '@common/enums/license.feature.flag';
 
 @Injectable()
 export class CollaborationAuthorizationService {
@@ -35,6 +38,7 @@ export class CollaborationAuthorizationService {
     private communityPolicyService: CommunityPolicyService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private timelineAuthorizationService: TimelineAuthorizationService,
+    private licenseService: LicenseService,
     private calloutAuthorizationService: CalloutAuthorizationService,
     @InjectRepository(Collaboration)
     private collaborationRepository: Repository<Collaboration>
@@ -43,7 +47,8 @@ export class CollaborationAuthorizationService {
   public async applyAuthorizationPolicy(
     collaboration: ICollaboration,
     parentAuthorization: IAuthorizationPolicy | undefined,
-    communityPolicy: ICommunityPolicy
+    communityPolicy: ICommunityPolicy,
+    license: ILicense
   ): Promise<ICollaboration> {
     collaboration.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
@@ -62,7 +67,8 @@ export class CollaborationAuthorizationService {
 
     collaboration.authorization = this.appendPrivilegeRules(
       collaboration.authorization,
-      communityPolicy
+      communityPolicy,
+      license
     );
 
     collaboration.callouts =
@@ -177,14 +183,6 @@ export class CollaborationAuthorizationService {
     communityMemberNotInherited.cascade = false;
     newRules.push(communityMemberNotInherited);
 
-    const manageWhiteboardRtPolicy =
-      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.ACCESS_WHITEBOARD_RT],
-        [AuthorizationCredential.BETA_TESTER],
-        CREDENTIAL_RULE_WHITEBOARD_RT_ACCESS
-      );
-    newRules.push(manageWhiteboardRtPolicy);
-
     return this.authorizationPolicyService.appendCredentialAuthorizationRules(
       authorization,
       newRules
@@ -223,7 +221,8 @@ export class CollaborationAuthorizationService {
 
   private appendPrivilegeRules(
     authorization: IAuthorizationPolicy,
-    policy: ICommunityPolicy
+    policy: ICommunityPolicy,
+    license: ILicense
   ): IAuthorizationPolicy {
     const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
 
@@ -236,6 +235,19 @@ export class CollaborationAuthorizationService {
       POLICY_RULE_COLLABORATION_CREATE
     );
     privilegeRules.push(createPrivilege);
+
+    const whiteboardRtEnabled = this.licenseService.isFeatureFlagEnabled(
+      license,
+      LicenseFeatureFlag.WHTIEBOART_RT
+    );
+    if (whiteboardRtEnabled) {
+      const createWhiteboardRtPrivilege = new AuthorizationPolicyRulePrivilege(
+        [AuthorizationPrivilege.CREATE_WHITEBOARD_RT],
+        AuthorizationPrivilege.CREATE,
+        POLICY_RULE_COLLABORATION_WHITEBOARD_RT_CREATE
+      );
+      privilegeRules.push(createWhiteboardRtPrivilege);
+    }
 
     if (
       this.communityPolicyService.getFlag(

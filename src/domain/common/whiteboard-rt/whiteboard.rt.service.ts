@@ -119,6 +119,11 @@ export class WhiteboardRtService {
         updateWhiteboardRtData.profileData
       );
     }
+
+    if (updateWhiteboardRtData.contentUpdatePolicy) {
+      whiteboardRt.contentUpdatePolicy =
+        updateWhiteboardRtData.contentUpdatePolicy;
+    }
     return this.save(whiteboardRt);
   }
 

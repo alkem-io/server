@@ -47,6 +47,7 @@ import { CommunityAuthorizationService } from '@domain/community/community/commu
 import { CollaborationAuthorizationService } from '@domain/collaboration/collaboration/collaboration.service.authorization';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 import { LicenseAuthorizationService } from '@domain/license/license/license.service.authorization';
+import { ILicense } from '@domain/license/license/license.interface';
 
 @Injectable()
 export class SpaceAuthorizationService {
@@ -70,7 +71,7 @@ export class SpaceAuthorizationService {
   ) {}
 
   async applyAuthorizationPolicy(spaceInput: ISpace): Promise<ISpace> {
-    const space = await this.spaceService.getSpaceOrFail(spaceInput.id, {
+    let space = await this.spaceService.getSpaceOrFail(spaceInput.id, {
       relations: {
         preferenceSet: true,
         community: {
@@ -86,13 +87,14 @@ export class SpaceAuthorizationService {
       !space.license
     )
       throw new RelationshipNotFoundException(
-        `Unable to load community with policy or preferenceSet or license for space ${space.id} `,
+        `Unable to load Space with entities at start of auth reset: ${space.id} `,
         LogContext.CHALLENGES
       );
 
     this.setCommunityPolicyFlags(space.community.policy, space.preferenceSet);
 
     const hostOrg = await this.spaceService.getHost(space.id);
+    const license = space.license;
 
     // Ensure always applying from a clean state
     space.authorization = this.authorizationPolicyService.reset(
@@ -109,8 +111,9 @@ export class SpaceAuthorizationService {
       space.authorization,
       space.id
     );
+
     // Extend rules depending on the Visibility
-    switch (space.license.visibility) {
+    switch (license.visibility) {
       case SpaceVisibility.ACTIVE:
       case SpaceVisibility.DEMO:
         space.authorization = this.extendAuthorizationPolicyLocal(
@@ -129,38 +132,48 @@ export class SpaceAuthorizationService {
     }
 
     // Cascade down
-    const spaceSaved = await this.propagateAuthorizationToChildEntities(
+    await this.propagateAuthorizationToChildEntities(
       space,
-      space.community.policy
+      space.community.policy,
+      space.license
     );
 
-    spaceSaved.license =
-      await this.licenseAuthorizationService.applyAuthorizationPolicy(
-        space.license, // ok to do
-        spaceSaved.authorization
+    // Reload, to get all the saves from save above + with
+    // key entities loaded that are needed for next steps
+    space = await this.spaceService.getSpaceOrFail(spaceInput.id, {
+      relations: {
+        community: true,
+        license: true,
+      },
+    });
+    if (!space.community || !space.license)
+      throw new RelationshipNotFoundException(
+        `Unable to load Space after first save: ${space.id} `,
+        LogContext.CHALLENGES
       );
 
-    // Finally update the child community directly after propagation
-    switch (space.license.visibility) {
+    space.license =
+      await this.licenseAuthorizationService.applyAuthorizationPolicy(
+        space.license,
+        space.authorization
+      );
+
+    // Finally update the child entities that depend on license
+    // directly after propagation
+    switch (license.visibility) {
       case SpaceVisibility.ACTIVE:
       case SpaceVisibility.DEMO:
-        spaceSaved.community = await this.spaceService.getCommunity(spaceSaved);
-        spaceSaved.community.authorization =
-          this.extendCommunityAuthorizationPolicy(
-            spaceSaved.community.authorization,
-            space.community.policy,
-            hostOrg
-          );
-
-        spaceSaved.collaboration = await this.spaceService.getCollaboration(
-          spaceSaved
+        space.community.authorization = this.extendCommunityAuthorizationPolicy(
+          space.community.authorization,
+          space.community.policy,
+          hostOrg
         );
         break;
       case SpaceVisibility.ARCHIVED:
         break;
     }
 
-    return await this.spaceRepository.save(spaceSaved);
+    return await this.spaceRepository.save(space);
   }
 
   private setCommunityPolicyFlags(
@@ -287,7 +300,8 @@ export class SpaceAuthorizationService {
 
   public async propagateAuthorizationToCommunityCollaborationAgent(
     spaceBase: ISpace,
-    communityPolicy: ICommunityPolicy
+    communityPolicy: ICommunityPolicy,
+    license: ILicense
   ): Promise<ISpace> {
     const space = await this.spaceService.getSpaceOrFail(spaceBase.id, {
       relations: {
@@ -312,7 +326,8 @@ export class SpaceAuthorizationService {
       await this.collaborationAuthorizationService.applyAuthorizationPolicy(
         space.collaboration,
         space.authorization,
-        communityPolicy
+        communityPolicy,
+        license
       );
 
     space.agent.authorization =
@@ -325,12 +340,14 @@ export class SpaceAuthorizationService {
 
   private async propagateAuthorizationToChildEntities(
     spaceBase: ISpace,
-    policy: ICommunityPolicy
+    policy: ICommunityPolicy,
+    license: ILicense
   ): Promise<ISpace> {
     await this.spaceService.save(spaceBase);
     let space = await this.propagateAuthorizationToCommunityCollaborationAgent(
       spaceBase,
-      policy
+      policy,
+      license
     );
     space = await this.propagateAuthorizationToProfileContextLicense(space);
     return await this.propagateAuthorizationToChallengesTemplatesStorage(space);
