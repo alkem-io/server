@@ -24,8 +24,8 @@ import {
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { CommunityService } from '@domain/community/community/community.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
-import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, FindOneOptions, Repository } from 'typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
+import { FindOneOptions, Repository } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IOrganization } from '@domain/community/organization';
 import { ICommunity } from '@domain/community/community';
@@ -83,9 +83,7 @@ export class ChallengeService {
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService,
-    @InjectEntityManager('default')
-    private entityManager: EntityManager
+    private readonly logger: LoggerService
   ) {}
 
   async createChallenge(
@@ -637,16 +635,12 @@ export class ChallengeService {
   async getChallengesCount(
     visibility = SpaceVisibility.ACTIVE
   ): Promise<number> {
-    // TODO: test / optimize?
+    // Does this need to be optimized? Loaded on all metadata queries
     return await this.challengeRepository
       .createQueryBuilder('challenge')
       .leftJoinAndSelect('challenge.parentSpace', 'space')
       .leftJoinAndSelect('space.license', 'license')
-      .where({
-        license: {
-          visibility: visibility,
-        },
-      })
+      .where('license.visibility = :visibility', { visibility: visibility })
       .getCount();
   }
 
