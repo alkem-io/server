@@ -40,6 +40,20 @@ export class UrlGeneratorService {
     )?.endpoint_cluster;
   }
 
+  async generateUrlForOpportunity(opportunityID: string): Promise<string> {
+    const opportunityUrlPath = await this.getOpportunityUrlPath(
+      this.FIELD_ID,
+      opportunityID
+    );
+    if (!opportunityUrlPath) {
+      throw new EntityNotFoundException(
+        `Unable to find opportunity for ID: ${opportunityID}`,
+        LogContext.URL_GENERATOR
+      );
+    }
+    return opportunityUrlPath;
+  }
+
   async generateUrlForChallenge(challengeID: string): Promise<string> {
     const challengeUrlPath = await this.getChallengeUrlPath(
       this.FIELD_ID,
@@ -383,17 +397,25 @@ export class UrlGeneratorService {
     fieldName: string,
     fieldID: string
   ): Promise<string> {
+    const query =
+      fieldName === 'profileId' ||
+      fieldName === 'whiteboardRtId' ||
+      fieldName === 'whiteboardId'
+        ? `
+    SELECT c.id AS calloutId, c.nameID AS calloutNameId, c.collaborationId AS collaborationId
+    FROM callout AS c JOIN callout_framing AS cf ON cf.id = c.framingId
+    WHERE cf.${fieldName} = '${fieldID}'
+  `
+        : `SELECT c.id AS calloutId, c.nameID AS calloutNameId, c.collaborationId AS collaborationId
+  FROM callout AS c JOIN callout_framing AS cf ON cf.id = c.framingId
+  WHERE c.${fieldName} = '${fieldID}'
+`;
+
     const [result]: {
       calloutId: string;
       calloutNameId: string;
       collaborationId: string;
-    }[] = await this.entityManager.connection.query(
-      `
-        SELECT c.id AS calloutId, c.nameID AS calloutNameId, c.collaborationId AS collaborationId
-        FROM callout AS c JOIN callout_framing AS cf ON cf.id = c.framingId
-        WHERE cf.${fieldName} = '${fieldID}'
-      `
-    );
+    }[] = await this.entityManager.connection.query(query);
 
     if (!result) {
       throw new EntityNotFoundException(
@@ -489,6 +511,7 @@ export class UrlGeneratorService {
       );
     }
 
+    let calloutId = '';
     const [contributionResult]: {
       calloutId: string;
     }[] = await this.entityManager.connection.query(
@@ -498,9 +521,30 @@ export class UrlGeneratorService {
       `
     );
 
+    if (!contributionResult) {
+      const [contributionResult]: {
+        calloutId: string;
+      }[] = await this.entityManager.connection.query(
+        `SELECT c.id AS calloutId
+        FROM callout AS c JOIN callout_framing AS cf ON cf.id = c.framingId
+        WHERE cf.whiteboardId = '${result.whiteboardId}'`
+      );
+
+      calloutId = contributionResult.calloutId;
+
+      if (!contributionResult) {
+        throw new EntityNotFoundException(
+          `Unable to find callout where whiteboardId: ${result.whiteboardId}`,
+          LogContext.URL_GENERATOR
+        );
+      }
+    } else {
+      calloutId = contributionResult.calloutId;
+    }
+
     const calloutUrlPath = await this.getCalloutUrlPath(
       this.FIELD_ID,
-      contributionResult.calloutId
+      calloutId
     );
     return `${calloutUrlPath}/${this.PATH_WHITEBOARDS}/${result.whiteboardNameId}`;
   }

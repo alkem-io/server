@@ -5,13 +5,30 @@ import { ContributionReporterService } from '@services/external/elasticsearch/co
 import { NotificationInputCommunityNewMember } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.new.member';
 import { ICommunity } from './community.interface';
 import { CommunityType } from '@common/enums/community.type';
+import { ActivityInputMemberJoined } from '@services/adapters/activity-adapter/dto/activity.dto.input.member.joined';
+import { IUser } from '../user/user.interface';
+import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 
 @Injectable()
 export class CommunityEventsService {
   constructor(
     private contributionReporter: ContributionReporterService,
-    private notificationAdapter: NotificationAdapter
+    private notificationAdapter: NotificationAdapter,
+    private activityAdapter: ActivityAdapter
   ) {}
+
+  public async registerCommunityNewMemberActivity(
+    community: ICommunity,
+    newMember: IUser,
+    agentInfo: AgentInfo
+  ) {
+    const activityLogInput: ActivityInputMemberJoined = {
+      triggeredBy: agentInfo.userID,
+      community: community,
+      user: newMember,
+    };
+    await this.activityAdapter.memberJoined(activityLogInput);
+  }
 
   public async processCommunityNewMemberEvents(
     community: ICommunity,

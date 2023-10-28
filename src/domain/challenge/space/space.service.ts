@@ -434,6 +434,7 @@ export class SpaceService {
       } else {
         this.logger.error(
           'Invalid state error when sorting Spaces!',
+          undefined,
           LogContext.CHALLENGES
         );
       }

@@ -922,11 +922,12 @@ export class SearchService {
           searchResultBase
         );
         searchResults.push(searchResult);
-      } catch (error) {
+      } catch (error: any) {
         this.logger.error(
           `Unable to process search result: ${JSON.stringify(
             result
           )} - error: ${error}`,
+          error?.stack,
           LogContext.SEARCH
         );
       }
