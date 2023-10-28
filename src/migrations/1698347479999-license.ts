@@ -1,8 +1,8 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 import { randomUUID } from 'crypto';
 
-export class license1697891333857 implements MigrationInterface {
-  name = 'license1697891333857';
+export class license1698347479999 implements MigrationInterface {
+  name = 'license1698347479999';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`CREATE TABLE \`license\` (
