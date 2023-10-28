@@ -451,8 +451,12 @@ export class SpaceService {
 
     const qb = this.spaceRepository.createQueryBuilder('space');
     if (visibilities) {
+      qb.leftJoinAndSelect('space.license', 'license');
+      qb.leftJoinAndSelect('space.authorization', 'authorization');
       qb.where({
-        visibility: In(visibilities),
+        license: {
+          visibility: In(visibilities),
+        },
       });
     }
 

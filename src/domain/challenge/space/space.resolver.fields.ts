@@ -144,13 +144,11 @@ export class SpaceResolverFields {
     return await this.spaceService.getStorageAggregatorOrFail(space.id);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('license', () => ILicense, {
-    nullable: true,
+    nullable: false,
     description:
       'The License governing platform functionality in use by this Space',
   })
-  @UseGuards(GraphqlGuard)
   async license(@Parent() space: Space): Promise<ILicense> {
     return await this.spaceService.getLicenseOrFail(space.id);
   }

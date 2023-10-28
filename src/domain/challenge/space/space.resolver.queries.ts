@@ -1,4 +1,4 @@
-import { Inject, UseGuards } from '@nestjs/common';
+import { UseGuards } from '@nestjs/common';
 import { Args, Query, Resolver } from '@nestjs/graphql';
 import {
   InnovationHub as InnovationHubDecorator,
@@ -15,7 +15,7 @@ import { SpaceFilterInput } from '@services/infrastructure/space-filter/dto/spac
 
 @Resolver()
 export class SpaceResolverQueries {
-  constructor(@Inject(SpaceService) private spaceService: SpaceService) {}
+  constructor(private spaceService: SpaceService) {}
 
   @Query(() => [ISpace], {
     nullable: false,
