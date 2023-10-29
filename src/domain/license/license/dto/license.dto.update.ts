@@ -1,16 +1,16 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { IFeatureFlag } from '@domain/license/feature-flag/feature.flag.interface';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { IsOptional } from 'class-validator';
+import { UpdateFeatureFlagInput } from '@domain/license/feature-flag/dto/feature.flag.dto.update';
 
 @InputType()
 export class UpdateLicenseInput {
-  @Field(() => UpdateLicenseInput, {
+  @Field(() => [UpdateFeatureFlagInput], {
     nullable: true,
     description: 'Update the feature flags for the License.',
   })
   @IsOptional()
-  featureFlags?: IFeatureFlag[];
+  featureFlags?: UpdateFeatureFlagInput[];
 
   @Field(() => SpaceVisibility, {
     nullable: true,

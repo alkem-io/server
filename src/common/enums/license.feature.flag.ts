@@ -1,7 +1,7 @@
 import { registerEnumType } from '@nestjs/graphql';
 
 export enum LicenseFeatureFlag {
-  WHTIEBOART_RT = 'open',
+  WHTIEBOART_RT = 'whiteboard-rt',
 }
 
 registerEnumType(LicenseFeatureFlag, {
