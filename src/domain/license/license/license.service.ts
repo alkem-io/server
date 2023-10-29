@@ -69,7 +69,7 @@ export class LicenseService {
     licenseUpdateData: UpdateLicenseInput
   ): ILicense {
     if (licenseUpdateData.visibility) {
-      licenseUpdateData.visibility = licenseUpdateData.visibility;
+      license.visibility = licenseUpdateData.visibility;
     }
     if (licenseUpdateData.featureFlags) {
       const featureFlags = this.getFeatureFlags(license);

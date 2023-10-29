@@ -73,7 +73,9 @@ export class SpaceAuthorizationService {
   async applyAuthorizationPolicy(spaceInput: ISpace): Promise<ISpace> {
     let space = await this.spaceService.getSpaceOrFail(spaceInput.id, {
       relations: {
-        preferenceSet: true,
+        preferenceSet: {
+          preferences: true,
+        },
         community: {
           policy: true,
         },
@@ -91,7 +93,10 @@ export class SpaceAuthorizationService {
         LogContext.CHALLENGES
       );
 
-    this.setCommunityPolicyFlags(space.community.policy, space.preferenceSet);
+    const communityPolicyWithFlags = this.setCommunityPolicyFlags(
+      space.community.policy,
+      space.preferenceSet
+    );
 
     const hostOrg = await this.spaceService.getHost(space.id);
     const license = space.license;
@@ -119,7 +124,7 @@ export class SpaceAuthorizationService {
         space.authorization = this.extendAuthorizationPolicyLocal(
           space.authorization,
           space.id,
-          space.community.policy
+          communityPolicyWithFlags
         );
         space.authorization = this.appendVerifiedCredentialRules(
           space.authorization
@@ -134,7 +139,7 @@ export class SpaceAuthorizationService {
     // Cascade down
     await this.propagateAuthorizationToChildEntities(
       space,
-      space.community.policy,
+      communityPolicyWithFlags,
       space.license
     );
 
@@ -165,7 +170,7 @@ export class SpaceAuthorizationService {
       case SpaceVisibility.DEMO:
         space.community.authorization = this.extendCommunityAuthorizationPolicy(
           space.community.authorization,
-          space.community.policy,
+          communityPolicyWithFlags,
           hostOrg
         );
         break;
@@ -259,6 +264,7 @@ export class SpaceAuthorizationService {
       CommunityPolicyFlag.ALLOW_SPACE_MEMBERS_TO_CONTRIBUTE,
       true
     );
+    return policy;
   }
 
   private async propagateAuthorizationToProfileContextLicense(
