@@ -17,7 +17,14 @@ export class license1698347479999 implements MigrationInterface {
                                     PRIMARY KEY (\`id\`)) ENGINE=InnoDB`);
 
     await queryRunner.query(
+      `ALTER TABLE \`license\` ADD CONSTRAINT \`FK_bfd01743815f0dd68ac1c5c45c0\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    );
+
+    await queryRunner.query(
       `ALTER TABLE \`space\` ADD \`licenseId\` char(36) NULL`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`space\` ADD CONSTRAINT \`FK_3ef80ef55ba1a1d45e625ea8389\` FOREIGN KEY (\`licenseId\`) REFERENCES \`license\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
 
     await queryRunner.query(
@@ -74,13 +81,7 @@ export class license1698347479999 implements MigrationInterface {
     }
 
     await queryRunner.query(
-      `ALTER TABLE \`space\` DROP INDEX \`IDX_3ef80ef55ba1a1d45e625ea838\``
-    );
-    await queryRunner.query(
       `DROP INDEX \`REL_bfd01743815f0dd68ac1c5c45c\` ON \`license\``
-    );
-    await queryRunner.query(
-      `DROP INDEX \`REL_3ef80ef55ba1a1d45e625ea838\` ON \`space\``
     );
 
     await queryRunner.query(`ALTER TABLE \`space\` DROP COLUMN \`licenseId\``);
@@ -104,7 +105,7 @@ export class license1698347479999 implements MigrationInterface {
         1, '', '', 0, '')`
     );
 
-    const featureFlags = '[]';
+    const featureFlags = '[{"name":"whiteboard-rt","enabled":false}]';
     await queryRunner.query(
       `INSERT INTO license (id, version, authorizationId, featureFlags, visibility)
             VALUES ('${licenseID}',
