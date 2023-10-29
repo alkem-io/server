@@ -35,6 +35,7 @@ import {
   PreferencesLoaderCreator,
   AgentLoaderCreator,
   ProfileLoaderCreator,
+  SpaceLicenseLoaderCreator,
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -149,8 +150,11 @@ export class SpaceResolverFields {
     description:
       'The License governing platform functionality in use by this Space',
   })
-  async license(@Parent() space: Space): Promise<ILicense> {
-    return await this.spaceService.getLicenseOrFail(space.id);
+  async license(
+    @Parent() space: Space,
+    @Loader(SpaceLicenseLoaderCreator) loader: ILoader<ILicense>
+  ): Promise<ILicense> {
+    return loader.load(space.id);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
