@@ -449,7 +449,7 @@ export class ChallengeService {
   public async getCollaboration(
     challenge: IChallenge
   ): Promise<ICollaboration> {
-    return await this.baseChallengeService.getCollaboration(
+    return await this.baseChallengeService.getCollaborationOrFail(
       challenge.id,
       this.challengeRepository
     );

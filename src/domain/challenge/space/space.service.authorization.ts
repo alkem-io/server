@@ -129,7 +129,7 @@ export class SpaceAuthorizationService {
             hostOrg
           );
 
-        spaceSaved.collaboration = await this.spaceService.getCollaboration(
+        spaceSaved.collaboration = await this.spaceService.getCollaborationOrFail(
           spaceSaved
         );
         break;

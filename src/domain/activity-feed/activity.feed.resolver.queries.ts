@@ -8,7 +8,8 @@ import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { ActivityFeedQueryArgs } from './activity.feed.query.args';
-import { ActivityFeedService } from '@domain/activity-feed/activity.feed.service';
+import { ActivityFeedService } from './activity.feed.service';
+import { ActivityFeed } from './activity.feed.interface';
 
 @Resolver()
 export class ActivityFeedResolverQueries {
@@ -19,22 +20,23 @@ export class ActivityFeedResolverQueries {
   ) {}
 
   @UseGuards(GraphqlGuard)
-  @Query(() => [IActivityLogEntry], {
+  @Query(() => ActivityFeed, {
     nullable: false,
     description: 'Activity events related to the current user.',
   })
   @Profiling.api
   public async activityFeed(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args({ nullable: true }) args: ActivityFeedQueryArgs
-  ): Promise<IActivityLogEntry[]> {
+    @Args('args', { nullable: true })
+    args?: ActivityFeedQueryArgs
+  ): Promise<ActivityFeed> {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
-      `Collaboration activity query: ${agentInfo.email}`
+      `Activity feed query: ${agentInfo.email}`
     );
 
-    return this.feedService.getActivityFeed(agentInfo.userID, args);
+    return this.feedService.getActivityFeed(agentInfo, args);
   }
 }

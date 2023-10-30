@@ -284,7 +284,7 @@ export class BaseChallengeService {
     return profile;
   }
 
-  public async getCollaboration(
+  public async getCollaborationOrFail(
     challengeId: string,
     repository: Repository<BaseChallenge>
   ): Promise<ICollaboration> {
@@ -336,7 +336,7 @@ export class BaseChallengeService {
     baseChallenge: IBaseChallenge,
     repository: Repository<BaseChallenge>
   ): Promise<number> {
-    const collaboration = await this.getCollaboration(
+    const collaboration = await this.getCollaborationOrFail(
       baseChallenge.id,
       repository
     );
@@ -348,7 +348,7 @@ export class BaseChallengeService {
     baseChallenge: IBaseChallenge,
     repository: Repository<BaseChallenge>
   ): Promise<number> {
-    const collaboration = await this.getCollaboration(
+    const collaboration = await this.getCollaborationOrFail(
       baseChallenge.id,
       repository
     );
@@ -359,7 +359,7 @@ export class BaseChallengeService {
     baseChallenge: IBaseChallenge,
     repository: Repository<BaseChallenge>
   ): Promise<number> {
-    const collaboration = await this.getCollaboration(
+    const collaboration = await this.getCollaborationOrFail(
       baseChallenge.id,
       repository
     );

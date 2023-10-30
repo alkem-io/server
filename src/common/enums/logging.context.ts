@@ -12,6 +12,7 @@ export enum LogContext {
   COLLABORATION = 'collaboration',
   AGENT = 'agent',
   ACTIVITY = 'activity',
+  ACTIVITY_FEED = 'activity-feed',
   API = 'api',
   AUTH = 'auth',
   AUTH_POLICY = 'auth_policy',

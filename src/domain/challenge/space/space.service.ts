@@ -805,9 +805,15 @@ export class SpaceService {
     );
   }
 
-  public async getCollaboration(space: ISpace): Promise<ICollaboration> {
-    return await this.baseChallengeService.getCollaboration(
-      space.id,
+  public async getCollaborationOrFail(
+    spaceIdOrEntity: ISpace | string
+  ): Promise<ICollaboration> {
+    const spaceId =
+      typeof spaceIdOrEntity === 'string'
+        ? spaceIdOrEntity
+        : spaceIdOrEntity.id;
+    return await this.baseChallengeService.getCollaborationOrFail(
+      spaceId,
       this.spaceRepository
     );
   }

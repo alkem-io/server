@@ -1,9 +1,11 @@
-import { ArgsType, Field } from '@nestjs/graphql';
+import { Args, ArgsType, Field, InputType } from '@nestjs/graphql';
 import { ActivityEventType } from '@common/enums/activity.event.type';
 import { UUID } from '@domain/common/scalars';
 import { ActivityFeedRoles } from './activity.feed.roles.enum';
+import { PaginationArgs, PaginationInput } from '@core/pagination';
+import { OrganizationFilterInput } from '@core/filtering';
 
-@ArgsType()
+@InputType()
 export class ActivityFeedQueryArgs {
   @Field(() => [ActivityEventType], {
     nullable: true,
@@ -13,7 +15,6 @@ export class ActivityFeedQueryArgs {
 
   @Field(() => Boolean, {
     nullable: true,
-    defaultValue: true,
     description:
       'Returns only events that the current user triggered; Includes all by default.',
   })
@@ -32,4 +33,10 @@ export class ActivityFeedQueryArgs {
       'Activity from which Spaces to include; Includes all by default.',
   })
   roles?: Array<ActivityFeedRoles>;
+
+  @Field(() => PaginationInput, {
+    nullable: true,
+    description: 'Pagination options.',
+  })
+  pagination?: PaginationInput;
 }
