@@ -105,7 +105,8 @@ export class license1698347479999 implements MigrationInterface {
         1, '', '', 0, '')`
     );
 
-    const featureFlags = '[{"name":"whiteboard-rt","enabled":false}]';
+    const featureFlags =
+      '[{"name":"whiteboard-rt","enabled":false},{"name":"callout-to-callout-template","enabled":false}]';
     await queryRunner.query(
       `INSERT INTO license (id, version, authorizationId, featureFlags, visibility)
             VALUES ('${licenseID}',

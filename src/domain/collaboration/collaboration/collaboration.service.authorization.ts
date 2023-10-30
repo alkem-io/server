@@ -238,7 +238,7 @@ export class CollaborationAuthorizationService {
 
     const whiteboardRtEnabled = this.licenseService.isFeatureFlagEnabled(
       license,
-      LicenseFeatureFlag.WHTIEBOART_RT
+      LicenseFeatureFlag.WHITEBOART_RT
     );
     if (whiteboardRtEnabled) {
       const createWhiteboardRtPrivilege = new AuthorizationPolicyRulePrivilege(

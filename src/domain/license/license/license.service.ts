@@ -27,11 +27,20 @@ export class LicenseService {
     license.authorization = new AuthorizationPolicy();
     // default to active space
     license.visibility = SpaceVisibility.ACTIVE;
+
+    // Set the feature flags
     const whiteboardRtFeatureFlag: IFeatureFlag = {
-      name: LicenseFeatureFlag.WHTIEBOART_RT,
+      name: LicenseFeatureFlag.WHITEBOART_RT,
       enabled: false,
     };
-    const featureFlags: IFeatureFlag[] = [whiteboardRtFeatureFlag];
+    const calloutToCalloutTemplateFeatureFlag: IFeatureFlag = {
+      name: LicenseFeatureFlag.CALLOUT_TO_CALLOUT_TEMPLATE,
+      enabled: false,
+    };
+    const featureFlags: IFeatureFlag[] = [
+      whiteboardRtFeatureFlag,
+      calloutToCalloutTemplateFeatureFlag,
+    ];
     license.featureFlags = this.serializeFeatureFlags(featureFlags);
 
     return await this.licenseRepository.save(license);
