@@ -2,7 +2,6 @@ import { Args, Query, Resolver } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
 import { CurrentUser, Profiling } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
-import { IActivityLogEntry } from '@services/api/activity-log/dto/activity.log.entry.interface';
 import { AgentInfo } from '@core/authentication';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationService } from '@core/authorization/authorization.service';

@@ -90,10 +90,15 @@ export class ActivityService {
       types?: ActivityEventType[];
       visibility?: boolean;
       userID?: string;
-      pagination?: PaginationArgs;
+      paginationArgs?: PaginationArgs;
     }
   ) {
-    const { types, visibility = true, userID, pagination = {} } = options ?? {};
+    const {
+      types,
+      visibility = true,
+      userID,
+      paginationArgs = {},
+    } = options ?? {};
 
     const qb = await this.activityRepository.createQueryBuilder('activity');
 
@@ -110,7 +115,7 @@ export class ActivityService {
       qb.andWhere({ triggeredBy: userID });
     }
 
-    return getPaginationResults(qb, pagination);
+    return getPaginationResults(qb, paginationArgs);
   }
 
   async getActivityForMessage(messageID: string): Promise<IActivity | null> {
