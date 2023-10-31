@@ -208,25 +208,15 @@ export class OrganizationResolverFields {
 
   @ResolveField('profile', () => IProfile, {
     nullable: false,
-    description: 'The profile for this Organization.',
+    description: 'The profile for this organization.',
   })
-  @UseGuards(GraphqlGuard)
+  @Profiling.api
   async profile(
     @Parent() organization: Organization,
-    @CurrentUser() agentInfo: AgentInfo,
     @Loader(ProfileLoaderCreator, { parentClassRef: Organization })
     loader: ILoader<IProfile>
   ) {
-    const profile = await loader.load(organization.id);
-    // Note: the Organization profile is public.
-    // Check if the user can read the profile entity, not the actual Organization entity
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      profile.authorization,
-      AuthorizationPrivilege.READ,
-      `read profile on Organization: ${profile.displayName}`
-    );
-    return profile;
+    return loader.load(organization.id);
   }
 
   @ResolveField('verification', () => IOrganizationVerification, {
