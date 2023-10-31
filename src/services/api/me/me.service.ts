@@ -14,7 +14,7 @@ import { In } from 'typeorm';
 import { ActivityLogService } from '../activity-log';
 import { AgentInfo } from '@core/authentication';
 import { MyJourneyResults } from './dto/my.journeys.results';
-import { IActivityLogEntry } from '../activity-log/dto/activity.log.entry.interface';
+import { ActivityEventType } from '@common/enums/activity.event.type';
 
 @Injectable()
 export class MeService {
@@ -65,7 +65,8 @@ export class MeService {
     visibilities: SpaceVisibility[] = [
       SpaceVisibility.ACTIVE,
       SpaceVisibility.DEMO,
-    ]
+    ],
+    types?: ActivityEventType[]
   ): Promise<MyJourneyResults[]> {
     const credentialMap = groupCredentialsByEntity(agentInfo.credentials);
     const spaceIds = Array.from(credentialMap.get('spaces')?.keys() ?? []);
@@ -105,25 +106,19 @@ export class MeService {
 
     for (const entity of entitiesToProcess) {
       if (!entity.collaboration?.id) continue;
-      const activities = await this.activityLogService.activityLog({
-        collaborationID: entity.collaboration?.id,
-      });
-      const myActivities = activities.filter(
-        x => x.triggeredBy.id === agentInfo.userID
+      const myActivities = await this.activityLogService.myActivityLog(
+        agentInfo.userID,
+        {
+          collaborationID: entity.collaboration?.id,
+          includeChild: false,
+          limit: 1,
+          types,
+        }
       );
-
-      let latestActivity: IActivityLogEntry | undefined = undefined;
-      if (myActivities.length > 0) {
-        myActivities.sort(
-          (a, b) => b.createdDate.getTime() - a.createdDate.getTime()
-        );
-
-        latestActivity = myActivities[0];
-      }
 
       myJourneyResults.push({
         journey: entity,
-        latestActivity,
+        latestActivity: myActivities[0],
       });
     }
 
