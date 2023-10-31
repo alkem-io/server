@@ -1,13 +1,15 @@
 import { Inject, LoggerService, UseGuards } from '@nestjs/common';
-import { Mutation, Resolver } from '@nestjs/graphql';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { ChatGuidanceService } from './chat.guidance.service';
 import { AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
+import { ChatGuidanceService } from './chat.guidance.service';
+import { ChatGuidanceAnswerRelevanceInput } from './dto/chat.guidance.relevance.dto';
+import { GuidanceReporterService } from '@services/external/elasticsearch/guidance-reporter';
 
 @Resolver()
 export class ChatGuidanceResolverMutations {
@@ -16,7 +18,8 @@ export class ChatGuidanceResolverMutations {
     private readonly logger: LoggerService,
     private chatGuidanceService: ChatGuidanceService,
     private authorizationService: AuthorizationService,
-    private platformAuthorizationService: PlatformAuthorizationPolicyService
+    private platformAuthorizationService: PlatformAuthorizationPolicyService,
+    private guidanceReporterService: GuidanceReporterService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -55,5 +58,17 @@ export class ChatGuidanceResolverMutations {
       return false;
     }
     return this.chatGuidanceService.ingest();
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => Boolean, {
+    description: 'User vote if a specific answer is relevant.',
+  })
+  @Profiling.api
+  public updateAnswerRelevance(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('input') { id, relevant }: ChatGuidanceAnswerRelevanceInput
+  ): Promise<boolean> {
+    return this.guidanceReporterService.updateAnswerRelevance(id, relevant);
   }
 }
