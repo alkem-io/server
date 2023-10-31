@@ -5,7 +5,8 @@ import { IActivityLogEntry } from '@services/api/activity-log/dto/activity.log.e
 @ObjectType()
 export class MyJourneyResults {
   @Field(() => IBaseChallenge, { nullable: false })
-  journey?: IBaseChallenge;
+  journey!: IBaseChallenge;
 
+  @Field(() => IActivityLogEntry, { nullable: true })
   latestActivity?: IActivityLogEntry;
 }
