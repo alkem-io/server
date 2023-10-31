@@ -46,23 +46,13 @@ export class UserResolverFields {
     nullable: false,
     description: 'The Profile for this User.',
   })
-  @UseGuards(GraphqlGuard)
+  @Profiling.api
   async profile(
     @Parent() user: User,
-    @CurrentUser() agentInfo: AgentInfo,
     @Loader(ProfileLoaderCreator, { parentClassRef: User })
     loader: ILoader<IProfile>
   ): Promise<IProfile> {
-    const profile = await loader.load(user.id);
-    // Note: the user profile is public.
-    // Check if the user can read the profile entity, not the actual User entity
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      profile.authorization,
-      AuthorizationPrivilege.READ,
-      `read profile on User: ${profile.displayName}`
-    );
-    return profile;
+    return loader.load(user.id);
   }
 
   @ResolveField('agent', () => IAgent, {
@@ -148,11 +138,7 @@ export class UserResolverFields {
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<string | 'not accessible'> {
     if (
-      await this.isAccessGranted(
-        user,
-        agentInfo,
-        AuthorizationPrivilege.READ_USER_PII
-      )
+      await this.isAccessGranted(user, agentInfo, AuthorizationPrivilege.READ)
     ) {
       return user.email;
     }
@@ -170,11 +156,7 @@ export class UserResolverFields {
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<string | 'not accessible'> {
     if (
-      await this.isAccessGranted(
-        user,
-        agentInfo,
-        AuthorizationPrivilege.READ_USER_PII
-      )
+      await this.isAccessGranted(user, agentInfo, AuthorizationPrivilege.READ)
     ) {
       return user.phone;
     }
