@@ -257,6 +257,21 @@ export class OpportunityService {
     return opportunity;
   }
 
+  public async getOpportunities(
+    options?: FindOneOptions<Opportunity>
+  ): Promise<IOpportunity[]> {
+    let opportunities: IOpportunity[] | undefined = undefined;
+    opportunities = await this.opportunityRepository.find({
+      ...options,
+    });
+
+    if (!opportunities) {
+      opportunities = [];
+    }
+
+    return opportunities;
+  }
+
   async getInnovationFlow(opportunityID: string): Promise<IInnovationFlow> {
     const opportunity = await this.getOpportunityOrFail(opportunityID, {
       relations: ['innovationFlow'],

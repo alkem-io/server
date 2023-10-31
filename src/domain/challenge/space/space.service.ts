@@ -390,7 +390,10 @@ export class SpaceService {
     return notExist.length > 0 ? notExist : true;
   }
 
-  async getSpaces(args: SpacesQueryArgs): Promise<ISpace[]> {
+  async getSpaces(
+    args: SpacesQueryArgs,
+    options?: FindManyOptions<Space>
+  ): Promise<ISpace[]> {
     const visibilities = this.spacesFilterService.getAllowedVisibilities(
       args.filter
     );
@@ -399,6 +402,7 @@ export class SpaceService {
     if (args && args.IDs)
       spaces = await this.spaceRepository.find({
         where: { id: In(args.IDs) },
+        ...options,
       });
     else spaces = await this.spaceRepository.find();
 
