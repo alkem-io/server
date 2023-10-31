@@ -15,6 +15,7 @@ import { ConfigurationTypes, LogContext } from '@src/common/enums';
 @Injectable()
 export class SessionExtendMiddleware implements NestMiddleware {
   private readonly SESSION_COOKIE_NAME: string;
+  private readonly enabled: boolean;
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
@@ -24,9 +25,17 @@ export class SessionExtendMiddleware implements NestMiddleware {
     this.SESSION_COOKIE_NAME = this.configService.get(
       ConfigurationTypes.IDENTITY
     )?.authentication.providers.ory.session_cookie_name;
+
+    this.enabled = this.configService.get(
+      ConfigurationTypes.IDENTITY
+    )?.authentication.providers.ory.session_extend_enabled;
   }
 
   async use(req: Request, res: Response, next: NextFunction) {
+    if (!this.enabled) {
+      return next();
+    }
+
     const authorization = req.headers['authorization'];
 
     if (!authorization) {
