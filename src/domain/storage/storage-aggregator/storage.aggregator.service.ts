@@ -217,6 +217,11 @@ export class StorageAggregatorService {
 
     let url = '';
     switch (journeyInfo.type) {
+      case 'opportunity':
+        url = await this.urlGeneratorService.generateUrlForOpportunity(
+          journeyInfo.id
+        );
+        break;
       case 'challenge':
         url = await this.urlGeneratorService.generateUrlForChallenge(
           journeyInfo.id
