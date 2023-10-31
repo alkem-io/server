@@ -1,6 +1,10 @@
 export type GuidanceUsage = {
   usage: {
     /**
+     * The id in the database
+     */
+    answerId: string;
+    /**
      * The input
      */
     question: string;
@@ -12,7 +16,7 @@ export type GuidanceUsage = {
      * Sources (in raw format) on which the answer is based on;
      * Unstructured text with title, link and content;
      */
-    sources: string;
+    sources?: string;
     /**
      * Amount of tokens which you used for the prompt; int
      */

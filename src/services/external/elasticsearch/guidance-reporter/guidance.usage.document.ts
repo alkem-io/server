@@ -1,7 +1,7 @@
 export type GuidanceUsageDocument = {
   question: string;
   answer: string;
-  sources: string;
+  sources?: string;
   promptTokens: number;
   completionTokens: number;
   totalTokens: number;
