@@ -1,20 +1,20 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { ActivityEventType } from '@common/enums/activity.event.type';
-import { ActivityFeedRoles } from '@domain/activity-feed/activity.feed.roles.enum';
-import { IActivityLogEntry } from '@services/api/activity-log/dto/activity.log.entry.interface';
-import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
-import { groupCredentialsByEntity } from '@services/api/roles/util/group.credentials.by.entity';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { intersection } from 'lodash';
+import { ActivityService } from '@platform/activity/activity.service';
+import { ActivityFeedRoles } from '@domain/activity-feed/activity.feed.roles.enum';
+import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { SpaceService } from '@domain/challenge/space/space.service';
+import { ActivityFeed } from '@domain/activity-feed/activity.feed.interface';
 import { EntityNotFoundException } from '@common/exceptions';
+import { ActivityEventType } from '@common/enums/activity.event.type';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { AgentInfo } from '@core/authentication';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { ActivityLogService } from '@services/api/activity-log';
-import { ActivityService } from '@platform/activity/activity.service';
 import { PaginationArgs } from '@core/pagination';
-import { ActivityFeed } from '@domain/activity-feed/activity.feed.interface';
+import { IActivityLogEntry } from '@services/api/activity-log/dto/activity.log.entry.interface';
+import { ActivityLogService } from '@services/api/activity-log';
+import { groupCredentialsByEntity } from '@services/api/roles/util/group.credentials.by.entity';
 
 type ActivityFeedFilters = {
   types?: Array<ActivityEventType>;
