@@ -74,9 +74,9 @@ export class CalloutContributionService {
         contributionPolicy,
         CalloutContributionType.POST
       );
-      post.nameID = this.namingService.createNameID(
-        `${post.profileData.displayName}`
-      );
+      post.nameID =
+        post.nameID ??
+        this.namingService.createNameID(`${post.profileData.displayName}`);
       contribution.post = await this.postService.createPost(
         post,
         storageAggregator,
