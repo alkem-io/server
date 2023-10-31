@@ -87,11 +87,15 @@ export class MeService {
     });
     const challenges = await this.challengeService.getChallenges({
       where: { id: In(challengeIds) },
-      relations: { collaboration: true },
+      relations: {
+        collaboration: true,
+        innovationFlow: true,
+        parentSpace: true,
+      },
     });
     const opportunities = await this.opportunityService.getOpportunities({
       where: { id: In(opportunityIds) },
-      relations: { collaboration: true },
+      relations: { collaboration: true, innovationFlow: true, challenge: true },
     });
 
     const myJourneyResults: MyJourneyResults[] = [];

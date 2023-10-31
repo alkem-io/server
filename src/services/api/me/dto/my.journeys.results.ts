@@ -1,11 +1,11 @@
-import { IBaseChallenge } from '@domain/challenge/base-challenge/base.challenge.interface';
+import { IJourney } from '@domain/challenge/base-challenge/journey.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IActivityLogEntry } from '@services/api/activity-log/dto/activity.log.entry.interface';
 
 @ObjectType()
 export class MyJourneyResults {
-  @Field(() => IBaseChallenge, { nullable: false })
-  journey!: IBaseChallenge;
+  @Field(() => IJourney, { nullable: false })
+  journey!: IJourney;
 
   @Field(() => IActivityLogEntry, { nullable: true })
   latestActivity?: IActivityLogEntry;
