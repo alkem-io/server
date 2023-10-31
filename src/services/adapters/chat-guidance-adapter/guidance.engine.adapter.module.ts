@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
 import { GuidanceEngineAdapter } from './guidance.engine.adapter';
-import { ChatGuidanceLogModule } from '@services/api/chat-guidance/chat.guidance.log.module';
+import { GuidanceReporterModule } from '@services/external/elasticsearch/guidance-reporter';
 
 @Module({
-  imports: [ChatGuidanceLogModule],
+  imports: [GuidanceReporterModule],
   providers: [GuidanceEngineAdapter],
   exports: [GuidanceEngineAdapter],
 })

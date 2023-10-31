@@ -42,9 +42,7 @@ export class ChatGuidanceService {
   public isGuidanceEngineEnabled(): boolean {
     const result = this.configService.get(ConfigurationTypes.PLATFORM)
       .guidance_engine?.enabled;
-    if (result) {
-      return true;
-    }
-    return false;
+
+    return Boolean(result);
   }
 }
