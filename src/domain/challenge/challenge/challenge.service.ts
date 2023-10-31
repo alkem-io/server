@@ -627,16 +627,7 @@ export class ChallengeService {
   public async getChallenges(
     options?: FindOneOptions<Challenge>
   ): Promise<IChallenge[]> {
-    let challenges: IChallenge[] | undefined = undefined;
-    challenges = await this.challengeRepository.find({
-      ...options,
-    });
-
-    if (!challenges) {
-      challenges = [];
-    }
-
-    return challenges;
+    return this.challengeRepository.find(options);
   }
 
   async getChallengesInSpaceCount(spaceID: string): Promise<number> {

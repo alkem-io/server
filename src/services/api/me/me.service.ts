@@ -15,6 +15,8 @@ import { ActivityLogService } from '../activity-log';
 import { AgentInfo } from '@core/authentication';
 import { MyJourneyResults } from './dto/my.journeys.results';
 import { ActivityEventType } from '@common/enums/activity.event.type';
+import { EntityNotInitializedException } from '@common/exceptions';
+import { LogContext } from '@common/enums';
 
 @Injectable()
 export class MeService {
@@ -105,7 +107,12 @@ export class MeService {
     const entitiesToProcess = [...spaces, ...challenges, ...opportunities];
 
     for (const entity of entitiesToProcess) {
-      if (!entity.collaboration?.id) continue;
+      if (!entity.collaboration?.id) {
+        throw new EntityNotInitializedException(
+          `Collaboration not initialized for ${entity.constructor.name} with id: ${entity.id}`,
+          LogContext.ACTIVITY
+        );
+      }
       const myActivities = await this.activityLogService.myActivityLog(
         agentInfo.userID,
         {

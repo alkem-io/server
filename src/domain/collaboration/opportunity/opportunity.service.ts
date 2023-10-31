@@ -260,16 +260,7 @@ export class OpportunityService {
   public async getOpportunities(
     options?: FindOneOptions<Opportunity>
   ): Promise<IOpportunity[]> {
-    let opportunities: IOpportunity[] | undefined = undefined;
-    opportunities = await this.opportunityRepository.find({
-      ...options,
-    });
-
-    if (!opportunities) {
-      opportunities = [];
-    }
-
-    return opportunities;
+    return this.opportunityRepository.find(options);
   }
 
   async getInnovationFlow(opportunityID: string): Promise<IInnovationFlow> {
