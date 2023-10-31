@@ -18,7 +18,7 @@ import { ActivityFeed } from '@domain/activity-feed/activity.feed.interface';
 
 type ActivityFeedFilters = {
   types?: Array<ActivityEventType>;
-  myActivity?: boolean; // todo name
+  myActivity?: boolean;
   spaceIds?: Array<string>;
   roles?: Array<ActivityFeedRoles>;
   pagination?: PaginationArgs;
