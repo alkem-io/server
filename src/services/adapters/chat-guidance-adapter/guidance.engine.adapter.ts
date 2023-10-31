@@ -3,7 +3,6 @@ import { ClientProxy } from '@nestjs/microservices';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { firstValueFrom } from 'rxjs';
 import { IChatGuidanceQueryResult } from '@services/api/chat-guidance/dto/chat.guidance.query.result.dto';
-import { ChatGuidanceLogService } from '@services/api/chat-guidance/chat.guidance.log.service';
 import { LogContext } from '@common/enums';
 import { CHAT_GUIDANCE_SERVICE } from '@common/constants';
 import { GuidanceEngineInputBase } from './dto/guidance.engine.dto.base';
@@ -11,6 +10,7 @@ import { GuidanceEngineBaseResponse } from './dto/guidance.engine.dto.base.respo
 import { GuidanceEngineQueryInput } from './dto/guidance.engine.dto.query';
 import { GuidanceEngineQueryResponse } from './dto/guidance.engine.dto.question.response';
 import { Source } from './source.type';
+import { GuidanceReporterService } from '@services/external/elasticsearch/guidance-reporter';
 
 enum GuidanceEngineEventType {
   QUERY = 'query',
@@ -27,7 +27,7 @@ export class GuidanceEngineAdapter {
     @Inject(CHAT_GUIDANCE_SERVICE) private GuidanceEngineClient: ClientProxy,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    private chatGuidanceLogService: ChatGuidanceLogService
+    private guidanceReporterService: GuidanceReporterService
   ) {}
 
   public async sendQuery(
@@ -44,10 +44,10 @@ export class GuidanceEngineAdapter {
     } catch (e) {
       const errorMessage = `Error received from guidance chat server! ${e}`;
       this.logger.error(errorMessage, undefined, LogContext.CHAT_GUIDANCE);
+      // not a real answer; just return an error
       return {
         answer: errorMessage,
         question: eventData.question,
-        sources: [],
       };
     }
 
@@ -63,23 +63,23 @@ export class GuidanceEngineAdapter {
 
     try {
       const jsonObject = JSON.parse(formattedString);
-      const result: IChatGuidanceQueryResult = {
-        ...jsonObject,
-        sources: this.extractMetadata(jsonObject.sources),
-      };
-      this.chatGuidanceLogService.logAnswer(
+      const answerId = await this.guidanceReporterService.logAnswer(
         eventData.question,
         jsonObject as GuidanceEngineQueryResponse,
         eventData.userId
       );
-      return result;
+      return {
+        ...jsonObject,
+        id: answerId,
+        sources: this.extractMetadata(jsonObject.sources),
+      };
     } catch (err: any) {
       const errorMessage = `Could not send query to chat guidance adapter! ${err}`;
       this.logger.error(errorMessage, err?.stack, LogContext.CHAT_GUIDANCE);
+      // not a real answer; just return an error
       return {
         answer: errorMessage,
         question: eventData.question,
-        sources: [],
       };
     }
   }
