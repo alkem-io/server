@@ -123,13 +123,11 @@ export class OrganizationAuthorizationService {
         organization.id
       );
 
-    if (organization.preferenceSet) {
-      organization.preferenceSet =
-        await this.preferenceSetAuthorizationService.applyAuthorizationPolicy(
-          organization.preferenceSet,
-          organization.authorization
-        );
-    }
+    organization.preferenceSet =
+      await this.preferenceSetAuthorizationService.applyAuthorizationPolicy(
+        organization.preferenceSet,
+        organization.authorization
+      );
 
     return await this.organizationRepository.save(organization);
   }
