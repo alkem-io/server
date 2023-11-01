@@ -44,7 +44,7 @@ export class WhiteboardRt extends NameableEntity implements IWhiteboardRt {
   @Column('varchar', {
     length: 255,
     nullable: false,
-    default: ContentUpdatePolicy.OWNER_ADMINS,
+    default: ContentUpdatePolicy.ADMINS,
   })
   contentUpdatePolicy!: ContentUpdatePolicy;
 }

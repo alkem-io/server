@@ -102,7 +102,7 @@ export class WhiteboardRtAuthorizationService {
     switch (whiteboardRt.contentUpdatePolicy) {
       case ContentUpdatePolicy.OWNER:
         break; // covered via dedicated rule above
-      case ContentUpdatePolicy.OWNER_ADMINS:
+      case ContentUpdatePolicy.ADMINS:
         const updateContentPrivilegeAdmins =
           new AuthorizationPolicyRulePrivilege(
             [AuthorizationPrivilege.UPDATE_CONTENT],
@@ -111,7 +111,7 @@ export class WhiteboardRtAuthorizationService {
           );
         privilegeRules.push(updateContentPrivilegeAdmins);
         break;
-      case ContentUpdatePolicy.OWNER_CONTRIBUTORS:
+      case ContentUpdatePolicy.CONTRIBUTORS:
         const updateContentPrivilegeContributors =
           new AuthorizationPolicyRulePrivilege(
             [AuthorizationPrivilege.UPDATE_CONTENT],

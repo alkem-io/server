@@ -35,7 +35,7 @@ export class WhiteboardRtService {
     });
     whiteboardRt.authorization = new AuthorizationPolicy();
     whiteboardRt.createdBy = userID;
-    whiteboardRt.contentUpdatePolicy = ContentUpdatePolicy.OWNER_CONTRIBUTORS;
+    whiteboardRt.contentUpdatePolicy = ContentUpdatePolicy.CONTRIBUTORS;
 
     whiteboardRt.profile = await this.profileService.createProfile(
       whiteboardRtData.profileData,
