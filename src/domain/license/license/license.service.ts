@@ -8,8 +8,8 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
 import { License } from './license.entity';
 import { ILicense } from './license.interface';
-import { IFeatureFlag } from '../feature-flag/feature.flag.interface';
-import { LicenseFeatureFlag } from '@common/enums/license.feature.flag';
+import { ILicenseFeatureFlag } from '../feature-flag/feature.flag.interface';
+import { LicenseFeatureFlagName } from '@common/enums/license.feature.flag';
 import { UpdateLicenseInput } from './dto/license.dto.update';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 
@@ -29,15 +29,15 @@ export class LicenseService {
     license.visibility = SpaceVisibility.ACTIVE;
 
     // Set the feature flags
-    const whiteboardRtFeatureFlag: IFeatureFlag = {
-      name: LicenseFeatureFlag.WHITEBOART_RT,
+    const whiteboardRtFeatureFlag: ILicenseFeatureFlag = {
+      name: LicenseFeatureFlagName.WHITEBOART_RT,
       enabled: false,
     };
-    const calloutToCalloutTemplateFeatureFlag: IFeatureFlag = {
-      name: LicenseFeatureFlag.CALLOUT_TO_CALLOUT_TEMPLATE,
+    const calloutToCalloutTemplateFeatureFlag: ILicenseFeatureFlag = {
+      name: LicenseFeatureFlagName.CALLOUT_TO_CALLOUT_TEMPLATE,
       enabled: false,
     };
-    const featureFlags: IFeatureFlag[] = [
+    const featureFlags: ILicenseFeatureFlag[] = [
       whiteboardRtFeatureFlag,
       calloutToCalloutTemplateFeatureFlag,
     ];
@@ -95,13 +95,13 @@ export class LicenseService {
     return await this.licenseRepository.save(license);
   }
 
-  getFeatureFlags(license: ILicense): IFeatureFlag[] {
+  getFeatureFlags(license: ILicense): ILicenseFeatureFlag[] {
     return this.deserializeFeatureFlags(license.featureFlags);
   }
 
   public isFeatureFlagEnabled(
     license: ILicense,
-    flag: LicenseFeatureFlag
+    flag: LicenseFeatureFlagName
   ): boolean {
     const featureFlags = this.getFeatureFlags(license);
     const requestedFlag = featureFlags.find(f => f.name === flag);
@@ -109,11 +109,13 @@ export class LicenseService {
     return false;
   }
 
-  private deserializeFeatureFlags(featureFlagStr: string): IFeatureFlag[] {
+  private deserializeFeatureFlags(
+    featureFlagStr: string
+  ): ILicenseFeatureFlag[] {
     return JSON.parse(featureFlagStr);
   }
 
-  private serializeFeatureFlags(featureFlags: IFeatureFlag[]): string {
+  private serializeFeatureFlags(featureFlags: ILicenseFeatureFlag[]): string {
     return JSON.stringify(featureFlags);
   }
 }

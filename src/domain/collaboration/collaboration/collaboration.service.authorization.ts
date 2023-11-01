@@ -29,7 +29,7 @@ import { TimelineAuthorizationService } from '@domain/timeline/timeline/timeline
 import { ICallout } from '../callout/callout.interface';
 import { ILicense } from '@domain/license/license/license.interface';
 import { LicenseService } from '@domain/license/license/license.service';
-import { LicenseFeatureFlag } from '@common/enums/license.feature.flag';
+import { LicenseFeatureFlagName } from '@common/enums/license.feature.flag';
 
 @Injectable()
 export class CollaborationAuthorizationService {
@@ -238,7 +238,7 @@ export class CollaborationAuthorizationService {
 
     const whiteboardRtEnabled = this.licenseService.isFeatureFlagEnabled(
       license,
-      LicenseFeatureFlag.WHITEBOART_RT
+      LicenseFeatureFlagName.WHITEBOART_RT
     );
     if (whiteboardRtEnabled) {
       const createWhiteboardRtPrivilege = new AuthorizationPolicyRulePrivilege(

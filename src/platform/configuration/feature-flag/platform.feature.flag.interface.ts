@@ -1,9 +1,8 @@
-import { LicenseFeatureFlagName } from '@common/enums/license.feature.flag';
 import { Field, ObjectType } from '@nestjs/graphql';
 
-@ObjectType('LicenseFeatureFlag')
-export abstract class ILicenseFeatureFlag {
-  @Field(() => LicenseFeatureFlagName, {
+@ObjectType('PlatformFeatureFlag')
+export abstract class IPlatformFeatureFlag {
+  @Field(() => String, {
     description: 'The name of the feature flag',
     nullable: false,
   })

@@ -6,6 +6,7 @@ import { IConfig } from './config.interface';
 import { IAuthenticationProviderConfig } from './authentication/providers/authentication.provider.config.interface';
 import { ConfigurationTypes } from '@common/enums';
 import { IOryConfig } from './authentication/providers/ory/ory.config.interface';
+import { PlatformFeatureFlag } from '@common/enums/platform.feature.flag';
 
 @Injectable()
 export class KonfigService {
@@ -30,7 +31,48 @@ export class KonfigService {
       authentication: {
         providers: await this.getAuthenticationProvidersConfig(),
       },
-      platform: {
+      featureFlags: [
+        {
+          name: PlatformFeatureFlag.SSI,
+          enabled: this.configService.get(ConfigurationTypes.SSI)?.enabled,
+        },
+        {
+          name: PlatformFeatureFlag.COMMUNICATIONS,
+          enabled: this.configService.get(ConfigurationTypes.COMMUNICATIONS)
+            ?.enabled,
+        },
+        {
+          name: PlatformFeatureFlag.COMMUNICATIONS_DISCUSSIONS,
+          enabled: this.configService.get(ConfigurationTypes.COMMUNICATIONS)
+            ?.discussions?.enabled,
+        },
+        {
+          name: PlatformFeatureFlag.SUBSCRIPTIONS,
+          enabled: this.configService.get(ConfigurationTypes.HOSTING)
+            ?.subscriptions?.enabled,
+        },
+        {
+          name: PlatformFeatureFlag.NOTIFICATIONS,
+          enabled: this.configService.get(ConfigurationTypes.NOTIFICATIONS)
+            ?.enabled,
+        },
+        {
+          name: PlatformFeatureFlag.WHITEBOARDS,
+          enabled: this.configService.get(ConfigurationTypes.COLLABORATION)
+            ?.whiteboards?.enabled,
+        },
+        {
+          name: PlatformFeatureFlag.LANDING_PAGE,
+          enabled: this.configService.get(ConfigurationTypes.PLATFORM)
+            ?.landing_page?.enabled,
+        },
+        {
+          name: PlatformFeatureFlag.GUIDENCE_ENGINE,
+          enabled: this.configService.get(ConfigurationTypes.PLATFORM)
+            ?.guidance_engine?.enabled,
+        },
+      ],
+      locations: {
         domain,
         environment: this.configService.get(ConfigurationTypes.HOSTING)
           ?.environment,
@@ -56,47 +98,6 @@ export class KonfigService {
         newuser: this.configService.get(ConfigurationTypes.PLATFORM)?.newuser,
         tips: this.configService.get(ConfigurationTypes.PLATFORM)?.tips,
         aup: this.configService.get(ConfigurationTypes.PLATFORM)?.aup,
-        featureFlags: [
-          {
-            name: 'ssi',
-            enabled: this.configService.get(ConfigurationTypes.SSI)?.enabled,
-          },
-          {
-            name: 'communications',
-            enabled: this.configService.get(ConfigurationTypes.COMMUNICATIONS)
-              ?.enabled,
-          },
-          {
-            name: 'communications-discussions',
-            enabled: this.configService.get(ConfigurationTypes.COMMUNICATIONS)
-              ?.discussions?.enabled,
-          },
-          {
-            name: 'subscriptions',
-            enabled: this.configService.get(ConfigurationTypes.HOSTING)
-              ?.subscriptions?.enabled,
-          },
-          {
-            name: 'notifications',
-            enabled: this.configService.get(ConfigurationTypes.NOTIFICATIONS)
-              ?.enabled,
-          },
-          {
-            name: 'whiteboards',
-            enabled: this.configService.get(ConfigurationTypes.COLLABORATION)
-              ?.whiteboards?.enabled,
-          },
-          {
-            name: 'landing-page',
-            enabled: this.configService.get(ConfigurationTypes.PLATFORM)
-              ?.landing_page?.enabled,
-          },
-          {
-            name: 'guidance-engine',
-            enabled: this.configService.get(ConfigurationTypes.PLATFORM)
-              ?.guidance_engine?.enabled,
-          },
-        ],
       },
       sentry: {
         enabled: sentryConfig?.enabled,
