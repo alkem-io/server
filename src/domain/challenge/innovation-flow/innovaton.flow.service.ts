@@ -7,11 +7,7 @@ import {
 } from '@common/exceptions';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import {
-  FindOneOptions,
-  FindOptionsRelationByString,
-  Repository,
-} from 'typeorm';
+import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { InnovationFlow } from './innovation.flow.entity';
 import { IInnovationFlow } from './innovation.flow.interface';
@@ -116,7 +112,7 @@ export class InnovationFlowService {
     const innovationFlow = await this.getInnovationFlowOrFail(
       innovationFlowData.innovationFlowID,
       {
-        relations: ['profile', 'lifecycle'],
+        relations: { profile: true, lifecycle: true },
       }
     );
 
@@ -161,7 +157,7 @@ export class InnovationFlowService {
     const innovationFlow = await this.getInnovationFlowOrFail(
       innovationFlowID,
       {
-        relations: ['lifecycle', 'profile'],
+        relations: { lifecycle: true, profile: true },
       }
     );
 
@@ -209,12 +205,12 @@ export class InnovationFlowService {
 
   public async getProfile(
     innovationFlowInput: IInnovationFlow,
-    relations: FindOptionsRelationByString = []
+    relations?: FindOptionsRelations<IInnovationFlow>
   ): Promise<IProfile> {
     const innovationFlow = await this.getInnovationFlowOrFail(
       innovationFlowInput.id,
       {
-        relations: ['profile', ...relations],
+        relations: { profile: true, ...relations },
       }
     );
     if (!innovationFlow.profile)
@@ -229,7 +225,7 @@ export class InnovationFlowService {
     const innovationFlow = await this.getInnovationFlowOrFail(
       innovationFlowId,
       {
-        relations: ['lifecycle'],
+        relations: { lifecycle: true },
       }
     );
     const lifecycle = innovationFlow.lifecycle;
@@ -250,7 +246,7 @@ export class InnovationFlowService {
     const innovationFlow = await this.getInnovationFlowOrFail(
       innovationFlowTemplateData.innovationFlowID,
       {
-        relations: ['lifecycle'],
+        relations: { lifecycle: true },
       }
     );
 
@@ -322,7 +318,7 @@ export class InnovationFlowService {
     const innovationFlow = await this.getInnovationFlowOrFail(
       innovationFlowID,
       {
-        relations: ['lifecycle', 'profile'],
+        relations: { lifecycle: true, profile: true },
       }
     );
 

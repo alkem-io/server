@@ -49,7 +49,7 @@ export class DiscussionResolverMutations {
     const discussion = await this.discussionService.getDiscussionOrFail(
       updateData.ID,
       {
-        relations: ['profile'],
+        relations: { profile: true },
       }
     );
     await this.authorizationService.grantAccessOrFail(

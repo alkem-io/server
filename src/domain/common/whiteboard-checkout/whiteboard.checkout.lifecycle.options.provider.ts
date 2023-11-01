@@ -111,7 +111,7 @@ export class WhiteboardCheckoutLifecycleOptionsProvider {
           await this.whiteboardCheckoutService.getWhiteboardCheckoutOrFail(
             event.parentID,
             {
-              relations: ['lifecycle'],
+              relations: { lifecycle: true },
             }
           );
 
@@ -129,7 +129,7 @@ export class WhiteboardCheckoutLifecycleOptionsProvider {
           await this.whiteboardCheckoutService.getWhiteboardCheckoutOrFail(
             event.parentID,
             {
-              relations: ['lifecycle'],
+              relations: { lifecycle: true },
             }
           );
 

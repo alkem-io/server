@@ -52,7 +52,7 @@ export class CalendarService {
 
   async deleteCalendar(calendarID: string): Promise<ICalendar> {
     const calendar = await this.getCalendarOrFail(calendarID, {
-      relations: ['events'],
+      relations: { events: true },
     });
 
     if (calendar.authorization)
@@ -105,7 +105,7 @@ export class CalendarService {
     const calendar = await this.getCalendarOrFail(
       calendarEventData.calendarID,
       {
-        relations: ['events'],
+        relations: { events: true },
       }
     );
     if (!calendar.events)
@@ -158,7 +158,7 @@ export class CalendarService {
     agentInfo: AgentInfo
   ): Promise<ICalendarEvent[]> {
     const calendarLoaded = await this.getCalendarOrFail(calendar.id, {
-      relations: ['events'],
+      relations: { events: true },
     });
     const allEvents = calendarLoaded.events;
     if (!allEvents)

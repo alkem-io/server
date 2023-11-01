@@ -36,7 +36,7 @@ export class CalendarEventAuthorizationService {
       await this.calendarEventService.getCalendarEventOrFail(
         calendarEventInput.id,
         {
-          relations: ['comments', 'profile'],
+          relations: { comments: true, profile: true },
         }
       );
     calendarEvent.authorization =

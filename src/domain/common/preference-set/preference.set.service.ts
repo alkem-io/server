@@ -46,7 +46,7 @@ export class PreferenceSetService {
   async deletePreferenceSet(preferenceSetID: string): Promise<IPreferenceSet> {
     // Note need to load it in with all contained entities so can remove fully
     const preferenceSet = await this.getPreferenceSetOrFail(preferenceSetID, {
-      relations: [],
+      relations: {},
     });
 
     if (preferenceSet.preferences) {
