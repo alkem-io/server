@@ -50,7 +50,7 @@ export class OrganizationVerificationService {
   ): Promise<IOrganizationVerification> {
     const organizationVerification =
       await this.getOrganizationVerificationOrFail(organizationVerificationID, {
-        relations: ['lifecycle'],
+        relations: { lifecycle: true },
       });
 
     if (organizationVerification.authorization)

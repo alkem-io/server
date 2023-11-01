@@ -39,7 +39,9 @@ export class PlatformResolverFields {
     description: 'The Innovation Library for the platform',
   })
   library(): Promise<ILibrary> {
-    return this.platformService.getLibraryOrFail(['library.innovationPacks']);
+    return this.platformService.getLibraryOrFail({
+      library: { innovationPacks: true },
+    });
   }
 
   @ResolveField('communication', () => ICommunication, {

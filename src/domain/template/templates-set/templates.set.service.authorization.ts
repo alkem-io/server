@@ -29,11 +29,11 @@ export class TemplatesSetAuthorizationService {
     const templatesSet = await this.templatesSetService.getTemplatesSetOrFail(
       templatesSetInput.id,
       {
-        relations: [
-          'postTemplates',
-          'whiteboardTemplates',
-          'innovationFlowTemplates',
-        ],
+        relations: {
+          postTemplates: true,
+          whiteboardTemplates: true,
+          innovationFlowTemplates: true,
+        },
       }
     );
 

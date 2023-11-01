@@ -96,12 +96,12 @@ export class TemplatesSetService {
 
   async deleteTemplatesSet(templatesSetID: string): Promise<ITemplatesSet> {
     const templatesSet = await this.getTemplatesSetOrFail(templatesSetID, {
-      relations: [
-        'authorization',
-        'postTemplates',
-        'whiteboardTemplates',
-        'innovationFlowTemplates',
-      ],
+      relations: {
+        authorization: true,
+        postTemplates: true,
+        whiteboardTemplates: true,
+        innovationFlowTemplates: true,
+      },
     });
 
     if (templatesSet.authorization)
@@ -137,7 +137,11 @@ export class TemplatesSetService {
     const templatesSetPopulated = await this.getTemplatesSetOrFail(
       templatesSet.id,
       {
-        relations: ['postTemplates', 'postTemplates.profile'],
+        relations: {
+          postTemplates: {
+            profile: true,
+          },
+        },
       }
     );
     if (!templatesSetPopulated.postTemplates) {
@@ -176,7 +180,7 @@ export class TemplatesSetService {
     templatesSetId: string
   ): Promise<IPostTemplate> {
     return this.postTemplateService.getPostTemplateOrFail(templateId, {
-      relations: ['templatesSet', 'profile'],
+      relations: { templatesSet: true, profile: true },
       where: { templatesSet: { id: templatesSetId } },
     });
   }
@@ -188,7 +192,7 @@ export class TemplatesSetService {
     return this.whiteboardTemplateService.getWhiteboardTemplateOrFail(
       templateId,
       {
-        relations: ['templatesSet', 'profile'],
+        relations: { templatesSet: true, profile: true },
         where: { templatesSet: { id: templatesSetId } },
       }
     );
@@ -201,7 +205,7 @@ export class TemplatesSetService {
     return this.innovationFlowTemplateService.getInnovationFlowTemplateOrFail(
       templateId,
       {
-        relations: ['templatesSet', 'profile'],
+        relations: { templatesSet: true, profile: true },
         where: { templatesSet: { id: templatesSetId } },
       }
     );
@@ -267,7 +271,11 @@ export class TemplatesSetService {
     const templatesSetPopulated = await this.getTemplatesSetOrFail(
       templatesSet.id,
       {
-        relations: ['whiteboardTemplates', 'whiteboardTemplates.profile'],
+        relations: {
+          whiteboardTemplates: {
+            profile: true,
+          },
+        },
       }
     );
     if (!templatesSetPopulated.whiteboardTemplates) {
@@ -316,10 +324,11 @@ export class TemplatesSetService {
     const templatesSetPopulated = await this.getTemplatesSetOrFail(
       templatesSet.id,
       {
-        relations: [
-          'innovationFlowTemplates',
-          'innovationFlowTemplates.profile',
-        ],
+        relations: {
+          innovationFlowTemplates: {
+            profile: true,
+          },
+        },
       }
     );
     if (!templatesSetPopulated.innovationFlowTemplates) {

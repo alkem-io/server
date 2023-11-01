@@ -11,6 +11,7 @@ import { CalloutType } from '@common/enums/callout.type';
 export class CreateCalloutTemplateInput extends CreateTemplateBaseInput {
   @Field(() => CalloutType, {
     description: 'Callout type.',
+    nullable: false,
   })
   type!: CalloutType;
 

@@ -40,6 +40,7 @@ export class CalloutTemplateService {
       ProfileType.CALLOUT_TEMPLATE,
       storageAggregator
     );
+    calloutTemplate.type = calloutTemplateData.type;
     calloutTemplate.framing =
       await this.calloutFramingService.createCalloutFraming(
         calloutTemplateData.framing,
