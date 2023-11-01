@@ -83,8 +83,14 @@ export class LicenseService {
     if (licenseUpdateData.featureFlags) {
       const featureFlags = this.getFeatureFlags(license);
       for (const flag of licenseUpdateData.featureFlags) {
-        const matchedFlag = featureFlags.find(f => f.name === flag.name);
-        if (matchedFlag) matchedFlag.enabled = flag.enabled;
+        if (LicenseFeatureFlagName.hasOwnProperty(flag.name)) {
+          const propName: string =
+            LicenseFeatureFlagName[
+              flag.name as keyof typeof LicenseFeatureFlagName
+            ];
+          const matchedFlag = featureFlags.find(f => f.name === propName);
+          if (matchedFlag) matchedFlag.enabled = flag.enabled;
+        }
       }
       license.featureFlags = this.serializeFeatureFlags(featureFlags);
     }
