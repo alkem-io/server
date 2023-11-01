@@ -9,7 +9,7 @@ import { CalloutType } from '@common/enums/callout.type';
 
 @Entity()
 export class CalloutTemplate extends TemplateBase implements ICalloutTemplate {
-  @Column('varchar', { length: 255, nullable: true })
+  @Column('varchar', { length: 255, nullable: false })
   type!: CalloutType;
 
   @ManyToOne(

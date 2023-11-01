@@ -5,7 +5,7 @@ export class calloutTemplateType1698689237022 implements MigrationInterface {
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
-      `ALTER TABLE \`callout_template\` ADD \`type\` varchar(255) NULL`
+      `ALTER TABLE \`callout_template\` ADD \`type\` varchar(255) NOT NULL`
     );
     await queryRunner.query(`UPDATE callout_template SET type = 'post'`);
   }
