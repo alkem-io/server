@@ -9,7 +9,7 @@ import { FindOneOptions, Repository } from 'typeorm';
 import { License } from './license.entity';
 import { ILicense } from './license.interface';
 import { ILicenseFeatureFlag } from '../feature-flag/feature.flag.interface';
-import { LicenseFeatureFlagName } from '@common/enums/license.feature.flag';
+import { LicenseFeatureFlagName } from '@common/enums/license.feature.flag.name';
 import { UpdateLicenseInput } from './dto/license.dto.update';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 

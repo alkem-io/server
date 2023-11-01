@@ -1,4 +1,4 @@
-import { LicenseFeatureFlagName } from '@common/enums/license.feature.flag';
+import { LicenseFeatureFlagName } from '@common/enums/license.feature.flag.name';
 import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType('LicenseFeatureFlag')

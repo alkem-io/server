@@ -1,6 +1,6 @@
 import { registerEnumType } from '@nestjs/graphql';
 
-export enum PlatformFeatureFlag {
+export enum PlatformFeatureFlagName {
   SSI = 'ssi',
   COMMUNICATIONS = 'communications',
   COMMUNICATIONS_DISCUSSIONS = 'communications-discussions',
@@ -11,6 +11,6 @@ export enum PlatformFeatureFlag {
   GUIDENCE_ENGINE = 'guidance-engine',
 }
 
-registerEnumType(PlatformFeatureFlag, {
-  name: 'PlatformFeatureFlag',
+registerEnumType(PlatformFeatureFlagName, {
+  name: 'PlatformFeatureFlagName',
 });

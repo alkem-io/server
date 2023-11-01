@@ -29,7 +29,7 @@ import { TimelineAuthorizationService } from '@domain/timeline/timeline/timeline
 import { ICallout } from '../callout/callout.interface';
 import { ILicense } from '@domain/license/license/license.interface';
 import { LicenseService } from '@domain/license/license/license.service';
-import { LicenseFeatureFlagName } from '@common/enums/license.feature.flag';
+import { LicenseFeatureFlagName } from '@common/enums/license.feature.flag.name';
 
 @Injectable()
 export class CollaborationAuthorizationService {

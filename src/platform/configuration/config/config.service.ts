@@ -6,7 +6,7 @@ import { IConfig } from './config.interface';
 import { IAuthenticationProviderConfig } from './authentication/providers/authentication.provider.config.interface';
 import { ConfigurationTypes } from '@common/enums';
 import { IOryConfig } from './authentication/providers/ory/ory.config.interface';
-import { PlatformFeatureFlag } from '@common/enums/platform.feature.flag';
+import { PlatformFeatureFlagName } from '@common/enums/platform.feature.flag.name';
 
 @Injectable()
 export class KonfigService {
@@ -33,41 +33,41 @@ export class KonfigService {
       },
       featureFlags: [
         {
-          name: PlatformFeatureFlag.SSI,
+          name: PlatformFeatureFlagName.SSI,
           enabled: this.configService.get(ConfigurationTypes.SSI)?.enabled,
         },
         {
-          name: PlatformFeatureFlag.COMMUNICATIONS,
+          name: PlatformFeatureFlagName.COMMUNICATIONS,
           enabled: this.configService.get(ConfigurationTypes.COMMUNICATIONS)
             ?.enabled,
         },
         {
-          name: PlatformFeatureFlag.COMMUNICATIONS_DISCUSSIONS,
+          name: PlatformFeatureFlagName.COMMUNICATIONS_DISCUSSIONS,
           enabled: this.configService.get(ConfigurationTypes.COMMUNICATIONS)
             ?.discussions?.enabled,
         },
         {
-          name: PlatformFeatureFlag.SUBSCRIPTIONS,
+          name: PlatformFeatureFlagName.SUBSCRIPTIONS,
           enabled: this.configService.get(ConfigurationTypes.HOSTING)
             ?.subscriptions?.enabled,
         },
         {
-          name: PlatformFeatureFlag.NOTIFICATIONS,
+          name: PlatformFeatureFlagName.NOTIFICATIONS,
           enabled: this.configService.get(ConfigurationTypes.NOTIFICATIONS)
             ?.enabled,
         },
         {
-          name: PlatformFeatureFlag.WHITEBOARDS,
+          name: PlatformFeatureFlagName.WHITEBOARDS,
           enabled: this.configService.get(ConfigurationTypes.COLLABORATION)
             ?.whiteboards?.enabled,
         },
         {
-          name: PlatformFeatureFlag.LANDING_PAGE,
+          name: PlatformFeatureFlagName.LANDING_PAGE,
           enabled: this.configService.get(ConfigurationTypes.PLATFORM)
             ?.landing_page?.enabled,
         },
         {
-          name: PlatformFeatureFlag.GUIDENCE_ENGINE,
+          name: PlatformFeatureFlagName.GUIDENCE_ENGINE,
           enabled: this.configService.get(ConfigurationTypes.PLATFORM)
             ?.guidance_engine?.enabled,
         },

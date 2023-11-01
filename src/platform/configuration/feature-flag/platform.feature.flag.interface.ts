@@ -1,8 +1,9 @@
+import { PlatformFeatureFlagName } from '@common/enums/platform.feature.flag.name';
 import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType('PlatformFeatureFlag')
 export abstract class IPlatformFeatureFlag {
-  @Field(() => String, {
+  @Field(() => PlatformFeatureFlagName, {
     description: 'The name of the feature flag',
     nullable: false,
   })
