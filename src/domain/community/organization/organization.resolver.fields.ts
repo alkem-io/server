@@ -93,7 +93,7 @@ export class OrganizationResolverFields {
     );
 
     const userGroup = await this.groupService.getUserGroupOrFail(groupID, {
-      relations: ['profile'],
+      relations: { profile: true },
     });
 
     if (userGroup.profile && !userGroup.profile?.displayName) {
@@ -208,15 +208,25 @@ export class OrganizationResolverFields {
 
   @ResolveField('profile', () => IProfile, {
     nullable: false,
-    description: 'The profile for this organization.',
+    description: 'The profile for this Organization.',
   })
-  @Profiling.api
+  @UseGuards(GraphqlGuard)
   async profile(
     @Parent() organization: Organization,
+    @CurrentUser() agentInfo: AgentInfo,
     @Loader(ProfileLoaderCreator, { parentClassRef: Organization })
     loader: ILoader<IProfile>
   ) {
-    return loader.load(organization.id);
+    const profile = await loader.load(organization.id);
+    // Note: the Organization profile is public.
+    // Check if the user can read the profile entity, not the actual Organization entity
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      profile.authorization,
+      AuthorizationPrivilege.READ,
+      `read profile on Organization: ${profile.displayName}`
+    );
+    return profile;
   }
 
   @ResolveField('verification', () => IOrganizationVerification, {

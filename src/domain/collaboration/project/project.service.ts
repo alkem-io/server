@@ -1,11 +1,7 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import {
-  FindOneOptions,
-  FindOptionsRelationByString,
-  Repository,
-} from 'typeorm';
+import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   ValidationException,
@@ -60,7 +56,7 @@ export class ProjectService {
   async deleteProject(deleteData: DeleteProjectInput): Promise<IProject> {
     const projectID = deleteData.ID;
     const project = await this.getProjectOrFail(projectID, {
-      relations: ['lifecycle'],
+      relations: { lifecycle: true },
     });
     if (!project)
       throw new EntityNotFoundException(
@@ -164,10 +160,10 @@ export class ProjectService {
 
   public async getProfile(
     projectInput: IProject,
-    relations: FindOptionsRelationByString = []
+    relations?: FindOptionsRelations<IProject>
   ): Promise<IProfile> {
     const project = await this.getProjectOrFail(projectInput.id, {
-      relations: ['profile', ...relations],
+      relations: { profile: true, ...relations },
     });
     if (!project.profile)
       throw new EntityNotFoundException(
@@ -180,7 +176,7 @@ export class ProjectService {
 
   async getLifecycle(projectId: string): Promise<ILifecycle> {
     const project = await this.getProjectOrFail(projectId, {
-      relations: ['lifecycle'],
+      relations: { lifecycle: true },
     });
 
     if (!project.lifecycle) {

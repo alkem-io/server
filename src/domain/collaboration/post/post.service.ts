@@ -1,11 +1,7 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import {
-  FindOneOptions,
-  FindOptionsRelationByString,
-  Repository,
-} from 'typeorm';
+import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext, ProfileType } from '@common/enums';
 import { IPost } from '@domain/collaboration/post/post.interface';
@@ -68,7 +64,7 @@ export class PostService {
   public async deletePost(deleteData: DeletePostInput): Promise<IPost> {
     const postID = deleteData.ID;
     const post = await this.getPostOrFail(postID, {
-      relations: ['profile'],
+      relations: { profile: true },
     });
     if (post.authorization) {
       await this.authorizationPolicyService.delete(post.authorization);
@@ -103,7 +99,7 @@ export class PostService {
 
   public async updatePost(postData: UpdatePostInput): Promise<IPost> {
     const post = await this.getPostOrFail(postData.ID, {
-      relations: ['profile'],
+      relations: { profile: true },
     });
 
     // Copy over the received data
@@ -135,10 +131,10 @@ export class PostService {
 
   public async getProfile(
     post: IPost,
-    relations: FindOptionsRelationByString = []
+    relations?: FindOptionsRelations<IPost>
   ): Promise<IProfile> {
     const postLoaded = await this.getPostOrFail(post.id, {
-      relations: ['profile', ...relations],
+      relations: { profile: true, ...relations },
     });
     if (!postLoaded.profile)
       throw new EntityNotFoundException(

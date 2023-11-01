@@ -143,7 +143,7 @@ export class ChallengeResolverMutations {
   ): Promise<IChallenge> {
     const challenge = await this.challengeService.getChallengeOrFail(
       challengeData.ID,
-      { relations: ['profile'] }
+      { relations: { profile: true } }
     );
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
