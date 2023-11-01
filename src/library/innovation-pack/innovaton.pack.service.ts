@@ -13,11 +13,7 @@ import {
 import { IOrganization } from '@domain/community/organization/organization.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import {
-  FindOneOptions,
-  FindOptionsRelationByString,
-  Repository,
-} from 'typeorm';
+import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { InnovationPack } from './innovation.pack.entity';
 import { IInnovationPack } from './innovation.pack.interface';
@@ -102,7 +98,7 @@ export class InnovationPackService {
     const innovationPack = await this.getInnovationPackOrFail(
       innovationPackData.ID,
       {
-        relations: ['profile'],
+        relations: { profile: true },
       }
     );
 
@@ -143,7 +139,7 @@ export class InnovationPackService {
     deleteData: DeleteInnovationPackInput
   ): Promise<IInnovationPack> {
     const innovationPack = await this.getInnovationPackOrFail(deleteData.ID, {
-      relations: ['templatesSet', 'profile'],
+      relations: { templatesSet: true, profile: true },
     });
 
     // Remove any host credentials
@@ -203,12 +199,12 @@ export class InnovationPackService {
 
   public async getProfile(
     innovationPackInput: IInnovationPack,
-    relations: FindOptionsRelationByString = []
+    relations?: FindOptionsRelations<IInnovationPack>
   ): Promise<IProfile> {
     const innovationPack = await this.getInnovationPackOrFail(
       innovationPackInput.id,
       {
-        relations: ['profile', ...relations],
+        relations: { profile: true, ...relations },
       }
     );
     if (!innovationPack.profile)
@@ -225,7 +221,7 @@ export class InnovationPackService {
     const innovationPackWithTemplates = await this.getInnovationPackOrFail(
       innovationPackId,
       {
-        relations: ['templatesSet'],
+        relations: { templatesSet: true },
       }
     );
     const templatesSet = innovationPackWithTemplates.templatesSet;
@@ -246,7 +242,7 @@ export class InnovationPackService {
   ): Promise<IInnovationPack> {
     const organization = await this.organizationService.getOrganizationOrFail(
       hostOrgID,
-      { relations: ['agent'] }
+      { relations: { agent: true } }
     );
 
     const existingHost = await this.getProvider(innovationPackID);

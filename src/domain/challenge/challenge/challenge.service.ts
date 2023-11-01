@@ -467,7 +467,7 @@ export class ChallengeService {
     args?: LimitAndShuffleIdsQueryArgs
   ): Promise<IOpportunity[]> {
     const challenge = await this.getChallengeOrFail(challengeId, {
-      relations: ['opportunities'],
+      relations: { opportunities: true },
     });
 
     const { IDs, limit, shuffle } = args ?? {};
@@ -509,7 +509,7 @@ export class ChallengeService {
     const challengeWithChildChallenges = await this.getChallengeOrFail(
       challenge.id,
       {
-        relations: ['childChallenges'],
+        relations: { childChallenges: true },
       }
     );
     const childChallenges = challengeWithChildChallenges.childChallenges;
@@ -532,7 +532,7 @@ export class ChallengeService {
     );
 
     const challenge = await this.getChallengeOrFail(challengeData.challengeID, {
-      relations: ['childChallenges', 'community'],
+      relations: { childChallenges: true, community: true },
     });
 
     const spaceID = this.getSpaceID(challenge);
@@ -730,7 +730,13 @@ export class ChallengeService {
   async getPreferenceSetOrFail(challengeId: string): Promise<IPreferenceSet> {
     const challengeWithPreferences = await this.getChallengeOrFail(
       challengeId,
-      { relations: ['preferenceSet', 'preferenceSet.preferences'] }
+      {
+        relations: {
+          preferenceSet: {
+            preferences: true,
+          },
+        },
+      }
     );
     const preferenceSet = challengeWithPreferences.preferenceSet;
 
@@ -795,7 +801,7 @@ export class ChallengeService {
     communityID: string
   ): Promise<IChallenge | null> {
     return await this.challengeRepository.findOne({
-      relations: ['community'],
+      relations: { community: true },
       where: {
         community: { id: communityID },
       },

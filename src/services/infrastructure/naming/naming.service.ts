@@ -314,7 +314,7 @@ export class NamingService {
       where: {
         comments: { id: roomID },
       },
-      relations: ['profile'],
+      relations: { profile: true },
     });
     if (!result) {
       throw new EntityNotFoundException(
@@ -345,7 +345,7 @@ export class NamingService {
       where: {
         comments: { id: commentsID },
       },
-      relations: ['profile', 'comments'],
+      relations: { profile: true, comments: true },
     });
     if (!result) {
       throw new EntityNotFoundException(
@@ -362,7 +362,7 @@ export class NamingService {
       where: {
         comments: { id: commentsID },
       },
-      relations: ['profile', 'comments'],
+      relations: { profile: true, comments: true },
     });
     if (!result) {
       throw new EntityNotFoundException(

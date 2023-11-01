@@ -82,7 +82,7 @@ export class ProfileResolverMutations {
     const profile = await this.profileService.getProfileOrFail(
       referenceInput.profileID,
       {
-        relations: ['references'],
+        relations: { references: true },
       }
     );
     await this.authorizationService.grantAccessOrFail(

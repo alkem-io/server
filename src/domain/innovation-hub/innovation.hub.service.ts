@@ -104,7 +104,7 @@ export class InnovationHubService {
       {
         idOrNameId: input.ID,
       },
-      { relations: ['profile'] }
+      { relations: { profile: true } }
     );
 
     if (input.nameID) {
@@ -163,7 +163,7 @@ export class InnovationHubService {
     const hub = await this.getInnovationHubOrFail(
       { idOrNameId: innovationHubID },
       {
-        relations: ['profile'],
+        relations: { profile: true },
       }
     );
 

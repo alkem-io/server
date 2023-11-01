@@ -598,7 +598,11 @@ export class SpaceService {
 
   async getTemplatesSetOrFail(spaceId: string): Promise<ITemplatesSet> {
     const spaceWithTemplates = await this.getSpaceOrFail(spaceId, {
-      relations: ['templatesSet', 'templatesSet.postTemplates'],
+      relations: {
+        templatesSet: {
+          postTemplates: true,
+        },
+      },
     });
     const templatesSet = spaceWithTemplates.templatesSet;
 
@@ -634,7 +638,11 @@ export class SpaceService {
 
   async getPreferenceSetOrFail(spaceId: string): Promise<IPreferenceSet> {
     const spaceWithPreferences = await this.getSpaceOrFail(spaceId, {
-      relations: ['preferenceSet', 'preferenceSet.preferences'],
+      relations: {
+        preferenceSet: {
+          preferences: true,
+        },
+      },
     });
     const preferenceSet = spaceWithPreferences.preferenceSet;
 
@@ -651,7 +659,7 @@ export class SpaceService {
   async setSpaceHost(spaceID: string, hostOrgID: string): Promise<ISpace> {
     const organization = await this.organizationService.getOrganizationOrFail(
       hostOrgID,
-      { relations: ['groups', 'agent'] }
+      { relations: { groups: true, agent: true } }
     );
 
     const existingHost = await this.getHost(spaceID);
@@ -700,7 +708,7 @@ export class SpaceService {
     if (args && args.IDs) {
       {
         spaceWithChallenges = await this.getSpaceOrFail(space.id, {
-          relations: ['challenges'],
+          relations: { challenges: true },
         });
         spaceWithChallenges.challenges = spaceWithChallenges.challenges?.filter(
           c => args.IDs?.includes(c.id)
@@ -708,7 +716,7 @@ export class SpaceService {
       }
     } else
       spaceWithChallenges = await this.getSpaceOrFail(space.id, {
-        relations: ['challenges'],
+        relations: { challenges: true },
       });
 
     const challenges = spaceWithChallenges.challenges;
@@ -891,7 +899,7 @@ export class SpaceService {
     challenge: IChallenge
   ): Promise<IChallenge> {
     const space = await this.getSpaceOrFail(spaceID, {
-      relations: ['challenges', 'community'],
+      relations: { challenges: true, community: true },
     });
     if (!space.challenges)
       throw new ValidationException(

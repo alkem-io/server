@@ -80,7 +80,7 @@ export class CommunicationService {
 
     // Try to find the Communication
     const communication = await this.getCommunicationOrFail(communicationID, {
-      relations: ['discussions'],
+      relations: { discussions: true },
     });
 
     if (!communication.discussionCategories.includes(discussionData.category)) {
@@ -145,7 +145,7 @@ export class CommunicationService {
     const communicationWithDiscussions = await this.getCommunicationOrFail(
       communication.id,
       {
-        relations: ['discussions'],
+        relations: { discussions: true },
       }
     );
     const discussions = communicationWithDiscussions.discussions;
@@ -216,7 +216,7 @@ export class CommunicationService {
   async removeCommunication(communicationID: string): Promise<boolean> {
     // Note need to load it in with all contained entities so can remove fully
     const communication = await this.getCommunicationOrFail(communicationID, {
-      relations: ['discussions'],
+      relations: { discussions: true },
     });
 
     // Remove all groups
