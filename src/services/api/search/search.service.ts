@@ -1128,10 +1128,12 @@ export class SearchService {
         collaborationFilter: collaborationFilter,
       });
 
-    const contributionMatches = (await contributionsQuery.getMany()).map(
-      x => x.id
-    );
+    const contributionMatches = await contributionsQuery.getMany();
+    const postMatches: string[] = [];
+    contributionMatches.forEach(x => {
+      if (x.post) return postMatches.push(x.post.id);
+    });
 
-    return contributionMatches;
+    return postMatches;
   }
 }
