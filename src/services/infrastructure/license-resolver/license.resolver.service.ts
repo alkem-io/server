@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { LogContext } from '@common/enums';
-import { licenseNotFoundException } from '@common/exceptions/license.not.found.exception';
+import { LicenseNotFoundException } from '@common/exceptions/license.not.found.exception';
 import { ILicense } from '@domain/license/license/license.interface';
 import { Space } from '@domain/challenge/space/space.entity';
 
@@ -26,7 +26,7 @@ export class LicenseResolverService {
     });
 
     if (!space || !space.license) {
-      throw new licenseNotFoundException(
+      throw new LicenseNotFoundException(
         `Unable to find License for provided spaceID: ${spaceID}`,
         LogContext.LICENSE
       );

@@ -1,7 +1,7 @@
 import { LogContext, AlkemioErrorStatus } from '@common/enums';
 import { BaseException } from './base.exception';
 
-export class licenseNotFoundException extends BaseException {
+export class LicenseNotFoundException extends BaseException {
   constructor(error: string, context: LogContext, code?: AlkemioErrorStatus) {
     super(error, context, code ?? AlkemioErrorStatus.LICENSE_NOT_FOUND);
   }
