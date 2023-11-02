@@ -16,7 +16,7 @@ export class SpaceLicenseLoaderCreator
     return createTypedRelationDataLoader(
       this.manager,
       Space,
-      { license: true },
+      { license: { featureFlags: true } },
       this.constructor.name,
       options
     );

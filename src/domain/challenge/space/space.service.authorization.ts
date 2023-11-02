@@ -148,7 +148,7 @@ export class SpaceAuthorizationService {
     space = await this.spaceService.getSpaceOrFail(spaceInput.id, {
       relations: {
         community: true,
-        license: true,
+        license: { featureFlags: true },
       },
     });
     if (!space.community || !space.license)

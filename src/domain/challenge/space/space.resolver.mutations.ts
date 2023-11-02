@@ -282,7 +282,9 @@ export class SpaceResolverMutations {
       challengeData.spaceID,
       {
         relations: {
-          license: true,
+          license: {
+            featureFlags: true,
+          },
         },
       }
     );

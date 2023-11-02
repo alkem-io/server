@@ -202,7 +202,7 @@ const getSpaceMock = ({
     license: {
       id,
       visibility,
-      featureFlags: '[]',
+      featureFlags: [],
       ...getEntityMock<License>(),
     },
     authorization: getAuthorizationPolicyMock(

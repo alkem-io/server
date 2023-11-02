@@ -6,17 +6,21 @@ import { License } from './license.entity';
 import { LicenseResolverFields } from './license.resolver.fields';
 import { LicenseService } from './license.service';
 import { LicenseAuthorizationService } from './license.service.authorization';
+import { FeatureFlagService } from '../feature-flag/feature.flag.service';
+import { FeatureFlag } from '../feature-flag/feature.flag.entity';
 
 @Module({
   imports: [
     AuthorizationModule,
     AuthorizationPolicyModule,
     TypeOrmModule.forFeature([License]),
+    TypeOrmModule.forFeature([FeatureFlag]),
   ],
   providers: [
     LicenseResolverFields,
     LicenseService,
     LicenseAuthorizationService,
+    FeatureFlagService,
   ],
   exports: [LicenseService, LicenseAuthorizationService],
 })

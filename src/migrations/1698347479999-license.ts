@@ -5,16 +5,32 @@ export class license1698347479999 implements MigrationInterface {
   name = 'license1698347479999';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(
+      `CREATE TABLE \`feature_flag\` (
+        \`id\` char(36) NOT NULL,
+        \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+        \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+        \`version\` int NOT NULL,
+        \`name\` text NOT NULL,
+        \`enabled\` boolean NOT NULL,
+        \`licenseId\` char(36) NULL,
+        PRIMARY KEY (\`id\`)
+      ) ENGINE=InnoDB`
+    );
+
     await queryRunner.query(`CREATE TABLE \`license\` (
                                     \`id\` char(36) NOT NULL,
                                     \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
                                     \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
                                     \`version\` int NOT NULL,
-                                    \`featureFlags\` text NOT NULL,
                                     \`visibility\` varchar(36) NULL DEFAULT 'active',
                                     \`authorizationId\` char(36) NULL,
                                     UNIQUE INDEX \`REL_bfd01743815f0dd68ac1c5c45c\` (\`authorizationId\`),
                                     PRIMARY KEY (\`id\`)) ENGINE=InnoDB`);
+
+    await queryRunner.query(
+      `ALTER TABLE \`feature_flag\` ADD CONSTRAINT \`FK_7e3e0a8b6d3e9b4a3a0d6e3a3e3\` FOREIGN KEY (\`licenseId\`) REFERENCES \`license\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    );
 
     await queryRunner.query(
       `ALTER TABLE \`license\` ADD CONSTRAINT \`FK_bfd01743815f0dd68ac1c5c45c0\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
@@ -99,22 +115,36 @@ export class license1698347479999 implements MigrationInterface {
     const licenseID = randomUUID();
     const licenseAuthID = randomUUID();
 
+    // Create and associate FeatureFlag entities with Licenses
+    const featureFlagData = [
+      { name: 'whiteboard-rt', value: false },
+      { name: 'callout-to-callout-template', value: false },
+      // Add more feature flags as needed
+    ];
+
     await queryRunner.query(
       `INSERT INTO authorization_policy (id, version, credentialRules, verifiedCredentialRules, anonymousReadAccess, privilegeRules) VALUES
         ('${licenseAuthID}',
         1, '', '', 0, '')`
     );
 
-    const featureFlags =
-      '[{"name":"whiteboard-rt","enabled":false},{"name":"callout-to-callout-template","enabled":false}]';
     await queryRunner.query(
-      `INSERT INTO license (id, version, authorizationId, featureFlags, visibility)
+      `INSERT INTO license (id, version, authorizationId, visibility)
             VALUES ('${licenseID}',
                     '1',
                     '${licenseAuthID}',
-                    '${featureFlags}',
                     '${visibility}')`
     );
+
+    for (const flag of featureFlagData) {
+      const flagID = randomUUID();
+
+      await queryRunner.query(
+        `INSERT INTO \`feature_flag\` (\`id\`, \`version\`,  \`name\`, \`enabled\`, \`licenseId\`)
+            VALUES (?, ?, ?, ?, ?)`,
+        [flagID, 1, flag.name, flag.value, licenseID] // Set licenseId to null initially
+      );
+    }
 
     await queryRunner.query(
       `UPDATE \`space\` SET licenseId = '${licenseID}' WHERE (id = '${spaceID}')`

@@ -21,14 +21,17 @@ export const getJourneyRolesForContributorEntityData = async (
       id: In(ids),
     };
 
+    const relations: any = { profile: true };
+
     if (visibility) {
       where.license = {
         visibility: In(visibility),
       };
+      relations.license = { featureFlags: true };
     }
     return entityManager.find(ref, {
       where,
-      relations: { profile: true },
+      relations,
       select: {
         profile: {
           displayName: true,

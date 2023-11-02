@@ -65,7 +65,7 @@ export class CollaborationAuthorizationService {
       communityPolicy
     );
 
-    collaboration.authorization = this.appendPrivilegeRules(
+    collaboration.authorization = await this.appendPrivilegeRules(
       collaboration.authorization,
       communityPolicy,
       license
@@ -219,11 +219,11 @@ export class CollaborationAuthorizationService {
     );
   }
 
-  private appendPrivilegeRules(
+  private async appendPrivilegeRules(
     authorization: IAuthorizationPolicy,
     policy: ICommunityPolicy,
     license: ILicense
-  ): IAuthorizationPolicy {
+  ): Promise<IAuthorizationPolicy> {
     const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
 
     const createPrivilege = new AuthorizationPolicyRulePrivilege(
@@ -236,7 +236,7 @@ export class CollaborationAuthorizationService {
     );
     privilegeRules.push(createPrivilege);
 
-    const whiteboardRtEnabled = this.licenseService.isFeatureFlagEnabled(
+    const whiteboardRtEnabled = await this.licenseService.isFeatureFlagEnabled(
       license,
       LicenseFeatureFlagName.WHITEBOART_RT
     );
