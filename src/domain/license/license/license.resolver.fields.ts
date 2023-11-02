@@ -11,7 +11,9 @@ export class LicenseResolverFields {
     nullable: false,
     description: 'The FeatureFlags for the license',
   })
-  featureFlags(@Parent() license: ILicense): ILicenseFeatureFlag[] {
-    return this.licenseService.getFeatureFlags(license);
+  async featureFlags(
+    @Parent() license: ILicense
+  ): Promise<ILicenseFeatureFlag[]> {
+    return await this.licenseService.getFeatureFlags(license.id);
   }
 }

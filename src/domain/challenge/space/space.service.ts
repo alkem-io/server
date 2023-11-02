@@ -270,7 +270,7 @@ export class SpaceService {
     }
 
     if (updateData.license) {
-      space.license = this.licenseService.updateLicense(
+      space.license = await this.licenseService.updateLicense(
         space.license,
         updateData.license
       );
@@ -289,7 +289,7 @@ export class SpaceService {
         templatesSet: true,
         profile: true,
         storageAggregator: true,
-        license: true,
+        license: { featureFlags: true },
       },
     });
 
@@ -299,7 +299,8 @@ export class SpaceService {
       !space.templatesSet ||
       !space.profile ||
       !space.storageAggregator ||
-      !space.license
+      !space.license ||
+      !space.license?.featureFlags
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load all entities for deletion of space ${space.id} `,
@@ -665,7 +666,7 @@ export class SpaceService {
   async getLicenseOrFail(spaceId: string): Promise<ILicense> {
     const space = await this.getSpaceOrFail(spaceId, {
       relations: {
-        license: true,
+        license: { featureFlags: true },
       },
     });
     const license = space.license;

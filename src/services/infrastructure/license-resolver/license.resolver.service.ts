@@ -16,7 +16,9 @@ export class LicenseResolverService {
   public async getlicenseForSpace(spaceID: string): Promise<ILicense> {
     const space = await this.entityManager.findOne(Space, {
       relations: {
-        license: true,
+        license: {
+          featureFlags: true,
+        },
       },
       where: [
         {

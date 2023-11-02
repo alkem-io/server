@@ -12,52 +12,71 @@ import { ILicenseFeatureFlag } from '../feature-flag/feature.flag.interface';
 import { LicenseFeatureFlagName } from '@common/enums/license.feature.flag.name';
 import { UpdateLicenseInput } from './dto/license.dto.update';
 import { SpaceVisibility } from '@common/enums/space.visibility';
+import { CreateFeatureFlagInput } from '../feature-flag/dto/feature.flag.dto.create';
+import { FeatureFlagService } from '../feature-flag/feature.flag.service';
+import { FeatureFlag } from '../feature-flag/feature.flag.entity';
+import { matchEnumString } from '@common/utils/match.enum';
 
 @Injectable()
 export class LicenseService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
+    private featureFlagService: FeatureFlagService,
     @InjectRepository(License)
     private licenseRepository: Repository<License>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   public async createLicense(): Promise<ILicense> {
-    const license: ILicense = new License();
-    license.authorization = new AuthorizationPolicy();
+    const license: ILicense = License.create();
+    license.authorization = AuthorizationPolicy.create();
     // default to active space
     license.visibility = SpaceVisibility.ACTIVE;
 
     // Set the feature flags
-    const whiteboardRtFeatureFlag: ILicenseFeatureFlag = {
+    const whiteboardRtFeatureFlag: CreateFeatureFlagInput = {
       name: LicenseFeatureFlagName.WHITEBOART_RT,
       enabled: false,
     };
-    const calloutToCalloutTemplateFeatureFlag: ILicenseFeatureFlag = {
+    const calloutToCalloutTemplateFeatureFlag: CreateFeatureFlagInput = {
       name: LicenseFeatureFlagName.CALLOUT_TO_CALLOUT_TEMPLATE,
       enabled: false,
     };
-    const featureFlags: ILicenseFeatureFlag[] = [
+    const featureFlagInputs: ILicenseFeatureFlag[] = [
       whiteboardRtFeatureFlag,
       calloutToCalloutTemplateFeatureFlag,
     ];
-    license.featureFlags = this.serializeFeatureFlags(featureFlags);
+    license.featureFlags = [];
+    for (const featureFlagInput of featureFlagInputs) {
+      const featureFlag = await this.featureFlagService.createFeatureFlag(
+        featureFlagInput
+      );
+      license.featureFlags.push(featureFlag);
+    }
 
     return await this.licenseRepository.save(license);
   }
 
   async delete(licenseID: string): Promise<ILicense> {
     const license = await this.getLicenseOrFail(licenseID, {
-      relations: [],
+      relations: {
+        featureFlags: true,
+      },
     });
 
     if (license.authorization)
       await this.authorizationPolicyService.delete(license.authorization);
 
+    if (license.featureFlags) {
+      for (const featureFlag of license.featureFlags) {
+        await this.featureFlagService.delete((featureFlag as FeatureFlag).id);
+      }
+    }
+
     return await this.licenseRepository.remove(license as License);
   }
 
-  async getLicenseOrFail(
+  public async getLicenseOrFail(
     licenseID: string,
     options?: FindOneOptions<License>
   ): Promise<ILicense | never> {
@@ -68,31 +87,35 @@ export class LicenseService {
     if (!license)
       throw new EntityNotFoundException(
         `License not found: ${licenseID}`,
-        LogContext.CALENDAR
+        LogContext.LICENSE
       );
     return license;
   }
 
-  updateLicense(
+  public async updateLicense(
     license: ILicense,
     licenseUpdateData: UpdateLicenseInput
-  ): ILicense {
+  ): Promise<ILicense> {
     if (licenseUpdateData.visibility) {
       license.visibility = licenseUpdateData.visibility;
     }
     if (licenseUpdateData.featureFlags) {
-      const featureFlags = this.getFeatureFlags(license);
-      for (const flag of licenseUpdateData.featureFlags) {
-        if (LicenseFeatureFlagName.hasOwnProperty(flag.name)) {
-          const propName: string =
-            LicenseFeatureFlagName[
-              flag.name as keyof typeof LicenseFeatureFlagName
-            ];
-          const matchedFlag = featureFlags.find(f => f.name === propName);
-          if (matchedFlag) matchedFlag.enabled = flag.enabled;
+      const featureFlags = await this.getFeatureFlags(license.id);
+      for (const featureFlag of featureFlags) {
+        const { name } = featureFlag;
+        const matchResult = matchEnumString(LicenseFeatureFlagName, name);
+
+        const featureFlagInput = licenseUpdateData.featureFlags.find(
+          f => f.name === matchResult?.key
+        );
+        if (featureFlagInput) {
+          const { enabled } = featureFlagInput;
+          await this.featureFlagService.updateFeatureFlag(
+            (featureFlag as FeatureFlag).id,
+            { name, enabled }
+          );
         }
       }
-      license.featureFlags = this.serializeFeatureFlags(featureFlags);
     }
     return license;
   }
@@ -101,27 +124,27 @@ export class LicenseService {
     return await this.licenseRepository.save(license);
   }
 
-  getFeatureFlags(license: ILicense): ILicenseFeatureFlag[] {
-    return this.deserializeFeatureFlags(license.featureFlags);
+  async getFeatureFlags(licenseID: string): Promise<ILicenseFeatureFlag[]> {
+    const license = await this.getLicenseOrFail(licenseID, {
+      relations: { featureFlags: true },
+    });
+
+    if (!license || !license.featureFlags)
+      throw new EntityNotFoundException(
+        `Feature flags for license with id: ${license.id} not found!`,
+        LogContext.LICENSE
+      );
+
+    return license.featureFlags;
   }
 
-  public isFeatureFlagEnabled(
+  public async isFeatureFlagEnabled(
     license: ILicense,
     flag: LicenseFeatureFlagName
-  ): boolean {
-    const featureFlags = this.getFeatureFlags(license);
+  ): Promise<boolean> {
+    const featureFlags = await this.getFeatureFlags(license.id);
     const requestedFlag = featureFlags.find(f => f.name === flag);
     if (requestedFlag) return requestedFlag.enabled;
     return false;
-  }
-
-  private deserializeFeatureFlags(
-    featureFlagStr: string
-  ): ILicenseFeatureFlag[] {
-    return JSON.parse(featureFlagStr);
-  }
-
-  private serializeFeatureFlags(featureFlags: ILicenseFeatureFlag[]): string {
-    return JSON.stringify(featureFlags);
   }
 }
