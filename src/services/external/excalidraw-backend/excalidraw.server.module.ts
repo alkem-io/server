@@ -4,8 +4,8 @@ import { AuthenticationModule } from '@core/authentication/authentication.module
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { ExcalidrawEventPublisherModule } from '@services/excalidraw-pubsub/publisher';
 import { ExcalidrawEventSubscriberModule } from '@services/excalidraw-pubsub/subscriber';
-// import { ExcalidrawServerFactoryProvider } from './excalidraw.server.factory.provider';
-import { ExcalidrawServerFactoryProvider2 } from './excalidraw.server.factory.provider2';
+// import { ExcalidrawAmqpServerFactoryProvider } from './excalidraw.amqp.server.factory.provider';
+import { ExcalidrawRedisServerFactoryProvider } from './excalidraw.redis.server.factory.provider';
 import { APP_ID_PROVIDER } from '@common/app.id.provider';
 
 @Module({
@@ -17,7 +17,8 @@ import { APP_ID_PROVIDER } from '@common/app.id.provider';
     ExcalidrawEventSubscriberModule,
   ],
   providers: [
-    /*ExcalidrawServerFactoryProvider, */ ExcalidrawServerFactoryProvider2,
+    /*ExcalidrawAmqpServerFactoryProvider, */
+    ExcalidrawRedisServerFactoryProvider,
     APP_ID_PROVIDER,
   ],
 })

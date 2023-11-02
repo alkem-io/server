@@ -1,3 +1,5 @@
+import { createClient } from 'redis';
+import { createAdapter } from '@socket.io/redis-adapter';
 import { FactoryProvider, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Configuration, FrontendApi } from '@ory/kratos-client';
@@ -15,8 +17,6 @@ import { AgentInfo } from '@core/authentication';
 import { OryDefaultIdentitySchema } from '@core/authentication/ory.default.identity.schema';
 import { WhiteboardRtService } from '@domain/common/whiteboard-rt';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { ExcalidrawEventPublisherService } from '@services/excalidraw-pubsub/publisher';
-import { ExcalidrawEventSubscriberService } from '@services/excalidraw-pubsub/subscriber';
 
 import {
   CLIENT_BROADCAST,
@@ -33,7 +33,7 @@ import {
   SERVER_VOLATILE_BROADCAST,
 } from './event.names';
 
-export const ExcalidrawServerFactoryProvider: FactoryProvider = {
+export const ExcalidrawRedisServerFactoryProvider: FactoryProvider = {
   provide: EXCALIDRAW_SERVER,
   inject: [
     APP_ID,
@@ -42,8 +42,6 @@ export const ExcalidrawServerFactoryProvider: FactoryProvider = {
     AuthenticationService,
     AuthorizationService,
     WhiteboardRtService,
-    ExcalidrawEventPublisherService,
-    ExcalidrawEventSubscriberService,
   ],
   useFactory: async (
     appId: string,
@@ -51,9 +49,7 @@ export const ExcalidrawServerFactoryProvider: FactoryProvider = {
     configService: ConfigService,
     authService: AuthenticationService,
     authorizationService: AuthorizationService,
-    whiteboardRtService: WhiteboardRtService,
-    excalidrawEventPublisher: ExcalidrawEventPublisherService,
-    excalidrawEventSubscriber: ExcalidrawEventSubscriberService
+    whiteboardRtService: WhiteboardRtService
   ) =>
     factory(
       appId,
@@ -61,9 +57,7 @@ export const ExcalidrawServerFactoryProvider: FactoryProvider = {
       configService,
       authService,
       authorizationService,
-      whiteboardRtService,
-      excalidrawEventPublisher,
-      excalidrawEventSubscriber
+      whiteboardRtService
     ),
 };
 
@@ -73,9 +67,7 @@ const factory = async (
   configService: ConfigService,
   authService: AuthenticationService,
   authorizationService: AuthorizationService,
-  whiteboardRtService: WhiteboardRtService,
-  excalidrawEventPublisher: ExcalidrawEventPublisherService,
-  excalidrawEventSubscriber: ExcalidrawEventSubscriberService
+  whiteboardRtService: WhiteboardRtService
 ) => {
   const port = configService.get(ConfigurationTypes.HOSTING).whiteboard_rt.port;
 
@@ -103,15 +95,18 @@ const factory = async (
   });
 
   try {
+    const { host, port } = configService.get(ConfigurationTypes.STORAGE).redis;
+
+    const pubClient = createClient({ url: `redis://${host}:${port}` });
+    const subClient = pubClient.duplicate();
+
+    const redisAdapter = createAdapter(pubClient, subClient);
+
     const wsServer = new SocketIO(httpServer, {
-      transports: ['websocket', 'polling'],
+      transports: ['websocket'],
       allowEIO3: true,
+      adapter: redisAdapter,
     });
-    // subscribe to the state of other server instances
-    // events from other servers ONLY
-    excalidrawEventSubscriber.subscribeToAll(event =>
-      event.handleEvent(wsServer)
-    );
 
     wsServer.on(CONNECTION, async socket => {
       const agentInfo = await getUserInfo(
@@ -143,46 +138,27 @@ const factory = async (
             wsServer,
             whiteboardRtService,
             authorizationService,
-            excalidrawEventPublisher,
             logger
           )
       );
 
       socket.on(SERVER_BROADCAST, (roomID: string, data: ArrayBuffer) =>
-        serverBroadcastEventHandler(
-          roomID,
-          data,
-          socket,
-          excalidrawEventPublisher
-        )
+        serverBroadcastEventHandler(roomID, data, socket)
       );
 
       socket.on(
         SERVER_VOLATILE_BROADCAST,
         (roomID: string, data: ArrayBuffer) =>
-          serverVolatileBroadcastEventHandler(
-            roomID,
-            data,
-            socket,
-            excalidrawEventPublisher
-          )
+          serverVolatileBroadcastEventHandler(roomID, data, socket)
       );
 
       socket.on(
         DISCONNECTING,
         async () =>
-          await disconnectingEventHandler(
-            agentInfo,
-            wsServer,
-            socket,
-            logger,
-            excalidrawEventPublisher
-          )
+          await disconnectingEventHandler(agentInfo, wsServer, socket, logger)
       );
 
-      socket.on(DISCONNECT, () =>
-        disconnectEventHandler(socket, excalidrawEventPublisher)
-      );
+      socket.on(DISCONNECT, () => disconnectEventHandler(socket));
     });
   } catch (error) {
     logger.error(error, LogContext.EXCALIDRAW_SERVER);
@@ -241,7 +217,6 @@ const joinRoomEventHandler = async (
   wsServer: SocketIO,
   whiteboardRtService: WhiteboardRtService,
   authorizationService: AuthorizationService,
-  excalidrawEventPublisher: ExcalidrawEventPublisherService,
   logger: LoggerService
 ) => {
   try {
@@ -284,10 +259,6 @@ const joinRoomEventHandler = async (
 
   const socketIDs = sockets.map(socket => socket.id);
   wsServer.in(roomID).emit(ROOM_USER_CHANGE, socketIDs);
-  excalidrawEventPublisher.publishRoomUserChange({
-    roomID,
-    socketIDs,
-  });
 };
 /*
 Built-in event for handling broadcast;
@@ -296,14 +267,9 @@ messages are sent to all sockets except the sender socket in reliable manner
 const serverBroadcastEventHandler = (
   roomID: string,
   data: ArrayBuffer,
-  socket: Socket,
-  excalidrawEventPublisher: ExcalidrawEventPublisherService
+  socket: Socket
 ) => {
   socket.broadcast.to(roomID).emit(CLIENT_BROADCAST, data);
-  excalidrawEventPublisher.publishServerBroadcast({
-    roomID,
-    data,
-  });
 };
 /*
 Built-in event for handling broadcast;
@@ -314,30 +280,21 @@ useful for sending event where only the latest is useful, e.g. cursor location
 const serverVolatileBroadcastEventHandler = (
   roomID: string,
   data: ArrayBuffer,
-  socket: Socket,
-  excalidrawEventPublisher: ExcalidrawEventPublisherService
+  socket: Socket
 ) => {
   socket.volatile.broadcast.to(roomID).emit(CLIENT_BROADCAST, data);
-  excalidrawEventPublisher.publishServerVolatileBroadcast({
-    roomID,
-    data,
-  });
 };
 /* Built-in event for handling socket disconnects */
 const disconnectingEventHandler = async (
   agentInfo: AgentInfo,
   wsServer: SocketIO,
   socket: Socket,
-  logger: LoggerService,
-  excalidrawEventPublisher: ExcalidrawEventPublisherService
+  logger: LoggerService
 ) => {
   logger?.verbose?.(
     `User '${agentInfo.userID}' has disconnected`,
     LogContext.EXCALIDRAW_SERVER
   );
-  excalidrawEventPublisher.publishDisconnecting({
-    roomID: 'NA',
-  });
   for (const roomID of socket.rooms) {
     const otherClientIds = (await wsServer.in(roomID).fetchSockets())
       .filter(_socket => _socket.id !== socket.id)
@@ -346,23 +303,14 @@ const disconnectingEventHandler = async (
     if (otherClientIds.length > 0) {
       socket.broadcast.to(roomID).emit(ROOM_USER_CHANGE, otherClientIds);
     }
-
-    excalidrawEventPublisher.publishRoomUserChange({
-      roomID,
-      socketIDs: otherClientIds,
-    });
   }
 
   closeConnection(socket);
 };
 
-const disconnectEventHandler = async (
-  socket: Socket,
-  excalidrawEventPublisher: ExcalidrawEventPublisherService
-) => {
+const disconnectEventHandler = async (socket: Socket) => {
   socket.removeAllListeners();
   socket.disconnect();
-  excalidrawEventPublisher.publishDisconnected({ roomID: 'NA' });
 };
 
 const closeConnection = (socket: Socket, message?: string) => {
