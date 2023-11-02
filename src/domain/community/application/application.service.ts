@@ -103,7 +103,7 @@ export class ApplicationService {
 
   async getUser(applicationID: string): Promise<IUser> {
     const application = await this.getApplicationOrFail(applicationID, {
-      relations: ['user'],
+      relations: { user: true },
     });
     const user = application.user;
     if (!user)

@@ -1020,7 +1020,7 @@ export class SearchService {
     let postIDsFilter: string[] | undefined = undefined;
     if (searchInSpaceID) {
       searchInSpace = await this.spaceService.getSpaceOrFail(searchInSpaceID, {
-        relations: ['collaboration'],
+        relations: { collaboration: true },
       });
       spaceIDsFilter = [searchInSpace.id];
 

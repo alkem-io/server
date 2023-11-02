@@ -88,7 +88,7 @@ export default class SearchResultBuilderService
     const opportunity = await this.opportunityService.getOpportunityOrFail(
       rawSearchResult.result.id,
       {
-        relations: ['challenge'],
+        relations: { challenge: true },
       }
     );
     const space = await this.spaceService.getSpaceOrFail(
