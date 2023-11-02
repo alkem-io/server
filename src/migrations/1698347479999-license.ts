@@ -11,7 +11,7 @@ export class license1698347479999 implements MigrationInterface {
                                     \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
                                     \`version\` int NOT NULL,
                                     \`featureFlags\` text NOT NULL,
-                                    \`visibility\` varchar(255) NULL,
+                                    \`visibility\` varchar(36) NULL DEFAULT 'active',
                                     \`authorizationId\` char(36) NULL,
                                     UNIQUE INDEX \`REL_bfd01743815f0dd68ac1c5c45c\` (\`authorizationId\`),
                                     PRIMARY KEY (\`id\`)) ENGINE=InnoDB`);

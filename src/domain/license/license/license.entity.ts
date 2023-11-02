@@ -6,7 +6,7 @@ import { SpaceVisibility } from '@common/enums/space.visibility';
 @Entity()
 export class License extends AuthorizableEntity implements ILicense {
   @Column('varchar', {
-    length: 255,
+    length: 36,
     nullable: false,
     default: SpaceVisibility.ACTIVE,
   })
