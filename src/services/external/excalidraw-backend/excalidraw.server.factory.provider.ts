@@ -108,6 +108,7 @@ const factory = async (
       allowEIO3: true,
     });
     // subscribe to the state of other server instances
+    // events from other servers ONLY
     excalidrawEventSubscriber.subscribeToAll(event =>
       event.handleEvent(wsServer)
     );
@@ -131,7 +132,7 @@ const factory = async (
       );
 
       wsServer.to(socket.id).emit(INIT_ROOM);
-
+      // client events ONLY
       socket.on(
         JOIN_ROOM,
         async (roomID: string) =>
@@ -234,7 +235,7 @@ const getUserInfo = async (
     return undefined;
   }
 };
-
+/* This event is coming from the client; whenever they request to join a room */
 const joinRoomEventHandler = async (
   roomID: string,
   agentInfo: AgentInfo,
@@ -273,19 +274,14 @@ const joinRoomEventHandler = async (
   );
 
   const sockets = await wsServer.in(roomID).fetchSockets();
-  if (sockets.length <= 1) {
-    wsServer.to(`${socket.id}`).emit(FIRST_IN_ROOM);
+  if (sockets.length === 1) {
+    wsServer.to(socket.id).emit(FIRST_IN_ROOM);
   } else {
     logger?.verbose?.(
       `User ${agentInfo.userID} emitted to room ${roomID}`,
       LogContext.EXCALIDRAW_SERVER
     );
     socket.broadcast.to(roomID).emit(NEW_USER, socket.id);
-    // excalidrawEventPublisher.publishNewUser({
-    //   roomID,
-    //   socketID: socket.id,
-    // });
-    // todo; testing if not need
   }
 
   const socketIDs = sockets.map(socket => socket.id);
@@ -337,19 +333,21 @@ const disconnectingEventHandler = async (
     roomID: 'NA',
   });
   for (const roomID of socket.rooms) {
-    const otherClients = (await wsServer.in(roomID).fetchSockets()).filter(
-      _socket => _socket.id !== socket.id
-    );
+    const otherClientIds = (await wsServer.in(roomID).fetchSockets())
+      .filter(_socket => _socket.id !== socket.id)
+      .map(socket => socket.id);
 
-    if (otherClients.length > 0) {
-      const socketIDs = otherClients.map(socket => socket.id);
-      socket.broadcast.to(roomID).emit(ROOM_USER_CHANGE, socketIDs);
-      excalidrawEventPublisher.publishRoomUserChange({
-        roomID,
-        socketIDs,
-      });
+    if (otherClientIds.length > 0) {
+      socket.broadcast.to(roomID).emit(ROOM_USER_CHANGE, otherClientIds);
     }
+
+    excalidrawEventPublisher.publishRoomUserChange({
+      roomID,
+      socketIDs: otherClientIds,
+    });
   }
+
+  closeConnection(socket);
 };
 
 const disconnectEventHandler = async (
@@ -361,8 +359,10 @@ const disconnectEventHandler = async (
   excalidrawEventPublisher.publishDisconnected({ roomID: 'NA' });
 };
 
-const closeConnection = (socket: Socket, message: string) => {
+const closeConnection = (socket: Socket, message?: string) => {
   socket.removeAllListeners();
-  socket.emit(CONNECTION_CLOSED, message);
+  if (message) {
+    socket.emit(CONNECTION_CLOSED, message);
+  }
   socket.disconnect();
 };

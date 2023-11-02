@@ -29,7 +29,7 @@ export abstract class BaseEvent implements IExcalidrawEvent {
 export class RoomUserChangeEvent extends BaseEvent implements IExcalidrawEvent {
   constructor(
     public roomID: string,
-    public socketIDs: Array<string>, // all sockets in the room
+    public socketIDs: Array<string>, // all sockets in the remote room
     public publisherId?: string
   ) {
     super(roomID, publisherId, ROOM_USER_CHANGE);
@@ -39,6 +39,7 @@ export class RoomUserChangeEvent extends BaseEvent implements IExcalidrawEvent {
     const ownSocketIds = (await wsServer.in(this.roomID).fetchSockets()).map(
       socket => socket.id
     );
+
     const deduplicator = new Set([...ownSocketIds, ...this.socketIDs]);
     wsServer.in(this.roomID).emit(ROOM_USER_CHANGE, Array.from(deduplicator));
   }
