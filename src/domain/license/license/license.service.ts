@@ -15,6 +15,7 @@ import { SpaceVisibility } from '@common/enums/space.visibility';
 import { CreateFeatureFlagInput } from '../feature-flag/dto/feature.flag.dto.create';
 import { FeatureFlagService } from '../feature-flag/feature.flag.service';
 import { FeatureFlag } from '../feature-flag/feature.flag.entity';
+import { matchEnumString } from '@common/utils/match.enum';
 
 @Injectable()
 export class LicenseService {
@@ -101,16 +102,20 @@ export class LicenseService {
     if (licenseUpdateData.featureFlags) {
       const featureFlags = await this.getFeatureFlags(license.id);
       for (const featureFlag of featureFlags) {
+        const { name } = featureFlag;
+        const matchResult = matchEnumString(LicenseFeatureFlagName, name);
+
         const featureFlagInput = licenseUpdateData.featureFlags.find(
-          f => f.name === featureFlag.name
+          f => f.name === matchResult?.key
         );
         if (featureFlagInput) {
-          featureFlag.enabled = featureFlagInput.enabled;
+          const { enabled } = featureFlagInput;
+          await this.featureFlagService.updateFeatureFlag(
+            (featureFlag as FeatureFlag).id,
+            { name, enabled }
+          );
         }
       }
-
-      license.featureFlags = featureFlags;
-      await this.save(license);
     }
     return license;
   }
