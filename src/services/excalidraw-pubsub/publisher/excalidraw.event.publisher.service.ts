@@ -4,7 +4,6 @@ import { APP_ID, EXCALIDRAW_PUBSUB_PROVIDER } from '@common/constants';
 import {
   DISCONNECT,
   DISCONNECTING,
-  NEW_USER,
   ROOM_USER_CHANGE,
   SERVER_BROADCAST,
   SERVER_VOLATILE_BROADCAST,
@@ -13,7 +12,6 @@ import {
   BasePayload,
   DisconnectedPayload,
   DisconnectingPayload,
-  NewUserPayload,
   RoomUserChangePayload,
   ServerBroadcastPayload,
   ServerVolatileBroadcastPayload,
@@ -25,14 +23,6 @@ export class ExcalidrawEventPublisherService {
     @Inject(EXCALIDRAW_PUBSUB_PROVIDER) private excalidrawPubSub: AMQPPubSub,
     @Inject(APP_ID) private appId: string
   ) {}
-
-  public publishNewUser(payload: NewUserPayload) {
-    this.excalidrawPubSub.publish(NEW_USER, {
-      ...payload,
-      publisherId: payload.publisherId ?? this.appId,
-      name: NEW_USER,
-    });
-  }
 
   public publishRoomUserChange(payload: RoomUserChangePayload) {
     this.excalidrawPubSub.publish(ROOM_USER_CHANGE, {

@@ -1,24 +1,16 @@
 import {
   DISCONNECT,
   DISCONNECTING,
-  JOIN_ROOM,
-  NEW_USER,
   ROOM_USER_CHANGE,
   SERVER_BROADCAST,
   SERVER_VOLATILE_BROADCAST,
 } from '@services/external/excalidraw-backend/event.names';
-// todo: clear payloads
+
 export type BasePayload = {
   roomID: string;
   publisherId?: string;
   name?: string;
-};
-export type RoomJoinPayload = BasePayload & {
-  name?: typeof JOIN_ROOM;
-};
-export type NewUserPayload = BasePayload & {
-  name?: typeof NEW_USER;
-  socketID: string; // socket of the new user
+  data?: ArrayBuffer;
 };
 export type RoomUserChangePayload = BasePayload & {
   name?: typeof ROOM_USER_CHANGE;

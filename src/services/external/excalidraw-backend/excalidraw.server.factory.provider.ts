@@ -17,6 +17,7 @@ import { WhiteboardRtService } from '@domain/common/whiteboard-rt';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { ExcalidrawEventPublisherService } from '@services/excalidraw-pubsub/publisher';
 import { ExcalidrawEventSubscriberService } from '@services/excalidraw-pubsub/subscriber';
+
 import {
   CLIENT_BROADCAST,
   CONNECTION,
@@ -30,11 +31,7 @@ import {
   ROOM_USER_CHANGE,
   SERVER_BROADCAST,
   SERVER_VOLATILE_BROADCAST,
-} from '@services/external/excalidraw-backend/event.names';
-import {
-  RoomUserChangePayload,
-  ServerVolatileBroadcastPayload,
-} from '@services/excalidraw-pubsub/payloads';
+} from './event.names';
 
 export const ExcalidrawServerFactoryProvider: FactoryProvider = {
   provide: EXCALIDRAW_SERVER,
@@ -57,253 +54,321 @@ export const ExcalidrawServerFactoryProvider: FactoryProvider = {
     whiteboardRtService: WhiteboardRtService,
     excalidrawEventPublisher: ExcalidrawEventPublisherService,
     excalidrawEventSubscriber: ExcalidrawEventSubscriberService
-  ) => {
-    const port = configService.get(ConfigurationTypes.HOSTING).whiteboard_rt
-      .port;
+  ) =>
+    factory(
+      appId,
+      logger,
+      configService,
+      authService,
+      authorizationService,
+      whiteboardRtService,
+      excalidrawEventPublisher,
+      excalidrawEventSubscriber
+    ),
+};
 
-    if (!port) {
-      logger.error('Port not provided!', EXCALIDRAW_SERVER);
-      return;
-    }
+const factory = async (
+  appId: string,
+  logger: LoggerService,
+  configService: ConfigService,
+  authService: AuthenticationService,
+  authorizationService: AuthorizationService,
+  whiteboardRtService: WhiteboardRtService,
+  excalidrawEventPublisher: ExcalidrawEventPublisherService,
+  excalidrawEventSubscriber: ExcalidrawEventSubscriberService
+) => {
+  const port = configService.get(ConfigurationTypes.HOSTING).whiteboard_rt.port;
 
-    const kratosPublicBaseUrl = configService.get(ConfigurationTypes.IDENTITY)
-      .authentication.providers.ory.kratos_public_base_url_server;
+  if (!port) {
+    logger.error('Port not provided!', EXCALIDRAW_SERVER);
+    return;
+  }
 
-    const kratosClient = new FrontendApi(
-      new Configuration({
-        basePath: kratosPublicBaseUrl,
-      })
+  const kratosPublicBaseUrl = configService.get(ConfigurationTypes.IDENTITY)
+    .authentication.providers.ory.kratos_public_base_url_server;
+
+  const kratosClient = new FrontendApi(
+    new Configuration({
+      basePath: kratosPublicBaseUrl,
+    })
+  );
+
+  const httpServer = http.createServer();
+
+  httpServer.listen(port, () => {
+    logger?.verbose?.(
+      `listening on port: ${port}`,
+      LogContext.EXCALIDRAW_SERVER
+    );
+  });
+
+  try {
+    const wsServer = new SocketIO(httpServer, {
+      transports: ['websocket', 'polling'],
+      allowEIO3: true,
+    });
+    // subscribe to the state of other server instances
+    // events from other servers ONLY
+    excalidrawEventSubscriber.subscribeToAll(event =>
+      event.handleEvent(wsServer)
     );
 
-    const httpServer = http.createServer();
+    wsServer.on(CONNECTION, async socket => {
+      const agentInfo = await getUserInfo(
+        kratosClient,
+        socket.handshake.headers,
+        logger,
+        authService
+      );
 
-    httpServer.listen(port, () => {
+      if (!agentInfo) {
+        closeConnection(socket, 'Not able to authenticate user');
+        return;
+      }
+
       logger?.verbose?.(
-        `listening on port: ${port}`,
+        `User '${agentInfo.userID}' established connection`,
         LogContext.EXCALIDRAW_SERVER
       );
-    });
 
-    try {
-      const wsServer = new SocketIO(httpServer, {
-        transports: ['websocket', 'polling'],
-        allowEIO3: true,
-      });
-
-      excalidrawEventSubscriber.subscribeToAll(async payload => {
-        // Some messages can be coming from this instance of the service
-        // so filter them out
-        // todo: filter in the subscriber
-        if (payload.publisherId !== appId) {
-          const { roomID, name } = payload;
-          // todo: try redesigning the handling using the visitor pattern
-          switch (name) {
-            case SERVER_VOLATILE_BROADCAST: {
-              const { data } = payload as ServerVolatileBroadcastPayload;
-              wsServer.volatile.in(roomID).emit(CLIENT_BROADCAST, data);
-              break;
-            }
-            case SERVER_BROADCAST: {
-              const { data } = payload as ServerVolatileBroadcastPayload;
-              wsServer.in(roomID).emit(CLIENT_BROADCAST, data);
-              break;
-            }
-            case DISCONNECTING: {
-              // todo: rework using roomID
-              // idk: todo
-              break;
-            }
-            case DISCONNECT: {
-              // no handling required imo
-              break;
-            }
-            case ROOM_USER_CHANGE: {
-              const userChangePayload = payload as RoomUserChangePayload;
-              const ownSocketIds = (
-                await wsServer.in(roomID).fetchSockets()
-              ).map(socket => socket.id);
-              wsServer
-                .in(roomID)
-                .emit(ROOM_USER_CHANGE, [
-                  ...ownSocketIds,
-                  ...userChangePayload.socketIDs,
-                ]);
-              break;
-            }
-          }
-        }
-      });
-
-      wsServer.on(CONNECTION, async socket => {
-        let agentInfo: AgentInfo;
-        try {
-          agentInfo = await authenticate(socket.handshake.headers);
-        } catch (e) {
-          const err = e as Error;
-          logger.error(
-            `Error when trying to authenticate with excalidraw server: ${err.message}`,
-            LogContext.EXCALIDRAW_SERVER
-          );
-          closeConnection(socket, err.message);
-          return;
-        }
-
-        logger?.verbose?.(
-          `User '${agentInfo.userID}' established connection`,
-          LogContext.EXCALIDRAW_SERVER
-        );
-
-        wsServer.to(socket.id).emit(INIT_ROOM);
-        socket.on(JOIN_ROOM, async (roomID: string) => {
-          try {
-            const whiteboardRt =
-              await whiteboardRtService.getWhiteboardRtOrFail(roomID);
-            await authorizationService.grantAccessOrFail(
-              agentInfo,
-              whiteboardRt.authorization,
-              AuthorizationPrivilege.ACCESS_WHITEBOARD_RT,
-              `access whiteboardRt: ${whiteboardRt.id}`
-            );
-          } catch (e) {
-            const err = e as Error;
-            logger.error(
-              `Error when trying to authorize the user with the whiteboard: ${err.message}`,
-              LogContext.EXCALIDRAW_SERVER
-            );
-            closeConnection(socket, err.message);
-            return;
-          }
-
-          await socket.join(roomID);
-          logger?.verbose?.(
-            `${agentInfo.userID} has joined ${roomID}`,
-            LogContext.EXCALIDRAW_SERVER
-          );
-
-          const sockets = await wsServer.in(roomID).fetchSockets();
-          if (sockets.length <= 1) {
-            wsServer.to(`${socket.id}`).emit(FIRST_IN_ROOM);
-          } else {
-            logger?.verbose?.(
-              `User ${agentInfo.userID} emitted to room ${roomID}`,
-              LogContext.EXCALIDRAW_SERVER
-            );
-            socket.broadcast.to(roomID).emit(NEW_USER, socket.id);
-            // excalidrawEventPublisher.publishNewUser({
-            //   roomID,
-            //   socketID: socket.id,
-            // });
-            // todo; testing if not need
-          }
-
-          const socketIDs = sockets.map(socket => socket.id);
-          wsServer.in(roomID).emit(ROOM_USER_CHANGE, socketIDs);
-          excalidrawEventPublisher.publishRoomUserChange({
+      wsServer.to(socket.id).emit(INIT_ROOM);
+      // client events ONLY
+      socket.on(
+        JOIN_ROOM,
+        async (roomID: string) =>
+          await joinRoomEventHandler(
             roomID,
-            socketIDs,
-          });
-        });
+            agentInfo,
+            socket,
+            wsServer,
+            whiteboardRtService,
+            authorizationService,
+            excalidrawEventPublisher,
+            logger
+          )
+      );
 
-        socket.on(SERVER_BROADCAST, (roomID: string, data: ArrayBuffer) => {
-          socket.broadcast.to(roomID).emit(CLIENT_BROADCAST, data);
-          excalidrawEventPublisher.publishServerBroadcast({
+      socket.on(SERVER_BROADCAST, (roomID: string, data: ArrayBuffer) =>
+        serverBroadcastEventHandler(
+          roomID,
+          data,
+          socket,
+          excalidrawEventPublisher
+        )
+      );
+
+      socket.on(
+        SERVER_VOLATILE_BROADCAST,
+        (roomID: string, data: ArrayBuffer) =>
+          serverVolatileBroadcastEventHandler(
             roomID,
             data,
-          });
-        });
+            socket,
+            excalidrawEventPublisher
+          )
+      );
 
-        socket.on(
-          SERVER_VOLATILE_BROADCAST,
-          (roomID: string, data: ArrayBuffer) => {
-            socket.volatile.broadcast.to(roomID).emit(CLIENT_BROADCAST, data);
-            excalidrawEventPublisher.publishServerVolatileBroadcast({
-              roomID,
-              data,
-            });
-          }
-        );
+      socket.on(
+        DISCONNECTING,
+        async () =>
+          await disconnectingEventHandler(
+            agentInfo,
+            wsServer,
+            socket,
+            logger,
+            excalidrawEventPublisher
+          )
+      );
 
-        socket.on(DISCONNECTING, async () => {
-          logger?.verbose?.(
-            `User '${agentInfo.userID}' has disconnected`,
-            LogContext.EXCALIDRAW_SERVER
-          );
-          excalidrawEventPublisher.publishDisconnecting({
-            roomID: 'NA',
-          });
-          /***
-           * idk why is this needed
-           * seems very expensive
-           * send the room id while disconnecting instead of trying to find which is it
-           */
-          // todo: send roomID
-          /***
-           * For all the rooms this socket is
-           * send a room change event
-           */
-          for (const roomID in socket.rooms) {
-            const otherClients = (
-              await wsServer.in(roomID).fetchSockets()
-            ).filter(_socket => _socket.id !== socket.id);
+      socket.on(DISCONNECT, () =>
+        disconnectEventHandler(socket, excalidrawEventPublisher)
+      );
+    });
+  } catch (error) {
+    logger.error(error, LogContext.EXCALIDRAW_SERVER);
+  }
+};
 
-            if (otherClients.length > 0) {
-              const socketIDs = otherClients.map(socket => socket.id);
-              socket.broadcast.to(roomID).emit(ROOM_USER_CHANGE, socketIDs);
-              excalidrawEventPublisher.publishRoomUserChange({
-                roomID,
-                socketIDs,
-              });
-            }
-          }
-        });
+/* Sets the user into the context field or closes the connection */
+const authenticate = async (
+  kratosFrontEndApi: FrontendApi,
+  headers: Record<string, string | string[] | undefined>,
+  logger: LoggerService,
+  authService: AuthenticationService
+): Promise<AgentInfo> => {
+  const cookie = headers.cookie as string;
 
-        socket.on(DISCONNECT, () => {
-          socket.removeAllListeners();
-          socket.disconnect();
-          excalidrawEventPublisher.publishDisconnected({
-            roomID: 'NA',
-          });
-        });
-      });
-    } catch (error) {
-      logger.error(error, LogContext.EXCALIDRAW_SERVER);
+  try {
+    const { data: session } = await kratosFrontEndApi.toSession({
+      cookie,
+    });
+
+    if (!session) {
+      logger.verbose?.('No Ory Kratos session', LogContext.EXCALIDRAW_SERVER);
+      return authService.createAgentInfo();
     }
 
-    const closeConnection = (socket: Socket, message: string) => {
-      socket.removeAllListeners();
-      socket.emit(CONNECTION_CLOSED, message);
-      socket.disconnect();
-    };
+    const oryIdentity = session.identity as OryDefaultIdentitySchema;
+    return authService.createAgentInfo(oryIdentity);
+  } catch (e: any) {
+    throw new Error(e?.message);
+  }
+};
+/* returns the user agent info */
+const getUserInfo = async (
+  kratosFrontEndApi: FrontendApi,
+  headers: Record<string, string | string[] | undefined>,
+  logger: LoggerService,
+  authService: AuthenticationService
+) => {
+  try {
+    return await authenticate(kratosFrontEndApi, headers, logger, authService);
+  } catch (e) {
+    const err = e as Error;
+    logger.error(
+      `Error when trying to authenticate with excalidraw server: ${err.message}`,
+      err.stack,
+      LogContext.EXCALIDRAW_SERVER
+    );
+    return undefined;
+  }
+};
+/* This event is coming from the client; whenever they request to join a room */
+const joinRoomEventHandler = async (
+  roomID: string,
+  agentInfo: AgentInfo,
+  socket: Socket,
+  wsServer: SocketIO,
+  whiteboardRtService: WhiteboardRtService,
+  authorizationService: AuthorizationService,
+  excalidrawEventPublisher: ExcalidrawEventPublisherService,
+  logger: LoggerService
+) => {
+  try {
+    const whiteboardRt = await whiteboardRtService.getWhiteboardRtOrFail(
+      roomID
+    );
+    await authorizationService.grantAccessOrFail(
+      agentInfo,
+      whiteboardRt.authorization,
+      AuthorizationPrivilege.ACCESS_WHITEBOARD_RT,
+      `access whiteboardRt: ${whiteboardRt.id}`
+    );
+  } catch (e) {
+    const err = e as Error;
+    logger.error(
+      `Error when trying to authorize the user with the whiteboard: ${err.message}`,
+      LogContext.EXCALIDRAW_SERVER
+    );
+    closeConnection(socket, err.message);
+    return;
+  }
 
-    /***
-     * Sets the user into the context field or close the connection
-     */
-    const authenticate = (
-      headers: Record<string, string | string[] | undefined>
-    ): Promise<AgentInfo> => {
-      return new Promise(async (resolve, reject) => {
-        const cookie = headers.cookie as string;
+  await socket.join(roomID);
 
-        try {
-          const { data: session } = await kratosClient.toSession({
-            cookie,
-          });
+  logger?.verbose?.(
+    `${agentInfo.userID} has joined ${roomID}`,
+    LogContext.EXCALIDRAW_SERVER
+  );
 
-          if (!session) {
-            logger.verbose?.(
-              'No Ory Kratos session',
-              LogContext.EXCALIDRAW_SERVER
-            );
-            resolve(await authService.createAgentInfo());
-          }
+  const sockets = await wsServer.in(roomID).fetchSockets();
+  if (sockets.length === 1) {
+    wsServer.to(socket.id).emit(FIRST_IN_ROOM);
+  } else {
+    logger?.verbose?.(
+      `User ${agentInfo.userID} emitted to room ${roomID}`,
+      LogContext.EXCALIDRAW_SERVER
+    );
+    socket.broadcast.to(roomID).emit(NEW_USER, socket.id);
+  }
 
-          const oryIdentity = session.identity as OryDefaultIdentitySchema;
-          resolve(await authService.createAgentInfo(oryIdentity));
-        } catch (e) {
-          reject(e);
-          logger.error?.(e, LogContext.EXCALIDRAW_SERVER);
-        }
-      });
-    };
-  },
+  const socketIDs = sockets.map(socket => socket.id);
+  wsServer.in(roomID).emit(ROOM_USER_CHANGE, socketIDs);
+  excalidrawEventPublisher.publishRoomUserChange({
+    roomID,
+    socketIDs,
+  });
+};
+/*
+Built-in event for handling broadcast;
+messages are sent to all sockets except the sender socket in reliable manner
+ */
+const serverBroadcastEventHandler = (
+  roomID: string,
+  data: ArrayBuffer,
+  socket: Socket,
+  excalidrawEventPublisher: ExcalidrawEventPublisherService
+) => {
+  socket.broadcast.to(roomID).emit(CLIENT_BROADCAST, data);
+  excalidrawEventPublisher.publishServerBroadcast({
+    roomID,
+    data,
+  });
+};
+/*
+Built-in event for handling broadcast;
+messages are sent to all sockets except the sender socket;
+not guaranteed to be received if the underlying connection is not ready;
+useful for sending event where only the latest is useful, e.g. cursor location
+ */
+const serverVolatileBroadcastEventHandler = (
+  roomID: string,
+  data: ArrayBuffer,
+  socket: Socket,
+  excalidrawEventPublisher: ExcalidrawEventPublisherService
+) => {
+  socket.volatile.broadcast.to(roomID).emit(CLIENT_BROADCAST, data);
+  excalidrawEventPublisher.publishServerVolatileBroadcast({
+    roomID,
+    data,
+  });
+};
+/* Built-in event for handling socket disconnects */
+const disconnectingEventHandler = async (
+  agentInfo: AgentInfo,
+  wsServer: SocketIO,
+  socket: Socket,
+  logger: LoggerService,
+  excalidrawEventPublisher: ExcalidrawEventPublisherService
+) => {
+  logger?.verbose?.(
+    `User '${agentInfo.userID}' has disconnected`,
+    LogContext.EXCALIDRAW_SERVER
+  );
+  excalidrawEventPublisher.publishDisconnecting({
+    roomID: 'NA',
+  });
+  for (const roomID of socket.rooms) {
+    const otherClientIds = (await wsServer.in(roomID).fetchSockets())
+      .filter(_socket => _socket.id !== socket.id)
+      .map(socket => socket.id);
+
+    if (otherClientIds.length > 0) {
+      socket.broadcast.to(roomID).emit(ROOM_USER_CHANGE, otherClientIds);
+    }
+
+    excalidrawEventPublisher.publishRoomUserChange({
+      roomID,
+      socketIDs: otherClientIds,
+    });
+  }
+
+  closeConnection(socket);
+};
+
+const disconnectEventHandler = async (
+  socket: Socket,
+  excalidrawEventPublisher: ExcalidrawEventPublisherService
+) => {
+  socket.removeAllListeners();
+  socket.disconnect();
+  excalidrawEventPublisher.publishDisconnected({ roomID: 'NA' });
+};
+
+const closeConnection = (socket: Socket, message?: string) => {
+  socket.removeAllListeners();
+  if (message) {
+    socket.emit(CONNECTION_CLOSED, message);
+  }
+  socket.disconnect();
 };
