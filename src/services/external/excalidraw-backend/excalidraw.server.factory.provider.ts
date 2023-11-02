@@ -189,9 +189,7 @@ const factory = async (
   }
 };
 
-/***
- * Sets the user into the context field or close the connection
- */
+/* Sets the user into the context field or closes the connection */
 const authenticate = async (
   kratosFrontEndApi: FrontendApi,
   headers: Record<string, string | string[] | undefined>,
@@ -216,7 +214,7 @@ const authenticate = async (
     throw new Error(e?.message);
   }
 };
-
+/* returns the user agent info */
 const getUserInfo = async (
   kratosFrontEndApi: FrontendApi,
   headers: Record<string, string | string[] | undefined>,
@@ -291,7 +289,10 @@ const joinRoomEventHandler = async (
     socketIDs,
   });
 };
-
+/*
+Built-in event for handling broadcast;
+messages are sent to all sockets except the sender socket in reliable manner
+ */
 const serverBroadcastEventHandler = (
   roomID: string,
   data: ArrayBuffer,
@@ -304,7 +305,12 @@ const serverBroadcastEventHandler = (
     data,
   });
 };
-
+/*
+Built-in event for handling broadcast;
+messages are sent to all sockets except the sender socket;
+not guaranteed to be received if the underlying connection is not ready;
+useful for sending event where only the latest is useful, e.g. cursor location
+ */
 const serverVolatileBroadcastEventHandler = (
   roomID: string,
   data: ArrayBuffer,
@@ -317,7 +323,7 @@ const serverVolatileBroadcastEventHandler = (
     data,
   });
 };
-
+/* Built-in event for handling socket disconnects */
 const disconnectingEventHandler = async (
   agentInfo: AgentInfo,
   wsServer: SocketIO,
