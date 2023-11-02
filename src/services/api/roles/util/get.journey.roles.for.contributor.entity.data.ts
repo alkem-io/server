@@ -17,12 +17,21 @@ export const getJourneyRolesForContributorEntityData = async (
     ids: string[],
     visibility?: SpaceVisibility[]
   ): Promise<T[]> => {
+    const where: any = {
+      id: In(ids),
+    };
+
+    const relations: any = { profile: true };
+
+    if (visibility) {
+      where.license = {
+        visibility: In(visibility),
+      };
+      relations.license = { featureFlags: true };
+    }
     return entityManager.find(ref, {
-      where: {
-        id: In(ids),
-        visibility: visibility ? In(visibility) : undefined,
-      },
-      relations: { profile: true },
+      where,
+      relations,
       select: {
         profile: {
           displayName: true,
@@ -30,6 +39,7 @@ export const getJourneyRolesForContributorEntityData = async (
       },
     } as FindManyOptions);
   };
+
   const [spaces, challenges, opportunities] = await Promise.all([
     fetchData(Space, spaceIds, spaceAllowedVisibilities),
     fetchData(Challenge, challengeIds),

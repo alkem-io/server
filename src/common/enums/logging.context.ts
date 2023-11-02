@@ -52,4 +52,5 @@ export enum LogContext {
   URL_GENERATOR = 'url-generator',
   CONVERSION = 'conversion',
   TASKS = 'tasks',
+  LICENSE = 'license',
 }

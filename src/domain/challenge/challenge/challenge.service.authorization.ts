@@ -40,6 +40,8 @@ import { ContextAuthorizationService } from '@domain/context/context/context.ser
 import { CommunityAuthorizationService } from '@domain/community/community/community.service.authorization';
 import { CollaborationAuthorizationService } from '@domain/collaboration/collaboration/collaboration.service.authorization';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
+import { ILicense } from '@domain/license/license/license.interface';
+import { LicenseResolverService } from '@services/infrastructure/license-resolver/license.resolver.service';
 
 @Injectable()
 export class ChallengeAuthorizationService {
@@ -56,6 +58,7 @@ export class ChallengeAuthorizationService {
     private profileAuthorizationService: ProfileAuthorizationService,
     private contextAuthorizationService: ContextAuthorizationService,
     private communityAuthorizationService: CommunityAuthorizationService,
+    private licenseResolverService: LicenseResolverService,
     private collaborationAuthorizationService: CollaborationAuthorizationService
   ) {}
 
@@ -63,6 +66,9 @@ export class ChallengeAuthorizationService {
     challengeInput: IChallenge,
     parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<IChallenge> {
+    const license = await this.licenseResolverService.getlicenseForSpace(
+      challengeInput.spaceID
+    );
     const communityPolicy = await this.setCommunityPolicyFlags(challengeInput);
 
     // private challenge or not?
@@ -100,7 +106,8 @@ export class ChallengeAuthorizationService {
     // propagate authorization rules for child entities
     return await this.propagateAuthorizationToChildEntities(
       challengeInput,
-      communityPolicy
+      communityPolicy,
+      license
     );
   }
 
@@ -251,14 +258,16 @@ export class ChallengeAuthorizationService {
 
   private async propagateAuthorizationToChildEntities(
     challengeBase: IChallenge,
-    policy: ICommunityPolicy
+    policy: ICommunityPolicy,
+    license: ILicense
   ): Promise<IChallenge> {
     await this.challengeService.save(challengeBase);
 
     let challenge =
       await this.propagateAuthorizationToCommunityCollaborationAgent(
         challengeBase,
-        policy
+        policy,
+        license
       );
     challenge = await this.propagateAuthorizationToProfileContext(challenge);
     return await this.propagateAuthorizationToOpportunitiesStorageChildChallengesPreferences(
@@ -308,7 +317,8 @@ export class ChallengeAuthorizationService {
 
   public async propagateAuthorizationToCommunityCollaborationAgent(
     challengeBase: IChallenge,
-    communityPolicy: ICommunityPolicy
+    communityPolicy: ICommunityPolicy,
+    license: ILicense
   ): Promise<IChallenge> {
     const challenge = await this.challengeService.getChallengeOrFail(
       challengeBase.id,
@@ -341,7 +351,8 @@ export class ChallengeAuthorizationService {
       await this.collaborationAuthorizationService.applyAuthorizationPolicy(
         challenge.collaboration,
         challenge.authorization,
-        communityPolicy
+        communityPolicy,
+        license
       );
 
     challenge.agent.authorization =

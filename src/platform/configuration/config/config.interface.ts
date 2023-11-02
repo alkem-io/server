@@ -1,11 +1,12 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IAuthenticationConfig } from './authentication';
-import { IPlatformLocations } from './platform';
+import { IPlatformLocations } from './locations';
 import { ISentryConfig } from './sentry';
 import { Template, ITemplate } from './template';
 import { IApmConfig } from './apm';
 import { IGeoConfig } from './integrations';
 import { IStorageConfig } from './storage';
+import { IPlatformFeatureFlag } from '../feature-flag/platform.feature.flag.interface';
 
 @ObjectType('Config')
 export abstract class IConfig {
@@ -23,9 +24,15 @@ export abstract class IConfig {
 
   @Field(() => IPlatformLocations, {
     nullable: false,
-    description: 'Platform related resources.',
+    description: 'Platform related locations.',
   })
-  platform?: IPlatformLocations;
+  locations?: IPlatformLocations;
+
+  @Field(() => [IPlatformFeatureFlag], {
+    nullable: false,
+    description: 'The feature flags for the platform',
+  })
+  featureFlags?: IPlatformFeatureFlag[];
 
   @Field(() => ISentryConfig, {
     nullable: false,
