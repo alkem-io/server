@@ -4,12 +4,11 @@ import { ITemplatesSet } from '@domain/template/templates-set';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { IJourney } from '../base-challenge/journey.interface';
-import { IBaseChallenge } from '../base-challenge/base.challenge.interface';
 
 @ObjectType('Space', {
   implements: () => [IJourney],
 })
-export class ISpace extends IBaseChallenge implements IJourney {
+export class ISpace extends IJourney {
   rowId!: number;
   @Field(() => SpaceVisibility, {
     description: 'Visibility of the Space.',

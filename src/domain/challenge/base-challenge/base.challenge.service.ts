@@ -15,7 +15,6 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
 import { BaseChallenge } from '@domain/challenge/base-challenge/base.challenge.entity';
 import { CreateBaseChallengeInput } from '@domain/challenge/base-challenge/base.challenge.dto.create';
-import { IBaseChallenge } from '@domain/challenge/base-challenge/base.challenge.interface';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { IAgent } from '@domain/agent/agent/agent.interface';
@@ -32,6 +31,7 @@ import { IProfile } from '@domain/common/profile';
 import { VisualType } from '@common/enums/visual.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { IJourney } from './journey.interface';
 
 @Injectable()
 export class BaseChallengeService {
@@ -47,7 +47,7 @@ export class BaseChallengeService {
   ) {}
 
   public async initialise(
-    baseChallenge: IBaseChallenge,
+    baseChallenge: IJourney,
     baseChallengeData: CreateBaseChallengeInput,
     spaceID: string,
     communityType: CommunityType,
@@ -109,7 +109,7 @@ export class BaseChallengeService {
   public async update(
     baseChallengeData: UpdateBaseChallengeInput,
     repository: Repository<BaseChallenge>
-  ): Promise<IBaseChallenge> {
+  ): Promise<IJourney> {
     const baseChallenge = await this.getBaseChallengeOrFail(
       baseChallengeData.ID,
       repository,
@@ -188,7 +188,7 @@ export class BaseChallengeService {
     baseChallengeID: string,
     repository: Repository<BaseChallenge>,
     options?: FindOneOptions<BaseChallenge>
-  ): Promise<IBaseChallenge | never> {
+  ): Promise<IJourney | never> {
     const challenge = await repository.findOne({
       where: { id: baseChallengeID },
       ...options,
@@ -325,7 +325,7 @@ export class BaseChallengeService {
   }
 
   public async getMembersCount(
-    baseChallenge: IBaseChallenge,
+    baseChallenge: IJourney,
     repository: Repository<BaseChallenge>
   ): Promise<number> {
     const community = await this.getCommunity(baseChallenge.id, repository);
@@ -333,7 +333,7 @@ export class BaseChallengeService {
   }
 
   public async getPostsCount(
-    baseChallenge: IBaseChallenge,
+    baseChallenge: IJourney,
     repository: Repository<BaseChallenge>
   ): Promise<number> {
     const collaboration = await this.getCollaboration(
@@ -345,7 +345,7 @@ export class BaseChallengeService {
   }
 
   public async getWhiteboardsCount(
-    baseChallenge: IBaseChallenge,
+    baseChallenge: IJourney,
     repository: Repository<BaseChallenge>
   ): Promise<number> {
     const collaboration = await this.getCollaboration(
@@ -356,7 +356,7 @@ export class BaseChallengeService {
   }
 
   public async getRelationsCount(
-    baseChallenge: IBaseChallenge,
+    baseChallenge: IJourney,
     repository: Repository<BaseChallenge>
   ): Promise<number> {
     const collaboration = await this.getCollaboration(

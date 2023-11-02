@@ -2,15 +2,12 @@
 import { Column, Generated, JoinColumn, OneToOne } from 'typeorm';
 import { Community } from '@domain/community/community/community.entity';
 import { Context } from '@domain/context/context/context.entity';
-import { IBaseChallenge } from './base.challenge.interface';
 import { Agent } from '@domain/agent/agent/agent.entity';
 import { Collaboration } from '../../collaboration/collaboration/collaboration.entity';
 import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
+import { IJourney } from './journey.interface';
 
-export abstract class BaseChallenge
-  extends NameableEntity
-  implements IBaseChallenge
-{
+export abstract class BaseChallenge extends NameableEntity implements IJourney {
   @Column({
     unique: true,
   })
