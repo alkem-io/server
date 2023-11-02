@@ -65,7 +65,7 @@ export class InnovationFlowTemplateService {
     const innovationFlowTemplate = await this.getInnovationFlowTemplateOrFail(
       innovationFlowTemplateInput.id,
       {
-        relations: ['profile'],
+        relations: { profile: true },
       }
     );
     await this.templateBaseService.updateTemplateBase(
@@ -87,7 +87,7 @@ export class InnovationFlowTemplateService {
     const innovationFlowTemplate = await this.getInnovationFlowTemplateOrFail(
       innovationFlowTemplateInput.id,
       {
-        relations: ['profile'],
+        relations: { profile: true },
       }
     );
     const templateId: string = innovationFlowTemplate.id;

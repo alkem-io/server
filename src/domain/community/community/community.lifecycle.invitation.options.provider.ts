@@ -63,7 +63,7 @@ export class CommunityInvitationLifecycleOptionsProvider {
           const invitation = await this.invitationService.getInvitationOrFail(
             event.parentID,
             {
-              relations: ['community'],
+              relations: { community: true },
             }
           );
           const userID = invitation.invitedUser;

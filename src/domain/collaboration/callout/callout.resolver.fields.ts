@@ -70,7 +70,7 @@ export class CalloutResolverFields {
   ): Promise<ICalloutContribution[]> {
     return await this.calloutService.getContributions(
       callout,
-      [],
+      {},
       ids,
       filter,
       limit,

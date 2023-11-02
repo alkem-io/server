@@ -85,7 +85,7 @@ export class TemplatesSetResolverMutations {
     const templatesSet = await this.templatesSetService.getTemplatesSetOrFail(
       postTemplateInput.templatesSetID,
       {
-        relations: ['postTemplates'],
+        relations: { postTemplates: true },
       }
     );
     await this.authorizationService.grantAccessOrFail(
@@ -118,7 +118,7 @@ export class TemplatesSetResolverMutations {
     const templatesSet = await this.templatesSetService.getTemplatesSetOrFail(
       whiteboardTemplateInput.templatesSetID,
       {
-        relations: ['whiteboardTemplates'],
+        relations: { whiteboardTemplates: true },
       }
     );
     await this.authorizationService.grantAccessOrFail(
@@ -152,7 +152,7 @@ export class TemplatesSetResolverMutations {
     const templatesSet = await this.templatesSetService.getTemplatesSetOrFail(
       innovationFlowTemplateInput.templatesSetID,
       {
-        relations: ['innovationFlowTemplates'],
+        relations: { innovationFlowTemplates: true },
       }
     );
     await this.authorizationService.grantAccessOrFail(
@@ -185,7 +185,7 @@ export class TemplatesSetResolverMutations {
       await this.innovationFlowTemplateService.getInnovationFlowTemplateOrFail(
         deleteData.ID,
         {
-          relations: ['templatesSet'],
+          relations: { templatesSet: true },
         }
       );
     await this.authorizationService.grantAccessOrFail(

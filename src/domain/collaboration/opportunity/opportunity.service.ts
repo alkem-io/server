@@ -265,7 +265,7 @@ export class OpportunityService {
 
   async getInnovationFlow(opportunityID: string): Promise<IInnovationFlow> {
     const opportunity = await this.getOpportunityOrFail(opportunityID, {
-      relations: ['innovationFlow'],
+      relations: { innovationFlow: true },
     });
 
     const innovationFlow = opportunity.innovationFlow;
@@ -342,7 +342,7 @@ export class OpportunityService {
       this.opportunityRepository
     );
     const opportunity = await this.getOpportunityOrFail(baseOpportunity.id, {
-      relations: ['profile'],
+      relations: { profile: true },
     });
     if (opportunityData.nameID) {
       if (opportunityData.nameID !== baseOpportunity.nameID) {
@@ -528,7 +528,7 @@ export class OpportunityService {
     communityID: string
   ): Promise<IOpportunity | null> {
     return await this.opportunityRepository.findOne({
-      relations: ['community', 'challenge'],
+      relations: { community: true, challenge: true },
       where: {
         community: { id: communityID },
       },

@@ -31,7 +31,7 @@ export class TimelineService {
 
   async deleteTimeline(timelineID: string): Promise<ITimeline> {
     const timeline = await this.getTimelineOrFail(timelineID, {
-      relations: ['calendar'],
+      relations: { calendar: true },
     });
 
     if (timeline.authorization)
@@ -66,7 +66,7 @@ export class TimelineService {
 
   async getCalendarOrFail(timelineInput: ITimeline): Promise<ICalendar> {
     const timeline = await this.getTimelineOrFail(timelineInput.id, {
-      relations: ['calendar'],
+      relations: { calendar: true },
     });
     const calendar = timeline.calendar;
     if (!calendar) {
