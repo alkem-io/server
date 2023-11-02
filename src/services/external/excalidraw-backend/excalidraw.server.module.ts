@@ -4,7 +4,8 @@ import { AuthenticationModule } from '@core/authentication/authentication.module
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { ExcalidrawEventPublisherModule } from '@services/excalidraw-pubsub/publisher';
 import { ExcalidrawEventSubscriberModule } from '@services/excalidraw-pubsub/subscriber';
-import { ExcalidrawServerFactoryProvider } from './excalidraw.server.factory.provider';
+// import { ExcalidrawServerFactoryProvider } from './excalidraw.server.factory.provider';
+import { ExcalidrawServerFactoryProvider2 } from './excalidraw.server.factory.provider2';
 import { APP_ID_PROVIDER } from '@common/app.id.provider';
 
 @Module({
@@ -15,6 +16,9 @@ import { APP_ID_PROVIDER } from '@common/app.id.provider';
     ExcalidrawEventPublisherModule,
     ExcalidrawEventSubscriberModule,
   ],
-  providers: [ExcalidrawServerFactoryProvider, APP_ID_PROVIDER],
+  providers: [
+    /*ExcalidrawServerFactoryProvider, */ ExcalidrawServerFactoryProvider2,
+    APP_ID_PROVIDER,
+  ],
 })
 export class ExcalidrawServerModule {}
