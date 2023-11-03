@@ -226,7 +226,7 @@ const joinRoomEventHandler = async (
     await authorizationService.grantAccessOrFail(
       agentInfo,
       whiteboardRt.authorization,
-      AuthorizationPrivilege.ACCESS_WHITEBOARD_RT,
+      AuthorizationPrivilege.UPDATE_CONTENT,
       `access whiteboardRt: ${whiteboardRt.id}`
     );
   } catch (e) {
