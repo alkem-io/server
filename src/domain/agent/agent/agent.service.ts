@@ -140,7 +140,7 @@ export class AgentService {
     agentID: string
   ): Promise<{ agent: IAgent; credentials: ICredential[] }> {
     const agent = await this.getAgentOrFail(agentID, {
-      relations: ['credentials'],
+      relations: { credentials: true },
     });
 
     if (!agent.credentials) {

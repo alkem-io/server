@@ -31,7 +31,7 @@ export class PostTemplateResolverMutations {
     const postTemplate = await this.postTemplateService.getPostTemplateOrFail(
       postTemplateInput.ID,
       {
-        relations: ['profile'],
+        relations: { profile: true },
       }
     );
     await this.authorizationService.grantAccessOrFail(
@@ -57,7 +57,7 @@ export class PostTemplateResolverMutations {
     const postTemplate = await this.postTemplateService.getPostTemplateOrFail(
       deleteData.ID,
       {
-        relations: ['profile'],
+        relations: { profile: true },
       }
     );
     await this.authorizationService.grantAccessOrFail(

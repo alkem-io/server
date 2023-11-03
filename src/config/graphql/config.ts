@@ -4,11 +4,9 @@ export const configQuery = gql`
   query configuration {
     platform {
       configuration {
-        platform {
-          featureFlags {
-            enabled
-            name
-          }
+        featureFlags {
+          enabled
+          name
         }
       }
     }

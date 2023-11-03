@@ -192,7 +192,7 @@ export class OrganizationService {
     organizationData: UpdateOrganizationInput
   ): Promise<IOrganization> {
     const organization = await this.getOrganizationOrFail(organizationData.ID, {
-      relations: ['profile'],
+      relations: { profile: true },
     });
 
     await this.checkDisplayNameOrFail(
@@ -387,7 +387,7 @@ export class OrganizationService {
     organizationID: string
   ): Promise<{ organization: IOrganization; agent: IAgent }> {
     const organization = await this.getOrganizationOrFail(organizationID, {
-      relations: ['agent'],
+      relations: { agent: true },
     });
 
     if (!organization.agent) {
@@ -561,7 +561,7 @@ export class OrganizationService {
     const organizationWithAgent = await this.getOrganizationOrFail(
       organization.id,
       {
-        relations: ['agent'],
+        relations: { agent: true },
       }
     );
     const agent = organizationWithAgent.agent;
@@ -578,7 +578,11 @@ export class OrganizationService {
     const organizationGroups = await this.getOrganizationOrFail(
       organization.id,
       {
-        relations: ['groups', 'groups.profile'],
+        relations: {
+          groups: {
+            profile: true,
+          },
+        },
       }
     );
     const groups = organizationGroups.groups;
@@ -596,7 +600,11 @@ export class OrganizationService {
 
   async getPreferenceSetOrFail(orgId: string): Promise<IPreferenceSet> {
     const orgWithPreferences = await this.getOrganizationOrFail(orgId, {
-      relations: ['preferenceSet', 'preferenceSet.preferences'],
+      relations: {
+        preferenceSet: {
+          preferences: true,
+        },
+      },
     });
     const preferenceSet = orgWithPreferences.preferenceSet;
 
@@ -806,7 +814,7 @@ export class OrganizationService {
     const organization = await this.getOrganizationOrFail(
       organizationParent.id,
       {
-        relations: ['verification'],
+        relations: { verification: true },
       }
     );
     if (!organization.verification) {

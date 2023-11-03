@@ -4,11 +4,7 @@ import { ICalloutContribution } from './callout.contribution.interface';
 import { CalloutContribution } from './callout.contribution.entity';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { InjectRepository } from '@nestjs/typeorm';
-import {
-  FindOneOptions,
-  FindOptionsRelationByString,
-  Repository,
-} from 'typeorm';
+import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { LogContext } from '@common/enums/logging.context';
 import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
@@ -197,12 +193,12 @@ export class CalloutContributionService {
 
   public async getWhiteboard(
     calloutContributionInput: ICalloutContribution,
-    relations: FindOptionsRelationByString = []
+    relations?: FindOptionsRelations<ICalloutContribution>
   ): Promise<IWhiteboard | null> {
     const calloutContribution = await this.getCalloutContributionOrFail(
       calloutContributionInput.id,
       {
-        relations: ['whiteboard', ...relations],
+        relations: { whiteboard: true, ...relations },
       }
     );
     if (!calloutContribution.whiteboard) {
@@ -214,12 +210,12 @@ export class CalloutContributionService {
 
   public async getLink(
     calloutContributionInput: ICalloutContribution,
-    relations: FindOptionsRelationByString = []
+    relations?: FindOptionsRelations<ICalloutContribution>
   ): Promise<IReference | null> {
     const calloutContribution = await this.getCalloutContributionOrFail(
       calloutContributionInput.id,
       {
-        relations: ['link', ...relations],
+        relations: { link: true, ...relations },
       }
     );
     if (!calloutContribution.link) {
@@ -231,12 +227,12 @@ export class CalloutContributionService {
 
   public async getPost(
     calloutContributionInput: ICalloutContribution,
-    relations: FindOptionsRelationByString = []
+    relations?: FindOptionsRelations<ICalloutContribution>
   ): Promise<IPost | null> {
     const calloutContribution = await this.getCalloutContributionOrFail(
       calloutContributionInput.id,
       {
-        relations: ['post', ...relations],
+        relations: { post: true, ...relations },
       }
     );
     if (!calloutContribution.post) {

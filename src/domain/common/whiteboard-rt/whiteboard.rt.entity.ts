@@ -10,6 +10,7 @@ import {
 import { compressText, decompressText } from '@common/utils/compression.util';
 import { IWhiteboardRt } from './whiteboard.rt.interface';
 import { NameableEntity } from '../entity/nameable-entity/nameable.entity';
+import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
 
 @Entity()
 export class WhiteboardRt extends NameableEntity implements IWhiteboardRt {
@@ -39,4 +40,11 @@ export class WhiteboardRt extends NameableEntity implements IWhiteboardRt {
 
   @Column('char', { length: 36, nullable: true })
   createdBy!: string;
+
+  @Column('varchar', {
+    length: 255,
+    nullable: false,
+    default: ContentUpdatePolicy.ADMINS,
+  })
+  contentUpdatePolicy!: ContentUpdatePolicy;
 }

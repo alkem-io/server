@@ -50,7 +50,7 @@ export class DocumentService {
   ): Promise<IDocument> {
     const documentID = deleteData.ID;
     const document = await this.getDocumentOrFail(documentID, {
-      relations: ['tagset'],
+      relations: { tagset: true },
     });
     // Delete the underlying document
     try {
@@ -133,7 +133,7 @@ export class DocumentService {
     documentData: UpdateDocumentInput
   ): Promise<IDocument> {
     const document = await this.getDocumentOrFail(documentData.ID, {
-      relations: ['profile'],
+      relations: { tagset: true },
     });
 
     // Copy over the received data

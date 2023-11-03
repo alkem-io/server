@@ -22,7 +22,6 @@ export enum AuthorizationPrivilege {
   CREATE_ORGANIZATION = 'create-organization',
   FILE_UPLOAD = 'file-upload',
   FILE_DELETE = 'file-delete',
-  READ_USERS = 'read-users',
   UPDATE_WHITEBOARD = 'update-whiteboard',
   UPDATE_INNOVATION_FLOW = 'update-innovation-flow',
   COMMUNITY_JOIN = 'community-join',
@@ -35,10 +34,13 @@ export enum AuthorizationPrivilege {
   UPDATE_CALLOUT_PUBLISHER = 'update-callout-publisher',
   CREATE_RELATION = 'create-relation',
   CREATE_OPPORTUNITY = 'create-opportunity',
+  READ_USERS = 'read-users',
+  READ_USER_PII = 'read-user-pii',
   MOVE_POST = 'move-post',
   MOVE_CONTRIBUTION = 'move-contribution',
   ACCESS_INTERACTIVE_GUIDANCE = 'access-interactive-guidance',
-  ACCESS_WHITEBOARD_RT = 'access-whiteboard-rt',
+  CREATE_WHITEBOARD_RT = 'create-whiteboard-rt',
+  UPDATE_CONTENT = 'update-content',
 }
 
 registerEnumType(AuthorizationPrivilege, {

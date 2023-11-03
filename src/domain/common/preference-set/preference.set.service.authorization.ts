@@ -24,7 +24,7 @@ export class PreferenceSetAuthorizationService {
       await this.preferenceSetService.getPreferenceSetOrFail(
         preferenceSetInput.id,
         {
-          relations: [],
+          relations: {},
         }
       );
 
