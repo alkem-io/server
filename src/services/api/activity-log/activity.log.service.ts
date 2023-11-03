@@ -79,7 +79,9 @@ export class ActivityLogService {
     return results;
   }
 
-  public async convertRawActivityToResults(rawActivities: IActivity[]) {
+  public async convertRawActivityToResults(
+    rawActivities: IActivity[]
+  ): Promise<(IActivityLogEntry | undefined)[]> {
     return Promise.all(
       rawActivities.map(x => this.convertRawActivityToResult(x))
     );

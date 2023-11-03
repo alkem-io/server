@@ -860,7 +860,7 @@ export class SpaceService {
 
   public async getCollaborationOrFail(
     spaceIdOrEntity: ISpace | string
-  ): Promise<ICollaboration> {
+  ): Promise<ICollaboration> | never {
     const spaceId =
       typeof spaceIdOrEntity === 'string'
         ? spaceIdOrEntity

@@ -45,6 +45,6 @@ import { CalendarEventModule } from '@domain/timeline/event/event.module';
     ActivityLogResolverQueries,
     ActivityLogResolverSubscriptions,
   ],
-  exports: [ActivityLogService], // todo
+  exports: [ActivityLogService],
 })
 export class ActivityLogModule {}

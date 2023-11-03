@@ -287,7 +287,7 @@ export class BaseChallengeService {
   public async getCollaborationOrFail(
     challengeId: string,
     repository: Repository<BaseChallenge>
-  ): Promise<ICollaboration> {
+  ): Promise<ICollaboration> | never {
     const challengeWithCollaboration = await this.getBaseChallengeOrFail(
       challengeId,
       repository,

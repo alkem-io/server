@@ -14,7 +14,10 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { PaginationArgs } from '@core/pagination';
 import { IActivityLogEntry } from '@services/api/activity-log/dto/activity.log.entry.interface';
 import { ActivityLogService } from '@services/api/activity-log';
-import { groupCredentialsByEntity } from '@services/api/roles/util/group.credentials.by.entity';
+import {
+  CredentialMap,
+  groupCredentialsByEntity,
+} from '@services/api/roles/util/group.credentials.by.entity';
 
 type ActivityFeedFilters = {
   types?: Array<ActivityEventType>;
@@ -76,30 +79,43 @@ export class ActivityFeedService {
     const spacesWithCredentials = Array.from(
       credentialMap.get('spaces')?.keys() ?? []
     );
+    // get only Spaces specified in the filter and check if they exist
+    const filteredSpaceIds = await this.filterSpacesOrFail(
+      spaceIdsFilter,
+      spacesWithCredentials
+    );
+    // get only Spaces with the appropriate roles specified from the filter
+    return filterSpacesByRoles(credentialMap, filteredSpaceIds, rolesFilter);
+  }
+
+  /***
+   * Helper function to filter Spaces by a subset and check if they exist
+   * @param spaceIdsFilter
+   * @param spaceIds
+   * @returns string[] Filtered array of Space ids
+   * @throws {EntityNotFoundException} If Space(s) do not exist
+   */
+  private async filterSpacesOrFail(
+    spaceIdsFilter: string[],
+    spaceIds: string[]
+  ): Promise<string[]> {
     // get only Spaces specified in the filter
-    const filteredSpaceIds = spaceIdsFilter.length
-      ? intersection(spaceIdsFilter, spacesWithCredentials)
-      : spacesWithCredentials;
+    const filteredSpaceIds = intersection(spaceIdsFilter, spaceIds);
     // check if the Spaces exist;
     // a Space might not exist if it's deleted or broken/orphaned data was introduced
-    const trueOrList = await this.spaceService.spacesExist(filteredSpaceIds);
-    if (Array.isArray(trueOrList)) {
+    const successOrNonExistingSpaces = await this.spaceService.spacesExist(
+      filteredSpaceIds
+    );
+    if (Array.isArray(successOrNonExistingSpaces)) {
       throw new EntityNotFoundException(
-        `Spaces with the following identifiers not found: '${trueOrList.join(
+        `Spaces with the following identifiers not found: '${successOrNonExistingSpaces.join(
           ','
         )}'`,
         LogContext.ACTIVITY
       );
     }
-    // get only Spaces with the appropriate roles specified from the filter
-    return rolesFilter.length
-      ? filteredSpaceIds.filter(spaceId => {
-          const spaceRoles = credentialMap.get('spaces')?.get(spaceId) ?? [];
-          return rolesFilter.some(role =>
-            (spaceRoles as string[]).includes(role as string)
-          );
-        })
-      : filteredSpaceIds;
+
+    return filteredSpaceIds;
   }
 
   private async getPaginatedActivity(
@@ -178,3 +194,27 @@ export class ActivityFeedService {
     return collaborationIds;
   }
 }
+
+/***
+ * Filters Spaces by a predefined set of roles
+ * @param credentialMap
+ * @param spaceIds
+ * @param rolesFilter
+ * @returns string[] Filtered array of Space ids
+ */
+const filterSpacesByRoles = (
+  credentialMap: CredentialMap,
+  spaceIds: string[],
+  rolesFilter: string[]
+): string[] => {
+  if (!rolesFilter.length) {
+    return spaceIds;
+  }
+
+  return spaceIds.filter(spaceId => {
+    const spaceRoles = credentialMap.get('spaces')?.get(spaceId) ?? [];
+    return rolesFilter.some(role =>
+      (spaceRoles as string[]).includes(role as string)
+    );
+  });
+};
