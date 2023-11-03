@@ -20,6 +20,7 @@ import { EntityResolverModule } from '@services/infrastructure/entity-resolver/e
 import { TagsetTemplateSetModule } from '@domain/common/tagset-template-set/tagset.template.set.module';
 import { TimelineModule } from '@domain/timeline/timeline/timeline.module';
 import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
+import { LicenseModule } from '@domain/license/license/license.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { StorageAggregatorResolverModule } from '@services/infrastructure/storag
     PostModule,
     TimelineModule,
     TagsetTemplateSetModule,
+    LicenseModule,
     TypeOrmModule.forFeature([Collaboration]),
   ],
   providers: [

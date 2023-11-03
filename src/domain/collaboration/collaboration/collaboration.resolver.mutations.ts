@@ -135,8 +135,8 @@ export class CollaborationResolverMutations {
       this.authorizationService.grantAccessOrFail(
         agentInfo,
         collaboration.authorization,
-        AuthorizationPrivilege.ACCESS_WHITEBOARD_RT,
-        `access to '${CalloutType.WHITEBOARD_RT}' callout on collaboration: ${collaboration.id}`
+        AuthorizationPrivilege.CREATE_WHITEBOARD_RT,
+        `create callout type '${CalloutType.WHITEBOARD_RT}' on collaboration: ${collaboration.id}`
       );
     }
 

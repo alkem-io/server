@@ -487,7 +487,7 @@ export class SearchService {
 
   // Determine the score increment based on whether the user has read access or not
   private getScoreIncrementSpace(space: ISpace, agentInfo: AgentInfo): number {
-    switch (space.visibility) {
+    switch (space.license?.visibility) {
       case SpaceVisibility.ACTIVE:
         return this.getScoreIncrementReadAccess(space.authorization, agentInfo);
       case SpaceVisibility.DEMO:

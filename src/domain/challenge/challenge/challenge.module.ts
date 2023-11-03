@@ -29,6 +29,7 @@ import { InnovationFlowModule } from '../innovation-flow/innovation.flow.module'
 import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
+import { LicenseResolverModule } from '@services/infrastructure/license-resolver/license.resolver.module';
 
 @Module({
   imports: [
@@ -57,6 +58,7 @@ import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/stor
     ContextModule,
     ProfileModule,
     CollaborationModule,
+    LicenseResolverModule,
   ],
   providers: [
     ChallengeService,

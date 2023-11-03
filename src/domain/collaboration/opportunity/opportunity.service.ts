@@ -1,6 +1,6 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, FindOneOptions, In, Repository } from 'typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
+import { FindOneOptions, In, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -29,7 +29,6 @@ import { AgentInfo } from '@src/core/authentication/agent-info';
 import { IContext } from '@domain/context/context/context.interface';
 import { ICollaboration } from '../collaboration/collaboration.interface';
 import { InnovationFlowType } from '@common/enums/innovation.flow.type';
-import { SpaceVisibility } from '@common/enums/space.visibility';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { IProfile } from '@domain/common/profile/profile.interface';
@@ -59,9 +58,7 @@ export class OpportunityService {
     @InjectRepository(Opportunity)
     private opportunityRepository: Repository<Opportunity>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService,
-    @InjectEntityManager('default')
-    private entityManager: EntityManager
+    private readonly logger: LoggerService
   ) {}
 
   async createOpportunity(
@@ -499,17 +496,6 @@ export class OpportunityService {
 
   async getOpportunitiesInSpaceCount(spaceID: string): Promise<number> {
     return await this.opportunityRepository.countBy({ spaceID: spaceID });
-  }
-
-  async getOpportunitiesCount(
-    visibility = SpaceVisibility.ACTIVE
-  ): Promise<number> {
-    const sqlQuery = `SELECT COUNT(*) as opportunitiesCount FROM opportunity RIGHT JOIN space ON opportunity.spaceID = space.id WHERE space.visibility = '${visibility}'`;
-    const [queryResult]: {
-      opportunitiesCount: number;
-    }[] = await this.entityManager.connection.query(sqlQuery);
-
-    return queryResult.opportunitiesCount;
   }
 
   async getOpportunitiesInChallengeCount(challengeID: string): Promise<number> {

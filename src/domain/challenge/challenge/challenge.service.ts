@@ -637,7 +637,8 @@ export class ChallengeService {
   async getChallengesCount(
     visibility = SpaceVisibility.ACTIVE
   ): Promise<number> {
-    const sqlQuery = `SELECT COUNT(*) as challengesCount FROM challenge RIGHT JOIN space ON challenge.spaceID = space.id WHERE space.visibility = '${visibility}'`;
+    const sqlQuery = `SELECT COUNT(*) as challengesCount FROM challenge RIGHT JOIN space ON challenge.spaceID = space.id
+    RIGHT JOIN license ON space.licenseId = license.id WHERE license.visibility = '${visibility}'`;
     const [queryResult]: {
       challengesCount: number;
     }[] = await this.entityManager.connection.query(sqlQuery);

@@ -16,6 +16,7 @@ import { MockFunctionMetadata, ModuleMocker } from 'jest-mock';
 import { InnovationFlow } from '../innovation-flow/innovation.flow.entity';
 import { InnovationFlowType } from '@common/enums/innovation.flow.type';
 import { ProfileType } from '@common/enums';
+import { License } from '@domain/license/license/license.entity';
 
 const moduleMocker = new ModuleMocker(global);
 
@@ -198,7 +199,12 @@ const getSpaceMock = ({
       type: ProfileType.SPACE,
       ...getEntityMock<Profile>(),
     },
-    visibility,
+    license: {
+      id,
+      visibility,
+      featureFlags: [],
+      ...getEntityMock<License>(),
+    },
     authorization: getAuthorizationPolicyMock(
       `auth-${id}`,
       anonymousReadAccess
