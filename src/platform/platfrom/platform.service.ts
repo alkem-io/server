@@ -8,11 +8,7 @@ import { ILibrary } from '@library/library/library.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import {
-  FindOneOptions,
-  FindOptionsRelationByString,
-  Repository,
-} from 'typeorm';
+import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
 import { Platform } from './platform.entity';
 import { IPlatform } from './platform.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
@@ -47,10 +43,10 @@ export class PlatformService {
   }
 
   async getLibraryOrFail(
-    relations: FindOptionsRelationByString = []
+    relations?: FindOptionsRelations<IPlatform>
   ): Promise<ILibrary> {
     const platform = await this.getPlatformOrFail({
-      relations: ['library', ...relations],
+      relations: { library: true, ...relations },
     });
     const library = platform.library;
     if (!library) {
@@ -64,7 +60,7 @@ export class PlatformService {
 
   async getCommunicationOrFail(): Promise<ICommunication> {
     const platform = await this.getPlatformOrFail({
-      relations: ['communication'],
+      relations: { communication: true },
     });
     const communication = platform.communication;
     if (!communication) {
@@ -78,7 +74,7 @@ export class PlatformService {
 
   async ensureCommunicationCreated(): Promise<ICommunication> {
     const platform = await this.getPlatformOrFail({
-      relations: ['communication'],
+      relations: { communication: true },
     });
     const communication = platform.communication;
     if (!communication) {

@@ -51,11 +51,13 @@ export class StorageBucketResolverMutations {
     const visual = await this.visualService.getVisualOrFail(
       uploadData.visualID,
       {
-        relations: [
-          'profile',
-          'profile.storageBucket',
-          'profile.storageBucket.authorization',
-        ],
+        relations: {
+          profile: {
+            storageBucket: {
+              authorization: true,
+            },
+          },
+        },
       }
     );
     this.authorizationService.grantAccessOrFail(
@@ -118,11 +120,13 @@ export class StorageBucketResolverMutations {
     const reference = await this.referenceService.getReferenceOrFail(
       uploadData.referenceID,
       {
-        relations: [
-          'profile',
-          'profile.storageBucket',
-          'profile.storageBucket.authorization',
-        ],
+        relations: {
+          profile: {
+            storageBucket: {
+              authorization: true,
+            },
+          },
+        },
       }
     );
     this.authorizationService.grantAccessOrFail(

@@ -2,6 +2,7 @@ import { Field, ObjectType } from '@nestjs/graphql';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { INameable } from '../entity/nameable-entity/nameable.interface';
 import { WhiteboardContent } from '../scalars/scalar.whiteboard.content';
+import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
 
 @ObjectType('WhiteboardRt')
 export abstract class IWhiteboardRt extends INameable {
@@ -9,6 +10,12 @@ export abstract class IWhiteboardRt extends INameable {
     description: 'The JSON representation of the WhiteboardRt.',
   })
   content?: string;
+
+  @Field(() => ContentUpdatePolicy, {
+    description: 'The policy governing who can update the Whiteboard contet.',
+    nullable: false,
+  })
+  contentUpdatePolicy!: ContentUpdatePolicy;
 
   // Expose the date at which the WhiteboardRt was created from parent entity
   @Field(() => Date)

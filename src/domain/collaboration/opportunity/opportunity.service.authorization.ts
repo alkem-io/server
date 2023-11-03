@@ -23,6 +23,8 @@ import { ContextAuthorizationService } from '@domain/context/context/context.ser
 import { CommunityAuthorizationService } from '@domain/community/community/community.service.authorization';
 import { CollaborationAuthorizationService } from '../collaboration/collaboration.service.authorization';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
+import { ILicense } from '@domain/license/license/license.interface';
+import { LicenseResolverService } from '@services/infrastructure/license-resolver/license.resolver.service';
 
 @Injectable()
 export class OpportunityAuthorizationService {
@@ -35,6 +37,7 @@ export class OpportunityAuthorizationService {
     private contextAuthorizationService: ContextAuthorizationService,
     private communityAuthorizationService: CommunityAuthorizationService,
     private collaborationAuthorizationService: CollaborationAuthorizationService,
+    private licenseResolverService: LicenseResolverService,
     private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService
   ) {}
 
@@ -43,6 +46,9 @@ export class OpportunityAuthorizationService {
     challengeAuthorization: IAuthorizationPolicy | undefined,
     challengeCommunityPolicy: ICommunityPolicy
   ): Promise<IOpportunity> {
+    const license = await this.licenseResolverService.getlicenseForSpace(
+      opportunity.spaceID
+    );
     const communityPolicy = await this.opportunityService.getCommunityPolicy(
       opportunity.id
     );
@@ -64,7 +70,8 @@ export class OpportunityAuthorizationService {
     // propagate authorization rules for child entities
     return await this.propagateAuthorizationToChildEntities(
       opportunity,
-      communityPolicy
+      communityPolicy,
+      license
     );
   }
 
@@ -185,14 +192,16 @@ export class OpportunityAuthorizationService {
   }
   private async propagateAuthorizationToChildEntities(
     opportunityInput: IOpportunity,
-    policy: ICommunityPolicy
+    policy: ICommunityPolicy,
+    license: ILicense
   ): Promise<IOpportunity> {
     await this.opportunityService.save(opportunityInput);
 
     let opportunity =
       await this.propagateAuthorizationToCommunityCollaborationAgent(
         opportunityInput,
-        policy
+        policy,
+        license
       );
     opportunity = await this.propagateAuthorizationToProfileContext(
       opportunity
@@ -255,7 +264,8 @@ export class OpportunityAuthorizationService {
 
   public async propagateAuthorizationToCommunityCollaborationAgent(
     opportunityBase: IOpportunity,
-    communityPolicy: ICommunityPolicy
+    communityPolicy: ICommunityPolicy,
+    license: ILicense
   ): Promise<IOpportunity> {
     const opportunity = await this.opportunityService.getOpportunityOrFail(
       opportunityBase.id,
@@ -293,7 +303,8 @@ export class OpportunityAuthorizationService {
       await this.collaborationAuthorizationService.applyAuthorizationPolicy(
         opportunity.collaboration,
         opportunity.authorization,
-        communityPolicy
+        communityPolicy,
+        license
       );
 
     opportunity.agent.authorization =

@@ -38,7 +38,12 @@ export class PlatformAuthorizationService {
 
   async applyAuthorizationPolicy(): Promise<IPlatform> {
     const platform = await this.platformService.getPlatformOrFail({
-      relations: ['library', 'library.innovationPacks', 'communication'],
+      relations: {
+        library: {
+          innovationPacks: true,
+        },
+        communication: true,
+      },
     });
 
     platform.authorization =
@@ -90,13 +95,14 @@ export class PlatformAuthorizationService {
       );
 
     const innovationHubs = await this.innovationHubService.getInnovationHubs({
-      relations: [
-        'profile',
-        'profile.visuals',
-        'profile.references',
-        'profile.tagsets',
-        'profile.location',
-      ],
+      relations: {
+        profile: {
+          visuals: true,
+          references: true,
+          tagsets: true,
+          location: true,
+        },
+      },
     });
 
     for (const innovationHub of innovationHubs) {

@@ -1,6 +1,5 @@
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
 import { SpaceService } from '@domain/challenge/space/space.service';
-import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
 import { INVP, NVP } from '@domain/common/nvp';
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { UserService } from '@domain/community/user/user.service';
@@ -15,7 +14,6 @@ export class MetadataService {
     private userService: UserService,
     private spaceService: SpaceService,
     private challengeService: ChallengeService,
-    private opportunityService: OpportunityService,
     private organizationService: OrganizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -57,15 +55,6 @@ export class MetadataService {
     const challengesTopic = new NVP('challenges', challengesCount.toString());
     challengesTopic.id = 'challenges';
     metrics.push(challengesTopic);
-
-    const opportunitiesCount =
-      await this.opportunityService.getOpportunitiesCount();
-    const opportunitiesTopic = new NVP(
-      'opportunities',
-      opportunitiesCount.toString()
-    );
-    opportunitiesTopic.id = 'opportunities';
-    metrics.push(opportunitiesTopic);
 
     // Users
     const usersCount = await this.userService.getUserCount();

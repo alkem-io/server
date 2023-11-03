@@ -161,8 +161,8 @@ export const ExcalidrawServerFactoryProvider: FactoryProvider = {
             await authorizationService.grantAccessOrFail(
               agentInfo,
               whiteboardRt.authorization,
-              AuthorizationPrivilege.ACCESS_WHITEBOARD_RT,
-              `access whiteboardRt: ${whiteboardRt.id}`
+              AuthorizationPrivilege.UPDATE_CONTENT,
+              `update content whiteboardRt: ${whiteboardRt.id}`
             );
           } catch (e) {
             const err = e as Error;

@@ -18,6 +18,7 @@ export * from './checkout.loader.creator';
 export * from './visual.loader.creator';
 
 export * from './space/space.templates.set.loader.creator';
+export * from './space/space.license.loader.creator';
 export * from './collaboration/collaboration.timeline.loader.creator';
 
 export * from './innovation.flow.lifecycle.loader.creator';

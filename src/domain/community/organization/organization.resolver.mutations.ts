@@ -152,7 +152,11 @@ export class OrganizationResolverMutations {
     const organization = await this.organizationService.getOrganizationOrFail(
       authorizationResetData.organizationID,
       {
-        relations: ['profile', 'profile.storageBucket'],
+        relations: {
+          profile: {
+            storageBucket: true,
+          },
+        },
       }
     );
     await this.authorizationService.grantAccessOrFail(

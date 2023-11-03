@@ -93,7 +93,7 @@ export class UserGroupService {
     userGroupInput: UpdateUserGroupInput
   ): Promise<IUserGroup> {
     const group = await this.getUserGroupOrFail(userGroupInput.ID, {
-      relations: ['profile'],
+      relations: { profile: true },
     });
 
     const newName = userGroupInput.name;
@@ -123,7 +123,7 @@ export class UserGroupService {
 
   async getParent(group: IUserGroup): Promise<IGroupable> {
     const groupWithParent = (await this.getUserGroupOrFail(group.id, {
-      relations: ['community', 'organization'],
+      relations: { community: true, organization: true },
     })) as UserGroup;
     if (groupWithParent?.community) return groupWithParent?.community;
     if (groupWithParent?.organization) return groupWithParent?.organization;
@@ -169,7 +169,7 @@ export class UserGroupService {
     });
 
     return await this.getUserGroupOrFail(membershipData.groupID, {
-      relations: ['community'],
+      relations: { community: true },
     });
   }
 
@@ -187,7 +187,7 @@ export class UserGroupService {
     });
 
     return await this.getUserGroupOrFail(membershipData.groupID, {
-      relations: ['community'],
+      relations: { community: true },
     });
   }
 

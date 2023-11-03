@@ -1,6 +1,9 @@
 export const POLICY_RULE_SPACE_CREATE_CHALLENGE =
   'policyRule-spaceCreateChallenge';
-export const POLICY_RULE_WHITEBOARD_UPDATE = 'policyRule-whiteboardUpdate';
+export const POLICY_RULE_WHITEBOARD_CONTENT_UPDATE =
+  'policyRule-whiteboardContentUpdate';
+export const POLICY_RULE_WHITEBOARD_RT_CONTENT_UPDATE =
+  'policyRule-whiteboardRtContentUpdate';
 export const POLICY_RULE_VISUAL_UPDATE = 'policyRule-visualUpdate';
 export const POLICY_RULE_WHITEBOARD_CONTRIBUTE =
   'policyRule-whiteboardContribute';
@@ -16,6 +19,8 @@ export const POLICY_RULE_CALLOUT_CREATE = 'policyRule-calloutCreate';
 export const POLICY_RULE_CALLOUT_CONTRIBUTE = 'policyRule-calloutContribute';
 export const POLICY_RULE_COLLABORATION_CREATE =
   'policyRule-collaborationCreate';
+export const POLICY_RULE_COLLABORATION_WHITEBOARD_RT_CREATE =
+  'policyRule-collaborationWhiteboardRtCreate';
 export const POLICY_RULE_COMMUNITY_INVITE = 'policyRule-communityInvite';
 export const POLICY_RULE_STORAGE_BUCKET_UPDATER_FILE_UPLOAD =
   'policyRule-storageBucketUpdaterFileUpload';

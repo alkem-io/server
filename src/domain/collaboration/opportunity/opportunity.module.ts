@@ -21,6 +21,7 @@ import { CollaborationModule } from '../collaboration/collaboration.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { ContextModule } from '@domain/context/context/context.module';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
+import { LicenseResolverModule } from '@services/infrastructure/license-resolver/license.resolver.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/stor
     ContextModule,
     ContributionReporterModule,
     StorageAggregatorModule,
+    LicenseResolverModule,
     TypeOrmModule.forFeature([Opportunity]),
   ],
   providers: [

@@ -14,6 +14,7 @@ import { ProfileService } from '../profile/profile.service';
 import { VisualType } from '@common/enums/visual.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
 
 @Injectable()
 export class WhiteboardRtService {
@@ -34,6 +35,7 @@ export class WhiteboardRtService {
     });
     whiteboardRt.authorization = new AuthorizationPolicy();
     whiteboardRt.createdBy = userID;
+    whiteboardRt.contentUpdatePolicy = ContentUpdatePolicy.CONTRIBUTORS;
 
     whiteboardRt.profile = await this.profileService.createProfile(
       whiteboardRtData.profileData,
@@ -116,6 +118,11 @@ export class WhiteboardRtService {
         whiteboardRt.profile,
         updateWhiteboardRtData.profileData
       );
+    }
+
+    if (updateWhiteboardRtData.contentUpdatePolicy) {
+      whiteboardRt.contentUpdatePolicy =
+        updateWhiteboardRtData.contentUpdatePolicy;
     }
     return this.save(whiteboardRt);
   }

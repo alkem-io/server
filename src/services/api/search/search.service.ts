@@ -449,18 +449,23 @@ export class SearchService {
         },
       });
 
+      const lowerCasedTerm = term.toLowerCase();
       const filteredSpaceMatches = spaces.filter(space => {
         return (
-          space.nameID.includes(term) ||
-          space.profile.displayName.includes(term) ||
-          space.profile.tagline.includes(term) ||
-          space.profile.description.includes(term) ||
-          space.profile.tagsets?.some(tagset => tagset.tags.includes(term)) ||
-          space.context?.impact?.includes(term) ||
-          space.context?.vision?.includes(term) ||
-          space.context?.who?.includes(term) ||
-          space.profile.location?.country.includes(term) ||
-          space.profile.location?.city.includes(term)
+          space.nameID.toLowerCase().includes(lowerCasedTerm) ||
+          space.profile.displayName.toLowerCase().includes(lowerCasedTerm) ||
+          space.profile.tagline.toLowerCase().includes(lowerCasedTerm) ||
+          space.profile.description.toLowerCase().includes(lowerCasedTerm) ||
+          space.profile.tagsets?.some(tagset =>
+            tagset.tags.map(tag => tag.toLowerCase()).includes(lowerCasedTerm)
+          ) ||
+          space.context?.impact?.toLowerCase().includes(lowerCasedTerm) ||
+          space.context?.vision?.toLowerCase().includes(lowerCasedTerm) ||
+          space.context?.who?.toLowerCase().includes(lowerCasedTerm) ||
+          space.profile.location?.country
+            .toLowerCase()
+            .includes(lowerCasedTerm) ||
+          space.profile.location?.city.toLowerCase().includes(lowerCasedTerm)
         );
       });
 
@@ -482,7 +487,7 @@ export class SearchService {
 
   // Determine the score increment based on whether the user has read access or not
   private getScoreIncrementSpace(space: ISpace, agentInfo: AgentInfo): number {
-    switch (space.visibility) {
+    switch (space.license?.visibility) {
       case SpaceVisibility.ACTIVE:
         return this.getScoreIncrementReadAccess(space.authorization, agentInfo);
       case SpaceVisibility.DEMO:
@@ -534,21 +539,30 @@ export class SearchService {
           },
         },
       });
+      const lowerCasedTerm = term.toLowerCase();
       // Second part: Filter the results in TypeScript
       const filteredChallengeMatches = challenges.filter(challenge => {
         return (
-          challenge.nameID.includes(term) ||
-          challenge.profile.displayName.includes(term) ||
-          challenge.profile.tagline.includes(term) ||
-          challenge.profile.description.includes(term) ||
+          challenge.nameID.toLowerCase().includes(lowerCasedTerm) ||
+          challenge.profile.displayName
+            .toLowerCase()
+            .includes(lowerCasedTerm) ||
+          challenge.profile.tagline.toLowerCase().includes(lowerCasedTerm) ||
+          challenge.profile.description
+            .toLowerCase()
+            .includes(lowerCasedTerm) ||
           challenge.profile.tagsets?.some(tagset =>
-            tagset.tags.includes(term)
+            tagset.tags.map(tag => tag.toLowerCase()).includes(lowerCasedTerm)
           ) ||
-          challenge.context?.impact?.includes(term) ||
-          challenge.context?.vision?.includes(term) ||
-          challenge.context?.who?.includes(term) ||
-          challenge.profile.location?.country.includes(term) ||
-          challenge.profile.location?.city.includes(term)
+          challenge.context?.impact?.toLowerCase().includes(lowerCasedTerm) ||
+          challenge.context?.vision?.toLowerCase().includes(lowerCasedTerm) ||
+          challenge.context?.who?.toLowerCase().includes(lowerCasedTerm) ||
+          challenge.profile.location?.country
+            .toLowerCase()
+            .includes(lowerCasedTerm) ||
+          challenge.profile.location?.city
+            .toLowerCase()
+            .includes(lowerCasedTerm)
         );
       });
 
@@ -603,21 +617,30 @@ export class SearchService {
         },
       });
 
+      const lowerCasedTerm = term.toLowerCase();
       // Second part: Filter the results in TypeScript
       const filteredOpportunityMatches = opportunities.filter(opportunity => {
         return (
-          opportunity.nameID.includes(term) ||
-          opportunity.profile.displayName.includes(term) ||
-          opportunity.profile.tagline.includes(term) ||
-          opportunity.profile.description.includes(term) ||
+          opportunity.nameID.toLowerCase().includes(lowerCasedTerm) ||
+          opportunity.profile.displayName
+            .toLowerCase()
+            .includes(lowerCasedTerm) ||
+          opportunity.profile.tagline.toLowerCase().includes(lowerCasedTerm) ||
+          opportunity.profile.description
+            .toLowerCase()
+            .includes(lowerCasedTerm) ||
           opportunity.profile.tagsets?.some(tagset =>
-            tagset.tags.includes(term)
+            tagset.tags.map(tag => tag.toLowerCase()).includes(lowerCasedTerm)
           ) ||
-          opportunity.context?.impact?.includes(term) ||
-          opportunity.context?.vision?.includes(term) ||
-          opportunity.context?.who?.includes(term) ||
-          opportunity.profile.location?.country.includes(term) ||
-          opportunity.profile.location?.city.includes(term)
+          opportunity.context?.impact?.toLowerCase().includes(lowerCasedTerm) ||
+          opportunity.context?.vision?.toLowerCase().includes(lowerCasedTerm) ||
+          opportunity.context?.who?.toLowerCase().includes(lowerCasedTerm) ||
+          opportunity.profile.location?.country
+            .toLowerCase()
+            .includes(lowerCasedTerm) ||
+          opportunity.profile.location?.city
+            .toLowerCase()
+            .includes(lowerCasedTerm)
         );
       });
       // Only show challenges that the current user has read access to
@@ -997,7 +1020,7 @@ export class SearchService {
     let postIDsFilter: string[] | undefined = undefined;
     if (searchInSpaceID) {
       searchInSpace = await this.spaceService.getSpaceOrFail(searchInSpaceID, {
-        relations: ['collaboration'],
+        relations: { collaboration: true },
       });
       spaceIDsFilter = [searchInSpace.id];
 
