@@ -23,6 +23,7 @@ import {
   POLICY_RULE_COLLABORATION_CREATE,
   POLICY_RULE_CALLOUT_CONTRIBUTE,
   POLICY_RULE_COLLABORATION_WHITEBOARD_RT_CREATE,
+  CREDENTIAL_RULE_TYPES_CALLOUT_SAVE_AS_TEMPLATE,
 } from '@common/constants';
 import { CommunityRole } from '@common/enums/community.role';
 import { TimelineAuthorizationService } from '@domain/timeline/timeline/timeline.service.authorization';
@@ -56,9 +57,10 @@ export class CollaborationAuthorizationService {
         parentAuthorization
       );
 
-    collaboration.authorization = this.appendCredentialRules(
+    collaboration.authorization = await this.appendCredentialRules(
       collaboration.authorization,
-      communityPolicy
+      communityPolicy,
+      license
     );
     collaboration.authorization = this.appendCredentialRulesForContributors(
       collaboration.authorization,
@@ -160,10 +162,11 @@ export class CollaborationAuthorizationService {
     return contributors;
   }
 
-  private appendCredentialRules(
+  private async appendCredentialRules(
     authorization: IAuthorizationPolicy | undefined,
-    policy: ICommunityPolicy
-  ): IAuthorizationPolicy {
+    policy: ICommunityPolicy,
+    license: ILicense
+  ): Promise<IAuthorizationPolicy> {
     if (!authorization)
       throw new EntityNotInitializedException(
         `Authorization definition not found for Context: ${JSON.stringify(
@@ -182,6 +185,25 @@ export class CollaborationAuthorizationService {
       );
     communityMemberNotInherited.cascade = false;
     newRules.push(communityMemberNotInherited);
+
+    const saveAsTemplateEnabled =
+      await this.licenseService.isFeatureFlagEnabled(
+        license,
+        LicenseFeatureFlagName.CALLOUT_TO_CALLOUT_TEMPLATE
+      );
+    if (saveAsTemplateEnabled) {
+      const saveAsTemplate =
+        this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+          [AuthorizationPrivilege.SAVE_AS_TEMPLATE],
+          [
+            AuthorizationCredential.GLOBAL_ADMIN,
+            AuthorizationCredential.GLOBAL_ADMIN_SPACES,
+          ],
+          CREDENTIAL_RULE_TYPES_CALLOUT_SAVE_AS_TEMPLATE
+        );
+      saveAsTemplate.cascade = false;
+      newRules.push(saveAsTemplate);
+    }
 
     return this.authorizationPolicyService.appendCredentialAuthorizationRules(
       authorization,
@@ -248,7 +270,6 @@ export class CollaborationAuthorizationService {
       );
       privilegeRules.push(createWhiteboardRtPrivilege);
     }
-
     if (
       this.communityPolicyService.getFlag(
         policy,

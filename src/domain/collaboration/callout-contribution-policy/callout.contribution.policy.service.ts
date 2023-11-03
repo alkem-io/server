@@ -65,29 +65,29 @@ export class CalloutContributionPolicyService {
   }
 
   public updateCalloutContributionPolicy(
-    calloutResponsePolicy: ICalloutContributionPolicy,
-    calloutResponsePolicyData: UpdateCalloutContributionPolicyInput
+    calloutContributionPolicy: ICalloutContributionPolicy,
+    calloutContributionPolicyData: UpdateCalloutContributionPolicyInput
   ): ICalloutContributionPolicy {
-    if (calloutResponsePolicyData.allowedContributionTypes) {
-      calloutResponsePolicy.allowedContributionTypes =
-        calloutResponsePolicyData.allowedContributionTypes;
+    if (calloutContributionPolicyData.allowedContributionTypes) {
+      calloutContributionPolicy.allowedContributionTypes =
+        calloutContributionPolicyData.allowedContributionTypes;
     }
 
-    if (calloutResponsePolicyData.state) {
-      calloutResponsePolicy.state = calloutResponsePolicyData.state;
+    if (calloutContributionPolicyData.state) {
+      calloutContributionPolicy.state = calloutContributionPolicyData.state;
     }
 
-    return calloutResponsePolicy;
+    return calloutContributionPolicy;
   }
 
   public async delete(
-    calloutResponsePolicy: ICalloutContributionPolicy
+    calloutContributionPolicy: ICalloutContributionPolicy
   ): Promise<ICalloutContributionPolicy> {
-    const calloutResponsePolicyID = calloutResponsePolicy.id;
+    const calloutContributionPolicyID = calloutContributionPolicy.id;
     const result = await this.calloutContributionPolicyRepository.remove(
-      calloutResponsePolicy as CalloutContributionPolicy
+      calloutContributionPolicy as CalloutContributionPolicy
     );
-    result.id = calloutResponsePolicyID;
+    result.id = calloutContributionPolicyID;
     return result;
   }
 }

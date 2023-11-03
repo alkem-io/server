@@ -13,49 +13,49 @@ export class CalloutContributionDefaultsService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     @InjectRepository(CalloutContributionDefaults)
-    private calloutResponseDefaultsRepository: Repository<CalloutContributionDefaults>
+    private calloutContributionDefaultsRepository: Repository<CalloutContributionDefaults>
   ) {}
 
   public createCalloutContributionDefaults(
-    calloutResponseDefaultsData?: CreateCalloutContributionDefaultsInput
+    calloutContributionDefaultsData?: CreateCalloutContributionDefaultsInput
   ): ICalloutContributionDefaults {
-    const calloutResponseDefaults = new CalloutContributionDefaults();
-    if (calloutResponseDefaultsData) {
-      calloutResponseDefaults.postDescription =
-        calloutResponseDefaultsData.postDescription;
+    const calloutContributionDefaults = new CalloutContributionDefaults();
+    if (calloutContributionDefaultsData) {
+      calloutContributionDefaults.postDescription =
+        calloutContributionDefaultsData.postDescription;
 
-      calloutResponseDefaults.whiteboardContent =
-        calloutResponseDefaultsData.whiteboardContent;
+      calloutContributionDefaults.whiteboardContent =
+        calloutContributionDefaultsData.whiteboardContent;
     }
 
-    return calloutResponseDefaults;
+    return calloutContributionDefaults;
   }
 
   public updateCalloutContributionDefaults(
-    calloutResponseDefaults: ICalloutContributionDefaults,
-    calloutResponseDefaultsData: UpdateCalloutContributionDefaultsInput
+    calloutContributionDefaults: ICalloutContributionDefaults,
+    calloutContributionDefaultsData: UpdateCalloutContributionDefaultsInput
   ): ICalloutContributionDefaults {
-    if (calloutResponseDefaultsData.postDescription) {
-      calloutResponseDefaults.postDescription =
-        calloutResponseDefaultsData.postDescription;
+    if (calloutContributionDefaultsData.postDescription) {
+      calloutContributionDefaults.postDescription =
+        calloutContributionDefaultsData.postDescription;
     }
 
-    if (calloutResponseDefaultsData.whiteboardContent) {
-      calloutResponseDefaults.whiteboardContent =
-        calloutResponseDefaultsData.whiteboardContent;
+    if (calloutContributionDefaultsData.whiteboardContent) {
+      calloutContributionDefaults.whiteboardContent =
+        calloutContributionDefaultsData.whiteboardContent;
     }
 
-    return calloutResponseDefaults;
+    return calloutContributionDefaults;
   }
 
   public async delete(
-    calloutResponseDefaults: ICalloutContributionDefaults
+    calloutContributionDefaults: ICalloutContributionDefaults
   ): Promise<ICalloutContributionDefaults> {
-    const calloutResponseDefaultsID = calloutResponseDefaults.id;
-    const result = await this.calloutResponseDefaultsRepository.remove(
-      calloutResponseDefaults as CalloutContributionDefaults
+    const calloutContributionDefaultsID = calloutContributionDefaults.id;
+    const result = await this.calloutContributionDefaultsRepository.remove(
+      calloutContributionDefaults as CalloutContributionDefaults
     );
-    result.id = calloutResponseDefaultsID;
+    result.id = calloutContributionDefaultsID;
     return result;
   }
 }
