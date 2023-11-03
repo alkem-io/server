@@ -1,6 +1,9 @@
 import { AMQPPubSub } from 'graphql-amqp-subscriptions';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { APP_ID, EXCALIDRAW_PUBSUB_PROVIDER } from '@common/constants';
+import { AlkemioErrorStatus, LogContext } from '@common/enums';
+import { BaseException } from '@common/exceptions/base.exception';
 import {
   DISCONNECT,
   DISCONNECTING,
@@ -9,22 +12,9 @@ import {
   SERVER_BROADCAST,
   SERVER_VOLATILE_BROADCAST,
 } from '@services/external/excalidraw-backend/event.names';
-import {
-  BasePayload,
-  RoomUserChangePayload,
-  ServerBroadcastPayload,
-  ServerVolatileBroadcastPayload,
-} from '../payloads';
-import {
-  BaseEvent,
-  DisconnectedEvent,
-  DisconnectingEvent,
-  RoomUserChangeEvent,
-  ServerBroadcastEvent,
-  ServerVolatileBroadcastEvent,
-} from '../events';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { LogContext } from '@common/enums';
+import { BasePayload } from '../payloads';
+import { BaseEvent } from '../events';
+import { excalidrawEventFactory } from './excalidraw.event.factory';
 
 const subscribableEvents = [
   NEW_USER,
@@ -73,7 +63,7 @@ export class ExcalidrawEventSubscriberService {
             // events are handled by the ws server in the current instance
             continue;
           }
-          const instance = createInstanceFromPayload({
+          const instance = excalidrawEventFactory({
             ...value,
             // parse the parsed value back to Buffer - see BaseReceivedPayload
             data: value.data && Buffer.from(value.data),
@@ -90,37 +80,12 @@ export class ExcalidrawEventSubscriberService {
           next(instance);
         }
       } catch (e) {
-        throw new Error(
-          `Exception while waiting for result: ${(e as Error).message}`
+        throw new BaseException(
+          `Exception while waiting for result: ${(e as Error).message}`,
+          LogContext.EXCALIDRAW_SERVER,
+          AlkemioErrorStatus.EXCALIDRAW_AMQP_RESULT_ERROR
         );
       }
     })();
   }
 }
-// todo type
-const createInstanceFromPayload = (
-  payload: BasePayload
-): BaseEvent | undefined => {
-  switch (payload.name) {
-    case DISCONNECT:
-      return new DisconnectedEvent(payload.publisherId);
-    case DISCONNECTING:
-      return new DisconnectingEvent(payload.publisherId);
-    case ROOM_USER_CHANGE: {
-      const { roomID, publisherId, socketIDs } =
-        payload as RoomUserChangePayload;
-      return new RoomUserChangeEvent(roomID, socketIDs, publisherId);
-    }
-    case SERVER_BROADCAST: {
-      const { roomID, publisherId, data } = payload as ServerBroadcastPayload;
-      return new ServerBroadcastEvent(roomID, data, publisherId);
-    }
-    case SERVER_VOLATILE_BROADCAST: {
-      const { roomID, publisherId, data } =
-        payload as ServerVolatileBroadcastPayload;
-      return new ServerVolatileBroadcastEvent(roomID, data, publisherId);
-    }
-    default:
-      return undefined;
-  }
-};

@@ -31,7 +31,7 @@ import {
   ROOM_USER_CHANGE,
   SERVER_BROADCAST,
   SERVER_VOLATILE_BROADCAST,
-} from './event.names';
+} from '../event.names';
 
 export const ExcalidrawAmqpServerFactoryProvider: FactoryProvider = {
   provide: EXCALIDRAW_SERVER,
