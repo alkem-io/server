@@ -13,9 +13,11 @@ export const getPaginationResults = async <
   query: SelectQueryBuilder<T>,
   paginationArgs: PaginationArgs
 ): Promise<IPaginatedType<T>> => {
+  const total = await query.getCount();
   const result = await getRelayStylePaginationResults(query, paginationArgs);
 
   return {
+    total,
     items: result.edges.map(x => x.node),
     pageInfo: result.pageInfo,
   };

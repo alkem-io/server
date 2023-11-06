@@ -50,7 +50,7 @@ import { IActivityLogEntryCalloutLinkCreated } from './activity.log.dto.entry.ca
     );
   },
 })
-export abstract class IActivityLogEntry {
+export class IActivityLogEntry {
   @Field(() => UUID, {
     nullable: false,
   })

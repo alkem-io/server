@@ -79,6 +79,14 @@ export class ActivityLogService {
     return results;
   }
 
+  public async convertRawActivityToResults(
+    rawActivities: IActivity[]
+  ): Promise<(IActivityLogEntry | undefined)[]> {
+    return Promise.all(
+      rawActivities.map(x => this.convertRawActivityToResult(x))
+    );
+  }
+
   public async convertRawActivityToResult(
     rawActivity: IActivity
   ): Promise<IActivityLogEntry | undefined> {
@@ -132,8 +140,7 @@ export class ActivityLogService {
           this.calendarEventService
         );
       const activityType = rawActivity.type as ActivityEventType;
-      const result = await activityBuilder[activityType](rawActivity);
-      return result;
+      return await activityBuilder[activityType](rawActivity);
     } catch (error) {
       //
       this.logger.warn(
