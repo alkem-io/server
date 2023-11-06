@@ -1050,12 +1050,6 @@ export class SpaceService {
     );
   }
 
-  async getSpaceCount(visibility = SpaceVisibility.ACTIVE): Promise<number> {
-    return await this.spaceRepository.countBy({
-      license: { visibility: visibility },
-    });
-  }
-
   async getCommunityInNameableScope(
     communityID: string,
     space: ISpace

@@ -24,8 +24,8 @@ import {
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { CommunityService } from '@domain/community/community/community.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
-import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, FindOneOptions, Repository } from 'typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
+import { FindOneOptions, Repository } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IOrganization } from '@domain/community/organization';
 import { ICommunity } from '@domain/community/community';
@@ -48,7 +48,6 @@ import { CommunityRole } from '@common/enums/community.role';
 import { challengeCommunityPolicy } from './challenge.community.policy';
 import { challengeCommunityApplicationForm } from './challenge.community.application.form';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
-import { SpaceVisibility } from '@common/enums/space.visibility';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
@@ -83,9 +82,7 @@ export class ChallengeService {
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService,
-    @InjectEntityManager('default')
-    private entityManager: EntityManager
+    private readonly logger: LoggerService
   ) {}
 
   async createChallenge(
@@ -632,18 +629,6 @@ export class ChallengeService {
   async getChallengesInSpaceCount(spaceID: string): Promise<number> {
     const count = await this.challengeRepository.countBy({ spaceID: spaceID });
     return count;
-  }
-
-  async getChallengesCount(
-    visibility = SpaceVisibility.ACTIVE
-  ): Promise<number> {
-    const sqlQuery = `SELECT COUNT(*) as challengesCount FROM challenge RIGHT JOIN space ON challenge.spaceID = space.id
-    RIGHT JOIN license ON space.licenseId = license.id WHERE license.visibility = '${visibility}'`;
-    const [queryResult]: {
-      challengesCount: number;
-    }[] = await this.entityManager.connection.query(sqlQuery);
-
-    return queryResult.challengesCount;
   }
 
   async getChildChallengesCount(challengeID: string): Promise<number> {
