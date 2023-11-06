@@ -4,6 +4,7 @@ import { IBaseChallenge } from '@domain/challenge/base-challenge/base.challenge.
 import { ITemplatesSet } from '@domain/template/templates-set';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { ILicense } from '@domain/license/license/license.interface';
+import { IJourney } from '../base-challenge/journey.interface';
 
 @ObjectType('Space', {
   implements: () => [IJourney],
