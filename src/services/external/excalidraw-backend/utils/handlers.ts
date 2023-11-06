@@ -10,7 +10,7 @@ import {
   FIRST_IN_ROOM,
   NEW_USER,
   ROOM_USER_CHANGE,
-} from '../event.names';
+} from '../types';
 
 /* This event is coming from the client; whenever they request to join a room */
 export const joinRoomEventHandler = async (
@@ -43,6 +43,7 @@ export const joinRoomEventHandler = async (
   }
 
   await socket.join(roomID);
+  socket.data.lastContributed = -1;
 
   logger?.verbose?.(
     `${agentInfo.userID} has joined ${roomID}`,
@@ -73,6 +74,7 @@ export const serverBroadcastEventHandler = (
   socket: Socket
 ) => {
   socket.broadcast.to(roomID).emit(CLIENT_BROADCAST, data);
+  socket.data.lastContributed = Date.now();
 };
 /*
 Built-in event for handling broadcast;
@@ -113,13 +115,13 @@ export const disconnectingEventHandler = async (
 
 export const disconnectEventHandler = async (socket: Socket) => {
   socket.removeAllListeners();
-  socket.disconnect();
+  socket.disconnect(true);
 };
 
 export const closeConnection = (socket: Socket, message?: string) => {
-  socket.removeAllListeners();
   if (message) {
     socket.emit(CONNECTION_CLOSED, message);
   }
-  socket.disconnect();
+  socket.removeAllListeners();
+  socket.disconnect(true);
 };
