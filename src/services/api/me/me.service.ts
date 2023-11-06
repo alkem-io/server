@@ -8,12 +8,24 @@ import { ApplicationForRoleResult } from '../roles/dto/roles.dto.result.applicat
 import { InvitationForRoleResult } from '../roles/dto/roles.dto.result.invitation';
 import { ISpace } from '@domain/challenge/space/space.interface';
 import { SpacesQueryArgs } from '@domain/challenge/space/dto/space.args.query.spaces';
+import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
+import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
+import { In } from 'typeorm';
+import { ActivityLogService } from '../activity-log';
+import { AgentInfo } from '@core/authentication';
+import { MyJourneyResults } from './dto/my.journeys.results';
+import { ActivityEventType } from '@common/enums/activity.event.type';
+import { EntityNotInitializedException } from '@common/exceptions';
+import { LogContext } from '@common/enums';
 
 @Injectable()
 export class MeService {
   constructor(
     private spaceService: SpaceService,
-    private rolesService: RolesService
+    private challengeService: ChallengeService,
+    private opportunityService: OpportunityService,
+    private rolesService: RolesService,
+    private activityLogService: ActivityLogService
   ) {}
 
   public async getUserInvitations(
@@ -47,5 +59,83 @@ export class MeService {
     };
 
     return this.spaceService.getSpaces(args);
+  }
+
+  public async getMyJourneys(
+    agentInfo: AgentInfo,
+    limit = 20,
+    visibilities: SpaceVisibility[] = [
+      SpaceVisibility.ACTIVE,
+      SpaceVisibility.DEMO,
+    ],
+    types?: ActivityEventType[]
+  ): Promise<MyJourneyResults[]> {
+    const credentialMap = groupCredentialsByEntity(agentInfo.credentials);
+    const spaceIds = Array.from(credentialMap.get('spaces')?.keys() ?? []);
+    const challengeIds = Array.from(
+      credentialMap.get('challenges')?.keys() ?? []
+    );
+    const opportunityIds = Array.from(
+      credentialMap.get('opportunities')?.keys() ?? []
+    );
+    const args: SpacesQueryArgs = {
+      IDs: spaceIds,
+      filter: {
+        visibilities,
+      },
+    };
+
+    const spaces = await this.spaceService.getSpaces(args, {
+      relations: { collaboration: true },
+    });
+    const challenges = await this.challengeService.getChallenges({
+      where: { id: In(challengeIds) },
+      relations: {
+        collaboration: true,
+        innovationFlow: true,
+        parentSpace: true,
+      },
+    });
+    const opportunities = await this.opportunityService.getOpportunities({
+      where: { id: In(opportunityIds) },
+      relations: { collaboration: true, innovationFlow: true, challenge: true },
+    });
+
+    const myJourneyResults: MyJourneyResults[] = [];
+
+    // Process spaces, challenges, and opportunities together
+    const entitiesToProcess = [...spaces, ...challenges, ...opportunities];
+
+    for (const entity of entitiesToProcess) {
+      if (!entity.collaboration?.id) {
+        throw new EntityNotInitializedException(
+          `Collaboration not initialized for ${entity.constructor.name} with id: ${entity.id}`,
+          LogContext.ACTIVITY
+        );
+      }
+      const myActivities = await this.activityLogService.myActivityLog(
+        agentInfo.userID,
+        {
+          collaborationID: entity.collaboration?.id,
+          includeChild: false,
+          limit: 1,
+          types,
+        }
+      );
+
+      myJourneyResults.push({
+        journey: entity,
+        latestActivity: myActivities[0],
+      });
+    }
+
+    // Sort myJourneyResults by the newest activity's createdDate in descending order
+    myJourneyResults.sort((a, b) => {
+      const dateA = a.latestActivity?.createdDate || new Date(0);
+      const dateB = b.latestActivity?.createdDate || new Date(0);
+      return dateB.getTime() - dateA.getTime();
+    });
+
+    return myJourneyResults.slice(0, limit);
   }
 }

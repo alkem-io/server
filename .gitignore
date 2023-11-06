@@ -43,6 +43,7 @@ subscriptions.log
 # dotenv environment variables file
 .env
 .env.test
+.env.docker
 
 # TypeScript cache
 *.tsbuildinfo
@@ -55,3 +56,7 @@ subscriptions.log
 
 # Ignores homeserver.db file
 **/*.db
+
+# Ignores all scripts and files downloaded by the scripts and local build files
+.scripts/
+.build/

@@ -4,9 +4,12 @@ import { IBaseChallenge } from '@domain/challenge/base-challenge/base.challenge.
 import { ITemplatesSet } from '@domain/template/templates-set';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { ILicense } from '@domain/license/license/license.interface';
+import { IJourney } from '../base-challenge/journey.interface';
 
-@ObjectType('Space')
-export class ISpace extends IBaseChallenge {
+@ObjectType('Space', {
+  implements: () => [IJourney],
+})
+export class ISpace extends IBaseChallenge implements IJourney {
   rowId!: number;
 
   challenges?: IChallenge[];
