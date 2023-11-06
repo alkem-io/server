@@ -33,7 +33,7 @@ export abstract class IActivityLogEntryBase {
     nullable: false,
     description: 'The event type for this Activity.',
   })
-  type!: string;
+  type!: ActivityEventType;
 
   @Field(() => String, {
     nullable: false,

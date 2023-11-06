@@ -15,7 +15,7 @@ export class ActivityLogInput {
     nullable: true,
     description: 'Include entries happened on child Collaborations.',
   })
-  includeChild?: string;
+  includeChild?: boolean;
 
   @Field(() => Float, {
     nullable: true,

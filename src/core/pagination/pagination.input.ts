@@ -1,8 +1,8 @@
-import { ArgsType, Int, Field } from '@nestjs/graphql';
+import { ArgsType, Int, Field, InputType } from '@nestjs/graphql';
 import { UUID } from '@domain/common/scalars';
 
-@ArgsType()
-export class PaginationArgs {
+@InputType()
+export class PaginationInput {
   @Field(() => UUID, {
     description: 'A pivot cursor after which items are selected',
     nullable: true,
