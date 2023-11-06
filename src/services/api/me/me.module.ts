@@ -8,6 +8,9 @@ import { MeResolverQueries } from './me.resolver.queries';
 import { MeResolverFields } from './me.resolver.fields';
 import { SpaceModule } from '@domain/challenge/space/space.module';
 import { RolesModule } from '../roles/roles.module';
+import { ChallengeModule } from '@domain/challenge/challenge/challenge.module';
+import { OpportunityModule } from '@domain/collaboration/opportunity/opportunity.module';
+import { ActivityLogModule } from '../activity-log/activity.log.module';
 
 @Module({
   imports: [
@@ -16,7 +19,10 @@ import { RolesModule } from '../roles/roles.module';
     InvitationModule,
     UserModule,
     SpaceModule,
+    ChallengeModule,
+    OpportunityModule,
     RolesModule,
+    ActivityLogModule,
   ],
   providers: [MeService, MeResolverQueries, MeResolverFields],
   exports: [MeService],
