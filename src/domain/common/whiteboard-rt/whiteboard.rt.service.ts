@@ -14,6 +14,8 @@ import { ProfileService } from '../profile/profile.service';
 import { VisualType } from '@common/enums/visual.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
+import { UpdateWhiteboardContentRtInput } from './dto/whiteboard.rt.dto.update.content';
 
 @Injectable()
 export class WhiteboardRtService {
@@ -34,6 +36,7 @@ export class WhiteboardRtService {
     });
     whiteboardRt.authorization = new AuthorizationPolicy();
     whiteboardRt.createdBy = userID;
+    whiteboardRt.contentUpdatePolicy = ContentUpdatePolicy.CONTRIBUTORS;
 
     whiteboardRt.profile = await this.profileService.createProfile(
       whiteboardRtData.profileData,
@@ -105,18 +108,34 @@ export class WhiteboardRtService {
       }
     );
 
-    if (
-      updateWhiteboardRtData.content &&
-      updateWhiteboardRtData.content !== whiteboardRt.content
-    ) {
-      whiteboardRt.content = updateWhiteboardRtData.content;
-    }
     if (updateWhiteboardRtData.profileData) {
       whiteboardRt.profile = await this.profileService.updateProfile(
         whiteboardRt.profile,
         updateWhiteboardRtData.profileData
       );
     }
+
+    if (updateWhiteboardRtData.contentUpdatePolicy) {
+      whiteboardRt.contentUpdatePolicy =
+        updateWhiteboardRtData.contentUpdatePolicy;
+    }
+
+    return this.save(whiteboardRt);
+  }
+
+  async updateWhiteboardContentRt(
+    whiteboardRtInput: IWhiteboardRt,
+    updateWhiteboardContentRtData: UpdateWhiteboardContentRtInput
+  ): Promise<IWhiteboardRt> {
+    const whiteboardRt = await this.getWhiteboardRtOrFail(whiteboardRtInput.id);
+
+    if (
+      updateWhiteboardContentRtData.content &&
+      updateWhiteboardContentRtData.content !== whiteboardRt.content
+    ) {
+      whiteboardRt.content = updateWhiteboardContentRtData.content;
+    }
+
     return this.save(whiteboardRt);
   }
 

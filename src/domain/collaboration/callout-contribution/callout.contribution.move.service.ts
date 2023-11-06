@@ -42,7 +42,7 @@ export class CalloutContributionMoveService {
     const sourceCallout = contribution.callout;
     const targetCallout = await this.calloutRepository.findOne({
       where: { id: calloutID },
-      relations: ['collaboration'],
+      relations: { collaboration: true },
     });
 
     if (!targetCallout) {

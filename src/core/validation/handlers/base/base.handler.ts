@@ -84,6 +84,7 @@ import {
 import { UpdateCalloutTemplateInput } from '@domain/template/callout-template/dto/callout.template.dto.update';
 import { CreateCalloutTemplateInput } from '@domain/template/callout-template/dto/callout.template.dto.create';
 import { CreateContributionOnCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create.contribution';
+import { UpdateLicenseInput } from '@domain/license/license/dto/license.dto.update';
 
 export class BaseHandler extends AbstractHandler {
   public async handle(
@@ -136,6 +137,7 @@ export class BaseHandler extends AbstractHandler {
       UpdateOrganizationInput,
       UpdateOpportunityInput,
       UpdateChallengeInput,
+      UpdateLicenseInput,
       UpdateCalendarEventInput,
       UpdateUserGroupInput,
       UpdateUserInput,

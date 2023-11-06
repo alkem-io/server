@@ -10,6 +10,8 @@ import { ensureMaxLength } from '@common/utils';
 import { SMALL_TEXT_LENGTH } from '@common/constants';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ActivityEventType } from '@common/enums/activity.event.type';
+import { PaginationArgs } from '@core/pagination';
+import { getPaginationResults } from '@core/pagination/pagination.fn';
 
 @Injectable()
 export class ActivityService {
@@ -64,20 +66,58 @@ export class ActivityService {
       types?: ActivityEventType[];
       limit?: number;
       visibility?: boolean;
+      userID?: string;
     }
   ): Promise<IActivity[]> {
-    const { types, visibility = true, limit } = options ?? {};
+    const { types, visibility = true, limit, userID } = options ?? {};
     return this.activityRepository.find({
       where: {
         collaborationID: In(collaborationIDs),
         visibility: visibility,
         type: types && types.length > 0 ? In(types) : undefined,
+        triggeredBy: userID,
       },
       order: {
         createdDate: 'DESC',
       },
       take: limit,
     });
+  }
+
+  public async getPaginatedActivity(
+    collaborationIDs: string[],
+    options?: {
+      types?: ActivityEventType[];
+      visibility?: boolean;
+      userID?: string;
+      paginationArgs?: PaginationArgs;
+      orderByCreatedDate?: 'ASC' | 'DESC';
+    }
+  ) {
+    const {
+      types,
+      visibility = true,
+      userID,
+      paginationArgs = {},
+      orderByCreatedDate = 'DESC',
+    } = options ?? {};
+
+    const qb = await this.activityRepository.createQueryBuilder('activity');
+
+    qb.where({
+      collaborationID: In(collaborationIDs),
+      visibility: visibility,
+    }).orderBy({ createdDate: orderByCreatedDate });
+
+    if (types && types.length > 0) {
+      qb.andWhere({ type: In(types) });
+    }
+
+    if (userID) {
+      qb.andWhere({ triggeredBy: userID });
+    }
+
+    return getPaginationResults(qb, paginationArgs);
   }
 
   async getActivityForMessage(messageID: string): Promise<IActivity | null> {

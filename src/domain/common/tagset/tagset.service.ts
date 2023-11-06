@@ -66,7 +66,7 @@ export class TagsetService {
 
   async updateTagset(tagsetData: UpdateTagsetInput): Promise<ITagset> {
     const tagset = await this.getTagsetOrFail(tagsetData.ID, {
-      relations: ['tagsetTemplate'],
+      relations: { tagsetTemplate: true },
     });
 
     switch (tagset.type) {

@@ -1,10 +1,6 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import {
-  FindOneOptions,
-  FindOptionsRelationByString,
-  Repository,
-} from 'typeorm';
+import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext, ProfileType } from '@common/enums';
 import { Discussion } from './discussion.entity';
@@ -78,7 +74,7 @@ export class DiscussionService {
   ): Promise<IDiscussion> {
     const discussionID = deleteData.ID;
     const discussion = await this.getDiscussionOrFail(discussionID, {
-      relations: ['profile', 'comments'],
+      relations: { profile: true, comments: true },
     });
 
     if (discussion.profile) {
@@ -126,7 +122,7 @@ export class DiscussionService {
 
   async deleteDiscussion(discussionID: string): Promise<IDiscussion> {
     const discussion = await this.getDiscussionOrFail(discussionID, {
-      relations: ['profile'],
+      relations: { profile: true },
     });
     if (discussion.profile) {
       await this.profileService.deleteProfile(discussion.profile.id);
@@ -160,10 +156,10 @@ export class DiscussionService {
 
   public async getProfile(
     discussionInput: IDiscussion,
-    relations: FindOptionsRelationByString = []
+    relations?: FindOptionsRelations<IDiscussion>
   ): Promise<IProfile> {
     const discussion = await this.getDiscussionOrFail(discussionInput.id, {
-      relations: ['profile', ...relations],
+      relations: { profile: true, ...relations },
     });
     if (!discussion.profile)
       throw new EntityNotFoundException(
@@ -178,7 +174,7 @@ export class DiscussionService {
     const discussionWithComments = await this.getDiscussionOrFail(
       discussionID,
       {
-        relations: ['comments'],
+        relations: { comments: true },
       }
     );
     const room = discussionWithComments.comments;

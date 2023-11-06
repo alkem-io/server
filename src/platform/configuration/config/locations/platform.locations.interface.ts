@@ -1,5 +1,4 @@
 import { Field, ObjectType } from '@nestjs/graphql';
-import { FeatureFlag } from './platform.dto.feature.flag';
 
 @ObjectType('PlatformLocations')
 export abstract class IPlatformLocations {
@@ -88,12 +87,6 @@ export abstract class IPlatformLocations {
     description: 'URL where users can get information about previous releases',
   })
   releases!: string;
-
-  @Field(() => [FeatureFlag], {
-    nullable: false,
-    description: 'The feature flags for the platform',
-  })
-  featureFlags?: FeatureFlag[];
 
   @Field(() => String, {
     nullable: false,

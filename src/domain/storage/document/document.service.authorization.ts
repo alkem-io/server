@@ -30,7 +30,7 @@ export class DocumentAuthorizationService {
     const document = await this.documentService.getDocumentOrFail(
       documentInput.id,
       {
-        relations: ['tagset'],
+        relations: { tagset: true },
       }
     );
     document.authorization =

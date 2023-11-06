@@ -78,6 +78,8 @@ import { PaginationArgs } from '@core/pagination';
 import { getPaginationResults } from '@core/pagination/pagination.fn';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
+import { ILicense } from '@domain/license/license/license.interface';
+import { LicenseService } from '@domain/license/license/license.service';
 
 @Injectable()
 export class SpaceService {
@@ -95,6 +97,7 @@ export class SpaceService {
     private templatesSetService: TemplatesSetService,
     private storageAggregatorService: StorageAggregatorService,
     private collaborationService: CollaborationService,
+    private licenseService: LicenseService,
     @InjectRepository(Space)
     private spaceRepository: Repository<Space>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -106,11 +109,11 @@ export class SpaceService {
   ): Promise<ISpace> {
     await this.validateSpaceData(spaceData);
     const space: ISpace = Space.create(spaceData);
-    // default to active space
-    space.visibility = SpaceVisibility.ACTIVE;
 
     space.storageAggregator =
       await this.storageAggregatorService.createStorageAggregator();
+
+    space.license = await this.licenseService.createLicense();
 
     // remove context before saving as want to control that creation
     space.context = undefined;
@@ -235,10 +238,17 @@ export class SpaceService {
   public async updateSpacePlatformSettings(
     updateData: UpdateSpacePlatformSettingsInput
   ): Promise<ISpace> {
-    const space = await this.getSpaceOrFail(updateData.spaceID);
+    const space = await this.getSpaceOrFail(updateData.spaceID, {
+      relations: {
+        license: true,
+      },
+    });
 
-    if (updateData.visibility) {
-      space.visibility = updateData.visibility;
+    if (!space.license) {
+      throw new RelationshipNotFoundException(
+        `Unable to load license for space ${space.id} `,
+        LogContext.CHALLENGES
+      );
     }
 
     if (updateData.nameID) {
@@ -259,6 +269,13 @@ export class SpaceService {
       await this.setSpaceHost(space.id, updateData.hostID);
     }
 
+    if (updateData.license) {
+      space.license = await this.licenseService.updateLicense(
+        space.license,
+        updateData.license
+      );
+    }
+
     return await this.save(space);
   }
 
@@ -272,11 +289,27 @@ export class SpaceService {
         templatesSet: true,
         profile: true,
         storageAggregator: true,
+        license: { featureFlags: true },
       },
     });
 
+    if (
+      !space.challenges ||
+      !space.preferenceSet ||
+      !space.templatesSet ||
+      !space.profile ||
+      !space.storageAggregator ||
+      !space.license ||
+      !space.license?.featureFlags
+    ) {
+      throw new RelationshipNotFoundException(
+        `Unable to load all entities for deletion of space ${space.id} `,
+        LogContext.CHALLENGES
+      );
+    }
+
     // Do not remove a space that has child challenges, require these to be individually first removed
-    if (space.challenges && space.challenges.length > 0)
+    if (space.challenges.length > 0)
       throw new OperationNotAllowedException(
         `Unable to remove Space (${space.nameID}) as it contains ${space.challenges.length} challenges`,
         LogContext.CHALLENGES
@@ -287,33 +320,16 @@ export class SpaceService {
       this.spaceRepository
     );
 
-    if (space.preferenceSet) {
-      await this.preferenceSetService.deletePreferenceSet(
-        space.preferenceSet.id
-      );
-    }
+    await this.preferenceSetService.deletePreferenceSet(space.preferenceSet.id);
 
-    if (space.templatesSet) {
-      await this.templatesSetService.deleteTemplatesSet(space.templatesSet.id);
-    }
+    await this.templatesSetService.deleteTemplatesSet(space.templatesSet.id);
 
-    if (space.storageAggregator) {
-      await this.storageAggregatorService.delete(space.storageAggregator.id);
-    }
+    await this.storageAggregatorService.delete(space.storageAggregator.id);
+    await this.licenseService.delete(space.license.id);
 
     const result = await this.spaceRepository.remove(space as Space);
     result.id = deleteData.ID;
     return result;
-  }
-
-  getVisibility(space: ISpace): SpaceVisibility {
-    if (!space.visibility) {
-      throw new EntityNotInitializedException(
-        `SpaceVisibility not found for Space: ${space.id}`,
-        LogContext.CHALLENGES
-      );
-    }
-    return space.visibility;
   }
 
   public async getSpacesForInnovationHub({
@@ -331,7 +347,9 @@ export class SpaceService {
       }
 
       return this.spaceRepository.findBy({
-        visibility: spaceVisibilityFilter,
+        license: {
+          visibility: spaceVisibilityFilter,
+        },
       });
     }
 
@@ -390,7 +408,10 @@ export class SpaceService {
     return notExist.length > 0 ? notExist : true;
   }
 
-  async getSpaces(args: SpacesQueryArgs): Promise<ISpace[]> {
+  async getSpaces(
+    args: SpacesQueryArgs,
+    options?: FindManyOptions<Space>
+  ): Promise<ISpace[]> {
     const visibilities = this.spacesFilterService.getAllowedVisibilities(
       args.filter
     );
@@ -399,6 +420,7 @@ export class SpaceService {
     if (args && args.IDs)
       spaces = await this.spaceRepository.find({
         where: { id: In(args.IDs) },
+        ...options,
       });
     else spaces = await this.spaceRepository.find();
 
@@ -434,8 +456,12 @@ export class SpaceService {
 
     const qb = this.spaceRepository.createQueryBuilder('space');
     if (visibilities) {
+      qb.leftJoinAndSelect('space.license', 'license');
+      qb.leftJoinAndSelect('space.authorization', 'authorization');
       qb.where({
-        visibility: In(visibilities),
+        license: {
+          visibility: In(visibilities),
+        },
       });
     }
 
@@ -456,6 +482,7 @@ export class SpaceService {
     const spacesDataForSorting = await this.spaceRepository
       .createQueryBuilder('space')
       .leftJoinAndSelect('space.challenges', 'challenge')
+      .leftJoinAndSelect('space.license', 'license')
       .leftJoinAndSelect('space.authorization', 'authorization_policy')
       .leftJoinAndSelect('challenge.opportunities', 'opportunities')
       .whereInIds(IDs)
@@ -470,18 +497,20 @@ export class SpaceService {
   ): string[] {
     const visibleSpaces = spacesData.filter(space => {
       return this.spacesFilterService.isVisible(
-        space.visibility,
+        space.license?.visibility,
         allowedVisibilities
       );
     });
 
     const sortedSpaces = visibleSpaces.sort((a, b) => {
+      const visibilityA = a.license?.visibility;
+      const visibilityB = b.license?.visibility;
       if (
-        a.visibility !== b.visibility &&
-        (a.visibility === SpaceVisibility.DEMO ||
-          b.visibility === SpaceVisibility.DEMO)
+        visibilityA !== visibilityB &&
+        (visibilityA === SpaceVisibility.DEMO ||
+          visibilityB === SpaceVisibility.DEMO)
       )
-        return a.visibility === SpaceVisibility.DEMO ? 1 : -1;
+        return visibilityA === SpaceVisibility.DEMO ? 1 : -1;
 
       if (
         a.authorization?.anonymousReadAccess === true &&
@@ -543,7 +572,9 @@ export class SpaceService {
     return this.spaceRepository.find({
       where: {
         id: In(spaceIds),
-        visibility: visibilities.length ? In(visibilities) : undefined,
+        license: {
+          visibility: visibilities.length ? In(visibilities) : undefined,
+        },
       },
     });
   }
@@ -598,7 +629,11 @@ export class SpaceService {
 
   async getTemplatesSetOrFail(spaceId: string): Promise<ITemplatesSet> {
     const spaceWithTemplates = await this.getSpaceOrFail(spaceId, {
-      relations: ['templatesSet', 'templatesSet.postTemplates'],
+      relations: {
+        templatesSet: {
+          postTemplates: true,
+        },
+      },
     });
     const templatesSet = spaceWithTemplates.templatesSet;
 
@@ -632,9 +667,31 @@ export class SpaceService {
     return storageAggregator;
   }
 
+  async getLicenseOrFail(spaceId: string): Promise<ILicense> {
+    const space = await this.getSpaceOrFail(spaceId, {
+      relations: {
+        license: { featureFlags: true },
+      },
+    });
+    const license = space.license;
+
+    if (!license) {
+      throw new EntityNotFoundException(
+        `Unable to find license for space with nameID: ${space.nameID}`,
+        LogContext.LICENSE
+      );
+    }
+
+    return license;
+  }
+
   async getPreferenceSetOrFail(spaceId: string): Promise<IPreferenceSet> {
     const spaceWithPreferences = await this.getSpaceOrFail(spaceId, {
-      relations: ['preferenceSet', 'preferenceSet.preferences'],
+      relations: {
+        preferenceSet: {
+          preferences: true,
+        },
+      },
     });
     const preferenceSet = spaceWithPreferences.preferenceSet;
 
@@ -651,7 +708,7 @@ export class SpaceService {
   async setSpaceHost(spaceID: string, hostOrgID: string): Promise<ISpace> {
     const organization = await this.organizationService.getOrganizationOrFail(
       hostOrgID,
-      { relations: ['groups', 'agent'] }
+      { relations: { groups: true, agent: true } }
     );
 
     const existingHost = await this.getHost(spaceID);
@@ -700,7 +757,7 @@ export class SpaceService {
     if (args && args.IDs) {
       {
         spaceWithChallenges = await this.getSpaceOrFail(space.id, {
-          relations: ['challenges'],
+          relations: { challenges: true },
         });
         spaceWithChallenges.challenges = spaceWithChallenges.challenges?.filter(
           c => args.IDs?.includes(c.id)
@@ -708,7 +765,7 @@ export class SpaceService {
       }
     } else
       spaceWithChallenges = await this.getSpaceOrFail(space.id, {
-        relations: ['challenges'],
+        relations: { challenges: true },
       });
 
     const challenges = spaceWithChallenges.challenges;
@@ -805,9 +862,15 @@ export class SpaceService {
     );
   }
 
-  public async getCollaboration(space: ISpace): Promise<ICollaboration> {
-    return await this.baseChallengeService.getCollaboration(
-      space.id,
+  public async getCollaborationOrFail(
+    spaceIdOrEntity: ISpace | string
+  ): Promise<ICollaboration> | never {
+    const spaceId =
+      typeof spaceIdOrEntity === 'string'
+        ? spaceIdOrEntity
+        : spaceIdOrEntity.id;
+    return await this.baseChallengeService.getCollaborationOrFail(
+      spaceId,
       this.spaceRepository
     );
   }
@@ -891,7 +954,7 @@ export class SpaceService {
     challenge: IChallenge
   ): Promise<IChallenge> {
     const space = await this.getSpaceOrFail(spaceID, {
-      relations: ['challenges', 'community'],
+      relations: { challenges: true, community: true },
     });
     if (!space.challenges)
       throw new ValidationException(
@@ -995,10 +1058,6 @@ export class SpaceService {
       space,
       this.spaceRepository
     );
-  }
-
-  async getSpaceCount(visibility = SpaceVisibility.ACTIVE): Promise<number> {
-    return await this.spaceRepository.countBy({ visibility: visibility });
   }
 
   async getCommunityInNameableScope(

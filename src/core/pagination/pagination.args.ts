@@ -7,23 +7,23 @@ export class PaginationArgs {
     description: 'A pivot cursor after which items are selected',
     nullable: true,
   })
-  after!: string;
+  after?: string;
 
   @Field(() => Int, {
     description: 'Amount of items after the cursor',
     nullable: true,
   })
-  first!: number;
+  first?: number;
 
   @Field(() => UUID, {
     description: 'A pivot cursor before which items are selected',
     nullable: true,
   })
-  before!: string;
+  before?: string;
 
   @Field(() => Int, {
     description: 'Amount of items before the cursor',
     nullable: true,
   })
-  last!: number;
+  last?: number;
 }

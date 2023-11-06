@@ -80,7 +80,14 @@ export const getRelayStylePaginationResults = async <
 
   const { first, after, last, before } = paginationArgs;
 
-  query.orderBy({ [`${query.alias}.${SORTING_COLUMN}`]: 'ASC' });
+  const hasOrderBy =
+    query.expressionMap.orderBys && Object.keys(query.expressionMap.orderBys).length > 0;
+
+  if (hasOrderBy) {
+    query.addOrderBy(`${query.alias}.${SORTING_COLUMN}`, 'ASC');
+  } else {
+    query.orderBy({ [`${query.alias}.${SORTING_COLUMN}`]: 'ASC' });
+  }
 
   const originalQuery = query.clone();
   const hasWhere =
@@ -142,12 +149,10 @@ export const getRelayStylePaginationResults = async <
   const beforeQuery = originalQuery.clone();
   const afterQuery = originalQuery.clone();
 
-  let countBefore = 0;
-  let countAfter = 0;
-  countBefore = await beforeQuery[hasWhere ? 'andWhere' : 'where']({
+  const countBefore = await beforeQuery[hasWhere ? 'andWhere' : 'where']({
     [SORTING_COLUMN]: LessThan(startCursorRowId),
   }).getCount();
-  countAfter = await afterQuery[hasWhere ? 'andWhere' : 'where']({
+  const countAfter = await afterQuery[hasWhere ? 'andWhere' : 'where']({
     [SORTING_COLUMN]: MoreThan(endCursorRowId),
   }).getCount();
 

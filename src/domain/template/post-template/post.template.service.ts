@@ -62,7 +62,7 @@ export class PostTemplateService {
     const postTemplate = await this.getPostTemplateOrFail(
       postTemplateInput.id,
       {
-        relations: ['profile'],
+        relations: { profile: true },
       }
     );
     await this.templateBaseService.updateTemplateBase(
@@ -85,7 +85,7 @@ export class PostTemplateService {
     const postTemplate = await this.getPostTemplateOrFail(
       postTemplateInput.id,
       {
-        relations: ['profile'],
+        relations: { profile: true },
       }
     );
     const templateId: string = postTemplate.id;

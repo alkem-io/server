@@ -114,7 +114,7 @@ export class BaseChallengeService {
       baseChallengeData.ID,
       repository,
       {
-        relations: ['context', 'community', 'profile'],
+        relations: { context: true, community: true, profile: true },
       }
     );
 
@@ -147,13 +147,13 @@ export class BaseChallengeService {
       baseChallengeID,
       repository,
       {
-        relations: [
-          'collaboration',
-          'community',
-          'context',
-          'agent',
-          'profile',
-        ],
+        relations: {
+          collaboration: true,
+          community: true,
+          context: true,
+          agent: true,
+          profile: true,
+        },
       }
     );
     if (baseChallenge.context) {
@@ -222,7 +222,7 @@ export class BaseChallengeService {
       baseChallengeId,
       repository,
       {
-        relations: ['community'],
+        relations: { community: true },
       }
     );
     const community = challengeWithCommunity.community;
@@ -272,7 +272,7 @@ export class BaseChallengeService {
       challengeId,
       repository,
       {
-        relations: ['profile'],
+        relations: { profile: true },
       }
     );
     const profile = challengeWithProfile.profile;
@@ -284,15 +284,15 @@ export class BaseChallengeService {
     return profile;
   }
 
-  public async getCollaboration(
+  public async getCollaborationOrFail(
     challengeId: string,
     repository: Repository<BaseChallenge>
-  ): Promise<ICollaboration> {
+  ): Promise<ICollaboration> | never {
     const challengeWithCollaboration = await this.getBaseChallengeOrFail(
       challengeId,
       repository,
       {
-        relations: ['collaboration'],
+        relations: { collaboration: true },
       }
     );
     const collaboration = challengeWithCollaboration.collaboration;
@@ -312,7 +312,7 @@ export class BaseChallengeService {
       challengeId,
       repository,
       {
-        relations: ['agent'],
+        relations: { agent: true },
       }
     );
     const agent = challengeWithContext.agent;
@@ -336,7 +336,7 @@ export class BaseChallengeService {
     baseChallenge: IBaseChallenge,
     repository: Repository<BaseChallenge>
   ): Promise<number> {
-    const collaboration = await this.getCollaboration(
+    const collaboration = await this.getCollaborationOrFail(
       baseChallenge.id,
       repository
     );
@@ -348,7 +348,7 @@ export class BaseChallengeService {
     baseChallenge: IBaseChallenge,
     repository: Repository<BaseChallenge>
   ): Promise<number> {
-    const collaboration = await this.getCollaboration(
+    const collaboration = await this.getCollaborationOrFail(
       baseChallenge.id,
       repository
     );
@@ -359,7 +359,7 @@ export class BaseChallengeService {
     baseChallenge: IBaseChallenge,
     repository: Repository<BaseChallenge>
   ): Promise<number> {
-    const collaboration = await this.getCollaboration(
+    const collaboration = await this.getCollaborationOrFail(
       baseChallenge.id,
       repository
     );

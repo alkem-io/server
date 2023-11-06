@@ -35,7 +35,7 @@ export class TagsetTemplateSetService {
     const tagsetTemplateSet = await this.getTagsetTemplateSetOrFail(
       tagsetTemplateSetID,
       {
-        relations: [],
+        relations: {},
       }
     );
 

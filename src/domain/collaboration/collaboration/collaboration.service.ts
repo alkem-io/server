@@ -217,7 +217,7 @@ export class CollaborationService {
     collaborationID: string
   ): Promise<ICollaboration> {
     const collaboration = await this.getCollaborationOrFail(collaborationID, {
-      relations: ['callouts', 'timeline'],
+      relations: { callouts: true, timeline: true },
     });
 
     if (collaboration.callouts) {
@@ -250,7 +250,7 @@ export class CollaborationService {
   ): Promise<ICallout> {
     const collaborationID = calloutData.collaborationID;
     const collaboration = await this.getCollaborationOrFail(collaborationID, {
-      relations: ['callouts', 'tagsetTemplateSet'],
+      relations: { callouts: true, tagsetTemplateSet: true },
     });
     if (!collaboration.callouts || !collaboration.tagsetTemplateSet)
       throw new EntityNotInitializedException(
@@ -313,7 +313,7 @@ export class CollaborationService {
 
   async getTimelineOrFail(collaborationID: string): Promise<ITimeline> {
     const collaboration = await this.getCollaborationOrFail(collaborationID, {
-      relations: ['timeline'],
+      relations: { timeline: true },
     });
     const timeline = collaboration.timeline;
 
@@ -470,7 +470,7 @@ export class CollaborationService {
     const loadedCollaboration = await this.getCollaborationOrFail(
       collaboration.id,
       {
-        relations: ['callouts'],
+        relations: { callouts: true },
       }
     );
     if (!loadedCollaboration.callouts)
@@ -487,7 +487,7 @@ export class CollaborationService {
   ): Promise<IRelation> {
     const collaborationId = relationData.collaborationID;
     const collaboration = await this.getCollaborationOrFail(collaborationId, {
-      relations: ['relations'],
+      relations: { relations: true },
     });
 
     if (!collaboration.relations)
@@ -506,7 +506,7 @@ export class CollaborationService {
     collaborationID: string
   ): Promise<ITagsetTemplateSet> {
     const collaboration = await this.getCollaborationOrFail(collaborationID, {
-      relations: ['tagsetTemplateSet'],
+      relations: { tagsetTemplateSet: true },
     });
 
     if (!collaboration.tagsetTemplateSet) {
@@ -525,7 +525,7 @@ export class CollaborationService {
     const loadedCollaboration = await this.getCollaborationOrFail(
       collaboration.id,
       {
-        relations: ['relations'],
+        relations: { relations: true },
       }
     );
 
@@ -598,7 +598,7 @@ export class CollaborationService {
     const collaborationLoaded = await this.getCollaborationOrFail(
       collaboration.id,
       {
-        relations: ['callouts'],
+        relations: { callouts: true },
       }
     );
     const allCallouts = collaborationLoaded.callouts;

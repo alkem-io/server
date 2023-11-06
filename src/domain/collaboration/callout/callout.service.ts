@@ -1,10 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import {
-  FindOneOptions,
-  FindOptionsRelationByString,
-  Repository,
-} from 'typeorm';
+import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -227,7 +223,11 @@ export class CalloutService {
     agentInfo: AgentInfo
   ): Promise<ICallout> {
     const callout = await this.getCalloutOrFail(calloutUpdateData.ID, {
-      relations: ['contributionDefaults', 'contributionPolicy', 'framing'],
+      relations: {
+        contributionDefaults: true,
+        contributionPolicy: true,
+        framing: true,
+      },
     });
 
     if (!callout.contributionDefaults || !callout.contributionPolicy) {
@@ -377,7 +377,7 @@ export class CalloutService {
     calloutID: string
   ): Promise<ICalloutContributionPolicy> {
     const callout = await this.getCalloutOrFail(calloutID, {
-      relations: ['contributionPolicy'],
+      relations: { contributionPolicy: true },
     });
     if (!callout.contributionPolicy)
       throw new EntityNotInitializedException(
@@ -391,7 +391,7 @@ export class CalloutService {
     calloutID: string
   ): Promise<ICalloutContributionDefaults> {
     const callout = await this.getCalloutOrFail(calloutID, {
-      relations: ['contributionDefaults'],
+      relations: { contributionDefaults: true },
     });
     if (!callout.contributionDefaults)
       throw new EntityNotInitializedException(
@@ -403,7 +403,7 @@ export class CalloutService {
 
   public async getComments(calloutID: string): Promise<IRoom | undefined> {
     const callout = await this.getCalloutOrFail(calloutID, {
-      relations: ['comments'],
+      relations: { comments: true },
     });
     return callout.comments;
   }
@@ -436,7 +436,7 @@ export class CalloutService {
   ): Promise<ICalloutContribution> {
     const calloutID = contributionData.calloutID;
     const callout = await this.getCalloutOrFail(calloutID, {
-      relations: ['contributions', 'contributionPolicy'],
+      relations: { contributions: true, contributionPolicy: true },
     });
     if (!callout.contributions || !callout.contributionPolicy)
       throw new EntityNotInitializedException(
@@ -468,10 +468,10 @@ export class CalloutService {
 
   public async getCalloutFraming(
     calloutID: string,
-    relations: FindOptionsRelationByString = []
+    relations: FindOneOptions<ICallout>[] = []
   ): Promise<ICalloutFraming> {
     const calloutLoaded = await this.getCalloutOrFail(calloutID, {
-      relations: ['framing', ...relations],
+      relations: { framing: true, ...relations },
     });
     if (!calloutLoaded.framing)
       throw new EntityNotFoundException(
@@ -484,14 +484,19 @@ export class CalloutService {
 
   public async getContributions(
     callout: ICallout,
-    relations: FindOptionsRelationByString = [],
+    relations?: FindOptionsRelations<ICallout>,
     contributionIDs?: string[],
     filter?: CalloutContributionFilterArgs,
     limit?: number,
     shuffle?: boolean
   ): Promise<ICalloutContribution[]> {
     const calloutLoaded = await this.getCalloutOrFail(callout.id, {
-      relations: ['contributions', 'contributions.whiteboard', ...relations],
+      relations: {
+        contributions: {
+          whiteboard: true,
+        },
+        ...relations,
+      },
     });
     if (!calloutLoaded.contributions)
       throw new EntityNotFoundException(

@@ -108,7 +108,7 @@ export class InvitationExternalService {
     const existingInvitationExternals =
       await this.invitationExternalRepository.find({
         where: { email: email },
-        relations: ['community'],
+        relations: { community: true },
       });
 
     if (existingInvitationExternals.length > 0)

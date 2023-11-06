@@ -24,8 +24,8 @@ import {
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { CommunityService } from '@domain/community/community/community.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
-import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, FindOneOptions, Repository } from 'typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
+import { FindOneOptions, Repository } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IOrganization } from '@domain/community/organization';
 import { ICommunity } from '@domain/community/community';
@@ -48,7 +48,6 @@ import { CommunityRole } from '@common/enums/community.role';
 import { challengeCommunityPolicy } from './challenge.community.policy';
 import { challengeCommunityApplicationForm } from './challenge.community.application.form';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
-import { SpaceVisibility } from '@common/enums/space.visibility';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
@@ -83,9 +82,7 @@ export class ChallengeService {
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService,
-    @InjectEntityManager('default')
-    private entityManager: EntityManager
+    private readonly logger: LoggerService
   ) {}
 
   async createChallenge(
@@ -449,7 +446,7 @@ export class ChallengeService {
   public async getCollaboration(
     challenge: IChallenge
   ): Promise<ICollaboration> {
-    return await this.baseChallengeService.getCollaboration(
+    return await this.baseChallengeService.getCollaborationOrFail(
       challenge.id,
       this.challengeRepository
     );
@@ -467,7 +464,7 @@ export class ChallengeService {
     args?: LimitAndShuffleIdsQueryArgs
   ): Promise<IOpportunity[]> {
     const challenge = await this.getChallengeOrFail(challengeId, {
-      relations: ['opportunities'],
+      relations: { opportunities: true },
     });
 
     const { IDs, limit, shuffle } = args ?? {};
@@ -509,7 +506,7 @@ export class ChallengeService {
     const challengeWithChildChallenges = await this.getChallengeOrFail(
       challenge.id,
       {
-        relations: ['childChallenges'],
+        relations: { childChallenges: true },
       }
     );
     const childChallenges = challengeWithChildChallenges.childChallenges;
@@ -532,7 +529,7 @@ export class ChallengeService {
     );
 
     const challenge = await this.getChallengeOrFail(challengeData.challengeID, {
-      relations: ['childChallenges', 'community'],
+      relations: { childChallenges: true, community: true },
     });
 
     const spaceID = this.getSpaceID(challenge);
@@ -624,25 +621,15 @@ export class ChallengeService {
     return opportunity;
   }
 
-  async getChallenges(): Promise<Challenge[]> {
-    const challenges = await this.challengeRepository.find();
-    return challenges || [];
+  public async getChallenges(
+    options?: FindOneOptions<Challenge>
+  ): Promise<IChallenge[]> {
+    return this.challengeRepository.find(options);
   }
 
   async getChallengesInSpaceCount(spaceID: string): Promise<number> {
     const count = await this.challengeRepository.countBy({ spaceID: spaceID });
     return count;
-  }
-
-  async getChallengesCount(
-    visibility = SpaceVisibility.ACTIVE
-  ): Promise<number> {
-    const sqlQuery = `SELECT COUNT(*) as challengesCount FROM challenge RIGHT JOIN space ON challenge.spaceID = space.id WHERE space.visibility = '${visibility}'`;
-    const [queryResult]: {
-      challengesCount: number;
-    }[] = await this.entityManager.connection.query(sqlQuery);
-
-    return queryResult.challengesCount;
   }
 
   async getChildChallengesCount(challengeID: string): Promise<number> {
@@ -730,7 +717,13 @@ export class ChallengeService {
   async getPreferenceSetOrFail(challengeId: string): Promise<IPreferenceSet> {
     const challengeWithPreferences = await this.getChallengeOrFail(
       challengeId,
-      { relations: ['preferenceSet', 'preferenceSet.preferences'] }
+      {
+        relations: {
+          preferenceSet: {
+            preferences: true,
+          },
+        },
+      }
     );
     const preferenceSet = challengeWithPreferences.preferenceSet;
 
@@ -795,7 +788,7 @@ export class ChallengeService {
     communityID: string
   ): Promise<IChallenge | null> {
     return await this.challengeRepository.findOne({
-      relations: ['community'],
+      relations: { community: true },
       where: {
         community: { id: communityID },
       },

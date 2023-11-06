@@ -1,11 +1,14 @@
 import { Field, ObjectType } from '@nestjs/graphql';
-import { IBaseChallenge } from '../../challenge/base-challenge/base.challenge.interface';
 import { IProject } from '@domain/collaboration/project/project.interface';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { IInnovationFlow } from '@domain/challenge/innovation-flow/innovation.flow.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-@ObjectType('Opportunity')
-export abstract class IOpportunity extends IBaseChallenge {
+import { IJourney } from '@domain/challenge/base-challenge/journey.interface';
+import { IBaseChallenge } from '@domain/challenge/base-challenge/base.challenge.interface';
+@ObjectType('Opportunity', {
+  implements: () => [IJourney],
+})
+export abstract class IOpportunity extends IBaseChallenge implements IJourney {
   rowId!: number;
   @Field(() => [IProject], {
     nullable: true,

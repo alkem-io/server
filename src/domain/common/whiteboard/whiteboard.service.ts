@@ -1,10 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import {
-  FindOneOptions,
-  FindOptionsRelationByString,
-  Repository,
-} from 'typeorm';
+import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext, ProfileType } from '@common/enums';
 import { Whiteboard } from './whiteboard.entity';
@@ -88,7 +84,7 @@ export class WhiteboardService {
 
   async deleteWhiteboard(whiteboardID: string): Promise<IWhiteboard> {
     const whiteboard = await this.getWhiteboardOrFail(whiteboardID, {
-      relations: ['checkout', 'profile'],
+      relations: { checkout: true, profile: true },
     });
 
     if (whiteboard.checkout) {
@@ -116,7 +112,7 @@ export class WhiteboardService {
     agentInfo: AgentInfo
   ): Promise<IWhiteboard> {
     const whiteboard = await this.getWhiteboardOrFail(whiteboardInput.id, {
-      relations: ['checkout', 'profile'],
+      relations: { checkout: true, profile: true },
     });
     if (!whiteboard.checkout) {
       throw new EntityNotFoundException(
@@ -151,10 +147,10 @@ export class WhiteboardService {
 
   public async getProfile(
     whiteboard: IWhiteboard,
-    relations: FindOptionsRelationByString = []
+    relations?: FindOptionsRelations<IWhiteboard>
   ): Promise<IProfile> {
     const whiteboardLoaded = await this.getWhiteboardOrFail(whiteboard.id, {
-      relations: ['profile', ...relations],
+      relations: { profile: true, ...relations },
     });
     if (!whiteboardLoaded.profile)
       throw new EntityNotFoundException(
@@ -186,7 +182,7 @@ export class WhiteboardService {
     const whiteboardWithCheckout = await this.getWhiteboardOrFail(
       whiteboard.id,
       {
-        relations: ['checkout'],
+        relations: { checkout: true },
       }
     );
 
