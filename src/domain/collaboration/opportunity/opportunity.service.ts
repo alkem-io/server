@@ -383,7 +383,7 @@ export class OpportunityService {
   public async getCollaboration(
     opportunity: IOpportunity
   ): Promise<ICollaboration> {
-    return await this.baseChallengeService.getCollaboration(
+    return await this.baseChallengeService.getCollaborationOrFail(
       opportunity.id,
       this.opportunityRepository
     );
