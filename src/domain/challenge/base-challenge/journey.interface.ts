@@ -5,7 +5,8 @@ import { IChallenge } from '../challenge/challenge.interface';
 import { IOpportunity } from '@domain/collaboration/opportunity';
 import { ISpace } from '../space/space.interface';
 import { ICollaboration } from '@domain/collaboration/collaboration';
-import { INameable } from '@domain/common/entity/nameable-entity';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
+import { UUID, NameID } from '@domain/common/scalars';
 
 @InterfaceType('Journey', {
   resolveType(journey) {
@@ -19,10 +20,29 @@ import { INameable } from '@domain/common/entity/nameable-entity';
     );
   },
 })
-export abstract class IJourney extends INameable {
+export abstract class IJourney {
+  @Field(() => UUID, {
+    nullable: false,
+    description: 'The ID of the Journey',
+  })
+  id!: string;
+
+  @Field(() => IAuthorizationPolicy, {
+    nullable: true,
+    description: 'The authorization rules for the Journey',
+  })
+  authorization?: IAuthorizationPolicy;
+
+  @Field(() => NameID, {
+    nullable: false,
+    description:
+      'A name identifier of the Journey, unique within a given scope.',
+  })
+  nameID!: string;
+
   @Field(() => ICollaboration, {
     nullable: true,
-    description: 'Collaboration object for the base challenge',
+    description: 'Collaboration object for the Journey',
   })
   collaboration?: ICollaboration;
 }
