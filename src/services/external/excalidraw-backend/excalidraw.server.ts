@@ -4,7 +4,7 @@ import { Configuration, FrontendApi } from '@ory/kratos-client';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ConfigurationTypes, LogContext } from '@common/enums';
-import { EXCALIDRAW_SERVER, UUID_LENGTH } from '@common/constants';
+import { APP_ID, EXCALIDRAW_SERVER, UUID_LENGTH } from '@common/constants';
 import { AuthenticationService } from '@core/authentication/authentication.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { WhiteboardRtService } from '@domain/common/whiteboard-rt';
@@ -47,7 +47,9 @@ export class ExcalidrawServer {
     private authorizationService: AuthorizationService,
     private whiteboardRtService: WhiteboardRtService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private logger: LoggerService
+    private logger: LoggerService,
+    @Inject(APP_ID)
+    private appId: string
   ) {
     this.init().then(() =>
       this.logger.verbose?.(
@@ -73,14 +75,14 @@ export class ExcalidrawServer {
       if (!isRoomId(roomId)) {
         return;
       }
-      console.log(roomId, 'room deleted');
+      console.log(`[${this.appId}]`, roomId, 'room deleted');
       this.timers.delete(roomId);
     });
     adapter.on(CREATE_ROOM, (roomId: string) => {
       if (!isRoomId(roomId)) {
         return;
       }
-      console.log(roomId, 'room created');
+      console.log(`[${this.appId}]`, roomId, 'room created');
       const timer = this.timers.get(roomId);
       if (!timer) {
         const timer = setInterval(async () => {
