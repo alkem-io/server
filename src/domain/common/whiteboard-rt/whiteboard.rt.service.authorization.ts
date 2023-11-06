@@ -11,13 +11,12 @@ import { EntityNotInitializedException } from '@common/exceptions/entity.not.ini
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
   CREDENTIAL_RULE_WHITEBOARD_CREATED_BY,
-  CREDENTIAL_RULE_WHITEBOARD_RT_ACCESS,
-  POLICY_RULE_WHITEBOARD_CONTRIBUTE,
-  POLICY_RULE_WHITEBOARD_UPDATE,
+  POLICY_RULE_WHITEBOARD_RT_CONTENT_UPDATE,
 } from '@common/constants';
 import { ProfileAuthorizationService } from '../profile/profile.service.authorization';
 import { WhiteboardRtService } from './whiteboard.rt.service';
 import { IWhiteboardRt } from './whiteboard.rt.interface';
+import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
 
 @Injectable()
 export class WhiteboardRtAuthorizationService {
@@ -39,7 +38,8 @@ export class WhiteboardRtAuthorizationService {
 
     whiteboardRt.authorization = this.appendCredentialRules(whiteboardRt);
     whiteboardRt.authorization = this.appendPrivilegeRules(
-      whiteboardRt.authorization
+      whiteboardRt.authorization,
+      whiteboardRt
     );
 
     whiteboardRt.profile = await this.whiteboardRtService.getProfile(
@@ -73,6 +73,7 @@ export class WhiteboardRtAuthorizationService {
             AuthorizationPrivilege.CREATE,
             AuthorizationPrivilege.READ,
             AuthorizationPrivilege.UPDATE,
+            AuthorizationPrivilege.UPDATE_CONTENT,
             AuthorizationPrivilege.DELETE,
           ],
           [
@@ -84,14 +85,6 @@ export class WhiteboardRtAuthorizationService {
           CREDENTIAL_RULE_WHITEBOARD_CREATED_BY
         );
       newRules.push(manageWhiteboardCreatedByPolicy);
-
-      const manageWhiteboardRtPolicy =
-        this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-          [AuthorizationPrivilege.ACCESS_WHITEBOARD_RT],
-          [AuthorizationCredential.BETA_TESTER],
-          CREDENTIAL_RULE_WHITEBOARD_RT_ACCESS
-        );
-      newRules.push(manageWhiteboardRtPolicy);
     }
 
     return this.authorizationPolicyService.appendCredentialAuthorizationRules(
@@ -101,23 +94,33 @@ export class WhiteboardRtAuthorizationService {
   }
 
   private appendPrivilegeRules(
-    authorization: IAuthorizationPolicy
+    authorization: IAuthorizationPolicy,
+    whiteboardRt: IWhiteboardRt
   ): IAuthorizationPolicy {
     const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
 
-    const createPrivilege = new AuthorizationPolicyRulePrivilege(
-      [AuthorizationPrivilege.UPDATE_WHITEBOARD],
-      AuthorizationPrivilege.UPDATE,
-      POLICY_RULE_WHITEBOARD_UPDATE
-    );
-    privilegeRules.push(createPrivilege);
-
-    const contributePrivilege = new AuthorizationPolicyRulePrivilege(
-      [AuthorizationPrivilege.UPDATE_WHITEBOARD],
-      AuthorizationPrivilege.CONTRIBUTE,
-      POLICY_RULE_WHITEBOARD_CONTRIBUTE
-    );
-    privilegeRules.push(contributePrivilege);
+    switch (whiteboardRt.contentUpdatePolicy) {
+      case ContentUpdatePolicy.OWNER:
+        break; // covered via dedicated rule above
+      case ContentUpdatePolicy.ADMINS:
+        const updateContentPrivilegeAdmins =
+          new AuthorizationPolicyRulePrivilege(
+            [AuthorizationPrivilege.UPDATE_CONTENT],
+            AuthorizationPrivilege.UPDATE,
+            POLICY_RULE_WHITEBOARD_RT_CONTENT_UPDATE
+          );
+        privilegeRules.push(updateContentPrivilegeAdmins);
+        break;
+      case ContentUpdatePolicy.CONTRIBUTORS:
+        const updateContentPrivilegeContributors =
+          new AuthorizationPolicyRulePrivilege(
+            [AuthorizationPrivilege.UPDATE_CONTENT],
+            AuthorizationPrivilege.CONTRIBUTE,
+            POLICY_RULE_WHITEBOARD_RT_CONTENT_UPDATE
+          );
+        privilegeRules.push(updateContentPrivilegeContributors);
+        break;
+    }
 
     return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
       authorization,

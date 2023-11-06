@@ -8,7 +8,7 @@ import { CalloutFramingService } from './callout.framing.service';
 import { CalloutFraming } from './callout.framing.entity';
 import { ICalloutFraming } from './callout.framing.interface';
 import { WhiteboardAuthorizationService } from '@domain/common/whiteboard/whiteboard.service.authorization';
-import { WhiteboardRtAuthorizationService } from '@domain/common/whiteboard-rt/whiteboard.rt.authorization.service';
+import { WhiteboardRtAuthorizationService } from '@domain/common/whiteboard-rt/whiteboard.rt.service.authorization';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { LogContext } from '@common/enums/logging.context';
 

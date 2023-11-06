@@ -35,11 +35,13 @@ import {
   PreferencesLoaderCreator,
   AgentLoaderCreator,
   ProfileLoaderCreator,
+  SpaceLicenseLoaderCreator,
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication/agent-info';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { ILicense } from '@domain/license/license/license.interface';
 
 @Resolver(() => ISpace)
 export class SpaceResolverFields {
@@ -141,6 +143,18 @@ export class SpaceResolverFields {
   @UseGuards(GraphqlGuard)
   async storageAggregator(@Parent() space: Space): Promise<IStorageAggregator> {
     return await this.spaceService.getStorageAggregatorOrFail(space.id);
+  }
+
+  @ResolveField('license', () => ILicense, {
+    nullable: false,
+    description:
+      'The License governing platform functionality in use by this Space',
+  })
+  async license(
+    @Parent() space: Space,
+    @Loader(SpaceLicenseLoaderCreator) loader: ILoader<ILicense>
+  ): Promise<ILicense> {
+    return loader.load(space.id);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
