@@ -23,6 +23,7 @@ import {
   POLICY_RULE_COLLABORATION_CREATE,
   POLICY_RULE_CALLOUT_CONTRIBUTE,
   POLICY_RULE_COLLABORATION_WHITEBOARD_RT_CREATE,
+  POLICY_RULE_COLLABORATION_WHITEBOARD_RT_CONTRIBUTORS_CREATE,
 } from '@common/constants';
 import { CommunityRole } from '@common/enums/community.role';
 import { TimelineAuthorizationService } from '@domain/timeline/timeline/timeline.service.authorization';
@@ -261,6 +262,16 @@ export class CollaborationAuthorizationService {
         POLICY_RULE_CALLOUT_CONTRIBUTE
       );
       privilegeRules.push(createCalloutPrivilege);
+
+      if (whiteboardRtEnabled) {
+        const createWhiteboardRtContributePrivilege =
+          new AuthorizationPolicyRulePrivilege(
+            [AuthorizationPrivilege.CREATE_WHITEBOARD_RT],
+            AuthorizationPrivilege.CONTRIBUTE,
+            POLICY_RULE_COLLABORATION_WHITEBOARD_RT_CONTRIBUTORS_CREATE
+          );
+        privilegeRules.push(createWhiteboardRtContributePrivilege);
+      }
     }
 
     return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
