@@ -31,10 +31,11 @@ import {
   CREATE_ROOM,
   DELETE_ROOM,
 } from '@services/external/excalidraw-backend/adapters/adapter.event.names';
+import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 
 export type RoomTimers = Map<string, NodeJS.Timer>;
 
-const WINDOW_LENGTH = 3000;
+const WINDOW_LENGTH = 10000; // todo get from config
 
 @Injectable()
 export class ExcalidrawServer {
@@ -46,6 +47,7 @@ export class ExcalidrawServer {
     private authService: AuthenticationService,
     private authorizationService: AuthorizationService,
     private whiteboardRtService: WhiteboardRtService,
+    private contributionReporter: ContributionReporterService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private logger: LoggerService,
     @Inject(APP_ID)
@@ -75,34 +77,16 @@ export class ExcalidrawServer {
       if (!isRoomId(roomId)) {
         return;
       }
-      console.log(`[${this.appId}]`, roomId, 'room deleted');
       this.timers.delete(roomId);
     });
     adapter.on(CREATE_ROOM, (roomId: string) => {
       if (!isRoomId(roomId)) {
         return;
       }
-      console.log(`[${this.appId}]`, roomId, 'room created');
       const timer = this.timers.get(roomId);
+
       if (!timer) {
-        const timer = setInterval(async () => {
-          const windowEnd = Date.now();
-          const windowStart = windowEnd - WINDOW_LENGTH;
-
-          const sockets = await this.wsServer.in(roomId).fetchSockets();
-
-          sockets.forEach(socket => {
-            const lastContributed = socket.data.lastContributed;
-            // was the last contribution in that window
-            if (
-              lastContributed >= windowStart &&
-              windowEnd >= lastContributed
-            ) {
-              console.log(socket.id, 'contribution event');
-            }
-          });
-        }, WINDOW_LENGTH);
-
+        const timer = this.startContributionEventTimer(roomId);
         this.timers.set(roomId, timer);
       }
     });
@@ -119,6 +103,8 @@ export class ExcalidrawServer {
         closeConnection(socket, 'Not able to authenticate user');
         return;
       }
+
+      socket.data.agentInfo = agentInfo; // todo type
 
       this.logger?.verbose?.(
         `User '${agentInfo.userID}' established connection`,
@@ -165,6 +151,37 @@ export class ExcalidrawServer {
       socket.on(DISCONNECT, () => disconnectEventHandler(socket));
     });
   }
+
+  private startContributionEventTimer(roomId: string) {
+    return setInterval(async () => {
+      const windowEnd = Date.now();
+      const windowStart = windowEnd - WINDOW_LENGTH;
+
+      const spaceID = ''; // todo
+      const wb = await this.whiteboardRtService.getProfile(roomId);
+      // const callout = await this.whiteboardRtService.getCallout(roomId);
+
+      const sockets = await this.wsServer.in(roomId).fetchSockets();
+
+      for (const socket of sockets) {
+        const lastContributed = socket.data.lastContributed;
+        // was the last contribution in that window
+        if (lastContributed >= windowStart && windowEnd >= lastContributed) {
+          this.contributionReporter.whiteboardRtContribution(
+            {
+              id: roomId,
+              name: wb.displayName,
+              space: spaceID,
+            },
+            {
+              id: socket.data.agentInfo.userID,
+              email: socket.data.agentInfo.email,
+            }
+          );
+        }
+      }
+    }, WINDOW_LENGTH);
+  }
 }
 
-const isRoomId = (id: string) => id.length === UUID_LENGTH; // todo: not that reliable
+const isRoomId = (id: string) => id.length === UUID_LENGTH; // not that reliable

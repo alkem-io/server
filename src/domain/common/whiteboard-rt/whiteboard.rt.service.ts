@@ -128,11 +128,11 @@ export class WhiteboardRtService {
   }
 
   public async getProfile(
-    whiteboardRt: IWhiteboardRt,
+    whiteboardRtId: string,
     relations?: FindOptionsRelations<IWhiteboardRt>
   ): Promise<IProfile> {
     const whiteboardRtLoaded = await this.getWhiteboardRtOrFail(
-      whiteboardRt.id,
+      whiteboardRtId,
       {
         relations: {
           profile: true,
@@ -143,11 +143,15 @@ export class WhiteboardRtService {
 
     if (!whiteboardRtLoaded.profile)
       throw new EntityNotFoundException(
-        `WhiteboardRt profile not initialised: ${whiteboardRt.id}`,
+        `WhiteboardRt profile not initialised: ${whiteboardRtId}`,
         LogContext.COLLABORATION
       );
 
     return whiteboardRtLoaded.profile;
+  }
+
+  public getCallout(whiteboardRtId: string) {
+    return {} as any;
   }
 
   public save(whiteboardRt: IWhiteboardRt): Promise<IWhiteboardRt> {

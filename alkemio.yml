@@ -350,6 +350,8 @@ integrations:
       rejectUnauthorized: ${ELASTIC_TLS_REJECT_UNAUTHORIZED}:false
     policies:
       space_name_enrich_policy: ${ELASTIC_POLICY_SPACE_NAME_ENRICH}:space_name_enrich_policy
+  contributions:
+    rt_window: ${CONTRIBUTION_RT_WINDOW}:600
 
 notifications:
   enabled: ${NOTIFICATIONS_ENABLED}:true
