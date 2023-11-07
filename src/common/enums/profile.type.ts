@@ -5,7 +5,7 @@ export enum ProfileType {
   CHALLENGE = 'challenge',
   OPPORTUNITY = 'opportunity',
   INNOVATION_FLOW = 'innovation-flow',
-  CALLOUT_TEMPLATE = 'callout-framing',
+  CALLOUT_TEMPLATE = 'callout-template',
   CALLOUT_FRAMING = 'callout-framing',
   POST = 'post',
   WHITEBOARD_RT = 'whiteboard-rt',

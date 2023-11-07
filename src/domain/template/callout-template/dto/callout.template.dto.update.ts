@@ -16,10 +16,10 @@ export class UpdateCalloutTemplateInput extends UpdateTemplateBaseInput {
   @Field(() => UpdateCalloutContributionDefaultsInput, { nullable: true })
   @ValidateNested({ each: true })
   @Type(() => UpdateCalloutContributionDefaultsInput)
-  responseDefaults?: UpdateCalloutContributionDefaultsInput;
+  contributionDefaults?: UpdateCalloutContributionDefaultsInput;
 
   @Field(() => UpdateCalloutContributionPolicyInput, { nullable: true })
   @ValidateNested({ each: true })
   @Type(() => UpdateCalloutContributionPolicyInput)
-  responsePolicy?: UpdateCalloutContributionPolicyInput;
+  contributionPolicy?: UpdateCalloutContributionPolicyInput;
 }

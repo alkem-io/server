@@ -24,8 +24,8 @@ export class CalloutTemplateService {
     private readonly logger: LoggerService,
     private templateBaseService: TemplateBaseService,
     private calloutFramingService: CalloutFramingService,
-    private calloutResponseDefaultsService: CalloutContributionDefaultsService,
-    private calloutResponsePolicyService: CalloutContributionPolicyService
+    private calloutContributionDefaultsService: CalloutContributionDefaultsService,
+    private calloutContributionPolicyService: CalloutContributionPolicyService
   ) {}
 
   public async createCalloutTemplate(
@@ -49,16 +49,16 @@ export class CalloutTemplateService {
         agentInfo.userID
       );
     calloutTemplate.contributionDefaults =
-      this.calloutResponseDefaultsService.createCalloutContributionDefaults(
-        calloutTemplateData.responseDefaults
+      this.calloutContributionDefaultsService.createCalloutContributionDefaults(
+        calloutTemplateData.contributionDefaults
       );
     const policyData =
-      this.calloutResponsePolicyService.updateContributionPolicyInput(
+      this.calloutContributionPolicyService.updateContributionPolicyInput(
         calloutTemplateData.type,
-        calloutTemplateData.responsePolicy
+        calloutTemplateData.contributionPolicy
       );
     calloutTemplate.contributionPolicy =
-      this.calloutResponsePolicyService.createCalloutContributionPolicy(
+      this.calloutContributionPolicyService.createCalloutContributionPolicy(
         policyData
       );
 
@@ -112,18 +112,18 @@ export class CalloutTemplateService {
           agentInfo
         );
     }
-    if (calloutTemplateData.responseDefaults) {
+    if (calloutTemplateData.contributionDefaults) {
       calloutTemplate.contributionDefaults =
-        this.calloutResponseDefaultsService.updateCalloutContributionDefaults(
+        this.calloutContributionDefaultsService.updateCalloutContributionDefaults(
           calloutTemplate.contributionDefaults,
-          calloutTemplateData.responseDefaults
+          calloutTemplateData.contributionDefaults
         );
     }
-    if (calloutTemplateData.responsePolicy) {
+    if (calloutTemplateData.contributionPolicy) {
       calloutTemplate.contributionPolicy =
-        this.calloutResponsePolicyService.updateCalloutContributionPolicy(
+        this.calloutContributionPolicyService.updateCalloutContributionPolicy(
           calloutTemplate.contributionPolicy,
-          calloutTemplateData.responsePolicy
+          calloutTemplateData.contributionPolicy
         );
     }
 
@@ -147,10 +147,10 @@ export class CalloutTemplateService {
     const templateId: string = calloutTemplate.id;
     await this.templateBaseService.deleteEntities(calloutTemplate);
     await this.calloutFramingService.delete(calloutTemplate.framing);
-    await this.calloutResponseDefaultsService.delete(
+    await this.calloutContributionDefaultsService.delete(
       calloutTemplate.contributionDefaults
     );
-    await this.calloutResponsePolicyService.delete(
+    await this.calloutContributionPolicyService.delete(
       calloutTemplate.contributionPolicy
     );
     const result = await this.calloutTemplateRepository.remove(
