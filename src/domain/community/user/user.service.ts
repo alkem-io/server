@@ -855,10 +855,6 @@ export class UserService {
     return storageAggregator;
   }
 
-  async getUserCount(): Promise<number> {
-    return await this.userRepository.countBy({ serviceProfile: false });
-  }
-
   private async tryRegisterUserCommunication(
     user: IUser
   ): Promise<string | undefined> {

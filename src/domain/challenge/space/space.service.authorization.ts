@@ -148,19 +148,12 @@ export class SpaceAuthorizationService {
     space = await this.spaceService.getSpaceOrFail(spaceInput.id, {
       relations: {
         community: true,
-        license: { featureFlags: true },
       },
     });
-    if (!space.community || !space.license)
+    if (!space.community)
       throw new RelationshipNotFoundException(
         `Unable to load Space after first save: ${space.id} `,
         LogContext.CHALLENGES
-      );
-
-    space.license =
-      await this.licenseAuthorizationService.applyAuthorizationPolicy(
-        space.license,
-        space.authorization
       );
 
     // Finally update the child entities that depend on license
@@ -274,9 +267,17 @@ export class SpaceAuthorizationService {
       relations: {
         context: true,
         profile: true,
+        license: {
+          featureFlags: true,
+        },
       },
     });
-    if (!space.context || !space.profile)
+    if (
+      !space.context ||
+      !space.profile ||
+      !space.license ||
+      !space.license.featureFlags
+    )
       throw new RelationshipNotFoundException(
         `Unable to load context or profile for space ${space.id} `,
         LogContext.CHALLENGES
@@ -301,6 +302,12 @@ export class SpaceAuthorizationService {
         clonedAuthorization
       );
 
+    space.license =
+      await this.licenseAuthorizationService.applyAuthorizationPolicy(
+        space.license,
+        clonedAuthorization
+      );
+
     return await this.spaceService.save(space);
   }
 
@@ -314,6 +321,9 @@ export class SpaceAuthorizationService {
         community: true,
         collaboration: true,
         agent: true,
+        license: {
+          featureFlags: true,
+        },
       },
     });
     if (!space.community || !space.collaboration || !space.agent)

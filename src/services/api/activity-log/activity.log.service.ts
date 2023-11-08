@@ -46,7 +46,7 @@ export class ActivityLogService {
     private readonly entityManager: EntityManager
   ) {}
 
-  async activityLog(
+  public async activityLog(
     queryData: ActivityLogInput,
     childCollaborations: string[] = []
   ): Promise<IActivityLogEntry[]> {
@@ -77,6 +77,39 @@ export class ActivityLogService {
       }
     }
     return results;
+  }
+
+  public async myActivityLog(
+    userId: string,
+    queryData: ActivityLogInput
+  ): Promise<IActivityLogEntry[]> {
+    const activities = await this.activityLog({
+      collaborationID: queryData.collaborationID,
+      includeChild: queryData.includeChild,
+    });
+    const myActivities = activities.filter(x => {
+      if (queryData.types) {
+        return x.triggeredBy.id === userId && queryData.types.includes(x.type);
+      } else {
+        return x.triggeredBy.id === userId;
+      }
+    });
+
+    if (myActivities.length > 0) {
+      myActivities.sort(
+        (a, b) => b.createdDate.getTime() - a.createdDate.getTime()
+      );
+    }
+
+    return myActivities.slice(0, queryData.limit ?? myActivities.length);
+  }
+
+  public async convertRawActivityToResults(
+    rawActivities: IActivity[]
+  ): Promise<(IActivityLogEntry | undefined)[]> {
+    return Promise.all(
+      rawActivities.map(x => this.convertRawActivityToResult(x))
+    );
   }
 
   public async convertRawActivityToResult(
@@ -132,8 +165,7 @@ export class ActivityLogService {
           this.calendarEventService
         );
       const activityType = rawActivity.type as ActivityEventType;
-      const result = await activityBuilder[activityType](rawActivity);
-      return result;
+      return await activityBuilder[activityType](rawActivity);
     } catch (error) {
       //
       this.logger.warn(

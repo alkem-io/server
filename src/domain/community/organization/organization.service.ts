@@ -594,10 +594,6 @@ export class OrganizationService {
     return groups;
   }
 
-  async getOrganizationCount(): Promise<number> {
-    return await this.organizationRepository.count();
-  }
-
   async getPreferenceSetOrFail(orgId: string): Promise<IPreferenceSet> {
     const orgWithPreferences = await this.getOrganizationOrFail(orgId, {
       relations: {

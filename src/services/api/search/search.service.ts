@@ -446,6 +446,7 @@ export class SearchService {
             location: true,
             tagsets: true,
           },
+          license: true,
         },
       });
 
@@ -469,18 +470,23 @@ export class SearchService {
         );
       });
 
-      // Only show spaces that the current user has read access to
+      // Filter the spaces + score them
       for (const space of filteredSpaceMatches) {
-        // Score depends on various factors, hardcoded for now
-        const score_increment = this.getScoreIncrementSpace(space, agentInfo);
+        if (
+          space.license &&
+          space.license.visibility !== SpaceVisibility.ARCHIVED
+        ) {
+          // Score depends on various factors, hardcoded for now
+          const score_increment = this.getScoreIncrementSpace(space, agentInfo);
 
-        await this.buildMatchingResult(
-          space,
-          spaceResults,
-          term,
-          SearchResultType.SPACE,
-          score_increment
-        );
+          await this.buildMatchingResult(
+            space,
+            spaceResults,
+            term,
+            SearchResultType.SPACE,
+            score_increment
+          );
+        }
       }
     }
   }
@@ -537,6 +543,9 @@ export class SearchService {
             location: true,
             tagsets: true,
           },
+          parentSpace: {
+            license: true,
+          },
         },
       });
       const lowerCasedTerm = term.toLowerCase();
@@ -569,6 +578,8 @@ export class SearchService {
       // Only show challenges that the current user has read access to
       for (const challenge of filteredChallengeMatches) {
         if (
+          challenge.parentSpace?.license?.visibility !==
+            SpaceVisibility.ARCHIVED &&
           this.authorizationService.isAccessGranted(
             agentInfo,
             challenge.authorization,
@@ -609,7 +620,11 @@ export class SearchService {
         relations: {
           context: true,
           collaboration: true,
-          challenge: true,
+          challenge: {
+            parentSpace: {
+              license: true,
+            },
+          },
           profile: {
             location: true,
             tagsets: true,
@@ -646,6 +661,8 @@ export class SearchService {
       // Only show challenges that the current user has read access to
       for (const opportunity of filteredOpportunityMatches) {
         if (
+          opportunity.challenge?.parentSpace?.license?.visibility !==
+            SpaceVisibility.ARCHIVED &&
           this.authorizationService.isAccessGranted(
             agentInfo,
             opportunity.authorization,

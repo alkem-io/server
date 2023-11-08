@@ -1,4 +1,4 @@
-import { Column, Entity } from 'typeorm';
+import { Column, Entity, Generated } from 'typeorm';
 import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
 import { IActivity } from './activity.interface';
 import { SMALL_TEXT_LENGTH, TINY_TEXT_LENGTH } from '@common/constants';
@@ -6,6 +6,12 @@ import { ActivityEventType } from '@common/enums/activity.event.type';
 
 @Entity()
 export class Activity extends BaseAlkemioEntity implements IActivity {
+  @Column({
+    unique: true,
+  })
+  @Generated('increment')
+  rowId!: number;
+
   @Column('char', { length: 36, nullable: false })
   triggeredBy!: string;
 

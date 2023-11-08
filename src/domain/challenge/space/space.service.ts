@@ -408,7 +408,10 @@ export class SpaceService {
     return notExist.length > 0 ? notExist : true;
   }
 
-  async getSpaces(args: SpacesQueryArgs): Promise<ISpace[]> {
+  async getSpaces(
+    args: SpacesQueryArgs,
+    options?: FindManyOptions<Space>
+  ): Promise<ISpace[]> {
     const visibilities = this.spacesFilterService.getAllowedVisibilities(
       args.filter
     );
@@ -417,6 +420,7 @@ export class SpaceService {
     if (args && args.IDs)
       spaces = await this.spaceRepository.find({
         where: { id: In(args.IDs) },
+        ...options,
       });
     else spaces = await this.spaceRepository.find();
 
@@ -858,9 +862,15 @@ export class SpaceService {
     );
   }
 
-  public async getCollaboration(space: ISpace): Promise<ICollaboration> {
-    return await this.baseChallengeService.getCollaboration(
-      space.id,
+  public async getCollaborationOrFail(
+    spaceIdOrEntity: ISpace | string
+  ): Promise<ICollaboration> | never {
+    const spaceId =
+      typeof spaceIdOrEntity === 'string'
+        ? spaceIdOrEntity
+        : spaceIdOrEntity.id;
+    return await this.baseChallengeService.getCollaborationOrFail(
+      spaceId,
       this.spaceRepository
     );
   }
@@ -1048,12 +1058,6 @@ export class SpaceService {
       space,
       this.spaceRepository
     );
-  }
-
-  async getSpaceCount(visibility = SpaceVisibility.ACTIVE): Promise<number> {
-    return await this.spaceRepository.countBy({
-      license: { visibility: visibility },
-    });
   }
 
   async getCommunityInNameableScope(
