@@ -74,6 +74,7 @@ export class WhiteboardRtAuthorizationService {
             AuthorizationPrivilege.READ,
             AuthorizationPrivilege.UPDATE,
             AuthorizationPrivilege.UPDATE_CONTENT,
+            AuthorizationPrivilege.CONTRIBUTE,
             AuthorizationPrivilege.DELETE,
           ],
           [
