@@ -1,20 +1,21 @@
 import http from 'http';
-import { ConfigService } from '@nestjs/config';
-import { LoggerService } from '@nestjs/common';
 import { Namespace, Server as SocketIO } from 'socket.io';
 import { Adapter } from 'socket.io-adapter';
+import { ConfigService } from '@nestjs/config';
+import { LoggerService } from '@nestjs/common';
 import {
   AlkemioErrorStatus,
   ConfigurationTypes,
   LogContext,
 } from '@common/enums';
 import { BaseException } from '@common/exceptions/base.exception';
-// todo: give the correct type to the server
+import { SocketIoServer } from '../types';
+
 export const getExcalidrawBaseServerOrFail = (
   configService: ConfigService,
   logger: LoggerService,
   adapterFactory?: typeof Adapter | ((nsp: Namespace) => Adapter)
-): SocketIO | never => {
+): SocketIoServer | never => {
   const port = configService.get(ConfigurationTypes.HOSTING).whiteboard_rt.port;
 
   if (!port) {

@@ -1,11 +1,11 @@
-import { Server as SocketIO, Socket } from 'socket.io';
 import { ExcalidrawEventPublisherService } from '@services/excalidraw-pubsub/publisher';
 import { ROOM_USER_CHANGE } from '../../types/event.names';
+import { SocketIoServer, SocketIoSocket } from '../../types';
 
 /* This event is coming from the client; whenever they request to join a room */
 export const joinRoomEventAmqpHandler = async (
   roomID: string,
-  wsServer: SocketIO,
+  wsServer: SocketIoServer,
   excalidrawEventPublisher: ExcalidrawEventPublisherService
 ) => {
   const sockets = await wsServer.in(roomID).fetchSockets();
@@ -49,8 +49,8 @@ export const serverVolatileBroadcastEventAmqpHandler = (
 };
 /* Built-in event for handling socket disconnects */
 export const disconnectingEventAmqpHandler = async (
-  wsServer: SocketIO,
-  socket: Socket,
+  wsServer: SocketIoServer,
+  socket: SocketIoSocket,
   excalidrawEventPublisher: ExcalidrawEventPublisherService
 ) => {
   excalidrawEventPublisher.publishDisconnecting({

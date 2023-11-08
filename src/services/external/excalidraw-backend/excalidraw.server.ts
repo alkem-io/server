@@ -116,7 +116,7 @@ export class ExcalidrawServer {
         return;
       }
 
-      socket.data.agentInfo = agentInfo; // todo type
+      socket.data.agentInfo = agentInfo;
 
       this.logger?.verbose?.(
         `User '${agentInfo.userID}' established connection`,

@@ -1,5 +1,4 @@
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Server as SocketIO } from 'socket.io';
 import { FactoryProvider, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { APP_ID, EXCALIDRAW_SERVER } from '@constants/index';
@@ -23,6 +22,7 @@ import {
   serverBroadcastEventAmqpHandler,
   serverVolatileBroadcastEventAmqpHandler,
 } from './handlers';
+import { SocketIoServer } from '@services/external/excalidraw-backend/types';
 
 export const ExcalidrawAmqpServerFactoryProvider: FactoryProvider = {
   provide: EXCALIDRAW_SERVER,
@@ -56,7 +56,7 @@ const factory = async (
   configService: ConfigService,
   excalidrawEventPublisher: ExcalidrawEventPublisherService,
   excalidrawEventSubscriber: ExcalidrawEventSubscriberService
-): Promise<SocketIO> | never => {
+): Promise<SocketIoServer> | never => {
   const wsServer = getExcalidrawBaseServerOrFail(configService, logger);
   // subscribe to the state of other server instances
   // events from other servers ONLY
