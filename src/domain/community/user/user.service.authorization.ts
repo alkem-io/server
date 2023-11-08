@@ -201,6 +201,22 @@ export class UserAuthorizationService {
     const readUserPiiCredentials: ICredentialDefinition[] = [
       userSelfManagementCredential,
     ];
+
+    // Ensure global admins can see PII
+    readUserPiiCredentials.push({
+      type: AuthorizationCredential.GLOBAL_ADMIN,
+      resourceID: '',
+    });
+    readUserPiiCredentials.push({
+      type: AuthorizationCredential.GLOBAL_ADMIN_SPACES,
+      resourceID: '',
+    });
+    readUserPiiCredentials.push({
+      type: AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY,
+      resourceID: '',
+    });
+
+    // Give visibility to admins of communities / orgs
     for (const credential of credentials) {
       // Grant read access to Space Admins for spaces the user is a member of
       if (credential.type === AuthorizationCredential.SPACE_MEMBER) {

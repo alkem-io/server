@@ -3,6 +3,7 @@ import { Type } from '@nestjs/common';
 import { Field, ObjectType } from '@nestjs/graphql';
 
 export interface IPaginatedType<T> {
+  total: number;
   items: T[];
   pageInfo: IRelayStylePageInfo;
 }
@@ -42,6 +43,9 @@ class PageInfo {
 export function Paginate<T>(classRef: Type<T>, fieldName = classRef.name) {
   @ObjectType({ isAbstract: true })
   abstract class PaginatedType implements IPaginatedType<T> {
+    @Field(() => Number)
+    total!: number;
+
     @Field(() => [classRef], { name: fieldName })
     items!: T[];
 

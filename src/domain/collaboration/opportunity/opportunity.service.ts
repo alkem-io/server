@@ -254,6 +254,12 @@ export class OpportunityService {
     return opportunity;
   }
 
+  public async getOpportunities(
+    options?: FindOneOptions<Opportunity>
+  ): Promise<IOpportunity[]> {
+    return this.opportunityRepository.find(options);
+  }
+
   async getInnovationFlow(opportunityID: string): Promise<IInnovationFlow> {
     const opportunity = await this.getOpportunityOrFail(opportunityID, {
       relations: { innovationFlow: true },
@@ -377,7 +383,7 @@ export class OpportunityService {
   public async getCollaboration(
     opportunity: IOpportunity
   ): Promise<ICollaboration> {
-    return await this.baseChallengeService.getCollaboration(
+    return await this.baseChallengeService.getCollaborationOrFail(
       opportunity.id,
       this.opportunityRepository
     );
