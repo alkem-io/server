@@ -165,35 +165,40 @@ export class ExcalidrawServer {
   }
 
   private startContributionEventTimer(roomId: string) {
-    return setInterval(async () => {
-      const windowEnd = Date.now();
-      const windowStart = windowEnd - this.windowSizeMs;
+    return setInterval(
+      async () => await this.gatherContributions(roomId),
+      this.windowSizeMs
+    );
+  }
 
-      const { spaceID } =
-        await this.communityResolver.getCommunityFromWhiteboardRtOrFail(roomId);
-      const wb = await this.whiteboardRtService.getProfile(roomId);
-      // const callout = await this.whiteboardRtService.getCallout(roomId);
+  private async gatherContributions(roomId: string) {
+    const windowEnd = Date.now();
+    const windowStart = windowEnd - this.windowSizeMs;
 
-      const sockets = await this.wsServer.in(roomId).fetchSockets();
+    const { spaceID } =
+      await this.communityResolver.getCommunityFromWhiteboardRtOrFail(roomId);
+    const wb = await this.whiteboardRtService.getProfile(roomId);
+    // const callout = await this.whiteboardRtService.getCallout(roomId);
 
-      for (const socket of sockets) {
-        const lastContributed = socket.data.lastContributed;
-        // was the last contribution in that window
-        if (lastContributed >= windowStart && windowEnd >= lastContributed) {
-          this.contributionReporter.whiteboardRtContribution(
-            {
-              id: roomId,
-              name: wb.displayName,
-              space: spaceID,
-            },
-            {
-              id: socket.data.agentInfo.userID,
-              email: socket.data.agentInfo.email,
-            }
-          );
-        }
+    const sockets = await this.wsServer.in(roomId).fetchSockets();
+
+    for (const socket of sockets) {
+      const lastContributed = socket.data.lastContributed;
+      // was the last contribution in that window
+      if (lastContributed >= windowStart && windowEnd >= lastContributed) {
+        this.contributionReporter.whiteboardRtContribution(
+          {
+            id: roomId,
+            name: wb.displayName,
+            space: spaceID,
+          },
+          {
+            id: socket.data.agentInfo.userID,
+            email: socket.data.agentInfo.email,
+          }
+        );
       }
-    }, this.windowSizeMs);
+    }
   }
 }
 // not that reliable, but best we can do
