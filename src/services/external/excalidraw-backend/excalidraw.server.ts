@@ -1,5 +1,4 @@
 import { clearInterval, setInterval } from 'timers';
-import { Server as SocketIO } from 'socket.io';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Configuration, FrontendApi } from '@ory/kratos-client';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
@@ -26,6 +25,7 @@ import {
   JOIN_ROOM,
   SERVER_BROADCAST,
   SERVER_VOLATILE_BROADCAST,
+  SocketIoServer,
 } from './types';
 import {
   CREATE_ROOM,
@@ -44,7 +44,7 @@ export class ExcalidrawServer {
   private readonly windowSizeMs: number;
 
   constructor(
-    @Inject(EXCALIDRAW_SERVER) private wsServer: SocketIO,
+    @Inject(EXCALIDRAW_SERVER) private wsServer: SocketIoServer,
     private configService: ConfigService,
     private authService: AuthenticationService,
     private authorizationService: AuthorizationService,
