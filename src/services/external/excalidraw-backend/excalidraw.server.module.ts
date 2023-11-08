@@ -4,6 +4,7 @@ import { AuthenticationModule } from '@core/authentication/authentication.module
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { APP_ID_PROVIDER } from '@common/app.id.provider';
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
+import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { ExcalidrawRedisServerFactoryProvider } from './adapters/redis';
 import { ExcalidrawServer } from './excalidraw.server';
 
@@ -13,6 +14,7 @@ import { ExcalidrawServer } from './excalidraw.server';
     WhiteboardRtModule,
     AuthorizationModule,
     ContributionReporterModule,
+    EntityResolverModule,
   ],
   providers: [
     ExcalidrawRedisServerFactoryProvider,

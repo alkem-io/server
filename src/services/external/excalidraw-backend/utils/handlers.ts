@@ -46,7 +46,7 @@ export const joinRoomEventHandler = async (
   socket.data.lastContributed = -1;
 
   logger?.verbose?.(
-    `${agentInfo.userID} has joined ${roomID}`,
+    `User '${agentInfo.userID}' has joined room '${roomID}'`,
     LogContext.EXCALIDRAW_SERVER
   );
 
@@ -55,7 +55,7 @@ export const joinRoomEventHandler = async (
     wsServer.to(socket.id).emit(FIRST_IN_ROOM);
   } else {
     logger?.verbose?.(
-      `User ${agentInfo.userID} emitted to room ${roomID}`,
+      `User '${agentInfo.userID}' emitted to room '${roomID}'`,
       LogContext.EXCALIDRAW_SERVER
     );
     socket.broadcast.to(roomID).emit(NEW_USER, socket.id);

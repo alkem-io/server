@@ -1,3 +1,4 @@
+import { clearInterval, setInterval } from 'timers';
 import { Server as SocketIO } from 'socket.io';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Configuration, FrontendApi } from '@ory/kratos-client';
@@ -26,20 +27,21 @@ import {
   SERVER_BROADCAST,
   SERVER_VOLATILE_BROADCAST,
 } from './types';
-import { setInterval } from 'timers';
 import {
   CREATE_ROOM,
   DELETE_ROOM,
 } from '@services/external/excalidraw-backend/adapters/adapter.event.names';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
+import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 
-export type RoomTimers = Map<string, NodeJS.Timer>;
+type RoomTimers = Map<string, NodeJS.Timer>;
 
-const WINDOW_LENGTH = 10000; // todo get from config
+const defaultWindowsSize = 600;
 
 @Injectable()
 export class ExcalidrawServer {
   private readonly timers: RoomTimers = new Map();
+  private readonly windowSizeMs: number;
 
   constructor(
     @Inject(EXCALIDRAW_SERVER) private wsServer: SocketIO,
@@ -48,11 +50,17 @@ export class ExcalidrawServer {
     private authorizationService: AuthorizationService,
     private whiteboardRtService: WhiteboardRtService,
     private contributionReporter: ContributionReporterService,
+    private communityResolver: CommunityResolverService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private logger: LoggerService,
     @Inject(APP_ID)
     private appId: string
   ) {
+    const windowSize = this.configService.get(ConfigurationTypes.INTEGRATIONS)
+      ?.contributions.rt_window;
+
+    this.windowSizeMs = (windowSize ?? defaultWindowsSize) * 1000;
+    // don't block the constructor
     this.init().then(() =>
       this.logger.verbose?.(
         'Excalidraw server initialized and running',
@@ -77,6 +85,10 @@ export class ExcalidrawServer {
       if (!isRoomId(roomId)) {
         return;
       }
+
+      const timer = this.timers.get(roomId);
+      clearInterval(timer);
+
       this.timers.delete(roomId);
     });
     adapter.on(CREATE_ROOM, (roomId: string) => {
@@ -155,9 +167,10 @@ export class ExcalidrawServer {
   private startContributionEventTimer(roomId: string) {
     return setInterval(async () => {
       const windowEnd = Date.now();
-      const windowStart = windowEnd - WINDOW_LENGTH;
+      const windowStart = windowEnd - this.windowSizeMs;
 
-      const spaceID = ''; // todo
+      const { spaceID } =
+        await this.communityResolver.getCommunityFromWhiteboardRtOrFail(roomId);
       const wb = await this.whiteboardRtService.getProfile(roomId);
       // const callout = await this.whiteboardRtService.getCallout(roomId);
 
@@ -180,8 +193,8 @@ export class ExcalidrawServer {
           );
         }
       }
-    }, WINDOW_LENGTH);
+    }, this.windowSizeMs);
   }
 }
-
-const isRoomId = (id: string) => id.length === UUID_LENGTH; // not that reliable
+// not that reliable, but best we can do
+const isRoomId = (id: string) => id.length === UUID_LENGTH;

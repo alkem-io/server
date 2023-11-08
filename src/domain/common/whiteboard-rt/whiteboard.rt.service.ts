@@ -162,10 +162,6 @@ export class WhiteboardRtService {
     return whiteboardRtLoaded.profile;
   }
 
-  public getCallout(whiteboardRtId: string) {
-    return {} as any;
-  }
-
   public save(whiteboardRt: IWhiteboardRt): Promise<IWhiteboardRt> {
     return this.whiteboardRtRepository.save(whiteboardRt);
   }
