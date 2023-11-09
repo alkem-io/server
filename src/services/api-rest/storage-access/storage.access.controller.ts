@@ -9,7 +9,6 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { GraphQLError } from 'graphql';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { AgentInfo } from '@core/authentication';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
@@ -56,25 +55,22 @@ export class StorageAccessController {
         `Read document: ${document.displayName} - '${document.id}`
       );
     } catch (e: any) {
-      try {
-        this.logger.error(
-          `User '${agentInfo.userID}' - unable to access document '${document.id} in storage bucket '${document.storageBucket.id}`,
-          e?.stack,
-          LogContext.DOCUMENT
-        );
-        document = await this.documentService.getDocumentOrFail(id, {
-          relations: {
-            storageBucket: true,
-          },
-        });
-      } catch (e) {
-        throw new NotFoundHttpException(
-          `Document with id '${id}' not found`,
-          LogContext.DOCUMENT
-        );
-      }
-      const err = e as GraphQLError;
-      throw new ForbiddenHttpException(err.message, LogContext.DOCUMENT);
+      this.logger.error(e, e?.stack, LogContext.DOCUMENT);
+      const docWithInfo = await this.documentService.getDocumentOrFail(id, {
+        relations: {
+          storageBucket: true,
+        },
+      });
+      this.logger.error(
+        `User '${agentInfo.userID}' - unable to access document '${docWithInfo.id} in storage bucket '${docWithInfo.storageBucket.id}: ${e?.message}`,
+        e?.stack,
+        LogContext.DOCUMENT
+      );
+
+      throw new ForbiddenHttpException(
+        `Authorization policy for document '${docWithInfo.id}' not sufficient`,
+        LogContext.DOCUMENT
+      );
     }
 
     res.setHeader('Content-Type', `${document.mimeType}`);
