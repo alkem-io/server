@@ -13,7 +13,7 @@ import { CreateDocumentInput } from './dto/document.dto.create';
 import { Document } from './document.entity';
 import { IDocument } from './document.interface';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
-import { IpfsService, ToContent } from '@services/adapters/ipfs/ipfs.service';
+import { IpfsService } from '@services/adapters/ipfs/ipfs.service';
 import { IpfsUploadFailedException } from '@common/exceptions/ipfs/ipfs.upload.exception';
 import { IpfsDeleteFailedException } from '@common/exceptions/ipfs/ipfs.delete.exception';
 import { ConfigService } from '@nestjs/config';
@@ -182,10 +182,7 @@ export class DocumentService {
     return true;
   }
 
-  public async uploadFile(
-    buffer: ToContent,
-    fileName: string
-  ): Promise<string> {
+  public async uploadFile(buffer: Buffer, fileName: string): Promise<string> {
     try {
       return await this.ipfsAdapter.uploadFileFromBufferCID(buffer);
     } catch (error) {

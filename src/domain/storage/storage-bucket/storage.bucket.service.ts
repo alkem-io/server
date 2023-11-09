@@ -30,7 +30,7 @@ import { Profile } from '@domain/common/profile/profile.entity';
 import { IStorageBucketParent } from './dto/storage.bucket.dto.parent';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { ProfileType } from '@common/enums';
-import { ToContent } from '@services/adapters/ipfs/ipfs.service';
+
 @Injectable()
 export class StorageBucketService {
   DEFAULT_MAX_ALLOWED_FILE_SIZE = 5242880;
@@ -159,7 +159,7 @@ export class StorageBucketService {
 
   public async uploadFileAsDocumentFromBuffer(
     storageBucketId: string,
-    buffer: ToContent,
+    buffer: Buffer,
     filename: string,
     mimeType: string,
     userID: string,
@@ -177,7 +177,7 @@ export class StorageBucketService {
     this.validateMimeTypes(storage, mimeType);
 
     // Upload the document
-    const size = 100; // buffer.length;
+    const size = buffer.length;
     this.validateSize(storage, size);
     const externalID = await this.documentService.uploadFile(buffer, filename);
 
