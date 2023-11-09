@@ -8,8 +8,8 @@ import { DocumentService } from '@domain/storage/document/document.service';
 import { base64ToArrayBuffer } from '@common/utils';
 import { ExcalidrawContent } from '@common/interfaces';
 import { WhiteboardRt } from '@domain/common/whiteboard-rt/whiteboard.rt.entity';
-import { User } from '@domain/community/user';
 import { WhiteboardTemplate } from '@domain/template/whiteboard-template/whiteboard.template.entity';
+import { AgentInfo } from '@core/authentication';
 
 @Injectable()
 export class AdminWhiteboardService {
@@ -20,7 +20,7 @@ export class AdminWhiteboardService {
     private documentService: DocumentService
   ) {}
 
-  public async uploadFilesFromContentToStorageBucket() {
+  public async uploadFilesFromContentToStorageBucket(agentInfo: AgentInfo) {
     // select the ids of the entities, needed for the save
     const options: FindManyOptions = {
       relations: {
@@ -49,12 +49,19 @@ export class AdminWhiteboardService {
     const whiteboardsRt = await this.manager.find(WhiteboardRt, options);
 
     const whiteboardResults = await this._uploadFilesFromContentToStorageBucket(
-      whiteboards
+      whiteboards,
+      agentInfo.userID
     );
     const whiteboardTemplateResults =
-      await this._uploadFilesFromContentToStorageBucket(whiteboardTemplates);
+      await this._uploadFilesFromContentToStorageBucket(
+        whiteboardTemplates,
+        agentInfo.userID
+      );
     const whiteboardRtResults =
-      await this._uploadFilesFromContentToStorageBucket(whiteboardsRt);
+      await this._uploadFilesFromContentToStorageBucket(
+        whiteboardsRt,
+        agentInfo.userID
+      );
 
     return {
       results: [
@@ -76,7 +83,8 @@ export class AdminWhiteboardService {
   }
 
   private async _uploadFilesFromContentToStorageBucket(
-    whiteboards: Whiteboard[] | WhiteboardRt[] | WhiteboardTemplate[]
+    whiteboards: Whiteboard[] | WhiteboardRt[] | WhiteboardTemplate[],
+    uploaderId: string
   ) {
     const results: string[] = [];
     const errors: string[] = [];
@@ -84,9 +92,6 @@ export class AdminWhiteboardService {
 
     const className = whiteboards[0].constructor.name;
 
-    const adminUser = await this.manager.findOneByOrFail(User, {
-      nameID: 'admin-alkemio',
-    });
     for (const whiteboard of whiteboards) {
       const { id, content, profile } = whiteboard;
 
@@ -117,7 +122,7 @@ export class AdminWhiteboardService {
             warns.unshift(
               `${className} ${id} - the file doesn't have any content; might be already transferred`
             );
-            continue; //
+            continue;
           }
           const imageBuffer = base64ToArrayBuffer(file.dataURL);
           try {
@@ -127,10 +132,11 @@ export class AdminWhiteboardService {
                 imageBuffer,
                 `${className}-${profile.displayName}-${id}`, // we can't really infer the name
                 file.mimeType,
-                adminUser.id,
+                uploaderId,
                 false
               );
             file.url = this.documentService.getPubliclyAccessibleURL(document);
+            console.log(file.url);
             file.dataURL = '';
           } catch (e) {
             const err = e as Error;
