@@ -9,6 +9,16 @@ import { CID, create, IPFSHTTPClient } from 'ipfs-http-client';
 import { IpfsDeleteFailedException } from '@common/exceptions/ipfs/ipfs.delete.exception';
 import { IpfsGCFailedException } from '@common/exceptions/ipfs/ipfs.gc.exception';
 
+type AwaitIterable<T> = Iterable<T> | AsyncIterable<T>;
+export type ToContent =
+  | string
+  | InstanceType<typeof String>
+  | ArrayBufferView
+  | ArrayBuffer
+  | Blob
+  | AwaitIterable<Uint8Array>
+  | ReadableStream<Uint8Array>;
+
 @Injectable()
 export class IpfsService {
   private readonly ipfsClient: IPFSHTTPClient;
@@ -47,7 +57,7 @@ export class IpfsService {
   }
 
   // returns the CID only
-  public async uploadFileFromBufferCID(buffer: Buffer): Promise<string> {
+  public async uploadFileFromBufferCID(buffer: ToContent): Promise<string> {
     const res = await this.ipfsClient.add(buffer, { pin: true });
     this.logger.verbose?.(
       `Uploaded file with CID: ${res.path}`,
