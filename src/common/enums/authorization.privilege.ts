@@ -41,6 +41,7 @@ export enum AuthorizationPrivilege {
   ACCESS_INTERACTIVE_GUIDANCE = 'access-interactive-guidance',
   CREATE_WHITEBOARD_RT = 'create-whiteboard-rt',
   UPDATE_CONTENT = 'update-content',
+  SAVE_AS_TEMPLATE = 'save-as-template',
 }
 
 registerEnumType(AuthorizationPrivilege, {

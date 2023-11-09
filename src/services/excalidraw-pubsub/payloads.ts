@@ -4,7 +4,7 @@ import {
   ROOM_USER_CHANGE,
   SERVER_BROADCAST,
   SERVER_VOLATILE_BROADCAST,
-} from '@services/external/excalidraw-backend/event.names';
+} from '@services/external/excalidraw-backend/types/event.names';
 
 export type BasePayload = {
   roomID: string;

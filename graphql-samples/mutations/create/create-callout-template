@@ -14,10 +14,10 @@ Variables:
         "displayName": "template displayname",
         "description": "template description"
     },
-    "responseDefaults": {
+    "contributionDefaults": {
       "postDescription": "this is what users will see"
     },
-    "responsePolicy": {
+    "contributionPolicy": {
       "allowedContributionTypes": ["COMMENTS"],
       "state": "OPEN"
     },
