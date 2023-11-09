@@ -92,7 +92,6 @@ export class SpaceResolverFields {
     return context;
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('collaboration', () => ICollaboration, {
     nullable: true,
