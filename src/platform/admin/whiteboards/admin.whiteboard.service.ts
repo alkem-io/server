@@ -10,6 +10,7 @@ import { ExcalidrawContent } from '@common/interfaces';
 import { WhiteboardRt } from '@domain/common/whiteboard-rt/whiteboard.rt.entity';
 import { WhiteboardTemplate } from '@domain/template/whiteboard-template/whiteboard.template.entity';
 import { AgentInfo } from '@core/authentication';
+import { DocumentAuthorizationService } from '@domain/storage/document/document.service.authorization';
 
 @Injectable()
 export class AdminWhiteboardService {
@@ -17,7 +18,8 @@ export class AdminWhiteboardService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService,
     @InjectEntityManager() private manager: EntityManager,
     private storageBucketService: StorageBucketService,
-    private documentService: DocumentService
+    private documentService: DocumentService,
+    private documentAuthorizationService: DocumentAuthorizationService
   ) {}
 
   public async uploadFilesFromContentToStorageBucket(agentInfo: AgentInfo) {
@@ -135,6 +137,10 @@ export class AdminWhiteboardService {
                 uploaderId,
                 false
               );
+            await this.documentAuthorizationService.applyAuthorizationPolicy(
+              document,
+              profile.storageBucket.authorization
+            );
             file.url = this.documentService.getPubliclyAccessibleURL(document);
             console.log(file.url);
             file.dataURL = '';
