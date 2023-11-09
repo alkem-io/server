@@ -191,6 +191,7 @@ export class CommunityResolverService {
     return community;
   }
 
+  //toDo - refactor to `getSpaceIdFromWhiteboardRtOrFail`
   public async getCommunityFromWhiteboardRtOrFail(
     whiteboardId: string
   ): Promise<ICommunity> {
