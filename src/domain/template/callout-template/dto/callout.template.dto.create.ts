@@ -23,10 +23,10 @@ export class CreateCalloutTemplateInput extends CreateTemplateBaseInput {
   @Field(() => CreateCalloutContributionDefaultsInput, { nullable: false })
   @ValidateNested({ each: true })
   @Type(() => CreateCalloutContributionDefaultsInput)
-  responseDefaults!: CreateCalloutContributionDefaultsInput;
+  contributionDefaults!: CreateCalloutContributionDefaultsInput;
 
   @Field(() => CreateCalloutContributionPolicyInput, { nullable: false })
   @ValidateNested({ each: true })
   @Type(() => CreateCalloutContributionPolicyInput)
-  responsePolicy!: CreateCalloutContributionPolicyInput;
+  contributionPolicy!: CreateCalloutContributionPolicyInput;
 }
