@@ -5,7 +5,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Whiteboard } from '@domain/common/whiteboard';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { DocumentService } from '@domain/storage/document/document.service';
-import { base64ToArrayBuffer } from '@common/utils';
+import { base64ToBuffer } from '@common/utils';
 import { ExcalidrawContent } from '@common/interfaces';
 import { WhiteboardRt } from '@domain/common/whiteboard-rt/whiteboard.rt.entity';
 import { WhiteboardTemplate } from '@domain/template/whiteboard-template/whiteboard.template.entity';
@@ -126,7 +126,14 @@ export class AdminWhiteboardService {
             );
             continue;
           }
-          const imageBuffer = base64ToArrayBuffer(file.dataURL);
+
+          const imageBuffer = base64ToBuffer(file.dataURL);
+
+          if (!imageBuffer) {
+            errors.unshift(`${className} ${id} - unable to decode base64`);
+            continue;
+          }
+
           try {
             const document =
               await this.storageBucketService.uploadFileAsDocumentFromBuffer(
