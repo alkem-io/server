@@ -43,7 +43,7 @@ export class WhiteboardRtAuthorizationService {
     );
 
     whiteboardRt.profile = await this.whiteboardRtService.getProfile(
-      whiteboardRt
+      whiteboardRt.id
     );
     whiteboardRt.profile =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
@@ -74,6 +74,7 @@ export class WhiteboardRtAuthorizationService {
             AuthorizationPrivilege.READ,
             AuthorizationPrivilege.UPDATE,
             AuthorizationPrivilege.UPDATE_CONTENT,
+            AuthorizationPrivilege.CONTRIBUTE,
             AuthorizationPrivilege.DELETE,
           ],
           [

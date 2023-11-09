@@ -11,7 +11,7 @@ import {
   ROOM_USER_CHANGE,
   SERVER_BROADCAST,
   SERVER_VOLATILE_BROADCAST,
-} from '@services/external/excalidraw-backend/event.names';
+} from '@services/external/excalidraw-backend/types/event.names';
 import { BasePayload } from '../payloads';
 import { BaseEvent } from '../events';
 import { excalidrawEventFactory } from './excalidraw.event.factory';

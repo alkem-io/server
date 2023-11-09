@@ -1,4 +1,3 @@
-import { Server as SocketIO } from 'socket.io';
 import {
   CLIENT_BROADCAST,
   DISCONNECT,
@@ -6,10 +5,11 @@ import {
   ROOM_USER_CHANGE,
   SERVER_BROADCAST,
   SERVER_VOLATILE_BROADCAST,
-} from '@services/external/excalidraw-backend/event.names';
+  SocketIoServer,
+} from '@services/external/excalidraw-backend/types';
 
 export interface IExcalidrawEvent {
-  handleEvent(wsServer: SocketIO): Promise<void> | void;
+  handleEvent(wsServer: SocketIoServer): Promise<void> | void;
 }
 
 export abstract class BaseEvent implements IExcalidrawEvent {
@@ -21,7 +21,7 @@ export abstract class BaseEvent implements IExcalidrawEvent {
   ) {}
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  handleEvent(wsServer: SocketIO): Promise<void> | void {
+  handleEvent(wsServer: SocketIoServer): Promise<void> | void {
     throw Error('You are using the base implementation of an abstract class');
   }
 }
@@ -35,7 +35,7 @@ export class RoomUserChangeEvent extends BaseEvent implements IExcalidrawEvent {
     super(roomID, publisherId, ROOM_USER_CHANGE);
   }
 
-  async handleEvent(wsServer: SocketIO): Promise<void> {
+  async handleEvent(wsServer: SocketIoServer): Promise<void> {
     const ownSocketIds = (await wsServer.in(this.roomID).fetchSockets()).map(
       socket => socket.id
     );
@@ -57,7 +57,7 @@ export class ServerBroadcastEvent
     super(roomID, publisherId, SERVER_BROADCAST);
   }
 
-  handleEvent(wsServer: SocketIO): Promise<void> | void {
+  handleEvent(wsServer: SocketIoServer): Promise<void> | void {
     wsServer.in(this.roomID).emit(CLIENT_BROADCAST, this.data);
   }
 }
@@ -74,7 +74,7 @@ export class ServerVolatileBroadcastEvent
     super(roomID, publisherId, SERVER_VOLATILE_BROADCAST);
   }
 
-  handleEvent(wsServer: SocketIO): Promise<void> | void {
+  handleEvent(wsServer: SocketIoServer): Promise<void> | void {
     wsServer.in(this.roomID).emit(CLIENT_BROADCAST, this.data);
   }
 }
