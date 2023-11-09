@@ -30,6 +30,7 @@ import { Profile } from '@domain/common/profile/profile.entity';
 import { IStorageBucketParent } from './dto/storage.bucket.dto.parent';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { ProfileType } from '@common/enums';
+
 @Injectable()
 export class StorageBucketService {
   DEFAULT_MAX_ALLOWED_FILE_SIZE = 5242880;
