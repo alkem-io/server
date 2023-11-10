@@ -38,6 +38,7 @@ import { arrayRandomElement } from '@common/utils';
 type RoomTimers = Map<string, NodeJS.Timer | NodeJS.Timeout>;
 
 const defaultContributionInterval = 600;
+const defaultSaveInterval = 300;
 
 const SERVER_SAVE_REQUEST = 'save-request';
 const CLIENT_SAVE_SUCCESS = 'save-success';
@@ -72,7 +73,7 @@ export class ExcalidrawServer {
 
     this.contributionWindowMs =
       (contributionInterval ?? defaultContributionInterval) * 1000;
-    this.saveIntervalMs = 5 * 1000; // todo
+    this.saveIntervalMs = defaultSaveInterval * 1000; // todo
     // don't block the constructor
     this.init().then(() =>
       this.logger.verbose?.(
@@ -264,13 +265,13 @@ export class ExcalidrawServer {
         return true;
       }
 
-      return this.sendSaveMessage(roomId, ++retries);
+      return await this.sendSaveMessage(roomId, ++retries);
     } catch (e) {
       this.logger.verbose?.(
         `Client '${randomSocket.data.agentInfo.userID}' did not respond to '${SERVER_SAVE_REQUEST}' event after ${CLIENT_SAVE_TIMEOUT}ms`,
         LogContext.EXCALIDRAW_SERVER
       );
-      return this.sendSaveMessage(roomId, ++retries);
+      return await this.sendSaveMessage(roomId, ++retries);
     }
   }
 }
