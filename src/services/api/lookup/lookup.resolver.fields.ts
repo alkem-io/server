@@ -52,6 +52,7 @@ import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.a
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 
 @Resolver(() => LookupQueryResults)
 export class LookupResolverFields {
@@ -103,14 +104,14 @@ export class LookupResolverFields {
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField(() => IStorageAggregator, {
+  @ResolveField(() => IAuthorizationPolicy, {
     nullable: true,
     description: 'Lookup the specified Authorization Policy',
   })
   async authorizationPolicy(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID }) id: string
-  ): Promise<IStorageAggregator> {
+  ): Promise<IAuthorizationPolicy> {
     // Note: this is a special case, mostly to track down issues related to authorization policies, so restrict access to platform admins
     const authorizationPolicy =
       await this.authorizationPolicyService.getAuthorizationPolicyOrFail(id);
