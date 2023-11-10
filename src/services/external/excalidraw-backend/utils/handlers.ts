@@ -45,6 +45,7 @@ export const joinRoomEventHandler = async (
 
   await socket.join(roomID);
   socket.data.lastContributed = -1;
+  socket.data.readonly = false; // needs to be set properly on a later stage
 
   logger?.verbose?.(
     `User '${agentInfo.userID}' has joined room '${roomID}'`,

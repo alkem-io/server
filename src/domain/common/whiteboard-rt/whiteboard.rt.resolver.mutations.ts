@@ -62,7 +62,7 @@ export class WhiteboardRtResolverMutations {
       AuthorizationPrivilege.UPDATE_CONTENT,
       `update WhiteboardRt: ${whiteboardRt.nameID}`
     );
-
+    // throw new Error('');
     return this.whiteboardRtService.updateWhiteboardContentRt(
       whiteboardRt,
       whiteboardData

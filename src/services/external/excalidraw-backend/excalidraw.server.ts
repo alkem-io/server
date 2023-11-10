@@ -1,4 +1,4 @@
-import { clearInterval, setInterval } from 'timers';
+import { clearInterval, setInterval, setTimeout } from 'timers';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Configuration, FrontendApi } from '@ory/kratos-client';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
@@ -33,15 +33,25 @@ import {
 } from '@services/external/excalidraw-backend/adapters/adapter.event.names';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
+import { arrayRandomElement } from '@common/utils';
 
-type RoomTimers = Map<string, NodeJS.Timer>;
+type RoomTimers = Map<string, NodeJS.Timer | NodeJS.Timeout>;
 
-const defaultWindowsSize = 600;
+const defaultContributionInterval = 600;
+
+const SERVER_SAVE_REQUEST = 'save-request';
+const CLIENT_SAVE_SUCCESS = 'save-success';
+const CLIENT_SAVE_FAIL = 'save-fail';
+const CLIENT_SAVE_TIMEOUT = 10000; // todo
+const SAVE_MAX_RETRIES = 5; // todo
 
 @Injectable()
 export class ExcalidrawServer {
-  private readonly timers: RoomTimers = new Map();
-  private readonly windowSizeMs: number;
+  private readonly contributionTimers: RoomTimers = new Map();
+  private readonly saveTimers: RoomTimers = new Map();
+
+  private readonly contributionWindowMs: number;
+  private readonly saveIntervalMs: number;
 
   constructor(
     @Inject(EXCALIDRAW_SERVER) private wsServer: SocketIoServer,
@@ -56,10 +66,13 @@ export class ExcalidrawServer {
     @Inject(APP_ID)
     private appId: string
   ) {
-    const windowSize = this.configService.get(ConfigurationTypes.INTEGRATIONS)
-      ?.contributions.rt_window;
+    const contributionInterval = this.configService.get(
+      ConfigurationTypes.INTEGRATIONS
+    )?.contributions.rt_window;
 
-    this.windowSizeMs = (windowSize ?? defaultWindowsSize) * 1000;
+    this.contributionWindowMs =
+      (contributionInterval ?? defaultContributionInterval) * 1000;
+    this.saveIntervalMs = 5 * 1000; // todo
     // don't block the constructor
     this.init().then(() =>
       this.logger.verbose?.(
@@ -86,20 +99,29 @@ export class ExcalidrawServer {
         return;
       }
 
-      const timer = this.timers.get(roomId);
-      clearInterval(timer);
+      const contributionTimer = this.contributionTimers.get(roomId);
+      clearInterval(contributionTimer);
+      this.contributionTimers.delete(roomId);
 
-      this.timers.delete(roomId);
+      const saveTimer = this.saveTimers.get(roomId);
+      clearInterval(saveTimer);
+      this.saveTimers.delete(roomId);
     });
     adapter.on(CREATE_ROOM, (roomId: string) => {
       if (!isRoomId(roomId)) {
         return;
       }
-      const timer = this.timers.get(roomId);
-
-      if (!timer) {
+      const contributionTimer = this.contributionTimers.get(roomId);
+      if (!contributionTimer) {
         const timer = this.startContributionEventTimer(roomId);
-        this.timers.set(roomId, timer);
+        this.contributionTimers.set(roomId, timer);
+      }
+
+      const saveTimer = this.saveTimers.get(roomId);
+      if (!saveTimer) {
+        this.logger.verbose?.(`Starting timer for room '${roomId}'`);
+        const timer = this.startSaveTimer(roomId);
+        this.saveTimers.set(roomId, timer);
       }
     });
 
@@ -167,18 +189,17 @@ export class ExcalidrawServer {
   private startContributionEventTimer(roomId: string) {
     return setInterval(
       async () => await this.gatherContributions(roomId),
-      this.windowSizeMs
+      this.contributionWindowMs
     );
   }
 
   private async gatherContributions(roomId: string) {
     const windowEnd = Date.now();
-    const windowStart = windowEnd - this.windowSizeMs;
+    const windowStart = windowEnd - this.contributionWindowMs;
 
     const { spaceID } =
       await this.communityResolver.getCommunityFromWhiteboardRtOrFail(roomId);
     const wb = await this.whiteboardRtService.getProfile(roomId);
-    // const callout = await this.whiteboardRtService.getCallout(roomId);
 
     const sockets = await this.wsServer.in(roomId).fetchSockets();
 
@@ -198,6 +219,58 @@ export class ExcalidrawServer {
           }
         );
       }
+    }
+  }
+
+  private startSaveTimer(roomId: string) {
+    const timer = setTimeout(async () => {
+      const saved = await this.sendSaveMessage(roomId);
+
+      if (saved) {
+      }
+      timer.refresh();
+    }, this.saveIntervalMs);
+    return timer;
+  }
+
+  /***
+   * Sends save requests to random sockets until it's successful.
+   * Retries indefinitely
+   * @param roomId The room that needs saving
+   * @param retries
+   */
+  // todo: return type
+  private async sendSaveMessage(roomId: string, retries = 0): Promise<boolean> {
+    if (retries === SAVE_MAX_RETRIES) {
+      return false;
+    }
+    // get only sockets which can save
+    const sockets = (await this.wsServer.in(roomId).fetchSockets()).filter(
+      socket => !socket.data.readonly
+    );
+    const randomSocket = arrayRandomElement(sockets);
+    try {
+      // todo: response type
+      const response = await this.wsServer
+        .to(randomSocket.id)
+        .timeout(CLIENT_SAVE_TIMEOUT)
+        .emitWithAck(SERVER_SAVE_REQUEST);
+
+      this.logger.verbose?.(
+        `Received ${JSON.stringify(response)} from '${randomSocket.id}'`
+      );
+
+      if (response.success) {
+        return true;
+      }
+
+      return this.sendSaveMessage(roomId, ++retries);
+    } catch (e) {
+      this.logger.verbose?.(
+        `Client '${randomSocket.data.agentInfo.userID}' did not respond to '${SERVER_SAVE_REQUEST}' event after ${CLIENT_SAVE_TIMEOUT}ms`,
+        LogContext.EXCALIDRAW_SERVER
+      );
+      return this.sendSaveMessage(roomId, ++retries);
     }
   }
 }
