@@ -38,13 +38,11 @@ import { arrayRandomElement } from '@common/utils';
 type RoomTimers = Map<string, NodeJS.Timer | NodeJS.Timeout>;
 
 const defaultContributionInterval = 600;
-const defaultSaveInterval = 300;
+const defaultSaveInterval = 15;
+const defaultSaveTimeout = 10;
+const defaultMaxRetries = 5;
 
 const SERVER_SAVE_REQUEST = 'save-request';
-const CLIENT_SAVE_SUCCESS = 'save-success';
-const CLIENT_SAVE_FAIL = 'save-fail';
-const CLIENT_SAVE_TIMEOUT = 10000; // todo
-const SAVE_MAX_RETRIES = 5; // todo
 
 @Injectable()
 export class ExcalidrawServer {
@@ -53,6 +51,8 @@ export class ExcalidrawServer {
 
   private readonly contributionWindowMs: number;
   private readonly saveIntervalMs: number;
+  private readonly saveTimeoutMs: number;
+  private readonly saveMaxRetries: number;
 
   constructor(
     @Inject(EXCALIDRAW_SERVER) private wsServer: SocketIoServer,
@@ -67,13 +67,18 @@ export class ExcalidrawServer {
     @Inject(APP_ID)
     private appId: string
   ) {
-    const contributionInterval = this.configService.get(
-      ConfigurationTypes.INTEGRATIONS
-    )?.contributions.rt_window;
+    const {
+      contribution_window,
+      save_interval,
+      save_timeout,
+      save_max_retries,
+    } = this.configService.get(ConfigurationTypes.COLLABORATION)?.whiteboards;
 
     this.contributionWindowMs =
-      (contributionInterval ?? defaultContributionInterval) * 1000;
-    this.saveIntervalMs = defaultSaveInterval * 1000; // todo
+      (contribution_window ?? defaultContributionInterval) * 1000;
+    this.saveIntervalMs = (save_interval ?? defaultSaveInterval) * 1000;
+    this.saveTimeoutMs = (save_timeout ?? defaultSaveTimeout) * 1000;
+    this.saveMaxRetries = (save_max_retries ?? defaultMaxRetries) * 1000;
     // don't block the constructor
     this.init().then(() =>
       this.logger.verbose?.(
@@ -228,7 +233,11 @@ export class ExcalidrawServer {
       const saved = await this.sendSaveMessage(roomId);
 
       if (saved) {
+        this.logger.verbose?.(`Saving '${roomId}' successful`);
+      } else {
+        this.logger.error(`Saving '${roomId}' failed`);
       }
+
       timer.refresh();
     }, this.saveIntervalMs);
     return timer;
@@ -240,37 +249,40 @@ export class ExcalidrawServer {
    * @param roomId The room that needs saving
    * @param retries
    */
-  // todo: return type
   private async sendSaveMessage(roomId: string, retries = 0): Promise<boolean> {
-    if (retries === SAVE_MAX_RETRIES) {
+    if (retries === this.saveMaxRetries) {
       return false;
+    }
+    if (retries > 0) {
+      this.logger.warn?.(
+        `Retrying [${retries}/${this.saveMaxRetries}]`,
+        LogContext.EXCALIDRAW_SERVER
+      );
     }
     // get only sockets which can save
     const sockets = (await this.wsServer.in(roomId).fetchSockets()).filter(
       socket => !socket.data.readonly
     );
+    // choose a random socket which can save
     const randomSocket = arrayRandomElement(sockets);
+    // sends a save request to the socket and wait for a response
     try {
-      // todo: response type
-      const response = await this.wsServer
+      const [response]: { success: boolean }[] = await this.wsServer
         .to(randomSocket.id)
-        .timeout(CLIENT_SAVE_TIMEOUT)
+        .timeout(this.saveTimeoutMs)
         .emitWithAck(SERVER_SAVE_REQUEST);
-
-      this.logger.verbose?.(
-        `Received ${JSON.stringify(response)} from '${randomSocket.id}'`
-      );
-
-      if (response.success) {
-        return true;
+      // if failed - repeat
+      if (!response.success) {
+        return await this.sendSaveMessage(roomId, ++retries);
       }
-
-      return await this.sendSaveMessage(roomId, ++retries);
+      // if successful - stop and return
+      return true;
     } catch (e) {
       this.logger.verbose?.(
-        `Client '${randomSocket.data.agentInfo.userID}' did not respond to '${SERVER_SAVE_REQUEST}' event after ${CLIENT_SAVE_TIMEOUT}ms`,
+        `User '${randomSocket.data.agentInfo.userID}' did not respond to '${SERVER_SAVE_REQUEST}' event after ${this.saveTimeoutMs}ms`,
         LogContext.EXCALIDRAW_SERVER
       );
+      //
       return await this.sendSaveMessage(roomId, ++retries);
     }
   }

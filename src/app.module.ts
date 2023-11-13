@@ -67,7 +67,6 @@ import { APP_ID_PROVIDER } from '@common/app.id.provider';
 import { IpfsLogModule } from '@services/api-rest/ipfs-log/ipfs.log.module';
 import { ContributionMoveModule } from '@domain/collaboration/callout-contribution/callout.contribution.move.module';
 import { TaskGraphqlModule } from '@domain/task/task.module';
-import { AdminWhiteboardModule } from '@platform/admin/whiteboards/admin.whiteboard.module';
 import { ActivityFeedModule } from '@domain/activity-feed';
 
 @Module({
@@ -232,7 +231,6 @@ import { ActivityFeedModule } from '@domain/activity-feed';
     LookupModule,
     AuthResetSubscriberModule,
     TaskGraphqlModule,
-    AdminWhiteboardModule,
     ActivityFeedModule,
   ],
   controllers: [AppController, SsiCredentialFlowController],
