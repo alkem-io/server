@@ -2,8 +2,10 @@ import { FrontendApi } from '@ory/kratos-client';
 import { LoggerService } from '@nestjs/common';
 import { AuthenticationService } from '@core/authentication/authentication.service';
 import { AgentInfo } from '@core/authentication';
-import { LogContext } from '@common/enums';
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { OryDefaultIdentitySchema } from '@core/authentication/ory.default.identity.schema';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 
 /* Sets the user into the context field or closes the connection */
 export const authenticate = async (
@@ -47,5 +49,22 @@ export const getUserInfo = async (
       LogContext.EXCALIDRAW_SERVER
     );
     return undefined;
+  }
+};
+export const isUserReadonly = async (
+  authorizationService: AuthorizationService,
+  agentInfo: AgentInfo,
+  wbRtAuthorization?: IAuthorizationPolicy
+): Promise<boolean> => {
+  try {
+    await authorizationService.grantAccessOrFail(
+      agentInfo,
+      wbRtAuthorization,
+      AuthorizationPrivilege.UPDATE_CONTENT,
+      'access whiteboardRt'
+    );
+    return false;
+  } catch (e: any) {
+    return true;
   }
 };

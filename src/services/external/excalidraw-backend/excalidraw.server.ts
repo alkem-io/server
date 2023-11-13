@@ -43,6 +43,7 @@ const defaultContributionInterval = 600;
 const defaultSaveInterval = 15;
 const defaultSaveTimeout = 10;
 const defaultMaxRetries = 5;
+const defaultTimeoutBeforeRetryMs = 3000;
 
 const SERVER_SAVE_REQUEST = 'save-request';
 
@@ -80,7 +81,7 @@ export class ExcalidrawServer {
       (contribution_window ?? defaultContributionInterval) * 1000;
     this.saveIntervalMs = (save_interval ?? defaultSaveInterval) * 1000;
     this.saveTimeoutMs = (save_timeout ?? defaultSaveTimeout) * 1000;
-    this.saveMaxRetries = (save_max_retries ?? defaultMaxRetries) * 1000;
+    this.saveMaxRetries = Number(save_max_retries ?? defaultMaxRetries);
     // don't block the constructor
     this.init().then(() =>
       this.logger.verbose?.(
@@ -267,7 +268,6 @@ export class ExcalidrawServer {
     opts: SaveMessageOpts
   ): Promise<boolean> {
     const { maxRetries, timeout } = opts;
-
     if (retries === maxRetries) {
       return false;
     }
@@ -291,7 +291,14 @@ export class ExcalidrawServer {
         .emitWithAck(SERVER_SAVE_REQUEST);
       // if failed - repeat
       if (!response.success) {
-        return await this._sendSaveMessage(roomId, ++retries, opts);
+        // workaround for timers/promises not working
+        return new Promise(res =>
+          setTimeout(
+            async () =>
+              res(await this._sendSaveMessage(roomId, ++retries, opts)),
+            defaultTimeoutBeforeRetryMs
+          )
+        );
       }
       // if successful - stop and return
       return true;
@@ -300,7 +307,7 @@ export class ExcalidrawServer {
         `User '${randomSocket.data.agentInfo.userID}' did not respond to '${SERVER_SAVE_REQUEST}' event after ${timeout}ms`,
         LogContext.EXCALIDRAW_SERVER
       );
-      //
+      //retry if timed out
       return await this._sendSaveMessage(roomId, ++retries, opts);
     }
   }
