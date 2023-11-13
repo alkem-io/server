@@ -86,9 +86,8 @@ export class PlatformAuthorizationService {
       );
 
     // Cascade down
-    const platformPropagated = await this.propagateAuthorizationToChildEntities(
-      platform
-    );
+    const platformPropagated =
+      await this.propagateAuthorizationToChildEntities();
 
     return await this.platformRepository.save(platformPropagated);
   }
@@ -107,32 +106,48 @@ export class PlatformAuthorizationService {
     );
   }
 
-  private async propagateAuthorizationToChildEntities(
-    platform: IPlatform
-  ): Promise<IPlatform> {
-    if (platform.library) {
-      await this.libraryAuthorizationService.applyAuthorizationPolicy(
-        platform.library,
+  private async propagateAuthorizationToChildEntities(): Promise<IPlatform> {
+    const platform = await this.platformService.getPlatformOrFail({
+      relations: {
+        authorization: true,
+        library: {
+          innovationPacks: true,
+        },
+        communication: true,
+        storageAggregator: true,
+      },
+    });
+
+    if (
+      !platform.authorization ||
+      !platform.library ||
+      !platform.communication ||
+      !platform.storageAggregator
+    )
+      throw new RelationshipNotFoundException(
+        `Unable to load entities for platform: ${platform.id} `,
+        LogContext.PLATFORM
+      );
+
+    await this.libraryAuthorizationService.applyAuthorizationPolicy(
+      platform.library,
+      platform.authorization
+    );
+
+    const copyPlatformAuthorization: IAuthorizationPolicy =
+      this.authorizationPolicyService.cloneAuthorizationPolicy(
         platform.authorization
       );
-    }
 
-    if (platform.communication) {
-      const copyPlatformAuthorization: IAuthorizationPolicy = JSON.parse(
-        JSON.stringify(platform.authorization)
-      );
-      // Extend the platform authoization policy for communication only
-      const extendedAuthPolicy = await this.appendCredentialRulesCommunication(
-        copyPlatformAuthorization
-      );
-      await this.communicationAuthorizationService.applyAuthorizationPolicy(
-        platform.communication,
-        extendedAuthPolicy
-      );
-    }
+    // Extend the platform authoization policy for communication only
+    const extendedAuthPolicy = await this.appendCredentialRulesCommunication(
+      copyPlatformAuthorization
+    );
+    await this.communicationAuthorizationService.applyAuthorizationPolicy(
+      platform.communication,
+      extendedAuthPolicy
+    );
 
-    platform.storageAggregator =
-      await this.platformService.getStorageAggregator(platform);
     platform.storageAggregator =
       await this.storageAggregatorAuthorizationService.applyAuthorizationPolicy(
         platform.storageAggregator,
@@ -144,14 +159,7 @@ export class PlatformAuthorizationService {
       );
 
     const innovationHubs = await this.innovationHubService.getInnovationHubs({
-      relations: {
-        profile: {
-          visuals: true,
-          references: true,
-          tagsets: true,
-          location: true,
-        },
-      },
+      relations: {},
     });
 
     for (const innovationHub of innovationHubs) {
