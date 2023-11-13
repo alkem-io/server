@@ -13,7 +13,6 @@ import {
   CREDENTIAL_RULE_TYPES_PLATFORM_CREATE_ORG_FILE_UPLOAD as CREDENTIAL_RULE_TYPES_PLATFORM_CREATE_ORG,
   CREDENTIAL_RULE_TYPES_PLATFORM_ANY_ADMIN,
   POLICY_RULE_PLATFORM_CREATE,
-  CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_GUIDANCE,
 } from '@common/constants';
 
 @Injectable()
@@ -160,15 +159,6 @@ export class PlatformAuthorizationPolicyService {
       );
     admin.cascade = false;
     credentialRules.push(admin);
-
-    const interactiveGuidance =
-      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.ACCESS_INTERACTIVE_GUIDANCE],
-        [AuthorizationCredential.BETA_TESTER],
-        CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_GUIDANCE
-      );
-    admin.cascade = false;
-    credentialRules.push(interactiveGuidance);
 
     return credentialRules;
   }

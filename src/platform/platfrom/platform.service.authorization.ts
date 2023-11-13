@@ -18,8 +18,13 @@ import {
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { InnovationHubService } from '@domain/innovation-hub';
 import { InnovationHubAuthorizationService } from '@domain/innovation-hub/innovation.hub.service.authorization';
-import { CREDENTIAL_RULE_TYPES_PLATFORM_FILE_UPLOAD_ANY_USER } from '@common/constants';
+import {
+  CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_GUIDANCE,
+  CREDENTIAL_RULE_TYPES_PLATFORM_FILE_UPLOAD_ANY_USER,
+} from '@common/constants';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
+import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { OrganizationService } from '@domain/community/organization/organization.service';
 
 @Injectable()
 export class PlatformAuthorizationService {
@@ -32,6 +37,7 @@ export class PlatformAuthorizationService {
     private innovationHubService: InnovationHubService,
     private innovationHubAuthorizationService: InnovationHubAuthorizationService,
     private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
+    private organizationService: OrganizationService,
     @InjectRepository(Platform)
     private platformRepository: Repository<Platform>
   ) {}
@@ -46,9 +52,18 @@ export class PlatformAuthorizationService {
       },
     });
 
-    platform.authorization =
+    const platformAuthorizationPolicy =
       this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();
+
+    platform.authorization =
+      this.authorizationPolicyService.cloneAuthorizationPolicy(
+        platformAuthorizationPolicy
+      );
     platform.authorization.anonymousReadAccess = true;
+    platform.authorization =
+      await this.appendCredentialRulesInteractiveGuidance(
+        platform.authorization
+      );
 
     // Cascade down
     const platformPropagated = await this.propagateAuthorizationToChildEntities(
@@ -167,5 +182,46 @@ export class PlatformAuthorizationService {
     );
 
     return storageAuthorization;
+  }
+
+  private async appendCredentialRulesInteractiveGuidance(
+    authorization: IAuthorizationPolicy
+  ): Promise<IAuthorizationPolicy> {
+    const newRules: IAuthorizationPolicyRuleCredential[] = [];
+
+    const criterias: ICredentialDefinition[] = [];
+    // Assign all users that are beta tester
+    const betaTesterUser: ICredentialDefinition = {
+      type: AuthorizationCredential.BETA_TESTER,
+      resourceID: '',
+    };
+    criterias.push(betaTesterUser);
+    // Assign all users that are associates of organizations that are beta testers
+    const betaTesterOrganizations =
+      await this.organizationService.organizationsWithCredentials({
+        type: AuthorizationCredential.BETA_TESTER,
+      });
+    for (const organization of betaTesterOrganizations) {
+      const betaTesterOrg: ICredentialDefinition = {
+        type: AuthorizationCredential.ORGANIZATION_ASSOCIATE,
+        resourceID: organization.id,
+      };
+      criterias.push(betaTesterOrg);
+    }
+
+    const interactiveGuidanceRule =
+      this.authorizationPolicyService.createCredentialRule(
+        [AuthorizationPrivilege.ACCESS_INTERACTIVE_GUIDANCE],
+        criterias,
+        `${CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_GUIDANCE}2`
+      );
+    interactiveGuidanceRule.cascade = false;
+
+    newRules.push(interactiveGuidanceRule);
+
+    return this.authorizationPolicyService.appendCredentialAuthorizationRules(
+      authorization,
+      newRules
+    );
   }
 }
