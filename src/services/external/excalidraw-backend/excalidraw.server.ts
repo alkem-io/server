@@ -111,6 +111,10 @@ export class ExcalidrawServer {
       const contributionTimer = this.contributionTimers.get(roomId);
       clearInterval(contributionTimer);
       this.contributionTimers.delete(roomId);
+      this.logger.verbose?.(
+        `[${this.appId}] Room deleted: '${roomId}'`,
+        LogContext.EXCALIDRAW_SERVER
+      );
 
       const saveTimer = this.saveTimers.get(roomId);
       clearInterval(saveTimer);
@@ -120,17 +124,38 @@ export class ExcalidrawServer {
       if (!isRoomId(roomId)) {
         return;
       }
+      this.logger.verbose?.(
+        `[${this.appId}] Room created: '${roomId}'`,
+        LogContext.EXCALIDRAW_SERVER
+      );
       const contributionTimer = this.contributionTimers.get(roomId);
       if (!contributionTimer) {
+        this.logger.verbose?.(
+          `[${this.appId}] Starting contribution timer for room '${roomId}'`,
+          LogContext.EXCALIDRAW_SERVER
+        );
         const timer = this.startContributionEventTimer(roomId);
         this.contributionTimers.set(roomId, timer);
+      } else {
+        this.logger.verbose?.(
+          `[${this.appId}] Contribution timer for room '${roomId}' exists`,
+          LogContext.EXCALIDRAW_SERVER
+        );
       }
 
       const saveTimer = this.saveTimers.get(roomId);
       if (!saveTimer) {
-        this.logger.verbose?.(`Starting timer for room '${roomId}'`);
+        this.logger.verbose?.(
+          `[${this.appId}] Starting auto save timer for room '${roomId}'`,
+          LogContext.EXCALIDRAW_SERVER
+        );
         const timer = this.startSaveTimer(roomId);
         this.saveTimers.set(roomId, timer);
+      } else {
+        this.logger.verbose?.(
+          `[${this.appId}] Auto save timer for room '${roomId}' exists`,
+          LogContext.EXCALIDRAW_SERVER
+        );
       }
     });
 
