@@ -49,7 +49,7 @@ export class UserResolverMutations {
     @Args('userData') userData: CreateUserInput
   ): Promise<IUser> {
     const authorization =
-      this.platformAuthorizationService.getPlatformAuthorizationPolicy();
+      await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       authorization,

@@ -193,7 +193,7 @@ export class UserResolverFields {
   ): Promise<boolean> {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
+      await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
       `user: ${agentInfo.email} can contact user: ${user.email}`
     );

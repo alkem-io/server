@@ -38,7 +38,7 @@ export class UserResolverQueries {
   ): Promise<IUser[]> {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
+      await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
       `users query: ${agentInfo.email}`
     );
@@ -58,7 +58,7 @@ export class UserResolverQueries {
   ): Promise<PaginatedUsers> {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
+      await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
       `users query: ${agentInfo.email}`
     );
@@ -78,7 +78,7 @@ export class UserResolverQueries {
   ): Promise<IUser> {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
+      await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
       `user query: ${agentInfo.email}`
     );

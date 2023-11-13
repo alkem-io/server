@@ -52,7 +52,7 @@ export class OrganizationResolverMutations {
     @Args('organizationData') organizationData: CreateOrganizationInput
   ): Promise<IOrganization> {
     const authorizationPolicy =
-      this.platformAuthorizationService.getPlatformAuthorizationPolicy();
+      await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
 
     await this.authorizationService.grantAccessOrFail(
       agentInfo,

@@ -116,7 +116,7 @@ export class LookupResolverFields {
     const authorizationPolicy =
       await this.authorizationPolicyService.getAuthorizationPolicyOrFail(id);
     const platformAuthorization =
-      this.platformAuthorizationService.getPlatformAuthorizationPolicy();
+      await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       platformAuthorization,

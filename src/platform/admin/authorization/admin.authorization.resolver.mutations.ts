@@ -212,11 +212,11 @@ export class AdminAuthorizationResolverMutations {
     description: 'Reset the Authorization Policy on all entities',
   })
   @Profiling.api
-  public authorizationPolicyResetAll(
+  public async authorizationPolicyResetAll(
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<string> {
     const platformPolicy =
-      this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();
+      await this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       platformPolicy,

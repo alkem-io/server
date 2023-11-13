@@ -65,7 +65,7 @@ export class RolesResolverFields {
   ): Promise<InvitationForRoleResult[]> {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
+      await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.PLATFORM_ADMIN,
       `roles user query: ${agentInfo.email}`
     );
@@ -90,7 +90,7 @@ export class RolesResolverFields {
   ): Promise<ApplicationForRoleResult[]> {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
+      await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.PLATFORM_ADMIN,
       `roles user query: ${agentInfo.email}`
     );
