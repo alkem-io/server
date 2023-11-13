@@ -86,8 +86,9 @@ export class PlatformAuthorizationService {
       );
 
     // Cascade down
-    const platformPropagated =
-      await this.propagateAuthorizationToChildEntities();
+    const platformPropagated = await this.propagateAuthorizationToChildEntities(
+      platform.authorization
+    );
 
     return await this.platformRepository.save(platformPropagated);
   }
@@ -106,10 +107,11 @@ export class PlatformAuthorizationService {
     );
   }
 
-  private async propagateAuthorizationToChildEntities(): Promise<IPlatform> {
+  private async propagateAuthorizationToChildEntities(
+    authorization: IAuthorizationPolicy
+  ): Promise<IPlatform> {
     const platform = await this.platformService.getPlatformOrFail({
       relations: {
-        authorization: true,
         library: {
           innovationPacks: true,
         },
@@ -119,7 +121,6 @@ export class PlatformAuthorizationService {
     });
 
     if (
-      !platform.authorization ||
       !platform.library ||
       !platform.communication ||
       !platform.storageAggregator
@@ -129,6 +130,7 @@ export class PlatformAuthorizationService {
         LogContext.PLATFORM
       );
 
+    platform.authorization = authorization;
     await this.libraryAuthorizationService.applyAuthorizationPolicy(
       platform.library,
       platform.authorization
