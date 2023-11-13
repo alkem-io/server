@@ -65,10 +65,8 @@ export class ExcalidrawServer {
     private whiteboardRtService: WhiteboardRtService,
     private contributionReporter: ContributionReporterService,
     private communityResolver: CommunityResolverService,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private logger: LoggerService,
-    @Inject(APP_ID)
-    private appId: string
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService,
+    @Inject(APP_ID) private appId: string
   ) {
     const {
       contribution_window,
@@ -112,7 +110,7 @@ export class ExcalidrawServer {
       clearInterval(contributionTimer);
       this.contributionTimers.delete(roomId);
       this.logger.verbose?.(
-        `[${this.appId}] Room deleted: '${roomId}'`,
+        `Room deleted: '${roomId}'`,
         LogContext.EXCALIDRAW_SERVER
       );
 
@@ -120,25 +118,30 @@ export class ExcalidrawServer {
       clearInterval(saveTimer);
       this.saveTimers.delete(roomId);
     });
-    adapter.on(CREATE_ROOM, (roomId: string) => {
+    adapter.on(CREATE_ROOM, async (roomId: string) => {
       if (!isRoomId(roomId)) {
         return;
       }
+      if ((await this.wsServer.in(roomId).fetchSockets()).length > 1) {
+        // if there are more than 1 sockets connected
+        // this room was created elsewhere
+        return;
+      }
       this.logger.verbose?.(
-        `[${this.appId}] Room created: '${roomId}'`,
+        `Room created: '${roomId}'`,
         LogContext.EXCALIDRAW_SERVER
       );
       const contributionTimer = this.contributionTimers.get(roomId);
       if (!contributionTimer) {
         this.logger.verbose?.(
-          `[${this.appId}] Starting contribution timer for room '${roomId}'`,
+          `Starting contribution timer for room '${roomId}'`,
           LogContext.EXCALIDRAW_SERVER
         );
         const timer = this.startContributionEventTimer(roomId);
         this.contributionTimers.set(roomId, timer);
       } else {
         this.logger.verbose?.(
-          `[${this.appId}] Contribution timer for room '${roomId}' exists`,
+          `Contribution timer for room '${roomId}' exists`,
           LogContext.EXCALIDRAW_SERVER
         );
       }
@@ -146,14 +149,14 @@ export class ExcalidrawServer {
       const saveTimer = this.saveTimers.get(roomId);
       if (!saveTimer) {
         this.logger.verbose?.(
-          `[${this.appId}] Starting auto save timer for room '${roomId}'`,
+          `Starting auto save timer for room '${roomId}'`,
           LogContext.EXCALIDRAW_SERVER
         );
         const timer = this.startSaveTimer(roomId);
         this.saveTimers.set(roomId, timer);
       } else {
         this.logger.verbose?.(
-          `[${this.appId}] Auto save timer for room '${roomId}' exists`,
+          `Auto save timer for room '${roomId}' exists`,
           LogContext.EXCALIDRAW_SERVER
         );
       }
@@ -264,9 +267,16 @@ export class ExcalidrawServer {
       });
 
       if (saved) {
-        this.logger.verbose?.(`Saving '${roomId}' successful`);
+        this.logger.verbose?.(
+          `Saving '${roomId}' successful`,
+          LogContext.EXCALIDRAW_SERVER
+        );
       } else {
-        this.logger.error(`Saving '${roomId}' failed`);
+        this.logger.error(
+          `Saving '${roomId}' failed`,
+          undefined,
+          LogContext.EXCALIDRAW_SERVER
+        );
       }
 
       timer.refresh();

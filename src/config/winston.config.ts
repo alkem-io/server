@@ -5,20 +5,19 @@ import { ConfigService } from '@nestjs/config';
 import { ConfigurationTypes } from '@common/enums';
 import { FileTransportOptions } from 'winston/lib/winston/transports';
 import * as logform from 'logform';
+import { APP_ID_VALUE } from '@common/app.id.provider';
 
-const LOG_LABEL = 'alkemio-server';
-
-const consoleLoggingStandardFormat: logform.Format[] = [
+const consoleLoggingStandardFormat = (label: string): logform.Format[] => [
   winston.format.timestamp(),
-  nestWinstonModuleUtilities.format.nestLike(undefined, {
+  nestWinstonModuleUtilities.format.nestLike(label, {
     colors: true,
     prettyPrint: false,
   }),
 ];
 
-const consoleLoggingProdFormat: logform.Format[] = [
+const consoleLoggingProdFormat = (label: string): logform.Format[] => [
   winston.format.timestamp(),
-  winston.format.label({ label: LOG_LABEL }),
+  winston.format.label({ label }),
   winston.format.json({ deterministic: true }),
 ];
 
@@ -36,8 +35,8 @@ export class WinstonConfigService {
         format: winston.format.combine(
           ...(this.configService.get(ConfigurationTypes.MONITORING)?.logging
             ?.json
-            ? consoleLoggingProdFormat
-            : consoleLoggingStandardFormat)
+            ? consoleLoggingProdFormat(APP_ID_VALUE)
+            : consoleLoggingStandardFormat(APP_ID_VALUE))
         ),
         level: this.configService
           .get(ConfigurationTypes.MONITORING)
