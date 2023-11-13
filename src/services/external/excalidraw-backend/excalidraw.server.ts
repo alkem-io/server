@@ -35,6 +35,8 @@ import { ContributionReporterService } from '@services/external/elasticsearch/co
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { arrayRandomElement } from '@common/utils';
 
+type SaveMessageOpts = { maxRetries: number; timeout: number };
+
 type RoomTimers = Map<string, NodeJS.Timer | NodeJS.Timeout>;
 
 const defaultContributionInterval = 600;
@@ -230,7 +232,10 @@ export class ExcalidrawServer {
 
   private startSaveTimer(roomId: string) {
     const timer = setTimeout(async () => {
-      const saved = await this.sendSaveMessage(roomId);
+      const saved = await this.sendSaveMessage(roomId, {
+        maxRetries: this.saveMaxRetries,
+        timeout: this.saveTimeoutMs,
+      });
 
       if (saved) {
         this.logger.verbose?.(`Saving '${roomId}' successful`);
@@ -244,18 +249,31 @@ export class ExcalidrawServer {
   }
 
   /***
-   * Sends save requests to random sockets until it's successful.
-   * Retries indefinitely
+   * Sends save requests to a random sockets until it's successful after a fixed set of retries
+   *
    * @param roomId The room that needs saving
-   * @param retries
+   * @param opts Save options
    */
-  private async sendSaveMessage(roomId: string, retries = 0): Promise<boolean> {
-    if (retries === this.saveMaxRetries) {
+  private async sendSaveMessage(
+    roomId: string,
+    opts: SaveMessageOpts
+  ): Promise<boolean> {
+    return this._sendSaveMessage(roomId, 0, opts);
+  }
+
+  private async _sendSaveMessage(
+    roomId: string,
+    retries: number,
+    opts: SaveMessageOpts
+  ): Promise<boolean> {
+    const { maxRetries, timeout } = opts;
+
+    if (retries === maxRetries) {
       return false;
     }
     if (retries > 0) {
       this.logger.warn?.(
-        `Retrying [${retries}/${this.saveMaxRetries}]`,
+        `Retrying [${retries}/${maxRetries}]`,
         LogContext.EXCALIDRAW_SERVER
       );
     }
@@ -269,21 +287,21 @@ export class ExcalidrawServer {
     try {
       const [response]: { success: boolean }[] = await this.wsServer
         .to(randomSocket.id)
-        .timeout(this.saveTimeoutMs)
+        .timeout(timeout)
         .emitWithAck(SERVER_SAVE_REQUEST);
       // if failed - repeat
       if (!response.success) {
-        return await this.sendSaveMessage(roomId, ++retries);
+        return await this._sendSaveMessage(roomId, ++retries, opts);
       }
       // if successful - stop and return
       return true;
     } catch (e) {
       this.logger.verbose?.(
-        `User '${randomSocket.data.agentInfo.userID}' did not respond to '${SERVER_SAVE_REQUEST}' event after ${this.saveTimeoutMs}ms`,
+        `User '${randomSocket.data.agentInfo.userID}' did not respond to '${SERVER_SAVE_REQUEST}' event after ${timeout}ms`,
         LogContext.EXCALIDRAW_SERVER
       );
       //
-      return await this.sendSaveMessage(roomId, ++retries);
+      return await this._sendSaveMessage(roomId, ++retries, opts);
     }
   }
 }
