@@ -101,16 +101,23 @@ export class ExcalidrawServer {
     );
 
     const adapter = this.wsServer.of('/').adapter;
-    adapter.on(DELETE_ROOM, (roomId: string) => {
+    adapter.on(DELETE_ROOM, async (roomId: string) => {
       if (!isRoomId(roomId)) {
         return;
       }
+
+      const sockets = await this.wsServer.in(roomId).fetchSockets();
+      // if (sockets.length > 0) {
+      //   // if there are sockets already connected
+      //   // this room was created elsewhere
+      //   return;
+      // }
 
       const contributionTimer = this.contributionTimers.get(roomId);
       clearInterval(contributionTimer);
       this.contributionTimers.delete(roomId);
       this.logger.verbose?.(
-        `Room deleted: '${roomId}'`,
+        `Room deleted: '${roomId} - Sockets: ${sockets.length}'`,
         LogContext.EXCALIDRAW_SERVER
       );
 
