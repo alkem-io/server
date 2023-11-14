@@ -1,0 +1,53 @@
+import { Injectable } from '@nestjs/common';
+import { IVisual } from './visual.interface';
+import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
+import { fromBuffer } from 'file-type';
+import { MimeTypeVisual } from '@common/enums/mime.file.type.visual';
+import { DocumentService } from '@domain/storage/document/document.service';
+import { VisualService } from './visual.service';
+import { DocumentAuthorizationService } from '@domain/storage/document/document.service.authorization';
+import { urlToBuffer } from '@common/utils/url.to.buffer';
+
+@Injectable()
+export class AvatarService {
+  constructor(
+    private storageBucketService: StorageBucketService,
+    private documentService: DocumentService,
+    private documentAuthorizationsService: DocumentAuthorizationService,
+    private visualService: VisualService
+  ) {}
+  public async createAvatarFromURL(
+    storageBucketId: string,
+    userId: string,
+    avatarURL: string
+  ): Promise<IVisual> {
+    const imageBuffer = await urlToBuffer(avatarURL);
+
+    const fileInfo = await fromBuffer(imageBuffer);
+
+    const document =
+      await this.storageBucketService.uploadFileAsDocumentFromBuffer(
+        storageBucketId,
+        imageBuffer,
+        'profilePicture', // we can't really infer the name
+        fileInfo?.mime ?? MimeTypeVisual.PNG,
+        userId,
+        false
+      );
+
+    const storageBucket =
+      await this.storageBucketService.getStorageBucketOrFail(storageBucketId);
+    const url = this.documentService.getPubliclyAccessibleURL(document);
+    await this.documentAuthorizationsService.applyAuthorizationPolicy(
+      document,
+      storageBucket.authorization
+    );
+
+    const visual = await this.visualService.createVisualAvatar();
+    if (url) {
+      visual.uri = url;
+    }
+
+    return visual;
+  }
+}

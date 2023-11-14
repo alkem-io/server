@@ -168,6 +168,18 @@ export class DocumentService {
     return `${endpoint_cluster}${private_rest_api_route}/storage/document/${document.id}`;
   }
 
+  public isAlkemioDocumentURL(url: string): boolean {
+    const endpoint_cluster = this.configService.get(
+      ConfigurationTypes.HOSTING
+    )?.endpoint_cluster;
+    const private_rest_api_route = this.configService.get(
+      ConfigurationTypes.HOSTING
+    )?.path_api_private_rest;
+    return url.startsWith(
+      `${endpoint_cluster}${private_rest_api_route}/storage/document/`
+    );
+  }
+
   private async removeFile(CID: string): Promise<boolean> {
     try {
       await this.ipfsAdapter.unpinFile(CID);

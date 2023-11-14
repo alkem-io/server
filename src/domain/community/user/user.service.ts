@@ -63,6 +63,8 @@ import { UsersQueryArgs } from './dto/users.query.args';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
+import { AvatarService } from '@domain/common/visual/avatar.service';
+import { DocumentService } from '@domain/storage/document/document.service';
 @Injectable()
 export class UserService {
   cacheOptions: CachingConfig = { ttl: 300 };
@@ -76,6 +78,8 @@ export class UserService {
     private preferenceSetService: PreferenceSetService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private storageAggregatorService: StorageAggregatorService,
+    private avatarService: AvatarService,
+    private documentService: DocumentService,
     @InjectRepository(User)
     private userRepository: Repository<User>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -294,17 +298,46 @@ export class UserService {
       );
     }
 
-    return await this.createUser({
+    const isAlkemioDocumentURL = this.documentService.isAlkemioDocumentURL(
+      agentInfo.avatarURL
+    );
+
+    const user = await this.createUser({
       nameID: this.createUserNameID(agentInfo.firstName, agentInfo.lastName),
       email: email,
       firstName: agentInfo.firstName,
       lastName: agentInfo.lastName,
       accountUpn: email,
       profileData: {
-        avatarURL: agentInfo.avatarURL,
+        avatarURL: isAlkemioDocumentURL ? agentInfo.avatarURL : undefined,
         displayName: `${agentInfo.firstName} ${agentInfo.lastName}`,
       },
     });
+
+    if (agentInfo.avatarURL && !isAlkemioDocumentURL) {
+      if (!user.profile?.storageBucket?.id) {
+        throw new EntityNotInitializedException(
+          `User profile storage bucket not initialized for user with id: ${user.id}`,
+          LogContext.COMMUNITY
+        );
+      }
+      const visual = await this.avatarService.createAvatarFromURL(
+        user.profile?.storageBucket?.id,
+        user.id,
+        agentInfo.avatarURL
+      );
+
+      if (!user.profile.visuals) {
+        throw new EntityNotInitializedException(
+          `Visuals not initialized for profile with id: ${user.profile.id}`,
+          LogContext.COMMUNITY
+        );
+      }
+      user.profile.visuals = [visual];
+      user.profile = await this.profileService.save(user.profile);
+    }
+
+    return user;
   }
 
   private async validateUserProfileCreationRequest(
