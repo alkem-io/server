@@ -127,8 +127,8 @@ export class ExcalidrawServer {
         `Room: '${roomId}': Sockets: ${sockets.length}`,
         LogContext.EXCALIDRAW_SERVER
       );
-      if (sockets.length > 1) {
-        // if there are more than 1 sockets connected
+      if (sockets.length > 0) {
+        // if there are sockets already connected
         // this room was created elsewhere
         return;
       }
