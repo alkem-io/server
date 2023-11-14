@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
@@ -16,6 +17,8 @@ import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
 import { UpdateWhiteboardContentRtInput } from './dto/whiteboard.rt.dto.update.content';
+import { ExcalidrawContent } from '@common/interfaces';
+import { getDocumentUrlPattern } from '@common/utils';
 
 @Injectable()
 export class WhiteboardRtService {
@@ -23,7 +26,8 @@ export class WhiteboardRtService {
     @InjectRepository(WhiteboardRt)
     private whiteboardRtRepository: Repository<WhiteboardRt>,
     private authorizationPolicyService: AuthorizationPolicyService,
-    private profileService: ProfileService
+    private profileService: ProfileService,
+    private configService: ConfigService
   ) {}
 
   async createWhiteboardRt(
@@ -127,16 +131,55 @@ export class WhiteboardRtService {
     whiteboardRtInput: IWhiteboardRt,
     updateWhiteboardContentRtData: UpdateWhiteboardContentRtInput
   ): Promise<IWhiteboardRt> {
-    const whiteboardRt = await this.getWhiteboardRtOrFail(whiteboardRtInput.id);
+    const whiteboardRt = await this.getWhiteboardRtOrFail(
+      whiteboardRtInput.id,
+      {
+        relations: {
+          profile: {
+            storageBucket: true,
+          },
+        },
+      }
+    );
 
     if (
-      updateWhiteboardContentRtData.content &&
-      updateWhiteboardContentRtData.content !== whiteboardRt.content
+      !updateWhiteboardContentRtData.content ||
+      updateWhiteboardContentRtData.content === whiteboardRt.content
     ) {
-      whiteboardRt.content = updateWhiteboardContentRtData.content;
+      return whiteboardRt;
     }
 
-    return this.save(whiteboardRt);
+    const content: ExcalidrawContent = JSON.parse(
+      updateWhiteboardContentRtData.content
+    );
+
+    if (!content.files) {
+      return this.save({
+        ...whiteboardRt,
+        content: updateWhiteboardContentRtData.content,
+      });
+    }
+
+    const documentUrlPattern = getDocumentUrlPattern(this.configService);
+    const files = Object.entries(content.files);
+
+    if (files.length) {
+      for (const [, file] of files) {
+        if (!file.url) {
+          continue;
+        }
+
+        // https://alkem.io/api/private/rest/storage/document/da0eb18f-e689-413e-a778-bf281e838540
+        if (!file.url.includes(documentUrlPattern)) {
+          // .. throw
+        }
+      }
+    }
+
+    return this.save({
+      ...whiteboardRt,
+      content: updateWhiteboardContentRtData.content,
+    });
   }
 
   public async getProfile(

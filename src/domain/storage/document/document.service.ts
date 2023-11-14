@@ -4,7 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
-import { ConfigurationTypes, LogContext } from '@common/enums';
+import { LogContext } from '@common/enums';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { DeleteDocumentInput } from './dto/document.dto.delete';
@@ -18,6 +18,7 @@ import { IpfsUploadFailedException } from '@common/exceptions/ipfs/ipfs.upload.e
 import { IpfsDeleteFailedException } from '@common/exceptions/ipfs/ipfs.delete.exception';
 import { ConfigService } from '@nestjs/config';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { getDocumentUrlPattern } from '@common/utils';
 
 @Injectable()
 export class DocumentService {
@@ -53,15 +54,16 @@ export class DocumentService {
       relations: { tagset: true },
     });
     // Delete the underlying document
-    try {
-      await this.removeFile(document.externalID);
-    } catch (error: any) {
-      this.logger.error(
-        `Unable to delete underlying file for document '${documentID}': ${error}`,
-        error?.stack,
-        LogContext.STORAGE_BUCKET
-      );
-    }
+    // todo: fix ipfs deletion - https://github.com/alkem-io/server/issues/2832
+    // try {
+    //   await this.removeFile(document.externalID);
+    // } catch (error: any) {
+    //   this.logger.error(
+    //     `Unable to delete underlying file for document '${documentID}': ${error}`,
+    //     error?.stack,
+    //     LogContext.STORAGE_BUCKET
+    //   );
+    // }
 
     if (document.authorization) {
       await this.authorizationPolicyService.delete(document.authorization);
@@ -159,13 +161,8 @@ export class DocumentService {
   }
 
   public getPubliclyAccessibleURL(document: IDocument): string {
-    const endpoint_cluster = this.configService.get(
-      ConfigurationTypes.HOSTING
-    )?.endpoint_cluster;
-    const private_rest_api_route = this.configService.get(
-      ConfigurationTypes.HOSTING
-    )?.path_api_private_rest;
-    return `${endpoint_cluster}${private_rest_api_route}/storage/document/${document.id}`;
+    const pattern = getDocumentUrlPattern(this.configService);
+    return `${pattern}${document.id}`;
   }
 
   private async removeFile(CID: string): Promise<boolean> {
