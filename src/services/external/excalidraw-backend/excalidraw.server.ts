@@ -309,6 +309,10 @@ export class ExcalidrawServer {
     const sockets = (await this.wsServer.in(roomId).fetchSockets()).filter(
       socket => !socket.data.readonly
     );
+    // return if no eligible sockets
+    if (!sockets.length) {
+      return false;
+    }
     // choose a random socket which can save
     const randomSocket = arrayRandomElement(sockets);
     // sends a save request to the socket and wait for a response
