@@ -122,7 +122,12 @@ export class ExcalidrawServer {
       if (!isRoomId(roomId)) {
         return;
       }
-      if ((await this.wsServer.in(roomId).fetchSockets()).length > 1) {
+      const sockets = await this.wsServer.in(roomId).fetchSockets();
+      this.logger.verbose?.(
+        `Room: '${roomId}': Sockets: ${sockets.length}`,
+        LogContext.EXCALIDRAW_SERVER
+      );
+      if (sockets.length > 1) {
         // if there are more than 1 sockets connected
         // this room was created elsewhere
         return;
