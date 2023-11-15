@@ -12,3 +12,5 @@ export const DISCONNECT = 'disconnect';
 export const CLIENT_BROADCAST = 'client-broadcast';
 
 export const CONNECTION_CLOSED = 'connection-closed';
+
+export const SERVER_SAVE_REQUEST = 'save-request';
