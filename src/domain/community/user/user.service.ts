@@ -314,7 +314,7 @@ export class UserService {
       },
     });
 
-    if (agentInfo.avatarURL && !isAlkemioDocumentURL) {
+    if (!isAlkemioDocumentURL) {
       if (!user.profile?.storageBucket?.id) {
         throw new EntityNotInitializedException(
           `User profile storage bucket not initialized for user with id: ${user.id}`,
