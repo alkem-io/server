@@ -118,7 +118,7 @@ export class LookupResolverFields {
     const authorizationPolicy =
       await this.authorizationPolicyService.getAuthorizationPolicyOrFail(id);
     const platformAuthorization =
-      this.platformAuthorizationService.getPlatformAuthorizationPolicy();
+      await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       platformAuthorization,
@@ -146,7 +146,7 @@ export class LookupResolverFields {
   ): Promise<AuthorizationPrivilege[]> {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
+      await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.PLATFORM_ADMIN,
       `user privileges field: ${agentInfo.email}`
     );

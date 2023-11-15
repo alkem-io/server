@@ -12,6 +12,7 @@ import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
 import { Platform } from './platform.entity';
 import { IPlatform } from './platform.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 
 @Injectable()
 export class PlatformService {
@@ -91,7 +92,7 @@ export class PlatformService {
   }
 
   async getStorageAggregator(
-    platformInput: ILibrary
+    platformInput: IPlatform
   ): Promise<IStorageAggregator> {
     const platform = await this.getPlatformOrFail({
       relations: {
@@ -103,10 +104,23 @@ export class PlatformService {
     if (!storageAggregator) {
       throw new EntityNotFoundException(
         `Unable to find storage aggregator for Platform: ${platformInput.id}`,
-        LogContext.LIBRARY
+        LogContext.PLATFORM
       );
     }
 
     return storageAggregator;
+  }
+
+  getAuthorizationPolicy(platform: IPlatform): IAuthorizationPolicy {
+    const authorization = platform.authorization;
+
+    if (!authorization) {
+      throw new EntityNotFoundException(
+        `Unable to find Authorization Policy for Platform: ${platform.id}`,
+        LogContext.PLATFORM
+      );
+    }
+
+    return authorization;
   }
 }

@@ -33,7 +33,7 @@ export class AdminAuthorizationResolverQueries {
   ): Promise<IUser[]> {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
+      await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
       `authorization query: ${agentInfo.email}`
     );
@@ -56,7 +56,7 @@ export class AdminAuthorizationResolverQueries {
   ): Promise<AuthorizationPrivilege[]> {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
+      await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
       `authorization query: ${agentInfo.email}`
     );

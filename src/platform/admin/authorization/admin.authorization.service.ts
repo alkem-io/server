@@ -23,6 +23,10 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { AgentInfo } from '@core/authentication';
 import { AssignGlobalSpacesAdminInput } from './dto/authorization.dto.assign.global.spaces.admin';
 import { RemoveGlobalSpacesAdminInput } from './dto/authorization.dto.remove.global.spaces.admin';
+import { IOrganization } from '@domain/community/organization';
+import { OrganizationService } from '@domain/community/organization/organization.service';
+import { RevokeOrganizationAuthorizationCredentialInput } from './dto/authorization.dto.credential.revoke.organization';
+import { GrantOrganizationAuthorizationCredentialInput } from './dto/authorization.dto.credential.grant.organization';
 
 @Injectable()
 export class AdminAuthorizationService {
@@ -31,6 +35,7 @@ export class AdminAuthorizationService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private agentService: AgentService,
     private userService: UserService,
+    private organizationService: OrganizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -171,7 +176,7 @@ export class AdminAuthorizationService {
     return privileges;
   }
 
-  async grantCredential(
+  async grantCredentialToUser(
     grantCredentialData: GrantAuthorizationCredentialInput
   ): Promise<IUser> {
     // check the inputs
@@ -194,7 +199,7 @@ export class AdminAuthorizationService {
     return user;
   }
 
-  async revokeCredential(
+  async revokeCredentialFromUser(
     revokeCredentialData: RevokeAuthorizationCredentialInput
   ): Promise<IUser> {
     // check the inputs
@@ -217,6 +222,56 @@ export class AdminAuthorizationService {
     });
 
     return user;
+  }
+
+  async grantCredentialToOrganization(
+    grantCredentialData: GrantOrganizationAuthorizationCredentialInput
+  ): Promise<IOrganization> {
+    // check the inputs
+    if (this.isGlobalAuthorizationCredential(grantCredentialData.type)) {
+      if (grantCredentialData.resourceID)
+        throw new ForbiddenException(
+          `resourceID should not be specified for global AuthorizationCredentials: ${grantCredentialData.type}`,
+          LogContext.AUTH
+        );
+    }
+    const { organization, agent } =
+      await this.organizationService.getOrganizationAndAgent(
+        grantCredentialData.organizationID
+      );
+
+    organization.agent = await this.agentService.grantCredential({
+      agentID: agent.id,
+      type: grantCredentialData.type,
+      resourceID: grantCredentialData.resourceID,
+    });
+    return organization;
+  }
+
+  async revokeCredentialFromOrganization(
+    revokeCredentialData: RevokeOrganizationAuthorizationCredentialInput
+  ): Promise<IOrganization> {
+    // check the inputs
+    if (this.isGlobalAuthorizationCredential(revokeCredentialData.type)) {
+      if (revokeCredentialData.resourceID)
+        throw new ForbiddenException(
+          `resourceID should not be specified for global AuthorizationCredentials: ${revokeCredentialData.type}`,
+          LogContext.AUTH
+        );
+    }
+
+    const { organization, agent } =
+      await this.organizationService.getOrganizationAndAgent(
+        revokeCredentialData.organizationID
+      );
+
+    organization.agent = await this.agentService.revokeCredential({
+      agentID: agent.id,
+      type: revokeCredentialData.type,
+      resourceID: revokeCredentialData.resourceID || '',
+    });
+
+    return organization;
   }
 
   isGlobalAuthorizationCredential(credentialType: string): boolean {

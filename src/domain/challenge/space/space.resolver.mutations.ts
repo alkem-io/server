@@ -64,7 +64,7 @@ export class SpaceResolverMutations {
     @Args('spaceData') spaceData: CreateSpaceInput
   ): Promise<ISpace> {
     const authorizationPolicy =
-      this.platformAuthorizationService.getPlatformAuthorizationPolicy();
+      await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       authorizationPolicy,

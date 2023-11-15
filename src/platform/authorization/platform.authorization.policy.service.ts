@@ -1,33 +1,48 @@
 import { Injectable } from '@nestjs/common';
-import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
+import {
+  AuthorizationCredential,
+  AuthorizationPrivilege,
+  LogContext,
+} from '@common/enums';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
-import {
-  CREDENTIAL_RULE_TYPES_PLATFORM_GLOBAL_ADMINS,
-  CREDENTIAL_RULE_TYPES_PLATFORM_GRANT_GLOBAL_ADMINS,
-  CREDENTIAL_RULE_TYPES_PLATFORM_ADMINS,
-  CREDENTIAL_RULE_TYPES_PLATFORM_READ_REGISTERED,
-  CREDENTIAL_RULE_TYPES_PLATFORM_CREATE_ORG_FILE_UPLOAD as CREDENTIAL_RULE_TYPES_PLATFORM_CREATE_ORG,
-  CREDENTIAL_RULE_TYPES_PLATFORM_ANY_ADMIN,
-  POLICY_RULE_PLATFORM_CREATE,
-  CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_GUIDANCE,
-} from '@common/constants';
+import { CREDENTIAL_RULE_TYPES_PLATFORM_GLOBAL_ADMINS } from '@common/constants';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Platform } from '@platform/platfrom/platform.entity';
+import { Repository } from 'typeorm';
+import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 
 @Injectable()
 export class PlatformAuthorizationPolicyService {
-  private readonly platformAuthorizationPolicy: IAuthorizationPolicy;
   private readonly rootAuthorizationPolicy: IAuthorizationPolicy;
 
-  constructor(private authorizationPolicyService: AuthorizationPolicyService) {
+  constructor(
+    private authorizationPolicyService: AuthorizationPolicyService,
+    @InjectRepository(Platform)
+    private platformRepository: Repository<Platform>
+  ) {
     this.rootAuthorizationPolicy = this.createRootAuthorizationPolicy();
-    this.platformAuthorizationPolicy = this.createPlatformAuthorizationPolicy();
   }
 
-  public getPlatformAuthorizationPolicy(): IAuthorizationPolicy {
-    return this.platformAuthorizationPolicy;
+  public async getPlatformAuthorizationPolicy(): Promise<IAuthorizationPolicy> {
+    const platform = (
+      await this.platformRepository.find({
+        take: 1,
+        relations: {
+          authorization: true,
+        },
+      })
+    )?.[0];
+
+    if (!platform || !platform.authorization) {
+      throw new EntityNotFoundException(
+        'No Platform authorization found!',
+        LogContext.PLATFORM
+      );
+    }
+    return platform.authorization;
   }
 
   public inheritRootAuthorizationPolicy(
@@ -47,29 +62,6 @@ export class PlatformAuthorizationPolicyService {
     return this.authorizationPolicyService.appendCredentialAuthorizationRules(
       rootAuthorization,
       credentialRules
-    );
-  }
-
-  private createPlatformAuthorizationPolicy(): IAuthorizationPolicy {
-    let platformAuthorization: IAuthorizationPolicy = new AuthorizationPolicy();
-    platformAuthorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
-        platformAuthorization,
-        this.rootAuthorizationPolicy
-      );
-
-    const credentialRules = this.createPlatformCredentialRules();
-
-    const platformAuthCredRules =
-      this.authorizationPolicyService.appendCredentialAuthorizationRules(
-        platformAuthorization,
-        credentialRules
-      );
-
-    const privilegeRules = this.createPlatformPrivilegeRules();
-    return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
-      platformAuthCredRules,
-      privilegeRules
     );
   }
 
@@ -93,99 +85,5 @@ export class PlatformAuthorizationPolicyService {
     credentialRules.push(globalAdmins);
 
     return credentialRules;
-  }
-
-  private createPlatformCredentialRules(): IAuthorizationPolicyRuleCredential[] {
-    const credentialRules: IAuthorizationPolicyRuleCredential[] = [];
-
-    // Allow global admins to manage global privileges, access Platform mgmt
-    const globalAdminNotInherited =
-      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.GRANT_GLOBAL_ADMINS],
-        [AuthorizationCredential.GLOBAL_ADMIN],
-        CREDENTIAL_RULE_TYPES_PLATFORM_GRANT_GLOBAL_ADMINS
-      );
-    globalAdminNotInherited.cascade = false;
-    credentialRules.push(globalAdminNotInherited);
-
-    // Allow global admin Spaces to access Platform mgmt
-    const platformAdmin =
-      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.PLATFORM_ADMIN],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_ADMIN_SPACES,
-          AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY,
-        ],
-        CREDENTIAL_RULE_TYPES_PLATFORM_ADMINS
-      );
-    platformAdmin.cascade = false;
-    credentialRules.push(platformAdmin);
-
-    // Allow all registered users to query non-protected user information
-    const userNotInherited =
-      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.READ_USERS],
-        [AuthorizationCredential.GLOBAL_REGISTERED],
-        CREDENTIAL_RULE_TYPES_PLATFORM_READ_REGISTERED
-      );
-    userNotInherited.cascade = false;
-    credentialRules.push(userNotInherited);
-
-    const createOrg =
-      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.CREATE_ORGANIZATION],
-        [
-          AuthorizationCredential.SPACE_ADMIN,
-          AuthorizationCredential.CHALLENGE_ADMIN,
-        ],
-        CREDENTIAL_RULE_TYPES_PLATFORM_CREATE_ORG
-      );
-    createOrg.cascade = false;
-    credentialRules.push(createOrg);
-
-    const admin =
-      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.ADMIN],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_ADMIN_SPACES,
-          AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY,
-          AuthorizationCredential.SPACE_ADMIN,
-          AuthorizationCredential.CHALLENGE_ADMIN,
-          AuthorizationCredential.OPPORTUNITY_ADMIN,
-          AuthorizationCredential.ORGANIZATION_ADMIN,
-        ],
-        CREDENTIAL_RULE_TYPES_PLATFORM_ANY_ADMIN
-      );
-    admin.cascade = false;
-    credentialRules.push(admin);
-
-    const interactiveGuidance =
-      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.ACCESS_INTERACTIVE_GUIDANCE],
-        [AuthorizationCredential.BETA_TESTER],
-        CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_GUIDANCE
-      );
-    admin.cascade = false;
-    credentialRules.push(interactiveGuidance);
-
-    return credentialRules;
-  }
-
-  private createPlatformPrivilegeRules(): AuthorizationPolicyRulePrivilege[] {
-    const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
-
-    const createPrivilege = new AuthorizationPolicyRulePrivilege(
-      [
-        AuthorizationPrivilege.CREATE_SPACE,
-        AuthorizationPrivilege.CREATE_ORGANIZATION,
-      ],
-      AuthorizationPrivilege.CREATE,
-      POLICY_RULE_PLATFORM_CREATE
-    );
-    privilegeRules.push(createPrivilege);
-
-    return privilegeRules;
   }
 }

@@ -30,7 +30,7 @@ export class RolesResolverQueries {
   ): Promise<ContributorRoles> {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
+      await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
       `roles user query: ${agentInfo.email}`
     );

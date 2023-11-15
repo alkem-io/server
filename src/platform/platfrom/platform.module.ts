@@ -15,6 +15,7 @@ import { InnovationHubModule } from '@domain/innovation-hub';
 import { KonfigModule } from '@platform/configuration/config/config.module';
 import { MetadataModule } from '@platform/metadata/metadata.module';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
+import { OrganizationModule } from '@domain/community/organization/organization.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/stor
     KonfigModule,
     MetadataModule,
     InnovationHubModule,
+    OrganizationModule,
     TypeOrmModule.forFeature([Platform]),
   ],
   providers: [

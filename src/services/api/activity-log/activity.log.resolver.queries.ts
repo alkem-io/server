@@ -38,7 +38,7 @@ export class ActivityLogResolverQueries {
     // can agent read users
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
+      await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
       `Collaboration activity query: ${agentInfo.email}`
     );
