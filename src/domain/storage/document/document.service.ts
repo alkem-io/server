@@ -52,15 +52,18 @@ export class DocumentService {
     const document = await this.getDocumentOrFail(documentID, {
       relations: { tagset: true },
     });
-    // Delete the underlying document
-    try {
-      await this.removeFile(document.externalID);
-    } catch (error: any) {
-      this.logger.error(
-        `Unable to delete underlying file for document '${documentID}': ${error}`,
-        error?.stack,
-        LogContext.STORAGE_BUCKET
-      );
+    const DELETE_IPFS_CONTENTS = false;
+    if (DELETE_IPFS_CONTENTS) {
+      // Delete the underlying document
+      try {
+        await this.removeFile(document.externalID);
+      } catch (error: any) {
+        this.logger.error(
+          `Unable to delete underlying file for document '${documentID}': ${error}`,
+          error?.stack,
+          LogContext.STORAGE_BUCKET
+        );
+      }
     }
 
     if (document.authorization) {
@@ -159,13 +162,29 @@ export class DocumentService {
   }
 
   public getPubliclyAccessibleURL(document: IDocument): string {
+    const documentsBaseUrlPath = this.getDocumentsBaseUrlPath();
+    return `${documentsBaseUrlPath}/${document.id}`;
+  }
+
+  public async getDocumentFromURL(
+    url: string | undefined
+  ): Promise<IDocument | undefined> {
+    const documentsBaseUrlPath = this.getDocumentsBaseUrlPath();
+    if (url && url.startsWith(documentsBaseUrlPath)) {
+      const documentID = url.substring(documentsBaseUrlPath.length + 1);
+      return await this.getDocumentOrFail(documentID);
+    }
+    return undefined;
+  }
+
+  private getDocumentsBaseUrlPath(): string {
     const endpoint_cluster = this.configService.get(
       ConfigurationTypes.HOSTING
     )?.endpoint_cluster;
     const private_rest_api_route = this.configService.get(
       ConfigurationTypes.HOSTING
     )?.path_api_private_rest;
-    return `${endpoint_cluster}${private_rest_api_route}/storage/document/${document.id}`;
+    return `${endpoint_cluster}${private_rest_api_route}/storage/document`;
   }
 
   public isAlkemioDocumentURL(url: string): boolean {
