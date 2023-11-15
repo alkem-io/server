@@ -23,6 +23,9 @@ import { GLOBAL_POLICY_AUTHORIZATION_GRANT_GLOBAL_ADMIN } from '@common/constant
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AuthResetService } from '@services/auth-reset/publisher/auth-reset.service';
+import { IOrganization } from '@domain/community/organization';
+import { GrantOrganizationAuthorizationCredentialInput } from './dto/authorization.dto.credential.grant.organization';
+import { RevokeOrganizationAuthorizationCredentialInput } from './dto/authorization.dto.credential.revoke.organization';
 
 @Resolver()
 export class AdminAuthorizationResolverMutations {
@@ -61,7 +64,7 @@ export class AdminAuthorizationResolverMutations {
       AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
       `grant credential: ${agentInfo.email}`
     );
-    return await this.adminAuthorizationService.grantCredential(
+    return await this.adminAuthorizationService.grantCredentialToUser(
       grantCredentialData
     );
   }
@@ -82,7 +85,49 @@ export class AdminAuthorizationResolverMutations {
       AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
       `revoke credential: ${agentInfo.email}`
     );
-    return await this.adminAuthorizationService.revokeCredential(
+    return await this.adminAuthorizationService.revokeCredentialFromUser(
+      credentialRemoveData
+    );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IOrganization, {
+    description: 'Grants an authorization credential to an Organization.',
+  })
+  @Profiling.api
+  async grantCredentialToOrganization(
+    @Args('grantCredentialData')
+    grantCredentialData: GrantOrganizationAuthorizationCredentialInput,
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<IOrganization> {
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      this.authorizationGlobalAdminPolicy,
+      AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
+      `grant credential: ${agentInfo.email}`
+    );
+    return await this.adminAuthorizationService.grantCredentialToOrganization(
+      grantCredentialData
+    );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IOrganization, {
+    description: 'Removes an authorization credential from an Organization.',
+  })
+  @Profiling.api
+  async revokeCredentialFromOrganization(
+    @Args('revokeCredentialData')
+    credentialRemoveData: RevokeOrganizationAuthorizationCredentialInput,
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<IOrganization> {
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      this.authorizationGlobalAdminPolicy,
+      AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
+      `revoke credential: ${agentInfo.email}`
+    );
+    return await this.adminAuthorizationService.revokeCredentialFromOrganization(
       credentialRemoveData
     );
   }
@@ -212,11 +257,11 @@ export class AdminAuthorizationResolverMutations {
     description: 'Reset the Authorization Policy on all entities',
   })
   @Profiling.api
-  public authorizationPolicyResetAll(
+  public async authorizationPolicyResetAll(
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<string> {
     const platformPolicy =
-      this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();
+      await this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       platformPolicy,

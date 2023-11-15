@@ -28,7 +28,7 @@ export class ChatGuidanceResolverQueries {
   ): Promise<IChatGuidanceQueryResult> {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
+      await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.ACCESS_INTERACTIVE_GUIDANCE,
       `Access interactive guidance: ${agentInfo.email}`
     );

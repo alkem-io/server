@@ -31,7 +31,7 @@ export class ActivityFeedResolverQueries {
   ): Promise<ActivityFeed> {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
+      await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
       `Activity feed query: ${agentInfo.email}`
     );

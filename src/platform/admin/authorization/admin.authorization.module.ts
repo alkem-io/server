@@ -9,6 +9,7 @@ import { AdminAuthorizationResolverQueries } from './admin.authorization.resolve
 import { AdminAuthorizationService } from './admin.authorization.service';
 import { PlatformAuthorizationPolicyModule } from '@src/platform/authorization/platform.authorization.policy.module';
 import { AuthResetModule } from '@services/auth-reset/publisher/auth-reset.module';
+import { OrganizationModule } from '@domain/community/organization/organization.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { AuthResetModule } from '@services/auth-reset/publisher/auth-reset.modul
     AuthorizationPolicyModule,
     AgentModule,
     UserModule,
+    OrganizationModule,
     CredentialModule,
     PlatformAuthorizationPolicyModule,
     AuthResetModule,

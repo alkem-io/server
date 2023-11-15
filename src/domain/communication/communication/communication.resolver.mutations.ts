@@ -125,7 +125,7 @@ export class CommunicationResolverMutations {
   ): Promise<boolean> {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
+      await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
       `send user message from: ${agentInfo.email}`
     );
@@ -152,7 +152,7 @@ export class CommunicationResolverMutations {
   ): Promise<boolean> {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
+      await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
       `send message to organization ${messageData.organizationId} from: ${agentInfo.email}`
     );
@@ -178,7 +178,7 @@ export class CommunicationResolverMutations {
   ): Promise<boolean> {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
+      await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
       `send message to community ${messageData.communityId} from: ${agentInfo.email}`
     );

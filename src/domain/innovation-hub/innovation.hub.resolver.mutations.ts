@@ -30,7 +30,7 @@ export class InnovationHubResolverMutations {
     @Args('createData') createData: CreateInnovationHubInput
   ): Promise<IInnovationHub> {
     const authorizationPolicy =
-      this.platformAuthorizationService.getPlatformAuthorizationPolicy();
+      await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       authorizationPolicy,
@@ -51,7 +51,7 @@ export class InnovationHubResolverMutations {
     @Args('updateData') updateData: UpdateInnovationHubInput
   ): Promise<IInnovationHub> {
     const authorizationPolicy =
-      this.platformAuthorizationService.getPlatformAuthorizationPolicy();
+      await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       authorizationPolicy,
@@ -72,7 +72,7 @@ export class InnovationHubResolverMutations {
     @Args('deleteData') deleteData: DeleteInnovationHubInput
   ): Promise<IInnovationHub> {
     const authorizationPolicy =
-      this.platformAuthorizationService.getPlatformAuthorizationPolicy();
+      await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       authorizationPolicy,

@@ -12,6 +12,7 @@ import {
   SocketIoServer,
   SocketIoSocket,
 } from '../types';
+import { isUserReadonly } from './util';
 
 /* This event is coming from the client; whenever they request to join a room */
 export const joinRoomEventHandler = async (
@@ -23,10 +24,9 @@ export const joinRoomEventHandler = async (
   authorizationService: AuthorizationService,
   logger: LoggerService
 ) => {
+  const whiteboardRt = await whiteboardRtService.getWhiteboardRtOrFail(roomID);
+
   try {
-    const whiteboardRt = await whiteboardRtService.getWhiteboardRtOrFail(
-      roomID
-    );
     await authorizationService.grantAccessOrFail(
       agentInfo,
       whiteboardRt.authorization,
@@ -45,6 +45,11 @@ export const joinRoomEventHandler = async (
 
   await socket.join(roomID);
   socket.data.lastContributed = -1;
+  socket.data.readonly = await isUserReadonly(
+    authorizationService,
+    agentInfo,
+    whiteboardRt.authorization
+  );
 
   logger?.verbose?.(
     `User '${agentInfo.userID}' has joined room '${roomID}'`,

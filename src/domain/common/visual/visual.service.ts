@@ -14,12 +14,10 @@ import { getImageDimensions } from '@common/utils';
 import { Visual } from './visual.entity';
 import { IVisual } from './visual.interface';
 import { DeleteVisualInput } from './dto/visual.dto.delete';
+import { avatarMinImageSize, avatarMaxImageSize } from './avatar.constants';
 
 @Injectable()
 export class VisualService {
-  private readonly avatarMinImageSize = 190;
-  private readonly avatarMaxImageSize = 410;
-
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     @InjectRepository(Visual)
@@ -159,10 +157,10 @@ export class VisualService {
   async createVisualAvatar(): Promise<IVisual> {
     return await this.createVisual({
       name: 'avatar',
-      minWidth: this.avatarMinImageSize,
-      maxWidth: this.avatarMaxImageSize,
-      minHeight: this.avatarMinImageSize,
-      maxHeight: this.avatarMaxImageSize,
+      minWidth: avatarMinImageSize,
+      maxWidth: avatarMaxImageSize,
+      minHeight: avatarMinImageSize,
+      maxHeight: avatarMaxImageSize,
       aspectRatio: 1,
     });
   }

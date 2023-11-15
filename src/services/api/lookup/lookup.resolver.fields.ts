@@ -50,11 +50,17 @@ import { DocumentService } from '@domain/storage/document/document.service';
 import { IDocument } from '@domain/storage/document';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
+import { UserService } from '@domain/community/user/user.service';
 
 @Resolver(() => LookupQueryResults)
 export class LookupResolverFields {
   constructor(
     private authorizationService: AuthorizationService,
+    private authorizationPolicyService: AuthorizationPolicyService,
+    private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private communityService: CommunityService,
     private applicationService: ApplicationService,
     private invitationService: InvitationService,
@@ -75,7 +81,8 @@ export class LookupResolverFields {
     private calendarService: CalendarService,
     private documentService: DocumentService,
     private innovationFlowTemplateService: InnovationFlowTemplateService,
-    private storageAggregatorService: StorageAggregatorService
+    private storageAggregatorService: StorageAggregatorService,
+    private userService: UserService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -96,6 +103,63 @@ export class LookupResolverFields {
     );
 
     return document;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField(() => IAuthorizationPolicy, {
+    nullable: true,
+    description: 'Lookup the specified Authorization Policy',
+  })
+  async authorizationPolicy(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('ID', { type: () => UUID }) id: string
+  ): Promise<IAuthorizationPolicy> {
+    // Note: this is a special case, mostly to track down issues related to authorization policies, so restrict access to platform admins
+    const authorizationPolicy =
+      await this.authorizationPolicyService.getAuthorizationPolicyOrFail(id);
+    const platformAuthorization =
+      await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      platformAuthorization,
+      AuthorizationPrivilege.PLATFORM_ADMIN,
+      `lookup AuthorizationPolicy: ${authorizationPolicy.id}`
+    );
+
+    return authorizationPolicy;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField(
+    'authorizationPrivilegesForUser',
+    () => [AuthorizationPrivilege],
+    {
+      nullable: true,
+      description:
+        'The privileges granted to the specified user based on this Authorization Policy.',
+    }
+  )
+  async authorizationPrivilegesForUser(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('userID', { type: () => UUID }) userID: string,
+    @Args('authorizationID', { type: () => UUID }) authorizationID: string
+  ): Promise<AuthorizationPrivilege[]> {
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
+      AuthorizationPrivilege.PLATFORM_ADMIN,
+      `user privileges field: ${agentInfo.email}`
+    );
+    const authorization =
+      await this.authorizationPolicyService.getAuthorizationPolicyOrFail(
+        authorizationID
+      );
+    const agent = await this.userService.getAgent(userID);
+    return this.authorizationService.getGrantedPrivileges(
+      agent.credentials || [],
+      [],
+      authorization
+    );
   }
 
   @UseGuards(GraphqlGuard)

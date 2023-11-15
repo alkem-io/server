@@ -31,7 +31,7 @@ export class AdminWhiteboardResolverMutations {
     @CurrentUser() agentInfo: AgentInfo
   ) {
     const platformPolicy =
-      this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();
+      await this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       platformPolicy,

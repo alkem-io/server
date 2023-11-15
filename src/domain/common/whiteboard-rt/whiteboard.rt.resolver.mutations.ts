@@ -62,7 +62,6 @@ export class WhiteboardRtResolverMutations {
       AuthorizationPrivilege.UPDATE_CONTENT,
       `update WhiteboardRt: ${whiteboardRt.nameID}`
     );
-
     return this.whiteboardRtService.updateWhiteboardContentRt(
       whiteboardRt,
       whiteboardData
