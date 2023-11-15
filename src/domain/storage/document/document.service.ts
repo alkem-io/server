@@ -177,6 +177,10 @@ export class DocumentService {
     return undefined;
   }
 
+  public isAlkemioDocumentURL(url: string): boolean {
+    return url.startsWith(this.getDocumentsBaseUrlPath());
+  }
+
   private getDocumentsBaseUrlPath(): string {
     const endpoint_cluster = this.configService.get(
       ConfigurationTypes.HOSTING
@@ -185,18 +189,6 @@ export class DocumentService {
       ConfigurationTypes.HOSTING
     )?.path_api_private_rest;
     return `${endpoint_cluster}${private_rest_api_route}/storage/document`;
-  }
-
-  public isAlkemioDocumentURL(url: string): boolean {
-    const endpoint_cluster = this.configService.get(
-      ConfigurationTypes.HOSTING
-    )?.endpoint_cluster;
-    const private_rest_api_route = this.configService.get(
-      ConfigurationTypes.HOSTING
-    )?.path_api_private_rest;
-    return url.startsWith(
-      `${endpoint_cluster}${private_rest_api_route}/storage/document/`
-    );
   }
 
   private async removeFile(CID: string): Promise<boolean> {
