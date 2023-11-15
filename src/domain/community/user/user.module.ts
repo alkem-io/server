@@ -27,6 +27,9 @@ import {
 } from '@core/dataloader/creators/loader.creators';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
 import { UserStorageAggregatorLoaderCreator } from '@core/dataloader/creators/loader.creators/community/user.storage.aggregator.loader.creator';
+import { DocumentModule } from '@domain/storage/document/document.module';
+import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
+import { AvatarModule } from '@domain/common/visual/avatar.module';
 
 @Module({
   imports: [
@@ -46,6 +49,9 @@ import { UserStorageAggregatorLoaderCreator } from '@core/dataloader/creators/lo
     KonfigModule,
     MessagingModule,
     StorageAggregatorModule,
+    StorageBucketModule,
+    DocumentModule,
+    AvatarModule,
     TypeOrmModule.forFeature([User]),
   ],
   providers: [
