@@ -7,6 +7,7 @@ import { DocumentService } from '@domain/storage/document/document.service';
 import { VisualService } from './visual.service';
 import { DocumentAuthorizationService } from '@domain/storage/document/document.service.authorization';
 import { urlToBuffer } from '@common/utils/url.to.buffer';
+import { avatarMinImageSize, avatarMaxImageSize } from './avatar.constants';
 
 @Injectable()
 export class AvatarService {
@@ -43,10 +44,17 @@ export class AvatarService {
       storageBucket.authorization
     );
 
-    const visual = await this.visualService.createVisualAvatar();
-    if (url) {
-      visual.uri = url;
-    }
+    const visual = await this.visualService.createVisual(
+      {
+        name: 'avatar',
+        minWidth: avatarMinImageSize,
+        maxWidth: avatarMaxImageSize,
+        minHeight: avatarMinImageSize,
+        maxHeight: avatarMaxImageSize,
+        aspectRatio: 1,
+      },
+      url
+    );
 
     return visual;
   }

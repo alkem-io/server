@@ -321,11 +321,6 @@ export class UserService {
           LogContext.COMMUNITY
         );
       }
-      const visual = await this.avatarService.createAvatarFromURL(
-        user.profile?.storageBucket?.id,
-        user.id,
-        agentInfo.avatarURL
-      );
 
       if (!user.profile.visuals) {
         throw new EntityNotInitializedException(
@@ -333,6 +328,13 @@ export class UserService {
           LogContext.COMMUNITY
         );
       }
+
+      const visual = await this.avatarService.createAvatarFromURL(
+        user.profile?.storageBucket?.id,
+        user.id,
+        agentInfo.avatarURL
+      );
+
       user.profile.visuals = [visual];
       user.profile = await this.profileService.save(user.profile);
     }
