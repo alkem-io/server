@@ -177,6 +177,10 @@ export class DocumentService {
     return undefined;
   }
 
+  public isAlkemioDocumentURL(url: string): boolean {
+    return url.startsWith(this.getDocumentsBaseUrlPath());
+  }
+
   private getDocumentsBaseUrlPath(): string {
     const endpoint_cluster = this.configService.get(
       ConfigurationTypes.HOSTING
