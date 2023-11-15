@@ -134,9 +134,10 @@ export class WhiteboardRtService {
       updateWhiteboardContentRtData.content !== whiteboardRt.content
     ) {
       whiteboardRt.content = updateWhiteboardContentRtData.content;
+      return this.save(whiteboardRt);
     }
 
-    return this.save(whiteboardRt);
+    return whiteboardRt;
   }
 
   public async getProfile(

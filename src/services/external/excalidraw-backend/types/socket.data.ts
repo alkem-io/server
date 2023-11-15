@@ -10,4 +10,9 @@ export type SocketData = {
    * The events are the ones received on the server-broadcast channel
    */
   lastContributed: number;
+  /***
+   * True if the user can only read the content and see the interactions of others users
+   * but is not able to contribute
+   */
+  readonly: boolean;
 };

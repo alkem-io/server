@@ -350,10 +350,6 @@ integrations:
       rejectUnauthorized: ${ELASTIC_TLS_REJECT_UNAUTHORIZED}:false
     policies:
       space_name_enrich_policy: ${ELASTIC_POLICY_SPACE_NAME_ENRICH}:space_name_enrich_policy
-  contributions:
-    # the window in which contributions are accepted to be counted towards a single contribution event;
-    # time is in SECONDS
-    rt_window: ${CONTRIBUTION_RT_WINDOW}:600
 
 notifications:
   enabled: ${NOTIFICATIONS_ENABLED}:true
@@ -361,6 +357,16 @@ notifications:
 collaboration:
   whiteboards:
     enabled: ${WHITEBOARDS_ENABLED}:true
+    # the window in which contributions are accepted to be counted towards a single contribution event;
+    # time is in SECONDS
+    contribution_window: ${CONTRIBUTION_RT_WINDOW}:600
+    # SECONDS between saves
+    save_interval: ${WHITEBOARD_AUTOSAVE_INTERVAL}:15
+    # SECONDS to wait after the request is save before it fails
+    save_timeout: ${WHITEBOARD_AUTOSAVE_TIMEOUT}:10
+    # max retries before the autosave fails
+    save_max_retries: ${WHITEBOARD_AUTOSAVE_MAX_RETRIES}:5
+
 
 ## Configuration of the legal / usability aspects of the platform
 platform:
