@@ -146,7 +146,7 @@ export class LookupResolverFields {
   ): Promise<AuthorizationPrivilege[]> {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
+      await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.PLATFORM_ADMIN,
       `user privileges field: ${agentInfo.email}`
     );
