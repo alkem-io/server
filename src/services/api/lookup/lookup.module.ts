@@ -26,6 +26,7 @@ import { DocumentModule } from '@domain/storage/document/document.module';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
+import { UserModule } from '@domain/community/user/user.module';
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platf
     DocumentModule,
     StorageAggregatorModule,
     PlatformAuthorizationPolicyModule,
+    UserModule,
   ],
   providers: [LookupService, LookupResolverQueries, LookupResolverFields],
   exports: [LookupService],
