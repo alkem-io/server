@@ -30,6 +30,7 @@ import { Profile } from '@domain/common/profile/profile.entity';
 import { IStorageBucketParent } from './dto/storage.bucket.dto.parent';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { ProfileType } from '@common/enums';
+import { IReference } from '@domain/common/reference';
 
 @Injectable()
 export class StorageBucketService {
@@ -220,6 +221,72 @@ export class StorageBucketService {
     return document;
   }
 
+  async uploadFileOnReference(
+    reference: IReference,
+    storageBucket: IStorageBucket,
+    readStream: ReadStream,
+    filename: string,
+    mimetype: string,
+    userID: string
+  ): Promise<IDocument | never> {
+    if (!readStream)
+      throw new ValidationException(
+        'Readstream should be defined!',
+        LogContext.DOCUMENT
+      );
+
+    const documentForReference = await this.documentService.getDocumentFromURL(
+      reference.uri
+    );
+
+    try {
+      const newDocument = await this.uploadFileAsDocument(
+        storageBucket.id,
+        readStream,
+        filename,
+        mimetype,
+        userID
+      );
+      // Delete the old document, if any
+      if (documentForReference) {
+        await this.documentService.deleteDocument({
+          ID: documentForReference.id,
+        });
+      }
+      return newDocument;
+    } catch (error: any) {
+      throw new IpfsUploadFailedException(
+        `Ipfs upload of ${filename} on reference failed! Error: ${error.message}`
+      );
+    }
+  }
+
+  public async addDocumentToBucketOrFail(
+    storageBucketId: string,
+    document: IDocument
+  ): Promise<void> | never {
+    const storage = await this.getStorageBucketOrFail(storageBucketId, {
+      relations: { documents: true },
+    });
+    if (!storage.documents) {
+      throw new EntityNotInitializedException(
+        `StorageBucket (${storage}) not initialised`,
+        LogContext.STORAGE_BUCKET
+      );
+    }
+
+    this.validateMimeTypes(storage, document.mimeType);
+    this.validateSize(storage, document.size);
+
+    storage.documents.push(document);
+
+    this.logger.verbose?.(
+      `Added document '${document.externalID}' on storage bucket: ${storage.id}`,
+      LogContext.STORAGE_BUCKET
+    );
+    await this.storageBucketRepository.save(storage);
+  }
+
   async uploadImageOnVisual(
     visual: IVisual,
     storageBucket: IStorageBucket,
@@ -233,7 +300,7 @@ export class StorageBucketService {
     if (!readStream)
       throw new ValidationException(
         'Readstream should be defined!',
-        LogContext.COMMUNITY
+        LogContext.DOCUMENT
       );
 
     const buffer = await streamToBuffer(readStream);
@@ -242,9 +309,12 @@ export class StorageBucketService {
       await this.visualService.getImageDimensions(buffer);
     this.visualService.validateImageWidth(visual, imageWidth);
     this.visualService.validateImageHeight(visual, imageHeight);
+    const documentForVisual = await this.documentService.getDocumentFromURL(
+      visual.uri
+    );
 
     try {
-      return await this.uploadFileAsDocumentFromBuffer(
+      const newDocument = await this.uploadFileAsDocumentFromBuffer(
         storageBucket.id,
         buffer,
         fileName,
@@ -252,9 +322,16 @@ export class StorageBucketService {
         userID,
         true
       );
+      // Delete the old document
+      if (documentForVisual) {
+        await this.documentService.deleteDocument({
+          ID: documentForVisual.id,
+        });
+      }
+      return newDocument;
     } catch (error: any) {
       throw new IpfsUploadFailedException(
-        `Ipfs upload of ${fileName} failed! Error: ${error.message}`
+        `Ipfs upload of ${fileName} on visual failed! Error: ${error.message}`
       );
     }
   }

@@ -32,7 +32,7 @@ export class ChatGuidanceResolverMutations {
   ): Promise<boolean> {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
+      await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.ACCESS_INTERACTIVE_GUIDANCE,
       `Access interactive guidance: ${agentInfo.email}`
     );
@@ -50,7 +50,7 @@ export class ChatGuidanceResolverMutations {
   async ingest(@CurrentUser() agentInfo: AgentInfo): Promise<boolean> {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
+      await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.PLATFORM_ADMIN,
       `Access interactive guidance: ${agentInfo.email}`
     );

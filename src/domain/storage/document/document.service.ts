@@ -4,7 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
-import { LogContext } from '@common/enums';
+import { ConfigurationTypes, LogContext } from '@common/enums';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { DeleteDocumentInput } from './dto/document.dto.delete';
@@ -18,7 +18,6 @@ import { IpfsUploadFailedException } from '@common/exceptions/ipfs/ipfs.upload.e
 import { IpfsDeleteFailedException } from '@common/exceptions/ipfs/ipfs.delete.exception';
 import { ConfigService } from '@nestjs/config';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { getDocumentUrlPattern } from '@common/utils';
 
 @Injectable()
 export class DocumentService {
@@ -53,17 +52,19 @@ export class DocumentService {
     const document = await this.getDocumentOrFail(documentID, {
       relations: { tagset: true },
     });
-    // Delete the underlying document
-    // todo: fix ipfs deletion - https://github.com/alkem-io/server/issues/2832
-    // try {
-    //   await this.removeFile(document.externalID);
-    // } catch (error: any) {
-    //   this.logger.error(
-    //     `Unable to delete underlying file for document '${documentID}': ${error}`,
-    //     error?.stack,
-    //     LogContext.STORAGE_BUCKET
-    //   );
-    // }
+    const DELETE_IPFS_CONTENTS = false;
+    if (DELETE_IPFS_CONTENTS) {
+      // Delete the underlying document
+      try {
+        await this.removeFile(document.externalID);
+      } catch (error: any) {
+        this.logger.error(
+          `Unable to delete underlying file for document '${documentID}': ${error}`,
+          error?.stack,
+          LogContext.STORAGE_BUCKET
+        );
+      }
+    }
 
     if (document.authorization) {
       await this.authorizationPolicyService.delete(document.authorization);
@@ -161,8 +162,30 @@ export class DocumentService {
   }
 
   public getPubliclyAccessibleURL(document: IDocument): string {
-    const pattern = getDocumentUrlPattern(this.configService);
-    return `${pattern}${document.id}`;
+    const documentsBaseUrlPath = this.getDocumentsBaseUrlPath();
+    return `${documentsBaseUrlPath}/${document.id}`;
+  }
+
+  public async getDocumentFromURL(url: string): Promise<IDocument | undefined> {
+    const documentsBaseUrlPath = this.getDocumentsBaseUrlPath();
+
+    if (!url.startsWith(documentsBaseUrlPath)) {
+      return undefined;
+    }
+
+    const documentID = url.substring(documentsBaseUrlPath.length + 1);
+    return await this.getDocumentOrFail(documentID);
+  }
+
+  public isAlkemioDocumentURL(url: string): boolean {
+    return url.startsWith(this.getDocumentsBaseUrlPath());
+  }
+
+  private getDocumentsBaseUrlPath(): string {
+    const { endpoint_cluster, path_api_private_rest } = this.configService.get(
+      ConfigurationTypes.HOSTING
+    );
+    return `${endpoint_cluster}${path_api_private_rest}/storage/document`;
   }
 
   private async removeFile(CID: string): Promise<boolean> {

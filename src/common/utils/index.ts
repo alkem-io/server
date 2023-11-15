@@ -9,4 +9,4 @@ export * from './stringify.util';
 export * from './getJourneyByCollaboration';
 export * from './async.filter';
 export * from './base64.to.buffer';
-export * from './get.document.url.pattern';
+export * from './array.random.element';

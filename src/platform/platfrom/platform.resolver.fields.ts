@@ -30,8 +30,8 @@ export class PlatformResolverFields {
     description: 'The authorization policy for the platform',
     nullable: false,
   })
-  authorization(): IAuthorizationPolicy {
-    return this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();
+  authorization(@Parent() platform: IPlatform): IAuthorizationPolicy {
+    return this.platformService.getAuthorizationPolicy(platform);
   }
 
   @ResolveField('library', () => ILibrary, {
