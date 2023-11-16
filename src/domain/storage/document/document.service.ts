@@ -169,10 +169,14 @@ export class DocumentService {
   public async getDocumentFromURL(
     url: string | undefined
   ): Promise<IDocument | undefined> {
-    const documentsBaseUrlPath = this.getDocumentsBaseUrlPath();
-    if (url && url.startsWith(documentsBaseUrlPath)) {
-      const documentID = url.substring(documentsBaseUrlPath.length + 1);
-      return await this.getDocumentOrFail(documentID);
+    try {
+      const documentsBaseUrlPath = this.getDocumentsBaseUrlPath();
+      if (url && url.startsWith(documentsBaseUrlPath)) {
+        const documentID = url.substring(documentsBaseUrlPath.length + 1);
+        return await this.getDocumentOrFail(documentID);
+      }
+    } catch (error) {
+      return undefined;
     }
     return undefined;
   }
