@@ -60,7 +60,7 @@ services:
 
   kratos-migrate:
     container_name: alkemio_dev_kratos_migrate
-    image: oryd/kratos:v0.13.0
+    image: oryd/kratos:v1.0.0
     depends_on:
       - mariadb
     environment:
@@ -72,16 +72,27 @@ services:
       - type: bind
         source: ./.build/ory/kratos
         target: /etc/config/kratos
+      - type: bind
+        source: ../kratos
+        target: /dockerdev
+        read_only: false
     command: -c /etc/config/kratos/kratos.yml migrate sql -e --yes
 
   kratos:
     container_name: alkemio_dev_kratos
-    image: oryd/kratos:v0.13.0
+    build:
+      context: ../kratos
+      dockerfile: ../kratos/.docker/Dockerfile-debug
+    security_opt:
+      - apparmor=unconfined
+    cap_add:
+      - SYS_PTRACE
     depends_on:
       - kratos-migrate
     ports:
       - 4433
       - 4434
+      - 9999:40000
     restart: unless-stopped
     environment:
       - DSN=mysql://root:${MYSQL_ROOT_PASSWORD}@tcp(${DATABASE_HOST}:3306)/kratos?max_conns=20&max_idle_conns=4
@@ -92,6 +103,10 @@ services:
       - type: bind
         source: ./.build/ory/kratos
         target: /etc/config/kratos
+      - type: bind
+        source: ../kratos
+        target: /dockerdev
+        read_only: false
     command: serve -c /etc/config/kratos/kratos.yml --dev --watch-courier
 
   oathkeeper:
@@ -136,7 +151,7 @@ services:
       - 4001
       - 4002
       - 5001
-      - 8080
+      - 8090:8080
     volumes:
       - /tmp/ipfs-docker-data:/data/ipfs
 
