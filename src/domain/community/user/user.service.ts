@@ -332,7 +332,7 @@ export class UserService {
       const visual = await this.avatarService.createAvatarFromURL(
         user.profile?.storageBucket?.id,
         user.id,
-        agentInfo.avatarURL
+        agentInfo.avatarURL ?? user.profile.visuals[0].uri
       );
 
       user.profile.visuals = [visual];
