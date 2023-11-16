@@ -12,6 +12,7 @@ import { WhiteboardResolverSubscriptions } from '@domain/common/whiteboard/white
 import { VisualModule } from '@domain/common/visual/visual.module';
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
+import { ProfileDocumentsModule } from '@domain/profile-documents/profile.documents.module';
 import { ProfileModule } from '../profile/profile.module';
 
 @Module({
@@ -23,6 +24,7 @@ import { ProfileModule } from '../profile/profile.module';
     WhiteboardCheckoutModule,
     VisualModule,
     ProfileModule,
+    ProfileDocumentsModule,
     TypeOrmModule.forFeature([Whiteboard]),
   ],
   providers: [

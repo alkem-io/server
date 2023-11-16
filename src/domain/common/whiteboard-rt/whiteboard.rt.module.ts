@@ -11,8 +11,8 @@ import { WhiteboardRtResolverFields } from './whiteboard.rt.resolver.fields';
 import { WhiteboardRtResolverMutations } from './whiteboard.rt.resolver.mutations';
 import { WhiteboardRtService } from './whiteboard.rt.service';
 import { WhiteboardRtAuthorizationService } from './whiteboard.rt.service.authorization';
-import { DocumentModule } from '@domain/storage/document/document.module';
 import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
+import { ProfileDocumentsModule } from '@domain/profile-documents/profile.documents.module';
 
 @Module({
   imports: [
@@ -22,9 +22,9 @@ import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.buck
     VisualModule,
     ProfileModule,
     UserModule,
-    DocumentModule,
     StorageBucketModule,
     TypeOrmModule.forFeature([WhiteboardRt]),
+    ProfileDocumentsModule,
   ],
   providers: [
     WhiteboardRtService,
