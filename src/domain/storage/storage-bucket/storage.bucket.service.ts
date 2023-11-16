@@ -247,8 +247,11 @@ export class StorageBucketService {
         mimetype,
         userID
       );
-      // Delete the old document, if any
-      if (documentForReference) {
+      // Delete the old document, if any. Do not delete the same doc.
+      if (
+        documentForReference &&
+        newDocument.externalID != documentForReference?.externalID
+      ) {
         await this.documentService.deleteDocument({
           ID: documentForReference.id,
         });
