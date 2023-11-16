@@ -264,6 +264,32 @@ export class StorageBucketService {
     }
   }
 
+  public async addDocumentToBucketOrFail(
+    storageBucketId: string,
+    document: IDocument
+  ): Promise<void> | never {
+    const storage = await this.getStorageBucketOrFail(storageBucketId, {
+      relations: { documents: true },
+    });
+    if (!storage.documents) {
+      throw new EntityNotInitializedException(
+        `StorageBucket (${storage}) not initialised`,
+        LogContext.STORAGE_BUCKET
+      );
+    }
+
+    this.validateMimeTypes(storage, document.mimeType);
+    this.validateSize(storage, document.size);
+
+    storage.documents.push(document);
+
+    this.logger.verbose?.(
+      `Added document '${document.externalID}' on storage bucket: ${storage.id}`,
+      LogContext.STORAGE_BUCKET
+    );
+    await this.storageBucketRepository.save(storage);
+  }
+
   async uploadImageOnVisual(
     visual: IVisual,
     storageBucket: IStorageBucket,

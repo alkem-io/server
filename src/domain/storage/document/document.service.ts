@@ -166,19 +166,15 @@ export class DocumentService {
     return `${documentsBaseUrlPath}/${document.id}`;
   }
 
-  public async getDocumentFromURL(
-    url: string | undefined
-  ): Promise<IDocument | undefined> {
-    try {
-      const documentsBaseUrlPath = this.getDocumentsBaseUrlPath();
-      if (url && url.startsWith(documentsBaseUrlPath)) {
-        const documentID = url.substring(documentsBaseUrlPath.length + 1);
-        return await this.getDocumentOrFail(documentID);
-      }
-    } catch (error) {
+  public async getDocumentFromURL(url: string): Promise<IDocument | undefined> {
+    const documentsBaseUrlPath = this.getDocumentsBaseUrlPath();
+
+    if (!url.startsWith(documentsBaseUrlPath)) {
       return undefined;
     }
-    return undefined;
+
+    const documentID = url.substring(documentsBaseUrlPath.length + 1);
+    return await this.getDocumentOrFail(documentID);
   }
 
   public isAlkemioDocumentURL(url: string): boolean {
@@ -187,13 +183,10 @@ export class DocumentService {
   }
 
   private getDocumentsBaseUrlPath(): string {
-    const endpoint_cluster = this.configService.get(
+    const { endpoint_cluster, path_api_private_rest } = this.configService.get(
       ConfigurationTypes.HOSTING
-    )?.endpoint_cluster;
-    const private_rest_api_route = this.configService.get(
-      ConfigurationTypes.HOSTING
-    )?.path_api_private_rest;
-    return `${endpoint_cluster}${private_rest_api_route}/storage/document`;
+    );
+    return `${endpoint_cluster}${path_api_private_rest}/storage/document`;
   }
 
   private async removeFile(CID: string): Promise<boolean> {
