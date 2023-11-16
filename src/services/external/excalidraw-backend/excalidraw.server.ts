@@ -301,7 +301,7 @@ export class ExcalidrawServer {
     }
     if (retries > 0) {
       this.logger.warn?.(
-        `Retrying [${retries}/${maxRetries}]`,
+        `Retrying to save [${retries}/${maxRetries}]`,
         LogContext.EXCALIDRAW_SERVER
       );
     }

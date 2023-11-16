@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
-import { EntityNotFoundException } from '@common/exceptions';
+import {
+  EntityNotFoundException,
+  EntityNotInitializedException,
+} from '@common/exceptions';
 import { LogContext, ProfileType } from '@common/enums';
 import { Whiteboard } from './whiteboard.entity';
 import { IWhiteboard } from './whiteboard.interface';
@@ -18,6 +21,8 @@ import { VisualType } from '@common/enums/visual.type';
 import { IVisual } from '../visual';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { ExcalidrawContent } from '@common/interfaces';
+import { ProfileDocumentsService } from '@domain/profile-documents/profile.documents.service';
 
 @Injectable()
 export class WhiteboardService {
@@ -26,7 +31,8 @@ export class WhiteboardService {
     private whiteboardRepository: Repository<Whiteboard>,
     private whiteboardCheckoutService: WhiteboardCheckoutService,
     private authorizationPolicyService: AuthorizationPolicyService,
-    private profileService: ProfileService
+    private profileService: ProfileService,
+    private profileDocumentsService: ProfileDocumentsService
   ) {}
 
   async createWhiteboard(
@@ -112,11 +118,21 @@ export class WhiteboardService {
     agentInfo: AgentInfo
   ): Promise<IWhiteboard> {
     const whiteboard = await this.getWhiteboardOrFail(whiteboardInput.id, {
-      relations: { checkout: true, profile: true },
+      relations: {
+        checkout: true,
+        profile: true,
+      },
     });
     if (!whiteboard.checkout) {
       throw new EntityNotFoundException(
-        `Whiteboard not initialised: ${whiteboard.id}`,
+        `Checkout not initialized on whiteboard: ${whiteboard.id}`,
+        LogContext.COLLABORATION
+      );
+    }
+
+    if (!whiteboard?.profile) {
+      throw new EntityNotInitializedException(
+        `Profile not initialized on whiteboard: '${whiteboard.id}'`,
         LogContext.COLLABORATION
       );
     }
@@ -130,8 +146,15 @@ export class WhiteboardService {
         whiteboard.checkout,
         agentInfo
       );
-      whiteboard.content = updateWhiteboardData.content;
+
+      const newContent = await this.reuploadDocumentsIfNotInBucket(
+        JSON.parse(updateWhiteboardData.content),
+        whiteboard.profile.id
+      );
+
+      whiteboard.content = JSON.stringify(newContent);
     }
+
     if (updateWhiteboardData.profileData) {
       whiteboard.profile = await this.profileService.updateProfile(
         whiteboard.profile,
@@ -207,5 +230,44 @@ export class WhiteboardService {
       );
 
     return whiteboardWithCheckout.checkout;
+  }
+
+  private async reuploadDocumentsIfNotInBucket(
+    whiteboardContent: ExcalidrawContent,
+    profileIdToCheck: string
+  ): Promise<ExcalidrawContent> | never {
+    if (!whiteboardContent.files) {
+      return whiteboardContent;
+    }
+
+    const files = Object.entries(whiteboardContent.files);
+
+    if (!files.length) {
+      return whiteboardContent;
+    }
+
+    for (const [, file] of files) {
+      if (!file.url) {
+        continue;
+      }
+
+      const newDocUrl =
+        await this.profileDocumentsService.reuploadDocumentsToProfile(
+          file.url,
+          profileIdToCheck
+        );
+
+      if (!newDocUrl) {
+        continue;
+      }
+
+      // change the url to the new document
+      whiteboardContent.files[file.id] = {
+        ...file,
+        url: newDocUrl,
+      };
+    }
+
+    return whiteboardContent;
   }
 }

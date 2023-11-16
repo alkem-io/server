@@ -1,21 +1,27 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
-import { EntityNotFoundException } from '@common/exceptions';
+import {
+  EntityNotFoundException,
+  EntityNotInitializedException,
+} from '@common/exceptions';
 import { LogContext, ProfileType } from '@common/enums';
-import { WhiteboardRt } from './whiteboard.rt.entity';
-import { IWhiteboardRt } from './whiteboard.rt.interface';
-import { CreateWhiteboardRtInput } from './dto/whiteboard.rt.dto.create';
-import { AuthorizationPolicy } from '../authorization-policy/authorization.policy.entity';
-import { UpdateWhiteboardRtInput } from './dto/whiteboard.rt.dto.update';
-import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
-import { IProfile } from '../profile/profile.interface';
-import { ProfileService } from '../profile/profile.service';
 import { VisualType } from '@common/enums/visual.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
 import { UpdateWhiteboardContentRtInput } from './dto/whiteboard.rt.dto.update.content';
+import { ExcalidrawContent } from '@common/interfaces';
+import { IProfile } from '@domain/common/profile';
+import { ProfileDocumentsService } from '@domain/profile-documents/profile.documents.service';
+import { AuthorizationPolicy } from '../authorization-policy/authorization.policy.entity';
+import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
+import { ProfileService } from '../profile/profile.service';
+import { WhiteboardRt } from './whiteboard.rt.entity';
+import { IWhiteboardRt } from './whiteboard.rt.interface';
+import { CreateWhiteboardRtInput } from './dto/whiteboard.rt.dto.create';
+import { UpdateWhiteboardRtInput } from './dto/whiteboard.rt.dto.update';
 
 @Injectable()
 export class WhiteboardRtService {
@@ -23,7 +29,9 @@ export class WhiteboardRtService {
     @InjectRepository(WhiteboardRt)
     private whiteboardRtRepository: Repository<WhiteboardRt>,
     private authorizationPolicyService: AuthorizationPolicyService,
-    private profileService: ProfileService
+    private profileService: ProfileService,
+    private configService: ConfigService,
+    private profileDocumentsService: ProfileDocumentsService
   ) {}
 
   async createWhiteboardRt(
@@ -127,17 +135,36 @@ export class WhiteboardRtService {
     whiteboardRtInput: IWhiteboardRt,
     updateWhiteboardContentRtData: UpdateWhiteboardContentRtInput
   ): Promise<IWhiteboardRt> {
-    const whiteboardRt = await this.getWhiteboardRtOrFail(whiteboardRtInput.id);
+    const whiteboardRt = await this.getWhiteboardRtOrFail(
+      whiteboardRtInput.id,
+      {
+        relations: {
+          profile: true,
+        },
+      }
+    );
 
     if (
-      updateWhiteboardContentRtData.content &&
-      updateWhiteboardContentRtData.content !== whiteboardRt.content
+      !updateWhiteboardContentRtData.content ||
+      updateWhiteboardContentRtData.content === whiteboardRt.content
     ) {
-      whiteboardRt.content = updateWhiteboardContentRtData.content;
-      return this.save(whiteboardRt);
+      return whiteboardRt;
     }
 
-    return whiteboardRt;
+    if (!whiteboardRt?.profile) {
+      throw new EntityNotInitializedException(
+        `Profile not initialized on whiteboard: '${whiteboardRt.id}'`,
+        LogContext.COLLABORATION
+      );
+    }
+
+    const newContent = await this.reuploadDocumentsIfNotInBucket(
+      JSON.parse(updateWhiteboardContentRtData.content),
+      whiteboardRt?.profile.id
+    );
+
+    whiteboardRt.content = JSON.stringify(newContent);
+    return this.save(whiteboardRt);
   }
 
   public async getProfile(
@@ -165,5 +192,44 @@ export class WhiteboardRtService {
 
   public save(whiteboardRt: IWhiteboardRt): Promise<IWhiteboardRt> {
     return this.whiteboardRtRepository.save(whiteboardRt);
+  }
+
+  private async reuploadDocumentsIfNotInBucket(
+    whiteboardContent: ExcalidrawContent,
+    profileIdToCheck: string
+  ): Promise<ExcalidrawContent> | never {
+    if (!whiteboardContent.files) {
+      return whiteboardContent;
+    }
+
+    const files = Object.entries(whiteboardContent.files);
+
+    if (!files.length) {
+      return whiteboardContent;
+    }
+
+    for (const [, file] of files) {
+      if (!file.url) {
+        continue;
+      }
+
+      const newDocUrl =
+        await this.profileDocumentsService.reuploadDocumentsToProfile(
+          file.url,
+          profileIdToCheck
+        );
+
+      if (!newDocUrl) {
+        continue;
+      }
+
+      // change the url to the new document
+      whiteboardContent.files[file.id] = {
+        ...file,
+        url: newDocUrl,
+      };
+    }
+
+    return whiteboardContent;
   }
 }
