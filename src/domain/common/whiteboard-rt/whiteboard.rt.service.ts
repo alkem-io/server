@@ -25,6 +25,8 @@ import { DocumentService } from '@domain/storage/document/document.service';
 import { IProfile } from '@domain/common/profile';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { DocumentAuthorizationService } from '@domain/storage/document/document.service.authorization';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { IDocument } from '@domain/storage/document';
 
 @Injectable()
 export class WhiteboardRtService {
@@ -136,22 +138,6 @@ export class WhiteboardRtService {
     return this.save(whiteboardRt);
   }
 
-  async updateWhiteboardContentRt1(
-    whiteboardRtInput: IWhiteboardRt,
-    updateWhiteboardContentRtData: UpdateWhiteboardContentRtInput
-  ): Promise<IWhiteboardRt> {
-    const whiteboardRt = await this.getWhiteboardRtOrFail(whiteboardRtInput.id);
-
-    if (
-      updateWhiteboardContentRtData.content &&
-      updateWhiteboardContentRtData.content !== whiteboardRt.content
-    ) {
-      whiteboardRt.content = updateWhiteboardContentRtData.content;
-    }
-
-    return this.save(whiteboardRt);
-  }
-
   async updateWhiteboardContentRt(
     whiteboardRtInput: IWhiteboardRt,
     updateWhiteboardContentRtData: UpdateWhiteboardContentRtInput
@@ -169,13 +155,6 @@ export class WhiteboardRtService {
       }
     );
 
-    if (!whiteboardRt?.profile?.storageBucket) {
-      throw new EntityNotInitializedException(
-        `Storage bucket not initialized on whiteboard: '${whiteboardRt.id}'`,
-        LogContext.COLLABORATION
-      );
-    }
-
     if (
       !updateWhiteboardContentRtData.content ||
       updateWhiteboardContentRtData.content === whiteboardRt.content
@@ -183,20 +162,31 @@ export class WhiteboardRtService {
       return whiteboardRt;
     }
 
+    if (!whiteboardRt?.profile?.storageBucket) {
+      throw new EntityNotInitializedException(
+        `Storage bucket not initialized on whiteboard: '${whiteboardRt.id}'`,
+        LogContext.COLLABORATION
+      );
+    }
+
     const jsonContent: ExcalidrawContent = JSON.parse(
       updateWhiteboardContentRtData.content
     );
 
     if (!jsonContent.files) {
-      whiteboardRt.content = updateWhiteboardContentRtData.content;
-      return this.save(whiteboardRt);
+      return this.save({
+        ...whiteboardRt,
+        content: updateWhiteboardContentRtData.content,
+      });
     }
 
     const files = Object.entries(jsonContent.files);
 
     if (!files.length) {
-      whiteboardRt.content = updateWhiteboardContentRtData.content;
-      return this.save(whiteboardRt);
+      return this.save({
+        ...whiteboardRt,
+        content: updateWhiteboardContentRtData.content,
+      });
     }
 
     for (const [, file] of files) {
@@ -212,58 +202,19 @@ export class WhiteboardRtService {
         );
       }
 
-      const docInContent = await this.documentService.getDocumentFromURL(
-        file.url
+      const newDoc = await this.reuploadDocumentIfNotInBucket(
+        file.url,
+        whiteboardRt?.profile?.storageBucket
       );
 
-      if (!docInContent) {
-        throw new BaseException(
-          `File with URL '${file.url}' not found`,
-          LogContext.COLLABORATION,
-          AlkemioErrorStatus.NOT_FOUND
-        );
+      if (!newDoc) {
+        continue;
       }
-
-      const docInThisWhiteboard =
-        whiteboardRt?.profile?.storageBucket?.documents.find(
-          doc => doc.id === docInContent.id
-        );
-
-      if (!docInThisWhiteboard) {
-        // if not in this whiteboard - create it inside it
-        const newDoc = await this.documentService.createDocument({
-          createdBy: docInContent.createdBy,
-          displayName: docInContent.displayName,
-          externalID: docInContent.externalID,
-          mimeType: docInContent.mimeType,
-          size: docInContent.size,
-          anonymousReadAccess: false,
-        });
-        await this.storageBucketService.addDocumentToBucketOrFail(
-          whiteboardRt?.profile?.storageBucket?.id,
-          newDoc
-        );
-
-        await this.documentAuthorizationService.applyAuthorizationPolicy(
-          newDoc,
-          whiteboardRt?.profile?.storageBucket.authorization
-        );
-
-        const imageElement = jsonContent.elements.find(
-          element => element.fileId === file.id
-        );
-
-        if (imageElement) {
-          imageElement.fileId = newDoc.id;
-        }
-
-        delete jsonContent.files[file.id];
-        jsonContent.files[newDoc.id] = {
-          ...file,
-          id: newDoc.id,
-          url: this.documentService.getPubliclyAccessibleURL(newDoc),
-        };
-      }
+      // change the url to the new document
+      jsonContent.files[file.id] = {
+        ...file,
+        url: this.documentService.getPubliclyAccessibleURL(newDoc),
+      };
     }
 
     whiteboardRt.content = JSON.stringify(jsonContent);
@@ -295,5 +246,56 @@ export class WhiteboardRtService {
 
   public save(whiteboardRt: IWhiteboardRt): Promise<IWhiteboardRt> {
     return this.whiteboardRtRepository.save(whiteboardRt);
+  }
+
+  private async reuploadDocumentIfNotInBucket(
+    fileUrl: string,
+    storageBucketToCheck: IStorageBucket
+  ): Promise<IDocument | undefined> | never {
+    const docInContent = await this.documentService.getDocumentFromURL(fileUrl);
+
+    if (!docInContent) {
+      throw new BaseException(
+        `File with URL '${fileUrl}' not found`,
+        LogContext.COLLABORATION,
+        AlkemioErrorStatus.NOT_FOUND
+      );
+    }
+
+    if (!storageBucketToCheck?.documents) {
+      throw new EntityNotInitializedException(
+        `Documents not initialized for storage bucket: '${storageBucketToCheck.id}'`,
+        LogContext.COLLABORATION
+      );
+    }
+
+    const docInThisBucket = storageBucketToCheck?.documents.find(
+      doc => doc.id === docInContent.id
+    );
+
+    if (docInThisBucket) {
+      return undefined;
+    }
+
+    if (!docInThisBucket) {
+      // if not in this bucket - create it inside it
+      const newDoc = await this.documentService.createDocument({
+        createdBy: docInContent.createdBy,
+        displayName: docInContent.displayName,
+        externalID: docInContent.externalID,
+        mimeType: docInContent.mimeType,
+        size: docInContent.size,
+        anonymousReadAccess: false,
+      });
+      await this.storageBucketService.addDocumentToBucketOrFail(
+        storageBucketToCheck?.id,
+        newDoc
+      );
+      await this.documentAuthorizationService.applyAuthorizationPolicy(
+        newDoc,
+        storageBucketToCheck.authorization
+      );
+      return newDoc;
+    }
   }
 }
