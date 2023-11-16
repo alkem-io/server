@@ -178,6 +178,7 @@ export class DocumentService {
   }
 
   public isAlkemioDocumentURL(url: string): boolean {
+    if (!url) return false;
     return url.startsWith(this.getDocumentsBaseUrlPath());
   }
 
