@@ -300,7 +300,10 @@ export class StorageBucketService {
         true
       );
       // Delete the old document
-      if (documentForVisual) {
+      if (
+        documentForVisual &&
+        newDocument.externalID != documentForVisual?.externalID
+      ) {
         await this.documentService.deleteDocument({
           ID: documentForVisual.id,
         });
