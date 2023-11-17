@@ -30,12 +30,15 @@ import {
   SERVER_VOLATILE_BROADCAST,
   SERVER_SAVE_REQUEST,
   SocketIoServer,
+  RemoteSocketIoSocket,
 } from './types';
 import { CREATE_ROOM, DELETE_ROOM } from './adapters/adapter.event.names';
 
 type SaveMessageOpts = { maxRetries: number; timeout: number };
 
 type RoomTimers = Map<string, NodeJS.Timer | NodeJS.Timeout>;
+
+type SaveResponse = { success: boolean; errors?: string[] };
 
 const defaultContributionInterval = 600;
 const defaultSaveInterval = 15;
@@ -317,10 +320,12 @@ export class ExcalidrawServer {
     const randomSocket = arrayRandomElement(sockets);
     // sends a save request to the socket and wait for a response
     try {
-      const [response]: { success: boolean }[] = await this.wsServer
+      const [response]: SaveResponse[] = await this.wsServer
         .to(randomSocket.id)
         .timeout(timeout)
         .emitWithAck(SERVER_SAVE_REQUEST);
+      // log the response
+      this.logResponse(response, randomSocket, roomId);
       // if failed - repeat
       if (!response.success) {
         // workaround for timers/promises not working
@@ -341,6 +346,33 @@ export class ExcalidrawServer {
       );
       //retry if timed out
       return await this._sendSaveMessage(roomId, ++retries, opts);
+    }
+  }
+
+  private logResponse(
+    response: SaveResponse,
+    socket: RemoteSocketIoSocket,
+    roomId: string
+  ) {
+    if (!response.success) {
+      this.logger.error(
+        `User ${
+          socket.data.agentInfo.userID
+        } failed to save whiteboard '${roomId}': ${response.errors?.join(
+          '; '
+        )}`,
+        undefined,
+        LogContext.EXCALIDRAW_SERVER
+      );
+    } else if (response.errors) {
+      this.logger.warn(
+        `User '${
+          socket.data.agentInfo.userID
+        }' saved Whiteboard '${roomId}' with some errors: ${response.errors?.join(
+          ';'
+        )}'`,
+        LogContext.EXCALIDRAW_SERVER
+      );
     }
   }
 }
