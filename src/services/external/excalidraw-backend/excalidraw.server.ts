@@ -33,6 +33,8 @@ import {
   RemoteSocketIoSocket,
 } from './types';
 import { CREATE_ROOM, DELETE_ROOM } from './adapters/adapter.event.names';
+import { SessionExtendMiddleware } from './middlewares';
+import { getSessionFromHeader } from '@common/utils/get.session.from.header';
 
 type SaveMessageOpts = { maxRetries: number; timeout: number };
 
@@ -158,6 +160,8 @@ export class ExcalidrawServer {
       this.saveTimers.delete(roomId);
     });
 
+    this.wsServer.use(SessionExtendMiddleware);
+
     this.wsServer.on(CONNECTION, async socket => {
       const agentInfo = await getUserInfo(
         kratosClient,
@@ -172,6 +176,7 @@ export class ExcalidrawServer {
       }
 
       socket.data.agentInfo = agentInfo;
+      socket.data.session = getSessionFromHeader(socket.handshake.headers);
 
       this.logger?.verbose?.(
         `User '${agentInfo.userID}' established connection`,

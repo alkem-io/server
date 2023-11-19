@@ -27,7 +27,7 @@ export const joinRoomEventHandler = async (
   const whiteboardRt = await whiteboardRtService.getWhiteboardRtOrFail(roomID);
 
   try {
-    await authorizationService.grantAccessOrFail(
+    authorizationService.grantAccessOrFail(
       agentInfo,
       whiteboardRt.authorization,
       AuthorizationPrivilege.UPDATE_CONTENT,

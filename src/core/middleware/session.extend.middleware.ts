@@ -11,6 +11,7 @@ import jwt_decode from 'jwt-decode';
 import { KratosPayload } from '@core/authentication/kratos.payload';
 import { AuthenticationService } from '@core/authentication/authentication.service';
 import { ConfigurationTypes, LogContext } from '@src/common/enums';
+import { getSession } from '@common/utils';
 
 @Injectable()
 export class SessionExtendMiddleware implements NestMiddleware {
@@ -48,24 +49,19 @@ export class SessionExtendMiddleware implements NestMiddleware {
     const [, token] = authorization.split(' ');
 
     if (!token) {
-      this.logger.verbose?.('Session extend middleware: token not found');
+      this.logger.verbose?.(
+        'Session extend middleware: token not found',
+        LogContext.AUTH_TOKEN
+      );
       return next();
     }
 
-    let jwt;
-
-    try {
-      jwt = jwt_decode<KratosPayload>(token);
-    } catch (error) {
-      this.logger.verbose?.('Bearer token is not a valid JWT token!');
-      return next();
-    }
-
-    const session = jwt.session;
+    const session = getSession(kratosClient, {)
 
     if (!session) {
       this.logger.verbose?.(
-        'Session extend middleware: Kratos session not found in token'
+        'Session extend middleware: Kratos session not found in token',
+        LogContext.AUTH_TOKEN
       );
       return next();
     }
@@ -83,7 +79,8 @@ export class SessionExtendMiddleware implements NestMiddleware {
 
       if (!newSession) {
         this.logger.warn?.(
-          'New session cookie not sent: new session not found'
+          'New session cookie not sent: new session not found',
+          LogContext.AUTH_TOKEN
         );
         return next();
       }
@@ -92,7 +89,8 @@ export class SessionExtendMiddleware implements NestMiddleware {
         req.cookies[this.SESSION_COOKIE_NAME];
       if (!orySessionId) {
         this.logger.warn?.(
-          'New session cookie not sent: new session id not found'
+          'New session cookie not sent: new session id not found',
+          LogContext.AUTH_TOKEN
         );
         return next();
       }
@@ -101,7 +99,8 @@ export class SessionExtendMiddleware implements NestMiddleware {
 
       if (!newExpiry) {
         this.logger.warn?.(
-          'New session cookie not sent: new expiry date not defined'
+          'New session cookie not sent: new expiry date not defined',
+          LogContext.AUTH_TOKEN
         );
         return next();
       }
@@ -114,7 +113,7 @@ export class SessionExtendMiddleware implements NestMiddleware {
         encode: val => val, // skip encoding; pass the value as is
       });
 
-      this.logger.verbose?.('New session cookie sent');
+      this.logger.verbose?.('New session cookie sent', LogContext.AUTH_TOKEN);
     }
 
     next();
