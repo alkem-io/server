@@ -19,5 +19,5 @@ export type SocketData = {
   /***
    * The session of the user connected with the socket
    */
-  session: Session;
+  session?: Session;
 };

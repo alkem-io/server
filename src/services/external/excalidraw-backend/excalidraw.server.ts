@@ -4,8 +4,8 @@ import { Configuration, FrontendApi } from '@ory/kratos-client';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ConfigurationTypes, LogContext } from '@common/enums';
-import { APP_ID, EXCALIDRAW_SERVER, UUID_LENGTH } from '@common/constants';
-import { arrayRandomElement } from '@common/utils';
+import { EXCALIDRAW_SERVER, UUID_LENGTH } from '@common/constants';
+import { arrayRandomElement, getSession } from '@common/utils';
 import { AuthenticationService } from '@core/authentication/authentication.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { WhiteboardRtService } from '@domain/common/whiteboard-rt';
@@ -33,8 +33,7 @@ import {
   RemoteSocketIoSocket,
 } from './types';
 import { CREATE_ROOM, DELETE_ROOM } from './adapters/adapter.event.names';
-import { SessionExtendMiddleware } from './middlewares';
-import { getSessionFromHeader } from '@common/utils/get.session.from.header';
+import { sessionMiddleware } from './middlewares';
 
 type SaveMessageOpts = { maxRetries: number; timeout: number };
 
@@ -59,15 +58,14 @@ export class ExcalidrawServer {
   private readonly saveMaxRetries: number;
 
   constructor(
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService,
     @Inject(EXCALIDRAW_SERVER) private wsServer: SocketIoServer,
     private configService: ConfigService,
     private authService: AuthenticationService,
     private authorizationService: AuthorizationService,
     private whiteboardRtService: WhiteboardRtService,
     private contributionReporter: ContributionReporterService,
-    private communityResolver: CommunityResolverService,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService,
-    @Inject(APP_ID) private appId: string
+    private communityResolver: CommunityResolverService
   ) {
     const {
       contribution_window,
@@ -160,7 +158,14 @@ export class ExcalidrawServer {
       this.saveTimers.delete(roomId);
     });
 
-    this.wsServer.use(SessionExtendMiddleware);
+    this.wsServer.use(sessionMiddleware);
+    this.wsServer.use((socket, next) => {
+      if (Math.random() > 0.9) {
+        next();
+      } else {
+        next(new Error('invalid'));
+      }
+    });
 
     this.wsServer.on(CONNECTION, async socket => {
       const agentInfo = await getUserInfo(
@@ -176,7 +181,17 @@ export class ExcalidrawServer {
       }
 
       socket.data.agentInfo = agentInfo;
-      socket.data.session = getSessionFromHeader(socket.handshake.headers);
+      try {
+        socket.data.session = await getSession(kratosClient, {
+          cookie: socket.handshake.headers.cookie,
+        });
+      } catch (e: any) {
+        this.logger.error(
+          `Unable to extract session for user '${agentInfo.userID} and socket '${socket.id}'`,
+          e?.stack,
+          LogContext.EXCALIDRAW_SERVER
+        );
+      }
 
       this.logger?.verbose?.(
         `User '${agentInfo.userID}' established connection`,

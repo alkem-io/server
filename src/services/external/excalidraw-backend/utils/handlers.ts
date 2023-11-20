@@ -5,14 +5,13 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import {
   CLIENT_BROADCAST,
-  CONNECTION_CLOSED,
   FIRST_IN_ROOM,
   NEW_USER,
   ROOM_USER_CHANGE,
   SocketIoServer,
   SocketIoSocket,
 } from '../types';
-import { isUserReadonly } from './util';
+import { closeConnection, isUserReadonly } from './util';
 
 /* This event is coming from the client; whenever they request to join a room */
 export const joinRoomEventHandler = async (
@@ -120,14 +119,6 @@ export const disconnectingEventHandler = async (
 };
 
 export const disconnectEventHandler = async (socket: SocketIoSocket) => {
-  socket.removeAllListeners();
-  socket.disconnect(true);
-};
-
-export const closeConnection = (socket: SocketIoSocket, message?: string) => {
-  if (message) {
-    socket.emit(CONNECTION_CLOSED, message);
-  }
   socket.removeAllListeners();
   socket.disconnect(true);
 };

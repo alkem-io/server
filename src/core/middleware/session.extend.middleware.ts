@@ -12,11 +12,13 @@ import { KratosPayload } from '@core/authentication/kratos.payload';
 import { AuthenticationService } from '@core/authentication/authentication.service';
 import { ConfigurationTypes, LogContext } from '@src/common/enums';
 import { getSession } from '@common/utils';
+import { Configuration, FrontendApi, Session } from '@ory/kratos-client';
 
 @Injectable()
 export class SessionExtendMiddleware implements NestMiddleware {
   private readonly SESSION_COOKIE_NAME: string;
   private readonly enabled: boolean;
+  private readonly kratosClient: FrontendApi;
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
@@ -30,6 +32,16 @@ export class SessionExtendMiddleware implements NestMiddleware {
     this.enabled = this.configService.get(
       ConfigurationTypes.IDENTITY
     )?.authentication.providers.ory.session_extend_enabled;
+
+    const kratosPublicBaseUrl = this.configService.get(
+      ConfigurationTypes.IDENTITY
+    ).authentication.providers.ory.kratos_public_base_url_server;
+
+    this.kratosClient = new FrontendApi(
+      new Configuration({
+        basePath: kratosPublicBaseUrl,
+      })
+    );
   }
 
   async use(req: Request, res: Response, next: NextFunction) {
@@ -46,21 +58,15 @@ export class SessionExtendMiddleware implements NestMiddleware {
       return next();
     }
 
-    const [, token] = authorization.split(' ');
-
-    if (!token) {
-      this.logger.verbose?.(
-        'Session extend middleware: token not found',
-        LogContext.AUTH_TOKEN
-      );
-      return next();
-    }
-
-    const session = getSession(kratosClient, {)
-
-    if (!session) {
-      this.logger.verbose?.(
-        'Session extend middleware: Kratos session not found in token',
+    let session: Session;
+    try {
+      session = await getSession(this.kratosClient, {
+        authorization,
+      });
+    } catch (e: any) {
+      this.logger.error(
+        `Error while extracting ory session: ${e?.message}`,
+        e?.stack,
         LogContext.AUTH_TOKEN
       );
       return next();

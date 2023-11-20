@@ -1,1 +1,1 @@
-export * from './session.extend.middleware';
+export * from './session.middleware';

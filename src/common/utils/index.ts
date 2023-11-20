@@ -10,4 +10,4 @@ export * from './getJourneyByCollaboration';
 export * from './async.filter';
 export * from './base64.to.buffer';
 export * from './array.random.element';
-export * from './get.session.from.header';
+export * from './get.session';

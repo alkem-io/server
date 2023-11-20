@@ -1,6 +1,6 @@
-import { KratosPayload } from '@core/authentication/kratos.payload';
-import { Configuration, FrontendApi, Session } from '@ory/kratos-client';
+import { FrontendApi, Session } from '@ory/kratos-client';
 import jwt_decode from 'jwt-decode';
+import { KratosPayload } from '@core/authentication/kratos.payload';
 
 export const getSession = async (
   kratosClient: FrontendApi,
