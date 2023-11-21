@@ -261,7 +261,7 @@ import { ActivityFeedModule } from '@domain/activity-feed';
 export class AppModule {
   configure(consumer: MiddlewareConsumer) {
     consumer
-      .apply(RequestLoggerMiddleware/*, SessionExtendMiddleware*/)
+      .apply(RequestLoggerMiddleware, SessionExtendMiddleware)
       .forRoutes('/');
   }
 }
