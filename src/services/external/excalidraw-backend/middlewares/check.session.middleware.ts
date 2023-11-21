@@ -1,8 +1,9 @@
 import { UnauthorizedException } from '@nestjs/common';
-import { SocketIoSocket } from '@services/external/excalidraw-backend/types';
-import { isSessionValid } from '@services/external/excalidraw-backend/utils';
+import { SocketIoSocket } from '../types';
+import { isSessionValid } from '../utils';
+import { SimpleMiddlewareHandler } from './middleware.handler.type';
 
-export const checkSessionMiddleware = (
+export const checkSessionMiddleware: SimpleMiddlewareHandler = (
   socket: SocketIoSocket,
   next: (err?: Error) => void
 ) => {

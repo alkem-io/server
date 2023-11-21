@@ -48,8 +48,6 @@ type SaveMessageOpts = { maxRetries: number; timeout: number };
 type RoomTimers = Map<string, NodeJS.Timer | NodeJS.Timeout>;
 type SaveResponse = { success: boolean; errors?: string[] };
 
-type SaveResponse = { success: boolean; errors?: string[] };
-
 const defaultContributionInterval = 600;
 const defaultSaveInterval = 15;
 const defaultSaveTimeout = 10;
@@ -168,15 +166,8 @@ export class ExcalidrawServer {
     });
 
     this.wsServer.use(attachSessionMiddleware(kratosClient));
-    this.wsServer.use((socket, next) =>
-      attachAgentMiddleware(
-        socket,
-        next,
-        kratosClient,
-        socket.handshake.headers,
-        this.logger,
-        this.authService
-      )
+    this.wsServer.use(
+      attachAgentMiddleware(kratosClient, this.logger, this.authService)
     );
 
     this.wsServer.on(CONNECTION, async socket => {

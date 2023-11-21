@@ -35,6 +35,7 @@ export const joinRoomEventHandler = async (
     const err = e as Error;
     logger.error(
       `Error when trying to authorize the user with the whiteboard: ${err.message}`,
+      err.stack,
       LogContext.EXCALIDRAW_SERVER
     );
     closeConnection(socket, err.message);

@@ -1,12 +1,10 @@
 import { FrontendApi } from '@ory/kratos-client';
-import { ExtendedError } from 'socket.io/dist/namespace';
-import { getSession } from '@common/utils';
-import { SocketIoSocket } from '../types';
 import { UnauthorizedException } from '@nestjs/common';
+import { getSession } from '@common/utils';
+import { WrappedMiddlewareHandler } from './middleware.handler.type';
 
-export const attachSessionMiddleware =
-  (kratosFrontEndApi: FrontendApi) =>
-  async (socket: SocketIoSocket, next: (err?: ExtendedError) => void) => {
+export const attachSessionMiddleware: WrappedMiddlewareHandler =
+  (kratosFrontEndApi: FrontendApi) => async (socket, next) => {
     try {
       socket.data.session = await getSession(kratosFrontEndApi, {
         cookie: socket.handshake.headers.cookie,
