@@ -48,6 +48,8 @@ type SaveMessageOpts = { maxRetries: number; timeout: number };
 type RoomTimers = Map<string, NodeJS.Timer | NodeJS.Timeout>;
 type SaveResponse = { success: boolean; errors?: string[] };
 
+type SaveResponse = { success: boolean; errors?: string[] };
+
 const defaultContributionInterval = 600;
 const defaultSaveInterval = 15;
 const defaultSaveTimeout = 10;
