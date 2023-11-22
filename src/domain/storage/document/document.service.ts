@@ -174,7 +174,16 @@ export class DocumentService {
     }
 
     const documentID = url.substring(documentsBaseUrlPath.length + 1);
-    return await this.getDocumentOrFail(documentID);
+    try {
+      return await this.getDocumentOrFail(documentID);
+    } catch (error: any) {
+      this.logger.error(
+        `Unable to find document '${documentID}': ${error}`,
+        error?.stack,
+        LogContext.STORAGE_BUCKET
+      );
+    }
+    return undefined;
   }
 
   public isAlkemioDocumentURL(url: string): boolean {
