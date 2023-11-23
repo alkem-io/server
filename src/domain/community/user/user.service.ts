@@ -302,7 +302,7 @@ export class UserService {
       agentInfo.avatarURL
     );
 
-    const user = await this.createUser({
+    let user = await this.createUser({
       nameID: this.createUserNameID(agentInfo.firstName, agentInfo.lastName),
       email: email,
       firstName: agentInfo.firstName,
@@ -329,14 +329,15 @@ export class UserService {
         );
       }
 
-      const visual = await this.avatarService.createAvatarFromURL(
+      const { visual, document } = await this.avatarService.createAvatarFromURL(
         user.profile?.storageBucket?.id,
         user.id,
         agentInfo.avatarURL ?? user.profile.visuals[0].uri
       );
 
       user.profile.visuals = [visual];
-      user.profile = await this.profileService.save(user.profile);
+      user.profile.storageBucket.documents = [document];
+      user = await this.saveUser(user);
     }
 
     return user;

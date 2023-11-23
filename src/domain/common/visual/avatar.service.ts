@@ -8,6 +8,9 @@ import { VisualService } from './visual.service';
 import { DocumentAuthorizationService } from '@domain/storage/document/document.service.authorization';
 import { urlToBuffer } from '@common/utils/url.to.buffer';
 import { avatarMinImageSize, avatarMaxImageSize } from './avatar.constants';
+import { IDocument } from '@domain/storage/document';
+
+export type AvatarDocument = { visual: IVisual; document: IDocument };
 
 @Injectable()
 export class AvatarService {
@@ -21,7 +24,7 @@ export class AvatarService {
     storageBucketId: string,
     userId: string,
     avatarURL: string
-  ): Promise<IVisual> {
+  ): Promise<AvatarDocument> {
     const imageBuffer = await urlToBuffer(avatarURL);
 
     const fileInfo = await fromBuffer(imageBuffer);
@@ -37,7 +40,9 @@ export class AvatarService {
       );
 
     const storageBucket =
-      await this.storageBucketService.getStorageBucketOrFail(storageBucketId);
+      await this.storageBucketService.getStorageBucketOrFail(storageBucketId, {
+        relations: { documents: true },
+      });
     const url = this.documentService.getPubliclyAccessibleURL(document);
     await this.documentAuthorizationsService.applyAuthorizationPolicy(
       document,
@@ -55,7 +60,6 @@ export class AvatarService {
       },
       url
     );
-
-    return visual;
+    return { visual, document };
   }
 }
