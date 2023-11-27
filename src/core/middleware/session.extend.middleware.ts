@@ -62,9 +62,8 @@ export class SessionExtendMiddleware implements NestMiddleware {
         authorization,
       });
     } catch (e: any) {
-      this.logger.error(
+      this.logger.verbose?.(
         `Error while extracting ory session: ${e?.message}`,
-        e?.stack,
         LogContext.AUTH_TOKEN
       );
       return next();
