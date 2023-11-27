@@ -149,7 +149,6 @@ export class AdminWhiteboardService {
               profile.storageBucket.authorization
             );
             file.url = this.documentService.getPubliclyAccessibleURL(document);
-            console.log(file.url);
             file.dataURL = '';
           } catch (e) {
             const err = e as Error;
