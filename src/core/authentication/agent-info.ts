@@ -12,4 +12,5 @@ export class AgentInfo {
   communicationID = '';
   agentID = '';
   avatarURL = '';
+  expiry?: number = undefined;
 }

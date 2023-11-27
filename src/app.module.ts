@@ -194,7 +194,12 @@ import { ActivityFeedModule } from '@domain/activity-feed';
               };
             },
           },
-          'graphql-ws': true,
+          'graphql-ws': {
+            onNext: (ctx, message, args, result) => {
+              return result;
+            },
+
+          },
         },
       }),
     }),
@@ -261,7 +266,7 @@ import { ActivityFeedModule } from '@domain/activity-feed';
 export class AppModule {
   configure(consumer: MiddlewareConsumer) {
     consumer
-      .apply(RequestLoggerMiddleware, SessionExtendMiddleware)
+      .apply(RequestLoggerMiddleware /*, SessionExtendMiddleware */)
       .forRoutes('/');
   }
 }
