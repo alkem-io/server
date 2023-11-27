@@ -16,7 +16,7 @@ export const getSession = async (
   }
 
   if (authorization) {
-    return getFromAuthorizationHeader(kratosClient, authorization);
+    return getFromAuthorizationHeader(authorization);
   }
 
   throw new Error('Authorization header or cookie not provided');
@@ -32,10 +32,7 @@ const getFromCookie = async (kratosClient: FrontendApi, cookie: string) => {
     throw new Error(e?.message);
   }
 };
-const getFromAuthorizationHeader = (
-  kratosClient: FrontendApi,
-  authorizationHeader: string
-) => {
+const getFromAuthorizationHeader = (authorizationHeader: string) => {
   const [, token] = authorizationHeader.split(' ');
 
   if (!token) {
