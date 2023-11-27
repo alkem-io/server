@@ -7,8 +7,6 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { Request, Response, NextFunction } from 'express';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import jwt_decode from 'jwt-decode';
-import { KratosPayload } from '@core/authentication/kratos.payload';
 import { AuthenticationService } from '@core/authentication/authentication.service';
 import { ConfigurationTypes, LogContext } from '@src/common/enums';
 import { getSession } from '@common/utils';
