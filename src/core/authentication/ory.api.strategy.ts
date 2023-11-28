@@ -5,10 +5,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Strategy } from 'passport-custom';
 import { Configuration, FrontendApi } from '@ory/kratos-client';
 import { ConfigurationTypes, LogContext } from '@common/enums';
-import {
-  ApiRestrictedAccessException,
-  BearerTokenNotFoundException,
-} from '@common/exceptions/auth';
+import { ApiRestrictedAccessException } from '@common/exceptions/auth';
 import { AuthenticationService } from './authentication.service';
 import { OryDefaultIdentitySchema } from './ory.default.identity.schema';
 import { verifyIdentityIfOidcAuth } from './verify.identity.if.oidc.auth';
@@ -52,7 +49,8 @@ export class OryApiStrategy extends PassportStrategy(
     const bearerToken = authorizationHeader?.split(' ')[1];
 
     if (!bearerToken) {
-      throw new BearerTokenNotFoundException('Bearer token is not provided!');
+      this.logger.verbose?.('Bearer token is not provided', LogContext.AUTH);
+      return this.authService.createAgentInfo();
     }
 
     const { data } = await this.kratosClient.toSession({
