@@ -59,7 +59,8 @@ export class AuthenticationService {
   }
 
   async createAgentInfo(
-    oryIdentity?: OryDefaultIdentitySchema
+    oryIdentity?: OryDefaultIdentitySchema,
+    session?: Session
   ): Promise<AgentInfo> {
     const agentInfo = new AgentInfo();
     if (!oryIdentity) {
@@ -88,6 +89,9 @@ export class AuthenticationService {
     agentInfo.firstName = oryTraits.name.first;
     agentInfo.lastName = oryTraits.name.last;
     agentInfo.avatarURL = oryTraits.picture;
+    agentInfo.expiry = session?.expires_at
+      ? new Date(session.expires_at).getTime()
+      : undefined;
     let agentInfoMetadata;
 
     try {
