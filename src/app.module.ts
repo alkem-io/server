@@ -1,3 +1,4 @@
+import { CloseCode } from 'graphql-ws';
 import { ConfigurationTypes } from '@common/enums';
 import { ValidationPipe } from '@common/pipes/validation.pipe';
 import configuration from '@config/configuration';
@@ -196,9 +197,19 @@ import { ActivityFeedModule } from '@domain/activity-feed';
           },
           'graphql-ws': {
             onNext: (ctx, message, args, result) => {
+              const context = args.contextValue as IGraphQLContext;
+              const expiry = context.req.user.expiry;
+              // if the session has expired, close the socket
+              if (expiry && expiry < Date.now()) {
+                (ctx as WebsocketContext).extra.socket.close(
+                  CloseCode.Unauthorized,
+                  'Session expired'
+                );
+                return;
+              }
+
               return result;
             },
-
           },
         },
       }),
@@ -266,7 +277,7 @@ import { ActivityFeedModule } from '@domain/activity-feed';
 export class AppModule {
   configure(consumer: MiddlewareConsumer) {
     consumer
-      .apply(RequestLoggerMiddleware /*, SessionExtendMiddleware */)
+      .apply(RequestLoggerMiddleware, SessionExtendMiddleware)
       .forRoutes('/');
   }
 }

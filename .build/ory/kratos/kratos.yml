@@ -91,7 +91,7 @@ selfservice:
             - hook: session
 
 session:
-  lifespan: 2m
+  lifespan: 48h
   earliest_possible_extend: 24h
 
 log:
