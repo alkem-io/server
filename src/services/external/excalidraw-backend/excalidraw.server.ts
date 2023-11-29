@@ -1,10 +1,15 @@
 import { clearInterval, setInterval, setTimeout } from 'timers';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Configuration, FrontendApi } from '@ory/kratos-client';
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  LoggerService,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ConfigurationTypes, LogContext } from '@common/enums';
-import { APP_ID, EXCALIDRAW_SERVER, UUID_LENGTH } from '@common/constants';
+import { EXCALIDRAW_SERVER, UUID_LENGTH } from '@common/constants';
 import { arrayRandomElement } from '@common/utils';
 import { AuthenticationService } from '@core/authentication/authentication.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -12,13 +17,13 @@ import { WhiteboardRtService } from '@domain/common/whiteboard-rt';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import {
-  getUserInfo,
   closeConnection,
   disconnectEventHandler,
   disconnectingEventHandler,
   joinRoomEventHandler,
   serverBroadcastEventHandler,
   serverVolatileBroadcastEventHandler,
+  checkSession,
 } from './utils';
 import {
   CONNECTION,
@@ -33,11 +38,14 @@ import {
   RemoteSocketIoSocket,
 } from './types';
 import { CREATE_ROOM, DELETE_ROOM } from './adapters/adapter.event.names';
+import {
+  attachSessionMiddleware,
+  attachAgentMiddleware,
+  checkSessionMiddleware,
+} from './middlewares';
 
 type SaveMessageOpts = { maxRetries: number; timeout: number };
-
 type RoomTimers = Map<string, NodeJS.Timer | NodeJS.Timeout>;
-
 type SaveResponse = { success: boolean; errors?: string[] };
 
 const defaultContributionInterval = 600;
@@ -57,15 +65,14 @@ export class ExcalidrawServer {
   private readonly saveMaxRetries: number;
 
   constructor(
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService,
     @Inject(EXCALIDRAW_SERVER) private wsServer: SocketIoServer,
     private configService: ConfigService,
     private authService: AuthenticationService,
     private authorizationService: AuthorizationService,
     private whiteboardRtService: WhiteboardRtService,
     private contributionReporter: ContributionReporterService,
-    private communityResolver: CommunityResolverService,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService,
-    @Inject(APP_ID) private appId: string
+    private communityResolver: CommunityResolverService
   ) {
     const {
       contribution_window,
@@ -158,23 +165,29 @@ export class ExcalidrawServer {
       this.saveTimers.delete(roomId);
     });
 
+    this.wsServer.use(attachSessionMiddleware(kratosClient));
+    this.wsServer.use(
+      attachAgentMiddleware(kratosClient, this.logger, this.authService)
+    );
+
     this.wsServer.on(CONNECTION, async socket => {
-      const agentInfo = await getUserInfo(
-        kratosClient,
-        socket.handshake.headers,
-        this.logger,
-        this.authService
-      );
+      // drop connection on invalid or expired session
+      socket.prependAny(() => checkSession(socket));
+      socket.use((_, next) => checkSessionMiddleware(socket, next));
+      socket.on('error', err => {
+        if (!err) {
+          return;
+        }
 
-      if (!agentInfo) {
-        closeConnection(socket, 'Not able to authenticate user');
-        return;
-      }
+        this.logger.error(err.message, err.stack, LogContext.EXCALIDRAW_SERVER);
 
-      socket.data.agentInfo = agentInfo;
+        if (err && err instanceof UnauthorizedException) {
+          closeConnection(socket, err.message);
+        }
+      });
 
       this.logger?.verbose?.(
-        `User '${agentInfo.userID}' established connection`,
+        `User '${socket.data.agentInfo.userID}' established connection`,
         LogContext.EXCALIDRAW_SERVER
       );
 
@@ -185,7 +198,6 @@ export class ExcalidrawServer {
         async (roomID: string) =>
           await joinRoomEventHandler(
             roomID,
-            agentInfo,
             socket,
             this.wsServer,
             this.whiteboardRtService,
@@ -207,12 +219,7 @@ export class ExcalidrawServer {
       socket.on(
         DISCONNECTING,
         async () =>
-          await disconnectingEventHandler(
-            agentInfo,
-            this.wsServer,
-            socket,
-            this.logger
-          )
+          await disconnectingEventHandler(this.wsServer, socket, this.logger)
       );
 
       socket.on(DISCONNECT, () => disconnectEventHandler(socket));

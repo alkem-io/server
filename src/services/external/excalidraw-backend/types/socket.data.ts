@@ -1,3 +1,4 @@
+import { Session } from '@ory/kratos-client';
 import { AgentInfo } from '@core/authentication';
 
 export type SocketData = {
@@ -15,4 +16,8 @@ export type SocketData = {
    * but is not able to contribute
    */
   readonly: boolean;
+  /***
+   * The session of the user connected with the socket
+   */
+  session?: Session;
 };
