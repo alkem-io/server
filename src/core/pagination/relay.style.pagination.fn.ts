@@ -81,7 +81,8 @@ export const getRelayStylePaginationResults = async <
   const { first, after, last, before } = paginationArgs;
 
   const hasOrderBy =
-    query.expressionMap.orderBys && Object.keys(query.expressionMap.orderBys).length > 0;
+    query.expressionMap.orderBys &&
+    Object.keys(query.expressionMap.orderBys).length > 0;
 
   if (hasOrderBy) {
     query.addOrderBy(`${query.alias}.${SORTING_COLUMN}`, 'ASC');

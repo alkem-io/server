@@ -6,6 +6,7 @@ import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { OryDefaultIdentitySchema } from '@core/authentication/ory.default.identity.schema';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
+import { CONNECTION_CLOSED, SocketIoSocket } from '../types';
 
 /* Sets the user into the context field or closes the connection */
 export const authenticate = async (
@@ -57,7 +58,7 @@ export const isUserReadonly = async (
   wbRtAuthorization?: IAuthorizationPolicy
 ): Promise<boolean> => {
   try {
-    await authorizationService.grantAccessOrFail(
+    authorizationService.grantAccessOrFail(
       agentInfo,
       wbRtAuthorization,
       AuthorizationPrivilege.UPDATE_CONTENT,
@@ -67,4 +68,13 @@ export const isUserReadonly = async (
   } catch (e: any) {
     return true;
   }
+};
+// closes the connection for this socket
+// and sends an optional message before disconnecting
+export const closeConnection = (socket: SocketIoSocket, message?: string) => {
+  if (message) {
+    socket.emit(CONNECTION_CLOSED, message);
+  }
+  socket.removeAllListeners();
+  socket.disconnect(true);
 };

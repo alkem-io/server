@@ -1,23 +1,20 @@
 import { LoggerService } from '@nestjs/common';
 import { WhiteboardRtService } from '@domain/common/whiteboard-rt';
-import { AgentInfo } from '@core/authentication';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import {
   CLIENT_BROADCAST,
-  CONNECTION_CLOSED,
   FIRST_IN_ROOM,
   NEW_USER,
   ROOM_USER_CHANGE,
   SocketIoServer,
   SocketIoSocket,
 } from '../types';
-import { isUserReadonly } from './util';
+import { closeConnection, isUserReadonly } from './util';
 
 /* This event is coming from the client; whenever they request to join a room */
 export const joinRoomEventHandler = async (
   roomID: string,
-  agentInfo: AgentInfo,
   socket: SocketIoSocket,
   wsServer: SocketIoServer,
   whiteboardRtService: WhiteboardRtService,
@@ -25,9 +22,10 @@ export const joinRoomEventHandler = async (
   logger: LoggerService
 ) => {
   const whiteboardRt = await whiteboardRtService.getWhiteboardRtOrFail(roomID);
+  const agentInfo = socket.data.agentInfo;
 
   try {
-    await authorizationService.grantAccessOrFail(
+    authorizationService.grantAccessOrFail(
       agentInfo,
       whiteboardRt.authorization,
       AuthorizationPrivilege.UPDATE_CONTENT,
@@ -37,6 +35,7 @@ export const joinRoomEventHandler = async (
     const err = e as Error;
     logger.error(
       `Error when trying to authorize the user with the whiteboard: ${err.message}`,
+      err.stack,
       LogContext.EXCALIDRAW_SERVER
     );
     closeConnection(socket, err.message);
@@ -97,13 +96,12 @@ export const serverVolatileBroadcastEventHandler = (
 };
 /* Built-in event for handling socket disconnects */
 export const disconnectingEventHandler = async (
-  agentInfo: AgentInfo,
   wsServer: SocketIoServer,
   socket: SocketIoSocket,
   logger: LoggerService
 ) => {
   logger?.verbose?.(
-    `User '${agentInfo.userID}' has disconnected`,
+    `User '${socket.data.agentInfo.userID}' has disconnected`,
     LogContext.EXCALIDRAW_SERVER
   );
   for (const roomID of socket.rooms) {
@@ -120,14 +118,6 @@ export const disconnectingEventHandler = async (
 };
 
 export const disconnectEventHandler = async (socket: SocketIoSocket) => {
-  socket.removeAllListeners();
-  socket.disconnect(true);
-};
-
-export const closeConnection = (socket: SocketIoSocket, message?: string) => {
-  if (message) {
-    socket.emit(CONNECTION_CLOSED, message);
-  }
   socket.removeAllListeners();
   socket.disconnect(true);
 };

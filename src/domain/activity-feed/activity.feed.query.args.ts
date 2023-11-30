@@ -1,9 +1,8 @@
-import { Args, ArgsType, Field, InputType } from '@nestjs/graphql';
+import { Field, InputType } from '@nestjs/graphql';
 import { ActivityEventType } from '@common/enums/activity.event.type';
 import { UUID } from '@domain/common/scalars';
 import { ActivityFeedRoles } from './activity.feed.roles.enum';
-import { PaginationArgs, PaginationInput } from '@core/pagination';
-import { OrganizationFilterInput } from '@core/filtering';
+import { PaginationInput } from '@core/pagination';
 
 @InputType()
 export class ActivityFeedQueryArgs {

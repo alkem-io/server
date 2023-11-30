@@ -66,6 +66,6 @@ export class OryApiStrategy extends PassportStrategy(
     this.logger.verbose?.(session.identity, LogContext.AUTH);
 
     const oryIdentity = session.identity as OryDefaultIdentitySchema;
-    return this.authService.createAgentInfo(oryIdentity);
+    return this.authService.createAgentInfo(oryIdentity, session);
   }
 }
