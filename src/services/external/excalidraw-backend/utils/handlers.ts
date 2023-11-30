@@ -11,6 +11,7 @@ import {
   SocketIoSocket,
 } from '../types';
 import { closeConnection, isUserReadonly } from './util';
+import { checkSession } from '@services/external/excalidraw-backend/utils/check.session';
 
 /* This event is coming from the client; whenever they request to join a room */
 export const joinRoomEventHandler = async (
@@ -120,4 +121,17 @@ export const disconnectingEventHandler = async (
 export const disconnectEventHandler = async (socket: SocketIoSocket) => {
   socket.removeAllListeners();
   socket.disconnect(true);
+};
+
+export const checkSessionHandler = (socket: SocketIoSocket) => {
+  if (socket.disconnected) {
+    return;
+  }
+
+  const { session } = socket.data;
+  const result = checkSession(session);
+
+  if (result) {
+    closeConnection(socket, result);
+  }
 };

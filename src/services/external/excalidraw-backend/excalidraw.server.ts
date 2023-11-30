@@ -23,7 +23,7 @@ import {
   joinRoomEventHandler,
   serverBroadcastEventHandler,
   serverVolatileBroadcastEventHandler,
-  checkSession,
+  checkSessionHandler,
 } from './utils';
 import {
   CONNECTION,
@@ -172,7 +172,7 @@ export class ExcalidrawServer {
 
     this.wsServer.on(CONNECTION, async socket => {
       // drop connection on invalid or expired session
-      socket.prependAny(() => checkSession(socket));
+      socket.prependAny(() => checkSessionHandler(socket));
       socket.use((_, next) => checkSessionMiddleware(socket, next));
       socket.on('error', err => {
         if (!err) {
