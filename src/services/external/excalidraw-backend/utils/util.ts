@@ -52,11 +52,28 @@ export const getUserInfo = async (
     return undefined;
   }
 };
-export const isUserReadonly = async (
+export const canUserRead = (
   authorizationService: AuthorizationService,
   agentInfo: AgentInfo,
   wbRtAuthorization?: IAuthorizationPolicy
-): Promise<boolean> => {
+): boolean => {
+  try {
+    authorizationService.grantAccessOrFail(
+      agentInfo,
+      wbRtAuthorization,
+      AuthorizationPrivilege.READ,
+      'access whiteboardRt'
+    );
+    return false;
+  } catch (e) {
+    return true;
+  }
+};
+export const canUserUpdate = (
+  authorizationService: AuthorizationService,
+  agentInfo: AgentInfo,
+  wbRtAuthorization?: IAuthorizationPolicy
+): boolean => {
   try {
     authorizationService.grantAccessOrFail(
       agentInfo,
@@ -65,7 +82,7 @@ export const isUserReadonly = async (
       'access whiteboardRt'
     );
     return false;
-  } catch (e: any) {
+  } catch (e) {
     return true;
   }
 };

@@ -10,7 +10,7 @@ import {
   SocketIoServer,
   SocketIoSocket,
 } from '../types';
-import { closeConnection, isUserReadonly } from './util';
+import { canUserRead, canUserUpdate, closeConnection } from './util';
 
 /* This event is coming from the client; whenever they request to join a room */
 export const joinRoomEventHandler = async (
@@ -24,27 +24,22 @@ export const joinRoomEventHandler = async (
   const whiteboardRt = await whiteboardRtService.getWhiteboardRtOrFail(roomID);
   const agentInfo = socket.data.agentInfo;
 
-  try {
-    authorizationService.grantAccessOrFail(
-      agentInfo,
-      whiteboardRt.authorization,
-      AuthorizationPrivilege.UPDATE_CONTENT,
-      `access whiteboardRt: ${whiteboardRt.id}`
-    );
-  } catch (e) {
-    const err = e as Error;
+  if (
+    !canUserRead(authorizationService, agentInfo, whiteboardRt.authorization)
+  ) {
     logger.error(
-      `Error when trying to authorize the user with the whiteboard: ${err.message}`,
-      err.stack,
+      `Unable to authorize the user with Whiteboard: '${whiteboardRt.id}'`,
+      undefined,
       LogContext.EXCALIDRAW_SERVER
     );
-    closeConnection(socket, err.message);
+    closeConnection(socket, 'Unauthorized');
     return;
   }
-
   await socket.join(roomID);
+
   socket.data.lastContributed = -1;
-  socket.data.readonly = await isUserReadonly(
+  socket.data.read = true; // already authorized
+  socket.data.update = canUserUpdate(
     authorizationService,
     agentInfo,
     whiteboardRt.authorization

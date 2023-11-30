@@ -12,10 +12,13 @@ export type SocketData = {
    */
   lastContributed: number;
   /***
-   * True if the user can only read the content and see the interactions of others users
-   * but is not able to contribute
+   * True if the user can read the content and see the interactions of others users
    */
-  readonly: boolean;
+  read: boolean;
+  /***
+   * If the user can update the content o the whiteboard
+   */
+  update: boolean;
   /***
    * The session of the user connected with the socket
    */

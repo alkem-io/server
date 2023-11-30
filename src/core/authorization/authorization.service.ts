@@ -32,8 +32,7 @@ export class AuthorizationService {
 
     const errorMsg = `Authorization: unable to grant '${privilegeRequired}' privilege: ${msg} user: ${agentInfo.userID}`;
     this.logCredentialCheckFailDetails(errorMsg, agentInfo, auth);
-
-    // If get to here then no match was found
+    // If you get to here then no match was found
     throw new ForbiddenAuthorizationPolicyException(
       errorMsg,
       privilegeRequired,

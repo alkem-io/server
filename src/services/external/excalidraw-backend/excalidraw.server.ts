@@ -171,6 +171,11 @@ export class ExcalidrawServer {
     );
 
     this.wsServer.on(CONNECTION, async socket => {
+      // first authorize
+      // attach session handlers
+      // attach error handlers
+      // attach socket handlers conditional on authorization
+
       // drop connection on invalid or expired session
       socket.prependAny(() => checkSession(socket));
       socket.use((_, next) => checkSessionMiddleware(socket, next));
@@ -317,7 +322,7 @@ export class ExcalidrawServer {
     }
     // get only sockets which can save
     const sockets = (await this.wsServer.in(roomId).fetchSockets()).filter(
-      socket => !socket.data.readonly
+      socket => socket.data.update
     );
     // return if no eligible sockets
     if (!sockets.length) {
