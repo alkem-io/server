@@ -1,7 +1,7 @@
 import { LoggerService } from '@nestjs/common';
 import { WhiteboardRtService } from '@domain/common/whiteboard-rt';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { LogContext } from '@common/enums';
 import {
   CLIENT_BROADCAST,
   FIRST_IN_ROOM,
@@ -12,8 +12,7 @@ import {
 } from '../types';
 import { canUserRead, canUserUpdate, closeConnection } from './util';
 
-/* This event is coming from the client; whenever they request to join a room */
-export const joinRoomEventHandler = async (
+export const authorizeWithRoomAndJoinHandler = async (
   roomID: string,
   socket: SocketIoSocket,
   wsServer: SocketIoServer,
@@ -35,7 +34,6 @@ export const joinRoomEventHandler = async (
     closeConnection(socket, 'Unauthorized');
     return;
   }
-  await socket.join(roomID);
 
   socket.data.lastContributed = -1;
   socket.data.read = true; // already authorized
@@ -45,13 +43,34 @@ export const joinRoomEventHandler = async (
     whiteboardRt.authorization
   );
 
+  await joinRoomHandler(roomID, socket, wsServer, logger);
+};
+/* This event is coming from the client; whenever they request to join a room */
+const joinRoomHandler = async (
+  roomID: string,
+  socket: SocketIoSocket,
+  wsServer: SocketIoServer,
+  logger: LoggerService
+) => {
+  if (!socket.data.read) {
+    return;
+  }
+
+  await socket.join(roomID);
+
+  const { agentInfo } = socket.data;
+
   logger?.verbose?.(
-    `User '${agentInfo.userID}' has joined room '${roomID}'`,
+    `User '${socket.data.agentInfo.userID}' has joined room '${roomID}'`,
     LogContext.EXCALIDRAW_SERVER
   );
 
   const sockets = await wsServer.in(roomID).fetchSockets();
   if (sockets.length === 1) {
+    logger?.verbose?.(
+      `User '${agentInfo.userID}' is first in room '${roomID}'`,
+      LogContext.EXCALIDRAW_SERVER
+    );
     wsServer.to(socket.id).emit(FIRST_IN_ROOM);
   } else {
     logger?.verbose?.(

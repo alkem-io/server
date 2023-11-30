@@ -64,10 +64,11 @@ export const canUserRead = (
       AuthorizationPrivilege.READ,
       'access whiteboardRt'
     );
-    return false;
   } catch (e) {
-    return true;
+    return false;
   }
+
+  return true;
 };
 export const canUserUpdate = (
   authorizationService: AuthorizationService,

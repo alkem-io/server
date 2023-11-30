@@ -16,7 +16,7 @@ export type SocketData = {
    */
   read: boolean;
   /***
-   * If the user can update the content o the whiteboard
+   * If the user can update the content of the whiteboard
    */
   update: boolean;
   /***
