@@ -1,3 +1,4 @@
+import { UnauthorizedException } from '@nestjs/common';
 import { SocketIoSocket } from '../types';
 import { checkSession } from '../utils';
 import { SimpleMiddlewareHandler } from './middleware.handler.type';
@@ -14,7 +15,7 @@ export const checkSessionMiddleware: SimpleMiddlewareHandler = (
   const result = checkSession(session);
 
   if (result) {
-    return next(new Error(result));
+    return next(new UnauthorizedException(result));
   }
 
   next();
