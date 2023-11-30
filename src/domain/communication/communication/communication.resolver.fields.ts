@@ -1,11 +1,12 @@
 import { GraphqlGuard } from '@core/authorization';
 import { UseGuards } from '@nestjs/common';
-import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { Args, Float, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
 import { CommunicationService } from './communication.service';
 import { AuthorizationPrivilege } from '@common/enums';
 import { ICommunication } from './communication.interface';
 import { IDiscussion } from '../discussion/discussion.interface';
+import { DiscussionsOrderBy } from '@common/enums/discussions.orderBy';
 
 @Resolver(() => ICommunication)
 export class CommunicationResolverFields {
@@ -19,9 +20,28 @@ export class CommunicationResolverFields {
   })
   @Profiling.api
   async discussions(
-    @Parent() communication: ICommunication
+    @Parent() communication: ICommunication,
+    @Args({
+      name: 'limit',
+      type: () => Float,
+      description:
+        'The number of Discussions to return; if omitted return all Discussions.',
+      nullable: true,
+    })
+    limit: number,
+    @Args({
+      name: 'orderBy',
+      type: () => DiscussionsOrderBy,
+      description: 'The sort order of the Discussions to return.',
+      nullable: true,
+    })
+    orderBy: DiscussionsOrderBy
   ): Promise<IDiscussion[]> {
-    return await this.communicationService.getDiscussions(communication);
+    return await this.communicationService.getDiscussions(
+      communication,
+      limit,
+      orderBy
+    );
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

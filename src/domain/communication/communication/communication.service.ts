@@ -25,6 +25,8 @@ import { IRoom } from '../room/room.interface';
 import { RoomType } from '@common/enums/room.type';
 import { COMMUNICATION_PLATFORM_SPACEID } from '@common/constants';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
+import { DiscussionsOrderBy } from '@common/enums/discussions.orderBy';
+import { Discussion } from '../discussion/discussion.entity';
 
 @Injectable()
 export class CommunicationService {
@@ -141,7 +143,11 @@ export class CommunicationService {
     return false;
   }
 
-  async getDiscussions(communication: ICommunication): Promise<IDiscussion[]> {
+  async getDiscussions(
+    communication: ICommunication,
+    limit?: number | undefined,
+    orderBy: DiscussionsOrderBy = DiscussionsOrderBy.DISCUSSIONS_CREATEDATE_DESC
+  ): Promise<IDiscussion[]> {
     const communicationWithDiscussions = await this.getCommunicationOrFail(
       communication.id,
       {
@@ -155,7 +161,18 @@ export class CommunicationService {
         LogContext.COMMUNICATION
       );
 
-    return discussions;
+    const sortedDiscussions = (discussions as Discussion[]).sort((a, b) => {
+      switch (orderBy) {
+        case DiscussionsOrderBy.DISCUSSIONS_CREATEDATE_ASC:
+          return a.createdDate.getTime() - b.createdDate.getTime();
+        case DiscussionsOrderBy.DISCUSSIONS_CREATEDATE_DESC:
+          return b.createdDate.getTime() - a.createdDate.getTime();
+      }
+      return 0;
+    });
+    return limit && limit > 0
+      ? sortedDiscussions.slice(0, limit)
+      : sortedDiscussions;
   }
 
   async getDiscussionOrFail(
