@@ -23,7 +23,7 @@ export class CommunicationResolverFields {
     @Parent() communication: ICommunication,
 
     @Args('queryData', { type: () => DiscussionsInput, nullable: true })
-    queryData: DiscussionsInput | undefined
+    queryData?: DiscussionsInput
   ): Promise<IDiscussion[]> {
     return await this.communicationService.getDiscussions(
       communication,

@@ -145,7 +145,7 @@ export class CommunicationService {
 
   async getDiscussions(
     communication: ICommunication,
-    limit?: number | undefined,
+    limit?: number,
     orderBy: DiscussionsOrderBy = DiscussionsOrderBy.DISCUSSIONS_CREATEDATE_DESC
   ): Promise<IDiscussion[]> {
     const communicationWithDiscussions = await this.getCommunicationOrFail(
