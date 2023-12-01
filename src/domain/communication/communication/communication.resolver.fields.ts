@@ -6,6 +6,7 @@ import { CommunicationService } from './communication.service';
 import { AuthorizationPrivilege } from '@common/enums';
 import { ICommunication } from './communication.interface';
 import { IDiscussion } from '../discussion/discussion.interface';
+import { DiscussionsInput } from './dto/communication.dto.discussions.input';
 
 @Resolver(() => ICommunication)
 export class CommunicationResolverFields {
@@ -19,9 +20,16 @@ export class CommunicationResolverFields {
   })
   @Profiling.api
   async discussions(
-    @Parent() communication: ICommunication
+    @Parent() communication: ICommunication,
+
+    @Args('queryData', { type: () => DiscussionsInput, nullable: true })
+    queryData?: DiscussionsInput
   ): Promise<IDiscussion[]> {
-    return await this.communicationService.getDiscussions(communication);
+    return await this.communicationService.getDiscussions(
+      communication,
+      queryData?.limit,
+      queryData?.orderBy
+    );
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
