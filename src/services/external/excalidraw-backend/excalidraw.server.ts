@@ -17,13 +17,13 @@ import { WhiteboardRtService } from '@domain/common/whiteboard-rt';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import {
-  checkSession,
   closeConnection,
   disconnectEventHandler,
   disconnectingEventHandler,
   serverBroadcastEventHandler,
   authorizeWithRoomAndJoinHandler,
   serverVolatileBroadcastEventHandler,
+  checkSessionHandler,
 } from './utils';
 import {
   CONNECTION,
@@ -191,7 +191,7 @@ export class ExcalidrawServer {
       );
       // attach session handlers
       // drop connection on invalid or expired session
-      socket.prependAny(() => checkSession(socket));
+      socket.prependAny(() => checkSessionHandler(socket));
       socket.use((_, next) => checkSessionMiddleware(socket, next));
       // attach error handlers
       socket.on('error', err => {

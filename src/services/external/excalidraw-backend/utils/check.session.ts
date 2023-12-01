@@ -1,10 +1,10 @@
-import { SocketIoSocket } from '../types';
-import { isSessionValid } from './is.session.valid';
-import { closeConnection } from './util';
+import { Session } from '@ory/kratos-client';
+import { validateSession } from './validate.session';
 
-export const checkSession = (socket: SocketIoSocket) => {
-  const { session } = socket.data;
-  if (!isSessionValid(session) && !socket.disconnected) {
-    return closeConnection(socket, 'Session invalid or expired');
+export const checkSession = (session?: Session) => {
+  const { valid, reason } = validateSession(session);
+
+  if (!valid && reason === 'Session expired') {
+    return reason;
   }
 };
