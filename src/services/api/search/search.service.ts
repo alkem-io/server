@@ -885,8 +885,8 @@ export class SearchService {
 
       if (postIDsFilter.length) {
         query
-          .andWhere('post.id in (:postIDsFilter)')
-          .setParameter('postIDsFilter', postIDsFilter.toString());
+          .andWhere('post.id IN (:postIDsFilter)')
+          .setParameter('postIDsFilter', postIDsFilter);
       }
 
       const postMatches = await query.getMany();
