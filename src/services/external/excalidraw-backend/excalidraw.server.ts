@@ -17,13 +17,13 @@ import { WhiteboardRtService } from '@domain/common/whiteboard-rt';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import {
+  checkSession,
   closeConnection,
   disconnectEventHandler,
   disconnectingEventHandler,
-  joinRoomEventHandler,
   serverBroadcastEventHandler,
+  authorizeWithRoomAndJoinHandler,
   serverVolatileBroadcastEventHandler,
-  checkSession,
 } from './utils';
 import {
   CONNECTION,
@@ -171,9 +171,29 @@ export class ExcalidrawServer {
     );
 
     this.wsServer.on(CONNECTION, async socket => {
+      this.logger?.verbose?.(
+        `User '${socket.data.agentInfo.userID}' established connection`,
+        LogContext.EXCALIDRAW_SERVER
+      );
+      this.wsServer.to(socket.id).emit(INIT_ROOM);
+      // first authorize the user with the room
+      socket.on(
+        JOIN_ROOM,
+        async (roomID: string) =>
+          await authorizeWithRoomAndJoinHandler(
+            roomID,
+            socket,
+            this.wsServer,
+            this.whiteboardRtService,
+            this.authorizationService,
+            this.logger
+          )
+      );
+      // attach session handlers
       // drop connection on invalid or expired session
       socket.prependAny(() => checkSession(socket));
       socket.use((_, next) => checkSessionMiddleware(socket, next));
+      // attach error handlers
       socket.on('error', err => {
         if (!err) {
           return;
@@ -185,43 +205,27 @@ export class ExcalidrawServer {
           closeConnection(socket, err.message);
         }
       });
-
-      this.logger?.verbose?.(
-        `User '${socket.data.agentInfo.userID}' established connection`,
-        LogContext.EXCALIDRAW_SERVER
-      );
-
-      this.wsServer.to(socket.id).emit(INIT_ROOM);
+      // attach socket handlers conditionally on authorization
       // client events ONLY
-      socket.on(
-        JOIN_ROOM,
-        async (roomID: string) =>
-          await joinRoomEventHandler(
-            roomID,
-            socket,
-            this.wsServer,
-            this.whiteboardRtService,
-            this.authorizationService,
-            this.logger
-          )
-      );
-
-      socket.on(SERVER_BROADCAST, (roomID: string, data: ArrayBuffer) =>
-        serverBroadcastEventHandler(roomID, data, socket)
-      );
-
+      // user can broadcast presence
       socket.on(
         SERVER_VOLATILE_BROADCAST,
         (roomID: string, data: ArrayBuffer) =>
           serverVolatileBroadcastEventHandler(roomID, data, socket)
       );
 
+      if (socket.data.update) {
+        // user can broadcast content change events
+        socket.on(SERVER_BROADCAST, (roomID: string, data: ArrayBuffer) =>
+          serverBroadcastEventHandler(roomID, data, socket)
+        );
+      }
+
       socket.on(
         DISCONNECTING,
         async () =>
           await disconnectingEventHandler(this.wsServer, socket, this.logger)
       );
-
       socket.on(DISCONNECT, () => disconnectEventHandler(socket));
     });
   }
@@ -317,7 +321,7 @@ export class ExcalidrawServer {
     }
     // get only sockets which can save
     const sockets = (await this.wsServer.in(roomId).fetchSockets()).filter(
-      socket => !socket.data.readonly
+      socket => socket.data.update
     );
     // return if no eligible sockets
     if (!sockets.length) {
