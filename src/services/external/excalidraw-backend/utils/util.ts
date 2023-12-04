@@ -82,10 +82,11 @@ export const canUserUpdate = (
       AuthorizationPrivilege.UPDATE_CONTENT,
       'access whiteboardRt'
     );
-    return false;
   } catch (e) {
-    return true;
+    return false;
   }
+
+  return true;
 };
 // closes the connection for this socket
 // and sends an optional message before disconnecting
