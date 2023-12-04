@@ -19,12 +19,13 @@ export class IpfsService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {
-    const {
-      endpoint: ipfsEndpoint,
-      client_endpoint,
-      timeout,
-    } = this.configService.get(ConfigurationTypes.STORAGE)?.ipfs;
-    this.ipfsClientEndpoint = client_endpoint;
+    const ipfsEndpoint = this.configService.get(ConfigurationTypes.STORAGE)
+      ?.ipfs?.endpoint;
+    this.ipfsClientEndpoint = this.configService.get(
+      ConfigurationTypes.STORAGE
+    )?.ipfs?.client_endpoint;
+    const timeout = this.configService.get(ConfigurationTypes.STORAGE)?.ipfs
+      ?.timeout;
     this.ipfsClient = create({ url: ipfsEndpoint, timeout });
   }
 
