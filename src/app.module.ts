@@ -160,6 +160,7 @@ import { ActivityFeedModule } from '@domain/activity-feed';
         },
         fieldResolverEnhancers: ['guards', 'filters'],
         sortSchema: true,
+        persistedQueries: false,
         /***
          * graphql-ws requires passing the request object through the context method
          * !!! this is graphql-ws ONLY
