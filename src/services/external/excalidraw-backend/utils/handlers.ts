@@ -1,23 +1,20 @@
 import { LoggerService } from '@nestjs/common';
 import { WhiteboardRtService } from '@domain/common/whiteboard-rt';
-import { AgentInfo } from '@core/authentication';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { LogContext } from '@common/enums';
 import {
   CLIENT_BROADCAST,
-  CONNECTION_CLOSED,
   FIRST_IN_ROOM,
   NEW_USER,
   ROOM_USER_CHANGE,
   SocketIoServer,
   SocketIoSocket,
 } from '../types';
-import { isUserReadonly } from './util';
+import { canUserRead, canUserUpdate, closeConnection } from './util';
+import { checkSession } from '@services/external/excalidraw-backend/utils/check.session';
 
-/* This event is coming from the client; whenever they request to join a room */
-export const joinRoomEventHandler = async (
+export const authorizeWithRoomAndJoinHandler = async (
   roomID: string,
-  agentInfo: AgentInfo,
   socket: SocketIoSocket,
   wsServer: SocketIoServer,
   whiteboardRtService: WhiteboardRtService,
@@ -25,39 +22,56 @@ export const joinRoomEventHandler = async (
   logger: LoggerService
 ) => {
   const whiteboardRt = await whiteboardRtService.getWhiteboardRtOrFail(roomID);
+  const agentInfo = socket.data.agentInfo;
 
-  try {
-    await authorizationService.grantAccessOrFail(
-      agentInfo,
-      whiteboardRt.authorization,
-      AuthorizationPrivilege.UPDATE_CONTENT,
-      `access whiteboardRt: ${whiteboardRt.id}`
-    );
-  } catch (e) {
-    const err = e as Error;
+  if (
+    !canUserRead(authorizationService, agentInfo, whiteboardRt.authorization)
+  ) {
     logger.error(
-      `Error when trying to authorize the user with the whiteboard: ${err.message}`,
+      `Unable to authorize the user with Whiteboard: '${whiteboardRt.id}'`,
+      undefined,
       LogContext.EXCALIDRAW_SERVER
     );
-    closeConnection(socket, err.message);
+    closeConnection(socket, 'Unauthorized');
     return;
   }
 
-  await socket.join(roomID);
   socket.data.lastContributed = -1;
-  socket.data.readonly = await isUserReadonly(
+  socket.data.read = true; // already authorized
+  socket.data.update = canUserUpdate(
     authorizationService,
     agentInfo,
     whiteboardRt.authorization
   );
 
+  await joinRoomHandler(roomID, socket, wsServer, logger);
+};
+/* This event is coming from the client; whenever they request to join a room */
+const joinRoomHandler = async (
+  roomID: string,
+  socket: SocketIoSocket,
+  wsServer: SocketIoServer,
+  logger: LoggerService
+) => {
+  if (!socket.data.read) {
+    return;
+  }
+
+  await socket.join(roomID);
+
+  const { agentInfo } = socket.data;
+
   logger?.verbose?.(
-    `User '${agentInfo.userID}' has joined room '${roomID}'`,
+    `User '${socket.data.agentInfo.userID}' has joined room '${roomID}'`,
     LogContext.EXCALIDRAW_SERVER
   );
 
   const sockets = await wsServer.in(roomID).fetchSockets();
   if (sockets.length === 1) {
+    logger?.verbose?.(
+      `User '${agentInfo.userID}' is first in room '${roomID}'`,
+      LogContext.EXCALIDRAW_SERVER
+    );
     wsServer.to(socket.id).emit(FIRST_IN_ROOM);
   } else {
     logger?.verbose?.(
@@ -97,13 +111,12 @@ export const serverVolatileBroadcastEventHandler = (
 };
 /* Built-in event for handling socket disconnects */
 export const disconnectingEventHandler = async (
-  agentInfo: AgentInfo,
   wsServer: SocketIoServer,
   socket: SocketIoSocket,
   logger: LoggerService
 ) => {
   logger?.verbose?.(
-    `User '${agentInfo.userID}' has disconnected`,
+    `User '${socket.data.agentInfo.userID}' has disconnected`,
     LogContext.EXCALIDRAW_SERVER
   );
   for (const roomID of socket.rooms) {
@@ -124,10 +137,15 @@ export const disconnectEventHandler = async (socket: SocketIoSocket) => {
   socket.disconnect(true);
 };
 
-export const closeConnection = (socket: SocketIoSocket, message?: string) => {
-  if (message) {
-    socket.emit(CONNECTION_CLOSED, message);
+export const checkSessionHandler = (socket: SocketIoSocket) => {
+  if (socket.disconnected) {
+    return;
   }
-  socket.removeAllListeners();
-  socket.disconnect(true);
+
+  const { session } = socket.data;
+  const result = checkSession(session);
+
+  if (result) {
+    closeConnection(socket, result);
+  }
 };

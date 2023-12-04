@@ -6,6 +6,7 @@ import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { OryDefaultIdentitySchema } from '@core/authentication/ory.default.identity.schema';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
+import { CONNECTION_CLOSED, SocketIoSocket } from '../types';
 
 /* Sets the user into the context field or closes the connection */
 export const authenticate = async (
@@ -51,20 +52,47 @@ export const getUserInfo = async (
     return undefined;
   }
 };
-export const isUserReadonly = async (
+export const canUserRead = (
   authorizationService: AuthorizationService,
   agentInfo: AgentInfo,
   wbRtAuthorization?: IAuthorizationPolicy
-): Promise<boolean> => {
+): boolean => {
   try {
-    await authorizationService.grantAccessOrFail(
+    authorizationService.grantAccessOrFail(
+      agentInfo,
+      wbRtAuthorization,
+      AuthorizationPrivilege.READ,
+      'access whiteboardRt'
+    );
+  } catch (e) {
+    return false;
+  }
+
+  return true;
+};
+export const canUserUpdate = (
+  authorizationService: AuthorizationService,
+  agentInfo: AgentInfo,
+  wbRtAuthorization?: IAuthorizationPolicy
+): boolean => {
+  try {
+    authorizationService.grantAccessOrFail(
       agentInfo,
       wbRtAuthorization,
       AuthorizationPrivilege.UPDATE_CONTENT,
       'access whiteboardRt'
     );
     return false;
-  } catch (e: any) {
+  } catch (e) {
     return true;
   }
+};
+// closes the connection for this socket
+// and sends an optional message before disconnecting
+export const closeConnection = (socket: SocketIoSocket, message?: string) => {
+  if (message) {
+    socket.emit(CONNECTION_CLOSED, message);
+  }
+  socket.removeAllListeners();
+  socket.disconnect(true);
 };

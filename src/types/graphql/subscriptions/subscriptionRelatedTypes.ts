@@ -1,5 +1,6 @@
 import { IncomingMessage, ServerResponse } from 'http';
 import { Context, WebSocket as GraphqlWsWebSocket } from 'graphql-ws';
+import { AgentInfo } from '@core/authentication';
 
 export type SubscriptionsTransportWsWebsocket = {
   upgradeReq: IncomingMessage;
@@ -7,7 +8,7 @@ export type SubscriptionsTransportWsWebsocket = {
 };
 
 export type HttpContext = {
-  req: IncomingMessage;
+  req: IncomingMessage & { user: AgentInfo };
   res: ServerResponse;
 };
 

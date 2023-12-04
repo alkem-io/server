@@ -58,7 +58,7 @@ export class OryStrategy extends PassportStrategy(Strategy, 'oathkeeper-jwt') {
     const session = verifyIdentityIfOidcAuth(payload.session);
     const oryIdentity = session.identity as OryDefaultIdentitySchema;
 
-    return this.authService.createAgentInfo(oryIdentity);
+    return this.authService.createAgentInfo(oryIdentity, session);
   }
 }
 

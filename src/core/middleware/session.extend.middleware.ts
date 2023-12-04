@@ -7,15 +7,16 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { Request, Response, NextFunction } from 'express';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import jwt_decode from 'jwt-decode';
-import { KratosPayload } from '@core/authentication/kratos.payload';
 import { AuthenticationService } from '@core/authentication/authentication.service';
 import { ConfigurationTypes, LogContext } from '@src/common/enums';
+import { getSession } from '@common/utils';
+import { Configuration, FrontendApi, Session } from '@ory/kratos-client';
 
 @Injectable()
 export class SessionExtendMiddleware implements NestMiddleware {
   private readonly SESSION_COOKIE_NAME: string;
   private readonly enabled: boolean;
+  private readonly kratosClient: FrontendApi;
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
@@ -29,6 +30,16 @@ export class SessionExtendMiddleware implements NestMiddleware {
     this.enabled = this.configService.get(
       ConfigurationTypes.IDENTITY
     )?.authentication.providers.ory.session_extend_enabled;
+
+    const kratosPublicBaseUrl = this.configService.get(
+      ConfigurationTypes.IDENTITY
+    ).authentication.providers.ory.kratos_public_base_url_server;
+
+    this.kratosClient = new FrontendApi(
+      new Configuration({
+        basePath: kratosPublicBaseUrl,
+      })
+    );
   }
 
   async use(req: Request, res: Response, next: NextFunction) {
@@ -45,27 +56,15 @@ export class SessionExtendMiddleware implements NestMiddleware {
       return next();
     }
 
-    const [, token] = authorization.split(' ');
-
-    if (!token) {
-      this.logger.verbose?.('Session extend middleware: token not found');
-      return next();
-    }
-
-    let jwt;
-
+    let session: Session;
     try {
-      jwt = jwt_decode<KratosPayload>(token);
-    } catch (error) {
-      this.logger.verbose?.('Bearer token is not a valid JWT token!');
-      return next();
-    }
-
-    const session = jwt.session;
-
-    if (!session) {
+      session = await getSession(this.kratosClient, {
+        authorization,
+      });
+    } catch (e: any) {
       this.logger.verbose?.(
-        'Session extend middleware: Kratos session not found in token'
+        `Error while extracting ory session: ${e?.message}`,
+        LogContext.AUTH_TOKEN
       );
       return next();
     }
@@ -83,7 +82,8 @@ export class SessionExtendMiddleware implements NestMiddleware {
 
       if (!newSession) {
         this.logger.warn?.(
-          'New session cookie not sent: new session not found'
+          'New session cookie not sent: new session not found',
+          LogContext.AUTH_TOKEN
         );
         return next();
       }
@@ -92,7 +92,8 @@ export class SessionExtendMiddleware implements NestMiddleware {
         req.cookies[this.SESSION_COOKIE_NAME];
       if (!orySessionId) {
         this.logger.warn?.(
-          'New session cookie not sent: new session id not found'
+          'New session cookie not sent: new session id not found',
+          LogContext.AUTH_TOKEN
         );
         return next();
       }
@@ -101,7 +102,8 @@ export class SessionExtendMiddleware implements NestMiddleware {
 
       if (!newExpiry) {
         this.logger.warn?.(
-          'New session cookie not sent: new expiry date not defined'
+          'New session cookie not sent: new expiry date not defined',
+          LogContext.AUTH_TOKEN
         );
         return next();
       }
@@ -114,7 +116,7 @@ export class SessionExtendMiddleware implements NestMiddleware {
         encode: val => val, // skip encoding; pass the value as is
       });
 
-      this.logger.verbose?.('New session cookie sent');
+      this.logger.verbose?.('New session cookie sent', LogContext.AUTH_TOKEN);
     }
 
     next();

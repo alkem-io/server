@@ -1,10 +1,15 @@
 import { clearInterval, setInterval, setTimeout } from 'timers';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Configuration, FrontendApi } from '@ory/kratos-client';
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  LoggerService,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ConfigurationTypes, LogContext } from '@common/enums';
-import { APP_ID, EXCALIDRAW_SERVER, UUID_LENGTH } from '@common/constants';
+import { EXCALIDRAW_SERVER, UUID_LENGTH } from '@common/constants';
 import { arrayRandomElement } from '@common/utils';
 import { AuthenticationService } from '@core/authentication/authentication.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -12,13 +17,13 @@ import { WhiteboardRtService } from '@domain/common/whiteboard-rt';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import {
-  getUserInfo,
   closeConnection,
   disconnectEventHandler,
   disconnectingEventHandler,
-  joinRoomEventHandler,
   serverBroadcastEventHandler,
+  authorizeWithRoomAndJoinHandler,
   serverVolatileBroadcastEventHandler,
+  checkSessionHandler,
 } from './utils';
 import {
   CONNECTION,
@@ -33,11 +38,14 @@ import {
   RemoteSocketIoSocket,
 } from './types';
 import { CREATE_ROOM, DELETE_ROOM } from './adapters/adapter.event.names';
+import {
+  attachSessionMiddleware,
+  attachAgentMiddleware,
+  checkSessionMiddleware,
+} from './middlewares';
 
 type SaveMessageOpts = { maxRetries: number; timeout: number };
-
 type RoomTimers = Map<string, NodeJS.Timer | NodeJS.Timeout>;
-
 type SaveResponse = { success: boolean; errors?: string[] };
 
 const defaultContributionInterval = 600;
@@ -57,15 +65,14 @@ export class ExcalidrawServer {
   private readonly saveMaxRetries: number;
 
   constructor(
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService,
     @Inject(EXCALIDRAW_SERVER) private wsServer: SocketIoServer,
     private configService: ConfigService,
     private authService: AuthenticationService,
     private authorizationService: AuthorizationService,
     private whiteboardRtService: WhiteboardRtService,
     private contributionReporter: ContributionReporterService,
-    private communityResolver: CommunityResolverService,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService,
-    @Inject(APP_ID) private appId: string
+    private communityResolver: CommunityResolverService
   ) {
     const {
       contribution_window,
@@ -158,34 +165,23 @@ export class ExcalidrawServer {
       this.saveTimers.delete(roomId);
     });
 
+    this.wsServer.use(attachSessionMiddleware(kratosClient));
+    this.wsServer.use(
+      attachAgentMiddleware(kratosClient, this.logger, this.authService)
+    );
+
     this.wsServer.on(CONNECTION, async socket => {
-      const agentInfo = await getUserInfo(
-        kratosClient,
-        socket.handshake.headers,
-        this.logger,
-        this.authService
-      );
-
-      if (!agentInfo) {
-        closeConnection(socket, 'Not able to authenticate user');
-        return;
-      }
-
-      socket.data.agentInfo = agentInfo;
-
       this.logger?.verbose?.(
-        `User '${agentInfo.userID}' established connection`,
+        `User '${socket.data.agentInfo.userID}' established connection`,
         LogContext.EXCALIDRAW_SERVER
       );
-
       this.wsServer.to(socket.id).emit(INIT_ROOM);
-      // client events ONLY
+      // first authorize the user with the room
       socket.on(
         JOIN_ROOM,
         async (roomID: string) =>
-          await joinRoomEventHandler(
+          await authorizeWithRoomAndJoinHandler(
             roomID,
-            agentInfo,
             socket,
             this.wsServer,
             this.whiteboardRtService,
@@ -193,28 +189,43 @@ export class ExcalidrawServer {
             this.logger
           )
       );
+      // attach session handlers
+      // drop connection on invalid or expired session
+      socket.prependAny(() => checkSessionHandler(socket));
+      socket.use((_, next) => checkSessionMiddleware(socket, next));
+      // attach error handlers
+      socket.on('error', err => {
+        if (!err) {
+          return;
+        }
 
-      socket.on(SERVER_BROADCAST, (roomID: string, data: ArrayBuffer) =>
-        serverBroadcastEventHandler(roomID, data, socket)
-      );
+        this.logger.error(err.message, err.stack, LogContext.EXCALIDRAW_SERVER);
 
+        if (err && err instanceof UnauthorizedException) {
+          closeConnection(socket, err.message);
+        }
+      });
+      // attach socket handlers conditionally on authorization
+      // client events ONLY
+      // user can broadcast presence
       socket.on(
         SERVER_VOLATILE_BROADCAST,
         (roomID: string, data: ArrayBuffer) =>
           serverVolatileBroadcastEventHandler(roomID, data, socket)
       );
 
+      if (socket.data.update) {
+        // user can broadcast content change events
+        socket.on(SERVER_BROADCAST, (roomID: string, data: ArrayBuffer) =>
+          serverBroadcastEventHandler(roomID, data, socket)
+        );
+      }
+
       socket.on(
         DISCONNECTING,
         async () =>
-          await disconnectingEventHandler(
-            agentInfo,
-            this.wsServer,
-            socket,
-            this.logger
-          )
+          await disconnectingEventHandler(this.wsServer, socket, this.logger)
       );
-
       socket.on(DISCONNECT, () => disconnectEventHandler(socket));
     });
   }
@@ -310,7 +321,7 @@ export class ExcalidrawServer {
     }
     // get only sockets which can save
     const sockets = (await this.wsServer.in(roomId).fetchSockets()).filter(
-      socket => !socket.data.readonly
+      socket => socket.data.update
     );
     // return if no eligible sockets
     if (!sockets.length) {

@@ -128,7 +128,7 @@ export class DocumentService {
     return document.createdDate;
   }
 
-  public getDocumentContents(document: IDocument): Readable {
+  public getDocumentContents(document: IDocument): Readable | never {
     return Readable.from(this.ipfsAdapter.getFileContents(document.externalID));
   }
 

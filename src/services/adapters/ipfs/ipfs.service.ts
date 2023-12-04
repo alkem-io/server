@@ -24,7 +24,9 @@ export class IpfsService {
     this.ipfsClientEndpoint = this.configService.get(
       ConfigurationTypes.STORAGE
     )?.ipfs?.client_endpoint;
-    this.ipfsClient = create({ url: ipfsEndpoint });
+    const timeout = this.configService.get(ConfigurationTypes.STORAGE)?.ipfs
+      ?.timeout;
+    this.ipfsClient = create({ url: ipfsEndpoint, timeout });
   }
 
   public async uploadFile(filePath: string): Promise<string> {
