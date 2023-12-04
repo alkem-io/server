@@ -19,12 +19,13 @@ export class IpfsService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {
-    const ipfsEndpoint = this.configService.get(ConfigurationTypes.STORAGE)
-      ?.ipfs?.endpoint;
-    this.ipfsClientEndpoint = this.configService.get(
-      ConfigurationTypes.STORAGE
-    )?.ipfs?.client_endpoint;
-    this.ipfsClient = create({ url: ipfsEndpoint });
+    const {
+      endpoint: ipfsEndpoint,
+      client_endpoint,
+      timeout,
+    } = this.configService.get(ConfigurationTypes.STORAGE)?.ipfs;
+    this.ipfsClientEndpoint = client_endpoint;
+    this.ipfsClient = create({ url: ipfsEndpoint, timeout });
   }
 
   public async uploadFile(filePath: string): Promise<string> {
