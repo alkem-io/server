@@ -1,7 +1,7 @@
 import { FrontendApi } from '@ory/kratos-client';
 import { LoggerService, UnauthorizedException } from '@nestjs/common';
 import { AuthenticationService } from '@core/authentication/authentication.service';
-import { authenticate } from '../utils';
+import { getUserInfo } from '../utils';
 import { WrappedMiddlewareHandler } from './middleware.handler.type';
 
 export const attachAgentMiddleware: WrappedMiddlewareHandler =
@@ -12,7 +12,7 @@ export const attachAgentMiddleware: WrappedMiddlewareHandler =
   ) =>
   async (socket, next) => {
     try {
-      socket.data.agentInfo = await authenticate(
+      socket.data.agentInfo = await getUserInfo(
         kratosFrontEndApi,
         socket.handshake.headers,
         logger,
