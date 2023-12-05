@@ -42,6 +42,7 @@ import {
   attachSessionMiddleware,
   attachAgentMiddleware,
   checkSessionMiddleware,
+  socketDataInitMiddleware,
 } from './middlewares';
 
 type SaveMessageOpts = { maxRetries: number; timeout: number };
@@ -165,6 +166,7 @@ export class ExcalidrawServer {
       this.saveTimers.delete(roomId);
     });
 
+    this.wsServer.use(socketDataInitMiddleware);
     this.wsServer.use(attachSessionMiddleware(kratosClient));
     this.wsServer.use(
       attachAgentMiddleware(kratosClient, this.logger, this.authService)
@@ -213,13 +215,18 @@ export class ExcalidrawServer {
         (roomID: string, data: ArrayBuffer) =>
           serverVolatileBroadcastEventHandler(roomID, data, socket)
       );
-
-      if (socket.data.update) {
-        // user can broadcast content change events
-        socket.on(SERVER_BROADCAST, (roomID: string, data: ArrayBuffer) =>
-          serverBroadcastEventHandler(roomID, data, socket)
-        );
-      }
+      // to avoid this problem we can extend the server impl to have a build in
+      // auth and handlers to be attached when the socket has been authenticated
+      // and authorized
+      // wait for the flag to be initialized
+      setTimeout(() => {
+        if (socket.data.update) {
+          // user can broadcast content change events
+          socket.on(SERVER_BROADCAST, (roomID: string, data: ArrayBuffer) =>
+            serverBroadcastEventHandler(roomID, data, socket)
+          );
+        }
+      }, 300);
 
       socket.on(
         DISCONNECTING,
