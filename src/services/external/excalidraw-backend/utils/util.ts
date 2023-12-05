@@ -1,25 +1,26 @@
 import { FrontendApi } from '@ory/kratos-client';
 import { LoggerService } from '@nestjs/common';
-import { AuthenticationService } from '@core/authentication/authentication.service';
 import { AgentInfo } from '@core/authentication';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { getSession } from '@common/utils';
+import { AuthenticationService } from '@core/authentication/authentication.service';
 import { OryDefaultIdentitySchema } from '@core/authentication/ory.default.identity.schema';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { CONNECTION_CLOSED, SocketIoSocket } from '../types';
 
 /* Sets the user into the context field or closes the connection */
-export const authenticate = async (
+const authenticate = async (
   kratosFrontEndApi: FrontendApi,
   headers: Record<string, string | string[] | undefined>,
   logger: LoggerService,
   authService: AuthenticationService
 ): Promise<AgentInfo> => {
-  const cookie = headers.cookie as string;
+  const authorization = headers.authorization as string;
 
   try {
-    const { data: session } = await kratosFrontEndApi.toSession({
-      cookie,
+    const session = await getSession(kratosFrontEndApi, {
+      authorization,
     });
 
     if (!session) {
@@ -49,7 +50,7 @@ export const getUserInfo = async (
       err.stack,
       LogContext.EXCALIDRAW_SERVER
     );
-    return undefined;
+    return authService.createAgentInfo();
   }
 };
 export const canUserRead = (
