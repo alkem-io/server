@@ -4,6 +4,7 @@ import { RelationshipNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { ActivityEventType } from '@common/enums/activity.event.type';
 import { IUser } from '@domain/community/user/user.interface';
+import { IJourney } from '@domain/challenge/base-challenge/journey.interface';
 import { IActivityLogEntryMemberJoined } from './activity.log.dto.entry.member.joined.interface';
 import { IActivityLogEntryCalloutPublished } from './activity.log.dto.entry.callout.published';
 import { IActivityLogEntryCalloutPostCreated } from './activity.log.dto.entry.callout.post.created';
@@ -15,6 +16,7 @@ import { IActivityLogEntryOpportunityCreated } from './activity.log.dto.entry.op
 import { IActivityLogEntryUpdateSent } from './activity.log.dto.entry.update.sent';
 import { IActivityLogEntryCalendarEventCreated } from './activity.log.dto.entry.calendar.event.created';
 import { IActivityLogEntryCalloutLinkCreated } from './activity.log.dto.entry.callout.link.created';
+import { JourneyTypeEnum } from '@common/enums/journey.type';
 
 @InterfaceType('ActivityLogEntry', {
   resolveType(activityLogEntry) {
@@ -103,4 +105,16 @@ export class IActivityLogEntry {
     description: 'The display name of the parent',
   })
   parentDisplayName!: string;
+
+  @Field(() => JourneyTypeEnum, {
+    nullable: true,
+    description: 'The type of journey',
+  })
+  journeyType?: JourneyTypeEnum;
+
+  @Field(() => IJourney, {
+    nullable: true,
+    description: 'The journey where the activity happened',
+  })
+  journey?: IJourney;
 }

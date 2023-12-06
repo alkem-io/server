@@ -29,7 +29,7 @@ export class ActivityFeedResolverQueries {
     @Args('args', { nullable: true })
     args?: ActivityFeedQueryArgs
   ): Promise<ActivityFeed> {
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
