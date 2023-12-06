@@ -1,5 +1,5 @@
 import { Profiling } from '@common/decorators';
-import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { Args, Float, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common/decorators/core/use-guards.decorator';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { UUID } from '@domain/common/scalars';
@@ -41,6 +41,18 @@ export class TemplatesSetResolverFields {
   }
 
   @UseGuards(GraphqlGuard)
+  @ResolveField('postTemplatesCount', () => Float, {
+    nullable: false,
+    description: 'The total number of PostTemplates in this TemplatesSet.',
+  })
+  @Profiling.api
+  async postTemplatesCount(
+    @Parent() templatesSet: ITemplatesSet
+  ): Promise<number> {
+    return this.templatesSetService.getPostTemplatesCount(templatesSet.id);
+  }
+
+  @UseGuards(GraphqlGuard)
   @ResolveField('postTemplate', () => IPostTemplate, {
     nullable: true,
     description: 'A single PostTemplate',
@@ -72,6 +84,21 @@ export class TemplatesSetResolverFields {
   }
 
   @UseGuards(GraphqlGuard)
+  @ResolveField('whiteboardTemplatesCount', () => Float, {
+    nullable: false,
+    description:
+      'The total number of WhiteboardTemplates in this TemplatesSet.',
+  })
+  @Profiling.api
+  async whiteboardTemplatesCount(
+    @Parent() templatesSet: ITemplatesSet
+  ): Promise<number> {
+    return this.templatesSetService.getWhiteboardTemplatesCount(
+      templatesSet.id
+    );
+  }
+
+  @UseGuards(GraphqlGuard)
   @ResolveField('whiteboardTemplate', () => IWhiteboardTemplate, {
     nullable: true,
     description: 'A single WhiteboardTemplate',
@@ -100,6 +127,21 @@ export class TemplatesSetResolverFields {
     @Parent() templatesSet: ITemplatesSet
   ): Promise<IInnovationFlowTemplate[]> {
     return this.templatesSetService.getInnovationFlowTemplates(templatesSet);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField('innovationFlowTemplatesCount', () => Float, {
+    nullable: false,
+    description:
+      'The total number of InnovationFlowTemplates in this TemplatesSet.',
+  })
+  @Profiling.api
+  async innovationFlowTemplatesCount(
+    @Parent() templatesSet: ITemplatesSet
+  ): Promise<number> {
+    return this.templatesSetService.getInnovationFlowTemplatesCount(
+      templatesSet.id
+    );
   }
 
   @UseGuards(GraphqlGuard)
