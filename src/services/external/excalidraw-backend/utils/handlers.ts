@@ -28,11 +28,11 @@ export const authorizeWithRoomAndJoinHandler = async (
     !canUserRead(authorizationService, agentInfo, whiteboardRt.authorization)
   ) {
     logger.error(
-      `Unable to authorize the user with Whiteboard: '${whiteboardRt.id}'`,
+      `Unable to authorize User '${agentInfo.userID}' with Whiteboard: '${whiteboardRt.id}'`,
       undefined,
       LogContext.EXCALIDRAW_SERVER
     );
-    closeConnection(socket, 'Unauthorized');
+    closeConnection(socket, 'Unauthorized read access');
     return;
   }
 
