@@ -40,7 +40,7 @@ export class LibraryService {
   public async getInnovationPacks(
     library: ILibrary,
     limit?: number,
-    orderBy: InnovationPacksOrderBy = InnovationPacksOrderBy.NUMBER_OF_TEMPLATES_ASC
+    orderBy: InnovationPacksOrderBy = InnovationPacksOrderBy.NUMBER_OF_TEMPLATES_DESC
   ): Promise<IInnovationPack[]> {
     const innovationPacks = library.innovationPacks;
     if (!innovationPacks)
@@ -63,9 +63,9 @@ export class LibraryService {
         case InnovationPacksOrderBy.RANDOM:
           return 0.5 - Math.random();
         case InnovationPacksOrderBy.NUMBER_OF_TEMPLATES_ASC:
-          return a.templatesCount < b.templatesCount ? 1 : -1;
-        case InnovationPacksOrderBy.NUMBER_OF_TEMPLATES_DESC:
           return a.templatesCount < b.templatesCount ? -1 : 1;
+        case InnovationPacksOrderBy.NUMBER_OF_TEMPLATES_DESC:
+          return a.templatesCount < b.templatesCount ? 1 : -1;
       }
       return 0;
     });

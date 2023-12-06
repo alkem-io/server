@@ -12,7 +12,7 @@ export class InnovationPacksInput {
 
   @Field(() => InnovationPacksOrderBy, {
     description:
-      'The sort order of the InnovationPacks to return. Defaults to number of templates ASC',
+      'The sort order of the InnovationPacks to return. Defaults to number of templates Descending.',
     nullable: true,
   })
   orderBy?: InnovationPacksOrderBy;
