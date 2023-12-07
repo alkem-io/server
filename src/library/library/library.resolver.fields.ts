@@ -9,6 +9,7 @@ import { InnovationPackService } from '@library/innovation-pack/innovaton.pack.s
 import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
 import { LibraryService } from './library.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { InnovationPacksInput } from './dto/library.dto.innovationPacks.input';
 
 @Resolver(() => ILibrary)
 export class LibraryResolverFields {
@@ -54,8 +55,14 @@ export class LibraryResolverFields {
   })
   @UseGuards(GraphqlGuard)
   async innovationPacks(
-    @Parent() library: ILibrary
+    @Parent() library: ILibrary,
+    @Args('queryData', { type: () => InnovationPacksInput, nullable: true })
+    queryData?: InnovationPacksInput
   ): Promise<IInnovationPack[]> {
-    return await this.libraryService.getInnovationPacks(library);
+    return await this.libraryService.getInnovationPacks(
+      library,
+      queryData?.limit,
+      queryData?.orderBy
+    );
   }
 }

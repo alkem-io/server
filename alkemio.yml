@@ -364,10 +364,12 @@ collaboration:
     contribution_window: ${CONTRIBUTION_RT_WINDOW}:600
     # SECONDS between saves
     save_interval: ${WHITEBOARD_AUTOSAVE_INTERVAL}:15
-    # SECONDS to wait after the request is save before it fails
+    # SECONDS to wait after the request is saved, before it fails
     save_timeout: ${WHITEBOARD_AUTOSAVE_TIMEOUT}:10
     # max retries before the autosave fails
     save_max_retries: ${WHITEBOARD_AUTOSAVE_MAX_RETRIES}:5
+    # MILLISECONDS to wait before the socket data has been initialized
+    socket_data_init_delay: ${WHITEBOARD_SOCKET_DATA_INIT_DELAY}:700
 
 
 ## Configuration of the legal / usability aspects of the platform
