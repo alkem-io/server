@@ -226,7 +226,11 @@ export class ExcalidrawServer {
             serverBroadcastEventHandler(roomID, data, socket)
           );
         }
-      }, 300);
+        this.logger.verbose?.(
+          `User '${socket.data.agentInfo.userID}' update flag is '${socket.data.update}'`,
+          LogContext.EXCALIDRAW_SERVER
+        );
+      }, 700);
 
       socket.on(
         DISCONNECTING,
