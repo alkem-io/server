@@ -54,11 +54,11 @@ export class AuthorizationService {
     )}'; authorization definition: anonymousAccess=${
       authorization?.anonymousReadAccess
     } & rules: ${authorization?.credentialRules}`;
-    this.logger.verbose?.(msg, LogContext.AUTH_POLICY);
+    this.logger.debug?.(msg, LogContext.AUTH_POLICY);
   }
 
   logAgentInfo(agentInfo: AgentInfo) {
-    this.logger.verbose?.(
+    this.logger.debug?.(
       `AgentInfo: '${agentInfo.email}' has credentials '${JSON.stringify(
         agentInfo.credentials,
         this.replacer

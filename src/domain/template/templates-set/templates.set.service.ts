@@ -408,18 +408,32 @@ export class TemplatesSetService {
   }
 
   async getTemplatesCount(templatesSetID: string): Promise<number> {
-    const whiteboardTemplatesCount =
-      await this.whiteboardTemplateService.getCountInTemplatesSet(
-        templatesSetID
-      );
+    const whiteboardTemplatesCount = await this.getWhiteboardTemplatesCount(
+      templatesSetID
+    );
 
-    const postTemplatesCount =
-      await this.postTemplateService.getCountInTemplatesSet(templatesSetID);
+    const postTemplatesCount = await this.getPostTemplatesCount(templatesSetID);
 
-    const innovationFlowsCount =
-      await this.innovationFlowTemplateService.getCountInTemplatesSet(
-        templatesSetID
-      );
+    const innovationFlowsCount = await this.getInnovationFlowTemplatesCount(
+      templatesSetID
+    );
+
     return whiteboardTemplatesCount + postTemplatesCount + innovationFlowsCount;
+  }
+
+  getWhiteboardTemplatesCount(templatesSetID: string): Promise<number> {
+    return this.whiteboardTemplateService.getCountInTemplatesSet(
+      templatesSetID
+    );
+  }
+
+  getPostTemplatesCount(templatesSetID: string): Promise<number> {
+    return this.postTemplateService.getCountInTemplatesSet(templatesSetID);
+  }
+
+  getInnovationFlowTemplatesCount(templatesSetID: string): Promise<number> {
+    return this.innovationFlowTemplateService.getCountInTemplatesSet(
+      templatesSetID
+    );
   }
 }
