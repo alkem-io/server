@@ -54,6 +54,7 @@ const defaultSaveInterval = 15;
 const defaultSaveTimeout = 10;
 const defaultMaxRetries = 5;
 const defaultTimeoutBeforeRetryMs = 3000;
+const defaultSocketDataInitDelay = 700;
 
 @Injectable()
 export class ExcalidrawServer {
@@ -64,6 +65,7 @@ export class ExcalidrawServer {
   private readonly saveIntervalMs: number;
   private readonly saveTimeoutMs: number;
   private readonly saveMaxRetries: number;
+  private readonly socketDataInitDelayMs: number;
 
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService,
@@ -80,6 +82,7 @@ export class ExcalidrawServer {
       save_interval,
       save_timeout,
       save_max_retries,
+      socket_data_init_delay,
     } = this.configService.get(ConfigurationTypes.COLLABORATION)?.whiteboards;
 
     this.contributionWindowMs =
@@ -87,6 +90,9 @@ export class ExcalidrawServer {
     this.saveIntervalMs = (save_interval ?? defaultSaveInterval) * 1000;
     this.saveTimeoutMs = (save_timeout ?? defaultSaveTimeout) * 1000;
     this.saveMaxRetries = Number(save_max_retries ?? defaultMaxRetries);
+    this.socketDataInitDelayMs = Number(
+      socket_data_init_delay ?? defaultSocketDataInitDelay
+    );
     // don't block the constructor
     this.init().then(() =>
       this.logger.verbose?.(
@@ -230,7 +236,7 @@ export class ExcalidrawServer {
           `User '${socket.data.agentInfo.userID}' update flag is '${socket.data.update}'`,
           LogContext.EXCALIDRAW_SERVER
         );
-      }, 700);
+      }, this.socketDataInitDelayMs);
 
       socket.on(
         DISCONNECTING,
