@@ -166,7 +166,6 @@ export class ActivityLogService {
         child: rawActivity.child,
         parentNameID: parentDetails.nameID,
         parentDisplayName: parentDetails.displayName,
-        journeyType,
         journey,
       };
       const activityBuilder: IActivityLogBuilder =

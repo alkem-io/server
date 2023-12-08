@@ -26,9 +26,9 @@ export class ActivityFeedResolverQueries {
   })
   @Profiling.api
   public async activityFeed(
-    @CurrentUser() agentInfo: AgentInfo,
     @Args({ nullable: true })
-    pagination?: PaginationArgs,
+    pagination: PaginationArgs,
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('args', { nullable: true })
     args?: ActivityFeedQueryArgs
   ): Promise<ActivityFeed> {
