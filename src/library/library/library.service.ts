@@ -13,6 +13,7 @@ import { CreateInnovationPackOnLibraryInput } from './dto/library.dto.create.inn
 import { Library } from './library.entity';
 import { ILibrary } from './library.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { InnovationPacksOrderBy } from '@common/enums/innovation.packs.orderBy';
 
 @Injectable()
 export class LibraryService {
@@ -37,7 +38,9 @@ export class LibraryService {
   }
 
   public async getInnovationPacks(
-    library: ILibrary
+    library: ILibrary,
+    limit?: number,
+    orderBy: InnovationPacksOrderBy = InnovationPacksOrderBy.NUMBER_OF_TEMPLATES_DESC
   ): Promise<IInnovationPack[]> {
     const innovationPacks = library.innovationPacks;
     if (!innovationPacks)
@@ -55,11 +58,18 @@ export class LibraryService {
       })
     );
 
-    const sortedPacks = innovationPacksWithCounts.sort((a, b) =>
-      a.templatesCount < b.templatesCount ? 1 : -1
-    );
-
-    return sortedPacks;
+    const sortedPacks = innovationPacksWithCounts.sort((a, b) => {
+      switch (orderBy) {
+        case InnovationPacksOrderBy.RANDOM:
+          return 0.5 - Math.random();
+        case InnovationPacksOrderBy.NUMBER_OF_TEMPLATES_ASC:
+          return a.templatesCount < b.templatesCount ? -1 : 1;
+        case InnovationPacksOrderBy.NUMBER_OF_TEMPLATES_DESC:
+          return a.templatesCount < b.templatesCount ? 1 : -1;
+      }
+      return 0;
+    });
+    return limit && limit > 0 ? sortedPacks.slice(0, limit) : sortedPacks;
   }
 
   public async createInnovationPack(

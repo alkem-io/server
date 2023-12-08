@@ -42,6 +42,7 @@ import {
   attachSessionMiddleware,
   attachAgentMiddleware,
   checkSessionMiddleware,
+  socketDataInitMiddleware,
 } from './middlewares';
 
 type SaveMessageOpts = { maxRetries: number; timeout: number };
@@ -53,6 +54,7 @@ const defaultSaveInterval = 15;
 const defaultSaveTimeout = 10;
 const defaultMaxRetries = 5;
 const defaultTimeoutBeforeRetryMs = 3000;
+const defaultSocketDataInitDelay = 700;
 
 @Injectable()
 export class ExcalidrawServer {
@@ -63,6 +65,7 @@ export class ExcalidrawServer {
   private readonly saveIntervalMs: number;
   private readonly saveTimeoutMs: number;
   private readonly saveMaxRetries: number;
+  private readonly socketDataInitDelayMs: number;
 
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService,
@@ -79,6 +82,7 @@ export class ExcalidrawServer {
       save_interval,
       save_timeout,
       save_max_retries,
+      socket_data_init_delay,
     } = this.configService.get(ConfigurationTypes.COLLABORATION)?.whiteboards;
 
     this.contributionWindowMs =
@@ -86,6 +90,9 @@ export class ExcalidrawServer {
     this.saveIntervalMs = (save_interval ?? defaultSaveInterval) * 1000;
     this.saveTimeoutMs = (save_timeout ?? defaultSaveTimeout) * 1000;
     this.saveMaxRetries = Number(save_max_retries ?? defaultMaxRetries);
+    this.socketDataInitDelayMs = Number(
+      socket_data_init_delay ?? defaultSocketDataInitDelay
+    );
     // don't block the constructor
     this.init().then(() =>
       this.logger.verbose?.(
@@ -165,6 +172,7 @@ export class ExcalidrawServer {
       this.saveTimers.delete(roomId);
     });
 
+    this.wsServer.use(socketDataInitMiddleware);
     this.wsServer.use(attachSessionMiddleware(kratosClient));
     this.wsServer.use(
       attachAgentMiddleware(kratosClient, this.logger, this.authService)
@@ -213,13 +221,22 @@ export class ExcalidrawServer {
         (roomID: string, data: ArrayBuffer) =>
           serverVolatileBroadcastEventHandler(roomID, data, socket)
       );
-
-      if (socket.data.update) {
-        // user can broadcast content change events
-        socket.on(SERVER_BROADCAST, (roomID: string, data: ArrayBuffer) =>
-          serverBroadcastEventHandler(roomID, data, socket)
+      // to avoid this problem we can extend the server impl to have a build in
+      // auth and handlers to be attached when the socket has been authenticated
+      // and authorized
+      // wait for the flag to be initialized
+      setTimeout(() => {
+        if (socket.data.update) {
+          // user can broadcast content change events
+          socket.on(SERVER_BROADCAST, (roomID: string, data: ArrayBuffer) =>
+            serverBroadcastEventHandler(roomID, data, socket)
+          );
+        }
+        this.logger.verbose?.(
+          `User '${socket.data.agentInfo.userID}' update flag is '${socket.data.update}'`,
+          LogContext.EXCALIDRAW_SERVER
         );
-      }
+      }, this.socketDataInitDelayMs);
 
       socket.on(
         DISCONNECTING,

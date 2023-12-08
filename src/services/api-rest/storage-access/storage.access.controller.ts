@@ -48,7 +48,7 @@ export class StorageAccessController {
     }
 
     try {
-      await this.authorizationService.grantAccessOrFail(
+      this.authorizationService.grantAccessOrFail(
         agentInfo,
         document.authorization,
         AuthorizationPrivilege.READ,
@@ -83,7 +83,19 @@ export class StorageAccessController {
       new Date(Date.now() + 15552000 * 1000).toUTCString()
     );
 
-    const readable = this.documentService.getDocumentContents(document);
-    return new StreamableFile(readable);
+    try {
+      const readable = this.documentService.getDocumentContents(document);
+      return new StreamableFile(readable);
+    } catch (e: any) {
+      this.logger.error(
+        `Error while trying to retrieve document '${id}': ${e}`,
+        e?.stack,
+        LogContext.DOCUMENT
+      );
+      throw new NotFoundHttpException(
+        'Error while trying to retrieve document',
+        LogContext.DOCUMENT
+      );
+    }
   }
 }
