@@ -46,6 +46,8 @@ export const CREDENTIAL_RULE_TYPES_PLATFORM_ANY_ADMIN =
   'credentialRuleTypes-platformAnyAdmin';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_GUIDANCE =
   'credentialRuleTypes-platformAccessGuidance';
+export const CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_DASHBOARD =
+  'credentialRuleTypes-platformAccessDashboard';
 export const CREDENTIAL_RULE_TYPES_LIBRARY_FILE_UPLOAD_ANY_USER =
   'credentialRuleTypes-libraryFileUploadAnyUser';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_FILE_UPLOAD_ANY_USER =
