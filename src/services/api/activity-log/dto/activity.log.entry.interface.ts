@@ -16,7 +16,6 @@ import { IActivityLogEntryOpportunityCreated } from './activity.log.dto.entry.op
 import { IActivityLogEntryUpdateSent } from './activity.log.dto.entry.update.sent';
 import { IActivityLogEntryCalendarEventCreated } from './activity.log.dto.entry.calendar.event.created';
 import { IActivityLogEntryCalloutLinkCreated } from './activity.log.dto.entry.callout.link.created';
-import { JourneyTypeEnum } from '@common/enums/journey.type';
 
 @InterfaceType('ActivityLogEntry', {
   resolveType(activityLogEntry) {
@@ -105,12 +104,6 @@ export class IActivityLogEntry {
     description: 'The display name of the parent',
   })
   parentDisplayName!: string;
-
-  @Field(() => JourneyTypeEnum, {
-    nullable: true,
-    description: 'The type of journey',
-  })
-  journeyType?: JourneyTypeEnum;
 
   @Field(() => IJourney, {
     nullable: true,

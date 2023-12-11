@@ -9,6 +9,7 @@ import { PlatformAuthorizationPolicyService } from '@platform/authorization/plat
 import { ActivityFeedQueryArgs } from './activity.feed.query.args';
 import { ActivityFeedService } from './activity.feed.service';
 import { ActivityFeed } from './activity.feed.interface';
+import { PaginationArgs } from '@core/pagination';
 
 @Resolver()
 export class ActivityFeedResolverQueries {
@@ -25,6 +26,8 @@ export class ActivityFeedResolverQueries {
   })
   @Profiling.api
   public async activityFeed(
+    @Args({ nullable: true })
+    pagination: PaginationArgs,
     @CurrentUser() agentInfo: AgentInfo,
     @Args('args', { nullable: true })
     args?: ActivityFeedQueryArgs
@@ -36,6 +39,6 @@ export class ActivityFeedResolverQueries {
       `Activity feed query: ${agentInfo.email}`
     );
 
-    return this.feedService.getActivityFeed(agentInfo, args);
+    return this.feedService.getActivityFeed(agentInfo, { ...args, pagination });
   }
 }

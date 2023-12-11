@@ -10,8 +10,8 @@ import { UUID, NameID } from '@domain/common/scalars';
 
 @InterfaceType('Journey', {
   resolveType(journey) {
-    if (!journey.innovationFlow) return ISpace;
-    if (journey.parentSpace) return IChallenge;
+    if (!journey.innovationFlow && !journey.spaceID) return ISpace;
+    if (journey.spaceID && !journey.challenge) return IChallenge;
     if (journey.challenge) return IOpportunity;
 
     throw new RelationshipNotFoundException(
