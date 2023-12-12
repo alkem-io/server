@@ -25,6 +25,9 @@ import ActivityLogBuilderService from './activity.log.builder.service';
 import { ReferenceService } from '@domain/common/reference/reference.service';
 import { CalendarService } from '@domain/timeline/calendar/calendar.service';
 import { CalendarEventService } from '@domain/timeline/event/event.service';
+import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
+import { SpaceService } from '@domain/challenge/space/space.service';
+import { JourneyTypeEnum } from '@common/enums/journey.type';
 
 export class ActivityLogService {
   constructor(
@@ -33,6 +36,7 @@ export class ActivityLogService {
     private calloutService: CalloutService,
     private postService: PostService,
     private whiteboardService: WhiteboardService,
+    private spaceService: SpaceService,
     private challengeService: ChallengeService,
     private opportunityService: OpportunityService,
     private roomService: RoomService,
@@ -40,6 +44,7 @@ export class ActivityLogService {
     private calendarService: CalendarService,
     private calendarEventService: CalendarEventService,
     private communityService: CommunityService,
+    private collaborationService: CollaborationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     @InjectEntityManager()
@@ -138,6 +143,19 @@ export class ActivityLogService {
         );
       }
 
+      const result =
+        await this.collaborationService.getJourneyFromCollaboration(
+          rawActivity.collaborationID
+        );
+
+      const journeyType = getJourneyType(result);
+      const journeyId =
+        result?.spaceId ?? result?.challengeId ?? result?.opportunityId;
+      const journey =
+        journeyType && journeyId
+          ? await this.getJourneyByType(journeyType, journeyId)
+          : undefined;
+
       const activityLogEntryBase: IActivityLogEntry = {
         id: rawActivity.id,
         triggeredBy: userTriggeringActivity,
@@ -148,6 +166,7 @@ export class ActivityLogService {
         child: rawActivity.child,
         parentNameID: parentDetails.nameID,
         parentDisplayName: parentDetails.displayName,
+        journey,
       };
       const activityBuilder: IActivityLogBuilder =
         new ActivityLogBuilderService(
@@ -209,4 +228,39 @@ export class ActivityLogService {
 
     return undefined;
   }
+
+  private getJourneyByType(type: JourneyTypeEnum, id: string) {
+    switch (type) {
+      case JourneyTypeEnum.SPACE:
+        return this.spaceService.getSpaceOrFail(id);
+      case JourneyTypeEnum.CHALLENGE:
+        return this.challengeService.getChallengeOrFail(id);
+      case JourneyTypeEnum.OPPORTUNITY:
+        return this.opportunityService.getOpportunityOrFail(id);
+      default:
+        throw new Error(`Invalid journey type: ${type}`);
+    }
+  }
 }
+
+const getJourneyType = (ids?: {
+  spaceId?: string;
+  challengeId?: string;
+  opportunityId?: string;
+}): JourneyTypeEnum | undefined => {
+  const { spaceId, challengeId, opportunityId } = ids ?? {};
+
+  if (spaceId) {
+    return JourneyTypeEnum.SPACE;
+  }
+
+  if (challengeId) {
+    return JourneyTypeEnum.CHALLENGE;
+  }
+
+  if (opportunityId) {
+    return JourneyTypeEnum.OPPORTUNITY;
+  }
+
+  return undefined;
+};
