@@ -605,6 +605,19 @@ export class SpaceService {
     spaceID: string,
     options?: FindOneOptions<Space>
   ): Promise<ISpace | never> {
+    const space = await this.getSpace(spaceID, options);
+    if (!space)
+      throw new EntityNotFoundException(
+        `Unable to find Space with ID: ${spaceID}`,
+        LogContext.CHALLENGES
+      );
+    return space;
+  }
+
+  async getSpace(
+    spaceID: string,
+    options?: FindOneOptions<Space>
+  ): Promise<ISpace | null> {
     let space: ISpace | null = null;
     if (spaceID.length === UUID_LENGTH) {
       space = await this.spaceRepository.findOne({
@@ -619,11 +632,6 @@ export class SpaceService {
         ...options,
       });
     }
-    if (!space)
-      throw new EntityNotFoundException(
-        `Unable to find Space with ID: ${spaceID}`,
-        LogContext.CHALLENGES
-      );
     return space;
   }
 
@@ -807,8 +815,8 @@ export class SpaceService {
   async getOpportunityInNameableScope(
     opportunityID: string,
     space: ISpace
-  ): Promise<IOpportunity> {
-    return await this.opportunityService.getOpportunityInNameableScopeOrFail(
+  ): Promise<IOpportunity | null> {
+    return await this.opportunityService.getOpportunityInNameableScope(
       opportunityID,
       space.id
     );
@@ -817,8 +825,8 @@ export class SpaceService {
   async getChallengeInNameableScope(
     challengeID: string,
     space: ISpace
-  ): Promise<IChallenge> {
-    return await this.challengeService.getChallengeInNameableScopeOrFail(
+  ): Promise<IChallenge | null> {
+    return await this.challengeService.getChallengeInNameableScope(
       challengeID,
       space.id
     );

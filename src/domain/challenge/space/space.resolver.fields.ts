@@ -1,4 +1,4 @@
-import { AuthorizationPrivilege } from '@common/enums';
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
 import { Space } from '@domain/challenge/space/space.entity';
 import { IProject } from '@domain/collaboration/project';
@@ -42,6 +42,7 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { AgentInfo } from '@core/authentication/agent-info';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { ILicense } from '@domain/license/license/license.interface';
+import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 
 @Resolver(() => ISpace)
 export class SpaceResolverFields {
@@ -219,9 +220,20 @@ export class SpaceResolverFields {
   @Profiling.api
   async challenge(
     @Args('ID', { type: () => UUID_NAMEID }) id: string,
+    @CurrentUser() agentInfo: AgentInfo,
     @Parent() space: Space
   ): Promise<IChallenge> {
-    return await this.spaceService.getChallengeInNameableScope(id, space);
+    const challenge = await this.spaceService.getChallengeInNameableScope(
+      id,
+      space
+    );
+    if (!challenge) {
+      throw new EntityNotFoundException(
+        `Unable to find challenge with ID: ${id} in space with ID '${space.id}', , requested by user: ${agentInfo.userID}`,
+        LogContext.CHALLENGES
+      );
+    }
+    return challenge;
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -251,9 +263,20 @@ export class SpaceResolverFields {
   @Profiling.api
   async opportunity(
     @Args('ID', { type: () => UUID_NAMEID }) id: string,
+    @CurrentUser() agentInfo: AgentInfo,
     @Parent() space: Space
   ): Promise<IOpportunity> {
-    return await this.spaceService.getOpportunityInNameableScope(id, space);
+    const opportunity = await this.spaceService.getOpportunityInNameableScope(
+      id,
+      space
+    );
+    if (!opportunity) {
+      throw new EntityNotFoundException(
+        `Unable to find Opportunity with ID: ${id} in space with ID '${space.id}', , requested by user: ${agentInfo.userID}`,
+        LogContext.CHALLENGES
+      );
+    }
+    return opportunity;
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
