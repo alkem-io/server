@@ -72,8 +72,7 @@ export class ActivityFeedService {
     agentInfo: AgentInfo,
     options?: Pick<ActivityFeedFilters, 'spaceIds' | 'roles'>
   ) {
-    const { spaceIds: spaceIdsFilter = [], roles: rolesFilter = [] } =
-      options ?? {};
+    const { spaceIds: spaceIdsFilter, roles: rolesFilter = [] } = options ?? {};
     // get all Spaces the user has credentials for
     const credentialMap = groupCredentialsByEntity(agentInfo.credentials);
     const spacesWithCredentials = Array.from(
@@ -81,8 +80,8 @@ export class ActivityFeedService {
     );
     // get only Spaces specified in the filter and check if they exist
     const filteredSpaceIds = await this.filterSpacesOrFail(
-      spaceIdsFilter,
-      spacesWithCredentials
+      spacesWithCredentials,
+      spaceIdsFilter
     );
     // get only Spaces with the appropriate roles specified from the filter
     return filterSpacesByRoles(credentialMap, filteredSpaceIds, rolesFilter);
@@ -96,11 +95,13 @@ export class ActivityFeedService {
    * @throws {EntityNotFoundException} If Space(s) do not exist
    */
   private async filterSpacesOrFail(
-    spaceIdsFilter: string[],
-    spaceIds: string[]
+    spaceIds: string[],
+    spaceIdsFilter?: string[]
   ): Promise<string[]> {
-    // get only Spaces specified in the filter
-    const filteredSpaceIds = intersection(spaceIdsFilter, spaceIds);
+    // get only Spaces specified in the filter; if the filter is defined
+    const filteredSpaceIds = spaceIdsFilter
+      ? intersection(spaceIdsFilter, spaceIds)
+      : spaceIds;
     // check if the Spaces exist;
     // a Space might not exist if it's deleted or broken/orphaned data was introduced
     const successOrNonExistingSpaces = await this.spaceService.spacesExist(
@@ -160,7 +161,7 @@ export class ActivityFeedService {
       const collaboration = await this.spaceService.getCollaborationOrFail(
         spaceId
       );
-      await this.authorizationService.grantAccessOrFail(
+      this.authorizationService.grantAccessOrFail(
         agentInfo,
         collaboration.authorization,
         AuthorizationPrivilege.READ,
@@ -175,7 +176,7 @@ export class ActivityFeedService {
       // filter the child collaborations by read access
       for (const childCollaboration of childCollaborations) {
         try {
-          await this.authorizationService.grantAccessOrFail(
+          this.authorizationService.grantAccessOrFail(
             agentInfo,
             childCollaboration.authorization,
             AuthorizationPrivilege.READ,

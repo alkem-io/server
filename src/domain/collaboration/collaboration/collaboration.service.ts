@@ -648,4 +648,57 @@ export class CollaborationService {
 
     return calloutsInOrder;
   }
+
+  public async getJourneyFromCollaboration(collaborationId: string): Promise<
+    | {
+        spaceId?: string;
+        challengeId?: string;
+        opportunityId?: string;
+      }
+    | undefined
+  > {
+    const [space]: { id: string }[] = await this.entityManager.query(
+      `
+      SELECT space.id FROM alkemio.collaboration
+      RIGHT JOIN space on collaboration.id = space.collaborationId
+      WHERE collaboration.id = '${collaborationId}'
+    `
+    );
+
+    if (space) {
+      return {
+        spaceId: space.id,
+      };
+    }
+
+    const [challenge]: { id: string }[] = await this.entityManager.query(
+      `
+      SELECT challenge.id FROM alkemio.collaboration
+      RIGHT JOIN challenge on collaboration.id = challenge.collaborationId
+      WHERE collaboration.id = '${collaborationId}'
+    `
+    );
+
+    if (challenge) {
+      return {
+        challengeId: challenge.id,
+      };
+    }
+
+    const [opportunity]: { id: string }[] = await this.entityManager.query(
+      `
+      SELECT opportunity.id FROM alkemio.collaboration
+      RIGHT JOIN opportunity on collaboration.id = opportunity.collaborationId
+      WHERE collaboration.id = '${collaborationId}'
+    `
+    );
+
+    if (opportunity) {
+      return {
+        opportunityId: opportunity.id,
+      };
+    }
+
+    return undefined;
+  }
 }
