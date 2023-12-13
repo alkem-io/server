@@ -33,11 +33,12 @@ export class CommunityEventsService {
   public async processCommunityNewMemberEvents(
     community: ICommunity,
     displayName: string,
-    agentInfo: AgentInfo
+    agentInfo: AgentInfo,
+    newMember: IUser
   ) {
     // Send the notification
     const notificationInput: NotificationInputCommunityNewMember = {
-      userID: agentInfo.userID,
+      userID: newMember.id,
       triggeredBy: agentInfo.userID,
       community: community,
     };
