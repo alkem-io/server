@@ -506,7 +506,8 @@ export class CommunityService {
           await this.communityEventsService.processCommunityNewMemberEvents(
             community,
             displayName,
-            agentInfo
+            agentInfo,
+            user
           );
         }
       }

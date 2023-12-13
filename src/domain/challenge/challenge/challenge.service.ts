@@ -339,11 +339,11 @@ export class ChallengeService {
     return result;
   }
 
-  async getChallengeInNameableScopeOrFail(
+  async getChallengeInNameableScope(
     challengeID: string,
     nameableScopeID: string,
     options?: FindOneOptions<Challenge>
-  ): Promise<IChallenge | never> {
+  ): Promise<IChallenge | null> {
     let challenge: IChallenge | null = null;
     if (challengeID.length == UUID_LENGTH) {
       challenge = await this.challengeRepository.findOne({
@@ -358,6 +358,20 @@ export class ChallengeService {
         ...options,
       });
     }
+
+    return challenge;
+  }
+
+  async getChallengeInNameableScopeOrFail(
+    challengeID: string,
+    nameableScopeID: string,
+    options?: FindOneOptions<Challenge>
+  ): Promise<IChallenge | never> {
+    const challenge = await this.getChallengeInNameableScope(
+      challengeID,
+      nameableScopeID,
+      options
+    );
 
     if (!challenge) {
       throw new EntityNotFoundException(

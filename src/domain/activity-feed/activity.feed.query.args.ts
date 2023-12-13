@@ -2,7 +2,6 @@ import { Field, InputType } from '@nestjs/graphql';
 import { ActivityEventType } from '@common/enums/activity.event.type';
 import { UUID } from '@domain/common/scalars';
 import { ActivityFeedRoles } from './activity.feed.roles.enum';
-import { PaginationInput } from '@core/pagination';
 
 @InputType()
 export class ActivityFeedQueryArgs {
@@ -32,10 +31,4 @@ export class ActivityFeedQueryArgs {
       'Activity from which Spaces to include; Includes all by default.',
   })
   roles?: Array<ActivityFeedRoles>;
-
-  @Field(() => PaginationInput, {
-    nullable: true,
-    description: 'Pagination options.',
-  })
-  pagination?: PaginationInput;
 }
