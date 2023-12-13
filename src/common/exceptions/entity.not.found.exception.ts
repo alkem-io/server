@@ -1,8 +1,8 @@
 import { LogContext, AlkemioErrorStatus } from '@common/enums';
-import { BaseException } from './base.exception';
+import { BaseException, ExceptionDetails } from './base.exception';
 
 export class EntityNotFoundException extends BaseException {
-  constructor(error: string, context: LogContext, code?: AlkemioErrorStatus) {
-    super(error, context, code ?? AlkemioErrorStatus.ENTITY_NOT_FOUND);
+  constructor(error: string, context: LogContext, details?: ExceptionDetails) {
+    super(error, context, AlkemioErrorStatus.ENTITY_NOT_FOUND, details);
   }
 }

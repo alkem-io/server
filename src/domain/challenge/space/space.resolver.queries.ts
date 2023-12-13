@@ -68,8 +68,9 @@ export class SpaceResolverQueries {
     const space = await this.spaceService.getSpaceOrFail(ID);
     if (!space) {
       throw new EntityNotFoundException(
-        `Unable to find Space with ID: '${ID}', requested by user: ${agentInfo.userID}`,
-        LogContext.CHALLENGES
+        `Unable to find Space with ID: '${ID}'`,
+        LogContext.CHALLENGES,
+        { userId: agentInfo.userID }
       );
     }
     return space;

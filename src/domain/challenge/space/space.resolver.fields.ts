@@ -229,8 +229,9 @@ export class SpaceResolverFields {
     );
     if (!challenge) {
       throw new EntityNotFoundException(
-        `Unable to find challenge with ID: ${id} in space with ID '${space.id}', , requested by user: ${agentInfo.userID}`,
-        LogContext.CHALLENGES
+        `Unable to find challenge with ID: '${id}'`,
+        LogContext.CHALLENGES,
+        { challengeId: id, spaceId: space.id, userId: agentInfo.userID }
       );
     }
     return challenge;
@@ -272,8 +273,9 @@ export class SpaceResolverFields {
     );
     if (!opportunity) {
       throw new EntityNotFoundException(
-        `Unable to find Opportunity with ID: ${id} in space with ID '${space.id}', , requested by user: ${agentInfo.userID}`,
-        LogContext.CHALLENGES
+        `Unable to find Opportunity with ID: '${id}'`,
+        LogContext.CHALLENGES,
+        { opportunityId: id, spaceId: space.id, userId: agentInfo.userID }
       );
     }
     return opportunity;
