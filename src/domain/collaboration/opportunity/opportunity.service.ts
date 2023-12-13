@@ -200,11 +200,11 @@ export class OpportunityService {
     return await this.opportunityRepository.save(opportunity);
   }
 
-  async getOpportunityInNameableScopeOrFail(
+  async getOpportunityInNameableScope(
     opportunityID: string,
     nameableScopeID: string,
     options?: FindOneOptions<Opportunity>
-  ): Promise<IOpportunity | never> {
+  ): Promise<IOpportunity | null> {
     let opportunity: IOpportunity | null = null;
     if (opportunityID.length == UUID_LENGTH) {
       opportunity = await this.opportunityRepository.findOne({
@@ -218,13 +218,6 @@ export class OpportunityService {
         where: { nameID: opportunityID, spaceID: nameableScopeID },
         ...options,
       });
-    }
-
-    if (!opportunity) {
-      throw new EntityNotFoundException(
-        `Unable to find Opportunity with ID: ${opportunityID}`,
-        LogContext.OPPORTUNITY
-      );
     }
 
     return opportunity;

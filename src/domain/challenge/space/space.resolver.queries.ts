@@ -1,6 +1,7 @@
-import { UseGuards } from '@nestjs/common';
+import { Inject, LoggerService, UseGuards } from '@nestjs/common';
 import { Args, Query, Resolver } from '@nestjs/graphql';
 import {
+  CurrentUser,
   InnovationHub as InnovationHubDecorator,
   Profiling,
 } from '@src/common/decorators';
@@ -12,10 +13,17 @@ import { InnovationHub } from '@domain/innovation-hub/types';
 import { GraphqlGuard } from '@core/authorization';
 import { PaginatedSpaces, PaginationArgs } from '@core/pagination';
 import { SpaceFilterInput } from '@services/infrastructure/space-filter/dto/space.filter.dto.input';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { AgentInfo } from '@core/authentication/agent-info';
+import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
+import { LogContext } from '@common/enums/logging.context';
 
 @Resolver()
 export class SpaceResolverQueries {
-  constructor(private spaceService: SpaceService) {}
+  constructor(
+    private spaceService: SpaceService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
+  ) {}
 
   @Query(() => [ISpace], {
     nullable: false,
@@ -54,8 +62,17 @@ export class SpaceResolverQueries {
   })
   @Profiling.api
   async space(
-    @Args('ID', { type: () => UUID_NAMEID }) ID: string
+    @Args('ID', { type: () => UUID_NAMEID }) ID: string,
+    @CurrentUser() agentInfo: AgentInfo
   ): Promise<ISpace> {
-    return await this.spaceService.getSpaceOrFail(ID);
+    const space = await this.spaceService.getSpaceOrFail(ID);
+    if (!space) {
+      throw new EntityNotFoundException(
+        `Unable to find Space with ID: '${ID}'`,
+        LogContext.CHALLENGES,
+        { userId: agentInfo.userID }
+      );
+    }
+    return space;
   }
 }
