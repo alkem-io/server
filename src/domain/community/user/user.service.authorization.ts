@@ -57,14 +57,6 @@ export class UserAuthorizationService {
         `Unable to load agent or profile or preferences or storage for User ${user.id} `,
         LogContext.COMMUNITY
       );
-    // NOTE: Clone the authorization policy to ensure the changes are local to profile
-    const clonedAnonymousReadAccessAuthorization =
-      this.authorizationPolicyService.cloneAuthorizationPolicy(
-        user.authorization
-      );
-    // To ensure that profile + context on a space are always publicly visible, even for private spaces
-    clonedAnonymousReadAccessAuthorization.anonymousReadAccess = true;
-
     // Ensure always applying from a clean state
     user.authorization = this.authorizationPolicyService.reset(
       user.authorization
@@ -78,6 +70,13 @@ export class UserAuthorizationService {
       user.authorization,
       user
     );
+    // NOTE: Clone the authorization policy to ensure the changes are local to profile
+    const clonedAnonymousReadAccessAuthorization =
+      this.authorizationPolicyService.cloneAuthorizationPolicy(
+        user.authorization
+      );
+    // To ensure that profile + context on a space are always publicly visible, even for private spaces
+    clonedAnonymousReadAccessAuthorization.anonymousReadAccess = true;
 
     // cascade
     user.profile =
