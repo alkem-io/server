@@ -50,7 +50,7 @@ export class UserResolverMutations {
   ): Promise<IUser> {
     const authorization =
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       authorization,
       AuthorizationPrivilege.CREATE,
