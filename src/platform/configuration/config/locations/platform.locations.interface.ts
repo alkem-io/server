@@ -46,6 +46,12 @@ export abstract class IPlatformLocations {
 
   @Field(() => String, {
     nullable: false,
+    description: 'URL to the blog of the platform',
+  })
+  blog!: string;
+
+  @Field(() => String, {
+    nullable: false,
     description: 'URL for the link Impact in the HomePage of the application',
   })
   impact!: string;
