@@ -392,6 +392,9 @@ platform:
   # About the platform
   about: ${PLATFORM_ABOUT}:https://alkemio.org/about/
 
+  # Blog
+  blog: ${PLATFORM_BLOG}:https://welcome.alkem.io/blog/
+
   # Home page - Impact
   impact: ${PLATFORM_IMPACT}:https://alkemio.org/manifesto
 
