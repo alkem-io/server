@@ -37,13 +37,11 @@ export class OpportunityResolverFields {
     return await this.opportunityService.getInnovationFlow(opportunity.id);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('community', () => ICommunity, {
     nullable: true,
     description: 'The community for the Opportunity.',
   })
-  @Profiling.api
   async community(
     @Parent() opportunity: IOpportunity,
     @Loader(JourneyCommunityLoaderCreator, { parentClassRef: Opportunity })

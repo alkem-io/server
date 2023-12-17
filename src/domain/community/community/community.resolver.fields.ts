@@ -252,7 +252,6 @@ export class CommunityResolverFields {
     nullable: true,
     description: 'The policy that defines the roles for this Community.',
   })
-  @Profiling.api
   async policy(@Parent() community: Community): Promise<ICommunityPolicy> {
     return this.communityService.getCommunityPolicy(community);
   }
@@ -262,7 +261,6 @@ export class CommunityResolverFields {
     nullable: true,
     description: 'The membership status of the currently logged in user.',
   })
-  @Profiling.api
   async myMembershipStatus(
     @CurrentUser() agentInfo: AgentInfo,
     @Parent() community: ICommunity
@@ -276,7 +274,6 @@ export class CommunityResolverFields {
     description:
       'The roles on this community for the currently logged in user.',
   })
-  @Profiling.api
   async myRoles(
     @CurrentUser() agentInfo: AgentInfo,
     @Parent() community: ICommunity
