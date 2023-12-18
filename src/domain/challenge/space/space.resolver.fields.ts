@@ -57,7 +57,6 @@ export class SpaceResolverFields {
     description:
       'Get a Community within the Space. Defaults to the Community for the Space itself.',
   })
-  @Profiling.api
   async community(
     @Parent() space: Space,
     @Args('ID', { type: () => UUID, nullable: true }) ID: string,

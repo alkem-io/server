@@ -36,7 +36,6 @@ export class ChallengeResolverFields {
     nullable: true,
     description: 'The community for the challenge.',
   })
-  @Profiling.api
   async community(
     @Parent() challenge: IChallenge,
     @Loader(JourneyCommunityLoaderCreator, { parentClassRef: Challenge })
