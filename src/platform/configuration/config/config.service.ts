@@ -82,6 +82,7 @@ export class KonfigService {
         support: this.configService.get(ConfigurationTypes.PLATFORM)?.support,
         feedback: this.configService.get(ConfigurationTypes.PLATFORM)?.feedback,
         about: this.configService.get(ConfigurationTypes.PLATFORM)?.about,
+        blog: this.configService.get(ConfigurationTypes.PLATFORM)?.blog,
         impact: this.configService.get(ConfigurationTypes.PLATFORM)?.impact,
         inspiration: this.configService.get(ConfigurationTypes.PLATFORM)
           ?.inspiration,
