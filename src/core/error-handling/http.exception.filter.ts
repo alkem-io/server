@@ -20,9 +20,9 @@ export class HttpExceptionFilter implements ExceptionFilter {
   ) {}
 
   catch(exception: BaseHttpException, host: ArgumentsHost) {
-    const ctx = host.switchToHttp();
-    const response = ctx.getResponse<Response<RestErrorResponse>>();
-    const req = ctx.getRequest<HttpContext['req']>();
+    const httpArguments = host.switchToHttp();
+    const response = httpArguments.getResponse<Response<RestErrorResponse>>();
+    const req = httpArguments.getRequest<HttpContext['req']>();
     const status = exception.getStatus();
 
     exception.details = {
