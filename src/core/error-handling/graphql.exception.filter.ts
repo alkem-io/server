@@ -1,4 +1,4 @@
-import { Catch, Inject, LoggerService } from '@nestjs/common';
+import { ArgumentsHost, Catch, Inject, LoggerService } from '@nestjs/common';
 import { GqlExceptionFilter } from '@nestjs/graphql';
 import { GraphQLError } from 'graphql';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -11,7 +11,13 @@ export class GraphqlExceptionFilter implements GqlExceptionFilter {
     private readonly logger: LoggerService
   ) {}
 
-  catch(exception: BaseException) {
+  catch(exception: BaseException, host: ArgumentsHost) {
+    const httpArguments = host.switchToHttp();
+    const ctx = httpArguments.getNext<IGraphQLContext>();
+    exception.details = {
+      ...exception.details,
+      userId: ctx.req.user.userID,
+    };
     /* add values in 'stack' that you want to include as additional data
       e.g. stack = { code: '123' };
       THE VAR NAME DOES NOT CORRESPOND WITH ITS VALUE OR PURPOSE

@@ -1,9 +1,6 @@
 import { GraphQLError } from 'graphql';
 import { LogContext, AlkemioErrorStatus } from '@common/enums';
-
-export type ExceptionDetails =
-  | string
-  | ({ userId: string } & Record<string, unknown>);
+import { ExceptionDetails } from './exception.details';
 
 export class BaseException extends GraphQLError {
   private readonly exceptionName = this.constructor.name;
