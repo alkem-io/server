@@ -17,7 +17,7 @@ import { Cache, CachingConfig } from 'cache-manager';
 @Injectable()
 export class UrlGeneratorService {
   cacheOptions: CachingConfig = {
-    ttl: 3000, // milliseconds
+    ttl: 300000, // milliseconds
   };
 
   PATH_USER = 'user';
