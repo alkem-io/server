@@ -59,6 +59,7 @@ import {
   HttpExceptionFilter,
   GraphqlExceptionFilter,
 } from '@core/error-handling';
+import { ApolloAuditTrailPlugin } from '@core/plugins/audit-trail';
 import { MeModule } from '@services/api/me';
 import { ExcalidrawServerModule } from '@services/external/excalidraw-backend';
 import { ChatGuidanceModule } from '@services/api/chat-guidance/chat.guidance.module';
@@ -161,6 +162,7 @@ import { ActivityFeedModule } from '@domain/activity-feed';
         fieldResolverEnhancers: ['guards', 'filters'],
         sortSchema: true,
         persistedQueries: false,
+        plugins: [ApolloAuditTrailPlugin()],
         /***
          * graphql-ws requires passing the request object through the context method
          * !!! this is graphql-ws ONLY
