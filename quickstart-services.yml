@@ -310,7 +310,7 @@ services:
   guidance_engine:
     container_name: alkemio_dev_guidance_engine
     hostname: guidance-engine
-    image: alkemio/guidance-engine:v0.4.0
+    image: alkemio/guidance-engine:v0.5.1
     restart: always
     volumes:
        - /dev/shm:/dev/shm
@@ -325,14 +325,11 @@ services:
       - RABBITMQ_USER
       - RABBITMQ_PASSWORD
       - ENVIRONMENT=dev
-      - OPENAI_API_KEY
-      - OPENAI_API_TYPE
+      - EMBEDDINGS_DEPLOYMENT_NAME
+      - AZURE_OPENAI_API_KEY
+      - AZURE_OPENAI_ENDPOINT
       - OPENAI_API_VERSION
-      - OPENAI_API_BASE
       - AI_MODEL_TEMPERATURE
-      - AI_MODEL_NAME
-      - AI_DEPLOYMENT_NAME
-      - AI_EMBEDDINGS_DEPLOYMENT_NAME
       - AI_SOURCE_WEBSITE
       - AI_SOURCE_WEBSITE2
       - AI_WEBSITE_REPO
@@ -340,6 +337,7 @@ services:
       - AI_LOCAL_PATH
       - AI_GITHUB_USER
       - AI_GITHUB_PAT
+      - LLM_DEPLOYMENT_NAME
       - LANGCHAIN_TRACING_V2
       - LANGCHAIN_ENDPOINT
       - LANGCHAIN_API_KEY
