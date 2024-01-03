@@ -58,7 +58,8 @@ export class GuidanceEngineAdapter {
       formattedString = message
         .replace(/\\\\n/g, ' ')
         .replace(/\\\\"/g, '')
-        .replace(/<\|im_end\|>/g, '');
+        .replace(/<\|im_end\|>/g, '')
+        .replace(/content='(.*?)'/g, '$1');
     }
 
     try {
@@ -128,44 +129,14 @@ export class GuidanceEngineAdapter {
   }
 
   private extractMetadata(metadata: string): Source[] {
-    // Use regular expressions to extract metadata sections
-    const metadataMatches = metadata.match(/metadata=\{.*?\}/g);
-
-    if (!metadataMatches) {
-      this.logger.warn?.(
-        `Metadata match not found in: ${metadata}`,
-        LogContext.CHAT_GUIDANCE
-      );
-      return [];
-    }
     // deduplicate sources
     const sourceSet = new Set<string>();
     const metadataObjects: Source[] = [];
 
     // Loop through metadata matches and extract source and title
-    for (const metadataMatch of metadataMatches) {
-      const [, uri] = metadataMatch.match(/'source': '([^']*)'/) ?? [];
-      const [, title] = metadataMatch.match(/'title': '([^']*)'/) ?? [];
-      // if no matches are found log and skip
-      if (!uri && !title) {
-        this.logger.warn?.(
-          `No title or URI found for metadata match in: ${metadataMatch}`,
-          LogContext.CHAT_GUIDANCE
-        );
-        continue;
-      }
-      // log whatever was not found
-      if (!uri) {
-        this.logger.warn?.(
-          `URI match not found in: ${metadataMatch}`,
-          LogContext.CHAT_GUIDANCE
-        );
-      } else if (!title) {
-        this.logger.warn?.(
-          `Title match not found in: ${metadataMatch}`,
-          LogContext.CHAT_GUIDANCE
-        );
-      }
+    for (const metadataMatch of metadata) {
+      const uri = metadataMatch;
+      const title = metadataMatch;
 
       const sourceKey = uri ?? title;
 

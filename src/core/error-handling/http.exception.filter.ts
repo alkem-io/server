@@ -10,6 +10,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Response } from 'express';
 import { BaseHttpException } from '@common/exceptions/http';
 import { RestErrorResponse } from './rest.error.response';
+import { HttpContext } from '@src/types';
 
 @Catch(HttpException)
 export class HttpExceptionFilter implements ExceptionFilter {
@@ -19,9 +20,15 @@ export class HttpExceptionFilter implements ExceptionFilter {
   ) {}
 
   catch(exception: BaseHttpException, host: ArgumentsHost) {
-    const ctx = host.switchToHttp();
-    const response = ctx.getResponse<Response<RestErrorResponse>>();
+    const httpArguments = host.switchToHttp();
+    const response = httpArguments.getResponse<Response<RestErrorResponse>>();
+    const req = httpArguments.getRequest<HttpContext['req']>();
     const status = exception.getStatus();
+
+    exception.details = {
+      ...exception.details,
+      userId: req.user.userID,
+    };
 
     /* add values in 'stack' that you want to include as additional data
      e.g. stack = { code: '123' };
@@ -40,6 +47,8 @@ export class HttpExceptionFilter implements ExceptionFilter {
       timestamp: new Date().toISOString(),
       message: exception.message,
       context: process.env.NODE_ENV !== 'production' ? context : undefined,
+      details:
+        process.env.NODE_ENV !== 'production' ? exception.details : undefined,
       stack:
         process.env.NODE_ENV !== 'production' ? exception.stack : undefined,
     });
