@@ -18,7 +18,7 @@ enum GuidanceEngineEventType {
   RESET = 'reset',
 }
 
-const successfulIngestionResponse = 'Ingest function executed';
+const successfulIngestionResponse = 'Ingest successful';
 const successfulResetResponse = 'Reset function executed';
 
 @Injectable()
@@ -59,7 +59,7 @@ export class GuidanceEngineAdapter {
         .replace(/\\\\n/g, ' ')
         .replace(/\\\\"/g, '')
         .replace(/<\|im_end\|>/g, '')
-        .replace(/content='(.*?)'/g, '$1');
+        .replace(/content=(['"])(.*?)\1/g, '$2');
     }
 
     try {
@@ -107,10 +107,12 @@ export class GuidanceEngineAdapter {
     }
   }
 
-  public async sendIngest(): Promise<boolean> {
+  public async sendIngest(
+    eventData: GuidanceEngineInputBase
+  ): Promise<boolean> {
     const response = this.GuidanceEngineClient.send(
       { cmd: GuidanceEngineEventType.INGEST },
-      {}
+      eventData
     );
 
     try {
