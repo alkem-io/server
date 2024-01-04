@@ -18,7 +18,7 @@ enum GuidanceEngineEventType {
   RESET = 'reset',
 }
 
-const successfulIngestionResponse = 'Ingest function executed';
+const successfulIngestionResponse = 'Ingest successful';
 const successfulResetResponse = 'Reset function executed';
 
 @Injectable()
