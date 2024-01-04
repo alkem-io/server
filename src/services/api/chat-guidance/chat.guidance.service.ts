@@ -35,8 +35,10 @@ export class ChatGuidanceService {
     });
   }
 
-  public async ingest(): Promise<boolean> {
-    return this.guidanceEngineAdapter.sendIngest();
+  public async ingest(agentInfo: AgentInfo): Promise<boolean> {
+    return this.guidanceEngineAdapter.sendIngest({
+      userId: agentInfo.userID,
+    });
   }
 
   public isGuidanceEngineEnabled(): boolean {
