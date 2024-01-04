@@ -310,7 +310,7 @@ services:
   guidance_engine:
     container_name: alkemio_dev_guidance_engine
     hostname: guidance-engine
-    image: alkemio/guidance-engine:v0.5.1
+    image: alkemio/guidance-engine:v0.5.2
     restart: always
     volumes:
        - /dev/shm:/dev/shm
