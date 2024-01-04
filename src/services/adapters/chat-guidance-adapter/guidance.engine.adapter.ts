@@ -59,7 +59,7 @@ export class GuidanceEngineAdapter {
         .replace(/\\\\n/g, ' ')
         .replace(/\\\\"/g, '')
         .replace(/<\|im_end\|>/g, '')
-        .replace(/content=(['"])(.*?)\1/g, '');
+        .replace(/content=(['"])(.*?)\1/g, '$2');
     }
 
     try {
