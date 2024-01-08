@@ -9,5 +9,5 @@ export class UsersQueryArgs extends ContributorQueryArgs {
     description: 'Retrieve the specified users by ID.',
     nullable: true,
   })
-  ids?: string[];
+  IDs?: string[];
 }
