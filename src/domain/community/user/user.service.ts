@@ -627,8 +627,8 @@ export class UserService {
       users = await this.userRepository.findBy({ serviceProfile: false });
     }
 
-    if (args.ids) {
-      users = users.filter(user => args.ids?.includes(user.id));
+    if (args.IDs) {
+      users = users.filter(user => args.IDs?.includes(user.id));
     }
 
     return limitAndShuffle(users, limit, shuffle);
