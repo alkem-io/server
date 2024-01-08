@@ -2,14 +2,24 @@ import { LogContext, ProfileType } from '@common/enums';
 import { ConfigurationTypes } from '@common/enums/configuration.type';
 import { EntityNotFoundException } from '@common/exceptions';
 import { IProfile } from '@domain/common/profile/profile.interface';
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import {
+  CACHE_MANAGER,
+  Inject,
+  Injectable,
+  LoggerService,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { EntityManager } from 'typeorm';
+import { Cache, CachingConfig } from 'cache-manager';
 
 @Injectable()
 export class UrlGeneratorService {
+  cacheOptions: CachingConfig = {
+    ttl: 300000, // milliseconds
+  };
+
   PATH_USER = 'user';
   PATH_ORGANIZATION = 'organization';
   PATH_INNOVATION_LIBRARY = 'innovation-library';
@@ -33,14 +43,45 @@ export class UrlGeneratorService {
     private configService: ConfigService,
     @InjectEntityManager('default')
     private entityManager: EntityManager,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService,
+    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache
   ) {
     this.endpoint_cluster = this.configService.get(
       ConfigurationTypes.HOSTING
     )?.endpoint_cluster;
   }
 
+  private getUrlIdCacheKey(entityId: string): string {
+    return `@url:communicationId:${entityId}`;
+  }
+
+  private async setUrlCache(entityId: string, url: string) {
+    await this.cacheManager.set(
+      this.getUrlIdCacheKey(entityId),
+      url,
+      this.cacheOptions
+    );
+  }
+
+  public async getUrlFromCache(entityId: string): Promise<string | undefined> {
+    const url = await this.cacheManager.get<string>(
+      this.getUrlIdCacheKey(entityId)
+    );
+    if (url) {
+      this.logger.verbose?.(
+        `Using cached url for entity: ${url}`,
+        LogContext.URL_GENERATOR
+      );
+    }
+    return url;
+  }
+
   async generateUrlForOpportunity(opportunityID: string): Promise<string> {
+    const cachedUrl = await this.getUrlFromCache(opportunityID);
+    if (cachedUrl) {
+      return cachedUrl;
+    }
     const opportunityUrlPath = await this.getOpportunityUrlPath(
       this.FIELD_ID,
       opportunityID
@@ -51,10 +92,15 @@ export class UrlGeneratorService {
         LogContext.URL_GENERATOR
       );
     }
+    await this.setUrlCache(opportunityID, opportunityUrlPath);
     return opportunityUrlPath;
   }
 
   async generateUrlForChallenge(challengeID: string): Promise<string> {
+    const cachedUrl = await this.getUrlFromCache(challengeID);
+    if (cachedUrl) {
+      return cachedUrl;
+    }
     const challengeUrlPath = await this.getChallengeUrlPath(
       this.FIELD_ID,
       challengeID
@@ -65,6 +111,7 @@ export class UrlGeneratorService {
         LogContext.URL_GENERATOR
       );
     }
+    await this.setUrlCache(challengeID, challengeUrlPath);
     return challengeUrlPath;
   }
 
@@ -73,6 +120,24 @@ export class UrlGeneratorService {
   }
 
   async generateUrlForProfile(profile: IProfile): Promise<string> {
+    const cachedUrl = await this.getUrlFromCache(profile.id);
+    if (cachedUrl) {
+      return cachedUrl;
+    }
+    const url = await this.generateUrlForProfileNotCached(profile);
+    if (url && url.length > 0) {
+      await this.setUrlCache(profile.id, url);
+    }
+    return url;
+  }
+
+  private async generateUrlForProfileNotCached(
+    profile: IProfile
+  ): Promise<string> {
+    const cachedUrl = await this.getUrlFromCache(profile.id);
+    if (cachedUrl) {
+      return cachedUrl;
+    }
     switch (profile.type) {
       case ProfileType.SPACE:
         const spaceEntityInfo = await this.getNameableEntityInfoOrFail(
