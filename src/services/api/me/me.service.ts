@@ -15,8 +15,7 @@ import { ActivityLogService } from '../activity-log';
 import { AgentInfo } from '@core/authentication';
 import { MyJourneyResults } from './dto/my.journeys.results';
 import { ActivityEventType } from '@common/enums/activity.event.type';
-import { EntityNotInitializedException } from '@common/exceptions';
-import { LogContext } from '@common/enums';
+import { ActivityService } from '@platform/activity/activity.service';
 
 @Injectable()
 export class MeService {
@@ -25,7 +24,8 @@ export class MeService {
     private challengeService: ChallengeService,
     private opportunityService: OpportunityService,
     private rolesService: RolesService,
-    private activityLogService: ActivityLogService
+    private activityLogService: ActivityLogService,
+    private activityService: ActivityService
   ) {}
 
   public async getUserInvitations(
@@ -105,37 +105,42 @@ export class MeService {
 
     // Process spaces, challenges, and opportunities together
     const entitiesToProcess = [...spaces, ...challenges, ...opportunities];
+    const collaborationIDs = [];
+    const collaborationIdToEntity = new Map<
+      string,
+      (typeof entitiesToProcess)[0]
+    >();
 
     for (const entity of entitiesToProcess) {
-      if (!entity.collaboration?.id) {
-        throw new EntityNotInitializedException(
-          `Collaboration not initialized for ${entity.constructor.name} with id: ${entity.id}`,
-          LogContext.ACTIVITY
-        );
+      const collaborationId = entity.collaboration?.id;
+      if (collaborationId) {
+        collaborationIDs.push(collaborationId);
+        collaborationIdToEntity.set(collaborationId, entity);
       }
-      const myActivities = await this.activityLogService.myActivityLog(
-        agentInfo.userID,
-        {
-          collaborationID: entity.collaboration?.id,
-          includeChild: false,
-          limit: 1,
-          types,
-        }
-      );
-
-      myJourneyResults.push({
-        journey: entity,
-        latestActivity: myActivities[0],
-      });
     }
 
-    // Sort myJourneyResults by the newest activity's createdDate in descending order
-    myJourneyResults.sort((a, b) => {
-      const dateA = a.latestActivity?.createdDate || new Date(0);
-      const dateB = b.latestActivity?.createdDate || new Date(0);
-      return dateB.getTime() - dateA.getTime();
-    });
+    // Get all raw activities; limit is used to determine the amount of results
+    const rawActivities =
+      await this.activityService.getActivityForCollaborations(
+        collaborationIDs,
+        { userID: agentInfo.userID, types, limit }
+      );
 
-    return myJourneyResults.slice(0, limit);
+    for (const rawActivity of rawActivities) {
+      const myActivities = await this.activityLogService.activityLog({
+        collaborationID: rawActivity.collaborationID,
+        includeChild: false,
+      });
+
+      const entity = collaborationIdToEntity.get(rawActivity.collaborationID);
+      if (entity) {
+        myJourneyResults.push({
+          journey: entity,
+          latestActivity: myActivities[0],
+        });
+      }
+    }
+
+    return myJourneyResults;
   }
 }

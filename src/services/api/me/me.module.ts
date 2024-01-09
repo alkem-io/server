@@ -11,6 +11,7 @@ import { RolesModule } from '../roles/roles.module';
 import { ChallengeModule } from '@domain/challenge/challenge/challenge.module';
 import { OpportunityModule } from '@domain/collaboration/opportunity/opportunity.module';
 import { ActivityLogModule } from '../activity-log/activity.log.module';
+import { ActivityModule } from '@platform/activity/activity.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { ActivityLogModule } from '../activity-log/activity.log.module';
     OpportunityModule,
     RolesModule,
     ActivityLogModule,
+    ActivityModule,
   ],
   providers: [MeService, MeResolverQueries, MeResolverFields],
   exports: [MeService],
