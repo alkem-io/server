@@ -303,6 +303,9 @@ storage:
     # Timeout to abort the request after a fixed time, in milliseconds.
     timeout: ${IPFS_TIMEOUT}:15000
 
+  local_storage:
+    path: ${LOCAL_STORAGE_PATH}:/storage
+
   # Redis configuration
   redis:
     # Redis host

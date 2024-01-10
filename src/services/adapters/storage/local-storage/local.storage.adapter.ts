@@ -1,18 +1,31 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'crypto';
 import { promisify } from 'util';
-import { writeFile, readFile, unlink } from 'fs';
+import { readFile, unlink, writeFile } from 'fs';
 import { LocalStorageSaveFailedException } from '@common/exceptions/storage/local.storage.save.failed.exception';
-import { LogContext } from '@common/enums';
+import { ConfigurationTypes, LogContext } from '@common/enums';
 import { LocalStorageDeleteFailedException } from '@common/exceptions/storage';
+import { StorageService } from '../storage.service.interface';
+import { StorageServiceType } from '../storage.service.type';
+
 const writeFileAsync = promisify(writeFile);
 const readFileAsync = promisify(readFile);
 const unlinkAsync = promisify(unlink);
 
-const STORAGE_PATH = '/storage'; // todo move to config
-
 @Injectable()
-export class LocalStorageService {
+export class LocalStorageAdapter implements StorageService {
+  private readonly storagePath: string;
+
+  constructor(private configService: ConfigService) {
+    this.storagePath = this.configService.get(
+      ConfigurationTypes.STORAGE
+    )?.local_storage?.path;
+  }
+
+  public getType(): StorageServiceType {
+    return StorageServiceType.LOCAL_STORAGE;
+  }
   // todo: leave it as only Buffer for now; it may need to expand the type
   // so it handles other types of data
   public save(data: Buffer) {
@@ -61,7 +74,7 @@ export class LocalStorageService {
     const fileName = name ?? randomUUID();
 
     try {
-      await writeFileAsync(STORAGE_PATH, buffer);
+      await writeFileAsync(this.storagePath, buffer);
       return fileName;
     } catch (e: any) {
       throw new LocalStorageSaveFailedException(
@@ -69,13 +82,14 @@ export class LocalStorageService {
         LogContext.LOCAL_STORAGE,
         {
           message: e?.message,
+          filePath: this.storagePath,
+          fileName,
         }
       );
     }
   }
-
   // todo: return the correct path; may not be in the correct folder
   private getFilePath(fileName: string): string {
-    return `${STORAGE_PATH}/${fileName}`;
+    return `${this.storagePath}/${fileName}`;
   }
 }
