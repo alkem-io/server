@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ICredential } from '@src/domain';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { groupCredentialsByEntity } from '@services/api/roles/util/group.credentials.by.entity';
@@ -8,24 +8,22 @@ import { ApplicationForRoleResult } from '../roles/dto/roles.dto.result.applicat
 import { InvitationForRoleResult } from '../roles/dto/roles.dto.result.invitation';
 import { ISpace } from '@domain/challenge/space/space.interface';
 import { SpacesQueryArgs } from '@domain/challenge/space/dto/space.args.query.spaces';
-import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
-import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
-import { In } from 'typeorm';
 import { ActivityLogService } from '../activity-log';
 import { AgentInfo } from '@core/authentication';
 import { MyJourneyResults } from './dto/my.journeys.results';
-import { ActivityEventType } from '@common/enums/activity.event.type';
-import { EntityNotInitializedException } from '@common/exceptions';
+import { ActivityService } from '@platform/activity/activity.service';
 import { LogContext } from '@common/enums';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Injectable()
 export class MeService {
   constructor(
     private spaceService: SpaceService,
-    private challengeService: ChallengeService,
-    private opportunityService: OpportunityService,
     private rolesService: RolesService,
-    private activityLogService: ActivityLogService
+    private activityLogService: ActivityLogService,
+    private activityService: ActivityService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService
   ) {}
 
   public async getUserInvitations(
@@ -63,79 +61,32 @@ export class MeService {
 
   public async getMyJourneys(
     agentInfo: AgentInfo,
-    limit = 20,
-    visibilities: SpaceVisibility[] = [
-      SpaceVisibility.ACTIVE,
-      SpaceVisibility.DEMO,
-    ],
-    types?: ActivityEventType[]
+    limit = 20
   ): Promise<MyJourneyResults[]> {
-    const credentialMap = groupCredentialsByEntity(agentInfo.credentials);
-    const spaceIds = Array.from(credentialMap.get('spaces')?.keys() ?? []);
-    const challengeIds = Array.from(
-      credentialMap.get('challenges')?.keys() ?? []
+    const rawActivities = await this.activityService.getMyJourneysActivity(
+      agentInfo.userID,
+      limit
     );
-    const opportunityIds = Array.from(
-      credentialMap.get('opportunities')?.keys() ?? []
-    );
-    const args: SpacesQueryArgs = {
-      IDs: spaceIds,
-      filter: {
-        visibilities,
-      },
-    };
-
-    const spaces = await this.spaceService.getSpaces(args, {
-      relations: { collaboration: true },
-    });
-    const challenges = await this.challengeService.getChallenges({
-      where: { id: In(challengeIds) },
-      relations: {
-        collaboration: true,
-        innovationFlow: true,
-        parentSpace: true,
-      },
-    });
-    const opportunities = await this.opportunityService.getOpportunities({
-      where: { id: In(opportunityIds) },
-      relations: { collaboration: true, innovationFlow: true, challenge: true },
-    });
 
     const myJourneyResults: MyJourneyResults[] = [];
 
-    // Process spaces, challenges, and opportunities together
-    const entitiesToProcess = [...spaces, ...challenges, ...opportunities];
+    for (const rawActivity of rawActivities) {
+      const activityLog =
+        await this.activityLogService.convertRawActivityToResult(rawActivity);
 
-    for (const entity of entitiesToProcess) {
-      if (!entity.collaboration?.id) {
-        throw new EntityNotInitializedException(
-          `Collaboration not initialized for ${entity.constructor.name} with id: ${entity.id}`,
+      if (!activityLog?.journey) {
+        this.logger.warn(
+          `Unable to process activity entry ${rawActivity.id} because it does not have a journey.`,
           LogContext.ACTIVITY
         );
+        continue;
       }
-      const myActivities = await this.activityLogService.myActivityLog(
-        agentInfo.userID,
-        {
-          collaborationID: entity.collaboration?.id,
-          includeChild: false,
-          limit: 1,
-          types,
-        }
-      );
-
       myJourneyResults.push({
-        journey: entity,
-        latestActivity: myActivities[0],
+        journey: activityLog.journey,
+        latestActivity: activityLog,
       });
     }
 
-    // Sort myJourneyResults by the newest activity's createdDate in descending order
-    myJourneyResults.sort((a, b) => {
-      const dateA = a.latestActivity?.createdDate || new Date(0);
-      const dateB = b.latestActivity?.createdDate || new Date(0);
-      return dateB.getTime() - dateA.getTime();
-    });
-
-    return myJourneyResults.slice(0, limit);
+    return myJourneyResults;
   }
 }

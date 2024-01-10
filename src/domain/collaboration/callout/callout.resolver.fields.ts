@@ -43,7 +43,7 @@ export class CalloutResolverFields {
       description: 'The IDs of the Contributions to return',
       nullable: true,
     })
-    ids: string[],
+    IDs: string[],
     @Args({
       name: 'filter',
       type: () => CalloutContributionFilterArgs,
@@ -71,7 +71,7 @@ export class CalloutResolverFields {
     return await this.calloutService.getContributions(
       callout,
       {},
-      ids,
+      IDs,
       filter,
       limit,
       shuffle

@@ -1,6 +1,6 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
+import { EntityManager, In, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { Activity } from './activity.entity';
@@ -12,13 +12,17 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ActivityEventType } from '@common/enums/activity.event.type';
 import { PaginationArgs } from '@core/pagination';
 import { getPaginationResults } from '@core/pagination/pagination.fn';
+import { Collaboration } from '@domain/collaboration/collaboration';
 
 @Injectable()
 export class ActivityService {
   constructor(
     @InjectRepository(Activity)
     private activityRepository: Repository<Activity>,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService,
+    @InjectEntityManager('default')
+    private entityManager: EntityManager
   ) {}
 
   async createActivity(activityData: CreateActivityInput): Promise<IActivity> {
@@ -137,5 +141,54 @@ export class ActivityService {
     }
 
     return entry;
+  }
+
+  public async getMyJourneysActivity(
+    triggeredBy: string,
+    limit: number
+  ): Promise<any> {
+    const activities = await this.activityRepository
+      .createQueryBuilder('activity')
+      .select([
+        'activity.id',
+        'activity.createdDate',
+        'activity.collaborationID',
+        'activity.type',
+        'activity.description',
+        'activity.parentID',
+        'activity.triggeredBy',
+        'activity.resourceID',
+      ])
+      .where('activity.triggeredBy = :triggeredBy', {
+        triggeredBy,
+      })
+      .groupBy('activity.collaborationId')
+      .orderBy('activity.createdDate', 'DESC')
+      .getMany();
+
+    // Get unique collaboration IDs from activities
+    const collaborationIDs = [
+      ...new Set(activities.map(a => a.collaborationID)),
+    ];
+
+    // Query for collaborations
+    const collaborationRepository: Repository<Collaboration> =
+      this.entityManager.getRepository(Collaboration);
+
+    const collaborations: Collaboration[] = await collaborationRepository
+      .createQueryBuilder('collaboration')
+      .select()
+      .where('collaboration.id IN (:...ids)', { ids: collaborationIDs })
+      .getMany();
+
+    // Create a map of collaboration IDs to collaborations
+    const collaborationMap = new Map(collaborations.map(c => [c.id, c]));
+
+    // Filter activities that have a corresponding collaboration
+    const activityData = activities
+      .filter(activity => collaborationMap.has(activity.collaborationID))
+      .slice(0, limit);
+
+    return activityData;
   }
 }
