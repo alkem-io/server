@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ICredential } from '@src/domain';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { groupCredentialsByEntity } from '@services/api/roles/util/group.credentials.by.entity';
@@ -12,6 +12,8 @@ import { ActivityLogService } from '../activity-log';
 import { AgentInfo } from '@core/authentication';
 import { MyJourneyResults } from './dto/my.journeys.results';
 import { ActivityService } from '@platform/activity/activity.service';
+import { LogContext } from '@common/enums';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Injectable()
 export class MeService {
@@ -19,7 +21,9 @@ export class MeService {
     private spaceService: SpaceService,
     private rolesService: RolesService,
     private activityLogService: ActivityLogService,
-    private activityService: ActivityService
+    private activityService: ActivityService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService
   ) {}
 
   public async getUserInvitations(
@@ -71,10 +75,14 @@ export class MeService {
         await this.activityLogService.convertRawActivityToResult(rawActivity);
 
       if (!activityLog?.journey) {
+        this.logger.warn(
+          `Unable to process activity entry ${rawActivity.id} because it does not have a journey.`,
+          LogContext.ACTIVITY
+        );
         continue;
       }
       myJourneyResults.push({
-        journey: activityLog?.journey,
+        journey: activityLog.journey,
         latestActivity: activityLog,
       });
     }
