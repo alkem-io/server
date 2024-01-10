@@ -1,5 +1,4 @@
-// todo: move file
-import { StorageServiceType } from '@services/adapters/storage/storage.service.type';
+import { StorageServiceType } from './storage.service.type';
 
 export interface StorageService {
   getType(): StorageServiceType;

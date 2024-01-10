@@ -1,13 +1,18 @@
+import * as process from 'process';
+import path from 'path';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { randomUUID } from 'crypto';
 import { promisify } from 'util';
-import { readFile, unlink, writeFile } from 'fs';
+import { readFile, unlink, writeFile, existsSync, mkdirSync } from 'fs';
 import { LocalStorageSaveFailedException } from '@common/exceptions/storage/local.storage.save.failed.exception';
 import { ConfigurationTypes, LogContext } from '@common/enums';
-import { LocalStorageDeleteFailedException } from '@common/exceptions/storage';
+import {
+  LocalStorageDeleteFailedException,
+  LocalStorageReadFailedException,
+} from '@common/exceptions/storage';
 import { StorageService } from '../storage.service.interface';
 import { StorageServiceType } from '../storage.service.type';
+import { calculateHash } from '@common/utils';
 
 const writeFileAsync = promisify(writeFile);
 const readFileAsync = promisify(readFile);
@@ -67,22 +72,26 @@ export class LocalStorageAdapter implements StorageService {
     }
   }
 
-  private async saveFromBuffer(
-    buffer: Buffer,
-    name?: string
-  ): Promise<string> | never {
-    const fileName = name ?? randomUUID();
+  private async saveFromBuffer(buffer: Buffer): Promise<string> | never {
+    const fileName = this.getFileName(buffer);
+    const filePath = this.getFilePath(fileName);
+
+    if (existsSync(filePath)) {
+      return fileName;
+    }
+
+    this.ensureStoragePathExists();
 
     try {
-      await writeFileAsync(this.storagePath, buffer);
+      await writeFileAsync(filePath, buffer);
       return fileName;
     } catch (e: any) {
-      throw new LocalStorageSaveFailedException(
-        'Unable to save file',
+      throw new LocalStorageReadFailedException(
+        'Unable to read file',
         LogContext.LOCAL_STORAGE,
         {
           message: e?.message,
-          filePath: this.storagePath,
+          filePath,
           fileName,
         }
       );
@@ -90,6 +99,22 @@ export class LocalStorageAdapter implements StorageService {
   }
   // todo: return the correct path; may not be in the correct folder
   private getFilePath(fileName: string): string {
-    return `${this.storagePath}/${fileName}`;
+    return path.join(this.getPath(), fileName);
+  }
+
+  private getPath() {
+    return path.join(process.cwd(), this.storagePath);
+  }
+
+  private ensureStoragePathExists() {
+    const dir = this.getPath();
+
+    if (!existsSync(dir)) {
+      mkdirSync(dir);
+    }
+  }
+
+  private getFileName(data: Buffer): string {
+    return calculateHash(data);
   }
 }

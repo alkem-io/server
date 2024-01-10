@@ -11,3 +11,4 @@ export * from './async.filter';
 export * from './base64.to.buffer';
 export * from './array.random.element';
 export * from './get.session';
+export * from './calculate.hash';

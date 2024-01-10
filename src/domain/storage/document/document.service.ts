@@ -134,7 +134,7 @@ export class DocumentService {
     document: IDocument
   ): Promise<Readable> | never {
     const content = await this.storageService.read(document.externalID);
-    return Readable.from(content.toJSON().data);
+    return Readable.from(content);
   }
 
   public async updateDocument(
