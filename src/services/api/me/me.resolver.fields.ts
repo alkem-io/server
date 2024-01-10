@@ -14,9 +14,7 @@ import { MeService } from './me.service';
 import { ApplicationForRoleResult } from '../roles/dto/roles.dto.result.application';
 import { InvitationForRoleResult } from '../roles/dto/roles.dto.result.invitation';
 import { LogContext } from '@common/enums';
-import { SpaceFilterInput } from '@services/infrastructure/space-filter/dto/space.filter.dto.input';
 import { MyJourneyResults } from './dto/my.journeys.results';
-import { ActivityEventType } from '@common/enums/activity.event.type';
 
 @Resolver(() => MeQueryResults)
 export class MeResolverFields {
@@ -115,22 +113,8 @@ export class MeResolverFields {
         'The number of Journeys to return; if omitted return latest 20 active Journeys.',
       nullable: true,
     })
-    limit: number,
-    @Args({
-      name: 'types',
-      type: () => [ActivityEventType],
-      description:
-        'Which activity types to use for ordering the data. Journeys with latest activities of the selected type will be returned on top of the array.',
-      nullable: true,
-    })
-    types: ActivityEventType[],
-    @Args('filter', { nullable: true }) filter?: SpaceFilterInput
+    limit: number
   ): Promise<MyJourneyResults[]> {
-    return this.meService.getMyJourneys(
-      agentInfo,
-      limit,
-      filter?.visibilities,
-      types
-    );
+    return this.meService.getMyJourneys(agentInfo, limit);
   }
 }
