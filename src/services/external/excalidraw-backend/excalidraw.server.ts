@@ -36,6 +36,7 @@ import {
   SERVER_SAVE_REQUEST,
   SocketIoServer,
   RemoteSocketIoSocket,
+  BROADCAST_READY,
 } from './types';
 import { CREATE_ROOM, DELETE_ROOM } from './adapters/adapter.event.names';
 import {
@@ -231,6 +232,7 @@ export class ExcalidrawServer {
           socket.on(SERVER_BROADCAST, (roomID: string, data: ArrayBuffer) =>
             serverBroadcastEventHandler(roomID, data, socket)
           );
+          this.wsServer.to(socket.id).emit(BROADCAST_READY);
         }
         this.logger.verbose?.(
           `User '${socket.data.agentInfo.userID}' update flag is '${socket.data.update}'`,
