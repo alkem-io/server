@@ -304,7 +304,8 @@ storage:
     timeout: ${IPFS_TIMEOUT}:15000
 
   local_storage:
-    path: ${LOCAL_STORAGE_PATH}:/storage
+    # Absolute path
+    path: ${LOCAL_STORAGE_PATH}:~/alkemio/data/storage
 
   # Redis configuration
   redis:
