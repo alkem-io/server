@@ -27,7 +27,6 @@ import { WinstonConfigService } from '@src/config/winston.config';
 import { MetadataModule } from '@src/platform/metadata/metadata.module';
 import { SearchModule } from '@services/api/search/search.module';
 import { KonfigModule } from '@src/platform/configuration/config/config.module';
-import { IpfsModule } from '@services/adapters/storage/ipfs/ipfs.module';
 import { print } from 'graphql/language/printer';
 import { WinstonModule } from 'nest-winston';
 import { join } from 'path';
@@ -225,7 +224,6 @@ import { ActivityFeedModule } from '@domain/activity-feed';
     ActivityLogModule,
     RolesModule,
     KonfigModule,
-    IpfsModule,
     AdminCommunicationModule,
     AgentModule,
     MessageModule,
