@@ -252,9 +252,6 @@ export class initialSchema1704960218003 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE \`storage_bucket\` ADD CONSTRAINT \`FK_f2f48b57269987b13b415a00587\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
-    // await queryRunner.query(
-    //   `ALTER TABLE \`storage_bucket\` ADD CONSTRAINT \`FK_11d0ed50a26da5513f7e4347847\` FOREIGN KEY (\`storageAggregatorId\`) REFERENCES \`storage_aggregator\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
-    // );
     await queryRunner.query(
       `ALTER TABLE \`profile\` ADD CONSTRAINT \`FK_a96475631aba7dce41db03cc8b2\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
@@ -780,10 +777,14 @@ export class initialSchema1704960218003 implements MigrationInterface {
       `INSERT INTO platform (id, createdDate, updatedDate, version, authorizationId, libraryId, storageAggregatorId) VALUES ('${platformID}', NOW(), NOW(), 1, '${platformAuthID}', '${libraryID}', '${platformStorageAggregatorID}')`
     );
 
+    await queryRunner.query(
+      `ALTER TABLE \`storage_bucket\` ADD CONSTRAINT \`FK_11d0ed50a26da5513f7e4347847\` FOREIGN KEY (\`storageAggregatorId\`) REFERENCES \`storage_aggregator\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    );
+
     var preferenceDefinitionIds = [...Array(42)].map(id => randomUUID());
 
     await queryRunner.query(
-      `INSERT INTO preference_definition (id, version, definitionSet, groupName, displayName, description, valueType, type) 
+      `INSERT INTO preference_definition (id, version, groupName, displayName, description, valueType, type, definitionSet) 
       VALUES
         ('${preferenceDefinitionIds[0]}',1,'NotificationGlobalAdmin','[Admin] User profile deleted','Receive a notification when a user profile is removed','boolean','NotificationUserRemoved','user'),
         ('${preferenceDefinitionIds[1]}',1,'Notification','Community Application','Receive notification when I apply to join a community','boolean','NotificationApplicationSubmitted','user'),
