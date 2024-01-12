@@ -24,6 +24,7 @@ import {
   authorizeWithRoomAndJoinHandler,
   serverVolatileBroadcastEventHandler,
   checkSessionHandler,
+  requestBroadcastEventHandler,
 } from './utils';
 import {
   CONNECTION,
@@ -36,7 +37,7 @@ import {
   SERVER_SAVE_REQUEST,
   SocketIoServer,
   RemoteSocketIoSocket,
-  BROADCAST_READY,
+  SERVER_REQUEST_BROADCAST,
 } from './types';
 import { CREATE_ROOM, DELETE_ROOM } from './adapters/adapter.event.names';
 import {
@@ -222,6 +223,12 @@ export class ExcalidrawServer {
         (roomID: string, data: ArrayBuffer) =>
           serverVolatileBroadcastEventHandler(roomID, data, socket)
       );
+      // separate channel for sending requests between sockets; available to all sockets, no matter the privileges
+      // socket is sending a request to the server, so the server broadcasts it to all other sockets
+      // the separate channel is required, because not all sockets can broadcast through SERVER_BROADCAST
+      socket.on(SERVER_REQUEST_BROADCAST, (roomID: string, data: ArrayBuffer) =>
+        requestBroadcastEventHandler(roomID, data, socket)
+      );
       // to avoid this problem we can extend the server impl to have a build in
       // auth and handlers to be attached when the socket has been authenticated
       // and authorized
@@ -232,7 +239,6 @@ export class ExcalidrawServer {
           socket.on(SERVER_BROADCAST, (roomID: string, data: ArrayBuffer) =>
             serverBroadcastEventHandler(roomID, data, socket)
           );
-          this.wsServer.to(socket.id).emit(BROADCAST_READY);
         }
         this.logger.verbose?.(
           `User '${socket.data.agentInfo.userID}' update flag is '${socket.data.update}'`,
