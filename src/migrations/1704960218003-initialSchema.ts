@@ -9,6 +9,27 @@ export class initialSchema1704960218003 implements MigrationInterface {
   name = 'initialSchema1704960218003';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
+    const [tablesCount] = await queryRunner.query(
+      `SELECT COUNT(*) AS total_tables
+      FROM INFORMATION_SCHEMA.TABLES
+      WHERE TABLE_SCHEMA = 'alkemio';`
+    );
+
+    // We assume an empty schema has no tables or has only the migrations table
+    // If the schema is empty we exit the migration
+    if (tablesCount.total_tables > 1) {
+      return;
+    }
+
+    // If there are migrations executed on the environment we exit the migration
+    const migrations = await queryRunner.query(
+      `SELECT name FROM migrations_typeorm;`
+    );
+
+    if (migrations.length > 0) {
+      return;
+    }
+
     await queryRunner.query(
       `CREATE TABLE \`authorization_policy\` (\`id\` char(36) NOT NULL, \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), \`version\` int NOT NULL, \`credentialRules\` text NOT NULL, \`privilegeRules\` text NOT NULL, \`verifiedCredentialRules\` text NOT NULL, \`anonymousReadAccess\` tinyint NOT NULL, PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
     );
