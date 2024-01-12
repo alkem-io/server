@@ -3,7 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { promisify } from 'util';
 import { readFile, unlink, writeFile, existsSync, mkdirSync } from 'fs';
-import { LocalStorageSaveFailedException } from '@common/exceptions/storage/local.storage.save.failed.exception';
+import { LocalStorageSaveFailedException } from '@common/exceptions/storage/local-storage/local.storage.save.failed.exception';
 import { ConfigurationTypes, LogContext } from '@common/enums';
 import { calculateBufferHash, pathResolve } from '@common/utils';
 import {

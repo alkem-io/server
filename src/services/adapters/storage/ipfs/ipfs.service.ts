@@ -4,6 +4,8 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ReadStream } from 'fs';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
 import { CID, create, IPFSHTTPClient } from 'ipfs-http-client';
 import { IpfsDeleteFailedException } from '@common/exceptions/ipfs/ipfs.delete.exception';
 import { IpfsGCFailedException } from '@common/exceptions/ipfs/ipfs.gc.exception';
