@@ -324,9 +324,9 @@ export class StorageBucketService {
     );
 
     try {
-      const newDocument = await this.uploadFileAsDocument(
+      const newDocument = await this.uploadFileAsDocumentFromBuffer(
         storageBucket.id,
-        readStream,
+        buffer,
         fileName,
         mimetype,
         userID
