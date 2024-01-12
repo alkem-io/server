@@ -305,7 +305,7 @@ storage:
 
   local_storage:
     # Absolute path
-    path: ${LOCAL_STORAGE_PATH}:~/alkemio/data/storage
+    path: ${LOCAL_STORAGE_PATH}:.storage
 
   # Redis configuration
   redis:
