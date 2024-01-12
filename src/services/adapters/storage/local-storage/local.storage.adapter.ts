@@ -41,13 +41,14 @@ export class LocalStorageAdapter implements StorageService {
     try {
       return await readFileAsync(filePath);
     } catch (e: any) {
-      throw new LocalStorageSaveFailedException(
+      throw new LocalStorageReadFailedException(
         'Unable to read file',
         LogContext.LOCAL_STORAGE,
         {
           message: e?.message,
           filePath,
           fileName,
+          originalError: e,
         }
       );
     }
@@ -66,6 +67,7 @@ export class LocalStorageAdapter implements StorageService {
           message: e?.message,
           filePath,
           fileName,
+          originalError: e,
         }
       );
     }
@@ -83,13 +85,14 @@ export class LocalStorageAdapter implements StorageService {
       await writeFileAsync(filePath, buffer);
       return fileName;
     } catch (e: any) {
-      throw new LocalStorageReadFailedException(
-        'Unable to read file',
+      throw new LocalStorageSaveFailedException(
+        'Unable to save file',
         LogContext.LOCAL_STORAGE,
         {
           message: e?.message,
           filePath,
           fileName,
+          originalError: e,
         }
       );
     }
