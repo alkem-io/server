@@ -104,12 +104,14 @@ export class RoomResolverMutations {
           message,
           agentInfo
         );
-        this.roomServiceEvents.processNotificationPostComment(
-          post,
-          room,
-          message,
-          agentInfo
-        );
+        if (post.createdBy !== agentInfo.userID) {
+          this.roomServiceEvents.processNotificationPostComment(
+            post,
+            room,
+            message,
+            agentInfo
+          );
+        }
         this.roomServiceEvents.processActivityPostComment(
           post,
           room,
