@@ -109,6 +109,14 @@ export const serverVolatileBroadcastEventHandler = (
 ) => {
   socket.volatile.broadcast.to(roomID).emit(CLIENT_BROADCAST, data);
 };
+// broadcasts requests from socket to all other sockets
+export const requestBroadcastEventHandler = (
+  roomID: string,
+  data: ArrayBuffer,
+  socket: SocketIoSocket
+) => {
+  socket.broadcast.to(roomID).emit(CLIENT_BROADCAST, data);
+};
 /* Built-in event for handling socket disconnects */
 export const disconnectingEventHandler = async (
   wsServer: SocketIoServer,

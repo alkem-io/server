@@ -24,6 +24,7 @@ import {
   authorizeWithRoomAndJoinHandler,
   serverVolatileBroadcastEventHandler,
   checkSessionHandler,
+  requestBroadcastEventHandler,
 } from './utils';
 import {
   CONNECTION,
@@ -36,6 +37,7 @@ import {
   SERVER_SAVE_REQUEST,
   SocketIoServer,
   RemoteSocketIoSocket,
+  SERVER_REQUEST_BROADCAST,
 } from './types';
 import { CREATE_ROOM, DELETE_ROOM } from './adapters/adapter.event.names';
 import {
@@ -220,6 +222,12 @@ export class ExcalidrawServer {
         SERVER_VOLATILE_BROADCAST,
         (roomID: string, data: ArrayBuffer) =>
           serverVolatileBroadcastEventHandler(roomID, data, socket)
+      );
+      // A channel where all viewers of the whiteboard can broadcast messages.
+      // Currently used to send requests for missing data, to pull from other whiteboard collaborators.
+      // This channel is needed because not all viewers has 'write' privilege, so they can't use the channel where updates are broadcast.
+      socket.on(SERVER_REQUEST_BROADCAST, (roomID: string, data: ArrayBuffer) =>
+        requestBroadcastEventHandler(roomID, data, socket)
       );
       // to avoid this problem we can extend the server impl to have a build in
       // auth and handlers to be attached when the socket has been authenticated
