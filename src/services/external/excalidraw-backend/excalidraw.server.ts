@@ -223,7 +223,7 @@ export class ExcalidrawServer {
         (roomID: string, data: ArrayBuffer) =>
           serverVolatileBroadcastEventHandler(roomID, data, socket)
       );
-      // separate channel for sending requests between sockets; available to all sockets, no matter the privileges
+      // separate channel for sending requests between sockets; available to all authorized sockets, in all modes
       // socket is sending a request to the server, so the server broadcasts it to all other sockets
       // the separate channel is required, because not all sockets can broadcast through SERVER_BROADCAST
       socket.on(SERVER_REQUEST_BROADCAST, (roomID: string, data: ArrayBuffer) =>
