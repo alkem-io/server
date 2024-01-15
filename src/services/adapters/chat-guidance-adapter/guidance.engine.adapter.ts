@@ -58,8 +58,7 @@ export class GuidanceEngineAdapter {
       formattedString = message
         .replace(/\\\\n/g, ' ')
         .replace(/\\\\"/g, '')
-        .replace(/<\|im_end\|>/g, '')
-        .replace(/content=(['"])(.*?)\1/g, '$2');
+        .replace(/<\|im_end\|>/g, '');
     }
 
     try {
