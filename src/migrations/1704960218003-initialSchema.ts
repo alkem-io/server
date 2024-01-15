@@ -16,8 +16,9 @@ export class initialSchema1704960218003 implements MigrationInterface {
     );
 
     // We assume an empty schema has no tables or has only the migrations table
-    // If the schema is empty we exit the migration
+    // If the schema is not empty we exit the migration
     if (tablesCount.total_tables > 1) {
+      await this.addMissingConstraints(queryRunner);
       return;
     }
 
@@ -27,6 +28,7 @@ export class initialSchema1704960218003 implements MigrationInterface {
     );
 
     if (migrations.length > 0) {
+      await this.addMissingConstraints(queryRunner);
       return;
     }
 
@@ -1906,6 +1908,12 @@ export class initialSchema1704960218003 implements MigrationInterface {
     await queryRunner.query(`DROP TABLE \`tagset_template\``);
     await queryRunner.query(`DROP TABLE \`tagset_template_set\``);
     await queryRunner.query(`DROP TABLE \`authorization_policy\``);
+  }
+
+  private async addMissingConstraints(queryRunner: QueryRunner) {
+    await queryRunner.query(
+      `ALTER TABLE \`storage_bucket\` ADD CONSTRAINT \`FK_11d0ed50a26da5513f7e4347847\` FOREIGN KEY (\`storageAggregatorId\`) REFERENCES \`storage_aggregator\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    );
   }
 
   private async createStorageAggregator(
