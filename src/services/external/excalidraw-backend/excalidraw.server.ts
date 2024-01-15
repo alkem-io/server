@@ -223,9 +223,9 @@ export class ExcalidrawServer {
         (roomID: string, data: ArrayBuffer) =>
           serverVolatileBroadcastEventHandler(roomID, data, socket)
       );
-      // separate channel for sending requests between sockets; available to all authorized sockets, in all modes
-      // socket is sending a request to the server, so the server broadcasts it to all other sockets
-      // the separate channel is required, because not all sockets can broadcast through SERVER_BROADCAST
+      // A channel where all viewers of the whiteboard can broadcast messages.
+      // Currently used to send requests for missing data, to pull from other whiteboard collaborators.
+      // This channel is needed because not all viewers has 'write' privilege, so they can't use the channel where updates are broadcast.
       socket.on(SERVER_REQUEST_BROADCAST, (roomID: string, data: ArrayBuffer) =>
         requestBroadcastEventHandler(roomID, data, socket)
       );
