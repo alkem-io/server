@@ -24,8 +24,6 @@ export class ChatGuidanceService {
       language: chatData.language ?? 'EN',
     });
 
-    this.guidanceEngineAdapter.sendReset({ userId: agentInfo.userID });
-
     return response;
   }
 
