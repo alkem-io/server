@@ -258,7 +258,7 @@ export class CollaborationAuthorizationService {
       POLICY_RULE_COLLABORATION_CREATE
     );
     privilegeRules.push(createPrivilege);
-
+    // todo
     const whiteboardRtEnabled = await this.licenseService.isFeatureFlagEnabled(
       license,
       LicenseFeatureFlagName.WHITEBOART_RT

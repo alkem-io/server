@@ -21,14 +21,14 @@ export const authorizeWithRoomAndJoinHandler = async (
   authorizationService: AuthorizationService,
   logger: LoggerService
 ) => {
-  const whiteboardRt = await whiteboardService.getWhiteboardOrFail(roomID);
+  const whiteboard = await whiteboardService.getWhiteboardOrFail(roomID);
   const agentInfo = socket.data.agentInfo;
 
   if (
-    !canUserRead(authorizationService, agentInfo, whiteboardRt.authorization)
+    !canUserRead(authorizationService, agentInfo, whiteboard.authorization)
   ) {
     logger.error(
-      `Unable to authorize User '${agentInfo.userID}' with Whiteboard: '${whiteboardRt.id}'`,
+      `Unable to authorize User '${agentInfo.userID}' with Whiteboard: '${whiteboard.id}'`,
       undefined,
       LogContext.EXCALIDRAW_SERVER
     );
@@ -41,7 +41,7 @@ export const authorizeWithRoomAndJoinHandler = async (
   socket.data.update = canUserUpdate(
     authorizationService,
     agentInfo,
-    whiteboardRt.authorization
+    whiteboard.authorization
   );
 
   await joinRoomHandler(roomID, socket, wsServer, logger);

@@ -267,7 +267,7 @@ export class ExcalidrawServer {
     const windowStart = windowEnd - this.contributionWindowMs;
 
     const { spaceID } =
-      await this.communityResolver.getCommunityFromWhiteboardRtOrFail(roomId);
+      await this.communityResolver.getCommunityFromWhiteboardOrFail(roomId);
     const wb = await this.whiteboardService.getProfile(roomId);
 
     const sockets = await this.wsServer.in(roomId).fetchSockets();
@@ -276,7 +276,7 @@ export class ExcalidrawServer {
       const lastContributed = socket.data.lastContributed;
       // was the last contribution in that window
       if (lastContributed >= windowStart && windowEnd >= lastContributed) {
-        this.contributionReporter.whiteboardRtContribution(
+        this.contributionReporter.whiteboardContribution(
           {
             id: roomId,
             name: wb.displayName,

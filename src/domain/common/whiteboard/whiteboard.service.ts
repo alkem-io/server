@@ -4,6 +4,7 @@ import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
+  RelationshipNotFoundException,
 } from '@common/exceptions';
 import { LogContext, ProfileType } from '@common/enums';
 import { VisualType } from '@common/enums/visual.type';
@@ -33,72 +34,81 @@ export class WhiteboardService {
   ) {}
 
   async createWhiteboard(
-    whiteboardRtData: CreateWhiteboardInput,
+    whiteboardData: CreateWhiteboardInput,
     storageAggregator: IStorageAggregator,
     userID?: string
   ): Promise<IWhiteboard> {
-    const whiteboardRt: IWhiteboard = Whiteboard.create({
-      ...whiteboardRtData,
+    const whiteboard: IWhiteboard = Whiteboard.create({
+      ...whiteboardData,
     });
-    whiteboardRt.authorization = new AuthorizationPolicy();
-    whiteboardRt.createdBy = userID;
-    whiteboardRt.contentUpdatePolicy = ContentUpdatePolicy.CONTRIBUTORS;
+    whiteboard.authorization = new AuthorizationPolicy();
+    whiteboard.createdBy = userID;
+    whiteboard.contentUpdatePolicy = ContentUpdatePolicy.CONTRIBUTORS;
 
-    whiteboardRt.profile = await this.profileService.createProfile(
-      whiteboardRtData.profileData,
-      ProfileType.WHITEBOARD_RT,
+    whiteboard.profile = await this.profileService.createProfile(
+      whiteboardData.profileData,
+      ProfileType.WHITEBOARD,
       storageAggregator
     );
     await this.profileService.addVisualOnProfile(
-      whiteboardRt.profile,
+      whiteboard.profile,
       VisualType.CARD
     );
-    await this.profileService.addTagsetOnProfile(whiteboardRt.profile, {
+    await this.profileService.addTagsetOnProfile(whiteboard.profile, {
       name: TagsetReservedName.DEFAULT,
       tags: [],
     });
 
-    return this.save(whiteboardRt);
+    return this.save(whiteboard);
   }
 
   async getWhiteboardOrFail(
-    whiteboardRtID: string,
+    whiteboardID: string,
     options?: FindOneOptions<Whiteboard>
   ): Promise<IWhiteboard | never> {
-    const whiteboardRt = await this.whiteboardRepository.findOne({
-      where: { id: whiteboardRtID },
+    const whiteboard = await this.whiteboardRepository.findOne({
+      where: { id: whiteboardID },
       ...options,
     });
 
-    if (!whiteboardRt)
+    if (!whiteboard)
       throw new EntityNotFoundException(
-        `Not able to locate WhiteboardRt with the specified ID: ${whiteboardRtID}`,
+        `Not able to locate Whiteboard with the specified ID: ${whiteboardID}`,
         LogContext.CHALLENGES
       );
-    return whiteboardRt;
+    return whiteboard;
   }
 
-  async deleteWhiteboard(whiteboardRtID: string): Promise<IWhiteboard> {
-    const whiteboard = await this.getWhiteboardOrFail(whiteboardRtID, {
+  async deleteWhiteboard(whiteboardID: string): Promise<IWhiteboard> {
+    const whiteboard = await this.getWhiteboardOrFail(whiteboardID, {
       relations: {
         authorization: true,
         profile: true,
       },
     });
 
-    if (whiteboard.profile) {
-      await this.profileService.deleteProfile(whiteboard.profile.id);
+    if (!whiteboard.profile) {
+      throw new RelationshipNotFoundException(
+        `Profile not found on whiteboard: '${whiteboard.id}'`,
+        LogContext.CHALLENGES
+      );
     }
 
-    if (whiteboard.authorization) {
-      await this.authorizationPolicyService.delete(whiteboard.authorization);
+    if (!whiteboard.authorization) {
+      throw new RelationshipNotFoundException(
+        `Authorization not found on whiteboard: '${whiteboard.id}'`,
+        LogContext.CHALLENGES
+      );
     }
 
-    const deletedWhiteboardRt = await this.whiteboardRepository.remove(
+    await this.profileService.deleteProfile(whiteboard.profile.id);
+    await this.authorizationPolicyService.delete(whiteboard.authorization);
+
+    const deletedWhiteboard = await this.whiteboardRepository.remove(
       whiteboard as Whiteboard
     );
-    deletedWhiteboardRt.id = whiteboardRtID;
-    return deletedWhiteboardRt;
+    deletedWhiteboard.id = whiteboardID;
+    return deletedWhiteboard;
   }
 
   async updateWhiteboard(
@@ -171,7 +181,7 @@ export class WhiteboardService {
 
     if (!whiteboardLoaded.profile)
       throw new EntityNotFoundException(
-        `WhiteboardRt profile not initialised: ${whiteboardId}`,
+        `Whiteboard profile not initialised: ${whiteboardId}`,
         LogContext.COLLABORATION
       );
 

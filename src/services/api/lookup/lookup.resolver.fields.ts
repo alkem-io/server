@@ -324,23 +324,21 @@ export class LookupResolverFields {
   @UseGuards(GraphqlGuard)
   @ResolveField(() => IWhiteboard, {
     nullable: true,
-    description: 'Lookup the specified WhiteboardRt',
+    description: 'Lookup the specified Whiteboard',
   })
-  async whiteboardRt(
+  async whiteboard(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<IWhiteboard> {
-    const whiteboardRt = await this.whiteboardService.getWhiteboardOrFail(
-      id
-    );
+    const whiteboard = await this.whiteboardService.getWhiteboardOrFail(id);
     this.authorizationService.grantAccessOrFail(
       agentInfo,
-      whiteboardRt.authorization,
+      whiteboard.authorization,
       AuthorizationPrivilege.READ,
-      `lookup WhiteboardRt: ${whiteboardRt.nameID}`
+      `lookup Whiteboard: ${whiteboard.nameID}`
     );
 
-    return whiteboardRt;
+    return whiteboard;
   }
 
   @UseGuards(GraphqlGuard)

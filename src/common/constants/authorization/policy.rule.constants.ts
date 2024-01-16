@@ -18,9 +18,9 @@ export const POLICY_RULE_CALLOUT_CONTRIBUTE = 'policyRule-calloutContribute';
 export const POLICY_RULE_COLLABORATION_CREATE =
   'policyRule-collaborationCreate';
 export const POLICY_RULE_COLLABORATION_WHITEBOARD_RT_CREATE =
-  'policyRule-collaborationWhiteboardRtCreate';
+  'policyRule-collaborationWhiteboardRtCreate'; // todo
 export const POLICY_RULE_COLLABORATION_WHITEBOARD_RT_CONTRIBUTORS_CREATE =
-  'policyRule-collaborationWhiteboardRtContributorsCreate';
+  'policyRule-collaborationWhiteboardRtContributorsCreate'; // todo
 export const POLICY_RULE_COMMUNITY_INVITE = 'policyRule-communityInvite';
 export const POLICY_RULE_STORAGE_BUCKET_UPDATER_FILE_UPLOAD =
   'policyRule-storageBucketUpdaterFileUpload';

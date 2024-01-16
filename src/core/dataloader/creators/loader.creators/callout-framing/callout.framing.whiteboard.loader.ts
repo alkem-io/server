@@ -16,7 +16,7 @@ export class CalloutFramingWhiteboardLoaderCreator
     return createTypedRelationDataLoader(
       this.manager,
       CalloutFraming,
-      { whiteboardRt: true },
+      { whiteboard: true },
       this.constructor.name,
       options
     );

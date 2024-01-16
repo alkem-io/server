@@ -8,7 +8,6 @@ export enum ProfileType {
   CALLOUT_TEMPLATE = 'callout-template',
   CALLOUT_FRAMING = 'callout-framing',
   POST = 'post',
-  WHITEBOARD_RT = 'whiteboard-rt',
   WHITEBOARD = 'whiteboard',
   DISCUSSION = 'discussion',
   ORGANIZATION = 'organization',

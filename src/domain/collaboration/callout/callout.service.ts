@@ -240,8 +240,7 @@ export class CalloutService {
     if (calloutUpdateData.framing) {
       callout.framing = await this.calloutFramingService.updateCalloutFraming(
         callout.framing,
-        calloutUpdateData.framing,
-        agentInfo
+        calloutUpdateData.framing
       );
     }
 

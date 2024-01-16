@@ -56,14 +56,14 @@ export const getUserInfo = async (
 export const canUserRead = (
   authorizationService: AuthorizationService,
   agentInfo: AgentInfo,
-  wbRtAuthorization?: IAuthorizationPolicy
+  wbAuthorization?: IAuthorizationPolicy
 ): boolean => {
   try {
     authorizationService.grantAccessOrFail(
       agentInfo,
-      wbRtAuthorization,
+      wbAuthorization,
       AuthorizationPrivilege.READ,
-      'access whiteboardRt'
+      'access whiteboard'
     );
   } catch (e) {
     return false;
@@ -74,14 +74,14 @@ export const canUserRead = (
 export const canUserUpdate = (
   authorizationService: AuthorizationService,
   agentInfo: AgentInfo,
-  wbRtAuthorization?: IAuthorizationPolicy
+  wbAuthorization?: IAuthorizationPolicy
 ): boolean => {
   try {
     authorizationService.grantAccessOrFail(
       agentInfo,
-      wbRtAuthorization,
+      wbAuthorization,
       AuthorizationPrivilege.UPDATE_CONTENT,
-      'access whiteboardRt'
+      'access whiteboard'
     );
   } catch (e) {
     return false;

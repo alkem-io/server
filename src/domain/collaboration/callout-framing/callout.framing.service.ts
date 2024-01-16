@@ -234,23 +234,6 @@ export class CalloutFramingService {
     return calloutFraming.whiteboard;
   }
 
-  public async getWhiteboardRt(
-    calloutFramingInput: ICalloutFraming,
-    relations?: FindOptionsRelations<ICalloutFraming>
-  ): Promise<IWhiteboard | null> {
-    const calloutFraming = await this.getCalloutFramingOrFail(
-      calloutFramingInput.id,
-      {
-        relations: { whiteboard: true, ...relations },
-      }
-    );
-    if (!calloutFraming.whiteboard) {
-      return null;
-    }
-
-    return calloutFraming.whiteboard;
-  }
-
   updateDisplayLocationTagsetValue(
     framing: ICalloutFraming,
     group: CalloutDisplayLocation

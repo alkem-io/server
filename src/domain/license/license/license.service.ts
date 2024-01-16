@@ -33,6 +33,7 @@ export class LicenseService {
     // default to active space
     license.visibility = SpaceVisibility.ACTIVE;
 
+    // todo
     // Set the feature flags
     const whiteboardRtFeatureFlag: CreateFeatureFlagInput = {
       name: LicenseFeatureFlagName.WHITEBOART_RT,

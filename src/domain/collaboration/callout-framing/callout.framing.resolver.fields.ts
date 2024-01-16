@@ -35,9 +35,9 @@ export class CalloutFramingResolverFields {
     description: 'The Whiteboard for framing the associated Callout.',
   })
   @Profiling.api
-  whiteboardRt(
+  whiteboard(
     @Parent() calloutFraming: ICalloutFraming
   ): Promise<IWhiteboard | null> {
-    return this.calloutFramingService.getWhiteboardRt(calloutFraming);
+    return this.calloutFramingService.getWhiteboard(calloutFraming);
   }
 }

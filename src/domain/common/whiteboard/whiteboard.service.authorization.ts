@@ -27,46 +27,44 @@ export class WhiteboardAuthorizationService {
   ) {}
 
   async applyAuthorizationPolicy(
-    whiteboardRt: IWhiteboard,
+    whiteboard: IWhiteboard,
     parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<IWhiteboard> {
-    whiteboardRt.authorization =
+    whiteboard.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
-        whiteboardRt.authorization,
+        whiteboard.authorization,
         parentAuthorization
       );
 
-    whiteboardRt.authorization = this.appendCredentialRules(whiteboardRt);
-    whiteboardRt.authorization = this.appendPrivilegeRules(
-      whiteboardRt.authorization,
-      whiteboardRt
+    whiteboard.authorization = this.appendCredentialRules(whiteboard);
+    whiteboard.authorization = this.appendPrivilegeRules(
+      whiteboard.authorization,
+      whiteboard
     );
 
-    whiteboardRt.profile = await this.whiteboardService.getProfile(
-      whiteboardRt.id
-    );
-    whiteboardRt.profile =
+    whiteboard.profile = await this.whiteboardService.getProfile(whiteboard.id);
+    whiteboard.profile =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
-        whiteboardRt.profile,
-        whiteboardRt.authorization
+        whiteboard.profile,
+        whiteboard.authorization
       );
 
-    return this.whiteboardService.save(whiteboardRt);
+    return this.whiteboardService.save(whiteboard);
   }
 
   private appendCredentialRules(
-    whiteboardRt: IWhiteboard
+    whiteboard: IWhiteboard
   ): IAuthorizationPolicy {
-    const authorization = whiteboardRt.authorization;
+    const authorization = whiteboard.authorization;
     if (!authorization)
       throw new EntityNotInitializedException(
-        `Authorization definition not found for WhiteboardRt: ${whiteboardRt.id}`,
+        `Authorization definition not found for Whiteboard: ${whiteboard.id}`,
         LogContext.COLLABORATION
       );
 
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
-    if (whiteboardRt.createdBy) {
+    if (whiteboard.createdBy) {
       const manageWhiteboardCreatedByPolicy =
         this.authorizationPolicyService.createCredentialRule(
           [
@@ -80,7 +78,7 @@ export class WhiteboardAuthorizationService {
           [
             {
               type: AuthorizationCredential.USER_SELF_MANAGEMENT,
-              resourceID: whiteboardRt.createdBy,
+              resourceID: whiteboard.createdBy,
             },
           ],
           CREDENTIAL_RULE_WHITEBOARD_CREATED_BY
@@ -96,11 +94,11 @@ export class WhiteboardAuthorizationService {
 
   private appendPrivilegeRules(
     authorization: IAuthorizationPolicy,
-    whiteboardRt: IWhiteboard
+    whiteboard: IWhiteboard
   ): IAuthorizationPolicy {
     const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
 
-    switch (whiteboardRt.contentUpdatePolicy) {
+    switch (whiteboard.contentUpdatePolicy) {
       case ContentUpdatePolicy.OWNER:
         break; // covered via dedicated rule above
       case ContentUpdatePolicy.ADMINS:
