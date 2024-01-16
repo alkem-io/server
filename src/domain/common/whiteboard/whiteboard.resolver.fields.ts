@@ -2,42 +2,42 @@ import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Profiling } from '@src/common/decorators';
-import { IWhiteboardCheckout } from '../whiteboard-checkout/whiteboard.checkout.interface';
-import { IWhiteboard } from './whiteboard.interface';
 import { UseGuards } from '@nestjs/common/decorators/core/use-guards.decorator';
 import { GraphqlGuard } from '@src/core/authorization/graphql.guard';
 import { IUser } from '@domain/community/user/user.interface';
 import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions';
-import { IProfile } from '../profile/profile.interface';
 import { Loader } from '@core/dataloader/decorators';
+import { IProfile } from '../profile/profile.interface';
+import { IWhiteboard } from './whiteboard.interface';
 import {
-  CheckoutLoaderCreator,
   ProfileLoaderCreator,
   UserLoaderCreator,
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
-import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
+import { Whiteboard } from './whiteboard.entity';
+import { WhiteboardService } from './whiteboard.service';
 
 @Resolver(() => IWhiteboard)
 export class WhiteboardResolverFields {
   constructor(
+    private whiteboardService: WhiteboardService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
 
   @ResolveField('createdBy', () => IUser, {
     nullable: true,
-    description: 'The user that created this Whiteboard',
+    description: 'The user that created this WhiteboardRt',
   })
   async createdBy(
-    @Parent() whiteboard: IWhiteboard,
+    @Parent() whiteboardRt: IWhiteboard,
     @Loader(UserLoaderCreator, { resolveToNull: true }) loader: ILoader<IUser>
   ): Promise<IUser | null> {
-    const createdBy = whiteboard.createdBy;
+    const createdBy = whiteboardRt.createdBy;
     if (!createdBy) {
       this.logger?.warn(
-        `CreatedBy not set on Whiteboard with id ${whiteboard.id}`,
+        `CreatedBy not set on WhiteboardRt with id ${whiteboardRt.id}`,
         LogContext.COLLABORATION
       );
       return null;
@@ -54,7 +54,7 @@ export class WhiteboardResolverFields {
     } catch (e: unknown) {
       if (e instanceof EntityNotFoundException) {
         this.logger?.warn(
-          `createdBy '${createdBy}' unable to be resolved when resolving whiteboard '${whiteboard.id}'`,
+          `createdBy '${createdBy}' unable to be resolved when resolving whiteboardRt '${whiteboardRt.id}'`,
           LogContext.COLLABORATION
         );
         return null;
@@ -67,27 +67,14 @@ export class WhiteboardResolverFields {
   @UseGuards(GraphqlGuard)
   @ResolveField('profile', () => IProfile, {
     nullable: false,
-    description: 'The Profile for this Whiteboard.',
+    description: 'The Profile for this WhiteboardRt.',
   })
   @Profiling.api
   async profile(
-    @Parent() whiteboard: IWhiteboard,
+    @Parent() whiteboardRt: IWhiteboard,
     @Loader(ProfileLoaderCreator, { parentClassRef: Whiteboard })
     loader: ILoader<IProfile>
   ): Promise<IProfile> {
-    return loader.load(whiteboard.id);
-  }
-
-  @ResolveField('checkout', () => IWhiteboardCheckout, {
-    nullable: true,
-    description: 'The checkout out state of this Whiteboard.',
-  })
-  @Profiling.api
-  async checkout(
-    @Parent() whiteboard: IWhiteboard,
-    @Loader(CheckoutLoaderCreator, { parentClassRef: Whiteboard })
-    loader: ILoader<IWhiteboardCheckout>
-  ) {
-    return loader.load(whiteboard.id);
+    return loader.load(whiteboardRt.id);
   }
 }

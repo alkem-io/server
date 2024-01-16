@@ -3,8 +3,8 @@ import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { createTypedRelationDataLoader } from '../../../utils';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
-import { IWhiteboard } from '@domain/common/whiteboard';
 import { CalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.entity';
+import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 
 @Injectable()
 export class CalloutFramingWhiteboardLoaderCreator
@@ -16,7 +16,7 @@ export class CalloutFramingWhiteboardLoaderCreator
     return createTypedRelationDataLoader(
       this.manager,
       CalloutFraming,
-      { whiteboard: true },
+      { whiteboardRt: true },
       this.constructor.name,
       options
     );

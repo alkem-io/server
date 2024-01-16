@@ -1,5 +1,5 @@
 import { LoggerService } from '@nestjs/common';
-import { WhiteboardRtService } from '@domain/common/whiteboard-rt';
+import { WhiteboardService } from '@domain/common/whiteboard';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { LogContext } from '@common/enums';
 import {
@@ -17,11 +17,11 @@ export const authorizeWithRoomAndJoinHandler = async (
   roomID: string,
   socket: SocketIoSocket,
   wsServer: SocketIoServer,
-  whiteboardRtService: WhiteboardRtService,
+  whiteboardService: WhiteboardService,
   authorizationService: AuthorizationService,
   logger: LoggerService
 ) => {
-  const whiteboardRt = await whiteboardRtService.getWhiteboardRtOrFail(roomID);
+  const whiteboardRt = await whiteboardService.getWhiteboardOrFail(roomID);
   const agentInfo = socket.data.agentInfo;
 
   if (

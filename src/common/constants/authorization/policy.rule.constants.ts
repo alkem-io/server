@@ -1,9 +1,7 @@
 export const POLICY_RULE_SPACE_CREATE_CHALLENGE =
   'policyRule-spaceCreateChallenge';
-export const POLICY_RULE_WHITEBOARD_CONTENT_UPDATE =
-  'policyRule-whiteboardContentUpdate';
 export const POLICY_RULE_WHITEBOARD_RT_CONTENT_UPDATE =
-  'policyRule-whiteboardRtContentUpdate';
+  'policyRule-whiteboardRtContentUpdate'; // todo
 export const POLICY_RULE_VISUAL_UPDATE = 'policyRule-visualUpdate';
 export const POLICY_RULE_WHITEBOARD_CONTRIBUTE =
   'policyRule-whiteboardContribute';

@@ -8,9 +8,8 @@ import { Loader } from '@core/dataloader/decorators';
 import { CalloutFraming } from './callout.framing.entity';
 import { ProfileLoaderCreator } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
-import { IWhiteboard } from '@domain/common/whiteboard';
 import { CalloutFramingService } from './callout.framing.service';
-import { IWhiteboardRt } from '@domain/common/whiteboard-rt/whiteboard.rt.interface';
+import { IWhiteboard } from '@domain/common/whiteboard/types';
 
 @Resolver(() => ICalloutFraming)
 export class CalloutFramingResolverFields {
@@ -36,21 +35,9 @@ export class CalloutFramingResolverFields {
     description: 'The Whiteboard for framing the associated Callout.',
   })
   @Profiling.api
-  async whiteboard(
+  whiteboardRt(
     @Parent() calloutFraming: ICalloutFraming
   ): Promise<IWhiteboard | null> {
-    return await this.calloutFramingService.getWhiteboard(calloutFraming);
-  }
-
-  @UseGuards(GraphqlGuard)
-  @ResolveField('whiteboardRt', () => IWhiteboardRt, {
-    nullable: true,
-    description: 'The WhiteboardRt for framing the associated Callout.',
-  })
-  @Profiling.api
-  async whiteboardRt(
-    @Parent() calloutFraming: ICalloutFraming
-  ): Promise<IWhiteboardRt | null> {
-    return await this.calloutFramingService.getWhiteboardRt(calloutFraming);
+    return this.calloutFramingService.getWhiteboardRt(calloutFraming);
   }
 }

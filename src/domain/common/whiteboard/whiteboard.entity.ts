@@ -6,16 +6,11 @@ import {
   BeforeUpdate,
   Column,
   Entity,
-  JoinColumn,
-  OneToOne,
 } from 'typeorm';
-import { IWhiteboard } from './whiteboard.interface';
-import { WhiteboardCheckout } from '../whiteboard-checkout/whiteboard.checkout.entity';
 import { compressText, decompressText } from '@common/utils/compression.util';
+import { IWhiteboard } from './whiteboard.interface';
 import { NameableEntity } from '../entity/nameable-entity/nameable.entity';
-
-export const EMPTY_WHITEBOARD_CONTENT =
-  '{\n  "type": "excalidraw",\n  "version": 2,\n  "source": "",\n  "elements": [],\n  "appState": {\n    "gridSize": 20,\n    "viewBackgroundColor": "#ffffff"\n  },\n  "files": {}\n}';
+import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
 
 @Entity()
 export class Whiteboard extends NameableEntity implements IWhiteboard {
@@ -26,7 +21,7 @@ export class Whiteboard extends NameableEntity implements IWhiteboard {
 
   @BeforeInsert()
   @BeforeUpdate()
-  async compressContent() {
+  async compressValue() {
     if (this.content !== '') {
       this.content = await compressText(this.content);
     }
@@ -34,7 +29,7 @@ export class Whiteboard extends NameableEntity implements IWhiteboard {
   @AfterInsert()
   @AfterUpdate()
   @AfterLoad()
-  async decompressContent() {
+  async decompressValue() {
     if (this.content !== '') {
       this.content = await decompressText(this.content);
     }
@@ -46,11 +41,10 @@ export class Whiteboard extends NameableEntity implements IWhiteboard {
   @Column('char', { length: 36, nullable: true })
   createdBy!: string;
 
-  @OneToOne(() => WhiteboardCheckout, {
-    eager: false,
-    cascade: true,
-    onDelete: 'SET NULL',
+  @Column('varchar', {
+    length: 255,
+    nullable: false,
+    default: ContentUpdatePolicy.ADMINS,
   })
-  @JoinColumn()
-  checkout?: WhiteboardCheckout;
+  contentUpdatePolicy!: ContentUpdatePolicy;
 }

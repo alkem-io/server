@@ -13,7 +13,7 @@ import { EXCALIDRAW_SERVER, UUID_LENGTH } from '@common/constants';
 import { arrayRandomElement } from '@common/utils';
 import { AuthenticationService } from '@core/authentication/authentication.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { WhiteboardRtService } from '@domain/common/whiteboard-rt';
+import { WhiteboardService } from '@domain/common/whiteboard';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import {
@@ -75,7 +75,7 @@ export class ExcalidrawServer {
     private configService: ConfigService,
     private authService: AuthenticationService,
     private authorizationService: AuthorizationService,
-    private whiteboardRtService: WhiteboardRtService,
+    private whiteboardService: WhiteboardService,
     private contributionReporter: ContributionReporterService,
     private communityResolver: CommunityResolverService
   ) {
@@ -194,7 +194,7 @@ export class ExcalidrawServer {
             roomID,
             socket,
             this.wsServer,
-            this.whiteboardRtService,
+            this.whiteboardService,
             this.authorizationService,
             this.logger
           )
@@ -268,7 +268,7 @@ export class ExcalidrawServer {
 
     const { spaceID } =
       await this.communityResolver.getCommunityFromWhiteboardRtOrFail(roomId);
-    const wb = await this.whiteboardRtService.getProfile(roomId);
+    const wb = await this.whiteboardService.getProfile(roomId);
 
     const sockets = await this.wsServer.in(roomId).fetchSockets();
 

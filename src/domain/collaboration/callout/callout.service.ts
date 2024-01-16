@@ -146,7 +146,7 @@ export class CalloutService {
 
     if (
       calloutData.type == CalloutType.WHITEBOARD_RT &&
-      !calloutData.framing.whiteboardRt
+      !calloutData.framing.whiteboard
     ) {
       throw new ValidationException(
         'Please provide a whiteboard for real time',

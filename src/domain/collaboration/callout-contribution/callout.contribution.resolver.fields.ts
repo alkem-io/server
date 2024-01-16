@@ -3,7 +3,7 @@ import { Inject, UseGuards } from '@nestjs/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { ICalloutContribution } from './callout.contribution.interface';
 import { Profiling } from '@common/decorators';
-import { IWhiteboard } from '@domain/common/whiteboard';
+import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 import { CalloutContributionService } from './callout.contribution.service';
 import { IReference } from '@domain/common/reference';
 import { IPost } from '../post/post.interface';

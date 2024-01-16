@@ -6,96 +6,85 @@ import {
   EntityNotInitializedException,
 } from '@common/exceptions';
 import { LogContext, ProfileType } from '@common/enums';
+import { VisualType } from '@common/enums/visual.type';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
+import { UpdateWhiteboardContentInput } from './dto/whiteboard.dto.update.content';
+import { ExcalidrawContent } from '@common/interfaces';
+import { IProfile } from '@domain/common/profile';
+import { ProfileDocumentsService } from '@domain/profile-documents/profile.documents.service';
+import { AuthorizationPolicy } from '../authorization-policy/authorization.policy.entity';
+import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
+import { ProfileService } from '../profile/profile.service';
 import { Whiteboard } from './whiteboard.entity';
 import { IWhiteboard } from './whiteboard.interface';
 import { CreateWhiteboardInput } from './dto/whiteboard.dto.create';
-import { AuthorizationPolicy } from '../authorization-policy/authorization.policy.entity';
-import { WhiteboardCheckoutService } from '../whiteboard-checkout/whiteboard.checkout.service';
 import { UpdateWhiteboardInput } from './dto/whiteboard.dto.update';
-import { IWhiteboardCheckout } from '../whiteboard-checkout/whiteboard.checkout.interface';
-import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
-import { AgentInfo } from '@core/authentication';
-import { IProfile } from '../profile/profile.interface';
-import { ProfileService } from '../profile/profile.service';
-import { VisualType } from '@common/enums/visual.type';
-import { IVisual } from '../visual';
-import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { ExcalidrawContent } from '@common/interfaces';
-import { ProfileDocumentsService } from '@domain/profile-documents/profile.documents.service';
 
 @Injectable()
 export class WhiteboardService {
   constructor(
     @InjectRepository(Whiteboard)
     private whiteboardRepository: Repository<Whiteboard>,
-    private whiteboardCheckoutService: WhiteboardCheckoutService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private profileService: ProfileService,
     private profileDocumentsService: ProfileDocumentsService
   ) {}
 
   async createWhiteboard(
-    whiteboardData: CreateWhiteboardInput,
+    whiteboardRtData: CreateWhiteboardInput,
     storageAggregator: IStorageAggregator,
     userID?: string
   ): Promise<IWhiteboard> {
-    const whiteboard: IWhiteboard = Whiteboard.create({ ...whiteboardData });
-    whiteboard.authorization = new AuthorizationPolicy();
-    whiteboard.createdBy = userID;
+    const whiteboardRt: IWhiteboard = Whiteboard.create({
+      ...whiteboardRtData,
+    });
+    whiteboardRt.authorization = new AuthorizationPolicy();
+    whiteboardRt.createdBy = userID;
+    whiteboardRt.contentUpdatePolicy = ContentUpdatePolicy.CONTRIBUTORS;
 
-    whiteboard.profile = await this.profileService.createProfile(
-      whiteboardData.profileData,
-      ProfileType.WHITEBOARD,
+    whiteboardRt.profile = await this.profileService.createProfile(
+      whiteboardRtData.profileData,
+      ProfileType.WHITEBOARD_RT,
       storageAggregator
     );
     await this.profileService.addVisualOnProfile(
-      whiteboard.profile,
+      whiteboardRt.profile,
       VisualType.CARD
     );
-    await this.profileService.addTagsetOnProfile(whiteboard.profile, {
+    await this.profileService.addTagsetOnProfile(whiteboardRt.profile, {
       name: TagsetReservedName.DEFAULT,
       tags: [],
     });
 
-    // get the id assigned
-    const savedWhiteboard = await this.save(whiteboard);
-
-    whiteboard.checkout =
-      await this.whiteboardCheckoutService.createWhiteboardCheckout({
-        whiteboardID: savedWhiteboard.id,
-      });
-
-    return await this.save(whiteboard);
+    return this.save(whiteboardRt);
   }
 
   async getWhiteboardOrFail(
-    whiteboardID: string,
+    whiteboardRtID: string,
     options?: FindOneOptions<Whiteboard>
   ): Promise<IWhiteboard | never> {
-    const whiteboard = await this.whiteboardRepository.findOne({
-      where: {
-        id: whiteboardID,
-      },
+    const whiteboardRt = await this.whiteboardRepository.findOne({
+      where: { id: whiteboardRtID },
       ...options,
     });
 
-    if (!whiteboard)
+    if (!whiteboardRt)
       throw new EntityNotFoundException(
-        `Not able to locate Whiteboard with the specified ID: ${whiteboardID}`,
+        `Not able to locate WhiteboardRt with the specified ID: ${whiteboardRtID}`,
         LogContext.CHALLENGES
       );
-    return whiteboard;
+    return whiteboardRt;
   }
 
-  async deleteWhiteboard(whiteboardID: string): Promise<IWhiteboard> {
-    const whiteboard = await this.getWhiteboardOrFail(whiteboardID, {
-      relations: { checkout: true, profile: true },
+  async deleteWhiteboard(whiteboardRtID: string): Promise<IWhiteboard> {
+    const whiteboard = await this.getWhiteboardOrFail(whiteboardRtID, {
+      relations: {
+        authorization: true,
+        profile: true,
+      },
     });
-
-    if (whiteboard.checkout) {
-      await this.whiteboardCheckoutService.delete(whiteboard.checkout.id);
-    }
 
     if (whiteboard.profile) {
       await this.profileService.deleteProfile(whiteboard.profile.id);
@@ -105,29 +94,52 @@ export class WhiteboardService {
       await this.authorizationPolicyService.delete(whiteboard.authorization);
     }
 
-    const deletedWhiteboard = await this.whiteboardRepository.remove(
+    const deletedWhiteboardRt = await this.whiteboardRepository.remove(
       whiteboard as Whiteboard
     );
-    deletedWhiteboard.id = whiteboardID;
-    return deletedWhiteboard;
+    deletedWhiteboardRt.id = whiteboardRtID;
+    return deletedWhiteboardRt;
   }
 
   async updateWhiteboard(
     whiteboardInput: IWhiteboard,
-    updateWhiteboardData: UpdateWhiteboardInput,
-    agentInfo: AgentInfo
+    updateWhiteboardData: UpdateWhiteboardInput
   ): Promise<IWhiteboard> {
     const whiteboard = await this.getWhiteboardOrFail(whiteboardInput.id, {
       relations: {
-        checkout: true,
         profile: true,
       },
     });
-    if (!whiteboard.checkout) {
-      throw new EntityNotFoundException(
-        `Checkout not initialized on whiteboard: ${whiteboard.id}`,
-        LogContext.COLLABORATION
+
+    if (updateWhiteboardData.profileData) {
+      whiteboard.profile = await this.profileService.updateProfile(
+        whiteboard.profile,
+        updateWhiteboardData.profileData
       );
+    }
+
+    if (updateWhiteboardData.contentUpdatePolicy) {
+      whiteboard.contentUpdatePolicy = updateWhiteboardData.contentUpdatePolicy;
+    }
+
+    return this.save(whiteboard);
+  }
+
+  async updateWhiteboardContent(
+    whiteboardInput: IWhiteboard,
+    updateWhiteboardContentData: UpdateWhiteboardContentInput
+  ): Promise<IWhiteboard> {
+    const whiteboard = await this.getWhiteboardOrFail(whiteboardInput.id, {
+      relations: {
+        profile: true,
+      },
+    });
+
+    if (
+      !updateWhiteboardContentData.content ||
+      updateWhiteboardContentData.content === whiteboard.content
+    ) {
+      return whiteboard;
     }
 
     if (!whiteboard?.profile) {
@@ -137,99 +149,37 @@ export class WhiteboardService {
       );
     }
 
-    // Before updating the whiteboard contents check the user doing it has it checked out
-    if (
-      updateWhiteboardData.content &&
-      updateWhiteboardData.content !== whiteboard.content
-    ) {
-      this.whiteboardCheckoutService.isUpdateAllowedOrFail(
-        whiteboard.checkout,
-        agentInfo
-      );
+    const newContent = await this.reuploadDocumentsIfNotInBucket(
+      JSON.parse(updateWhiteboardContentData.content),
+      whiteboard?.profile.id
+    );
 
-      const newContent = await this.reuploadDocumentsIfNotInBucket(
-        JSON.parse(updateWhiteboardData.content),
-        whiteboard.profile.id
-      );
-
-      whiteboard.content = JSON.stringify(newContent);
-    }
-
-    if (updateWhiteboardData.profileData) {
-      whiteboard.profile = await this.profileService.updateProfile(
-        whiteboard.profile,
-        updateWhiteboardData.profileData
-      );
-    }
+    whiteboard.content = JSON.stringify(newContent);
     return this.save(whiteboard);
   }
 
-  save(whiteboard: IWhiteboard): Promise<IWhiteboard> {
-    return this.whiteboardRepository.save(whiteboard);
-  }
-
   public async getProfile(
-    whiteboard: IWhiteboard,
+    whiteboardId: string,
     relations?: FindOptionsRelations<IWhiteboard>
   ): Promise<IProfile> {
-    const whiteboardLoaded = await this.getWhiteboardOrFail(whiteboard.id, {
-      relations: { profile: true, ...relations },
+    const whiteboardLoaded = await this.getWhiteboardOrFail(whiteboardId, {
+      relations: {
+        profile: true,
+        ...relations,
+      },
     });
+
     if (!whiteboardLoaded.profile)
       throw new EntityNotFoundException(
-        `Whiteboard profile not initialised: ${whiteboard.id}`,
+        `WhiteboardRt profile not initialised: ${whiteboardId}`,
         LogContext.COLLABORATION
       );
 
     return whiteboardLoaded.profile;
   }
 
-  public async getVisualPreview(whiteboard: IWhiteboard): Promise<IVisual> {
-    const profile = await this.getProfile(whiteboard);
-    const preview = await this.profileService.getVisual(
-      profile,
-      VisualType.CARD
-    );
-    if (!preview)
-      throw new EntityNotFoundException(
-        `Whiteboard preview visual not initialised: ${whiteboard.id}`,
-        LogContext.COLLABORATION
-      );
-
-    return preview;
-  }
-
-  async getWhiteboardCheckout(
-    whiteboard: IWhiteboard
-  ): Promise<IWhiteboardCheckout> {
-    const whiteboardWithCheckout = await this.getWhiteboardOrFail(
-      whiteboard.id,
-      {
-        relations: { checkout: true },
-      }
-    );
-
-    // Note: this is done the same as with organizationVerification, i.e. that
-    // we create the entity wrapping a lifecycle if it is not present.
-    // This is due to lifecycles being difficult to deal with via migraitons.
-    // Needs further discussion.
-    if (!whiteboardWithCheckout.checkout) {
-      // create and add the checkout
-      whiteboard.checkout =
-        await this.whiteboardCheckoutService.createWhiteboardCheckout({
-          whiteboardID: whiteboard.id,
-        });
-
-      await this.save(whiteboard);
-    }
-
-    if (!whiteboardWithCheckout.checkout)
-      throw new EntityNotFoundException(
-        `Whiteboard not initialised, no checkout: ${whiteboard.id}`,
-        LogContext.CONTEXT
-      );
-
-    return whiteboardWithCheckout.checkout;
+  public save(whiteboard: IWhiteboard): Promise<IWhiteboard> {
+    return this.whiteboardRepository.save(whiteboard);
   }
 
   private async reuploadDocumentsIfNotInBucket(

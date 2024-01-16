@@ -1,8 +1,8 @@
-import { CreateNameableInput } from '@domain/common/entity/nameable-entity/dto/nameable.dto.create';
-import { NameID } from '@domain/common/scalars/scalar.nameid';
-import { WhiteboardContent } from '@domain/common/scalars/scalar.whiteboard.content';
 import { Field, InputType } from '@nestjs/graphql';
 import { IsOptional } from 'class-validator';
+import { NameID } from '@domain/common/scalars/scalar.nameid';
+import { CreateNameableInput } from '@domain/common/entity/nameable-entity/dto/nameable.dto.create';
+import { WhiteboardContent } from '@domain/common/scalars/scalar.whiteboard.content';
 
 @InputType()
 export class CreateWhiteboardInput extends CreateNameableInput {

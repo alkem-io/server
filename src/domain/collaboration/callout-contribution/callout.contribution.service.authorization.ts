@@ -3,7 +3,7 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CalloutContributionService } from './callout.contribution.service';
 import { ICalloutContribution } from './callout.contribution.interface';
-import { WhiteboardAuthorizationService } from '@domain/common/whiteboard/whiteboard.service.authorization';
+import { WhiteboardAuthorizationService } from '@domain/common/whiteboard';
 import { PostAuthorizationService } from '../post/post.service.authorization';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { EntityNotInitializedException } from '@common/exceptions';

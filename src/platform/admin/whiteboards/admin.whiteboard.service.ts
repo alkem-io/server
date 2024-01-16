@@ -2,12 +2,11 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager, FindManyOptions } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Whiteboard } from '@domain/common/whiteboard';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { base64ToBuffer } from '@common/utils';
 import { ExcalidrawContent } from '@common/interfaces';
-import { WhiteboardRt } from '@domain/common/whiteboard-rt/whiteboard.rt.entity';
+import { Whiteboard } from '@domain/common/whiteboard/types';
 import { WhiteboardTemplate } from '@domain/template/whiteboard-template/whiteboard.template.entity';
 import { AgentInfo } from '@core/authentication';
 import { DocumentAuthorizationService } from '@domain/storage/document/document.service.authorization';
@@ -48,7 +47,6 @@ export class AdminWhiteboardService {
       WhiteboardTemplate,
       options
     );
-    const whiteboardsRt = await this.manager.find(WhiteboardRt, options);
 
     const whiteboardResults = await this._uploadFilesFromContentToStorageBucket(
       whiteboards,
@@ -59,33 +57,25 @@ export class AdminWhiteboardService {
         whiteboardTemplates,
         agentInfo.userID
       );
-    const whiteboardRtResults =
-      await this._uploadFilesFromContentToStorageBucket(
-        whiteboardsRt,
-        agentInfo.userID
-      );
 
     return {
       results: [
         ...whiteboardResults.results,
         ...whiteboardTemplateResults.results,
-        ...whiteboardRtResults.results,
       ],
       errors: [
         ...whiteboardResults.errors,
         ...whiteboardTemplateResults.errors,
-        ...whiteboardRtResults.errors,
       ],
       warns: [
         ...whiteboardResults.warns,
         ...whiteboardTemplateResults.warns,
-        ...whiteboardRtResults.warns,
       ],
     };
   }
 
   private async _uploadFilesFromContentToStorageBucket(
-    whiteboards: Whiteboard[] | WhiteboardRt[] | WhiteboardTemplate[],
+    whiteboards: Whiteboard[] | WhiteboardTemplate[],
     uploaderId: string
   ) {
     const results: string[] = [];

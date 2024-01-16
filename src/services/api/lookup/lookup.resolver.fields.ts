@@ -5,9 +5,7 @@ import { CurrentUser } from '@src/common/decorators';
 import { ResolveField } from '@nestjs/graphql';
 import { AgentInfo } from '@core/authentication/agent-info';
 import { LookupQueryResults } from './dto/lookup.query.results';
-import { IWhiteboard } from '@domain/common/whiteboard';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
-import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { CommunityService } from '@domain/community/community/community.service';
@@ -44,8 +42,8 @@ import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { IOpportunity } from '@domain/collaboration/opportunity';
 import { CalloutTemplateService } from '@domain/template/callout-template/callout.template.service';
 import { ICalloutTemplate } from '@domain/template/callout-template/callout.template.interface';
-import { WhiteboardRtService } from '@domain/common/whiteboard-rt';
-import { IWhiteboardRt } from '@domain/common/whiteboard-rt/whiteboard.rt.interface';
+import { WhiteboardService } from '@domain/common/whiteboard';
+import { IWhiteboard } from '@domain/common/whiteboard/types';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { IDocument } from '@domain/storage/document';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
@@ -69,7 +67,6 @@ export class LookupResolverFields {
     private collaborationService: CollaborationService,
     private contextService: ContextService,
     private whiteboardService: WhiteboardService,
-    private whiteboardRtService: WhiteboardRtService,
     private whiteboardTemplateService: WhiteboardTemplateService,
     private calloutTemplateService: CalloutTemplateService,
     private profileService: ProfileService,
@@ -315,7 +312,7 @@ export class LookupResolverFields {
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<IContext> {
     const context = await this.contextService.getContextOrFail(id);
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       context.authorization,
       AuthorizationPrivilege.READ,
@@ -324,40 +321,19 @@ export class LookupResolverFields {
 
     return context;
   }
-
   @UseGuards(GraphqlGuard)
   @ResolveField(() => IWhiteboard, {
-    nullable: true,
-    description: 'Lookup the specified Whiteboard',
-  })
-  async whiteboard(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('ID', { type: () => UUID }) id: string
-  ): Promise<IWhiteboard> {
-    const whiteboard = await this.whiteboardService.getWhiteboardOrFail(id);
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      whiteboard.authorization,
-      AuthorizationPrivilege.READ,
-      `lookup Whiteboard: ${whiteboard.nameID}`
-    );
-
-    return whiteboard;
-  }
-
-  @UseGuards(GraphqlGuard)
-  @ResolveField(() => IWhiteboardRt, {
     nullable: true,
     description: 'Lookup the specified WhiteboardRt',
   })
   async whiteboardRt(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID }) id: string
-  ): Promise<IWhiteboardRt> {
-    const whiteboardRt = await this.whiteboardRtService.getWhiteboardRtOrFail(
+  ): Promise<IWhiteboard> {
+    const whiteboardRt = await this.whiteboardService.getWhiteboardOrFail(
       id
     );
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       whiteboardRt.authorization,
       AuthorizationPrivilege.READ,
@@ -378,7 +354,7 @@ export class LookupResolverFields {
   ): Promise<IWhiteboardTemplate> {
     const whiteboardTemplate =
       await this.whiteboardTemplateService.getWhiteboardTemplateOrFail(id);
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       whiteboardTemplate.authorization,
       AuthorizationPrivilege.READ,
@@ -399,7 +375,7 @@ export class LookupResolverFields {
   ): Promise<ICalloutTemplate> {
     const calloutTemplate =
       await this.calloutTemplateService.getCalloutTemplateOrFail(id);
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       calloutTemplate.authorization,
       AuthorizationPrivilege.READ,
@@ -419,7 +395,7 @@ export class LookupResolverFields {
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<IProfile> {
     const profile = await this.profileService.getProfileOrFail(id);
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       profile.authorization,
       AuthorizationPrivilege.READ,
@@ -439,7 +415,7 @@ export class LookupResolverFields {
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<ICallout> {
     const callout = await this.calloutService.getCalloutOrFail(id);
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       callout.authorization,
       AuthorizationPrivilege.READ,
@@ -459,7 +435,7 @@ export class LookupResolverFields {
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<IPost> {
     const post = await this.postService.getPostOrFail(id);
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       post.authorization,
       AuthorizationPrivilege.READ,
@@ -479,7 +455,7 @@ export class LookupResolverFields {
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<IRoom> {
     const room = await this.roomService.getRoomOrFail(id);
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       room.authorization,
       AuthorizationPrivilege.READ,
@@ -500,7 +476,7 @@ export class LookupResolverFields {
   ): Promise<IInnovationFlow> {
     const innovationFlow =
       await this.innovationFlowService.getInnovationFlowOrFail(id);
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       innovationFlow.authorization,
       AuthorizationPrivilege.READ,
@@ -523,7 +499,7 @@ export class LookupResolverFields {
       await this.innovationFlowTemplateService.getInnovationFlowTemplateOrFail(
         id
       );
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       innovationFlowTemplate.authorization,
       AuthorizationPrivilege.READ,
@@ -543,7 +519,7 @@ export class LookupResolverFields {
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<IChallenge> {
     const challenge = await this.challengeService.getChallengeOrFail(id);
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       challenge.authorization,
       AuthorizationPrivilege.READ,
@@ -563,7 +539,7 @@ export class LookupResolverFields {
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<IOpportunity> {
     const opportunity = await this.opportunityService.getOpportunityOrFail(id);
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       opportunity.authorization,
       AuthorizationPrivilege.READ,
