@@ -1,4 +1,7 @@
-export type ExceptionDetails = { userId: string; message?: string } & Record<
-  string,
-  unknown
->;
+export type ExceptionDetails = ExceptionExtraDetails & Record<string, unknown>;
+
+export type ExceptionExtraDetails = {
+  userId?: string;
+  message?: string;
+  originalException?: Error;
+};
