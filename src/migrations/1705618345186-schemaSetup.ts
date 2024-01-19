@@ -1646,6 +1646,16 @@ export class schemaSetup1705618345186 implements MigrationInterface {
   public async down(queryRunner: QueryRunner): Promise<void> {}
 
   private async addMissingConstraints(queryRunner: QueryRunner) {
+    const storageBuckets = await queryRunner.query(
+      `SELECT id FROM storage_bucket where storageAggregatorId NOT IN (select id from storage_aggregator);`
+    );
+    for (const storageBucket of storageBuckets) {
+      await queryRunner.query(
+        `UPDATE storage_bucket
+        SET storageAggregatorId = NULL
+        WHERE id = '${storageBucket.id}'`
+      );
+    }
     await queryRunner.query(
       `ALTER TABLE \`storage_bucket\` ADD CONSTRAINT \`FK_11d0ed50a26da5513f7e4347847\` FOREIGN KEY (\`storageAggregatorId\`) REFERENCES \`storage_aggregator\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
