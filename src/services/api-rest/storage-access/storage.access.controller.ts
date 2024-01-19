@@ -84,7 +84,7 @@ export class StorageAccessController {
     );
 
     try {
-      const readable = this.documentService.getDocumentContents(document);
+      const readable = await this.documentService.getDocumentContents(document);
       return new StreamableFile(readable);
     } catch (e: any) {
       this.logger.error(

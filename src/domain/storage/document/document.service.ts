@@ -13,11 +13,12 @@ import { CreateDocumentInput } from './dto/document.dto.create';
 import { Document } from './document.entity';
 import { IDocument } from './document.interface';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
-import { IpfsService } from '@services/adapters/ipfs/ipfs.service';
-import { IpfsUploadFailedException } from '@common/exceptions/ipfs/ipfs.upload.exception';
-import { IpfsDeleteFailedException } from '@common/exceptions/ipfs/ipfs.delete.exception';
+import { StorageService } from '@services/adapters/storage';
 import { ConfigService } from '@nestjs/config';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { STORAGE_SERVICE } from '@common/constants';
+import { DocumentDeleteFailedException } from '@common/exceptions/document/document.delete.failed.exception';
+import { DocumentSaveFailedException } from '@common/exceptions/document/document.save.failed.exception';
 
 @Injectable()
 export class DocumentService {
@@ -25,7 +26,8 @@ export class DocumentService {
     private configService: ConfigService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private tagsetService: TagsetService,
-    private ipfsAdapter: IpfsService,
+    @Inject(STORAGE_SERVICE)
+    private storageService: StorageService,
     @InjectRepository(Document)
     private documentRepository: Repository<Document>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -128,8 +130,11 @@ export class DocumentService {
     return document.createdDate;
   }
 
-  public getDocumentContents(document: IDocument): Readable | never {
-    return Readable.from(this.ipfsAdapter.getFileContents(document.externalID));
+  public async getDocumentContents(
+    document: IDocument
+  ): Promise<Readable> | never {
+    const content = await this.storageService.read(document.externalID);
+    return Readable.from(content);
   }
 
   public async updateDocument(
@@ -200,13 +205,15 @@ export class DocumentService {
 
   private async removeFile(CID: string): Promise<boolean> {
     try {
-      await this.ipfsAdapter.unpinFile(CID);
-      await this.ipfsAdapter.garbageCollect();
-    } catch (error) {
-      throw new IpfsDeleteFailedException(
-        `Ipfs removing file at path ${CID} failed! Error: ${
-          (error as Error).message ?? String(error)
-        }`
+      await this.storageService.delete(CID);
+    } catch (error: any) {
+      throw new DocumentDeleteFailedException(
+        `Removing file ${CID} failed!`,
+        LogContext.IPFS,
+        {
+          message: error?.message,
+          originalException: error,
+        }
       );
     }
     return true;
@@ -214,12 +221,15 @@ export class DocumentService {
 
   public async uploadFile(buffer: Buffer, fileName: string): Promise<string> {
     try {
-      return await this.ipfsAdapter.uploadFileFromBufferCID(buffer);
-    } catch (error) {
-      throw new IpfsUploadFailedException(
-        `Ipfs upload of ${fileName} failed! Error: ${
-          (error as Error).message ?? String(error)
-        }`
+      return await this.storageService.save(buffer);
+    } catch (error: any) {
+      throw new DocumentSaveFailedException(
+        `Uploading ${fileName} failed!`,
+        LogContext.IPFS,
+        {
+          message: error?.message,
+          originalException: error,
+        }
       );
     }
   }

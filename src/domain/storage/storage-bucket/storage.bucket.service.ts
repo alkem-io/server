@@ -24,13 +24,13 @@ import { ValidationException } from '@common/exceptions';
 import { IVisual } from '@domain/common/visual/visual.interface';
 import { VisualService } from '@domain/common/visual/visual.service';
 import { streamToBuffer } from '@common/utils';
-import { IpfsUploadFailedException } from '@common/exceptions/ipfs/ipfs.upload.exception';
 import { CreateStorageBucketInput } from './dto/storage.bucket.dto.create';
 import { Profile } from '@domain/common/profile/profile.entity';
 import { IStorageBucketParent } from './dto/storage.bucket.dto.parent';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { ProfileType } from '@common/enums';
 import { IReference } from '@domain/common/reference';
+import { StorageUploadFailedException } from '@common/exceptions/storage/storage.upload.failed.exception';
 
 @Injectable()
 export class StorageBucketService {
@@ -258,8 +258,15 @@ export class StorageBucketService {
       }
       return newDocument;
     } catch (error: any) {
-      throw new IpfsUploadFailedException(
-        `Ipfs upload of ${filename} on reference failed! Error: ${error.message}`
+      throw new StorageUploadFailedException(
+        'Upload on reference failed!',
+        LogContext.STORAGE_BUCKET,
+        {
+          message: error.message,
+          fileName: filename,
+          referenceID: reference.id,
+          originalException: error,
+        }
       );
     }
   }
@@ -322,8 +329,7 @@ export class StorageBucketService {
         buffer,
         fileName,
         mimetype,
-        userID,
-        true
+        userID
       );
       // Delete the old document
       if (
@@ -336,8 +342,15 @@ export class StorageBucketService {
       }
       return newDocument;
     } catch (error: any) {
-      throw new IpfsUploadFailedException(
-        `Ipfs upload of ${fileName} on visual failed! Error: ${error.message}`
+      throw new StorageUploadFailedException(
+        'Upload on visual failed!',
+        LogContext.STORAGE_BUCKET,
+        {
+          message: error.message,
+          fileName,
+          visualID: visual.id,
+          originalException: error,
+        }
       );
     }
   }
@@ -440,15 +453,13 @@ export class StorageBucketService {
   public async getStorageBucketsForAggregator(
     storageAggregatorID: string
   ): Promise<IStorageBucket[]> {
-    const result = await this.storageBucketRepository.find({
+    return this.storageBucketRepository.find({
       where: {
         storageAggregator: {
           id: storageAggregatorID,
         },
       },
     });
-    if (!result) return [];
-    return result;
   }
 
   public async getStorageBucketParent(
@@ -462,13 +473,12 @@ export class StorageBucketService {
       },
     });
     if (profile) {
-      const parentEntity: IStorageBucketParent = {
+      return {
         id: profile.id,
         type: profile.type as ProfileType,
         displayName: profile.displayName,
         url: await this.urlGeneratorService.generateUrlForProfile(profile),
       };
-      return parentEntity;
     }
 
     return null;

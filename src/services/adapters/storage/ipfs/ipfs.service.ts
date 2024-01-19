@@ -2,9 +2,10 @@ import { ConfigurationTypes, LogContext } from '@common/enums';
 import { streamToBuffer } from '@common/utils';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as fs from 'fs';
 import { ReadStream } from 'fs';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
 import { CID, create, IPFSHTTPClient } from 'ipfs-http-client';
 import { IpfsDeleteFailedException } from '@common/exceptions/ipfs/ipfs.delete.exception';
 import { IpfsGCFailedException } from '@common/exceptions/ipfs/ipfs.gc.exception';
@@ -27,15 +28,6 @@ export class IpfsService {
     const timeout = this.configService.get(ConfigurationTypes.STORAGE)?.ipfs
       ?.timeout;
     this.ipfsClient = create({ url: ipfsEndpoint, timeout });
-  }
-
-  public async uploadFile(filePath: string): Promise<string> {
-    this.logger.verbose?.(
-      `Uploading file from path: ${filePath}`,
-      LogContext.IPFS
-    );
-    const imageBuffer = fs.readFileSync(filePath);
-    return this.uploadFileFromBuffer(imageBuffer);
   }
 
   public async uploadFileFromStream(stream: ReadStream): Promise<string> {

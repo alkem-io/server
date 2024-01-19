@@ -54,4 +54,5 @@ export enum LogContext {
   CONVERSION = 'conversion',
   TASKS = 'tasks',
   LICENSE = 'license',
+  LOCAL_STORAGE = 'local-storage',
 }

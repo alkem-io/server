@@ -1,7 +1,7 @@
 import { AgentInfo } from '@core/authentication';
 import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
-import { IpfsService } from '@services/adapters/ipfs/ipfs.service';
+import { IpfsService } from '@services/adapters/storage/ipfs/ipfs.service';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { EntityManager, ObjectType } from 'typeorm';
 

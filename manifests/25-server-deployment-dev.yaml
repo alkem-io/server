@@ -48,3 +48,10 @@ spec:
           ports:
             - name: graphql
               containerPort: 4000
+          volumeMounts:
+            - name: file-storage
+              mountPath: /storage
+      volumes:
+        - name: file-storage
+          persistentVolumeClaim:
+            claimName: file-storage-pvc
