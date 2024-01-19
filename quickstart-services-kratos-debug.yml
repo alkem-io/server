@@ -141,20 +141,6 @@ services:
     networks:
       - alkemio_dev_net
 
-  ipfs:
-    container_name: alkemio_dev_ipfs
-    image: ipfs/go-ipfs:v0.9.1
-    networks:
-      - alkemio_dev_net
-    restart: always
-    ports:
-      - 4001
-      - 4002
-      - 5001
-      - 8090:8080
-    volumes:
-      - /tmp/ipfs-docker-data:/data/ipfs
-
   synapse:
     container_name: alkemio_dev_synapse
     image: matrixdotorg/synapse:v1.82.0
