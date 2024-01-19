@@ -24,7 +24,6 @@ services:
       - 3306:3306
       - 5432:5432
       - 8008:8008
-      - 5001:5001
       - 4436:4436
       - 4437:4437
       - 1025:1025
@@ -125,20 +124,6 @@ services:
       - 1025
     networks:
       - alkemio_dev_net
-
-  ipfs:
-    container_name: alkemio_dev_ipfs
-    image: ipfs/go-ipfs:v0.9.1
-    networks:
-      - alkemio_dev_net
-    restart: always
-    ports:
-      - 4001
-      - 4002
-      - 5001
-      - 8080
-    volumes:
-      - /tmp/ipfs-docker-data:/data/ipfs
 
   synapse:
     container_name: alkemio_dev_synapse
