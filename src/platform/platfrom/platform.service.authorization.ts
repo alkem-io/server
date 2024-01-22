@@ -233,34 +233,20 @@ export class PlatformAuthorizationService {
   }
 
   private async createCredentialRuleInteractiveGuidance(): Promise<IAuthorizationPolicyRuleCredential> {
-    const criterias: ICredentialDefinition[] = [];
-    // Assign all users that are beta tester
-    const betaTesterUser: ICredentialDefinition = {
-      type: AuthorizationCredential.BETA_TESTER,
+    const userGuidanceChatAccessCredential = {
+      type: AuthorizationCredential.GLOBAL_REGISTERED,
       resourceID: '',
     };
-    criterias.push(betaTesterUser);
-    // Assign all users that are associates of organizations that are beta testers
-    const betaTesterOrganizations =
-      await this.organizationService.organizationsWithCredentials({
-        type: AuthorizationCredential.BETA_TESTER,
-      });
-    for (const organization of betaTesterOrganizations) {
-      const betaTesterOrg: ICredentialDefinition = {
-        type: AuthorizationCredential.ORGANIZATION_ASSOCIATE,
-        resourceID: organization.id,
-      };
-      criterias.push(betaTesterOrg);
-    }
 
-    const interactiveGuidanceRule =
+    const userGuidanceChatAccessPrivilegeRule =
       this.authorizationPolicyService.createCredentialRule(
         [AuthorizationPrivilege.ACCESS_INTERACTIVE_GUIDANCE],
-        criterias,
+        [userGuidanceChatAccessCredential],
         CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_GUIDANCE
       );
-    interactiveGuidanceRule.cascade = false;
-    return interactiveGuidanceRule;
+    userGuidanceChatAccessPrivilegeRule.cascade = false;
+
+    return userGuidanceChatAccessPrivilegeRule;
   }
 
   private async createCredentialRuleDashboardRefresh(): Promise<IAuthorizationPolicyRuleCredential> {
