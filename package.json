@@ -92,7 +92,7 @@
     "logform": "^2.3.2",
     "module-alias": "^2.2.2",
     "moment": "^2.29.4",
-    "mysql": "^2.18.1",
+    "mysql2": "^2.3.3",
     "nest-winston": "^1.5.0",
     "passport-custom": "^1.1.1",
     "passport-jwt": "^4.0.0",
