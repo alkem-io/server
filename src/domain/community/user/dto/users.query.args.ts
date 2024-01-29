@@ -5,7 +5,6 @@ import { ArgsType, Field } from '@nestjs/graphql';
 @ArgsType()
 export class UsersQueryArgs extends ContributorQueryArgs {
   @Field(() => [UUID], {
-    name: 'IDs',
     description: 'Retrieve the specified users by ID.',
     nullable: true,
   })
