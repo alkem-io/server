@@ -94,24 +94,24 @@ export class ActivityService {
       types?: ActivityEventType[];
       visibility?: boolean;
       userID?: string;
+      orderBy?: 'ASC' | 'DESC';
       paginationArgs?: PaginationArgs;
-      orderByCreatedDate?: 'ASC' | 'DESC';
     }
   ) {
     const {
       types,
       visibility = true,
       userID,
+      orderBy = 'DESC',
       paginationArgs = {},
-      orderByCreatedDate = 'DESC',
     } = options ?? {};
 
-    const qb = await this.activityRepository.createQueryBuilder('activity');
+    const qb = this.activityRepository.createQueryBuilder('activity');
 
     qb.where({
       collaborationID: In(collaborationIDs),
       visibility: visibility,
-    }).orderBy({ createdDate: orderByCreatedDate });
+    });
 
     if (types && types.length > 0) {
       qb.andWhere({ type: In(types) });
@@ -121,7 +121,7 @@ export class ActivityService {
       qb.andWhere({ triggeredBy: userID });
     }
 
-    return getPaginationResults(qb, paginationArgs);
+    return getPaginationResults(qb, paginationArgs, orderBy);
   }
 
   async getActivityForMessage(messageID: string): Promise<IActivity | null> {

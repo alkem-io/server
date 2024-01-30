@@ -1,6 +1,7 @@
 import {
   Brackets,
   Like,
+  ObjectLiteral,
   SelectQueryBuilder,
   WhereExpressionBuilder,
 } from 'typeorm';
@@ -13,7 +14,7 @@ import {
  * with the other 'WHERE' statements before it in the query.
  * Defaults to 'AND'.
  */
-export const applyFiltering = <T>(
+export const applyFiltering = <T extends ObjectLiteral>(
   query: SelectQueryBuilder<T>,
   filter: any,
   bindOperator: 'and' | 'or' = 'and'
