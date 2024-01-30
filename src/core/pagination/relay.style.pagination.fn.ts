@@ -1,6 +1,7 @@
 import {
   Equal,
   LessThan,
+  LessThanOrEqual,
   MoreThan,
   MoreThanOrEqual,
   SelectQueryBuilder,
@@ -88,7 +89,7 @@ export const getRelayStylePaginationResults = async <
   });
   // Transforms UUID cursor into rowId cursor
   const rowId = await getRowIdFromCursor(query, cursorColumn, before, after);
-  query = enforceCursor(query, first, last, rowId);
+  query = enforceCursor(query, first, last, rowId, sort);
 
   const limit = first ?? last ?? DEFAULT_PAGE_ITEMS;
   query.take(limit);
@@ -96,7 +97,7 @@ export const getRelayStylePaginationResults = async <
   // todo: can we use getManyAndCount to optimize?
   const result = await query.getMany();
 
-  const pageInfo = await getPageInfo(query, cursorColumn);
+  const pageInfo = await getPageInfo(query, cursorColumn, sort);
 
   const edges = result.map<IRelayStyleEdge<T>>(x => ({ node: x }));
 
@@ -138,7 +139,8 @@ const enforceCursor = <T>(
   query: SelectQueryBuilder<T>,
   first: number | undefined,
   last: number | undefined,
-  rowId: number | undefined
+  rowId: number | undefined,
+  sort: 'ASC' | 'DESC'
 ) => {
   if (rowId == undefined) {
     return query;
@@ -150,7 +152,7 @@ const enforceCursor = <T>(
   if (first) {
     // Finds all rows for which rowId > rowIdcursor
     return query.clone()[hasWhere ? 'andWhere' : 'where']({
-      [SORTING_COLUMN]: MoreThan(rowId),
+      [SORTING_COLUMN]: sort === 'ASC' ? MoreThan(rowId) : LessThan(rowId),
     });
   }
 
@@ -159,10 +161,13 @@ const enforceCursor = <T>(
     return query
       .clone()
       [hasWhere ? 'andWhere' : 'where']({
-        [SORTING_COLUMN]: LessThan(rowId),
+        [SORTING_COLUMN]: sort === 'ASC' ? LessThan(rowId) : MoreThan(rowId),
       })
       .andWhere({
-        [SORTING_COLUMN]: MoreThanOrEqual(rowId - last),
+        [SORTING_COLUMN]:
+          sort === 'ASC'
+            ? MoreThanOrEqual(rowId - last)
+            : LessThanOrEqual(rowId - last),
       });
   }
 
@@ -171,7 +176,8 @@ const enforceCursor = <T>(
 
 const getPageInfo = async <T extends IBaseAlkemio & Paginationable>(
   query: SelectQueryBuilder<T>,
-  cursorColumn: typeof DEFAULT_CURSOR_COLUMN
+  cursorColumn: typeof DEFAULT_CURSOR_COLUMN,
+  sort: 'ASC' | 'DESC'
 ): Promise<IRelayStylePageInfo> => {
   const result = await query.getMany();
 
@@ -189,13 +195,17 @@ const getPageInfo = async <T extends IBaseAlkemio & Paginationable>(
   const countBefore = await query
     .clone()
     [hasWhere ? 'andWhere' : 'where']({
-      [SORTING_COLUMN]: LessThan(startCursorRowId),
+      [SORTING_COLUMN]:
+        sort === 'ASC'
+          ? LessThan(startCursorRowId)
+          : MoreThan(startCursorRowId),
     })
     .getCount();
   const countAfter = await query
     .clone()
     [hasWhere ? 'andWhere' : 'where']({
-      [SORTING_COLUMN]: MoreThan(endCursorRowId),
+      [SORTING_COLUMN]:
+        sort === 'ASC' ? MoreThan(endCursorRowId) : LessThan(endCursorRowId),
     })
     .getCount();
 
