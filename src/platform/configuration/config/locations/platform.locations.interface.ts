@@ -40,6 +40,12 @@ export abstract class IPlatformLocations {
 
   @Field(() => String, {
     nullable: false,
+    description: 'URL to the landing page of the platform',
+  })
+  landing!: string;
+
+  @Field(() => String, {
+    nullable: false,
     description: 'URL to a page about the platform',
   })
   about!: string;
