@@ -4,6 +4,7 @@ import {
   LessThanOrEqual,
   MoreThan,
   MoreThanOrEqual,
+  ObjectLiteral,
   SelectQueryBuilder,
 } from 'typeorm';
 import { Logger } from '@nestjs/common';
@@ -135,7 +136,7 @@ const getRowIdFromCursor = async <T extends IBaseAlkemio & Paginationable>(
   return rowIdCursorResult.rowId;
 };
 
-const enforceCursor = <T>(
+const enforceCursor = <T extends ObjectLiteral>(
   query: SelectQueryBuilder<T>,
   first: number | undefined,
   last: number | undefined,
