@@ -142,15 +142,13 @@ export class ActivityFeedService {
       )
     ).filter((x): x is IActivityLogEntry => !!x);
 
-    if (orderByCreatedDate) {
-      convertedActivities.sort(({ createdDate: a }, { createdDate: b }) => {
-        if (orderByCreatedDate === 'DESC') {
-          return b.getTime() - a.getTime();
-        } else {
-          return a.getTime() - b.getTime();
-        }
-      });
-    }
+    convertedActivities.sort(({ createdDate: a }, { createdDate: b }) => {
+      if (orderByCreatedDate === 'DESC') {
+        return b.getTime() - a.getTime();
+      } else {
+        return a.getTime() - b.getTime();
+      }
+    });
 
     // todo solve issue below
     // may return incorrect paginated results due to convertRawActivityToResults returning
