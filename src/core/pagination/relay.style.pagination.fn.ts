@@ -13,6 +13,7 @@ import { EntityNotFoundException } from '@src/common/exceptions';
 import { PaginationArgs } from './pagination.args';
 import {
   IRelayStyleEdge,
+  IRelayStylePageInfo,
   IRelayStylePaginatedType,
 } from './relay.style.paginated.type';
 
@@ -54,11 +55,10 @@ const SORTING_COLUMN: keyof Paginationable = 'rowId';
   }
 
  * !!! The pagination algorithm provided in the link about is not strictly followed !!!
- * @param query A *SelectQueryBuilder*. You can provided it from  from the entity's repository class
+ * @param query A *SelectQueryBuilder*. You can provide it from the entity's repository class
  * @param paginationArgs
  * @param cursorColumn
  */
-// todo: simplify; break in smaller functions; fix jsdoc
 export const getRelayStylePaginationResults = async <
   T extends IBaseAlkemio & Paginationable
 >(
@@ -80,64 +80,98 @@ export const getRelayStylePaginationResults = async <
 
   const { first, after, last, before } = paginationArgs;
 
-  const hasOrderBy =
-    query.expressionMap.orderBys &&
-    Object.keys(query.expressionMap.orderBys).length > 0;
-
-  if (hasOrderBy) {
-    query.addOrderBy(`${query.alias}.${SORTING_COLUMN}`, 'ASC');
-  } else {
-    query.orderBy({ [`${query.alias}.${SORTING_COLUMN}`]: 'ASC' });
-  }
-
-  const originalQuery = query.clone();
-  const hasWhere =
-    query.expressionMap.wheres && query.expressionMap.wheres.length > 0;
-
+  query.orderBy({
+    [`${query.alias}.${SORTING_COLUMN}`]: 'ASC',
+    ...query.expressionMap.orderBys,
+  });
   // Transforms UUID cursor into rowId cursor
-  let rowIdcursor: number | undefined = undefined;
-  const cursorFromUser = before ?? after ?? undefined;
-  if (cursorFromUser) {
-    const queryRowId = originalQuery.clone();
-    const rowIdCursorResult = await queryRowId[hasWhere ? 'andWhere' : 'where'](
-      {
-        [cursorColumn]: Equal(cursorFromUser),
-      }
-    ).getOne();
-    if (rowIdCursorResult == undefined) {
-      throw new EntityNotFoundException(
-        `Unable to find entity with ID: ${after}`,
-        LogContext.CHALLENGES
-      );
-    }
-    rowIdcursor = rowIdCursorResult.rowId;
-  }
-
-  // FORWARD pagination
-  if (first && rowIdcursor) {
-    // Finds all rows for which rowId > rowIdcursor
-    query[hasWhere ? 'andWhere' : 'where']({
-      [SORTING_COLUMN]: MoreThan(rowIdcursor),
-    });
-    logger.verbose(`First ${first} After ${after}`);
-  }
-  // REVERSE pagination
-  if (last && rowIdcursor) {
-    // Finds all rows for which rowIdcursor > rowId >= rowIdcursor - last
-    query[hasWhere ? 'andWhere' : 'where']({
-      [SORTING_COLUMN]: LessThan(rowIdcursor),
-    }).andWhere({
-      [SORTING_COLUMN]: MoreThanOrEqual(rowIdcursor - last),
-    });
-    logger.verbose(`Last ${last} Before ${before}`);
-  }
+  const rowId = await getRowIdFromCursor(query, cursorColumn, before, after);
+  query = enforceCursor(query, first, last, rowId);
 
   const limit = first ?? last ?? DEFAULT_PAGE_ITEMS;
   query.take(limit);
 
   // todo: can we use getManyAndCount to optimize?
   const result = await query.getMany();
-  logger.verbose(query.getQuery());
+
+  const pageInfo = await getPageInfo(query, cursorColumn);
+
+  const edges = result.map<IRelayStyleEdge<T>>(x => ({ node: x }));
+
+  return { edges, pageInfo };
+};
+
+const getRowIdFromCursor = async <T extends IBaseAlkemio & Paginationable>(
+  query: SelectQueryBuilder<T>,
+  cursorColumn: string,
+  before: string | undefined,
+  after: string | undefined
+) => {
+  const cursor = before ?? after;
+  if (!cursor) {
+    return undefined;
+  }
+
+  const hasWhere =
+    query.expressionMap.wheres && query.expressionMap.wheres.length > 0;
+
+  const rowIdCursorResult = await query
+    .clone()
+    [hasWhere ? 'andWhere' : 'where']({
+      [cursorColumn]: Equal(cursor),
+    })
+    .getOne();
+
+  if (!rowIdCursorResult) {
+    throw new EntityNotFoundException(
+      `Unable to find entity with ID: ${cursor}`,
+      LogContext.PAGINATION
+    );
+  }
+
+  return rowIdCursorResult.rowId;
+};
+
+const enforceCursor = <T>(
+  query: SelectQueryBuilder<T>,
+  first: number | undefined,
+  last: number | undefined,
+  rowId: number | undefined
+) => {
+  if (rowId == undefined) {
+    return query;
+  }
+
+  const hasWhere =
+    query.expressionMap.wheres && query.expressionMap.wheres.length > 0;
+
+  if (first) {
+    // Finds all rows for which rowId > rowIdcursor
+    return query.clone()[hasWhere ? 'andWhere' : 'where']({
+      [SORTING_COLUMN]: MoreThan(rowId),
+    });
+  }
+
+  if (last) {
+    // Finds all rows for which rowIdcursor > rowId >= rowIdcursor - last
+    return query
+      .clone()
+      [hasWhere ? 'andWhere' : 'where']({
+        [SORTING_COLUMN]: LessThan(rowId),
+      })
+      .andWhere({
+        [SORTING_COLUMN]: MoreThanOrEqual(rowId - last),
+      });
+  }
+
+  return query;
+};
+
+const getPageInfo = async <T extends IBaseAlkemio & Paginationable>(
+  query: SelectQueryBuilder<T>,
+  cursorColumn: typeof DEFAULT_CURSOR_COLUMN
+): Promise<IRelayStylePageInfo> => {
+  const result = await query.getMany();
 
   const startCursorItem = result?.[0];
   const startCursor = startCursorItem?.[cursorColumn];
@@ -147,31 +181,29 @@ export const getRelayStylePaginationResults = async <
   const endCursor = endCursorItem?.[cursorColumn];
   const endCursorRowId = endCursorItem?.[SORTING_COLUMN];
 
-  const beforeQuery = originalQuery.clone();
-  const afterQuery = originalQuery.clone();
+  const hasWhere =
+    query.expressionMap.wheres && query.expressionMap.wheres.length > 0;
 
-  const countBefore = await beforeQuery[hasWhere ? 'andWhere' : 'where']({
-    [SORTING_COLUMN]: LessThan(startCursorRowId),
-  }).getCount();
-  const countAfter = await afterQuery[hasWhere ? 'andWhere' : 'where']({
-    [SORTING_COLUMN]: MoreThan(endCursorRowId),
-  }).getCount();
-
-  logger.verbose(`Items before ${startCursor}: ${countBefore}`);
-  logger.verbose(`Items after ${endCursor}: ${countAfter}`);
-
-  const edges = result.map<IRelayStyleEdge<T>>(x => ({ node: x }));
+  const countBefore = await query
+    .clone()
+    [hasWhere ? 'andWhere' : 'where']({
+      [SORTING_COLUMN]: LessThan(startCursorRowId),
+    })
+    .getCount();
+  const countAfter = await query
+    .clone()
+    [hasWhere ? 'andWhere' : 'where']({
+      [SORTING_COLUMN]: MoreThan(endCursorRowId),
+    })
+    .getCount();
 
   const hasNextPage = countAfter > 0;
   const hasPreviousPage = countBefore > 0;
 
   return {
-    edges,
-    pageInfo: {
-      startCursor,
-      endCursor,
-      hasNextPage,
-      hasPreviousPage,
-    },
+    startCursor,
+    endCursor,
+    hasNextPage,
+    hasPreviousPage,
   };
 };
