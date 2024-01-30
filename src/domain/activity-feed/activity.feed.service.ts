@@ -63,7 +63,7 @@ export class ActivityFeedService {
     return this.getPaginatedActivity(collaborationIds, {
       types,
       userID: myActivity ? agentInfo.userID : undefined,
-      // visibility: true, // todo; what is this?
+      visibility: true,
       paginationArgs,
     });
   }
@@ -125,13 +125,15 @@ export class ActivityFeedService {
       types?: ActivityEventType[];
       visibility?: boolean;
       userID?: string;
+      orderByCreatedDate?: 'ASC' | 'DESC';
       paginationArgs?: PaginationArgs;
     }
   ) {
+    const { orderByCreatedDate = 'DESC', ...restOptions } = options ?? {};
     const rawPaginatedActivities =
       await this.activityService.getPaginatedActivity(
         collaborationIds,
-        options
+        restOptions
       );
 
     const convertedActivities = (
@@ -139,6 +141,16 @@ export class ActivityFeedService {
         rawPaginatedActivities.items
       )
     ).filter((x): x is IActivityLogEntry => !!x);
+
+    if (orderByCreatedDate) {
+      convertedActivities.sort(({ createdDate: a }, { createdDate: b }) => {
+        if (orderByCreatedDate === 'DESC') {
+          return b.getTime() - a.getTime();
+        } else {
+          return a.getTime() - b.getTime();
+        }
+      });
+    }
 
     // todo solve issue below
     // may return incorrect paginated results due to convertRawActivityToResults returning

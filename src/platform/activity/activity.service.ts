@@ -95,7 +95,6 @@ export class ActivityService {
       visibility?: boolean;
       userID?: string;
       paginationArgs?: PaginationArgs;
-      orderByCreatedDate?: 'ASC' | 'DESC';
     }
   ) {
     const {
@@ -103,7 +102,6 @@ export class ActivityService {
       visibility = true,
       userID,
       paginationArgs = {},
-      orderByCreatedDate = 'DESC',
     } = options ?? {};
 
     const qb = this.activityRepository.createQueryBuilder('activity');
@@ -111,7 +109,7 @@ export class ActivityService {
     qb.where({
       collaborationID: In(collaborationIDs),
       visibility: visibility,
-    }).orderBy({ createdDate: orderByCreatedDate });
+    });
 
     if (types && types.length > 0) {
       qb.andWhere({ type: In(types) });
