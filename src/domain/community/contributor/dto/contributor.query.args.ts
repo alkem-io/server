@@ -5,7 +5,6 @@ import { ArgsType, Field } from '@nestjs/graphql';
 @ArgsType()
 export class ContributorQueryArgs extends LimitAndShuffleQueryArgs {
   @Field(() => ContributorFilterInput, {
-    name: 'filter',
     description: 'Filtering criteria for returning results.',
     nullable: true,
   })

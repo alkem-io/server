@@ -164,15 +164,14 @@ export class CollaborationResolverMutations {
         communityPolicy
       );
 
-    if (
-      calloutData.sendNotification &&
-      calloutAuthorized.visibility === CalloutVisibility.PUBLISHED
-    ) {
-      const notificationInput: NotificationInputCalloutPublished = {
-        triggeredBy: agentInfo.userID,
-        callout: callout,
-      };
-      await this.notificationAdapter.calloutPublished(notificationInput);
+    if (calloutAuthorized.visibility === CalloutVisibility.PUBLISHED) {
+      if (calloutData.sendNotification) {
+        const notificationInput: NotificationInputCalloutPublished = {
+          triggeredBy: agentInfo.userID,
+          callout: callout,
+        };
+        await this.notificationAdapter.calloutPublished(notificationInput);
+      }
 
       const activityLogInput: ActivityInputCalloutPublished = {
         triggeredBy: agentInfo.userID,
