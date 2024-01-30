@@ -57,6 +57,7 @@ const SORTING_COLUMN: keyof Paginationable = 'rowId';
  * !!! The pagination algorithm provided in the link about is not strictly followed !!!
  * @param query A *SelectQueryBuilder*. You can provide it from the entity's repository class
  * @param paginationArgs
+ * @param sort
  * @param cursorColumn
  */
 export const getRelayStylePaginationResults = async <
@@ -64,6 +65,7 @@ export const getRelayStylePaginationResults = async <
 >(
   query: SelectQueryBuilder<T>,
   paginationArgs: PaginationArgs,
+  sort: 'ASC' | 'DESC' = 'ASC',
   cursorColumn = DEFAULT_CURSOR_COLUMN
 ): Promise<IRelayStylePaginatedType<T>> => {
   const logger = new Logger(LogContext.PAGINATION);
@@ -81,7 +83,7 @@ export const getRelayStylePaginationResults = async <
   const { first, after, last, before } = paginationArgs;
 
   query.orderBy({
-    [`${query.alias}.${SORTING_COLUMN}`]: 'ASC',
+    [`${query.alias}.${SORTING_COLUMN}`]: sort,
     ...query.expressionMap.orderBys,
   });
   // Transforms UUID cursor into rowId cursor

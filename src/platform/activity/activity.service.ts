@@ -94,6 +94,7 @@ export class ActivityService {
       types?: ActivityEventType[];
       visibility?: boolean;
       userID?: string;
+      orderBy?: 'ASC' | 'DESC';
       paginationArgs?: PaginationArgs;
     }
   ) {
@@ -101,6 +102,7 @@ export class ActivityService {
       types,
       visibility = true,
       userID,
+      orderBy = 'DESC',
       paginationArgs = {},
     } = options ?? {};
 
@@ -119,7 +121,7 @@ export class ActivityService {
       qb.andWhere({ triggeredBy: userID });
     }
 
-    return getPaginationResults(qb, paginationArgs);
+    return getPaginationResults(qb, paginationArgs, orderBy);
   }
 
   async getActivityForMessage(messageID: string): Promise<IActivity | null> {
