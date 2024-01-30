@@ -849,7 +849,10 @@ export class CommunicationAdapter {
     );
   }
 
-  private makeRetryableAndPromisify<T, TReturnType>(
+  private makeRetryableAndPromisify<
+    T extends BaseMatrixAdapterEventResponsePayload,
+    TReturnType
+  >(
     input$: Observable<T>,
     resultSelector: (result: T) => TReturnType,
     options?: {
