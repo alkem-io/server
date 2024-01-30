@@ -106,7 +106,7 @@ export class ActivityService {
       orderByCreatedDate = 'DESC',
     } = options ?? {};
 
-    const qb = await this.activityRepository.createQueryBuilder('activity');
+    const qb = this.activityRepository.createQueryBuilder('activity');
 
     qb.where({
       collaborationID: In(collaborationIDs),
