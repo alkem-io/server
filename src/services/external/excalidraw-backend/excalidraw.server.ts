@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ConfigurationTypes, LogContext } from '@common/enums';
-import { EXCALIDRAW_SERVER, UUID_LENGTH } from '@common/constants';
+import { APP_ID, EXCALIDRAW_SERVER, UUID_LENGTH } from '@common/constants';
 import { arrayRandomElement } from '@common/utils';
 import { AuthenticationService } from '@core/authentication/authentication.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -38,6 +38,7 @@ import {
   SocketIoServer,
   RemoteSocketIoSocket,
   SERVER_REQUEST_BROADCAST,
+  SERVER_SIDE_ROOM_DELETED,
 } from './types';
 import { CREATE_ROOM, DELETE_ROOM } from './adapters/adapter.event.names';
 import {
@@ -70,6 +71,7 @@ export class ExcalidrawServer {
   private readonly socketDataInitDelayMs: number;
 
   constructor(
+    @Inject(APP_ID) private appId: string,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService,
     @Inject(EXCALIDRAW_SERVER) private wsServer: SocketIoServer,
     private configService: ConfigService,
@@ -126,7 +128,7 @@ export class ExcalidrawServer {
         return;
       }
       this.logger.verbose?.(
-        `Room created: '${roomId}'`,
+        `Room '${roomId}' created on instance '${this.appId}'`,
         LogContext.EXCALIDRAW_SERVER
       );
       const contributionTimer = this.contributionTimers.get(roomId);
@@ -160,11 +162,10 @@ export class ExcalidrawServer {
         return;
       }
 
-      if ((await this.wsServer.in(roomId).fetchSockets()).length > 0) {
-        // if there are sockets already connected
-        // this room was deleted, but it's still active on the other instances
-        return;
-      }
+      this.wsServer.serverSideEmit(SERVER_SIDE_ROOM_DELETED, [
+        this.appId,
+        roomId,
+      ]);
 
       this.logger.verbose?.(
         `Room deleted: '${roomId}`,
@@ -179,13 +180,38 @@ export class ExcalidrawServer {
       clearTimeout(saveTimer);
       this.saveTimers.delete(roomId);
     });
-
+    // middlewares
     this.wsServer.use(socketDataInitMiddleware);
     this.wsServer.use(attachSessionMiddleware(kratosClient));
     this.wsServer.use(
       attachAgentMiddleware(kratosClient, this.logger, this.authService)
     );
+    // cluster communication
+    this.wsServer.on(
+      SERVER_SIDE_ROOM_DELETED,
+      async (serverId: string, roomId: string) => {
+        this.logger.verbose?.(
+          `'${SERVER_SIDE_ROOM_DELETED} received: 'Room '${roomId}' deleted in '${serverId}' instance`,
+          LogContext.EXCALIDRAW_SERVER
+        );
 
+        if ((await this.wsServer.in(roomId).fetchSockets()).length > 0) {
+          // if there are sockets already connected
+          // this room was deleted, but it's still active on the other instances
+          // so do nothing here
+          return;
+        }
+
+        const contributionTimer = this.contributionTimers.get(roomId);
+        clearTimeout(contributionTimer);
+        this.contributionTimers.delete(roomId);
+
+        const saveTimer = this.saveTimers.get(roomId);
+        clearTimeout(saveTimer);
+        this.saveTimers.delete(roomId);
+      }
+    );
+    // handlers
     this.wsServer.on(CONNECTION, async socket => {
       this.logger?.verbose?.(
         `User '${socket.data.agentInfo.userID}' established connection`,
