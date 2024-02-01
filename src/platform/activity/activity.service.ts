@@ -162,11 +162,10 @@ export class ActivityService {
       .where('activity.triggeredBy = :triggeredBy', {
         triggeredBy,
       })
-      .groupBy('activity.collaborationId')
       .orderBy('activity.createdDate', 'DESC')
       .getMany();
 
-    // Get unique collaboration IDs from activities
+    // Get unique collaboration IDs from sorted activities
     const collaborationIDs = [
       ...new Set(activities.map(a => a.collaborationID)),
     ];
@@ -185,9 +184,24 @@ export class ActivityService {
     const collaborationMap = new Map(collaborations.map(c => [c.id, c]));
 
     // Filter activities that have a corresponding collaboration
-    const activityData = activities
-      .filter(activity => collaborationMap.has(activity.collaborationID))
-      .slice(0, limit);
+    const filteredActivities = activities.filter(activity =>
+      collaborationMap.has(activity.collaborationID)
+    );
+
+    // Create a map of collaboration IDs to latest activities
+    const latestActivityMap = new Map();
+    for (const activity of filteredActivities) {
+      const existingActivity = latestActivityMap.get(activity.collaborationID);
+      if (
+        !existingActivity ||
+        activity.createdDate > existingActivity.createdDate
+      ) {
+        latestActivityMap.set(activity.collaborationID, activity);
+      }
+    }
+
+    // Convert the map values to an array and limit the results
+    const activityData = Array.from(latestActivityMap.values()).slice(0, limit);
 
     return activityData;
   }
