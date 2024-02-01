@@ -396,6 +396,9 @@ platform:
   # About the platform
   about: ${PLATFORM_ABOUT}:https://alkemio.org/about/
 
+  # landing
+  landing: ${PLATFORM_LANDING}:https://welcome.alkem.io/
+
   # Blog
   blog: ${PLATFORM_BLOG}:https://welcome.alkem.io/blog/
 

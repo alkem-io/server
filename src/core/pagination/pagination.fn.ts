@@ -11,10 +11,15 @@ export const getPaginationResults = async <
   T extends IBaseAlkemio & Paginationable
 >(
   query: SelectQueryBuilder<T>,
-  paginationArgs: PaginationArgs
+  paginationArgs: PaginationArgs,
+  sort?: 'ASC' | 'DESC'
 ): Promise<IPaginatedType<T>> => {
   const total = await query.getCount();
-  const result = await getRelayStylePaginationResults(query, paginationArgs);
+  const result = await getRelayStylePaginationResults(
+    query,
+    paginationArgs,
+    sort
+  );
 
   return {
     total,
