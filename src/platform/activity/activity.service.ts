@@ -189,19 +189,26 @@ export class ActivityService {
     );
 
     // Create a map of collaboration IDs to latest activities
-    const latestActivityMap = new Map();
+    const latestActivityPerCollaborationMap = new Map();
     for (const activity of filteredActivities) {
-      const existingActivity = latestActivityMap.get(activity.collaborationID);
+      const existingActivity = latestActivityPerCollaborationMap.get(
+        activity.collaborationID
+      );
       if (
         !existingActivity ||
         activity.createdDate > existingActivity.createdDate
       ) {
-        latestActivityMap.set(activity.collaborationID, activity);
+        latestActivityPerCollaborationMap.set(
+          activity.collaborationID,
+          activity
+        );
       }
     }
 
     // Convert the map values to an array and limit the results
-    const activityData = Array.from(latestActivityMap.values()).slice(0, limit);
+    const activityData = Array.from(
+      latestActivityPerCollaborationMap.values()
+    ).slice(0, limit);
 
     return activityData;
   }
