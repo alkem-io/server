@@ -162,10 +162,11 @@ export class ExcalidrawServer {
         return;
       }
 
-      this.wsServer.serverSideEmit(SERVER_SIDE_ROOM_DELETED, [
+      this.wsServer.serverSideEmit(
+        SERVER_SIDE_ROOM_DELETED,
         this.appId,
-        roomId,
-      ]);
+        roomId
+      );
 
       this.logger.verbose?.(
         `Room deleted: '${roomId}`,
