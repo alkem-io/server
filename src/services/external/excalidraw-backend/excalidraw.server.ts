@@ -48,7 +48,7 @@ import {
 } from './middlewares';
 
 type SaveMessageOpts = { maxRetries: number; timeout: number };
-type RoomTimers = Map<string, NodeJS.Timer | NodeJS.Timeout>;
+type RoomTimers = Map<string, NodeJS.Timer>;
 type SaveResponse = { success: boolean; errors?: string[] };
 
 const defaultContributionInterval = 600;
@@ -150,6 +150,12 @@ export class ExcalidrawServer {
       }
     });
     adapter.on(DELETE_ROOM, async (roomId: string) => {
+      this.logger.verbose?.(
+        `roomId: '${roomId}', sockets: ${
+          (await this.wsServer.in(roomId).fetchSockets()).length
+        }`,
+        LogContext.EXCALIDRAW_SERVER
+      );
       if (!isRoomId(roomId)) {
         return;
       }
