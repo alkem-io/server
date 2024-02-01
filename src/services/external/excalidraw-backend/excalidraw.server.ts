@@ -55,7 +55,7 @@ const defaultContributionInterval = 600;
 const defaultSaveInterval = 15;
 const defaultSaveTimeout = 10;
 const defaultMaxRetries = 5;
-const defaultTimeoutBeforeRetryMs = 3000;
+// const defaultTimeoutBeforeRetryMs = 3000;
 const defaultSocketDataInitDelay = 700;
 
 @Injectable()
@@ -298,7 +298,7 @@ export class ExcalidrawServer {
   }
 
   private startSaveTimer(roomId: string) {
-    const timer = setTimeout(async () => {
+    return setInterval(async () => {
       const saved = await this.sendSaveMessage(roomId, {
         maxRetries: this.saveMaxRetries,
         timeout: this.saveTimeoutMs,
@@ -322,9 +322,9 @@ export class ExcalidrawServer {
         );
       }
 
-      timer.refresh();
+      // timer.refresh();
     }, this.saveIntervalMs);
-    return timer;
+    // return timer;
   }
 
   /***
@@ -374,16 +374,16 @@ export class ExcalidrawServer {
       // log the response
       this.logResponse(response, randomSocket, roomId);
       // if failed - repeat
-      if (!response.success) {
-        // workaround for timers/promises not working
-        return new Promise(res =>
-          setTimeout(
-            async () =>
-              res(await this._sendSaveMessage(roomId, ++retries, opts)),
-            defaultTimeoutBeforeRetryMs
-          )
-        );
-      }
+      // if (!response.success) {
+      //   // workaround for timers/promises not working
+      //   return new Promise(res =>
+      //     setTimeout(
+      //       async () =>
+      //         res(await this._sendSaveMessage(roomId, ++retries, opts)),
+      //       defaultTimeoutBeforeRetryMs
+      //     )
+      //   );
+      // }
       // if successful - stop and return
       return true;
     } catch (e) {
@@ -391,8 +391,9 @@ export class ExcalidrawServer {
         `User '${randomSocket.data.agentInfo.userID}' did not respond to '${SERVER_SAVE_REQUEST}' event after ${timeout}ms`,
         LogContext.EXCALIDRAW_SERVER
       );
-      //retry if timed out
-      return await this._sendSaveMessage(roomId, ++retries, opts);
+      // retry if timed out
+      // return await this._sendSaveMessage(roomId, ++retries, opts);
+      return false;
     }
   }
 
