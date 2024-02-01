@@ -170,11 +170,23 @@ export class ExcalidrawServer {
       this.contributionTimers.delete(roomId);
 
       const saveTimer = this.saveTimers.get(roomId);
+      if (saveTimer) {
+        this.logger.error(
+          `\n\n\nSave timer for room '${roomId}' FOUND. Ttying to clear timer.\n\n\n`,
+          undefined,
+          LogContext.EXCALIDRAW_SERVER
+        );
+      } else {
+        this.logger.verbose?.(
+          `\n\n\nSave timer for room '${roomId}' NOT FOUND.\n\n\n`,
+          LogContext.EXCALIDRAW_SERVER
+        );
+      }
       clearInterval(saveTimer);
       const saveTimerCheck = this.saveTimers.get(roomId);
       if (saveTimerCheck) {
         this.logger.error(
-          `\n\n\nUnable to clear save timer for room '${roomId}' NOT CLEARED\n\n\n`,
+          `\n\n\nSave timer for room '${roomId}' NOT CLEARED. Timer: '${saveTimerCheck}'\n\n\n`,
           undefined,
           LogContext.EXCALIDRAW_SERVER
         );
