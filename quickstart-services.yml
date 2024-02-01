@@ -1,7 +1,7 @@
 version: '3.7'
 
 volumes:
-  alkemio_dev_mariadb:
+  alkemio_dev_mysql:
   alkemio_dev_postgres:
   tmpvolume:
   rabbitmq_data:
@@ -41,7 +41,7 @@ services:
 
   mariadb:
     container_name: alkemio_dev_mariadb
-    image: mariadb:10.7.1
+    image: mysql:8.3.0
     networks:
       - alkemio_dev_net
     environment:
@@ -51,11 +51,11 @@ services:
     ports:
       - 3306
     volumes:
-      - alkemio_dev_mariadb:/var/lib/mysql
+      - alkemio_dev_mysql:/var/lib/mysql
       - ./.scripts/schema.sql:/bootstrap_scripts/1.sql
       - ./.scripts/migrations/CSVs:/tmp/CSVs
       - tmpvolume:/tmp
-    command: --sql_mode="" --default-authentication-plugin=mysql_native_password --init-file /bootstrap_scripts/1.sql
+    # command: --sql_mode="" --init-file /bootstrap_scripts/1.sql
 
   kratos-migrate:
     container_name: alkemio_dev_kratos_migrate
