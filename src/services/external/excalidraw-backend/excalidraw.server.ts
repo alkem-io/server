@@ -1,4 +1,4 @@
-import { clearInterval, setInterval, setTimeout } from 'timers';
+import { setInterval, setTimeout } from 'timers';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Configuration, FrontendApi } from '@ory/kratos-client';
 import {
@@ -122,7 +122,7 @@ export class ExcalidrawServer {
       }
       if ((await this.wsServer.in(roomId).fetchSockets()).length > 0) {
         // if there are sockets already connected
-        // this room was created elsewhere
+        // this room already exist on another instance
         return;
       }
       this.logger.verbose?.(
@@ -156,7 +156,7 @@ export class ExcalidrawServer {
 
       if ((await this.wsServer.in(roomId).fetchSockets()).length > 0) {
         // if there are sockets already connected
-        // this room was created elsewhere
+        // this room was deleted, but it's still active on the other instances
         return;
       }
 
@@ -166,11 +166,11 @@ export class ExcalidrawServer {
       );
 
       const contributionTimer = this.contributionTimers.get(roomId);
-      clearInterval(contributionTimer);
+      clearTimeout(contributionTimer);
       this.contributionTimers.delete(roomId);
 
       const saveTimer = this.saveTimers.get(roomId);
-      clearInterval(saveTimer);
+      clearTimeout(saveTimer);
       this.saveTimers.delete(roomId);
     });
 
@@ -298,7 +298,12 @@ export class ExcalidrawServer {
         timeout: this.saveTimeoutMs,
       });
 
-      if (saved) {
+      if (saved === undefined) {
+        this.logger.warn?.(
+          `No eligible sockets found to save '${roomId}'.`,
+          LogContext.EXCALIDRAW_SERVER
+        );
+      } else if (saved) {
         this.logger.verbose?.(
           `Saving '${roomId}' successful`,
           LogContext.EXCALIDRAW_SERVER
@@ -325,7 +330,7 @@ export class ExcalidrawServer {
   private async sendSaveMessage(
     roomId: string,
     opts: SaveMessageOpts
-  ): Promise<boolean> {
+  ): Promise<boolean | undefined> {
     return this._sendSaveMessage(roomId, 0, opts);
   }
 
@@ -333,7 +338,7 @@ export class ExcalidrawServer {
     roomId: string,
     retries: number,
     opts: SaveMessageOpts
-  ): Promise<boolean> {
+  ): Promise<boolean | undefined> {
     const { maxRetries, timeout } = opts;
     if (retries === maxRetries) {
       return false;
@@ -350,7 +355,7 @@ export class ExcalidrawServer {
     );
     // return if no eligible sockets
     if (!sockets.length) {
-      return false;
+      return undefined;
     }
     // choose a random socket which can save
     const randomSocket = arrayRandomElement(sockets);
@@ -376,7 +381,7 @@ export class ExcalidrawServer {
       // if successful - stop and return
       return true;
     } catch (e) {
-      this.logger.verbose?.(
+      this.logger.error?.(
         `User '${randomSocket.data.agentInfo.userID}' did not respond to '${SERVER_SAVE_REQUEST}' event after ${timeout}ms`,
         LogContext.EXCALIDRAW_SERVER
       );
