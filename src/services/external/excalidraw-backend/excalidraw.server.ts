@@ -324,7 +324,7 @@ export class ExcalidrawServer {
       });
 
       if (saved === undefined) {
-        this.logger.warn?.(
+        this.logger.verbose?.(
           `No eligible sockets found to save '${roomId}'.`,
           LogContext.EXCALIDRAW_SERVER
         );
