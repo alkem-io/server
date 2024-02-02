@@ -163,13 +163,21 @@ export class ExcalidrawServer {
         return;
       }
 
-      if ((await this.wsServer.in(roomId).fetchSockets()).length > 0) {
+      const connectedSocketsToRoomCount = (
+        await this.wsServer.in(roomId).fetchSockets()
+      ).length;
+      if (connectedSocketsToRoomCount > 0) {
         // if there are sockets already connected
         // this room was deleted, but it's still active on the other instances
         // so do nothing here
+        this.logger.verbose?.(
+          `Room '${roomId}' deleted locally ('${this.appId}'), but ${connectedSocketsToRoomCount} sockets are still connected elsewhere`,
+          LogContext.EXCALIDRAW_SERVER
+        );
         return;
       }
-
+      // send an event that the room is actually deleted everywhere,
+      // because this was the last one
       this.wsServer.serverSideEmit(
         SERVER_SIDE_ROOM_DELETED,
         this.appId,
@@ -177,16 +185,16 @@ export class ExcalidrawServer {
       );
 
       this.logger.verbose?.(
-        `Room deleted: '${roomId}`,
+        `Room '${roomId}' deleted locally and everywhere else - this was the final instance`,
         LogContext.EXCALIDRAW_SERVER
       );
 
       const contributionTimer = this.contributionTimers.get(roomId);
-      clearTimeout(contributionTimer);
+      clearInterval(contributionTimer);
       this.contributionTimers.delete(roomId);
 
       const saveTimer = this.saveTimers.get(roomId);
-      clearTimeout(saveTimer);
+      clearInterval(saveTimer);
       this.saveTimers.delete(roomId);
     });
     // middlewares
@@ -200,23 +208,17 @@ export class ExcalidrawServer {
       SERVER_SIDE_ROOM_DELETED,
       async (serverId: string, roomId: string) => {
         this.logger.verbose?.(
-          `'${SERVER_SIDE_ROOM_DELETED} received: 'Room '${roomId}' deleted in '${serverId}' instance`,
+          `'${SERVER_SIDE_ROOM_DELETED}' received: 'Room '${roomId}' deleted in '${serverId}' instance. Room is finally deleted everywhere`,
           LogContext.EXCALIDRAW_SERVER
         );
-
-        if ((await this.wsServer.in(roomId).fetchSockets()).length > 0) {
-          // if there are sockets already connected
-          // this room was deleted, but it's still active on the other instances
-          // so do nothing here
-          return;
-        }
-
+        // clear any timers that were left locally,
+        // because the room has not been deleted globally
         const contributionTimer = this.contributionTimers.get(roomId);
-        clearTimeout(contributionTimer);
+        clearInterval(contributionTimer);
         this.contributionTimers.delete(roomId);
 
         const saveTimer = this.saveTimers.get(roomId);
-        clearTimeout(saveTimer);
+        clearInterval(saveTimer);
         this.saveTimers.delete(roomId);
       }
     );
