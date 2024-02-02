@@ -65,7 +65,6 @@ export class ExcalidrawServer {
   private readonly contributionWindowMs: number;
   private readonly saveIntervalMs: number;
   private readonly saveTimeoutMs: number;
-  private readonly saveMaxRetries: number;
   private readonly socketDataInitDelayMs: number;
 
   constructor(
@@ -321,7 +320,6 @@ export class ExcalidrawServer {
   private startSaveTimer(roomId: string) {
     return setInterval(async () => {
       const saved = await this.sendSaveMessage(roomId, {
-        maxRetries: this.saveMaxRetries,
         timeout: this.saveTimeoutMs,
       });
 
