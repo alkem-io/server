@@ -158,7 +158,15 @@ export class ExcalidrawServer {
         }`,
         LogContext.EXCALIDRAW_SERVER
       );
+
       if (!isRoomId(roomId)) {
+        return;
+      }
+
+      if ((await this.wsServer.in(roomId).fetchSockets()).length > 0) {
+        // if there are sockets already connected
+        // this room was deleted, but it's still active on the other instances
+        // so do nothing here
         return;
       }
 
