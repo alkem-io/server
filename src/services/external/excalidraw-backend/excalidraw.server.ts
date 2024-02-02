@@ -48,15 +48,13 @@ import {
   socketDataInitMiddleware,
 } from './middlewares';
 
-type SaveMessageOpts = { maxRetries: number; timeout: number };
+type SaveMessageOpts = { timeout: number };
 type RoomTimers = Map<string, NodeJS.Timer>;
 type SaveResponse = { success: boolean; errors?: string[] };
 
 const defaultContributionInterval = 600;
 const defaultSaveInterval = 15;
 const defaultSaveTimeout = 10;
-const defaultMaxRetries = 5;
-// const defaultTimeoutBeforeRetryMs = 3000;
 const defaultSocketDataInitDelay = 700;
 
 @Injectable()
@@ -85,7 +83,6 @@ export class ExcalidrawServer {
       contribution_window,
       save_interval,
       save_timeout,
-      save_max_retries,
       socket_data_init_delay,
     } = this.configService.get(ConfigurationTypes.COLLABORATION)?.whiteboards;
 
@@ -93,7 +90,6 @@ export class ExcalidrawServer {
       (contribution_window ?? defaultContributionInterval) * 1000;
     this.saveIntervalMs = (save_interval ?? defaultSaveInterval) * 1000;
     this.saveTimeoutMs = (save_timeout ?? defaultSaveTimeout) * 1000;
-    this.saveMaxRetries = Number(save_max_retries ?? defaultMaxRetries);
     this.socketDataInitDelayMs = Number(
       socket_data_init_delay ?? defaultSocketDataInitDelay
     );
@@ -188,14 +184,8 @@ export class ExcalidrawServer {
         `Room '${roomId}' deleted locally and everywhere else - this was the final instance`,
         LogContext.EXCALIDRAW_SERVER
       );
-
-      const contributionTimer = this.contributionTimers.get(roomId);
-      clearInterval(contributionTimer);
-      this.contributionTimers.delete(roomId);
-
-      const saveTimer = this.saveTimers.get(roomId);
-      clearInterval(saveTimer);
-      this.saveTimers.delete(roomId);
+      // delete timers that were left locally
+      this.deleteTimersForRoom(roomId);
     });
     // middlewares
     this.wsServer.use(socketDataInitMiddleware);
@@ -213,13 +203,7 @@ export class ExcalidrawServer {
         );
         // clear any timers that were left locally,
         // because the room has not been deleted globally
-        const contributionTimer = this.contributionTimers.get(roomId);
-        clearInterval(contributionTimer);
-        this.contributionTimers.delete(roomId);
-
-        const saveTimer = this.saveTimers.get(roomId);
-        clearInterval(saveTimer);
-        this.saveTimers.delete(roomId);
+        this.deleteTimersForRoom(roomId);
       }
     );
     // handlers
@@ -374,24 +358,7 @@ export class ExcalidrawServer {
     roomId: string,
     opts: SaveMessageOpts
   ): Promise<boolean | undefined> {
-    return this._sendSaveMessage(roomId, 0, opts);
-  }
-
-  private async _sendSaveMessage(
-    roomId: string,
-    retries: number,
-    opts: SaveMessageOpts
-  ): Promise<boolean | undefined> {
-    const { maxRetries, timeout } = opts;
-    if (retries === maxRetries) {
-      return false;
-    }
-    if (retries > 0) {
-      this.logger.warn?.(
-        `Retrying to save [${retries}/${maxRetries}]`,
-        LogContext.EXCALIDRAW_SERVER
-      );
-    }
+    const { timeout } = opts;
     // get only sockets which can save
     const sockets = (await this.wsServer.in(roomId).fetchSockets()).filter(
       socket => socket.data.update
@@ -410,28 +377,15 @@ export class ExcalidrawServer {
         .emitWithAck(SERVER_SAVE_REQUEST);
       // log the response
       this.logResponse(response, randomSocket, roomId);
-      // if failed - repeat
-      // if (!response.success) {
-      //   // workaround for timers/promises not working
-      //   return new Promise(res =>
-      //     setTimeout(
-      //       async () =>
-      //         res(await this._sendSaveMessage(roomId, ++retries, opts)),
-      //       defaultTimeoutBeforeRetryMs
-      //     )
-      //   );
-      // }
-      // if successful - stop and return
-      return true;
     } catch (e) {
       this.logger.error?.(
         `User '${randomSocket.data.agentInfo.userID}' did not respond to '${SERVER_SAVE_REQUEST}' event after ${timeout}ms`,
         LogContext.EXCALIDRAW_SERVER
       );
-      // retry if timed out
-      // return await this._sendSaveMessage(roomId, ++retries, opts);
       return false;
     }
+
+    return true;
   }
 
   private logResponse(
@@ -456,6 +410,29 @@ export class ExcalidrawServer {
         }' saved Whiteboard '${roomId}' with some errors: ${response.errors?.join(
           ';'
         )}'`,
+        LogContext.EXCALIDRAW_SERVER
+      );
+    }
+  }
+
+  private deleteTimersForRoom(roomId: string) {
+    const contributionTimer = this.contributionTimers.get(roomId);
+    if (contributionTimer) {
+      clearInterval(contributionTimer);
+      this.contributionTimers.delete(roomId);
+
+      this.logger.verbose?.(
+        `Deleted contribution timer for room '${roomId}'`,
+        LogContext.EXCALIDRAW_SERVER
+      );
+    }
+
+    const saveTimer = this.saveTimers.get(roomId);
+    if (saveTimer) {
+      clearInterval(saveTimer);
+      this.saveTimers.delete(roomId);
+      this.logger.verbose?.(
+        `Deleted auto save timer for room '${roomId}'`,
         LogContext.EXCALIDRAW_SERVER
       );
     }
