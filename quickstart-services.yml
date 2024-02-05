@@ -55,7 +55,7 @@ services:
       - ./.scripts/schema.sql:/bootstrap_scripts/1.sql
       - ./.scripts/migrations/CSVs:/tmp/CSVs
       - tmpvolume:/tmp
-    # command: --sql_mode="" --init-file /bootstrap_scripts/1.sql
+    command: --init-file /bootstrap_scripts/1.sql
 
   kratos-migrate:
     container_name: alkemio_dev_kratos_migrate
