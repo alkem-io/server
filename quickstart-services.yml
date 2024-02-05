@@ -39,8 +39,8 @@ services:
         source: ./.build/traefik/
         target: /etc/traefik/
 
-  mariadb:
-    container_name: alkemio_dev_mariadb
+  mysql:
+    container_name: alkemio_dev_mysql
     image: mysql:8.3.0
     networks:
       - alkemio_dev_net
@@ -61,7 +61,7 @@ services:
     container_name: alkemio_dev_kratos_migrate
     image: oryd/kratos:v1.0.0
     depends_on:
-      - mariadb
+      - mysql
     environment:
       - DSN=mysql://root:${MYSQL_ROOT_PASSWORD}@tcp(${DATABASE_HOST}:3306)/kratos?max_conns=20&max_idle_conns=4
     restart: on-failure

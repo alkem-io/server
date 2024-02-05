@@ -223,10 +223,10 @@ http:
 
 tcp:
   services:
-    mariadb:
+    mysql:
       loadBalancer:
         servers:
-          - address: 'mariadb:3306'
+          - address: 'mysql:3306'
 
     postgres:
       loadBalancer:
@@ -249,11 +249,11 @@ tcp:
           - address: 'redis:6379'
 
   routers:
-    mariadb:
+    mysql:
       rule: 'HostSNI(`*`)'
-      service: 'mariadb'
+      service: 'mysql'
       entryPoints:
-        - 'mariadb'
+        - 'mysql'
 
     postgres:
       rule: 'HostSNI(`*`)'
