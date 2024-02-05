@@ -147,13 +147,6 @@ export class ExcalidrawServer {
       }
     });
     adapter.on(DELETE_ROOM, async (roomId: string) => {
-      this.logger.verbose?.(
-        `roomId: '${roomId}', sockets: ${
-          (await this.wsServer.in(roomId).fetchSockets()).length
-        }`,
-        LogContext.EXCALIDRAW_SERVER
-      );
-
       if (!isRoomId(roomId)) {
         return;
       }
@@ -340,10 +333,7 @@ export class ExcalidrawServer {
           LogContext.EXCALIDRAW_SERVER
         );
       }
-
-      // timer.refresh();
     }, this.saveIntervalMs);
-    // return timer;
   }
 
   /***
