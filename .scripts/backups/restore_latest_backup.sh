@@ -22,7 +22,7 @@ fi
 source .env
 
 # Get the latest file in the S3 bucket
-latest_file=$(aws s3 ls s3://alkemio-backups/storage/$STORAGE/backups/$ENV --recursive | sort | tail -n 1 | awk '{print $4}')
+latest_file=$(aws s3 ls s3://alkemio-backups/storage/$STORAGE/backups/$ENV/ --recursive | sort | tail -n 1 | awk '{print $4}')
 echo $latest_file
 
 # Download the latest file
@@ -36,7 +36,7 @@ echo "Local filename: $local_file"
 
 # Restore snapshot using the correct docker container and command based on storage
 if [[ "$STORAGE" == "mariadb" || "$STORAGE" == "mysql" ]]; then
-    docker exec -i alkemio_dev_mariadb /usr/bin/mysql -u root -p${MYSQL_ROOT_PASSWORD} ${MYSQL_DATABASE} < $local_file
+    docker exec -i alkemio_dev_mysql /usr/bin/mysql -u root -p${MYSQL_ROOT_PASSWORD} ${MYSQL_DATABASE} < $local_file
     echo "Backup restored successfully!"
 elif [[ "$STORAGE" == "postgres" ]]; then
     docker exec -i alkemio_dev_postgres psql -U ${POSTGRES_USER} -d postgres -c "SELECT pg_terminate_backend(pg_stat_activity.pid)
