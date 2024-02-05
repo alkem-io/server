@@ -14,15 +14,18 @@ import {
   POLICY_RULE_WHITEBOARD_RT_CONTENT_UPDATE,
 } from '@common/constants';
 import { ProfileAuthorizationService } from '../profile/profile.service.authorization';
-import { WhiteboardRtService } from './whiteboard.rt.service';
 import { IWhiteboardRt } from './whiteboard.rt.interface';
 import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
+import { WhiteboardRt } from './whiteboard.rt.entity';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 
 @Injectable()
 export class WhiteboardRtAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
-    private whiteboardRtService: WhiteboardRtService,
+    @InjectRepository(WhiteboardRt)
+    private whiteboardRtRepository: Repository<WhiteboardRt>,
     private profileAuthorizationService: ProfileAuthorizationService
   ) {}
 
@@ -42,16 +45,28 @@ export class WhiteboardRtAuthorizationService {
       whiteboardRt
     );
 
-    whiteboardRt.profile = await this.whiteboardRtService.getProfile(
-      whiteboardRt.id
-    );
+    const profile = (
+      await this.whiteboardRtRepository.findOne({
+        where: { id: whiteboardRt.id },
+        relations: { profile: true },
+      })
+    )?.profile;
+
+    if (!profile) {
+      throw new EntityNotInitializedException(
+        `Profile not found for WhiteboardRt: ${whiteboardRt.id}`,
+        LogContext.COLLABORATION
+      );
+    }
+
+    whiteboardRt.profile = profile;
     whiteboardRt.profile =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
         whiteboardRt.profile,
         whiteboardRt.authorization
       );
 
-    return this.whiteboardRtService.save(whiteboardRt);
+    return this.whiteboardRtRepository.save(whiteboardRt);
   }
 
   private appendCredentialRules(

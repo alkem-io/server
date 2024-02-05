@@ -59,12 +59,13 @@ export class ActivityFeedService {
       agentInfo,
       spaceIds
     );
-    // how do you understand what journey is this activity about
+
     return this.getPaginatedActivity(collaborationIds, {
       types,
       userID: myActivity ? agentInfo.userID : undefined,
-      // visibility: true, // todo; what is this?
+      visibility: true,
       paginationArgs,
+      sort: 'DESC', // the most recent first
     });
   }
 
@@ -125,6 +126,7 @@ export class ActivityFeedService {
       types?: ActivityEventType[];
       visibility?: boolean;
       userID?: string;
+      sort?: 'ASC' | 'DESC';
       paginationArgs?: PaginationArgs;
     }
   ) {

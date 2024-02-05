@@ -94,24 +94,24 @@ export class ActivityService {
       types?: ActivityEventType[];
       visibility?: boolean;
       userID?: string;
+      orderBy?: 'ASC' | 'DESC';
       paginationArgs?: PaginationArgs;
-      orderByCreatedDate?: 'ASC' | 'DESC';
     }
   ) {
     const {
       types,
       visibility = true,
       userID,
+      orderBy = 'DESC',
       paginationArgs = {},
-      orderByCreatedDate = 'DESC',
     } = options ?? {};
 
-    const qb = await this.activityRepository.createQueryBuilder('activity');
+    const qb = this.activityRepository.createQueryBuilder('activity');
 
     qb.where({
       collaborationID: In(collaborationIDs),
       visibility: visibility,
-    }).orderBy({ createdDate: orderByCreatedDate });
+    });
 
     if (types && types.length > 0) {
       qb.andWhere({ type: In(types) });
@@ -121,7 +121,7 @@ export class ActivityService {
       qb.andWhere({ triggeredBy: userID });
     }
 
-    return getPaginationResults(qb, paginationArgs);
+    return getPaginationResults(qb, paginationArgs, orderBy);
   }
 
   async getActivityForMessage(messageID: string): Promise<IActivity | null> {
@@ -162,11 +162,10 @@ export class ActivityService {
       .where('activity.triggeredBy = :triggeredBy', {
         triggeredBy,
       })
-      .groupBy('activity.collaborationId')
       .orderBy('activity.createdDate', 'DESC')
       .getMany();
 
-    // Get unique collaboration IDs from activities
+    // Get unique collaboration IDs from sorted activities
     const collaborationIDs = [
       ...new Set(activities.map(a => a.collaborationID)),
     ];
@@ -185,9 +184,31 @@ export class ActivityService {
     const collaborationMap = new Map(collaborations.map(c => [c.id, c]));
 
     // Filter activities that have a corresponding collaboration
-    const activityData = activities
-      .filter(activity => collaborationMap.has(activity.collaborationID))
-      .slice(0, limit);
+    const filteredActivities = activities.filter(activity =>
+      collaborationMap.has(activity.collaborationID)
+    );
+
+    // Create a map of collaboration IDs to latest activities
+    const latestActivityPerCollaborationMap = new Map();
+    for (const activity of filteredActivities) {
+      const existingActivity = latestActivityPerCollaborationMap.get(
+        activity.collaborationID
+      );
+      if (
+        !existingActivity ||
+        activity.createdDate > existingActivity.createdDate
+      ) {
+        latestActivityPerCollaborationMap.set(
+          activity.collaborationID,
+          activity
+        );
+      }
+    }
+
+    // Convert the map values to an array and limit the results
+    const activityData = Array.from(
+      latestActivityPerCollaborationMap.values()
+    ).slice(0, limit);
 
     return activityData;
   }

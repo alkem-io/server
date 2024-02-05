@@ -1,7 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
+import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
+import {
+  EntityManager,
+  FindOneOptions,
+  FindOptionsRelations,
+  Repository,
+} from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -22,6 +26,8 @@ import { WhiteboardRt } from './whiteboard.rt.entity';
 import { IWhiteboardRt } from './whiteboard.rt.interface';
 import { CreateWhiteboardRtInput } from './dto/whiteboard.rt.dto.create';
 import { UpdateWhiteboardRtInput } from './dto/whiteboard.rt.dto.update';
+import { WhiteboardRtAuthorizationService } from './whiteboard.rt.service.authorization';
+import { CalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.entity';
 
 @Injectable()
 export class WhiteboardRtService {
@@ -30,8 +36,9 @@ export class WhiteboardRtService {
     private whiteboardRtRepository: Repository<WhiteboardRt>,
     private authorizationPolicyService: AuthorizationPolicyService,
     private profileService: ProfileService,
-    private configService: ConfigService,
-    private profileDocumentsService: ProfileDocumentsService
+    private whiteboardRtAuthService: WhiteboardRtAuthorizationService,
+    private profileDocumentsService: ProfileDocumentsService,
+    @InjectEntityManager() private entityManager: EntityManager
   ) {}
 
   async createWhiteboardRt(
@@ -111,7 +118,7 @@ export class WhiteboardRtService {
       whiteboardRtInput.id,
       {
         relations: {
-          profile: true,
+          profile: !!updateWhiteboardRtData.profileData,
         },
       }
     );
@@ -126,6 +133,24 @@ export class WhiteboardRtService {
     if (updateWhiteboardRtData.contentUpdatePolicy) {
       whiteboardRt.contentUpdatePolicy =
         updateWhiteboardRtData.contentUpdatePolicy;
+
+      const framing = await this.entityManager.findOne(CalloutFraming, {
+        where: {
+          whiteboardRt: { id: whiteboardRt.id },
+        },
+      });
+
+      if (!framing) {
+        throw new EntityNotInitializedException(
+          `Framing not initialized on whiteboard: '${whiteboardRt.id}'`,
+          LogContext.COLLABORATION
+        );
+      }
+
+      await this.whiteboardRtAuthService.applyAuthorizationPolicy(
+        whiteboardRt,
+        framing.authorization
+      );
     }
 
     return this.save(whiteboardRt);
