@@ -1,6 +1,6 @@
 {
   "name": "alkemio-server",
-  "version": "0.66.2",
+  "version": "0.67.0",
   "description": "Alkemio server, responsible for managing the shared Alkemio platform",
   "author": "Alkemio Foundation",
   "private": false,
@@ -21,6 +21,7 @@
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
     "start:services": "docker-compose -f quickstart-services.yml --env-file .env.docker up --build --force-recreate",
+    "start:services:ssi": "docker-compose -f quickstart-services.yml -f quickstart-wallet-manager.yml --env-file .env.docker up --build --force-recreate",
     "start:services:kratos:debug": "docker-compose -f quickstart-services-kratos-debug.yml --env-file .env.docker up --build --force-recreate",
     "lint": "tsc --noEmit && eslint src/**/*.ts{,x}",
     "lint:prod": "tsc --noEmit && cross-env NODE_ENV=production eslint src/**/*.ts{,x}",

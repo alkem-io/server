@@ -255,31 +255,6 @@ services:
       - alkemio_dev_net
     command: sh -c "/wait && npm run start"
 
-  wallet-manager:
-    extra_hosts:
-      - 'host.docker.internal:host-gateway'
-    container_name: alkemio_dev_wallet_manager
-    hostname: wallet-manager
-    image: alkemio/wallet-manager:v0.4.2
-    environment:
-      - DID_METHOD
-      - JOLOCOM_DATABASE_HOST
-      - MYSQL_ROOT_PASSWORD
-      - RABBITMQ_HOST
-      - RABBITMQ_USER
-      - RABBITMQ_PASSWORD
-      - LOGGING_CONSOLE_ENABLED
-      - LOGGING_LEVEL_CONSOLE
-      - ENVIRONMENT=dev
-      - WAIT_HOSTS=host.docker.internal:3000
-      - WAIT_HOSTS_TIMEOUT=300
-      - WAIT_SLEEP_INTERVAL=30
-      - WAIT_HOST_CONNECT_TIMEOUT=30
-    restart: always
-    networks:
-      - alkemio_dev_net
-    command: sh -c "/wait && npm run start"
-
   redis:
     extra_hosts:
       - 'host.docker.internal:host-gateway'
