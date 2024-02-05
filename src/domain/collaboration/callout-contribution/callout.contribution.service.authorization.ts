@@ -12,7 +12,10 @@ import { CommunityPolicyService } from '@domain/community/community-policy/commu
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { CommunityRole } from '@common/enums/community.role';
 import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
-import { CREDENTIAL_RULE_CONTRIBUTION_ADMINS_MOVE } from '@common/constants';
+import {
+  CREDENTIAL_RULE_CONTRIBUTION_ADMINS_MOVE,
+  CREDENTIAL_RULE_CONTRIBUTION_CREATED_BY,
+} from '@common/constants';
 
 @Injectable()
 export class CalloutContributionAuthorizationService {
@@ -92,6 +95,26 @@ export class CalloutContributionAuthorizationService {
       );
 
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
+
+    if (contribution.createdBy) {
+      const manageCreatedPostPolicy =
+        this.authorizationPolicyService.createCredentialRule(
+          [
+            AuthorizationPrivilege.CREATE,
+            AuthorizationPrivilege.READ,
+            AuthorizationPrivilege.UPDATE,
+            AuthorizationPrivilege.DELETE,
+          ],
+          [
+            {
+              type: AuthorizationCredential.USER_SELF_MANAGEMENT,
+              resourceID: contribution.createdBy,
+            },
+          ],
+          CREDENTIAL_RULE_CONTRIBUTION_CREATED_BY
+        );
+      newRules.push(manageCreatedPostPolicy);
+    }
 
     // Allow space admins to move post
     const credentials = this.communityPolicyService.getAllCredentialsForRole(
