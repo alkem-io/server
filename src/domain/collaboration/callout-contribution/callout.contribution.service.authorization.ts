@@ -50,6 +50,12 @@ export class CalloutContributionAuthorizationService {
         parentAuthorization
       );
 
+    // Extend to give the user creating the contribution more rights
+    contribution.authorization = this.appendCredentialRules(
+      contribution,
+      communityPolicy
+    );
+
     if (contribution.post) {
       contribution.post =
         await this.postAuthorizationService.applyAuthorizationPolicy(
@@ -73,12 +79,6 @@ export class CalloutContributionAuthorizationService {
           contribution.authorization
         );
     }
-
-    // Extend to give the user creating the contribution more rights
-    contribution.authorization = this.appendCredentialRules(
-      contribution,
-      communityPolicy
-    );
 
     return this.contributionService.save(contribution);
   }
