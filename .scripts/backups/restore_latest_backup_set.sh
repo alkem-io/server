@@ -80,16 +80,16 @@ bash $SCRIPT_PATH postgres $ENV
 # Start services
 npm run start:services &
 
-# Wait for alkemio_dev_mariadb container to be up
+# Wait for alkemio_dev_mysql container to be up
 while true; do
     # Check the status of the container
-    CONTAINER_STATUS=$(docker inspect --format="{{.State.Status}}" alkemio_dev_mariadb)
+    CONTAINER_STATUS=$(docker inspect --format="{{.State.Status}}" alkemio_dev_mysql)
 
     # If the container is running, break out of the loop
     if [ "$CONTAINER_STATUS" == "running" ]; then
         break
     else
-        echo "Waiting for alkemio_dev_mariadb to start..."
+        echo "Waiting for alkemio_dev_mysql to start..."
         sleep 500
     fi
 done
