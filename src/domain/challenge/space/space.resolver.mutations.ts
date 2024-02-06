@@ -306,7 +306,7 @@ export class SpaceResolverMutations {
       await this.authorizationService.grantAccessOrFail(
         agentInfo,
         space.authorization,
-        AuthorizationPrivilege.PLATFORM_ADMIN,
+        AuthorizationPrivilege.CREATE,
         `challengeCreate using challenge template: ${space.nameID} - ${challengeData.collaborationTemplateChallengeID}`
       );
     }

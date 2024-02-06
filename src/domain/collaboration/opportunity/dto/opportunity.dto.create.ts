@@ -22,4 +22,11 @@ export class CreateOpportunityInput extends CreateBaseChallengeInput {
   nameID!: string;
 
   storageAggregatorParent!: IStorageAggregator;
+
+  @Field(() => UUID, {
+    nullable: true,
+    description:
+      'The ID of the Opportunity to use for setting up the collaboration of the Opportunity.',
+  })
+  collaborationTemplateOpportunityID?: string;
 }
