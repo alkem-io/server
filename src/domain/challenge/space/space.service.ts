@@ -40,7 +40,7 @@ import { Space } from './space.entity';
 import { ISpace } from './space.interface';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { UpdateSpaceInput } from './dto/space.dto.update';
-import { CreateChallengeOnSpaceInput } from '../challenge/dto/challenge.dto.create.in.space';
+import { CreateChallengeOnSpaceInput } from './dto/space.dto.create.challenge';
 import { CommunityService } from '@domain/community/community/community.service';
 import { CommunityType } from '@common/enums/community.type';
 import { AgentInfo } from '@src/core/authentication/agent-info';

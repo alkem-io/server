@@ -16,7 +16,7 @@ import { SpaceAuthorizationService } from './space.service.authorization';
 import { ChallengeAuthorizationService } from '@domain/challenge/challenge/challenge.service.authorization';
 import { ISpace } from './space.interface';
 import { SpaceAuthorizationResetInput } from './dto/space.dto.reset.authorization';
-import { CreateChallengeOnSpaceInput } from '../challenge/dto/challenge.dto.create.in.space';
+import { CreateChallengeOnSpaceInput } from './dto/space.dto.create.challenge';
 import { PreferenceService } from '@domain/common/preference/preference.service';
 import { IPreference } from '@domain/common/preference/preference.interface';
 import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set';
@@ -300,6 +300,16 @@ export class SpaceResolverMutations {
       AuthorizationPrivilege.CREATE_CHALLENGE,
       `challengeCreate: ${space.nameID}`
     );
+
+    // For the creation based on the template from another challenge require platform admin privileges
+    if (challengeData.collaborationTemplateChallengeID) {
+      await this.authorizationService.grantAccessOrFail(
+        agentInfo,
+        space.authorization,
+        AuthorizationPrivilege.PLATFORM_ADMIN,
+        `challengeCreate using challenge template: ${space.nameID} - ${challengeData.collaborationTemplateChallengeID}`
+      );
+    }
     const challenge = await this.spaceService.createChallengeInSpace(
       challengeData,
       agentInfo
