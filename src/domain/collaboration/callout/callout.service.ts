@@ -319,7 +319,28 @@ export class CalloutService {
     return result;
   }
 
-  public createCalloutInputFromCallout(callout: ICallout): CreateCalloutInput {
+  public async createCalloutInputFromCallout(
+    calloutInput: ICallout
+  ): Promise<CreateCalloutInput> {
+    const callout = await this.getCalloutOrFail(calloutInput.id, {
+      relations: {
+        contributionDefaults: true,
+        contributionPolicy: true,
+        framing: {
+          profile: {
+            references: true,
+            location: true,
+            tagsets: true,
+          },
+          whiteboard: {
+            profile: true,
+          },
+          whiteboardRt: {
+            profile: true,
+          },
+        },
+      },
+    });
     return {
       nameID: callout.nameID,
       type: callout.type,

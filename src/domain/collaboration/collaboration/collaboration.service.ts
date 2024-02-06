@@ -130,7 +130,7 @@ export class CollaborationService {
 
     for (const sourceCallout of sourceCallouts) {
       const sourceCalloutInput =
-        this.calloutService.createCalloutInputFromCallout(sourceCallout);
+        await this.calloutService.createCalloutInputFromCallout(sourceCallout);
       calloutsData.push(sourceCalloutInput);
     }
     return calloutsData;
