@@ -41,10 +41,10 @@ export class LinkService {
     return link;
   }
 
-  public async updateLink(
-    link: ILink,
-    linkData: UpdateLinkInput
-  ): Promise<ILink> {
+  public async updateLink(linkData: UpdateLinkInput): Promise<ILink> {
+    const link = await this.getLinkOrFail(linkData.ID, {
+      relations: { profile: true },
+    });
     if (linkData.profile) {
       link.profile = await this.profileService.updateProfile(
         link.profile,
@@ -57,9 +57,8 @@ export class LinkService {
     return await this.save(link);
   }
 
-  async delete(linkInput: ILink): Promise<ILink> {
-    const linkID = linkInput.id;
-    const link = await this.getLinkOrFail(linkID, {
+  async deleteLink(linkId: string): Promise<ILink> {
+    const link = await this.getLinkOrFail(linkId, {
       relations: {
         profile: true,
       },
@@ -73,7 +72,7 @@ export class LinkService {
     }
 
     const result = await this.linkRepository.remove(link as Link);
-    result.id = linkID;
+    result.id = linkId;
     return result;
   }
 

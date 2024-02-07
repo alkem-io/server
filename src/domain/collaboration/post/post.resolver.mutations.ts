@@ -32,7 +32,7 @@ export class PostResolverMutations {
       AuthorizationPrivilege.DELETE,
       `delete post: ${post.nameID}`
     );
-    return await this.postService.deletePost(deleteData);
+    return await this.postService.deletePost(deleteData.ID);
   }
 
   @UseGuards(GraphqlGuard)

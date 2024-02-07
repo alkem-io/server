@@ -123,7 +123,7 @@ export class CalloutContributionService {
       }
     );
     if (contribution.post) {
-      await this.postService.deletePost({ ID: contribution.post.id });
+      await this.postService.deletePost(contribution.post.id);
     }
 
     if (contribution.whiteboard) {
@@ -131,7 +131,7 @@ export class CalloutContributionService {
     }
 
     if (contribution.link) {
-      await this.linkService.delete(contribution.link);
+      await this.linkService.deleteLink(contribution.link.id);
     }
 
     if (contribution.authorization) {
