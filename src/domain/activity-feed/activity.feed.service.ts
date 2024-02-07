@@ -18,6 +18,7 @@ import {
   CredentialMap,
   groupCredentialsByEntity,
 } from '@services/api/roles/util/group.credentials.by.entity';
+import { ICollaboration } from '@domain/collaboration/collaboration';
 
 type ActivityFeedFilters = {
   types?: Array<ActivityEventType>;
@@ -163,6 +164,7 @@ export class ActivityFeedService {
       const collaboration = await this.spaceService.getCollaborationOrFail(
         spaceId
       );
+      let childCollaborations: ICollaboration[] = [];
       try {
         this.authorizationService.grantAccessOrFail(
           agentInfo,
@@ -178,11 +180,19 @@ export class ActivityFeedService {
         );
       }
 
-      // get all child collaborations
-      const childCollaborations =
-        await this.collaborationService.getChildCollaborationsOrFail(
-          collaboration.id
+      try {
+        // get all child collaborations
+        childCollaborations =
+          await this.collaborationService.getChildCollaborationsOrFail(
+            collaboration.id
+          );
+      } catch (error) {
+        this.logger?.warn(
+          `User ${agentInfo.userID} is not able to read childCollaborations for collaboration: ${collaboration.id}`,
+          LogContext.ACTIVITY_FEED
         );
+      }
+
       // filter the child collaborations by read access
       for (const childCollaboration of childCollaborations) {
         try {
