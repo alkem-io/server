@@ -74,6 +74,7 @@ export const canUserRead = (
 export const canUserUpdate = (
   authorizationService: AuthorizationService,
   agentInfo: AgentInfo,
+  logger: LoggerService,
   wbRtAuthorization?: IAuthorizationPolicy
 ): boolean => {
   try {
@@ -84,9 +85,22 @@ export const canUserUpdate = (
       'access whiteboardRt'
     );
   } catch (e) {
+    logger.verbose?.(
+      `!!!   USER CAN NOT UPDATE ${JSON.stringify({
+        agentInfo,
+        wbRtAuthorization,
+      })} ${(e as any).message}`,
+      LogContext.EXCALIDRAW_SERVER
+    );
     return false;
   }
-
+  logger.verbose?.(
+    `!!!   USER CAN UPDATE ${JSON.stringify({
+      agentInfo,
+      wbRtAuthorization,
+    })} `,
+    LogContext.EXCALIDRAW_SERVER
+  );
   return true;
 };
 // closes the connection for this socket

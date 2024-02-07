@@ -41,6 +41,7 @@ export const authorizeWithRoomAndJoinHandler = async (
   socket.data.update = canUserUpdate(
     authorizationService,
     agentInfo,
+    logger,
     whiteboardRt.authorization
   );
 
@@ -91,8 +92,13 @@ messages are sent to all sockets except the sender socket in reliable manner
 export const serverBroadcastEventHandler = (
   roomID: string,
   data: ArrayBuffer,
-  socket: SocketIoSocket
+  socket: SocketIoSocket,
+  logger: LoggerService
 ) => {
+  logger?.verbose?.(
+    `Broadcasting to room: ${roomID} data: ${JSON.stringify(data)}`,
+    LogContext.EXCALIDRAW_SERVER
+  );
   socket.broadcast.to(roomID).emit(CLIENT_BROADCAST, data);
   socket.data.lastContributed = Date.now();
 };
@@ -113,8 +119,13 @@ export const serverVolatileBroadcastEventHandler = (
 export const requestBroadcastEventHandler = (
   roomID: string,
   data: ArrayBuffer,
-  socket: SocketIoSocket
+  socket: SocketIoSocket,
+  logger: LoggerService
 ) => {
+  logger?.verbose?.(
+    `requestBroadcastEventHandler ${JSON.stringify(data)}`,
+    LogContext.EXCALIDRAW_SERVER
+  );
   socket.broadcast.to(roomID).emit(CLIENT_BROADCAST, data);
 };
 /* Built-in event for handling socket disconnects */

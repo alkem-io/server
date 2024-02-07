@@ -246,7 +246,7 @@ export class ExcalidrawServer {
       // Currently used to send requests for missing data, to pull from other whiteboard collaborators.
       // This channel is needed because not all viewers has 'write' privilege, so they can't use the channel where updates are broadcast.
       socket.on(SERVER_REQUEST_BROADCAST, (roomID: string, data: ArrayBuffer) =>
-        requestBroadcastEventHandler(roomID, data, socket)
+        requestBroadcastEventHandler(roomID, data, socket, this.logger)
       );
       // to avoid this problem we can extend the server impl to have a build in
       // auth and handlers to be attached when the socket has been authenticated
@@ -256,7 +256,14 @@ export class ExcalidrawServer {
         if (socket.data.update) {
           // user can broadcast content change events
           socket.on(SERVER_BROADCAST, (roomID: string, data: ArrayBuffer) =>
-            serverBroadcastEventHandler(roomID, data, socket)
+            serverBroadcastEventHandler(roomID, data, socket, this.logger)
+          );
+        } else {
+          this.logger.verbose?.(
+            `!!! USER CAN NOT UPDATE HERE
+            ${JSON.stringify(socket.data)},
+            ${socket.data.agentInfo.userID}`,
+            LogContext.EXCALIDRAW_SERVER
           );
         }
         this.logger.verbose?.(
