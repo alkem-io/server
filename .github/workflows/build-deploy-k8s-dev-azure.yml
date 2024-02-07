@@ -2,7 +2,7 @@ name: Build, Migrate & Deploy to Dev
 
 on:
   push:
-    branches: [develop]
+    branches: [client-wbVerbose]
 
 jobs:
   build:
