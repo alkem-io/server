@@ -1,4 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
+import { randomUUID } from 'crypto';
+import replaceSpecialCharacters from 'replace-special-characters';
+import { escapeString } from './utils/escape-string';
 
 export class linkEntity1707304590364 implements MigrationInterface {
   name = 'linkEntity1707304590364';
@@ -22,15 +25,96 @@ export class linkEntity1707304590364 implements MigrationInterface {
       `ALTER TABLE \`link\` ADD CONSTRAINT \`FK_3bfc8c1aaec1395cc148268d3cd\` FOREIGN KEY (\`profileId\`) REFERENCES \`profile\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
 
+    // Todo: remove the FK relationship between contribution + reference
+
     const contributions: {
       id: string;
       linkId: string;
+      calloutId: string;
     }[] = await queryRunner.query(
-      `SELECT id, linkId FROM callout_contribution`
+      `SELECT id, linkId, calloutId FROM callout_contribution`
     );
     for (const contribution of contributions) {
       if (contribution.linkId) {
-        // move the data
+        // Get the relevant information
+        const [reference]: {
+          id: string;
+          name: string;
+          description: string;
+          uri: string;
+        }[] = await queryRunner.query(
+          `SELECT id, name, description, uri FROM reference WHERE id = '${contribution.linkId}'`
+        );
+
+        const storageAggregatorID = await this.getStorageAggregatorID(
+          queryRunner,
+          contribution.calloutId
+        );
+
+        // Create and link the Framing
+        const linkID = randomUUID();
+        const linkAuthID = randomUUID();
+
+        const profileID = randomUUID();
+        const profileAuthID = randomUUID();
+
+        const locationID = randomUUID();
+        const storageBucketID = randomUUID();
+        const storageBucketAuthID = randomUUID();
+
+        await queryRunner.query(
+          `INSERT INTO authorization_policy (id, version, credentialRules, verifiedCredentialRules, anonymousReadAccess, privilegeRules) VALUES
+                ('${linkAuthID}',
+                1, '', '', 0, '')`
+        );
+        await queryRunner.query(
+          `INSERT INTO authorization_policy (id, version, credentialRules, verifiedCredentialRules, anonymousReadAccess, privilegeRules) VALUES
+                ('${profileAuthID}',
+                1, '', '', 0, '')`
+        );
+        await queryRunner.query(
+          `INSERT INTO authorization_policy (id, version, credentialRules, verifiedCredentialRules, anonymousReadAccess, privilegeRules) VALUES
+                ('${storageBucketAuthID}',
+                1, '', '', 0, '')`
+        );
+
+        await queryRunner.query(
+          `INSERT INTO location (id) VALUES
+                ('${locationID}')`
+        );
+
+        await queryRunner.query(
+          `INSERT INTO storage_bucket (id, version, storageAggregatorId, authorizationId) VALUES
+                ('${storageBucketID}',
+                1, '${storageAggregatorID}', '${storageBucketAuthID}')`
+        );
+
+        await queryRunner.query(
+          `INSERT INTO profile (id, version, displayName, description, authorizationId) VALUES
+                ('${profileID}',
+                1, '${escapeString(
+                  replaceSpecialCharacters(reference.name)
+                )}', '${escapeString(
+            replaceSpecialCharacters(reference.description)
+          )}', '${profileAuthID}')`
+        );
+
+        await queryRunner.query(
+          `INSERT INTO link (id, version, uri, authorizationId, profileId) VALUES
+                ('${linkID}',
+                1, '${escapeString(
+                  replaceSpecialCharacters(reference.uri)
+                )}', '${linkAuthID}', '${profileID}')`
+        );
+
+        await queryRunner.query(
+          `UPDATE callout_contribution SET linkId = '${linkID}' WHERE id = '${contribution.id}'`
+        );
+
+        // Delete the old reference table entry
+        await queryRunner.query(
+          `DELETE FROM reference WHERE id = '${contribution.linkId}'`
+        );
       }
     }
     await queryRunner.query(
@@ -56,5 +140,39 @@ export class linkEntity1707304590364 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE \`callout_contribution\` ADD CONSTRAINT \`FK_bdf2d0eced5c95968a85caaaaee\` FOREIGN KEY (\`linkId\`) REFERENCES \`reference\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
+  }
+
+  private async getStorageAggregatorID(
+    queryRunner: QueryRunner,
+    calloutID: string
+  ) {
+    const [callout]: {
+      id: string;
+      framingId: string;
+    }[] = await queryRunner.query(
+      `SELECT id, framingId FROM callout WHERE id = '${calloutID}'`
+    );
+
+    const [framing]: {
+      id: string;
+      profileId: string;
+    }[] = await queryRunner.query(
+      `SELECT id, profileId FROM callout_framing WHERE id = '${callout.framingId}'`
+    );
+
+    const [profile]: {
+      id: string;
+      storageBucketId: string;
+    }[] = await queryRunner.query(
+      `SELECT id, storageBucketId FROM profile WHERE id = '${framing.profileId}'`
+    );
+
+    const [storageBucket]: {
+      id: string;
+      storageAggregatorId: string;
+    }[] = await queryRunner.query(
+      `SELECT id, storageAggregatorId FROM storage_bucket WHERE id = '${profile.storageBucketId}'`
+    );
+    return storageBucket.storageAggregatorId;
   }
 }
