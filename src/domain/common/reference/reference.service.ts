@@ -122,4 +122,25 @@ export class ReferenceService {
   async saveReference(reference: IReference): Promise<IReference> {
     return await this.referenceRepository.save(reference);
   }
+
+  public createReferenceInputFromReference(
+    reference: IReference
+  ): CreateReferenceInput {
+    return {
+      name: reference.name,
+      uri: reference.uri,
+      description: reference.description,
+    };
+  }
+
+  public createReferencesInputFromReferences(
+    references?: IReference[]
+  ): CreateReferenceInput[] {
+    const result: CreateReferenceInput[] = [];
+    if (!references) return result;
+    for (const reference of references) {
+      result.push(this.createReferenceInputFromReference(reference));
+    }
+    return result;
+  }
 }

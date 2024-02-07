@@ -259,6 +259,23 @@ export class CalloutFramingService {
     return calloutFraming.whiteboardRt;
   }
 
+  public createCalloutFramingInputFromCalloutFraming(
+    calloutFraming: ICalloutFraming
+  ): CreateCalloutFramingInput {
+    return {
+      profile: this.profileService.createProfileInputFromProfile(
+        calloutFraming.profile
+      ),
+      whiteboard: this.whiteboardService.createWhiteboardInputFromWhiteboard(
+        calloutFraming.whiteboard
+      ),
+      whiteboardRt:
+        this.whiteboardRtService.createWhiteboardRtInputFromWhiteboardRt(
+          calloutFraming.whiteboardRt
+        ),
+    };
+  }
+
   updateDisplayLocationTagsetValue(
     framing: ICalloutFraming,
     group: CalloutDisplayLocation
