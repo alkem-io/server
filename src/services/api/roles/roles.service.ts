@@ -109,11 +109,6 @@ export class RolesService {
       states
     );
     for (const application of applications) {
-      // skip any finalized applications; only want to return pending applications
-      const isFinalized = await this.applicationService.isFinalizedApplication(
-        application.id
-      );
-      if (isFinalized) continue;
       const community = application.community;
       const state = await this.applicationService.getApplicationState(
         application.id
