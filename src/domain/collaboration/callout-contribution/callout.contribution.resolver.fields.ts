@@ -5,7 +5,6 @@ import { ICalloutContribution } from './callout.contribution.interface';
 import { Profiling } from '@common/decorators';
 import { IWhiteboard } from '@domain/common/whiteboard';
 import { CalloutContributionService } from './callout.contribution.service';
-import { ILink } from '@domain/common/link';
 import { IPost } from '../post/post.interface';
 import { IUser } from '@domain/community/user/user.interface';
 import { UserLookupService } from '@services/infrastructure/user-lookup/user.lookup.service';
@@ -13,6 +12,7 @@ import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exc
 import { LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums/logging.context';
+import { ILink } from '../link/link.interface';
 
 @Resolver(() => ICalloutContribution)
 export class CalloutContributionResolverFields {

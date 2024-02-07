@@ -160,15 +160,15 @@ export class ActivityAdapter {
     const eventType = ActivityEventType.CALLOUT_LINK_CREATED;
     this.logEventTriggered(eventData, eventType);
 
-    const reference = eventData.reference;
-    const description = `[${eventData.callout.framing.profile.displayName}] - ${reference.name}`;
+    const link = eventData.link;
+    const description = `[${eventData.callout.framing.profile.displayName}] - ${link.profile.displayName}`;
     const collaborationID = await this.getCollaborationIdForCallout(
       eventData.callout.id
     );
     const activity = await this.activityService.createActivity({
       triggeredBy: eventData.triggeredBy,
       collaborationID,
-      resourceID: reference.id,
+      resourceID: link.id,
       parentID: eventData.callout.id,
       description: description,
       type: eventType,

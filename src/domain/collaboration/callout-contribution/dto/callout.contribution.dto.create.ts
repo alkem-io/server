@@ -3,7 +3,7 @@ import { IsOptional, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { CreateWhiteboardInput } from '@domain/common/whiteboard';
 import { CreatePostInput } from '@domain/collaboration/post/dto/post.dto.create';
-import { CreateLinkInput } from '@domain/common/link/dto/link.dto.create';
+import { CreateLinkInput } from '@domain/collaboration/link/dto/link.dto.create';
 @InputType()
 export class CreateCalloutContributionInput {
   @Field(() => CreatePostInput, { nullable: true })
