@@ -1,4 +1,4 @@
-import { setInterval, setTimeout } from 'timers';
+import { setInterval } from 'timers';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Configuration, FrontendApi } from '@ory/kratos-client';
 import {
@@ -55,7 +55,6 @@ type SaveResponse = { success: boolean; errors?: string[] };
 const defaultContributionInterval = 600;
 const defaultSaveInterval = 15;
 const defaultSaveTimeout = 10;
-const defaultSocketDataInitDelay = 700;
 
 @Injectable()
 export class ExcalidrawServer {
@@ -65,7 +64,6 @@ export class ExcalidrawServer {
   private readonly contributionWindowMs: number;
   private readonly saveIntervalMs: number;
   private readonly saveTimeoutMs: number;
-  private readonly socketDataInitDelayMs: number;
 
   constructor(
     @Inject(APP_ID) private appId: string,
@@ -78,20 +76,13 @@ export class ExcalidrawServer {
     private contributionReporter: ContributionReporterService,
     private communityResolver: CommunityResolverService
   ) {
-    const {
-      contribution_window,
-      save_interval,
-      save_timeout,
-      socket_data_init_delay,
-    } = this.configService.get(ConfigurationTypes.COLLABORATION)?.whiteboards;
+    const { contribution_window, save_interval, save_timeout } =
+      this.configService.get(ConfigurationTypes.COLLABORATION)?.whiteboards;
 
     this.contributionWindowMs =
       (contribution_window ?? defaultContributionInterval) * 1000;
     this.saveIntervalMs = (save_interval ?? defaultSaveInterval) * 1000;
     this.saveTimeoutMs = (save_timeout ?? defaultSaveTimeout) * 1000;
-    this.socketDataInitDelayMs = Number(
-      socket_data_init_delay ?? defaultSocketDataInitDelay
-    );
     // don't block the constructor
     this.init().then(() =>
       this.logger.verbose?.(
@@ -206,18 +197,26 @@ export class ExcalidrawServer {
       );
       this.wsServer.to(socket.id).emit(INIT_ROOM);
       // first authorize the user with the room
-      socket.on(
-        JOIN_ROOM,
-        async (roomID: string) =>
-          await authorizeWithRoomAndJoinHandler(
-            roomID,
-            socket,
-            this.wsServer,
-            this.whiteboardRtService,
-            this.authorizationService,
-            this.logger
-          )
-      );
+      socket.on(JOIN_ROOM, async (roomID: string) => {
+        await authorizeWithRoomAndJoinHandler(
+          roomID,
+          socket,
+          this.wsServer,
+          this.whiteboardRtService,
+          this.authorizationService,
+          this.logger
+        );
+        if (socket.data.update) {
+          // user can broadcast content change events
+          socket.on(SERVER_BROADCAST, (roomID: string, data: ArrayBuffer) =>
+            serverBroadcastEventHandler(roomID, data, socket)
+          );
+        }
+        this.logger.verbose?.(
+          `User '${socket.data.agentInfo.userID}' update flag is '${socket.data.update}'`,
+          LogContext.EXCALIDRAW_SERVER
+        );
+      });
       // attach session handlers
       // drop connection on invalid or expired session
       socket.prependAny(() => checkSessionHandler(socket));
@@ -248,22 +247,6 @@ export class ExcalidrawServer {
       socket.on(SERVER_REQUEST_BROADCAST, (roomID: string, data: ArrayBuffer) =>
         requestBroadcastEventHandler(roomID, data, socket)
       );
-      // to avoid this problem we can extend the server impl to have a build in
-      // auth and handlers to be attached when the socket has been authenticated
-      // and authorized
-      // wait for the flag to be initialized
-      setTimeout(() => {
-        if (socket.data.update) {
-          // user can broadcast content change events
-          socket.on(SERVER_BROADCAST, (roomID: string, data: ArrayBuffer) =>
-            serverBroadcastEventHandler(roomID, data, socket)
-          );
-        }
-        this.logger.verbose?.(
-          `User '${socket.data.agentInfo.userID}' update flag is '${socket.data.update}'`,
-          LogContext.EXCALIDRAW_SERVER
-        );
-      }, this.socketDataInitDelayMs);
 
       socket.on(
         DISCONNECTING,
