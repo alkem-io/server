@@ -156,7 +156,7 @@ export class ActivityFeedService {
   private async getAllAuthorizedCollaborations(
     agentInfo: AgentInfo,
     spaceIds: string[]
-  ) {
+  ): Promise<string[]> {
     const collaborationIds: string[] = [];
     for (const spaceId of spaceIds) {
       // filter the collaborations by read access
