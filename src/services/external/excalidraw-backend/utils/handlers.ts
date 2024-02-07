@@ -119,13 +119,8 @@ export const serverVolatileBroadcastEventHandler = (
 export const requestBroadcastEventHandler = (
   roomID: string,
   data: ArrayBuffer,
-  socket: SocketIoSocket,
-  logger: LoggerService
+  socket: SocketIoSocket
 ) => {
-  logger?.verbose?.(
-    `requestBroadcastEventHandler ${JSON.stringify(data)}`,
-    LogContext.EXCALIDRAW_SERVER
-  );
   socket.broadcast.to(roomID).emit(CLIENT_BROADCAST, data);
 };
 /* Built-in event for handling socket disconnects */
