@@ -92,13 +92,8 @@ messages are sent to all sockets except the sender socket in reliable manner
 export const serverBroadcastEventHandler = (
   roomID: string,
   data: ArrayBuffer,
-  socket: SocketIoSocket,
-  logger: LoggerService
+  socket: SocketIoSocket
 ) => {
-  logger?.verbose?.(
-    `Broadcasting to room: ${roomID} data: ${JSON.stringify(data)}`,
-    LogContext.EXCALIDRAW_SERVER
-  );
   socket.broadcast.to(roomID).emit(CLIENT_BROADCAST, data);
   socket.data.lastContributed = Date.now();
 };
