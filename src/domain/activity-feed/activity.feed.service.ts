@@ -163,13 +163,21 @@ export class ActivityFeedService {
       const collaboration = await this.spaceService.getCollaborationOrFail(
         spaceId
       );
-      this.authorizationService.grantAccessOrFail(
-        agentInfo,
-        collaboration.authorization,
-        AuthorizationPrivilege.READ,
-        `Collaboration activity query: ${agentInfo.email}`
-      );
-      collaborationIds.push(collaboration.id);
+      try {
+        this.authorizationService.grantAccessOrFail(
+          agentInfo,
+          collaboration.authorization,
+          AuthorizationPrivilege.READ,
+          `Collaboration activity query: ${agentInfo.email}`
+        );
+        collaborationIds.push(collaboration.id);
+      } catch (error) {
+        this.logger?.warn(
+          `User ${agentInfo.userID} is not able to read collaboration ${collaboration.id}`,
+          LogContext.ACTIVITY_FEED
+        );
+      }
+
       // get all child collaborations
       const childCollaborations =
         await this.collaborationService.getChildCollaborationsOrFail(
