@@ -13,7 +13,6 @@ import { Document } from '../document/document.entity';
 import { ReferenceModule } from '@domain/common/reference/reference.module';
 import { Profile } from '@domain/common/profile/profile.entity';
 import { UrlGeneratorModule } from '@services/infrastructure/url-generator';
-import { LinkModule } from '@domain/collaboration/link/link.module';
 
 @Module({
   imports: [
@@ -22,7 +21,6 @@ import { LinkModule } from '@domain/collaboration/link/link.module';
     AuthorizationPolicyModule,
     VisualModule,
     ReferenceModule,
-    LinkModule,
     UrlGeneratorModule,
     TypeOrmModule.forFeature([StorageBucket]),
     TypeOrmModule.forFeature([Document]),

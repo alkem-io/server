@@ -29,9 +29,7 @@ import { Profile } from '@domain/common/profile/profile.entity';
 import { IStorageBucketParent } from './dto/storage.bucket.dto.parent';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { ProfileType } from '@common/enums';
-import { IReference } from '@domain/common/reference';
 import { StorageUploadFailedException } from '@common/exceptions/storage/storage.upload.failed.exception';
-import { ILink } from '@domain/collaboration/link/link.interface';
 
 @Injectable()
 export class StorageBucketService {
@@ -222,8 +220,9 @@ export class StorageBucketService {
     return document;
   }
 
-  async uploadFileOnReference(
-    reference: IReference,
+  async uploadFileFromURI(
+    uri: string,
+    entityId: string,
     storageBucket: IStorageBucket,
     readStream: ReadStream,
     filename: string,
@@ -237,7 +236,7 @@ export class StorageBucketService {
       );
 
     const documentForReference = await this.documentService.getDocumentFromURL(
-      reference.uri
+      uri
     );
 
     try {
@@ -260,62 +259,12 @@ export class StorageBucketService {
       return newDocument;
     } catch (error: any) {
       throw new StorageUploadFailedException(
-        'Upload on reference failed!',
+        'Upload on reference or link failed!',
         LogContext.STORAGE_BUCKET,
         {
           message: error.message,
           fileName: filename,
-          referenceID: reference.id,
-          originalException: error,
-        }
-      );
-    }
-  }
-
-  async uploadFileOnLink(
-    link: ILink,
-    storageBucket: IStorageBucket,
-    readStream: ReadStream,
-    filename: string,
-    mimetype: string,
-    userID: string
-  ): Promise<IDocument | never> {
-    if (!readStream)
-      throw new ValidationException(
-        'Readstream should be defined!',
-        LogContext.DOCUMENT
-      );
-
-    const documentForReference = await this.documentService.getDocumentFromURL(
-      link.uri
-    );
-
-    try {
-      const newDocument = await this.uploadFileAsDocument(
-        storageBucket.id,
-        readStream,
-        filename,
-        mimetype,
-        userID
-      );
-      // Delete the old document, if any. Do not delete the same doc.
-      if (
-        documentForReference &&
-        newDocument.externalID != documentForReference.externalID
-      ) {
-        await this.documentService.deleteDocument({
-          ID: documentForReference.id,
-        });
-      }
-      return newDocument;
-    } catch (error: any) {
-      throw new StorageUploadFailedException(
-        'Upload on link failed!',
-        LogContext.STORAGE_BUCKET,
-        {
-          message: error.message,
-          fileName: filename,
-          linkID: link.id,
+          referenceID: entityId,
           originalException: error,
         }
       );
