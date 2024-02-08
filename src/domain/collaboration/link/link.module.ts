@@ -8,12 +8,16 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
 import { LinkResolverFields } from './link.resolver.fields';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { LinkResolverMutations } from './link.resolver.mutations';
+import { DocumentModule } from '@domain/storage/document/document.module';
+import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
 
 @Module({
   imports: [
     AuthorizationModule,
     AuthorizationPolicyModule,
     ProfileModule,
+    DocumentModule,
+    StorageBucketModule,
     TypeOrmModule.forFeature([Link]),
   ],
   providers: [
