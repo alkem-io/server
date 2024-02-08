@@ -169,11 +169,6 @@ export class linkEntity1707304590364 implements MigrationInterface {
         `SELECT id, displayName, description FROM profile WHERE id = '${link.profileId}'`
       );
 
-      const calloutFramingProfileId = await this.getCalloutFramingProfileID(
-        queryRunner,
-        contribution.calloutId
-      );
-
       const referenceID = randomUUID();
       const referenceAuthID = randomUUID();
 
@@ -184,18 +179,17 @@ export class linkEntity1707304590364 implements MigrationInterface {
       );
 
       await queryRunner.query(
-        `INSERT INTO reference (id, version, name, uri, description, authorizationId, profileId) VALUES
+        `INSERT INTO reference (id, version, name, uri, description, authorizationId) VALUES
                 ('${referenceID}',
                 1,
-                '$${escapeString(
+                '${escapeString(
                   replaceSpecialCharacters(linkProfile.displayName)
                 )}',
                 '${escapeString(replaceSpecialCharacters(link.uri))}',
-                '$${escapeString(
+                '${escapeString(
                   replaceSpecialCharacters(linkProfile.description)
                 )}',
-                '${referenceAuthID}',
-                '${calloutFramingProfileId}')`
+                '${referenceAuthID}')`
       );
       await queryRunner.query(
         `UPDATE callout_contribution SET linkId = '${referenceID}' WHERE id = '${contribution.id}'`
