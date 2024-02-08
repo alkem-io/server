@@ -127,22 +127,22 @@ export class linkEntity1707304590364 implements MigrationInterface {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    // await queryRunner.query(
-    //   `ALTER TABLE \`link\` DROP FOREIGN KEY \`FK_3bfc8c1aaec1395cc148268d3cd\``
-    // );
-    // await queryRunner.query(
-    //   `ALTER TABLE \`link\` DROP FOREIGN KEY \`FK_07f249ac87502495710a62c5c01\``
-    // );
+    await queryRunner.query(
+      `ALTER TABLE \`link\` DROP FOREIGN KEY \`FK_3bfc8c1aaec1395cc148268d3cd\``
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`link\` DROP FOREIGN KEY \`FK_07f249ac87502495710a62c5c01\``
+    );
 
-    // await queryRunner.query(
-    //   `DROP INDEX \`REL_3bfc8c1aaec1395cc148268d3c\` ON \`link\``
-    // );
-    // await queryRunner.query(
-    //   `DROP INDEX \`REL_07f249ac87502495710a62c5c0\` ON \`link\``
-    // );
-    // await queryRunner.query(
-    //   `ALTER TABLE \`callout_contribution\` DROP FOREIGN KEY  \`FK_bdf2d0eced5c95968a85caaaaee\``
-    // );
+    await queryRunner.query(
+      `DROP INDEX \`REL_3bfc8c1aaec1395cc148268d3c\` ON \`link\``
+    );
+    await queryRunner.query(
+      `DROP INDEX \`REL_07f249ac87502495710a62c5c0\` ON \`link\``
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`callout_contribution\` DROP FOREIGN KEY  \`FK_bdf2d0eced5c95968a85caaaaee\``
+    );
 
     const contributions: {
       id: string;
