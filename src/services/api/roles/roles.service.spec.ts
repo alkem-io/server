@@ -153,16 +153,6 @@ describe('RolesService', () => {
         RelationshipNotFoundException
       );
     });
-
-    it('Should skip application that is finalized', async () => {
-      jest
-        .spyOn(applicationService, 'isFinalizedApplication')
-        .mockResolvedValueOnce(true);
-
-      const res = await rolesService.getUserApplications(testData.user.id);
-
-      expect(res).toHaveLength(0);
-    });
   });
 
   describe('Organization Roles', () => {

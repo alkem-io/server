@@ -257,4 +257,17 @@ export class WhiteboardRtService {
 
     return whiteboardContent;
   }
+
+  public createWhiteboardRtInputFromWhiteboardRt(
+    whiteboard?: IWhiteboardRt
+  ): CreateWhiteboardRtInput | undefined {
+    if (!whiteboard) return undefined;
+    return {
+      profileData: this.profileService.createProfileInputFromProfile(
+        whiteboard.profile
+      ),
+      content: whiteboard.content,
+      nameID: whiteboard.nameID,
+    };
+  }
 }

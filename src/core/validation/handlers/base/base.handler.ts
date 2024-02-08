@@ -27,7 +27,7 @@ import {
   CreateUserGroupInput,
   UpdateUserGroupInput,
 } from '@domain/community/user-group/dto';
-import { CreateChallengeOnSpaceInput } from '@domain/challenge/challenge/dto/challenge.dto.create.in.space';
+import { CreateChallengeOnSpaceInput } from '@domain/challenge/space/dto/space.dto.create.challenge';
 import { CreateChallengeOnChallengeInput } from '@domain/challenge/challenge/dto/challenge.dto.create.in.challenge';
 import { CreateActorInput, UpdateActorInput } from '@domain/context/actor';
 import { CommunityApplyInput } from '@domain/community/community/dto/community.dto.apply';

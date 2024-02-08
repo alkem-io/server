@@ -19,7 +19,6 @@ import { IPost } from '../post';
 import { ICalloutContributionPolicy } from '../callout-contribution-policy/callout.contribution.policy.interface';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 import { ValidationException } from '@common/exceptions';
-import { ProfileService } from '@domain/common/profile/profile.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 
 @Injectable()
@@ -29,7 +28,6 @@ export class CalloutContributionService {
     private postService: PostService,
     private whiteboardService: WhiteboardService,
     private referenceService: ReferenceService,
-    private profileService: ProfileService,
     private namingService: NamingService,
     @InjectRepository(CalloutContribution)
     private contributionRepository: Repository<CalloutContribution>
@@ -39,8 +37,7 @@ export class CalloutContributionService {
     calloutContributionData: CreateCalloutContributionInput,
     storageAggregator: IStorageAggregator,
     contributionPolicy: ICalloutContributionPolicy,
-    userID: string,
-    profileID?: string
+    userID: string
   ): Promise<ICalloutContribution> {
     const contribution: ICalloutContribution = CalloutContribution.create(
       calloutContributionData
@@ -88,17 +85,7 @@ export class CalloutContributionService {
         CalloutContributionType.LINK
       );
 
-      if (!profileID) {
-        throw new EntityNotFoundException(
-          'Attempted to create a link contribution without a profile',
-          LogContext.COLLABORATION
-        );
-      }
-
-      contribution.link = await this.profileService.createReference({
-        ...link,
-        profileID,
-      });
+      contribution.link = await this.referenceService.createReference(link);
     }
 
     return await this.save(contribution);

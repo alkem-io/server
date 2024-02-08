@@ -155,7 +155,7 @@ export class schemaSetup1705618345186 implements MigrationInterface {
             \`version\` int(11) NOT NULL,
             \`nameID\` varchar(36) NOT NULL,
             \`type\` text NOT NULL,
-            \`visibility\` text NOT NULL DEFAULT 'draft',
+            \`visibility\` text NOT NULL DEFAULT ('draft'),
             \`authorizationId\` char(36) DEFAULT NULL,
             \`commentsId\` char(36) DEFAULT NULL,
             \`collaborationId\` char(36) DEFAULT NULL,
@@ -1596,7 +1596,7 @@ export class schemaSetup1705618345186 implements MigrationInterface {
     var preferenceDefinitionIds = [...Array(42)].map(id => randomUUID());
 
     await queryRunner.query(
-      `INSERT INTO preference_definition (id, version, groupName, displayName, description, valueType, type, definitionSet) 
+      `INSERT INTO preference_definition (id, version, groupName, displayName, description, valueType, type, definitionSet)
       VALUES
         ('${preferenceDefinitionIds[0]}',1,'NotificationGlobalAdmin','[Admin] User profile deleted','Receive a notification when a user profile is removed','boolean','NotificationUserRemoved','user'),
         ('${preferenceDefinitionIds[1]}',1,'Notification','Community Application','Receive notification when I apply to join a community','boolean','NotificationApplicationSubmitted','user'),

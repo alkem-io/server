@@ -65,4 +65,18 @@ export class LocationService {
 
     return await this.locationRepository.save(location);
   }
+
+  public createLocationInputFromLocation(
+    location?: ILocation
+  ): CreateLocationInput | undefined {
+    if (!location) return undefined;
+    return {
+      city: location.city,
+      country: location.country,
+      addressLine1: location.addressLine1,
+      addressLine2: location.addressLine2,
+      postalCode: location.postalCode,
+      stateOrProvince: location.stateOrProvince,
+    };
+  }
 }
