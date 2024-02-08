@@ -119,6 +119,23 @@ export class CollaborationService {
     return await this.save(collaboration);
   }
 
+  public async createCalloutInputsFromCollaboration(
+    collaborationSource: ICollaboration
+  ): Promise<CreateCalloutInput[]> {
+    const calloutsData: CreateCalloutInput[] = [];
+
+    const sourceCallouts = await this.getCalloutsOnCollaboration(
+      collaborationSource
+    );
+
+    for (const sourceCallout of sourceCallouts) {
+      const sourceCalloutInput =
+        await this.calloutService.createCalloutInputFromCallout(sourceCallout);
+      calloutsData.push(sourceCalloutInput);
+    }
+    return calloutsData;
+  }
+
   async save(collaboration: ICollaboration): Promise<ICollaboration> {
     return await this.collaborationRepository.save(collaboration);
   }

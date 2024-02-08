@@ -270,4 +270,17 @@ export class WhiteboardService {
 
     return whiteboardContent;
   }
+
+  public createWhiteboardInputFromWhiteboard(
+    whiteboard?: IWhiteboard
+  ): CreateWhiteboardInput | undefined {
+    if (!whiteboard) return undefined;
+    return {
+      profileData: this.profileService.createProfileInputFromProfile(
+        whiteboard.profile
+      ),
+      content: whiteboard.content,
+      nameID: whiteboard.nameID,
+    };
+  }
 }

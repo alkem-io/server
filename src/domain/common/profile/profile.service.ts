@@ -454,4 +454,21 @@ export class ProfileService {
     }
     return result;
   }
+
+  public createProfileInputFromProfile(profile: IProfile): CreateProfileInput {
+    return {
+      description: profile.description,
+      displayName: profile.displayName,
+      location: this.locationService.createLocationInputFromLocation(
+        profile.location
+      ),
+      referencesData: this.referenceService.createReferencesInputFromReferences(
+        profile.references
+      ),
+      tagline: profile.tagline,
+      tagsets: this.tagsetService.createTagsetsInputFromTagsets(
+        profile.tagsets
+      ),
+    };
+  }
 }

@@ -41,7 +41,6 @@ import { ICalloutContributionDefaults } from '../callout-contribution-defaults/c
 import { CalloutContributionFilterArgs } from '../callout-contribution/dto/callout.contribution.args.filter';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
-import { PostService } from '../post/post.service';
 
 @Injectable()
 export class CalloutService {
@@ -55,7 +54,6 @@ export class CalloutService {
     private contributionPolicyService: CalloutContributionPolicyService,
     private contributionService: CalloutContributionService,
     private storageAggregatorResolverService: StorageAggregatorResolverService,
-    private postService: PostService,
     @InjectRepository(Callout)
     private calloutRepository: Repository<Callout>
   ) {}
@@ -319,6 +317,48 @@ export class CalloutService {
     result.id = calloutID;
 
     return result;
+  }
+
+  public async createCalloutInputFromCallout(
+    calloutInput: ICallout
+  ): Promise<CreateCalloutInput> {
+    const callout = await this.getCalloutOrFail(calloutInput.id, {
+      relations: {
+        contributionDefaults: true,
+        contributionPolicy: true,
+        framing: {
+          profile: {
+            references: true,
+            location: true,
+            tagsets: true,
+          },
+          whiteboard: {
+            profile: true,
+          },
+          whiteboardRt: {
+            profile: true,
+          },
+        },
+      },
+    });
+    return {
+      nameID: callout.nameID,
+      type: callout.type,
+      visibility: callout.visibility,
+      framing:
+        this.calloutFramingService.createCalloutFramingInputFromCalloutFraming(
+          callout.framing
+        ),
+      contributionDefaults:
+        this.contributionDefaultsService.createCalloutContributionDefaultsInputFromCalloutContributionDefaults(
+          callout.contributionDefaults
+        ),
+      contributionPolicy:
+        this.contributionPolicyService.createCalloutContributionPolicyInputFromCalloutContributionPolicy(
+          callout.contributionPolicy
+        ),
+      sortOrder: callout.sortOrder,
+    };
   }
 
   public async getActivityCount(callout: ICallout): Promise<number> {
