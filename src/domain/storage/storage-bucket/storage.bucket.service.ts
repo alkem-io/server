@@ -21,8 +21,6 @@ import { MimeFileType } from '@common/enums/mime.file.type';
 import { CreateDocumentInput } from '../document/dto/document.dto.create';
 import { ReadStream } from 'fs';
 import { ValidationException } from '@common/exceptions';
-import { IVisual } from '@domain/common/visual/visual.interface';
-import { VisualService } from '@domain/common/visual/visual.service';
 import { streamToBuffer } from '@common/utils';
 import { CreateStorageBucketInput } from './dto/storage.bucket.dto.create';
 import { Profile } from '@domain/common/profile/profile.entity';
@@ -51,7 +49,6 @@ export class StorageBucketService {
     private documentService: DocumentService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private authorizationService: AuthorizationService,
-    private visualService: VisualService,
     private urlGeneratorService: UrlGeneratorService,
     @InjectRepository(StorageBucket)
     private storageBucketRepository: Repository<StorageBucket>,
@@ -296,65 +293,6 @@ export class StorageBucketService {
     );
     await this.storageBucketRepository.save(storage);
   }
-
-  async uploadImageOnVisual(
-    visual: IVisual,
-    storageBucket: IStorageBucket,
-    readStream: ReadStream,
-    fileName: string,
-    mimetype: string,
-    userID: string
-  ): Promise<IDocument | never> {
-    this.visualService.validateMimeType(visual, mimetype);
-
-    if (!readStream)
-      throw new ValidationException(
-        'Readstream should be defined!',
-        LogContext.DOCUMENT
-      );
-
-    const buffer = await streamToBuffer(readStream);
-
-    const { imageHeight, imageWidth } =
-      await this.visualService.getImageDimensions(buffer);
-    this.visualService.validateImageWidth(visual, imageWidth);
-    this.visualService.validateImageHeight(visual, imageHeight);
-    const documentForVisual = await this.documentService.getDocumentFromURL(
-      visual.uri
-    );
-
-    try {
-      const newDocument = await this.uploadFileAsDocumentFromBuffer(
-        storageBucket.id,
-        buffer,
-        fileName,
-        mimetype,
-        userID
-      );
-      // Delete the old document
-      if (
-        documentForVisual &&
-        newDocument.externalID != documentForVisual?.externalID
-      ) {
-        await this.documentService.deleteDocument({
-          ID: documentForVisual.id,
-        });
-      }
-      return newDocument;
-    } catch (error: any) {
-      throw new StorageUploadFailedException(
-        'Upload on visual failed!',
-        LogContext.STORAGE_BUCKET,
-        {
-          message: error.message,
-          fileName,
-          visualID: visual.id,
-          originalException: error,
-        }
-      );
-    }
-  }
-
   public async size(storage: IStorageBucket): Promise<number> {
     const documentsSize = await this.documentRepository
       .createQueryBuilder('document')

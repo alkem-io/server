@@ -8,7 +8,6 @@ import { StorageBucketResolverFields } from './storage.bucket.resolver.fields';
 import { StorageBucketResolverMutations } from './storage.bucket.resolver.mutations';
 import { StorageBucketService } from './storage.bucket.service';
 import { StorageBucketAuthorizationService } from './storage.bucket.service.authorization';
-import { VisualModule } from '@domain/common/visual/visual.module';
 import { Document } from '../document/document.entity';
 import { Profile } from '@domain/common/profile/profile.entity';
 import { UrlGeneratorModule } from '@services/infrastructure/url-generator';
@@ -18,7 +17,6 @@ import { UrlGeneratorModule } from '@services/infrastructure/url-generator';
     DocumentModule,
     AuthorizationModule,
     AuthorizationPolicyModule,
-    VisualModule,
     UrlGeneratorModule,
     TypeOrmModule.forFeature([StorageBucket]),
     TypeOrmModule.forFeature([Document]),

@@ -10,16 +10,24 @@ import { UpdateVisualInput } from '@domain/common/visual/dto/visual.dto.update';
 import { CreateVisualInput } from '@domain/common/visual/dto/visual.dto.create';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
-import { getImageDimensions } from '@common/utils';
+import { getImageDimensions, streamToBuffer } from '@common/utils';
 import { Visual } from './visual.entity';
 import { IVisual } from './visual.interface';
 import { DeleteVisualInput } from './dto/visual.dto.delete';
 import { avatarMinImageSize, avatarMaxImageSize } from './avatar.constants';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { ReadStream } from 'fs';
+import { IDocument } from '@domain/storage/document/document.interface';
+import { DocumentService } from '@domain/storage/document/document.service';
+import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
+import { StorageUploadFailedException } from '@common/exceptions/storage/storage.upload.failed.exception';
 
 @Injectable()
 export class VisualService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
+    private documentService: DocumentService,
+    private storageBucketService: StorageBucketService,
     @InjectRepository(Visual)
     private visualRepository: Repository<Visual>
   ) {}
@@ -61,6 +69,64 @@ export class VisualService {
       ...result,
       id,
     };
+  }
+
+  async uploadImageOnVisual(
+    visual: IVisual,
+    storageBucket: IStorageBucket,
+    readStream: ReadStream,
+    fileName: string,
+    mimetype: string,
+    userID: string
+  ): Promise<IDocument | never> {
+    this.validateMimeType(visual, mimetype);
+
+    if (!readStream)
+      throw new ValidationException(
+        'Readstream should be defined!',
+        LogContext.DOCUMENT
+      );
+
+    const buffer = await streamToBuffer(readStream);
+
+    const { imageHeight, imageWidth } = await this.getImageDimensions(buffer);
+    this.validateImageWidth(visual, imageWidth);
+    this.validateImageHeight(visual, imageHeight);
+    const documentForVisual = await this.documentService.getDocumentFromURL(
+      visual.uri
+    );
+
+    try {
+      const newDocument =
+        await this.storageBucketService.uploadFileAsDocumentFromBuffer(
+          storageBucket.id,
+          buffer,
+          fileName,
+          mimetype,
+          userID
+        );
+      // Delete the old document
+      if (
+        documentForVisual &&
+        newDocument.externalID != documentForVisual?.externalID
+      ) {
+        await this.documentService.deleteDocument({
+          ID: documentForVisual.id,
+        });
+      }
+      return newDocument;
+    } catch (error: any) {
+      throw new StorageUploadFailedException(
+        'Upload on visual failed!',
+        LogContext.STORAGE_BUCKET,
+        {
+          message: error.message,
+          fileName,
+          visualID: visual.id,
+          originalException: error,
+        }
+      );
+    }
   }
 
   async getVisualOrFail(
