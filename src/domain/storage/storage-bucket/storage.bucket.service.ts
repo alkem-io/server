@@ -31,6 +31,7 @@ import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.
 import { ProfileType } from '@common/enums';
 import { IReference } from '@domain/common/reference';
 import { StorageUploadFailedException } from '@common/exceptions/storage/storage.upload.failed.exception';
+import { ILink } from '@domain/collaboration/link/link.interface';
 
 @Injectable()
 export class StorageBucketService {
@@ -250,7 +251,7 @@ export class StorageBucketService {
       // Delete the old document, if any. Do not delete the same doc.
       if (
         documentForReference &&
-        newDocument.externalID != documentForReference?.externalID
+        newDocument.externalID != documentForReference.externalID
       ) {
         await this.documentService.deleteDocument({
           ID: documentForReference.id,
@@ -265,6 +266,56 @@ export class StorageBucketService {
           message: error.message,
           fileName: filename,
           referenceID: reference.id,
+          originalException: error,
+        }
+      );
+    }
+  }
+
+  async uploadFileOnLink(
+    link: ILink,
+    storageBucket: IStorageBucket,
+    readStream: ReadStream,
+    filename: string,
+    mimetype: string,
+    userID: string
+  ): Promise<IDocument | never> {
+    if (!readStream)
+      throw new ValidationException(
+        'Readstream should be defined!',
+        LogContext.DOCUMENT
+      );
+
+    const documentForReference = await this.documentService.getDocumentFromURL(
+      link.uri
+    );
+
+    try {
+      const newDocument = await this.uploadFileAsDocument(
+        storageBucket.id,
+        readStream,
+        filename,
+        mimetype,
+        userID
+      );
+      // Delete the old document, if any. Do not delete the same doc.
+      if (
+        documentForReference &&
+        newDocument.externalID != documentForReference.externalID
+      ) {
+        await this.documentService.deleteDocument({
+          ID: documentForReference.id,
+        });
+      }
+      return newDocument;
+    } catch (error: any) {
+      throw new StorageUploadFailedException(
+        'Upload on link failed!',
+        LogContext.STORAGE_BUCKET,
+        {
+          message: error.message,
+          fileName: filename,
+          linkID: link.id,
           originalException: error,
         }
       );

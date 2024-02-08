@@ -26,6 +26,9 @@ import { StorageBucketUploadFileInput } from './dto/storage.bucket.dto.upload.fi
 import { StorageBucketUploadFileOnReferenceInput } from './dto/storage.bucket.dto.upload.file.on.reference';
 import { IStorageBucket } from './storage.bucket.interface';
 import { DeleteStorageBuckeetInput as DeleteStorageBucketInput } from './dto/storage.bucket.dto.delete';
+import { ILink } from '@domain/collaboration/link/link.interface';
+import { StorageBucketUploadFileOnLinkInput } from './dto/storage.bucket.dto.upload.file.on.link';
+import { LinkService } from '@domain/collaboration/link/link.service';
 
 @Resolver()
 export class StorageBucketResolverMutations {
@@ -35,7 +38,8 @@ export class StorageBucketResolverMutations {
     private documentAuthorizationService: DocumentAuthorizationService,
     private documentService: DocumentService,
     private visualService: VisualService,
-    private referenceService: ReferenceService
+    private referenceService: ReferenceService,
+    private linkService: LinkService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -173,6 +177,73 @@ export class StorageBucketResolverMutations {
       uri: this.documentService.getPubliclyAccessibleURL(documentAuthorized),
     };
     return await this.referenceService.updateReference(updateData);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => ILink, {
+    description:
+      'Create a new Document on the Storage and return the value as part of the returned Link.',
+  })
+  @Profiling.api
+  async uploadFileOnLink(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('uploadData') uploadData: StorageBucketUploadFileOnLinkInput,
+    @Args({ name: 'file', type: () => GraphQLUpload })
+    { createReadStream, filename, mimetype }: FileUpload
+  ): Promise<ILink> {
+    const link = await this.linkService.getLinkOrFail(uploadData.linkID, {
+      relations: {
+        profile: {
+          storageBucket: {
+            authorization: true,
+          },
+        },
+      },
+    });
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      link.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `link file upload: ${link.id}`
+    );
+
+    const profile = link.profile;
+    if (!profile || !profile.storageBucket)
+      throw new EntityNotInitializedException(
+        `Unable to find profile for Link: ${link.id}`,
+        LogContext.STORAGE_BUCKET
+      );
+
+    const storageBucket = profile.storageBucket;
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      storageBucket.authorization,
+      AuthorizationPrivilege.FILE_UPLOAD,
+      `create document on storage: ${storageBucket.id}`
+    );
+
+    const readStream = createReadStream();
+
+    const document = await this.storageBucketService.uploadFileOnLink(
+      link,
+      storageBucket,
+      readStream,
+      filename,
+      mimetype,
+      agentInfo.userID
+    );
+
+    const documentAuthorized =
+      await this.documentAuthorizationService.applyAuthorizationPolicy(
+        document,
+        storageBucket.authorization
+      );
+
+    const updateData: UpdateReferenceInput = {
+      ID: link.id,
+      uri: this.documentService.getPubliclyAccessibleURL(documentAuthorized),
+    };
+    return await this.linkService.updateLink(updateData);
   }
 
   @UseGuards(GraphqlGuard)
