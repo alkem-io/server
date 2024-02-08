@@ -13,17 +13,10 @@ import { VisualUploadImageInput } from '@domain/common/visual/dto/visual.dto.upl
 import { VisualService } from '@domain/common/visual/visual.service';
 import { DocumentService } from '../document/document.service';
 import { UpdateVisualInput } from '@domain/common/visual/dto/visual.dto.update';
-import { ReferenceService } from '@domain/common/reference/reference.service';
-import {
-  IReference,
-  Reference,
-  UpdateReferenceInput,
-} from '@domain/common/reference';
 import { Visual } from '@domain/common/visual';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { StorageBucketUploadFileInput } from './dto/storage.bucket.dto.upload.file';
-import { StorageBucketUploadFileOnReferenceInput } from './dto/storage.bucket.dto.upload.file.on.reference';
 import { IStorageBucket } from './storage.bucket.interface';
 import { DeleteStorageBuckeetInput as DeleteStorageBucketInput } from './dto/storage.bucket.dto.delete';
 
@@ -34,8 +27,7 @@ export class StorageBucketResolverMutations {
     private storageBucketService: StorageBucketService,
     private documentAuthorizationService: DocumentAuthorizationService,
     private documentService: DocumentService,
-    private visualService: VisualService,
-    private referenceService: ReferenceService
+    private visualService: VisualService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -105,76 +97,6 @@ export class StorageBucketResolverMutations {
     return await this.visualService.updateVisual(updateData);
   }
 
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IReference, {
-    description:
-      'Create a new Document on the Storage and return the value as part of the returned Reference.',
-  })
-  @Profiling.api
-  async uploadFileOnReference(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('uploadData') uploadData: StorageBucketUploadFileOnReferenceInput,
-    @Args({ name: 'file', type: () => GraphQLUpload })
-    { createReadStream, filename, mimetype }: FileUpload
-  ): Promise<IReference> {
-    const reference = await this.referenceService.getReferenceOrFail(
-      uploadData.referenceID,
-      {
-        relations: {
-          profile: {
-            storageBucket: {
-              authorization: true,
-            },
-          },
-        },
-      }
-    );
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      reference.authorization,
-      AuthorizationPrivilege.UPDATE,
-      `reference file upload: ${reference.id}`
-    );
-
-    const profile = (reference as Reference).profile;
-    if (!profile || !profile.storageBucket)
-      throw new EntityNotInitializedException(
-        `Unable to find profile for Reference: ${reference.id}`,
-        LogContext.STORAGE_BUCKET
-      );
-
-    const storageBucket = profile.storageBucket;
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      storageBucket.authorization,
-      AuthorizationPrivilege.FILE_UPLOAD,
-      `create document on storage: ${storageBucket.id}`
-    );
-
-    const readStream = createReadStream();
-
-    const document = await this.storageBucketService.uploadFileFromURI(
-      reference.uri,
-      reference.id,
-      storageBucket,
-      readStream,
-      filename,
-      mimetype,
-      agentInfo.userID
-    );
-
-    const documentAuthorized =
-      await this.documentAuthorizationService.applyAuthorizationPolicy(
-        document,
-        storageBucket.authorization
-      );
-
-    const updateData: UpdateReferenceInput = {
-      ID: reference.id,
-      uri: this.documentService.getPubliclyAccessibleURL(documentAuthorized),
-    };
-    return await this.referenceService.updateReference(updateData);
-  }
   @UseGuards(GraphqlGuard)
   @Mutation(() => String, {
     description:
