@@ -251,4 +251,24 @@ export class TagsetService {
   async save(tagset: ITagset): Promise<ITagset> {
     return await this.tagsetRepository.save(tagset);
   }
+
+  public createTagsetInputFromTagset(tagset: ITagset): CreateTagsetInput {
+    return {
+      name: tagset.name,
+      tags: tagset.tags,
+      type: tagset.type,
+      tagsetTemplate: tagset.tagsetTemplate,
+    };
+  }
+
+  public createTagsetsInputFromTagsets(
+    tagsets?: ITagset[]
+  ): CreateTagsetInput[] {
+    const tagsetInputs: CreateTagsetInput[] = [];
+    if (!tagsets) return tagsetInputs;
+    for (const tagset of tagsets) {
+      tagsetInputs.push(this.createTagsetInputFromTagset(tagset));
+    }
+    return tagsetInputs;
+  }
 }

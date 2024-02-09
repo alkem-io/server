@@ -11,10 +11,10 @@ user=root
 password=${MYSQL_ROOT_PASSWORD}
 database=${MYSQL_DATABASE}
 host=localhost # or your MySQL server IP
-container=alkemio_dev_mariadb
+container=alkemio_dev_mysql
 
 # Get a list of all tables in the database
-tables=$(docker exec -i alkemio_dev_mariadb mysql -u $user -p$password -e "SHOW TABLES FROM $database" | grep -v Tables_in_)
+tables=$(docker exec -i alkemio_dev_mysql mysql -u $user -p$password -e "SHOW TABLES FROM $database" | grep -v Tables_in_)
 
 # Export each table to a separate CSV file
 for table in $tables; do
@@ -25,7 +25,7 @@ for table in $tables; do
 
 
     # Get columns of the table, omitting createdData, updatedDate, and version
-    columns=$(docker exec -i alkemio_dev_mariadb mysql -u $user -p$password -e "SHOW COLUMNS FROM $table" $database | awk '{print $1}' | grep -v '^Field$' | grep -Ev '^(createdDate|updatedDate|version)$' | tr '\n' ',' | sed 's/,$//')
+    columns=$(docker exec -i alkemio_dev_mysql mysql -u $user -p$password -e "SHOW COLUMNS FROM $table" $database | awk '{print $1}' | grep -v '^Field$' | grep -Ev '^(createdDate|updatedDate|version)$' | tr '\n' ',' | sed 's/,$//')
 
     filename="${table}.csv"
 

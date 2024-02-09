@@ -32,12 +32,12 @@ import { CommunityResolverService } from '@services/infrastructure/entity-resolv
 import { ActivityInputCalloutPostCreated } from '@services/adapters/activity-adapter/dto/activity.dto.input.callout.post.created';
 import { NotificationInputPostCreated } from '@services/adapters/notification-adapter/dto/notification.dto.input.post.created';
 import { NotificationInputWhiteboardCreated } from '@services/adapters/notification-adapter/dto/notification.dto.input.whiteboard.created';
-import { IReference } from '@domain/common/reference';
 import { ActivityInputCalloutLinkCreated } from '@services/adapters/activity-adapter/dto/activity.dto.input.callout.link.created';
 import { CreateContributionOnCalloutInput } from './dto/callout.dto.create.contribution';
 import { ICalloutContribution } from '../callout-contribution/callout.contribution.interface';
 import { CalloutContributionAuthorizationService } from '../callout-contribution/callout.contribution.service.authorization';
 import { CalloutContributionService } from '../callout-contribution/callout.contribution.service';
+import { ILink } from '../link/link.interface';
 
 @Resolver()
 export class CalloutResolverMutations {
@@ -264,12 +264,12 @@ export class CalloutResolverMutations {
 
   private async processActivityLinkCreated(
     callout: ICallout,
-    reference: IReference,
+    link: ILink,
     agentInfo: AgentInfo
   ) {
     const activityLogInput: ActivityInputCalloutLinkCreated = {
       triggeredBy: agentInfo.userID,
-      reference: reference,
+      link: link,
       callout: callout,
     };
     this.activityAdapter.calloutLinkCreated(activityLogInput);
@@ -281,8 +281,8 @@ export class CalloutResolverMutations {
 
     this.contributionReporter.calloutLinkCreated(
       {
-        id: reference.id,
-        name: reference.name,
+        id: link.id,
+        name: link.profile.displayName,
         space: spaceID,
       },
       {

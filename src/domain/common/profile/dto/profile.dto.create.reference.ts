@@ -1,4 +1,4 @@
-import { CreateReferenceInput } from '@domain/common/reference/reference.dto.create';
+import { CreateReferenceInput } from '@domain/common/reference/dto/reference.dto.create';
 import { UUID } from '@domain/common/scalars';
 import { InputType, Field } from '@nestjs/graphql';
 
