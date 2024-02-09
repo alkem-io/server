@@ -18,9 +18,6 @@ export class addConstraints1705843901852 implements MigrationInterface {
       `ALTER TABLE \`profile\` ADD UNIQUE INDEX \`IDX_432056041df0e4337b17ff7b09\` (\`locationId\`)`
     );
     await queryRunner.query(
-      `ALTER TABLE \`innovation_hub\` ADD UNIQUE INDEX \`IDX_8f35d04d098bb6c7c57a9a83ac\` (\`subdomain\`)`
-    );
-    await queryRunner.query(
       `ALTER TABLE \`organization_verification\` ADD UNIQUE INDEX \`IDX_c66eddab0caacb1ef8d46bcafd\` (\`authorizationId\`)`
     );
     await queryRunner.query(
@@ -108,12 +105,6 @@ export class addConstraints1705843901852 implements MigrationInterface {
       `ALTER TABLE \`callout\` ADD UNIQUE INDEX \`IDX_cf776244b01436d8ca5cc76284\` (\`framingId\`)`
     );
     await queryRunner.query(
-      `ALTER TABLE \`callout\` ADD UNIQUE INDEX \`IDX_1e740008a7e1512966e3b08414\` (\`contributionPolicyId\`)`
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`callout\` ADD UNIQUE INDEX \`IDX_36b0da55acff774d0845aeb55f\` (\`contributionDefaultsId\`)`
-    );
-    await queryRunner.query(
       `ALTER TABLE \`callout\` ADD UNIQUE INDEX \`IDX_62ed316cda7b75735b20307b47\` (\`commentsId\`)`
     );
     await queryRunner.query(
@@ -159,9 +150,6 @@ export class addConstraints1705843901852 implements MigrationInterface {
       `ALTER TABLE \`opportunity\` ADD UNIQUE INDEX \`IDX_28129cec24e65cc8340ecd1284\` (\`profileId\`)`
     );
     await queryRunner.query(
-      `ALTER TABLE \`opportunity\` ADD UNIQUE INDEX \`IDX_fa617e79d6b2926edc7b4a3878\` (\`collaborationId\`)`
-    );
-    await queryRunner.query(
       `ALTER TABLE \`opportunity\` ADD UNIQUE INDEX \`IDX_a37ebd95962285f8339bffb157\` (\`innovationFlowId\`)`
     );
     await queryRunner.query(
@@ -172,12 +160,6 @@ export class addConstraints1705843901852 implements MigrationInterface {
     );
     await queryRunner.query(
       `ALTER TABLE \`challenge\` ADD UNIQUE INDEX \`IDX_eedbe52ec6041ac337528d3dd0\` (\`profileId\`)`
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`challenge\` ADD UNIQUE INDEX \`IDX_d4551f18fed106ae2e20c70f7c\` (\`collaborationId\`)`
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`challenge\` ADD UNIQUE INDEX \`IDX_88592bee71718eec66a3bfc63f\` (\`preferenceSetId\`)`
     );
     await queryRunner.query(
       `ALTER TABLE \`challenge\` ADD UNIQUE INDEX \`IDX_0ec10c5ca99e2b7bbdeeaf6ff0\` (\`storageAggregatorId\`)`
