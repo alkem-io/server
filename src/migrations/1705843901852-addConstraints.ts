@@ -224,6 +224,19 @@ export class addConstraints1705843901852 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE \`space\` ADD UNIQUE INDEX \`IDX_980c4643d7d9de1b97bc39f518\` (\`storageAggregatorId\`)`
     );
+    // ======================================== FIXING ONE-TO-ONE RELATIONSHIPS ========================================
+    // PLATFORM
+    await queryRunner.query(`DROP INDEX \`FK_55333901817dd09d5906537e088\` ON \`platform\``); // communicationId
+    await queryRunner.query(
+      `ALTER TABLE \`platform\` ADD UNIQUE INDEX \`REL_3eb4c1d5063176a184485399f1\` (\`communicationId\`)`
+    );
+    await queryRunner.query(`DROP INDEX \`FK_5554d59c0b805c9c1ecb0070e16\` ON \`platform\``); // storageAggregatorId
+    await queryRunner.query(
+      `ALTER TABLE \`platform\` ADD UNIQUE INDEX \`REL_f516dd9a46616999c7e9a6adc1\` (\`storageAggregatorId\`)`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`platform\` ADD UNIQUE INDEX \`REL_ca469f5ec53a7719d155d60aca\` (\`libraryId\`)`
+    );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {}
