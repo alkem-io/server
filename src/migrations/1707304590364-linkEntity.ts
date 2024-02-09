@@ -47,10 +47,21 @@ export class linkEntity1707304590364 implements MigrationInterface {
         `SELECT id, name, description, uri FROM reference WHERE id = '${contribution.linkId}'`
       );
 
+      if (contribution.calloutId === null) {
+        console.log(`Contribution ${contribution.id} has no calloutId`);
+        continue;
+      }
       const storageAggregatorID = await this.getStorageAggregatorID(
         queryRunner,
         contribution.calloutId
       );
+
+      if (storageAggregatorID === null) {
+        console.log(
+          `Callout ${contribution.calloutId} has no storageAggregatorID`
+        );
+        continue;
+      }
 
       // Create and link the Profile
       const linkID = randomUUID();
