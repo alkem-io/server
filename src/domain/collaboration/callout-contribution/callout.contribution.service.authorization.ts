@@ -12,7 +12,11 @@ import { CommunityPolicyService } from '@domain/community/community-policy/commu
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { CommunityRole } from '@common/enums/community.role';
 import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
-import { CREDENTIAL_RULE_CONTRIBUTION_ADMINS_MOVE } from '@common/constants';
+import {
+  CREDENTIAL_RULE_CONTRIBUTION_ADMINS_MOVE,
+  CREDENTIAL_RULE_CONTRIBUTION_CREATED_BY,
+} from '@common/constants';
+import { LinkAuthorizationService } from '../link/link.service.authorization';
 
 @Injectable()
 export class CalloutContributionAuthorizationService {
@@ -21,6 +25,7 @@ export class CalloutContributionAuthorizationService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private postAuthorizationService: PostAuthorizationService,
     private whiteboardAuthorizationService: WhiteboardAuthorizationService,
+    private linkAuthorizationService: LinkAuthorizationService,
     private communityPolicyService: CommunityPolicyService
   ) {}
 
@@ -47,6 +52,12 @@ export class CalloutContributionAuthorizationService {
         parentAuthorization
       );
 
+    // Extend to give the user creating the contribution more rights
+    contribution.authorization = this.appendCredentialRules(
+      contribution,
+      communityPolicy
+    );
+
     if (contribution.post) {
       contribution.post =
         await this.postAuthorizationService.applyAuthorizationPolicy(
@@ -64,18 +75,12 @@ export class CalloutContributionAuthorizationService {
     }
 
     if (contribution.link) {
-      contribution.link.authorization =
-        this.authorizationPolicyService.inheritParentAuthorization(
-          contribution.link.authorization,
+      contribution.link =
+        await this.linkAuthorizationService.applyAuthorizationPolicy(
+          contribution.link,
           contribution.authorization
         );
     }
-
-    // Extend to give the user creating the contribution more rights
-    contribution.authorization = this.appendCredentialRules(
-      contribution,
-      communityPolicy
-    );
 
     return this.contributionService.save(contribution);
   }
@@ -92,6 +97,26 @@ export class CalloutContributionAuthorizationService {
       );
 
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
+
+    if (contribution.createdBy) {
+      const manageCreatedPostPolicy =
+        this.authorizationPolicyService.createCredentialRule(
+          [
+            AuthorizationPrivilege.CREATE,
+            AuthorizationPrivilege.READ,
+            AuthorizationPrivilege.UPDATE,
+            AuthorizationPrivilege.DELETE,
+          ],
+          [
+            {
+              type: AuthorizationCredential.USER_SELF_MANAGEMENT,
+              resourceID: contribution.createdBy,
+            },
+          ],
+          CREDENTIAL_RULE_CONTRIBUTION_CREATED_BY
+        );
+      newRules.push(manageCreatedPostPolicy);
+    }
 
     // Allow space admins to move post
     const credentials = this.communityPolicyService.getAllCredentialsForRole(

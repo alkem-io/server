@@ -9,7 +9,7 @@ log:
 entryPoints:
   web:
     address: ':80'
-  mariadb:
+  mysql:
     address: ':3306'
   postgres:
     address: ':5432'

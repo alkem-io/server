@@ -19,6 +19,13 @@ export class CreateChallengeInput extends CreateBaseChallengeInput {
   })
   innovationFlowTemplateID?: string;
 
+  @Field(() => UUID, {
+    nullable: true,
+    description:
+      'The ID of the Challenge to use for setting up the collaboration the Challenge.',
+  })
+  collaborationTemplateChallengeID?: string;
+
   // Override
   @Field(() => NameID, {
     nullable: true,

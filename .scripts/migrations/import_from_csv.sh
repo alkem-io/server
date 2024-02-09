@@ -13,7 +13,7 @@ host=localhost # or your MySQL server IP
 folder="CSVs"
 
 # Docker container name
-container="alkemio_dev_mariadb"
+container="alkemio_dev_mysql"
 
 # Check if CSV files are present
 if [ -z "$(ls -A $folder/*.csv 2>/dev/null)" ]; then

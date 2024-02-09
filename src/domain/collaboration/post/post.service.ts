@@ -8,7 +8,6 @@ import { IPost } from '@domain/collaboration/post/post.interface';
 import { Post } from '@domain/collaboration/post/post.entity';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { DeletePostInput } from './dto/post.dto.delete';
 import { UpdatePostInput } from './dto/post.dto.update';
 import { CreatePostInput } from './dto/post.dto.create';
 import { IProfile } from '@domain/common/profile/profile.interface';
@@ -61,9 +60,8 @@ export class PostService {
     return await this.savePost(post);
   }
 
-  public async deletePost(deleteData: DeletePostInput): Promise<IPost> {
-    const postID = deleteData.ID;
-    const post = await this.getPostOrFail(postID, {
+  public async deletePost(postId: string): Promise<IPost> {
+    const post = await this.getPostOrFail(postId, {
       relations: { profile: true },
     });
     if (post.authorization) {
@@ -77,7 +75,7 @@ export class PostService {
     }
 
     const result = await this.postRepository.remove(post as Post);
-    result.id = postID;
+    result.id = postId;
     return result;
   }
 
