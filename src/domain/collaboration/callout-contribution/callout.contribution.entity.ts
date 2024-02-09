@@ -3,8 +3,8 @@ import { ICalloutContribution } from '@domain/collaboration/callout-contribution
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity/authorizable.entity';
 import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
 import { Post } from '../post';
-import { Reference } from '@domain/common/reference';
 import { Callout } from '../callout/callout.entity';
+import { Link } from '../link/link.entity';
 
 @Entity()
 export class CalloutContribution
@@ -30,13 +30,13 @@ export class CalloutContribution
   @JoinColumn()
   post?: Post;
 
-  @OneToOne(() => Reference, {
+  @OneToOne(() => Link, {
     eager: false,
     cascade: true,
     onDelete: 'SET NULL',
   })
   @JoinColumn()
-  link?: Reference;
+  link?: Link;
 
   @ManyToOne(() => Callout, callout => callout.contributions, {
     eager: false,

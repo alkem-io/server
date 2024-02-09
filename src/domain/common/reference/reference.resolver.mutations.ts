@@ -1,4 +1,4 @@
-import { CurrentUser } from '@common/decorators';
+import { CurrentUser, Profiling } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { AgentInfo } from '@core/authentication';
 import { GraphqlGuard } from '@core/authorization';
@@ -9,12 +9,23 @@ import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { ReferenceService } from './reference.service';
 import { UpdateReferenceInput } from './dto/reference.dto.update';
+import { Reference } from './reference.entity';
+import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
+import { LogContext } from '@common/enums/logging.context';
+import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
+import { StorageBucketUploadFileOnReferenceInput } from '@domain/storage/storage-bucket/dto/storage.bucket.dto.upload.file.on.reference';
+import { FileUpload, GraphQLUpload } from 'graphql-upload';
+import { DocumentService } from '@domain/storage/document/document.service';
+import { DocumentAuthorizationService } from '@domain/storage/document/document.service.authorization';
 
 @Resolver()
 export class ReferenceResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
-    private referenceService: ReferenceService
+    private referenceService: ReferenceService,
+    private storageBucketService: StorageBucketService,
+    private documentService: DocumentService,
+    private documentAuthorizationService: DocumentAuthorizationService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -59,5 +70,76 @@ export class ReferenceResolverMutations {
       `delete reference: ${reference.id}`
     );
     return await this.referenceService.deleteReference(deleteData);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IReference, {
+    description:
+      'Create a new Document on the Storage and return the value as part of the returned Reference.',
+  })
+  @Profiling.api
+  async uploadFileOnReference(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('uploadData') uploadData: StorageBucketUploadFileOnReferenceInput,
+    @Args({ name: 'file', type: () => GraphQLUpload })
+    { createReadStream, filename, mimetype }: FileUpload
+  ): Promise<IReference> {
+    const reference = await this.referenceService.getReferenceOrFail(
+      uploadData.referenceID,
+      {
+        relations: {
+          profile: {
+            storageBucket: {
+              authorization: true,
+            },
+          },
+        },
+      }
+    );
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      reference.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `reference file upload: ${reference.id}`
+    );
+
+    const profile = (reference as Reference).profile;
+    if (!profile || !profile.storageBucket)
+      throw new EntityNotInitializedException(
+        `Unable to find profile for Reference: ${reference.id}`,
+        LogContext.STORAGE_BUCKET
+      );
+
+    const storageBucket = profile.storageBucket;
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      storageBucket.authorization,
+      AuthorizationPrivilege.FILE_UPLOAD,
+      `create document on storage: ${storageBucket.id}`
+    );
+
+    const readStream = createReadStream();
+
+    const document = await this.storageBucketService.uploadFileFromURI(
+      reference.uri,
+      reference.id,
+      storageBucket,
+      readStream,
+      filename,
+      mimetype,
+      agentInfo.userID
+    );
+
+    const documentAuthorized =
+      await this.documentAuthorizationService.applyAuthorizationPolicy(
+        document,
+        storageBucket.authorization
+      );
+
+    const updateData: UpdateReferenceInput = {
+      ID: reference.id,
+      uri: this.documentService.getPubliclyAccessibleURL(documentAuthorized),
+    };
+    return await this.referenceService.updateReference(updateData);
   }
 }

@@ -5,7 +5,6 @@ import { ICalloutContribution } from './callout.contribution.interface';
 import { Profiling } from '@common/decorators';
 import { IWhiteboard } from '@domain/common/whiteboard';
 import { CalloutContributionService } from './callout.contribution.service';
-import { IReference } from '@domain/common/reference';
 import { IPost } from '../post/post.interface';
 import { IUser } from '@domain/community/user/user.interface';
 import { UserLookupService } from '@services/infrastructure/user-lookup/user.lookup.service';
@@ -13,6 +12,7 @@ import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exc
 import { LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums/logging.context';
+import { ILink } from '../link/link.interface';
 
 @Resolver(() => ICalloutContribution)
 export class CalloutContributionResolverFields {
@@ -38,14 +38,14 @@ export class CalloutContributionResolverFields {
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField('link', () => IReference, {
+  @ResolveField('link', () => ILink, {
     nullable: true,
     description: 'The Link that was contributed.',
   })
   @Profiling.api
   async link(
     @Parent() calloutContribution: ICalloutContribution
-  ): Promise<IReference | null> {
+  ): Promise<ILink | null> {
     return await this.calloutContributionService.getLink(calloutContribution);
   }
 

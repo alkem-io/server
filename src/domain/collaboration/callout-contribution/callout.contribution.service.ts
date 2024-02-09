@@ -12,14 +12,14 @@ import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service'
 import { IWhiteboard } from '@domain/common/whiteboard';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { PostService } from '../post/post.service';
-import { ReferenceService } from '@domain/common/reference/reference.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { IReference } from '@domain/common/reference';
 import { IPost } from '../post';
 import { ICalloutContributionPolicy } from '../callout-contribution-policy/callout.contribution.policy.interface';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 import { ValidationException } from '@common/exceptions';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { LinkService } from '../link/link.service';
+import { ILink } from '../link/link.interface';
 
 @Injectable()
 export class CalloutContributionService {
@@ -27,7 +27,7 @@ export class CalloutContributionService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private postService: PostService,
     private whiteboardService: WhiteboardService,
-    private referenceService: ReferenceService,
+    private linkService: LinkService,
     private namingService: NamingService,
     @InjectRepository(CalloutContribution)
     private contributionRepository: Repository<CalloutContribution>
@@ -85,7 +85,10 @@ export class CalloutContributionService {
         CalloutContributionType.LINK
       );
 
-      contribution.link = await this.referenceService.createReference(link);
+      contribution.link = await this.linkService.createLink(
+        link,
+        storageAggregator
+      );
     }
 
     return await this.save(contribution);
@@ -120,7 +123,7 @@ export class CalloutContributionService {
       }
     );
     if (contribution.post) {
-      await this.postService.deletePost({ ID: contribution.post.id });
+      await this.postService.deletePost(contribution.post.id);
     }
 
     if (contribution.whiteboard) {
@@ -128,7 +131,7 @@ export class CalloutContributionService {
     }
 
     if (contribution.link) {
-      await this.referenceService.deleteReference({ ID: contribution.link.id });
+      await this.linkService.deleteLink(contribution.link.id);
     }
 
     if (contribution.authorization) {
@@ -198,7 +201,7 @@ export class CalloutContributionService {
   public async getLink(
     calloutContributionInput: ICalloutContribution,
     relations?: FindOptionsRelations<ICalloutContribution>
-  ): Promise<IReference | null> {
+  ): Promise<ILink | null> {
     const calloutContribution = await this.getCalloutContributionOrFail(
       calloutContributionInput.id,
       {

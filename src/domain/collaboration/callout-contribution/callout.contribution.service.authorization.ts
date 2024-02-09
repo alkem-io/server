@@ -16,6 +16,7 @@ import {
   CREDENTIAL_RULE_CONTRIBUTION_ADMINS_MOVE,
   CREDENTIAL_RULE_CONTRIBUTION_CREATED_BY,
 } from '@common/constants';
+import { LinkAuthorizationService } from '../link/link.service.authorization';
 
 @Injectable()
 export class CalloutContributionAuthorizationService {
@@ -24,6 +25,7 @@ export class CalloutContributionAuthorizationService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private postAuthorizationService: PostAuthorizationService,
     private whiteboardAuthorizationService: WhiteboardAuthorizationService,
+    private linkAuthorizationService: LinkAuthorizationService,
     private communityPolicyService: CommunityPolicyService
   ) {}
 
@@ -73,9 +75,9 @@ export class CalloutContributionAuthorizationService {
     }
 
     if (contribution.link) {
-      contribution.link.authorization =
-        this.authorizationPolicyService.inheritParentAuthorization(
-          contribution.link.authorization,
+      contribution.link =
+        await this.linkAuthorizationService.applyAuthorizationPolicy(
+          contribution.link,
           contribution.authorization
         );
     }

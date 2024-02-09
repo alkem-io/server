@@ -42,6 +42,9 @@ case $ENV in
     "acc")
         SERVER_NAME="matrix-acc.alkem.io"
         ;;
+    "sandbox")
+        SERVER_NAME="matrix-sandbox.alkem.io"
+        ;;
     *)
         echo "Invalid environment"
         exit 1

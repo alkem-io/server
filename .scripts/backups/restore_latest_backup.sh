@@ -13,8 +13,8 @@ fi
 ENV=${2:-prod}
 
 # Validate the environment
-if [[ "$ENV" != "acc" && "$ENV" != "dev" && "$ENV" != "prod" ]]; then
-    echo "Invalid environment '$ENV'. Please specify 'acc', 'dev', or 'prod'."
+if [[ "$ENV" != "acc" && "$ENV" != "dev" && "$ENV" != "sandbox" && "$ENV" != "prod" ]]; then
+    echo "Invalid environment '$ENV'. Please specify 'acc', 'dev', 'sandbox' or 'prod'."
     exit 1
 fi
 
