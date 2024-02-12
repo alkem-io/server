@@ -48,7 +48,11 @@ import { PreferenceSetService } from '@domain/common/preference-set/preference.s
 import { IPreferenceSet } from '@domain/common/preference-set/preference.set.interface';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { PaginationArgs } from '@core/pagination';
-import { applyFiltering, UserFilterInput } from '@core/filtering';
+import {
+  applyFiltering,
+  applyUsersFilter,
+  UserFilterInput,
+} from '@core/filtering';
 import { getPaginationResults } from '@core/pagination/pagination.fn';
 import { IPaginatedType } from '@core/pagination/paginated.type';
 import { CreateProfileInput } from '@domain/common/profile/dto/profile.dto.create';
@@ -689,18 +693,7 @@ export class UserService {
     }
 
     if (filter) {
-      const { displayName, ...rest } = filter;
-
-      if (displayName) {
-        const hasWhere =
-          qb.expressionMap.wheres && qb.expressionMap.wheres.length > 0;
-        qb.leftJoinAndSelect('user.profile', 'profile');
-        qb[hasWhere ? 'andWhere' : 'where'](
-          'profile.displayName like :term'
-        ).setParameters({ term: `%${displayName}%` });
-      }
-
-      applyFiltering(qb, rest, 'or');
+      applyUsersFilter(qb, filter, 'and');
     }
 
     return getPaginationResults(qb, paginationArgs);
