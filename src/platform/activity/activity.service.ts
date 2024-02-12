@@ -174,11 +174,14 @@ export class ActivityService {
     const collaborationRepository: Repository<Collaboration> =
       this.entityManager.getRepository(Collaboration);
 
-    const collaborations: Collaboration[] = await collaborationRepository
-      .createQueryBuilder('collaboration')
-      .select()
-      .where('collaboration.id IN (:...ids)', { ids: collaborationIDs })
-      .getMany();
+    const collaborations: Collaboration[] =
+      collaborationIDs.length === 0
+        ? []
+        : await collaborationRepository
+            .createQueryBuilder('collaboration')
+            .select()
+            .where('collaboration.id IN (:...ids)', { ids: collaborationIDs })
+            .getMany();
 
     // Create a map of collaboration IDs to collaborations
     const collaborationMap = new Map(collaborations.map(c => [c.id, c]));
