@@ -663,19 +663,19 @@ export class bigMigration1707470560618 implements MigrationInterface {
       'ALTER TABLE `challenge` ADD `spaceID` varchar(255) NOT NULL'
     );
     await queryRunner.query(
-      'ALTER TABLE `tagset_template` CHANGE `name` `name` varchar(255) NOT NULL DEFAULT \'default\''
+      "ALTER TABLE `tagset_template` CHANGE `name` `name` varchar(255) NOT NULL DEFAULT 'default'"
     );
     await queryRunner.query(
-      'ALTER TABLE `tagset_template` CHANGE `type` `type` varchar(255) NOT NULL DEFAULT \'freeform\''
+      "ALTER TABLE `tagset_template` CHANGE `type` `type` varchar(255) NOT NULL DEFAULT 'freeform'"
     );
     await queryRunner.query(
       'ALTER TABLE `tagset_template` CHANGE `allowedValues` `allowedValues` text NOT NULL'
     );
     await queryRunner.query(
-      'ALTER TABLE `tagset` CHANGE `type` `type` varchar(255) NOT NULL DEFAULT \'freeform\''
+      "ALTER TABLE `tagset` CHANGE `type` `type` varchar(255) NOT NULL DEFAULT 'freeform'"
     );
     await queryRunner.query(
-      'ALTER TABLE `visual` CHANGE `uri` `uri` text NOT NULL DEFAULT \'\''
+      "ALTER TABLE `visual` CHANGE `uri` `uri` text NOT NULL DEFAULT ''"
     );
     await queryRunner.query('ALTER TABLE `visual` DROP COLUMN `aspectRatio`');
     await queryRunner.query(
@@ -721,13 +721,13 @@ export class bigMigration1707470560618 implements MigrationInterface {
       'ALTER TABLE `document` ADD `displayName` text NULL'
     );
     await queryRunner.query(
-      'ALTER TABLE `document` CHANGE `mimeType` `mimeType` varchar(36) NOT NULL DEFAULT \'\''
+      "ALTER TABLE `document` CHANGE `mimeType` `mimeType` varchar(36) NOT NULL DEFAULT ''"
     );
     await queryRunner.query(
       'ALTER TABLE `document` CHANGE `size` `size` int NOT NULL'
     );
     await queryRunner.query(
-      'ALTER TABLE `document` CHANGE `externalID` `externalID` varchar(128) NOT NULL DEFAULT \'\''
+      "ALTER TABLE `document` CHANGE `externalID` `externalID` varchar(128) NOT NULL DEFAULT ''"
     );
     await queryRunner.query(
       'ALTER TABLE `document` ADD UNIQUE INDEX `IDX_d9e2dfcccf59233c17cc6bc641` (`authorizationId`)'
@@ -951,7 +951,7 @@ export class bigMigration1707470560618 implements MigrationInterface {
       'ALTER TABLE `whiteboard` ADD UNIQUE INDEX `IDX_4db6290f461fa726e86cf3d634` (`checkoutId`)'
     );
     await queryRunner.query(
-      'ALTER TABLE `whiteboard_rt` CHANGE `contentUpdatePolicy` `contentUpdatePolicy` varchar(255) NOT NULL DEFAULT \'admins\''
+      "ALTER TABLE `whiteboard_rt` CHANGE `contentUpdatePolicy` `contentUpdatePolicy` varchar(255) NOT NULL DEFAULT 'admins'"
     );
     await queryRunner.query(
       'ALTER TABLE `callout_framing` DROP FOREIGN KEY `FK_8bc0e1f40be5816d3a593cbf7fa`'
@@ -966,7 +966,7 @@ export class bigMigration1707470560618 implements MigrationInterface {
       'ALTER TABLE `callout_framing` ADD UNIQUE INDEX `IDX_62712f63939a6d56fd5c334ee3` (`whiteboardRtId`)'
     );
     await queryRunner.query(
-      'ALTER TABLE `callout_contribution_policy` CHANGE `state` `state` varchar(255) NOT NULL DEFAULT \'open\''
+      "ALTER TABLE `callout_contribution_policy` CHANGE `state` `state` varchar(255) NOT NULL DEFAULT 'open'"
     );
     await queryRunner.query('ALTER TABLE `post` DROP COLUMN `nameID`');
     await queryRunner.query(
@@ -997,10 +997,10 @@ export class bigMigration1707470560618 implements MigrationInterface {
       'ALTER TABLE `callout` ADD `nameID` varchar(255) NOT NULL'
     );
     await queryRunner.query(
-      'ALTER TABLE `callout` CHANGE `visibility` `visibility` text NOT NULL DEFAULT \'draft\''
+      "ALTER TABLE `callout` CHANGE `visibility` `visibility` text NOT NULL DEFAULT 'draft'"
     );
     await queryRunner.query(
-      'ALTER TABLE `callout` CHANGE `sortOrder` `sortOrder` int NOT NULL DEFAULT \'10\''
+      "ALTER TABLE `callout` CHANGE `sortOrder` `sortOrder` int NOT NULL DEFAULT '10'"
     );
     await queryRunner.query(
       'ALTER TABLE `callout` CHANGE `publishedDate` `publishedDate` datetime NOT NULL'
@@ -1088,7 +1088,7 @@ export class bigMigration1707470560618 implements MigrationInterface {
       'ALTER TABLE `innovation_flow_template` DROP COLUMN `type`'
     );
     await queryRunner.query(
-      'ALTER TABLE `innovation_flow_template` ADD `type` varchar(255) NOT NULL DEFAULT \'challenge\''
+      "ALTER TABLE `innovation_flow_template` ADD `type` varchar(255) NOT NULL DEFAULT 'challenge'"
     );
     await queryRunner.query(
       'ALTER TABLE `innovation_flow_template` ADD UNIQUE INDEX `IDX_3aec561629db1d65a9b2b3a788` (`authorizationId`)'
@@ -1112,7 +1112,7 @@ export class bigMigration1707470560618 implements MigrationInterface {
       'ALTER TABLE `feature_flag` CHANGE `enabled` `enabled` tinyint NOT NULL'
     );
     await queryRunner.query(
-      'ALTER TABLE `license` CHANGE `visibility` `visibility` varchar(36) NOT NULL DEFAULT \'active\''
+      "ALTER TABLE `license` CHANGE `visibility` `visibility` varchar(36) NOT NULL DEFAULT 'active'"
     );
     await queryRunner.query(
       'ALTER TABLE `space` DROP FOREIGN KEY `FK_3ef80ef55ba1a1d45e625ea8389`'
@@ -2404,7 +2404,7 @@ export class bigMigration1707470560618 implements MigrationInterface {
       'ALTER TABLE `space` ADD CONSTRAINT `FK_3ef80ef55ba1a1d45e625ea8389` FOREIGN KEY (`licenseId`) REFERENCES `license`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
     );
     await queryRunner.query(
-      'ALTER TABLE `license` CHANGE `visibility` `visibility` varchar(36) NULL DEFAULT \'active\''
+      "ALTER TABLE `license` CHANGE `visibility` `visibility` varchar(36) NULL DEFAULT 'active'"
     );
     await queryRunner.query(
       'ALTER TABLE `feature_flag` CHANGE `enabled` `enabled` tinyint(1) NOT NULL'
@@ -2519,7 +2519,7 @@ export class bigMigration1707470560618 implements MigrationInterface {
       'ALTER TABLE `callout` CHANGE `sortOrder` `sortOrder` int NOT NULL'
     );
     await queryRunner.query(
-      'ALTER TABLE `callout` CHANGE `visibility` `visibility` text NOT NULL DEFAULT \'_utf8mb4\'draft\'\''
+      "ALTER TABLE `callout` CHANGE `visibility` `visibility` text NOT NULL DEFAULT '_utf8mb4'draft''"
     );
     await queryRunner.query('ALTER TABLE `callout` DROP COLUMN `nameID`');
     await queryRunner.query(
@@ -2811,25 +2811,25 @@ export class bigMigration1707470560618 implements MigrationInterface {
     );
     await queryRunner.query('ALTER TABLE `location` DROP COLUMN `postalCode`');
     await queryRunner.query(
-      'ALTER TABLE `location` ADD `postalCode` varchar(128) NOT NULL DEFAULT \'\''
+      "ALTER TABLE `location` ADD `postalCode` varchar(128) NOT NULL DEFAULT ''"
     );
     await queryRunner.query(
       'ALTER TABLE `location` DROP COLUMN `stateOrProvince`'
     );
     await queryRunner.query(
-      'ALTER TABLE `location` ADD `stateOrProvince` varchar(128) NOT NULL DEFAULT \'\''
+      "ALTER TABLE `location` ADD `stateOrProvince` varchar(128) NOT NULL DEFAULT ''"
     );
     await queryRunner.query(
       'ALTER TABLE `location` DROP COLUMN `addressLine2`'
     );
     await queryRunner.query(
-      'ALTER TABLE `location` ADD `addressLine2` varchar(128) NOT NULL DEFAULT \'\''
+      "ALTER TABLE `location` ADD `addressLine2` varchar(128) NOT NULL DEFAULT ''"
     );
     await queryRunner.query(
       'ALTER TABLE `location` DROP COLUMN `addressLine1`'
     );
     await queryRunner.query(
-      'ALTER TABLE `location` ADD `addressLine1` varchar(128) NOT NULL DEFAULT \'\''
+      "ALTER TABLE `location` ADD `addressLine1` varchar(128) NOT NULL DEFAULT ''"
     );
     await queryRunner.query(
       'ALTER TABLE `location` CHANGE `country` `country` varchar(255) NOT NULL'
