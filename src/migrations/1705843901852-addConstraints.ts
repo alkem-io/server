@@ -226,17 +226,41 @@ export class addConstraints1705843901852 implements MigrationInterface {
     );
     // ======================================== FIXING ONE-TO-ONE RELATIONSHIPS ========================================
     // PLATFORM
-    await queryRunner.query(`DROP INDEX \`FK_55333901817dd09d5906537e088\` ON \`platform\``); // communicationId
-    await queryRunner.query(
-      `ALTER TABLE \`platform\` ADD UNIQUE INDEX \`REL_3eb4c1d5063176a184485399f1\` (\`communicationId\`)`
-    );
-    await queryRunner.query(`DROP INDEX \`FK_5554d59c0b805c9c1ecb0070e16\` ON \`platform\``); // storageAggregatorId
-    await queryRunner.query(
-      `ALTER TABLE \`platform\` ADD UNIQUE INDEX \`REL_f516dd9a46616999c7e9a6adc1\` (\`storageAggregatorId\`)`
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`platform\` ADD UNIQUE INDEX \`REL_ca469f5ec53a7719d155d60aca\` (\`libraryId\`)`
-    );
+    // await queryRunner.query(`DROP INDEX \`FK_55333901817dd09d5906537e088\` ON \`platform\``); // communicationId
+    // await queryRunner.query(
+    //   `ALTER TABLE \`platform\` ADD UNIQUE INDEX \`REL_3eb4c1d5063176a184485399f1\` (\`communicationId\`)`
+    // );
+    // await queryRunner.query(`DROP INDEX \`FK_5554d59c0b805c9c1ecb0070e16\` ON \`platform\``); // storageAggregatorId
+    // await queryRunner.query(
+    //   `ALTER TABLE \`platform\` ADD UNIQUE INDEX \`REL_f516dd9a46616999c7e9a6adc1\` (\`storageAggregatorId\`)`
+    // );
+    // await queryRunner.query(
+    //   `ALTER TABLE \`platform\` ADD UNIQUE INDEX \`REL_ca469f5ec53a7719d155d60aca\` (\`libraryId\`)`
+    // );
+    // // LIBRARY
+    // await queryRunner.query(`DROP INDEX \`FK_6664d59c0b805c9c1ecb0070e16\` ON \`library\``); // storageAggregatorId
+    // await queryRunner.query(
+    //   `ALTER TABLE \`library\` ADD UNIQUE INDEX \`REL_112e1c016f3cdbcea1d45118ee\` (\`storageAggregatorId\`)`
+    // );
+    // // CALLOUT FRAMING
+    // await queryRunner.query(`DROP INDEX \`IDX_8bc0e1f40be5816d3a593cbf7f\` ON \`callout_framing\``); // whiteboardId
+    // await queryRunner.query(
+    //   `ALTER TABLE \`callout_framing\` ADD UNIQUE INDEX \`REL_8bc0e1f40be5816d3a593cbf7f\` (\`whiteboardId\`)`
+    // );
+    // await queryRunner.query(`DROP INDEX \`IDX_62712f63939a6d56fd5c334ee3\` ON \`callout_framing\``); // whiteboardRtId
+    // await queryRunner.query(
+    //   `ALTER TABLE \`callout_framing\` ADD UNIQUE INDEX \`REL_62712f63939a6d56fd5c334ee3\` (\`whiteboardRtId\`)`
+    // );
+    // // INNOVATION PACK
+    // await queryRunner.query(`DROP INDEX \`FK_39991450cf75dc486700ca034c6\` ON \`innovation_pack\``); // profileId
+    // await queryRunner.query(
+    //   `ALTER TABLE \`innovation_pack\` ADD UNIQUE INDEX \`REL_5facd6d188068a5a1c5b6f07fc\` (\`profileId\`)`
+    // );
+    // await queryRunner.query(`DROP INDEX \`FK_55555901817dd09d5906537e088\` ON \`innovation_pack\``); // templatesSetId
+    // await queryRunner.query(
+    //   `ALTER TABLE \`innovation_pack\` ADD UNIQUE INDEX \`REL_a1441e46c8d36090e1f6477cea\` (\`templatesSetId\`)`
+    // );
+    // NVP
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {}
