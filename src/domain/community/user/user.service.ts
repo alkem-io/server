@@ -48,11 +48,7 @@ import { PreferenceSetService } from '@domain/common/preference-set/preference.s
 import { IPreferenceSet } from '@domain/common/preference-set/preference.set.interface';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { PaginationArgs } from '@core/pagination';
-import {
-  applyFiltering,
-  applyUsersFilter,
-  UserFilterInput,
-} from '@core/filtering';
+import { applyUserFilter, UserFilterInput } from '@core/filtering';
 import { getPaginationResults } from '@core/pagination/pagination.fn';
 import { IPaginatedType } from '@core/pagination/paginated.type';
 import { CreateProfileInput } from '@domain/common/profile/dto/profile.dto.create';
@@ -644,16 +640,7 @@ export class UserService {
   ): Promise<IPaginatedType<IUser>> {
     const qb = await this.userRepository.createQueryBuilder('user');
     if (filter) {
-      const { displayName, ...rest } = filter;
-
-      if (displayName)
-        qb.leftJoinAndSelect('user.profile', 'profile')
-          .where('profile.displayName like :term')
-          .setParameters({ term: `%${displayName}%` });
-
-      if (rest) {
-        applyFiltering(qb, rest, 'or');
-      }
+      applyUserFilter(qb, filter);
     }
 
     return getPaginationResults(qb, paginationArgs);
@@ -693,7 +680,7 @@ export class UserService {
     }
 
     if (filter) {
-      applyUsersFilter(qb, filter, 'and');
+      applyUserFilter(qb, filter);
     }
 
     return getPaginationResults(qb, paginationArgs);
@@ -727,18 +714,7 @@ export class UserService {
     }
 
     if (filter) {
-      const { displayName, ...rest } = filter;
-
-      if (displayName) {
-        const hasWhere =
-          qb.expressionMap.wheres && qb.expressionMap.wheres.length > 0;
-        qb.leftJoinAndSelect('user.profile', 'profile');
-        qb[hasWhere ? 'andWhere' : 'where'](
-          'profile.displayName like :term'
-        ).setParameters({ term: `%${displayName}%` });
-      }
-
-      applyFiltering(qb, rest, 'or');
+      applyUserFilter(qb, filter);
     }
 
     return getPaginationResults(qb, paginationArgs);
