@@ -177,7 +177,7 @@ export class ActivityService {
     const collaborations: Collaboration[] = await collaborationRepository
       .createQueryBuilder('collaboration')
       .select()
-      .where('collaboration.id IN (:...ids)', { ids: collaborationIDs })
+      .where({ id: In(collaborationIDs) })
       .getMany();
 
     // Create a map of collaboration IDs to collaborations
