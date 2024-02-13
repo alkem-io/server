@@ -103,7 +103,7 @@ export class UserAuthorizationService {
         user.authorization
       );
 
-    return await this.userService.saveUser(user);
+    return await this.userService.save(user);
   }
 
   async grantCredentials(user: IUser): Promise<IUser> {
@@ -118,7 +118,7 @@ export class UserAuthorizationService {
       agentID: agent.id,
       resourceID: user.id,
     });
-    return await this.userService.saveUser(user);
+    return await this.userService.save(user);
   }
 
   private appendGlobalCredentialRules(
