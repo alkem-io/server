@@ -89,6 +89,7 @@ import {
   CreateLinkInput,
   UpdateLinkInput,
 } from '@domain/collaboration/link/dto';
+import { UpdateUserPlatformSettingsInput } from '@domain/community/user/dto/user.dto.update.platform.settings';
 
 export class BaseHandler extends AbstractHandler {
   public async handle(
@@ -147,6 +148,7 @@ export class BaseHandler extends AbstractHandler {
       UpdateCalendarEventInput,
       UpdateUserGroupInput,
       UpdateUserInput,
+      UpdateUserPlatformSettingsInput,
       UpdateProfileInput,
       UpdateProjectInput,
       UpdateWhiteboardDirectInput,
