@@ -6,11 +6,14 @@ import {
   BeforeUpdate,
   Column,
   Entity,
+  JoinColumn,
+  OneToOne,
 } from 'typeorm';
 import { compressText, decompressText } from '@common/utils/compression.util';
 import { IWhiteboardRt } from './whiteboard.rt.interface';
 import { NameableEntity } from '../entity/nameable-entity/nameable.entity';
 import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
+import { User } from '@domain/community/user/user.entity';
 
 @Entity()
 export class WhiteboardRt extends NameableEntity implements IWhiteboardRt {
@@ -38,7 +41,13 @@ export class WhiteboardRt extends NameableEntity implements IWhiteboardRt {
   @Column('longtext', { nullable: false })
   content!: string;
 
-  @Column('char', { length: 36, nullable: true })
+  @OneToOne(() => User, {
+    eager: false,
+    cascade: false,
+    onDelete: 'SET NULL',
+    nullable: true,
+  })
+  @JoinColumn({ name: 'createdBy' })
   createdBy!: string;
 
   @Column('varchar', {

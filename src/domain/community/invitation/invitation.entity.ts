@@ -3,6 +3,7 @@ import { Community } from '@domain/community/community/community.entity';
 import { Lifecycle } from '@domain/common/lifecycle/lifecycle.entity';
 import { IInvitation } from './invitation.interface';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
+import { User } from '@domain/community/user/user.entity';
 @Entity()
 export class Invitation extends AuthorizableEntity implements IInvitation {
   @OneToOne(() => Lifecycle, {
@@ -23,7 +24,13 @@ export class Invitation extends AuthorizableEntity implements IInvitation {
   @Column('char', { length: 36, nullable: true })
   invitedUser!: string;
 
-  @Column('char', { length: 36, nullable: true })
+  @OneToOne(() => User, {
+    eager: false,
+    cascade: false,
+    onDelete: 'SET NULL',
+    nullable: true,
+  })
+  @JoinColumn({ name: 'createdBy' })
   createdBy!: string;
 
   @Column('varchar', { length: 512, nullable: true })

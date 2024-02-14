@@ -4,10 +4,17 @@ import { StorageBucket } from '../storage-bucket/storage.bucket.entity';
 import { MimeFileType } from '@common/enums/mime.file.type';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { Tagset } from '@domain/common/tagset';
+import { User } from '@domain/community/user/user.entity';
 
 @Entity()
 export class Document extends AuthorizableEntity implements IDocument {
-  @Column('varchar', { length: 36, nullable: true })
+  @OneToOne(() => User, {
+    eager: false,
+    cascade: false,
+    onDelete: 'SET NULL',
+    nullable: true,
+  })
+  @JoinColumn({ name: 'createdBy' })
   createdBy!: string;
 
   @ManyToOne(() => StorageBucket, storage => storage.documents, {

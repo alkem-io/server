@@ -16,6 +16,7 @@ import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity/au
 import { CalloutContributionPolicy } from '../callout-contribution-policy/callout.contribution.policy.entity';
 import { CalloutContributionDefaults } from '../callout-contribution-defaults/callout.contribution.defaults.entity';
 import { CalloutContribution } from '../callout-contribution/callout.contribution.entity';
+import { User } from '@domain/community/user/user.entity';
 
 @Entity()
 export class Callout extends AuthorizableEntity implements ICallout {
@@ -25,7 +26,13 @@ export class Callout extends AuthorizableEntity implements ICallout {
   @Column('text', { nullable: false })
   type!: CalloutType;
 
-  @Column('char', { length: 36, nullable: true })
+  @OneToOne(() => User, {
+    eager: false,
+    cascade: false,
+    onDelete: 'SET NULL',
+    nullable: true,
+  })
+  @JoinColumn({ name: 'createdBy' })
   createdBy!: string;
 
   @Column('text', { nullable: false, default: CalloutVisibility.DRAFT })
