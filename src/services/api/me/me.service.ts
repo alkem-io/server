@@ -40,7 +40,7 @@ export class MeService {
     return await this.rolesService.getUserApplications(userId, states);
   }
 
-  public getSpaceMemberships(
+  public async getSpaceMemberships(
     credentials: ICredential[],
     visibilities: SpaceVisibility[] = [
       SpaceVisibility.ACTIVE,
@@ -56,7 +56,9 @@ export class MeService {
       },
     };
 
-    return this.spaceService.getSpaces(args);
+    const spaces = await this.spaceService.getSpacesUnsorted(args);
+    // Todo: apply a different sort order when returning my Memberships. Order to be specified. (e.g. by last activity, by name, etc.)
+    return await this.spaceService.orderSpacesDefault(spaces);
   }
 
   public async getMyJourneys(

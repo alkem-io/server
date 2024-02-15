@@ -36,7 +36,7 @@ export class SpaceResolverQueries {
     @Args({ nullable: true }) args: SpacesQueryArgs
   ): Promise<ISpace[]> {
     if (!innovationHub) {
-      return this.spaceService.getSpaces(args);
+      return this.spaceService.getSpacesSorted(args);
     }
 
     return this.spaceService.getSpacesForInnovationHub(innovationHub);
