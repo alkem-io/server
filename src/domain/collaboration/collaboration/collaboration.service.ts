@@ -4,6 +4,7 @@ import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
+  ForbiddenException,
   ValidationException,
 } from '@common/exceptions';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
@@ -425,17 +426,23 @@ export class CollaborationService {
       for (const calloutID of args.IDs) {
         let callout;
         if (calloutID.length === UUID_LENGTH)
-          callout = availableCallouts.find(callout => callout.id === calloutID);
+          callout = allCallouts.find(callout => callout.id === calloutID);
         else
-          callout = availableCallouts.find(
-            callout => callout.nameID === calloutID
-          );
+          callout = allCallouts.find(callout => callout.nameID === calloutID);
 
         if (!callout)
           throw new EntityNotFoundException(
             `Callout with requested ID (${calloutID}) not located within current Collaboration: ${collaboration.id}`,
             LogContext.COLLABORATION
           );
+
+        if (!this.hasAgentAccessToCallout(callout, agentInfo)) {
+          throw new ForbiddenException(
+            `User does not have access to callout: ${callout.id}`,
+            LogContext.COLLABORATION
+          );
+        }
+
         results.push(callout);
       }
       return results;
