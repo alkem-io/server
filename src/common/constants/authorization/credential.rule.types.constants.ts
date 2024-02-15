@@ -30,6 +30,8 @@ export const CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_ADMINS_ALL =
   'credentialRuleTypes-organizationGlobalAdminsAll';
 export const CREDENTIAL_RULE_TYPES_USER_AUTHORIZATION_RESET =
   'credentialRuleTypes-userAuthorizationReset';
+export const CREDENTIAL_RULE_TYPES_USER_PLATFORM_ADMIN =
+  'credentialRuleTypes-userrPlatformAdmin';
 export const CREDENTIAL_RULE_TYPES_USER_GLOBAL_ADMIN_COMMUNITY =
   'credentialRuleTypes-userGlobalAdminCommunity';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_GLOBAL_ADMINS =
