@@ -439,7 +439,14 @@ export class SpaceService {
         ...options,
       });
     } else {
-      spaces = await this.spaceRepository.find();
+      spaces = await this.spaceRepository.find({
+        where: {
+          license: {
+            visibility: In(visibilities),
+          },
+        },
+        ...options,
+      });
     }
 
     if (spaces.length === 0) return [];
