@@ -6,6 +6,11 @@ import { LinkService } from './link.service';
 import { ILink } from './link.interface';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { LogContext } from '@common/enums/logging.context';
+import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
+import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
+import { CREDENTIAL_RULE_LINK_CREATED_BY } from '@common/constants/authorization/credential.rule.constants';
 
 @Injectable()
 export class LinkAuthorizationService {
@@ -17,7 +22,8 @@ export class LinkAuthorizationService {
 
   public async applyAuthorizationPolicy(
     linkInput: ILink,
-    parentAuthorization: IAuthorizationPolicy | undefined
+    parentAuthorization: IAuthorizationPolicy | undefined,
+    createdByID?: string
   ): Promise<ILink> {
     const link = await this.linkService.getLinkOrFail(linkInput.id, {
       relations: {
@@ -34,7 +40,7 @@ export class LinkAuthorizationService {
         link.authorization,
         parentAuthorization
       );
-
+    link.authorization = this.appendCredentialRules(link, createdByID);
     link.profile =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
         link.profile,
@@ -42,5 +48,42 @@ export class LinkAuthorizationService {
       );
 
     return this.linkService.save(link);
+  }
+
+  private appendCredentialRules(
+    link: ILink,
+    createdByID?: string
+  ): IAuthorizationPolicy {
+    const authorization = link.authorization;
+    if (!authorization)
+      throw new EntityNotInitializedException(
+        `Authorization definition not found for Link: ${link.id}`,
+        LogContext.COLLABORATION
+      );
+
+    const newRules: IAuthorizationPolicyRuleCredential[] = [];
+
+    if (createdByID) {
+      const manageCreatedPostPolicy =
+        this.authorizationPolicyService.createCredentialRule(
+          [AuthorizationPrivilege.DELETE],
+          [
+            {
+              type: AuthorizationCredential.USER_SELF_MANAGEMENT,
+              resourceID: createdByID,
+            },
+          ],
+          CREDENTIAL_RULE_LINK_CREATED_BY
+        );
+      newRules.push(manageCreatedPostPolicy);
+    }
+
+    const updatedAuthorization =
+      this.authorizationPolicyService.appendCredentialAuthorizationRules(
+        authorization,
+        newRules
+      );
+
+    return updatedAuthorization;
   }
 }
