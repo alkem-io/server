@@ -23,5 +23,5 @@ export class UpdateUserPlatformSettingsInput {
   })
   @IsEmail()
   @MaxLength(MID_TEXT_LENGTH)
-  email!: string;
+  email?: string;
 }
