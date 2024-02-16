@@ -362,9 +362,9 @@ describe('SpacesSorting', () => {
     expect(JSON.stringify(result)).toBe('["3","8","4","10"]');
   });
   it('Filtering test 3', () => {
-    const visibilities = [SpaceVisibility.DEMO];
+    const visibilities = [SpaceVisibility.ARCHIVED];
     const archivedSpaces = spaceTestData.filter(space => {
-      const visibility = space.license?.visibility || SpaceVisibility.DEMO;
+      const visibility = space.license?.visibility || SpaceVisibility.ARCHIVED;
       return visibilities.includes(visibility);
     });
     const result = service['orderSpacesDefault'](archivedSpaces);
