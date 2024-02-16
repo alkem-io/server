@@ -74,8 +74,8 @@ yq e ".server_name = \"$SERVER_NAME\"" -i $HOMESERVER_FILE_PATH
 # Path to your existing script
 SCRIPT_PATH='restore_latest_backup.sh'
 
-# Call the existing script for mariadb
-bash $SCRIPT_PATH mariadb $ENV
+# Call the existing script for mysql
+bash $SCRIPT_PATH mysql $ENV
 
 # Call the existing script for postgres
 bash $SCRIPT_PATH postgres $ENV
