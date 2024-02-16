@@ -1,11 +1,11 @@
 #!/bin/bash
 
 # The storage is the first argument passed to the script. Default to 'mariadb' if not provided.
-STORAGE=${1:-mariadb}
+STORAGE=${1:-mysql}
 
 # Validate the storage
-if [[ "$STORAGE" != "mariadb" && "$STORAGE" != "mysql" && "$STORAGE" != "postgres" ]]; then
-    echo "Invalid storage '$STORAGE'. Please specify 'mariadb', 'mysql', or 'postgres'."
+if [[ "$STORAGE" != "mysql" && "$STORAGE" != "postgres" ]]; then
+    echo "Invalid storage '$STORAGE'. Please specify 'mysql', or 'postgres'."
     exit 1
 fi
 
@@ -22,7 +22,11 @@ fi
 source .env
 
 # Get the latest file in the S3 bucket
-latest_file=$(aws s3 ls s3://alkemio-backups/storage/$STORAGE/backups/$ENV/ --recursive | sort | tail -n 1 | awk '{print $4}')
+if [[ $STORAGE == "mysql" ]]; then
+    latest_file=$(aws s3 ls s3://alkemio-backups/storage/$STORAGE/backups/$ENV/ --recursive | grep $MYSQL_DATABASE | sort | tail -n 1 | awk '{print $4}')
+elif [[ $STORAGE == "postgres" ]]; then
+    latest_file=$(aws s3 ls s3://alkemio-backups/storage/$STORAGE/backups/$ENV/ --recursive | sort | tail -n 1 | awk '{print $4}')
+fi
 echo $latest_file
 
 # Download the latest file
