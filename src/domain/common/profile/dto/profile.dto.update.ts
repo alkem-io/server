@@ -5,10 +5,7 @@ import {
   MinLength,
   ValidateNested,
 } from 'class-validator';
-import {
-  SMALL_TEXT_LENGTH,
-  VERY_LONG_TEXT_LENGTH,
-} from '@src/common/constants';
+import { HUGE_TEXT_LENGTH, SMALL_TEXT_LENGTH } from '@src/common/constants';
 import { UpdateReferenceInput } from '@domain/common/reference';
 import { UpdateTagsetInput } from '@domain/common/tagset/dto/tagset.dto.update';
 import { UpdateLocationInput } from '@domain/common/location/dto/location.dto.update';
@@ -32,7 +29,7 @@ export class UpdateProfileInput {
 
   @Field(() => Markdown, { nullable: true })
   @IsOptional()
-  @MaxLength(VERY_LONG_TEXT_LENGTH)
+  @MaxLength(HUGE_TEXT_LENGTH)
   description?: string;
 
   @Field(() => [UpdateReferenceInput], { nullable: true })
