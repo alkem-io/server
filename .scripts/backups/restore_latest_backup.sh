@@ -22,7 +22,7 @@ fi
 source .env
 
 # Get the latest file in the S3 bucket
-latest_file=$(aws s3 ls s3://alkemio-backups/storage/$STORAGE/backups/$ENV/ --recursive | sort | tail -n 1 | awk '{print $4}')
+latest_file=$(aws s3 ls s3://alkemio-backups/storage/$STORAGE/backups/$ENV/ --recursive | grep $MYSQL_DATABASE | sort | tail -n 1 | awk '{print $4}')
 echo $latest_file
 
 # Download the latest file
