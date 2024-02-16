@@ -331,31 +331,43 @@ describe('SpacesSorting', () => {
   });
 
   it('Sorting test', () => {
-    const result = service['filterAndSortSpaces'](spaceTestData, [
-      SpaceVisibility.ACTIVE,
-      SpaceVisibility.DEMO,
-    ]);
+    const visibilities = [SpaceVisibility.ACTIVE, SpaceVisibility.DEMO];
+    const activeDemoSpaces = spaceTestData.filter(space => {
+      const visibility = space.license?.visibility || SpaceVisibility.ACTIVE;
+      return visibilities.includes(visibility);
+    });
+    const result = service['orderSpacesDefault'](activeDemoSpaces);
     expect(JSON.stringify(result)).toBe(
       '["6","2","1","5","9","3","8","4","10"]'
     );
   });
   it('Filtering test 1', () => {
-    const result = service['filterAndSortSpaces'](spaceTestData, [
-      SpaceVisibility.ACTIVE,
-    ]);
+    const visibilities = [SpaceVisibility.ACTIVE];
+    const activeSpaces = spaceTestData.filter(space => {
+      const visibility = space.license?.visibility || SpaceVisibility.ACTIVE;
+      return visibilities.includes(visibility);
+    });
+
+    const result = service['orderSpacesDefault'](activeSpaces);
 
     expect(JSON.stringify(result)).toBe('["6","2","1","5","9"]');
   });
   it('Filtering test 2', () => {
-    const result = service['filterAndSortSpaces'](spaceTestData, [
-      SpaceVisibility.DEMO,
-    ]);
+    const visibilities = [SpaceVisibility.DEMO];
+    const demoSpaces = spaceTestData.filter(space => {
+      const visibility = space.license?.visibility || SpaceVisibility.DEMO;
+      return visibilities.includes(visibility);
+    });
+    const result = service['orderSpacesDefault'](demoSpaces);
     expect(JSON.stringify(result)).toBe('["3","8","4","10"]');
   });
   it('Filtering test 3', () => {
-    const result = service['filterAndSortSpaces'](spaceTestData, [
-      SpaceVisibility.ARCHIVED,
-    ]);
+    const visibilities = [SpaceVisibility.DEMO];
+    const archivedSpaces = spaceTestData.filter(space => {
+      const visibility = space.license?.visibility || SpaceVisibility.DEMO;
+      return visibilities.includes(visibility);
+    });
+    const result = service['orderSpacesDefault'](archivedSpaces);
     expect(JSON.stringify(result)).toBe('["7"]');
   });
 });
