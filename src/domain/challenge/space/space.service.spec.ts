@@ -336,7 +336,7 @@ describe('SpacesSorting', () => {
       const visibility = space.license?.visibility || SpaceVisibility.ACTIVE;
       return visibilities.includes(visibility);
     });
-    const result = service['orderSpacesDefault'](activeDemoSpaces);
+    const result = service['sortSpacesDefault'](activeDemoSpaces);
     expect(JSON.stringify(result)).toBe(
       '["6","2","1","5","9","3","8","4","10"]'
     );
@@ -348,7 +348,7 @@ describe('SpacesSorting', () => {
       return visibilities.includes(visibility);
     });
 
-    const result = service['orderSpacesDefault'](activeSpaces);
+    const result = service['sortSpacesDefault'](activeSpaces);
 
     expect(JSON.stringify(result)).toBe('["6","2","1","5","9"]');
   });
@@ -358,7 +358,7 @@ describe('SpacesSorting', () => {
       const visibility = space.license?.visibility || SpaceVisibility.DEMO;
       return visibilities.includes(visibility);
     });
-    const result = service['orderSpacesDefault'](demoSpaces);
+    const result = service['sortSpacesDefault'](demoSpaces);
     expect(JSON.stringify(result)).toBe('["3","8","4","10"]');
   });
   it('Filtering test 3', () => {
@@ -367,7 +367,7 @@ describe('SpacesSorting', () => {
       const visibility = space.license?.visibility || SpaceVisibility.ARCHIVED;
       return visibilities.includes(visibility);
     });
-    const result = service['orderSpacesDefault'](archivedSpaces);
+    const result = service['sortSpacesDefault'](archivedSpaces);
     expect(JSON.stringify(result)).toBe('["7"]');
   });
 });
