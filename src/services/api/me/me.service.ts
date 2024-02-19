@@ -65,7 +65,7 @@ export class MeService {
   ): Promise<MyJourneyResults[]> {
     const rawActivities = await this.activityService.getMyJourneysActivity(
       agentInfo.userID,
-      limit * 2
+      limit * 2 //magic number, should not be needed. toDo Fix in https://app.zenhub.com/workspaces/alkemio-development-5ecb98b262ebd9f4aec4194c/issues/gh/alkem-io/server/3626
     );
 
     const myJourneyResults: MyJourneyResults[] = [];
