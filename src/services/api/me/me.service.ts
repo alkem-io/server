@@ -65,7 +65,7 @@ export class MeService {
   ): Promise<MyJourneyResults[]> {
     const rawActivities = await this.activityService.getMyJourneysActivity(
       agentInfo.userID,
-      limit
+      limit * 2
     );
 
     const myJourneyResults: MyJourneyResults[] = [];
@@ -87,6 +87,6 @@ export class MeService {
       });
     }
 
-    return myJourneyResults;
+    return myJourneyResults.slice(0, limit);
   }
 }
