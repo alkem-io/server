@@ -1,5 +1,18 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 import { escapeString } from './utils/escape-string';
+import { inflate } from 'zlib';
+import { promisify } from 'util';
+
+// We can't rely on default "utf8" because Buffer#toString() alters strings that aren't valid UTF-8
+// as well as we shouldn't use "base64" because it's space-consuming and we're trying to save space here.
+const COMPRESSED_STRING_ENCODING = 'binary';
+
+export const decompressText = async (value: string): Promise<string> => {
+  const compressedBuffer = Buffer.from(value, COMPRESSED_STRING_ENCODING);
+  const decompressedBuffer = await promisify(inflate)(compressedBuffer);
+
+  return decompressedBuffer.toString('utf8');
+};
 
 type Whiteboard = {
   id: string;
@@ -14,17 +27,31 @@ type Whiteboard = {
   profileId: string;
 };
 
-export class whiteboardToRt1704981162358 implements MigrationInterface {
+export class whiteboardToRt1708354354175 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
-    // move whiteboards to whiteboard_rt
+    // decompress all records in the whiteboard_rt
+    const whiteboardsRt: Whiteboard[] = await queryRunner.query(`
+      SELECT * FROM whiteboard
+    `);
+    for (const whiteboardRt of whiteboardsRt) {
+      whiteboardRt.content = await decompressText(whiteboardRt.content);
+      await queryRunner.query(`
+        UPDATE whiteboard_rt
+        SET content = '${whiteboardRt.content}'
+        WHERE id = '${whiteboardRt.id}'
+      `);
+    }
+    // move whiteboards to whiteboard_rt AND decompress the content
     const whiteboards: Whiteboard[] = await queryRunner.query(`
       SELECT * FROM whiteboard
     `);
     for (const whiteboard of whiteboards) {
+      whiteboard.content = await decompressText(whiteboard.content);
+      const debugValue = generateInsertValues(whiteboard);
       await queryRunner.query(`
         INSERT INTO whiteboard_rt (id, createdDate, updatedDate, version, nameID, content, createdBy, authorizationId, profileId, contentUpdatePolicy)
         VALUES
-        ${generateInsertValues(whiteboard)}
+        ${debugValue}
       `);
     }
     // delete checkout entity
@@ -84,7 +111,7 @@ export class whiteboardToRt1704981162358 implements MigrationInterface {
     // reinsert callout_contribution references to the newly renamed whiteboard table
     await queryRunner.query(`
       ALTER TABLE \`callout_contribution\` ADD CONSTRAINT \`FK_5e34f9a356f6254b8da24f8947b\`
-        FOREIGN KEY (\`whiteboardId\`) REFERENCES \`whiteboard\`(\`id\`) ON DELETE SET NULL ON UPDATE CASCADE
+        FOREIGN KEY (\`whiteboardId\`) REFERENCES \`whiteboard\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION
     `);
     await queryRunner.query(`
       ALTER TABLE \`callout_contribution\` ADD UNIQUE INDEX \`REL_5e34f9a356f6254b8da24f8947\` (\`whiteboardId\`)
@@ -107,8 +134,8 @@ export class whiteboardToRt1704981162358 implements MigrationInterface {
 const generateInsertValues = (whiteboard: Whiteboard) => {
   return `(
     '${whiteboard.id}',
-    '${correctDate(whiteboard.createdDate).toISOString()}',
-    '${correctDate(whiteboard.updatedDate).toISOString()}',
+    '${dateToMysqlDatetime(correctDate(whiteboard.createdDate))}',
+    '${dateToMysqlDatetime(correctDate(whiteboard.updatedDate))}',
      ${whiteboard.version},
      '${whiteboard.nameID}',
      '${escapeString(whiteboard.content)}',
@@ -125,3 +152,7 @@ const correctDate = (date: Date) => {
   date.setTime(date.getTime() - date.getTimezoneOffset() * 60 * 1000);
   return date;
 };
+
+const dateToMysqlDatetime = (date: Date) => {
+  return date.toISOString().slice(0, 19).replace('T', ' ');
+}

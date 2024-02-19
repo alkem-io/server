@@ -332,9 +332,6 @@ export class CalloutService {
           whiteboard: {
             profile: true,
           },
-          whiteboardRt: {
-            profile: true,
-          },
         },
       },
     });

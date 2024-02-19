@@ -25,7 +25,7 @@ export class WhiteboardAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     @InjectRepository(Whiteboard)
-    private whiteboardRtRepository: Repository<Whiteboard>,
+    private whiteboardRepository: Repository<Whiteboard>,
     private profileAuthorizationService: ProfileAuthorizationService
   ) {}
 
@@ -46,7 +46,7 @@ export class WhiteboardAuthorizationService {
     );
 
     const profile = (
-      await this.whiteboardRtRepository.findOne({
+      await this.whiteboardRepository.findOne({
         where: { id: whiteboard.id },
         relations: { profile: true },
       })
@@ -54,7 +54,7 @@ export class WhiteboardAuthorizationService {
 
     if (!profile) {
       throw new EntityNotInitializedException(
-        `Profile not found for WhiteboardRt: ${whiteboard.id}`,
+        `Profile not found for Whiteboard: ${whiteboard.id}`,
         LogContext.COLLABORATION
       );
     }
@@ -66,7 +66,7 @@ export class WhiteboardAuthorizationService {
         whiteboard.authorization
       );
 
-    return this.whiteboardRtRepository.save(whiteboard);
+    return this.whiteboardRepository.save(whiteboard);
   }
 
   private appendCredentialRules(whiteboard: IWhiteboard): IAuthorizationPolicy {
