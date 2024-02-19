@@ -1,6 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
+import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
+import {
+  EntityManager,
+  FindOneOptions,
+  FindOptionsRelations,
+  Repository,
+} from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -15,6 +20,7 @@ import { UpdateWhiteboardContentInput } from './dto/whiteboard.dto.update.conten
 import { ExcalidrawContent } from '@common/interfaces';
 import { IProfile } from '@domain/common/profile';
 import { ProfileDocumentsService } from '@domain/profile-documents/profile.documents.service';
+import { CalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.entity';
 import { AuthorizationPolicy } from '../authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import { ProfileService } from '../profile/profile.service';
@@ -22,6 +28,7 @@ import { Whiteboard } from './whiteboard.entity';
 import { IWhiteboard } from './whiteboard.interface';
 import { CreateWhiteboardInput } from './dto/whiteboard.dto.create';
 import { UpdateWhiteboardInput } from './dto/whiteboard.dto.update';
+import { WhiteboardAuthorizationService } from './whiteboard.service.authorization';
 
 @Injectable()
 export class WhiteboardService {
@@ -30,7 +37,9 @@ export class WhiteboardService {
     private whiteboardRepository: Repository<Whiteboard>,
     private authorizationPolicyService: AuthorizationPolicyService,
     private profileService: ProfileService,
-    private profileDocumentsService: ProfileDocumentsService
+    private profileDocumentsService: ProfileDocumentsService,
+    private whiteboardAuthService: WhiteboardAuthorizationService,
+    @InjectEntityManager() private entityManager: EntityManager
   ) {}
 
   async createWhiteboard(
@@ -117,7 +126,7 @@ export class WhiteboardService {
   ): Promise<IWhiteboard> {
     const whiteboard = await this.getWhiteboardOrFail(whiteboardInput.id, {
       relations: {
-        profile: true,
+        profile: !!updateWhiteboardData.profileData,
       },
     });
 
@@ -130,6 +139,24 @@ export class WhiteboardService {
 
     if (updateWhiteboardData.contentUpdatePolicy) {
       whiteboard.contentUpdatePolicy = updateWhiteboardData.contentUpdatePolicy;
+
+      const framing = await this.entityManager.findOne(CalloutFraming, {
+        where: {
+          whiteboard: { id: whiteboard.id },
+        },
+      });
+
+      if (!framing) {
+        throw new EntityNotInitializedException(
+          `Framing not initialized on whiteboard: '${whiteboard.id}'`,
+          LogContext.COLLABORATION
+        );
+      }
+
+      await this.whiteboardAuthService.applyAuthorizationPolicy(
+        whiteboard,
+        framing.authorization
+      );
     }
 
     return this.save(whiteboard);
@@ -229,5 +256,18 @@ export class WhiteboardService {
     }
 
     return whiteboardContent;
+  }
+
+  public createWhiteboardInputFromWhiteboard(
+    whiteboard?: IWhiteboard
+  ): CreateWhiteboardInput | undefined {
+    if (!whiteboard) return undefined;
+    return {
+      profileData: this.profileService.createProfileInputFromProfile(
+        whiteboard.profile
+      ),
+      content: whiteboard.content,
+      nameID: whiteboard.nameID,
+    };
   }
 }

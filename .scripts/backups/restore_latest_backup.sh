@@ -1,11 +1,11 @@
 #!/bin/bash
 
 # The storage is the first argument passed to the script. Default to 'mariadb' if not provided.
-STORAGE=${1:-mariadb}
+STORAGE=${1:-mysql}
 
 # Validate the storage
-if [[ "$STORAGE" != "mariadb" && "$STORAGE" != "mysql" && "$STORAGE" != "postgres" ]]; then
-    echo "Invalid storage '$STORAGE'. Please specify 'mariadb', 'mysql', or 'postgres'."
+if [[ "$STORAGE" != "mysql" && "$STORAGE" != "postgres" ]]; then
+    echo "Invalid storage '$STORAGE'. Please specify 'mysql', or 'postgres'."
     exit 1
 fi
 
@@ -13,8 +13,8 @@ fi
 ENV=${2:-prod}
 
 # Validate the environment
-if [[ "$ENV" != "acc" && "$ENV" != "dev" && "$ENV" != "prod" ]]; then
-    echo "Invalid environment '$ENV'. Please specify 'acc', 'dev', or 'prod'."
+if [[ "$ENV" != "acc" && "$ENV" != "dev" && "$ENV" != "sandbox" && "$ENV" != "prod" ]]; then
+    echo "Invalid environment '$ENV'. Please specify 'acc', 'dev', 'sandbox' or 'prod'."
     exit 1
 fi
 
@@ -22,7 +22,11 @@ fi
 source .env
 
 # Get the latest file in the S3 bucket
-latest_file=$(aws s3 ls s3://alkemio-backups/storage/$STORAGE/backups/$ENV --recursive | sort | tail -n 1 | awk '{print $4}')
+if [[ $STORAGE == "mysql" ]]; then
+    latest_file=$(aws s3 ls s3://alkemio-backups/storage/$STORAGE/backups/$ENV/ --recursive | grep $MYSQL_DATABASE | sort | tail -n 1 | awk '{print $4}')
+elif [[ $STORAGE == "postgres" ]]; then
+    latest_file=$(aws s3 ls s3://alkemio-backups/storage/$STORAGE/backups/$ENV/ --recursive | sort | tail -n 1 | awk '{print $4}')
+fi
 echo $latest_file
 
 # Download the latest file
@@ -36,7 +40,7 @@ echo "Local filename: $local_file"
 
 # Restore snapshot using the correct docker container and command based on storage
 if [[ "$STORAGE" == "mariadb" || "$STORAGE" == "mysql" ]]; then
-    docker exec -i alkemio_dev_mariadb /usr/bin/mysql -u root -p${MYSQL_ROOT_PASSWORD} ${MYSQL_DATABASE} < $local_file
+    docker exec -i alkemio_dev_mysql /usr/bin/mysql -u root -p${MYSQL_ROOT_PASSWORD} ${MYSQL_DATABASE} < $local_file
     echo "Backup restored successfully!"
 elif [[ "$STORAGE" == "postgres" ]]; then
     docker exec -i alkemio_dev_postgres psql -U ${POSTGRES_USER} -d postgres -c "SELECT pg_terminate_backend(pg_stat_activity.pid)

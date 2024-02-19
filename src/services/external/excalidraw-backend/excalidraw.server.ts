@@ -1,4 +1,4 @@
-import { clearInterval, setInterval, setTimeout } from 'timers';
+import { setInterval } from 'timers';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Configuration, FrontendApi } from '@ory/kratos-client';
 import {
@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ConfigurationTypes, LogContext } from '@common/enums';
-import { EXCALIDRAW_SERVER, UUID_LENGTH } from '@common/constants';
+import { APP_ID, EXCALIDRAW_SERVER, UUID_LENGTH } from '@common/constants';
 import { arrayRandomElement } from '@common/utils';
 import { AuthenticationService } from '@core/authentication/authentication.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -38,6 +38,7 @@ import {
   SocketIoServer,
   RemoteSocketIoSocket,
   SERVER_REQUEST_BROADCAST,
+  SERVER_SIDE_ROOM_DELETED,
 } from './types';
 import { CREATE_ROOM, DELETE_ROOM } from './adapters/adapter.event.names';
 import {
@@ -47,16 +48,13 @@ import {
   socketDataInitMiddleware,
 } from './middlewares';
 
-type SaveMessageOpts = { maxRetries: number; timeout: number };
-type RoomTimers = Map<string, NodeJS.Timer | NodeJS.Timeout>;
+type SaveMessageOpts = { timeout: number };
+type RoomTimers = Map<string, NodeJS.Timer>;
 type SaveResponse = { success: boolean; errors?: string[] };
 
 const defaultContributionInterval = 600;
 const defaultSaveInterval = 15;
 const defaultSaveTimeout = 10;
-const defaultMaxRetries = 5;
-const defaultTimeoutBeforeRetryMs = 3000;
-const defaultSocketDataInitDelay = 700;
 
 @Injectable()
 export class ExcalidrawServer {
@@ -66,10 +64,9 @@ export class ExcalidrawServer {
   private readonly contributionWindowMs: number;
   private readonly saveIntervalMs: number;
   private readonly saveTimeoutMs: number;
-  private readonly saveMaxRetries: number;
-  private readonly socketDataInitDelayMs: number;
 
   constructor(
+    @Inject(APP_ID) private appId: string,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService,
     @Inject(EXCALIDRAW_SERVER) private wsServer: SocketIoServer,
     private configService: ConfigService,
@@ -79,22 +76,13 @@ export class ExcalidrawServer {
     private contributionReporter: ContributionReporterService,
     private communityResolver: CommunityResolverService
   ) {
-    const {
-      contribution_window,
-      save_interval,
-      save_timeout,
-      save_max_retries,
-      socket_data_init_delay,
-    } = this.configService.get(ConfigurationTypes.COLLABORATION)?.whiteboards;
+    const { contribution_window, save_interval, save_timeout } =
+      this.configService.get(ConfigurationTypes.COLLABORATION)?.whiteboards;
 
     this.contributionWindowMs =
       (contribution_window ?? defaultContributionInterval) * 1000;
     this.saveIntervalMs = (save_interval ?? defaultSaveInterval) * 1000;
     this.saveTimeoutMs = (save_timeout ?? defaultSaveTimeout) * 1000;
-    this.saveMaxRetries = Number(save_max_retries ?? defaultMaxRetries);
-    this.socketDataInitDelayMs = Number(
-      socket_data_init_delay ?? defaultSocketDataInitDelay
-    );
     // don't block the constructor
     this.init().then(() =>
       this.logger.verbose?.(
@@ -122,11 +110,11 @@ export class ExcalidrawServer {
       }
       if ((await this.wsServer.in(roomId).fetchSockets()).length > 0) {
         // if there are sockets already connected
-        // this room was created elsewhere
+        // this room already exist on another instance
         return;
       }
       this.logger.verbose?.(
-        `Room created: '${roomId}'`,
+        `Room '${roomId}' created on instance '${this.appId}'`,
         LogContext.EXCALIDRAW_SERVER
       );
       const contributionTimer = this.contributionTimers.get(roomId);
@@ -154,32 +142,54 @@ export class ExcalidrawServer {
         return;
       }
 
-      if ((await this.wsServer.in(roomId).fetchSockets()).length > 0) {
+      const connectedSocketsToRoomCount = (
+        await this.wsServer.in(roomId).fetchSockets()
+      ).length;
+      if (connectedSocketsToRoomCount > 0) {
         // if there are sockets already connected
-        // this room was created elsewhere
+        // this room was deleted, but it's still active on the other instances
+        // so do nothing here
+        this.logger.verbose?.(
+          `Room '${roomId}' deleted locally ('${this.appId}'), but ${connectedSocketsToRoomCount} sockets are still connected elsewhere`,
+          LogContext.EXCALIDRAW_SERVER
+        );
         return;
       }
-
-      this.logger.verbose?.(
-        `Room deleted: '${roomId}`,
-        LogContext.EXCALIDRAW_SERVER
+      // send an event that the room is actually deleted everywhere,
+      // because this was the last one
+      this.wsServer.serverSideEmit(
+        SERVER_SIDE_ROOM_DELETED,
+        this.appId,
+        roomId
       );
 
-      const contributionTimer = this.contributionTimers.get(roomId);
-      clearInterval(contributionTimer);
-      this.contributionTimers.delete(roomId);
-
-      const saveTimer = this.saveTimers.get(roomId);
-      clearInterval(saveTimer);
-      this.saveTimers.delete(roomId);
+      this.logger.verbose?.(
+        `Room '${roomId}' deleted locally and everywhere else - this was the final instance`,
+        LogContext.EXCALIDRAW_SERVER
+      );
+      // delete timers that were left locally
+      this.deleteTimersForRoom(roomId);
     });
-
+    // middlewares
     this.wsServer.use(socketDataInitMiddleware);
     this.wsServer.use(attachSessionMiddleware(kratosClient));
     this.wsServer.use(
       attachAgentMiddleware(kratosClient, this.logger, this.authService)
     );
-
+    // cluster communication
+    this.wsServer.on(
+      SERVER_SIDE_ROOM_DELETED,
+      async (serverId: string, roomId: string) => {
+        this.logger.verbose?.(
+          `'${SERVER_SIDE_ROOM_DELETED}' received: 'Room '${roomId}' deleted in '${serverId}' instance. Room is finally deleted everywhere`,
+          LogContext.EXCALIDRAW_SERVER
+        );
+        // clear any timers that were left locally,
+        // because the room has not been deleted globally
+        this.deleteTimersForRoom(roomId);
+      }
+    );
+    // handlers
     this.wsServer.on(CONNECTION, async socket => {
       this.logger?.verbose?.(
         `User '${socket.data.agentInfo.userID}' established connection`,
@@ -187,18 +197,26 @@ export class ExcalidrawServer {
       );
       this.wsServer.to(socket.id).emit(INIT_ROOM);
       // first authorize the user with the room
-      socket.on(
-        JOIN_ROOM,
-        async (roomID: string) =>
-          await authorizeWithRoomAndJoinHandler(
-            roomID,
-            socket,
-            this.wsServer,
-            this.whiteboardService,
-            this.authorizationService,
-            this.logger
-          )
-      );
+      socket.on(JOIN_ROOM, async (roomID: string) => {
+        await authorizeWithRoomAndJoinHandler(
+          roomID,
+          socket,
+          this.wsServer,
+          this.whiteboardService,
+          this.authorizationService,
+          this.logger
+        );
+        if (socket.data.update) {
+          // user can broadcast content change events
+          socket.on(SERVER_BROADCAST, (roomID: string, data: ArrayBuffer) =>
+            serverBroadcastEventHandler(roomID, data, socket)
+          );
+        }
+        this.logger.verbose?.(
+          `User '${socket.data.agentInfo.userID}' update flag is '${socket.data.update}'`,
+          LogContext.EXCALIDRAW_SERVER
+        );
+      });
       // attach session handlers
       // drop connection on invalid or expired session
       socket.prependAny(() => checkSessionHandler(socket));
@@ -229,22 +247,6 @@ export class ExcalidrawServer {
       socket.on(SERVER_REQUEST_BROADCAST, (roomID: string, data: ArrayBuffer) =>
         requestBroadcastEventHandler(roomID, data, socket)
       );
-      // to avoid this problem we can extend the server impl to have a build in
-      // auth and handlers to be attached when the socket has been authenticated
-      // and authorized
-      // wait for the flag to be initialized
-      setTimeout(() => {
-        if (socket.data.update) {
-          // user can broadcast content change events
-          socket.on(SERVER_BROADCAST, (roomID: string, data: ArrayBuffer) =>
-            serverBroadcastEventHandler(roomID, data, socket)
-          );
-        }
-        this.logger.verbose?.(
-          `User '${socket.data.agentInfo.userID}' update flag is '${socket.data.update}'`,
-          LogContext.EXCALIDRAW_SERVER
-        );
-      }, this.socketDataInitDelayMs);
 
       socket.on(
         DISCONNECTING,
@@ -292,13 +294,17 @@ export class ExcalidrawServer {
   }
 
   private startSaveTimer(roomId: string) {
-    const timer = setTimeout(async () => {
+    return setInterval(async () => {
       const saved = await this.sendSaveMessage(roomId, {
-        maxRetries: this.saveMaxRetries,
         timeout: this.saveTimeoutMs,
       });
 
-      if (saved) {
+      if (saved === undefined) {
+        this.logger.verbose?.(
+          `No eligible sockets found to save '${roomId}'.`,
+          LogContext.EXCALIDRAW_SERVER
+        );
+      } else if (saved) {
         this.logger.verbose?.(
           `Saving '${roomId}' successful`,
           LogContext.EXCALIDRAW_SERVER
@@ -310,10 +316,7 @@ export class ExcalidrawServer {
           LogContext.EXCALIDRAW_SERVER
         );
       }
-
-      timer.refresh();
     }, this.saveIntervalMs);
-    return timer;
   }
 
   /***
@@ -325,32 +328,15 @@ export class ExcalidrawServer {
   private async sendSaveMessage(
     roomId: string,
     opts: SaveMessageOpts
-  ): Promise<boolean> {
-    return this._sendSaveMessage(roomId, 0, opts);
-  }
-
-  private async _sendSaveMessage(
-    roomId: string,
-    retries: number,
-    opts: SaveMessageOpts
-  ): Promise<boolean> {
-    const { maxRetries, timeout } = opts;
-    if (retries === maxRetries) {
-      return false;
-    }
-    if (retries > 0) {
-      this.logger.warn?.(
-        `Retrying to save [${retries}/${maxRetries}]`,
-        LogContext.EXCALIDRAW_SERVER
-      );
-    }
+  ): Promise<boolean | undefined> {
+    const { timeout } = opts;
     // get only sockets which can save
     const sockets = (await this.wsServer.in(roomId).fetchSockets()).filter(
       socket => socket.data.update
     );
     // return if no eligible sockets
     if (!sockets.length) {
-      return false;
+      return undefined;
     }
     // choose a random socket which can save
     const randomSocket = arrayRandomElement(sockets);
@@ -362,27 +348,15 @@ export class ExcalidrawServer {
         .emitWithAck(SERVER_SAVE_REQUEST);
       // log the response
       this.logResponse(response, randomSocket, roomId);
-      // if failed - repeat
-      if (!response.success) {
-        // workaround for timers/promises not working
-        return new Promise(res =>
-          setTimeout(
-            async () =>
-              res(await this._sendSaveMessage(roomId, ++retries, opts)),
-            defaultTimeoutBeforeRetryMs
-          )
-        );
-      }
-      // if successful - stop and return
-      return true;
     } catch (e) {
-      this.logger.verbose?.(
+      this.logger.error?.(
         `User '${randomSocket.data.agentInfo.userID}' did not respond to '${SERVER_SAVE_REQUEST}' event after ${timeout}ms`,
         LogContext.EXCALIDRAW_SERVER
       );
-      //retry if timed out
-      return await this._sendSaveMessage(roomId, ++retries, opts);
+      return false;
     }
+
+    return true;
   }
 
   private logResponse(
@@ -407,6 +381,29 @@ export class ExcalidrawServer {
         }' saved Whiteboard '${roomId}' with some errors: ${response.errors?.join(
           ';'
         )}'`,
+        LogContext.EXCALIDRAW_SERVER
+      );
+    }
+  }
+
+  private deleteTimersForRoom(roomId: string) {
+    const contributionTimer = this.contributionTimers.get(roomId);
+    if (contributionTimer) {
+      clearInterval(contributionTimer);
+      this.contributionTimers.delete(roomId);
+
+      this.logger.verbose?.(
+        `Deleted contribution timer for room '${roomId}'`,
+        LogContext.EXCALIDRAW_SERVER
+      );
+    }
+
+    const saveTimer = this.saveTimers.get(roomId);
+    if (saveTimer) {
+      clearInterval(saveTimer);
+      this.saveTimers.delete(roomId);
+      this.logger.verbose?.(
+        `Deleted auto save timer for room '${roomId}'`,
         LogContext.EXCALIDRAW_SERVER
       );
     }

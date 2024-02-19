@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, FindOneOptions, Repository } from 'typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
+import { FindOneOptions, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import {
@@ -18,9 +18,7 @@ export class ReferenceService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     @InjectRepository(Reference)
-    private referenceRepository: Repository<Reference>,
-    @InjectEntityManager('default')
-    private entityManager: EntityManager
+    private referenceRepository: Repository<Reference>
   ) {}
 
   async createReference(
@@ -123,5 +121,26 @@ export class ReferenceService {
 
   async saveReference(reference: IReference): Promise<IReference> {
     return await this.referenceRepository.save(reference);
+  }
+
+  public createReferenceInputFromReference(
+    reference: IReference
+  ): CreateReferenceInput {
+    return {
+      name: reference.name,
+      uri: reference.uri,
+      description: reference.description,
+    };
+  }
+
+  public createReferencesInputFromReferences(
+    references?: IReference[]
+  ): CreateReferenceInput[] {
+    const result: CreateReferenceInput[] = [];
+    if (!references) return result;
+    for (const reference of references) {
+      result.push(this.createReferenceInputFromReference(reference));
+    }
+    return result;
   }
 }

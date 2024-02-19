@@ -13,7 +13,6 @@ import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileType } from '@common/enums';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
-import { AgentInfo } from '@core/authentication/agent-info';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 import { VisualType } from '@common/enums/visual.type';
 import { ITagsetTemplate } from '@domain/common/tagset-template/tagset.template.interface';
@@ -232,6 +231,19 @@ export class CalloutFramingService {
     }
 
     return calloutFraming.whiteboard;
+  }
+
+  public createCalloutFramingInputFromCalloutFraming(
+    calloutFraming: ICalloutFraming
+  ): CreateCalloutFramingInput {
+    return {
+      profile: this.profileService.createProfileInputFromProfile(
+        calloutFraming.profile
+      ),
+      whiteboard: this.whiteboardService.createWhiteboardInputFromWhiteboard(
+        calloutFraming.whiteboard
+      ),
+    };
   }
 
   updateDisplayLocationTagsetValue(

@@ -25,7 +25,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { CommunityService } from '@domain/community/community/community.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, Repository } from 'typeorm';
+import { FindOneOptions, IsNull, Not, Repository } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IOrganization } from '@domain/community/organization';
 import { ICommunity } from '@domain/community/community';
@@ -208,11 +208,22 @@ export class ChallengeService {
       challenge.innovationFlow,
       stateTagset
     );
-    // Finally create default callouts
+
+    // Finally create default callouts, either using hard coded defaults or from a collaboration
+    let calloutDefaults = challengeDefaultCallouts;
+    if (challengeData.collaborationTemplateChallengeID) {
+      const collaboration = await this.getCollaborationForChallenge(
+        challengeData.collaborationTemplateChallengeID
+      );
+      calloutDefaults =
+        await this.collaborationService.createCalloutInputsFromCollaboration(
+          collaboration
+        );
+    }
     challenge.collaboration =
       await this.collaborationService.addDefaultCallouts(
         challenge.collaboration,
-        challengeDefaultCallouts,
+        calloutDefaults,
         challenge.storageAggregator,
         agentInfo?.userID
       );
@@ -466,6 +477,21 @@ export class ChallengeService {
     );
   }
 
+  public async getCollaborationForChallenge(
+    challengeID: string
+  ): Promise<ICollaboration> {
+    const challenge = await this.getChallengeOrFail(challengeID, {
+      relations: { collaboration: true },
+    });
+    if (!challenge.collaboration) {
+      throw new RelationshipNotFoundException(
+        `Unable to load Collaboration for challenge ${challengeID} `,
+        LogContext.CHALLENGES
+      );
+    }
+    return challenge.collaboration;
+  }
+
   async getAgent(challengeId: string): Promise<IAgent> {
     return await this.baseChallengeService.getAgent(
       challengeId,
@@ -642,7 +668,10 @@ export class ChallengeService {
   }
 
   async getChallengesInSpaceCount(spaceID: string): Promise<number> {
-    const count = await this.challengeRepository.countBy({ spaceID: spaceID });
+    const count = await this.challengeRepository.countBy({
+      spaceID: spaceID,
+      parentSpace: Not(IsNull()),
+    });
     return count;
   }
 

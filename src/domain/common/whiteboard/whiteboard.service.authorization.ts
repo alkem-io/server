@@ -1,9 +1,13 @@
+import { Repository } from 'typeorm';
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 import {
   AuthorizationCredential,
   AuthorizationPrivilege,
   LogContext,
 } from '@common/enums';
+import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
+import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
@@ -14,15 +18,14 @@ import {
   POLICY_RULE_WHITEBOARD_RT_CONTENT_UPDATE,
 } from '@common/constants';
 import { ProfileAuthorizationService } from '../profile/profile.service.authorization';
-import { WhiteboardService } from './whiteboard.service';
 import { IWhiteboard } from './whiteboard.interface';
-import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
 
 @Injectable()
 export class WhiteboardAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
-    private whiteboardService: WhiteboardService,
+    @InjectRepository(Whiteboard)
+    private whiteboardRtRepository: Repository<Whiteboard>,
     private profileAuthorizationService: ProfileAuthorizationService
   ) {}
 
@@ -42,19 +45,31 @@ export class WhiteboardAuthorizationService {
       whiteboard
     );
 
-    whiteboard.profile = await this.whiteboardService.getProfile(whiteboard.id);
+    const profile = (
+      await this.whiteboardRtRepository.findOne({
+        where: { id: whiteboard.id },
+        relations: { profile: true },
+      })
+    )?.profile;
+
+    if (!profile) {
+      throw new EntityNotInitializedException(
+        `Profile not found for WhiteboardRt: ${whiteboard.id}`,
+        LogContext.COLLABORATION
+      );
+    }
+
+    whiteboard.profile = profile;
     whiteboard.profile =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
         whiteboard.profile,
         whiteboard.authorization
       );
 
-    return this.whiteboardService.save(whiteboard);
+    return this.whiteboardRtRepository.save(whiteboard);
   }
 
-  private appendCredentialRules(
-    whiteboard: IWhiteboard
-  ): IAuthorizationPolicy {
+  private appendCredentialRules(whiteboard: IWhiteboard): IAuthorizationPolicy {
     const authorization = whiteboard.authorization;
     if (!authorization)
       throw new EntityNotInitializedException(

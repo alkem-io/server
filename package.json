@@ -1,6 +1,6 @@
 {
   "name": "alkemio-server",
-  "version": "0.66.0",
+  "version": "0.68.1",
   "description": "Alkemio server, responsible for managing the shared Alkemio platform",
   "author": "Alkemio Foundation",
   "private": false,
@@ -21,6 +21,7 @@
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
     "start:services": "docker-compose -f quickstart-services.yml --env-file .env.docker up --build --force-recreate",
+    "start:services:ssi": "docker-compose -f quickstart-services.yml -f quickstart-wallet-manager.yml --env-file .env.docker up --build --force-recreate",
     "start:services:kratos:debug": "docker-compose -f quickstart-services-kratos-debug.yml --env-file .env.docker up --build --force-recreate",
     "lint": "tsc --noEmit && eslint src/**/*.ts{,x}",
     "lint:prod": "tsc --noEmit && cross-env NODE_ENV=production eslint src/**/*.ts{,x}",
@@ -44,7 +45,7 @@
     "fs-capacitor": "6.2.0",
     "jsonwebtoken": "9.0.0",
     "@nestjs/schematics": {
-      "typescript": "4.7.4"
+      "typescript": "5.3.3"
     }
   },
   "dependencies": {
@@ -54,14 +55,14 @@
     "@elastic/elasticsearch": "^8.4.0",
     "@nestjs/apollo": "^10.0.6",
     "@nestjs/axios": "^3.0.1",
-    "@nestjs/common": "^8.0.5",
+    "@nestjs/common": "^9.4.3",
     "@nestjs/config": "^1.0.1",
-    "@nestjs/core": "^8.0.5",
+    "@nestjs/core": "^9.4.3",
     "@nestjs/graphql": "^10.0.6",
     "@nestjs/jwt": "^8.0.0",
-    "@nestjs/microservices": "^8.1.2",
-    "@nestjs/passport": "^8.0.0",
-    "@nestjs/platform-express": "^8.0.5",
+    "@nestjs/microservices": "^9.4.3",
+    "@nestjs/passport": "^9.0.3",
+    "@nestjs/platform-express": "^9.4.0",
     "@nestjs/typeorm": "9.0.1",
     "@ory/kratos-client": "^0.11.1",
     "@socket.io/redis-adapter": "^8.2.1",
@@ -92,7 +93,7 @@
     "logform": "^2.3.2",
     "module-alias": "^2.2.2",
     "moment": "^2.29.4",
-    "mysql": "^2.18.1",
+    "mysql2": "^2.3.3",
     "nest-winston": "^1.5.0",
     "passport-custom": "^1.1.1",
     "passport-jwt": "^4.0.0",
@@ -107,9 +108,9 @@
     "yaml": "^2.0.0-7"
   },
   "devDependencies": {
-    "@nestjs/cli": "^8.1.0",
-    "@nestjs/schematics": "^8.0.2",
-    "@nestjs/testing": "^8.0.5",
+    "@nestjs/cli": "^9.5.0",
+    "@nestjs/schematics": "^9.2.0",
+    "@nestjs/testing": "^9.4.0",
     "@types/amqplib": "^0.8.2",
     "@types/cache-manager": "^3.4.2",
     "@types/cache-manager-redis-store": "^2.0.1",
@@ -121,8 +122,8 @@
     "@types/node": "^16.4.6",
     "@types/passport-jwt": "^3.0.6",
     "@types/supertest": "^2.0.11",
-    "@typescript-eslint/eslint-plugin": "^4.28.5",
-    "@typescript-eslint/parser": "^4.28.5",
+    "@typescript-eslint/eslint-plugin": "^6.19.1",
+    "@typescript-eslint/parser": "^6.19.1",
     "coveralls": "^3.1.1",
     "eslint": "^7.31.0",
     "eslint-config-prettier": "^8.3.0",
@@ -136,7 +137,7 @@
     "supertest": "^6.1.4",
     "ts-jest": "^29.0.3",
     "ts-node": "^10.9.1",
-    "typescript": "4.7.4"
+    "typescript": "5.3.3"
   },
   "_moduleAliases": {
     "@src": "./dist"

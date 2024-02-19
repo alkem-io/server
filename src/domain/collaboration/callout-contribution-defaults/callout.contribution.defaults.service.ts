@@ -58,4 +58,17 @@ export class CalloutContributionDefaultsService {
     result.id = calloutContributionDefaultsID;
     return result;
   }
+
+  public createCalloutContributionDefaultsInputFromCalloutContributionDefaults(
+    calloutContributionDefaults?: ICalloutContributionDefaults
+  ): CreateCalloutContributionDefaultsInput | undefined {
+    if (!calloutContributionDefaults) {
+      return undefined;
+    }
+    const result: CreateCalloutContributionDefaultsInput = {
+      postDescription: calloutContributionDefaults.postDescription,
+      whiteboardContent: calloutContributionDefaults.whiteboardContent,
+    };
+    return result;
+  }
 }

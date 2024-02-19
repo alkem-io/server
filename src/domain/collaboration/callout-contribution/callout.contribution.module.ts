@@ -9,10 +9,9 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { WhiteboardModule } from '@domain/common/whiteboard/whiteboard.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { PostModule } from '../post/post.module';
-import { ReferenceModule } from '@domain/common/reference/reference.module';
 import { UserLookupModule } from '@services/infrastructure/user-lookup/user.lookup.module';
-import { ProfileModule } from '@domain/common/profile/profile.module';
 import { CommunityPolicyModule } from '@domain/community/community-policy/community.policy.module';
+import { LinkModule } from '../link/link.module';
 
 @Module({
   imports: [
@@ -21,9 +20,8 @@ import { CommunityPolicyModule } from '@domain/community/community-policy/commun
     WhiteboardModule,
     PostModule,
     NamingModule,
-    ReferenceModule,
+    LinkModule,
     UserLookupModule,
-    ProfileModule,
     CommunityPolicyModule,
     TypeOrmModule.forFeature([CalloutContribution]),
   ],

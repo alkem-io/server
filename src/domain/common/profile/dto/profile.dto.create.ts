@@ -6,9 +6,9 @@ import {
   ValidateNested,
 } from 'class-validator';
 import {
+  HUGE_TEXT_LENGTH,
   MID_TEXT_LENGTH,
   SMALL_TEXT_LENGTH,
-  VERY_LONG_TEXT_LENGTH,
 } from '@src/common/constants';
 import { CreateReferenceInput } from '@domain/common/reference';
 import { CreateLocationInput } from '@domain/common/location/dto';
@@ -36,7 +36,7 @@ export class CreateProfileInput {
 
   @Field(() => Markdown, { nullable: true })
   @IsOptional()
-  @MaxLength(VERY_LONG_TEXT_LENGTH)
+  @MaxLength(HUGE_TEXT_LENGTH)
   description?: string;
 
   @Field(() => CreateLocationInput, { nullable: true })

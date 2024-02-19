@@ -23,6 +23,7 @@ import {
   CREDENTIAL_RULE_TYPES_USER_GLOBAL_ADMIN_COMMUNITY,
   CREDENTIAL_RULE_USER_SELF_ADMIN,
   CREDENTIAL_RULE_USER_READ_PII,
+  CREDENTIAL_RULE_TYPES_USER_PLATFORM_ADMIN,
 } from '@common/constants';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 
@@ -103,7 +104,7 @@ export class UserAuthorizationService {
         user.authorization
       );
 
-    return await this.userService.saveUser(user);
+    return await this.userService.save(user);
   }
 
   async grantCredentials(user: IUser): Promise<IUser> {
@@ -118,7 +119,7 @@ export class UserAuthorizationService {
       agentID: agent.id,
       resourceID: user.id,
     });
-    return await this.userService.saveUser(user);
+    return await this.userService.save(user);
   }
 
   private appendGlobalCredentialRules(
@@ -138,6 +139,16 @@ export class UserAuthorizationService {
       );
     globalAdminNotInherited.cascade = false;
     newRules.push(globalAdminNotInherited);
+
+    // Allow global admins do platform admin actions
+    const globalAdminPlatformAdminNotInherited =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.PLATFORM_ADMIN],
+        [AuthorizationCredential.GLOBAL_ADMIN],
+        CREDENTIAL_RULE_TYPES_USER_PLATFORM_ADMIN
+      );
+    globalAdminNotInherited.cascade = false;
+    newRules.push(globalAdminPlatformAdminNotInherited);
 
     const communityAdmin =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(

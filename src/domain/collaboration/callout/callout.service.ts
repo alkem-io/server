@@ -30,7 +30,6 @@ import { CalloutFramingService } from '../callout-framing/callout.framing.servic
 import { ICalloutFraming } from '../callout-framing/callout.framing.interface';
 import { CalloutContributionDefaultsService } from '../callout-contribution-defaults/callout.contribution.defaults.service';
 import { CalloutContributionPolicyService } from '../callout-contribution-policy/callout.contribution.policy.service';
-import { AgentInfo } from '@core/authentication';
 import { ICalloutContribution } from '../callout-contribution/callout.contribution.interface';
 import { CreateContributionOnCalloutInput } from './dto/callout.dto.create.contribution';
 import { CalloutContributionService } from '../callout-contribution/callout.contribution.service';
@@ -41,7 +40,6 @@ import { ICalloutContributionDefaults } from '../callout-contribution-defaults/c
 import { CalloutContributionFilterArgs } from '../callout-contribution/dto/callout.contribution.args.filter';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
-import { PostService } from '../post/post.service';
 
 @Injectable()
 export class CalloutService {
@@ -55,7 +53,6 @@ export class CalloutService {
     private contributionPolicyService: CalloutContributionPolicyService,
     private contributionService: CalloutContributionService,
     private storageAggregatorResolverService: StorageAggregatorResolverService,
-    private postService: PostService,
     @InjectRepository(Callout)
     private calloutRepository: Repository<Callout>
   ) {}
@@ -219,8 +216,7 @@ export class CalloutService {
   }
 
   public async updateCallout(
-    calloutUpdateData: UpdateCalloutInput,
-    agentInfo: AgentInfo
+    calloutUpdateData: UpdateCalloutInput
   ): Promise<ICallout> {
     const callout = await this.getCalloutOrFail(calloutUpdateData.ID, {
       relations: {
@@ -318,6 +314,48 @@ export class CalloutService {
     result.id = calloutID;
 
     return result;
+  }
+
+  public async createCalloutInputFromCallout(
+    calloutInput: ICallout
+  ): Promise<CreateCalloutInput> {
+    const callout = await this.getCalloutOrFail(calloutInput.id, {
+      relations: {
+        contributionDefaults: true,
+        contributionPolicy: true,
+        framing: {
+          profile: {
+            references: true,
+            location: true,
+            tagsets: true,
+          },
+          whiteboard: {
+            profile: true,
+          },
+          whiteboardRt: {
+            profile: true,
+          },
+        },
+      },
+    });
+    return {
+      nameID: callout.nameID,
+      type: callout.type,
+      visibility: callout.visibility,
+      framing:
+        this.calloutFramingService.createCalloutFramingInputFromCalloutFraming(
+          callout.framing
+        ),
+      contributionDefaults:
+        this.contributionDefaultsService.createCalloutContributionDefaultsInputFromCalloutContributionDefaults(
+          callout.contributionDefaults
+        ),
+      contributionPolicy:
+        this.contributionPolicyService.createCalloutContributionPolicyInputFromCalloutContributionPolicy(
+          callout.contributionPolicy
+        ),
+      sortOrder: callout.sortOrder,
+    };
   }
 
   public async getActivityCount(callout: ICallout): Promise<number> {
@@ -456,8 +494,7 @@ export class CalloutService {
         contributionData,
         storageAggregator,
         callout.contributionPolicy,
-        userID,
-        callout.framing.profile.id
+        userID
       );
     callout.contributions.push(contribution);
     await this.calloutRepository.save(callout);
