@@ -25,7 +25,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { CommunityService } from '@domain/community/community/community.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, Repository } from 'typeorm';
+import { FindOneOptions, IsNull, Not, Repository } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IOrganization } from '@domain/community/organization';
 import { ICommunity } from '@domain/community/community';
@@ -668,7 +668,10 @@ export class ChallengeService {
   }
 
   async getChallengesInSpaceCount(spaceID: string): Promise<number> {
-    const count = await this.challengeRepository.countBy({ spaceID: spaceID });
+    const count = await this.challengeRepository.countBy({
+      spaceID: spaceID,
+      parentSpace: Not(IsNull()),
+    });
     return count;
   }
 

@@ -94,12 +94,7 @@ export class PostAuthorizationService {
 
     const manageCreatedPostPolicy =
       this.authorizationPolicyService.createCredentialRule(
-        [
-          AuthorizationPrivilege.CREATE,
-          AuthorizationPrivilege.READ,
-          AuthorizationPrivilege.UPDATE,
-          AuthorizationPrivilege.DELETE,
-        ],
+        [AuthorizationPrivilege.DELETE],
         [
           {
             type: AuthorizationCredential.USER_SELF_MANAGEMENT,

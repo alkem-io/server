@@ -23,6 +23,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
 import { NotificationInputUserRegistered } from '@services/adapters/notification-adapter/dto/notification.dto.input.user.registered';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
+import { UpdateUserPlatformSettingsInput } from './dto/user.dto.update.platform.settings';
 
 @Resolver(() => IUser)
 export class UserResolverMutations {
@@ -168,5 +169,25 @@ export class UserResolverMutations {
       `reset authorization definition on user: ${authorizationResetData.userID}`
     );
     return await this.userAuthorizationService.applyAuthorizationPolicy(user);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IUser, {
+    description:
+      'Update the platform settings, such as nameID, email, for the specified User.',
+  })
+  async updateUserPlatformSettings(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('updateData') updateData: UpdateUserPlatformSettingsInput
+  ): Promise<IUser> {
+    const user = await this.userService.getUserOrFail(updateData.userID);
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      user.authorization,
+      AuthorizationPrivilege.PLATFORM_ADMIN,
+      `update platform settings on User: ${user.id}`
+    );
+
+    return await this.userService.updateUserPlatformSettings(updateData);
   }
 }
