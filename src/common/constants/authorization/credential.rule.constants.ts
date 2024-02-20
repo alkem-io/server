@@ -25,7 +25,10 @@ export const CREDENTIAL_RULE_SPACE_FILE_UPLOAD =
   'credentialRule-spaceMemberFileUpload';
 export const CREDENTIAL_RULE_CONTRIBUTION_CREATED_BY =
   'credentialRule-contributionCreatedBy';
+export const CREDENTIAL_RULE_CONTRIBUTION_CREATED_BY_DELETE =
+  'credentialRule-contributionCreatedByDelete';
 export const CREDENTIAL_RULE_POST_CREATED_BY = 'credentialRule-postCreatedBy';
+export const CREDENTIAL_RULE_LINK_CREATED_BY = 'credentialRule-linkCreatedBy';
 export const CREDENTIAL_RULE_POST_ADMINS_MOVE = 'credentialRule-postAdminsMove';
 export const CREDENTIAL_RULE_CONTRIBUTION_ADMINS_MOVE =
   'credentialRule-contributionAdminsMove';
