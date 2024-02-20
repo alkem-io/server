@@ -44,8 +44,7 @@ export class WhiteboardResolverMutations {
   @Mutation(() => IWhiteboard, {
     description: 'Updates the specified Whiteboard content.',
   })
-  // todo rename
-  async updateWhiteboardContentRt(
+  async updateWhiteboardContent(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('whiteboardData') whiteboardData: UpdateWhiteboardContentInput
   ): Promise<IWhiteboard> {
@@ -56,7 +55,7 @@ export class WhiteboardResolverMutations {
       agentInfo,
       whiteboard.authorization,
       AuthorizationPrivilege.UPDATE_CONTENT,
-      `update Whiteboard: ${whiteboard.nameID}`
+      `update content of Whiteboard: ${whiteboard.nameID}`
     );
     return this.whiteboardService.updateWhiteboardContent(
       whiteboard,
