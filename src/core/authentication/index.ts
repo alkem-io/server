@@ -1,1 +1,1 @@
-export * from './agent-info';
+export * from '../authentication.agent.info/agent-info';
