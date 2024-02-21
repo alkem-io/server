@@ -140,16 +140,6 @@ export class CalloutService {
         LogContext.COLLABORATION
       );
     }
-
-    if (
-      calloutData.type == CalloutType.WHITEBOARD_RT &&
-      !calloutData.framing.whiteboard
-    ) {
-      throw new ValidationException(
-        'Please provide a whiteboard for real time',
-        LogContext.COLLABORATION
-      );
-    }
   }
 
   private async getStorageAggregator(
