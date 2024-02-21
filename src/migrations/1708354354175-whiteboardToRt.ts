@@ -1,6 +1,4 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
-// import { inflate } from 'zlib';
-// import { promisify } from 'util';
 
 type Whiteboard = {
   id: string;
@@ -17,31 +15,11 @@ type Whiteboard = {
 
 export class whiteboardToRt1708354354175 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
-    // decompress all records in the whiteboard_rt
-    /*const whiteboardsRt: Whiteboard[] = await queryRunner.query(`
-      SELECT * FROM whiteboard
-    `);
-    for (const whiteboardRt of whiteboardsRt) {
-      const compressedBuffer = Buffer.from(whiteboardRt.content, 'binary');
-      const decompressedBuffer = await promisify(inflate)(compressedBuffer);
-      whiteboardRt.content = decompressedBuffer.toString('utf8');
-
-      await queryRunner.query(`
-        UPDATE whiteboard_rt
-        SET content = '${whiteboardRt.content}'
-        WHERE id = '${whiteboardRt.id}'
-      `);
-    }*/
     // move whiteboards to whiteboard_rt AND decompress the content
     const whiteboards: Whiteboard[] = await queryRunner.query(`
       SELECT * FROM whiteboard
     `);
     for (const whiteboard of whiteboards) {
-      /* const compressedBuffer = Buffer.from(whiteboard.content, 'binary');
-      const decompressedBuffer = await promisify(inflate)(compressedBuffer);
-      whiteboard.content = decompressedBuffer.toString('utf8');*/
-
-      // whiteboard.content = await decompressText(whiteboard.content);
       const debugValue = generateInsertValues(whiteboard);
       await queryRunner.query(
         `
