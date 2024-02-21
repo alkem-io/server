@@ -85,9 +85,6 @@ export class WhiteboardRtAuthorizationService {
       const manageWhiteboardCreatedByPolicy =
         this.authorizationPolicyService.createCredentialRule(
           [
-            AuthorizationPrivilege.CREATE,
-            AuthorizationPrivilege.READ,
-            AuthorizationPrivilege.UPDATE,
             AuthorizationPrivilege.UPDATE_CONTENT,
             AuthorizationPrivilege.CONTRIBUTE,
             AuthorizationPrivilege.DELETE,
