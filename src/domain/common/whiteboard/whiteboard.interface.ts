@@ -12,13 +12,24 @@ export abstract class IWhiteboard extends INameable {
   })
   content!: string;
 
-  // Expose the date at which the Whiteboard was created from parent entity
-  @Field(() => Date)
+  @Field(() => ContentUpdatePolicy, {
+    description: 'The policy governing who can update the Whiteboard contet.',
+    nullable: false,
+  })
+  contentUpdatePolicy!: ContentUpdatePolicy;
+
+  @Field(() => Date, {
+    description: 'The date at which the Whiteboard was created.',
+  })
   createdDate!: Date;
+
+  @Field(() => Date, {
+    nullable: true,
+    description: 'The date at which the Whiteboard was last updated.',
+  })
+  updatedDate!: Date;
 
   createdBy?: string;
 
   callout?: ICallout;
-
-  contentUpdatePolicy!: ContentUpdatePolicy;
 }

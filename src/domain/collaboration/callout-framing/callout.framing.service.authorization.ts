@@ -44,13 +44,6 @@ export class CalloutFramingAuthorizationService {
       );
     }
 
-    if (!calloutFraming.whiteboard) {
-      throw new RelationshipNotFoundException(
-        `Unable to load Whiteboard on calloutFraming:  ${calloutFraming.id} `,
-        LogContext.COLLABORATION
-      );
-    }
-
     calloutFraming.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         calloutFraming.authorization,
@@ -63,11 +56,13 @@ export class CalloutFramingAuthorizationService {
         calloutFraming.authorization
       );
 
-    calloutFraming.whiteboard =
-      await this.whiteboardAuthorizationService.applyAuthorizationPolicy(
-        calloutFraming.whiteboard,
-        calloutFraming.authorization
-      );
+    if (calloutFraming.whiteboard) {
+      calloutFraming.whiteboard =
+        await this.whiteboardAuthorizationService.applyAuthorizationPolicy(
+          calloutFraming.whiteboard,
+          calloutFraming.authorization
+        );
+    }
 
     return this.calloutFramingRepository.save(calloutFraming);
   }
