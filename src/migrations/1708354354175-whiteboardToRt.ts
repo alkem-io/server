@@ -95,26 +95,6 @@ export class whiteboardToRt1708354354175 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE \`callout_framing\` ADD CONSTRAINT \`FK_8bc0e1f40be5816d3a593cbf7fa\` FOREIGN KEY (\`whiteboardId\`) REFERENCES \`whiteboard\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
-    // enforce the contribution policy to OWNER for all whiteboards that are responses to a callout
-    await queryRunner.query(`
-      UPDATE whiteboard
-      SET contentUpdatePolicy = 'owner'
-      WHERE id IN (
-        SELECT whiteboardId
-        FROM callout_contribution
-        WHERE whiteboardId IS NOT NULL
-      )
-    `);
-    // enforce the contribution policy to OWNER for all whiteboards that are framing of a callout
-    await queryRunner.query(`
-      UPDATE whiteboard
-      SET contentUpdatePolicy = 'owner'
-      WHERE id IN (
-        SELECT whiteboardId
-        FROM callout_framing
-        WHERE whiteboardId IS NOT NULL
-      )
-    `);
     // update all the callouts with whiteboardRT type
     await queryRunner.query(
       `UPDATE \`callout\` SET type = 'whiteboard' WHERE type = 'whiteboard_rt'`
