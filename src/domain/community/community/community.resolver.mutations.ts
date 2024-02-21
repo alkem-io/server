@@ -125,7 +125,8 @@ export class CommunityResolverMutations {
       community,
       roleData.userID,
       roleData.role,
-      agentInfo
+      agentInfo,
+      true
     );
 
     // reset the user authorization policy so that their profile is visible to other community members
