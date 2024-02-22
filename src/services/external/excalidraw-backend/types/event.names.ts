@@ -14,5 +14,6 @@ export const CLIENT_BROADCAST = 'client-broadcast';
 
 export const CONNECTION_CLOSED = 'connection-closed';
 
+export const SAVED = 'saved';
 export const SERVER_SAVE_REQUEST = 'save-request';
 export const SERVER_SIDE_ROOM_DELETED = 'server-side-room-deleted';
