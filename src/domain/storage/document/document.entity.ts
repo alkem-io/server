@@ -9,6 +9,7 @@ import { Tagset } from '@domain/common/tagset';
 export class Document extends AuthorizableEntity implements IDocument {
   // omitting OneToOne decorator for createdBy to avoid circular dependency
   // needs a redesign to avoid circular dependency
+  @Column('char', { length: 36, nullable: true })
   createdBy!: string;
 
   @ManyToOne(() => StorageBucket, storage => storage.documents, {

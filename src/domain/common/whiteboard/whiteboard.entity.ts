@@ -13,7 +13,6 @@ import { IWhiteboard } from './whiteboard.interface';
 import { WhiteboardCheckout } from '../whiteboard-checkout/whiteboard.checkout.entity';
 import { compressText, decompressText } from '@common/utils/compression.util';
 import { NameableEntity } from '../entity/nameable-entity/nameable.entity';
-import { User } from '@domain/community/user/user.entity';
 
 export const EMPTY_WHITEBOARD_CONTENT =
   '{\n  "type": "excalidraw",\n  "version": 2,\n  "source": "",\n  "elements": [],\n  "appState": {\n    "gridSize": 20,\n    "viewBackgroundColor": "#ffffff"\n  },\n  "files": {}\n}';
@@ -44,13 +43,7 @@ export class Whiteboard extends NameableEntity implements IWhiteboard {
   @Column('longtext', { nullable: false })
   content!: string;
 
-  @OneToOne(() => User, {
-    eager: false,
-    cascade: false,
-    onDelete: 'SET NULL',
-    nullable: true,
-  })
-  @JoinColumn({ name: 'createdBy' })
+  @Column('char', { length: 36, nullable: true })
   createdBy!: string;
 
   @OneToOne(() => WhiteboardCheckout, {
