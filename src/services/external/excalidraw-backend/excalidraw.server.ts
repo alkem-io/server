@@ -25,6 +25,7 @@ import {
   serverVolatileBroadcastEventHandler,
   checkSessionHandler,
   requestBroadcastEventHandler,
+  idleStateEventHandler,
 } from './utils';
 import {
   CONNECTION,
@@ -40,6 +41,7 @@ import {
   SERVER_REQUEST_BROADCAST,
   SERVER_SIDE_ROOM_DELETED,
   SAVED,
+  IDLE_STATE,
 } from './types';
 import { CREATE_ROOM, DELETE_ROOM } from './adapters/adapter.event.names';
 import {
@@ -247,6 +249,10 @@ export class ExcalidrawServer {
       // This channel is needed because not all viewers has 'write' privilege, so they can't use the channel where updates are broadcast.
       socket.on(SERVER_REQUEST_BROADCAST, (roomID: string, data: ArrayBuffer) =>
         requestBroadcastEventHandler(roomID, data, socket)
+      );
+
+      socket.on(IDLE_STATE, (roomID: string, data: ArrayBuffer) =>
+        idleStateEventHandler(roomID, data, socket)
       );
 
       socket.on(

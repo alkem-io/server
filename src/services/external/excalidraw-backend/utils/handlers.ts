@@ -5,6 +5,7 @@ import { LogContext } from '@common/enums';
 import {
   CLIENT_BROADCAST,
   FIRST_IN_ROOM,
+  IDLE_STATE,
   NEW_USER,
   ROOM_USER_CHANGE,
   SocketIoServer,
@@ -114,6 +115,13 @@ export const requestBroadcastEventHandler = (
   socket: SocketIoSocket
 ) => {
   socket.broadcast.to(roomID).emit(CLIENT_BROADCAST, data);
+};
+export const idleStateEventHandler = (
+  roomID: string,
+  data: ArrayBuffer,
+  socket: SocketIoSocket
+) => {
+  socket.broadcast.to(roomID).emit(IDLE_STATE, data);
 };
 /* Built-in event for handling socket disconnects */
 export const disconnectingEventHandler = async (

@@ -4,6 +4,7 @@ import { APP_ID, EXCALIDRAW_PUBSUB_PROVIDER } from '@common/constants';
 import {
   DISCONNECT,
   DISCONNECTING,
+  IDLE_STATE,
   ROOM_USER_CHANGE,
   SERVER_BROADCAST,
   SERVER_VOLATILE_BROADCAST,
@@ -12,6 +13,7 @@ import {
   BasePayload,
   DisconnectedPayload,
   DisconnectingPayload,
+  IdleStatePayload,
   RoomUserChangePayload,
   ServerBroadcastPayload,
   ServerVolatileBroadcastPayload,
@@ -47,6 +49,14 @@ export class ExcalidrawEventPublisherService {
       ...payload,
       publisherId: payload.publisherId ?? this.appId,
       name: SERVER_VOLATILE_BROADCAST,
+    });
+  }
+
+  public publishIdleState(payload: IdleStatePayload) {
+    this.excalidrawPubSub.publish(IDLE_STATE, {
+      ...payload,
+      publisherId: payload.publisherId ?? this.appId,
+      name: IDLE_STATE,
     });
   }
 
