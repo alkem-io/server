@@ -287,19 +287,6 @@ export class addConstraints1705843901852 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE \`callout_framing\` ADD CONSTRAINT \`FK_8bc0e1f40be5816d3a593cbf7fa\` FOREIGN KEY (\`whiteboardId\`) REFERENCES \`whiteboard\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
-    // whiteboardRtId
-    await queryRunner.query(
-      `ALTER TABLE \`callout_framing\` DROP FOREIGN KEY \`FK_62712f63939a6d56fd5c334ee3f\``
-    );
-    await queryRunner.query(
-      `DROP INDEX \`IDX_62712f63939a6d56fd5c334ee3\` ON \`callout_framing\``
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`callout_framing\` ADD UNIQUE INDEX \`REL_62712f63939a6d56fd5c334ee3\` (\`whiteboardRtId\`)`
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`callout_framing\` ADD CONSTRAINT \`FK_62712f63939a6d56fd5c334ee3f\` FOREIGN KEY (\`whiteboardRtId\`) REFERENCES \`whiteboard_rt\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
-    );
     // INNOVATION PACK
     // profileId
     await queryRunner.query(
