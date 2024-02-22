@@ -4,14 +4,14 @@ import { Configuration, IdentityApi, Session } from '@ory/kratos-client';
 import { ConfigurationTypes, LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { UserService } from '@domain/community/user/user.service';
-import { AgentInfo } from '../authentication.agent.info/agent-info';
+import { AgentInfo } from './agent-info';
 import { OryDefaultIdentitySchema } from './ory.default.identity.schema';
 import { NotSupportedException } from '@common/exceptions';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { getBearerToken } from './get.bearer.token';
 import { SessionExtendException } from '@common/exceptions/auth';
 
-import { AgentInfoCacheService } from '@core/authentication.agent.info/agent-info.cache.service';
+import { AgentCacheService } from '@domain/agent/agent/agent.cache.service';
 @Injectable()
 export class AuthenticationService {
   private readonly kratosPublicUrlServer: string;
@@ -22,7 +22,7 @@ export class AuthenticationService {
   private readonly kratosClient: IdentityApi;
 
   constructor(
-    private agentCacheService: AgentInfoCacheService,
+    private agentCacheService: AgentCacheService,
     private configService: ConfigService,
     private userService: UserService,
     private agentService: AgentService,

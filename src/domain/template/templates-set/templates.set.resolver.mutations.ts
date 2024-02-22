@@ -5,7 +5,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { TemplatesSetService } from './templates.set.service';
 import { IPostTemplate } from '../post-template/post.template.interface';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
-import { AgentInfo } from '@core/authentication.agent.info/agent-info';
+import { AgentInfo } from '@core/authentication/agent-info';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { IWhiteboardTemplate } from '../whiteboard-template/whiteboard.template.interface';
