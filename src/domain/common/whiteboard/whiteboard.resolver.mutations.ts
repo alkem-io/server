@@ -2,7 +2,7 @@ import { Inject, LoggerService, UseGuards } from '@nestjs/common';
 import { Args, Resolver, Mutation } from '@nestjs/graphql';
 import { CurrentUser } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
-import { AgentInfo } from '@core/authentication/agent-info';
+import { AgentInfo } from '@core/authentication.agent.info/agent-info';
 import { WhiteboardCheckoutEventInput } from '../whiteboard-checkout/dto/whiteboard.checkout.dto.event';
 import { IWhiteboardCheckout } from '../whiteboard-checkout/whiteboard.checkout.interface';
 import { WhiteboardCheckoutLifecycleOptionsProvider } from '../whiteboard-checkout/whiteboard.checkout.lifecycle.options.provider';

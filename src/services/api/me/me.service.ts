@@ -40,7 +40,7 @@ export class MeService {
     return await this.rolesService.getUserApplications(userId, states);
   }
 
-  public getSpaceMemberships(
+  public async getSpaceMemberships(
     credentials: ICredential[],
     visibilities: SpaceVisibility[] = [
       SpaceVisibility.ACTIVE,
@@ -56,7 +56,9 @@ export class MeService {
       },
     };
 
-    return this.spaceService.getSpaces(args);
+    const spaces = await this.spaceService.getSpacesUnsorted(args);
+    // Todo: apply a different sort order when returning my Memberships. Order to be specified. (e.g. by last activity, by name, etc.)
+    return await this.spaceService.orderSpacesDefault(spaces);
   }
 
   public async getMyJourneys(
@@ -65,7 +67,7 @@ export class MeService {
   ): Promise<MyJourneyResults[]> {
     const rawActivities = await this.activityService.getMyJourneysActivity(
       agentInfo.userID,
-      limit
+      limit * 2 //magic number, should not be needed. toDo Fix in https://app.zenhub.com/workspaces/alkemio-development-5ecb98b262ebd9f4aec4194c/issues/gh/alkem-io/server/3626
     );
 
     const myJourneyResults: MyJourneyResults[] = [];
@@ -87,6 +89,6 @@ export class MeService {
       });
     }
 
-    return myJourneyResults;
+    return myJourneyResults.slice(0, limit);
   }
 }

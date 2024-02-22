@@ -4,7 +4,7 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
-import { AgentInfo } from '@core/authentication/agent-info';
+import { AgentInfo } from '@core/authentication.agent.info/agent-info';
 import { UpdateInnovationFlowTemplateInput } from './dto/innovation.flow.template.dto.update';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { IInnovationFlowTemplate } from './innovation.flow.template.interface';
