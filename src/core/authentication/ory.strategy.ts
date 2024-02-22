@@ -14,7 +14,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { OryDefaultIdentitySchema } from './ory.default.identity.schema';
 import { KratosPayload } from './kratos.payload';
 import { verifyIdentityIfOidcAuth } from './verify.identity.if.oidc.auth';
-import { AgentInfo } from '../authentication.agent.info/agent-info';
+import { AgentInfo } from './agent-info';
 
 @Injectable()
 export class OryStrategy extends PassportStrategy(Strategy, 'oathkeeper-jwt') {

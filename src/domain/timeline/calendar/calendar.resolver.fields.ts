@@ -8,7 +8,7 @@ import {
 } from '@src/common/decorators';
 import { ICalendar } from './calendar.interface';
 import { ICalendarEvent } from '../event/event.interface';
-import { AgentInfo } from '@core/authentication.agent.info/agent-info';
+import { AgentInfo } from '@core/authentication/agent-info';
 import { CalendarArgsEvents } from './dto/calendar.args.events';
 import { CalendarService } from './calendar.service';
 import { UUID_NAMEID } from '@domain/common/scalars';

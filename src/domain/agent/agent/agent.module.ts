@@ -12,13 +12,12 @@ import { VerifiedCredentialModule } from '../verified-credential/verified.creden
 import { AgentResolverSubscriptions } from '@domain/agent/agent/agent.resolver.subscriptions';
 import { SsiSovrhdAdapterModule } from '@services/adapters/ssi-sovrhd/ssi.sovrhd.adapter.module';
 import { WalletManagerAdapterModule } from '@services/adapters/wallet-manager-adapter/wallet.manager.adapter.module';
-import { AuthenticationAgentInfoModule } from '@core/authentication.agent.info/authentication.agent.info.module';
+import { AgentCacheService } from './agent.cache.service';
 
 @Module({
   imports: [
     AuthorizationPolicyModule,
     AuthorizationModule,
-    AuthenticationAgentInfoModule,
     CredentialModule,
     VerifiedCredentialModule,
     TrustRegistryAdapterModule,
@@ -29,10 +28,11 @@ import { AuthenticationAgentInfoModule } from '@core/authentication.agent.info/a
   ],
   providers: [
     AgentService,
+    AgentCacheService,
     AgentResolverMutations,
     AgentResolverFields,
     AgentResolverSubscriptions,
   ],
-  exports: [AgentService],
+  exports: [AgentService, AgentCacheService],
 })
 export class AgentModule {}

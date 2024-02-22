@@ -4,7 +4,7 @@ import { CurrentUser } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AgentInfo } from '@core/authentication.agent.info/agent-info';
+import { AgentInfo } from '@core/authentication/agent-info';
 import { OrganizationVerificationEventInput } from './dto/organization.verification.dto.event';
 import { OrganizationVerificationLifecycleOptionsProvider } from './organization.verification.lifecycle.options.provider';
 import { IOrganizationVerification } from './organization.verification.interface';

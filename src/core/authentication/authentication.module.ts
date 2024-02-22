@@ -8,8 +8,6 @@ import { OryStrategy } from './ory.strategy';
 import { CredentialModule } from '@domain/agent/credential/credential.module';
 import { OryApiStrategy } from './ory.api.strategy';
 import { AgentModule } from '@domain/agent/agent/agent.module';
-import { AgentInfoCacheService } from '@core/authentication.agent.info/agent-info.cache.service';
-import { AuthenticationAgentInfoModule } from '@core/authentication.agent.info/authentication.agent.info.module';
 @Module({
   imports: [
     PassportModule.register({
@@ -27,14 +25,8 @@ import { AuthenticationAgentInfoModule } from '@core/authentication.agent.info/a
         signOptions: { expiresIn: '1d' },
       }),
     }),
-    AuthenticationAgentInfoModule,
   ],
-  providers: [
-    AuthenticationService,
-    OryStrategy,
-    OryApiStrategy,
-    AgentInfoCacheService,
-  ],
+  providers: [AuthenticationService, OryStrategy, OryApiStrategy],
   exports: [AuthenticationService],
 })
 export class AuthenticationModule {}

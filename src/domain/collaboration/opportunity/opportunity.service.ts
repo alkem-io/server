@@ -25,7 +25,7 @@ import { CommunityService } from '@domain/community/community/community.service'
 import { NVP } from '@domain/common/nvp';
 import { UUID_LENGTH } from '@common/constants';
 import { CommunityType } from '@common/enums/community.type';
-import { AgentInfo } from '@core/authentication.agent.info/agent-info';
+import { AgentInfo } from '@src/core/authentication/agent-info';
 import { IContext } from '@domain/context/context/context.interface';
 import { ICollaboration } from '../collaboration/collaboration.interface';
 import { InnovationFlowType } from '@common/enums/innovation.flow.type';

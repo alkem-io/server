@@ -6,7 +6,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { IWhiteboardTemplate } from './whiteboard.template.interface';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
-import { AgentInfo } from '@core/authentication.agent.info/agent-info';
+import { AgentInfo } from '@core/authentication/agent-info';
 import { UpdateWhiteboardTemplateInput } from './dto/whiteboard.template.dto.update';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { DeleteWhiteboardTemplateInput } from './dto/whiteboard.template.dto.delete';

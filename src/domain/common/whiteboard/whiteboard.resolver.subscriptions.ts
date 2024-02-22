@@ -1,6 +1,6 @@
 import { Args, Resolver, Subscription } from '@nestjs/graphql';
 import { Inject, LoggerService, UseGuards } from '@nestjs/common';
-import { AgentInfo } from '@core/authentication.agent.info/agent-info';
+import { AgentInfo } from '@src/core/authentication/agent-info';
 import { WhiteboardContentUpdated } from '@domain/common/whiteboard/dto/whiteboard.dto.event.content.updated';
 import { UUID } from '@domain/common/scalars';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';

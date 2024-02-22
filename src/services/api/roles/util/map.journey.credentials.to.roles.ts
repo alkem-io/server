@@ -4,7 +4,7 @@ import { SpaceVisibility } from '@common/enums/space.visibility';
 import { groupCredentialsByEntity } from './group.credentials.by.entity';
 import { getJourneyRolesForContributorEntityData } from './get.journey.roles.for.contributor.entity.data';
 import { getJourneyRolesForContributorQueryResult } from './get.journey.roles.for.contributor.query.result';
-import { AgentInfo } from '@core/authentication.agent.info/agent-info';
+import { AgentInfo } from '@core/authentication/agent-info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 
 export const mapJourneyCredentialsToRoles = async (

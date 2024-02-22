@@ -1,6 +1,6 @@
 import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { AgentInfo } from '@core/authentication.agent.info/agent-info';
+import { AgentInfo } from '@core/authentication/agent-info';
 import { LogContext } from '@common/enums/logging.context';
 import { ConvertChallengeToSpaceInput } from './dto/convert.dto.challenge.to.space.input';
 import { SpaceService } from '@domain/challenge/space/space.service';

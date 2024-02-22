@@ -1,6 +1,6 @@
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { SubscriptionType } from '@common/enums/subscription.type';
-import { AgentInfo } from '@core/authentication.agent.info/agent-info';
+import { AgentInfo } from '@core/authentication/agent-info';
 import { GraphqlGuard } from '@core/authorization';
 import { Inject, LoggerService, UseGuards } from '@nestjs/common';
 import { Args, Resolver, Subscription } from '@nestjs/graphql';

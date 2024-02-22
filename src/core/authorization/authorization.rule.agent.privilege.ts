@@ -1,6 +1,6 @@
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { ForbiddenException } from '@common/exceptions';
-import { AgentInfo } from '@core/authentication.agent.info/agent-info';
+import { AgentInfo } from '@core/authentication/agent-info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
 

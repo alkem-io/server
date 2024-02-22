@@ -3,7 +3,7 @@ import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { IInnovationHub } from './innovation.hub.interface';
-import { AgentInfo } from '@core/authentication.agent.info/agent-info';
+import { AgentInfo } from '@core/authentication/agent-info';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { DeleteInnovationHubInput } from './dto/innovation.hub.dto.delete';
 import { InnovationHubService } from './innovation.hub.service';
