@@ -14,7 +14,7 @@ import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileType } from '@common/enums';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
 import { WhiteboardRtService } from '@domain/common/whiteboard-rt/whiteboard.rt.service';
-import { AgentInfo } from '@core/authentication/agent-info';
+import { AgentInfo } from '@core/authentication.agent.info/agent-info';
 import { IWhiteboard } from '@domain/common/whiteboard';
 import { IWhiteboardRt } from '@domain/common/whiteboard-rt/whiteboard.rt.interface';
 import { VisualType } from '@common/enums/visual.type';
