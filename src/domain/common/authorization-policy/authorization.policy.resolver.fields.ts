@@ -3,7 +3,7 @@ import { CurrentUser, Profiling } from '@src/common/decorators';
 import { IAuthorizationPolicy } from './authorization.policy.interface';
 import { IAuthorizationPolicyRuleCredential } from '../../../core/authorization/authorization.policy.rule.credential.interface';
 import { AuthorizationPolicyService } from './authorization.policy.service';
-import { AgentInfo } from '@core/authentication/agent-info';
+import { AgentInfo } from '@core/authentication.agent.info/agent-info';
 import { AuthorizationPrivilege } from '@common/enums';
 import { UseGuards } from '@nestjs/common';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';

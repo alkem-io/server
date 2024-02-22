@@ -13,7 +13,7 @@ import { ICollaboration } from '@domain/collaboration/collaboration/collaboratio
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { ICallout } from '../callout/callout.interface';
 import { CollaborationArgsCallouts } from './dto/collaboration.args.callouts';
-import { AgentInfo } from '@core/authentication/agent-info';
+import { AgentInfo } from '@core/authentication.agent.info/agent-info';
 import { Loader } from '@core/dataloader/decorators';
 import {
   CollaborationRelationsLoaderCreator,

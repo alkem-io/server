@@ -3,7 +3,7 @@ import { GraphqlGuard } from '@core/authorization';
 import { UseGuards } from '@nestjs/common';
 import { CurrentUser } from '@src/common/decorators';
 import { ResolveField } from '@nestjs/graphql';
-import { AgentInfo } from '@core/authentication/agent-info';
+import { AgentInfo } from '@core/authentication.agent.info/agent-info';
 import { LookupQueryResults } from './dto/lookup.query.results';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { AuthorizationService } from '@core/authorization/authorization.service';
