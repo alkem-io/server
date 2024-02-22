@@ -3,7 +3,6 @@ import { IDiscussion } from './discussion.interface';
 import { Communication } from '../communication/communication.entity';
 import { Room } from '../room/room.entity';
 import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
-import { User } from '@domain/community/user/user.entity';
 
 @Entity()
 export class Discussion extends NameableEntity implements IDiscussion {
@@ -18,13 +17,7 @@ export class Discussion extends NameableEntity implements IDiscussion {
   @JoinColumn()
   comments!: Room;
 
-  @OneToOne(() => User, {
-    eager: false,
-    cascade: false,
-    onDelete: 'SET NULL',
-    nullable: true,
-  })
-  @JoinColumn({ name: 'createdBy' })
+  @Column('char', { length: 36, nullable: true })
   createdBy!: string;
 
   @ManyToOne(() => Communication, communication => communication.discussions, {

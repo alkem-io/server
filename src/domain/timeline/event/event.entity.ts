@@ -3,20 +3,13 @@ import { ICalendarEvent } from './event.interface';
 import { Calendar } from '../calendar/calendar.entity';
 import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
 import { Room } from '@domain/communication/room/room.entity';
-import { User } from '@domain/community/user/user.entity';
 
 @Entity()
 export class CalendarEvent extends NameableEntity implements ICalendarEvent {
   @Column('text')
   type!: string;
 
-  @OneToOne(() => User, {
-    eager: false,
-    cascade: false,
-    onDelete: 'SET NULL',
-    nullable: true,
-  })
-  @JoinColumn({ name: 'createdBy' })
+  @Column('char', { length: 36, nullable: true })
   createdBy!: string;
 
   @OneToOne(() => Room, {
