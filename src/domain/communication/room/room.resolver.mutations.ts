@@ -181,6 +181,16 @@ export class RoomResolverMutations {
           messageData.roomID
         );
 
+        // Mentions notificaitons should be sent regardless of callout visibility per client-web#5557
+        this.roomServiceEvents.processNotificationMentions(
+          callout.id,
+          callout.nameID,
+          callout.framing.profile,
+          room,
+          message,
+          agentInfo
+        );
+
         if (callout.visibility === CalloutVisibility.PUBLISHED) {
           this.roomServiceEvents.processActivityCalloutCommentCreated(
             callout,
@@ -189,14 +199,6 @@ export class RoomResolverMutations {
           );
           this.roomServiceEvents.processNotificationDiscussionComment(
             callout,
-            room,
-            message,
-            agentInfo
-          );
-          this.roomServiceEvents.processNotificationMentions(
-            callout.id,
-            callout.nameID,
-            callout.framing.profile,
             room,
             message,
             agentInfo
