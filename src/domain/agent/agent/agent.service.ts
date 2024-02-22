@@ -48,12 +48,12 @@ import { SsiSovrhdRegisterCallbackSession } from '@services/adapters/ssi-sovrhd/
 import { AgentInteractionVerifiedCredentialRequestSovrhd } from './dto/agent.dto.interaction.verified.credential.request.sovrhd';
 import { SsiSovrhdRegisterCallbackCredential } from '@services/adapters/ssi-sovrhd/dto/ssi.sovrhd.dto.register.callback.credential';
 import { getRandomId } from '@src/common/utils';
-import { AgentCacheService } from './agent.cache.service';
+import { AgentInfoCacheService } from '../../../core/authentication.agent.info/agent-info.cache.service';
 
 @Injectable()
 export class AgentService {
   constructor(
-    private agentCacheService: AgentCacheService,
+    private agentInfoCacheService: AgentInfoCacheService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private configService: ConfigService,
     private credentialService: CredentialService,
@@ -180,7 +180,7 @@ export class AgentService {
     });
 
     agent.credentials?.push(credential);
-    await this.agentCacheService.updateAgentInfoCache(agent);
+    await this.agentInfoCacheService.updateAgentInfoCache(agent);
 
     return await this.saveAgent(agent);
   }
@@ -206,7 +206,7 @@ export class AgentService {
       }
     }
     agent.credentials = newCredentials;
-    await this.agentCacheService.updateAgentInfoCache(agent);
+    await this.agentInfoCacheService.updateAgentInfoCache(agent);
 
     return agent;
   }
