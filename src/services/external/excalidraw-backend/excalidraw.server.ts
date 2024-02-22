@@ -39,6 +39,7 @@ import {
   RemoteSocketIoSocket,
   SERVER_REQUEST_BROADCAST,
   SERVER_SIDE_ROOM_DELETED,
+  SAVED,
 } from './types';
 import { CREATE_ROOM, DELETE_ROOM } from './adapters/adapter.event.names';
 import {
@@ -309,6 +310,7 @@ export class ExcalidrawServer {
           `Saving '${roomId}' successful`,
           LogContext.EXCALIDRAW_SERVER
         );
+        this.wsServer.emit(SAVED);
       } else {
         this.logger.error(
           `Saving '${roomId}' failed`,

@@ -24,9 +24,7 @@ export const authorizeWithRoomAndJoinHandler = async (
   const whiteboard = await whiteboardService.getWhiteboardOrFail(roomID);
   const agentInfo = socket.data.agentInfo;
 
-  if (
-    !canUserRead(authorizationService, agentInfo, whiteboard.authorization)
-  ) {
+  if (!canUserRead(authorizationService, agentInfo, whiteboard.authorization)) {
     logger.error(
       `Unable to authorize User '${agentInfo.userID}' with Whiteboard: '${whiteboard.id}'`,
       undefined,
