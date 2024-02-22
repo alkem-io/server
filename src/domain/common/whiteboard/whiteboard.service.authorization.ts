@@ -15,7 +15,7 @@ import { EntityNotInitializedException } from '@common/exceptions/entity.not.ini
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
   CREDENTIAL_RULE_WHITEBOARD_CREATED_BY,
-  POLICY_RULE_WHITEBOARD_RT_CONTENT_UPDATE,
+  POLICY_RULE_WHITEBOARD_CONTENT_UPDATE,
 } from '@common/constants';
 import { ProfileAuthorizationService } from '../profile/profile.service.authorization';
 import { IWhiteboard } from './whiteboard.interface';
@@ -83,9 +83,6 @@ export class WhiteboardAuthorizationService {
       const manageWhiteboardCreatedByPolicy =
         this.authorizationPolicyService.createCredentialRule(
           [
-            AuthorizationPrivilege.CREATE,
-            AuthorizationPrivilege.READ,
-            AuthorizationPrivilege.UPDATE,
             AuthorizationPrivilege.UPDATE_CONTENT,
             AuthorizationPrivilege.CONTRIBUTE,
             AuthorizationPrivilege.DELETE,
@@ -121,7 +118,7 @@ export class WhiteboardAuthorizationService {
           new AuthorizationPolicyRulePrivilege(
             [AuthorizationPrivilege.UPDATE_CONTENT],
             AuthorizationPrivilege.UPDATE,
-            POLICY_RULE_WHITEBOARD_RT_CONTENT_UPDATE
+            POLICY_RULE_WHITEBOARD_CONTENT_UPDATE
           );
         privilegeRules.push(updateContentPrivilegeAdmins);
         break;
@@ -130,7 +127,7 @@ export class WhiteboardAuthorizationService {
           new AuthorizationPolicyRulePrivilege(
             [AuthorizationPrivilege.UPDATE_CONTENT],
             AuthorizationPrivilege.CONTRIBUTE,
-            POLICY_RULE_WHITEBOARD_RT_CONTENT_UPDATE
+            POLICY_RULE_WHITEBOARD_CONTENT_UPDATE
           );
         privilegeRules.push(updateContentPrivilegeContributors);
         break;

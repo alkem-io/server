@@ -33,10 +33,9 @@ export class LicenseService {
     // default to active space
     license.visibility = SpaceVisibility.ACTIVE;
 
-    // todo
     // Set the feature flags
     const whiteboardRtFeatureFlag: CreateFeatureFlagInput = {
-      name: LicenseFeatureFlagName.WHITEBOART_RT,
+      name: LicenseFeatureFlagName.WHITEBOARD_MULTI_USER,
       enabled: false,
     };
     const calloutToCalloutTemplateFeatureFlag: CreateFeatureFlagInput = {

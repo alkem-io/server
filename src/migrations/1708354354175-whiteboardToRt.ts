@@ -103,6 +103,23 @@ export class whiteboardToRt1708354354175 implements MigrationInterface {
     await queryRunner.query(
       `UPDATE \`callout\` SET type = 'whiteboard' WHERE type = 'whiteboard_rt'`
     );
+    // rename feature flag
+    await queryRunner.query(
+      `UPDATE \`feature_flag\` SET name = 'whiteboard-multi-user' WHERE name = 'whiteboard-rt'`
+    );
+    // rename privilege rules
+    await queryRunner.query(`
+        UPDATE authorization_policy
+        SET privilegeRules = REPLACE(privilegeRules, 'whiteboardRtContentUpdate', 'whiteboardContentUpdate');
+    `);
+    await queryRunner.query(`
+        UPDATE authorization_policy
+        SET privilegeRules = REPLACE(privilegeRules, 'collaborationWhiteboardRtCreate', 'collaborationWhiteboardCreate');
+    `);
+    await queryRunner.query(`
+        UPDATE authorization_policy
+        SET privilegeRules = REPLACE(privilegeRules, 'collaborationWhiteboardRtContributorsCreate', 'collaborationWhiteboardContributorsCreate');
+    `);
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
