@@ -1,6 +1,7 @@
 import {
   DISCONNECT,
   DISCONNECTING,
+  IDLE_STATE,
   ROOM_USER_CHANGE,
   SERVER_BROADCAST,
   SERVER_VOLATILE_BROADCAST,
@@ -22,6 +23,10 @@ export type ServerBroadcastPayload = BasePayload & {
 };
 export type ServerVolatileBroadcastPayload = BasePayload & {
   name?: typeof SERVER_VOLATILE_BROADCAST;
+  data: ArrayBuffer;
+};
+export type IdleStatePayload = BasePayload & {
+  name?: typeof IDLE_STATE;
   data: ArrayBuffer;
 };
 export type DisconnectingPayload = BasePayload & {

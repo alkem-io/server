@@ -7,6 +7,7 @@ import { BaseException } from '@common/exceptions/base.exception';
 import {
   DISCONNECT,
   DISCONNECTING,
+  IDLE_STATE,
   NEW_USER,
   ROOM_USER_CHANGE,
   SERVER_BROADCAST,
@@ -21,6 +22,7 @@ const subscribableEvents = [
   ROOM_USER_CHANGE,
   SERVER_BROADCAST,
   SERVER_VOLATILE_BROADCAST,
+  IDLE_STATE,
   DISCONNECTING,
   DISCONNECT,
 ];

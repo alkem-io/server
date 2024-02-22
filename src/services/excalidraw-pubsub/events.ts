@@ -2,6 +2,7 @@ import {
   CLIENT_BROADCAST,
   DISCONNECT,
   DISCONNECTING,
+  IDLE_STATE,
   ROOM_USER_CHANGE,
   SERVER_BROADCAST,
   SERVER_VOLATILE_BROADCAST,
@@ -76,6 +77,19 @@ export class ServerVolatileBroadcastEvent
 
   handleEvent(wsServer: SocketIoServer): Promise<void> | void {
     wsServer.in(this.roomID).emit(CLIENT_BROADCAST, this.data);
+  }
+}
+export class IdleStateEvent extends BaseEvent implements IExcalidrawEvent {
+  constructor(
+    public roomID: string,
+    public data: ArrayBuffer,
+    public publisherId?: string
+  ) {
+    super(roomID, publisherId, IDLE_STATE);
+  }
+
+  handleEvent(wsServer: SocketIoServer): Promise<void> | void {
+    wsServer.in(this.roomID).emit(IDLE_STATE, this.data);
   }
 }
 

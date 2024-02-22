@@ -47,6 +47,16 @@ export const serverVolatileBroadcastEventAmqpHandler = (
     data,
   });
 };
+export const idleStateEventAmqpHandler = (
+  roomID: string,
+  data: ArrayBuffer,
+  excalidrawEventPublisher: ExcalidrawEventPublisherService
+) => {
+  excalidrawEventPublisher.publishIdleState({
+    roomID,
+    data,
+  });
+};
 /* Built-in event for handling socket disconnects */
 export const disconnectingEventAmqpHandler = async (
   wsServer: SocketIoServer,
