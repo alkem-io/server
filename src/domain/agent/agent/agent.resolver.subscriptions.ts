@@ -3,7 +3,7 @@ import { Inject, LoggerService, UseGuards } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@src/common/enums';
 import { PubSubEngine } from 'graphql-subscriptions';
-import { AgentInfo } from '@core/authentication.agent.info/agent-info';
+import { AgentInfo } from '@src/core/authentication/agent-info';
 import { ProfileCredentialVerified } from '@domain/agent/agent/dto/agent.dto.profile.credential.verified';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';

@@ -2,7 +2,7 @@ import { Args, Resolver } from '@nestjs/graphql';
 import { Inject, LoggerService, UseGuards } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { SubscriptionReadService } from '@services/subscriptions/subscription-service';
-import { AgentInfo } from '@core/authentication.agent.info/agent-info';
+import { AgentInfo } from '@src/core/authentication/agent-info';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { ActivityCreatedSubscriptionPayload } from './dto/subscriptions/activity.log.dto.activity.created.subscription.payload';
