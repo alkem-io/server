@@ -14,7 +14,6 @@ export abstract class IPost extends INameable {
   @Field(() => Date)
   createdDate!: Date;
 
-  @Column('char', { length: 36, nullable: true })
   createdBy!: string;
 
   @Field(() => IRoom, {
