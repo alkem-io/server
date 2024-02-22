@@ -8,6 +8,7 @@ export const validateMachineDefinition = (
   definition: string
 ): Error | ErrorObject[] | undefined => {
   let json;
+  let validate;
 
   try {
     json = JSON.parse(definition);
@@ -15,7 +16,12 @@ export const validateMachineDefinition = (
     return e as Error;
   }
 
-  const validate = ajv.compile(schema);
+  try {
+    validate = ajv.compile(schema);
+  } catch (e: unknown) {
+    return e as Error;
+  }
+
   const valid = validate(json);
 
   if (valid) {
