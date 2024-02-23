@@ -262,6 +262,14 @@ export class ExcalidrawServer {
       );
       socket.on(DISCONNECT, () => disconnectEventHandler(socket));
     });
+
+    this.whiteboardService.EventEmitter.on('saved', async (roomID: string) => {
+      this.logger.verbose?.(
+        `Whiteboard '${roomID}' saved`,
+        LogContext.EXCALIDRAW_SERVER
+      );
+      this.wsServer.to(roomID).emit(SAVED);
+    });
   }
 
   private startContributionEventTimer(roomId: string) {
@@ -316,7 +324,6 @@ export class ExcalidrawServer {
           `Saving '${roomId}' successful`,
           LogContext.EXCALIDRAW_SERVER
         );
-        this.wsServer.emit(SAVED);
       } else {
         this.logger.error(
           `Saving '${roomId}' failed`,
