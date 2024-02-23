@@ -36,6 +36,7 @@ export const authorizeWithRoomAndJoinHandler = async (
   }
 
   socket.data.lastContributed = -1;
+  socket.data.lastCursorMove = -1;
   socket.data.read = true; // already authorized
   socket.data.update = canUserUpdate(
     authorizationService,
@@ -107,6 +108,7 @@ export const serverVolatileBroadcastEventHandler = (
   socket: SocketIoSocket
 ) => {
   socket.volatile.broadcast.to(roomID).emit(CLIENT_BROADCAST, data);
+  socket.data.lastCursorMove = Date.now();
 };
 // broadcasts requests from socket to all other sockets
 export const requestBroadcastEventHandler = (
