@@ -9,7 +9,6 @@ import {
   CONNECTION,
   DISCONNECT,
   DISCONNECTING,
-  IDLE_STATE,
   INIT_ROOM,
   JOIN_ROOM,
   SERVER_BROADCAST,
@@ -19,7 +18,6 @@ import { getExcalidrawBaseServerOrFail } from '../../utils/get.excalidraw.base.s
 import {
   disconnectEventAmqpHandler,
   disconnectingEventAmqpHandler,
-  idleStateEventAmqpHandler,
   joinRoomEventAmqpHandler,
   serverBroadcastEventAmqpHandler,
   serverVolatileBroadcastEventAmqpHandler,
@@ -89,10 +87,6 @@ const factory = async (
         data,
         excalidrawEventPublisher
       )
-    );
-
-    socket.on(IDLE_STATE, (roomID: string, data: ArrayBuffer) =>
-      idleStateEventAmqpHandler(roomID, data, excalidrawEventPublisher)
     );
 
     socket.on(

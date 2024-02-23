@@ -1,7 +1,6 @@
 import {
   DISCONNECT,
   DISCONNECTING,
-  IDLE_STATE,
   ROOM_USER_CHANGE,
   SERVER_BROADCAST,
   SERVER_VOLATILE_BROADCAST,
@@ -10,7 +9,6 @@ import {
   BaseEvent,
   DisconnectedEvent,
   DisconnectingEvent,
-  IdleStateEvent,
   RoomUserChangeEvent,
   ServerBroadcastEvent,
   ServerVolatileBroadcastEvent,
@@ -36,8 +34,6 @@ export const excalidrawEventFactory = (
       return createServerBroadcastEvent(payload);
     case SERVER_VOLATILE_BROADCAST:
       return createServerVolatileBroadcastEvent(payload);
-    case IDLE_STATE:
-      return createIdleStateEvent(payload);
     default:
       return undefined;
   }
@@ -71,10 +67,4 @@ const createServerVolatileBroadcastEvent = (
   const { roomID, publisherId, data } =
     payload as ServerVolatileBroadcastPayload;
   return new ServerVolatileBroadcastEvent(roomID, data, publisherId);
-};
-
-const createIdleStateEvent = (payload: BasePayload): IdleStateEvent => {
-  const { roomID, publisherId, data } =
-    payload as ServerVolatileBroadcastPayload;
-  return new IdleStateEvent(roomID, data, publisherId);
 };
