@@ -3,7 +3,7 @@ import {
   CurrentUser,
   Profiling,
 } from '@common/decorators';
-import { AuthorizationPrivilege } from '@common/enums';
+import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 import { AgentInfo } from '@core/authentication';
 import { GraphqlGuard } from '@core/authorization';
 import { IAgent } from '@domain/agent/agent';
@@ -226,16 +226,33 @@ export class UserResolverFields {
     user: IUser,
     agentInfo: AgentInfo,
     privilege: AuthorizationPrivilege
-  ) {
+  ): Promise<boolean> {
     // needs to be loaded if you are not going through the orm layer
     // e.g. pagination is going around the orm layer
     const { authorization } = await this.userService.getUserOrFail(user.id, {
       relations: { authorization: true },
     });
-    return await this.authorizationService.isAccessGranted(
+    const accessGranted = this.authorizationService.isAccessGranted(
       agentInfo,
       authorization,
       privilege
     );
+    if (!accessGranted) {
+      // Check if the user has a particular credential, which signals that it should be able to access the user
+      // todo: remove later, this is code to track down a particular race condition: https://github.com/alkem-io/notifications/issues/283
+      const hasGlobalAdminCredential = agentInfo.credentials.some(
+        credential =>
+          credential.type === AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY ||
+          credential.type === AuthorizationCredential.GLOBAL_ADMIN_SPACES
+      );
+      if (hasGlobalAdminCredential) {
+        this.logger.error(
+          `Agent: ${agentInfo.email} is not authorized to access user: ${
+            user.email
+          }: authorization policy of user: ${JSON.stringify(authorization)}`
+        );
+      }
+    }
+    return accessGranted;
   }
 }

@@ -214,6 +214,16 @@ const getSpaceMock = ({
   };
 };
 
+const getFilteredSpaces = (
+  spaces: Space[],
+  visibilities: SpaceVisibility[]
+): Space[] => {
+  return spaces.filter(space => {
+    const visibility = space.license?.visibility || SpaceVisibility.ACTIVE;
+    return visibilities.includes(visibility);
+  });
+};
+
 const spaceTestData: Space[] = [
   getSpaceMock({
     id: '1',
@@ -331,31 +341,33 @@ describe('SpacesSorting', () => {
   });
 
   it('Sorting test', () => {
-    const result = service['filterAndSortSpaces'](spaceTestData, [
+    const activeDemoSpaces = getFilteredSpaces(spaceTestData, [
       SpaceVisibility.ACTIVE,
       SpaceVisibility.DEMO,
     ]);
+    const result = service['sortSpacesDefault'](activeDemoSpaces);
     expect(JSON.stringify(result)).toBe(
       '["6","2","1","5","9","3","8","4","10"]'
     );
   });
   it('Filtering test 1', () => {
-    const result = service['filterAndSortSpaces'](spaceTestData, [
+    const activeSpaces = getFilteredSpaces(spaceTestData, [
       SpaceVisibility.ACTIVE,
     ]);
+    const result = service['sortSpacesDefault'](activeSpaces);
 
     expect(JSON.stringify(result)).toBe('["6","2","1","5","9"]');
   });
   it('Filtering test 2', () => {
-    const result = service['filterAndSortSpaces'](spaceTestData, [
-      SpaceVisibility.DEMO,
-    ]);
+    const demoSpaces = getFilteredSpaces(spaceTestData, [SpaceVisibility.DEMO]);
+    const result = service['sortSpacesDefault'](demoSpaces);
     expect(JSON.stringify(result)).toBe('["3","8","4","10"]');
   });
   it('Filtering test 3', () => {
-    const result = service['filterAndSortSpaces'](spaceTestData, [
+    const archivedSpaces = getFilteredSpaces(spaceTestData, [
       SpaceVisibility.ARCHIVED,
     ]);
+    const result = service['sortSpacesDefault'](archivedSpaces);
     expect(JSON.stringify(result)).toBe('["7"]');
   });
 });
