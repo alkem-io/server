@@ -1,3 +1,4 @@
+import EventEmitter = require('node:events');
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
 import {
@@ -29,9 +30,11 @@ import { IWhiteboard } from './whiteboard.interface';
 import { CreateWhiteboardInput } from './dto/whiteboard.dto.create';
 import { UpdateWhiteboardInput } from './dto/whiteboard.dto.update';
 import { WhiteboardAuthorizationService } from './whiteboard.service.authorization';
+import { SAVED } from '@services/external/excalidraw-backend/types/event.names';
 
 @Injectable()
 export class WhiteboardService {
+  public EventEmitter = new EventEmitter();
   constructor(
     @InjectRepository(Whiteboard)
     private whiteboardRepository: Repository<Whiteboard>,
@@ -192,7 +195,12 @@ export class WhiteboardService {
     );
 
     whiteboard.content = JSON.stringify(newContent);
-    return this.save(whiteboard);
+
+    const savedWhiteboard = await this.save(whiteboard);
+
+    this.EventEmitter.emit(SAVED, savedWhiteboard.id);
+
+    return savedWhiteboard;
   }
 
   public async getProfile(
