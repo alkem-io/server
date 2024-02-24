@@ -3,6 +3,7 @@ import { UpdateProfileInput } from '@domain/common/profile/dto';
 import { IsOptional, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
+import { UpdateInnovationFlowStateInput } from './innovation.flow.state.dto.update';
 
 @InputType()
 export class UpdateInnovationFlowInput {
@@ -21,10 +22,8 @@ export class UpdateInnovationFlowInput {
   @Type(() => UpdateProfileInput)
   profileData?: UpdateProfileInput;
 
-  @Field(() => [String], {
-    nullable: true,
-    description: 'The states on this InnovationFlow that should be selectable.',
-  })
-  @IsOptional()
-  visibleStates?: string[];
+  @Field(() => [UpdateInnovationFlowStateInput], { nullable: true })
+  @ValidateNested({ each: true })
+  @Type(() => UpdateInnovationFlowStateInput)
+  states!: UpdateInnovationFlowStateInput[];
 }

@@ -4,17 +4,17 @@ import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { Profiling } from '@src/common/decorators';
 import { IInnovationFlow } from './innovation.flow.interface';
 import { IProfile } from '@domain/common/profile/profile.interface';
-import {
-  InnovationFlowLifecycleLoaderCreator,
-  ProfileLoaderCreator,
-} from '@core/dataloader/creators';
+import { ProfileLoaderCreator } from '@core/dataloader/creators';
 import { Loader } from '@core/dataloader/decorators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { InnovationFlow } from './innovation.flow.entity';
-import { ILifecycle } from '@domain/common/lifecycle';
+import { IInnovationFlowState } from './innovation.flow.dto.state.interface';
+import { InnovationFlowService } from './innovaton.flow.service';
 
 @Resolver(() => IInnovationFlow)
 export class InnovationFlowResolverFields {
+  constructor(private innovationFlowService: InnovationFlowService) {}
+
   @UseGuards(GraphqlGuard)
   @ResolveField('profile', () => IProfile, {
     nullable: false,
@@ -29,18 +29,11 @@ export class InnovationFlowResolverFields {
     return loader.load(innovationFlow.id);
   }
 
-  @ResolveField('lifecycle', () => ILifecycle, {
-    nullable: true,
-    description: 'The Lifecycle being used by this InnovationFlow',
+  @ResolveField('states', () => [IInnovationFlowState], {
+    nullable: false,
+    description: 'The set of States in use in this Flow.',
   })
-  @UseGuards(GraphqlGuard)
-  async lifecycle(
-    @Parent() innovationFlow: IInnovationFlow,
-    @Loader(InnovationFlowLifecycleLoaderCreator, {
-      parentClassRef: InnovationFlow,
-    })
-    loader: ILoader<ILifecycle>
-  ): Promise<ILifecycle> {
-    return await loader.load(innovationFlow.id);
+  states(@Parent() flow: IInnovationFlow): IInnovationFlowState[] {
+    return this.innovationFlowService.getStates(flow);
   }
 }

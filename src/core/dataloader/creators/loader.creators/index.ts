@@ -21,7 +21,6 @@ export * from './space/space.templates.set.loader.creator';
 export * from './space/space.license.loader.creator';
 export * from './collaboration/collaboration.timeline.loader.creator';
 
-export * from './innovation.flow.lifecycle.loader.creator';
 export * from './journey/journey.collaboration.loader.creator';
 export * from './journey/journey.context.loader.creator';
 export * from './journey/journey.community.loader.creator';

@@ -8,10 +8,7 @@ import { InnovationFlowResolverMutations } from './innovation.flow.resolver.muta
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
-import { LifecycleModule } from '@domain/common/lifecycle/lifecycle.module';
 import { InnovationFlowTemplateModule } from '@domain/template/innovation-flow-template/innovation.flow.template.module';
-import { InnovationFlowLifecycleOptionsProviderChallenge } from './innovation.flow.lifecycle.options.provider.challenge';
-import { InnovationFlowLifecycleOptionsProviderOpportunity } from './innovation.flow.lifecycle.options.provider.opportunity';
 import { TagsetModule } from '@domain/common/tagset/tagset.module';
 import { TagsetTemplateModule } from '@domain/common/tagset-template/tagset.template.module';
 
@@ -19,7 +16,6 @@ import { TagsetTemplateModule } from '@domain/common/tagset-template/tagset.temp
   imports: [
     AuthorizationModule,
     AuthorizationPolicyModule,
-    LifecycleModule,
     InnovationFlowTemplateModule,
     ProfileModule,
     TagsetModule,
@@ -31,8 +27,6 @@ import { TagsetTemplateModule } from '@domain/common/tagset-template/tagset.temp
     InnovationFlowAuthorizationService,
     InnovationFlowResolverFields,
     InnovationFlowResolverMutations,
-    InnovationFlowLifecycleOptionsProviderChallenge,
-    InnovationFlowLifecycleOptionsProviderOpportunity,
   ],
   exports: [InnovationFlowService, InnovationFlowAuthorizationService],
 })

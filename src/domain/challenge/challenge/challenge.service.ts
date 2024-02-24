@@ -191,10 +191,6 @@ export class ChallengeService {
 
     const savedChallenge = await this.challengeRepository.save(challenge);
 
-    await this.innovationFlowService.updateFlowStateTagsetTemplateForLifecycle(
-      challenge.innovationFlow,
-      statesTagssetTemplate
-    );
     const stateTagset = savedChallenge.innovationFlow.profile.tagsets?.find(
       t => t.tagsetTemplate?.name === TagsetReservedName.FLOW_STATE
     );
@@ -204,10 +200,6 @@ export class ChallengeService {
         LogContext.CHALLENGES
       );
     }
-    await this.innovationFlowService.updateStateTagsetForLifecycle(
-      challenge.innovationFlow,
-      stateTagset
-    );
 
     // Finally create default callouts, either using hard coded defaults or from a collaboration
     let calloutDefaults = challengeDefaultCallouts;

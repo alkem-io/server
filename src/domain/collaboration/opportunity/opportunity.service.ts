@@ -136,10 +136,6 @@ export class OpportunityService {
           opportunity.storageAggregator
         );
 
-      await this.innovationFlowService.updateFlowStateTagsetTemplateForLifecycle(
-        opportunity.innovationFlow,
-        stateTagsetTemplate
-      );
       const stateTagset = opportunity.innovationFlow.profile.tagsets?.find(
         t => t.tagsetTemplate?.name === TagsetReservedName.FLOW_STATE
       );
@@ -149,10 +145,7 @@ export class OpportunityService {
           LogContext.CHALLENGES
         );
       }
-      await this.innovationFlowService.updateStateTagsetForLifecycle(
-        opportunity.innovationFlow,
-        stateTagset
-      );
+
       // Finally create default callouts, either using hard coded defaults or from a collaboration
       let calloutDefaults = opportunityDefaultCallouts;
       if (opportunityData.collaborationTemplateOpportunityID) {

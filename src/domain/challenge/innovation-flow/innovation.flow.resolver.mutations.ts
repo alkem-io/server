@@ -8,20 +8,13 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { IInnovationFlow } from './innovation.flow.interface';
 import { UpdateInnovationFlowInput } from './dto/innovation.flow.dto.update';
-import { UpdateInnovationFlowLifecycleTemplateInput } from './dto/innovation.flow.dto.update.lifecycle.template';
-import { InnovationFlowEvent } from './dto/innovation.flow.dto.event';
-import { InnovationFlowLifecycleOptionsProviderOpportunity } from './innovation.flow.lifecycle.options.provider.opportunity';
-import { InnovationFlowLifecycleOptionsProviderChallenge } from './innovation.flow.lifecycle.options.provider.challenge';
-import { AdminInnovationFlowSynchronizeStatesInput } from './dto/innovation.flow.dto.admin.synchronize.states';
-import { ITagset } from '@domain/common/tagset/tagset.interface';
+import { UpdateInnovationFlowSelectedStateInput } from './dto/innovation.flow.dto.update.selected.state';
 
 @Resolver()
 export class InnovationFlowResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
-    private innovationFlowService: InnovationFlowService,
-    private opportunityLifecycleOptionsProvider: InnovationFlowLifecycleOptionsProviderOpportunity,
-    private challengeLifecycleOptionsProvider: InnovationFlowLifecycleOptionsProviderChallenge
+    private innovationFlowService: InnovationFlowService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -49,102 +42,27 @@ export class InnovationFlowResolverMutations {
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IInnovationFlow, {
-    description: 'Updates the template for the specified Innovation Flow.',
+    description: 'Updates the InnovationFlow.',
   })
   @Profiling.api
-  async updateInnovationFlowLifecycleTemplate(
+  async updateInnovationFlowState(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('innovationFlowData')
-    innovationFlowData: UpdateInnovationFlowLifecycleTemplateInput
+    @Args('innovationFlowStateData')
+    innovationFlowStateData: UpdateInnovationFlowSelectedStateInput
   ): Promise<IInnovationFlow> {
     const innovationFlow =
       await this.innovationFlowService.getInnovationFlowOrFail(
-        innovationFlowData.innovationFlowID
-      );
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      innovationFlow.authorization,
-      AuthorizationPrivilege.UPDATE_INNOVATION_FLOW,
-      `innovation flow template update: ${innovationFlow.id}`
-    );
-    return await this.innovationFlowService.updateInnovationFlowTemplate(
-      innovationFlowData
-    );
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IInnovationFlow, {
-    description: 'Trigger an event on the InnovationFlow for an Opportunity.',
-  })
-  async eventOnOpportunity(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('innovationFlowEventData')
-    innovationFlowEventData: InnovationFlowEvent
-  ): Promise<IInnovationFlow> {
-    const innovationFlow =
-      await this.innovationFlowService.getInnovationFlowOrFail(
-        innovationFlowEventData.innovationFlowID
+        innovationFlowStateData.innovationFlowID
       );
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       innovationFlow.authorization,
       AuthorizationPrivilege.UPDATE,
-      `event on opportunity innovation flow: ${innovationFlow.id}`
+      `updateInnovationFlow selectedState: ${innovationFlow.id}`
     );
-    return await this.opportunityLifecycleOptionsProvider.eventOnOpportunity(
-      innovationFlowEventData,
-      agentInfo
-    );
-  }
 
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IInnovationFlow, {
-    description: 'Trigger an event on the InnovationFlow for a Challenge.',
-  })
-  async eventOnChallenge(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('innovationFlowEventData')
-    innovationFlowEventData: InnovationFlowEvent
-  ): Promise<IInnovationFlow> {
-    const innovationFlow =
-      await this.innovationFlowService.getInnovationFlowOrFail(
-        innovationFlowEventData.innovationFlowID
-      );
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      innovationFlow.authorization,
-      AuthorizationPrivilege.UPDATE,
-      `event on challenge innovation flow: ${innovationFlow.id}`
-    );
-    return await this.challengeLifecycleOptionsProvider.eventOnChallenge(
-      innovationFlowEventData,
-      agentInfo
-    );
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => ITagset, {
-    description:
-      'Updates the States tagset to be synchronized with the Lifecycle states.',
-  })
-  @Profiling.api
-  async adminInnovationFlowSynchronizeStates(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('innovationFlowData')
-    innovationFlowData: AdminInnovationFlowSynchronizeStatesInput
-  ): Promise<ITagset> {
-    const innovationFlow =
-      await this.innovationFlowService.getInnovationFlowOrFail(
-        innovationFlowData.innovationFlowID
-      );
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      innovationFlow.authorization,
-      AuthorizationPrivilege.UPDATE_INNOVATION_FLOW,
-      `innovation flow admin synchronize states: ${innovationFlow.id}`
-    );
-    return await this.innovationFlowService.updateStatesTagsetTemplateToMatchLifecycle(
-      innovationFlowData.innovationFlowID
+    return await this.innovationFlowService.updateSelectedState(
+      innovationFlowStateData
     );
   }
 }

@@ -2,7 +2,6 @@ import { UUID_LENGTH } from '@common/constants';
 import { LogContext, ProfileType } from '@common/enums';
 import {
   EntityNotFoundException,
-  EntityNotInitializedException,
   ValidationException,
 } from '@common/exceptions';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
@@ -17,27 +16,21 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy/authori
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { VisualType } from '@common/enums/visual.type';
-import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
-import { ILifecycle } from '@domain/common/lifecycle';
 import { InnovationFlowTemplateService } from '@domain/template/innovation-flow-template/innovation.flow.template.service';
-import { ILifecycleDefinition } from '@interfaces/lifecycle.definition.interface';
-import { UpdateInnovationFlowLifecycleTemplateInput } from './dto/innovation.flow.dto.update.lifecycle.template';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { UpdateProfileSelectTagsetInput } from '@domain/common/profile/dto/profile.dto.update.select.tagset';
-import { ITagset } from '@domain/common/tagset';
+import { UpdateProfileSelectTagsetDefinitionInput } from '@domain/common/profile/dto/profile.dto.update.select.tagset.definition';
 import { ITagsetTemplate } from '@domain/common/tagset-template/tagset.template.interface';
-import { TagsetTemplateService } from '@domain/common/tagset-template/tagset.template.service';
-import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { IInnovationFlowState } from './innovation.flow.dto.state.interface';
+import { UpdateInnovationFlowSelectedStateInput } from './dto/innovation.flow.dto.update.selected.state';
+import { UpdateProfileSelectTagsetValueInput } from '@domain/common/profile/dto/profile.dto.update.select.tagset.value';
+import { CreateInnovationFlowStateInput } from './dto/innovation.flow.state.dto.create';
 
 @Injectable()
 export class InnovationFlowService {
   constructor(
     private profileService: ProfileService,
-    private lifecycleService: LifecycleService,
     private innovationFlowTemplateService: InnovationFlowTemplateService,
-    private tagsetService: TagsetService,
-    private tagsetTemplateService: TagsetTemplateService,
     @InjectRepository(InnovationFlow)
     private innovationFlowRepository: Repository<InnovationFlow>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -64,7 +57,6 @@ export class InnovationFlowService {
     const innovationFlow: IInnovationFlow = new InnovationFlow();
     innovationFlow.authorization = new AuthorizationPolicy();
     innovationFlow.spaceID = innovationFlowData.spaceID;
-    innovationFlow.type = innovationFlowData.type;
 
     const tagsetInputs =
       this.profileService.convertTagsetTemplatesToCreateTagsetInput(
@@ -87,17 +79,29 @@ export class InnovationFlowService {
       VisualType.CARD
     );
 
-    const machineConfig: ILifecycleDefinition =
-      await this.innovationFlowTemplateService.getInnovationFlowDefinitionFromTemplate(
-        innovationFlowData.innovationFlowTemplateID,
-        innovationFlowData.spaceID,
-        innovationFlowData.type
-      );
-
-    innovationFlow.lifecycle = await this.lifecycleService.createLifecycle(
-      innovationFlow.id,
-      machineConfig
-    );
+    const defaultStates: CreateInnovationFlowStateInput[] = [
+      {
+        displayName: 'prepare',
+        explanation: 'The innovation is being prepared.',
+        sortOrder: 1,
+      },
+      {
+        displayName: 'in progress',
+        explanation: 'The innovation is in progress.',
+        sortOrder: 2,
+      },
+      {
+        displayName: 'summary',
+        explanation: 'The summary of the flow results.',
+        sortOrder: 3,
+      },
+      {
+        displayName: 'done',
+        explanation: 'The flow is completed.',
+        sortOrder: 4,
+      },
+    ];
+    innovationFlow.states = this.serializeStates(defaultStates);
 
     return await this.innovationFlowRepository.save(innovationFlow);
   }
@@ -112,33 +116,25 @@ export class InnovationFlowService {
     const innovationFlow = await this.getInnovationFlowOrFail(
       innovationFlowData.innovationFlowID,
       {
-        relations: { profile: true, lifecycle: true },
+        relations: { profile: true },
       }
     );
 
-    const visibleStates = innovationFlowData.visibleStates;
-    if (visibleStates && innovationFlow.lifecycle) {
-      const states = this.lifecycleService.getStates(innovationFlow.lifecycle);
-      for (const visibleState of visibleStates) {
-        if (!states.includes(visibleState)) {
-          throw new ValidationException(
-            `Provided set of visibleStates (${visibleStates}) has value '${visibleState}'
-            that is not in the Lifecycle states: ${states}`,
-            LogContext.CHALLENGES
-          );
-        }
-      }
-
-      const defaultSelectedValue = this.lifecycleService.getState(
-        innovationFlow.lifecycle
+    if (innovationFlowData.states) {
+      const newStateNames = innovationFlowData.states.map(
+        state => state.displayName
       );
-      const updateData: UpdateProfileSelectTagsetInput = {
+
+      const updateData: UpdateProfileSelectTagsetDefinitionInput = {
         profileID: innovationFlow.profile.id,
-        allowedValues: innovationFlowData.visibleStates,
-        defaultSelectedValue: defaultSelectedValue,
+        allowedValues: newStateNames,
+        defaultSelectedValue: newStateNames[0], // default to first in the list
         tagsetName: TagsetReservedName.FLOW_STATE.valueOf(),
       };
-      await this.profileService.updateSelectTagset(updateData);
+      await this.profileService.updateSelectTagsetDefinition(updateData);
+
+      // serialize the states
+      innovationFlow.states = this.serializeStates(innovationFlowData.states);
     }
 
     if (innovationFlowData.profileData) {
@@ -151,19 +147,53 @@ export class InnovationFlowService {
     return await this.innovationFlowRepository.save(innovationFlow);
   }
 
+  async updateSelectedState(
+    innovationFlowSelectedStateData: UpdateInnovationFlowSelectedStateInput
+  ): Promise<IInnovationFlow> {
+    const innovationFlow = await this.getInnovationFlowOrFail(
+      innovationFlowSelectedStateData.innovationFlowID,
+      {
+        relations: { profile: true },
+      }
+    );
+
+    const statesTagset = await this.profileService.getTagset(
+      innovationFlow.profile.id,
+      TagsetReservedName.FLOW_STATE.valueOf()
+    );
+
+    const newStateName = innovationFlowSelectedStateData.selectedState;
+    const newStateAllowed = statesTagset.tags.includes(newStateName);
+    if (!newStateAllowed) {
+      throw new ValidationException(
+        `New state '${newStateName}' not in allowed states: ${statesTagset.tags}`,
+        LogContext.CHALLENGES
+      );
+    }
+
+    const updateData: UpdateProfileSelectTagsetValueInput = {
+      profileID: innovationFlow.profile.id,
+      selectedValue: newStateName,
+      tagsetName: TagsetReservedName.FLOW_STATE.valueOf(),
+    };
+    await this.profileService.updateSelectTagsetValue(updateData);
+    return await this.getInnovationFlowOrFail(
+      innovationFlowSelectedStateData.innovationFlowID,
+      {
+        relations: { profile: true },
+      }
+    );
+  }
+
   async deleteInnovationFlow(
     innovationFlowID: string
   ): Promise<IInnovationFlow> {
     const innovationFlow = await this.getInnovationFlowOrFail(
       innovationFlowID,
       {
-        relations: { lifecycle: true, profile: true },
+        relations: { profile: true },
       }
     );
-
-    if (innovationFlow.lifecycle) {
-      await this.lifecycleService.deleteLifecycle(innovationFlow.lifecycle.id);
-    }
 
     if (innovationFlow.profile) {
       await this.profileService.deleteProfile(innovationFlow.profile.id);
@@ -196,13 +226,6 @@ export class InnovationFlowService {
     return innovationFlow;
   }
 
-  async getInnovationFlowStates(
-    innovationFlow: IInnovationFlow
-  ): Promise<string[]> {
-    const lifecycle = await this.getLifecycle(innovationFlow.id);
-    return await this.lifecycleService.getStates(lifecycle);
-  }
-
   public async getProfile(
     innovationFlowInput: IInnovationFlow,
     relations?: FindOptionsRelations<IInnovationFlow>
@@ -221,124 +244,22 @@ export class InnovationFlowService {
 
     return innovationFlow.profile;
   }
-  async getLifecycle(innovationFlowId: string): Promise<ILifecycle> {
-    const innovationFlow = await this.getInnovationFlowOrFail(
-      innovationFlowId,
-      {
-        relations: { lifecycle: true },
-      }
-    );
-    const lifecycle = innovationFlow.lifecycle;
 
-    if (!lifecycle) {
-      throw new EntityNotFoundException(
-        `Unable to find lifecycle for innovationFlow with ID: ${innovationFlow.id}`,
-        LogContext.CHALLENGES
-      );
-    }
-
-    return lifecycle;
+  public getStates(flow: IInnovationFlow): IInnovationFlowState[] {
+    const states: IInnovationFlowState[] = this.deserializeStates(flow.states);
+    return states.sort((a, b) => (a.sortOrder > b.sortOrder ? 1 : -1));
   }
 
-  async updateInnovationFlowTemplate(
-    innovationFlowTemplateData: UpdateInnovationFlowLifecycleTemplateInput
-  ): Promise<IInnovationFlow> {
-    const innovationFlow = await this.getInnovationFlowOrFail(
-      innovationFlowTemplateData.innovationFlowID,
-      {
-        relations: { lifecycle: true },
-      }
-    );
-
-    if (!innovationFlow.lifecycle) {
-      throw new EntityNotInitializedException(
-        `Lifecycle of Innovation Flow (${innovationFlow.id}) not initialized`,
-        LogContext.CHALLENGES
-      );
-    }
-
-    const machineConfig: ILifecycleDefinition =
-      await this.innovationFlowTemplateService.getInnovationFlowDefinitionFromTemplate(
-        innovationFlowTemplateData.innovationFlowTemplateID,
-        innovationFlow.spaceID,
-        innovationFlow.type
-      );
-
-    innovationFlow.lifecycle.machineDef = JSON.stringify(machineConfig);
-    innovationFlow.lifecycle.machineState = '';
-
-    const updatedInnovationFlow = await this.innovationFlowRepository.save(
-      innovationFlow
-    );
-    await this.updateStatesTagsetTemplateToMatchLifecycle(innovationFlow.id);
-    return updatedInnovationFlow;
+  public getStateNames(flow: IInnovationFlow): string[] {
+    const states = this.getStates(flow);
+    return states.map(state => state.displayName);
   }
 
-  async updateFlowStateTagsetTemplateForLifecycle(
-    innovationFlow: IInnovationFlow,
-    tagsetTemplate: ITagsetTemplate
-  ): Promise<ITagsetTemplate> {
-    if (!innovationFlow.lifecycle) {
-      throw new EntityNotInitializedException(
-        `Lifecycle or Profile of Innovation Flow (${innovationFlow.id}) not initialized`,
-        LogContext.CHALLENGES
-      );
-    }
-
-    tagsetTemplate.allowedValues = this.lifecycleService.getStates(
-      innovationFlow.lifecycle
-    );
-    tagsetTemplate.defaultSelectedValue = this.lifecycleService.getState(
-      innovationFlow.lifecycle
-    );
-
-    return await this.tagsetTemplateService.save(tagsetTemplate);
+  private deserializeStates(statesStr: string): IInnovationFlowState[] {
+    return JSON.parse(statesStr);
   }
 
-  async updateStateTagsetForLifecycle(
-    innovationFlow: IInnovationFlow,
-    stateTagset: ITagset
-  ): Promise<ITagset> {
-    if (!innovationFlow.lifecycle) {
-      throw new EntityNotInitializedException(
-        `Lifecycle or Profile of Innovation Flow (${innovationFlow.id}) not initialized`,
-        LogContext.CHALLENGES
-      );
-    }
-
-    const state = this.lifecycleService.getState(innovationFlow.lifecycle);
-    stateTagset.tags = [state];
-
-    return await this.tagsetService.save(stateTagset);
-  }
-
-  async updateStatesTagsetTemplateToMatchLifecycle(
-    innovationFlowID: string
-  ): Promise<ITagset> {
-    const innovationFlow = await this.getInnovationFlowOrFail(
-      innovationFlowID,
-      {
-        relations: { lifecycle: true, profile: true },
-      }
-    );
-
-    if (!innovationFlow.lifecycle || !innovationFlow.profile) {
-      throw new EntityNotInitializedException(
-        `Lifecycle or Profile of Innovation Flow (${innovationFlow.id}) not initialized`,
-        LogContext.CHALLENGES
-      );
-    }
-
-    const states = this.lifecycleService.getStates(innovationFlow.lifecycle);
-    const state = this.lifecycleService.getState(innovationFlow.lifecycle);
-
-    const updateData: UpdateProfileSelectTagsetInput = {
-      profileID: innovationFlow.profile.id,
-      allowedValues: states,
-      tagsetName: TagsetReservedName.FLOW_STATE.valueOf(),
-      defaultSelectedValue: state,
-      tags: [state],
-    };
-    return await this.profileService.updateSelectTagset(updateData);
+  private serializeStates(states: IInnovationFlowState[]): string {
+    return JSON.stringify(states);
   }
 }
