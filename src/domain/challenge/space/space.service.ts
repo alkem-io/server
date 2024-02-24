@@ -790,7 +790,11 @@ export class SpaceService {
       }
     } else
       spaceWithChallenges = await this.getSpaceOrFail(space.id, {
-        relations: { challenges: true },
+        relations: {
+          challenges: {
+            profile: true,
+          },
+        },
       });
 
     const challenges = spaceWithChallenges.challenges;

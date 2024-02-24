@@ -504,7 +504,11 @@ export class ChallengeService {
     args?: LimitAndShuffleIdsQueryArgs
   ): Promise<IOpportunity[]> {
     const challenge = await this.getChallengeOrFail(challengeId, {
-      relations: { opportunities: true },
+      relations: {
+        opportunities: {
+          profile: true,
+        },
+      },
     });
 
     const { IDs, limit, shuffle } = args ?? {};
