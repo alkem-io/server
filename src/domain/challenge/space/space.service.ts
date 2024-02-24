@@ -809,7 +809,9 @@ export class SpaceService {
 
     // Sort the challenges base on their display name
     const sortedChallenges = limitAndShuffled.sort((a, b) =>
-      a.nameID > b.nameID ? 1 : -1
+      a.profile.displayName.toLowerCase() > b.profile.displayName.toLowerCase()
+        ? 1
+        : -1
     );
     return sortedChallenges;
   }
