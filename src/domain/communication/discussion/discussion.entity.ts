@@ -2,7 +2,7 @@ import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
 import { IDiscussion } from './discussion.interface';
 import { Communication } from '../communication/communication.entity';
 import { Room } from '../room/room.entity';
-import { NameableEntity } from '@domain/common/entity/nameable-entity';
+import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
 
 @Entity()
 export class Discussion extends NameableEntity implements IDiscussion {
