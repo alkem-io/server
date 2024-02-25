@@ -19,7 +19,7 @@ export class InnovationFlowTemplate
   )
   templatesSet?: TemplatesSet;
 
-  @Column('longtext', { nullable: false })
+  @Column('text', { nullable: false })
   states!: string;
 
   constructor() {

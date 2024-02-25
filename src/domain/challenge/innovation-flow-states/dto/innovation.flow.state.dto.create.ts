@@ -1,7 +1,7 @@
 export class CreateInnovationFlowStateInput {
   displayName!: string;
 
-  explanation!: string;
+  description!: string;
 
   sortOrder!: number;
 }

@@ -17,7 +17,7 @@ export class UpdateInnovationFlowStateInput {
     description: 'The explation text to clarify the State.',
   })
   @MaxLength(LONG_TEXT_LENGTH)
-  explanation!: string;
+  description!: string;
 
   @Field(() => Number, {
     nullable: false,

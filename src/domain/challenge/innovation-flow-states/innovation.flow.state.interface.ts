@@ -13,7 +13,7 @@ export abstract class IInnovationFlowState {
     nullable: false,
     description: 'The explation text to clarify the state.',
   })
-  explanation!: string;
+  description!: string;
 
   @Field(() => Number, {
     nullable: false,

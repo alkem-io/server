@@ -1,22 +1,24 @@
-export const challengeFlowStatesDefault = [
+import { IInnovationFlowState } from '@domain/challenge/innovation-flow-states/innovation.flow.state.interface';
+
+export const challengeFlowStatesDefault: IInnovationFlowState[] = [
   {
     displayName: 'prepare',
-    explanation: 'The innovation is being prepared.',
+    description: 'The innovation is being prepared.',
     sortOrder: 1,
   },
   {
     displayName: 'in progress',
-    explanation: 'The innovation is in progress.',
+    description: 'The innovation is in progress.',
     sortOrder: 2,
   },
   {
     displayName: 'summary',
-    explanation: 'The summary of the flow results.',
+    description: 'The summary of the flow results.',
     sortOrder: 3,
   },
   {
     displayName: 'done',
-    explanation: 'The flow is completed.',
+    description: 'The flow is completed.',
     sortOrder: 4,
   },
 ];
