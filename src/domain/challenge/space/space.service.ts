@@ -290,6 +290,7 @@ export class SpaceService {
         profile: true,
         storageAggregator: true,
         license: { featureFlags: true },
+        defaults: true,
       },
     });
 
@@ -300,7 +301,8 @@ export class SpaceService {
       !space.profile ||
       !space.storageAggregator ||
       !space.license ||
-      !space.license?.featureFlags
+      !space.license?.featureFlags ||
+      !space.defaults
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load all entities for deletion of space ${space.id} `,
@@ -326,6 +328,7 @@ export class SpaceService {
 
     await this.storageAggregatorService.delete(space.storageAggregator.id);
     await this.licenseService.delete(space.license.id);
+    await this.spaceDefaultsService.deleteSpaceDefaults(space.defaults.id);
 
     const result = await this.spaceRepository.remove(space as Space);
     result.id = deleteData.ID;
