@@ -136,9 +136,7 @@ export class SpaceService {
       );
     }
 
-    space.templatesSet = await this.templatesSetService.createTemplatesSet({
-      minInnovationFlow: 0,
-    });
+    space.templatesSet = await this.templatesSetService.createTemplatesSet();
     space.templatesSet =
       await this.spaceDefaultsService.addDefaultTemplatesToSpace(
         space.templatesSet

@@ -67,9 +67,7 @@ export class InnovationPackService {
     });
 
     innovationPack.templatesSet =
-      await this.templatesSetService.createTemplatesSet({
-        minInnovationFlow: 0,
-      });
+      await this.templatesSetService.createTemplatesSet();
 
     // save before assigning host in case that fails
     const savedInnovationPack = await this.innovationPackRepository.save(
