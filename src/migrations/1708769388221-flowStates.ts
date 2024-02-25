@@ -9,107 +9,107 @@ export class flowStates1708769388221 implements MigrationInterface {
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     // create new schema entries
-    await queryRunner.query(
-      `CREATE TABLE \`space_defaults\` (\`id\` char(36) NOT NULL,
-                                        \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
-                                        \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
-                                        \`version\` int NOT NULL,
-                                        \`challengeFlowStates\` text NOT NULL,
-                                        \`opportunityFlowStates\` text NOT NULL,
-                                        \`authorizationId\` char(36) NULL,
-                                        UNIQUE INDEX \`REL_413ba75964e5a534e4bfa54846\` (\`authorizationId\`),
-                                        PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
-    );
+    // await queryRunner.query(
+    //   `CREATE TABLE \`space_defaults\` (\`id\` char(36) NOT NULL,
+    //                                     \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    //                                     \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+    //                                     \`version\` int NOT NULL,
+    //                                     \`challengeFlowStates\` text NOT NULL,
+    //                                     \`opportunityFlowStates\` text NOT NULL,
+    //                                     \`authorizationId\` char(36) NULL,
+    //                                     UNIQUE INDEX \`REL_413ba75964e5a534e4bfa54846\` (\`authorizationId\`),
+    //                                     PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
+    // );
 
-    await queryRunner.query(
-      `ALTER TABLE \`innovation_flow\` ADD \`states\` text NOT NULL`
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`innovation_flow_template\` ADD \`states\` text NOT NULL`
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`space\` ADD \`defaultsId\` char(36) NULL`
-    );
+    // await queryRunner.query(
+    //   `ALTER TABLE \`innovation_flow\` ADD \`states\` text NOT NULL`
+    // );
+    // await queryRunner.query(
+    //   `ALTER TABLE \`innovation_flow_template\` ADD \`states\` text NOT NULL`
+    // );
+    // await queryRunner.query(
+    //   `ALTER TABLE \`space\` ADD \`defaultsId\` char(36) NULL`
+    // );
 
-    // disable old constraints
-    await queryRunner.query(
-      `DROP INDEX \`IDX_0af5c8e5c0a2f7858ae0a40c04\` ON \`innovation_flow\``
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`innovation_flow\` DROP FOREIGN KEY \`FK_4b4a68698d32f610a5fc1880c7f\``
-    );
+    // // disable old constraints
+    // await queryRunner.query(
+    //   `ALTER TABLE \`innovation_flow\` DROP FOREIGN KEY \`FK_4b4a68698d32f610a5fc1880c7f\``
+    // );
+    // await queryRunner.query(
+    //   `DROP INDEX \`IDX_0af5c8e5c0a2f7858ae0a40c04\` ON \`innovation_flow\``
+    // );
 
-    ////////////////////////////////////////
-    // migrate data to new setup
-    // Create new space defaults for all spaces, including default flows for challenges + opportunities. TODO: what about the old flows?
-    const spaces: {
-      id: string;
-    }[] = await queryRunner.query(`SELECT id FROM space`);
-    for (const space of spaces) {
-      // Create and link the Profile
-      const defaultsID = randomUUID();
-      const defaultsAuthID = randomUUID();
+    // ////////////////////////////////////////
+    // // migrate data to new setup
+    // // Create new space defaults for all spaces, including default flows for challenges + opportunities. TODO: what about the old flows?
+    // const spaces: {
+    //   id: string;
+    // }[] = await queryRunner.query(`SELECT id FROM space`);
+    // for (const space of spaces) {
+    //   // Create and link the Profile
+    //   const defaultsID = randomUUID();
+    //   const defaultsAuthID = randomUUID();
 
-      await queryRunner.query(
-        `INSERT INTO authorization_policy (id, version, credentialRules, verifiedCredentialRules, anonymousReadAccess, privilegeRules) VALUES
-                      ('${defaultsAuthID}',
-                      1, '', '', 0, '')`
-      );
+    //   await queryRunner.query(
+    //     `INSERT INTO authorization_policy (id, version, credentialRules, verifiedCredentialRules, anonymousReadAccess, privilegeRules) VALUES
+    //                   ('${defaultsAuthID}',
+    //                   1, '', '', 0, '')`
+    //   );
 
-      // todo: Valentin: please check what I am doing re stringify...
-      await queryRunner.query(
-        `INSERT INTO space_defaults (id, version, challengeFlowStates, opportunityFlowStates, authorizationId) VALUES
-                      ('${defaultsID}',
-                      1,
-                      '${this.convertStatesToText(
-                        this.challengeFlowStatesDefault
-                      )}',
-                      '${this.convertStatesToText(
-                        this.opportunityFlowStatesDefault
-                      )}',
-                      '${defaultsAuthID}')`
-      );
-      await queryRunner.query(
-        `UPDATE space SET defaultsId = '${defaultsID}' WHERE id = '${space.id}'`
-      );
-    }
-    // Iterate over all the innovation flow entries and also all the innovation flow templates to convert the states to the new format
-    const innovationFlows: {
-      id: string;
-      lifecycleId: string;
-    }[] = await queryRunner.query(
-      `SELECT id, lifecycleId FROM innovation_flow`
-    );
-    for (const innovationFlow of innovationFlows) {
-      const [lifecycle]: {
-        id: string;
-        machineDef: string;
-      }[] = await queryRunner.query(
-        `SELECT id, machineDef FROM lifecycle WHERE id = '${innovationFlow.lifecycleId}'`
-      );
+    //   // todo: Valentin: please check what I am doing re stringify...
+    //   await queryRunner.query(
+    //     `INSERT INTO space_defaults (id, version, challengeFlowStates, opportunityFlowStates, authorizationId) VALUES
+    //                   ('${defaultsID}',
+    //                   1,
+    //                   '${this.convertStatesToText(
+    //                     this.challengeFlowStatesDefault
+    //                   )}',
+    //                   '${this.convertStatesToText(
+    //                     this.opportunityFlowStatesDefault
+    //                   )}',
+    //                   '${defaultsAuthID}')`
+    //   );
+    //   await queryRunner.query(
+    //     `UPDATE space SET defaultsId = '${defaultsID}' WHERE id = '${space.id}'`
+    //   );
+    // }
+    // // Iterate over all the innovation flow entries and also all the innovation flow templates to convert the states to the new format
+    // const innovationFlows: {
+    //   id: string;
+    //   lifecycleId: string;
+    // }[] = await queryRunner.query(
+    //   `SELECT id, lifecycleId FROM innovation_flow`
+    // );
+    // for (const innovationFlow of innovationFlows) {
+    //   const [lifecycle]: {
+    //     id: string;
+    //     machineDef: string;
+    //   }[] = await queryRunner.query(
+    //     `SELECT id, machineDef FROM lifecycle WHERE id = '${innovationFlow.lifecycleId}'`
+    //   );
 
-      // Convert the states to the new format
-      const states = this.convertMachineDefinitionToStates(
-        lifecycle.machineDef
-      );
+    //   // Convert the states to the new format
+    //   const states = this.convertMachineDefinitionToStates(
+    //     lifecycle.machineDef
+    //   );
 
-      //
-      await queryRunner.query(
-        `UPDATE innovation_flow SET states = '${this.convertStatesToText(
-          states
-        )}' WHERE id = '${innovationFlow.id}'`
-      );
-      await queryRunner.query(
-        `DELETE FROM lifecycle WHERE id = '${lifecycle.id}'`
-      );
-    }
+    //   //
+    //   await queryRunner.query(
+    //     `UPDATE innovation_flow SET states = '${this.convertStatesToText(
+    //       states
+    //     )}' WHERE id = '${innovationFlow.id}'`
+    //   );
+    //   await queryRunner.query(
+    //     `DELETE FROM lifecycle WHERE id = '${lifecycle.id}'`
+    //   );
+    // }
 
     // Iterate over all the innovation flow entries and also all the innovation flow templates to convert the states to the new format
     const innovationFlowTemplates: {
       id: string;
       definition: string;
     }[] = await queryRunner.query(
-      `SELECT id, lifecycleId FROM innovation_flow`
+      `SELECT id, definition FROM innovation_flow_template`
     );
     for (const innovationFlowTemplate of innovationFlowTemplates) {
       // Convert the states to the new format
@@ -121,7 +121,7 @@ export class flowStates1708769388221 implements MigrationInterface {
       await queryRunner.query(
         `UPDATE innovation_flow_template SET states = '${this.convertStatesToText(
           states
-        )}', machineDef = NULL WHERE id = '${innovationFlowTemplate.id}'`
+        )}' WHERE id = '${innovationFlowTemplate.id}'`
       );
     }
 
@@ -163,10 +163,10 @@ export class flowStates1708769388221 implements MigrationInterface {
 
     // disable old constraints
     await queryRunner.query(
-      `ALTER TABLE \`space\` DROP INDEX \`IDX_6b1efee39d076d9f7ecb8fef4c\``
+      `ALTER TABLE \`space_defaults\` DROP FOREIGN KEY \`FK_413ba75964e5a534e4bfa54846e\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`space_defaults\` DROP FOREIGN KEY \`FK_413ba75964e5a534e4bfa54846e\``
+      `ALTER TABLE \`space\` DROP INDEX \`IDX_6b1efee39d076d9f7ecb8fef4c\``
     );
     await queryRunner.query(
       `DROP INDEX \`REL_413ba75964e5a534e4bfa54846\` ON \`space_defaults\``
@@ -239,13 +239,10 @@ export class flowStates1708769388221 implements MigrationInterface {
     },
   ];
 
-  private convertStatesToText(states: any[]) {
-    return `${escapeString(
-      replaceSpecialCharacters(
-        JSON.stringify(this.opportunityFlowStatesDefault)
-      )
-    )}`;
+  private convertStatesToText(states: FlowState[]) {
+    return `${escapeString(replaceSpecialCharacters(JSON.stringify(states)))}`;
   }
+
   private convertMachineDefinitionToStates(machineDefStr: string): FlowState[] {
     const result: FlowState[] = [];
     const machineDef = JSON.parse(machineDefStr);
