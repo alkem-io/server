@@ -60,7 +60,7 @@ type SaveResponse = { success: boolean; errors?: string[] };
 const defaultContributionInterval = 600;
 const defaultSaveInterval = 15;
 const defaultSaveTimeout = 10;
-const defaultCollaboratorModeTimeout = 60;
+const defaultCollaboratorModeTimeout = 60 * 30; // 30 minutes
 
 @Injectable()
 export class ExcalidrawServer {
