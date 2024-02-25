@@ -55,7 +55,6 @@ import { IProfile } from '@domain/common/profile/profile.interface';
 import { OperationNotAllowedException } from '@common/exceptions/operation.not.allowed.exception';
 import { InnovationFlowService } from '../innovation-flow/innovaton.flow.service';
 import { IInnovationFlow } from '../innovation-flow/innovation.flow.interface';
-import { InnovationFlowType } from '@common/enums/innovation.flow.type';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { TagsetType } from '@common/enums/tagset.type';
 import { CreateTagsetTemplateInput } from '@domain/common/tagset-template/dto/tagset.template.dto.create';
@@ -65,6 +64,7 @@ import { ChallengeDisplayLocation } from '@common/enums/challenge.display.locati
 import { CommonDisplayLocation } from '@common/enums/common.display.location';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
+import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
 @Injectable()
 export class ChallengeService {
   constructor(
@@ -78,6 +78,7 @@ export class ChallengeService {
     private storageAggregatorService: StorageAggregatorService,
     private innovationFlowService: InnovationFlowService,
     private collaborationService: CollaborationService,
+    private spaceDefaultsService: SpaceDefaultsService,
     private namingService: NamingService,
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>,
@@ -173,14 +174,18 @@ export class ChallengeService {
       tagsetTemplateData
     );
 
+    const challengeFlowStates =
+      await this.spaceDefaultsService.getChallengeFlowStates(
+        spaceID,
+        challengeData.innovationFlowTemplateID
+      );
+
     // Note: need to create the innovation flow after creation of
     // tagsetTemplates on Collabration so can pass it in to the InnovationFlow
     challenge.innovationFlow =
       await this.innovationFlowService.createInnovationFlow(
         {
-          type: InnovationFlowType.CHALLENGE,
-          spaceID: spaceID,
-          innovationFlowTemplateID: challengeData.innovationFlowTemplateID,
+          states: challengeFlowStates,
           profile: {
             displayName: '',
           },

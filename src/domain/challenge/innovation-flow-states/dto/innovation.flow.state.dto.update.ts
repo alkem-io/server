@@ -1,6 +1,7 @@
 import { Field, InputType } from '@nestjs/graphql';
 import { MaxLength } from 'class-validator';
-import { MID_TEXT_LENGTH, SMALL_TEXT_LENGTH } from '@src/common/constants';
+import { LONG_TEXT_LENGTH, SMALL_TEXT_LENGTH } from '@src/common/constants';
+import { Markdown } from '@domain/common/scalars/scalar.markdown';
 
 @InputType()
 export class UpdateInnovationFlowStateInput {
@@ -11,11 +12,11 @@ export class UpdateInnovationFlowStateInput {
   @MaxLength(SMALL_TEXT_LENGTH)
   displayName!: string;
 
-  @Field(() => String, {
+  @Field(() => Markdown, {
     nullable: false,
     description: 'The explation text to clarify the State.',
   })
-  @MaxLength(MID_TEXT_LENGTH)
+  @MaxLength(LONG_TEXT_LENGTH)
   explanation!: string;
 
   @Field(() => Number, {

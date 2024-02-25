@@ -8,8 +8,8 @@ import { ProfileLoaderCreator } from '@core/dataloader/creators';
 import { Loader } from '@core/dataloader/decorators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { InnovationFlow } from './innovation.flow.entity';
-import { IInnovationFlowState } from './innovation.flow.dto.state.interface';
 import { InnovationFlowService } from './innovaton.flow.service';
+import { IInnovationFlowState } from '../innovation-flow-states/innovation.flow.state.interface';
 
 @Resolver(() => IInnovationFlow)
 export class InnovationFlowResolverFields {

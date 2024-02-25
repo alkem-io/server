@@ -1,6 +1,5 @@
-import { InnovationFlowType } from '@common/enums/innovation.flow.type';
-import { challengeInnovationFlowConfigDefault } from './templates.set.default.innovation.flow.challenge';
-import { opportunityInnovationFlowConfigDefault } from './templates.set.default.innovation.flow.opportunity';
+import { challengeFlowStatesDefault } from './space.defaults.challenge.flow';
+import { opportunityFlowStatesDefault } from './space.defaults.opportunity.flow';
 
 export const templatesSetDefaults: any = {
   posts: [
@@ -63,8 +62,7 @@ export const templatesSetDefaults: any = {
         description: 'Default Challenge innovationFlow',
         tags: [],
       },
-      type: InnovationFlowType.CHALLENGE,
-      definition: JSON.stringify(challengeInnovationFlowConfigDefault),
+      definition: JSON.stringify(challengeFlowStatesDefault),
     },
     {
       profile: {
@@ -72,8 +70,7 @@ export const templatesSetDefaults: any = {
         description: 'Default Opportunity innovationFlow',
         tags: [],
       },
-      type: InnovationFlowType.OPPORTUNITY,
-      definition: JSON.stringify(opportunityInnovationFlowConfigDefault),
+      definition: JSON.stringify(opportunityFlowStatesDefault),
     },
   ],
 };

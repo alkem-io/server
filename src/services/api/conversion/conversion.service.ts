@@ -19,7 +19,6 @@ import { ICommunity } from '@domain/community/community/community.interface';
 import { CommunicationService } from '@domain/communication/communication/communication.service';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
-import { InnovationFlowType } from '@common/enums/innovation.flow.type';
 import { DiscussionCategoryCommunity } from '@common/enums/communication.discussion.category.community';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { ICallout } from '@domain/collaboration/callout';
@@ -261,15 +260,16 @@ export class ConversionService {
       spaceID
     );
 
-    let innovationFlowTemplateID = innovationFlowTemplateIdInput;
-    if (!innovationFlowTemplateID) {
-      const defaultChallengeLifecycleTemplate =
-        await this.spaceService.getDefaultInnovationFlowTemplate(
-          spaceID,
-          InnovationFlowType.CHALLENGE
-        );
-      innovationFlowTemplateID = defaultChallengeLifecycleTemplate.id;
-    }
+    // TODO: need to check if the space has a default innovation flow template
+    const innovationFlowTemplateID = innovationFlowTemplateIdInput;
+    // if (!innovationFlowTemplateID) {
+    //   const defaultChallengeLifecycleTemplate =
+    //     await this.spaceService.getDefaultInnovationFlowTemplate(
+    //       spaceID,
+    //       InnovationFlowType.CHALLENGE
+    //     );
+    //   innovationFlowTemplateID = defaultChallengeLifecycleTemplate.id;
+    // }
     const emptyChallenge = await this.challengeService.createChallenge(
       {
         nameID: challengeNameID,

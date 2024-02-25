@@ -12,7 +12,6 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { TemplatesSet } from './templates.set.entity';
 import { ITemplatesSet } from './templates.set.interface';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
-import { templatesSetDefaults } from './templates.set.defaults';
 import { ITemplatesSetPolicy } from '../templates-set-policy/templates.set.policy.interface';
 import { PostTemplateService } from '../post-template/post.template.service';
 import { WhiteboardTemplateService } from '../whiteboard-template/whiteboard.template.service';
@@ -45,9 +44,7 @@ export class TemplatesSetService {
   ) {}
 
   async createTemplatesSet(
-    policy: ITemplatesSetPolicy,
-    addDefaults: boolean,
-    storageAggregator: IStorageAggregator
+    policy: ITemplatesSetPolicy
   ): Promise<ITemplatesSet> {
     const templatesSet: ITemplatesSet = TemplatesSet.create();
     templatesSet.authorization = new AuthorizationPolicy();
@@ -55,25 +52,6 @@ export class TemplatesSetService {
     templatesSet.postTemplates = [];
     templatesSet.whiteboardTemplates = [];
     templatesSet.innovationFlowTemplates = [];
-
-    if (addDefaults) {
-      for (const postTemplateDefault of templatesSetDefaults.posts) {
-        const postTemplate = await this.postTemplateService.createPostTemplate(
-          postTemplateDefault,
-          storageAggregator
-        );
-        templatesSet.postTemplates.push(postTemplate);
-      }
-
-      for (const innovationFlowTemplateDefault of templatesSetDefaults.innovationFlows) {
-        const innovationFlowTemplate =
-          await this.innovationFlowTemplateService.createInnovationFLowTemplate(
-            innovationFlowTemplateDefault,
-            storageAggregator
-          );
-        templatesSet.innovationFlowTemplates.push(innovationFlowTemplate);
-      }
-    }
 
     return await this.templatesSetRepository.save(templatesSet);
   }
@@ -237,6 +215,32 @@ export class TemplatesSetService {
     return postTemplate;
   }
 
+  async addTemplates(
+    templatesSet: ITemplatesSet,
+    postTemplateInputs: CreatePostTemplateInput[],
+    innovationFlowTemplateInputs: CreateInnovationFlowTemplateInput[]
+  ): Promise<ITemplatesSet> {
+    const storageAggregator = await this.getStorageAggregator(templatesSet);
+
+    for (const postTemplateDefault of postTemplateInputs) {
+      const postTemplate = await this.postTemplateService.createPostTemplate(
+        postTemplateDefault,
+        storageAggregator
+      );
+      templatesSet.postTemplates.push(postTemplate);
+    }
+
+    for (const innovationFlowTemplateDefault of innovationFlowTemplateInputs) {
+      const innovationFlowTemplate =
+        await this.innovationFlowTemplateService.createInnovationFLowTemplate(
+          innovationFlowTemplateDefault,
+          storageAggregator
+        );
+      templatesSet.innovationFlowTemplates.push(innovationFlowTemplate);
+    }
+    return await this.save(templatesSet);
+  }
+
   private async getStorageAggregator(
     templatesSet: ITemplatesSet
   ): Promise<IStorageAggregator> {
@@ -263,6 +267,10 @@ export class TemplatesSetService {
     templatesSet.calloutTemplates.push(calloutTemplate);
     await this.templatesSetRepository.save(templatesSet);
     return calloutTemplate;
+  }
+
+  public async save(templatesSet: ITemplatesSet): Promise<ITemplatesSet> {
+    return await this.templatesSetRepository.save(templatesSet);
   }
 
   async getWhiteboardTemplates(
@@ -347,14 +355,13 @@ export class TemplatesSetService {
     const innovationFlowTemplates = await this.getInnovationFlowTemplates(
       templatesSet
     );
-    const typeCount = innovationFlowTemplates.filter(
-      t => t.type === innovationFlowTemplate.type
-    ).length;
+    const templateCount = innovationFlowTemplates.length;
+
     const policy = this.getPolicy(templatesSet);
 
-    if (typeCount <= policy.minInnovationFlow) {
+    if (templateCount <= policy.minInnovationFlow) {
       throw new ValidationException(
-        `Cannot delete last innovationFlow template: ${innovationFlowTemplate.id} of type ${innovationFlowTemplate.type} from templatesSet: ${templatesSet.id}!`,
+        `Cannot delete innovationFlow template: ${innovationFlowTemplate.id} from templatesSet: ${templatesSet.id}!`,
         LogContext.LIFECYCLE
       );
     }

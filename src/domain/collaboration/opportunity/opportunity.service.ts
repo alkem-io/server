@@ -28,7 +28,6 @@ import { CommunityType } from '@common/enums/community.type';
 import { AgentInfo } from '@src/core/authentication/agent-info';
 import { IContext } from '@domain/context/context/context.interface';
 import { ICollaboration } from '../collaboration/collaboration.interface';
-import { InnovationFlowType } from '@common/enums/innovation.flow.type';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { IProfile } from '@domain/common/profile/profile.interface';
@@ -45,6 +44,7 @@ import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { OpportunityDisplayLocation } from '@common/enums/opportunity.display.location';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
+import { SpaceDefaultsService } from '@domain/challenge/space.defaults/space.defaults.service';
 @Injectable()
 export class OpportunityService {
   constructor(
@@ -54,6 +54,7 @@ export class OpportunityService {
     private innovationFlowService: InnovationFlowService,
     private collaborationService: CollaborationService,
     private storageAggregatorService: StorageAggregatorService,
+    private spaceDefaultsService: SpaceDefaultsService,
     private namingService: NamingService,
     @InjectRepository(Opportunity)
     private opportunityRepository: Repository<Opportunity>,
@@ -122,12 +123,16 @@ export class OpportunityService {
         tagsetTemplateData
       );
 
+      const opportunityFlowStates =
+        await this.spaceDefaultsService.getChallengeFlowStates(
+          spaceID,
+          opportunityData.innovationFlowTemplateID
+        );
+
       opportunity.innovationFlow =
         await this.innovationFlowService.createInnovationFlow(
           {
-            type: InnovationFlowType.OPPORTUNITY,
-            spaceID: spaceID,
-            innovationFlowTemplateID: opportunityData.innovationFlowTemplateID,
+            states: opportunityFlowStates,
             profile: {
               displayName: '',
             },

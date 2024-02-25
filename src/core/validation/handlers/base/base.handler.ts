@@ -86,7 +86,7 @@ import {
   UpdateLinkInput,
 } from '@domain/collaboration/link/dto';
 import { UpdateUserPlatformSettingsInput } from '@domain/community/user/dto/user.dto.update.platform.settings';
-import { UpdateInnovationFlowStateInput } from '@domain/challenge/innovation-flow/dto/innovation.flow.state.dto.update';
+import { UpdateInnovationFlowStateInput } from '@domain/challenge/innovation-flow-states/dto/innovation.flow.state.dto.update';
 
 export class BaseHandler extends AbstractHandler {
   public async handle(

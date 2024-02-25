@@ -30,6 +30,7 @@ import { CollaborationModule } from '@domain/collaboration/collaboration/collabo
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
 import { LicenseResolverModule } from '@services/infrastructure/license-resolver/license.resolver.module';
+import { SpaceDefaultsModule } from '../space.defaults/space.defaults.module';
 
 @Module({
   imports: [
@@ -57,6 +58,7 @@ import { LicenseResolverModule } from '@services/infrastructure/license-resolver
     StorageAggregatorModule,
     ContextModule,
     ProfileModule,
+    SpaceDefaultsModule,
     CollaborationModule,
     LicenseResolverModule,
   ],

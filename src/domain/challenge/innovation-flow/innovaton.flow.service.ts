@@ -16,21 +16,20 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy/authori
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { VisualType } from '@common/enums/visual.type';
-import { InnovationFlowTemplateService } from '@domain/template/innovation-flow-template/innovation.flow.template.service';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { UpdateProfileSelectTagsetDefinitionInput } from '@domain/common/profile/dto/profile.dto.update.select.tagset.definition';
 import { ITagsetTemplate } from '@domain/common/tagset-template/tagset.template.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { IInnovationFlowState } from './innovation.flow.dto.state.interface';
 import { UpdateInnovationFlowSelectedStateInput } from './dto/innovation.flow.dto.update.selected.state';
 import { UpdateProfileSelectTagsetValueInput } from '@domain/common/profile/dto/profile.dto.update.select.tagset.value';
-import { CreateInnovationFlowStateInput } from './dto/innovation.flow.state.dto.create';
+import { InnovationFlowStatesService } from '../innovation-flow-states/innovaton.flow.state.service';
+import { IInnovationFlowState } from '../innovation-flow-states/innovation.flow.state.interface';
 
 @Injectable()
 export class InnovationFlowService {
   constructor(
     private profileService: ProfileService,
-    private innovationFlowTemplateService: InnovationFlowTemplateService,
+    private innovationFlowStatesService: InnovationFlowStatesService,
     @InjectRepository(InnovationFlow)
     private innovationFlowRepository: Repository<InnovationFlow>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -41,22 +40,8 @@ export class InnovationFlowService {
     tagsetTemplates: ITagsetTemplate[],
     storageAggregator: IStorageAggregator
   ): Promise<IInnovationFlow> {
-    if (innovationFlowData.innovationFlowTemplateID) {
-      await this.innovationFlowTemplateService.validateInnovationFlowDefinitionOrFail(
-        innovationFlowData.innovationFlowTemplateID,
-        innovationFlowData.spaceID,
-        innovationFlowData.type
-      );
-    } else {
-      innovationFlowData.innovationFlowTemplateID =
-        await this.innovationFlowTemplateService.getDefaultInnovationFlowTemplateId(
-          innovationFlowData.spaceID,
-          innovationFlowData.type
-        );
-    }
     const innovationFlow: IInnovationFlow = new InnovationFlow();
     innovationFlow.authorization = new AuthorizationPolicy();
-    innovationFlow.spaceID = innovationFlowData.spaceID;
 
     const tagsetInputs =
       this.profileService.convertTagsetTemplatesToCreateTagsetInput(
@@ -79,29 +64,9 @@ export class InnovationFlowService {
       VisualType.CARD
     );
 
-    const defaultStates: CreateInnovationFlowStateInput[] = [
-      {
-        displayName: 'prepare',
-        explanation: 'The innovation is being prepared.',
-        sortOrder: 1,
-      },
-      {
-        displayName: 'in progress',
-        explanation: 'The innovation is in progress.',
-        sortOrder: 2,
-      },
-      {
-        displayName: 'summary',
-        explanation: 'The summary of the flow results.',
-        sortOrder: 3,
-      },
-      {
-        displayName: 'done',
-        explanation: 'The flow is completed.',
-        sortOrder: 4,
-      },
-    ];
-    innovationFlow.states = this.serializeStates(defaultStates);
+    innovationFlow.states = this.innovationFlowStatesService.serializeStates(
+      innovationFlowData.states
+    );
 
     return await this.innovationFlowRepository.save(innovationFlow);
   }
@@ -134,7 +99,9 @@ export class InnovationFlowService {
       await this.profileService.updateSelectTagsetDefinition(updateData);
 
       // serialize the states
-      innovationFlow.states = this.serializeStates(innovationFlowData.states);
+      innovationFlow.states = this.innovationFlowStatesService.serializeStates(
+        innovationFlowData.states
+      );
     }
 
     if (innovationFlowData.profileData) {
@@ -245,21 +212,11 @@ export class InnovationFlowService {
     return innovationFlow.profile;
   }
 
-  public getStates(flow: IInnovationFlow): IInnovationFlowState[] {
-    const states: IInnovationFlowState[] = this.deserializeStates(flow.states);
-    return states.sort((a, b) => (a.sortOrder > b.sortOrder ? 1 : -1));
-  }
-
-  public getStateNames(flow: IInnovationFlow): string[] {
-    const states = this.getStates(flow);
-    return states.map(state => state.displayName);
-  }
-
-  private deserializeStates(statesStr: string): IInnovationFlowState[] {
-    return JSON.parse(statesStr);
-  }
-
-  private serializeStates(states: IInnovationFlowState[]): string {
-    return JSON.stringify(states);
+  public getStates(
+    innovationFlowInput: IInnovationFlow
+  ): IInnovationFlowState[] {
+    return this.innovationFlowStatesService.getStates(
+      innovationFlowInput.states
+    );
   }
 }

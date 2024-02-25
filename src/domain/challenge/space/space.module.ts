@@ -34,6 +34,7 @@ import { NameReporterModule } from '@services/external/elasticsearch/name-report
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
 import { LicenseModule } from '@domain/license/license/license.module';
+import { SpaceDefaultsModule } from '../space.defaults/space.defaults.module';
 
 @Module({
   imports: [
@@ -59,6 +60,7 @@ import { LicenseModule } from '@domain/license/license/license.module';
     TemplatesSetModule,
     CollaborationModule,
     SpaceFilterModule,
+    SpaceDefaultsModule,
     ContributionReporterModule,
     LoaderCreatorModule,
     NameReporterModule,

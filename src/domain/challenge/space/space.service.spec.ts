@@ -14,7 +14,6 @@ import { Opportunity } from '@domain/collaboration/opportunity';
 import { SpaceFilterService } from '@services/infrastructure/space-filter/space.filter.service';
 import { MockFunctionMetadata, ModuleMocker } from 'jest-mock';
 import { InnovationFlow } from '../innovation-flow/innovation.flow.entity';
-import { InnovationFlowType } from '@common/enums/innovation.flow.type';
 import { ProfileType } from '@common/enums';
 import { License } from '@domain/license/license/license.entity';
 
@@ -96,7 +95,6 @@ const getChallengesMock = (
       innovationFlow: {
         id: '',
         spaceID: '',
-        type: InnovationFlowType.CHALLENGE,
         lifecycle: {
           id: `lifecycle-${i}`,
           machineDef: '',
@@ -144,7 +142,6 @@ const getOpportunitiesMock = (
       innovationFlow: {
         id: '',
         spaceID: '',
-        type: InnovationFlowType.OPPORTUNITY,
         lifecycle: {
           id: `lifecycle-${i}`,
           machineDef: '',

@@ -1,12 +1,8 @@
-import { InnovationFlowType } from '@common/enums/innovation.flow.type';
+import { CreateInnovationFlowStateInput } from '@domain/challenge/innovation-flow-states/dto/innovation.flow.state.dto.create';
 import { CreateProfileInput } from '@domain/common/profile/dto';
 
 export class CreateInnovationFlowInput {
-  innovationFlowTemplateID?: string;
-
-  type!: InnovationFlowType;
-
   profile!: CreateProfileInput;
 
-  spaceID!: string;
+  states!: CreateInnovationFlowStateInput[];
 }

@@ -1,3 +1,4 @@
+import { Markdown } from '@domain/common/scalars/scalar.markdown';
 import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType('InnovationFlowState')
@@ -8,7 +9,7 @@ export abstract class IInnovationFlowState {
   })
   displayName!: string;
 
-  @Field(() => String, {
+  @Field(() => Markdown, {
     nullable: false,
     description: 'The explation text to clarify the state.',
   })
