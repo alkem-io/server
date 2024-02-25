@@ -5,7 +5,6 @@ export const FIRST_IN_ROOM = 'first-in-room';
 export const NEW_USER = 'new-user';
 export const ROOM_USER_CHANGE = 'room-user-change';
 export const SERVER_BROADCAST = 'server-broadcast';
-export const SERVER_REQUEST_BROADCAST = 'server-request-broadcast';
 export const SERVER_VOLATILE_BROADCAST = 'server-volatile-broadcast';
 export const IDLE_STATE = 'idle-state';
 export const COLLABORATOR_MODE = 'collaborator-mode';

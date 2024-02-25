@@ -110,14 +110,6 @@ export const serverVolatileBroadcastEventHandler = (
   socket.volatile.broadcast.to(roomID).emit(CLIENT_BROADCAST, data);
   socket.data.lastCursorMove = Date.now();
 };
-// broadcasts requests from socket to all other sockets
-export const requestBroadcastEventHandler = (
-  roomID: string,
-  data: ArrayBuffer,
-  socket: SocketIoSocket
-) => {
-  socket.broadcast.to(roomID).emit(CLIENT_BROADCAST, data);
-};
 export const idleStateEventHandler = (
   roomID: string,
   data: ArrayBuffer,

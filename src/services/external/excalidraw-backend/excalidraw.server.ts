@@ -24,7 +24,6 @@ import {
   authorizeWithRoomAndJoinHandler,
   serverVolatileBroadcastEventHandler,
   checkSessionHandler,
-  requestBroadcastEventHandler,
   idleStateEventHandler,
 } from './utils';
 import {
@@ -38,7 +37,6 @@ import {
   SERVER_SAVE_REQUEST,
   SocketIoServer,
   RemoteSocketIoSocket,
-  SERVER_REQUEST_BROADCAST,
   SERVER_SIDE_ROOM_DELETED,
   SAVED,
   IDLE_STATE,
@@ -62,7 +60,7 @@ type SaveResponse = { success: boolean; errors?: string[] };
 const defaultContributionInterval = 600;
 const defaultSaveInterval = 15;
 const defaultSaveTimeout = 10;
-const defaultCollaboratorModeTimeout = 10;
+const defaultCollaboratorModeTimeout = 60;
 
 @Injectable()
 export class ExcalidrawServer {
@@ -215,11 +213,8 @@ export class ExcalidrawServer {
       this.wsServer.to(socket.id).emit(INIT_ROOM);
       this.wsServer.to(socket.id).emit(COLLABORATOR_MODE, { mode: 'write' });
 
-      const serverBroadcastListener = (roomID: string, data: ArrayBuffer) =>
-        serverBroadcastEventHandler(roomID, data, socket);
-      const collaboratorModeTimeoutCallback = () =>
-        socket.removeListener(SERVER_BROADCAST, serverBroadcastListener);
-      this.startCollaboratorModeTimer(socket, collaboratorModeTimeoutCallback);
+      this.startCollaboratorModeTimer(socket);
+
       // first authorize the user with the room
       socket.on(JOIN_ROOM, async (roomID: string) => {
         await authorizeWithRoomAndJoinHandler(
@@ -232,7 +227,10 @@ export class ExcalidrawServer {
         );
         if (socket.data.update) {
           // user can broadcast content change events
-          socket.on(SERVER_BROADCAST, serverBroadcastListener);
+          socket.on(SERVER_BROADCAST, (roomID: string, data: ArrayBuffer) => {
+            serverBroadcastEventHandler(roomID, data, socket);
+            this.resetCollaboratorModeTimer(socket);
+          });
         }
         this.logger.verbose?.(
           `User '${socket.data.agentInfo.userID}' update flag is '${socket.data.update}'`,
@@ -262,23 +260,7 @@ export class ExcalidrawServer {
         SERVER_VOLATILE_BROADCAST,
         (roomID: string, data: ArrayBuffer) => {
           serverVolatileBroadcastEventHandler(roomID, data, socket);
-          this.resetCollaboratorModeTimer(
-            socket,
-            collaboratorModeTimeoutCallback
-          );
-        }
-      );
-      // A channel where all viewers of the whiteboard can broadcast messages.
-      // Currently used to send requests for missing data, to pull from other whiteboard collaborators.
-      // This channel is needed because not all viewers has 'write' privilege, so they can't use the channel where updates are broadcast.
-      socket.on(
-        SERVER_REQUEST_BROADCAST,
-        (roomID: string, data: ArrayBuffer) => {
-          requestBroadcastEventHandler(roomID, data, socket);
-          this.resetCollaboratorModeTimer(
-            socket,
-            collaboratorModeTimeoutCallback
-          );
+          this.resetCollaboratorModeTimer(socket);
         }
       );
 
@@ -458,26 +440,20 @@ export class ExcalidrawServer {
     }
   }
 
-  private createCollaboratorModeTimer(
-    socket: SocketIoSocket,
-    callback?: () => void
-  ) {
+  private createCollaboratorModeTimer(socket: SocketIoSocket) {
     return setTimeout(async () => {
       this.logger.verbose?.(
         `Executing collaborator mode timer for socket '${socket.id}'`,
         LogContext.EXCALIDRAW_SERVER
       );
       this.wsServer.to(socket.id).emit(COLLABORATOR_MODE, { mode: 'read' });
-      callback?.();
+      socket.removeAllListeners(SERVER_BROADCAST);
       socket.data.update = false;
       this.collaboratorModeTimers.delete(socket.id);
     }, this.collaboratorModeTimeoutMs);
   }
 
-  private startCollaboratorModeTimer(
-    socket: SocketIoSocket,
-    callback?: () => void
-  ) {
+  private startCollaboratorModeTimer(socket: SocketIoSocket) {
     let timer = this.collaboratorModeTimers.get(socket.id);
     if (timer) {
       this.logger.verbose?.(
@@ -486,7 +462,7 @@ export class ExcalidrawServer {
       );
       return;
     }
-    timer = this.createCollaboratorModeTimer(socket, callback);
+    timer = this.createCollaboratorModeTimer(socket);
     this.collaboratorModeTimers.set(socket.id, timer);
     this.logger.verbose?.(
       `Created collaborator mode timer for socket '${socket.id}'`,
@@ -495,7 +471,7 @@ export class ExcalidrawServer {
   }
 
   private resetCollaboratorModeTimer = debounce(
-    (socket: SocketIoSocket, callback?: () => void) => {
+    (socket: SocketIoSocket) => {
       const timer = this.collaboratorModeTimers.get(socket.id);
       if (timer) {
         this.logger.verbose?.(
@@ -504,7 +480,7 @@ export class ExcalidrawServer {
         );
 
         this.deleteCollaboratorModeTimerForSocket(socket.id);
-        this.startCollaboratorModeTimer(socket, callback);
+        this.startCollaboratorModeTimer(socket);
       }
     },
     500,
