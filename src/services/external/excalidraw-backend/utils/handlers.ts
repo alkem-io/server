@@ -39,9 +39,11 @@ export const authorizeWithRoomAndJoinHandler = async (
     return;
   }
 
-  const socketsInRoom = (await wsServer.in(roomID).fetchSockets()).length;
+  const collaboratorsInRoom = (await wsServer.in(roomID).fetchSockets()).filter(
+    socket => socket.data.update
+  ).length;
   const isCollaboratorLimitReached =
-    socketsInRoom >= maxCollaboratorsForThisRoom;
+    collaboratorsInRoom >= maxCollaboratorsForThisRoom;
 
   if (isCollaboratorLimitReached) {
     logger.verbose?.(
@@ -50,7 +52,7 @@ export const authorizeWithRoomAndJoinHandler = async (
     );
   } else {
     logger.verbose?.(
-      `Max collaborators limit NOT reached (${socketsInRoom}/${maxCollaboratorsForThisRoom}) for room '${roomID}' - user '${agentInfo.email}' is a collaborator`,
+      `Max collaborators limit NOT reached (${collaboratorsInRoom}/${maxCollaboratorsForThisRoom}) for room '${roomID}' - user '${agentInfo.email}' is a collaborator`,
       LogContext.EXCALIDRAW_SERVER
     );
   }
