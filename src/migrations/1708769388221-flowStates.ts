@@ -152,9 +152,6 @@ export class flowStates1708769388221 implements MigrationInterface {
       `ALTER TABLE \`space_defaults\` ADD UNIQUE INDEX \`IDX_413ba75964e5a534e4bfa54846\` (\`authorizationId\`)`
     );
     await queryRunner.query(
-      `CREATE UNIQUE INDEX \`REL_413ba75964e5a534e4bfa54846\` ON \`space_defaults\` (\`authorizationId\`)`
-    );
-    await queryRunner.query(
       `ALTER TABLE \`space_defaults\` ADD CONSTRAINT \`FK_413ba75964e5a534e4bfa54846e\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
 
@@ -185,7 +182,7 @@ export class flowStates1708769388221 implements MigrationInterface {
 
     // disable old constraints
     await queryRunner.query(
-      `ALTER TABLE \`space\` DROP FOREIGN KEY \`FK_6b1efee39d076d9f7ecb8fef4c\``
+      `ALTER TABLE \`space\` DROP FOREIGN KEY \`FK_6b1efee39d076d9f7ecb8fef4cd\``
     );
     await queryRunner.query(
       `ALTER TABLE \`space\` DROP INDEX \`IDX_6b1efee39d076d9f7ecb8fef4c\``
@@ -195,7 +192,7 @@ export class flowStates1708769388221 implements MigrationInterface {
     );
 
     await queryRunner.query(
-      `ALTER TABLE \`space_defaults\` DROP FOREIGN KEY \`FK_413ba75964e5a534e4bfa54846\``
+      `ALTER TABLE \`space_defaults\` DROP FOREIGN KEY \`FK_413ba75964e5a534e4bfa54846e\``
     );
     await queryRunner.query(
       `DROP INDEX \`REL_413ba75964e5a534e4bfa54846\` ON \`space_defaults\``
