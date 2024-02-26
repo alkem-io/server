@@ -62,6 +62,8 @@ const defaultSaveInterval = 15;
 const defaultSaveTimeout = 10;
 const defaultCollaboratorModeTimeout = 60 * 30; // 30 minutes
 
+const resetCollaboratorModeDebounceWait = 1000;
+
 @Injectable()
 export class ExcalidrawServer {
   private readonly contributionTimers: RoomTimers = new Map();
@@ -474,11 +476,10 @@ export class ExcalidrawServer {
           LogContext.EXCALIDRAW_SERVER
         );
 
-        this.deleteCollaboratorModeTimerForSocket(socket.id);
-        this.startCollaboratorModeTimer(socket);
+        timer.refresh();
       }
     },
-    500,
+    resetCollaboratorModeDebounceWait,
     { leading: true, trailing: false }
   );
 
