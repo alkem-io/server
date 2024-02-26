@@ -16,6 +16,7 @@ import {
 } from '../../types/event.names';
 import { getExcalidrawBaseServerOrFail } from '../../utils/get.excalidraw.base.server';
 import { SocketIoServer } from '../../types/socket.io.server';
+import { SocketIoSocket } from '../../types/socket.io.socket';
 import {
   disconnectEventAmqpHandler,
   disconnectingEventAmqpHandler,
@@ -64,7 +65,7 @@ const factory = async (
     event.handleEvent(wsServer)
   );
   // special events related to AMQP "adapter"
-  wsServer.on(CONNECTION, async socket => {
+  wsServer.on(CONNECTION, async (socket: SocketIoSocket) => {
     wsServer.to(socket.id).emit(INIT_ROOM);
     // client events ONLY
     socket.on(

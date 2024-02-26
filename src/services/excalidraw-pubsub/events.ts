@@ -40,8 +40,10 @@ export class RoomUserChangeEvent extends BaseEvent implements IExcalidrawEvent {
       socket => socket.id
     );
 
-    const deduplicator = new Set([...ownSocketIds, ...this.socketIDs]);
-    wsServer.in(this.roomID).emit(ROOM_USER_CHANGE, Array.from(deduplicator));
+    const socketIdsInRoom = new Set([...ownSocketIds, ...this.socketIDs]);
+    wsServer
+      .in(this.roomID)
+      .emit(ROOM_USER_CHANGE, Array.from(socketIdsInRoom));
   }
 }
 

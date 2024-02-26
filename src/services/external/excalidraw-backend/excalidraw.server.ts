@@ -211,7 +211,7 @@ export class ExcalidrawServer {
       }
     );
     // handlers
-    this.wsServer.on(CONNECTION, async socket => {
+    this.wsServer.on(CONNECTION, async (socket: SocketIoSocket) => {
       this.logger?.verbose?.(
         `User '${socket.data.agentInfo.userID}' established connection`,
         LogContext.EXCALIDRAW_SERVER
@@ -220,7 +220,7 @@ export class ExcalidrawServer {
       this.wsServer.to(socket.id).emit(INIT_ROOM);
 
       // first authorize the user with the room
-      socket.on(JOIN_ROOM, async (roomID: string) => {
+      socket.on(JOIN_ROOM, async roomID => {
         // this logic could be provided by an entitlement (license) service
         const maxCollaboratorsForThisRoom =
           (await this.whiteboardService.isMultiUser(roomID))
@@ -386,18 +386,18 @@ export class ExcalidrawServer {
       return undefined;
     }
     // choose a random socket which can save
-    const randomSocket = arrayRandomElement(sockets);
+    const randomSocketWithUpdateFlag = arrayRandomElement(sockets);
     // sends a save request to the socket and wait for a response
     try {
       const [response]: SaveResponse[] = await this.wsServer
-        .to(randomSocket.id)
+        .to(randomSocketWithUpdateFlag.id)
         .timeout(timeout)
         .emitWithAck(SERVER_SAVE_REQUEST);
       // log the response
-      this.logResponse(response, randomSocket, roomId);
+      this.logResponse(response, randomSocketWithUpdateFlag, roomId);
     } catch (e) {
       this.logger.error?.(
-        `User '${randomSocket.data.agentInfo.userID}' did not respond to '${SERVER_SAVE_REQUEST}' event after ${timeout}ms`,
+        `User '${randomSocketWithUpdateFlag.data.agentInfo.userID}' did not respond to '${SERVER_SAVE_REQUEST}' event after ${timeout}ms`,
         LogContext.EXCALIDRAW_SERVER
       );
       return false;
