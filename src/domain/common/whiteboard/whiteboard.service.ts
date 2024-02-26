@@ -235,11 +235,11 @@ export class WhiteboardService {
       );
     }
 
-    const whiteboardFf = license.featureFlags?.find(
+    const whiteboardMultiUserFeatureFlag = license.featureFlags?.find(
       x => x.name === LicenseFeatureFlagName.WHITEBOARD_MULTI_USER
     );
 
-    if (!whiteboardFf) {
+    if (!whiteboardMultiUserFeatureFlag) {
       throw new EntityNotFoundException(
         'Feature flag not found',
         LogContext.COLLABORATION,
@@ -251,7 +251,7 @@ export class WhiteboardService {
       );
     }
 
-    return whiteboardFf.enabled;
+    return whiteboardMultiUserFeatureFlag.enabled;
   }
 
   public async getProfile(
