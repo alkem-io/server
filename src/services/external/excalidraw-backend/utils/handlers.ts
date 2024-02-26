@@ -4,7 +4,9 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { LogContext } from '@common/enums';
 import {
   CLIENT_BROADCAST,
+  COLLABORATOR_MODE,
   FIRST_IN_ROOM,
+  IDLE_STATE,
   NEW_USER,
   ROOM_USER_CHANGE,
   SocketIoServer,
@@ -24,9 +26,7 @@ export const authorizeWithRoomAndJoinHandler = async (
   const whiteboard = await whiteboardService.getWhiteboardOrFail(roomID);
   const agentInfo = socket.data.agentInfo;
 
-  if (
-    !canUserRead(authorizationService, agentInfo, whiteboard.authorization)
-  ) {
+  if (!canUserRead(authorizationService, agentInfo, whiteboard.authorization)) {
     logger.error(
       `Unable to authorize User '${agentInfo.userID}' with Whiteboard: '${whiteboard.id}'`,
       undefined,
@@ -37,6 +37,7 @@ export const authorizeWithRoomAndJoinHandler = async (
   }
 
   socket.data.lastContributed = -1;
+  socket.data.lastPresence = -1;
   socket.data.read = true; // already authorized
   socket.data.update = canUserUpdate(
     authorizationService,
@@ -82,6 +83,9 @@ const joinRoomHandler = async (
   }
 
   const socketIDs = sockets.map(socket => socket.id);
+  wsServer
+    .to(socket.id)
+    .emit(COLLABORATOR_MODE, { mode: socket.data.update ? 'write' : 'read' });
   wsServer.in(roomID).emit(ROOM_USER_CHANGE, socketIDs);
 };
 /*
@@ -108,14 +112,14 @@ export const serverVolatileBroadcastEventHandler = (
   socket: SocketIoSocket
 ) => {
   socket.volatile.broadcast.to(roomID).emit(CLIENT_BROADCAST, data);
+  socket.data.lastPresence = Date.now();
 };
-// broadcasts requests from socket to all other sockets
-export const requestBroadcastEventHandler = (
+export const idleStateEventHandler = (
   roomID: string,
   data: ArrayBuffer,
   socket: SocketIoSocket
 ) => {
-  socket.broadcast.to(roomID).emit(CLIENT_BROADCAST, data);
+  socket.broadcast.to(roomID).emit(IDLE_STATE, data);
 };
 /* Built-in event for handling socket disconnects */
 export const disconnectingEventHandler = async (
