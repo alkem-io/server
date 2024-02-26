@@ -1,5 +1,4 @@
-import { challengeFlowStatesDefault } from './space.defaults.challenge.flow';
-import { opportunityFlowStatesDefault } from './space.defaults.opportunity.flow';
+import { innovationFlowStatesDefault } from './space.defaults.innovation.flow';
 
 export const templatesSetDefaults: any = {
   posts: [
@@ -58,19 +57,11 @@ export const templatesSetDefaults: any = {
   innovationFlows: [
     {
       profile: {
-        displayName: 'Default Challenge innovationFlow',
-        description: 'Default Challenge innovationFlow',
+        displayName: 'Default innovationFlow',
+        description: 'Default innovationFlow',
         tags: [],
       },
-      definition: JSON.stringify(challengeFlowStatesDefault),
-    },
-    {
-      profile: {
-        displayName: 'Default Opportunity innovationFlow',
-        description: 'Default Opportunity innovationFlow',
-        tags: [],
-      },
-      definition: JSON.stringify(opportunityFlowStatesDefault),
+      definition: JSON.stringify(innovationFlowStatesDefault),
     },
   ],
 };

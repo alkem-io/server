@@ -175,7 +175,7 @@ export class ChallengeService {
     );
 
     const challengeFlowStates =
-      await this.spaceDefaultsService.getChallengeFlowStates(
+      await this.spaceDefaultsService.getDefaultInnovationFlowStatesForSpace(
         spaceID,
         challengeData.innovationFlowTemplateID
       );

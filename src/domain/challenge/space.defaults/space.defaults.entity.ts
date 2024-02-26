@@ -8,8 +8,5 @@ export class SpaceDefaults
   implements ISpaceDefaults
 {
   @Column('text')
-  challengeFlowStates!: string;
-
-  @Column('text')
-  opportunityFlowStates!: string;
+  innovationFlowStates!: string;
 }

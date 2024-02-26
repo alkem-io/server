@@ -14,8 +14,7 @@ export class flowStates1708769388221 implements MigrationInterface {
                                         \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
                                         \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
                                         \`version\` int NOT NULL,
-                                        \`challengeFlowStates\` text NOT NULL,
-                                        \`opportunityFlowStates\` text NOT NULL,
+                                        \`innovationFlowStates\` text NOT NULL,
                                         \`authorizationId\` char(36) NULL,
                                         UNIQUE INDEX \`REL_413ba75964e5a534e4bfa54846\` (\`authorizationId\`),
                                         PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
@@ -58,14 +57,11 @@ export class flowStates1708769388221 implements MigrationInterface {
 
       // todo: Valentin: please check what I am doing re stringify...
       await queryRunner.query(
-        `INSERT INTO space_defaults (id, version, challengeFlowStates, opportunityFlowStates, authorizationId) VALUES
+        `INSERT INTO space_defaults (id, version, innovationFlowStates, authorizationId) VALUES
                       ('${defaultsID}',
                       1,
                       '${this.convertStatesToText(
-                        this.challengeFlowStatesDefault
-                      )}',
-                      '${this.convertStatesToText(
-                        this.opportunityFlowStatesDefault
+                        this.innovationFlowStatesDefault
                       )}',
                       '${defaultsAuthID}')`
       );
@@ -193,30 +189,7 @@ export class flowStates1708769388221 implements MigrationInterface {
     );
   }
 
-  challengeFlowStatesDefault: FlowState[] = [
-    {
-      displayName: 'prepare',
-      description: 'The innovation is being prepared.',
-      sortOrder: 1,
-    },
-    {
-      displayName: 'in progress',
-      description: 'The innovation is in progress.',
-      sortOrder: 2,
-    },
-    {
-      displayName: 'summary',
-      description: 'The summary of the flow results.',
-      sortOrder: 3,
-    },
-    {
-      displayName: 'done',
-      description: 'The flow is completed.',
-      sortOrder: 4,
-    },
-  ];
-
-  opportunityFlowStatesDefault: FlowState[] = [
+  innovationFlowStatesDefault: FlowState[] = [
     {
       displayName: 'prepare',
       description: 'The innovation is being prepared.',

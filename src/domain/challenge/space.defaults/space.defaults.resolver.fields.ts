@@ -19,15 +19,4 @@ export class SpaceDefaultsResolverFields {
   ): IInnovationFlowState[] {
     return this.spaceDefaultsService.getDefaultChallengeFlowStates(defaults);
   }
-
-  @UseGuards(GraphqlGuard)
-  @ResolveField('opportunityFlowStates', () => [IInnovationFlowState], {
-    nullable: false,
-    description: 'The set of States in the default Opportunity Flow.',
-  })
-  opportunityFlowStates(
-    @Parent() defaults: ISpaceDefaults
-  ): IInnovationFlowState[] {
-    return this.spaceDefaultsService.getDefaultOpportunityFlowStates(defaults);
-  }
 }

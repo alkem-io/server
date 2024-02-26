@@ -124,7 +124,7 @@ export class OpportunityService {
       );
 
       const opportunityFlowStates =
-        await this.spaceDefaultsService.getChallengeFlowStates(
+        await this.spaceDefaultsService.getDefaultInnovationFlowStatesForSpace(
           spaceID,
           opportunityData.innovationFlowTemplateID
         );

@@ -12,8 +12,7 @@ import { SpaceDefaults } from './space.defaults.entity';
 import { InnovationFlowStatesService } from '../innovation-flow-states/innovaton.flow.state.service';
 import { IInnovationFlowState } from '../innovation-flow-states/innovation.flow.state.interface';
 import { Space } from '../space/space.entity';
-import { challengeFlowStatesDefault } from './definitions/space.defaults.challenge.flow';
-import { opportunityFlowStatesDefault } from './definitions/space.defaults.opportunity.flow';
+import { innovationFlowStatesDefault } from './definitions/space.defaults.innovation.flow';
 import { InnovationFlowTemplateService } from '@domain/template/innovation-flow-template/innovation.flow.template.service';
 
 import { ITemplatesSet } from '@domain/template/templates-set';
@@ -37,14 +36,9 @@ export class SpaceDefaultsService {
     const spaceDefaults: ISpaceDefaults = new SpaceDefaults();
 
     // Set the default challenge and opportunity flow states
-    spaceDefaults.challengeFlowStates =
+    spaceDefaults.innovationFlowStates =
       this.innovationFlowStatesService.serializeStates(
-        challengeFlowStatesDefault
-      );
-
-    spaceDefaults.opportunityFlowStates =
-      this.innovationFlowStatesService.serializeStates(
-        opportunityFlowStatesDefault
+        innovationFlowStatesDefault
       );
 
     spaceDefaults.authorization = new AuthorizationPolicy();
@@ -63,15 +57,7 @@ export class SpaceDefaultsService {
       const states = this.innovationFlowStatesService.getStates(
         spaceDefaultsData.challengeFlowStates
       );
-      spaceDefaults.challengeFlowStates =
-        this.innovationFlowStatesService.serializeStates(states);
-    }
-
-    if (spaceDefaultsData.opportunityFlowStates) {
-      const states = this.innovationFlowStatesService.getStates(
-        spaceDefaultsData.opportunityFlowStates
-      );
-      spaceDefaults.opportunityFlowStates =
+      spaceDefaults.innovationFlowStates =
         this.innovationFlowStatesService.serializeStates(states);
     }
 
@@ -142,49 +128,21 @@ export class SpaceDefaultsService {
     return spaceDefaults;
   }
 
-  public getDefaultChallengeFlowStates(
+  public getDefaultInnovationFlowStates(
     spaceDefaults: ISpaceDefaults
   ): IInnovationFlowState[] {
     return this.innovationFlowStatesService.getStates(
-      spaceDefaults.challengeFlowStates
+      spaceDefaults.innovationFlowStates
     );
   }
 
-  public getDefaultOpportunityFlowStates(
-    spaceDefaults: ISpaceDefaults
-  ): IInnovationFlowState[] {
-    return this.innovationFlowStatesService.getStates(
-      spaceDefaults.opportunityFlowStates
-    );
-  }
-
-  public async getChallengeFlowStates(
+  public async getDefaultInnovationFlowStatesForSpace(
     spaceID: string,
     innovationFlowTemplateID?: string
   ): Promise<IInnovationFlowState[]> {
     const spaceDefaults = await this.getSpaceDefaultsForSpaceOrFail(spaceID);
     let flowStates = this.innovationFlowStatesService.getStates(
-      spaceDefaults.challengeFlowStates
-    );
-    if (innovationFlowTemplateID) {
-      const innovationFlowTemplate =
-        await this.innovationFlowTemplateService.getInnovationFlowTemplateOrFail(
-          innovationFlowTemplateID
-        );
-      flowStates = this.innovationFlowStatesService.getStates(
-        innovationFlowTemplate.states
-      );
-    }
-    return flowStates;
-  }
-
-  public async getOpportunityFlowStates(
-    spaceID: string,
-    innovationFlowTemplateID?: string
-  ): Promise<IInnovationFlowState[]> {
-    const spaceDefaults = await this.getSpaceDefaultsForSpaceOrFail(spaceID);
-    let flowStates = this.innovationFlowStatesService.getStates(
-      spaceDefaults.opportunityFlowStates
+      spaceDefaults.innovationFlowStates
     );
     if (innovationFlowTemplateID) {
       const innovationFlowTemplate =

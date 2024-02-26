@@ -3,7 +3,5 @@ import { ObjectType } from '@nestjs/graphql';
 
 @ObjectType('SpaceDefaults')
 export abstract class ISpaceDefaults extends IAuthorizable {
-  challengeFlowStates!: string;
-
-  opportunityFlowStates!: string;
+  innovationFlowStates!: string;
 }
