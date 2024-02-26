@@ -165,7 +165,6 @@ export class flowStates1708769388221 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE \`innovation_flow\` DROP COLUMN \`lifecycleId\``
     );
-
     await queryRunner.query(
       `ALTER TABLE \`templates_set\` DROP COLUMN \`policy\``
     );
@@ -178,6 +177,12 @@ export class flowStates1708769388221 implements MigrationInterface {
     );
     await queryRunner.query(
       `ALTER TABLE \`innovation_flow\` ADD \`lifecycleId\` char(36) NULL`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`innovation_flow_template\` ADD \`definition\` text NULL`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`innovation_flow_template\` ADD \`type\` varchar(128) NULL`
     );
 
     // disable old constraints
@@ -250,6 +255,10 @@ export class flowStates1708769388221 implements MigrationInterface {
   }
 
   private convertMachineDefinitionToStates(machineDefStr: string): FlowState[] {
+    if (machineDefStr === '') {
+      // if no definition, just return the default
+      return this.innovationFlowStatesDefault;
+    }
     const result: FlowState[] = [];
     const machineDef = JSON.parse(machineDefStr);
     const machine = createMachine(machineDef);
