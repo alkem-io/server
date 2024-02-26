@@ -40,11 +40,28 @@ export class flowStates1708769388221 implements MigrationInterface {
 
     ////////////////////////////////////////
     // migrate data to new setup
-    // Create new space defaults for all spaces, including default flows for challenges + opportunities. TODO: what about the old flows?
+    // a. Create new space defaults for all spaces, including default flows for challenges + opportunities. TODO: what about the old flows?
     const spaces: {
       id: string;
-    }[] = await queryRunner.query(`SELECT id FROM space`);
+      templatesSetId: string;
+    }[] = await queryRunner.query(`SELECT id, templatesSetId FROM space`);
     for (const space of spaces) {
+      // Get the default innovation flow template to use
+      const innovation_flow_templates: {
+        id: string;
+        definition: string;
+      }[] = await queryRunner.query(
+        `SELECT id, definition FROM innovation_flow_template WHERE id = '${space.templatesSetId}'`
+      );
+      let states = this.innovationFlowStatesDefault;
+      // Pick up the first one if there is an innovation flow template; otherwise, use the default
+      if (innovation_flow_templates.length > 0) {
+        states = this.convertMachineDefinitionToStates(
+          innovation_flow_templates[0].definition
+        );
+      }
+      const statesStr = this.convertStatesToText(states);
+
       // Create and link the Profile
       const defaultsID = randomUUID();
       const defaultsAuthID = randomUUID();
@@ -60,16 +77,15 @@ export class flowStates1708769388221 implements MigrationInterface {
         `INSERT INTO space_defaults (id, version, innovationFlowStates, authorizationId) VALUES
                       ('${defaultsID}',
                       1,
-                      '${this.convertStatesToText(
-                        this.innovationFlowStatesDefault
-                      )}',
+                      '${statesStr}',
                       '${defaultsAuthID}')`
       );
       await queryRunner.query(
         `UPDATE space SET defaultsId = '${defaultsID}' WHERE id = '${space.id}'`
       );
     }
-    // Iterate over all the innovation flow entries and also all the innovation flow templates to convert the states to the new format
+
+    // b. Iterate over all the innovation flow entries and also all the innovation flow templates to convert the states to the new format
     const innovationFlows: {
       id: string;
       lifecycleId: string;
@@ -100,7 +116,7 @@ export class flowStates1708769388221 implements MigrationInterface {
       );
     }
 
-    // Iterate over all the innovation flow entries and also all the innovation flow templates to convert the states to the new format
+    // c. Iterate over all the innovation flow entries and also all the innovation flow templates to convert the states to the new format
     const innovationFlowTemplates: {
       id: string;
       definition: string;
@@ -132,6 +148,16 @@ export class flowStates1708769388221 implements MigrationInterface {
       `ALTER TABLE \`space\` ADD CONSTRAINT \`FK_6b1efee39d076d9f7ecb8fef4cd\` FOREIGN KEY (\`defaultsId\`) REFERENCES \`space_defaults\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
 
+    await queryRunner.query(
+      `ALTER TABLE \`space_defaults\` ADD UNIQUE INDEX \`IDX_413ba75964e5a534e4bfa54846\` (\`authorizationId\`)`
+    );
+    await queryRunner.query(
+      `CREATE UNIQUE INDEX \`REL_413ba75964e5a534e4bfa54846\` ON \`space_defaults\` (\`authorizationId\`)`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`space_defaults\` ADD CONSTRAINT \`FK_413ba75964e5a534e4bfa54846e\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    );
+
     // remove old data
     await queryRunner.query(
       `ALTER TABLE \`innovation_flow_template\` DROP COLUMN \`definition\``
@@ -159,13 +185,23 @@ export class flowStates1708769388221 implements MigrationInterface {
 
     // disable old constraints
     await queryRunner.query(
-      `ALTER TABLE \`space_defaults\` DROP FOREIGN KEY \`FK_413ba75964e5a534e4bfa54846e\``
+      `ALTER TABLE \`space\` DROP FOREIGN KEY \`FK_6b1efee39d076d9f7ecb8fef4c\``
     );
     await queryRunner.query(
       `ALTER TABLE \`space\` DROP INDEX \`IDX_6b1efee39d076d9f7ecb8fef4c\``
     );
     await queryRunner.query(
+      `DROP INDEX \`REL_6b1efee39d076d9f7ecb8fef4c\` ON \`space\``
+    );
+
+    await queryRunner.query(
+      `ALTER TABLE \`space_defaults\` DROP FOREIGN KEY \`FK_413ba75964e5a534e4bfa54846\``
+    );
+    await queryRunner.query(
       `DROP INDEX \`REL_413ba75964e5a534e4bfa54846\` ON \`space_defaults\``
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`space_defaults\` DROP INDEX \`IDX_413ba75964e5a534e4bfa54846\``
     );
 
     // migrate data to new setup
