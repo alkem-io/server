@@ -22,6 +22,9 @@ import { ExcalidrawContent } from '@common/interfaces';
 import { IProfile } from '@domain/common/profile';
 import { ProfileDocumentsService } from '@domain/profile-documents/profile.documents.service';
 import { CalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.entity';
+import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
+import { LicenseFeatureFlagName } from '@common/enums/license.feature.flag.name';
+import { Space } from '@domain/challenge/space/space.entity';
 import { AuthorizationPolicy } from '../authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import { ProfileService } from '../profile/profile.service';
@@ -44,6 +47,7 @@ export class WhiteboardService {
     private profileService: ProfileService,
     private profileDocumentsService: ProfileDocumentsService,
     private whiteboardAuthService: WhiteboardAuthorizationService,
+    private communityResolver: CommunityResolverService,
     @InjectEntityManager() private entityManager: EntityManager
   ) {}
 
@@ -203,6 +207,51 @@ export class WhiteboardService {
     this.eventEmitter.emit(WHITEBOARD_CONTENT_UPDATE, savedWhiteboard.id);
 
     return savedWhiteboard;
+  }
+
+  async isMultiUser(whiteboardId: string): Promise<boolean | never> {
+    const community =
+      await this.communityResolver.getCommunityFromWhiteboardOrFail(
+        whiteboardId
+      );
+
+    const space = await this.entityManager.findOneOrFail(Space, {
+      relations: {
+        license: {
+          featureFlags: true,
+        },
+      },
+      where: { id: community.spaceID },
+    });
+    const license = space.license;
+
+    if (!license) {
+      throw new EntityNotFoundException(
+        'Feature flag not found',
+        LogContext.COLLABORATION,
+        {
+          spaceId: community.spaceID,
+        }
+      );
+    }
+
+    const whiteboardMultiUserFeatureFlag = license.featureFlags?.find(
+      x => x.name === LicenseFeatureFlagName.WHITEBOARD_MULTI_USER
+    );
+
+    if (!whiteboardMultiUserFeatureFlag) {
+      throw new EntityNotFoundException(
+        'Feature flag not found',
+        LogContext.COLLABORATION,
+        {
+          spaceId: community.spaceID,
+          featureFlagName: LicenseFeatureFlagName.WHITEBOARD_MULTI_USER,
+          licenseId: license.id,
+        }
+      );
+    }
+
+    return whiteboardMultiUserFeatureFlag.enabled;
   }
 
   public async getProfile(

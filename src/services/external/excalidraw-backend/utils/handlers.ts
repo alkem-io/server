@@ -2,6 +2,9 @@ import { LoggerService } from '@nestjs/common';
 import { WhiteboardService } from '@domain/common/whiteboard';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { LogContext } from '@common/enums';
+import { CollaboratorModeReasons } from '../types/collaboration.mode.reasons';
+import { SocketIoServer } from '../types/socket.io.server';
+import { SocketIoSocket } from '../types/socket.io.socket';
 import {
   CLIENT_BROADCAST,
   COLLABORATOR_MODE,
@@ -9,15 +12,15 @@ import {
   IDLE_STATE,
   NEW_USER,
   ROOM_USER_CHANGE,
-  SocketIoServer,
-  SocketIoSocket,
-} from '../types';
+} from '../types/event.names';
+import { minCollaboratorsInRoom } from '../types/defaults';
 import { canUserRead, canUserUpdate, closeConnection } from './util';
-import { checkSession } from '@services/external/excalidraw-backend/utils/check.session';
+import { checkSession } from './check.session';
 
 export const authorizeWithRoomAndJoinHandler = async (
   roomID: string,
   socket: SocketIoSocket,
+  maxCollaboratorsForThisRoom: number,
   wsServer: SocketIoServer,
   whiteboardService: WhiteboardService,
   authorizationService: AuthorizationService,
@@ -28,7 +31,7 @@ export const authorizeWithRoomAndJoinHandler = async (
 
   if (!canUserRead(authorizationService, agentInfo, whiteboard.authorization)) {
     logger.error(
-      `Unable to authorize User '${agentInfo.userID}' with Whiteboard: '${whiteboard.id}'`,
+      `Unable to authorize User '${agentInfo.email}' with Whiteboard: '${whiteboard.id}'`,
       undefined,
       LogContext.EXCALIDRAW_SERVER
     );
@@ -36,14 +39,39 @@ export const authorizeWithRoomAndJoinHandler = async (
     return;
   }
 
+  const socketsInRoom = (await wsServer.in(roomID).fetchSockets()).length;
+  const isCollaboratorLimitReached =
+    socketsInRoom >= maxCollaboratorsForThisRoom;
+
+  if (isCollaboratorLimitReached) {
+    logger.verbose?.(
+      `Max collaborators limit (${maxCollaboratorsForThisRoom}) reached for room '${roomID}' - user '${agentInfo.email}' is read-only`,
+      LogContext.EXCALIDRAW_SERVER
+    );
+  } else {
+    logger.verbose?.(
+      `Max collaborators limit NOT reached (${socketsInRoom}/${maxCollaboratorsForThisRoom}) for room '${roomID}' - user '${agentInfo.email}' is a collaborator`,
+      LogContext.EXCALIDRAW_SERVER
+    );
+  }
+
   socket.data.lastContributed = -1;
   socket.data.lastPresence = -1;
   socket.data.read = true; // already authorized
-  socket.data.update = canUserUpdate(
-    authorizationService,
-    agentInfo,
-    whiteboard.authorization
+  socket.data.update =
+    !isCollaboratorLimitReached &&
+    canUserUpdate(authorizationService, agentInfo, whiteboard.authorization);
+
+  const reason = calculateReasonForCollaborationMode(
+    socket,
+    isCollaboratorLimitReached,
+    maxCollaboratorsForThisRoom
   );
+
+  wsServer.to(socket.id).emit(COLLABORATOR_MODE, {
+    mode: socket.data.update ? 'write' : 'read',
+    reason,
+  });
 
   await joinRoomHandler(roomID, socket, wsServer, logger);
 };
@@ -83,9 +111,6 @@ const joinRoomHandler = async (
   }
 
   const socketIDs = sockets.map(socket => socket.id);
-  wsServer
-    .to(socket.id)
-    .emit(COLLABORATOR_MODE, { mode: socket.data.update ? 'write' : 'read' });
   wsServer.in(roomID).emit(ROOM_USER_CHANGE, socketIDs);
 };
 /*
@@ -160,4 +185,20 @@ export const checkSessionHandler = (socket: SocketIoSocket) => {
   if (result) {
     closeConnection(socket, result);
   }
+};
+
+const calculateReasonForCollaborationMode = (
+  socket: SocketIoSocket,
+  isCapacityReached: boolean,
+  roomCapacity: number
+) => {
+  if (isCapacityReached) {
+    return CollaboratorModeReasons.ROOM_CAPACITY_REACHED;
+  }
+
+  if (!socket.data.update && roomCapacity === minCollaboratorsInRoom) {
+    return CollaboratorModeReasons.MULTI_USER_NOT_ALLOWED;
+  }
+
+  return undefined;
 };

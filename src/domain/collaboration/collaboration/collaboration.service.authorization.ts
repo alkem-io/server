@@ -265,7 +265,7 @@ export class CollaborationAuthorizationService {
     );
     if (whiteboardRtEnabled) {
       const createWhiteboardRtPrivilege = new AuthorizationPolicyRulePrivilege(
-        [AuthorizationPrivilege.CREATE_WHITEBOARD_RT],
+        [AuthorizationPrivilege.CREATE_WHITEBOARD_RT], // todo
         AuthorizationPrivilege.CREATE,
         POLICY_RULE_COLLABORATION_WHITEBOARD_CREATE
       );
