@@ -30,11 +30,13 @@ import { IWhiteboard } from './whiteboard.interface';
 import { CreateWhiteboardInput } from './dto/whiteboard.dto.create';
 import { UpdateWhiteboardInput } from './dto/whiteboard.dto.update';
 import { WhiteboardAuthorizationService } from './whiteboard.service.authorization';
-import { SAVED } from '@services/external/excalidraw-backend/types/event.names';
+import { WHITEBOARD_CONTENT_UPDATE } from './events/event.names';
 
 @Injectable()
 export class WhiteboardService {
-  public EventEmitter = new EventEmitter();
+  // The eventEmitter is used for cross-service communication.
+  // It allows services to send and receive messages, enabling them to coordinate activities or share data.
+  public eventEmitter = new EventEmitter();
   constructor(
     @InjectRepository(Whiteboard)
     private whiteboardRepository: Repository<Whiteboard>,
@@ -198,7 +200,7 @@ export class WhiteboardService {
 
     const savedWhiteboard = await this.save(whiteboard);
 
-    this.EventEmitter.emit(SAVED, savedWhiteboard.id);
+    this.eventEmitter.emit(WHITEBOARD_CONTENT_UPDATE, savedWhiteboard.id);
 
     return savedWhiteboard;
   }

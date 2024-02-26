@@ -51,6 +51,7 @@ import {
   socketDataInitMiddleware,
 } from './middlewares';
 import { debounce } from 'lodash';
+import { WHITEBOARD_CONTENT_UPDATE } from '@domain/common/whiteboard/events/event.names';
 
 type SaveMessageOpts = { timeout: number };
 type RoomTimers = Map<string, NodeJS.Timer>;
@@ -214,8 +215,6 @@ export class ExcalidrawServer {
 
       this.wsServer.to(socket.id).emit(INIT_ROOM);
 
-      this.startCollaboratorModeTimer(socket);
-
       // first authorize the user with the room
       socket.on(JOIN_ROOM, async (roomID: string) => {
         await authorizeWithRoomAndJoinHandler(
@@ -227,6 +226,7 @@ export class ExcalidrawServer {
           this.logger
         );
         if (socket.data.update) {
+          this.startCollaboratorModeTimer(socket);
           // user can broadcast content change events
           socket.on(SERVER_BROADCAST, (roomID: string, data: ArrayBuffer) => {
             serverBroadcastEventHandler(roomID, data, socket);
@@ -253,6 +253,7 @@ export class ExcalidrawServer {
         if (err && err instanceof UnauthorizedException) {
           closeConnection(socket, err.message);
         }
+        this.deleteCollaboratorModeTimerForSocket(socket.id);
       });
       // attach socket handlers conditionally on authorization
       // client events ONLY
@@ -280,13 +281,16 @@ export class ExcalidrawServer {
       });
     });
 
-    this.whiteboardService.EventEmitter.on(SAVED, (roomID: string) => {
-      this.logger.verbose?.(
-        `Whiteboard '${roomID}' saved`,
-        LogContext.EXCALIDRAW_SERVER
-      );
-      this.wsServer.to(roomID).emit(SAVED);
-    });
+    this.whiteboardService.eventEmitter.on(
+      WHITEBOARD_CONTENT_UPDATE,
+      (roomID: string) => {
+        this.logger.verbose?.(
+          `Whiteboard '${roomID}' saved`,
+          LogContext.EXCALIDRAW_SERVER
+        );
+        this.wsServer.to(roomID).emit(SAVED);
+      }
+    );
   }
 
   private startContributionEventTimer(roomId: string) {
@@ -471,11 +475,6 @@ export class ExcalidrawServer {
     (socket: SocketIoSocket) => {
       const timer = this.collaboratorModeTimers.get(socket.id);
       if (timer) {
-        this.logger.verbose?.(
-          `Reseting collaborator mode timer for socket '${socket.id}'`,
-          LogContext.EXCALIDRAW_SERVER
-        );
-
         timer.refresh();
       }
     },
