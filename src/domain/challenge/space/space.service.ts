@@ -43,7 +43,7 @@ import { UpdateSpaceInput } from './dto/space.dto.update';
 import { CreateChallengeOnSpaceInput } from './dto/space.dto.create.challenge';
 import { CommunityService } from '@domain/community/community/community.service';
 import { CommunityType } from '@common/enums/community.type';
-import { AgentInfo } from '@core/authentication.agent.info/agent-info';
+import { AgentInfo } from '@src/core/authentication/agent-info';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { IPreference } from '@domain/common/preference/preference.interface';
 import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set';
@@ -782,7 +782,11 @@ export class SpaceService {
     if (args && args.IDs) {
       {
         spaceWithChallenges = await this.getSpaceOrFail(space.id, {
-          relations: { challenges: true },
+          relations: {
+            challenges: {
+              profile: true,
+            },
+          },
         });
         spaceWithChallenges.challenges = spaceWithChallenges.challenges?.filter(
           c => args.IDs?.includes(c.id)
@@ -790,7 +794,11 @@ export class SpaceService {
       }
     } else
       spaceWithChallenges = await this.getSpaceOrFail(space.id, {
-        relations: { challenges: true },
+        relations: {
+          challenges: {
+            profile: true,
+          },
+        },
       });
 
     const challenges = spaceWithChallenges.challenges;
@@ -809,7 +817,9 @@ export class SpaceService {
 
     // Sort the challenges base on their display name
     const sortedChallenges = limitAndShuffled.sort((a, b) =>
-      a.nameID > b.nameID ? 1 : -1
+      a.profile.displayName.toLowerCase() > b.profile.displayName.toLowerCase()
+        ? 1
+        : -1
     );
     return sortedChallenges;
   }

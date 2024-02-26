@@ -59,7 +59,7 @@ services:
 
   kratos-migrate:
     container_name: alkemio_dev_kratos_migrate
-    image: oryd/kratos:v1.0.0
+    image: oryd/kratos:v1.1.0
     depends_on:
       - mysql
     environment:
@@ -75,7 +75,7 @@ services:
 
   kratos:
     container_name: alkemio_dev_kratos
-    image: oryd/kratos:v1.0.0
+    image: oryd/kratos:v1.1.0
     depends_on:
       - kratos-migrate
     ports:

@@ -24,7 +24,7 @@ import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.in
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { TagsetType } from '@common/enums/tagset.type';
 import { ProfileStorageBucketLoaderCreator } from '@core/dataloader/creators/loader.creators/profile/profile.storage.bucket.loader.creator';
-import { AgentInfo } from '@core/authentication.agent.info/agent-info';
+import { AgentInfo } from '@core/authentication/agent-info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator';
 

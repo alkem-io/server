@@ -2,7 +2,7 @@ import { Inject, LoggerService, UseGuards } from '@nestjs/common';
 import { Args, Resolver, Mutation } from '@nestjs/graphql';
 import { CurrentUser } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
-import { AgentInfo } from '@core/authentication.agent.info/agent-info';
+import { AgentInfo } from '@core/authentication/agent-info';
 import { WhiteboardService } from './whiteboard.service';
 import { IWhiteboard } from './whiteboard.interface';
 import { AuthorizationService } from '@core/authorization/authorization.service';

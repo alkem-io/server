@@ -39,7 +39,7 @@ import {
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AgentInfo } from '@core/authentication.agent.info/agent-info';
+import { AgentInfo } from '@core/authentication/agent-info';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { ILicense } from '@domain/license/license/license.interface';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';

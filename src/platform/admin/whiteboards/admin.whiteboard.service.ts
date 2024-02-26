@@ -67,10 +67,7 @@ export class AdminWhiteboardService {
         ...whiteboardResults.errors,
         ...whiteboardTemplateResults.errors,
       ],
-      warns: [
-        ...whiteboardResults.warns,
-        ...whiteboardTemplateResults.warns,
-      ],
+      warns: [...whiteboardResults.warns, ...whiteboardTemplateResults.warns],
     };
   }
 
