@@ -17,6 +17,6 @@ export class SpaceDefaultsResolverFields {
   challengeFlowStates(
     @Parent() defaults: ISpaceDefaults
   ): IInnovationFlowState[] {
-    return this.spaceDefaultsService.getDefaultChallengeFlowStates(defaults);
+    return this.spaceDefaultsService.getDefaultInnovationFlowStates(defaults);
   }
 }

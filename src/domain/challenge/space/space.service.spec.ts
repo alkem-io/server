@@ -8,7 +8,6 @@ import { repositoryProviderMockFactory } from '@test/utils/repository.provider.m
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { Profile } from '@domain/common/profile';
-import { Lifecycle } from '@domain/common/lifecycle';
 import { Challenge } from '../challenge/challenge.entity';
 import { Opportunity } from '@domain/collaboration/opportunity';
 import { SpaceFilterService } from '@services/infrastructure/space-filter/space.filter.service';
@@ -94,12 +93,28 @@ const getChallengesMock = (
       spaceID: `${spaceId}`,
       innovationFlow: {
         id: '',
-        spaceID: '',
-        lifecycle: {
-          id: `lifecycle-${i}`,
-          machineDef: '',
-          ...getEntityMock<Lifecycle>(),
-        },
+        states: JSON.stringify([
+          {
+            displayName: 'prepare',
+            description: 'The innovation is being prepared.',
+            sortOrder: 1,
+          },
+          {
+            displayName: 'in progress',
+            description: 'The innovation is in progress.',
+            sortOrder: 2,
+          },
+          {
+            displayName: 'summary',
+            description: 'The summary of the flow results.',
+            sortOrder: 3,
+          },
+          {
+            displayName: 'done',
+            description: 'The flow is completed.',
+            sortOrder: 4,
+          },
+        ]),
         profile: {
           id: '',
           displayName: `Challenge ${spaceId}.${i}`,
@@ -141,12 +156,28 @@ const getOpportunitiesMock = (
       spaceID: `${challengeId}`,
       innovationFlow: {
         id: '',
-        spaceID: '',
-        lifecycle: {
-          id: `lifecycle-${i}`,
-          machineDef: '',
-          ...getEntityMock<Lifecycle>(),
-        },
+        states: JSON.stringify([
+          {
+            displayName: 'prepare',
+            description: 'The innovation is being prepared.',
+            sortOrder: 1,
+          },
+          {
+            displayName: 'in progress',
+            description: 'The innovation is in progress.',
+            sortOrder: 2,
+          },
+          {
+            displayName: 'summary',
+            description: 'The summary of the flow results.',
+            sortOrder: 3,
+          },
+          {
+            displayName: 'done',
+            description: 'The flow is completed.',
+            sortOrder: 4,
+          },
+        ]),
         profile: {
           id: '',
           displayName: `opportunity-${challengeId}.${i}`,
