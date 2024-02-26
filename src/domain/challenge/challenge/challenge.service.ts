@@ -504,7 +504,11 @@ export class ChallengeService {
     args?: LimitAndShuffleIdsQueryArgs
   ): Promise<IOpportunity[]> {
     const challenge = await this.getChallengeOrFail(challengeId, {
-      relations: { opportunities: true },
+      relations: {
+        opportunities: {
+          profile: true,
+        },
+      },
     });
 
     const { IDs, limit, shuffle } = args ?? {};
@@ -531,7 +535,9 @@ export class ChallengeService {
 
     // Sort the opportunities base on their display name
     const sortedOpportunities = limitAndShuffled.sort((a, b) =>
-      a.nameID.toLowerCase() > b.nameID.toLowerCase() ? 1 : -1
+      a.profile.displayName.toLowerCase() > b.profile.displayName.toLowerCase()
+        ? 1
+        : -1
     );
     return sortedOpportunities;
   }
