@@ -55,6 +55,8 @@ type SaveResponse = { success: boolean; errors?: string[] };
 const defaultContributionInterval = 600;
 const defaultSaveInterval = 15;
 const defaultSaveTimeout = 10;
+// logically it must always be 1, since it's either multi-user or not
+const minCollaboratorsInRoom = 1;
 
 @Injectable()
 export class ExcalidrawServer {
@@ -64,6 +66,7 @@ export class ExcalidrawServer {
   private readonly contributionWindowMs: number;
   private readonly saveIntervalMs: number;
   private readonly saveTimeoutMs: number;
+  private readonly maxCollaboratorsInRoom: number;
 
   constructor(
     @Inject(APP_ID) private appId: string,
@@ -76,13 +79,18 @@ export class ExcalidrawServer {
     private contributionReporter: ContributionReporterService,
     private communityResolver: CommunityResolverService
   ) {
-    const { contribution_window, save_interval, save_timeout } =
-      this.configService.get(ConfigurationTypes.COLLABORATION)?.whiteboards;
+    const {
+      contribution_window,
+      save_interval,
+      save_timeout,
+      max_collaborators_in_room,
+    } = this.configService.get(ConfigurationTypes.COLLABORATION)?.whiteboards;
 
     this.contributionWindowMs =
       (contribution_window ?? defaultContributionInterval) * 1000;
     this.saveIntervalMs = (save_interval ?? defaultSaveInterval) * 1000;
     this.saveTimeoutMs = (save_timeout ?? defaultSaveTimeout) * 1000;
+    this.maxCollaboratorsInRoom = max_collaborators_in_room;
     // don't block the constructor
     this.init().then(() =>
       this.logger.verbose?.(
@@ -198,9 +206,16 @@ export class ExcalidrawServer {
       this.wsServer.to(socket.id).emit(INIT_ROOM);
       // first authorize the user with the room
       socket.on(JOIN_ROOM, async (roomID: string) => {
+        // this logic could be provided by an entitlement (license) service
+        const maxCollaboratorsForThisRoom =
+          (await this.whiteboardService.isMultiUser(roomID))
+            ? this.maxCollaboratorsInRoom
+            : minCollaboratorsInRoom;
+
         await authorizeWithRoomAndJoinHandler(
           roomID,
           socket,
+          maxCollaboratorsForThisRoom,
           this.wsServer,
           this.whiteboardService,
           this.authorizationService,

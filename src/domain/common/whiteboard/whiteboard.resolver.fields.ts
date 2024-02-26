@@ -21,9 +21,18 @@ import { WhiteboardService } from './whiteboard.service';
 @Resolver(() => IWhiteboard)
 export class WhiteboardResolverFields {
   constructor(
+    private whiteboardService: WhiteboardService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
+
+  @ResolveField(() => Boolean, {
+    nullable: false,
+    description: 'Whether the Whiteboard is multi-user enabled on Space level.',
+  })
+  public isMultiUser(@Parent() whiteboard: IWhiteboard): Promise<boolean> {
+    return this.whiteboardService.isMultiUser(whiteboard.id);
+  }
 
   @ResolveField('createdBy', () => IUser, {
     nullable: true,

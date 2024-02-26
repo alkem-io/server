@@ -89,6 +89,7 @@ export const canUserUpdate = (
 
   return true;
 };
+
 // closes the connection for this socket
 // and sends an optional message before disconnecting
 export const closeConnection = (socket: SocketIoSocket, message?: string) => {

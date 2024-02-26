@@ -16,6 +16,7 @@ import { checkSession } from '@services/external/excalidraw-backend/utils/check.
 export const authorizeWithRoomAndJoinHandler = async (
   roomID: string,
   socket: SocketIoSocket,
+  maxCollaboratorsForThisRoom: number,
   wsServer: SocketIoServer,
   whiteboardService: WhiteboardService,
   authorizationService: AuthorizationService,
@@ -24,11 +25,9 @@ export const authorizeWithRoomAndJoinHandler = async (
   const whiteboard = await whiteboardService.getWhiteboardOrFail(roomID);
   const agentInfo = socket.data.agentInfo;
 
-  if (
-    !canUserRead(authorizationService, agentInfo, whiteboard.authorization)
-  ) {
+  if (!canUserRead(authorizationService, agentInfo, whiteboard.authorization)) {
     logger.error(
-      `Unable to authorize User '${agentInfo.userID}' with Whiteboard: '${whiteboard.id}'`,
+      `Unable to authorize User '${agentInfo.email}' with Whiteboard: '${whiteboard.id}'`,
       undefined,
       LogContext.EXCALIDRAW_SERVER
     );
@@ -36,13 +35,27 @@ export const authorizeWithRoomAndJoinHandler = async (
     return;
   }
 
+  const socketInRoom = (await wsServer.in(roomID).fetchSockets()).length;
+  const isCollaboratorLimitReached =
+    socketInRoom >= maxCollaboratorsForThisRoom;
+
+  if (isCollaboratorLimitReached) {
+    logger.verbose?.(
+      `Max collaborators limit (${maxCollaboratorsForThisRoom}) reached for room '${roomID}' - user '${agentInfo.email}' is read-only`,
+      LogContext.EXCALIDRAW_SERVER
+    );
+  } else {
+    logger.verbose?.(
+      `Max collaborators limit NOT reached (${socketInRoom}/${maxCollaboratorsForThisRoom}) for room '${roomID}' - user '${agentInfo.email}' is a collaborator`,
+      LogContext.EXCALIDRAW_SERVER
+    );
+  }
+
   socket.data.lastContributed = -1;
   socket.data.read = true; // already authorized
-  socket.data.update = canUserUpdate(
-    authorizationService,
-    agentInfo,
-    whiteboard.authorization
-  );
+  socket.data.update =
+    !isCollaboratorLimitReached &&
+    canUserUpdate(authorizationService, agentInfo, whiteboard.authorization);
 
   await joinRoomHandler(roomID, socket, wsServer, logger);
 };
