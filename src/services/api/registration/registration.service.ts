@@ -2,7 +2,7 @@ import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { UserService } from '@domain/community/user/user.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
-import { AgentInfo } from '@core/authentication/agent-info';
+import { AgentInfo } from '@core/authentication.agent.info/agent-info';
 import { IUser } from '@domain/community/user/user.interface';
 import { LogContext } from '@common/enums/logging.context';
 import { UserNotVerifiedException } from '@common/exceptions/user/user.not.verified.exception';

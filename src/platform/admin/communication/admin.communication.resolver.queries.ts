@@ -2,7 +2,7 @@ import { CurrentUser, Profiling } from '@src/common/decorators';
 import { Args, Query, Resolver } from '@nestjs/graphql';
 import { GraphqlGuard } from '@core/authorization';
 import { UseGuards } from '@nestjs/common/decorators/core/use-guards.decorator';
-import { AgentInfo } from '@core/authentication/agent-info';
+import { AgentInfo } from '@core/authentication.agent.info/agent-info';
 import { AdminCommunicationService } from './admin.communication.service';
 import { CommunicationAdminMembershipInput } from './dto';
 import { AuthorizationPrivilege, AuthorizationRoleGlobal } from '@common/enums';

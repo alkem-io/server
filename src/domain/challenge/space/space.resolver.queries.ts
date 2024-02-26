@@ -14,7 +14,7 @@ import { GraphqlGuard } from '@core/authorization';
 import { PaginatedSpaces, PaginationArgs } from '@core/pagination';
 import { SpaceFilterInput } from '@services/infrastructure/space-filter/dto/space.filter.dto.input';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { AgentInfo } from '@core/authentication/agent-info';
+import { AgentInfo } from '@core/authentication.agent.info/agent-info';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { LogContext } from '@common/enums/logging.context';
 

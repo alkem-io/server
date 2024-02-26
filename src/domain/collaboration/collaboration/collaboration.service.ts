@@ -24,7 +24,7 @@ import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { CollaborationArgsCallouts } from './dto/collaboration.args.callouts';
-import { AgentInfo } from '@core/authentication/agent-info';
+import { AgentInfo } from '@core/authentication.agent.info/agent-info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UpdateCollaborationCalloutsSortOrderInput } from './dto/collaboration.dto.update.callouts.sort.order';
 import { getJourneyByCollaboration } from '@common/utils';

@@ -6,7 +6,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { ICalloutTemplate } from './callout.template.interface';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
-import { AgentInfo } from '@core/authentication/agent-info';
+import { AgentInfo } from '@core/authentication.agent.info/agent-info';
 import { UpdateCalloutTemplateInput } from './dto/callout.template.dto.update';
 import { DeleteCalloutTemplateInput } from './dto/callout.template.dto.delete';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';

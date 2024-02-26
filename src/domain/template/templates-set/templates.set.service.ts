@@ -26,7 +26,7 @@ import { CreateInnovationFlowTemplateInput } from '../innovation-flow-template/d
 import { ICalloutTemplate } from '../callout-template/callout.template.interface';
 import { CreateCalloutTemplateInput } from '../callout-template/dto/callout.template.dto.create';
 import { CalloutTemplateService } from '../callout-template/callout.template.service';
-import { AgentInfo } from '@core/authentication/agent-info';
+import { AgentInfo } from '@core/authentication.agent.info/agent-info';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 

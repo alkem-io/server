@@ -14,9 +14,9 @@ import { Cache } from 'cache-manager';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 // import Redlock, { RedlockAbortSignal } from 'redlock';
 import { EntityManager } from 'typeorm';
-import { IAgent, ICredential } from '..';
+import { IAgent, ICredential } from '../../domain/agent';
 @Injectable()
-export class AgentCacheService {
+export class AgentInfoCacheService {
   private readonly cache_ttl: number;
 
   constructor(

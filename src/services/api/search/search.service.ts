@@ -12,7 +12,7 @@ import {
 } from '@common/enums';
 import { ValidationException } from '@common/exceptions/validation.exception';
 import { Organization } from '@domain/community/organization/organization.entity';
-import { AgentInfo } from '@core/authentication/agent-info';
+import { AgentInfo } from '@core/authentication.agent.info/agent-info';
 import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entity';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { AuthorizationService } from '@core/authorization/authorization.service';

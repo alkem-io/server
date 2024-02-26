@@ -11,7 +11,7 @@ import { IUserGroup } from '@domain/community/user-group';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege } from '@common/enums';
 import { OrganizationAuthorizationService } from './organization.service.authorization';
-import { AgentInfo } from '@core/authentication/agent-info';
+import { AgentInfo } from '@core/authentication.agent.info/agent-info';
 import { IUser } from '@domain/community/user/user.interface';
 import { OrganizationAuthorizationResetInput } from './dto/organization.dto.reset.authorization';
 import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';

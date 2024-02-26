@@ -15,7 +15,7 @@ import { WhiteboardCheckoutStateEnum } from '@common/enums/whiteboard.checkout.s
 import { WhiteboardCheckoutLifecycleConfig } from './whiteboard.checkout.lifecycle.config';
 import { CreateWhiteboardCheckoutInput } from './dto/whiteboard.checkout.dto.create';
 import { EntityCheckoutStatusException } from '@common/exceptions/entity.not.checkedout.exception';
-import { AgentInfo } from '@core/authentication/agent-info';
+import { AgentInfo } from '@core/authentication.agent.info/agent-info';
 
 @Injectable()
 export class WhiteboardCheckoutService {
