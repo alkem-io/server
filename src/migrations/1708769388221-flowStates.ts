@@ -268,7 +268,7 @@ export class flowStates1708769388221 implements MigrationInterface {
     for (const stateName of stateNames) {
       result.push({
         displayName: stateName,
-        description: `Enter here the description for the '${stateName}' state. This is a default description.`,
+        description: '',
         sortOrder: sortOrder,
       });
       sortOrder++;
