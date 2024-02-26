@@ -152,7 +152,7 @@ export class flowStates1708769388221 implements MigrationInterface {
       `ALTER TABLE \`space_defaults\` ADD UNIQUE INDEX \`IDX_413ba75964e5a534e4bfa54846\` (\`authorizationId\`)`
     );
     await queryRunner.query(
-      `ALTER TABLE \`space_defaults\` ADD CONSTRAINT \`FK_413ba75964e5a534e4bfa54846e\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+      `ALTER TABLE \`space_defaults\` ADD CONSTRAINT \`FK_413ba75964e5a534e4bfa54846e\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
 
     // remove old data
