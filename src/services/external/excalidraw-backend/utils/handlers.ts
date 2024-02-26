@@ -4,6 +4,7 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { LogContext } from '@common/enums';
 import {
   CLIENT_BROADCAST,
+  COLLABORATOR_MODE,
   FIRST_IN_ROOM,
   IDLE_STATE,
   NEW_USER,
@@ -36,7 +37,7 @@ export const authorizeWithRoomAndJoinHandler = async (
   }
 
   socket.data.lastContributed = -1;
-  socket.data.lastCursorMove = -1;
+  socket.data.lastPresence = -1;
   socket.data.read = true; // already authorized
   socket.data.update = canUserUpdate(
     authorizationService,
@@ -82,6 +83,9 @@ const joinRoomHandler = async (
   }
 
   const socketIDs = sockets.map(socket => socket.id);
+  wsServer
+    .to(socket.id)
+    .emit(COLLABORATOR_MODE, { mode: socket.data.update ? 'write' : 'read' });
   wsServer.in(roomID).emit(ROOM_USER_CHANGE, socketIDs);
 };
 /*
@@ -108,7 +112,7 @@ export const serverVolatileBroadcastEventHandler = (
   socket: SocketIoSocket
 ) => {
   socket.volatile.broadcast.to(roomID).emit(CLIENT_BROADCAST, data);
-  socket.data.lastCursorMove = Date.now();
+  socket.data.lastPresence = Date.now();
 };
 export const idleStateEventHandler = (
   roomID: string,

@@ -12,10 +12,10 @@ export type SocketData = {
    */
   lastContributed: number;
   /***
-   * The timestamp of the last contribution event received;
-   * The events are the ones received on the server-broadcast channel
+   * The timestamp of the last presence received;
+   * These events are received with the 'server-volatile-broadcast' event
    */
-  lastCursorMove: number;
+  lastPresence: number;
   /***
    * True if the user can read the content and see the interactions of others users
    */

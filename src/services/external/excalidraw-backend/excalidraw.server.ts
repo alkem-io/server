@@ -211,7 +211,6 @@ export class ExcalidrawServer {
       );
 
       this.wsServer.to(socket.id).emit(INIT_ROOM);
-      this.wsServer.to(socket.id).emit(COLLABORATOR_MODE, { mode: 'write' });
 
       this.startCollaboratorModeTimer(socket);
 
@@ -279,7 +278,7 @@ export class ExcalidrawServer {
       });
     });
 
-    this.whiteboardService.EventEmitter.on('saved', async (roomID: string) => {
+    this.whiteboardService.EventEmitter.on(SAVED, async (roomID: string) => {
       this.logger.verbose?.(
         `Whiteboard '${roomID}' saved`,
         LogContext.EXCALIDRAW_SERVER
@@ -456,10 +455,6 @@ export class ExcalidrawServer {
   private startCollaboratorModeTimer(socket: SocketIoSocket) {
     let timer = this.collaboratorModeTimers.get(socket.id);
     if (timer) {
-      this.logger.verbose?.(
-        `Collaborator mode timer for socket '${socket.id}' already exists`,
-        LogContext.EXCALIDRAW_SERVER
-      );
       return;
     }
     timer = this.createCollaboratorModeTimer(socket);
