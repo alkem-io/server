@@ -278,7 +278,7 @@ export class ExcalidrawServer {
       });
     });
 
-    this.whiteboardService.EventEmitter.on(SAVED, async (roomID: string) => {
+    this.whiteboardService.EventEmitter.on(SAVED, (roomID: string) => {
       this.logger.verbose?.(
         `Whiteboard '${roomID}' saved`,
         LogContext.EXCALIDRAW_SERVER
