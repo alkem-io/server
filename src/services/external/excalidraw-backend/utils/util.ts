@@ -7,7 +7,8 @@ import { AuthenticationService } from '@core/authentication/authentication.servi
 import { OryDefaultIdentitySchema } from '@core/authentication/ory.default.identity.schema';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
-import { CONNECTION_CLOSED, SocketIoSocket } from '../types';
+import { SocketIoSocket } from '../types/socket.io.socket';
+import { CONNECTION_CLOSED } from '../types/event.names';
 
 /* Sets the user into the context field or closes the connection */
 const authenticate = async (

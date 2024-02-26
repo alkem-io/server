@@ -15,6 +15,7 @@ import {
   SERVER_VOLATILE_BROADCAST,
 } from '../../types/event.names';
 import { getExcalidrawBaseServerOrFail } from '../../utils/get.excalidraw.base.server';
+import { SocketIoServer } from '../../types/socket.io.server';
 import {
   disconnectEventAmqpHandler,
   disconnectingEventAmqpHandler,
@@ -22,7 +23,6 @@ import {
   serverBroadcastEventAmqpHandler,
   serverVolatileBroadcastEventAmqpHandler,
 } from './handlers';
-import { SocketIoServer } from '@services/external/excalidraw-backend/types';
 
 export const ExcalidrawAmqpServerFactoryProvider: FactoryProvider = {
   provide: EXCALIDRAW_SERVER,

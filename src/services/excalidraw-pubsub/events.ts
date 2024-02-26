@@ -5,8 +5,8 @@ import {
   ROOM_USER_CHANGE,
   SERVER_BROADCAST,
   SERVER_VOLATILE_BROADCAST,
-  SocketIoServer,
-} from '@services/external/excalidraw-backend/types';
+} from '../../services/external/excalidraw-backend/types/event.names';
+import { SocketIoServer } from '../../services/external/excalidraw-backend/types/socket.io.server';
 
 export interface IExcalidrawEvent {
   handleEvent(wsServer: SocketIoServer): Promise<void> | void;

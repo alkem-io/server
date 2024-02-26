@@ -1,4 +1,5 @@
 import { setInterval } from 'timers';
+import { debounce } from 'lodash';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Configuration, FrontendApi } from '@ory/kratos-client';
 import {
@@ -14,6 +15,7 @@ import { arrayRandomElement } from '@common/utils';
 import { AuthenticationService } from '@core/authentication/authentication.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { WhiteboardService } from '@domain/common/whiteboard';
+import { WHITEBOARD_CONTENT_UPDATE } from '@domain/common/whiteboard/events/event.names';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import {
@@ -35,14 +37,14 @@ import {
   SERVER_BROADCAST,
   SERVER_VOLATILE_BROADCAST,
   SERVER_SAVE_REQUEST,
-  SocketIoServer,
-  RemoteSocketIoSocket,
   SERVER_SIDE_ROOM_DELETED,
   SAVED,
   IDLE_STATE,
-  SocketIoSocket,
   COLLABORATOR_MODE,
-} from './types';
+} from './types/event.names';
+import { CollaboratorModeReasons } from './types/collaboration.mode.reasons';
+import { RemoteSocketIoSocket, SocketIoSocket } from './types/socket.io.socket';
+import { SocketIoServer } from './types/socket.io.server';
 import { CREATE_ROOM, DELETE_ROOM } from './adapters/adapter.event.names';
 import {
   attachSessionMiddleware,
@@ -50,22 +52,19 @@ import {
   checkSessionMiddleware,
   socketDataInitMiddleware,
 } from './middlewares';
-import { debounce } from 'lodash';
-import { WHITEBOARD_CONTENT_UPDATE } from '@domain/common/whiteboard/events/event.names';
+import {
+  defaultCollaboratorModeTimeout,
+  defaultContributionInterval,
+  defaultSaveInterval,
+  defaultSaveTimeout,
+  minCollaboratorsInRoom,
+  resetCollaboratorModeDebounceWait,
+} from './types/defaults';
 
 type SaveMessageOpts = { timeout: number };
 type RoomTimers = Map<string, NodeJS.Timer>;
 type SocketTimers = Map<string, NodeJS.Timer>;
 type SaveResponse = { success: boolean; errors?: string[] };
-
-const defaultContributionInterval = 600;
-const defaultSaveInterval = 15;
-const defaultSaveTimeout = 10;
-const defaultCollaboratorModeTimeout = 60 * 30; // 30 minutes
-
-const resetCollaboratorModeDebounceWait = 1000;
-// logically it must always be 1, since it's either multi-user or not
-const minCollaboratorsInRoom = 1;
 
 @Injectable()
 export class ExcalidrawServer {
@@ -246,7 +245,7 @@ export class ExcalidrawServer {
           });
         }
         this.logger.verbose?.(
-          `User '${socket.data.agentInfo.userID}' update flag is '${socket.data.update}'`,
+          `User '${socket.data.agentInfo.userID}' read=${socket.data.read}, update=${socket.data.update}`,
           LogContext.EXCALIDRAW_SERVER
         );
       });
@@ -463,7 +462,10 @@ export class ExcalidrawServer {
         `Executing collaborator mode timer for socket '${socket.id}'`,
         LogContext.EXCALIDRAW_SERVER
       );
-      this.wsServer.to(socket.id).emit(COLLABORATOR_MODE, { mode: 'read' });
+      this.wsServer.to(socket.id).emit(COLLABORATOR_MODE, {
+        mode: 'read',
+        reason: CollaboratorModeReasons.INACTIVITY,
+      });
       socket.removeAllListeners(SERVER_BROADCAST);
       socket.data.update = false;
       this.collaboratorModeTimers.delete(socket.id);
