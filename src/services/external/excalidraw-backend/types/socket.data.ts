@@ -12,6 +12,11 @@ export type SocketData = {
    */
   lastContributed: number;
   /***
+   * The timestamp of the last presence received;
+   * These events are received with the 'server-volatile-broadcast' event
+   */
+  lastPresence: number;
+  /***
    * True if the user can read the content and see the interactions of others users
    */
   read: boolean;

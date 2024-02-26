@@ -24,6 +24,7 @@ export type ServerVolatileBroadcastPayload = BasePayload & {
   name?: typeof SERVER_VOLATILE_BROADCAST;
   data: ArrayBuffer;
 };
+
 export type DisconnectingPayload = BasePayload & {
   name?: typeof DISCONNECTING;
 };

@@ -24,7 +24,7 @@ import {
   authorizeWithRoomAndJoinHandler,
   serverVolatileBroadcastEventHandler,
   checkSessionHandler,
-  requestBroadcastEventHandler,
+  idleStateEventHandler,
 } from './utils';
 import {
   CONNECTION,
@@ -37,8 +37,11 @@ import {
   SERVER_SAVE_REQUEST,
   SocketIoServer,
   RemoteSocketIoSocket,
-  SERVER_REQUEST_BROADCAST,
   SERVER_SIDE_ROOM_DELETED,
+  SAVED,
+  IDLE_STATE,
+  SocketIoSocket,
+  COLLABORATOR_MODE,
 } from './types';
 import { CREATE_ROOM, DELETE_ROOM } from './adapters/adapter.event.names';
 import {
@@ -47,14 +50,20 @@ import {
   checkSessionMiddleware,
   socketDataInitMiddleware,
 } from './middlewares';
+import { debounce } from 'lodash';
+import { WHITEBOARD_CONTENT_UPDATE } from '@domain/common/whiteboard/events/event.names';
 
 type SaveMessageOpts = { timeout: number };
 type RoomTimers = Map<string, NodeJS.Timer>;
+type SocketTimers = Map<string, NodeJS.Timer>;
 type SaveResponse = { success: boolean; errors?: string[] };
 
 const defaultContributionInterval = 600;
 const defaultSaveInterval = 15;
 const defaultSaveTimeout = 10;
+const defaultCollaboratorModeTimeout = 60 * 30; // 30 minutes
+
+const resetCollaboratorModeDebounceWait = 1000;
 // logically it must always be 1, since it's either multi-user or not
 const minCollaboratorsInRoom = 1;
 
@@ -62,10 +71,12 @@ const minCollaboratorsInRoom = 1;
 export class ExcalidrawServer {
   private readonly contributionTimers: RoomTimers = new Map();
   private readonly saveTimers: RoomTimers = new Map();
+  private readonly collaboratorModeTimers: SocketTimers = new Map();
 
   private readonly contributionWindowMs: number;
   private readonly saveIntervalMs: number;
   private readonly saveTimeoutMs: number;
+  private readonly collaboratorModeTimeoutMs: number;
   private readonly maxCollaboratorsInRoom: number;
 
   constructor(
@@ -83,6 +94,7 @@ export class ExcalidrawServer {
       contribution_window,
       save_interval,
       save_timeout,
+      collaborator_mode_timeout,
       max_collaborators_in_room,
     } = this.configService.get(ConfigurationTypes.COLLABORATION)?.whiteboards;
 
@@ -90,6 +102,8 @@ export class ExcalidrawServer {
       (contribution_window ?? defaultContributionInterval) * 1000;
     this.saveIntervalMs = (save_interval ?? defaultSaveInterval) * 1000;
     this.saveTimeoutMs = (save_timeout ?? defaultSaveTimeout) * 1000;
+    this.collaboratorModeTimeoutMs =
+      (collaborator_mode_timeout ?? defaultCollaboratorModeTimeout) * 1000;
     this.maxCollaboratorsInRoom = max_collaborators_in_room;
     // don't block the constructor
     this.init().then(() =>
@@ -203,7 +217,9 @@ export class ExcalidrawServer {
         `User '${socket.data.agentInfo.userID}' established connection`,
         LogContext.EXCALIDRAW_SERVER
       );
+
       this.wsServer.to(socket.id).emit(INIT_ROOM);
+
       // first authorize the user with the room
       socket.on(JOIN_ROOM, async (roomID: string) => {
         // this logic could be provided by an entitlement (license) service
@@ -222,10 +238,12 @@ export class ExcalidrawServer {
           this.logger
         );
         if (socket.data.update) {
+          this.startCollaboratorModeTimer(socket);
           // user can broadcast content change events
-          socket.on(SERVER_BROADCAST, (roomID: string, data: ArrayBuffer) =>
-            serverBroadcastEventHandler(roomID, data, socket)
-          );
+          socket.on(SERVER_BROADCAST, (roomID: string, data: ArrayBuffer) => {
+            serverBroadcastEventHandler(roomID, data, socket);
+            this.resetCollaboratorModeTimer(socket);
+          });
         }
         this.logger.verbose?.(
           `User '${socket.data.agentInfo.userID}' update flag is '${socket.data.update}'`,
@@ -247,20 +265,21 @@ export class ExcalidrawServer {
         if (err && err instanceof UnauthorizedException) {
           closeConnection(socket, err.message);
         }
+        this.deleteCollaboratorModeTimerForSocket(socket.id);
       });
       // attach socket handlers conditionally on authorization
       // client events ONLY
       // user can broadcast presence
       socket.on(
         SERVER_VOLATILE_BROADCAST,
-        (roomID: string, data: ArrayBuffer) =>
-          serverVolatileBroadcastEventHandler(roomID, data, socket)
+        (roomID: string, data: ArrayBuffer) => {
+          serverVolatileBroadcastEventHandler(roomID, data, socket);
+          this.resetCollaboratorModeTimer(socket);
+        }
       );
-      // A channel where all viewers of the whiteboard can broadcast messages.
-      // Currently used to send requests for missing data, to pull from other whiteboard collaborators.
-      // This channel is needed because not all viewers has 'write' privilege, so they can't use the channel where updates are broadcast.
-      socket.on(SERVER_REQUEST_BROADCAST, (roomID: string, data: ArrayBuffer) =>
-        requestBroadcastEventHandler(roomID, data, socket)
+
+      socket.on(IDLE_STATE, (roomID: string, data: ArrayBuffer) =>
+        idleStateEventHandler(roomID, data, socket)
       );
 
       socket.on(
@@ -268,8 +287,22 @@ export class ExcalidrawServer {
         async () =>
           await disconnectingEventHandler(this.wsServer, socket, this.logger)
       );
-      socket.on(DISCONNECT, () => disconnectEventHandler(socket));
+      socket.on(DISCONNECT, () => {
+        disconnectEventHandler(socket);
+        this.deleteCollaboratorModeTimerForSocket(socket.id);
+      });
     });
+
+    this.whiteboardService.eventEmitter.on(
+      WHITEBOARD_CONTENT_UPDATE,
+      (roomID: string) => {
+        this.logger.verbose?.(
+          `Whiteboard '${roomID}' saved`,
+          LogContext.EXCALIDRAW_SERVER
+        );
+        this.wsServer.to(roomID).emit(SAVED);
+      }
+    );
   }
 
   private startContributionEventTimer(roomId: string) {
@@ -419,6 +452,56 @@ export class ExcalidrawServer {
       this.saveTimers.delete(roomId);
       this.logger.verbose?.(
         `Deleted auto save timer for room '${roomId}'`,
+        LogContext.EXCALIDRAW_SERVER
+      );
+    }
+  }
+
+  private createCollaboratorModeTimer(socket: SocketIoSocket) {
+    return setTimeout(async () => {
+      this.logger.verbose?.(
+        `Executing collaborator mode timer for socket '${socket.id}'`,
+        LogContext.EXCALIDRAW_SERVER
+      );
+      this.wsServer.to(socket.id).emit(COLLABORATOR_MODE, { mode: 'read' });
+      socket.removeAllListeners(SERVER_BROADCAST);
+      socket.data.update = false;
+      this.collaboratorModeTimers.delete(socket.id);
+    }, this.collaboratorModeTimeoutMs);
+  }
+
+  private startCollaboratorModeTimer(socket: SocketIoSocket) {
+    let timer = this.collaboratorModeTimers.get(socket.id);
+    if (timer) {
+      return;
+    }
+    timer = this.createCollaboratorModeTimer(socket);
+    this.collaboratorModeTimers.set(socket.id, timer);
+    this.logger.verbose?.(
+      `Created collaborator mode timer for socket '${socket.id}'`,
+      LogContext.EXCALIDRAW_SERVER
+    );
+  }
+
+  private resetCollaboratorModeTimer = debounce(
+    (socket: SocketIoSocket) => {
+      const timer = this.collaboratorModeTimers.get(socket.id);
+      if (timer) {
+        timer.refresh();
+      }
+    },
+    resetCollaboratorModeDebounceWait,
+    { leading: true, trailing: false }
+  );
+
+  private deleteCollaboratorModeTimerForSocket(socketId: string) {
+    const timer = this.collaboratorModeTimers.get(socketId);
+    if (timer) {
+      clearTimeout(timer);
+      this.collaboratorModeTimers.delete(socketId);
+
+      this.logger.verbose?.(
+        `Deleted collaborator mode timer for socket '${socketId}'`,
         LogContext.EXCALIDRAW_SERVER
       );
     }
