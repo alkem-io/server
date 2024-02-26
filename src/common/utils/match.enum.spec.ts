@@ -8,7 +8,7 @@ describe('matchEnumString function', () => {
     const matchResult = matchEnumString(LicenseFeatureFlagName, inputString);
 
     expect(matchResult).toEqual({
-      key: 'WHITEBOART_MULTI_USER',
+      key: 'WHITEBOARD_MULTI_USER',
       value: 'whiteboard-multi-user',
     });
   });
