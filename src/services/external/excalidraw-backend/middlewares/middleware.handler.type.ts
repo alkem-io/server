@@ -1,5 +1,5 @@
 import { ExtendedError } from 'socket.io/dist/namespace';
-import { SocketIoSocket } from '@services/external/excalidraw-backend/types';
+import { SocketIoSocket } from '../types/socket.io.socket';
 
 export type SimpleMiddlewareHandler = (
   socket: SocketIoSocket,

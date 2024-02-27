@@ -408,7 +408,18 @@ export class SpaceService {
     return notExist.length > 0 ? notExist : true;
   }
 
-  async getSpaces(
+  async getSpacesSorted(
+    args: SpacesQueryArgs,
+    options?: FindManyOptions<Space>
+  ): Promise<ISpace[]> {
+    const spaces = await this.getSpacesUnsorted(args, options);
+
+    if (spaces.length === 0) return spaces;
+
+    return await this.orderSpacesDefault(spaces);
+  }
+
+  async getSpacesUnsorted(
     args: SpacesQueryArgs,
     options?: FindManyOptions<Space>
   ): Promise<ISpace[]> {
@@ -417,18 +428,35 @@ export class SpaceService {
     );
     // Load the spaces
     let spaces: ISpace[];
-    if (args && args.IDs)
+    if (args && args.IDs) {
       spaces = await this.spaceRepository.find({
-        where: { id: In(args.IDs) },
+        where: {
+          id: In(args.IDs),
+          license: {
+            visibility: In(visibilities),
+          },
+        },
         ...options,
       });
-    else spaces = await this.spaceRepository.find();
+    } else {
+      spaces = await this.spaceRepository.find({
+        where: {
+          license: {
+            visibility: In(visibilities),
+          },
+        },
+        ...options,
+      });
+    }
 
     if (spaces.length === 0) return [];
 
+    return spaces;
+  }
+
+  public async orderSpacesDefault(spaces: ISpace[]): Promise<ISpace[]> {
     // Get the order to return the data in
-    const sortedIDs = await this.getFilteredSpacesSortOrderDefault(
-      visibilities,
+    const sortedIDs = await this.getSpacesWithSortOrderDefault(
       spaces.flatMap(x => x.id)
     );
     const spacesResult: ISpace[] = [];
@@ -474,9 +502,8 @@ export class SpaceService {
     return this.spaceRepository.find(options);
   }
 
-  private async getFilteredSpacesSortOrderDefault(
-    allowedVisibilities: SpaceVisibility[],
-    IDs?: string[]
+  private async getSpacesWithSortOrderDefault(
+    IDs: string[]
   ): Promise<string[]> {
     // Then load data to do the sorting
     const spacesDataForSorting = await this.spaceRepository
@@ -488,21 +515,11 @@ export class SpaceService {
       .whereInIds(IDs)
       .getMany();
 
-    return this.filterAndSortSpaces(spacesDataForSorting, allowedVisibilities);
+    return this.sortSpacesDefault(spacesDataForSorting);
   }
 
-  private filterAndSortSpaces(
-    spacesData: Space[],
-    allowedVisibilities: SpaceVisibility[]
-  ): string[] {
-    const visibleSpaces = spacesData.filter(space => {
-      return this.spacesFilterService.isVisible(
-        space.license?.visibility,
-        allowedVisibilities
-      );
-    });
-
-    const sortedSpaces = visibleSpaces.sort((a, b) => {
+  private sortSpacesDefault(spacesData: Space[]): string[] {
+    const sortedSpaces = spacesData.sort((a, b) => {
       const visibilityA = a.license?.visibility;
       const visibilityB = b.license?.visibility;
       if (
@@ -765,7 +782,11 @@ export class SpaceService {
     if (args && args.IDs) {
       {
         spaceWithChallenges = await this.getSpaceOrFail(space.id, {
-          relations: { challenges: true },
+          relations: {
+            challenges: {
+              profile: true,
+            },
+          },
         });
         spaceWithChallenges.challenges = spaceWithChallenges.challenges?.filter(
           c => args.IDs?.includes(c.id)
@@ -773,7 +794,11 @@ export class SpaceService {
       }
     } else
       spaceWithChallenges = await this.getSpaceOrFail(space.id, {
-        relations: { challenges: true },
+        relations: {
+          challenges: {
+            profile: true,
+          },
+        },
       });
 
     const challenges = spaceWithChallenges.challenges;
@@ -792,7 +817,9 @@ export class SpaceService {
 
     // Sort the challenges base on their display name
     const sortedChallenges = limitAndShuffled.sort((a, b) =>
-      a.nameID > b.nameID ? 1 : -1
+      a.profile.displayName.toLowerCase() > b.profile.displayName.toLowerCase()
+        ? 1
+        : -1
     );
     return sortedChallenges;
   }

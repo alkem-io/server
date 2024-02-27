@@ -25,7 +25,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { CommunityService } from '@domain/community/community/community.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, Repository } from 'typeorm';
+import { FindOneOptions, IsNull, Not, Repository } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IOrganization } from '@domain/community/organization';
 import { ICommunity } from '@domain/community/community';
@@ -504,7 +504,11 @@ export class ChallengeService {
     args?: LimitAndShuffleIdsQueryArgs
   ): Promise<IOpportunity[]> {
     const challenge = await this.getChallengeOrFail(challengeId, {
-      relations: { opportunities: true },
+      relations: {
+        opportunities: {
+          profile: true,
+        },
+      },
     });
 
     const { IDs, limit, shuffle } = args ?? {};
@@ -531,7 +535,9 @@ export class ChallengeService {
 
     // Sort the opportunities base on their display name
     const sortedOpportunities = limitAndShuffled.sort((a, b) =>
-      a.nameID.toLowerCase() > b.nameID.toLowerCase() ? 1 : -1
+      a.profile.displayName.toLowerCase() > b.profile.displayName.toLowerCase()
+        ? 1
+        : -1
     );
     return sortedOpportunities;
   }
@@ -668,7 +674,10 @@ export class ChallengeService {
   }
 
   async getChallengesInSpaceCount(spaceID: string): Promise<number> {
-    const count = await this.challengeRepository.countBy({ spaceID: spaceID });
+    const count = await this.challengeRepository.countBy({
+      spaceID: spaceID,
+      parentSpace: Not(IsNull()),
+    });
     return count;
   }
 

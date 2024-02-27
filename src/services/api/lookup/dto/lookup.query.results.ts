@@ -1,5 +1,5 @@
 import { ObjectType } from '@nestjs/graphql';
-import { IWhiteboard } from '@domain/common/whiteboard';
+import { IWhiteboard } from '@domain/common/whiteboard/types';
 import { ICommunity } from '@domain/community/community';
 import { ICollaboration } from '@domain/collaboration/collaboration';
 import { IContext } from '@domain/context';
@@ -10,7 +10,6 @@ import { IInnovationFlow } from '@domain/challenge/innovation-flow/innovation.fl
 import { IPost } from '@domain/collaboration/post/post.interface';
 import { IWhiteboardTemplate } from '@domain/template/whiteboard-template/whiteboard.template.interface';
 import { IInnovationFlowTemplate } from '@domain/template/innovation-flow-template/innovation.flow.template.interface';
-import { IWhiteboardRt } from '@domain/common/whiteboard-rt/whiteboard.rt.interface';
 
 @ObjectType()
 export class LookupQueryResults {
@@ -25,6 +24,5 @@ export class LookupQueryResults {
   innovationFlow!: IInnovationFlow;
   InnovationFlowTemplate!: IInnovationFlowTemplate;
   whiteboard!: IWhiteboard;
-  whiteboardRt!: IWhiteboardRt;
   whiteboardTemplate!: IWhiteboardTemplate;
 }

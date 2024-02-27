@@ -39,11 +39,10 @@ import {
   UpdateProfileInput,
 } from '@domain/common/profile/dto';
 import { ApplicationEventInput } from '@domain/community/application/dto/application.dto.event';
-import { WhiteboardCheckoutEventInput } from '@domain/common/whiteboard-checkout/dto/whiteboard.checkout.dto.event';
 import { OrganizationVerificationEventInput } from '@domain/community/organization-verification/dto/organization.verification.dto.event';
 import { RoomSendMessageInput } from '@domain/communication/room/dto/room.dto.send.message';
 import { UpdatePostInput } from '@domain/collaboration/post/dto/post.dto.update';
-import { UpdateWhiteboardDirectInput } from '@domain/common/whiteboard/dto/whiteboard.dto.update.direct';
+import { UpdateWhiteboardDirectInput } from '@domain/common/whiteboard/types';
 import { UpdateDiscussionInput } from '@domain/communication/discussion/dto/discussion.dto.update';
 import { UpdateEcosystemModelInput } from '@domain/context/ecosystem-model/dto/ecosystem-model.dto.update';
 import { SendMessageOnCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.message.created';
@@ -89,6 +88,7 @@ import {
   CreateLinkInput,
   UpdateLinkInput,
 } from '@domain/collaboration/link/dto';
+import { UpdateUserPlatformSettingsInput } from '@domain/community/user/dto/user.dto.update.platform.settings';
 
 export class BaseHandler extends AbstractHandler {
   public async handle(
@@ -97,7 +97,6 @@ export class BaseHandler extends AbstractHandler {
   ): Promise<ValidationError[]> {
     const types: Function[] = [
       ApplicationEventInput,
-      WhiteboardCheckoutEventInput,
       InnovationFlowEvent,
       UpdateInnovationFlowInput,
       UpdateInnovationFlowLifecycleTemplateInput,
@@ -147,6 +146,7 @@ export class BaseHandler extends AbstractHandler {
       UpdateCalendarEventInput,
       UpdateUserGroupInput,
       UpdateUserInput,
+      UpdateUserPlatformSettingsInput,
       UpdateProfileInput,
       UpdateProjectInput,
       UpdateWhiteboardDirectInput,

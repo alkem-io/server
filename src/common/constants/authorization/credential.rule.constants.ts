@@ -6,8 +6,6 @@ export const CREDENTIAL_RULE_CHALLENGE_MEMBER_READ =
   'credentialRule-challengeMemberRead';
 export const CREDENTIAL_RULE_CHALLENGE_CREATE_OPPORTUNITY =
   'credentialRule-challengeCreateOpportunity';
-export const CREDENTIAL_RULE_CHALLENGE_FILE_UPLOAD =
-  'credentialRule-challengeMemberFileUpload';
 export const CREDENTIAL_RULE_CHALLENGE_SPACE_MEMBER_JOIN =
   'credentialRule-challengeSpaceMemberJoin';
 export const CREDENTIAL_RULE_CHALLENGE_SPACE_MEMBER_APPLY =
@@ -21,11 +19,12 @@ export const CREDENTIAL_RULE_SPACE_MEMBERS_READ =
   'credentialRule-spaceMembersRead';
 export const CREDENTIAL_RULE_SPACE_HOST_ASSOCIATES_JOIN =
   'credentialRule-spaceHostAssociatesJoin';
-export const CREDENTIAL_RULE_SPACE_FILE_UPLOAD =
-  'credentialRule-spaceMemberFileUpload';
 export const CREDENTIAL_RULE_CONTRIBUTION_CREATED_BY =
   'credentialRule-contributionCreatedBy';
+export const CREDENTIAL_RULE_CONTRIBUTION_CREATED_BY_DELETE =
+  'credentialRule-contributionCreatedByDelete';
 export const CREDENTIAL_RULE_POST_CREATED_BY = 'credentialRule-postCreatedBy';
+export const CREDENTIAL_RULE_LINK_CREATED_BY = 'credentialRule-linkCreatedBy';
 export const CREDENTIAL_RULE_POST_ADMINS_MOVE = 'credentialRule-postAdminsMove';
 export const CREDENTIAL_RULE_CONTRIBUTION_ADMINS_MOVE =
   'credentialRule-contributionAdminsMove';
@@ -39,14 +38,10 @@ export const CREDENTIAL_RULE_OPPORTUNITY_MEMBER =
   'credentialRule-opportunityMember';
 export const CREDENTIAL_RULE_RELATION_CREATED_BY =
   'credentialRule-relationCreatedBy';
-export const CREDENTIAL_RULE_WHITEBOARD_CHECKOUT_LOCKED_BY =
-  'credentialRule-whiteboardCheckoutLockedBy';
 export const CREDENTIAL_RULE_WHITEBOARD_CREATED_BY =
   'credentialRule-whiteboardCreatedBy';
 export const CREDENTIAL_RULE_WHITEBOARD_RT_ACCESS =
-  'credentialRule-whiteboardRtAccess';
-export const CREDENTIAL_RULE_WHITEBOARD_LOCKED_BY =
-  'credentialRule-whiteboardLockedBy';
+  'credentialRule-whiteboardRtAccess'; // todo
 export const CREDENTIAL_RULE_ROOM_MESSAGE_SENDER =
   'credentialRule-roomMessageSender';
 export const CREDENTIAL_RULE_ROOM_REACTION_SENDER =

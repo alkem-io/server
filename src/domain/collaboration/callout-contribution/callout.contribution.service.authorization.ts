@@ -3,7 +3,7 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CalloutContributionService } from './callout.contribution.service';
 import { ICalloutContribution } from './callout.contribution.interface';
-import { WhiteboardAuthorizationService } from '@domain/common/whiteboard/whiteboard.service.authorization';
+import { WhiteboardAuthorizationService } from '@domain/common/whiteboard';
 import { PostAuthorizationService } from '../post/post.service.authorization';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { EntityNotInitializedException } from '@common/exceptions';
@@ -15,6 +15,7 @@ import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 import {
   CREDENTIAL_RULE_CONTRIBUTION_ADMINS_MOVE,
   CREDENTIAL_RULE_CONTRIBUTION_CREATED_BY,
+  CREDENTIAL_RULE_CONTRIBUTION_CREATED_BY_DELETE,
 } from '@common/constants';
 import { LinkAuthorizationService } from '../link/link.service.authorization';
 
@@ -78,7 +79,8 @@ export class CalloutContributionAuthorizationService {
       contribution.link =
         await this.linkAuthorizationService.applyAuthorizationPolicy(
           contribution.link,
-          contribution.authorization
+          contribution.authorization,
+          contribution.createdBy
         );
     }
 
@@ -99,13 +101,12 @@ export class CalloutContributionAuthorizationService {
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
     if (contribution.createdBy) {
-      const manageCreatedPostPolicy =
+      const manageContributionPolicy =
         this.authorizationPolicyService.createCredentialRule(
           [
             AuthorizationPrivilege.CREATE,
             AuthorizationPrivilege.READ,
             AuthorizationPrivilege.UPDATE,
-            AuthorizationPrivilege.DELETE,
           ],
           [
             {
@@ -115,7 +116,21 @@ export class CalloutContributionAuthorizationService {
           ],
           CREDENTIAL_RULE_CONTRIBUTION_CREATED_BY
         );
-      newRules.push(manageCreatedPostPolicy);
+      newRules.push(manageContributionPolicy);
+
+      const manageContributionDeletePolicy =
+        this.authorizationPolicyService.createCredentialRule(
+          [AuthorizationPrivilege.DELETE],
+          [
+            {
+              type: AuthorizationCredential.USER_SELF_MANAGEMENT,
+              resourceID: contribution.createdBy,
+            },
+          ],
+          CREDENTIAL_RULE_CONTRIBUTION_CREATED_BY_DELETE
+        );
+      manageContributionDeletePolicy.cascade = false; // do not cascade delete to children
+      newRules.push(manageContributionDeletePolicy);
     }
 
     // Allow space admins to move post

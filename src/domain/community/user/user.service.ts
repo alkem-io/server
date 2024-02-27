@@ -65,6 +65,7 @@ import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.a
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { AvatarService } from '@domain/common/visual/avatar.service';
 import { DocumentService } from '@domain/storage/document/document.service';
+import { UpdateUserPlatformSettingsInput } from './dto/user.dto.update.platform.settings';
 @Injectable()
 export class UserService {
   cacheOptions: CachingConfig = { ttl: 300 };
@@ -157,7 +158,7 @@ export class UserService {
       this.createPreferenceDefaults()
     );
 
-    const response = await this.userRepository.save(user);
+    const response = await this.save(user);
     // all users need to be registered for communications at the absolute beginning
     // there are cases where a user could be messaged before they actually log-in
     // which will result in failure in communication (either missing user or unsent messages)
@@ -174,7 +175,7 @@ export class UserService {
 
           response.communicationID = communicationID;
 
-          await this.userRepository.save(response);
+          await this.save(response);
           await this.setUserCache(response);
         } catch (e: any) {
           this.logger.error(e, e?.stack, LogContext.USER);
@@ -337,7 +338,7 @@ export class UserService {
 
       user.profile.visuals = [visual];
       user.profile.storageBucket.documents = [document];
-      user = await this.saveUser(user);
+      user = await this.save(user);
     }
 
     return user;
@@ -367,10 +368,6 @@ export class UserService {
         `The provided nameID is already taken: ${nameID}`,
         LogContext.COMMUNITY
       );
-  }
-
-  async saveUser(user: IUser): Promise<IUser> {
-    return await this.userRepository.save(user);
   }
 
   async deleteUser(deleteData: DeleteUserInput): Promise<IUser> {
@@ -466,7 +463,7 @@ export class UserService {
 
       user.communicationID = communicationID;
 
-      await this.userRepository.save(user);
+      await this.save(user);
       // need to update the cache in case the user is already in it
       // but the previous registration attempt has failed
       await this.setUserCache(user);
@@ -545,12 +542,17 @@ export class UserService {
 
       user.communicationID = communicationID;
 
-      await this.userRepository.save(user);
+      await this.save(user);
       await this.setUserCache(user);
     }
 
     return user;
   }
+
+  async save(user: IUser): Promise<IUser> {
+    return await this.userRepository.save(user);
+  }
+
   async isRegisteredUser(email: string): Promise<boolean> {
     const user = await this.userRepository.findOneBy({ email: email });
     if (user) return true;
@@ -758,9 +760,40 @@ export class UserService {
       );
     }
 
-    const response = await this.userRepository.save(user);
+    const response = await this.save(user);
     await this.setUserCache(response);
     return response;
+  }
+
+  public async updateUserPlatformSettings(
+    updateData: UpdateUserPlatformSettingsInput
+  ): Promise<IUser> {
+    const user = await this.getUserOrFail(updateData.userID);
+
+    if (updateData.nameID) {
+      if (updateData.nameID !== user.nameID) {
+        // updating the nameID, check new value is allowed
+        await this.isNameIdAvailableOrFail(updateData.nameID);
+
+        user.nameID = updateData.nameID;
+      }
+    }
+
+    if (updateData.email) {
+      if (updateData.email !== user.email) {
+        const userCheck = await this.isRegisteredUser(updateData.email);
+        if (userCheck) {
+          throw new ValidationException(
+            `User profile with the specified email (${updateData.email}) already exists`,
+            LogContext.COMMUNITY
+          );
+        }
+
+        user.email = updateData.email;
+      }
+    }
+
+    return await this.save(user);
   }
 
   async getAgent(userID: string): Promise<IAgent> {

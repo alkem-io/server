@@ -30,7 +30,6 @@ import { CalloutFramingService } from '../callout-framing/callout.framing.servic
 import { ICalloutFraming } from '../callout-framing/callout.framing.interface';
 import { CalloutContributionDefaultsService } from '../callout-contribution-defaults/callout.contribution.defaults.service';
 import { CalloutContributionPolicyService } from '../callout-contribution-policy/callout.contribution.policy.service';
-import { AgentInfo } from '@core/authentication';
 import { ICalloutContribution } from '../callout-contribution/callout.contribution.interface';
 import { CreateContributionOnCalloutInput } from './dto/callout.dto.create.contribution';
 import { CalloutContributionService } from '../callout-contribution/callout.contribution.service';
@@ -141,16 +140,6 @@ export class CalloutService {
         LogContext.COLLABORATION
       );
     }
-
-    if (
-      calloutData.type == CalloutType.WHITEBOARD_RT &&
-      !calloutData.framing.whiteboardRt
-    ) {
-      throw new ValidationException(
-        'Please provide a whiteboard for real time',
-        LogContext.COLLABORATION
-      );
-    }
   }
 
   private async getStorageAggregator(
@@ -217,8 +206,7 @@ export class CalloutService {
   }
 
   public async updateCallout(
-    calloutUpdateData: UpdateCalloutInput,
-    agentInfo: AgentInfo
+    calloutUpdateData: UpdateCalloutInput
   ): Promise<ICallout> {
     const callout = await this.getCalloutOrFail(calloutUpdateData.ID, {
       relations: {
@@ -238,8 +226,7 @@ export class CalloutService {
     if (calloutUpdateData.framing) {
       callout.framing = await this.calloutFramingService.updateCalloutFraming(
         callout.framing,
-        calloutUpdateData.framing,
-        agentInfo
+        calloutUpdateData.framing
       );
     }
 
@@ -333,9 +320,6 @@ export class CalloutService {
             tagsets: true,
           },
           whiteboard: {
-            profile: true,
-          },
-          whiteboardRt: {
             profile: true,
           },
         },

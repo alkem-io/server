@@ -1,5 +1,5 @@
 import { UnauthorizedException } from '@nestjs/common';
-import { SocketIoSocket } from '../types';
+import { SocketIoSocket } from '../types/socket.io.socket';
 import { checkSession } from '../utils';
 import { SimpleMiddlewareHandler } from './middleware.handler.type';
 
