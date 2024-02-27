@@ -35,7 +35,7 @@ export class LicenseService {
 
     // Set the feature flags
     const whiteboardRtFeatureFlag: CreateFeatureFlagInput = {
-      name: LicenseFeatureFlagName.WHITEBOART_RT,
+      name: LicenseFeatureFlagName.WHITEBOARD_MULTI_USER,
       enabled: false,
     };
     const calloutToCalloutTemplateFeatureFlag: CreateFeatureFlagInput = {

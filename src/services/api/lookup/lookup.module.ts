@@ -3,7 +3,6 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { LookupService } from './lookup.service';
 import { LookupResolverQueries } from './lookup.resolver.queries';
 import { LookupResolverFields } from './lookup.resolver.fields';
-import { WhiteboardModule } from '@domain/common/whiteboard/whiteboard.module';
 import { CommunityModule } from '@domain/community/community/community.module';
 import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
 import { WhiteboardTemplateModule } from '@domain/template/whiteboard-template/whiteboard.template.module';
@@ -21,7 +20,7 @@ import { InvitationModule } from '@domain/community/invitation/invitation.module
 import { ChallengeModule } from '@domain/challenge/challenge/challenge.module';
 import { OpportunityModule } from '@domain/collaboration/opportunity/opportunity.module';
 import { CalloutTemplateModule } from '@domain/template/callout-template/callout.template.module';
-import { WhiteboardRtModule } from '@domain/common/whiteboard-rt';
+import { WhiteboardModule } from '@domain/common/whiteboard';
 import { DocumentModule } from '@domain/storage/document/document.module';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
@@ -37,7 +36,6 @@ import { UserModule } from '@domain/community/user/user.module';
     ContextModule,
     CalloutTemplateModule,
     WhiteboardModule,
-    WhiteboardRtModule,
     WhiteboardTemplateModule,
     InnovationFlowModule,
     InnovationFlowTemplateModule,

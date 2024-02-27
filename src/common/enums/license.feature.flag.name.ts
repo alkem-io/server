@@ -1,7 +1,7 @@
 import { registerEnumType } from '@nestjs/graphql';
 
 export enum LicenseFeatureFlagName {
-  WHITEBOART_RT = 'whiteboard-rt',
+  WHITEBOARD_MULTI_USER = 'whiteboard-multi-user',
   CALLOUT_TO_CALLOUT_TEMPLATE = 'callout-to-callout-template',
 }
 

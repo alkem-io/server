@@ -9,7 +9,6 @@ export enum ProfileType {
   CALLOUT_FRAMING = 'callout-framing',
   POST = 'post',
   CONTRIBUTION_LINK = 'contribution-link',
-  WHITEBOARD_RT = 'whiteboard-rt',
   WHITEBOARD = 'whiteboard',
   DISCUSSION = 'discussion',
   ORGANIZATION = 'organization',

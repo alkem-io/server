@@ -24,7 +24,6 @@ import { NotificationInputCalloutPublished } from '@services/adapters/notificati
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { UpdateCollaborationCalloutsSortOrderInput } from './dto/collaboration.dto.update.callouts.sort.order';
-import { CalloutType } from '@common/enums/callout.type';
 
 @Resolver()
 export class CollaborationResolverMutations {
@@ -51,13 +50,13 @@ export class CollaborationResolverMutations {
   ): Promise<ICollaboration> {
     const collaboration =
       await this.collaborationService.getCollaborationOrFail(deleteData.ID);
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       collaboration.authorization,
       AuthorizationPrivilege.DELETE,
       `delete collaboration: ${collaboration.id}`
     );
-    return await this.collaborationService.deleteCollaboration(deleteData.ID);
+    return this.collaborationService.deleteCollaboration(deleteData.ID);
   }
 
   @UseGuards(GraphqlGuard)
@@ -93,7 +92,7 @@ export class CollaborationResolverMutations {
       `create relation on collaboration: ${collaboration.id}`
     );
     // Load the authorization policy again to avoid the temporary extension above
-    const collaboriationAuthorizationPolicy =
+    const collaborationAuthorizationPolicy =
       await this.authorizationPolicyService.getAuthorizationPolicyOrFail(
         authorization.id
       );
@@ -110,9 +109,9 @@ export class CollaborationResolverMutations {
     };
     await this.notificationAdapter.collaborationInterest(notificationInput);
 
-    return await this.relationAuthorizationService.applyAuthorizationPolicy(
+    return this.relationAuthorizationService.applyAuthorizationPolicy(
       relation,
-      collaboriationAuthorizationPolicy,
+      collaborationAuthorizationPolicy,
       agentInfo.userID
     );
   }
@@ -130,15 +129,6 @@ export class CollaborationResolverMutations {
       await this.collaborationService.getCollaborationOrFail(
         calloutData.collaborationID
       );
-
-    if (calloutData.type === CalloutType.WHITEBOARD_RT) {
-      this.authorizationService.grantAccessOrFail(
-        agentInfo,
-        collaboration.authorization,
-        AuthorizationPrivilege.CREATE_WHITEBOARD_RT,
-        `create callout type '${CalloutType.WHITEBOARD_RT}' on collaboration: ${collaboration.id}`
-      );
-    }
 
     this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -223,12 +213,9 @@ export class CollaborationResolverMutations {
       `update callouts sort order on collaboration: ${collaboration.id}`
     );
 
-    const updatedCallouts =
-      await this.collaborationService.updateCalloutsSortOrder(
-        collaboration,
-        sortOrderData
-      );
-
-    return updatedCallouts;
+    return this.collaborationService.updateCalloutsSortOrder(
+      collaboration,
+      sortOrderData
+    );
   }
 }

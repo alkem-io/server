@@ -22,9 +22,9 @@ import {
   CREDENTIAL_RULE_COLLABORATION_CONTRIBUTORS,
   POLICY_RULE_COLLABORATION_CREATE,
   POLICY_RULE_CALLOUT_CONTRIBUTE,
-  POLICY_RULE_COLLABORATION_WHITEBOARD_RT_CREATE,
+  POLICY_RULE_COLLABORATION_WHITEBOARD_CREATE,
   CREDENTIAL_RULE_TYPES_CALLOUT_SAVE_AS_TEMPLATE,
-  POLICY_RULE_COLLABORATION_WHITEBOARD_RT_CONTRIBUTORS_CREATE,
+  POLICY_RULE_COLLABORATION_WHITEBOARD_CONTRIBUTORS_CREATE,
 } from '@common/constants';
 import { CommunityRole } from '@common/enums/community.role';
 import { TimelineAuthorizationService } from '@domain/timeline/timeline/timeline.service.authorization';
@@ -261,13 +261,13 @@ export class CollaborationAuthorizationService {
 
     const whiteboardRtEnabled = await this.licenseService.isFeatureFlagEnabled(
       license,
-      LicenseFeatureFlagName.WHITEBOART_RT
+      LicenseFeatureFlagName.WHITEBOARD_MULTI_USER
     );
     if (whiteboardRtEnabled) {
       const createWhiteboardRtPrivilege = new AuthorizationPolicyRulePrivilege(
-        [AuthorizationPrivilege.CREATE_WHITEBOARD_RT],
+        [AuthorizationPrivilege.CREATE_WHITEBOARD_RT], // todo
         AuthorizationPrivilege.CREATE,
-        POLICY_RULE_COLLABORATION_WHITEBOARD_RT_CREATE
+        POLICY_RULE_COLLABORATION_WHITEBOARD_CREATE
       );
       privilegeRules.push(createWhiteboardRtPrivilege);
     }
@@ -289,7 +289,7 @@ export class CollaborationAuthorizationService {
           new AuthorizationPolicyRulePrivilege(
             [AuthorizationPrivilege.CREATE_WHITEBOARD_RT],
             AuthorizationPrivilege.CONTRIBUTE,
-            POLICY_RULE_COLLABORATION_WHITEBOARD_RT_CONTRIBUTORS_CREATE
+            POLICY_RULE_COLLABORATION_WHITEBOARD_CONTRIBUTORS_CREATE
           );
         privilegeRules.push(createWhiteboardRtContributePrivilege);
       }

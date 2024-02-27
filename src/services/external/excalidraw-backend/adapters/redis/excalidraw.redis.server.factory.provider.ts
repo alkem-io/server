@@ -12,7 +12,7 @@ import { BaseException } from '@common/exceptions/base.exception';
 import { APP_ID, EXCALIDRAW_SERVER } from '@constants/index';
 import { AuthenticationService } from '@core/authentication/authentication.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { WhiteboardRtService } from '@domain/common/whiteboard-rt';
+import { WhiteboardService } from '@domain/common/whiteboard';
 import { getExcalidrawBaseServerOrFail } from '../../utils/get.excalidraw.base.server';
 
 export const ExcalidrawRedisServerFactoryProvider: FactoryProvider = {
@@ -23,7 +23,7 @@ export const ExcalidrawRedisServerFactoryProvider: FactoryProvider = {
     ConfigService,
     AuthenticationService,
     AuthorizationService,
-    WhiteboardRtService,
+    WhiteboardService,
   ],
   useFactory: async (
     appId: string,

@@ -2,29 +2,37 @@ import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Profiling } from '@src/common/decorators';
-import { IWhiteboardCheckout } from '../whiteboard-checkout/whiteboard.checkout.interface';
-import { IWhiteboard } from './whiteboard.interface';
 import { UseGuards } from '@nestjs/common/decorators/core/use-guards.decorator';
 import { GraphqlGuard } from '@src/core/authorization/graphql.guard';
 import { IUser } from '@domain/community/user/user.interface';
 import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions';
-import { IProfile } from '../profile/profile.interface';
 import { Loader } from '@core/dataloader/decorators';
+import { IProfile } from '../profile/profile.interface';
+import { IWhiteboard } from './whiteboard.interface';
 import {
-  CheckoutLoaderCreator,
   ProfileLoaderCreator,
   UserLoaderCreator,
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
-import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
+import { Whiteboard } from './whiteboard.entity';
+import { WhiteboardService } from './whiteboard.service';
 
 @Resolver(() => IWhiteboard)
 export class WhiteboardResolverFields {
   constructor(
+    private whiteboardService: WhiteboardService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
+
+  @ResolveField(() => Boolean, {
+    nullable: false,
+    description: 'Whether the Whiteboard is multi-user enabled on Space level.',
+  })
+  public isMultiUser(@Parent() whiteboard: IWhiteboard): Promise<boolean> {
+    return this.whiteboardService.isMultiUser(whiteboard.id);
+  }
 
   @ResolveField('createdBy', () => IUser, {
     nullable: true,
@@ -75,19 +83,6 @@ export class WhiteboardResolverFields {
     @Loader(ProfileLoaderCreator, { parentClassRef: Whiteboard })
     loader: ILoader<IProfile>
   ): Promise<IProfile> {
-    return loader.load(whiteboard.id);
-  }
-
-  @ResolveField('checkout', () => IWhiteboardCheckout, {
-    nullable: true,
-    description: 'The checkout out state of this Whiteboard.',
-  })
-  @Profiling.api
-  async checkout(
-    @Parent() whiteboard: IWhiteboard,
-    @Loader(CheckoutLoaderCreator, { parentClassRef: Whiteboard })
-    loader: ILoader<IWhiteboardCheckout>
-  ) {
     return loader.load(whiteboard.id);
   }
 }

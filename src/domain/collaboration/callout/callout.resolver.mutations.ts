@@ -84,13 +84,13 @@ export class CalloutResolverMutations {
     @Args('calloutData') calloutData: UpdateCalloutInput
   ): Promise<ICallout> {
     const callout = await this.calloutService.getCalloutOrFail(calloutData.ID);
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       callout.authorization,
       AuthorizationPrivilege.UPDATE,
       `update callout: ${callout.id}`
     );
-    return await this.calloutService.updateCallout(calloutData, agentInfo);
+    return await this.calloutService.updateCallout(calloutData);
   }
 
   @UseGuards(GraphqlGuard)

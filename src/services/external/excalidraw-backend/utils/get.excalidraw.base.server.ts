@@ -9,7 +9,7 @@ import {
   LogContext,
 } from '@common/enums';
 import { BaseException } from '@common/exceptions/base.exception';
-import { SocketIoServer } from '../types';
+import { SocketIoServer } from '../types/socket.io.server';
 
 export const getExcalidrawBaseServerOrFail = (
   configService: ConfigService,

@@ -1,6 +1,7 @@
 import { ExcalidrawEventPublisherService } from '@services/excalidraw-pubsub/publisher';
 import { ROOM_USER_CHANGE } from '../../types/event.names';
-import { SocketIoServer, SocketIoSocket } from '../../types';
+import { SocketIoServer } from '../../types/socket.io.server';
+import { SocketIoSocket } from '../../types/socket.io.socket';
 
 /* This event is coming from the client; whenever they request to join a room */
 export const joinRoomEventAmqpHandler = async (

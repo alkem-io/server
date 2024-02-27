@@ -4,7 +4,7 @@ import { InputType, Field } from '@nestjs/graphql';
 import { IsOptional } from 'class-validator';
 
 @InputType()
-export class UpdateWhiteboardContentRtInput extends UpdateNameableInput {
+export class UpdateWhiteboardContentInput extends UpdateNameableInput {
   @Field(() => WhiteboardContent, { nullable: true })
   @IsOptional()
   content?: string;
