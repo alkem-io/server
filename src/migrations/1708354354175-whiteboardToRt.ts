@@ -101,7 +101,7 @@ export class whiteboardToRt1708354354175 implements MigrationInterface {
     );
     // update all the callouts with whiteboardRT type
     await queryRunner.query(
-      `UPDATE \`callout\` SET type = 'whiteboard' WHERE type = 'whiteboard_real_time'`
+      `UPDATE \`callout\` SET type = 'whiteboard' WHERE type = 'whiteboard-real-time'`
     );
     // rename feature flag
     await queryRunner.query(
