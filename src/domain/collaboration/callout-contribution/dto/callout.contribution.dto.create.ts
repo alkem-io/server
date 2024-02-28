@@ -1,7 +1,7 @@
 import { InputType, Field } from '@nestjs/graphql';
 import { IsOptional, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
-import { CreateWhiteboardInput } from '@domain/common/whiteboard';
+import { CreateWhiteboardInput } from '@domain/common/whiteboard/types';
 import { CreatePostInput } from '@domain/collaboration/post/dto/post.dto.create';
 import { CreateLinkInput } from '@domain/collaboration/link/dto/link.dto.create';
 @InputType()

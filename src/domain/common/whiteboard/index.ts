@@ -1,3 +1,3 @@
-export * from './whiteboard.entity';
-export * from './dto/whiteboard.dto.create';
-export * from './whiteboard.interface';
+export * from './whiteboard.service';
+export * from './whiteboard.service.authorization';
+export * from './whiteboard.module';

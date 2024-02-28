@@ -1,34 +1,37 @@
 import { LoggerService } from '@nestjs/common';
-import { WhiteboardRtService } from '@domain/common/whiteboard-rt';
+import { WhiteboardService } from '@domain/common/whiteboard';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { LogContext } from '@common/enums';
+import { CollaboratorModeReasons } from '../types/collaboration.mode.reasons';
+import { SocketIoServer } from '../types/socket.io.server';
+import { SocketIoSocket } from '../types/socket.io.socket';
 import {
   CLIENT_BROADCAST,
+  COLLABORATOR_MODE,
   FIRST_IN_ROOM,
+  IDLE_STATE,
   NEW_USER,
   ROOM_USER_CHANGE,
-  SocketIoServer,
-  SocketIoSocket,
-} from '../types';
+} from '../types/event.names';
+import { minCollaboratorsInRoom } from '../types/defaults';
 import { canUserRead, canUserUpdate, closeConnection } from './util';
-import { checkSession } from '@services/external/excalidraw-backend/utils/check.session';
+import { checkSession } from './check.session';
 
 export const authorizeWithRoomAndJoinHandler = async (
   roomID: string,
   socket: SocketIoSocket,
+  maxCollaboratorsForThisRoom: number,
   wsServer: SocketIoServer,
-  whiteboardRtService: WhiteboardRtService,
+  whiteboardService: WhiteboardService,
   authorizationService: AuthorizationService,
   logger: LoggerService
 ) => {
-  const whiteboardRt = await whiteboardRtService.getWhiteboardRtOrFail(roomID);
+  const whiteboard = await whiteboardService.getWhiteboardOrFail(roomID);
   const agentInfo = socket.data.agentInfo;
 
-  if (
-    !canUserRead(authorizationService, agentInfo, whiteboardRt.authorization)
-  ) {
+  if (!canUserRead(authorizationService, agentInfo, whiteboard.authorization)) {
     logger.error(
-      `Unable to authorize User '${agentInfo.userID}' with Whiteboard: '${whiteboardRt.id}'`,
+      `Unable to authorize User '${agentInfo.email}' with Whiteboard: '${whiteboard.id}'`,
       undefined,
       LogContext.EXCALIDRAW_SERVER
     );
@@ -36,13 +39,41 @@ export const authorizeWithRoomAndJoinHandler = async (
     return;
   }
 
+  const collaboratorsInRoom = (await wsServer.in(roomID).fetchSockets()).filter(
+    socket => socket.data.update
+  ).length;
+  const isCollaboratorLimitReached =
+    collaboratorsInRoom >= maxCollaboratorsForThisRoom;
+
+  if (isCollaboratorLimitReached) {
+    logger.verbose?.(
+      `Max collaborators limit (${maxCollaboratorsForThisRoom}) reached for room '${roomID}' - user '${agentInfo.email}' is read-only`,
+      LogContext.EXCALIDRAW_SERVER
+    );
+  } else {
+    logger.verbose?.(
+      `Max collaborators limit NOT reached (${collaboratorsInRoom}/${maxCollaboratorsForThisRoom}) for room '${roomID}' - user '${agentInfo.email}' is a collaborator`,
+      LogContext.EXCALIDRAW_SERVER
+    );
+  }
+
   socket.data.lastContributed = -1;
+  socket.data.lastPresence = -1;
   socket.data.read = true; // already authorized
-  socket.data.update = canUserUpdate(
-    authorizationService,
-    agentInfo,
-    whiteboardRt.authorization
+  socket.data.update =
+    !isCollaboratorLimitReached &&
+    canUserUpdate(authorizationService, agentInfo, whiteboard.authorization);
+
+  const reason = calculateReasonForCollaborationMode(
+    socket,
+    isCollaboratorLimitReached,
+    maxCollaboratorsForThisRoom
   );
+
+  wsServer.to(socket.id).emit(COLLABORATOR_MODE, {
+    mode: socket.data.update ? 'write' : 'read',
+    reason,
+  });
 
   await joinRoomHandler(roomID, socket, wsServer, logger);
 };
@@ -108,14 +139,14 @@ export const serverVolatileBroadcastEventHandler = (
   socket: SocketIoSocket
 ) => {
   socket.volatile.broadcast.to(roomID).emit(CLIENT_BROADCAST, data);
+  socket.data.lastPresence = Date.now();
 };
-// broadcasts requests from socket to all other sockets
-export const requestBroadcastEventHandler = (
+export const idleStateEventHandler = (
   roomID: string,
   data: ArrayBuffer,
   socket: SocketIoSocket
 ) => {
-  socket.broadcast.to(roomID).emit(CLIENT_BROADCAST, data);
+  socket.broadcast.to(roomID).emit(IDLE_STATE, data);
 };
 /* Built-in event for handling socket disconnects */
 export const disconnectingEventHandler = async (
@@ -156,4 +187,20 @@ export const checkSessionHandler = (socket: SocketIoSocket) => {
   if (result) {
     closeConnection(socket, result);
   }
+};
+
+const calculateReasonForCollaborationMode = (
+  socket: SocketIoSocket,
+  isCapacityReached: boolean,
+  roomCapacity: number
+) => {
+  if (isCapacityReached) {
+    return CollaboratorModeReasons.ROOM_CAPACITY_REACHED;
+  }
+
+  if (!socket.data.update && roomCapacity === minCollaboratorsInRoom) {
+    return CollaboratorModeReasons.MULTI_USER_NOT_ALLOWED;
+  }
+
+  return undefined;
 };

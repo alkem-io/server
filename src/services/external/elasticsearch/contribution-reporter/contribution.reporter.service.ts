@@ -254,21 +254,7 @@ export class ContributionReporterService {
       details
     );
   }
-  public calloutWhiteboardEdited(
-    contribution: ContributionDetails,
-    details: AuthorDetails
-  ): void {
-    this.createDocument(
-      {
-        type: 'CALLOUT_WHITEBOARD_EDITED',
-        id: contribution.id,
-        name: contribution.name,
-        author: details.id,
-        space: contribution.space,
-      },
-      details
-    );
-  }
+
   public calendarEventCreated(
     contribution: ContributionDetails,
     details: AuthorDetails
@@ -301,7 +287,7 @@ export class ContributionReporterService {
     );
   }
 
-  public whiteboardRtContribution(
+  public whiteboardContribution(
     contribution: ContributionDetails,
     details: AuthorDetails
   ): void {

@@ -1,5 +1,5 @@
 import { AgentInfo } from '@core/authentication';
-import { SocketIoSocket } from '../types';
+import { SocketIoSocket } from '../types/socket.io.socket';
 import { SimpleMiddlewareHandler } from './middleware.handler.type';
 
 export const socketDataInitMiddleware: SimpleMiddlewareHandler = (

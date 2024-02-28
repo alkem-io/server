@@ -108,8 +108,7 @@ export class CalloutTemplateService {
       calloutTemplate.framing =
         await this.calloutFramingService.updateCalloutFraming(
           calloutTemplate.framing,
-          calloutTemplateData.framing,
-          agentInfo
+          calloutTemplateData.framing
         );
     }
     if (calloutTemplateData.contributionDefaults) {
