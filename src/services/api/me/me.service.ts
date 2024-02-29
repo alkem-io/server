@@ -63,7 +63,7 @@ export class MeService {
       this.spaceService.getSpaceMembershipCollaborationInfo(spaces);
 
     const latestActivitiesPerSpace =
-      await this.activityService.getLatestActivitiesPerSpaceFromJourneys(
+      await this.activityService.getLatestActivitiesPerSpaceMembership(
         agentInfo.userID,
         spaceMembershipCollaborationInfo
       );

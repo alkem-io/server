@@ -17,6 +17,7 @@ import {
   LatestActivitiesPerSpace,
   SpaceMembershipCollaborationInfo,
 } from '@services/api/me/space.membership.type';
+import { createLatestActivityPerSpaceMap } from './create.latest.activity.per.space';
 
 @Injectable()
 export class ActivityService {
@@ -217,7 +218,8 @@ export class ActivityService {
     return activityData;
   }
 
-  public async getLatestActivitiesPerSpaceFromJourneys(
+  // Returns latest activities from user and from other users per Space including activities from all child journeys
+  public async getLatestActivitiesPerSpaceMembership(
     triggeredBy: string,
     spaceMembershipCollaborationInfo: SpaceMembershipCollaborationInfo
   ): Promise<LatestActivitiesPerSpace> {
@@ -244,54 +246,12 @@ export class ActivityService {
       .getMany();
 
     // Create a map of collaboration IDs to latest activities
-    const latestActivityPerSpaceMap: LatestActivitiesPerSpace = new Map();
-
-    const updateLatestActivityPerSpaceMap = (
-      activity: Activity,
-      spaceID: string
-    ) => {
-      const latestActivities = latestActivityPerSpaceMap.get(spaceID);
-      const isMyActivity = activity.triggeredBy === triggeredBy;
-
-      if (!latestActivities) {
-        const activitiesObject = {
-          mylatestActivity: isMyActivity ? activity : undefined,
-          otherUsersLatestActivity: isMyActivity ? undefined : activity,
-        };
-        latestActivityPerSpaceMap.set(spaceID, activitiesObject);
-        return;
-      }
-
-      const existingActivity = isMyActivity
-        ? latestActivities.mylatestActivity
-        : latestActivities.otherUsersLatestActivity;
-
-      if (
-        !existingActivity ||
-        activity.createdDate > existingActivity.createdDate
-      ) {
-        const activitiesObject = {
-          mylatestActivity: isMyActivity
-            ? activity
-            : latestActivities.mylatestActivity,
-          otherUsersLatestActivity: isMyActivity
-            ? latestActivities.otherUsersLatestActivity
-            : activity,
-        };
-        latestActivityPerSpaceMap.set(spaceID, activitiesObject);
-      }
-    };
-
-    for (const activity of activities) {
-      const parentSpaceID = spaceMembershipCollaborationInfo.get(
-        activity.collaborationID
+    const latestActivityPerSpaceMap: LatestActivitiesPerSpace =
+      createLatestActivityPerSpaceMap(
+        activities,
+        spaceMembershipCollaborationInfo,
+        triggeredBy
       );
-
-      if (!parentSpaceID) {
-        continue;
-      }
-      updateLatestActivityPerSpaceMap(activity, parentSpaceID);
-    }
 
     return latestActivityPerSpaceMap;
   }
