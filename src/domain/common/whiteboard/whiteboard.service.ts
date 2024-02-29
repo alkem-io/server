@@ -155,17 +155,12 @@ export class WhiteboardService {
         },
       });
 
-      if (!framing) {
-        throw new EntityNotInitializedException(
-          `Framing not initialized on whiteboard: '${whiteboard.id}'`,
-          LogContext.COLLABORATION
+      if (framing) {
+        await this.whiteboardAuthService.applyAuthorizationPolicy(
+          whiteboard,
+          framing.authorization
         );
       }
-
-      await this.whiteboardAuthService.applyAuthorizationPolicy(
-        whiteboard,
-        framing.authorization
-      );
     }
 
     return this.save(whiteboard);
