@@ -2,7 +2,7 @@ import { ActivityEventType } from '@common/enums/activity.event.type';
 import { IActivity } from '@platform/activity/activity.interface';
 import { LatestActivitiesPerSpace } from '@services/api/me/space.membership.type';
 import { ISpace } from './space.interface';
-import { sortSpacesByActivity } from './get.spaces.sorted.by.activity';
+import { sortSpacesByActivity } from './sort.spaces.by.activity';
 
 const createTestActivity = (createdDate: Date): IActivity => {
   return {

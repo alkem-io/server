@@ -455,7 +455,7 @@ export class SpaceService {
     return spaces;
   }
 
-  public async getSpacesWithChildJourneysUnsorted(
+  public async getSpacesWithChildJourneys(
     args: SpacesQueryArgs,
     options?: FindManyOptions<Space>
   ): Promise<ISpace[]> {

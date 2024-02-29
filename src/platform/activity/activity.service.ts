@@ -240,9 +240,6 @@ export class ActivityService {
       .where({
         collaborationID: In(collaborationIDs),
       })
-      // .andWhere({
-      //   triggeredBy: triggeredBy,
-      // })
       .orderBy('activity.createdDate', 'DESC')
       .getMany();
 

@@ -13,7 +13,7 @@ import { MyJourneyResults } from './dto/my.journeys.results';
 import { ActivityService } from '@platform/activity/activity.service';
 import { LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { sortSpacesByActivity } from '@domain/challenge/space/get.spaces.sorted.by.activity';
+import { sortSpacesByActivity } from '@domain/challenge/space/sort.spaces.by.activity';
 
 @Injectable()
 export class MeService {
@@ -57,9 +57,7 @@ export class MeService {
     };
 
     // get spaces and their children challenges and opportunities
-    const spaces = await this.spaceService.getSpacesWithChildJourneysUnsorted(
-      args
-    );
+    const spaces = await this.spaceService.getSpacesWithChildJourneys(args);
 
     const spaceMembershipCollaborationInfo =
       this.spaceService.getSpaceMembershipCollaborationInfo(spaces);
