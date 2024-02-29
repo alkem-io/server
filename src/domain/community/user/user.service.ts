@@ -48,7 +48,8 @@ import { PreferenceSetService } from '@domain/common/preference-set/preference.s
 import { IPreferenceSet } from '@domain/common/preference-set/preference.set.interface';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { PaginationArgs } from '@core/pagination';
-import { applyUserFilter, UserFilterInput } from '@core/filtering';
+import { applyUserFilter } from '@core/filtering/filters';
+import { UserFilterInput } from '@core/filtering/input-types';
 import { getPaginationResults } from '@core/pagination/pagination.fn';
 import { IPaginatedType } from '@core/pagination/paginated.type';
 import { CreateProfileInput } from '@domain/common/profile/dto/profile.dto.create';
@@ -66,6 +67,7 @@ import { StorageAggregatorService } from '@domain/storage/storage-aggregator/sto
 import { AvatarService } from '@domain/common/visual/avatar.service';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { UpdateUserPlatformSettingsInput } from './dto/user.dto.update.platform.settings';
+
 @Injectable()
 export class UserService {
   cacheOptions: CachingConfig = { ttl: 300 };
@@ -640,7 +642,7 @@ export class UserService {
     paginationArgs: PaginationArgs,
     filter?: UserFilterInput
   ): Promise<IPaginatedType<IUser>> {
-    const qb = await this.userRepository.createQueryBuilder('user');
+    const qb = this.userRepository.createQueryBuilder('user');
     if (filter) {
       applyUserFilter(qb, filter);
     }
@@ -702,6 +704,7 @@ export class UserService {
       .leftJoin('user.agent', 'agent')
       .leftJoin('agent.credentials', 'credential')
       .addSelect(['credential.type', 'credential.resourceID'])
+      .where('credential.type = :type')
       .where('credential.type = :type')
       .andWhere('credential.resourceID = :resourceID')
       .setParameters({

@@ -1,9 +1,11 @@
 import { Brackets, ObjectLiteral, SelectQueryBuilder } from 'typeorm';
 import { UserFilterInput } from '../input-types';
+import { applyFilteringOnWhereExpression } from '../filter.fn.where.expression';
 
 export const applyUserFilter = <T extends ObjectLiteral>(
   query: SelectQueryBuilder<T>,
-  filter: UserFilterInput
+  filter: UserFilterInput,
+  bindOperator: 'and' | 'or' = 'and'
 ) => {
   const filterKeys = Object.keys(filter);
 
@@ -11,24 +13,22 @@ export const applyUserFilter = <T extends ObjectLiteral>(
     return query;
   }
 
-  const { displayName, email, firstName, lastName } = filter;
-
-  if (displayName) {
-    query.leftJoinAndSelect('user.profile', 'profile');
-  }
-
-  const hasWhere =
-    query.expressionMap.wheres && query.expressionMap.wheres.length > 0;
-  query[!hasWhere ? 'where' : 'andWhere'](
+  const { displayName, ...rest } = filter;
+  // A and ((b or c) or d)
+  query[bindOperator === 'and' ? 'andWhere' : 'orWhere'](
     new Brackets(wqb => {
-      if (displayName) wqb.orWhere('profile.displayName like :displayName');
-      if (email) wqb.orWhere('email like :email');
-      if (firstName) wqb.orWhere('firstName like :firstName');
-      if (lastName) wqb.orWhere('lastName like :lastName');
-    })
-  );
+      applyFilteringOnWhereExpression(wqb, rest);
 
-  filterKeys.forEach(key =>
-    query.setParameters({ [key]: `%${(filter as any)[key]}%` })
+      if (displayName) {
+        const hasWhere =
+          query.expressionMap.wheres && query.expressionMap.wheres.length > 0;
+        const alias = 'displayName';
+        query
+          .leftJoin('user.profile', 'profile')
+          .addSelect('profile.displayName', alias);
+        // does not find the alias if an object is used instead
+        wqb[hasWhere ? 'orWhere' : 'where'](`${alias} LIKE '%${displayName}%'`);
+      }
+    })
   );
 };
