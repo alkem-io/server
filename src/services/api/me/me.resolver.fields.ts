@@ -94,10 +94,7 @@ export class MeResolverFields {
     })
     visibilities: SpaceVisibility[]
   ): Promise<ISpace[]> {
-    return this.meService.getSpaceMemberships(
-      agentInfo.credentials,
-      visibilities
-    );
+    return this.meService.getSpaceMemberships(agentInfo, visibilities);
   }
 
   @UseGuards(GraphqlGuard)

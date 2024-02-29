@@ -13,6 +13,10 @@ import { ActivityEventType } from '@common/enums/activity.event.type';
 import { PaginationArgs } from '@core/pagination';
 import { getPaginationResults } from '@core/pagination/pagination.fn';
 import { Collaboration } from '@domain/collaboration/collaboration';
+import {
+  LatestActivitiesPerSpace,
+  SpaceMembershipCollaborationInfo,
+} from '@services/api/me/space.membership.type';
 
 @Injectable()
 export class ActivityService {
@@ -211,5 +215,87 @@ export class ActivityService {
     ).slice(0, limit);
 
     return activityData;
+  }
+
+  public async getLatestActivitiesPerSpaceFromJourneys(
+    triggeredBy: string,
+    spaceMembershipCollaborationInfo: SpaceMembershipCollaborationInfo
+  ): Promise<LatestActivitiesPerSpace> {
+    const collaborationIDs = Array.from(
+      spaceMembershipCollaborationInfo.keys()
+    );
+
+    const activities = await this.activityRepository
+      .createQueryBuilder('activity')
+      .select([
+        'activity.id',
+        'activity.createdDate',
+        'activity.collaborationID',
+        'activity.type',
+        'activity.description',
+        'activity.parentID',
+        'activity.triggeredBy',
+        'activity.resourceID',
+      ])
+      .where({
+        collaborationID: In(collaborationIDs),
+      })
+      // .andWhere({
+      //   triggeredBy: triggeredBy,
+      // })
+      .orderBy('activity.createdDate', 'DESC')
+      .getMany();
+
+    // Create a map of collaboration IDs to latest activities
+    const latestActivityPerSpaceMap: LatestActivitiesPerSpace = new Map();
+
+    const updateLatestActivityPerSpaceMap = (
+      activity: Activity,
+      spaceID: string
+    ) => {
+      const latestActivities = latestActivityPerSpaceMap.get(spaceID);
+      const isMyActivity = activity.triggeredBy === triggeredBy;
+
+      if (!latestActivities) {
+        const activitiesObject = {
+          mylatestActivity: isMyActivity ? activity : undefined,
+          otherUsersLatestActivity: isMyActivity ? undefined : activity,
+        };
+        latestActivityPerSpaceMap.set(spaceID, activitiesObject);
+        return;
+      }
+
+      const existingActivity = isMyActivity
+        ? latestActivities.mylatestActivity
+        : latestActivities.otherUsersLatestActivity;
+
+      if (
+        !existingActivity ||
+        activity.createdDate > existingActivity.createdDate
+      ) {
+        const activitiesObject = {
+          mylatestActivity: isMyActivity
+            ? activity
+            : latestActivities.mylatestActivity,
+          otherUsersLatestActivity: isMyActivity
+            ? latestActivities.otherUsersLatestActivity
+            : activity,
+        };
+        latestActivityPerSpaceMap.set(spaceID, activitiesObject);
+      }
+    };
+
+    for (const activity of activities) {
+      const parentSpaceID = spaceMembershipCollaborationInfo.get(
+        activity.collaborationID
+      );
+
+      if (!parentSpaceID) {
+        continue;
+      }
+      updateLatestActivityPerSpaceMap(activity, parentSpaceID);
+    }
+
+    return latestActivityPerSpaceMap;
   }
 }
