@@ -647,6 +647,8 @@ export class UserService {
       applyUserFilter(qb, filter);
     }
 
+    console.log(qb.getSql());
+
     return getPaginationResults(qb, paginationArgs);
   }
 
@@ -687,6 +689,8 @@ export class UserService {
       applyUserFilter(qb, filter);
     }
 
+    console.log(qb.getSql());
+
     return getPaginationResults(qb, paginationArgs);
   }
 
@@ -705,7 +709,6 @@ export class UserService {
       .leftJoin('agent.credentials', 'credential')
       .addSelect(['credential.type', 'credential.resourceID'])
       .where('credential.type = :type')
-      .where('credential.type = :type')
       .andWhere('credential.resourceID = :resourceID')
       .setParameters({
         type: communityCredentials.member.type,
@@ -721,6 +724,8 @@ export class UserService {
     if (filter) {
       applyUserFilter(qb, filter);
     }
+
+    console.log(qb.getSql());
 
     return getPaginationResults(qb, paginationArgs);
   }

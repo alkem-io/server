@@ -14,20 +14,20 @@ export const applyUserFilter = <T extends ObjectLiteral>(
   }
 
   const { displayName, ...rest } = filter;
+  const hasWhere = query.expressionMap.wheres?.length > 0;
   // A and ((b or c) or d)
-  query[bindOperator === 'and' ? 'andWhere' : 'orWhere'](
+  query[hasWhere ? (bindOperator === 'and' ? 'andWhere' : 'orWhere') : 'where'](
     new Brackets(wqb => {
       applyFilteringOnWhereExpression(wqb, rest);
 
       if (displayName) {
-        const hasWhere =
-          query.expressionMap.wheres && query.expressionMap.wheres.length > 0;
+        const hasRest = Object.keys(rest).length > 0;
         const alias = 'displayName';
         query
           .leftJoin('user.profile', 'profile')
           .addSelect('profile.displayName', alias);
         // does not find the alias if an object is used instead
-        wqb[hasWhere ? 'orWhere' : 'where'](`${alias} LIKE '%${displayName}%'`);
+        wqb[hasRest ? 'orWhere' : 'where'](`${alias} LIKE '%${displayName}%'`);
       }
     })
   );
