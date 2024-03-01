@@ -34,6 +34,7 @@ import { CreateWhiteboardInput } from './dto/whiteboard.dto.create';
 import { UpdateWhiteboardInput } from './dto/whiteboard.dto.update';
 import { WhiteboardAuthorizationService } from './whiteboard.service.authorization';
 import { WHITEBOARD_CONTENT_UPDATE } from './events/event.names';
+import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
 
 @Injectable()
 export class WhiteboardService {
@@ -160,6 +161,21 @@ export class WhiteboardService {
           whiteboard,
           framing.authorization
         );
+      } else {
+        const contribution = await this.entityManager.findOne(
+          CalloutContribution,
+          {
+            where: {
+              whiteboard: { id: whiteboard.id },
+            },
+          }
+        );
+        if (contribution) {
+          await this.whiteboardAuthService.applyAuthorizationPolicy(
+            whiteboard,
+            contribution.authorization
+          );
+        }
       }
     }
 
