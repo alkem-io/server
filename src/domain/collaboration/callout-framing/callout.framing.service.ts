@@ -13,10 +13,7 @@ import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileType } from '@common/enums';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
-import { WhiteboardRtService } from '@domain/common/whiteboard-rt/whiteboard.rt.service';
-import { AgentInfo } from '@core/authentication/agent-info';
-import { IWhiteboard } from '@domain/common/whiteboard';
-import { IWhiteboardRt } from '@domain/common/whiteboard-rt/whiteboard.rt.interface';
+import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 import { VisualType } from '@common/enums/visual.type';
 import { ITagsetTemplate } from '@domain/common/tagset-template/tagset.template.interface';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
@@ -33,7 +30,6 @@ export class CalloutFramingService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private profileService: ProfileService,
     private whiteboardService: WhiteboardService,
-    private whiteboardRtService: WhiteboardRtService,
     private namingService: NamingService,
     @InjectRepository(CalloutFraming)
     private calloutFramingRepository: Repository<CalloutFraming>
@@ -50,7 +46,7 @@ export class CalloutFramingService {
 
     calloutFraming.authorization = new AuthorizationPolicy();
 
-    const { profile, whiteboard, whiteboardRt, tags } = calloutFramingData;
+    const { profile, whiteboard, tags } = calloutFramingData;
 
     // To consider also having the default tagset as a template tagset
     const defaultTagset: CreateTagsetInput = {
@@ -92,18 +88,17 @@ export class CalloutFramingService {
       );
     }
 
-    if (whiteboardRt) {
-      whiteboardRt.nameID = this.namingService.createNameID(
-        `${whiteboardRt.profileData.displayName}`
+    if (whiteboard) {
+      whiteboard.nameID = this.namingService.createNameID(
+        `${whiteboard.profileData.displayName}`
       );
-      calloutFraming.whiteboardRt =
-        await this.whiteboardRtService.createWhiteboardRt(
-          whiteboardRt,
-          storageAggregator,
-          userID
-        );
+      calloutFraming.whiteboard = await this.whiteboardService.createWhiteboard(
+        whiteboard,
+        storageAggregator,
+        userID
+      );
       await this.profileService.addVisualOnProfile(
-        calloutFraming.whiteboardRt.profile,
+        calloutFraming.whiteboard.profile,
         VisualType.BANNER
       );
     }
@@ -113,8 +108,7 @@ export class CalloutFramingService {
 
   public async updateCalloutFraming(
     calloutFraming: ICalloutFraming,
-    calloutFramingData: UpdateCalloutFramingInput,
-    agentInfo: AgentInfo
+    calloutFramingData: UpdateCalloutFramingInput
   ): Promise<ICalloutFraming> {
     if (calloutFramingData.profile) {
       calloutFraming.profile = await this.profileService.updateProfile(
@@ -126,17 +120,15 @@ export class CalloutFramingService {
     if (calloutFraming.whiteboard && calloutFramingData.whiteboard) {
       calloutFraming.whiteboard = await this.whiteboardService.updateWhiteboard(
         calloutFraming.whiteboard,
-        calloutFramingData.whiteboard,
-        agentInfo
+        calloutFramingData.whiteboard
       );
     }
 
-    if (calloutFraming.whiteboardRt && calloutFramingData.whiteboardRt) {
-      calloutFraming.whiteboardRt =
-        await this.whiteboardRtService.updateWhiteboardRt(
-          calloutFraming.whiteboardRt,
-          calloutFramingData.whiteboardRt
-        );
+    if (calloutFraming.whiteboard && calloutFramingData.whiteboard) {
+      calloutFraming.whiteboard = await this.whiteboardService.updateWhiteboard(
+        calloutFraming.whiteboard,
+        calloutFramingData.whiteboard
+      );
     }
 
     return calloutFraming;
@@ -150,7 +142,6 @@ export class CalloutFramingService {
         relations: {
           profile: true,
           whiteboard: true,
-          whiteboardRt: true,
         },
       }
     );
@@ -164,9 +155,9 @@ export class CalloutFramingService {
       );
     }
 
-    if (calloutFraming.whiteboardRt) {
-      await this.whiteboardRtService.deleteWhiteboardRt(
-        calloutFraming.whiteboardRt.id
+    if (calloutFraming.whiteboard) {
+      await this.whiteboardService.deleteWhiteboard(
+        calloutFraming.whiteboard.id
       );
     }
     if (calloutFraming.authorization) {
@@ -242,23 +233,6 @@ export class CalloutFramingService {
     return calloutFraming.whiteboard;
   }
 
-  public async getWhiteboardRt(
-    calloutFramingInput: ICalloutFraming,
-    relations?: FindOptionsRelations<ICalloutFraming>
-  ): Promise<IWhiteboardRt | null> {
-    const calloutFraming = await this.getCalloutFramingOrFail(
-      calloutFramingInput.id,
-      {
-        relations: { whiteboardRt: true, ...relations },
-      }
-    );
-    if (!calloutFraming.whiteboardRt) {
-      return null;
-    }
-
-    return calloutFraming.whiteboardRt;
-  }
-
   public createCalloutFramingInputFromCalloutFraming(
     calloutFraming: ICalloutFraming
   ): CreateCalloutFramingInput {
@@ -269,10 +243,6 @@ export class CalloutFramingService {
       whiteboard: this.whiteboardService.createWhiteboardInputFromWhiteboard(
         calloutFraming.whiteboard
       ),
-      whiteboardRt:
-        this.whiteboardRtService.createWhiteboardRtInputFromWhiteboardRt(
-          calloutFraming.whiteboardRt
-        ),
     };
   }
 

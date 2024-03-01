@@ -9,7 +9,7 @@ Variables:
 {
   "calloutData": {
     "collaborationID": "ec32e1ab-90ca-48ff-ab70-424fedabaf21",
-    "whiteboardRt": {
+    "whiteboard": {
       "profileData": {
         "displayName": "Whiteboard:"
       },

@@ -190,8 +190,6 @@ export class UrlGeneratorService {
         return await this.getPostUrlPath(profile.id);
       case ProfileType.WHITEBOARD:
         return await this.getWhiteboardUrlPath(profile.id);
-      case ProfileType.WHITEBOARD_RT:
-        return await this.getWhiteboardRtUrlPath(profile.id);
       case ProfileType.INNOVATION_FLOW:
         return await this.getInnovationFlowUrlPathOrFail(profile.id);
       case ProfileType.WHITEBOARD_TEMPLATE:
@@ -463,9 +461,7 @@ export class UrlGeneratorService {
     fieldID: string
   ): Promise<string> {
     const query =
-      fieldName === 'profileId' ||
-      fieldName === 'whiteboardRtId' ||
-      fieldName === 'whiteboardId'
+      fieldName === 'profileId' || fieldName === 'whiteboardId'
         ? `
     SELECT c.id AS calloutId, c.nameID AS calloutNameId, c.collaborationId AS collaborationId
     FROM callout AS c JOIN callout_framing AS cf ON cf.id = c.framingId
@@ -517,7 +513,7 @@ export class UrlGeneratorService {
     }
     if (!collaborationJourneyUrlPath) {
       throw new EntityNotFoundException(
-        `Unable to find url path for collaoboration: ${fieldID}`,
+        `Unable to find url path for collaboration: ${fieldID}`,
         LogContext.URL_GENERATOR
       );
     }
@@ -564,9 +560,9 @@ export class UrlGeneratorService {
       whiteboardNameId: string;
     }[] = await this.entityManager.connection.query(
       `
-        SELECT whiteboard.id as whiteboardId, whiteboard.nameID as whiteboardNameId FROM whiteboard
-        WHERE whiteboard.profileId = '${profileID}'
-      `
+          SELECT whiteboard.id as whiteboardId, whiteboard.nameID as whiteboardNameId FROM whiteboard
+          WHERE whiteboard.profileId = '${profileID}'
+        `
     );
 
     if (!result) {
@@ -581,23 +577,23 @@ export class UrlGeneratorService {
       calloutId: string;
     }[] = await this.entityManager.connection.query(
       `
-        SELECT callout_contribution.id as contributionId, callout_contribution.calloutId as calloutId FROM callout_contribution
-        WHERE callout_contribution.whiteboardId = '${result.whiteboardId}'
-      `
+          SELECT callout_contribution.id as contributionId, callout_contribution.calloutId as calloutId FROM callout_contribution
+          WHERE callout_contribution.whiteboardId = '${result.whiteboardId}'
+        `
     );
 
     if (!contributionResult) {
-      const [contributionResult]: {
+      const [whiteboardFromFramingResult]: {
         calloutId: string;
       }[] = await this.entityManager.connection.query(
         `SELECT c.id AS calloutId
-        FROM callout AS c JOIN callout_framing AS cf ON cf.id = c.framingId
-        WHERE cf.whiteboardId = '${result.whiteboardId}'`
+          FROM callout AS c JOIN callout_framing AS cf ON cf.id = c.framingId
+          WHERE cf.whiteboardId = '${result.whiteboardId}'`
       );
 
-      calloutId = contributionResult.calloutId;
+      calloutId = whiteboardFromFramingResult.calloutId;
 
-      if (!contributionResult) {
+      if (!whiteboardFromFramingResult) {
         throw new EntityNotFoundException(
           `Unable to find callout where whiteboardId: ${result.whiteboardId}`,
           LogContext.URL_GENERATOR
@@ -612,19 +608,6 @@ export class UrlGeneratorService {
       calloutId
     );
     return `${calloutUrlPath}/${this.PATH_WHITEBOARDS}/${result.whiteboardNameId}`;
-  }
-
-  private async getWhiteboardRtUrlPath(profileID: string): Promise<string> {
-    const whiteboardRtInfo = await this.getNameableEntityInfoOrFail(
-      'whiteboard_rt',
-      this.FIELD_PROFILE_ID,
-      profileID
-    );
-
-    return await this.getCalloutUrlPath(
-      'whiteboardRtId',
-      whiteboardRtInfo.entityID
-    );
   }
 
   private async getInnovationPackUrlPath(profileID: string): Promise<string> {

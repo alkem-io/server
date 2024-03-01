@@ -4,12 +4,12 @@ import { CalloutType } from '@common/enums/callout.type';
 
 describe('matchEnumString function', () => {
   it('should return a match for a valid input string', () => {
-    const inputString = 'whiteboard-rt';
+    const inputString = 'whiteboard-multi-user';
     const matchResult = matchEnumString(LicenseFeatureFlagName, inputString);
 
     expect(matchResult).toEqual({
-      key: 'WHITEBOART_RT',
-      value: 'whiteboard-rt',
+      key: 'WHITEBOARD_MULTI_USER',
+      value: 'whiteboard-multi-user',
     });
   });
 
