@@ -20,3 +20,7 @@ So that <some business value>
 ## Additional Context
 
 Screen shots / UX designs / data that are relevant.
+
+## Areas that will be affected 
+ 
+_To be added during the refinement_
