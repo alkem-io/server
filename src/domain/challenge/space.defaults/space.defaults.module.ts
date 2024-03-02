@@ -1,9 +1,7 @@
 import { Module } from '@nestjs/common';
 import { SpaceDefaultsService } from './space.defaults.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { SpaceDefaultsResolverMutations } from './space.defaults.resolver.mutations';
 import { SpaceDefaults } from './space.defaults.entity';
-import { SpaceDefaultsResolverFields } from './space.defaults.resolver.fields';
 import { Space } from '../space/space.entity';
 import { InnovationFlowTemplateModule } from '@domain/template/innovation-flow-template/innovation.flow.template.module';
 import { InnovationFlowStatesModule } from '../innovation-flow-states/innovation.flow.state.module';
@@ -21,11 +19,7 @@ import { TemplatesSetModule } from '@domain/template/templates-set/templates.set
     TypeOrmModule.forFeature([SpaceDefaults]),
     TypeOrmModule.forFeature([Space]),
   ],
-  providers: [
-    SpaceDefaultsResolverMutations,
-    SpaceDefaultsService,
-    SpaceDefaultsResolverFields,
-  ],
+  providers: [SpaceDefaultsService],
   exports: [SpaceDefaultsService],
 })
 export class SpaceDefaultsModule {}

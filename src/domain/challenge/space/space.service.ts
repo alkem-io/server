@@ -79,6 +79,8 @@ import { StorageAggregatorService } from '@domain/storage/storage-aggregator/sto
 import { ILicense } from '@domain/license/license/license.interface';
 import { LicenseService } from '@domain/license/license/license.service';
 import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
+import { UpdateSpaceDefaultsInput } from './dto/space.dto.update.defaults';
+import { ISpaceDefaults } from '../space.defaults/space.defaults.interface';
 
 @Injectable()
 export class SpaceService {
@@ -143,6 +145,10 @@ export class SpaceService {
       );
 
     space.defaults = await this.spaceDefaultsService.createSpaceDefaults();
+    if (space.templatesSet.innovationFlowTemplates.length !== 0) {
+      space.defaults.innovationFlowTemplate =
+        space.templatesSet.innovationFlowTemplates[0];
+    }
 
     const locations = Object.values({
       ...CommonDisplayLocation,
@@ -233,6 +239,45 @@ export class SpaceService {
     );
 
     return await this.spaceRepository.save(space);
+  }
+
+  public async updateSpaceDefaults(
+    spaceDefaultsData: UpdateSpaceDefaultsInput
+  ): Promise<ISpaceDefaults> {
+    const space = await this.getSpaceOrFail(spaceDefaultsData.spaceID, {
+      relations: {
+        defaults: true,
+        templatesSet: {
+          innovationFlowTemplates: true,
+        },
+      },
+    });
+    if (
+      !space.defaults ||
+      !space.templatesSet ||
+      !space.templatesSet.innovationFlowTemplates
+    ) {
+      throw new RelationshipNotFoundException(
+        `Unable to load all required data to update the defaults on  Space ${space.id} `,
+        LogContext.CHALLENGES
+      );
+    }
+
+    // Verify that the specified template is in the space library
+    const template = space.templatesSet.innovationFlowTemplates.find(
+      t => t.id === spaceDefaultsData.flowTemplateID
+    );
+    if (!template) {
+      throw new NotSupportedException(
+        `InnovationFlowTemplate ID provided (${spaceDefaultsData.flowTemplateID}) is not part of the Library for the Space ${space.id} `,
+        LogContext.CHALLENGES
+      );
+    }
+
+    return await this.spaceDefaultsService.updateSpaceDefaults(
+      space.defaults,
+      template
+    );
   }
 
   public async updateSpacePlatformSettings(

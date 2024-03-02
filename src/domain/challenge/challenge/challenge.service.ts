@@ -174,22 +174,17 @@ export class ChallengeService {
       tagsetTemplateData
     );
 
-    const challengeFlowStates =
-      await this.spaceDefaultsService.getDefaultInnovationFlowStatesForSpace(
+    // Rely on the logic in Space Defaults to create the right innovation flow input
+    const innovationFlowInput =
+      await this.spaceDefaultsService.getCreateInnovationFlowInput(
         spaceID,
         challengeData.innovationFlowTemplateID
       );
-
     // Note: need to create the innovation flow after creation of
     // tagsetTemplates on Collabration so can pass it in to the InnovationFlow
     challenge.innovationFlow =
       await this.innovationFlowService.createInnovationFlow(
-        {
-          states: challengeFlowStates,
-          profile: {
-            displayName: '',
-          },
-        },
+        innovationFlowInput,
         [statesTagssetTemplate],
         challenge.storageAggregator
       );

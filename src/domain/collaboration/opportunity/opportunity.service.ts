@@ -123,20 +123,15 @@ export class OpportunityService {
         tagsetTemplateData
       );
 
-      const opportunityFlowStates =
-        await this.spaceDefaultsService.getDefaultInnovationFlowStatesForSpace(
+      // Rely on the logic in Space Defaults to create the right innovation flow input
+      const innovationFlowInput =
+        await this.spaceDefaultsService.getCreateInnovationFlowInput(
           spaceID,
           opportunityData.innovationFlowTemplateID
         );
-
       opportunity.innovationFlow =
         await this.innovationFlowService.createInnovationFlow(
-          {
-            states: opportunityFlowStates,
-            profile: {
-              displayName: '',
-            },
-          },
+          innovationFlowInput,
           [stateTagsetTemplate],
           opportunity.storageAggregator
         );

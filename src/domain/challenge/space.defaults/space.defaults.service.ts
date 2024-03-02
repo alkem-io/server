@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { UpdateSpaceDefaultsInput } from './dto/space.defaults.dto.update';
 import { ISpaceDefaults } from './space.defaults.interface';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -10,14 +9,14 @@ import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { SpaceDefaults } from './space.defaults.entity';
 import { InnovationFlowStatesService } from '../innovation-flow-states/innovaton.flow.state.service';
-import { IInnovationFlowState } from '../innovation-flow-states/innovation.flow.state.interface';
 import { Space } from '../space/space.entity';
-import { innovationFlowStatesDefault } from './definitions/space.defaults.innovation.flow';
 import { InnovationFlowTemplateService } from '@domain/template/innovation-flow-template/innovation.flow.template.service';
-
 import { ITemplatesSet } from '@domain/template/templates-set';
-import { templatesSetDefaults } from './definitions/space.defaults.templates';
 import { TemplatesSetService } from '@domain/template/templates-set/templates.set.service';
+import { IInnovationFlowTemplate } from '@domain/template/innovation-flow-template/innovation.flow.template.interface';
+import { CreateInnovationFlowInput } from '../innovation-flow';
+import { templatesSetDefaults } from './definitions/space.defaults.templates';
+import { innovationFlowStatesDefault } from './definitions/space.defaults.innovation.flow';
 
 @Injectable()
 export class SpaceDefaultsService {
@@ -34,32 +33,16 @@ export class SpaceDefaultsService {
 
   public async createSpaceDefaults(): Promise<ISpaceDefaults> {
     const spaceDefaults: ISpaceDefaults = new SpaceDefaults();
-
-    // Set the default challenge and opportunity flow states
-    spaceDefaults.innovationFlowStates =
-      this.innovationFlowStatesService.serializeStates(
-        innovationFlowStatesDefault
-      );
-
     spaceDefaults.authorization = new AuthorizationPolicy();
 
     return spaceDefaults;
   }
 
   public async updateSpaceDefaults(
-    spaceDefaultsData: UpdateSpaceDefaultsInput
+    spaceDefaults: ISpaceDefaults,
+    innovationFlowTemplate: IInnovationFlowTemplate
   ): Promise<ISpaceDefaults> {
-    const spaceDefaults = await this.getSpaceDefaultsOrFail(
-      spaceDefaultsData.ID
-    );
-
-    if (spaceDefaultsData.challengeFlowStates) {
-      const states = this.innovationFlowStatesService.getStates(
-        spaceDefaultsData.challengeFlowStates
-      );
-      spaceDefaults.innovationFlowStates =
-        this.innovationFlowStatesService.serializeStates(states);
-    }
+    spaceDefaults.innovationFlowTemplate = innovationFlowTemplate;
 
     return await this.save(spaceDefaults);
   }
@@ -74,6 +57,8 @@ export class SpaceDefaultsService {
     if (spaceDefaults.authorization) {
       await this.authorizationPolicyService.delete(spaceDefaults.authorization);
     }
+
+    // Note: do not remove the innovation flow template here, as that is the responsibility of the Space Library
 
     const result = await this.spaceDefaultsRepository.remove(
       spaceDefaults as SpaceDefaults
@@ -128,32 +113,57 @@ export class SpaceDefaultsService {
     return spaceDefaults;
   }
 
-  public getDefaultInnovationFlowStates(
+  public getDefaultInnovationFlowTemplate(
     spaceDefaults: ISpaceDefaults
-  ): IInnovationFlowState[] {
-    return this.innovationFlowStatesService.getStates(
-      spaceDefaults.innovationFlowStates
-    );
+  ): IInnovationFlowTemplate | undefined {
+    return spaceDefaults.innovationFlowTemplate;
   }
 
-  public async getDefaultInnovationFlowStatesForSpace(
+  public async getCreateInnovationFlowInput(
     spaceID: string,
     innovationFlowTemplateID?: string
-  ): Promise<IInnovationFlowState[]> {
-    const spaceDefaults = await this.getSpaceDefaultsForSpaceOrFail(spaceID);
-    let flowStates = this.innovationFlowStatesService.getStates(
-      spaceDefaults.innovationFlowStates
-    );
+  ): Promise<CreateInnovationFlowInput> {
+    // Start with using the provided argument
     if (innovationFlowTemplateID) {
-      const innovationFlowTemplate =
+      const template =
         await this.innovationFlowTemplateService.getInnovationFlowTemplateOrFail(
           innovationFlowTemplateID
         );
-      flowStates = this.innovationFlowStatesService.getStates(
-        innovationFlowTemplate.states
-      );
+      // Note: no profile currently present, so use the one from the template for now
+      const result: CreateInnovationFlowInput = {
+        profile: {
+          displayName: template.profile.displayName,
+          description: template.profile.description,
+        },
+        states: this.innovationFlowStatesService.getStates(template.states),
+      };
+      return result;
     }
-    return flowStates;
+
+    // If no argument is provided, then use the default template for the space, if set
+    const spaceDefaults = await this.getSpaceDefaultsForSpaceOrFail(spaceID);
+    if (spaceDefaults.innovationFlowTemplate) {
+      const template = spaceDefaults.innovationFlowTemplate;
+      // Note: no profile currently present, so use the one from the template for now
+      const result: CreateInnovationFlowInput = {
+        profile: {
+          displayName: template.profile.displayName,
+          description: template.profile.description,
+        },
+        states: this.innovationFlowStatesService.getStates(template.states),
+      };
+      return result;
+    }
+
+    // If no default template is set, then make up one
+    const result: CreateInnovationFlowInput = {
+      profile: {
+        displayName: 'default',
+        description: 'default flow',
+      },
+      states: innovationFlowStatesDefault,
+    };
+    return result;
   }
 
   public async addDefaultTemplatesToSpace(
