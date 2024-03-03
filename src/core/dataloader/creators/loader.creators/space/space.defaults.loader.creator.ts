@@ -16,7 +16,13 @@ export class SpaceDefaultsLoaderCreator
     return createTypedRelationDataLoader(
       this.manager,
       Space,
-      { defaults: true },
+      {
+        defaults: {
+          innovationFlowTemplate: {
+            profile: true,
+          },
+        },
+      },
       this.constructor.name,
       options
     );
