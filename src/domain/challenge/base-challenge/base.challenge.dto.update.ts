@@ -3,7 +3,6 @@ import { IsOptional, ValidateNested } from 'class-validator';
 import { UpdateContextInput } from '@domain/context/context/dto/context.dto.update';
 import { UpdateNameableInput } from '@domain/common/entity/nameable-entity/dto/nameable.dto.update';
 import { Type } from 'class-transformer';
-import { UpdateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.update';
 
 @InputType()
 export class UpdateBaseChallengeInput extends UpdateNameableInput {
@@ -15,10 +14,4 @@ export class UpdateBaseChallengeInput extends UpdateNameableInput {
   @ValidateNested()
   @Type(() => UpdateContextInput)
   context?: UpdateContextInput;
-
-  @Field(() => UpdateCollaborationInput, { nullable: true })
-  @IsOptional()
-  @ValidateNested()
-  @Type(() => UpdateCollaborationInput)
-  collaboration?: UpdateCollaborationInput;
 }
