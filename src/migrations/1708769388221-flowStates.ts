@@ -30,6 +30,10 @@ export class flowStates1708769388221 implements MigrationInterface {
       `ALTER TABLE \`space\` ADD \`defaultsId\` char(36) NULL`
     );
 
+    await queryRunner.query(
+      `ALTER TABLE \`collaboration\` ADD \`innovationFlowId\` char(36) DEFAULTNULL`
+    );
+
     // disable old constraints
     await queryRunner.query(
       `ALTER TABLE \`innovation_flow\` DROP FOREIGN KEY \`FK_4b4a68698d32f610a5fc1880c7f\``
@@ -132,6 +136,49 @@ export class flowStates1708769388221 implements MigrationInterface {
         )}' WHERE id = '${innovationFlowTemplate.id}'`
       );
     }
+    // d. Move the InnovationFlows to be on Collaboration for Challenges + Opportunities
+    const challenges: {
+      id: string;
+      innovationFlowId: string;
+      collaborationId: string;
+    }[] = await queryRunner.query(
+      `SELECT id, innovationFlowId, collaborationId FROM challenge`
+    );
+    for (const challenge of challenges) {
+      //
+      await queryRunner.query(
+        `UPDATE collaboration SET innovationFlowId = '${challenge.innovationFlowId}' WHERE id = '${challenge.collaborationId}'`
+      );
+    }
+    const opportunities: {
+      id: string;
+      innovationFlowId: string;
+      collaborationId: string;
+    }[] = await queryRunner.query(
+      `SELECT id, innovationFlowId, collaborationId FROM opportunity`
+    );
+    for (const opportunity of opportunities) {
+      //
+      await queryRunner.query(
+        `UPDATE collaboration SET innovationFlowId = '${opportunity.innovationFlowId}' WHERE id = '${opportunity.collaborationId}'`
+      );
+    }
+    const spaces2: {
+      id: string;
+      collaborationId: string;
+      storageAggregatorId: string;
+    }[] = await queryRunner.query(
+      `SELECT id, collaborationId, storageAggregatorId FROM space`
+    );
+    for (const space of spaces2) {
+      const newInnovationFlowId = await this.createInnovationFlow(
+        queryRunner,
+        space.storageAggregatorId
+      );
+      await queryRunner.query(
+        `UPDATE collaboration SET innovationFlowId = '${newInnovationFlowId}' WHERE id = '${space.collaborationId}'`
+      );
+    }
 
     // Add new constraints
     await queryRunner.query(
@@ -177,6 +224,13 @@ export class flowStates1708769388221 implements MigrationInterface {
     );
 
     await queryRunner.query(
+      `ALTER TABLE \`challenge\` DROP COLUMN \`innovationFlowId\``
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`opportunity\` DROP COLUMN \`innovationFlowId\``
+    );
+
+    await queryRunner.query(
       `ALTER TABLE \`templates_set\` DROP COLUMN \`policy\``
     );
   }
@@ -195,6 +249,14 @@ export class flowStates1708769388221 implements MigrationInterface {
     );
     await queryRunner.query(
       `ALTER TABLE \`innovation_flow\` ADD \`type\` varchar(128) NULL`
+    );
+
+    await queryRunner.query(
+      `ALTER TABLE \`challenge\` ADD \`innovationFlowId\` char(36) DEFAULTNULL`
+    );
+
+    await queryRunner.query(
+      `ALTER TABLE \`opportunity\` ADD \`innovationFlowId\` char(36) DEFAULTNULL`
     );
 
     await queryRunner.query(
@@ -251,6 +313,9 @@ export class flowStates1708769388221 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE \`innovation_flow_template\` DROP COLUMN \`states\``
     );
+    await queryRunner.query(
+      `ALTER TABLE \`collaboration\` DROP COLUMN \`innovationFlowId\``
+    );
   }
 
   innovationFlowStatesDefault: FlowState[] = [
@@ -300,6 +365,75 @@ export class flowStates1708769388221 implements MigrationInterface {
       sortOrder++;
     }
     return result;
+  }
+
+  private async createInnovationFlow(
+    queryRunner: QueryRunner,
+    storageAggregatorID: String
+  ): Promise<string> {
+    // Create and link the Profile
+    const innovationFlowID = randomUUID();
+    const innovationFlowAuthID = randomUUID();
+
+    const profileID = randomUUID();
+    const profileAuthID = randomUUID();
+
+    const locationID = randomUUID();
+    const storageBucketID = randomUUID();
+    const storageBucketAuthID = randomUUID();
+
+    await queryRunner.query(
+      `INSERT INTO authorization_policy (id, version, credentialRules, verifiedCredentialRules, anonymousReadAccess, privilegeRules) VALUES
+                ('${innovationFlowAuthID}',
+                1, '', '', 0, '')`
+    );
+    await queryRunner.query(
+      `INSERT INTO authorization_policy (id, version, credentialRules, verifiedCredentialRules, anonymousReadAccess, privilegeRules) VALUES
+                ('${profileAuthID}',
+                1, '', '', 0, '')`
+    );
+    await queryRunner.query(
+      `INSERT INTO authorization_policy (id, version, credentialRules, verifiedCredentialRules, anonymousReadAccess, privilegeRules) VALUES
+                ('${storageBucketAuthID}',
+                1, '', '', 0, '')`
+    );
+
+    await queryRunner.query(
+      `INSERT INTO location VALUES
+        ('${locationID}', DEFAULT, DEFAULT, 1, '', '', '' ,'', '', '')`
+    );
+
+    await queryRunner.query(
+      `INSERT INTO storage_bucket (id, version, storageAggregatorId, authorizationId) VALUES
+                ('${storageBucketID}',
+                1,
+                '${storageAggregatorID}',
+                '${storageBucketAuthID}')`
+    );
+
+    await queryRunner.query(
+      `INSERT INTO profile (id, version, displayName, description, type, authorizationId) VALUES
+                ('${profileID}',
+                1,
+                'innovationFlow',
+                '',
+                'innovation-flow',
+                '${profileAuthID}')`
+    );
+
+    const statesStr = this.convertStatesToText(
+      this.innovationFlowStatesDefault
+    );
+    await queryRunner.query(
+      `INSERT INTO innovation_flow (id, version, authorizationId, profileId) VALUES
+                ('${innovationFlowID}',
+                1, 
+                '${innovationFlowAuthID}', 
+                '${profileID}'
+                '${statesStr})`
+    );
+
+    return innovationFlowID;
   }
 }
 
