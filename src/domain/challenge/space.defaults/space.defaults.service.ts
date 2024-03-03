@@ -128,7 +128,10 @@ export class SpaceDefaultsService {
     if (innovationFlowTemplateID) {
       const template =
         await this.innovationFlowTemplateService.getInnovationFlowTemplateOrFail(
-          innovationFlowTemplateID
+          innovationFlowTemplateID,
+          {
+            relations: { profile: true },
+          }
         );
       // Note: no profile currently present, so use the one from the template for now
       const result: CreateInnovationFlowInput = {
@@ -144,7 +147,14 @@ export class SpaceDefaultsService {
     // If no argument is provided, then use the default template for the space, if set
     const spaceDefaults = await this.getSpaceDefaultsForSpaceOrFail(spaceID);
     if (spaceDefaults.innovationFlowTemplate) {
-      const template = spaceDefaults.innovationFlowTemplate;
+      const template =
+        await this.innovationFlowTemplateService.getInnovationFlowTemplateOrFail(
+          spaceDefaults.innovationFlowTemplate.id,
+          {
+            relations: { profile: true },
+          }
+        );
+      spaceDefaults.innovationFlowTemplate;
       // Note: no profile currently present, so use the one from the template for now
       const result: CreateInnovationFlowInput = {
         profile: {

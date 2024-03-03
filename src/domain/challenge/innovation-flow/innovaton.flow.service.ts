@@ -42,6 +42,12 @@ export class InnovationFlowService {
   ): Promise<IInnovationFlow> {
     const innovationFlow: IInnovationFlow = new InnovationFlow();
     innovationFlow.authorization = new AuthorizationPolicy();
+    if (innovationFlowData.states.length === 0) {
+      throw new ValidationException(
+        `Require at least one state to create an InnovationFlow: ${innovationFlowData}`,
+        LogContext.CHALLENGES
+      );
+    }
 
     const tagsetInputs =
       this.profileService.convertTagsetTemplatesToCreateTagsetInput(
@@ -220,7 +226,7 @@ export class InnovationFlowService {
     );
   }
 
-  public async getCurrentStateName(
+  public async getCurrentState(
     innovationFlowInput: IInnovationFlow
   ): Promise<IInnovationFlowState> {
     const innovationFlow = await this.getInnovationFlowOrFail(

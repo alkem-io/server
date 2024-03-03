@@ -44,6 +44,6 @@ export class InnovationFlowResolverFields {
   async currentState(
     @Parent() flow: IInnovationFlow
   ): Promise<IInnovationFlowState> {
-    return this.innovationFlowService.getCurrentStateName(flow);
+    return this.innovationFlowService.getCurrentState(flow);
   }
 }

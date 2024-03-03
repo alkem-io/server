@@ -59,9 +59,9 @@ export const templatesSetDefaults: any = {
       profile: {
         displayName: 'Default innovationFlow',
         description: 'Default innovationFlow',
-        tags: [],
+        tags: ['default'],
       },
-      definition: JSON.stringify(innovationFlowStatesDefault),
+      states: innovationFlowStatesDefault,
     },
   ],
 };
