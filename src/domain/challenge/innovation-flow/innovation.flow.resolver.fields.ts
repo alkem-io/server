@@ -36,4 +36,14 @@ export class InnovationFlowResolverFields {
   states(@Parent() flow: IInnovationFlow): IInnovationFlowState[] {
     return this.innovationFlowService.getStates(flow);
   }
+
+  @ResolveField('currentState', () => IInnovationFlowState, {
+    nullable: false,
+    description: 'The currently selected state for this Flow.',
+  })
+  async currentState(
+    @Parent() flow: IInnovationFlow
+  ): Promise<IInnovationFlowState> {
+    return this.innovationFlowService.getCurrentStateName(flow);
+  }
 }

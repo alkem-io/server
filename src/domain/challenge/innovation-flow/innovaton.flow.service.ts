@@ -219,4 +219,38 @@ export class InnovationFlowService {
       innovationFlowInput.states
     );
   }
+
+  public async getCurrentStateName(
+    innovationFlowInput: IInnovationFlow
+  ): Promise<IInnovationFlowState> {
+    const innovationFlow = await this.getInnovationFlowOrFail(
+      innovationFlowInput.id,
+      {
+        relations: { profile: true },
+      }
+    );
+    const statesTagset = await this.profileService.getTagset(
+      innovationFlow.profile.id,
+      TagsetReservedName.FLOW_STATE.valueOf()
+    );
+    const tags = statesTagset.tags;
+    if (tags.length !== 1) {
+      throw new EntityNotFoundException(
+        `InnovationFlow without FLOW STATE tagset with tag found: ${innovationFlow.id}`,
+        LogContext.COLLABORATION
+      );
+    }
+    const selectedStateDisplayName = tags[0];
+    const states = this.getStates(innovationFlow);
+    const currentState = states.find(
+      s => s.displayName === selectedStateDisplayName
+    );
+    if (!currentState) {
+      throw new EntityNotFoundException(
+        `InnovationFlow without FLOW STATE tagset with tag found: ${innovationFlow.id}, ${selectedStateDisplayName}`,
+        LogContext.COLLABORATION
+      );
+    }
+    return currentState;
+  }
 }
