@@ -278,8 +278,8 @@ export class ConversionService {
           displayName: opportunity.profile.displayName,
         },
         storageAggregatorParent: spaceStorageAggregator,
+        spaceID: spaceID,
       },
-      spaceID,
       agentInfo
     );
 

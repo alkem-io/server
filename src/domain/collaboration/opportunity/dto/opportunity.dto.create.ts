@@ -29,4 +29,6 @@ export class CreateOpportunityInput extends CreateBaseChallengeInput {
       'The ID of the Opportunity to use for setting up the collaboration of the Opportunity.',
   })
   collaborationTemplateOpportunityID?: string;
+
+  spaceID = 'not defined';
 }

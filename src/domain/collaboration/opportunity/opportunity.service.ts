@@ -64,7 +64,6 @@ export class OpportunityService {
 
   async createOpportunity(
     opportunityData: CreateOpportunityInput,
-    spaceID: string,
     agentInfo?: AgentInfo
   ): Promise<IOpportunity> {
     if (!opportunityData.nameID) {
@@ -74,11 +73,10 @@ export class OpportunityService {
     }
     await this.baseChallengeService.isNameAvailableOrFail(
       opportunityData.nameID,
-      spaceID
+      opportunityData.spaceID
     );
 
     const opportunity: IOpportunity = Opportunity.create(opportunityData);
-    opportunity.spaceID = spaceID;
     opportunity.projects = [];
 
     opportunity.storageAggregator =
@@ -89,7 +87,7 @@ export class OpportunityService {
     await this.baseChallengeService.initialise(
       opportunity,
       opportunityData,
-      spaceID,
+      opportunityData.spaceID,
       CommunityType.OPPORTUNITY,
       opportunityCommunityPolicy,
       opportunityCommunityApplicationForm,
@@ -126,7 +124,7 @@ export class OpportunityService {
       // Rely on the logic in Space Defaults to create the right innovation flow input
       const innovationFlowInput =
         await this.spaceDefaultsService.getCreateInnovationFlowInput(
-          spaceID,
+          opportunityData.spaceID,
           opportunityData.innovationFlowTemplateID
         );
       opportunity.innovationFlow =

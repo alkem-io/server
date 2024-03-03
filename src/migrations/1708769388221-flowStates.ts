@@ -165,9 +165,17 @@ export class flowStates1708769388221 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE \`innovation_flow_template\` DROP COLUMN \`type\``
     );
+
     await queryRunner.query(
       `ALTER TABLE \`innovation_flow\` DROP COLUMN \`lifecycleId\``
     );
+    await queryRunner.query(
+      `ALTER TABLE \`innovation_flow\` DROP COLUMN \`spaceID\``
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`innovation_flow\` DROP COLUMN \`type\``
+    );
+
     await queryRunner.query(
       `ALTER TABLE \`templates_set\` DROP COLUMN \`policy\``
     );
@@ -178,9 +186,17 @@ export class flowStates1708769388221 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE \`templates_set\` ADD \`policy\` text NULL`
     );
+
     await queryRunner.query(
       `ALTER TABLE \`innovation_flow\` ADD \`lifecycleId\` char(36) NULL`
     );
+    await queryRunner.query(
+      `ALTER TABLE \`innovation_flow\` ADD \`spaceID\` char(36) NULL`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`innovation_flow\` ADD \`type\` varchar(128) NULL`
+    );
+
     await queryRunner.query(
       `ALTER TABLE \`innovation_flow_template\` ADD \`definition\` text NULL`
     );

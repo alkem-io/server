@@ -992,9 +992,9 @@ export class SpaceService {
 
     // Update the challenge data being passed in to set the storage aggregator to use
     challengeData.storageAggregatorParent = space.storageAggregator;
+    challengeData.spaceID = space.id;
     const newChallenge = await this.challengeService.createChallenge(
       challengeData,
-      space.id,
       agentInfo
     );
 

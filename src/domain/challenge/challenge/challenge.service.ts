@@ -88,7 +88,6 @@ export class ChallengeService {
 
   async createChallenge(
     challengeData: CreateChallengeInput,
-    spaceID: string,
     agentInfo?: AgentInfo
   ): Promise<IChallenge> {
     if (!challengeData.nameID) {
@@ -98,11 +97,10 @@ export class ChallengeService {
     }
     await this.baseChallengeService.isNameAvailableOrFail(
       challengeData.nameID,
-      spaceID
+      challengeData.spaceID
     );
 
     const challenge: IChallenge = Challenge.create(challengeData);
-    challenge.spaceID = spaceID;
     challenge.childChallenges = [];
 
     challenge.opportunities = [];
@@ -115,7 +113,7 @@ export class ChallengeService {
     await this.baseChallengeService.initialise(
       challenge,
       challengeData,
-      spaceID,
+      challengeData.spaceID,
       CommunityType.CHALLENGE,
       challengeCommunityPolicy,
       challengeCommunityApplicationForm,
@@ -177,7 +175,7 @@ export class ChallengeService {
     // Rely on the logic in Space Defaults to create the right innovation flow input
     const innovationFlowInput =
       await this.spaceDefaultsService.getCreateInnovationFlowInput(
-        spaceID,
+        challengeData.spaceID,
         challengeData.innovationFlowTemplateID
       );
     // Note: need to create the innovation flow after creation of
@@ -576,11 +574,8 @@ export class ChallengeService {
       spaceID
     );
 
-    const childChallenge = await this.createChallenge(
-      challengeData,
-      spaceID,
-      agentInfo
-    );
+    challengeData.spaceID = spaceID;
+    const childChallenge = await this.createChallenge(challengeData, agentInfo);
 
     challenge.childChallenges?.push(childChallenge);
 
@@ -640,9 +635,9 @@ export class ChallengeService {
     );
 
     opportunityData.storageAggregatorParent = challenge.storageAggregator;
+    opportunityData.spaceID = spaceID;
     const opportunity = await this.opportunityService.createOpportunity(
       opportunityData,
-      spaceID,
       agentInfo
     );
 

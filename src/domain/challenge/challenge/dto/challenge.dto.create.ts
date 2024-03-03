@@ -34,4 +34,5 @@ export class CreateChallengeInput extends CreateBaseChallengeInput {
   nameID!: string;
 
   storageAggregatorParent!: IStorageAggregator;
+  spaceID = 'not defined';
 }
