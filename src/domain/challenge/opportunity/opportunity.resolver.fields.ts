@@ -19,23 +19,11 @@ import {
   OpportunityParentNameLoaderCreator,
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
-import { IInnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 
 @Resolver(() => IOpportunity)
 export class OpportunityResolverFields {
   constructor(private opportunityService: OpportunityService) {}
-
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
-  @ResolveField('innovationFlow', () => IInnovationFlow, {
-    nullable: true,
-    description: 'The InnovationFlow for the Opportunity.',
-  })
-  @Profiling.api
-  async innovationFlow(@Parent() opportunity: IOpportunity) {
-    return await this.opportunityService.getInnovationFlow(opportunity.id);
-  }
 
   @UseGuards(GraphqlGuard)
   @ResolveField('community', () => ICommunity, {

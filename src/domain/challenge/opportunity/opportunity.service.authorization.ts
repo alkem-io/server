@@ -15,7 +15,6 @@ import {
   CREDENTIAL_RULE_OPPORTUNITY_ADMIN,
   CREDENTIAL_RULE_OPPORTUNITY_MEMBER,
 } from '@common/constants';
-import { InnovationFlowAuthorizationService } from '@domain/collaboration/innovation-flow/innovation.flow.service.authorization';
 import { CommunityRole } from '@common/enums/community.role';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
@@ -32,7 +31,6 @@ export class OpportunityAuthorizationService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private opportunityService: OpportunityService,
     private communityPolicyService: CommunityPolicyService,
-    private innovationFlowAuthorizationService: InnovationFlowAuthorizationService,
     private profileAuthorizationService: ProfileAuthorizationService,
     private contextAuthorizationService: ContextAuthorizationService,
     private communityAuthorizationService: CommunityAuthorizationService,
@@ -322,12 +320,11 @@ export class OpportunityAuthorizationService {
       opportunityBase.id,
       {
         relations: {
-          innovationFlow: true,
           projects: true,
         },
       }
     );
-    if (!opportunity.innovationFlow || !opportunity.projects)
+    if (!opportunity.projects)
       throw new RelationshipNotFoundException(
         `Unable to load child entities for opportunity: ${opportunity.id} `,
         LogContext.CHALLENGES
@@ -340,12 +337,6 @@ export class OpportunityAuthorizationService {
           opportunity.authorization
         );
     }
-
-    opportunity.innovationFlow =
-      await this.innovationFlowAuthorizationService.applyAuthorizationPolicy(
-        opportunity.innovationFlow,
-        opportunity.authorization
-      );
 
     return await this.opportunityService.save(opportunity);
   }

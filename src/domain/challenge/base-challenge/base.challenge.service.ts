@@ -99,7 +99,10 @@ export class BaseChallengeService {
     );
 
     baseChallenge.collaboration =
-      await this.collaborationService.createCollaboration();
+      await this.collaborationService.createCollaboration(
+        spaceID,
+        storageAggregator
+      );
 
     baseChallenge.agent = await this.agentService.createAgent({
       parentDisplayID: `${baseChallenge.nameID}`,

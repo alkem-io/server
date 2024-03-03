@@ -34,8 +34,6 @@ import { IProfile } from '@domain/common/profile/profile.interface';
 import { CreateProjectInput } from '@domain/collaboration/project/dto/project.dto.create';
 import { CommunityRole } from '@common/enums/community.role';
 import { OperationNotAllowedException } from '@common/exceptions/operation.not.allowed.exception';
-import { IInnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.interface';
-import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovaton.flow.service';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { TagsetType } from '@common/enums/tagset.type';
 import { CreateTagsetTemplateInput } from '@domain/common/tagset-template/dto/tagset.template.dto.create';
@@ -44,17 +42,14 @@ import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { OpportunityDisplayLocation } from '@common/enums/opportunity.display.location';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
-import { SpaceDefaultsService } from '@domain/challenge/space.defaults/space.defaults.service';
 @Injectable()
 export class OpportunityService {
   constructor(
     private baseChallengeService: BaseChallengeService,
     private projectService: ProjectService,
     private communityService: CommunityService,
-    private innovationFlowService: InnovationFlowService,
     private collaborationService: CollaborationService,
     private storageAggregatorService: StorageAggregatorService,
-    private spaceDefaultsService: SpaceDefaultsService,
     private namingService: NamingService,
     @InjectRepository(Opportunity)
     private opportunityRepository: Repository<Opportunity>,
@@ -98,17 +93,6 @@ export class OpportunityService {
     await this.opportunityRepository.save(opportunity);
 
     if (opportunity.collaboration) {
-      const tagsetTemplateDataStates: CreateTagsetTemplateInput = {
-        name: TagsetReservedName.FLOW_STATE,
-        type: TagsetType.SELECT_ONE,
-        allowedValues: [],
-      };
-      const stateTagsetTemplate =
-        await this.collaborationService.addTagsetTemplate(
-          opportunity.collaboration,
-          tagsetTemplateDataStates
-        );
-
       const locations = Object.values(OpportunityDisplayLocation);
       const tagsetTemplateData: CreateTagsetTemplateInput = {
         name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
@@ -120,29 +104,6 @@ export class OpportunityService {
         opportunity.collaboration,
         tagsetTemplateData
       );
-
-      // Rely on the logic in Space Defaults to create the right innovation flow input
-      const innovationFlowInput =
-        await this.spaceDefaultsService.getCreateInnovationFlowInput(
-          opportunityData.spaceID,
-          opportunityData.innovationFlowTemplateID
-        );
-      opportunity.innovationFlow =
-        await this.innovationFlowService.createInnovationFlow(
-          innovationFlowInput,
-          [stateTagsetTemplate],
-          opportunity.storageAggregator
-        );
-
-      const stateTagset = opportunity.innovationFlow.profile.tagsets?.find(
-        t => t.tagsetTemplate?.name === TagsetReservedName.FLOW_STATE
-      );
-      if (!stateTagset) {
-        throw new EntityNotInitializedException(
-          `State tagset not found on Opportunity InnovationFlow: ${opportunity.nameID}`,
-          LogContext.CHALLENGES
-        );
-      }
 
       // Finally create default callouts, either using hard coded defaults or from a collaboration
       let calloutDefaults = opportunityDefaultCallouts;
@@ -255,21 +216,6 @@ export class OpportunityService {
     return this.opportunityRepository.find(options);
   }
 
-  async getInnovationFlow(opportunityID: string): Promise<IInnovationFlow> {
-    const opportunity = await this.getOpportunityOrFail(opportunityID, {
-      relations: { innovationFlow: true },
-    });
-
-    const innovationFlow = opportunity.innovationFlow;
-    if (!innovationFlow)
-      throw new RelationshipNotFoundException(
-        `Unable to load InnovationFlow for Opportunity ${opportunityID} `,
-        LogContext.CHALLENGES
-      );
-
-    return innovationFlow;
-  }
-
   async getOpportunitiesInNameableScope(
     nameableScopeID: string,
     IDs?: string[]
@@ -289,7 +235,6 @@ export class OpportunityService {
     const opportunity = await this.getOpportunityOrFail(opportunityID, {
       relations: {
         projects: true,
-        innovationFlow: true,
         storageAggregator: true,
       },
     });
@@ -306,12 +251,6 @@ export class OpportunityService {
       opportunity.id,
       this.opportunityRepository
     );
-
-    if (opportunity.innovationFlow) {
-      await this.innovationFlowService.deleteInnovationFlow(
-        opportunity.innovationFlow.id
-      );
-    }
 
     if (opportunity.storageAggregator) {
       await this.storageAggregatorService.delete(

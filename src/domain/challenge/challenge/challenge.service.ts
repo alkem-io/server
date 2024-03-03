@@ -53,8 +53,6 @@ import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { OperationNotAllowedException } from '@common/exceptions/operation.not.allowed.exception';
-import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovaton.flow.service';
-import { IInnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.interface';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { TagsetType } from '@common/enums/tagset.type';
 import { CreateTagsetTemplateInput } from '@domain/common/tagset-template/dto/tagset.template.dto.create';
@@ -64,7 +62,6 @@ import { ChallengeDisplayLocation } from '@common/enums/challenge.display.locati
 import { CommonDisplayLocation } from '@common/enums/common.display.location';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
-import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
 @Injectable()
 export class ChallengeService {
   constructor(
@@ -76,9 +73,7 @@ export class ChallengeService {
     private organizationService: OrganizationService,
     private preferenceSetService: PreferenceSetService,
     private storageAggregatorService: StorageAggregatorService,
-    private innovationFlowService: InnovationFlowService,
     private collaborationService: CollaborationService,
-    private spaceDefaultsService: SpaceDefaultsService,
     private namingService: NamingService,
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>,
@@ -146,17 +141,6 @@ export class ChallengeService {
       );
     }
 
-    const tagsetTemplateDataStates: CreateTagsetTemplateInput = {
-      name: TagsetReservedName.FLOW_STATE,
-      type: TagsetType.SELECT_ONE,
-      allowedValues: [],
-    };
-    const statesTagssetTemplate =
-      await this.collaborationService.addTagsetTemplate(
-        challenge.collaboration,
-        tagsetTemplateDataStates
-      );
-
     const locations = Object.values({
       ...CommonDisplayLocation,
       ...ChallengeDisplayLocation,
@@ -172,26 +156,12 @@ export class ChallengeService {
       tagsetTemplateData
     );
 
-    // Rely on the logic in Space Defaults to create the right innovation flow input
-    const innovationFlowInput =
-      await this.spaceDefaultsService.getCreateInnovationFlowInput(
-        challengeData.spaceID,
-        challengeData.innovationFlowTemplateID
-      );
-    // Note: need to create the innovation flow after creation of
-    // tagsetTemplates on Collabration so can pass it in to the InnovationFlow
-    challenge.innovationFlow =
-      await this.innovationFlowService.createInnovationFlow(
-        innovationFlowInput,
-        [statesTagssetTemplate],
-        challenge.storageAggregator
-      );
-
     const savedChallenge = await this.challengeRepository.save(challenge);
 
-    const stateTagset = savedChallenge.innovationFlow.profile.tagsets?.find(
-      t => t.tagsetTemplate?.name === TagsetReservedName.FLOW_STATE
-    );
+    const stateTagset =
+      savedChallenge.collaboration?.innovationFlow.profile.tagsets?.find(
+        t => t.tagsetTemplate?.name === TagsetReservedName.FLOW_STATE
+      );
     if (!stateTagset) {
       throw new EntityNotInitializedException(
         `State tagset not found on InnovationFlow: ${challenge.nameID}`,
@@ -274,7 +244,6 @@ export class ChallengeService {
       relations: {
         childChallenges: true,
         opportunities: true,
-        innovationFlow: true,
         preferenceSet: {
           preferences: true,
         },
@@ -319,12 +288,6 @@ export class ChallengeService {
     if (challenge.storageAggregator) {
       await this.storageAggregatorService.delete(
         challenge.storageAggregator.id
-      );
-    }
-
-    if (challenge.innovationFlow) {
-      await this.innovationFlowService.deleteInnovationFlow(
-        challenge.innovationFlow.id
       );
     }
 
@@ -432,23 +395,6 @@ export class ChallengeService {
       challengeId,
       this.challengeRepository
     );
-  }
-
-  async getInnovationFlow(challengeId: string): Promise<IInnovationFlow> {
-    const challenge = await this.getChallengeOrFail(challengeId, {
-      relations: {
-        innovationFlow: true,
-      },
-    });
-
-    const innovationFlow = challenge.innovationFlow;
-    if (!innovationFlow)
-      throw new RelationshipNotFoundException(
-        `Unable to load InnovationFlow for challenge ${challengeId} `,
-        LogContext.CHALLENGES
-      );
-
-    return innovationFlow;
   }
 
   async getContext(challengeId: string): Promise<IContext> {

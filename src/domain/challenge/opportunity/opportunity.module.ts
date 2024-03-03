@@ -16,13 +16,11 @@ import { AgentModule } from '@domain/agent/agent/agent.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { CommunityPolicyModule } from '@domain/community/community-policy/community.policy.module';
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
-import { InnovationFlowModule } from '@domain/collaboration/innovation-flow/innovation.flow.module';
 import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { ContextModule } from '@domain/context/context/context.module';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
 import { LicenseResolverModule } from '@services/infrastructure/license-resolver/license.resolver.module';
-import { SpaceDefaultsModule } from '@domain/challenge/space.defaults/space.defaults.module';
 
 @Module({
   imports: [
@@ -36,13 +34,11 @@ import { SpaceDefaultsModule } from '@domain/challenge/space.defaults/space.defa
     AgentModule,
     CommunityPolicyModule,
     CollaborationModule,
-    InnovationFlowModule,
     NamingModule,
     ProfileModule,
     ContextModule,
     ContributionReporterModule,
     StorageAggregatorModule,
-    SpaceDefaultsModule,
     LicenseResolverModule,
     TypeOrmModule.forFeature([Opportunity]),
   ],

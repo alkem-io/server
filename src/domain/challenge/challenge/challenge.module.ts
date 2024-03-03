@@ -25,12 +25,10 @@ import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platf
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { LoaderCreatorModule } from '@core/dataloader/creators';
-import { InnovationFlowModule } from '@domain/collaboration/innovation-flow/innovation.flow.module';
 import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
 import { LicenseResolverModule } from '@services/infrastructure/license-resolver/license.resolver.module';
-import { SpaceDefaultsModule } from '../space.defaults/space.defaults.module';
 
 @Module({
   imports: [
@@ -46,7 +44,6 @@ import { SpaceDefaultsModule } from '../space.defaults/space.defaults.module';
     OpportunityModule,
     OrganizationModule,
     NamingModule,
-    InnovationFlowModule,
     PlatformAuthorizationPolicyModule,
     ProjectModule,
     UserModule,
@@ -58,7 +55,6 @@ import { SpaceDefaultsModule } from '../space.defaults/space.defaults.module';
     StorageAggregatorModule,
     ContextModule,
     ProfileModule,
-    SpaceDefaultsModule,
     CollaborationModule,
     LicenseResolverModule,
   ],

@@ -10,7 +10,6 @@ import {
 import { IOpportunity } from '@domain/challenge/opportunity/opportunity.interface';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { BaseChallenge } from '@domain/challenge/base-challenge/base.challenge.entity';
-import { InnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.entity';
 import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
 
 @Entity()
@@ -30,14 +29,6 @@ export class Opportunity extends BaseChallenge implements IOpportunity {
 
   @Column()
   spaceID!: string;
-
-  @OneToOne(() => InnovationFlow, {
-    eager: false,
-    cascade: true,
-    onDelete: 'SET NULL',
-  })
-  @JoinColumn()
-  innovationFlow!: InnovationFlow;
 
   @OneToOne(() => StorageAggregator, {
     eager: false,
