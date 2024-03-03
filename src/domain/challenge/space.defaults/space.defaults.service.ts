@@ -137,7 +137,6 @@ export class SpaceDefaultsService {
           description: template.profile.description,
         },
         states: this.innovationFlowStatesService.getStates(template.states),
-        spaceID,
       };
       return result;
     }
@@ -153,7 +152,6 @@ export class SpaceDefaultsService {
           description: template.profile.description,
         },
         states: this.innovationFlowStatesService.getStates(template.states),
-        spaceID,
       };
       return result;
     }
@@ -165,7 +163,6 @@ export class SpaceDefaultsService {
         description: 'default flow',
       },
       states: innovationFlowStatesDefault,
-      spaceID,
     };
     return result;
   }
