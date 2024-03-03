@@ -7,10 +7,10 @@ import {
   OneToMany,
   OneToOne,
 } from 'typeorm';
-import { IOpportunity } from '@domain/collaboration/opportunity/opportunity.interface';
+import { IOpportunity } from '@domain/challenge/opportunity/opportunity.interface';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { BaseChallenge } from '@domain/challenge/base-challenge/base.challenge.entity';
-import { InnovationFlow } from '@domain/challenge/innovation-flow/innovation.flow.entity';
+import { InnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.entity';
 import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
 
 @Entity()

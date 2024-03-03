@@ -13,7 +13,7 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { IOpportunity } from './opportunity.interface';
 import { DeleteOpportunityInput, UpdateOpportunityInput } from './dto';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
-import { CreateProjectInput } from '../project/dto';
+import { CreateProjectInput } from '@domain/collaboration/project/dto';
 
 @Resolver()
 export class OpportunityResolverMutations {

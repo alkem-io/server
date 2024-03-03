@@ -10,11 +10,11 @@ import {
 } from '@domain/challenge/challenge';
 import { IContext } from '@domain/context/context';
 import { NVP } from '@domain/common/nvp';
-import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
+import { OpportunityService } from '@domain/challenge/opportunity/opportunity.service';
 import {
   CreateOpportunityInput,
   IOpportunity,
-} from '@domain/collaboration/opportunity';
+} from '@domain/challenge/opportunity';
 import { BaseChallengeService } from '@domain/challenge/base-challenge/base.challenge.service';
 import {
   AuthorizationCredential,
@@ -53,8 +53,8 @@ import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { OperationNotAllowedException } from '@common/exceptions/operation.not.allowed.exception';
-import { InnovationFlowService } from '../innovation-flow/innovaton.flow.service';
-import { IInnovationFlow } from '../innovation-flow/innovation.flow.interface';
+import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovaton.flow.service';
+import { IInnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.interface';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { TagsetType } from '@common/enums/tagset.type';
 import { CreateTagsetTemplateInput } from '@domain/common/tagset-template/dto/tagset.template.dto.create';

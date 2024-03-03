@@ -19,8 +19,8 @@ import {
   spaceCommunityApplicationForm,
   spaceCommunityPolicy,
 } from '@domain/challenge/space';
-import { IOpportunity } from '@domain/collaboration/opportunity/opportunity.interface';
-import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
+import { IOpportunity } from '@domain/challenge/opportunity/opportunity.interface';
+import { OpportunityService } from '@domain/challenge/opportunity/opportunity.service';
 import { IProject } from '@domain/collaboration/project/project.interface';
 import { ProjectService } from '@domain/collaboration/project/project.service';
 import { INVP, NVP } from '@domain/common/nvp';

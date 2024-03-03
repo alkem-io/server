@@ -15,13 +15,13 @@ import {
   CREDENTIAL_RULE_OPPORTUNITY_ADMIN,
   CREDENTIAL_RULE_OPPORTUNITY_MEMBER,
 } from '@common/constants';
-import { InnovationFlowAuthorizationService } from '@domain/challenge/innovation-flow/innovation.flow.service.authorization';
+import { InnovationFlowAuthorizationService } from '@domain/collaboration/innovation-flow/innovation.flow.service.authorization';
 import { CommunityRole } from '@common/enums/community.role';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 import { ContextAuthorizationService } from '@domain/context/context/context.service.authorization';
 import { CommunityAuthorizationService } from '@domain/community/community/community.service.authorization';
-import { CollaborationAuthorizationService } from '../collaboration/collaboration.service.authorization';
+import { CollaborationAuthorizationService } from '@domain/collaboration/collaboration/collaboration.service.authorization';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 import { ILicense } from '@domain/license/license/license.interface';
 import { LicenseResolverService } from '@services/infrastructure/license-resolver/license.resolver.service';

@@ -1,4 +1,4 @@
-import { IInnovationFlowState } from '@domain/challenge/innovation-flow-states/innovation.flow.state.interface';
+import { IInnovationFlowState } from '@domain/collaboration/innovation-flow-states/innovation.flow.state.interface';
 
 export const innovationFlowStatesDefault: IInnovationFlowState[] = [
   {

@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Opportunity } from '@domain/collaboration/opportunity';
+import { Opportunity } from '@domain/challenge/opportunity';
 import { OpportunityService } from './opportunity.service';
 import { ProjectModule } from '@domain/collaboration/project/project.module';
 import { RelationModule } from '@domain/collaboration/relation/relation.module';
@@ -16,8 +16,8 @@ import { AgentModule } from '@domain/agent/agent/agent.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { CommunityPolicyModule } from '@domain/community/community-policy/community.policy.module';
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
-import { InnovationFlowModule } from '@domain/challenge/innovation-flow/innovation.flow.module';
-import { CollaborationModule } from '../collaboration/collaboration.module';
+import { InnovationFlowModule } from '@domain/collaboration/innovation-flow/innovation.flow.module';
+import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { ContextModule } from '@domain/context/context/context.module';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';

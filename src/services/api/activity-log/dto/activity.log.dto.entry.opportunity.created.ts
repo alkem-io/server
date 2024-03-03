@@ -1,4 +1,4 @@
-import { IOpportunity } from '@domain/collaboration/opportunity/opportunity.interface';
+import { IOpportunity } from '@domain/challenge/opportunity/opportunity.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IActivityLogEntryBase } from './activity.log.dto.entry.base.interface';
 import { IActivityLogEntry } from './activity.log.entry.interface';

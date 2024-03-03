@@ -22,7 +22,7 @@ import {
 import {
   CreateOpportunityInput,
   UpdateOpportunityInput,
-} from '@domain/collaboration/opportunity/dto';
+} from '@domain/challenge/opportunity/dto';
 import {
   CreateUserGroupInput,
   UpdateUserGroupInput,
@@ -63,7 +63,7 @@ import {
 import { VisualUploadImageInput } from '@domain/common/visual/dto/visual.dto.upload.image';
 import { CreateInvitationExistingUserOnCommunityInput } from '@domain/community/community/dto/community.dto.invite.existing.user';
 import { CreateInvitationExternalUserOnCommunityInput } from '@domain/community/community/dto/community.dto.invite.external.user';
-import { UpdateInnovationFlowInput } from '@domain/challenge/innovation-flow';
+import { UpdateInnovationFlowInput } from '@domain/collaboration/innovation-flow';
 import {
   CreateCalloutFramingInput,
   UpdateCalloutFramingInput,
@@ -85,7 +85,7 @@ import {
   UpdateLinkInput,
 } from '@domain/collaboration/link/dto';
 import { UpdateUserPlatformSettingsInput } from '@domain/community/user/dto/user.dto.update.platform.settings';
-import { UpdateInnovationFlowStateInput } from '@domain/challenge/innovation-flow-states/dto/innovation.flow.state.dto.update';
+import { UpdateInnovationFlowStateInput } from '@domain/collaboration/innovation-flow-states/dto/innovation.flow.state.dto.update';
 
 export class BaseHandler extends AbstractHandler {
   public async handle(

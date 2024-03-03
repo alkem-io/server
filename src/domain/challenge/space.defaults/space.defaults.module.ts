@@ -4,7 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { SpaceDefaults } from './space.defaults.entity';
 import { Space } from '../space/space.entity';
 import { InnovationFlowTemplateModule } from '@domain/template/innovation-flow-template/innovation.flow.template.module';
-import { InnovationFlowStatesModule } from '../innovation-flow-states/innovation.flow.state.module';
+import { InnovationFlowStatesModule } from '@domain/collaboration/innovation-flow-states/innovation.flow.state.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { TemplatesSetModule } from '@domain/template/templates-set/templates.set.module';

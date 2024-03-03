@@ -8,7 +8,7 @@ import { InnovationFlowTemplate } from './innovation.flow.template.entity';
 import { InnovationFlowTemplateResolverMutations } from './innovation.flow.template.resolver.mutations';
 import { InnovationFlowTemplateService } from './innovation.flow.template.service';
 import { InnovationFlowTemplateAuthorizationService } from './innovation.flow.template.service.authorization';
-import { InnovationFlowStatesModule } from '@domain/challenge/innovation-flow-states/innovation.flow.state.module';
+import { InnovationFlowStatesModule } from '@domain/collaboration/innovation-flow-states/innovation.flow.state.module';
 import { InnovationFlowTemplateResolverFields } from './innovation.flow.template.resolver.fields';
 
 @Module({

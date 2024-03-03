@@ -13,7 +13,7 @@ import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { PostService } from '@domain/collaboration/post/post.service';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
-import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
+import { OpportunityService } from '@domain/challenge/opportunity/opportunity.service';
 import { CommunityService } from '@domain/community/community/community.service';
 import { IActivityLogEntry } from './dto/activity.log.entry.interface';
 import { IActivityLogEntryUpdateSent } from './dto/activity.log.dto.entry.update.sent';

@@ -7,7 +7,7 @@ import { ChallengeResolverMutations } from './challenge.resolver.mutations';
 import { ChallengeService } from './challenge.service';
 import { CommunityModule } from '@domain/community/community/community.module';
 import { OrganizationModule } from '@domain/community/organization/organization.module';
-import { OpportunityModule } from '@domain/collaboration/opportunity/opportunity.module';
+import { OpportunityModule } from '@domain/challenge/opportunity/opportunity.module';
 import { BaseChallengeModule } from '@domain/challenge/base-challenge/base.challenge.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { ChallengeAuthorizationService } from '@domain/challenge/challenge/challenge.service.authorization';
@@ -25,7 +25,7 @@ import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platf
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { LoaderCreatorModule } from '@core/dataloader/creators';
-import { InnovationFlowModule } from '../innovation-flow/innovation.flow.module';
+import { InnovationFlowModule } from '@domain/collaboration/innovation-flow/innovation.flow.module';
 import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';

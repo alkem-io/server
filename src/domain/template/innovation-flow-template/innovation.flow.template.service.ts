@@ -9,8 +9,8 @@ import { InnovationFlowTemplate } from './innovation.flow.template.entity';
 import { IInnovationFlowTemplate } from './innovation.flow.template.interface';
 import { UpdateInnovationFlowTemplateInput } from './dto/innovation.flow.template.dto.update';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { InnovationFlowStatesService } from '@domain/challenge/innovation-flow-states/innovaton.flow.state.service';
-import { IInnovationFlowState } from '@domain/challenge/innovation-flow-states/innovation.flow.state.interface';
+import { InnovationFlowStatesService } from '@domain/collaboration/innovation-flow-states/innovaton.flow.state.service';
+import { IInnovationFlowState } from '@domain/collaboration/innovation-flow-states/innovation.flow.state.interface';
 
 @Injectable()
 export class InnovationFlowTemplateService {

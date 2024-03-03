@@ -7,7 +7,7 @@ import { ChallengeModule } from '@domain/challenge/challenge/challenge.module';
 import { CommunityModule } from '@domain/community/community/community.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { CommunicationModule } from '@domain/communication/communication/communication.module';
-import { OpportunityModule } from '@domain/collaboration/opportunity/opportunity.module';
+import { OpportunityModule } from '@domain/challenge/opportunity/opportunity.module';
 
 @Module({
   imports: [

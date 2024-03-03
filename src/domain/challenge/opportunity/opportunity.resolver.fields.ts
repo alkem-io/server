@@ -8,7 +8,7 @@ import { INVP } from '@domain/common/nvp/nvp.interface';
 import { AuthorizationPrivilege } from '@common/enums';
 import { UseGuards } from '@nestjs/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
-import { ICollaboration } from '../collaboration/collaboration.interface';
+import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { Opportunity } from './opportunity.entity';
 import { Loader } from '@core/dataloader/decorators';
@@ -19,7 +19,7 @@ import {
   OpportunityParentNameLoaderCreator,
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
-import { IInnovationFlow } from '@domain/challenge/innovation-flow/innovation.flow.interface';
+import { IInnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 
 @Resolver(() => IOpportunity)

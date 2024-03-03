@@ -9,7 +9,7 @@ import { MeResolverFields } from './me.resolver.fields';
 import { SpaceModule } from '@domain/challenge/space/space.module';
 import { RolesModule } from '../roles/roles.module';
 import { ChallengeModule } from '@domain/challenge/challenge/challenge.module';
-import { OpportunityModule } from '@domain/collaboration/opportunity/opportunity.module';
+import { OpportunityModule } from '@domain/challenge/opportunity/opportunity.module';
 import { ActivityLogModule } from '../activity-log/activity.log.module';
 import { ActivityModule } from '@platform/activity/activity.module';
 

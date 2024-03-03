@@ -9,7 +9,7 @@ import {
   EntityNotInitializedException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
-import { OpportunityAuthorizationService } from '@domain/collaboration/opportunity/opportunity.service.authorization';
+import { OpportunityAuthorizationService } from '@domain/challenge/opportunity/opportunity.service.authorization';
 import { ChallengeService } from './challenge.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IChallenge } from './challenge.interface';
@@ -34,7 +34,7 @@ import {
   CREDENTIAL_RULE_COMMUNITY_ADD_MEMBER,
 } from '@common/constants';
 import { CommunityRole } from '@common/enums/community.role';
-import { InnovationFlowAuthorizationService } from '../innovation-flow/innovation.flow.service.authorization';
+import { InnovationFlowAuthorizationService } from '@domain/collaboration/innovation-flow/innovation.flow.service.authorization';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 import { ContextAuthorizationService } from '@domain/context/context/context.service.authorization';
 import { CommunityAuthorizationService } from '@domain/community/community/community.service.authorization';

@@ -3,7 +3,7 @@ import { UpdateProfileInput } from '@domain/common/profile/dto';
 import { IsOptional, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
-import { UpdateInnovationFlowStateInput } from '@domain/challenge/innovation-flow-states/dto/innovation.flow.state.dto.update';
+import { UpdateInnovationFlowStateInput } from '@domain/collaboration/innovation-flow-states/dto/innovation.flow.state.dto.update';
 
 @InputType()
 export class UpdateInnovationFlowInput {

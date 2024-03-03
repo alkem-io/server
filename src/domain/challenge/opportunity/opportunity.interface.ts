@@ -1,7 +1,7 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IProject } from '@domain/collaboration/project/project.interface';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
-import { IInnovationFlow } from '@domain/challenge/innovation-flow/innovation.flow.interface';
+import { IInnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { IJourney } from '@domain/challenge/base-challenge/journey.interface';
 import { IBaseChallenge } from '@domain/challenge/base-challenge/base.challenge.interface';

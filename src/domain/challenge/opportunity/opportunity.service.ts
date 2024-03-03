@@ -13,7 +13,7 @@ import {
   opportunityCommunityApplicationForm,
   opportunityCommunityPolicy,
   UpdateOpportunityInput,
-} from '@domain/collaboration/opportunity';
+} from '@domain/challenge/opportunity';
 import { LogContext, ProfileType } from '@common/enums';
 import { ProjectService } from '@domain/collaboration/project/project.service';
 import { IProject } from '@domain/collaboration/project';
@@ -27,16 +27,16 @@ import { UUID_LENGTH } from '@common/constants';
 import { CommunityType } from '@common/enums/community.type';
 import { AgentInfo } from '@src/core/authentication/agent-info';
 import { IContext } from '@domain/context/context/context.interface';
-import { ICollaboration } from '../collaboration/collaboration.interface';
+import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { IProfile } from '@domain/common/profile/profile.interface';
-import { CreateProjectInput } from '../project/dto/project.dto.create';
+import { CreateProjectInput } from '@domain/collaboration/project/dto/project.dto.create';
 import { CommunityRole } from '@common/enums/community.role';
 import { OperationNotAllowedException } from '@common/exceptions/operation.not.allowed.exception';
-import { IInnovationFlow } from '@domain/challenge/innovation-flow/innovation.flow.interface';
-import { InnovationFlowService } from '@domain/challenge/innovation-flow/innovaton.flow.service';
-import { CollaborationService } from '../collaboration/collaboration.service';
+import { IInnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.interface';
+import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovaton.flow.service';
+import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { TagsetType } from '@common/enums/tagset.type';
 import { CreateTagsetTemplateInput } from '@domain/common/tagset-template/dto/tagset.template.dto.create';
 import { opportunityDefaultCallouts } from './opportunity.default.callouts';
