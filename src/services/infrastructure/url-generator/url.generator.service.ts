@@ -555,16 +555,59 @@ export class UrlGeneratorService {
   }
 
   private async getWhiteboardUrlPath(profileID: string): Promise<string> {
-    const whiteboardInfo = await this.getNameableEntityInfoOrFail(
-      'whiteboard',
-      this.FIELD_PROFILE_ID,
-      profileID
+    const [result]: {
+      whiteboardId: string;
+      whiteboardNameId: string;
+    }[] = await this.entityManager.connection.query(
+      `
+          SELECT whiteboard.id as whiteboardId, whiteboard.nameID as whiteboardNameId FROM whiteboard
+          WHERE whiteboard.profileId = '${profileID}'
+        `
     );
 
-    return await this.getCalloutUrlPath(
-      'whiteboardId',
-      whiteboardInfo.entityID
+    if (!result) {
+      throw new EntityNotFoundException(
+        `Unable to find whiteboard where profile: ${profileID}`,
+        LogContext.URL_GENERATOR
+      );
+    }
+
+    let calloutId = '';
+    const [contributionResult]: {
+      calloutId: string;
+    }[] = await this.entityManager.connection.query(
+      `
+          SELECT callout_contribution.id as contributionId, callout_contribution.calloutId as calloutId FROM callout_contribution
+          WHERE callout_contribution.whiteboardId = '${result.whiteboardId}'
+        `
     );
+
+    if (!contributionResult) {
+      const [whiteboardFromFramingResult]: {
+        calloutId: string;
+      }[] = await this.entityManager.connection.query(
+        `SELECT c.id AS calloutId
+          FROM callout AS c JOIN callout_framing AS cf ON cf.id = c.framingId
+          WHERE cf.whiteboardId = '${result.whiteboardId}'`
+      );
+
+      calloutId = whiteboardFromFramingResult.calloutId;
+
+      if (!whiteboardFromFramingResult) {
+        throw new EntityNotFoundException(
+          `Unable to find callout where whiteboardId: ${result.whiteboardId}`,
+          LogContext.URL_GENERATOR
+        );
+      }
+    } else {
+      calloutId = contributionResult.calloutId;
+    }
+
+    const calloutUrlPath = await this.getCalloutUrlPath(
+      this.FIELD_ID,
+      calloutId
+    );
+    return `${calloutUrlPath}/${this.PATH_WHITEBOARDS}/${result.whiteboardNameId}`;
   }
 
   private async getInnovationPackUrlPath(profileID: string): Promise<string> {
