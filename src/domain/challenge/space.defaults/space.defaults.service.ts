@@ -17,6 +17,7 @@ import { IInnovationFlowTemplate } from '@domain/template/innovation-flow-templa
 import { CreateInnovationFlowInput } from '../innovation-flow';
 import { templatesSetDefaults } from './definitions/space.defaults.templates';
 import { innovationFlowStatesDefault } from './definitions/space.defaults.innovation.flow';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 
 @Injectable()
 export class SpaceDefaultsService {
@@ -167,12 +168,14 @@ export class SpaceDefaultsService {
   }
 
   public async addDefaultTemplatesToSpace(
-    templatesSet: ITemplatesSet
+    templatesSet: ITemplatesSet,
+    storageAggregator: IStorageAggregator
   ): Promise<ITemplatesSet> {
     return await this.templatesSetService.addTemplates(
       templatesSet,
       templatesSetDefaults.posts,
-      templatesSetDefaults.innovationFlows
+      templatesSetDefaults.innovationFlows,
+      storageAggregator
     );
   }
 }

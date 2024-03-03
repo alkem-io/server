@@ -9,6 +9,7 @@ import { InnovationFlowTemplateResolverMutations } from './innovation.flow.templ
 import { InnovationFlowTemplateService } from './innovation.flow.template.service';
 import { InnovationFlowTemplateAuthorizationService } from './innovation.flow.template.service.authorization';
 import { InnovationFlowStatesModule } from '@domain/challenge/innovation-flow-states/innovation.flow.state.module';
+import { InnovationFlowTemplateResolverFields } from './innovation.flow.template.resolver.fields';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { InnovationFlowStatesModule } from '@domain/challenge/innovation-flow-st
   providers: [
     InnovationFlowTemplateService,
     InnovationFlowTemplateAuthorizationService,
+    InnovationFlowTemplateResolverFields,
     InnovationFlowTemplateResolverMutations,
   ],
   exports: [

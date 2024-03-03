@@ -16,5 +16,5 @@ export class InnovationFlow
   profile!: Profile;
 
   @Column('text')
-  states!: string;
+  states: string = '[]';
 }

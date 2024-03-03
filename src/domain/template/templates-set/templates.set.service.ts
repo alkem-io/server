@@ -214,10 +214,9 @@ export class TemplatesSetService {
   async addTemplates(
     templatesSet: ITemplatesSet,
     postTemplateInputs: CreatePostTemplateInput[],
-    innovationFlowTemplateInputs: CreateInnovationFlowTemplateInput[]
+    innovationFlowTemplateInputs: CreateInnovationFlowTemplateInput[],
+    storageAggregator: IStorageAggregator
   ): Promise<ITemplatesSet> {
-    const storageAggregator = await this.getStorageAggregator(templatesSet);
-
     for (const postTemplateDefault of postTemplateInputs) {
       const postTemplate = await this.postTemplateService.createPostTemplate(
         postTemplateDefault,

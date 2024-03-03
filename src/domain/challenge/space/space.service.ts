@@ -131,20 +131,23 @@ export class SpaceService {
       space.storageAggregator
     );
 
-    if (!space.collaboration) {
+    if (!space.collaboration || !space.storageAggregator) {
       throw new EntityNotInitializedException(
-        `Collaboration not initialized on Space: ${space.nameID}`,
+        `Space not fully initialized: ${space.nameID}`,
         LogContext.CHALLENGES
       );
     }
 
+    // The space library (templates set) and defaults are separate but related concepts
     space.templatesSet = await this.templatesSetService.createTemplatesSet();
+    space.defaults = await this.spaceDefaultsService.createSpaceDefaults();
+
+    // And set the defaults
     space.templatesSet =
       await this.spaceDefaultsService.addDefaultTemplatesToSpace(
-        space.templatesSet
+        space.templatesSet,
+        space.storageAggregator
       );
-
-    space.defaults = await this.spaceDefaultsService.createSpaceDefaults();
     if (space.templatesSet.innovationFlowTemplates.length !== 0) {
       space.defaults.innovationFlowTemplate =
         space.templatesSet.innovationFlowTemplates[0];

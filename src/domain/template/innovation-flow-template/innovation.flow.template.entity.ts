@@ -20,7 +20,7 @@ export class InnovationFlowTemplate
   templatesSet?: TemplatesSet;
 
   @Column('text', { nullable: false })
-  states!: string;
+  states: string = '[]';
 
   constructor() {
     super();
