@@ -88,12 +88,12 @@ export class ChallengeResolverMutations {
     );
 
     // For the creation based on the template from another challenge require platform admin privileges
-    if (opportunityData.collaborationTemplateOpportunityID) {
+    if (opportunityData.collaborationData?.collaborationTemplateID) {
       await this.authorizationService.grantAccessOrFail(
         agentInfo,
         challenge.authorization,
         AuthorizationPrivilege.CREATE,
-        `opportunityCreate using challenge template: ${challenge.nameID} - ${opportunityData.collaborationTemplateOpportunityID}`
+        `opportunityCreate using challenge template: ${challenge.nameID} - ${opportunityData.collaborationData.collaborationTemplateID}`
       );
     }
     const opportunity = await this.challengeService.createOpportunity(

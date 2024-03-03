@@ -42,6 +42,8 @@ export class flowStates1708769388221 implements MigrationInterface {
       `DROP INDEX \`IDX_0af5c8e5c0a2f7858ae0a40c04\` ON \`innovation_flow\``
     );
 
+    // TODO: drop constraints challenge - innovation flow, opportunit - innovation flow
+
     ////////////////////////////////////////
     // migrate data to new setup
     // a. Create new space defaults for all spaces, including default flows for challenges + opportunities. TODO: what about the old flows?
@@ -204,6 +206,8 @@ export class flowStates1708769388221 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE \`space_defaults\` ADD CONSTRAINT \`FK_666ba75964e5a534e4bfa54846e\` FOREIGN KEY (\`innovationFlowTemplateId\`) REFERENCES \`innovation_flow_template\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
+
+    // TODO: add constraints collaboration - innovation flow
 
     // remove old data
     await queryRunner.query(

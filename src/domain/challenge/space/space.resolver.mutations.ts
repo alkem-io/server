@@ -329,12 +329,12 @@ export class SpaceResolverMutations {
     );
 
     // For the creation based on the template from another challenge require platform admin privileges
-    if (challengeData.collaborationTemplateChallengeID) {
+    if (challengeData.collaborationData?.collaborationTemplateID) {
       await this.authorizationService.grantAccessOrFail(
         agentInfo,
         space.authorization,
         AuthorizationPrivilege.CREATE,
-        `challengeCreate using challenge template: ${space.nameID} - ${challengeData.collaborationTemplateChallengeID}`
+        `challengeCreate using challenge template: ${space.nameID} - ${challengeData.collaborationData.collaborationTemplateID}`
       );
     }
     const challenge = await this.spaceService.createChallengeInSpace(

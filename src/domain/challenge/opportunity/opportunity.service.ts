@@ -107,10 +107,13 @@ export class OpportunityService {
 
       // Finally create default callouts, either using hard coded defaults or from a collaboration
       let calloutDefaults = opportunityDefaultCallouts;
-      if (opportunityData.collaborationTemplateOpportunityID) {
-        const collaboration = await this.getCollaborationForOpportunity(
-          opportunityData.collaborationTemplateOpportunityID
-        );
+      const collaborationTemplateID =
+        opportunityData.collaborationData?.collaborationTemplateID;
+      if (collaborationTemplateID) {
+        const collaboration =
+          await this.collaborationService.getCollaborationOrFail(
+            collaborationTemplateID
+          );
         calloutDefaults =
           await this.collaborationService.createCalloutInputsFromCollaboration(
             collaboration
@@ -321,21 +324,6 @@ export class OpportunityService {
       opportunity.id,
       this.opportunityRepository
     );
-  }
-
-  public async getCollaborationForOpportunity(
-    opportunityID: string
-  ): Promise<ICollaboration> {
-    const opportunity = await this.getOpportunityOrFail(opportunityID, {
-      relations: { collaboration: true },
-    });
-    if (!opportunity.collaboration) {
-      throw new RelationshipNotFoundException(
-        `Unable to load Collaboration for opportunity ${opportunityID} `,
-        LogContext.CHALLENGES
-      );
-    }
-    return opportunity.collaboration;
   }
 
   async createProject(projectData: CreateProjectInput): Promise<IProject> {

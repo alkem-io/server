@@ -100,8 +100,11 @@ export class BaseChallengeService {
 
     baseChallenge.collaboration =
       await this.collaborationService.createCollaboration(
-        spaceID,
-        storageAggregator
+        {
+          ...baseChallengeData.collaborationData,
+        },
+        storageAggregator,
+        spaceID
       );
 
     baseChallenge.agent = await this.agentService.createAgent({

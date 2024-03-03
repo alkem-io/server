@@ -50,6 +50,7 @@ import { InnovationFlowService } from '../innovation-flow/innovaton.flow.service
 import { SpaceDefaultsService } from '@domain/challenge/space.defaults/space.defaults.service';
 import { TagsetType } from '@common/enums/tagset.type';
 import { IInnovationFlow } from '../innovation-flow/innovation.flow.interface';
+import { CreateCollaborationInput } from './dto/collaboration.dto.create';
 
 @Injectable()
 export class CollaborationService {
@@ -71,9 +72,9 @@ export class CollaborationService {
   ) {}
 
   async createCollaboration(
-    spaceID: string,
+    collaborationData: CreateCollaborationInput,
     storageAggregator: IStorageAggregator,
-    innovationFlowTemplateID?: string
+    spaceID: string
   ): Promise<ICollaboration> {
     const collaboration: ICollaboration = Collaboration.create();
     collaboration.authorization = new AuthorizationPolicy();
@@ -99,7 +100,7 @@ export class CollaborationService {
     const innovationFlowInput =
       await this.spaceDefaultsService.getCreateInnovationFlowInput(
         spaceID,
-        innovationFlowTemplateID
+        collaborationData.innovationFlowTemplateID
       );
     // Note: need to create the innovation flow after creation of
     // tagsetTemplates on Collabration so can pass it in to the InnovationFlow

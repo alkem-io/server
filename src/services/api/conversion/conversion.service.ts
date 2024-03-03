@@ -273,7 +273,9 @@ export class ConversionService {
     const emptyChallenge = await this.challengeService.createChallenge(
       {
         nameID: challengeNameID,
-        innovationFlowTemplateID: innovationFlowTemplateID,
+        collaborationData: {
+          innovationFlowTemplateID: innovationFlowTemplateID,
+        },
         profileData: {
           displayName: opportunity.profile.displayName,
         },

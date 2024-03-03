@@ -1,4 +1,4 @@
-import { NameID, UUID, UUID_NAMEID } from '@domain/common/scalars';
+import { NameID, UUID_NAMEID } from '@domain/common/scalars';
 import { Field, InputType } from '@nestjs/graphql';
 import { CreateBaseChallengeInput } from '@domain/challenge/base-challenge/base.challenge.dto.create';
 import { IsOptional } from 'class-validator';
@@ -12,19 +12,6 @@ export class CreateChallengeInput extends CreateBaseChallengeInput {
   })
   @IsOptional()
   leadOrganizations?: string[];
-
-  @Field(() => UUID, {
-    nullable: true,
-    description: 'The Innovation Flow template to use for the Challenge.',
-  })
-  innovationFlowTemplateID?: string;
-
-  @Field(() => UUID, {
-    nullable: true,
-    description:
-      'The ID of the Challenge to use for setting up the collaboration the Challenge.',
-  })
-  collaborationTemplateChallengeID?: string;
 
   // Override
   @Field(() => NameID, {

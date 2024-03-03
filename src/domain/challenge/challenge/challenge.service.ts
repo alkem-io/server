@@ -159,7 +159,7 @@ export class ChallengeService {
     const savedChallenge = await this.challengeRepository.save(challenge);
 
     const stateTagset =
-      savedChallenge.collaboration?.innovationFlow.profile.tagsets?.find(
+      savedChallenge.collaboration?.innovationFlow?.profile.tagsets?.find(
         t => t.tagsetTemplate?.name === TagsetReservedName.FLOW_STATE
       );
     if (!stateTagset) {
@@ -171,10 +171,13 @@ export class ChallengeService {
 
     // Finally create default callouts, either using hard coded defaults or from a collaboration
     let calloutDefaults = challengeDefaultCallouts;
-    if (challengeData.collaborationTemplateChallengeID) {
-      const collaboration = await this.getCollaborationForChallenge(
-        challengeData.collaborationTemplateChallengeID
-      );
+    const collaborationTemplateID =
+      challengeData.collaborationData?.collaborationTemplateID;
+    if (collaborationTemplateID) {
+      const collaboration =
+        await this.collaborationService.getCollaborationOrFail(
+          collaborationTemplateID
+        );
       calloutDefaults =
         await this.collaborationService.createCalloutInputsFromCollaboration(
           collaboration
@@ -411,21 +414,6 @@ export class ChallengeService {
       challenge.id,
       this.challengeRepository
     );
-  }
-
-  public async getCollaborationForChallenge(
-    challengeID: string
-  ): Promise<ICollaboration> {
-    const challenge = await this.getChallengeOrFail(challengeID, {
-      relations: { collaboration: true },
-    });
-    if (!challenge.collaboration) {
-      throw new RelationshipNotFoundException(
-        `Unable to load Collaboration for challenge ${challengeID} `,
-        LogContext.CHALLENGES
-      );
-    }
-    return challenge.collaboration;
   }
 
   async getAgent(challengeId: string): Promise<IAgent> {

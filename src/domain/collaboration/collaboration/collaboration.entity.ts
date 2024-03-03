@@ -45,5 +45,5 @@ export class Collaboration
     onDelete: 'SET NULL',
   })
   @JoinColumn()
-  innovationFlow!: InnovationFlow;
+  innovationFlow?: InnovationFlow;
 }
