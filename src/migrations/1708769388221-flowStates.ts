@@ -9,6 +9,7 @@ export class flowStates1708769388221 implements MigrationInterface {
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     // create new schema entries
+
     await queryRunner.query(
       `CREATE TABLE \`space_defaults\` (\`id\` char(36) NOT NULL,
                                         \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
@@ -31,7 +32,7 @@ export class flowStates1708769388221 implements MigrationInterface {
     );
 
     await queryRunner.query(
-      `ALTER TABLE \`collaboration\` ADD \`innovationFlowId\` char(36) DEFAULTNULL`
+      `ALTER TABLE \`collaboration\` ADD \`innovationFlowId\` char(36) DEFAULT NULL`
     );
 
     // disable old constraints
@@ -41,7 +42,9 @@ export class flowStates1708769388221 implements MigrationInterface {
     await queryRunner.query(
       `DROP INDEX \`IDX_0af5c8e5c0a2f7858ae0a40c04\` ON \`innovation_flow\``
     );
-
+    await queryRunner.query(
+      `ALTER TABLE \`innovation_flow\` DROP COLUMN \`spaceID\``
+    );
     // TODO: drop constraints challenge - innovation flow, opportunit - innovation flow
 
     ////////////////////////////////////////
@@ -201,11 +204,13 @@ export class flowStates1708769388221 implements MigrationInterface {
     );
     // TBD: also need a REL?
     await queryRunner.query(
-      `ALTER TABLE \`space_defaults\` ADD UNIQUE INDEX \`IDX_666ba75964e5a534e4bfa54846\` (\`innovationFlowTemplateId\`)`
+      // Shouldn't this be a non-unique index if we are allowing nulls here?
+      `ALTER TABLE \`space_defaults\` ADD INDEX \`IDX_666ba75964e5a534e4bfa54846\` (\`innovationFlowTemplateId\`)`
     );
-    await queryRunner.query(
-      `ALTER TABLE \`space_defaults\` ADD CONSTRAINT \`FK_666ba75964e5a534e4bfa54846e\` FOREIGN KEY (\`innovationFlowTemplateId\`) REFERENCES \`innovation_flow_template\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
-    );
+    // This one didn't work
+    // await queryRunner.query(
+    //   `ALTER TABLE \`space_defaults\` ADD CONSTRAINT \`FK_666ba75964e5a534e4bfa54846e\` FOREIGN KEY (\`innovationFlowTemplateId\`) REFERENCES \`innovation_flow_template\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    // );
 
     // TODO: add constraints collaboration - innovation flow
 
@@ -220,15 +225,19 @@ export class flowStates1708769388221 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE \`innovation_flow\` DROP COLUMN \`lifecycleId\``
     );
-    await queryRunner.query(
-      `ALTER TABLE \`innovation_flow\` DROP COLUMN \`spaceID\``
-    );
+
     await queryRunner.query(
       `ALTER TABLE \`innovation_flow\` DROP COLUMN \`type\``
     );
 
     await queryRunner.query(
+      `ALTER TABLE \`challenge\` DROP FOREIGN KEY \`FK_4c435130cde781b69259eec7d85\``
+    );
+    await queryRunner.query(
       `ALTER TABLE \`challenge\` DROP COLUMN \`innovationFlowId\``
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`opportunity\` DROP FOREIGN KEY \`FK_4840f1e3ae5509245bdb5c401f3\``
     );
     await queryRunner.query(
       `ALTER TABLE \`opportunity\` DROP COLUMN \`innovationFlowId\``
@@ -429,12 +438,12 @@ export class flowStates1708769388221 implements MigrationInterface {
       this.innovationFlowStatesDefault
     );
     await queryRunner.query(
-      `INSERT INTO innovation_flow (id, version, authorizationId, profileId) VALUES
+      `INSERT INTO innovation_flow (id, version, authorizationId, profileId, states) VALUES
                 ('${innovationFlowID}',
-                1, 
-                '${innovationFlowAuthID}', 
-                '${profileID}'
-                '${statesStr})`
+                1,
+                '${innovationFlowAuthID}',
+                '${profileID}',
+                '${statesStr}')`
     );
 
     return innovationFlowID;
