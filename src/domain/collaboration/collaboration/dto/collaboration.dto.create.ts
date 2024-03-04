@@ -5,14 +5,14 @@ import { UUID } from '@domain/common/scalars';
 export class CreateCollaborationInput {
   @Field(() => UUID, {
     nullable: true,
-    description: 'The Innovation Flow template to use for the Opportunity.',
+    description: 'The Innovation Flow template to use for the Collaboration.',
   })
   innovationFlowTemplateID?: string;
 
   @Field(() => UUID, {
     nullable: true,
     description:
-      'The ID of the Collaboration to use for setting up the collaboration of the Opportunity.',
+      'The ID of the Collaboration to use for setting up the collaboration of the Collaboration.',
   })
   collaborationTemplateID?: string;
 }

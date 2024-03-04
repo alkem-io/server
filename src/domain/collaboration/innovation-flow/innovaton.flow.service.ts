@@ -24,12 +24,15 @@ import { UpdateInnovationFlowSelectedStateInput } from './dto/innovation.flow.dt
 import { UpdateProfileSelectTagsetValueInput } from '@domain/common/profile/dto/profile.dto.update.select.tagset.value';
 import { InnovationFlowStatesService } from '../innovation-flow-states/innovaton.flow.state.service';
 import { IInnovationFlowState } from '../innovation-flow-states/innovation.flow.state.interface';
+import { UpdateInnovationFlowFromTemplateInput } from './dto/innovation.flow.dto.update.from.template';
+import { InnovationFlowTemplateService } from '@domain/template/innovation-flow-template/innovation.flow.template.service';
 
 @Injectable()
 export class InnovationFlowService {
   constructor(
     private profileService: ProfileService,
     private innovationFlowStatesService: InnovationFlowStatesService,
+    private innovationFlowTemplateService: InnovationFlowTemplateService,
     @InjectRepository(InnovationFlow)
     private innovationFlowRepository: Repository<InnovationFlow>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -116,6 +119,41 @@ export class InnovationFlowService {
         innovationFlowData.profileData
       );
     }
+
+    return await this.innovationFlowRepository.save(innovationFlow);
+  }
+
+  async updateStatesFromTemplate(
+    innovationFlowData: UpdateInnovationFlowFromTemplateInput
+  ): Promise<IInnovationFlow> {
+    const innovationFlow = await this.getInnovationFlowOrFail(
+      innovationFlowData.innovationFlowID,
+      {
+        relations: { profile: true },
+      }
+    );
+    const innovationFlowTemplate =
+      await this.innovationFlowTemplateService.getInnovationFlowTemplateOrFail(
+        innovationFlowData.inovationFlowTemplateID
+      );
+
+    const newStates = this.innovationFlowStatesService.getStates(
+      innovationFlowTemplate.states
+    );
+
+    const newStateNames = newStates.map(state => state.displayName);
+
+    const updateData: UpdateProfileSelectTagsetDefinitionInput = {
+      profileID: innovationFlow.profile.id,
+      allowedValues: newStateNames,
+      defaultSelectedValue: newStateNames[0], // default to first in the list
+      tagsetName: TagsetReservedName.FLOW_STATE.valueOf(),
+    };
+    await this.profileService.updateSelectTagsetDefinition(updateData);
+
+    // serialize the states
+    innovationFlow.states =
+      this.innovationFlowStatesService.serializeStates(newStates);
 
     return await this.innovationFlowRepository.save(innovationFlow);
   }
