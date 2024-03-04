@@ -59,7 +59,7 @@ export class flowStates1708769388221 implements MigrationInterface {
       const innovation_flow_templates: {
         id: string;
       }[] = await queryRunner.query(
-        `SELECT id FROM innovation_flow_template WHERE id = '${space.templatesSetId}'`
+        `SELECT id FROM innovation_flow_template WHERE templatesSetId = '${space.templatesSetId}'`
       );
       // Pick up the first one if there is an innovation flow template; otherwise, use the default
       let innovationTemplateID: string | null = null;
