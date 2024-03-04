@@ -2,7 +2,7 @@ import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IActivityLogEntryBase } from './activity.log.dto.entry.base.interface';
 import { IActivityLogEntry } from './activity.log.entry.interface';
-import { IReference } from '@domain/common/reference/reference.interface';
+import { ILink } from '@domain/collaboration/link/link.interface';
 
 @ObjectType('ActivityLogEntryCalloutLinkCreated', {
   implements: () => [IActivityLogEntry],
@@ -17,9 +17,9 @@ export abstract class IActivityLogEntryCalloutLinkCreated
   })
   callout!: ICallout;
 
-  @Field(() => IReference, {
+  @Field(() => ILink, {
     nullable: false,
-    description: 'The Reference that was created.',
+    description: 'The Link that was created.',
   })
-  reference!: IReference;
+  link!: ILink;
 }
