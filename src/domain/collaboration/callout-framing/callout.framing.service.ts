@@ -155,11 +155,6 @@ export class CalloutFramingService {
       );
     }
 
-    if (calloutFraming.whiteboard) {
-      await this.whiteboardService.deleteWhiteboard(
-        calloutFraming.whiteboard.id
-      );
-    }
     if (calloutFraming.authorization) {
       await this.authorizationPolicyService.delete(
         calloutFraming.authorization
