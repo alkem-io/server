@@ -62,7 +62,7 @@ export abstract class ISearchResult {
 
   @Field(() => SearchResultType, {
     nullable: false,
-    description: 'The event type for this Activity.',
+    description: 'The type of returned result for this search.',
   })
   type!: string;
 

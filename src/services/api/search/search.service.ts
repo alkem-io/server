@@ -128,7 +128,7 @@ export class SearchService {
     const challengeResults: Map<number, Match> = new Map();
     const opportunityResults: Map<number, Match> = new Map();
     const postResults: Map<number, Match> = new Map();
-    const calloutResults: Map<number, Match> = new Map();
+    // const calloutResults: Map<number, Match> = new Map();
 
     const filteredTerms = this.validateSearchTerms(searchData.terms);
 
@@ -151,7 +151,7 @@ export class SearchService {
       searchChallenges,
       searchOpportunities,
       searchPosts,
-      searchCallouts,
+      // searchCallouts,
     ] = await this.searchBy(agentInfo, entityTypesFilter, spaceIDsFilter);
 
     if (searchData.tagsetNames)
@@ -213,7 +213,7 @@ export class SearchService {
       journeyResultsCount:
         spaceResults.size + challengeResults.size + opportunityResults.size,
       groupResults: [],
-      calloutResults: [],
+      calloutResults: calloutResultsMock,
     };
 
     results.contributorResults.push(
@@ -1185,3 +1185,15 @@ export class SearchService {
     return postMatches;
   }
 }
+
+const calloutResultsMock = [
+  {
+    id: '1',
+    score: 1,
+    terms: ['callout name'],
+    type: SearchResultType.CALLOUT,
+    result: {
+      id: 'calloutid-1234567890',
+    },
+  },
+];
