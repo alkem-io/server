@@ -1194,6 +1194,47 @@ const calloutResultsMock = [
     type: SearchResultType.CALLOUT,
     result: {
       id: 'calloutid-1234567890',
+      nameID: 'calloutName-1',
+      type: CalloutType.POST_COLLECTION,
+      framing: {
+        id: 'framingid-1221321',
+        profile: {
+          id: 'profileId-w21213213',
+          displayName: 'Test callout',
+          desciption: 'post collection callout',
+        },
+      },
+      contributions: [
+        {
+          post: {
+            id: 'postId-2132132423',
+          },
+        },
+      ],
+    },
+    callout: {
+      id: 'calloutid-1234567890',
+      nameID: 'calloutName-1',
+      type: CalloutType.POST_COLLECTION,
+      framing: {
+        id: 'framingid-1221321',
+        profile: {
+          id: 'profileId-w21213213',
+          displayName: 'Test callout',
+          desciption: 'post collection callout',
+        },
+      },
+      contributions: [
+        {
+          post: {
+            id: 'postId-2132132423',
+          },
+        },
+      ],
+      authorization: {
+        id: 'authId-21432142134',
+        credentialRules: '',
+      },
     },
   },
 ];
