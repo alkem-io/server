@@ -1188,7 +1188,7 @@ export class SearchService {
 
 const calloutResultsMock = [
   {
-    id: '1',
+    id: 'callout-1',
     score: 1,
     terms: ['callout name'],
     type: SearchResultType.CALLOUT,
