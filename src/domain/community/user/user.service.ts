@@ -647,8 +647,6 @@ export class UserService {
       applyUserFilter(qb, filter);
     }
 
-    console.log(qb.getSql());
-
     return getPaginationResults(qb, paginationArgs);
   }
 
@@ -689,8 +687,6 @@ export class UserService {
       applyUserFilter(qb, filter);
     }
 
-    console.log(qb.getSql());
-
     return getPaginationResults(qb, paginationArgs);
   }
 
@@ -724,8 +720,6 @@ export class UserService {
     if (filter) {
       applyUserFilter(qb, filter);
     }
-
-    console.log(qb.getSql());
 
     return getPaginationResults(qb, paginationArgs);
   }
