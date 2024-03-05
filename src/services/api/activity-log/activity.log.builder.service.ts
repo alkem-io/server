@@ -21,9 +21,9 @@ import { RoomService } from '@domain/communication/room/room.service';
 import { IActivityLogBuilder } from './activity.log.builder.interface';
 import { IActivityLogEntryCalendarEventCreated } from './dto/activity.log.dto.entry.calendar.event.created';
 import { IActivityLogEntryCalloutLinkCreated } from './dto/activity.log.dto.entry.callout.link.created';
-import { ReferenceService } from '@domain/common/reference/reference.service';
 import { CalendarService } from '@domain/timeline/calendar/calendar.service';
 import { CalendarEventService } from '@domain/timeline/event/event.service';
+import { LinkService } from '@domain/collaboration/link/link.service';
 
 export default class ActivityLogBuilderService implements IActivityLogBuilder {
   constructor(
@@ -36,7 +36,7 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
     private readonly opportunityService: OpportunityService,
     private readonly communityService: CommunityService,
     private readonly roomService: RoomService,
-    private readonly referenceService: ReferenceService,
+    private readonly linkService: LinkService,
     private readonly calendarService: CalendarService,
     private readonly calendarEventService: CalendarEventService
   ) {}
@@ -87,15 +87,15 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
     const calloutPostCreated = await this.calloutService.getCalloutOrFail(
       rawActivity.parentID
     );
-    const referenceCreated = await this.referenceService.getReferenceOrFail(
+    const linkCreated = await this.linkService.getLinkOrFail(
       rawActivity.resourceID
     );
-    const activityCalloutLinkreated: IActivityLogEntryCalloutLinkCreated = {
+    const activityCalloutLinkCreated: IActivityLogEntryCalloutLinkCreated = {
       ...this.activityLogEntryBase,
       callout: calloutPostCreated,
-      reference: referenceCreated,
+      link: linkCreated,
     };
-    return activityCalloutLinkreated;
+    return activityCalloutLinkCreated;
   }
 
   async [ActivityEventType.CALLOUT_WHITEBOARD_CREATED](rawActivity: IActivity) {
