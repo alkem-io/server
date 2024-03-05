@@ -11,6 +11,7 @@ import { ISearchResultOrganization } from './search.result.dto.entry.organizatio
 import { IBaseAlkemio } from '@domain/common/entity/base-entity';
 import { ISearchResultPost } from './search.result.dto.entry.post';
 import { ISearchResultUserGroup } from './search.result.dto.entry.user.group';
+import { ISearchResultCallout } from './search.result.dto.entry.callout';
 
 @InterfaceType('SearchResult', {
   resolveType(searchResult) {
@@ -30,6 +31,8 @@ import { ISearchResultUserGroup } from './search.result.dto.entry.user.group';
         return ISearchResultPost;
       case SearchResultType.USERGROUP:
         return ISearchResultUserGroup;
+      case SearchResultType.CALLOUT:
+        return ISearchResultCallout;
     }
 
     throw new RelationshipNotFoundException(

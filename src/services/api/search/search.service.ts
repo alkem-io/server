@@ -47,6 +47,7 @@ enum SearchEntityTypes {
   CHALLENGE = 'challenge',
   OPPORTUNITY = 'opportunity',
   POST = 'post',
+  CALLOUT = 'callout',
 }
 
 const SEARCH_ENTITIES: string[] = [
@@ -127,6 +128,7 @@ export class SearchService {
     const challengeResults: Map<number, Match> = new Map();
     const opportunityResults: Map<number, Match> = new Map();
     const postResults: Map<number, Match> = new Map();
+    const calloutResults: Map<number, Match> = new Map();
 
     const filteredTerms = this.validateSearchTerms(searchData.terms);
 
@@ -149,6 +151,7 @@ export class SearchService {
       searchChallenges,
       searchOpportunities,
       searchPosts,
+      searchCallouts,
     ] = await this.searchBy(agentInfo, entityTypesFilter, spaceIDsFilter);
 
     if (searchData.tagsetNames)
@@ -210,6 +213,7 @@ export class SearchService {
       journeyResultsCount:
         spaceResults.size + challengeResults.size + opportunityResults.size,
       groupResults: [],
+      calloutResults: [],
     };
 
     results.contributorResults.push(
@@ -275,7 +279,9 @@ export class SearchService {
     agentInfo: AgentInfo,
     entityTypesFilter?: string[],
     spaceIDsFilter?: string[] | undefined
-  ): Promise<[boolean, boolean, boolean, boolean, boolean, boolean, boolean]> {
+  ): Promise<
+    [boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean]
+  > {
     let searchUsers = true;
     let searchGroups = true;
     let searchOrganizations = true;
@@ -283,6 +289,7 @@ export class SearchService {
     let searchChallenges = true;
     let searchOpportunities = true;
     let searchPosts = true;
+    let searchCallouts = true;
 
     if (entityTypesFilter && entityTypesFilter.length > 0) {
       if (!entityTypesFilter.includes(SearchEntityTypes.USER))
@@ -299,6 +306,8 @@ export class SearchService {
         searchOpportunities = false;
       if (!entityTypesFilter.includes(SearchEntityTypes.POST))
         searchPosts = false;
+      if (!entityTypesFilter.includes(SearchEntityTypes.CALLOUT))
+        searchCallouts = false;
     }
 
     if (!agentInfo.email) {
@@ -317,6 +326,7 @@ export class SearchService {
       searchChallenges,
       searchOpportunities,
       searchPosts,
+      searchCallouts,
     ];
   }
 
