@@ -1,5 +1,4 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { ICredential } from '@src/domain';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { groupCredentialsByEntity } from '@services/api/roles/util/group.credentials.by.entity';
 import { SpaceService } from '@domain/challenge/space/space.service';
@@ -14,6 +13,7 @@ import { MyJourneyResults } from './dto/my.journeys.results';
 import { ActivityService } from '@platform/activity/activity.service';
 import { LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { sortSpacesByActivity } from '@domain/challenge/space/sort.spaces.by.activity';
 
 @Injectable()
 export class MeService {
@@ -41,13 +41,13 @@ export class MeService {
   }
 
   public async getSpaceMemberships(
-    credentials: ICredential[],
+    agentInfo: AgentInfo,
     visibilities: SpaceVisibility[] = [
       SpaceVisibility.ACTIVE,
       SpaceVisibility.DEMO,
     ]
   ): Promise<ISpace[]> {
-    const credentialMap = groupCredentialsByEntity(credentials);
+    const credentialMap = groupCredentialsByEntity(agentInfo.credentials);
     const spaceIds = Array.from(credentialMap.get('spaces')?.keys() ?? []);
     const args: SpacesQueryArgs = {
       IDs: spaceIds,
@@ -56,9 +56,19 @@ export class MeService {
       },
     };
 
-    const spaces = await this.spaceService.getSpacesUnsorted(args);
-    // Todo: apply a different sort order when returning my Memberships. Order to be specified. (e.g. by last activity, by name, etc.)
-    return await this.spaceService.orderSpacesDefault(spaces);
+    // get spaces and their children challenges and opportunities
+    const spaces = await this.spaceService.getSpacesWithChildJourneys(args);
+
+    const spaceMembershipCollaborationInfo =
+      this.spaceService.getSpaceMembershipCollaborationInfo(spaces);
+
+    const latestActivitiesPerSpace =
+      await this.activityService.getLatestActivitiesPerSpaceMembership(
+        agentInfo.userID,
+        spaceMembershipCollaborationInfo
+      );
+
+    return sortSpacesByActivity(spaces, latestActivitiesPerSpace);
   }
 
   public async getMyJourneys(
