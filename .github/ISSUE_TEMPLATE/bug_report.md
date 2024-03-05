@@ -36,3 +36,6 @@ If applicable, add screenshots to help explain your problem.
 
 **Additional context**
 Add any other context about the problem here.
+
+**Areas that will be affected as part of the fix**
+_Optional, to be added by developer if relevant_
