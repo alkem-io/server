@@ -47,7 +47,7 @@ import { PreferenceSetService } from '@domain/common/preference-set/preference.s
 import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set';
 import { PreferenceType } from '@common/enums/preference.type';
 import { PaginationArgs } from '@core/pagination';
-import { applyFiltering, OrganizationFilterInput } from '@core/filtering';
+import { OrganizationFilterInput } from '@core/filtering';
 import { IPaginatedType } from '@core/pagination/paginated.type';
 import { getPaginationResults } from '@core/pagination/pagination.fn';
 import { CreateUserGroupInput } from '../user-group/dto/user-group.dto.create';
@@ -59,6 +59,7 @@ import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { OrganizationRole } from '@common/enums/organization.role';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
+import { applyOrganizationFilter } from '@core/filtering/filters/organizationFilter';
 
 @Injectable()
 export class OrganizationService {
@@ -428,23 +429,11 @@ export class OrganizationService {
 
   async getPaginatedOrganizations(
     paginationArgs: PaginationArgs,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     filter?: OrganizationFilterInput
   ): Promise<IPaginatedType<IOrganization>> {
-    const qb = await this.organizationRepository.createQueryBuilder(
-      'organization'
-    );
+    const qb = this.organizationRepository.createQueryBuilder('organization');
     if (filter) {
-      const { displayName, ...rest } = filter;
-
-      if (displayName)
-        qb.leftJoinAndSelect('organization.profile', 'profile')
-          .where('profile.displayName like :term')
-          .setParameters({ term: `%${displayName}%` });
-
-      if (rest) {
-        applyFiltering(qb, rest);
-      }
+      applyOrganizationFilter(qb, filter);
     }
 
     return getPaginationResults(qb, paginationArgs);
