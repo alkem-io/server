@@ -170,27 +170,31 @@ export class ChallengeService {
       );
     }
 
-    // Finally create default callouts, either using hard coded defaults or from a collaboration
-    let calloutDefaults = challengeDefaultCallouts;
-    const collaborationTemplateID =
-      challengeData.collaborationData?.collaborationTemplateID;
-    if (collaborationTemplateID) {
-      const collaboration =
-        await this.collaborationService.getCollaborationOrFail(
-          collaborationTemplateID
-        );
-      calloutDefaults =
-        await this.collaborationService.createCalloutInputsFromCollaboration(
-          collaboration
+    // Finally create default callouts, either using hard coded defaults or from a collaboration, if flag is enabled
+    const addDefaultCallouts =
+      challengeData.collaborationData?.addDefaultCallouts;
+    if (addDefaultCallouts === undefined || addDefaultCallouts) {
+      let calloutDefaults = challengeDefaultCallouts;
+      const collaborationTemplateID =
+        challengeData.collaborationData?.collaborationTemplateID;
+      if (collaborationTemplateID) {
+        const collaboration =
+          await this.collaborationService.getCollaborationOrFail(
+            collaborationTemplateID
+          );
+        calloutDefaults =
+          await this.collaborationService.createCalloutInputsFromCollaboration(
+            collaboration
+          );
+      }
+      challenge.collaboration =
+        await this.collaborationService.addDefaultCallouts(
+          challenge.collaboration,
+          calloutDefaults,
+          challenge.storageAggregator,
+          agentInfo?.userID
         );
     }
-    challenge.collaboration =
-      await this.collaborationService.addDefaultCallouts(
-        challenge.collaboration,
-        calloutDefaults,
-        challenge.storageAggregator,
-        agentInfo?.userID
-      );
 
     if (agentInfo && challenge.community) {
       await this.communityService.assignUserToRole(

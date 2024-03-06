@@ -106,28 +106,32 @@ export class OpportunityService {
         tagsetTemplateData
       );
 
-      // Finally create default callouts, either using hard coded defaults or from a collaboration
-      let calloutDefaults = opportunityDefaultCallouts;
-      const collaborationTemplateID =
-        opportunityData.collaborationData?.collaborationTemplateID;
-      if (collaborationTemplateID) {
-        const collaboration =
-          await this.collaborationService.getCollaborationOrFail(
-            collaborationTemplateID
-          );
-        calloutDefaults =
-          await this.collaborationService.createCalloutInputsFromCollaboration(
-            collaboration
+      // Finally create default callouts, either using hard coded defaults or from a collaboration, if enabled
+      const addDefaultCallouts =
+        opportunityData.collaborationData?.addDefaultCallouts;
+      if (addDefaultCallouts === undefined || addDefaultCallouts) {
+        let calloutDefaults = opportunityDefaultCallouts;
+        const collaborationTemplateID =
+          opportunityData.collaborationData?.collaborationTemplateID;
+        if (collaborationTemplateID) {
+          const collaboration =
+            await this.collaborationService.getCollaborationOrFail(
+              collaborationTemplateID
+            );
+          calloutDefaults =
+            await this.collaborationService.createCalloutInputsFromCollaboration(
+              collaboration
+            );
+        }
+
+        opportunity.collaboration =
+          await this.collaborationService.addDefaultCallouts(
+            opportunity.collaboration,
+            calloutDefaults,
+            opportunity.storageAggregator,
+            agentInfo?.userID
           );
       }
-
-      opportunity.collaboration =
-        await this.collaborationService.addDefaultCallouts(
-          opportunity.collaboration,
-          calloutDefaults,
-          opportunity.storageAggregator,
-          agentInfo?.userID
-        );
     }
 
     // set immediate community parent

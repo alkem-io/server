@@ -15,4 +15,10 @@ export class CreateCollaborationInput {
       'The ID of the Collaboration to use for setting up the collaboration of the Collaboration.',
   })
   collaborationTemplateID?: string;
+
+  @Field(() => Boolean, {
+    nullable: true,
+    description: 'Add default callouts to the Collaboration; defaults to true.',
+  })
+  addDefaultCallouts? = true;
 }
