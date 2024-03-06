@@ -113,8 +113,26 @@ export class SpaceService {
     await this.validateSpaceData(spaceData);
     const space: ISpace = Space.create(spaceData);
 
+    ///////////
+    // Create the contextual elements for the space
+
     space.storageAggregator =
       await this.storageAggregatorService.createStorageAggregator();
+
+    // The space library (templates set) and defaults are separate but related concepts
+    space.templatesSet = await this.templatesSetService.createTemplatesSet();
+    space.defaults = await this.spaceDefaultsService.createSpaceDefaults();
+
+    // And set the defaults
+    space.templatesSet =
+      await this.spaceDefaultsService.addDefaultTemplatesToSpace(
+        space.templatesSet,
+        space.storageAggregator
+      );
+    if (space.templatesSet.innovationFlowTemplates.length !== 0) {
+      space.defaults.innovationFlowTemplate =
+        space.templatesSet.innovationFlowTemplates[0];
+    }
 
     space.license = await this.licenseService.createLicense();
 
@@ -137,21 +155,6 @@ export class SpaceService {
         `Space not fully initialized: ${space.nameID}`,
         LogContext.CHALLENGES
       );
-    }
-
-    // The space library (templates set) and defaults are separate but related concepts
-    space.templatesSet = await this.templatesSetService.createTemplatesSet();
-    space.defaults = await this.spaceDefaultsService.createSpaceDefaults();
-
-    // And set the defaults
-    space.templatesSet =
-      await this.spaceDefaultsService.addDefaultTemplatesToSpace(
-        space.templatesSet,
-        space.storageAggregator
-      );
-    if (space.templatesSet.innovationFlowTemplates.length !== 0) {
-      space.defaults.innovationFlowTemplate =
-        space.templatesSet.innovationFlowTemplates[0];
     }
 
     const locations = Object.values({
