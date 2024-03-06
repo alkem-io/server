@@ -134,7 +134,7 @@ export class InnovationFlowService {
     );
     const innovationFlowTemplate =
       await this.innovationFlowTemplateService.getInnovationFlowTemplateOrFail(
-        innovationFlowData.inovationFlowTemplateID
+        innovationFlowData.innovationFlowTemplateID
       );
 
     const newStates = this.innovationFlowStatesService.getStates(

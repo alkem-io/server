@@ -15,5 +15,5 @@ export class UpdateInnovationFlowFromTemplateInput {
     description:
       'The InnovationFlow template whose State definition will be used for the Innovation Flow',
   })
-  inovationFlowTemplateID!: string;
+  innovationFlowTemplateID!: string;
 }
