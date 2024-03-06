@@ -366,4 +366,13 @@ export class SpaceResolverFields {
   async host(@Parent() space: Space): Promise<IOrganization | undefined> {
     return await this.spaceService.getHost(space.id);
   }
+
+  @ResolveField('createdDate', () => Date, {
+    nullable: true,
+    description: 'The date for the creation of this Space.',
+  })
+  async createdDate(@Parent() space: Space): Promise<Date> {
+    const createdDate = (space as Space).createdDate;
+    return new Date(createdDate);
+  }
 }
