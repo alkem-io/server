@@ -87,7 +87,8 @@ export class OpportunityService {
       opportunityCommunityPolicy,
       opportunityCommunityApplicationForm,
       ProfileType.OPPORTUNITY,
-      opportunity.storageAggregator
+      opportunity.storageAggregator,
+      opportunityData.collaborationData
     );
 
     await this.opportunityRepository.save(opportunity);

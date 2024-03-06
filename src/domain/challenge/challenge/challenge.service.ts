@@ -113,7 +113,8 @@ export class ChallengeService {
       challengeCommunityPolicy,
       challengeCommunityApplicationForm,
       ProfileType.CHALLENGE,
-      challenge.storageAggregator
+      challenge.storageAggregator,
+      challengeData.collaborationData
     );
 
     await this.challengeRepository.save(challenge);

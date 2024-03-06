@@ -83,7 +83,6 @@ import { UpdateSpaceDefaultsInput } from './dto/space.dto.update.defaults';
 import { ISpaceDefaults } from '../space.defaults/space.defaults.interface';
 import { SpaceMembershipCollaborationInfo } from '@services/api/me/space.membership.type';
 
-
 @Injectable()
 export class SpaceService {
   constructor(

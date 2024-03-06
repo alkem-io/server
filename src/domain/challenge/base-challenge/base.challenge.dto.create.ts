@@ -3,7 +3,6 @@ import { IsOptional, ValidateNested } from 'class-validator';
 import { CreateContextInput } from '@domain/context/context/dto/context.dto.create';
 import { Type } from 'class-transformer';
 import { CreateNameableInput } from '@domain/common/entity/nameable-entity/dto/nameable.dto.create';
-import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
 
 @InputType()
 export class CreateBaseChallengeInput extends CreateNameableInput {
@@ -16,10 +15,4 @@ export class CreateBaseChallengeInput extends CreateNameableInput {
   @Field(() => [String], { nullable: true })
   @IsOptional()
   tags?: string[];
-
-  @Field(() => CreateCollaborationInput, { nullable: true })
-  @IsOptional()
-  @ValidateNested()
-  @Type(() => CreateCollaborationInput)
-  collaborationData?: CreateCollaborationInput;
 }
