@@ -62,6 +62,18 @@ export class InnovationFlowService {
         innovationFlowData.profile.tagsets,
         tagsetInputs
       );
+
+    // Update the flow state tagset to have the default value
+    const newStateNames = innovationFlowData.states.map(
+      state => state.displayName
+    );
+    const defaultSelectedState = newStateNames[0]; // default to first in the list
+    const flowTagsetInput = innovationFlowData.profile.tagsets.find(
+      t => t.name === TagsetReservedName.FLOW_STATE.valueOf()
+    );
+    if (flowTagsetInput) {
+      flowTagsetInput.tags = [defaultSelectedState];
+    }
     innovationFlow.profile = await this.profileService.createProfile(
       innovationFlowData.profile,
       ProfileType.INNOVATION_FLOW,
@@ -99,10 +111,11 @@ export class InnovationFlowService {
         state => state.displayName
       );
 
+      const defaultSelectedState = newStateNames[0]; // default to first in the list
       const updateData: UpdateProfileSelectTagsetDefinitionInput = {
         profileID: innovationFlow.profile.id,
         allowedValues: newStateNames,
-        defaultSelectedValue: newStateNames[0], // default to first in the list
+        defaultSelectedValue: defaultSelectedState,
         tagsetName: TagsetReservedName.FLOW_STATE.valueOf(),
       };
       await this.profileService.updateSelectTagsetDefinition(updateData);
@@ -143,10 +156,11 @@ export class InnovationFlowService {
 
     const newStateNames = newStates.map(state => state.displayName);
 
+    const defaultSelectedState = newStateNames[0]; // default to first in the list
     const updateData: UpdateProfileSelectTagsetDefinitionInput = {
       profileID: innovationFlow.profile.id,
       allowedValues: newStateNames,
-      defaultSelectedValue: newStateNames[0], // default to first in the list
+      defaultSelectedValue: defaultSelectedState,
       tagsetName: TagsetReservedName.FLOW_STATE.valueOf(),
     };
     await this.profileService.updateSelectTagsetDefinition(updateData);
@@ -291,7 +305,7 @@ export class InnovationFlowService {
     );
     if (!currentState) {
       throw new EntityNotFoundException(
-        `InnovationFlow without FLOW STATE tagset with tag found: ${innovationFlow.id}, ${selectedStateDisplayName}`,
+        `InnovationFlow FLOW STATE tagset could not find InnovationFlowState to match selected value: ${innovationFlow.id}, ${selectedStateDisplayName}`,
         LogContext.COLLABORATION
       );
     }
