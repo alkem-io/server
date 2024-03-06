@@ -12,9 +12,10 @@ import { Challenge } from '../challenge/challenge.entity';
 import { Opportunity } from '@domain/challenge/opportunity';
 import { SpaceFilterService } from '@services/infrastructure/space-filter/space.filter.service';
 import { MockFunctionMetadata, ModuleMocker } from 'jest-mock';
-import { InnovationFlow } from '../innovation-flow/innovation.flow.entity';
+import { InnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.entity';
 import { ProfileType } from '@common/enums';
 import { License } from '@domain/license/license/license.entity';
+import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
 
 const moduleMocker = new ModuleMocker(global);
 
@@ -91,39 +92,43 @@ const getChallengesMock = (
       rowId: i,
       nameID: `challenge-${spaceId}.${i}`,
       spaceID: `${spaceId}`,
-      innovationFlow: {
+      collaboration: {
         id: '',
-        states: JSON.stringify([
-          {
-            displayName: 'prepare',
-            description: 'The innovation is being prepared.',
-            sortOrder: 1,
-          },
-          {
-            displayName: 'in progress',
-            description: 'The innovation is in progress.',
-            sortOrder: 2,
-          },
-          {
-            displayName: 'summary',
-            description: 'The summary of the flow results.',
-            sortOrder: 3,
-          },
-          {
-            displayName: 'done',
-            description: 'The flow is completed.',
-            sortOrder: 4,
-          },
-        ]),
-        profile: {
+        innovationFlow: {
           id: '',
-          displayName: `Challenge ${spaceId}.${i}`,
-          tagline: '',
-          description: '',
-          type: ProfileType.SPACE,
-          ...getEntityMock<Profile>(),
+          states: JSON.stringify([
+            {
+              displayName: 'prepare',
+              description: 'The innovation is being prepared.',
+              sortOrder: 1,
+            },
+            {
+              displayName: 'in progress',
+              description: 'The innovation is in progress.',
+              sortOrder: 2,
+            },
+            {
+              displayName: 'summary',
+              description: 'The summary of the flow results.',
+              sortOrder: 3,
+            },
+            {
+              displayName: 'done',
+              description: 'The flow is completed.',
+              sortOrder: 4,
+            },
+          ]),
+          profile: {
+            id: '',
+            displayName: `Challenge ${spaceId}.${i}`,
+            tagline: '',
+            description: '',
+            type: ProfileType.SPACE,
+            ...getEntityMock<Profile>(),
+          },
+          ...getEntityMock<InnovationFlow>(),
         },
-        ...getEntityMock<InnovationFlow>(),
+        ...getEntityMock<Collaboration>(),
       },
       profile: {
         id: `profile-challenge-${spaceId}.${i}`,
@@ -154,39 +159,43 @@ const getOpportunitiesMock = (
       rowId: i,
       nameID: `opportunity-${challengeId}.${i}`,
       spaceID: `${challengeId}`,
-      innovationFlow: {
+      collaboration: {
         id: '',
-        states: JSON.stringify([
-          {
-            displayName: 'prepare',
-            description: 'The innovation is being prepared.',
-            sortOrder: 1,
-          },
-          {
-            displayName: 'in progress',
-            description: 'The innovation is in progress.',
-            sortOrder: 2,
-          },
-          {
-            displayName: 'summary',
-            description: 'The summary of the flow results.',
-            sortOrder: 3,
-          },
-          {
-            displayName: 'done',
-            description: 'The flow is completed.',
-            sortOrder: 4,
-          },
-        ]),
-        profile: {
+        innovationFlow: {
           id: '',
-          displayName: `opportunity-${challengeId}.${i}`,
-          tagline: '',
-          description: '',
-          type: ProfileType.OPPORTUNITY,
-          ...getEntityMock<Profile>(),
+          states: JSON.stringify([
+            {
+              displayName: 'prepare',
+              description: 'The innovation is being prepared.',
+              sortOrder: 1,
+            },
+            {
+              displayName: 'in progress',
+              description: 'The innovation is in progress.',
+              sortOrder: 2,
+            },
+            {
+              displayName: 'summary',
+              description: 'The summary of the flow results.',
+              sortOrder: 3,
+            },
+            {
+              displayName: 'done',
+              description: 'The flow is completed.',
+              sortOrder: 4,
+            },
+          ]),
+          profile: {
+            id: '',
+            displayName: `opportunity-${challengeId}.${i}`,
+            tagline: '',
+            description: '',
+            type: ProfileType.OPPORTUNITY,
+            ...getEntityMock<Profile>(),
+          },
+          ...getEntityMock<InnovationFlow>(),
         },
-        ...getEntityMock<InnovationFlow>(),
+        ...getEntityMock<Collaboration>(),
       },
       profile: {
         id: `profile-challenge-${challengeId}.${i}`,
