@@ -89,7 +89,7 @@ export class ProfileResolverFields {
     tagsetName: TagsetReservedName,
     @Loader(ProfileTagsetsLoaderCreator)
     loader: ILoader<ITagset[]>
-  ): Promise<ITagset> {
+  ): Promise<ITagset | undefined> {
     const tagsets = await loader.load(profile.id);
     if (!tagsetName) {
       const defaultTagset = tagsets.find(
@@ -106,15 +106,7 @@ export class ProfileResolverFields {
       return defaultTagset;
     }
 
-    const namedTagset = tagsets.find(t => t.name === tagsetName);
-    if (!namedTagset) {
-      throw new EntityNotFoundException(
-        `Unable to locate ${tagsetName} tagset for profile: ${profile.id}`,
-        LogContext.PROFILE
-      );
-    }
-
-    return namedTagset;
+    return tagsets.find(t => t.name === tagsetName);
   }
 
   @UseGuards(GraphqlGuard)
