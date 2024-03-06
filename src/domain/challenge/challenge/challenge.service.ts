@@ -62,6 +62,7 @@ import { ChallengeDisplayLocation } from '@common/enums/challenge.display.locati
 import { CommonDisplayLocation } from '@common/enums/common.display.location';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
+import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
 @Injectable()
 export class ChallengeService {
   constructor(
@@ -74,6 +75,7 @@ export class ChallengeService {
     private preferenceSetService: PreferenceSetService,
     private storageAggregatorService: StorageAggregatorService,
     private collaborationService: CollaborationService,
+    private spaceDefaultsService: SpaceDefaultsService,
     private namingService: NamingService,
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>,
@@ -170,31 +172,24 @@ export class ChallengeService {
       );
     }
 
-    // Finally create default callouts, either using hard coded defaults or from a collaboration, if flag is enabled
-    const addDefaultCallouts =
-      challengeData.collaborationData?.addDefaultCallouts;
-    if (addDefaultCallouts === undefined || addDefaultCallouts) {
-      let calloutDefaults = challengeDefaultCallouts;
-      const collaborationTemplateID =
-        challengeData.collaborationData?.collaborationTemplateID;
-      if (collaborationTemplateID) {
-        const collaboration =
-          await this.collaborationService.getCollaborationOrFail(
-            collaborationTemplateID
-          );
-        calloutDefaults =
-          await this.collaborationService.createCalloutInputsFromCollaboration(
-            collaboration
-          );
-      }
-      challenge.collaboration =
-        await this.collaborationService.addDefaultCallouts(
-          challenge.collaboration,
-          calloutDefaults,
-          challenge.storageAggregator,
-          agentInfo?.userID
-        );
-    }
+    // Finally create default callouts, using the defaults service to decide what to add
+    const calloutInputsFromCollaborationTemplate =
+      await this.collaborationService.createCalloutInputsFromCollaborationTemplate(
+        challengeData.collaborationData?.collaborationTemplateID
+      );
+    const calloutInputs =
+      await this.spaceDefaultsService.getCreateCalloutInputs(
+        challengeDefaultCallouts,
+        calloutInputsFromCollaborationTemplate,
+        challengeData.collaborationData
+      );
+    challenge.collaboration =
+      await this.collaborationService.addDefaultCallouts(
+        challenge.collaboration,
+        calloutInputs,
+        challenge.storageAggregator,
+        agentInfo?.userID
+      );
 
     if (agentInfo && challenge.community) {
       await this.communityService.assignUserToRole(

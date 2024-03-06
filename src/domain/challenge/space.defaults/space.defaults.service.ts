@@ -18,6 +18,8 @@ import { CreateInnovationFlowInput } from '@domain/collaboration/innovation-flow
 import { templatesSetDefaults } from './definitions/space.defaults.templates';
 import { innovationFlowStatesDefault } from './definitions/space.defaults.innovation.flow';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
+import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
 
 @Injectable()
 export class SpaceDefaultsService {
@@ -175,6 +177,26 @@ export class SpaceDefaultsService {
       states: innovationFlowStatesDefault,
     };
     return result;
+  }
+
+  public async getCreateCalloutInputs(
+    defaultCallouts: CreateCalloutInput[],
+    calloutsFromCollaborationTemplateInput: CreateCalloutInput[],
+    collaborationData?: CreateCollaborationInput
+  ): Promise<CreateCalloutInput[]> {
+    let calloutInputs: CreateCalloutInput[] = [];
+    const addDefaultCallouts = collaborationData?.addDefaultCallouts;
+    if (addDefaultCallouts === undefined || addDefaultCallouts) {
+      let calloutDefaults = defaultCallouts;
+      const collaborationTemplateID =
+        collaborationData?.collaborationTemplateID;
+      if (collaborationTemplateID) {
+        calloutDefaults = calloutsFromCollaborationTemplateInput;
+      } else {
+        calloutInputs = calloutDefaults;
+      }
+    }
+    return calloutInputs;
   }
 
   public async addDefaultTemplatesToSpace(

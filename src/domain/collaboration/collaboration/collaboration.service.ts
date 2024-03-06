@@ -199,6 +199,18 @@ export class CollaborationService {
     return collaboration;
   }
 
+  public async createCalloutInputsFromCollaborationTemplate(
+    collaborationTemplateID?: string
+  ): Promise<CreateCalloutInput[]> {
+    if (collaborationTemplateID) {
+      const collaboration = await this.getCollaborationOrFail(
+        collaborationTemplateID
+      );
+      return await this.createCalloutInputsFromCollaboration(collaboration);
+    }
+    return [];
+  }
+
   public async getChildCollaborationsOrFail(
     collaborationID: string
   ): Promise<ICollaboration[] | never> {

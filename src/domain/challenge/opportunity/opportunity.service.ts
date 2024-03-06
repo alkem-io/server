@@ -42,6 +42,7 @@ import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { OpportunityDisplayLocation } from '@common/enums/opportunity.display.location';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
+import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
 @Injectable()
 export class OpportunityService {
   constructor(
@@ -50,6 +51,7 @@ export class OpportunityService {
     private communityService: CommunityService,
     private collaborationService: CollaborationService,
     private storageAggregatorService: StorageAggregatorService,
+    private spaceDefaultsService: SpaceDefaultsService,
     private namingService: NamingService,
     @InjectRepository(Opportunity)
     private opportunityRepository: Repository<Opportunity>,
@@ -106,32 +108,25 @@ export class OpportunityService {
         tagsetTemplateData
       );
 
-      // Finally create default callouts, either using hard coded defaults or from a collaboration, if enabled
-      const addDefaultCallouts =
-        opportunityData.collaborationData?.addDefaultCallouts;
-      if (addDefaultCallouts === undefined || addDefaultCallouts) {
-        let calloutDefaults = opportunityDefaultCallouts;
-        const collaborationTemplateID =
-          opportunityData.collaborationData?.collaborationTemplateID;
-        if (collaborationTemplateID) {
-          const collaboration =
-            await this.collaborationService.getCollaborationOrFail(
-              collaborationTemplateID
-            );
-          calloutDefaults =
-            await this.collaborationService.createCalloutInputsFromCollaboration(
-              collaboration
-            );
-        }
+      // Finally create default callouts, using the defaults service to decide what to add
+      const calloutInputsFromCollaborationTemplate =
+        await this.collaborationService.createCalloutInputsFromCollaborationTemplate(
+          opportunityData.collaborationData?.collaborationTemplateID
+        );
+      const calloutInputs =
+        await this.spaceDefaultsService.getCreateCalloutInputs(
+          opportunityDefaultCallouts,
+          calloutInputsFromCollaborationTemplate,
+          opportunityData.collaborationData
+        );
 
-        opportunity.collaboration =
-          await this.collaborationService.addDefaultCallouts(
-            opportunity.collaboration,
-            calloutDefaults,
-            opportunity.storageAggregator,
-            agentInfo?.userID
-          );
-      }
+      opportunity.collaboration =
+        await this.collaborationService.addDefaultCallouts(
+          opportunity.collaboration,
+          calloutInputs,
+          opportunity.storageAggregator,
+          agentInfo?.userID
+        );
     }
 
     // set immediate community parent
