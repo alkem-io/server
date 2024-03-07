@@ -13,6 +13,11 @@ import { ActivityEventType } from '@common/enums/activity.event.type';
 import { PaginationArgs } from '@core/pagination';
 import { getPaginationResults } from '@core/pagination/pagination.fn';
 import { Collaboration } from '@domain/collaboration/collaboration';
+import {
+  LatestActivitiesPerSpace,
+  SpaceMembershipCollaborationInfo,
+} from '@services/api/me/space.membership.type';
+import { createLatestActivityPerSpaceMap } from './create.latest.activity.per.space';
 
 @Injectable()
 export class ActivityService {
@@ -211,5 +216,43 @@ export class ActivityService {
     ).slice(0, limit);
 
     return activityData;
+  }
+
+  // Returns latest activities from user and from other users per Space including activities from all child journeys
+  public async getLatestActivitiesPerSpaceMembership(
+    triggeredBy: string,
+    spaceMembershipCollaborationInfo: SpaceMembershipCollaborationInfo
+  ): Promise<LatestActivitiesPerSpace> {
+    const collaborationIDs = Array.from(
+      spaceMembershipCollaborationInfo.keys()
+    );
+
+    const activities = await this.activityRepository
+      .createQueryBuilder('activity')
+      .select([
+        'activity.id',
+        'activity.createdDate',
+        'activity.collaborationID',
+        'activity.type',
+        'activity.description',
+        'activity.parentID',
+        'activity.triggeredBy',
+        'activity.resourceID',
+      ])
+      .where({
+        collaborationID: In(collaborationIDs),
+      })
+      .orderBy('activity.createdDate', 'DESC')
+      .getMany();
+
+    // Create a map of collaboration IDs to latest activities
+    const latestActivityPerSpaceMap: LatestActivitiesPerSpace =
+      createLatestActivityPerSpaceMap(
+        activities,
+        spaceMembershipCollaborationInfo,
+        triggeredBy
+      );
+
+    return latestActivityPerSpaceMap;
   }
 }
