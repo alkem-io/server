@@ -54,3 +54,5 @@ export const CREDENTIAL_RULE_TYPES_LIBRARY_FILE_UPLOAD_ANY_USER =
   'credentialRuleTypes-libraryFileUploadAnyUser';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_FILE_UPLOAD_ANY_USER =
   'credentialRuleTypes-libraryFileUploadAnyUser';
+export const CREDENTIAL_RULE_TYPES_UPDATE_FORUM_DISCUSSION =
+  'credentialRuleTypes-updateForumDiscussion';
