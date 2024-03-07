@@ -85,10 +85,22 @@ export class CollaborationService {
     collaboration.tagsetTemplateSet =
       await this.tagsetTemplateSetService.createTagsetTemplateSet();
 
+    // Rely on the logic in Space Defaults to create the right innovation flow input
+    const innovationFlowInput =
+      await this.spaceDefaultsService.getCreateInnovationFlowInput(
+        spaceID,
+        collaborationData.innovationFlowTemplateID
+      );
+    const allowedStates = innovationFlowInput.states.map(
+      state => state.displayName
+    );
+
     const tagsetTemplateDataStates: CreateTagsetTemplateInput = {
       name: TagsetReservedName.FLOW_STATE,
       type: TagsetType.SELECT_ONE,
-      allowedValues: [],
+      allowedValues: allowedStates,
+      defaultSelectedValue:
+        allowedStates.length > 0 ? allowedStates[0] : undefined,
     };
     const statesTagsetTemplate =
       await this.tagsetTemplateSetService.addTagsetTemplate(
@@ -96,12 +108,6 @@ export class CollaborationService {
         tagsetTemplateDataStates
       );
 
-    // Rely on the logic in Space Defaults to create the right innovation flow input
-    const innovationFlowInput =
-      await this.spaceDefaultsService.getCreateInnovationFlowInput(
-        spaceID,
-        collaborationData.innovationFlowTemplateID
-      );
     // Note: need to create the innovation flow after creation of
     // tagsetTemplates on Collabration so can pass it in to the InnovationFlow
     collaboration.innovationFlow =

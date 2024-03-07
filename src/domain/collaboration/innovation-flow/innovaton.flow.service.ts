@@ -26,11 +26,13 @@ import { InnovationFlowStatesService } from '../innovation-flow-states/innovaton
 import { IInnovationFlowState } from '../innovation-flow-states/innovation.flow.state.interface';
 import { UpdateInnovationFlowFromTemplateInput } from './dto/innovation.flow.dto.update.from.template';
 import { InnovationFlowTemplateService } from '@domain/template/innovation-flow-template/innovation.flow.template.service';
+import { TagsetService } from '@domain/common/tagset/tagset.service';
 
 @Injectable()
 export class InnovationFlowService {
   constructor(
     private profileService: ProfileService,
+    private tagsetService: TagsetService,
     private innovationFlowStatesService: InnovationFlowStatesService,
     private innovationFlowTemplateService: InnovationFlowTemplateService,
     @InjectRepository(InnovationFlow)
@@ -186,9 +188,13 @@ export class InnovationFlowService {
       innovationFlow.profile.id,
       TagsetReservedName.FLOW_STATE.valueOf()
     );
+    const statesTagsetTemplate =
+      await this.tagsetService.getTagsetTemplateOrFail(statesTagset.id);
 
     const newStateName = innovationFlowSelectedStateData.selectedState;
-    const newStateAllowed = statesTagset.tags.includes(newStateName);
+    const newStateAllowed =
+      statesTagsetTemplate.allowedValues.includes(newStateName);
+
     if (!newStateAllowed) {
       throw new ValidationException(
         `New state '${newStateName}' not in allowed states: ${statesTagset.tags}`,
