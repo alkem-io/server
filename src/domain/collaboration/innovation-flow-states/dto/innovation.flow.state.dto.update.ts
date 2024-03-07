@@ -18,10 +18,4 @@ export class UpdateInnovationFlowStateInput {
   })
   @MaxLength(LONG_TEXT_LENGTH)
   description!: string;
-
-  @Field(() => Number, {
-    nullable: false,
-    description: 'The sort order of this question in a wider set of questions.',
-  })
-  sortOrder!: number;
 }

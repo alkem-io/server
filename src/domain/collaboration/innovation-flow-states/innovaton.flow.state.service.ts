@@ -10,7 +10,7 @@ export class InnovationFlowStatesService {
 
   public getStates(statesStr: string): IInnovationFlowState[] {
     const states: IInnovationFlowState[] = this.deserializeStates(statesStr);
-    return states.sort((a, b) => (a.sortOrder > b.sortOrder ? 1 : -1));
+    return states;
   }
 
   public getStateNames(statesStr: string): string[] {

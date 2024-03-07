@@ -335,22 +335,18 @@ export class flowStates1708769388221 implements MigrationInterface {
     {
       displayName: 'prepare',
       description: 'The innovation is being prepared.',
-      sortOrder: 1,
     },
     {
       displayName: 'in progress',
       description: 'The innovation is in progress.',
-      sortOrder: 2,
     },
     {
       displayName: 'summary',
       description: 'The summary of the flow results.',
-      sortOrder: 3,
     },
     {
       displayName: 'done',
       description: 'The flow is completed.',
-      sortOrder: 4,
     },
   ];
 
@@ -368,14 +364,11 @@ export class flowStates1708769388221 implements MigrationInterface {
     const machine = createMachine(machineDef);
     const states = machine.states;
     const stateNames = Object.keys(states);
-    let sortOrder = 0;
     for (const stateName of stateNames) {
       result.push({
         displayName: stateName,
         description: '',
-        sortOrder: sortOrder,
       });
-      sortOrder++;
     }
     return result;
   }
@@ -453,5 +446,4 @@ export class flowStates1708769388221 implements MigrationInterface {
 export type FlowState = {
   displayName: string;
   description: string;
-  sortOrder: number;
 };

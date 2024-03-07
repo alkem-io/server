@@ -14,10 +14,4 @@ export abstract class IInnovationFlowState {
     description: 'The explation text to clarify the state.',
   })
   description!: string;
-
-  @Field(() => Number, {
-    nullable: false,
-    description: 'The sort order of this question in a wider set of questions.',
-  })
-  sortOrder!: number;
 }
