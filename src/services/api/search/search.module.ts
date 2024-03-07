@@ -21,6 +21,7 @@ import { Post } from '@domain/collaboration/post/post.entity';
 import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
 import { CalloutModule } from '@domain/collaboration/callout/callout.module';
 import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
+import { Search2Module } from '@services/api/search2/search2.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { CalloutContribution } from '@domain/collaboration/callout-contribution/
     CollaborationModule,
     PostModule,
     CalloutModule,
+    Search2Module,
     TypeOrmModule.forFeature([User]),
     TypeOrmModule.forFeature([UserGroup]),
     TypeOrmModule.forFeature([Organization]),
