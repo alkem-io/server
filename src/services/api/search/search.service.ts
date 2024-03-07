@@ -47,6 +47,7 @@ enum SearchEntityTypes {
   CHALLENGE = 'challenge',
   OPPORTUNITY = 'opportunity',
   POST = 'post',
+  CALLOUT = 'callout',
 }
 
 const SEARCH_ENTITIES: string[] = [
@@ -127,6 +128,7 @@ export class SearchService {
     const challengeResults: Map<number, Match> = new Map();
     const opportunityResults: Map<number, Match> = new Map();
     const postResults: Map<number, Match> = new Map();
+    // const calloutResults: Map<number, Match> = new Map();
 
     const filteredTerms = this.validateSearchTerms(searchData.terms);
 
@@ -149,6 +151,7 @@ export class SearchService {
       searchChallenges,
       searchOpportunities,
       searchPosts,
+      // searchCallouts,
     ] = await this.searchBy(agentInfo, entityTypesFilter, spaceIDsFilter);
 
     if (searchData.tagsetNames)
@@ -210,6 +213,8 @@ export class SearchService {
       journeyResultsCount:
         spaceResults.size + challengeResults.size + opportunityResults.size,
       groupResults: [],
+      // calloutResults: calloutResultsMock,
+      calloutResults: [],
     };
 
     results.contributorResults.push(
@@ -275,7 +280,9 @@ export class SearchService {
     agentInfo: AgentInfo,
     entityTypesFilter?: string[],
     spaceIDsFilter?: string[] | undefined
-  ): Promise<[boolean, boolean, boolean, boolean, boolean, boolean, boolean]> {
+  ): Promise<
+    [boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean]
+  > {
     let searchUsers = true;
     let searchGroups = true;
     let searchOrganizations = true;
@@ -283,6 +290,7 @@ export class SearchService {
     let searchChallenges = true;
     let searchOpportunities = true;
     let searchPosts = true;
+    let searchCallouts = true;
 
     if (entityTypesFilter && entityTypesFilter.length > 0) {
       if (!entityTypesFilter.includes(SearchEntityTypes.USER))
@@ -299,6 +307,8 @@ export class SearchService {
         searchOpportunities = false;
       if (!entityTypesFilter.includes(SearchEntityTypes.POST))
         searchPosts = false;
+      if (!entityTypesFilter.includes(SearchEntityTypes.CALLOUT))
+        searchCallouts = false;
     }
 
     if (!agentInfo.email) {
@@ -317,6 +327,7 @@ export class SearchService {
       searchChallenges,
       searchOpportunities,
       searchPosts,
+      searchCallouts,
     ];
   }
 
@@ -1175,3 +1186,56 @@ export class SearchService {
     return postMatches;
   }
 }
+
+// const calloutResultsMock = [
+//   {
+//     id: 'callout-1',
+//     score: 1,
+//     terms: ['callout name'],
+//     type: SearchResultType.CALLOUT,
+//     result: {
+//       id: 'calloutid-1234567890',
+//       nameID: 'calloutName-1',
+//       type: CalloutType.POST_COLLECTION,
+//       framing: {
+//         id: 'framingid-1221321',
+//         profile: {
+//           id: 'profileId-w21213213',
+//           displayName: 'Test callout',
+//           desciption: 'post collection callout',
+//         },
+//       },
+//       contributions: [
+//         {
+//           post: {
+//             id: 'postId-2132132423',
+//           },
+//         },
+//       ],
+//     },
+//     callout: {
+//       id: 'calloutid-1234567890',
+//       nameID: 'calloutName-1',
+//       type: CalloutType.POST_COLLECTION,
+//       framing: {
+//         id: 'framingid-1221321',
+//         profile: {
+//           id: 'profileId-w21213213',
+//           displayName: 'Test callout',
+//           desciption: 'post collection callout',
+//         },
+//       },
+//       contributions: [
+//         {
+//           post: {
+//             id: 'postId-2132132423',
+//           },
+//         },
+//       ],
+//       authorization: {
+//         id: 'authId-21432142134',
+//         credentialRules: '',
+//       },
+//     },
+//   },
+// ];
