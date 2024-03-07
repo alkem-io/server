@@ -22,12 +22,12 @@ import { Opportunity } from '@domain/collaboration/opportunity';
 import { RoomService } from '@domain/communication/room/room.service';
 import { IActivityLogBuilder } from './activity.log.builder.interface';
 import ActivityLogBuilderService from './activity.log.builder.service';
-import { ReferenceService } from '@domain/common/reference/reference.service';
 import { CalendarService } from '@domain/timeline/calendar/calendar.service';
 import { CalendarEventService } from '@domain/timeline/event/event.service';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { SpaceService } from '@domain/challenge/space/space.service';
 import { JourneyTypeEnum } from '@common/enums/journey.type';
+import { LinkService } from '@domain/collaboration/link/link.service';
 
 export class ActivityLogService {
   constructor(
@@ -40,7 +40,7 @@ export class ActivityLogService {
     private challengeService: ChallengeService,
     private opportunityService: OpportunityService,
     private roomService: RoomService,
-    private referenceService: ReferenceService,
+    private linkService: LinkService,
     private calendarService: CalendarService,
     private calendarEventService: CalendarEventService,
     private communityService: CommunityService,
@@ -179,7 +179,7 @@ export class ActivityLogService {
           this.opportunityService,
           this.communityService,
           this.roomService,
-          this.referenceService,
+          this.linkService,
           this.calendarService,
           this.calendarEventService
         );

@@ -80,6 +80,7 @@ import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.a
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { ILicense } from '@domain/license/license/license.interface';
 import { LicenseService } from '@domain/license/license/license.service';
+import { SpaceMembershipCollaborationInfo } from '@services/api/me/space.membership.type';
 
 @Injectable()
 export class SpaceService {
@@ -452,6 +453,95 @@ export class SpaceService {
     if (spaces.length === 0) return [];
 
     return spaces;
+  }
+
+  public async getSpacesWithChildJourneys(
+    args: SpacesQueryArgs,
+    options?: FindManyOptions<Space>
+  ): Promise<ISpace[]> {
+    const visibilities = this.spacesFilterService.getAllowedVisibilities(
+      args.filter
+    );
+    // Load the spaces
+    let spaces: ISpace[];
+    if (args && args.IDs) {
+      spaces = await this.spaceRepository.find({
+        where: {
+          id: In(args.IDs),
+          license: {
+            visibility: In(visibilities),
+          },
+        },
+        ...options,
+        relations: {
+          ...options?.relations,
+          collaboration: true,
+          challenges: {
+            collaboration: true,
+            opportunities: {
+              collaboration: true,
+            },
+          },
+        },
+      });
+    } else {
+      spaces = await this.spaceRepository.find({
+        where: {
+          license: {
+            visibility: In(visibilities),
+          },
+        },
+        ...options,
+        relations: {
+          ...options?.relations,
+          collaboration: true,
+          challenges: {
+            collaboration: true,
+            opportunities: {
+              collaboration: true,
+            },
+          },
+        },
+      });
+    }
+
+    if (spaces.length === 0) return [];
+
+    return spaces;
+  }
+
+  // Returns a map of all collaboration IDs with parent space ID
+  public getSpaceMembershipCollaborationInfo(
+    spaces: ISpace[]
+  ): SpaceMembershipCollaborationInfo {
+    const spaceMembershipCollaborationInfo: SpaceMembershipCollaborationInfo =
+      new Map();
+
+    for (const space of spaces) {
+      if (space.collaboration?.id)
+        spaceMembershipCollaborationInfo.set(space.collaboration.id, space.id);
+
+      if (space.challenges) {
+        for (const challenge of space.challenges) {
+          if (challenge.collaboration?.id)
+            spaceMembershipCollaborationInfo.set(
+              challenge.collaboration.id,
+              space.id
+            );
+
+          if (challenge.opportunities) {
+            for (const opportunity of challenge.opportunities) {
+              if (opportunity.collaboration?.id)
+                spaceMembershipCollaborationInfo.set(
+                  opportunity.collaboration.id,
+                  space.id
+                );
+            }
+          }
+        }
+      }
+    }
+    return spaceMembershipCollaborationInfo;
   }
 
   public async orderSpacesDefault(spaces: ISpace[]): Promise<ISpace[]> {

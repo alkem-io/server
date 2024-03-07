@@ -27,6 +27,7 @@ import { IOpportunity } from '@domain/collaboration/opportunity';
 import { ICallout } from '@domain/collaboration/callout';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { EntityManager } from 'typeorm';
+import { ISearchResultCallout } from './dto/search.result.dto.entry.callout';
 
 export type PostParents = {
   callout: ICallout;
@@ -212,5 +213,16 @@ export default class SearchResultBuilderService
       post,
     };
     return searchResultPost;
+  }
+
+  async [SearchResultType.CALLOUT](rawSearchResult: ISearchResult) {
+    const callout = await this.calloutService.getCalloutOrFail(
+      rawSearchResult.result.id
+    );
+    const searchResultCallout: ISearchResultCallout = {
+      ...this.searchResultBase,
+      callout,
+    };
+    return searchResultCallout;
   }
 }

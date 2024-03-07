@@ -7,6 +7,7 @@ import { ISearchResultUser } from './dto/search.result.dto.entry.user';
 import { ISearchResultOrganization } from './dto/search.result.dto.entry.organization';
 import { ISearchResultUserGroup } from './dto/search.result.dto.entry.user.group';
 import { ISearchResultPost } from './dto/search.result.dto.entry.post';
+import { ISearchResultCallout } from './dto/search.result.dto.entry.callout';
 
 interface SearchResultBuilderFunction<TypedSearchResult> {
   (rawSearchResult: ISearchResult): Promise<TypedSearchResult>;
@@ -20,4 +21,5 @@ export interface ISearchResultBuilder {
   [SearchResultType.ORGANIZATION]: SearchResultBuilderFunction<ISearchResultOrganization>;
   [SearchResultType.USERGROUP]: SearchResultBuilderFunction<ISearchResultUserGroup>;
   [SearchResultType.POST]: SearchResultBuilderFunction<ISearchResultPost>;
+  [SearchResultType.CALLOUT]: SearchResultBuilderFunction<ISearchResultCallout>;
 }
