@@ -45,6 +45,12 @@ export abstract class ISearchResults {
 
   @Field(() => [ISearchResult], {
     nullable: false,
+    description: 'The search results for Callouts.',
+  })
+  calloutResults!: ISearchResult[];
+
+  @Field(() => [ISearchResult], {
+    nullable: false,
     description: 'The search results for Groups.',
   })
   groupResults!: ISearchResult[];
