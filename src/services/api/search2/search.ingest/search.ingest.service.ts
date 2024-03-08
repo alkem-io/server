@@ -133,108 +133,118 @@ export class SearchIngestService {
   }
   // todo: process return object for ingestion
   private fetchSpaces() {
-    return this.entityManager
-      .find<Space>(Space, {
-        ...journeyFindOptions,
-        relations: {
-          ...journeyFindOptions.relations,
-          license: true,
-        },
-        select: {
-          ...journeyFindOptions.select,
-          license: {
-            visibility: true,
-          },
-        },
-      })
-      .then(spaces => {
-        spaces.forEach(space => {
-          (space.profile as any).tags = processTagsets(space.profile.tagsets);
-          delete space.profile.tagsets;
-          return spaces;
-        });
-        return spaces;
-      });
-  }
-
-  private fetchChallenges() {
-    return this.entityManager
-      .find<Challenge>(Challenge, {
-        ...journeyFindOptions,
-        relations: {
-          ...journeyFindOptions.relations,
-          parentSpace: {
+    return (
+      this.entityManager
+        .find<Space>(Space, {
+          ...journeyFindOptions,
+          relations: {
+            ...journeyFindOptions.relations,
             license: true,
           },
-        },
-        select: {
-          ...journeyFindOptions.select,
-          parentSpace: {
+          select: {
+            ...journeyFindOptions.select,
             license: {
               visibility: true,
             },
           },
-        },
-      })
-      .then(challenges =>
-        challenges.filter(
-          challenge =>
-            challenge?.parentSpace?.license?.visibility !==
-            SpaceVisibility.ARCHIVED
-        )
-      )
-      .then(challenges => {
-        challenges.forEach(challenge => {
-          (challenge.profile as any).tags = processTagsets(
-            challenge.profile.tagsets
-          );
-          delete challenge.parentSpace;
-          delete challenge.profile.tagsets;
-        });
-        return challenges;
-      });
+        })
+        // todo: filter out archived spaces
+        // todo: use where clause instead of filtering
+        .then(spaces => {
+          spaces.forEach(space => {
+            (space.profile as any).tags = processTagsets(space.profile.tagsets);
+            delete space.profile.tagsets;
+            return spaces;
+          });
+          return spaces;
+        })
+    );
   }
 
-  private fetchOpportunities() {
-    return this.entityManager
-      .find<Opportunity>(Opportunity, {
-        ...journeyFindOptions,
-        relations: {
-          ...journeyFindOptions.relations,
-          challenge: {
+  private fetchChallenges() {
+    return (
+      this.entityManager
+        .find<Challenge>(Challenge, {
+          ...journeyFindOptions,
+          relations: {
+            ...journeyFindOptions.relations,
             parentSpace: {
               license: true,
             },
           },
-        },
-        select: {
-          ...journeyFindOptions.select,
-          challenge: {
+          select: {
+            ...journeyFindOptions.select,
             parentSpace: {
               license: {
                 visibility: true,
               },
             },
           },
-        },
-      })
-      .then(opportunities =>
-        opportunities.filter(
-          opportunity =>
-            opportunity.challenge?.parentSpace?.license?.visibility !==
-            SpaceVisibility.ARCHIVED
+        })
+        // todo: use where clause instead of filtering
+        .then(challenges =>
+          challenges.filter(
+            challenge =>
+              challenge?.parentSpace?.license?.visibility !==
+              SpaceVisibility.ARCHIVED
+          )
         )
-      )
-      .then(opportunities => {
-        opportunities.forEach(opportunity => {
-          (opportunity.profile as any).tags = processTagsets(
-            opportunity.profile.tagsets
-          );
-          delete opportunity.profile.tagsets;
-          delete opportunity.challenge;
-        });
-        return opportunities;
-      });
+        .then(challenges => {
+          challenges.forEach(challenge => {
+            (challenge.profile as any).tags = processTagsets(
+              challenge.profile.tagsets
+            );
+            delete challenge.parentSpace;
+            delete challenge.profile.tagsets;
+          });
+          return challenges;
+        })
+    );
+  }
+
+  private fetchOpportunities() {
+    return (
+      this.entityManager
+        .find<Opportunity>(Opportunity, {
+          ...journeyFindOptions,
+          relations: {
+            ...journeyFindOptions.relations,
+            challenge: {
+              parentSpace: {
+                license: true,
+              },
+            },
+          },
+          select: {
+            ...journeyFindOptions.select,
+            challenge: {
+              parentSpace: {
+                license: {
+                  visibility: true,
+                },
+              },
+            },
+          },
+        })
+        // todo: use where clause instead of filtering
+        .then(opportunities =>
+          opportunities.filter(
+            opportunity =>
+              opportunity.challenge?.parentSpace?.license?.visibility !==
+              SpaceVisibility.ARCHIVED
+          )
+        )
+        .then(opportunities => {
+          opportunities.forEach(opportunity => {
+            (opportunity.profile as any).tags = processTagsets(
+              opportunity.profile.tagsets
+            );
+            delete opportunity.profile.tagsets;
+            delete opportunity.challenge;
+          });
+          return opportunities;
+        })
+    );
   }
 
   private fetchOrganization() {

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager, In } from 'typeorm';
 import { groupBy } from 'lodash';
@@ -11,7 +11,11 @@ import { ISpace } from '@domain/challenge/space/space.interface';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { IOpportunity, Opportunity } from '@domain/collaboration/opportunity';
 import { BaseException } from '@common/exceptions/base.exception';
-import { AlkemioErrorStatus, LogContext } from '@common/enums';
+import {
+  AlkemioErrorStatus,
+  AuthorizationPrivilege,
+  LogContext,
+} from '@common/enums';
 import { ISearchResultOpportunity } from '@services/api/search/dto/search.result.dto.entry.opportunity';
 import { ISearchResultUser } from '@services/api/search/dto/search.result.dto.entry.user';
 import { IUser, User } from '@domain/community/user';
@@ -23,6 +27,8 @@ import { Post } from '@domain/collaboration/post';
 import { EntityNotFoundException } from '@common/exceptions';
 import { Callout, ICallout } from '@domain/collaboration/callout';
 import { AgentInfo } from '@core/authentication';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 
 export type PostParents = {
   callout: ICallout;
@@ -42,7 +48,10 @@ export type PostParentIDs = {
 export class SearchResultService {
   constructor(
     @InjectEntityManager()
-    private readonly entityManager: EntityManager
+    private readonly entityManager: EntityManager,
+    private readonly authorizationService: AuthorizationService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService
   ) {}
 
   public async resolveSearchResults(
@@ -50,15 +59,24 @@ export class SearchResultService {
     agentInfo: AgentInfo
   ): Promise<ISearchResults> {
     const groupedResults = groupBy(rawSearchResults, 'type');
-    // todo: authorize groupedResults first
+    // authorize entities with requester and enrich with data
     const [spaces, challenges, opportunities, users, organizations, posts] =
       await Promise.all([
-        this.getSpaceSearchResults(groupedResults.space),
-        this.getChallengeSearchResults(groupedResults.challenge),
-        this.getOpportunitySearchResults(groupedResults.opportunity),
-        this.getUserSearchResults(groupedResults.user),
-        this.getOrganizationSearchResults(groupedResults.organization),
-        this.getPostSearchResults(groupedResults.post),
+        this.getSpaceSearchResults(groupedResults.space ?? [], agentInfo),
+        this.getChallengeSearchResults(
+          groupedResults.challenge ?? [],
+          agentInfo
+        ),
+        this.getOpportunitySearchResults(
+          groupedResults.opportunity ?? [],
+          agentInfo
+        ),
+        this.getUserSearchResults(groupedResults.user ?? [], agentInfo),
+        this.getOrganizationSearchResults(
+          groupedResults.organization ?? [],
+          agentInfo
+        ),
+        this.getPostSearchResults(groupedResults.post ?? [], agentInfo),
       ]);
     // todo: count
     return {
@@ -69,13 +87,19 @@ export class SearchResultService {
       journeyResults: [...spaces, ...challenges, ...opportunities],
       journeyResultsCount: -1,
       groupResults: [],
+      calloutResults: [],
     };
   }
-  // todo: heavy copy-pasting below: could be refactored
+  // todo: heavy copy-pasting below: must be refactored
   public async getSpaceSearchResults(
-    rawSearchResults: ISearchResult[]
+    rawSearchResults: ISearchResult[],
+    agentInfo: AgentInfo
   ): Promise<ISearchResultSpace[]> {
-    const spaceIds = rawSearchResults.map(result => result.id);
+    if (rawSearchResults.length === 0) {
+      return [];
+    }
+
+    const spaceIds = rawSearchResults.map(hit => hit.result.id);
 
     const spaces = await this.entityManager.findBy(Space, {
       id: In(spaceIds),
@@ -84,10 +108,25 @@ export class SearchResultService {
     return spaces
       .map<ISearchResultSpace | undefined>(space => {
         const rawSearchResult = rawSearchResults.find(
-          result => result.id === space.id
+          hit => hit.result.id === space.id
         );
 
         if (!rawSearchResult) {
+          this.logger.error(
+            `Unable to find raw search result for space: ${space.id}`,
+            undefined,
+            LogContext.SEARCH
+          );
+          return undefined;
+        }
+
+        if (
+          !this.authorizationService.isAccessGranted(
+            agentInfo,
+            space.authorization,
+            AuthorizationPrivilege.READ
+          )
+        ) {
           return undefined;
         }
 
@@ -100,9 +139,14 @@ export class SearchResultService {
   }
 
   public async getChallengeSearchResults(
-    rawSearchResults: ISearchResult[]
+    rawSearchResults: ISearchResult[],
+    agentInfo: AgentInfo
   ): Promise<ISearchResultChallenge[]> {
-    const challengeIds = rawSearchResults.map(result => result.id);
+    if (rawSearchResults.length === 0) {
+      return [];
+    }
+
+    const challengeIds = rawSearchResults.map(hit => hit.result.id);
 
     const challenges = await this.entityManager.find(Challenge, {
       where: { id: In(challengeIds) },
@@ -113,10 +157,25 @@ export class SearchResultService {
     return challenges
       .map<ISearchResultChallenge | undefined>(challenge => {
         const rawSearchResult = rawSearchResults.find(
-          result => result.id === challenge.id
+          hit => hit.result.id === challenge.id
         );
 
         if (!rawSearchResult) {
+          this.logger.error(
+            `Unable to find raw search result for Challenge: ${challenge.id}`,
+            undefined,
+            LogContext.SEARCH
+          );
+          return undefined;
+        }
+
+        if (
+          !this.authorizationService.isAccessGranted(
+            agentInfo,
+            challenge.authorization,
+            AuthorizationPrivilege.READ
+          )
+        ) {
           return undefined;
         }
 
@@ -142,9 +201,14 @@ export class SearchResultService {
   }
 
   public async getOpportunitySearchResults(
-    rawSearchResults: ISearchResult[]
+    rawSearchResults: ISearchResult[],
+    agentInfo: AgentInfo
   ): Promise<ISearchResultChallenge[]> {
-    const opportunityIds = rawSearchResults.map(result => result.id);
+    if (rawSearchResults.length === 0) {
+      return [];
+    }
+
+    const opportunityIds = rawSearchResults.map(hit => hit.result.id);
 
     const opportunities = await this.entityManager.find(Opportunity, {
       where: { id: In(opportunityIds) },
@@ -155,10 +219,25 @@ export class SearchResultService {
     return opportunities
       .map<ISearchResultChallenge | undefined>(opportunity => {
         const rawSearchResult = rawSearchResults.find(
-          result => result.id === opportunity.id
+          hit => hit.result.id === opportunity.id
         );
 
         if (!rawSearchResult) {
+          this.logger.error(
+            `Unable to find raw search result for Opportunity: ${opportunity.id}`,
+            undefined,
+            LogContext.SEARCH
+          );
+          return undefined;
+        }
+
+        if (
+          !this.authorizationService.isAccessGranted(
+            agentInfo,
+            opportunity.authorization,
+            AuthorizationPrivilege.READ
+          )
+        ) {
           return undefined;
         }
 
@@ -200,9 +279,14 @@ export class SearchResultService {
   }
 
   public async getUserSearchResults(
-    rawSearchResults: ISearchResult[]
+    rawSearchResults: ISearchResult[],
+    agentInfo: AgentInfo
   ): Promise<ISearchResultUser[]> {
-    const userIds = rawSearchResults.map(result => result.id);
+    if (rawSearchResults.length === 0) {
+      return [];
+    }
+
+    const userIds = rawSearchResults.map(hit => hit.result.id);
 
     const users = await this.entityManager.findBy(User, {
       id: In(userIds),
@@ -211,10 +295,25 @@ export class SearchResultService {
     return users
       .map<ISearchResultUser | undefined>(user => {
         const rawSearchResult = rawSearchResults.find(
-          result => result.id === user.id
+          hit => hit.result.id === user.id
         );
 
         if (!rawSearchResult) {
+          this.logger.error(
+            `Unable to find raw search result for User: ${user.id}`,
+            undefined,
+            LogContext.SEARCH
+          );
+          return undefined;
+        }
+        // is that needed?
+        if (
+          !this.authorizationService.isAccessGranted(
+            agentInfo,
+            user.authorization,
+            AuthorizationPrivilege.READ
+          )
+        ) {
           return undefined;
         }
 
@@ -227,9 +326,14 @@ export class SearchResultService {
   }
 
   public async getOrganizationSearchResults(
-    rawSearchResults: ISearchResult[]
+    rawSearchResults: ISearchResult[],
+    agentInfo: AgentInfo
   ): Promise<ISearchResultOrganization[]> {
-    const orgIds = rawSearchResults.map(result => result.id);
+    if (rawSearchResults.length === 0) {
+      return [];
+    }
+
+    const orgIds = rawSearchResults.map(hit => hit.result.id);
 
     const organizations = await this.entityManager.findBy(Organization, {
       id: In(orgIds),
@@ -238,10 +342,25 @@ export class SearchResultService {
     return organizations
       .map<ISearchResultOrganization | undefined>(org => {
         const rawSearchResult = rawSearchResults.find(
-          result => result.id === org.id
+          hit => hit.result.id === org.id
         );
 
         if (!rawSearchResult) {
+          this.logger.error(
+            `Unable to find raw search result for Organization: ${org.id}`,
+            undefined,
+            LogContext.SEARCH
+          );
+          return undefined;
+        }
+
+        if (
+          !this.authorizationService.isAccessGranted(
+            agentInfo,
+            org.authorization,
+            AuthorizationPrivilege.READ
+          )
+        ) {
           return undefined;
         }
 
@@ -254,9 +373,14 @@ export class SearchResultService {
   }
 
   public async getPostSearchResults(
-    rawSearchResults: ISearchResult[]
+    rawSearchResults: ISearchResult[],
+    agentInfo: AgentInfo
   ): Promise<ISearchResultPost[]> {
-    const postIds = rawSearchResults.map(result => result.id);
+    if (rawSearchResults.length === 0) {
+      return [];
+    }
+
+    const postIds = rawSearchResults.map(hit => hit.result.id);
 
     const posts = await this.entityManager.findBy(Post, {
       id: In(postIds),
@@ -267,10 +391,25 @@ export class SearchResultService {
     // make getPostParents for all posts in one query
     for (const post of posts) {
       const rawSearchResult = rawSearchResults.find(
-        result => result.id === post.id
+        hit => hit.result.id === post.id
       );
 
       if (!rawSearchResult) {
+        this.logger.error(
+          `Unable to find raw search result for Post: ${post.id}`,
+          undefined,
+          LogContext.SEARCH
+        );
+        continue;
+      }
+
+      if (
+        !this.authorizationService.isAccessGranted(
+          agentInfo,
+          post.authorization,
+          AuthorizationPrivilege.READ
+        )
+      ) {
         continue;
       }
 

@@ -17,7 +17,11 @@ export class Search2Service {
     searchData: SearchInput,
     agentInfo: AgentInfo
   ): Promise<ISearchResults> {
-    const searchResults = await this.searchExtractService.search(searchData);
+    const onlyPublicResults = !agentInfo.email;
+    const searchResults = await this.searchExtractService.search(
+      searchData,
+      onlyPublicResults
+    );
     return this.searchResultService.resolveSearchResults(
       searchResults,
       agentInfo
