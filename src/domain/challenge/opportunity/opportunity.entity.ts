@@ -1,16 +1,8 @@
 import { Project } from '@domain/collaboration/project/project.entity';
-import {
-  Column,
-  Entity,
-  JoinColumn,
-  ManyToOne,
-  OneToMany,
-  OneToOne,
-} from 'typeorm';
+import { Column, Entity, ManyToOne, OneToMany } from 'typeorm';
 import { IOpportunity } from '@domain/challenge/opportunity/opportunity.interface';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { BaseChallenge } from '@domain/challenge/base-challenge/base.challenge.entity';
-import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
 
 @Entity()
 export class Opportunity extends BaseChallenge implements IOpportunity {
@@ -29,14 +21,6 @@ export class Opportunity extends BaseChallenge implements IOpportunity {
 
   @Column()
   spaceID!: string;
-
-  @OneToOne(() => StorageAggregator, {
-    eager: false,
-    cascade: true,
-    onDelete: 'SET NULL',
-  })
-  @JoinColumn()
-  storageAggregator?: StorageAggregator;
 
   constructor() {
     super();

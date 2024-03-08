@@ -50,8 +50,6 @@ import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set
 import { IPreferenceSet } from '@domain/common/preference-set';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { PreferenceType } from '@common/enums/preference.type';
-import { ITemplatesSet } from '@domain/template/templates-set/templates.set.interface';
-import { TemplatesSetService } from '@domain/template/templates-set/templates.set.service';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { UpdateSpacePlatformSettingsInput } from './dto/space.dto.update.platform.settings';
 import { SpacesQueryArgs } from './dto/space.args.query.spaces';
@@ -76,12 +74,8 @@ import { PaginationArgs } from '@core/pagination';
 import { getPaginationResults } from '@core/pagination/pagination.fn';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
-import { ILicense } from '@domain/license/license/license.interface';
-import { LicenseService } from '@domain/license/license/license.service';
-import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
-import { UpdateSpaceDefaultsInput } from './dto/space.dto.update.defaults';
-import { ISpaceDefaults } from '../space.defaults/space.defaults.interface';
 import { SpaceMembershipCollaborationInfo } from '@services/api/me/space.membership.type';
+import { AccountService } from '../account/account.service';
 
 @Injectable()
 export class SpaceService {
@@ -96,11 +90,9 @@ export class SpaceService {
     private challengeService: ChallengeService,
     private preferenceSetService: PreferenceSetService,
     private spacesFilterService: SpaceFilterService,
-    private templatesSetService: TemplatesSetService,
     private storageAggregatorService: StorageAggregatorService,
     private collaborationService: CollaborationService,
-    private spaceDefaultsService: SpaceDefaultsService,
-    private licenseService: LicenseService,
+    private accountService: AccountService,
     @InjectRepository(Space)
     private spaceRepository: Repository<Space>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -119,22 +111,10 @@ export class SpaceService {
     space.storageAggregator =
       await this.storageAggregatorService.createStorageAggregator();
 
-    // The space library (templates set) and defaults are separate but related concepts
-    space.templatesSet = await this.templatesSetService.createTemplatesSet();
-    space.defaults = await this.spaceDefaultsService.createSpaceDefaults();
-
-    // And set the defaults
-    space.templatesSet =
-      await this.spaceDefaultsService.addDefaultTemplatesToSpaceLibrary(
-        space.templatesSet,
-        space.storageAggregator
-      );
-    if (space.templatesSet.innovationFlowTemplates.length !== 0) {
-      space.defaults.innovationFlowTemplate =
-        space.templatesSet.innovationFlowTemplates[0];
-    }
-
-    space.license = await this.licenseService.createLicense();
+    space.account = await this.accountService.createAccount(
+      spaceData.accountData,
+      space.storageAggregator
+    );
 
     // remove context before saving as want to control that creation
     space.context = undefined;
@@ -211,11 +191,7 @@ export class SpaceService {
     );
 
     // save before assigning host in case that fails
-    const savedSpace = await this.spaceRepository.save(space);
-
-    await this.setSpaceHost(space.id, spaceData.hostID);
-
-    return savedSpace;
+    return await this.spaceRepository.save(space);
   }
 
   createPreferenceDefaults(): Map<PreferenceType, string> {
@@ -248,57 +224,18 @@ export class SpaceService {
     return await this.spaceRepository.save(space);
   }
 
-  public async updateSpaceDefaults(
-    spaceDefaultsData: UpdateSpaceDefaultsInput
-  ): Promise<ISpaceDefaults> {
-    const space = await this.getSpaceOrFail(spaceDefaultsData.spaceID, {
-      relations: {
-        defaults: true,
-        templatesSet: {
-          innovationFlowTemplates: true,
-        },
-      },
-    });
-    if (
-      !space.defaults ||
-      !space.templatesSet ||
-      !space.templatesSet.innovationFlowTemplates
-    ) {
-      throw new RelationshipNotFoundException(
-        `Unable to load all required data to update the defaults on  Space ${space.id} `,
-        LogContext.CHALLENGES
-      );
-    }
-
-    // Verify that the specified template is in the space library
-    const template = space.templatesSet.innovationFlowTemplates.find(
-      t => t.id === spaceDefaultsData.flowTemplateID
-    );
-    if (!template) {
-      throw new NotSupportedException(
-        `InnovationFlowTemplate ID provided (${spaceDefaultsData.flowTemplateID}) is not part of the Library for the Space ${space.id} `,
-        LogContext.CHALLENGES
-      );
-    }
-
-    return await this.spaceDefaultsService.updateSpaceDefaults(
-      space.defaults,
-      template
-    );
-  }
-
   public async updateSpacePlatformSettings(
     updateData: UpdateSpacePlatformSettingsInput
   ): Promise<ISpace> {
     const space = await this.getSpaceOrFail(updateData.spaceID, {
       relations: {
-        license: true,
+        account: true,
       },
     });
 
-    if (!space.license) {
+    if (!space.account) {
       throw new RelationshipNotFoundException(
-        `Unable to load license for space ${space.id} `,
+        `Unable to load account for space ${space.id} `,
         LogContext.CHALLENGES
       );
     }
@@ -317,14 +254,9 @@ export class SpaceService {
       }
     }
 
-    if (updateData.hostID) {
-      await this.setSpaceHost(space.id, updateData.hostID);
-    }
-
-    if (updateData.license) {
-      space.license = await this.licenseService.updateLicense(
-        space.license,
-        updateData.license
+    if (updateData.account) {
+      space.account = await this.accountService.updateAccountPlatformSettings(
+        updateData.account
       );
     }
 
@@ -338,23 +270,18 @@ export class SpaceService {
         preferenceSet: {
           preferences: true,
         },
-        templatesSet: true,
         profile: true,
         storageAggregator: true,
-        license: { featureFlags: true },
-        defaults: true,
+        account: true,
       },
     });
 
     if (
       !space.challenges ||
       !space.preferenceSet ||
-      !space.templatesSet ||
+      !space.account ||
       !space.profile ||
-      !space.storageAggregator ||
-      !space.license ||
-      !space.license?.featureFlags ||
-      !space.defaults
+      !space.storageAggregator
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load all entities for deletion of space ${space.id} `,
@@ -376,11 +303,9 @@ export class SpaceService {
 
     await this.preferenceSetService.deletePreferenceSet(space.preferenceSet.id);
 
-    await this.templatesSetService.deleteTemplatesSet(space.templatesSet.id);
+    await this.accountService.deleteAccount(space.account);
 
     await this.storageAggregatorService.delete(space.storageAggregator.id);
-    await this.licenseService.delete(space.license.id);
-    await this.spaceDefaultsService.deleteSpaceDefaults(space.defaults.id);
 
     const result = await this.spaceRepository.remove(space as Space);
     result.id = deleteData.ID;
@@ -402,8 +327,10 @@ export class SpaceService {
       }
 
       return this.spaceRepository.findBy({
-        license: {
-          visibility: spaceVisibilityFilter,
+        account: {
+          license: {
+            visibility: spaceVisibilityFilter,
+          },
         },
       });
     }
@@ -487,8 +414,10 @@ export class SpaceService {
       spaces = await this.spaceRepository.find({
         where: {
           id: In(args.IDs),
-          license: {
-            visibility: In(visibilities),
+          account: {
+            license: {
+              visibility: In(visibilities),
+            },
           },
         },
         ...options,
@@ -496,8 +425,10 @@ export class SpaceService {
     } else {
       spaces = await this.spaceRepository.find({
         where: {
-          license: {
-            visibility: In(visibilities),
+          account: {
+            license: {
+              visibility: In(visibilities),
+            },
           },
         },
         ...options,
@@ -522,8 +453,10 @@ export class SpaceService {
       spaces = await this.spaceRepository.find({
         where: {
           id: In(args.IDs),
-          license: {
-            visibility: In(visibilities),
+          account: {
+            license: {
+              visibility: In(visibilities),
+            },
           },
         },
         ...options,
@@ -541,8 +474,10 @@ export class SpaceService {
     } else {
       spaces = await this.spaceRepository.find({
         where: {
-          license: {
-            visibility: In(visibilities),
+          account: {
+            license: {
+              visibility: In(visibilities),
+            },
           },
         },
         ...options,
@@ -664,8 +599,8 @@ export class SpaceService {
 
   private sortSpacesDefault(spacesData: Space[]): string[] {
     const sortedSpaces = spacesData.sort((a, b) => {
-      const visibilityA = a.license?.visibility;
-      const visibilityB = b.license?.visibility;
+      const visibilityA = a.account?.license?.visibility;
+      const visibilityB = b.account?.license?.visibility;
       if (
         visibilityA !== visibilityB &&
         (visibilityA === SpaceVisibility.DEMO ||
@@ -733,8 +668,10 @@ export class SpaceService {
     return this.spaceRepository.find({
       where: {
         id: In(spaceIds),
-        license: {
-          visibility: visibilities.length ? In(visibilities) : undefined,
+        account: {
+          license: {
+            visibility: visibilities.length ? In(visibilities) : undefined,
+          },
         },
       },
     });
@@ -796,26 +733,6 @@ export class SpaceService {
     return space;
   }
 
-  async getTemplatesSetOrFail(spaceId: string): Promise<ITemplatesSet> {
-    const spaceWithTemplates = await this.getSpaceOrFail(spaceId, {
-      relations: {
-        templatesSet: {
-          postTemplates: true,
-        },
-      },
-    });
-    const templatesSet = spaceWithTemplates.templatesSet;
-
-    if (!templatesSet) {
-      throw new EntityNotFoundException(
-        `Unable to find templatesSet for space with nameID: ${spaceWithTemplates.nameID}`,
-        LogContext.COMMUNITY
-      );
-    }
-
-    return templatesSet;
-  }
-
   async getStorageAggregatorOrFail(
     spaceId: string
   ): Promise<IStorageAggregator> {
@@ -834,24 +751,6 @@ export class SpaceService {
     }
 
     return storageAggregator;
-  }
-
-  async getLicenseOrFail(spaceId: string): Promise<ILicense> {
-    const space = await this.getSpaceOrFail(spaceId, {
-      relations: {
-        license: { featureFlags: true },
-      },
-    });
-    const license = space.license;
-
-    if (!license) {
-      throw new EntityNotFoundException(
-        `Unable to find license for space with nameID: ${space.nameID}`,
-        LogContext.LICENSE
-      );
-    }
-
-    return license;
   }
 
   async getPreferenceSetOrFail(spaceId: string): Promise<IPreferenceSet> {

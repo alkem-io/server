@@ -87,6 +87,11 @@ import {
 import { UpdateUserPlatformSettingsInput } from '@domain/community/user/dto/user.dto.update.platform.settings';
 import { UpdateInnovationFlowStateInput } from '@domain/collaboration/innovation-flow-states/dto/innovation.flow.state.dto.update';
 import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
+import {
+  CreateAccountInput,
+  UpdateAccountInput,
+} from '@domain/challenge/account/dto';
+import { UpdateAccountDefaultsInput } from '@domain/challenge/account/dto/account.dto.update.defaults';
 
 export class BaseHandler extends AbstractHandler {
   public async handle(
@@ -124,8 +129,11 @@ export class BaseHandler extends AbstractHandler {
       CreateReferenceOnProfileInput,
       CreateTagsetOnProfileInput,
       CreateCalendarEventOnCalendarInput,
+      CreateAccountInput,
       DeleteDocumentInput,
       UpdateActorInput,
+      UpdateAccountInput,
+      UpdateAccountDefaultsInput,
       UpdatePostInput,
       UpdateDocumentInput,
       UpdateCalloutFramingInput,

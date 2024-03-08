@@ -12,7 +12,6 @@ import { Opportunity } from '@domain/challenge/opportunity/opportunity.entity';
 import { PreferenceSet } from '@domain/common/preference-set';
 import { IChallenge } from './challenge.interface';
 import { BaseChallenge } from '../base-challenge/base.challenge.entity';
-import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
 
 @Entity()
 export class Challenge extends BaseChallenge implements IChallenge {
@@ -52,12 +51,4 @@ export class Challenge extends BaseChallenge implements IChallenge {
   })
   @JoinColumn()
   preferenceSet?: PreferenceSet;
-
-  @OneToOne(() => StorageAggregator, {
-    eager: false,
-    cascade: true,
-    onDelete: 'SET NULL',
-  })
-  @JoinColumn()
-  storageAggregator?: StorageAggregator;
 }

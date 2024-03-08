@@ -21,7 +21,6 @@ import { AgentModule } from '@domain/agent/agent/agent.module';
 import { UserModule } from '@domain/community/user/user.module';
 import { PreferenceModule } from '@domain/common/preference';
 import { PreferenceSetModule } from '@domain/common/preference-set/preference.set.module';
-import { TemplatesSetModule } from '@domain/template/templates-set/templates.set.module';
 import { PlatformAuthorizationPolicyModule } from '@src/platform/authorization/platform.authorization.policy.module';
 import { SpaceFilterModule } from '@services/infrastructure/space-filter/space.filter.module';
 import { SpaceResolverSubscriptions } from './space.resolver.subscriptions';
@@ -33,13 +32,14 @@ import { LoaderCreatorModule } from '@core/dataloader/creators';
 import { NameReporterModule } from '@services/external/elasticsearch/name-reporter/name.reporter.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
-import { LicenseModule } from '@domain/license/license/license.module';
 import { SpaceDefaultsModule } from '../space.defaults/space.defaults.module';
+import { AccountModule } from '../account/account.module';
 
 @Module({
   imports: [
     ActivityAdapterModule,
     AgentModule,
+    AccountModule,
     AuthorizationPolicyModule,
     AuthorizationModule,
     ContextModule,
@@ -57,14 +57,12 @@ import { SpaceDefaultsModule } from '../space.defaults/space.defaults.module';
     NamingModule,
     PreferenceModule,
     PreferenceSetModule,
-    TemplatesSetModule,
     CollaborationModule,
     SpaceFilterModule,
     SpaceDefaultsModule,
     ContributionReporterModule,
     LoaderCreatorModule,
     NameReporterModule,
-    LicenseModule,
     ProfileModule,
     TypeOrmModule.forFeature([Space]),
   ],
