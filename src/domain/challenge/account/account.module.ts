@@ -10,9 +10,13 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
 import { TemplatesSetModule } from '@domain/template/templates-set/templates.set.module';
 import { LicenseModule } from '@domain/license/license/license.module';
 import { SpaceDefaultsModule } from '../space.defaults/space.defaults.module';
+import { AgentModule } from '@domain/agent/agent/agent.module';
+import { AuthorizationModule } from '@core/authorization/authorization.module';
 
 @Module({
   imports: [
+    AgentModule,
+    AuthorizationModule,
     AuthorizationPolicyModule,
     OrganizationModule,
     TemplatesSetModule,
