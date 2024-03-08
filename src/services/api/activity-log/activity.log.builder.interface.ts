@@ -11,6 +11,7 @@ import { IActivity } from '@platform/activity';
 import { IActivityLogEntryCalendarEventCreated } from './dto/activity.log.dto.entry.calendar.event.created';
 import { IActivityLogEntryUpdateSent } from './dto/activity.log.dto.entry.update.sent';
 import { IActivityLogEntryCalloutLinkCreated } from './dto/activity.log.dto.entry.callout.link.created';
+import { IActivityLogEntryCalloutWhiteboardContentModified } from './dto/activity.log.dto.entry.callout.whiteboard.content.modified';
 
 interface ActivityLogBuilderFunction<TypedActivityLogEntry> {
   (rawActivity: IActivity): Promise<TypedActivityLogEntry>;
@@ -22,6 +23,7 @@ export interface IActivityLogBuilder {
   [ActivityEventType.CALLOUT_POST_CREATED]: ActivityLogBuilderFunction<IActivityLogEntryCalloutPostCreated>;
   [ActivityEventType.CALLOUT_LINK_CREATED]: ActivityLogBuilderFunction<IActivityLogEntryCalloutLinkCreated>;
   [ActivityEventType.CALLOUT_WHITEBOARD_CREATED]: ActivityLogBuilderFunction<IActivityLogEntryCalloutWhiteboardCreated>;
+  [ActivityEventType.CALLOUT_WHITEBOARD_CONTENT_MODIFIED]: ActivityLogBuilderFunction<IActivityLogEntryCalloutWhiteboardContentModified>;
   [ActivityEventType.CALLOUT_POST_COMMENT]: ActivityLogBuilderFunction<IActivityLogEntryCalloutPostComment>;
   [ActivityEventType.CHALLENGE_CREATED]: ActivityLogBuilderFunction<IActivityLogEntryChallengeCreated>;
   [ActivityEventType.OPPORTUNITY_CREATED]: ActivityLogBuilderFunction<IActivityLogEntryOpportunityCreated>;

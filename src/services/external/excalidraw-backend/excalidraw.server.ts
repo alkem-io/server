@@ -60,6 +60,8 @@ import {
   minCollaboratorsInRoom,
   resetCollaboratorModeDebounceWait,
 } from './types/defaults';
+import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
+import { AgentInfo } from '@core/authentication';
 
 type SaveMessageOpts = { timeout: number };
 type RoomTimers = Map<string, NodeJS.Timer>;
@@ -87,7 +89,8 @@ export class ExcalidrawServer {
     private authorizationService: AuthorizationService,
     private whiteboardService: WhiteboardService,
     private contributionReporter: ContributionReporterService,
-    private communityResolver: CommunityResolverService
+    private communityResolver: CommunityResolverService,
+    private activityAdapter: ActivityAdapter
   ) {
     const {
       contribution_window,
@@ -287,6 +290,10 @@ export class ExcalidrawServer {
           await disconnectingEventHandler(this.wsServer, socket, this.logger)
       );
       socket.on(DISCONNECT, () => {
+        this.processActivityWhiteboardContentModified(
+          socket.data.agentInfo,
+          socket.data.roomId
+        );
         disconnectEventHandler(socket);
         this.deleteCollaboratorModeTimerForSocket(socket.id);
       });
@@ -507,6 +514,24 @@ export class ExcalidrawServer {
         LogContext.EXCALIDRAW_SERVER
       );
     }
+  }
+
+  private async processActivityWhiteboardContentModified(
+    agentInfo: AgentInfo,
+    whiteboardId: string
+  ) {
+    const whiteboard = await this.whiteboardService.getWhiteboardOrFail(
+      whiteboardId,
+      {
+        relations: {
+          profile: true,
+        },
+      }
+    );
+    this.activityAdapter.calloutWhiteboardContentModified({
+      triggeredBy: agentInfo.userID,
+      whiteboard: whiteboard,
+    });
   }
 }
 // not that reliable, but best we can do

@@ -24,6 +24,7 @@ import { IActivityLogEntryCalloutLinkCreated } from './dto/activity.log.dto.entr
 import { CalendarService } from '@domain/timeline/calendar/calendar.service';
 import { CalendarEventService } from '@domain/timeline/event/event.service';
 import { LinkService } from '@domain/collaboration/link/link.service';
+import { IActivityLogEntryCalloutWhiteboardContentModified } from './dto/activity.log.dto.entry.callout.whiteboard.content.modified';
 
 export default class ActivityLogBuilderService implements IActivityLogBuilder {
   constructor(
@@ -112,6 +113,24 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
         whiteboard: whiteboardCreated,
       };
     return activityCalloutWhiteboardCreated;
+  }
+
+  async [ActivityEventType.CALLOUT_WHITEBOARD_CONTENT_MODIFIED](
+    rawActivity: IActivity
+  ) {
+    const parentCallout = await this.calloutService.getCalloutOrFail(
+      rawActivity.parentID
+    );
+    const updatedWhiteboard = await this.whiteboardService.getWhiteboardOrFail(
+      rawActivity.resourceID
+    );
+    const activityCalloutWhiteboardContentModified: IActivityLogEntryCalloutWhiteboardContentModified =
+      {
+        ...this.activityLogEntryBase,
+        callout: parentCallout,
+        whiteboard: updatedWhiteboard,
+      };
+    return activityCalloutWhiteboardContentModified;
   }
 
   async [ActivityEventType.CALLOUT_POST_COMMENT](rawActivity: IActivity) {

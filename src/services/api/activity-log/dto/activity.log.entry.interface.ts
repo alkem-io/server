@@ -16,6 +16,7 @@ import { IActivityLogEntryOpportunityCreated } from './activity.log.dto.entry.op
 import { IActivityLogEntryUpdateSent } from './activity.log.dto.entry.update.sent';
 import { IActivityLogEntryCalendarEventCreated } from './activity.log.dto.entry.calendar.event.created';
 import { IActivityLogEntryCalloutLinkCreated } from './activity.log.dto.entry.callout.link.created';
+import { IActivityLogEntryCalloutWhiteboardContentModified } from './activity.log.dto.entry.callout.whiteboard.content.modified';
 
 @InterfaceType('ActivityLogEntry', {
   resolveType(activityLogEntry) {
@@ -27,6 +28,8 @@ import { IActivityLogEntryCalloutLinkCreated } from './activity.log.dto.entry.ca
         return IActivityLogEntryCalloutPostCreated;
       case ActivityEventType.CALLOUT_WHITEBOARD_CREATED:
         return IActivityLogEntryCalloutWhiteboardCreated;
+      case ActivityEventType.CALLOUT_WHITEBOARD_CONTENT_MODIFIED:
+        return IActivityLogEntryCalloutWhiteboardContentModified;
       case ActivityEventType.CALLOUT_POST_COMMENT:
         return IActivityLogEntryCalloutPostComment;
       case ActivityEventType.CALLOUT_LINK_CREATED:

@@ -28,4 +28,8 @@ export type SocketData = {
    * The session of the user connected with the socket
    */
   session?: Session;
+  /***
+   * The id of the room the user has joined
+   */
+  roomId: string;
 };
