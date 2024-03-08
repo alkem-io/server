@@ -2,19 +2,28 @@ import { IInnovationFlowState } from '@domain/collaboration/innovation-flow-stat
 
 export const innovationFlowStatesDefault: IInnovationFlowState[] = [
   {
-    displayName: 'prepare',
-    description: 'The innovation is being prepared.',
+    displayName: 'Explore',
+    description:
+      '🔍 A journey of discovery! Gather insights through research and observation.',
   },
   {
-    displayName: 'in progress',
-    description: 'The innovation is in progress.',
+    displayName: 'Define',
+    description:
+      '🎯 Sharpen your focus. Define the challenge with precision and set a clear direction.',
   },
   {
-    displayName: 'summary',
-    description: 'The summary of the flow results.',
+    displayName: 'Brainstorm',
+    description:
+      '🎨 Ignite creativity. Generate a constellation of ideas, using concepts from diverse perspectives to get inspired.',
   },
   {
-    displayName: 'done',
-    description: 'The flow is completed.',
+    displayName: 'Validate',
+    description:
+      '🛠️ Test assumptions. Build prototypes, seek feedback, and validate your concepts. Adapt based on real-world insights.',
+  },
+  {
+    displayName: 'Evaluate',
+    description:
+      '✅ Assess impact, feasibility, and alignment to make informed choices.',
   },
 ];
