@@ -1,5 +1,5 @@
 import { IOpportunity } from '@domain/challenge/opportunity/opportunity.interface';
-import { Field, ObjectType } from '@nestjs/graphql';
+import { ObjectType } from '@nestjs/graphql';
 import { IJourney } from '../base-challenge/journey.interface';
 import { IBaseChallenge } from '../base-challenge/base.challenge.interface';
 @ObjectType('Challenge', {
@@ -9,10 +9,4 @@ export abstract class IChallenge extends IBaseChallenge implements IJourney {
   rowId!: number;
   childChallenges?: IChallenge[];
   opportunities?: IOpportunity[];
-
-  @Field(() => String, {
-    description: 'The ID of the containing Space.',
-    nullable: false,
-  })
-  spaceID!: string;
 }

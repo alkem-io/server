@@ -3,7 +3,6 @@ import { ISpace } from '@domain/challenge/space/space.interface';
 import { BaseChallenge } from '@domain/challenge/base-challenge/base.challenge.entity';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { PreferenceSet } from '@domain/common/preference-set/preference.set.entity';
-import { Account } from '../account/account.entity';
 @Entity()
 export class Space extends BaseChallenge implements ISpace {
   @OneToMany(() => Challenge, challenge => challenge.parentSpace, {
@@ -19,14 +18,6 @@ export class Space extends BaseChallenge implements ISpace {
   })
   @JoinColumn()
   preferenceSet?: PreferenceSet;
-
-  @OneToOne(() => Account, {
-    eager: false,
-    cascade: true,
-    onDelete: 'SET NULL',
-  })
-  @JoinColumn()
-  account?: Account;
 
   constructor() {
     super();

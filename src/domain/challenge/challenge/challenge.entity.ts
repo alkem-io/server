@@ -1,12 +1,5 @@
 /* eslint-disable @typescript-eslint/no-inferrable-types */
-import {
-  Column,
-  Entity,
-  JoinColumn,
-  ManyToOne,
-  OneToMany,
-  OneToOne,
-} from 'typeorm';
+import { Entity, JoinColumn, ManyToOne, OneToMany, OneToOne } from 'typeorm';
 import { Space } from '@domain/challenge/space/space.entity';
 import { Opportunity } from '@domain/challenge/opportunity/opportunity.entity';
 import { PreferenceSet } from '@domain/common/preference-set';
@@ -40,9 +33,6 @@ export class Challenge extends BaseChallenge implements IChallenge {
     onDelete: 'CASCADE',
   })
   parentSpace?: Space;
-
-  @Column()
-  spaceID!: string;
 
   @OneToOne(() => PreferenceSet, {
     eager: false,

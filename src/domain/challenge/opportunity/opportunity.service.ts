@@ -43,6 +43,7 @@ import { OpportunityDisplayLocation } from '@common/enums/opportunity.display.lo
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
+import { IAccount } from '../account/account.interface';
 @Injectable()
 export class OpportunityService {
   constructor(
@@ -61,6 +62,7 @@ export class OpportunityService {
 
   async createOpportunity(
     opportunityData: CreateOpportunityInput,
+    account: IAccount,
     agentInfo?: AgentInfo
   ): Promise<IOpportunity> {
     if (!opportunityData.nameID) {
@@ -74,6 +76,7 @@ export class OpportunityService {
     );
 
     const opportunity: IOpportunity = Opportunity.create(opportunityData);
+    opportunity.account = account;
     opportunity.projects = [];
 
     opportunity.storageAggregator =
@@ -437,7 +440,7 @@ export class OpportunityService {
     return metrics;
   }
 
-  async getOpportunitiesInSpaceCount(spaceID: string): Promise<number> {
+  async getOpportunitiesInAccountCount(spaceID: string): Promise<number> {
     return await this.opportunityRepository.countBy({ spaceID: spaceID });
   }
 

@@ -54,23 +54,27 @@ export class NamingService {
 
   async isNameIdAvailableInSpace(
     nameID: string,
-    spaceID: string
+    accountID: string
   ): Promise<boolean> {
     if (!nameID) return true;
 
     const challengeCount = await this.challengeRepository.countBy({
       nameID: nameID,
-      spaceID: spaceID,
+      account: {
+        id: accountID,
+      },
     });
     if (challengeCount > 0) return false;
     const opportunityCount = await this.opportunityRepository.countBy({
       nameID: nameID,
-      spaceID: spaceID,
+      account: {
+        id: accountID,
+      },
     });
     if (opportunityCount > 0) return false;
     const projectCount = await this.projectRepository.countBy({
       nameID: nameID,
-      spaceID: spaceID,
+      spaceID: accountID,
     });
     if (projectCount > 0) return false;
     return true;

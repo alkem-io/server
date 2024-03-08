@@ -971,13 +971,14 @@ export class SpaceService {
   ): Promise<IChallenge> {
     const space = await this.getSpaceOrFail(challengeData.spaceID, {
       relations: {
+        account: true,
         storageAggregator: true,
       },
     });
     await this.validateChallengeNameIdOrFail(challengeData.nameID, space.id);
-    if (!space.storageAggregator) {
+    if (!space.storageAggregator || !space.account) {
       throw new EntityNotFoundException(
-        `Unable to retrieve storage aggregator on space: ${space.id}`,
+        `Unable to retrieve entities on space for creating challenge: ${space.id}`,
         LogContext.CHALLENGES
       );
     }
@@ -987,6 +988,7 @@ export class SpaceService {
     challengeData.spaceID = space.id;
     const newChallenge = await this.challengeService.createChallenge(
       challengeData,
+      space.account,
       agentInfo
     );
 
@@ -1031,15 +1033,22 @@ export class SpaceService {
   async getMetrics(space: ISpace): Promise<INVP[]> {
     const metrics: INVP[] = [];
 
+    if (!space.account) {
+      throw new EntityNotInitializedException(
+        'Space account not initialized',
+        LogContext.CHALLENGES
+      );
+    }
+    const account = space.account;
     // Challenges
     const challengesCount =
-      await this.challengeService.getChallengesInSpaceCount(space.id);
+      await this.challengeService.getChallengesInAccountCount(account.id);
     const challengesTopic = new NVP('challenges', challengesCount.toString());
     challengesTopic.id = `challenges-${space.id}`;
     metrics.push(challengesTopic);
 
     const opportunitiesCount =
-      await this.opportunityService.getOpportunitiesInSpaceCount(space.id);
+      await this.opportunityService.getOpportunitiesInAccountCount(account.id);
     const opportunitiesTopic = new NVP(
       'opportunities',
       opportunitiesCount.toString()
@@ -1087,7 +1096,7 @@ export class SpaceService {
   }
 
   async getChallengesCount(spaceID: string): Promise<number> {
-    return await this.challengeService.getChallengesInSpaceCount(spaceID);
+    return await this.challengeService.getChallengesInAccountCount(spaceID);
   }
 
   async getAgent(spaceID: string): Promise<IAgent> {

@@ -38,7 +38,7 @@ export const getJourneyRolesForContributorQueryResult = (
 
     if (readAccessSpace) {
       spaceResult.challenges = challenges
-        .filter(challenge => challenge.spaceID === space.id)
+        .filter(challenge => challenge.account?.id === space.account?.id)
         .map(x => {
           const challengeResult = new RolesResultCommunity(
             x.nameID,
@@ -52,7 +52,7 @@ export const getJourneyRolesForContributorQueryResult = (
 
       // TODO: also filter out opportunities in private challenges, for later...
       spaceResult.opportunities = opportunities
-        .filter(opp => opp.spaceID === space.id)
+        .filter(opp => opp.account?.id === space.account?.id)
         .map(x => {
           const oppResult = new RolesResultCommunity(
             x.nameID,

@@ -63,6 +63,7 @@ import { CommonDisplayLocation } from '@common/enums/common.display.location';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
+import { IAccount } from '../account/account.interface';
 @Injectable()
 export class ChallengeService {
   constructor(
@@ -85,6 +86,7 @@ export class ChallengeService {
 
   async createChallenge(
     challengeData: CreateChallengeInput,
+    account: IAccount,
     agentInfo?: AgentInfo
   ): Promise<IChallenge> {
     if (!challengeData.nameID) {
@@ -98,6 +100,7 @@ export class ChallengeService {
     );
 
     const challenge: IChallenge = Challenge.create(challengeData);
+    challenge.account = account;
     challenge.childChallenges = [];
 
     challenge.opportunities = [];
@@ -225,13 +228,17 @@ export class ChallengeService {
       challengeData,
       this.challengeRepository
     );
-    const challenge = await this.getChallengeOrFail(baseChallenge.id);
-    if (challengeData.nameID) {
+    const challenge = await this.getChallengeOrFail(baseChallenge.id, {
+      relations: {
+        account: true,
+      },
+    });
+    if (challengeData.nameID && challenge.account) {
       if (challengeData.nameID !== challenge.nameID) {
         // updating the nameID, check new value is allowed
         await this.baseChallengeService.isNameAvailableOrFail(
           challengeData.nameID,
-          this.getSpaceID(challenge)
+          challenge.account.id
         );
         challenge.nameID = challengeData.nameID;
         await this.challengeRepository.save(challenge);
@@ -314,14 +321,24 @@ export class ChallengeService {
     let challenge: IChallenge | null = null;
     if (challengeID.length == UUID_LENGTH) {
       challenge = await this.challengeRepository.findOne({
-        where: { id: challengeID, spaceID: nameableScopeID },
+        where: {
+          id: challengeID,
+          account: {
+            id: nameableScopeID,
+          },
+        },
         ...options,
       });
     }
     if (!challenge) {
       // look up based on nameID
       challenge = await this.challengeRepository.findOne({
-        where: { nameID: challengeID, spaceID: nameableScopeID },
+        where: {
+          nameID: challengeID,
+          account: {
+            id: nameableScopeID,
+          },
+        },
         ...options,
       });
     }
@@ -491,6 +508,7 @@ export class ChallengeService {
 
   async createChildChallenge(
     challengeData: CreateChallengeOnChallengeInput,
+    account: IAccount,
     agentInfo?: AgentInfo
   ): Promise<IChallenge> {
     this.logger.verbose?.(
@@ -502,14 +520,16 @@ export class ChallengeService {
       relations: { childChallenges: true, community: true },
     });
 
-    const spaceID = this.getSpaceID(challenge);
     await this.baseChallengeService.isNameAvailableOrFail(
       challengeData.nameID,
-      spaceID
+      account.id
     );
 
-    challengeData.spaceID = spaceID;
-    const childChallenge = await this.createChallenge(challengeData, agentInfo);
+    const childChallenge = await this.createChallenge(
+      challengeData,
+      account,
+      agentInfo
+    );
 
     challenge.childChallenges?.push(childChallenge);
 
@@ -524,19 +544,9 @@ export class ChallengeService {
     return childChallenge;
   }
 
-  getSpaceID(challenge: IChallenge): string {
-    const spaceID = challenge.spaceID;
-    if (!spaceID) {
-      throw new RelationshipNotFoundException(
-        `Unable to find spaceID for challenge: ${challenge.id} `,
-        LogContext.CHALLENGES
-      );
-    }
-    return spaceID;
-  }
-
   async createOpportunity(
     opportunityData: CreateOpportunityInput,
+    account: IAccount,
     agentInfo?: AgentInfo
   ): Promise<IOpportunity> {
     this.logger.verbose?.(
@@ -562,16 +572,15 @@ export class ChallengeService {
       );
     }
 
-    const spaceID = this.getSpaceID(challenge);
     await this.baseChallengeService.isNameAvailableOrFail(
       opportunityData.nameID,
-      spaceID
+      account.id
     );
 
     opportunityData.storageAggregatorParent = challenge.storageAggregator;
-    opportunityData.spaceID = spaceID;
     const opportunity = await this.opportunityService.createOpportunity(
       opportunityData,
+      account,
       agentInfo
     );
 
@@ -594,9 +603,11 @@ export class ChallengeService {
     return this.challengeRepository.find(options);
   }
 
-  async getChallengesInSpaceCount(spaceID: string): Promise<number> {
+  async getChallengesInAccountCount(accountId: string): Promise<number> {
     const count = await this.challengeRepository.countBy({
-      spaceID: spaceID,
+      account: {
+        id: accountId,
+      },
       parentSpace: Not(IsNull()),
     });
     return count;

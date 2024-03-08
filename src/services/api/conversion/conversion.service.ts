@@ -229,6 +229,7 @@ export class ConversionService {
           community: true,
           context: true,
           profile: true,
+          account: true,
           storageAggregator: true,
           collaboration: {
             callouts: {
@@ -246,6 +247,7 @@ export class ConversionService {
       !opportunity.community ||
       !opportunity.context ||
       !opportunity.profile ||
+      !opportunity.account ||
       !opportunity.collaboration ||
       !opportunity.storageAggregator ||
       !opportunity.collaboration.callouts
@@ -284,6 +286,7 @@ export class ConversionService {
         storageAggregatorParent: spaceStorageAggregator,
         spaceID: spaceID,
       },
+      opportunity.account,
       agentInfo
     );
 

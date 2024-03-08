@@ -14,7 +14,5 @@ export abstract class IOpportunity extends IBaseChallenge implements IJourney {
   })
   projects?: IProject[];
 
-  spaceID!: string;
-
   challenge?: IChallenge;
 }
