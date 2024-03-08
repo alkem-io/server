@@ -16,8 +16,10 @@ export class LicenseResolverService {
   public async getlicenseForSpace(spaceID: string): Promise<ILicense> {
     const space = await this.entityManager.findOne(Space, {
       relations: {
-        license: {
-          featureFlags: true,
+        account: {
+          license: {
+            featureFlags: true,
+          },
         },
       },
       where: [
@@ -27,12 +29,12 @@ export class LicenseResolverService {
       ],
     });
 
-    if (!space || !space.license) {
+    if (!space || !space.account || !space.account.license) {
       throw new LicenseNotFoundException(
         `Unable to find License for provided spaceID: ${spaceID}`,
         LogContext.LICENSE
       );
     }
-    return space.license;
+    return space.account.license;
   }
 }

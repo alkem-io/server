@@ -102,10 +102,12 @@ export class SpaceDefaultsService {
       const space = await this.spaceRepository.findOne({
         where: { id: spaceID },
         relations: {
-          defaults: true,
+          account: {
+            defaults: true,
+          },
         },
       });
-      if (space) spaceDefaults = space?.defaults;
+      if (space) spaceDefaults = space?.account?.defaults;
     }
 
     if (!spaceDefaults)

@@ -89,7 +89,9 @@ export class ConversionService {
     }
     const hostOrg = challengeCommunityLeadOrgs[0];
     const createSpaceInput: CreateSpaceInput = {
-      hostID: hostOrg.nameID,
+      accountData: {
+        hostID: hostOrg.nameID,
+      },
       nameID: challenge.nameID,
       profileData: {
         displayName: challenge.profile.displayName,

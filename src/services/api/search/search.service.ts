@@ -457,7 +457,9 @@ export class SearchService {
             location: true,
             tagsets: true,
           },
-          license: true,
+          account: {
+            license: true,
+          },
         },
       });
 
@@ -484,8 +486,9 @@ export class SearchService {
       // Filter the spaces + score them
       for (const space of filteredSpaceMatches) {
         if (
-          space.license &&
-          space.license.visibility !== SpaceVisibility.ARCHIVED
+          space.account &&
+          space.account.license &&
+          space.account.license.visibility !== SpaceVisibility.ARCHIVED
         ) {
           // Score depends on various factors, hardcoded for now
           const score_increment = this.getScoreIncrementSpace(space, agentInfo);
@@ -504,7 +507,7 @@ export class SearchService {
 
   // Determine the score increment based on whether the user has read access or not
   private getScoreIncrementSpace(space: ISpace, agentInfo: AgentInfo): number {
-    switch (space.license?.visibility) {
+    switch (space.account?.license?.visibility) {
       case SpaceVisibility.ACTIVE:
         return this.getScoreIncrementReadAccess(space.authorization, agentInfo);
       case SpaceVisibility.DEMO:
@@ -555,7 +558,9 @@ export class SearchService {
             tagsets: true,
           },
           parentSpace: {
-            license: true,
+            account: {
+              license: true,
+            },
           },
         },
       });
@@ -589,7 +594,7 @@ export class SearchService {
       // Only show challenges that the current user has read access to
       for (const challenge of filteredChallengeMatches) {
         if (
-          challenge.parentSpace?.license?.visibility !==
+          challenge.parentSpace?.account?.license?.visibility !==
             SpaceVisibility.ARCHIVED &&
           this.authorizationService.isAccessGranted(
             agentInfo,
@@ -633,7 +638,9 @@ export class SearchService {
           collaboration: true,
           challenge: {
             parentSpace: {
-              license: true,
+              account: {
+                license: true,
+              },
             },
           },
           profile: {
@@ -672,7 +679,7 @@ export class SearchService {
       // Only show challenges that the current user has read access to
       for (const opportunity of filteredOpportunityMatches) {
         if (
-          opportunity.challenge?.parentSpace?.license?.visibility !==
+          opportunity.challenge?.parentSpace?.account?.license?.visibility !==
             SpaceVisibility.ARCHIVED &&
           this.authorizationService.isAccessGranted(
             agentInfo,

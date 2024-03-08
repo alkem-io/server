@@ -278,10 +278,12 @@ export class BootstrapService {
 
       const spaceInput: CreateSpaceInput = {
         nameID: DEFAULT_SPACE_NAMEID,
-        hostID: DEFAULT_HOST_ORG_NAMEID,
         profileData: {
           displayName: DEFAULT_SPACE_DISPLAYNAME,
           tagline: 'An empty space to be populated',
+        },
+        accountData: {
+          hostID: DEFAULT_HOST_ORG_NAMEID,
         },
       };
       const space = await this.spaceService.createSpace(spaceInput);
