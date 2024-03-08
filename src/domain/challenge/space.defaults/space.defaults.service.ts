@@ -199,7 +199,7 @@ export class SpaceDefaultsService {
     return calloutInputs;
   }
 
-  public async addDefaultTemplatesToSpace(
+  public async addDefaultTemplatesToSpaceLibrary(
     templatesSet: ITemplatesSet,
     storageAggregator: IStorageAggregator
   ): Promise<ITemplatesSet> {

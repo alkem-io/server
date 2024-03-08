@@ -125,7 +125,7 @@ export class SpaceService {
 
     // And set the defaults
     space.templatesSet =
-      await this.spaceDefaultsService.addDefaultTemplatesToSpace(
+      await this.spaceDefaultsService.addDefaultTemplatesToSpaceLibrary(
         space.templatesSet,
         space.storageAggregator
       );

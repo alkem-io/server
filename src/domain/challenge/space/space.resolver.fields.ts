@@ -22,29 +22,23 @@ import { ISpace } from '@domain/challenge/space/space.interface';
 import { IOpportunity } from '@domain/challenge/opportunity';
 import { IAgent } from '@domain/agent/agent';
 import { IPreference } from '@domain/common/preference/preference.interface';
-import { ITemplatesSet } from '@domain/template/templates-set';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
 import { IProfile } from '@domain/common/profile';
 import { Loader } from '@core/dataloader/decorators';
 import {
-  SpaceTemplatesSetLoaderCreator,
   JourneyCollaborationLoaderCreator,
   JourneyCommunityLoaderCreator,
   JourneyContextLoaderCreator,
   PreferencesLoaderCreator,
   AgentLoaderCreator,
   ProfileLoaderCreator,
-  SpaceLicenseLoaderCreator,
-  SpaceDefaultsLoaderCreator,
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication/agent-info';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { ILicense } from '@domain/license/license/license.interface';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
-import { ISpaceDefaults } from '../space.defaults/space.defaults.interface';
 
 @Resolver(() => ISpace)
 export class SpaceResolverFields {
@@ -125,32 +119,6 @@ export class SpaceResolverFields {
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @ResolveField('templates', () => ITemplatesSet, {
-    nullable: true,
-    description: 'The templates in use by this Space',
-  })
-  @UseGuards(GraphqlGuard)
-  async templatesSet(
-    @Parent() space: Space,
-    @Loader(SpaceTemplatesSetLoaderCreator) loader: ILoader<ITemplatesSet>
-  ): Promise<ITemplatesSet> {
-    return loader.load(space.id);
-  }
-
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @ResolveField('defaults', () => ISpaceDefaults, {
-    nullable: true,
-    description: 'The defaults in use by this Space',
-  })
-  @UseGuards(GraphqlGuard)
-  async defaults(
-    @Parent() space: Space,
-    @Loader(SpaceDefaultsLoaderCreator) loader: ILoader<ISpaceDefaults>
-  ): Promise<ISpaceDefaults> {
-    return loader.load(space.id);
-  }
-
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('storageAggregator', () => IStorageAggregator, {
     nullable: true,
     description: 'The StorageAggregator in use by this Space',
@@ -158,18 +126,6 @@ export class SpaceResolverFields {
   @UseGuards(GraphqlGuard)
   async storageAggregator(@Parent() space: Space): Promise<IStorageAggregator> {
     return await this.spaceService.getStorageAggregatorOrFail(space.id);
-  }
-
-  @ResolveField('license', () => ILicense, {
-    nullable: false,
-    description:
-      'The License governing platform functionality in use by this Space',
-  })
-  async license(
-    @Parent() space: Space,
-    @Loader(SpaceLicenseLoaderCreator) loader: ILoader<ILicense>
-  ): Promise<ILicense> {
-    return loader.load(space.id);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
