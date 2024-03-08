@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Opportunity } from '@domain/challenge/opportunity';
 import { OpportunityService } from './opportunity.service';
-import { ProjectModule } from '@domain/collaboration/project/project.module';
 import { RelationModule } from '@domain/collaboration/relation/relation.module';
 import { OpportunityResolverFields } from './opportunity.resolver.fields';
 import { OpportunityResolverMutations } from './opportunity.resolver.mutations';
@@ -27,7 +26,6 @@ import { SpaceDefaultsModule } from '../space.defaults/space.defaults.module';
   imports: [
     AuthorizationModule,
     AuthorizationPolicyModule,
-    ProjectModule,
     RelationModule,
     BaseChallengeModule,
     CommunityModule,

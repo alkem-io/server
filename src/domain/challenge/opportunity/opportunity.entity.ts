@@ -1,5 +1,4 @@
-import { Project } from '@domain/collaboration/project/project.entity';
-import { Entity, ManyToOne, OneToMany } from 'typeorm';
+import { Entity, ManyToOne } from 'typeorm';
 import { IOpportunity } from '@domain/challenge/opportunity/opportunity.interface';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { BaseChallenge } from '@domain/challenge/base-challenge/base.challenge.entity';
@@ -12,12 +11,6 @@ export class Opportunity extends BaseChallenge implements IOpportunity {
     onDelete: 'CASCADE',
   })
   challenge?: Challenge;
-
-  @OneToMany(() => Project, project => project.opportunity, {
-    eager: true,
-    cascade: true,
-  })
-  projects?: Project[];
 
   constructor() {
     super();

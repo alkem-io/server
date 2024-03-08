@@ -1,7 +1,6 @@
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
 import { Space } from '@domain/challenge/space/space.entity';
-import { IProject } from '@domain/collaboration/project';
 import { INVP } from '@domain/common/nvp';
 import { UUID, UUID_NAMEID } from '@domain/common/scalars';
 import { IOrganization } from '@domain/community/organization';
@@ -249,31 +248,6 @@ export class SpaceResolverFields {
       );
     }
     return opportunity;
-  }
-
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @ResolveField('projects', () => [IProject], {
-    nullable: false,
-    description: 'All projects within this space',
-  })
-  @UseGuards(GraphqlGuard)
-  @Profiling.api
-  async projects(@Parent() space: Space): Promise<IProject[]> {
-    return await this.spaceService.getProjects(space);
-  }
-
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @ResolveField('project', () => IProject, {
-    nullable: false,
-    description: 'A particular Project, identified by the ID',
-  })
-  @UseGuards(GraphqlGuard)
-  @Profiling.api
-  async project(
-    @Parent() space: Space,
-    @Args('ID', { type: () => UUID_NAMEID }) projectID: string
-  ): Promise<IProject> {
-    return await this.spaceService.getProjectInNameableScope(projectID, space);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

@@ -195,18 +195,13 @@ export class OpportunityAuthorizationService {
   ): Promise<IOpportunity> {
     await this.opportunityService.save(opportunityInput);
 
-    let opportunity =
+    const opportunity =
       await this.propagateAuthorizationToCommunityCollaborationAgent(
         opportunityInput,
         policy,
         license
       );
-    opportunity = await this.propagateAuthorizationToProfileContext(
-      opportunity
-    );
-    return await this.propagateAuthorizationToProjectsInnovationFlow(
-      opportunity
-    );
+    return await this.propagateAuthorizationToProfileContext(opportunity);
   }
 
   private async propagateAuthorizationToProfileContext(
@@ -310,34 +305,6 @@ export class OpportunityAuthorizationService {
         opportunity.agent.authorization,
         opportunity.authorization
       );
-    return await this.opportunityService.save(opportunity);
-  }
-
-  public async propagateAuthorizationToProjectsInnovationFlow(
-    opportunityBase: IOpportunity
-  ): Promise<IOpportunity> {
-    const opportunity = await this.opportunityService.getOpportunityOrFail(
-      opportunityBase.id,
-      {
-        relations: {
-          projects: true,
-        },
-      }
-    );
-    if (!opportunity.projects)
-      throw new RelationshipNotFoundException(
-        `Unable to load child entities for opportunity: ${opportunity.id} `,
-        LogContext.CHALLENGES
-      );
-
-    for (const project of opportunity.projects) {
-      project.authorization =
-        this.authorizationPolicyService.inheritParentAuthorization(
-          project.authorization,
-          opportunity.authorization
-        );
-    }
-
     return await this.opportunityService.save(opportunity);
   }
 }

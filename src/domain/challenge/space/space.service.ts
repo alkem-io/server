@@ -21,8 +21,6 @@ import {
 } from '@domain/challenge/space';
 import { IOpportunity } from '@domain/challenge/opportunity/opportunity.interface';
 import { OpportunityService } from '@domain/challenge/opportunity/opportunity.service';
-import { IProject } from '@domain/collaboration/project/project.interface';
-import { ProjectService } from '@domain/collaboration/project/project.service';
 import { INVP, NVP } from '@domain/common/nvp';
 import { IOrganization } from '@domain/community/organization/organization.interface';
 import { ICommunity } from '@domain/community/community';
@@ -82,7 +80,6 @@ export class SpaceService {
   constructor(
     private agentService: AgentService,
     private organizationService: OrganizationService,
-    private projectService: ProjectService,
     private opportunityService: OpportunityService,
     private baseChallengeService: BaseChallengeService,
     private namingService: NamingService,
@@ -902,16 +899,6 @@ export class SpaceService {
     );
   }
 
-  async getProjectInNameableScope(
-    projectID: string,
-    space: ISpace
-  ): Promise<IProject> {
-    return await this.projectService.getProjectInNameableScopeOrFail(
-      projectID,
-      space.id
-    );
-  }
-
   async getCommunity(space: ISpace): Promise<ICommunity> {
     return await this.baseChallengeService.getCommunity(
       space.id,
@@ -1026,10 +1013,6 @@ export class SpaceService {
     );
   }
 
-  async getProjects(space: ISpace): Promise<IProject[]> {
-    return await this.projectService.getProjects(space.id);
-  }
-
   async getMetrics(space: ISpace): Promise<INVP[]> {
     const metrics: INVP[] = [];
 
@@ -1055,14 +1038,6 @@ export class SpaceService {
     );
     opportunitiesTopic.id = `opportunities-${space.id}`;
     metrics.push(opportunitiesTopic);
-
-    // Projects
-    const projectsCount = await this.projectService.getProjectsInSpaceCount(
-      space.id
-    );
-    const projectsTopic = new NVP('projects', projectsCount.toString());
-    projectsTopic.id = `projects-${space.id}`;
-    metrics.push(projectsTopic);
 
     // Members
     const membersCount = await this.getMembersCount(space);
