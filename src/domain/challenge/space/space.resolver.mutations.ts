@@ -214,8 +214,21 @@ export class SpaceResolverMutations {
     @Args('preferenceData') preferenceData: UpdateChallengePreferenceInput
   ) {
     const challenge = await this.challengeService.getChallengeOrFail(
-      preferenceData.challengeID
+      preferenceData.challengeID,
+      {
+        relations: {
+          account: true,
+        },
+      }
     );
+    if (!challenge.account) {
+      throw new EntityNotInitializedException(
+        `Unable to find account for ${challenge.nameID}`,
+        LogContext.CHALLENGES
+      );
+    }
+    const spaceID = challenge.account.spaceID;
+
     const preferenceSet = await this.challengeService.getPreferenceSetOrFail(
       challenge.id
     );
@@ -240,9 +253,7 @@ export class SpaceResolverMutations {
       preferenceData.value
     );
 
-    const space = await this.spaceService.getSpaceOrFail(
-      this.challengeService.getSpaceID(challenge)
-    );
+    const space = await this.spaceService.getSpaceOrFail(spaceID);
     // As the preferences may update the authorization, the authorization policy will need to be reset
     await this.challengeAuthorizationService.applyAuthorizationPolicy(
       challenge,
@@ -331,7 +342,7 @@ export class SpaceResolverMutations {
       {
         id: challenge.id,
         name: challenge.profile.displayName,
-        space: challenge.spaceID ?? '',
+        space: space.id,
       },
       {
         id: agentInfo.userID,

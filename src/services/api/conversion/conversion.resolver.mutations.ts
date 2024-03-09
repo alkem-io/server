@@ -19,6 +19,8 @@ import { OpportunityService } from '@domain/challenge/opportunity/opportunity.se
 import { SpaceService } from '@domain/challenge/space/space.service';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
 import { GLOBAL_POLICY_CONVERSION_GLOBAL_ADMINS } from '@common/constants/authorization/global.policy.constants';
+import { LogContext } from '@common/enums/logging.context';
+import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 
 @Resolver()
 export class ConversionResolverMutations {
@@ -84,8 +86,20 @@ export class ConversionResolverMutations {
     convertOpportunityToChallengeData: ConvertOpportunityToChallengeInput
   ): Promise<IChallenge> {
     const opportunity = await this.opportunityService.getOpportunityOrFail(
-      convertOpportunityToChallengeData.opportunityID
+      convertOpportunityToChallengeData.opportunityID,
+      {
+        relations: {
+          account: true,
+        },
+      }
     );
+    if (!opportunity.account) {
+      throw new EntityNotInitializedException(
+        `account not found on opportunity: ${opportunity.nameID}`,
+        LogContext.CHALLENGES
+      );
+    }
+    const spaceID = opportunity.account.spaceID;
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       this.authorizationGlobalAdminPolicy,
@@ -93,17 +107,15 @@ export class ConversionResolverMutations {
       `convert opportunity to challenge: ${agentInfo.email}`
     );
     const spaceStorageAggregator =
-      await this.spaceService.getStorageAggregatorOrFail(opportunity.spaceID);
+      await this.spaceService.getStorageAggregatorOrFail(spaceID);
     const newChallenge =
       await this.conversionService.convertOpportunityToChallenge(
         convertOpportunityToChallengeData.opportunityID,
-        this.opportunityService.getSpaceID(opportunity),
+        spaceID,
         agentInfo,
         spaceStorageAggregator
       );
-    const parentSpace = await this.spaceService.getSpaceOrFail(
-      this.challengeService.getSpaceID(newChallenge)
-    );
+    const parentSpace = await this.spaceService.getSpaceOrFail(spaceID);
     await this.spaceAuthorizationService.applyAuthorizationPolicy(parentSpace);
     return this.challengeService.getChallengeOrFail(newChallenge.id);
   }

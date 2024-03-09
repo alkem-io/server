@@ -65,7 +65,7 @@ export class ChallengeAuthorizationService {
     parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<IChallenge> {
     const license = await this.licenseResolverService.getlicenseForSpace(
-      challengeInput.spaceID
+      challengeInput.account.spaceID
     );
     const communityPolicy = await this.setCommunityPolicyFlags(challengeInput);
 
@@ -370,7 +370,6 @@ export class ChallengeAuthorizationService {
       {
         relations: {
           opportunities: true,
-          childChallenges: true,
           storageAggregator: true,
           preferenceSet: true,
         },
@@ -391,15 +390,6 @@ export class ChallengeAuthorizationService {
         challenge.storageAggregator,
         challenge.authorization
       );
-
-    if (challenge.childChallenges) {
-      for (const childChallenge of challenge.childChallenges) {
-        await this.applyAuthorizationPolicy(
-          childChallenge,
-          challenge.authorization
-        );
-      }
-    }
 
     for (const opportunity of challenge.opportunities) {
       await this.opportunityAuthorizationService.applyAuthorizationPolicy(

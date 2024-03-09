@@ -43,6 +43,8 @@ export class AccountService {
   ): Promise<IAccount> {
     const account: IAccount = new Account();
 
+    account.spaceID = ''; // set later
+
     ///////////
     // Create the contextual elements for the account
 

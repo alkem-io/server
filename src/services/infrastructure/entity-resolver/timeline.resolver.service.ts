@@ -70,15 +70,15 @@ export class TimelineResolverService {
   public async getSpaceIdForCalendar(
     calendarID: string
   ): Promise<string | never> {
+    const collaborationID = await this.getCollaborationIdForCalendar(
+      calendarID
+    );
+
     const space = await this.entityManager.findOne(Space, {
       where: [
         {
           collaboration: {
-            timeline: {
-              calendar: {
-                id: calendarID,
-              },
-            },
+            id: collaborationID,
           },
         },
       ],
@@ -86,33 +86,31 @@ export class TimelineResolverService {
 
     if (space && space.id) return space.id;
     const challenge = await this.entityManager.findOne(Challenge, {
+      relations: {
+        account: true,
+      },
       where: [
         {
           collaboration: {
-            timeline: {
-              calendar: {
-                id: calendarID,
-              },
-            },
+            id: collaborationID,
           },
         },
       ],
     });
-    if (challenge) return challenge.spaceID;
+    if (challenge && challenge.account) return challenge.account.spaceID;
     const opportuntiy = await this.entityManager.findOne(Opportunity, {
+      relations: {
+        account: true,
+      },
       where: [
         {
           collaboration: {
-            timeline: {
-              calendar: {
-                id: calendarID,
-              },
-            },
+            id: collaborationID,
           },
         },
       ],
     });
-    if (opportuntiy) return opportuntiy.spaceID;
+    if (opportuntiy && opportuntiy.account) return opportuntiy.account.spaceID;
     throw new EntityNotFoundError(
       `Unable to identify Space for provided calendar ID: ${calendarID}`,
       LogContext.CALENDAR

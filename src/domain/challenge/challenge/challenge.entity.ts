@@ -14,19 +14,6 @@ export class Challenge extends BaseChallenge implements IChallenge {
   })
   opportunities?: Opportunity[];
 
-  @OneToMany(() => Challenge, challenge => challenge.parentChallenge, {
-    eager: false,
-    cascade: true,
-  })
-  childChallenges?: Challenge[];
-
-  @ManyToOne(() => Challenge, challenge => challenge.childChallenges, {
-    eager: false,
-    cascade: false,
-    onDelete: 'CASCADE',
-  })
-  parentChallenge?: Challenge;
-
   @ManyToOne(() => Space, space => space.challenges, {
     eager: false,
     cascade: false,

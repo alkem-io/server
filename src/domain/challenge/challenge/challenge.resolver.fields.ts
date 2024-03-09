@@ -110,17 +110,6 @@ export class ChallengeResolverFields {
     return await this.challengeService.getOpportunities(challenge.id, args);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
-  @ResolveField('challenges', () => [IChallenge], {
-    nullable: true,
-    description: 'The set of child Challenges within this challenge.',
-  })
-  @Profiling.api
-  async challenges(@Parent() challenge: IChallenge) {
-    return await this.challengeService.getChildChallenges(challenge);
-  }
-
   @ResolveField('agent', () => IAgent, {
     nullable: true,
     description: 'The Agent representing this Challenge.',

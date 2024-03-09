@@ -1,4 +1,4 @@
-import { Entity, JoinColumn, OneToOne } from 'typeorm';
+import { Column, Entity, JoinColumn, OneToOne } from 'typeorm';
 import { IAccount } from '@domain/challenge/account/account.interface';
 import { TemplatesSet } from '@domain/template/templates-set/templates.set.entity';
 import { License } from '@domain/license/license/license.entity';
@@ -29,4 +29,7 @@ export class Account extends AuthorizableEntity implements IAccount {
   })
   @JoinColumn()
   defaults?: SpaceDefaults;
+
+  @Column()
+  spaceID!: string;
 }

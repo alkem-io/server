@@ -24,5 +24,5 @@ export abstract class IBaseChallenge extends INameable {
 
   storageAggregator?: IStorageAggregator;
 
-  account?: IAccount;
+  account!: IAccount;
 }

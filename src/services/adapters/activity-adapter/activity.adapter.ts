@@ -6,10 +6,7 @@ import { LogContext } from '@common/enums/logging.context';
 import { ActivityService } from '@src/platform/activity/activity.service';
 import { ActivityEventType } from '@common/enums/activity.event.type';
 import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
-import {
-  EntityNotFoundException,
-  EntityNotInitializedException,
-} from '@common/exceptions';
+import { EntityNotFoundException } from '@common/exceptions';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { SubscriptionPublishService } from '../../subscriptions/subscription-service';
 import { ActivityInputCalloutPublished } from './dto/activity.dto.input.callout.published';
@@ -55,23 +52,16 @@ export class ActivityAdapter {
 
     const challenge = eventData.challenge;
 
-    if (!challenge.spaceID) {
-      throw new EntityNotInitializedException(
-        `Unable to get spaceID of Challenge: ${challenge.id}`,
-        LogContext.ACTIVITY
-      );
-    }
+    const spaceID = challenge.account.spaceID;
 
-    const collaborationID = await this.getCollaborationIdForSpace(
-      challenge.spaceID
-    );
+    const collaborationID = await this.getCollaborationIdForSpace(spaceID);
     const description = challenge.profile.displayName;
 
     const activity = await this.activityService.createActivity({
       collaborationID,
       triggeredBy: eventData.triggeredBy,
       resourceID: challenge.id,
-      parentID: challenge.spaceID,
+      parentID: spaceID,
       description,
       type: eventType,
     });

@@ -20,12 +20,12 @@ export abstract class BaseChallenge
   rowId!: number;
 
   @OneToOne(() => Account, {
-    eager: false,
+    eager: true,
     cascade: true,
     onDelete: 'SET NULL',
   })
   @JoinColumn()
-  account?: Account;
+  account!: Account;
 
   @OneToOne(() => Collaboration, {
     eager: false,

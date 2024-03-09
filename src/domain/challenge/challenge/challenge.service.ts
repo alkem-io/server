@@ -35,8 +35,6 @@ import { IAgent } from '@domain/agent/agent';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { IChallenge } from './challenge.interface';
 import { AgentService } from '@domain/agent/agent/agent.service';
-import { ProjectService } from '@domain/collaboration/project/project.service';
-import { CreateChallengeOnChallengeInput } from './dto/challenge.dto.create.in.challenge';
 import { CommunityType } from '@common/enums/community.type';
 import { AgentInfo } from '@src/core/authentication/agent-info';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
@@ -70,7 +68,6 @@ export class ChallengeService {
     private agentService: AgentService,
     private communityService: CommunityService,
     private opportunityService: OpportunityService,
-    private projectService: ProjectService,
     private baseChallengeService: BaseChallengeService,
     private organizationService: OrganizationService,
     private preferenceSetService: PreferenceSetService,
@@ -101,7 +98,6 @@ export class ChallengeService {
 
     const challenge: IChallenge = Challenge.create(challengeData);
     challenge.account = account;
-    challenge.childChallenges = [];
 
     challenge.opportunities = [];
 
@@ -252,7 +248,6 @@ export class ChallengeService {
     // Note need to load it in with all contained entities so can remove fully
     const challenge = await this.getChallengeOrFail(challengeID, {
       relations: {
-        childChallenges: true,
         opportunities: true,
         preferenceSet: {
           preferences: true,
@@ -261,13 +256,6 @@ export class ChallengeService {
         storageAggregator: true,
       },
     });
-
-    // Do not remove a challenge that has child challenges , require these to be individually first removed
-    if (challenge.childChallenges && challenge.childChallenges.length > 0)
-      throw new OperationNotAllowedException(
-        `Unable to remove challenge (${challenge.nameID}) as it contains ${challenge.childChallenges.length} child challenges`,
-        LogContext.CHALLENGES
-      );
 
     if (challenge.opportunities && challenge.opportunities.length > 0)
       throw new OperationNotAllowedException(
@@ -483,67 +471,6 @@ export class ChallengeService {
     return sortedOpportunities;
   }
 
-  // Loads the challenges into the challenge entity if not already present
-  async getChildChallenges(challenge: IChallenge): Promise<IChallenge[]> {
-    if (challenge.childChallenges && challenge.childChallenges.length > 0) {
-      // challenge already has groups loaded
-      return challenge.childChallenges;
-    }
-
-    const challengeWithChildChallenges = await this.getChallengeOrFail(
-      challenge.id,
-      {
-        relations: { childChallenges: true },
-      }
-    );
-    const childChallenges = challengeWithChildChallenges.childChallenges;
-    if (!childChallenges)
-      throw new RelationshipNotFoundException(
-        `Unable to load child challenges for challenge ${challenge.id} `,
-        LogContext.CHALLENGES
-      );
-
-    return childChallenges;
-  }
-
-  async createChildChallenge(
-    challengeData: CreateChallengeOnChallengeInput,
-    account: IAccount,
-    agentInfo?: AgentInfo
-  ): Promise<IChallenge> {
-    this.logger.verbose?.(
-      `Adding child Challenge to Challenge (${challengeData.challengeID})`,
-      LogContext.CHALLENGES
-    );
-
-    const challenge = await this.getChallengeOrFail(challengeData.challengeID, {
-      relations: { childChallenges: true, community: true },
-    });
-
-    await this.baseChallengeService.isNameAvailableOrFail(
-      challengeData.nameID,
-      account.id
-    );
-
-    const childChallenge = await this.createChallenge(
-      challengeData,
-      account,
-      agentInfo
-    );
-
-    challenge.childChallenges?.push(childChallenge);
-
-    // Finally set the community relationship
-    await this.communityService.setParentCommunity(
-      childChallenge.community,
-      challenge.community
-    );
-
-    await this.challengeRepository.save(challenge);
-
-    return childChallenge;
-  }
-
   async createOpportunity(
     opportunityData: CreateOpportunityInput,
     account: IAccount,
@@ -613,13 +540,6 @@ export class ChallengeService {
     return count;
   }
 
-  async getChildChallengesCount(challengeID: string): Promise<number> {
-    return await this.challengeRepository.countBy({
-      parentChallenge: {
-        id: challengeID,
-      },
-    });
-  }
   async getMembersCount(challenge: IChallenge): Promise<number> {
     const community = await this.getCommunity(challenge.id);
     return await this.communityService.getMembersCount(community);
@@ -646,20 +566,6 @@ export class ChallengeService {
     );
     opportunitiesTopic.id = `opportunities-${challenge.id}`;
     metrics.push(opportunitiesTopic);
-
-    // Projects
-    const projectsCount = await this.projectService.getProjectsInChallengeCount(
-      challenge.id
-    );
-    const projectsTopic = new NVP('projects', projectsCount.toString());
-    projectsTopic.id = `projects-${challenge.id}`;
-    metrics.push(projectsTopic);
-
-    // Challenges
-    const challengesCount = await this.getChildChallengesCount(challenge.id);
-    const challengesTopic = new NVP('challenges', challengesCount.toString());
-    challengesTopic.id = `challenges-${challenge.id}`;
-    metrics.push(challengesTopic);
 
     // Posts
     const postsCount = await this.baseChallengeService.getPostsCount(

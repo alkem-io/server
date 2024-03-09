@@ -14,7 +14,6 @@ import { ChallengeAuthorizationService } from '@domain/challenge/challenge/chall
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
-import { ProjectModule } from '@domain/collaboration/project/project.module';
 import { UserModule } from '@domain/community/user/user.module';
 import { PreferenceModule } from '@domain/common/preference';
 import { PreferenceSetModule } from '@domain/common/preference-set/preference.set.module';
@@ -46,7 +45,6 @@ import { SpaceDefaultsModule } from '../space.defaults/space.defaults.module';
     OrganizationModule,
     NamingModule,
     PlatformAuthorizationPolicyModule,
-    ProjectModule,
     UserModule,
     PreferenceModule,
     PreferenceSetModule,

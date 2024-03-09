@@ -7,6 +7,5 @@ import { IBaseChallenge } from '../base-challenge/base.challenge.interface';
 })
 export abstract class IChallenge extends IBaseChallenge implements IJourney {
   rowId!: number;
-  childChallenges?: IChallenge[];
   opportunities?: IOpportunity[];
 }

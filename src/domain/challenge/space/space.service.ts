@@ -155,6 +155,7 @@ export class SpaceService {
       space.storageAggregator,
       agentInfo?.userID
     );
+    space.account.spaceID = space.id;
     await this.save(space);
 
     // set immediate community parent and  community policy

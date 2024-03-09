@@ -45,7 +45,7 @@ export class OpportunityAuthorizationService {
     challengeCommunityPolicy: ICommunityPolicy
   ): Promise<IOpportunity> {
     const license = await this.licenseResolverService.getlicenseForSpace(
-      opportunity.spaceID
+      opportunity.account.spaceID
     );
     const communityPolicy = await this.opportunityService.getCommunityPolicy(
       opportunity.id
