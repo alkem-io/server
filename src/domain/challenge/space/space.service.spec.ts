@@ -92,7 +92,11 @@ const getChallengesMock = (
       id: `${spaceId}.${i}`,
       rowId: i,
       nameID: `challenge-${spaceId}.${i}`,
-      spaceID: `${spaceId}`,
+      account: {
+        id: `account-${spaceId}.${i}`,
+        spaceID: `${spaceId}`,
+        ...getEntityMock<Account>(),
+      },
       collaboration: {
         id: '',
         innovationFlow: {
@@ -159,7 +163,11 @@ const getOpportunitiesMock = (
       id: `${challengeId}.${i}`,
       rowId: i,
       nameID: `opportunity-${challengeId}.${i}`,
-      spaceID: `${challengeId}`,
+      account: {
+        id: `account-${challengeId}.${i}`,
+        spaceID: `account-spaceID-${challengeId}.${i}`,
+        ...getEntityMock<Account>(),
+      },
       collaboration: {
         id: '',
         innovationFlow: {
