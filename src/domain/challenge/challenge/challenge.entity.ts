@@ -8,18 +8,18 @@ import { BaseChallenge } from '../base-challenge/base.challenge.entity';
 
 @Entity()
 export class Challenge extends BaseChallenge implements IChallenge {
-  @OneToMany(() => Opportunity, opportunity => opportunity.challenge, {
-    eager: false,
-    cascade: true,
-  })
-  opportunities?: Opportunity[];
-
   @ManyToOne(() => Space, space => space.challenges, {
     eager: false,
     cascade: false,
     onDelete: 'CASCADE',
   })
-  parentSpace?: Space;
+  space?: Space;
+
+  @OneToMany(() => Opportunity, opportunity => opportunity.challenge, {
+    eager: false,
+    cascade: true,
+  })
+  opportunities?: Opportunity[];
 
   @OneToOne(() => PreferenceSet, {
     eager: false,

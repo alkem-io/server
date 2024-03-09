@@ -557,7 +557,7 @@ export class SearchService {
             location: true,
             tagsets: true,
           },
-          parentSpace: {
+          space: {
             account: {
               license: true,
             },
@@ -594,7 +594,7 @@ export class SearchService {
       // Only show challenges that the current user has read access to
       for (const challenge of filteredChallengeMatches) {
         if (
-          challenge.parentSpace?.account?.license?.visibility !==
+          challenge.space?.account?.license?.visibility !==
             SpaceVisibility.ARCHIVED &&
           this.authorizationService.isAccessGranted(
             agentInfo,
@@ -636,12 +636,8 @@ export class SearchService {
         relations: {
           context: true,
           collaboration: true,
-          challenge: {
-            parentSpace: {
-              account: {
-                license: true,
-              },
-            },
+          account: {
+            license: true,
           },
           profile: {
             location: true,
@@ -679,7 +675,7 @@ export class SearchService {
       // Only show challenges that the current user has read access to
       for (const opportunity of filteredOpportunityMatches) {
         if (
-          opportunity.challenge?.parentSpace?.account?.license?.visibility !==
+          opportunity.account.license?.visibility !==
             SpaceVisibility.ARCHIVED &&
           this.authorizationService.isAccessGranted(
             agentInfo,

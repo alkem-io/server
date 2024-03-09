@@ -5,7 +5,7 @@ import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { PreferenceSet } from '@domain/common/preference-set/preference.set.entity';
 @Entity()
 export class Space extends BaseChallenge implements ISpace {
-  @OneToMany(() => Challenge, challenge => challenge.parentSpace, {
+  @OneToMany(() => Challenge, challenge => challenge.space, {
     eager: false,
     cascade: true,
   })
@@ -18,8 +18,4 @@ export class Space extends BaseChallenge implements ISpace {
   })
   @JoinColumn()
   preferenceSet?: PreferenceSet;
-
-  constructor() {
-    super();
-  }
 }

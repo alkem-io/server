@@ -535,7 +535,7 @@ export class ChallengeService {
       account: {
         id: accountId,
       },
-      parentSpace: Not(IsNull()),
+      space: Not(IsNull()),
     });
     return count;
   }
