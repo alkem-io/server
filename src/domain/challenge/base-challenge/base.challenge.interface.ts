@@ -24,5 +24,9 @@ export abstract class IBaseChallenge extends INameable {
 
   storageAggregator?: IStorageAggregator;
 
+  @Field(() => IAccount, {
+    nullable: false,
+    description: 'The Account for this space',
+  })
   account!: IAccount;
 }

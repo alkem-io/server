@@ -121,9 +121,10 @@ export class AccountService {
   }
 
   public async updateAccountPlatformSettings(
-    updateData: UpdateAccountInput
+    updateData: UpdateAccountInput,
+    accountInput: IAccount
   ): Promise<IAccount> {
-    const account = await this.getAccountOrFail(updateData.accountID, {
+    const account = await this.getAccountOrFail(accountInput.id, {
       relations: {
         license: true,
       },

@@ -16,6 +16,7 @@ import { InnovationFlow } from '@domain/collaboration/innovation-flow/innovation
 import { ProfileType } from '@common/enums';
 import { License } from '@domain/license/license/license.entity';
 import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
+import { Account } from '../account/account.entity';
 
 const moduleMocker = new ModuleMocker(global);
 
@@ -236,11 +237,14 @@ const getSpaceMock = ({
       type: ProfileType.SPACE,
       ...getEntityMock<Profile>(),
     },
-    license: {
-      id,
-      visibility,
-      featureFlags: [],
-      ...getEntityMock<License>(),
+    account: {
+      license: {
+        id,
+        visibility,
+        featureFlags: [],
+        ...getEntityMock<License>(),
+      },
+      ...getEntityMock<Account>(),
     },
     authorization: getAuthorizationPolicyMock(
       `auth-${id}`,
@@ -256,7 +260,8 @@ const getFilteredSpaces = (
   visibilities: SpaceVisibility[]
 ): Space[] => {
   return spaces.filter(space => {
-    const visibility = space.license?.visibility || SpaceVisibility.ACTIVE;
+    const visibility =
+      space.account.license?.visibility || SpaceVisibility.ACTIVE;
     return visibilities.includes(visibility);
   });
 };

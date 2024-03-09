@@ -2,7 +2,6 @@ import { OrganizationModule } from '@domain/community/organization/organization.
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Account } from '@domain/challenge/account/account.entity';
-import { AccountResolverMutations } from '@domain/challenge/account/account.resolver.mutations';
 import { AccountService } from '@domain/challenge/account/account.service';
 import { AccountResolverFields } from '@domain/challenge/account/account.resolver.fields';
 import { AccountAuthorizationService } from '@domain/challenge/account/account.service.authorization';
@@ -28,7 +27,6 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
     AccountService,
     AccountAuthorizationService,
     AccountResolverFields,
-    AccountResolverMutations,
   ],
   exports: [AccountService, AccountAuthorizationService],
 })

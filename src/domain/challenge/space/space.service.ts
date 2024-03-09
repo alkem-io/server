@@ -254,7 +254,8 @@ export class SpaceService {
 
     if (updateData.account) {
       space.account = await this.accountService.updateAccountPlatformSettings(
-        updateData.account
+        updateData.account,
+        space.account
       );
     }
 
@@ -561,11 +562,14 @@ export class SpaceService {
 
     const qb = this.spaceRepository.createQueryBuilder('space');
     if (visibilities) {
-      qb.leftJoinAndSelect('space.license', 'license');
+      qb.leftJoinAndSelect('space.account', 'account');
+      qb.leftJoinAndSelect('account.license', 'license');
       qb.leftJoinAndSelect('space.authorization', 'authorization');
       qb.where({
-        license: {
-          visibility: In(visibilities),
+        account: {
+          license: {
+            visibility: In(visibilities),
+          },
         },
       });
     }
@@ -586,7 +590,8 @@ export class SpaceService {
     const spacesDataForSorting = await this.spaceRepository
       .createQueryBuilder('space')
       .leftJoinAndSelect('space.challenges', 'challenge')
-      .leftJoinAndSelect('space.license', 'license')
+      .leftJoinAndSelect('space.account', 'account')
+      .leftJoinAndSelect('account.license', 'license')
       .leftJoinAndSelect('space.authorization', 'authorization_policy')
       .leftJoinAndSelect('challenge.opportunities', 'opportunities')
       .whereInIds(IDs)
