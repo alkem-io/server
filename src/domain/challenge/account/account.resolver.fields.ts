@@ -15,7 +15,7 @@ import { ISpaceDefaults } from '../space.defaults/space.defaults.interface';
 import {
   AccountDefaultsLoaderCreator,
   AccountLicenseLoaderCreator,
-  AccountTemplatesSetLoaderCreator,
+  AccountLibraryLoaderCreator,
 } from '@core/dataloader/creators/loader.creators';
 
 @Resolver(() => IAccount)
@@ -30,7 +30,7 @@ export class AccountResolverFields {
   @UseGuards(GraphqlGuard)
   async library(
     @Parent() account: Account,
-    @Loader(AccountTemplatesSetLoaderCreator) loader: ILoader<ITemplatesSet>
+    @Loader(AccountLibraryLoaderCreator) loader: ILoader<ITemplatesSet>
   ): Promise<ITemplatesSet> {
     return loader.load(account.id);
   }

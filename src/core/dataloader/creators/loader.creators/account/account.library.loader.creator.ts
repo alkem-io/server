@@ -7,7 +7,7 @@ import { createTypedRelationDataLoader } from '../../../utils';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
 
 @Injectable()
-export class AccountTemplatesSetLoaderCreator
+export class AccountLibraryLoaderCreator
   implements DataLoaderCreator<ITemplatesSet[]>
 {
   constructor(@InjectEntityManager() private manager: EntityManager) {}
@@ -16,7 +16,7 @@ export class AccountTemplatesSetLoaderCreator
     return createTypedRelationDataLoader(
       this.manager,
       Account,
-      { templatesSet: true },
+      { library: true },
       this.constructor.name,
       options
     );
