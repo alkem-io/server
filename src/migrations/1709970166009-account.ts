@@ -220,8 +220,19 @@ export class account1709970166009 implements MigrationInterface {
       `ALTER TABLE \`account\` DROP FOREIGN KEY \`FK_91a165c1091a6959cc19d522399\``
     );
     await queryRunner.query(
+      `ALTER TABLE \`challenge\` DROP FOREIGN KEY \`FK_78017461e03bd2a6cd47044bf6a\``
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`opportunity\` DROP FOREIGN KEY \`FK_69e32f4f4652f654dc8641ae2b8\``
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`space\` DROP FOREIGN KEY \`FK_6bdeffaf6ea6159b4672a2aed70\``
+    );
+
+    await queryRunner.query(
       `DROP INDEX \`REL_78017461e03bd2a6cd47044bf6\` ON \`challenge\``
     );
+
     await queryRunner.query(
       `ALTER TABLE \`challenge\` DROP INDEX \`IDX_78017461e03bd2a6cd47044bf6\``
     );
@@ -322,7 +333,7 @@ export class account1709970166009 implements MigrationInterface {
       `ALTER TABLE \`challenge\` RENAME COLUMN \`spaceID2\` TO \`spaceId\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`challenge\` ADD CONSTRAINT \`FK_494b27cb13b59128fb24b365ca6\` FOREIGN KEY (\`spaceId\`) REFERENCES \`space\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
+      `ALTER TABLE \`challenge\` ADD CONSTRAINT \`FK_494b27cb13b59128fb24b365ca6\` FOREIGN KEY (\`parentSpaceId\`) REFERENCES \`space\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
     );
 
     await queryRunner.query(
