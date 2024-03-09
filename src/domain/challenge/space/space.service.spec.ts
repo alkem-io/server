@@ -238,6 +238,8 @@ const getSpaceMock = ({
       ...getEntityMock<Profile>(),
     },
     account: {
+      id: `account-${id}`,
+      spaceID: `space-${id}`,
       license: {
         id,
         visibility,
