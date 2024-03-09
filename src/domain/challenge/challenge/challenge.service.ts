@@ -627,24 +627,10 @@ export class ChallengeService {
   async getStorageAggregatorOrFail(
     challengeId: string
   ): Promise<IStorageAggregator> {
-    const challengeWithStorageAggregator = await this.getChallengeOrFail(
+    return await this.baseChallengeService.getStorageAggregator(
       challengeId,
-      {
-        relations: {
-          storageAggregator: true,
-        },
-      }
+      this.challengeRepository
     );
-    const storageAggregator = challengeWithStorageAggregator.storageAggregator;
-
-    if (!storageAggregator) {
-      throw new EntityNotFoundException(
-        `Unable to find storage aggregator for Challenge with nameID: ${challengeWithStorageAggregator.nameID}`,
-        LogContext.COMMUNITY
-      );
-    }
-
-    return storageAggregator;
   }
 
   createPreferenceDefaults(): Map<PreferenceType, string> {

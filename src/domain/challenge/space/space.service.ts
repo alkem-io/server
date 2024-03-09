@@ -734,21 +734,10 @@ export class SpaceService {
   async getStorageAggregatorOrFail(
     spaceId: string
   ): Promise<IStorageAggregator> {
-    const spaceWithStorageAggregator = await this.getSpaceOrFail(spaceId, {
-      relations: {
-        storageAggregator: true,
-      },
-    });
-    const storageAggregator = spaceWithStorageAggregator.storageAggregator;
-
-    if (!storageAggregator) {
-      throw new EntityNotFoundException(
-        `Unable to find storage aggregatorfor space with nameID: ${spaceWithStorageAggregator.nameID}`,
-        LogContext.STORAGE_BUCKET
-      );
-    }
-
-    return storageAggregator;
+    return await this.baseChallengeService.getStorageAggregator(
+      spaceId,
+      this.spaceRepository
+    );
   }
 
   async getPreferenceSetOrFail(spaceId: string): Promise<IPreferenceSet> {

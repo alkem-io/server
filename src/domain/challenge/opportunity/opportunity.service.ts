@@ -337,27 +337,12 @@ export class OpportunityService {
   }
 
   async getStorageAggregatorOrFail(
-    challengeId: string
+    opportunityId: string
   ): Promise<IStorageAggregator> {
-    const opportunityWithStorageAggregator = await this.getOpportunityOrFail(
-      challengeId,
-      {
-        relations: {
-          storageAggregator: true,
-        },
-      }
+    return await this.baseChallengeService.getStorageAggregator(
+      opportunityId,
+      this.opportunityRepository
     );
-    const storageAggregator =
-      opportunityWithStorageAggregator.storageAggregator;
-
-    if (!storageAggregator) {
-      throw new EntityNotFoundException(
-        `Unable to find storage aggregator for Opportunity with nameID: ${opportunityWithStorageAggregator.nameID}`,
-        LogContext.COMMUNITY
-      );
-    }
-
-    return storageAggregator;
   }
 
   async getMetrics(opportunity: IOpportunity): Promise<INVP[]> {

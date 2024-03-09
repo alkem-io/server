@@ -272,6 +272,28 @@ export class BaseChallengeService {
     return context;
   }
 
+  public async getStorageAggregator(
+    challengeId: string,
+    repository: Repository<BaseChallenge>
+  ): Promise<IContext> {
+    const challengeWithContext = await this.getBaseChallengeOrFail(
+      challengeId,
+      repository,
+      {
+        relations: {
+          storageAggregator: true,
+        },
+      }
+    );
+    const storageAggregator = challengeWithContext.storageAggregator;
+    if (!storageAggregator)
+      throw new RelationshipNotFoundException(
+        `Unable to load storage aggregator for challenge ${challengeId} `,
+        LogContext.CONTEXT
+      );
+    return storageAggregator;
+  }
+
   public async getProfile(
     challengeId: string,
     repository: Repository<BaseChallenge>
