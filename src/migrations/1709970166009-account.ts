@@ -71,7 +71,7 @@ export class account1709970166009 implements MigrationInterface {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await this.projectAgreementDown(queryRunner);
+    // await this.projectAgreementDown(queryRunner);
     await this.challengeHierarchyDown(queryRunner);
 
     await this.accountDownBeforeData(queryRunner);
@@ -362,17 +362,21 @@ export class account1709970166009 implements MigrationInterface {
   private async challengeHierarchyDown(
     queryRunner: QueryRunner
   ): Promise<void> {
+    // await queryRunner.query(
+    //   `ALTER TABLE \`challenge\` DROP FOREIGN KEY \`FK_494b27cb13b59128fb24b365ca6\``
+    // );
+    // await queryRunner.query(
+    //   `ALTER TABLE \`challenge\` RENAME COLUMN \`spaceId\` TO \`parentSpaceId\``
+    // );
     await queryRunner.query(
-      `ALTER TABLE \`challenge\` DROP FOREIGN KEY \`FK_494b27cb13b59128fb24b365ca6\``
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`challenge\` RENAME COLUMN \`spaceId\` TO \`parentSpaceId\``
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`challenge\` RENAME COLUMN \`spaceID2\` TO \`spaceId\``
+      `ALTER TABLE \`challenge\` ADD \`spaceId\` char(36) NULL`
     );
     await queryRunner.query(
       `ALTER TABLE \`challenge\` ADD CONSTRAINT \`FK_494b27cb13b59128fb24b365ca6\` FOREIGN KEY (\`parentSpaceId\`) REFERENCES \`space\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
+    );
+
+    await queryRunner.query(
+      `ALTER TABLE \`opportunity\` ADD \`spaceID\` char(36) NULL`
     );
 
     await queryRunner.query(
