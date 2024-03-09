@@ -95,6 +95,37 @@ export class account1709970166009 implements MigrationInterface {
       );
     }
 
+    const challenges: {
+      id: string;
+      accountId: string;
+    }[] = await queryRunner.query(`SELECT id, accountId FROM challenge`);
+    for (const challenge of challenges) {
+      const [account]: {
+        id: string;
+        spaceID: string;
+      }[] = await queryRunner.query(
+        `SELECT id, spaceID FROM account WHERE id = '${challenge.accountId}'`
+      );
+      await queryRunner.query(
+        `UPDATE challenge SET spaceId = '${account.spaceID}' WHERE id = '${challenge.id}'`
+      );
+    }
+    const opportunities: {
+      id: string;
+      accountId: string;
+    }[] = await queryRunner.query(`SELECT id, accountId FROM opportunity`);
+    for (const opportunity of opportunities) {
+      const [account]: {
+        id: string;
+        spaceID: string;
+      }[] = await queryRunner.query(
+        `SELECT id, spaceID FROM account WHERE id = '${opportunity.accountId}'`
+      );
+      await queryRunner.query(
+        `UPDATE challenge SET spaceID = '${account.spaceID}' WHERE id = '${opportunity.id}'`
+      );
+    }
+
     await this.accountDownAfterData(queryRunner);
   }
 
@@ -194,6 +225,14 @@ export class account1709970166009 implements MigrationInterface {
       `ALTER TABLE \`space\` DROP COLUMN \`templatesSetId\``
     );
     await queryRunner.query(`ALTER TABLE \`space\` DROP COLUMN \`defaultsId\``);
+
+    await queryRunner.query(
+      `ALTER TABLE \`challenge\` DROP COLUMN \`spaceID2\``
+    );
+
+    await queryRunner.query(
+      `ALTER TABLE \`opportunity\` DROP COLUMN \`spaceID\``
+    );
   }
 
   private async accountDownBeforeData(queryRunner: QueryRunner): Promise<void> {
