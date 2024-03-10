@@ -18,3 +18,7 @@ export enum ActivityEventType {
 registerEnumType(ActivityEventType, {
   name: 'ActivityEventType',
 });
+
+export const ACTIVITY_UPDATE_EVENTS = [
+  ActivityEventType.CALLOUT_WHITEBOARD_CONTENT_MODIFIED,
+];

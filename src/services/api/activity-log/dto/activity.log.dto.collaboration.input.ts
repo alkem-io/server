@@ -30,4 +30,11 @@ export class ActivityLogInput {
       'Which activity types to include in the results. Returns all by default.',
   })
   types?: ActivityEventType[];
+
+  @Field(() => Boolean, {
+    nullable: true,
+    description:
+      'De-duplicates activity events per entity and activity event type.',
+  })
+  deDuplicateActivityEvents?: boolean;
 }

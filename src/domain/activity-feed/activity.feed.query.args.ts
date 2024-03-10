@@ -31,4 +31,17 @@ export class ActivityFeedQueryArgs {
       'Activity from which Spaces to include; Includes all by default.',
   })
   roles?: Array<ActivityFeedRoles>;
+
+  @Field(() => Boolean, {
+    nullable: true,
+    description:
+      'De-duplicates activity events per entity and activity event type.',
+  })
+  deDuplicateActivityEvents?: boolean;
+
+  @Field(() => Boolean, {
+    nullable: true,
+    description: 'Option to exclude update activity events.',
+  })
+  excludeUpdateActivityEvents?: boolean;
 }

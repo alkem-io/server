@@ -1,6 +1,6 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, In, Repository } from 'typeorm';
+import { EntityManager, In, Not, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { Activity } from './activity.entity';
@@ -9,7 +9,10 @@ import { CreateActivityInput } from './dto/activity.dto.create';
 import { ensureMaxLength } from '@common/utils';
 import { SMALL_TEXT_LENGTH } from '@common/constants';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { ActivityEventType } from '@common/enums/activity.event.type';
+import {
+  ACTIVITY_UPDATE_EVENTS,
+  ActivityEventType,
+} from '@common/enums/activity.event.type';
 import { PaginationArgs } from '@core/pagination';
 import { getPaginationResults } from '@core/pagination/pagination.fn';
 import { Collaboration } from '@domain/collaboration/collaboration';
@@ -75,42 +78,15 @@ export class ActivityService {
       types?: ActivityEventType[];
       limit?: number;
       visibility?: boolean;
-      userID?: string;
+      deDuplicateActivityEvents?: boolean;
     }
   ): Promise<IActivity[]> {
-    const { types, visibility = true, limit, userID } = options ?? {};
-    return this.activityRepository.find({
-      where: {
-        collaborationID: In(collaborationIDs),
-        visibility: visibility,
-        type: types && types.length > 0 ? In(types) : undefined,
-        triggeredBy: userID,
-      },
-      order: {
-        createdDate: 'DESC',
-      },
-      take: limit,
-    });
-  }
-
-  public async getPaginatedActivity(
-    collaborationIDs: string[],
-    options?: {
-      types?: ActivityEventType[];
-      visibility?: boolean;
-      userID?: string;
-      orderBy?: 'ASC' | 'DESC';
-      paginationArgs?: PaginationArgs;
-    }
-  ) {
     const {
       types,
       visibility = true,
-      userID,
-      orderBy = 'DESC',
-      paginationArgs = {},
+      limit,
+      deDuplicateActivityEvents = false,
     } = options ?? {};
-
     const qb = this.activityRepository.createQueryBuilder('activity');
 
     qb.where({
@@ -122,8 +98,65 @@ export class ActivityService {
       qb.andWhere({ type: In(types) });
     }
 
+    if (deDuplicateActivityEvents) {
+      qb.groupBy('activity.resourceID, activity.triggeredBy, activity.type');
+    }
+
+    qb.orderBy({
+      'activity.createdDate': 'DESC',
+    });
+
+    return qb.limit(limit).getMany();
+  }
+
+  public async getPaginatedActivity(
+    collaborationIDs: string[],
+    options?: {
+      types?: ActivityEventType[];
+      visibility?: boolean;
+      userID?: string;
+      orderBy?: 'ASC' | 'DESC';
+      paginationArgs?: PaginationArgs;
+      deDuplicateActivityEvents?: boolean;
+      excludeUpdateActivityEvents?: boolean;
+    }
+  ) {
+    const {
+      types,
+      visibility = true,
+      userID,
+      orderBy = 'DESC',
+      paginationArgs = {},
+      deDuplicateActivityEvents = false,
+      excludeUpdateActivityEvents = false,
+    } = options ?? {};
+
+    const qb = this.activityRepository.createQueryBuilder('activity');
+
+    qb.where({
+      collaborationID: In(collaborationIDs),
+      visibility: visibility,
+    });
+
     if (userID) {
       qb.andWhere({ triggeredBy: userID });
+    }
+
+    if (excludeUpdateActivityEvents) {
+      qb.andWhere({
+        type: Not(In(ACTIVITY_UPDATE_EVENTS)),
+      });
+    }
+
+    if (types && types.length > 0) {
+      const filteredTypes = excludeUpdateActivityEvents
+        ? types.filter(type => !ACTIVITY_UPDATE_EVENTS.includes(type))
+        : types;
+      qb.andWhere({ type: In(filteredTypes) });
+    }
+
+    if (deDuplicateActivityEvents) {
+      qb.groupBy('activity.resourceID, activity.triggeredBy, activity.type');
     }
 
     return getPaginationResults(qb, paginationArgs, orderBy);
@@ -179,6 +212,7 @@ export class ActivityService {
     const collaborationRepository: Repository<Collaboration> =
       this.entityManager.getRepository(Collaboration);
 
+    // Filter the collaborations that still exist
     const collaborations: Collaboration[] = await collaborationRepository
       .createQueryBuilder('collaboration')
       .select()
