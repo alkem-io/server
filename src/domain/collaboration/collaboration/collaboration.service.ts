@@ -5,6 +5,7 @@ import {
   EntityNotFoundException,
   EntityNotInitializedException,
   ForbiddenException,
+  RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
@@ -44,7 +45,12 @@ import { keyBy } from 'lodash';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { CalloutType } from '@common/enums/callout.type';
-import { Opportunity } from '@domain/collaboration/opportunity';
+import { Opportunity } from '@domain/challenge/opportunity';
+import { InnovationFlowService } from '../innovation-flow/innovaton.flow.service';
+import { SpaceDefaultsService } from '@domain/challenge/space.defaults/space.defaults.service';
+import { TagsetType } from '@common/enums/tagset.type';
+import { IInnovationFlow } from '../innovation-flow/innovation.flow.interface';
+import { CreateCollaborationInput } from './dto/collaboration.dto.create';
 
 @Injectable()
 export class CollaborationService {
@@ -55,15 +61,21 @@ export class CollaborationService {
     private namingService: NamingService,
     private relationService: RelationService,
     private tagsetTemplateSetService: TagsetTemplateSetService,
+    private innovationFlowService: InnovationFlowService,
     private storageAggregatorResolverService: StorageAggregatorResolverService,
     @InjectRepository(Collaboration)
     private collaborationRepository: Repository<Collaboration>,
     @InjectEntityManager('default')
     private entityManager: EntityManager,
-    private timelineService: TimelineService
+    private timelineService: TimelineService,
+    private spaceDefaultsService: SpaceDefaultsService
   ) {}
 
-  async createCollaboration(): Promise<ICollaboration> {
+  async createCollaboration(
+    collaborationData: CreateCollaborationInput,
+    storageAggregator: IStorageAggregator,
+    spaceID: string
+  ): Promise<ICollaboration> {
     const collaboration: ICollaboration = Collaboration.create();
     collaboration.authorization = new AuthorizationPolicy();
     collaboration.relations = [];
@@ -72,6 +84,38 @@ export class CollaborationService {
 
     collaboration.tagsetTemplateSet =
       await this.tagsetTemplateSetService.createTagsetTemplateSet();
+
+    // Rely on the logic in Space Defaults to create the right innovation flow input
+    const innovationFlowInput =
+      await this.spaceDefaultsService.getCreateInnovationFlowInput(
+        spaceID,
+        collaborationData.innovationFlowTemplateID
+      );
+    const allowedStates = innovationFlowInput.states.map(
+      state => state.displayName
+    );
+
+    const tagsetTemplateDataStates: CreateTagsetTemplateInput = {
+      name: TagsetReservedName.FLOW_STATE,
+      type: TagsetType.SELECT_ONE,
+      allowedValues: allowedStates,
+      defaultSelectedValue:
+        allowedStates.length > 0 ? allowedStates[0] : undefined,
+    };
+    const statesTagsetTemplate =
+      await this.tagsetTemplateSetService.addTagsetTemplate(
+        collaboration.tagsetTemplateSet,
+        tagsetTemplateDataStates
+      );
+
+    // Note: need to create the innovation flow after creation of
+    // tagsetTemplates on Collabration so can pass it in to the InnovationFlow
+    collaboration.innovationFlow =
+      await this.innovationFlowService.createInnovationFlow(
+        innovationFlowInput,
+        [statesTagsetTemplate],
+        storageAggregator
+      );
 
     return await this.save(collaboration);
   }
@@ -83,12 +127,12 @@ export class CollaborationService {
     collaboration.tagsetTemplateSet = await this.getTagsetTemplatesSet(
       collaboration.id
     );
+
     const tagsetTemplate =
       await this.tagsetTemplateSetService.addTagsetTemplate(
         collaboration.tagsetTemplateSet,
         tagsetTemplateData
       );
-
     await this.save(collaboration);
     return tagsetTemplate;
   }
@@ -159,6 +203,18 @@ export class CollaborationService {
         LogContext.COLLABORATION
       );
     return collaboration;
+  }
+
+  public async createCalloutInputsFromCollaborationTemplate(
+    collaborationTemplateID?: string
+  ): Promise<CreateCalloutInput[]> {
+    if (collaborationTemplateID) {
+      const collaboration = await this.getCollaborationOrFail(
+        collaborationTemplateID
+      );
+      return await this.createCalloutInputsFromCollaboration(collaboration);
+    }
+    return [];
   }
 
   public async getChildCollaborationsOrFail(
@@ -243,28 +299,44 @@ export class CollaborationService {
   public async deleteCollaboration(
     collaborationID: string
   ): Promise<ICollaboration> {
+    // Note need to load it in with all contained entities so can remove fully
     const collaboration = await this.getCollaborationOrFail(collaborationID, {
-      relations: { callouts: true, timeline: true },
+      relations: {
+        callouts: true,
+        timeline: true,
+        innovationFlow: true,
+        relations: true,
+        authorization: true,
+      },
     });
 
-    if (collaboration.callouts) {
-      for (const callout of collaboration.callouts) {
-        await this.calloutService.deleteCallout(callout.id);
-      }
+    if (
+      !collaboration.callouts ||
+      !collaboration.timeline ||
+      !collaboration.innovationFlow ||
+      !collaboration.relations ||
+      !collaboration.authorization
+    )
+      throw new RelationshipNotFoundException(
+        `Unable to remove Collaboration: missing child entities ${collaboration.id} `,
+        LogContext.CONTEXT
+      );
+
+    for (const callout of collaboration.callouts) {
+      await this.calloutService.deleteCallout(callout.id);
     }
 
-    if (collaboration.timeline) {
-      await this.timelineService.deleteTimeline(collaboration.timeline.id);
+    await this.timelineService.deleteTimeline(collaboration.timeline.id);
+
+    for (const relation of collaboration.relations) {
+      await this.relationService.deleteRelation({ ID: relation.id });
     }
 
-    if (collaboration.relations) {
-      for (const relation of collaboration.relations) {
-        await this.relationService.deleteRelation({ ID: relation.id });
-      }
-    }
+    await this.authorizationPolicyService.delete(collaboration.authorization);
 
-    if (collaboration.authorization)
-      await this.authorizationPolicyService.delete(collaboration.authorization);
+    await this.innovationFlowService.deleteInnovationFlow(
+      collaboration.innovationFlow.id
+    );
 
     return await this.collaborationRepository.remove(
       collaboration as Collaboration
@@ -495,6 +567,23 @@ export class CollaborationService {
           AuthorizationPrivilege.UPDATE
         );
     }
+  }
+
+  async getInnovationFlow(collaborationID: string): Promise<IInnovationFlow> {
+    const challenge = await this.getCollaborationOrFail(collaborationID, {
+      relations: {
+        innovationFlow: true,
+      },
+    });
+
+    const innovationFlow = challenge.innovationFlow;
+    if (!innovationFlow)
+      throw new RelationshipNotFoundException(
+        `Unable to load InnovationFlow for Collaboration ${collaborationID} `,
+        LogContext.CHALLENGES
+      );
+
+    return innovationFlow;
   }
 
   public async getCalloutsOnCollaboration(

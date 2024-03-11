@@ -15,7 +15,7 @@ import { ConvertChallengeToSpaceInput } from './dto/convert.dto.challenge.to.spa
 import { SpaceAuthorizationService } from '@domain/challenge/space/space.service.authorization';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { ConvertOpportunityToChallengeInput } from './dto/convert.dto.opportunity.to.challenge.input';
-import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
+import { OpportunityService } from '@domain/challenge/opportunity/opportunity.service';
 import { SpaceService } from '@domain/challenge/space/space.service';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
 import { GLOBAL_POLICY_CONVERSION_GLOBAL_ADMINS } from '@common/constants/authorization/global.policy.constants';

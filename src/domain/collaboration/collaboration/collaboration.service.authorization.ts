@@ -32,6 +32,8 @@ import { ICallout } from '../callout/callout.interface';
 import { ILicense } from '@domain/license/license/license.interface';
 import { LicenseService } from '@domain/license/license/license.service';
 import { LicenseFeatureFlagName } from '@common/enums/license.feature.flag.name';
+import { InnovationFlowAuthorizationService } from '../innovation-flow/innovation.flow.service.authorization';
+import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 
 @Injectable()
 export class CollaborationAuthorizationService {
@@ -42,6 +44,7 @@ export class CollaborationAuthorizationService {
     private timelineAuthorizationService: TimelineAuthorizationService,
     private licenseService: LicenseService,
     private calloutAuthorizationService: CalloutAuthorizationService,
+    private innovationFlowAuthorizationService: InnovationFlowAuthorizationService,
     @InjectRepository(Collaboration)
     private collaborationRepository: Repository<Collaboration>
   ) {}
@@ -73,9 +76,41 @@ export class CollaborationAuthorizationService {
       communityPolicy,
       license
     );
+    await this.collaborationRepository.save(collaboration);
+    return await this.propagateAuthorizationToChildEntities(
+      collaboration,
+      communityPolicy
+    );
+  }
 
-    collaboration.callouts =
-      await this.collaborationService.getCalloutsOnCollaboration(collaboration);
+  public async propagateAuthorizationToChildEntities(
+    collaborationInput: ICollaboration,
+    communityPolicy: ICommunityPolicy
+  ): Promise<ICollaboration> {
+    const collaboration =
+      await this.collaborationService.getCollaborationOrFail(
+        collaborationInput.id,
+        {
+          relations: {
+            callouts: true,
+            innovationFlow: true,
+            timeline: true,
+            relations: true,
+          },
+        }
+      );
+    if (
+      !collaboration.callouts ||
+      !collaboration.innovationFlow ||
+      !collaboration.timeline ||
+      !collaboration.relations
+    ) {
+      throw new RelationshipNotFoundException(
+        `Unable to load child entities for collaboration authorization:  ${collaboration.id}`,
+        LogContext.CHALLENGES
+      );
+    }
+
     const updatedCallouts: ICallout[] = [];
     for (const callout of collaboration.callouts) {
       const updatedCallout =
@@ -87,10 +122,6 @@ export class CollaborationAuthorizationService {
       updatedCallouts.push(updatedCallout);
     }
     collaboration.callouts = updatedCallouts;
-
-    collaboration.timeline = await this.collaborationService.getTimelineOrFail(
-      collaboration.id
-    );
 
     // Extend with contributor rules + then send into apply
     const clonedAuthorization =
@@ -110,21 +141,21 @@ export class CollaborationAuthorizationService {
         extendedAuthorizationContributors
       );
 
-    collaboration.relations =
-      await this.collaborationService.getRelationsOnCollaboration(
-        collaboration
-      );
-    if (collaboration.relations) {
-      for (const relation of collaboration.relations) {
-        relation.authorization =
-          this.authorizationPolicyService.inheritParentAuthorization(
-            relation.authorization,
-            collaboration.authorization
-          );
-      }
+    for (const relation of collaboration.relations) {
+      relation.authorization =
+        this.authorizationPolicyService.inheritParentAuthorization(
+          relation.authorization,
+          collaboration.authorization
+        );
     }
 
-    return await this.collaborationRepository.save(collaboration);
+    collaboration.innovationFlow =
+      await this.innovationFlowAuthorizationService.applyAuthorizationPolicy(
+        collaboration.innovationFlow,
+        collaboration.authorization
+      );
+
+    return await this.collaborationService.save(collaboration);
   }
 
   private getContributorCredentials(

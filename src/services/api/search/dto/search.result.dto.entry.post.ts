@@ -2,7 +2,7 @@ import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { ISpace } from '@domain/challenge/space/space.interface';
 import { IPost } from '@domain/collaboration/post/post.interface';
 import { ICallout } from '@domain/collaboration/callout';
-import { IOpportunity } from '@domain/collaboration/opportunity';
+import { IOpportunity } from '@domain/challenge/opportunity';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { ISearchResultBase } from './search.result.dto.entry.base.interface';
 import { ISearchResult } from './search.result.entry.interface';

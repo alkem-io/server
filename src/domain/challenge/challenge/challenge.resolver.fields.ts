@@ -3,7 +3,7 @@ import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
 import { ChallengeService } from './challenge.service';
 import { ICommunity } from '@domain/community/community/community.interface';
 import { IContext } from '@domain/context/context/context.interface';
-import { IOpportunity } from '@domain/collaboration/opportunity/opportunity.interface';
+import { IOpportunity } from '@domain/challenge/opportunity/opportunity.interface';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { INVP } from '@domain/common/nvp/nvp.interface';
 import { UseGuards } from '@nestjs/common/decorators';
@@ -25,7 +25,6 @@ import {
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
-import { IInnovationFlow } from '../innovation-flow/innovation.flow.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 
 @Resolver(() => IChallenge)
@@ -109,16 +108,6 @@ export class ChallengeResolverFields {
     @Args({ nullable: true }) args: LimitAndShuffleIdsQueryArgs
   ) {
     return await this.challengeService.getOpportunities(challenge.id, args);
-  }
-
-  @UseGuards(GraphqlGuard)
-  @ResolveField('innovationFlow', () => IInnovationFlow, {
-    nullable: true,
-    description: 'The InnovationFlow for the Challenge.',
-  })
-  @Profiling.api
-  async innovationFlow(@Parent() challenge: IChallenge) {
-    return await this.challengeService.getInnovationFlow(challenge.id);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

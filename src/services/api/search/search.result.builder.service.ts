@@ -1,6 +1,6 @@
 import { UserService } from '@domain/community/user/user.service';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
-import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
+import { OpportunityService } from '@domain/challenge/opportunity/opportunity.service';
 import { ISearchResultBuilder } from './search.result.builder.interface';
 import { SpaceService } from '@domain/challenge/space/space.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
@@ -23,7 +23,7 @@ import { PostService } from '@domain/collaboration/post/post.service';
 import { ISearchResultPost } from './dto/search.result.dto.entry.post';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { ISpace } from '@domain/challenge/space/space.interface';
-import { IOpportunity } from '@domain/collaboration/opportunity';
+import { IOpportunity } from '@domain/challenge/opportunity';
 import { ICallout } from '@domain/collaboration/callout';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { EntityManager } from 'typeorm';

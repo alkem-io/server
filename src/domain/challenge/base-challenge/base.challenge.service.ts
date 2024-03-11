@@ -32,6 +32,7 @@ import { IProfile } from '@domain/common/profile';
 import { VisualType } from '@common/enums/visual.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
 
 @Injectable()
 export class BaseChallengeService {
@@ -54,7 +55,8 @@ export class BaseChallengeService {
     communityPolicy: ICommunityPolicyDefinition,
     applicationFormData: CreateFormInput,
     profileType: ProfileType,
-    storageAggregator: IStorageAggregator
+    storageAggregator: IStorageAggregator,
+    collaborationInput?: CreateCollaborationInput
   ) {
     baseChallenge.authorization = new AuthorizationPolicy();
     await this.isNameAvailableOrFail(baseChallengeData.nameID, spaceID);
@@ -99,7 +101,13 @@ export class BaseChallengeService {
     );
 
     baseChallenge.collaboration =
-      await this.collaborationService.createCollaboration();
+      await this.collaborationService.createCollaboration(
+        {
+          ...collaborationInput,
+        },
+        storageAggregator,
+        spaceID
+      );
 
     baseChallenge.agent = await this.agentService.createAgent({
       parentDisplayID: `${baseChallenge.nameID}`,

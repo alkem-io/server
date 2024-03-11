@@ -1,6 +1,6 @@
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { ISpace } from '@domain/challenge/space/space.interface';
-import { IOpportunity } from '@domain/collaboration/opportunity/opportunity.interface';
+import { IOpportunity } from '@domain/challenge/opportunity/opportunity.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { ISearchResultBase } from './search.result.dto.entry.base.interface';
 import { ISearchResult } from './search.result.entry.interface';

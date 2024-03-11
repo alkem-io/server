@@ -11,13 +11,10 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { IWhiteboardTemplate } from '../whiteboard-template/whiteboard.template.interface';
 import { PostTemplateAuthorizationService } from '../post-template/post.template.service.authorization';
 import { WhiteboardTemplateAuthorizationService } from '../whiteboard-template/whiteboard.template.service.authorization';
-import { RelationshipNotFoundException } from '@common/exceptions';
-import { LogContext } from '@common/enums';
 import { InnovationFlowTemplateService } from '../innovation-flow-template/innovation.flow.template.service';
 import { InnovationFlowTemplateAuthorizationService } from '../innovation-flow-template/innovation.flow.template.service.authorization';
 import { CreateWhiteboardTemplateOnTemplatesSetInput } from './dto/whiteboard.template.dto.create.on.templates.set';
 import { IInnovationFlowTemplate } from '../innovation-flow-template/innovation.flow.template.interface';
-import { DeleteInnovationFlowTemplateInput } from './dto/innovation.flow.template.dto.delete.on.templates.set';
 import { CreateInnovationFlowTemplateOnTemplatesSetInput } from './dto/innovation.flow.template.dto.create.on.templates.set';
 import { CreatePostTemplateOnTemplatesSetInput } from './dto/post.template.dto.create.on.templates.set';
 import { ICalloutTemplate } from '../callout-template/callout.template.interface';
@@ -171,39 +168,5 @@ export class TemplatesSetResolverMutations {
       templatesSet.authorization
     );
     return innovationFlowTemplate;
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IInnovationFlowTemplate, {
-    description: 'Deletes the specified InnovationFlowTemplate.',
-  })
-  async deleteInnovationFlowTemplate(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('deleteData') deleteData: DeleteInnovationFlowTemplateInput
-  ): Promise<IInnovationFlowTemplate> {
-    const innovationFlowTemplate =
-      await this.innovationFlowTemplateService.getInnovationFlowTemplateOrFail(
-        deleteData.ID,
-        {
-          relations: { templatesSet: true },
-        }
-      );
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      innovationFlowTemplate.authorization,
-      AuthorizationPrivilege.DELETE,
-      `innovationFlow template delete: ${innovationFlowTemplate.id}`
-    );
-    const templatesSet = innovationFlowTemplate.templatesSet;
-    if (!templatesSet) {
-      throw new RelationshipNotFoundException(
-        `Unable to load TemplatesSet for innovation flow template: ${innovationFlowTemplate.id}`,
-        LogContext.TEMPLATES
-      );
-    }
-    return await this.templatesSetService.deleteInnovationFlowTemplate(
-      innovationFlowTemplate,
-      templatesSet
-    );
   }
 }

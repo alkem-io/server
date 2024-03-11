@@ -1,6 +1,6 @@
 import { Space } from '@domain/challenge/space/space.entity';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
-import { Opportunity } from '@domain/collaboration/opportunity';
+import { Opportunity } from '@domain/challenge/opportunity';
 import { RolesResultSpace } from '../dto/roles.dto.result.space';
 import { RolesResultCommunity } from '../dto/roles.dto.result.community';
 import { CredentialMap } from './group.credentials.by.entity';

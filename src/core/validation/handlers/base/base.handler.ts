@@ -22,7 +22,7 @@ import {
 import {
   CreateOpportunityInput,
   UpdateOpportunityInput,
-} from '@domain/collaboration/opportunity/dto';
+} from '@domain/challenge/opportunity/dto';
 import {
   CreateUserGroupInput,
   UpdateUserGroupInput,
@@ -63,11 +63,7 @@ import {
 import { VisualUploadImageInput } from '@domain/common/visual/dto/visual.dto.upload.image';
 import { CreateInvitationExistingUserOnCommunityInput } from '@domain/community/community/dto/community.dto.invite.existing.user';
 import { CreateInvitationExternalUserOnCommunityInput } from '@domain/community/community/dto/community.dto.invite.external.user';
-import { InnovationFlowEvent } from '@domain/challenge/innovation-flow/dto/innovation.flow.dto.event';
-import {
-  UpdateInnovationFlowInput,
-  UpdateInnovationFlowLifecycleTemplateInput,
-} from '@domain/challenge/innovation-flow';
+import { UpdateInnovationFlowInput } from '@domain/collaboration/innovation-flow';
 import {
   CreateCalloutFramingInput,
   UpdateCalloutFramingInput,
@@ -89,6 +85,8 @@ import {
   UpdateLinkInput,
 } from '@domain/collaboration/link/dto';
 import { UpdateUserPlatformSettingsInput } from '@domain/community/user/dto/user.dto.update.platform.settings';
+import { UpdateInnovationFlowStateInput } from '@domain/collaboration/innovation-flow-states/dto/innovation.flow.state.dto.update';
+import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
 
 export class BaseHandler extends AbstractHandler {
   public async handle(
@@ -97,9 +95,7 @@ export class BaseHandler extends AbstractHandler {
   ): Promise<ValidationError[]> {
     const types: Function[] = [
       ApplicationEventInput,
-      InnovationFlowEvent,
       UpdateInnovationFlowInput,
-      UpdateInnovationFlowLifecycleTemplateInput,
       RoomSendMessageInput,
       OrganizationVerificationEventInput,
       ProjectEventInput,
@@ -109,6 +105,7 @@ export class BaseHandler extends AbstractHandler {
       CreateActorGroupInput,
       CreateActorInput,
       CreateContributionOnCalloutInput,
+      CreateCollaborationInput,
       CreateDocumentInput,
       CreateCalloutTemplateInput,
       CreateCalloutTemplateOnTemplatesSetInput,
@@ -144,6 +141,7 @@ export class BaseHandler extends AbstractHandler {
       UpdateLicenseInput,
       UpdateLinkInput,
       UpdateCalendarEventInput,
+      UpdateInnovationFlowStateInput,
       UpdateUserGroupInput,
       UpdateUserInput,
       UpdateUserPlatformSettingsInput,

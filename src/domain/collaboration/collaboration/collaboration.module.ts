@@ -21,6 +21,8 @@ import { TagsetTemplateSetModule } from '@domain/common/tagset-template-set/tags
 import { TimelineModule } from '@domain/timeline/timeline/timeline.module';
 import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
 import { LicenseModule } from '@domain/license/license/license.module';
+import { InnovationFlowModule } from '../innovation-flow/innovation.flow.module';
+import { SpaceDefaultsModule } from '@domain/challenge/space.defaults/space.defaults.module';
 
 @Module({
   imports: [
@@ -39,6 +41,8 @@ import { LicenseModule } from '@domain/license/license/license.module';
     PostModule,
     TimelineModule,
     TagsetTemplateSetModule,
+    InnovationFlowModule,
+    SpaceDefaultsModule,
     LicenseModule,
     TypeOrmModule.forFeature([Collaboration]),
   ],
