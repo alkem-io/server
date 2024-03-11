@@ -5,7 +5,7 @@ import { Client as ElasticClient } from '@elastic/elasticsearch';
 import { ELASTICSEARCH_CLIENT_PROVIDER } from '@common/constants';
 import { Space } from '@domain/challenge/space/space.entity';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
-import { Opportunity } from '@domain/collaboration/opportunity';
+import { Opportunity } from '@domain/challenge/opportunity/opportunity.entity';
 import { Organization } from '@domain/community/organization';
 import { User } from '@domain/community/user';
 import { ErrorCause } from '@elastic/elasticsearch/lib/api/types';

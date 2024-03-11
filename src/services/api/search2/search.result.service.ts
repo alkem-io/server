@@ -9,7 +9,7 @@ import { ISearchResultChallenge } from '@services/api/search/dto/search.result.d
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { ISpace } from '@domain/challenge/space/space.interface';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
-import { IOpportunity, Opportunity } from '@domain/collaboration/opportunity';
+import { IOpportunity, Opportunity } from '@domain/challenge/opportunity';
 import { BaseException } from '@common/exceptions/base.exception';
 import {
   AlkemioErrorStatus,
