@@ -1,6 +1,6 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, In, Repository } from 'typeorm';
+import { EntityManager, In, Not, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { Activity } from './activity.entity';
@@ -79,6 +79,7 @@ export class ActivityService {
     }
   ): Promise<IActivity[]> {
     const { types, visibility = true, limit, userID } = options ?? {};
+
     return this.activityRepository.find({
       where: {
         collaborationID: In(collaborationIDs),
@@ -101,6 +102,8 @@ export class ActivityService {
       userID?: string;
       orderBy?: 'ASC' | 'DESC';
       paginationArgs?: PaginationArgs;
+      onlyUnique?: boolean;
+      excludeTypes?: ActivityEventType[];
     }
   ) {
     const {
@@ -109,6 +112,8 @@ export class ActivityService {
       userID,
       orderBy = 'DESC',
       paginationArgs = {},
+      onlyUnique = false,
+      excludeTypes,
     } = options ?? {};
 
     const qb = this.activityRepository.createQueryBuilder('activity');
@@ -118,12 +123,26 @@ export class ActivityService {
       visibility: visibility,
     });
 
-    if (types && types.length > 0) {
-      qb.andWhere({ type: In(types) });
-    }
-
     if (userID) {
       qb.andWhere({ triggeredBy: userID });
+    }
+
+    if (excludeTypes && excludeTypes.length > 0) {
+      qb.andWhere({
+        type: Not(In(excludeTypes)),
+      });
+    }
+
+    if (types && types.length > 0) {
+      const filteredTypes =
+        excludeTypes && excludeTypes.length > 0
+          ? types.filter(type => !excludeTypes.includes(type))
+          : types;
+      qb.andWhere({ type: In(filteredTypes) });
+    }
+
+    if (onlyUnique) {
+      qb.groupBy('activity.resourceID, activity.triggeredBy, activity.type');
     }
 
     return getPaginationResults(qb, paginationArgs, orderBy);
@@ -179,6 +198,7 @@ export class ActivityService {
     const collaborationRepository: Repository<Collaboration> =
       this.entityManager.getRepository(Collaboration);
 
+    // Filter the collaborations that still exist
     const collaborations: Collaboration[] = await collaborationRepository
       .createQueryBuilder('collaboration')
       .select()
