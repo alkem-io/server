@@ -38,4 +38,10 @@ export class ActivityFeedQueryArgs {
       'Group activity events per entity and activity event type and return the latest.',
   })
   onlyUnique?: boolean;
+
+  @Field(() => [ActivityEventType], {
+    nullable: true,
+    description: 'What events to exclude.',
+  })
+  excludeTypes?: Array<ActivityEventType>;
 }

@@ -9,10 +9,7 @@ import { CreateActivityInput } from './dto/activity.dto.create';
 import { ensureMaxLength } from '@common/utils';
 import { SMALL_TEXT_LENGTH } from '@common/constants';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import {
-  ACTIVITY_UPDATE_EVENTS,
-  ActivityEventType,
-} from '@common/enums/activity.event.type';
+import { ActivityEventType } from '@common/enums/activity.event.type';
 import { PaginationArgs } from '@core/pagination';
 import { getPaginationResults } from '@core/pagination/pagination.fn';
 import { Collaboration } from '@domain/collaboration/collaboration';
@@ -106,6 +103,7 @@ export class ActivityService {
       orderBy?: 'ASC' | 'DESC';
       paginationArgs?: PaginationArgs;
       onlyUnique?: boolean;
+      excludeTypes?: ActivityEventType[];
     }
   ) {
     const {
@@ -115,6 +113,7 @@ export class ActivityService {
       orderBy = 'DESC',
       paginationArgs = {},
       onlyUnique = false,
+      excludeTypes,
     } = options ?? {};
 
     const qb = this.activityRepository.createQueryBuilder('activity');
@@ -128,16 +127,17 @@ export class ActivityService {
       qb.andWhere({ triggeredBy: userID });
     }
 
-    if (!onlyUnique) {
+    if (excludeTypes && excludeTypes.length > 0) {
       qb.andWhere({
-        type: Not(In(ACTIVITY_UPDATE_EVENTS)),
+        type: Not(In(excludeTypes)),
       });
     }
 
     if (types && types.length > 0) {
-      const filteredTypes = !onlyUnique
-        ? types.filter(type => !ACTIVITY_UPDATE_EVENTS.includes(type))
-        : types;
+      const filteredTypes =
+        excludeTypes && excludeTypes.length > 0
+          ? types.filter(type => !excludeTypes.includes(type))
+          : types;
       qb.andWhere({ type: In(filteredTypes) });
     }
 
