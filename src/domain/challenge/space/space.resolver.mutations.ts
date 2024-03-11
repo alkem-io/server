@@ -35,7 +35,6 @@ import { ContributionReporterService } from '@services/external/elasticsearch/co
 import { NameReporterService } from '@services/external/elasticsearch/name-reporter/name.reporter.service';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { LogContext } from '@common/enums';
-import { ISpaceDefaults } from '../space.defaults/space.defaults.interface';
 
 @Resolver()
 export class SpaceResolverMutations {
@@ -132,10 +131,7 @@ export class SpaceResolverMutations {
 
     return updatedSpace;
   }
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => ISpaceDefaults, {
-    description: 'Updates the specified SpaceDefaults.',
-  })
+
   @UseGuards(GraphqlGuard)
   @Mutation(() => ISpace, {
     description:
