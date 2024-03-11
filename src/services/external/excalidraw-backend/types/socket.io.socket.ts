@@ -7,6 +7,7 @@ import {
   DISCONNECT,
   DISCONNECTING,
   IDLE_STATE,
+  SCENE_INIT,
   JOIN_ROOM,
   NEW_USER,
   ROOM_USER_CHANGE,
@@ -16,6 +17,7 @@ import {
 
 type ListenEvents = {
   [JOIN_ROOM]: (roomId: string) => void;
+  [SCENE_INIT]: (roomId: string, data: ArrayBuffer) => void;
   [SERVER_BROADCAST]: (roomId: string, data: ArrayBuffer) => void;
   [SERVER_VOLATILE_BROADCAST]: (roomId: string, data: ArrayBuffer) => void;
   [IDLE_STATE]: (roomId: string, data: ArrayBuffer) => void;

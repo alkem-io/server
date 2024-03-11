@@ -7,6 +7,7 @@ import { ContributionReporterModule } from '@services/external/elasticsearch/con
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { ExcalidrawRedisServerFactoryProvider } from './adapters/redis';
 import { ExcalidrawServer } from './excalidraw.server';
+import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { ExcalidrawServer } from './excalidraw.server';
     AuthorizationModule,
     ContributionReporterModule,
     EntityResolverModule,
+    ActivityAdapterModule,
   ],
   providers: [
     ExcalidrawRedisServerFactoryProvider,
