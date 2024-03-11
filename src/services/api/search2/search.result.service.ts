@@ -1,7 +1,7 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager, In } from 'typeorm';
-import { groupBy } from 'lodash';
+import { groupBy, union } from 'lodash';
 import { Space } from '@domain/challenge/space/space.entity';
 import { ISearchResult } from '@services/api/search/dto/search.result.entry.interface';
 import { ISearchResultSpace } from '@services/api/search/dto/search.result.dto.entry.space';
@@ -13,6 +13,7 @@ import { IOpportunity, Opportunity } from '@domain/collaboration/opportunity';
 import { BaseException } from '@common/exceptions/base.exception';
 import {
   AlkemioErrorStatus,
+  AuthorizationCredential,
   AuthorizationPrivilege,
   LogContext,
 } from '@common/enums';
@@ -29,6 +30,8 @@ import { Callout, ICallout } from '@domain/collaboration/callout';
 import { AgentInfo } from '@core/authentication';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { UserService } from '@domain/community/user/user.service';
+import { OrganizationService } from '@domain/community/organization/organization.service';
 
 export type PostParents = {
   callout: ICallout;
@@ -47,34 +50,52 @@ export type PostParentIDs = {
 @Injectable()
 export class SearchResultService {
   constructor(
-    @InjectEntityManager()
-    private readonly entityManager: EntityManager,
-    private readonly authorizationService: AuthorizationService,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService
+    @InjectEntityManager() private entityManager: EntityManager,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService,
+    private authorizationService: AuthorizationService,
+    private userService: UserService,
+    private organizationService: OrganizationService
   ) {}
 
+  /**
+   * Resolves search results by authorizing and enriching them with data.
+   * @param rawSearchResults The raw search results from the search engine.
+   * @param agentInfo The agent info of the user making the search request.
+   * @param spaceId The space ID to filter the search results by.
+   */
   public async resolveSearchResults(
     rawSearchResults: ISearchResult[],
-    agentInfo: AgentInfo
+    agentInfo: AgentInfo,
+    spaceId?: string
   ): Promise<ISearchResults> {
     const groupedResults = groupBy(rawSearchResults, 'type');
     // authorize entities with requester and enrich with data
     const [spaces, challenges, opportunities, users, organizations, posts] =
       await Promise.all([
-        this.getSpaceSearchResults(groupedResults.space ?? [], agentInfo),
+        this.getSpaceSearchResults(
+          groupedResults.space ?? [],
+          agentInfo,
+          spaceId
+        ),
         this.getChallengeSearchResults(
           groupedResults.challenge ?? [],
-          agentInfo
+          agentInfo,
+          spaceId
         ),
         this.getOpportunitySearchResults(
           groupedResults.opportunity ?? [],
-          agentInfo
+          agentInfo,
+          spaceId
         ),
-        this.getUserSearchResults(groupedResults.user ?? [], agentInfo),
+        this.getUserSearchResults(
+          groupedResults.user ?? [],
+          agentInfo,
+          spaceId
+        ),
         this.getOrganizationSearchResults(
           groupedResults.organization ?? [],
-          agentInfo
+          agentInfo,
+          spaceId
         ),
         this.getPostSearchResults(groupedResults.post ?? [], agentInfo),
       ]);
@@ -93,10 +114,19 @@ export class SearchResultService {
   // todo: heavy copy-pasting below: must be refactored
   public async getSpaceSearchResults(
     rawSearchResults: ISearchResult[],
-    agentInfo: AgentInfo
+    agentInfo: AgentInfo,
+    spaceId?: string
   ): Promise<ISearchResultSpace[]> {
     if (rawSearchResults.length === 0) {
       return [];
+    }
+
+    if (spaceId) {
+      const space = await this.entityManager.findOneByOrFail(Space, {
+        id: spaceId,
+      });
+
+      return [{ ...rawSearchResults[0], space }];
     }
 
     const spaceIds = rawSearchResults.map(hit => hit.result.id);
@@ -140,7 +170,8 @@ export class SearchResultService {
 
   public async getChallengeSearchResults(
     rawSearchResults: ISearchResult[],
-    agentInfo: AgentInfo
+    agentInfo: AgentInfo,
+    spaceId?: string
   ): Promise<ISearchResultChallenge[]> {
     if (rawSearchResults.length === 0) {
       return [];
@@ -149,7 +180,7 @@ export class SearchResultService {
     const challengeIds = rawSearchResults.map(hit => hit.result.id);
 
     const challenges = await this.entityManager.find(Challenge, {
-      where: { id: In(challengeIds) },
+      where: { id: In(challengeIds), spaceID: spaceId },
       relations: { parentSpace: true },
       select: { parentSpace: { id: true } },
     });
@@ -202,7 +233,8 @@ export class SearchResultService {
 
   public async getOpportunitySearchResults(
     rawSearchResults: ISearchResult[],
-    agentInfo: AgentInfo
+    agentInfo: AgentInfo,
+    spaceId?: string
   ): Promise<ISearchResultChallenge[]> {
     if (rawSearchResults.length === 0) {
       return [];
@@ -211,7 +243,7 @@ export class SearchResultService {
     const opportunityIds = rawSearchResults.map(hit => hit.result.id);
 
     const opportunities = await this.entityManager.find(Opportunity, {
-      where: { id: In(opportunityIds) },
+      where: { id: In(opportunityIds), spaceID: spaceId },
       relations: { challenge: { parentSpace: true } },
       select: { challenge: { id: true, parentSpace: { id: true } } },
     });
@@ -280,16 +312,19 @@ export class SearchResultService {
 
   public async getUserSearchResults(
     rawSearchResults: ISearchResult[],
-    agentInfo: AgentInfo
+    agentInfo: AgentInfo,
+    spaceId?: string
   ): Promise<ISearchResultUser[]> {
     if (rawSearchResults.length === 0) {
       return [];
     }
 
-    const userIds = rawSearchResults.map(hit => hit.result.id);
+    const usersFromSearch = rawSearchResults.map(hit => hit.result.id);
+    const usersInSpace = spaceId ? await this.getUsersInSpace(spaceId) : [];
+    const userIdsUnion = union(usersFromSearch, usersInSpace);
 
     const users = await this.entityManager.findBy(User, {
-      id: In(userIds),
+      id: In(userIdsUnion),
     });
 
     return users
@@ -306,7 +341,7 @@ export class SearchResultService {
           );
           return undefined;
         }
-        // is that needed?
+        // todo: is that needed?
         if (
           !this.authorizationService.isAccessGranted(
             agentInfo,
@@ -327,16 +362,21 @@ export class SearchResultService {
 
   public async getOrganizationSearchResults(
     rawSearchResults: ISearchResult[],
-    agentInfo: AgentInfo
+    agentInfo: AgentInfo,
+    spaceId?: string
   ): Promise<ISearchResultOrganization[]> {
     if (rawSearchResults.length === 0) {
       return [];
     }
 
-    const orgIds = rawSearchResults.map(hit => hit.result.id);
+    const orgsInSearch = rawSearchResults.map(hit => hit.result.id);
+    const orgsInSpace = spaceId
+      ? await this.getOrganizationsInSpace(spaceId)
+      : [];
+    const orgIdsUnion = union(orgsInSearch, orgsInSpace);
 
     const organizations = await this.entityManager.findBy(Organization, {
-      id: In(orgIds),
+      id: In(orgIdsUnion),
     });
 
     return organizations
@@ -489,5 +529,50 @@ export class SearchResultService {
     }
 
     return { challenge, opportunity, callout, space };
+  }
+
+  private async getUsersInSpace(spaceId: string): Promise<string[]> {
+    const usersFilter = [];
+
+    const membersInSpace = await this.userService.usersWithCredentials({
+      type: AuthorizationCredential.SPACE_MEMBER,
+      resourceID: spaceId,
+    });
+    usersFilter.push(...membersInSpace.map(user => user.id));
+
+    const adminsInSpace = await this.userService.usersWithCredentials({
+      type: AuthorizationCredential.SPACE_ADMIN,
+      resourceID: spaceId,
+    });
+    usersFilter.push(...adminsInSpace.map(user => user.id));
+
+    return usersFilter;
+  }
+
+  private async getOrganizationsInSpace(spaceId: string): Promise<string[]> {
+    const orgsInSpace = [];
+
+    const membersInSpace =
+      await this.organizationService.organizationsWithCredentials({
+        type: AuthorizationCredential.SPACE_MEMBER,
+        resourceID: spaceId,
+      });
+    orgsInSpace.push(...membersInSpace.map(org => org.id));
+
+    const adminsInSpace =
+      await this.organizationService.organizationsWithCredentials({
+        type: AuthorizationCredential.SPACE_ADMIN,
+        resourceID: spaceId,
+      });
+    orgsInSpace.push(...adminsInSpace.map(org => org.id));
+
+    const leadsInSpace =
+      await this.organizationService.organizationsWithCredentials({
+        type: AuthorizationCredential.SPACE_HOST,
+        resourceID: spaceId,
+      });
+    orgsInSpace.push(...leadsInSpace.map(org => org.id));
+
+    return orgsInSpace;
   }
 }

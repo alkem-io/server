@@ -24,7 +24,8 @@ export class Search2Service {
     );
     return this.searchResultService.resolveSearchResults(
       searchResults,
-      agentInfo
+      agentInfo,
+      searchData.searchInSpaceFilter
     );
   }
 }

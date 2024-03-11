@@ -54,9 +54,9 @@ export class SearchExtractService {
 
   constructor(
     @Inject(ELASTICSEARCH_CLIENT_PROVIDER)
-    private readonly elasticClient: ElasticClient | undefined,
+    private elasticClient: ElasticClient | undefined,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService
+    private logger: LoggerService
   ) {
     this.client = elasticClient!;
   }
@@ -90,7 +90,7 @@ export class SearchExtractService {
             },
           ],
           filter: searchData.searchInSpaceFilter
-            ? [{ match: { spaceId: searchData.searchInSpaceFilter } }]
+            ? [{ match: { spaceID: searchData.searchInSpaceFilter } }]
             : undefined,
         },
       },

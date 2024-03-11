@@ -385,7 +385,7 @@ export class SearchIngestService {
               }
               spacePosts.push({
                 ...contribution.post,
-                spaceId: space.id,
+                spaceID: space.id,
                 profile: {
                   ...contribution.post.profile,
                   tagsets: undefined,
@@ -405,8 +405,8 @@ export class SearchIngestService {
                 }
                 challengePosts.push({
                   ...contribution.post,
-                  spaceId: space.id,
-                  challengeId: challenge.id,
+                  spaceID: space.id,
+                  challengeID: challenge.id,
                   profile: {
                     ...contribution.post.profile,
                     tagsets: undefined,
@@ -429,9 +429,9 @@ export class SearchIngestService {
                   }
                   opportunityPosts.push({
                     ...contribution.post,
-                    spaceId: space.id,
-                    challengeId: challenge.id,
-                    opportunityId: opportunity.id,
+                    spaceID: space.id,
+                    challengeID: challenge.id,
+                    opportunityID: opportunity.id,
                     profile: {
                       ...contribution.post.profile,
                       tagsets: undefined,
