@@ -520,17 +520,9 @@ export class ExcalidrawServer {
     agentInfo: AgentInfo,
     whiteboardId: string
   ) {
-    const whiteboard = await this.whiteboardService.getWhiteboardOrFail(
-      whiteboardId,
-      {
-        relations: {
-          profile: true,
-        },
-      }
-    );
     this.activityAdapter.calloutWhiteboardContentModified({
       triggeredBy: agentInfo.userID,
-      whiteboard: whiteboard,
+      whiteboardId,
     });
   }
 }

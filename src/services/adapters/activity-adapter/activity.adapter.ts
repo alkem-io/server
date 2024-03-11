@@ -29,6 +29,7 @@ import { stringifyWithoutAuthorization } from '@common/utils/stringify.util';
 import { ActivityInputCalloutLinkCreated } from './dto/activity.dto.input.callout.link.created';
 import { ActivityInputCalendarEventCreated } from './dto/activity.dto.input.calendar.event.created';
 import { TimelineResolverService } from '@services/infrastructure/entity-resolver/timeline.resolver.service';
+import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
 
 @Injectable()
 export class ActivityAdapter {
@@ -40,6 +41,8 @@ export class ActivityAdapter {
     private calloutRepository: Repository<Callout>,
     @InjectRepository(Collaboration)
     private collaborationRepository: Repository<Collaboration>,
+    @InjectRepository(Whiteboard)
+    private whiteboardRepository: Repository<Whiteboard>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private readonly graphqlSubscriptionService: SubscriptionPublishService,
@@ -264,15 +267,19 @@ export class ActivityAdapter {
     const eventType = ActivityEventType.CALLOUT_WHITEBOARD_CONTENT_MODIFIED;
     this.logEventTriggered(eventData, eventType);
 
-    const whiteboard = eventData.whiteboard;
+    const whiteboardDisplayName = await this.getWhiteboardDisplayName(
+      eventData.whiteboardId
+    );
     const parentEntities =
-      await this.getCollaborationIdWithCalloutIdForWhiteboard(whiteboard.id);
+      await this.getCollaborationIdWithCalloutIdForWhiteboard(
+        eventData.whiteboardId
+      );
 
-    const description = `[${whiteboard.profile.displayName}]`;
+    const description = `[${whiteboardDisplayName}]`;
     const activity = await this.activityService.createActivity({
       triggeredBy: eventData.triggeredBy,
       collaborationID: parentEntities.collaborationID,
-      resourceID: whiteboard.id,
+      resourceID: eventData.whiteboardId,
       parentID: parentEntities.calloutID,
       description: description,
       type: eventType,
@@ -495,6 +502,23 @@ export class ActivityAdapter {
       );
     }
     return collaboration.id;
+  }
+
+  private async getWhiteboardDisplayName(
+    whiteboardID: string
+  ): Promise<string> {
+    const whiteboard = await this.whiteboardRepository
+      .createQueryBuilder('whiteboard')
+      .leftJoinAndSelect('whiteboard.profile', 'profile')
+      .where({ id: whiteboardID })
+      .getOne();
+    if (!whiteboard) {
+      throw new EntityNotFoundException(
+        `Unable to identify Whiteboard with ID: ${whiteboardID}`,
+        LogContext.ACTIVITY
+      );
+    }
+    return whiteboard.profile.displayName;
   }
 
   private async getCollaborationIdWithCalloutIdForWhiteboard(
