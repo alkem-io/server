@@ -59,10 +59,7 @@ export class ActivityLogService {
     const rawActivities =
       await this.activityService.getActivityForCollaborations(
         [queryData.collaborationID, ...childCollaborations],
-        {
-          types: queryData.types,
-          deDuplicateActivityEvents: queryData.deDuplicateActivityEvents,
-        }
+        { types: queryData.types }
       );
 
     const updatedChildActivities = rawActivities.map(x =>

@@ -78,35 +78,23 @@ export class ActivityService {
       types?: ActivityEventType[];
       limit?: number;
       visibility?: boolean;
-      deDuplicateActivityEvents?: boolean;
+      userID?: string;
     }
   ): Promise<IActivity[]> {
-    const {
-      types,
-      visibility = true,
-      limit,
-      deDuplicateActivityEvents = false,
-    } = options ?? {};
-    const qb = this.activityRepository.createQueryBuilder('activity');
+    const { types, visibility = true, limit, userID } = options ?? {};
 
-    qb.where({
-      collaborationID: In(collaborationIDs),
-      visibility: visibility,
+    return this.activityRepository.find({
+      where: {
+        collaborationID: In(collaborationIDs),
+        visibility: visibility,
+        type: types && types.length > 0 ? In(types) : undefined,
+        triggeredBy: userID,
+      },
+      order: {
+        createdDate: 'DESC',
+      },
+      take: limit,
     });
-
-    if (types && types.length > 0) {
-      qb.andWhere({ type: In(types) });
-    }
-
-    if (deDuplicateActivityEvents) {
-      qb.groupBy('activity.resourceID, activity.triggeredBy, activity.type');
-    }
-
-    qb.orderBy({
-      'activity.createdDate': 'DESC',
-    });
-
-    return qb.limit(limit).getMany();
   }
 
   public async getPaginatedActivity(
@@ -117,8 +105,7 @@ export class ActivityService {
       userID?: string;
       orderBy?: 'ASC' | 'DESC';
       paginationArgs?: PaginationArgs;
-      deDuplicateActivityEvents?: boolean;
-      excludeUpdateActivityEvents?: boolean;
+      onlyUnique?: boolean;
     }
   ) {
     const {
@@ -127,8 +114,7 @@ export class ActivityService {
       userID,
       orderBy = 'DESC',
       paginationArgs = {},
-      deDuplicateActivityEvents = false,
-      excludeUpdateActivityEvents = false,
+      onlyUnique = false,
     } = options ?? {};
 
     const qb = this.activityRepository.createQueryBuilder('activity');
@@ -142,20 +128,20 @@ export class ActivityService {
       qb.andWhere({ triggeredBy: userID });
     }
 
-    if (excludeUpdateActivityEvents) {
+    if (!onlyUnique) {
       qb.andWhere({
         type: Not(In(ACTIVITY_UPDATE_EVENTS)),
       });
     }
 
     if (types && types.length > 0) {
-      const filteredTypes = excludeUpdateActivityEvents
+      const filteredTypes = !onlyUnique
         ? types.filter(type => !ACTIVITY_UPDATE_EVENTS.includes(type))
         : types;
       qb.andWhere({ type: In(filteredTypes) });
     }
 
-    if (deDuplicateActivityEvents) {
+    if (onlyUnique) {
       qb.groupBy('activity.resourceID, activity.triggeredBy, activity.type');
     }
 

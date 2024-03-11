@@ -26,8 +26,7 @@ type ActivityFeedFilters = {
   spaceIds?: Array<string>;
   roles?: Array<ActivityFeedRoles>;
   pagination?: PaginationArgs;
-  deDuplicateActivityEvents?: boolean;
-  excludeUpdateActivityEvents?: boolean;
+  onlyUnique?: boolean;
 };
 
 @Injectable()
@@ -50,8 +49,7 @@ export class ActivityFeedService {
       types = [],
       myActivity = false,
       pagination: paginationArgs = {},
-      deDuplicateActivityEvents = false,
-      excludeUpdateActivityEvents = false,
+      onlyUnique = false,
       ...qualifyingSpacesOptions
     } = filters ?? {};
     // get all Spaces the user has credentials for
@@ -71,8 +69,7 @@ export class ActivityFeedService {
       visibility: true,
       paginationArgs,
       sort: 'DESC', // the most recent first
-      deDuplicateActivityEvents,
-      excludeUpdateActivityEvents,
+      onlyUnique,
     });
   }
 
@@ -135,8 +132,7 @@ export class ActivityFeedService {
       userID?: string;
       sort?: 'ASC' | 'DESC';
       paginationArgs?: PaginationArgs;
-      deDuplicateActivityEvents?: boolean;
-      excludeUpdateActivityEvents?: boolean;
+      onlyUnique?: boolean;
     }
   ) {
     const rawPaginatedActivities =

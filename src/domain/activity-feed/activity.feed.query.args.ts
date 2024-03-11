@@ -35,13 +35,7 @@ export class ActivityFeedQueryArgs {
   @Field(() => Boolean, {
     nullable: true,
     description:
-      'De-duplicates activity events per entity and activity event type.',
+      'Group activity events per entity and activity event type and return the latest.',
   })
-  deDuplicateActivityEvents?: boolean;
-
-  @Field(() => Boolean, {
-    nullable: true,
-    description: 'Option to exclude update activity events.',
-  })
-  excludeUpdateActivityEvents?: boolean;
+  onlyUnique?: boolean;
 }
