@@ -12,12 +12,12 @@ import { GraphqlGuard } from '@core/authorization';
 import {
   CreateOpportunityInput,
   IOpportunity,
-} from '@domain/collaboration/opportunity';
+} from '@domain/challenge/opportunity';
 import { AuthorizationPrivilege } from '@common/enums';
 import { AgentInfo } from '@core/authentication';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { ChallengeAuthorizationService } from '@domain/challenge/challenge/challenge.service.authorization';
-import { OpportunityAuthorizationService } from '@domain/collaboration/opportunity/opportunity.service.authorization';
+import { OpportunityAuthorizationService } from '@domain/challenge/opportunity/opportunity.service.authorization';
 import { IChallenge } from './challenge.interface';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { CreateChallengeOnChallengeInput } from './dto/challenge.dto.create.in.challenge';
@@ -88,12 +88,12 @@ export class ChallengeResolverMutations {
     );
 
     // For the creation based on the template from another challenge require platform admin privileges
-    if (opportunityData.collaborationTemplateOpportunityID) {
+    if (opportunityData.collaborationData?.collaborationTemplateID) {
       await this.authorizationService.grantAccessOrFail(
         agentInfo,
         challenge.authorization,
         AuthorizationPrivilege.CREATE,
-        `opportunityCreate using challenge template: ${challenge.nameID} - ${opportunityData.collaborationTemplateOpportunityID}`
+        `opportunityCreate using challenge template: ${challenge.nameID} - ${opportunityData.collaborationData.collaborationTemplateID}`
       );
     }
     const opportunity = await this.challengeService.createOpportunity(

@@ -35,6 +35,8 @@ import { ContributionReporterService } from '@services/external/elasticsearch/co
 import { NameReporterService } from '@services/external/elasticsearch/name-reporter/name.reporter.service';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { LogContext } from '@common/enums';
+import { ISpaceDefaults } from '../space.defaults/space.defaults.interface';
+import { UpdateSpaceDefaultsInput } from './dto/space.dto.update.defaults';
 
 @Resolver()
 export class SpaceResolverMutations {
@@ -130,6 +132,31 @@ export class SpaceResolverMutations {
     }
 
     return updatedSpace;
+  }
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => ISpaceDefaults, {
+    description: 'Updates the specified SpaceDefaults.',
+  })
+  async updateSpaceDefaults(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('spaceDefaultsData')
+    spaceDefaultsData: UpdateSpaceDefaultsInput
+  ): Promise<ISpaceDefaults> {
+    const space = await this.spaceService.getSpaceOrFail(
+      spaceDefaultsData.spaceID,
+      {
+        relations: {
+          defaults: true,
+        },
+      }
+    );
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      space.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `update spaceDefaults: ${space.id}`
+    );
+    return await this.spaceService.updateSpaceDefaults(spaceDefaultsData);
   }
 
   @UseGuards(GraphqlGuard)
@@ -302,12 +329,12 @@ export class SpaceResolverMutations {
     );
 
     // For the creation based on the template from another challenge require platform admin privileges
-    if (challengeData.collaborationTemplateChallengeID) {
+    if (challengeData.collaborationData?.collaborationTemplateID) {
       await this.authorizationService.grantAccessOrFail(
         agentInfo,
         space.authorization,
         AuthorizationPrivilege.CREATE,
-        `challengeCreate using challenge template: ${space.nameID} - ${challengeData.collaborationTemplateChallengeID}`
+        `challengeCreate using challenge template: ${space.nameID} - ${challengeData.collaborationData.collaborationTemplateID}`
       );
     }
     const challenge = await this.spaceService.createChallengeInSpace(

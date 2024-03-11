@@ -422,36 +422,25 @@ export class UrlGeneratorService {
       );
     }
 
-    // Try challenge first
-    const challengeInfo = await this.getNameableEntityInfo(
-      'challenge',
-      'innovationFlowId',
-      innovationFlowInfo.entityID
+    const [collaborationInfo]: {
+      entityID: string;
+    }[] = await this.entityManager.connection.query(
+      `
+        SELECT collaboration.id as entityID FROM collaboration
+        WHERE collaboration.innovationFlowId = '${innovationFlowInfo.entityID}'
+      `
     );
-    if (challengeInfo) {
-      const challengeUrlPath = await this.getChallengeUrlPath(
-        this.FIELD_ID,
-        challengeInfo.entityID
+
+    if (collaborationInfo) {
+      const collaborationJourneyUrlPath = await this.getJourneyUrlPath(
+        'collaborationId',
+        collaborationInfo.entityID
       );
-      return `${challengeUrlPath}/innovation-flow`;
-    } else {
-      // try Opportunity
-      const opportunityInfo = await this.getNameableEntityInfo(
-        'opportunity',
-        'innovationFlowId',
-        innovationFlowInfo.entityID
-      );
-      if (opportunityInfo) {
-        const opportunityUrlPath = await this.getOpportunityUrlPath(
-          this.FIELD_ID,
-          opportunityInfo.entityID
-        );
-        return `${opportunityUrlPath}/innovation-flow`;
-      }
+      return `${collaborationJourneyUrlPath}/innovation-flow`;
     }
 
     throw new EntityNotFoundException(
-      `Unable to find challenge or opportunity for innovationFlow with ID: ${innovationFlowInfo.entityID}`,
+      `Unable to find collaboration for journey with innovationFlow with ID: ${innovationFlowInfo.entityID}`,
       LogContext.URL_GENERATOR
     );
   }

@@ -9,7 +9,7 @@ import {
   EntityNotInitializedException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
-import { OpportunityAuthorizationService } from '@domain/collaboration/opportunity/opportunity.service.authorization';
+import { OpportunityAuthorizationService } from '@domain/challenge/opportunity/opportunity.service.authorization';
 import { ChallengeService } from './challenge.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IChallenge } from './challenge.interface';
@@ -34,7 +34,6 @@ import {
   CREDENTIAL_RULE_COMMUNITY_ADD_MEMBER,
 } from '@common/constants';
 import { CommunityRole } from '@common/enums/community.role';
-import { InnovationFlowAuthorizationService } from '../innovation-flow/innovation.flow.service.authorization';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 import { ContextAuthorizationService } from '@domain/context/context/context.service.authorization';
 import { CommunityAuthorizationService } from '@domain/community/community/community.service.authorization';
@@ -54,7 +53,6 @@ export class ChallengeAuthorizationService {
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private preferenceSetService: PreferenceSetService,
     private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
-    private innovationFlowAuthorizationService: InnovationFlowAuthorizationService,
     private profileAuthorizationService: ProfileAuthorizationService,
     private contextAuthorizationService: ContextAuthorizationService,
     private communityAuthorizationService: CommunityAuthorizationService,
@@ -375,18 +373,16 @@ export class ChallengeAuthorizationService {
           childChallenges: true,
           storageAggregator: true,
           preferenceSet: true,
-          innovationFlow: true,
         },
       }
     );
     if (
       !challenge.opportunities ||
       !challenge.storageAggregator ||
-      !challenge.preferenceSet ||
-      !challenge.innovationFlow
+      !challenge.preferenceSet
     )
       throw new RelationshipNotFoundException(
-        `Unable to load child entities for challenge authorization: ${challenge.id} - ${challenge.opportunities} - ${challenge.storageAggregator} - ${challenge.innovationFlow}`,
+        `Unable to load child entities for challenge authorization: ${challenge.id} - ${challenge.opportunities} - ${challenge.storageAggregator}`,
         LogContext.CHALLENGES
       );
 
@@ -416,12 +412,6 @@ export class ChallengeAuthorizationService {
     challenge.preferenceSet =
       await this.preferenceSetAuthorizationService.applyAuthorizationPolicy(
         challenge.preferenceSet,
-        challenge.authorization
-      );
-
-    challenge.innovationFlow =
-      await this.innovationFlowAuthorizationService.applyAuthorizationPolicy(
-        challenge.innovationFlow,
         challenge.authorization
       );
 

@@ -378,13 +378,15 @@ export class SpaceAuthorizationService {
         storageAggregator: true,
         templatesSet: true,
         preferenceSet: true,
+        defaults: true,
       },
     });
     if (
       !space.challenges ||
       !space.storageAggregator ||
       !space.templatesSet ||
-      !space.preferenceSet
+      !space.preferenceSet ||
+      !space.defaults
     )
       throw new RelationshipNotFoundException(
         `Unable to load challenges or storage or templates or preferences for space ${space.id} `,
@@ -417,6 +419,12 @@ export class SpaceAuthorizationService {
     space.templatesSet =
       await this.templatesSetAuthorizationService.applyAuthorizationPolicy(
         space.templatesSet,
+        space.authorization
+      );
+
+    space.defaults.authorization =
+      this.authorizationPolicyService.inheritParentAuthorization(
+        space.defaults.authorization,
         space.authorization
       );
 

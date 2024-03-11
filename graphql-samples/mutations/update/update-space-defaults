@@ -1,0 +1,13 @@
+mutation updateSpaceDefaults($updateData: UpdateSpaceDefaultsInput!) {
+  updateSpaceDefaults(updateData: $updateData) {
+    id
+  }
+}
+
+Variables:
+{
+  "updateData": {
+    "spaceID": "uuid_nameid",
+    "innovationFlowTemplateID": "uuid"
+  }
+}

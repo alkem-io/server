@@ -4,6 +4,7 @@ import { IRelation } from '@domain/collaboration/relation/relation.interface';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { ITagsetTemplateSet } from '@domain/common/tagset-template-set';
 import { ITimeline } from '@domain/timeline/timeline/timeline.interface';
+import { IInnovationFlow } from '../innovation-flow/innovation.flow.interface';
 
 @ObjectType('Collaboration')
 export abstract class ICollaboration extends IAuthorizable {
@@ -22,4 +23,6 @@ export abstract class ICollaboration extends IAuthorizable {
   tagsetTemplateSet?: ITagsetTemplateSet;
 
   timeline?: ITimeline;
+
+  innovationFlow?: IInnovationFlow;
 }

@@ -9,7 +9,7 @@ import { CalloutModule } from '@domain/collaboration/callout/callout.module';
 import { PostModule } from '@domain/collaboration/post/post.module';
 import { WhiteboardModule } from '@domain/common/whiteboard/whiteboard.module';
 import { ChallengeModule } from '@domain/challenge/challenge/challenge.module';
-import { OpportunityModule } from '@domain/collaboration/opportunity/opportunity.module';
+import { OpportunityModule } from '@domain/challenge/opportunity/opportunity.module';
 import { SubscriptionServiceModule } from '@services/subscriptions/subscription-service';
 import { ActivityLogService } from './activity.log.service';
 import { ActivityLogResolverQueries } from './activity.log.resolver.queries';

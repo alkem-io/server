@@ -19,8 +19,8 @@ import {
   spaceCommunityApplicationForm,
   spaceCommunityPolicy,
 } from '@domain/challenge/space';
-import { IOpportunity } from '@domain/collaboration/opportunity/opportunity.interface';
-import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
+import { IOpportunity } from '@domain/challenge/opportunity/opportunity.interface';
+import { OpportunityService } from '@domain/challenge/opportunity/opportunity.service';
 import { IProject } from '@domain/collaboration/project/project.interface';
 import { ProjectService } from '@domain/collaboration/project/project.service';
 import { INVP, NVP } from '@domain/common/nvp';
@@ -53,7 +53,6 @@ import { PreferenceType } from '@common/enums/preference.type';
 import { ITemplatesSet } from '@domain/template/templates-set/templates.set.interface';
 import { TemplatesSetService } from '@domain/template/templates-set/templates.set.service';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
-import { InnovationFlowType } from '@common/enums/innovation.flow.type';
 import { UpdateSpacePlatformSettingsInput } from './dto/space.dto.update.platform.settings';
 import { SpacesQueryArgs } from './dto/space.args.query.spaces';
 import { SpaceVisibility } from '@common/enums/space.visibility';
@@ -61,7 +60,6 @@ import { SpaceFilterService } from '@services/infrastructure/space-filter/space.
 import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { IProfile } from '@domain/common/profile/profile.interface';
-import { IInnovationFlowTemplate } from '@domain/template/innovation-flow-template/innovation.flow.template.interface';
 import { InnovationHub, InnovationHubType } from '@domain/innovation-hub/types';
 import { OperationNotAllowedException } from '@common/exceptions/operation.not.allowed.exception';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
@@ -80,6 +78,9 @@ import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.a
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { ILicense } from '@domain/license/license/license.interface';
 import { LicenseService } from '@domain/license/license/license.service';
+import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
+import { UpdateSpaceDefaultsInput } from './dto/space.dto.update.defaults';
+import { ISpaceDefaults } from '../space.defaults/space.defaults.interface';
 import { SpaceMembershipCollaborationInfo } from '@services/api/me/space.membership.type';
 
 @Injectable()
@@ -98,6 +99,7 @@ export class SpaceService {
     private templatesSetService: TemplatesSetService,
     private storageAggregatorService: StorageAggregatorService,
     private collaborationService: CollaborationService,
+    private spaceDefaultsService: SpaceDefaultsService,
     private licenseService: LicenseService,
     @InjectRepository(Space)
     private spaceRepository: Repository<Space>,
@@ -111,8 +113,26 @@ export class SpaceService {
     await this.validateSpaceData(spaceData);
     const space: ISpace = Space.create(spaceData);
 
+    ///////////
+    // Create the contextual elements for the space
+
     space.storageAggregator =
       await this.storageAggregatorService.createStorageAggregator();
+
+    // The space library (templates set) and defaults are separate but related concepts
+    space.templatesSet = await this.templatesSetService.createTemplatesSet();
+    space.defaults = await this.spaceDefaultsService.createSpaceDefaults();
+
+    // And set the defaults
+    space.templatesSet =
+      await this.spaceDefaultsService.addDefaultTemplatesToSpace(
+        space.templatesSet,
+        space.storageAggregator
+      );
+    if (space.templatesSet.innovationFlowTemplates.length !== 0) {
+      space.defaults.innovationFlowTemplate =
+        space.templatesSet.innovationFlowTemplates[0];
+    }
 
     space.license = await this.licenseService.createLicense();
 
@@ -130,9 +150,9 @@ export class SpaceService {
       space.storageAggregator
     );
 
-    if (!space.collaboration) {
+    if (!space.collaboration || !space.storageAggregator) {
       throw new EntityNotInitializedException(
-        `Collaboration not initialized on Space: ${space.nameID}`,
+        `Space not fully initialized: ${space.nameID}`,
         LogContext.CHALLENGES
       );
     }
@@ -190,14 +210,6 @@ export class SpaceService {
       this.createPreferenceDefaults()
     );
 
-    space.templatesSet = await this.templatesSetService.createTemplatesSet(
-      {
-        minInnovationFlow: 1,
-      },
-      true,
-      space.storageAggregator
-    );
-
     // save before assigning host in case that fails
     const savedSpace = await this.spaceRepository.save(space);
 
@@ -234,6 +246,45 @@ export class SpaceService {
     );
 
     return await this.spaceRepository.save(space);
+  }
+
+  public async updateSpaceDefaults(
+    spaceDefaultsData: UpdateSpaceDefaultsInput
+  ): Promise<ISpaceDefaults> {
+    const space = await this.getSpaceOrFail(spaceDefaultsData.spaceID, {
+      relations: {
+        defaults: true,
+        templatesSet: {
+          innovationFlowTemplates: true,
+        },
+      },
+    });
+    if (
+      !space.defaults ||
+      !space.templatesSet ||
+      !space.templatesSet.innovationFlowTemplates
+    ) {
+      throw new RelationshipNotFoundException(
+        `Unable to load all required data to update the defaults on  Space ${space.id} `,
+        LogContext.CHALLENGES
+      );
+    }
+
+    // Verify that the specified template is in the space library
+    const template = space.templatesSet.innovationFlowTemplates.find(
+      t => t.id === spaceDefaultsData.flowTemplateID
+    );
+    if (!template) {
+      throw new NotSupportedException(
+        `InnovationFlowTemplate ID provided (${spaceDefaultsData.flowTemplateID}) is not part of the Library for the Space ${space.id} `,
+        LogContext.CHALLENGES
+      );
+    }
+
+    return await this.spaceDefaultsService.updateSpaceDefaults(
+      space.defaults,
+      template
+    );
   }
 
   public async updateSpacePlatformSettings(
@@ -291,6 +342,7 @@ export class SpaceService {
         profile: true,
         storageAggregator: true,
         license: { featureFlags: true },
+        defaults: true,
       },
     });
 
@@ -301,7 +353,8 @@ export class SpaceService {
       !space.profile ||
       !space.storageAggregator ||
       !space.license ||
-      !space.license?.featureFlags
+      !space.license?.featureFlags ||
+      !space.defaults
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load all entities for deletion of space ${space.id} `,
@@ -327,6 +380,7 @@ export class SpaceService {
 
     await this.storageAggregatorService.delete(space.storageAggregator.id);
     await this.licenseService.delete(space.license.id);
+    await this.spaceDefaultsService.deleteSpaceDefaults(space.defaults.id);
 
     const result = await this.spaceRepository.remove(space as Space);
     result.id = deleteData.ID;
@@ -1000,40 +1054,6 @@ export class SpaceService {
     );
   }
 
-  async getDefaultInnovationFlowTemplate(
-    spaceId: string,
-    lifecycleType: InnovationFlowType
-  ): Promise<IInnovationFlowTemplate> {
-    const space = await this.getSpaceOrFail(spaceId, {
-      relations: {
-        templatesSet: true,
-      },
-    });
-
-    if (!space.templatesSet)
-      throw new EntityNotInitializedException(
-        `Templates set for space: ${spaceId} not initialized`,
-        LogContext.CHALLENGES
-      );
-
-    const allInnovationFlowTemplates =
-      await this.templatesSetService.getInnovationFlowTemplates(
-        space.templatesSet
-      );
-
-    const selectableInnovationFlowTemplates = allInnovationFlowTemplates.filter(
-      x => x.type === lifecycleType
-    );
-
-    if (selectableInnovationFlowTemplates.length === 0)
-      throw new ValidationException(
-        `Could not find default innovation flow template of type ${lifecycleType} in space ${spaceId}`,
-        LogContext.CHALLENGES
-      );
-
-    return selectableInnovationFlowTemplates[0];
-  }
-
   async validateChallengeNameIdOrFail(proposedNameID: string, spaceID: string) {
     const nameAvailable = await this.namingService.isNameIdAvailableInSpace(
       proposedNameID,
@@ -1065,9 +1085,9 @@ export class SpaceService {
 
     // Update the challenge data being passed in to set the storage aggregator to use
     challengeData.storageAggregatorParent = space.storageAggregator;
+    challengeData.spaceID = space.id;
     const newChallenge = await this.challengeService.createChallenge(
       challengeData,
-      space.id,
       agentInfo
     );
 

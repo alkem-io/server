@@ -14,6 +14,4 @@ export abstract class ITemplatesSet extends IAuthorizable {
   whiteboardTemplates!: IWhiteboardTemplate[];
 
   innovationFlowTemplates!: IInnovationFlowTemplate[];
-
-  policy!: string;
 }

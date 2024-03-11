@@ -7,7 +7,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums';
 import { EntityNotFoundException } from '@common/exceptions';
 import { CreateTagsetTemplateInput } from '@domain/common/tagset-template/dto/tagset.template.dto.create';
-import { UpdateTagsetTemplateInput } from '@domain/common/tagset-template/dto/tagset.template.dto.update';
+import { UpdateTagsetTemplateDefinitionInput } from './dto/tagset.template.dto.update';
 
 @Injectable()
 export class TagsetTemplateService {
@@ -56,14 +56,10 @@ export class TagsetTemplateService {
     return result;
   }
 
-  async updateTagsetTemplate(
+  async updateTagsetTemplateDefinition(
     tagsetTemplate: ITagsetTemplate,
-    tagsetTemplateData: UpdateTagsetTemplateInput
+    tagsetTemplateData: UpdateTagsetTemplateDefinitionInput
   ): Promise<ITagsetTemplate> {
-    if (tagsetTemplateData.name) {
-      tagsetTemplate.name = tagsetTemplateData.name;
-    }
-
     if (tagsetTemplateData.allowedValues) {
       tagsetTemplate.allowedValues = tagsetTemplateData.allowedValues;
     }
