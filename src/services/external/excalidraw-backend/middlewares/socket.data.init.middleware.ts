@@ -11,7 +11,6 @@ export const socketDataInitMiddleware: SimpleMiddlewareHandler = (
   socket.data.read = false;
   socket.data.update = false;
   socket.data.session = undefined;
-  socket.data.roomId = '';
 
   next();
 };

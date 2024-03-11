@@ -16,6 +16,7 @@ import { AuthenticationService } from '@core/authentication/authentication.servi
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { WhiteboardService } from '@domain/common/whiteboard';
 import { WHITEBOARD_CONTENT_UPDATE } from '@domain/common/whiteboard/events/event.names';
+import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import {
@@ -62,8 +63,6 @@ import {
   minCollaboratorsInRoom,
   resetCollaboratorModeDebounceWait,
 } from './types/defaults';
-import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
-import { AgentInfo } from '@core/authentication';
 
 type SaveMessageOpts = { timeout: number };
 type RoomTimers = Map<string, NodeJS.Timer>;
@@ -245,7 +244,12 @@ export class ExcalidrawServer {
           this.startCollaboratorModeTimer(socket);
           // user can broadcast content change events
           socket.on(SERVER_BROADCAST, (roomID: string, data: ArrayBuffer) => {
-            serverBroadcastEventHandler(roomID, data, socket);
+            serverBroadcastEventHandler(
+              roomID,
+              data,
+              socket,
+              this.activityAdapter
+            );
             this.resetCollaboratorModeTimer(socket);
           });
           socket.on(SCENE_INIT, (roomID: string, data: ArrayBuffer) => {
@@ -295,11 +299,6 @@ export class ExcalidrawServer {
           await disconnectingEventHandler(this.wsServer, socket, this.logger)
       );
       socket.on(DISCONNECT, () => {
-        this.processActivityWhiteboardContentModified(
-          socket.data.agentInfo,
-          socket.data.roomId,
-          socket.data.lastContributed
-        );
         disconnectEventHandler(socket);
         this.deleteCollaboratorModeTimerForSocket(socket.id);
       });
@@ -520,23 +519,6 @@ export class ExcalidrawServer {
         LogContext.EXCALIDRAW_SERVER
       );
     }
-  }
-
-  private async processActivityWhiteboardContentModified(
-    agentInfo: AgentInfo,
-    whiteboardId: string,
-    lastContributionTimestamp: number
-  ) {
-    const windowEnd = Date.now();
-    const windowStart = windowEnd - this.contributionWindowMs;
-    if (
-      lastContributionTimestamp >= windowStart &&
-      windowEnd >= lastContributionTimestamp
-    )
-      this.activityAdapter.calloutWhiteboardContentModified({
-        triggeredBy: agentInfo.userID,
-        whiteboardId,
-      });
   }
 }
 // not that reliable, but best we can do
