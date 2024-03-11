@@ -41,6 +41,8 @@ import {
   SAVED,
   IDLE_STATE,
   COLLABORATOR_MODE,
+  SCENE_INIT,
+  CLIENT_BROADCAST,
 } from './types/event.names';
 import { CollaboratorModeReasons } from './types/collaboration.mode.reasons';
 import { RemoteSocketIoSocket, SocketIoSocket } from './types/socket.io.socket';
@@ -246,6 +248,9 @@ export class ExcalidrawServer {
             serverBroadcastEventHandler(roomID, data, socket);
             this.resetCollaboratorModeTimer(socket);
           });
+          socket.on(SCENE_INIT, (roomID: string, data: ArrayBuffer) => {
+            socket.broadcast.to(roomID).emit(CLIENT_BROADCAST, data);
+          });
         }
         this.logger.verbose?.(
           `User '${socket.data.agentInfo.userID}' read=${socket.data.read}, update=${socket.data.update}`,
@@ -292,7 +297,8 @@ export class ExcalidrawServer {
       socket.on(DISCONNECT, () => {
         this.processActivityWhiteboardContentModified(
           socket.data.agentInfo,
-          socket.data.roomId
+          socket.data.roomId,
+          socket.data.lastContributed
         );
         disconnectEventHandler(socket);
         this.deleteCollaboratorModeTimerForSocket(socket.id);
@@ -518,12 +524,19 @@ export class ExcalidrawServer {
 
   private async processActivityWhiteboardContentModified(
     agentInfo: AgentInfo,
-    whiteboardId: string
+    whiteboardId: string,
+    lastContributionTimestamp: number
   ) {
-    this.activityAdapter.calloutWhiteboardContentModified({
-      triggeredBy: agentInfo.userID,
-      whiteboardId,
-    });
+    const windowEnd = Date.now();
+    const windowStart = windowEnd - this.contributionWindowMs;
+    if (
+      lastContributionTimestamp >= windowStart &&
+      windowEnd >= lastContributionTimestamp
+    )
+      this.activityAdapter.calloutWhiteboardContentModified({
+        triggeredBy: agentInfo.userID,
+        whiteboardId,
+      });
   }
 }
 // not that reliable, but best we can do

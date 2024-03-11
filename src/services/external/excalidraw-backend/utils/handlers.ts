@@ -16,7 +16,6 @@ import {
 import { minCollaboratorsInRoom } from '../types/defaults';
 import { canUserRead, canUserUpdate, closeConnection } from './util';
 import { checkSession } from './check.session';
-import { ClientBroadcastPayloadType } from '../types/client.broadcast.payload.type';
 
 export const authorizeWithRoomAndJoinHandler = async (
   roomID: string,
@@ -127,12 +126,7 @@ export const serverBroadcastEventHandler = (
   socket: SocketIoSocket
 ) => {
   socket.broadcast.to(roomID).emit(CLIENT_BROADCAST, data);
-
-  const decodedData = new TextDecoder().decode(data);
-  const decryptedData = JSON.parse(decodedData);
-  if (decryptedData.type === ClientBroadcastPayloadType.SCENE_UPDATE) {
-    socket.data.lastContributed = Date.now();
-  }
+  socket.data.lastContributed = Date.now();
 };
 /*
 Built-in event for handling broadcast;
