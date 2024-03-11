@@ -5,6 +5,7 @@ import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { TagsetTemplateSet } from '@domain/common/tagset-template-set';
 import { Timeline } from '@domain/timeline/timeline/timeline.entity';
+import { InnovationFlow } from '../innovation-flow/innovation.flow.entity';
 
 @Entity()
 export class Collaboration
@@ -37,4 +38,12 @@ export class Collaboration
   })
   @JoinColumn()
   timeline?: Timeline;
+
+  @OneToOne(() => InnovationFlow, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  innovationFlow?: InnovationFlow;
 }

@@ -1,7 +1,7 @@
 import { EntityManager, FindOptionsSelect } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
-import { Opportunity } from '@domain/collaboration/opportunity';
+import { Opportunity } from '@domain/challenge/opportunity';
 import { createTypedRelationDataLoader } from '../../../utils';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
 

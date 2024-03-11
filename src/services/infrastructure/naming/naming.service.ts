@@ -1,7 +1,7 @@
 import { EntityManager, Repository } from 'typeorm';
 import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
-import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entity';
+import { Opportunity } from '@domain/challenge/opportunity/opportunity.entity';
 import { Project } from '@domain/collaboration/project';
 import { NameID, UUID } from '@domain/common/scalars';
 import { Post } from '@domain/collaboration/post/post.entity';

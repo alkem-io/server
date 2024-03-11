@@ -1,4 +1,4 @@
-import { IOpportunity } from '@src/domain/collaboration/opportunity';
+import { IOpportunity } from '@src/domain/challenge/opportunity';
 import { ActivityInputBase } from './activity.dto.input.base';
 
 export class ActivityInputOpportunityCreated extends ActivityInputBase {

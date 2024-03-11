@@ -19,7 +19,7 @@ import {
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { SpaceService } from '@domain/challenge/space/space.service';
 import { ISpace } from '@domain/challenge/space/space.interface';
-import { IOpportunity } from '@domain/collaboration/opportunity';
+import { IOpportunity } from '@domain/challenge/opportunity';
 import { IAgent } from '@domain/agent/agent';
 import { IPreference } from '@domain/common/preference/preference.interface';
 import { ITemplatesSet } from '@domain/template/templates-set';
@@ -36,6 +36,7 @@ import {
   AgentLoaderCreator,
   ProfileLoaderCreator,
   SpaceLicenseLoaderCreator,
+  SpaceDefaultsLoaderCreator,
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -43,6 +44,7 @@ import { AgentInfo } from '@core/authentication/agent-info';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { ILicense } from '@domain/license/license/license.interface';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
+import { ISpaceDefaults } from '../space.defaults/space.defaults.interface';
 
 @Resolver(() => ISpace)
 export class SpaceResolverFields {
@@ -132,6 +134,19 @@ export class SpaceResolverFields {
     @Parent() space: Space,
     @Loader(SpaceTemplatesSetLoaderCreator) loader: ILoader<ITemplatesSet>
   ): Promise<ITemplatesSet> {
+    return loader.load(space.id);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @ResolveField('defaults', () => ISpaceDefaults, {
+    nullable: true,
+    description: 'The defaults in use by this Space',
+  })
+  @UseGuards(GraphqlGuard)
+  async defaults(
+    @Parent() space: Space,
+    @Loader(SpaceDefaultsLoaderCreator) loader: ILoader<ISpaceDefaults>
+  ): Promise<ISpaceDefaults> {
     return loader.load(space.id);
   }
 

@@ -1,7 +1,7 @@
 import { EntityManager, EntityTarget, FindManyOptions, In } from 'typeorm';
 import { Space } from '@domain/challenge/space/space.entity';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
-import { Opportunity } from '@domain/collaboration/opportunity';
+import { Opportunity } from '@domain/challenge/opportunity';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { BaseChallenge } from '@domain/challenge/base-challenge/base.challenge.entity';
 
