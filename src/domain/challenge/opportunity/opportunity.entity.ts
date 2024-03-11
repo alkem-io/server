@@ -11,8 +11,4 @@ export class Opportunity extends BaseChallenge implements IOpportunity {
     onDelete: 'CASCADE',
   })
   challenge?: Challenge;
-
-  constructor() {
-    super();
-  }
 }
