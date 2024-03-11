@@ -1,7 +1,7 @@
 import { Field, InterfaceType } from '@nestjs/graphql';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { IOpportunity, Opportunity } from '@domain/collaboration/opportunity';
+import { IOpportunity, Opportunity } from '@domain/challenge/opportunity';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { ICollaboration } from '@domain/collaboration/collaboration';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';

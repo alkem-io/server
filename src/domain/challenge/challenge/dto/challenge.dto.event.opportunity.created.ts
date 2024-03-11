@@ -1,5 +1,5 @@
 import { Field, ObjectType } from '@nestjs/graphql';
-import { IOpportunity } from '@domain/collaboration/opportunity/opportunity.interface';
+import { IOpportunity } from '@domain/challenge/opportunity/opportunity.interface';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 
 @ObjectType('OpportunityCreated')

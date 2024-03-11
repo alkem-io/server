@@ -1,4 +1,4 @@
-import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
+import { OpportunityService } from '@domain/challenge/opportunity/opportunity.service';
 import { ValueProvider } from '@nestjs/common';
 import { PublicPart } from '../utils/public-part';
 

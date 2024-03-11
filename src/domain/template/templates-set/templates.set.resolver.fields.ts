@@ -6,7 +6,6 @@ import { UUID } from '@domain/common/scalars';
 import { IPostTemplate } from '../post-template/post.template.interface';
 import { TemplatesSetService } from './templates.set.service';
 import { ITemplatesSet } from './templates.set.interface';
-import { ITemplatesSetPolicy } from '../templates-set-policy/templates.set.policy.interface';
 import { TemplatesSet } from './templates.set.entity';
 import { IWhiteboardTemplate } from '../whiteboard-template/whiteboard.template.interface';
 import { IInnovationFlowTemplate } from '../innovation-flow-template/innovation.flow.template.interface';
@@ -164,17 +163,5 @@ export class TemplatesSetResolverFields {
       ID,
       templatesSet.id
     );
-  }
-
-  @UseGuards(GraphqlGuard)
-  @ResolveField('policy', () => ITemplatesSetPolicy, {
-    nullable: true,
-    description: 'The policy for this TemplatesSet.',
-  })
-  @Profiling.api
-  async policy(
-    @Parent() templatesSet: ITemplatesSet
-  ): Promise<ITemplatesSetPolicy> {
-    return this.templatesSetService.getPolicy(templatesSet);
   }
 }

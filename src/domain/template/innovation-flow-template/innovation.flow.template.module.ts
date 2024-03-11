@@ -8,11 +8,14 @@ import { InnovationFlowTemplate } from './innovation.flow.template.entity';
 import { InnovationFlowTemplateResolverMutations } from './innovation.flow.template.resolver.mutations';
 import { InnovationFlowTemplateService } from './innovation.flow.template.service';
 import { InnovationFlowTemplateAuthorizationService } from './innovation.flow.template.service.authorization';
+import { InnovationFlowStatesModule } from '@domain/collaboration/innovation-flow-states/innovation.flow.state.module';
+import { InnovationFlowTemplateResolverFields } from './innovation.flow.template.resolver.fields';
 
 @Module({
   imports: [
     AuthorizationModule,
     AuthorizationPolicyModule,
+    InnovationFlowStatesModule,
     ProfileModule,
     TemplateBaseModule,
     TypeOrmModule.forFeature([InnovationFlowTemplate]),
@@ -20,6 +23,7 @@ import { InnovationFlowTemplateAuthorizationService } from './innovation.flow.te
   providers: [
     InnovationFlowTemplateService,
     InnovationFlowTemplateAuthorizationService,
+    InnovationFlowTemplateResolverFields,
     InnovationFlowTemplateResolverMutations,
   ],
   exports: [

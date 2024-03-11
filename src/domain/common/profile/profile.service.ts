@@ -26,9 +26,10 @@ import { VisualType } from '@common/enums/visual.type';
 import { CreateTagsetInput } from '../tagset';
 import { ITagsetTemplate } from '../tagset-template/tagset.template.interface';
 import { TagsetTemplateService } from '../tagset-template/tagset.template.service';
-import { UpdateProfileSelectTagsetInput } from './dto/profile.dto.update.select.tagset';
+import { UpdateProfileSelectTagsetDefinitionInput } from './dto/profile.dto.update.select.tagset.definition';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { UpdateProfileSelectTagsetValueInput } from './dto/profile.dto.update.select.tagset.value';
 
 @Injectable()
 export class ProfileService {
@@ -389,29 +390,40 @@ export class ProfileService {
     );
   }
 
-  async updateSelectTagset(
-    updateData: UpdateProfileSelectTagsetInput
+  async updateSelectTagsetDefinition(
+    updateData: UpdateProfileSelectTagsetDefinitionInput
   ): Promise<ITagset> {
     const tagset = await this.getTagset(
       updateData.profileID,
       updateData.tagsetName
     );
-    if (updateData.tags) {
-      tagset.tags = updateData.tags;
-      await this.tagsetService.save(tagset);
-    }
 
-    if (updateData.allowedValues) {
-      const tagsetTemplate = await this.tagsetService.getTagsetTemplateOrFail(
-        tagset.id,
-        true
-      );
-      await this.tagsetTemplateService.updateTagsetTemplate(tagsetTemplate, {
+    const tagsetTemplate = await this.tagsetService.getTagsetTemplateOrFail(
+      tagset.id,
+      true
+    );
+    await this.tagsetTemplateService.updateTagsetTemplateDefinition(
+      tagsetTemplate,
+      {
         allowedValues: updateData.allowedValues,
         defaultSelectedValue: updateData.defaultSelectedValue,
-      });
-    }
+      }
+    );
+
     return tagset;
+  }
+
+  async updateSelectTagsetValue(
+    updateData: UpdateProfileSelectTagsetValueInput
+  ): Promise<ITagset> {
+    const tagset = await this.getTagset(
+      updateData.profileID,
+      updateData.tagsetName
+    );
+    return await this.tagsetService.updateTagset({
+      ID: tagset.id,
+      tags: [updateData.selectedValue],
+    });
   }
 
   public convertTagsetTemplatesToCreateTagsetInput(

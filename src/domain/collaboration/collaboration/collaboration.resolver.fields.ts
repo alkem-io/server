@@ -22,6 +22,7 @@ import {
 import { ILoader } from '@core/dataloader/loader.interface';
 import { ITagsetTemplate } from '@domain/common/tagset-template/tagset.template.interface';
 import { ITimeline } from '@domain/timeline/timeline/timeline.interface';
+import { IInnovationFlow } from '../innovation-flow/innovation.flow.interface';
 
 @Resolver(() => ICollaboration)
 export class CollaborationResolverFields {
@@ -39,6 +40,16 @@ export class CollaborationResolverFields {
     @Loader(CollaborationRelationsLoaderCreator) loader: ILoader<IRelation[]>
   ) {
     return loader.load(collaboration.id);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField('innovationFlow', () => IInnovationFlow, {
+    nullable: true,
+    description: 'The InnovationFlow for the Collaboration.',
+  })
+  @Profiling.api
+  async innovationFlow(@Parent() collabotation: ICollaboration) {
+    return await this.collaborationService.getInnovationFlow(collabotation.id);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

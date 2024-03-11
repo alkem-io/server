@@ -12,8 +12,6 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { TemplatesSet } from './templates.set.entity';
 import { ITemplatesSet } from './templates.set.interface';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
-import { templatesSetDefaults } from './templates.set.defaults';
-import { ITemplatesSetPolicy } from '../templates-set-policy/templates.set.policy.interface';
 import { PostTemplateService } from '../post-template/post.template.service';
 import { WhiteboardTemplateService } from '../whiteboard-template/whiteboard.template.service';
 import { InnovationFlowTemplateService } from '../innovation-flow-template/innovation.flow.template.service';
@@ -44,36 +42,12 @@ export class TemplatesSetService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async createTemplatesSet(
-    policy: ITemplatesSetPolicy,
-    addDefaults: boolean,
-    storageAggregator: IStorageAggregator
-  ): Promise<ITemplatesSet> {
+  async createTemplatesSet(): Promise<ITemplatesSet> {
     const templatesSet: ITemplatesSet = TemplatesSet.create();
     templatesSet.authorization = new AuthorizationPolicy();
-    templatesSet.policy = this.convertPolicy(policy);
     templatesSet.postTemplates = [];
     templatesSet.whiteboardTemplates = [];
     templatesSet.innovationFlowTemplates = [];
-
-    if (addDefaults) {
-      for (const postTemplateDefault of templatesSetDefaults.posts) {
-        const postTemplate = await this.postTemplateService.createPostTemplate(
-          postTemplateDefault,
-          storageAggregator
-        );
-        templatesSet.postTemplates.push(postTemplate);
-      }
-
-      for (const innovationFlowTemplateDefault of templatesSetDefaults.innovationFlows) {
-        const innovationFlowTemplate =
-          await this.innovationFlowTemplateService.createInnovationFLowTemplate(
-            innovationFlowTemplateDefault,
-            storageAggregator
-          );
-        templatesSet.innovationFlowTemplates.push(innovationFlowTemplate);
-      }
-    }
 
     return await this.templatesSetRepository.save(templatesSet);
   }
@@ -237,6 +211,31 @@ export class TemplatesSetService {
     return postTemplate;
   }
 
+  async addTemplates(
+    templatesSet: ITemplatesSet,
+    postTemplateInputs: CreatePostTemplateInput[],
+    innovationFlowTemplateInputs: CreateInnovationFlowTemplateInput[],
+    storageAggregator: IStorageAggregator
+  ): Promise<ITemplatesSet> {
+    for (const postTemplateDefault of postTemplateInputs) {
+      const postTemplate = await this.postTemplateService.createPostTemplate(
+        postTemplateDefault,
+        storageAggregator
+      );
+      templatesSet.postTemplates.push(postTemplate);
+    }
+
+    for (const innovationFlowTemplateDefault of innovationFlowTemplateInputs) {
+      const innovationFlowTemplate =
+        await this.innovationFlowTemplateService.createInnovationFLowTemplate(
+          innovationFlowTemplateDefault,
+          storageAggregator
+        );
+      templatesSet.innovationFlowTemplates.push(innovationFlowTemplate);
+    }
+    return await this.save(templatesSet);
+  }
+
   private async getStorageAggregator(
     templatesSet: ITemplatesSet
   ): Promise<IStorageAggregator> {
@@ -263,6 +262,10 @@ export class TemplatesSetService {
     templatesSet.calloutTemplates.push(calloutTemplate);
     await this.templatesSetRepository.save(templatesSet);
     return calloutTemplate;
+  }
+
+  public async save(templatesSet: ITemplatesSet): Promise<ITemplatesSet> {
+    return await this.templatesSetRepository.save(templatesSet);
   }
 
   async getWhiteboardTemplates(
@@ -341,23 +344,8 @@ export class TemplatesSetService {
   }
 
   async deleteInnovationFlowTemplate(
-    innovationFlowTemplate: IInnovationFlowTemplate,
-    templatesSet: ITemplatesSet
+    innovationFlowTemplate: IInnovationFlowTemplate
   ): Promise<IInnovationFlowTemplate> {
-    const innovationFlowTemplates = await this.getInnovationFlowTemplates(
-      templatesSet
-    );
-    const typeCount = innovationFlowTemplates.filter(
-      t => t.type === innovationFlowTemplate.type
-    ).length;
-    const policy = this.getPolicy(templatesSet);
-
-    if (typeCount <= policy.minInnovationFlow) {
-      throw new ValidationException(
-        `Cannot delete last innovationFlow template: ${innovationFlowTemplate.id} of type ${innovationFlowTemplate.type} from templatesSet: ${templatesSet.id}!`,
-        LogContext.LIFECYCLE
-      );
-    }
     return await this.innovationFlowTemplateService.deleteInnovationFlowTemplate(
       innovationFlowTemplate
     );
@@ -390,21 +378,6 @@ export class TemplatesSetService {
     templatesSet.innovationFlowTemplates.push(innovationFlowTemplate);
     await this.templatesSetRepository.save(templatesSet);
     return innovationFlowTemplate;
-  }
-
-  getPolicy(templatesSet: ITemplatesSet): ITemplatesSetPolicy {
-    if (!templatesSet.policy) {
-      throw new EntityNotInitializedException(
-        `Unable to locate policy for TemplatesSet: ${templatesSet.id}`,
-        LogContext.COMMUNITY
-      );
-    }
-    const policy = JSON.parse(templatesSet.policy);
-    return policy;
-  }
-
-  convertPolicy(policy: ITemplatesSetPolicy): string {
-    return JSON.stringify(policy);
   }
 
   async getTemplatesCount(templatesSetID: string): Promise<number> {

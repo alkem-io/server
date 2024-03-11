@@ -9,7 +9,7 @@ import {
 import { Agreement } from '@domain/collaboration/agreement/agreement.entity';
 import { IProject } from './project.interface';
 import { Lifecycle } from '@domain/common/lifecycle/lifecycle.entity';
-import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entity';
+import { Opportunity } from '@domain/challenge/opportunity/opportunity.entity';
 import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
 
 @Entity()

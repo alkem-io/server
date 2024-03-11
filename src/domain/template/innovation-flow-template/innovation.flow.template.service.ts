@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
-import { Repository, FindOneOptions, EntityManager } from 'typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, FindOneOptions } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext, ProfileType } from '@common/enums';
 import { TemplateBaseService } from '@domain/template/template-base/template.base.service';
@@ -8,18 +8,17 @@ import { CreateInnovationFlowTemplateInput } from './dto/innovation.flow.templat
 import { InnovationFlowTemplate } from './innovation.flow.template.entity';
 import { IInnovationFlowTemplate } from './innovation.flow.template.interface';
 import { UpdateInnovationFlowTemplateInput } from './dto/innovation.flow.template.dto.update';
-import { InnovationFlowType } from '@common/enums/innovation.flow.type';
-import { ILifecycleDefinition } from '@interfaces/lifecycle.definition.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { InnovationFlowStatesService } from '@domain/collaboration/innovation-flow-states/innovaton.flow.state.service';
+import { IInnovationFlowState } from '@domain/collaboration/innovation-flow-states/innovation.flow.state.interface';
 
 @Injectable()
 export class InnovationFlowTemplateService {
   constructor(
     @InjectRepository(InnovationFlowTemplate)
     private innovationFlowTemplateRepository: Repository<InnovationFlowTemplate>,
-    private templateBaseService: TemplateBaseService,
-    @InjectEntityManager('default')
-    private entityManager: EntityManager
+    private innovationFlowStatesService: InnovationFlowStatesService,
+    private templateBaseService: TemplateBaseService
   ) {}
 
   async createInnovationFLowTemplate(
@@ -27,13 +26,18 @@ export class InnovationFlowTemplateService {
     storageAggregator: IStorageAggregator
   ): Promise<IInnovationFlowTemplate> {
     const innovationFlowTemplate: IInnovationFlowTemplate =
-      InnovationFlowTemplate.create(innovationFlowTemplateData);
+      new InnovationFlowTemplate();
     await this.templateBaseService.initialise(
       innovationFlowTemplate,
       innovationFlowTemplateData,
       ProfileType.INNOVATION_FLOW_TEMPLATE,
       storageAggregator
     );
+
+    innovationFlowTemplate.states =
+      this.innovationFlowStatesService.serializeStates(
+        innovationFlowTemplateData.states
+      );
 
     return await this.innovationFlowTemplateRepository.save(
       innovationFlowTemplate
@@ -72,8 +76,11 @@ export class InnovationFlowTemplateService {
       innovationFlowTemplate,
       innovationFlowTemplateData
     );
-    if (innovationFlowTemplateData.definition) {
-      innovationFlowTemplate.definition = innovationFlowTemplateData.definition;
+    if (innovationFlowTemplateData.states) {
+      innovationFlowTemplate.states =
+        this.innovationFlowStatesService.serializeStates(
+          innovationFlowTemplateData.states
+        );
     }
 
     return await this.innovationFlowTemplateRepository.save(
@@ -107,97 +114,19 @@ export class InnovationFlowTemplateService {
     );
   }
 
-  public async getInnovationFlowDefinitionFromTemplate(
-    templateID: string,
-    spaceID: string,
-    templateType: InnovationFlowType
-  ): Promise<ILifecycleDefinition> {
-    await this.validateInnovationFlowDefinitionOrFail(
-      templateID,
-      spaceID,
-      templateType
-    );
-    const innovationFlowTemplate = await this.getInnovationFlowTemplateOrFail(
-      templateID
-    );
-    if (!innovationFlowTemplate.definition) {
-      throw new EntityNotFoundException(
-        `InnovationFlow Template with ID: ${templateID}: definition is not set`,
-        LogContext.LIFECYCLE
-      );
-    }
-    return JSON.parse(innovationFlowTemplate.definition);
-  }
-
-  public async getDefaultInnovationFlowTemplateId(
-    spaceID: string,
-    templateType: InnovationFlowType
-  ): Promise<string> {
-    const [{ innovationFlowTemplateId }]: {
-      innovationFlowTemplateId: string;
-    }[] = await this.entityManager.connection.query(
-      `
-      SELECT innovation_flow_template.id AS innovationFlowTemplateId FROM space
-      LEFT JOIN innovation_flow_template ON space.templatesSetId = innovation_flow_template.templatesSetId
-      WHERE innovation_flow_template.type = '${templateType}'
-      AND space.id = '${spaceID}' ORDER BY innovation_flow_template.createdDate ASC LIMIT 1
-      `
-    );
-
-    if (!innovationFlowTemplateId) {
-      throw new EntityNotFoundException(
-        `Not able to locate InnovationFlowTemplate with type: ${templateType} for Space: ${spaceID}`,
-        LogContext.COMMUNICATION
-      );
-    }
-
-    return innovationFlowTemplateId;
-  }
-
-  async validateInnovationFlowDefinitionOrFail(
-    templateID: string,
-    spaceID: string,
-    templateType: InnovationFlowType
-  ): Promise<void> {
-    const isInnovationFlowTemplateAvailable =
-      await this.isInnovationFlowTemplateInSpace(
-        templateID,
-        spaceID,
-        templateType
-      );
-    if (!isInnovationFlowTemplateAvailable) {
-      throw new EntityNotFoundException(
-        `Unable to find ${templateType} InnovationFlow Template with ID: ${templateID}, in parent Space template set.`,
-        LogContext.LIFECYCLE
-      );
-    }
-  }
-
-  private async isInnovationFlowTemplateInSpace(
-    innovationFlowTemplateID: string,
-    spaceID: string,
-    templateType: string
-  ) {
-    const [queryResult]: {
-      spaceCount: string;
-    }[] = await this.entityManager.connection.query(
-      `
-      SELECT COUNT(*) as spaceCount FROM \`space\`
-      RIGHT JOIN \`innovation_flow_template\` ON \`space\`.\`templatesSetId\` = \`innovation_flow_template\`.\`templatesSetId\`
-      WHERE \`innovation_flow_template\`.\`id\` = '${innovationFlowTemplateID}'
-      AND \`innovation_flow_template\`.\`type\` = '${templateType}'
-      AND \`space\`.\`id\` = '${spaceID}'
-      `
-    );
-
-    return queryResult.spaceCount === '1';
-  }
-
   async getCountInTemplatesSet(templatesSetID: string): Promise<number> {
     return await this.innovationFlowTemplateRepository.countBy({
       templatesSet: {
         id: templatesSetID,
       },
     });
+  }
+
+  public getStates(
+    innovationFlowTemplate: IInnovationFlowTemplate
+  ): IInnovationFlowState[] {
+    return this.innovationFlowStatesService.getStates(
+      innovationFlowTemplate.states
+    );
   }
 }

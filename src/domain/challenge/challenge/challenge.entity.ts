@@ -8,11 +8,10 @@ import {
   OneToOne,
 } from 'typeorm';
 import { Space } from '@domain/challenge/space/space.entity';
-import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entity';
+import { Opportunity } from '@domain/challenge/opportunity/opportunity.entity';
 import { PreferenceSet } from '@domain/common/preference-set';
 import { IChallenge } from './challenge.interface';
 import { BaseChallenge } from '../base-challenge/base.challenge.entity';
-import { InnovationFlow } from '../innovation-flow/innovation.flow.entity';
 import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
 
 @Entity()
@@ -61,12 +60,4 @@ export class Challenge extends BaseChallenge implements IChallenge {
   })
   @JoinColumn()
   storageAggregator?: StorageAggregator;
-
-  @OneToOne(() => InnovationFlow, {
-    eager: false,
-    cascade: true,
-    onDelete: 'SET NULL',
-  })
-  @JoinColumn()
-  innovationFlow!: InnovationFlow;
 }

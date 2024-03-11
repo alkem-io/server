@@ -15,6 +15,7 @@ export abstract class IBaseChallenge extends INameable {
     description: 'Collaboration object for the base challenge',
   })
   collaboration?: ICollaboration;
+
   context?: IContext;
   community?: ICommunity;
   preferenceSet?: IPreferenceSet;

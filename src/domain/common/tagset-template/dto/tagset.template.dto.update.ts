@@ -1,7 +1,5 @@
-export class UpdateTagsetTemplateInput {
-  name?: string;
+export class UpdateTagsetTemplateDefinitionInput {
+  allowedValues!: string[];
 
   defaultSelectedValue?: string;
-
-  allowedValues?: string[];
 }

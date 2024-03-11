@@ -7,7 +7,7 @@ import { Timeline } from '@domain/timeline/timeline/timeline.entity';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Collaboration } from '@domain/collaboration/collaboration';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
-import { Opportunity } from '@domain/collaboration/opportunity';
+import { Opportunity } from '@domain/challenge/opportunity';
 
 @Injectable()
 export class TimelineResolverService {

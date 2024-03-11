@@ -7,7 +7,7 @@ import { UserService } from '@domain/community/user/user.service';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
 import { LogContext } from '@common/enums';
 import { ICommunity } from '@domain/community/community';
-import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
+import { OpportunityService } from '@domain/challenge/opportunity/opportunity.service';
 import { ApplicationService } from '@domain/community/application/application.service';
 import { CommunityService } from '@domain/community/community/community.service';
 import { RelationshipNotFoundException } from '@common/exceptions';

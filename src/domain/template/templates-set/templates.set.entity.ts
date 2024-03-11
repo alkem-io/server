@@ -1,4 +1,4 @@
-import { Column, Entity, OneToMany } from 'typeorm';
+import { Entity, OneToMany } from 'typeorm';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { ITemplatesSet } from './templates.set.interface';
 import { PostTemplate } from '../post-template/post.template.entity';
@@ -43,7 +43,4 @@ export class TemplatesSet extends AuthorizableEntity implements ITemplatesSet {
     }
   )
   innovationFlowTemplates!: InnovationFlowTemplate[];
-
-  @Column('text')
-  policy!: string;
 }

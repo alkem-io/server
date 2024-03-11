@@ -2,7 +2,6 @@ import { Column, Entity, ManyToOne } from 'typeorm';
 import { TemplateBase } from '@domain/template/template-base/template.base.entity';
 import { TemplatesSet } from '@domain/template/templates-set/templates.set.entity';
 import { IInnovationFlowTemplate } from './innovation.flow.template.interface';
-import { InnovationFlowType } from '@common/enums/innovation.flow.type';
 
 @Entity()
 export class InnovationFlowTemplate
@@ -20,14 +19,10 @@ export class InnovationFlowTemplate
   )
   templatesSet?: TemplatesSet;
 
-  @Column('longtext', { nullable: false })
-  definition!: string;
-
-  @Column({ default: InnovationFlowType.CHALLENGE })
-  type: string;
+  @Column('text', { nullable: false })
+  states: string = '[]';
 
   constructor() {
     super();
-    this.type = '';
   }
 }

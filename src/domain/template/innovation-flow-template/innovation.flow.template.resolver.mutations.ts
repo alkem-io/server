@@ -9,6 +9,7 @@ import { UpdateInnovationFlowTemplateInput } from './dto/innovation.flow.templat
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { IInnovationFlowTemplate } from './innovation.flow.template.interface';
 import { InnovationFlowTemplateService } from './innovation.flow.template.service';
+import { DeleteInnovationFlowTemplateInput } from './dto/innovation.flow.template.dto.delete';
 
 @Resolver()
 export class InnovationFlowTemplateResolverMutations {
@@ -40,6 +41,33 @@ export class InnovationFlowTemplateResolverMutations {
     return await this.innovationFlowTemplateService.updateInnovationFlowTemplate(
       innovationFlowTemplate,
       innovationFlowTemplateInput
+    );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IInnovationFlowTemplate, {
+    description: 'Deletes the specified InnovationFlowTemplate.',
+  })
+  async deleteInnovationFlowTemplate(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('deleteData') deleteData: DeleteInnovationFlowTemplateInput
+  ): Promise<IInnovationFlowTemplate> {
+    const innovationFlowTemplate =
+      await this.innovationFlowTemplateService.getInnovationFlowTemplateOrFail(
+        deleteData.ID,
+        {
+          relations: { templatesSet: true },
+        }
+      );
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      innovationFlowTemplate.authorization,
+      AuthorizationPrivilege.DELETE,
+      `innovationFlow template delete: ${innovationFlowTemplate.id}`
+    );
+
+    return await this.innovationFlowTemplateService.deleteInnovationFlowTemplate(
+      innovationFlowTemplate
     );
   }
 }

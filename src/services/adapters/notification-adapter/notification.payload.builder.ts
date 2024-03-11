@@ -7,7 +7,7 @@ import { Space } from '@domain/challenge/space/space.entity';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { IDiscussion } from '@domain/communication/discussion/discussion.interface';
 import { ICommunity } from '@domain/community/community';
-import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entity';
+import { Opportunity } from '@domain/challenge/opportunity/opportunity.entity';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
