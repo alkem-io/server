@@ -3,7 +3,7 @@ import { CalloutType } from '@common/enums/callout.type';
 import { ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { NameID } from '@domain/common/scalars/scalar.nameid';
-import { CalloutDisplayLocation } from '@common/enums/callout.display.location';
+import { CalloutDisplayLocation } from '@domain/challenge/space.defaults/definitions/callout.display.location';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { CreateCalloutFramingInput } from '@domain/collaboration/callout-framing/dto';
 import { CreateCalloutContributionDefaultsInput } from '@domain/collaboration/callout-contribution-defaults/dto';

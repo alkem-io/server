@@ -1,5 +1,5 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { CalloutDisplayLocation } from '@common/enums/callout.display.location';
+import { CalloutDisplayLocation } from '@domain/challenge/space.defaults/definitions/callout.display.location';
 import { NameID } from '@domain/common/scalars/scalar.nameid';
 import { UpdateBaseAlkemioInput } from '@domain/common/entity/base-entity/base.alkemio.dto.update';
 import { UpdateCalloutContributionDefaultsInput } from '@domain/collaboration/callout-contribution-defaults/dto';

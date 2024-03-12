@@ -1,4 +1,4 @@
-import { Entity, JoinColumn, OneToMany, OneToOne } from 'typeorm';
+import { Column, Entity, JoinColumn, OneToMany, OneToOne } from 'typeorm';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { Relation } from '@domain/collaboration/relation/relation.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
@@ -46,4 +46,7 @@ export class Collaboration
   })
   @JoinColumn()
   innovationFlow?: InnovationFlow;
+
+  @Column('text')
+  groups: string = '[]';
 }

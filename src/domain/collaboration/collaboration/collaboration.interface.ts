@@ -25,4 +25,6 @@ export abstract class ICollaboration extends IAuthorizable {
   timeline?: ITimeline;
 
   innovationFlow?: IInnovationFlow;
+
+  groups!: string;
 }

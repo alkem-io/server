@@ -23,6 +23,7 @@ import { ILoader } from '@core/dataloader/loader.interface';
 import { ITagsetTemplate } from '@domain/common/tagset-template/tagset.template.interface';
 import { ITimeline } from '@domain/timeline/timeline/timeline.interface';
 import { IInnovationFlow } from '../innovation-flow/innovation.flow.interface';
+import { ICalloutGroup } from '../callout-groups/callout.group.interface';
 
 @Resolver(() => ICollaboration)
 export class CollaborationResolverFields {
@@ -50,6 +51,14 @@ export class CollaborationResolverFields {
   @Profiling.api
   async innovationFlow(@Parent() collabotation: ICollaboration) {
     return await this.collaborationService.getInnovationFlow(collabotation.id);
+  }
+
+  @ResolveField('groups', () => [ICalloutGroup], {
+    nullable: false,
+    description: 'The set of CalloutGroups in use in this Collaboration.',
+  })
+  groups(@Parent() collaboration: ICollaboration): ICalloutGroup[] {
+    return this.collaborationService.getGroups(collaboration);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

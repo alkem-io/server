@@ -1,7 +1,7 @@
 import { CalloutState } from '@common/enums/callout.state';
 import { CalloutType } from '@common/enums/callout.type';
-import { CommonDisplayLocation } from '@common/enums/common.display.location';
-import { SpaceDisplayLocation } from '@common/enums/space.display.location';
+import { CommonDisplayLocation } from '@domain/challenge/space.defaults/definitions/common.display.location';
+import { SpaceDisplayLocation } from '@domain/challenge/space.defaults/definitions/space.display.location';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { TagsetType } from '@common/enums/tagset.type';
 import { CreateCalloutInput } from '@domain/collaboration/callout';

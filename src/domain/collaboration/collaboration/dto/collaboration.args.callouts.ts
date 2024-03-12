@@ -1,7 +1,7 @@
 import { ArgsType, Field, Float } from '@nestjs/graphql';
 import { UUID_NAMEID } from '@domain/common/scalars';
 import { TagsetArgs } from '@common/args/tagset.args';
-import { CalloutDisplayLocation } from '@common/enums/callout.display.location';
+import { CalloutDisplayLocation } from '@domain/challenge/space.defaults/definitions/callout.display.location';
 
 @ArgsType()
 export class CollaborationArgsCallouts {

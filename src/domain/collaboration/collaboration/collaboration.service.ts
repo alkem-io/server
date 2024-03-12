@@ -38,7 +38,7 @@ import {
 import { ITagsetTemplateSet } from '@domain/common/tagset-template-set';
 import { CreateCalloutInput } from '../callout/dto/callout.dto.create';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { CalloutDisplayLocation } from '@common/enums/callout.display.location';
+import { CalloutDisplayLocation } from '@domain/challenge/space.defaults/definitions/callout.display.location';
 import { TimelineService } from '@domain/timeline/timeline/timeline.service';
 import { ITimeline } from '@domain/timeline/timeline/timeline.interface';
 import { keyBy } from 'lodash';
@@ -52,6 +52,8 @@ import { TagsetType } from '@common/enums/tagset.type';
 import { IInnovationFlow } from '../innovation-flow/innovation.flow.interface';
 import { CreateCollaborationInput } from './dto/collaboration.dto.create';
 import { Space } from '@domain/challenge/space/space.entity';
+import { ICalloutGroup } from '../callout-groups/callout.group.interface';
+import { CalloutGroupsService } from '../callout-groups/callout.group.service';
 
 @Injectable()
 export class CollaborationService {
@@ -69,7 +71,8 @@ export class CollaborationService {
     @InjectEntityManager('default')
     private entityManager: EntityManager,
     private timelineService: TimelineService,
-    private spaceDefaultsService: SpaceDefaultsService
+    private spaceDefaultsService: SpaceDefaultsService,
+    private calloutGroupsService: CalloutGroupsService
   ) {}
 
   async createCollaboration(
@@ -363,6 +366,10 @@ export class CollaborationService {
     return await this.collaborationRepository.remove(
       collaboration as Collaboration
     );
+  }
+
+  public getGroups(collaboration: ICollaboration): ICalloutGroup[] {
+    return this.calloutGroupsService.getGroups(collaboration.groups);
   }
 
   public async createCalloutOnCollaboration(

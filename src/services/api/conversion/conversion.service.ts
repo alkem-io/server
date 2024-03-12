@@ -23,10 +23,10 @@ import { DiscussionCategoryCommunity } from '@common/enums/communication.discuss
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { ICallout } from '@domain/collaboration/callout';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { ChallengeDisplayLocation } from '@common/enums/challenge.display.location';
-import { SpaceDisplayLocation } from '@common/enums/space.display.location';
-import { CommonDisplayLocation } from '@common/enums/common.display.location';
-import { OpportunityDisplayLocation } from '@common/enums/opportunity.display.location';
+import { ChallengeDisplayLocation } from '@domain/challenge/space.defaults/definitions/challenge.display.location';
+import { SpaceDisplayLocation } from '@domain/challenge/space.defaults/definitions/space.display.location';
+import { CommonDisplayLocation } from '@domain/challenge/space.defaults/definitions/common.display.location';
+import { OpportunityDisplayLocation } from '@domain/challenge/space.defaults/definitions/opportunity.display.location';
 
 export class ConversionService {
   constructor(
