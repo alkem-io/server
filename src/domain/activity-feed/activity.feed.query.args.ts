@@ -31,4 +31,17 @@ export class ActivityFeedQueryArgs {
       'Activity from which Spaces to include; Includes all by default.',
   })
   roles?: Array<ActivityFeedRoles>;
+
+  @Field(() => Boolean, {
+    nullable: true,
+    description:
+      'Group activity events per entity and activity event type and return the latest.',
+  })
+  onlyUnique?: boolean;
+
+  @Field(() => [ActivityEventType], {
+    nullable: true,
+    description: 'What events to exclude.',
+  })
+  excludeTypes?: Array<ActivityEventType>;
 }
