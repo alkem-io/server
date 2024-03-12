@@ -38,7 +38,6 @@ import {
 import { ITagsetTemplateSet } from '@domain/common/tagset-template-set';
 import { CreateCalloutInput } from '../callout/dto/callout.dto.create';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { CalloutDisplayLocation } from '@domain/challenge/space.defaults/definitions/callout.display.location';
 import { TimelineService } from '@domain/timeline/timeline/timeline.service';
 import { ITimeline } from '@domain/timeline/timeline/timeline.interface';
 import { keyBy } from 'lodash';
@@ -483,25 +482,41 @@ export class CollaborationService {
     }
 
     // Single pass filter operation
+    const groupNames: string[] = [];
+    if (args.groups && args.groups.length) {
+      const allowedGroups = await this.calloutGroupsService.getGroups(
+        collaboration.groups
+      );
+
+      for (const group of args.groups) {
+        // Validate that the groups are valid
+        const groupAllowed = allowedGroups.find(g => g.displayName === group);
+        if (!groupAllowed) {
+          throw new ValidationException(
+            `Specified group not found: ${group}; allowed groups: ${allowedGroups
+              .map(g => g.displayName)
+              .join(', ')}`,
+            LogContext.COLLABORATION
+          );
+        }
+        groupNames.push(group);
+      }
+    }
     const availableCallouts = allCallouts.filter(callout => {
       // Check for READ privilege
       const hasAccess = this.hasAgentAccessToCallout(callout, agentInfo);
       if (!hasAccess) return false;
 
-      // Filter by Callout display locations
-      const locationCheck =
-        args.displayLocations && args.displayLocations.length
-          ? callout.framing.profile.tagsets?.some(
-              tagset =>
-                tagset.name === TagsetReservedName.CALLOUT_DISPLAY_LOCATION &&
-                tagset.tags.length > 0 &&
-                args.displayLocations?.includes(
-                  tagset.tags[0] as CalloutDisplayLocation
-                )
-            )
-          : true;
-
-      if (!locationCheck) return false;
+      // Filter by Callout groups
+      if (groupNames.length > 0) {
+        const hasMatchingTagset = callout.framing.profile.tagsets?.some(
+          tagset =>
+            tagset.name === TagsetReservedName.CALLOUT_GROUP &&
+            tagset.tags.length > 0 &&
+            groupNames?.includes(tagset.tags[0])
+        );
+        if (!hasMatchingTagset) return false;
+      }
 
       // Filter by tagsets
       const tagsetCheck =

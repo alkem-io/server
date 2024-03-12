@@ -148,7 +148,7 @@ export class ChallengeService {
       ...ChallengeDisplayLocation,
     });
     const tagsetTemplateData: CreateTagsetTemplateInput = {
-      name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+      name: TagsetReservedName.CALLOUT_GROUP,
       type: TagsetType.SELECT_ONE,
       allowedValues: locations,
       defaultSelectedValue: ChallengeDisplayLocation.CONTRIBUTE_RIGHT,

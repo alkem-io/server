@@ -3,11 +3,11 @@ import { CalloutType } from '@common/enums/callout.type';
 import { ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { NameID } from '@domain/common/scalars/scalar.nameid';
-import { CalloutDisplayLocation } from '@domain/challenge/space.defaults/definitions/callout.display.location';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { CreateCalloutFramingInput } from '@domain/collaboration/callout-framing/dto';
 import { CreateCalloutContributionDefaultsInput } from '@domain/collaboration/callout-contribution-defaults/dto';
 import { CreateCalloutContributionPolicyInput } from '@domain/collaboration/callout-contribution-policy/dto/callout.contribution.policy.dto.create';
+import { ICalloutGroup } from '@domain/collaboration/callout-groups/callout.group.interface';
 
 @InputType()
 export class CreateCalloutInput {
@@ -37,11 +37,11 @@ export class CreateCalloutInput {
   })
   type!: CalloutType;
 
-  @Field(() => CalloutDisplayLocation, {
+  @Field(() => ICalloutGroup, {
     nullable: true,
-    description: 'Set callout display location for this Callout.',
+    description: 'Set Callout Group location for this Callout.',
   })
-  displayLocation?: CalloutDisplayLocation;
+  group?: ICalloutGroup;
 
   @Field(() => Number, {
     nullable: true,

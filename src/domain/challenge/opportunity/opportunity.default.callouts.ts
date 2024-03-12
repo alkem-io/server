@@ -21,7 +21,7 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
         description: '⬇️ Here are some quick links to help you get started',
         tagsets: [
           {
-            name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+            name: TagsetReservedName.CALLOUT_GROUP,
             type: TagsetType.SELECT_ONE,
             tags: [CommonDisplayLocation.HOME_RIGHT],
           },
@@ -42,7 +42,7 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
         description: 'Things you would like to discuss with the community.',
         tagsets: [
           {
-            name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+            name: TagsetReservedName.CALLOUT_GROUP,
             type: TagsetType.SELECT_ONE,
             tags: [CommonDisplayLocation.HOME_LEFT],
           },
@@ -63,7 +63,7 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
         description: '',
         tagsets: [
           {
-            name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+            name: TagsetReservedName.CALLOUT_GROUP,
             type: TagsetType.SELECT_ONE,
             tags: [CommonDisplayLocation.HOME_RIGHT],
           },
@@ -89,7 +89,7 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
           'Please introduce yourself to each other, sharing a bit about your background, goal, and (envisioned) role in this project',
         tagsets: [
           {
-            name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+            name: TagsetReservedName.CALLOUT_GROUP,
             type: TagsetType.SELECT_ONE,
             tags: [CommonDisplayLocation.HOME_RIGHT],
           },
@@ -111,7 +111,7 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
           'Please share any relevant insights to help us better understand the context. You can describe why it is relevant and add a link or upload a document with the article. You can also comment on the insights already submitted by other community members!',
         tagsets: [
           {
-            name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+            name: TagsetReservedName.CALLOUT_GROUP,
             type: TagsetType.SELECT_ONE,
             tags: [OpportunityDisplayLocation.CONTRIBUTE_RIGHT],
           },
@@ -136,7 +136,7 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
         description: 'Please add links to documents with reference material.💥',
         tagsets: [
           {
-            name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+            name: TagsetReservedName.CALLOUT_GROUP,
             type: TagsetType.SELECT_ONE,
             tags: [OpportunityDisplayLocation.CONTRIBUTE],
           },
@@ -158,7 +158,7 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
           'We can use this whiteboard to further define what is needed to realize this Opportunity! Think about research, insights, stakeholders or other resources.',
         tagsets: [
           {
-            name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+            name: TagsetReservedName.CALLOUT_GROUP,
             type: TagsetType.SELECT_ONE,
             tags: [OpportunityDisplayLocation.CONTRIBUTE_RIGHT],
           },

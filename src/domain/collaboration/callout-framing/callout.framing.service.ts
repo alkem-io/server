@@ -20,9 +20,9 @@ import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { CreateTagsetInput } from '@domain/common/tagset/dto/tagset.dto.create';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { TagsetType } from '@common/enums/tagset.type';
-import { CalloutDisplayLocation } from '@domain/challenge/space.defaults/definitions/callout.display.location';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { ICalloutGroup } from '../callout-groups/callout.group.interface';
 
 @Injectable()
 export class CalloutFramingService {
@@ -243,17 +243,17 @@ export class CalloutFramingService {
 
   updateDisplayLocationTagsetValue(
     framing: ICalloutFraming,
-    group: CalloutDisplayLocation
+    group: ICalloutGroup
   ) {
     const displayLocationTagset = framing.profile.tagsets?.find(
-      tagset => tagset.name === TagsetReservedName.CALLOUT_DISPLAY_LOCATION
+      tagset => tagset.name === TagsetReservedName.CALLOUT_GROUP
     );
     if (!displayLocationTagset) {
       throw new EntityNotFoundException(
-        `Callout display location tagset not found for profile: ${framing.profile.id}`,
+        `Callout Group tagset not found for profile: ${framing.profile.id}`,
         LogContext.TAGSET
       );
     }
-    displayLocationTagset.tags = [group];
+    displayLocationTagset.tags = [group.displayName];
   }
 }

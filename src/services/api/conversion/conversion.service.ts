@@ -437,7 +437,7 @@ export class ConversionService {
       }
 
       const locationTagset = callout.framing.profile.tagsets.find(
-        t => t.name === TagsetReservedName.CALLOUT_DISPLAY_LOCATION
+        t => t.name === TagsetReservedName.CALLOUT_GROUP
       );
       if (!locationTagset || locationTagset.tags.length !== 1) {
         throw new EntityNotInitializedException(
@@ -485,7 +485,7 @@ export class ConversionService {
       }
 
       const locationTagset = callout.framing.profile.tagsets.find(
-        t => t.name === TagsetReservedName.CALLOUT_DISPLAY_LOCATION
+        t => t.name === TagsetReservedName.CALLOUT_GROUP
       );
       if (!locationTagset || locationTagset.tags.length !== 1) {
         throw new EntityNotInitializedException(

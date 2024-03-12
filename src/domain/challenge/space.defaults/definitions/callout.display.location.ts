@@ -1,5 +1,3 @@
-import { registerEnumType } from '@nestjs/graphql';
-
 export enum CalloutDisplayLocation {
   HOME_LEFT = 'HOME_1',
   HOME_RIGHT = 'HOME_2',
@@ -8,12 +6,6 @@ export enum CalloutDisplayLocation {
   KNOWLEDGE = 'KNOWLEDGE',
   COMMUNITY_LEFT = 'COMMUNITY_1',
   COMMUNITY_RIGHT = 'COMMUNITY_2',
-  CHALLENGES_LEFT = 'CHALLENGES_1',
-  CHALLENGES_RIGHT = 'CHALLENGES_2',
-  OPPORTUNITIES_LEFT = 'OPPORTUNITIES_1',
-  OPPORTUNITIES_RIGHT = 'OPPORTUNITIES_2',
+  SUBSPACES_LEFT = 'SUBSPACES_1',
+  SUBSPACES_RIGHT = 'SUBSPACES_2',
 }
-
-registerEnumType(CalloutDisplayLocation, {
-  name: 'CalloutDisplayLocation',
-});

@@ -94,7 +94,7 @@ export class OpportunityService {
     if (opportunity.collaboration) {
       const locations = Object.values(OpportunityDisplayLocation);
       const tagsetTemplateData: CreateTagsetTemplateInput = {
-        name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+        name: TagsetReservedName.CALLOUT_GROUP,
         type: TagsetType.SELECT_ONE,
         allowedValues: locations,
         defaultSelectedValue: OpportunityDisplayLocation.CONTRIBUTE_RIGHT,

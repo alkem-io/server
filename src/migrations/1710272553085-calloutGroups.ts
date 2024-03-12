@@ -21,6 +21,10 @@ export class calloutGroups1710272553085 implements MigrationInterface {
       'opportunity',
       this.spaceCalloutGroups
     );
+
+    // TODO: update the name + entries for old display location tagsets
+    // 'CHALLENGES_1', 'OPPORTUNITIES_1' ==> SUBSPACES_1
+    // 'CHALLENGES_2', 'OPPORTUNITIES_2' ==> SUBSPACES_2
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {

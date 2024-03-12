@@ -88,10 +88,10 @@ export class CalloutService {
       storageAggregator,
       userID
     );
-    if (calloutData.displayLocation) {
+    if (calloutData.group) {
       this.calloutFramingService.updateDisplayLocationTagsetValue(
         callout.framing,
-        calloutData.displayLocation
+        calloutData.group
       );
     }
 
@@ -249,10 +249,10 @@ export class CalloutService {
     if (calloutUpdateData.sortOrder)
       callout.sortOrder = calloutUpdateData.sortOrder;
 
-    if (calloutUpdateData.displayLocation) {
+    if (calloutUpdateData.group) {
       this.calloutFramingService.updateDisplayLocationTagsetValue(
         callout.framing,
-        calloutUpdateData.displayLocation
+        calloutUpdateData.group
       );
     }
 
