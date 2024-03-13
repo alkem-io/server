@@ -311,14 +311,21 @@ export class UrlGeneratorService {
     }
     const templatesSetID = templateInfo.templatesSetID;
 
-    const spaceInfo = await this.getNameableEntityInfo(
-      'space',
-      'templatesSetId',
+    const accountInfo = await this.getNameableEntityInfo(
+      'account',
+      'libraryId',
       templatesSetID
     );
 
-    if (spaceInfo) {
-      return this.generateUrlForSpace(spaceInfo.entityNameID);
+    if (accountInfo) {
+      const spaceInfo = await this.getNameableEntityInfo(
+        'space',
+        'accountId',
+        accountInfo.entityID
+      );
+      if (spaceInfo) {
+        return this.generateUrlForSpace(spaceInfo.entityNameID);
+      }
     }
     const innovationPackInfo = await this.getNameableEntityInfoOrFail(
       'innovation_pack',
