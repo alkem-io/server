@@ -84,31 +84,6 @@ export class ActivityLogService {
     return results;
   }
 
-  public async myActivityLog(
-    userId: string,
-    queryData: ActivityLogInput
-  ): Promise<IActivityLogEntry[]> {
-    const activities = await this.activityLog({
-      collaborationID: queryData.collaborationID,
-      includeChild: queryData.includeChild,
-    });
-    const myActivities = activities.filter(x => {
-      if (queryData.types) {
-        return x.triggeredBy.id === userId && queryData.types.includes(x.type);
-      } else {
-        return x.triggeredBy.id === userId;
-      }
-    });
-
-    if (myActivities.length > 0) {
-      myActivities.sort(
-        (a, b) => b.createdDate.getTime() - a.createdDate.getTime()
-      );
-    }
-
-    return myActivities.slice(0, queryData.limit ?? myActivities.length);
-  }
-
   public async convertRawActivityToResults(
     rawActivities: IActivity[]
   ): Promise<(IActivityLogEntry | undefined)[]> {

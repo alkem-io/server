@@ -16,6 +16,7 @@ import {
 import { minCollaboratorsInRoom } from '../types/defaults';
 import { canUserRead, canUserUpdate, closeConnection } from './util';
 import { checkSession } from './check.session';
+import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 
 export const authorizeWithRoomAndJoinHandler = async (
   roomID: string,
@@ -119,11 +120,18 @@ const joinRoomHandler = async (
 Built-in event for handling broadcast;
 messages are sent to all sockets except the sender socket in reliable manner
  */
-export const serverBroadcastEventHandler = (
+export const serverBroadcastEventHandler = async (
   roomID: string,
   data: ArrayBuffer,
-  socket: SocketIoSocket
+  socket: SocketIoSocket,
+  activityAdapter: ActivityAdapter
 ) => {
+  if (socket.data.lastContributed === -1)
+    activityAdapter.calloutWhiteboardContentModified({
+      triggeredBy: socket.data.agentInfo.userID,
+      whiteboardId: roomID,
+    });
+
   socket.broadcast.to(roomID).emit(CLIENT_BROADCAST, data);
   socket.data.lastContributed = Date.now();
 };

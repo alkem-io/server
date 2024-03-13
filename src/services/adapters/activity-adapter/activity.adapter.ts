@@ -15,6 +15,7 @@ import { SubscriptionPublishService } from '../../subscriptions/subscription-ser
 import { ActivityInputCalloutPublished } from './dto/activity.dto.input.callout.published';
 import { ActivityInputCalloutPostCreated } from './dto/activity.dto.input.callout.post.created';
 import { ActivityInputCalloutWhiteboardCreated } from './dto/activity.dto.input.callout.whiteboard.created';
+import { ActivityInputCalloutWhiteboardContentModified } from './dto/activity.dto.input.callout.whiteboard.content.modified';
 import { ActivityInputMemberJoined } from './dto/activity.dto.input.member.joined';
 import { ActivityInputCalloutPostComment } from './dto/activity.dto.input.callout.post.comment';
 import { ActivityInputCalloutDiscussionComment } from './dto/activity.dto.input.callout.discussion.comment';
@@ -28,6 +29,7 @@ import { stringifyWithoutAuthorization } from '@common/utils/stringify.util';
 import { ActivityInputCalloutLinkCreated } from './dto/activity.dto.input.callout.link.created';
 import { ActivityInputCalendarEventCreated } from './dto/activity.dto.input.calendar.event.created';
 import { TimelineResolverService } from '@services/infrastructure/entity-resolver/timeline.resolver.service';
+import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
 
 @Injectable()
 export class ActivityAdapter {
@@ -39,6 +41,8 @@ export class ActivityAdapter {
     private calloutRepository: Repository<Callout>,
     @InjectRepository(Collaboration)
     private collaborationRepository: Repository<Collaboration>,
+    @InjectRepository(Whiteboard)
+    private whiteboardRepository: Repository<Whiteboard>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private readonly graphqlSubscriptionService: SubscriptionPublishService,
@@ -257,6 +261,38 @@ export class ActivityAdapter {
     return true;
   }
 
+  public async calloutWhiteboardContentModified(
+    eventData: ActivityInputCalloutWhiteboardContentModified
+  ): Promise<boolean> {
+    const eventType = ActivityEventType.CALLOUT_WHITEBOARD_CONTENT_MODIFIED;
+    this.logEventTriggered(eventData, eventType);
+
+    const whiteboardDisplayName = await this.getWhiteboardDisplayName(
+      eventData.whiteboardId
+    );
+    const parentEntities =
+      await this.getCollaborationIdWithCalloutIdForWhiteboard(
+        eventData.whiteboardId
+      );
+
+    const description = `[${whiteboardDisplayName}]`;
+    const activity = await this.activityService.createActivity({
+      triggeredBy: eventData.triggeredBy,
+      collaborationID: parentEntities.collaborationID,
+      resourceID: eventData.whiteboardId,
+      parentID: parentEntities.calloutID,
+      description: description,
+      type: eventType,
+    });
+
+    this.graphqlSubscriptionService.publishActivity(
+      parentEntities.collaborationID,
+      activity
+    );
+
+    return true;
+  }
+
   public async calloutCommentCreated(
     eventData: ActivityInputCalloutDiscussionComment
   ): Promise<boolean> {
@@ -466,6 +502,49 @@ export class ActivityAdapter {
       );
     }
     return collaboration.id;
+  }
+
+  private async getWhiteboardDisplayName(
+    whiteboardID: string
+  ): Promise<string> {
+    const whiteboard = await this.whiteboardRepository
+      .createQueryBuilder('whiteboard')
+      .leftJoinAndSelect('whiteboard.profile', 'profile')
+      .where({ id: whiteboardID })
+      .getOne();
+    if (!whiteboard) {
+      throw new EntityNotFoundException(
+        `Unable to identify Whiteboard with ID: ${whiteboardID}`,
+        LogContext.ACTIVITY
+      );
+    }
+    return whiteboard.profile.displayName;
+  }
+
+  private async getCollaborationIdWithCalloutIdForWhiteboard(
+    whiteboardID: string
+  ): Promise<{ collaborationID: string; calloutID: string }> {
+    const [result]: {
+      collaborationID: string;
+      calloutID: string;
+    }[] = await this.entityManager.connection.query(
+      `
+        SELECT \`callout\`.\`id\` as \`calloutID\`, \`collaboration\`.\`id\` as collaborationID FROM \`collaboration\`
+        LEFT JOIN \`callout\` on \`callout\`.\`collaborationId\` = \`collaboration\`.\`id\`
+        JOIN \`callout_contribution\` on \`callout\`.\`id\` = \`callout_contribution\`.\`calloutId\`
+        JOIN \`whiteboard\` on \`whiteboard\`.\`id\` = \`callout_contribution\`.\`whiteboardId\`
+        WHERE \`whiteboard\`.\`id\` = '${whiteboardID}'
+      `
+    );
+
+    if (!result) {
+      throw new EntityNotFoundException(
+        `Unable to identify Collaboration for Whiteboard with ID: ${whiteboardID}`,
+        LogContext.ACTIVITY
+      );
+    }
+
+    return result;
   }
 
   private async getCollaborationIdFromCommunity(communityId: string) {

@@ -16,6 +16,7 @@ import { AuthenticationService } from '@core/authentication/authentication.servi
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { WhiteboardService } from '@domain/common/whiteboard';
 import { WHITEBOARD_CONTENT_UPDATE } from '@domain/common/whiteboard/events/event.names';
+import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import {
@@ -41,6 +42,8 @@ import {
   SAVED,
   IDLE_STATE,
   COLLABORATOR_MODE,
+  SCENE_INIT,
+  CLIENT_BROADCAST,
 } from './types/event.names';
 import { CollaboratorModeReasons } from './types/collaboration.mode.reasons';
 import { RemoteSocketIoSocket, SocketIoSocket } from './types/socket.io.socket';
@@ -87,7 +90,8 @@ export class ExcalidrawServer {
     private authorizationService: AuthorizationService,
     private whiteboardService: WhiteboardService,
     private contributionReporter: ContributionReporterService,
-    private communityResolver: CommunityResolverService
+    private communityResolver: CommunityResolverService,
+    private activityAdapter: ActivityAdapter
   ) {
     const {
       contribution_window,
@@ -240,8 +244,16 @@ export class ExcalidrawServer {
           this.startCollaboratorModeTimer(socket);
           // user can broadcast content change events
           socket.on(SERVER_BROADCAST, (roomID: string, data: ArrayBuffer) => {
-            serverBroadcastEventHandler(roomID, data, socket);
+            serverBroadcastEventHandler(
+              roomID,
+              data,
+              socket,
+              this.activityAdapter
+            );
             this.resetCollaboratorModeTimer(socket);
+          });
+          socket.on(SCENE_INIT, (roomID: string, data: ArrayBuffer) => {
+            socket.broadcast.to(roomID).emit(CLIENT_BROADCAST, data);
           });
         }
         this.logger.verbose?.(
