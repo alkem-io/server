@@ -52,6 +52,8 @@ import { AgentCacheService } from './agent.cache.service';
 
 @Injectable()
 export class AgentService {
+  private readonly cache_ttl: number;
+
   constructor(
     private agentCacheService: AgentCacheService,
     private authorizationPolicyService: AuthorizationPolicyService,
@@ -69,7 +71,11 @@ export class AgentService {
     private readonly cacheManager: Cache,
     @Inject(SUBSCRIPTION_PROFILE_VERIFIED_CREDENTIAL)
     private subscriptionVerifiedCredentials: PubSubEngine
-  ) {}
+  ) {
+    this.cache_ttl = this.configService.get(
+      ConfigurationTypes.IDENTITY
+    ).authentication.cache_ttl;
+  }
 
   async createAgent(inputData: CreateAgentInput): Promise<IAgent> {
     const agent: IAgent = Agent.create(inputData);
@@ -136,18 +142,39 @@ export class AgentService {
     return agents;
   }
 
+  private getAgentCacheKey(agentId: string): string {
+    return `@agent:id:${agentId}`;
+  }
+
+  private async getAgentFromCache(id: string): Promise<IAgent | undefined> {
+    return await this.cacheManager.get<IAgent>(this.getAgentCacheKey(id));
+  }
+
+  private async setAgentCache(agent: IAgent): Promise<IAgent> {
+    const cacheKey = this.getAgentCacheKey(agent.id);
+    return await this.cacheManager.set<IAgent>(cacheKey, agent, {
+      ttl: this.cache_ttl,
+    });
+  }
+
   async getAgentCredentials(
     agentID: string
   ): Promise<{ agent: IAgent; credentials: ICredential[] }> {
-    const agent = await this.getAgentOrFail(agentID, {
-      relations: { credentials: true },
-    });
+    let agent: IAgent | undefined = await this.getAgentFromCache(agentID);
+    if (!agent || !agent.credentials) {
+      agent = await this.getAgentOrFail(agentID, {
+        relations: { credentials: true },
+      });
 
-    if (!agent.credentials) {
-      throw new EntityNotInitializedException(
-        `Agent not initialized: ${agentID}`,
-        LogContext.AGENT
-      );
+      if (agent) {
+        await this.setAgentCache(agent);
+      }
+      if (!agent.credentials) {
+        throw new EntityNotInitializedException(
+          `Agent not initialized: ${agentID}`,
+          LogContext.AGENT
+        );
+      }
     }
     return { agent: agent, credentials: agent.credentials };
   }
@@ -181,6 +208,7 @@ export class AgentService {
 
     agent.credentials?.push(credential);
     await this.agentCacheService.updateAgentInfoCache(agent);
+    await this.setAgentCache(agent);
 
     return await this.saveAgent(agent);
   }
@@ -207,6 +235,7 @@ export class AgentService {
     }
     agent.credentials = newCredentials;
     await this.agentCacheService.updateAgentInfoCache(agent);
+    await this.setAgentCache(agent);
 
     return agent;
   }
