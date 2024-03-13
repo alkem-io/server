@@ -52,6 +52,8 @@ import { AgentCacheService } from './agent.cache.service';
 
 @Injectable()
 export class AgentService {
+  private readonly cache_ttl: number;
+
   constructor(
     private agentCacheService: AgentCacheService,
     private authorizationPolicyService: AuthorizationPolicyService,
@@ -69,7 +71,11 @@ export class AgentService {
     private readonly cacheManager: Cache,
     @Inject(SUBSCRIPTION_PROFILE_VERIFIED_CREDENTIAL)
     private subscriptionVerifiedCredentials: PubSubEngine
-  ) {}
+  ) {
+    this.cache_ttl = this.configService.get(
+      ConfigurationTypes.IDENTITY
+    ).authentication.cache_ttl;
+  }
 
   async createAgent(inputData: CreateAgentInput): Promise<IAgent> {
     const agent: IAgent = Agent.create(inputData);
@@ -147,7 +153,7 @@ export class AgentService {
   private async setAgentCache(agent: IAgent): Promise<IAgent> {
     const cacheKey = this.getAgentCacheKey(agent.id);
     return await this.cacheManager.set<IAgent>(cacheKey, agent, {
-      ttl: 60,
+      ttl: this.cache_ttl,
     });
   }
 
