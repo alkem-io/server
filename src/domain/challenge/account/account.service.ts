@@ -272,7 +272,7 @@ export class AccountService {
     });
 
     await this.organizationService.save(organization);
-    return await this.getAccountOrFail(spaceID);
+    return account;
   }
 
   async getHost(account: IAccount): Promise<IOrganization | undefined> {
