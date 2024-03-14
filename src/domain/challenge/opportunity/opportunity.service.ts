@@ -64,7 +64,7 @@ export class OpportunityService {
         opportunityData.profileData?.displayName || ''
       );
     }
-    await this.baseChallengeService.isNameAvailableOrFail(
+    await this.baseChallengeService.isNameAvailableInAccountOrFail(
       opportunityData.nameID,
       opportunityData.spaceID
     );
@@ -291,7 +291,7 @@ export class OpportunityService {
     if (opportunityData.nameID) {
       if (opportunityData.nameID !== baseOpportunity.nameID) {
         // updating the nameID, check new value is allowed
-        await this.baseChallengeService.isNameAvailableOrFail(
+        await this.baseChallengeService.isNameAvailableInAccountOrFail(
           opportunityData.nameID,
           opportunity.account.id
         );

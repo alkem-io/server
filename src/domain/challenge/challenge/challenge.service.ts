@@ -91,7 +91,7 @@ export class ChallengeService {
         challengeData.profileData.displayName
       );
     }
-    await this.baseChallengeService.isNameAvailableOrFail(
+    await this.baseChallengeService.isNameAvailableInAccountOrFail(
       challengeData.nameID,
       challengeData.spaceID
     );
@@ -232,7 +232,7 @@ export class ChallengeService {
     if (challengeData.nameID && challenge.account) {
       if (challengeData.nameID !== challenge.nameID) {
         // updating the nameID, check new value is allowed
-        await this.baseChallengeService.isNameAvailableOrFail(
+        await this.baseChallengeService.isNameAvailableInAccountOrFail(
           challengeData.nameID,
           challenge.account.id
         );
@@ -499,12 +499,13 @@ export class ChallengeService {
       );
     }
 
-    await this.baseChallengeService.isNameAvailableOrFail(
+    await this.baseChallengeService.isNameAvailableInAccountOrFail(
       opportunityData.nameID,
       account.id
     );
 
     opportunityData.storageAggregatorParent = challenge.storageAggregator;
+    opportunityData.spaceID = challenge.account.spaceID;
     const opportunity = await this.opportunityService.createOpportunity(
       opportunityData,
       account,

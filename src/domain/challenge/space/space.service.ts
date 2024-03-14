@@ -939,7 +939,7 @@ export class SpaceService {
   }
 
   async validateChallengeNameIdOrFail(proposedNameID: string, spaceID: string) {
-    const nameAvailable = await this.namingService.isNameIdAvailableInSpace(
+    const nameAvailable = await this.namingService.isNameIdAvailableInAccount(
       proposedNameID,
       spaceID
     );
