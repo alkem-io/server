@@ -893,10 +893,7 @@ export class SpaceService {
     space: ISpace,
     IDs?: string[]
   ): Promise<IOpportunity[]> {
-    return await this.opportunityService.getOpportunitiesInAccount(
-      space.id,
-      IDs
-    );
+    return await this.opportunityService.getOpportunitiesInSpace(space.id, IDs);
   }
 
   async getOpportunityInAccount(

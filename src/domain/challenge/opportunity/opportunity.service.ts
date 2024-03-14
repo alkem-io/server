@@ -225,7 +225,7 @@ export class OpportunityService {
     return this.opportunityRepository.find(options);
   }
 
-  async getOpportunitiesInAccount(
+  async getOpportunitiesInSpace(
     nameableScopeID: string,
     IDs?: string[]
   ): Promise<IOpportunity[]> {
@@ -233,16 +233,20 @@ export class OpportunityService {
       return await this.opportunityRepository.find({
         where: {
           id: In(IDs),
-          account: {
-            id: nameableScopeID,
+          challenge: {
+            space: {
+              id: nameableScopeID,
+            },
           },
         },
       });
     }
 
     return await this.opportunityRepository.findBy({
-      account: {
-        id: nameableScopeID,
+      challenge: {
+        space: {
+          id: nameableScopeID,
+        },
       },
     });
   }
