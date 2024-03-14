@@ -66,7 +66,7 @@ export class OpportunityService {
     }
     await this.baseChallengeService.isNameAvailableInAccountOrFail(
       opportunityData.nameID,
-      opportunityData.spaceID
+      account.id
     );
 
     const opportunity: IOpportunity = Opportunity.create(opportunityData);

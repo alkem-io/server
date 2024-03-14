@@ -950,10 +950,13 @@ export class SpaceService {
     );
   }
 
-  async validateChallengeNameIdOrFail(proposedNameID: string, spaceID: string) {
+  async validateChallengeNameIdOrFail(
+    proposedNameID: string,
+    accountID: string
+  ) {
     const nameAvailable = await this.namingService.isNameIdAvailableInAccount(
       proposedNameID,
-      spaceID
+      accountID
     );
     if (!nameAvailable)
       throw new ValidationException(
@@ -972,7 +975,10 @@ export class SpaceService {
         storageAggregator: true,
       },
     });
-    await this.validateChallengeNameIdOrFail(challengeData.nameID, space.id);
+    await this.validateChallengeNameIdOrFail(
+      challengeData.nameID,
+      space.account.id
+    );
     if (!space.storageAggregator || !space.account) {
       throw new EntityNotFoundException(
         `Unable to retrieve entities on space for creating challenge: ${space.id}`,

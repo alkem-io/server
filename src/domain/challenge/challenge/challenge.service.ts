@@ -93,7 +93,7 @@ export class ChallengeService {
     }
     await this.baseChallengeService.isNameAvailableInAccountOrFail(
       challengeData.nameID,
-      challengeData.spaceID
+      account.id
     );
 
     const challenge: IChallenge = Challenge.create(challengeData);
