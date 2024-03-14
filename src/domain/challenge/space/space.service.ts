@@ -864,33 +864,33 @@ export class SpaceService {
     return await this.communityService.getUserGroups(community);
   }
 
-  async getOpportunitiesInNameableScope(
+  async getOpportunitiesInAccount(
     space: ISpace,
     IDs?: string[]
   ): Promise<IOpportunity[]> {
-    return await this.opportunityService.getOpportunitiesInNameableScope(
+    return await this.opportunityService.getOpportunitiesInAccount(
       space.id,
       IDs
     );
   }
 
-  async getOpportunityInNameableScope(
+  async getOpportunityInAccount(
     opportunityID: string,
     space: ISpace
   ): Promise<IOpportunity | null> {
-    return await this.opportunityService.getOpportunityInNameableScope(
+    return await this.opportunityService.getOpportunityInAccount(
       opportunityID,
-      space.id
+      space.account.id
     );
   }
 
-  async getChallengeInNameableScope(
+  async getChallengeInAccount(
     challengeID: string,
     space: ISpace
   ): Promise<IChallenge | null> {
-    return await this.challengeService.getChallengeInNameableScope(
+    return await this.challengeService.getChallengeInAccount(
       challengeID,
-      space.id
+      space.account.id
     );
   }
 
@@ -1002,9 +1002,9 @@ export class SpaceService {
   }
 
   async getChallenge(challengeID: string, space: ISpace): Promise<IChallenge> {
-    return await this.challengeService.getChallengeInNameableScopeOrFail(
+    return await this.challengeService.getChallengeInAccountScopeOrFail(
       challengeID,
-      space.id
+      space.account.id
     );
   }
 
@@ -1080,16 +1080,6 @@ export class SpaceService {
     return await this.baseChallengeService.getMembersCount(
       space,
       this.spaceRepository
-    );
-  }
-
-  async getCommunityInNameableScope(
-    communityID: string,
-    space: ISpace
-  ): Promise<ICommunity> {
-    return await this.communityService.getCommunityInNameableScopeOrFail(
-      communityID,
-      space.id
     );
   }
 

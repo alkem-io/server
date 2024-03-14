@@ -49,20 +49,14 @@ export class SpaceResolverFields {
 
   @ResolveField('community', () => ICommunity, {
     nullable: true,
-    description:
-      'Get a Community within the Space. Defaults to the Community for the Space itself.',
+    description: 'Get the Community for the Space. ',
   })
   async community(
     @Parent() space: Space,
-    @Args('ID', { type: () => UUID, nullable: true }) ID: string,
     @Loader(JourneyCommunityLoaderCreator, { parentClassRef: Space })
     loader: ILoader<ICommunity>
   ) {
-    // Default to returning the community for the Space
-    if (!ID) {
-      return loader.load(space.id);
-    }
-    return await this.spaceService.getCommunityInNameableScope(ID, space);
+    return loader.load(space.id);
   }
 
   @ResolveField('context', () => IContext, {
@@ -192,10 +186,7 @@ export class SpaceResolverFields {
     @CurrentUser() agentInfo: AgentInfo,
     @Parent() space: Space
   ): Promise<IChallenge> {
-    const challenge = await this.spaceService.getChallengeInNameableScope(
-      id,
-      space
-    );
+    const challenge = await this.spaceService.getChallengeInAccount(id, space);
     if (!challenge) {
       throw new EntityNotFoundException(
         `Unable to find challenge with ID: '${id}'`,
@@ -221,7 +212,7 @@ export class SpaceResolverFields {
     })
     IDs: string[]
   ): Promise<IOpportunity[]> {
-    return await this.spaceService.getOpportunitiesInNameableScope(space, IDs);
+    return await this.spaceService.getOpportunitiesInAccount(space, IDs);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -236,7 +227,7 @@ export class SpaceResolverFields {
     @CurrentUser() agentInfo: AgentInfo,
     @Parent() space: Space
   ): Promise<IOpportunity> {
-    const opportunity = await this.spaceService.getOpportunityInNameableScope(
+    const opportunity = await this.spaceService.getOpportunityInAccount(
       id,
       space
     );

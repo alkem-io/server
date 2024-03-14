@@ -301,9 +301,9 @@ export class ChallengeService {
     return result;
   }
 
-  async getChallengeInNameableScope(
+  async getChallengeInAccount(
     challengeID: string,
-    nameableScopeID: string,
+    accountID: string,
     options?: FindOneOptions<Challenge>
   ): Promise<IChallenge | null> {
     let challenge: IChallenge | null = null;
@@ -312,7 +312,7 @@ export class ChallengeService {
         where: {
           id: challengeID,
           account: {
-            id: nameableScopeID,
+            id: accountID,
           },
         },
         ...options,
@@ -324,7 +324,7 @@ export class ChallengeService {
         where: {
           nameID: challengeID,
           account: {
-            id: nameableScopeID,
+            id: accountID,
           },
         },
         ...options,
@@ -334,14 +334,14 @@ export class ChallengeService {
     return challenge;
   }
 
-  async getChallengeInNameableScopeOrFail(
+  async getChallengeInAccountScopeOrFail(
     challengeID: string,
-    nameableScopeID: string,
+    accountID: string,
     options?: FindOneOptions<Challenge>
   ): Promise<IChallenge | never> {
-    const challenge = await this.getChallengeInNameableScope(
+    const challenge = await this.getChallengeInAccount(
       challengeID,
-      nameableScopeID,
+      accountID,
       options
     );
 

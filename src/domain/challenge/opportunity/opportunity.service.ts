@@ -162,9 +162,9 @@ export class OpportunityService {
     return await this.opportunityRepository.save(opportunity);
   }
 
-  async getOpportunityInNameableScope(
+  async getOpportunityInAccount(
     opportunityID: string,
-    nameableScopeID: string,
+    accountID: string,
     options?: FindOneOptions<Opportunity>
   ): Promise<IOpportunity | null> {
     let opportunity: IOpportunity | null = null;
@@ -173,7 +173,7 @@ export class OpportunityService {
         where: {
           id: opportunityID,
           account: {
-            id: nameableScopeID,
+            id: accountID,
           },
         },
         ...options,
@@ -185,7 +185,7 @@ export class OpportunityService {
         where: {
           nameID: opportunityID,
           account: {
-            id: nameableScopeID,
+            id: accountID,
           },
         },
         ...options,
@@ -225,7 +225,7 @@ export class OpportunityService {
     return this.opportunityRepository.find(options);
   }
 
-  async getOpportunitiesInNameableScope(
+  async getOpportunitiesInAccount(
     nameableScopeID: string,
     IDs?: string[]
   ): Promise<IOpportunity[]> {
