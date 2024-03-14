@@ -1,6 +1,6 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, In, Repository } from 'typeorm';
+import { FindOneOptions, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -64,9 +64,9 @@ export class OpportunityService {
         opportunityData.profileData?.displayName || ''
       );
     }
-    await this.baseChallengeService.isNameAvailableOrFail(
+    await this.baseChallengeService.isNameAvailableInAccountOrFail(
       opportunityData.nameID,
-      opportunityData.spaceID
+      account.id
     );
 
     const opportunity: IOpportunity = Opportunity.create(opportunityData);
@@ -162,9 +162,9 @@ export class OpportunityService {
     return await this.opportunityRepository.save(opportunity);
   }
 
-  async getOpportunityInNameableScope(
+  async getOpportunityInAccount(
     opportunityID: string,
-    nameableScopeID: string,
+    accountID: string,
     options?: FindOneOptions<Opportunity>
   ): Promise<IOpportunity | null> {
     let opportunity: IOpportunity | null = null;
@@ -173,7 +173,7 @@ export class OpportunityService {
         where: {
           id: opportunityID,
           account: {
-            id: nameableScopeID,
+            id: accountID,
           },
         },
         ...options,
@@ -185,7 +185,7 @@ export class OpportunityService {
         where: {
           nameID: opportunityID,
           account: {
-            id: nameableScopeID,
+            id: accountID,
           },
         },
         ...options,
@@ -217,34 +217,6 @@ export class OpportunityService {
     }
 
     return opportunity;
-  }
-
-  public async getOpportunities(
-    options?: FindOneOptions<Opportunity>
-  ): Promise<IOpportunity[]> {
-    return this.opportunityRepository.find(options);
-  }
-
-  async getOpportunitiesInNameableScope(
-    nameableScopeID: string,
-    IDs?: string[]
-  ): Promise<IOpportunity[]> {
-    if (IDs && IDs.length > 0) {
-      return await this.opportunityRepository.find({
-        where: {
-          id: In(IDs),
-          account: {
-            id: nameableScopeID,
-          },
-        },
-      });
-    }
-
-    return await this.opportunityRepository.findBy({
-      account: {
-        id: nameableScopeID,
-      },
-    });
   }
 
   async deleteOpportunity(opportunityID: string): Promise<IOpportunity> {
@@ -291,7 +263,7 @@ export class OpportunityService {
     if (opportunityData.nameID) {
       if (opportunityData.nameID !== baseOpportunity.nameID) {
         // updating the nameID, check new value is allowed
-        await this.baseChallengeService.isNameAvailableOrFail(
+        await this.baseChallengeService.isNameAvailableInAccountOrFail(
           opportunityData.nameID,
           opportunity.account.id
         );

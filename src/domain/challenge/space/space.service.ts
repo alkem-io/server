@@ -74,6 +74,8 @@ import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.a
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { SpaceMembershipCollaborationInfo } from '@services/api/me/space.membership.type';
 import { AccountService } from '../account/account.service';
+import { ProfileService } from '@domain/common/profile/profile.service';
+import { ContextService } from '@domain/context/context/context.service';
 
 @Injectable()
 export class SpaceService {
@@ -90,6 +92,8 @@ export class SpaceService {
     private storageAggregatorService: StorageAggregatorService,
     private collaborationService: CollaborationService,
     private accountService: AccountService,
+    private contextService: ContextService,
+    private profileService: ProfileService,
     @InjectRepository(Space)
     private spaceRepository: Repository<Space>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -109,13 +113,18 @@ export class SpaceService {
       await this.storageAggregatorService.createStorageAggregator();
 
     space.account = await this.accountService.createAccount(
-      spaceData.accountData,
       space.storageAggregator
     );
 
     // remove context before saving as want to control that creation
     space.context = undefined;
     await this.spaceRepository.save(space);
+    space.account.spaceID = space.id;
+
+    await this.accountService.setAccountHost(
+      space.account,
+      spaceData.accountData.hostID
+    );
     await this.baseChallengeService.initialise(
       space,
       spaceData,
@@ -155,7 +164,6 @@ export class SpaceService {
       space.storageAggregator,
       agentInfo?.userID
     );
-    space.account.spaceID = space.id;
     await this.save(space);
 
     // set immediate community parent and  community policy
@@ -214,10 +222,27 @@ export class SpaceService {
   }
 
   async update(spaceData: UpdateSpaceInput): Promise<ISpace> {
-    const space: ISpace = await this.baseChallengeService.update(
-      spaceData,
-      this.spaceRepository
-    );
+    const space = await this.getSpaceOrFail(spaceData.ID, {
+      relations: { context: true, community: true, profile: true },
+    });
+
+    if (spaceData.context) {
+      if (!space.context)
+        throw new EntityNotInitializedException(
+          `Space not initialised: ${spaceData.ID}`,
+          LogContext.CHALLENGES
+        );
+      space.context = await this.contextService.updateContext(
+        space.context,
+        spaceData.context
+      );
+    }
+    if (spaceData.profileData) {
+      space.profile = await this.profileService.updateProfile(
+        space.profile,
+        spaceData.profileData
+      );
+    }
 
     return await this.spaceRepository.save(space);
   }
@@ -864,33 +889,23 @@ export class SpaceService {
     return await this.communityService.getUserGroups(community);
   }
 
-  async getOpportunitiesInNameableScope(
-    space: ISpace,
-    IDs?: string[]
-  ): Promise<IOpportunity[]> {
-    return await this.opportunityService.getOpportunitiesInNameableScope(
-      space.id,
-      IDs
-    );
-  }
-
-  async getOpportunityInNameableScope(
+  async getOpportunityInAccount(
     opportunityID: string,
     space: ISpace
   ): Promise<IOpportunity | null> {
-    return await this.opportunityService.getOpportunityInNameableScope(
+    return await this.opportunityService.getOpportunityInAccount(
       opportunityID,
-      space.id
+      space.account.id
     );
   }
 
-  async getChallengeInNameableScope(
+  async getChallengeInAccount(
     challengeID: string,
     space: ISpace
   ): Promise<IChallenge | null> {
-    return await this.challengeService.getChallengeInNameableScope(
+    return await this.challengeService.getChallengeInAccount(
       challengeID,
-      space.id
+      space.account.id
     );
   }
 
@@ -935,10 +950,13 @@ export class SpaceService {
     );
   }
 
-  async validateChallengeNameIdOrFail(proposedNameID: string, spaceID: string) {
-    const nameAvailable = await this.namingService.isNameIdAvailableInSpace(
+  async validateChallengeNameIdOrFail(
+    proposedNameID: string,
+    accountID: string
+  ) {
+    const nameAvailable = await this.namingService.isNameIdAvailableInAccount(
       proposedNameID,
-      spaceID
+      accountID
     );
     if (!nameAvailable)
       throw new ValidationException(
@@ -957,7 +975,10 @@ export class SpaceService {
         storageAggregator: true,
       },
     });
-    await this.validateChallengeNameIdOrFail(challengeData.nameID, space.id);
+    await this.validateChallengeNameIdOrFail(
+      challengeData.nameID,
+      space.account.id
+    );
     if (!space.storageAggregator || !space.account) {
       throw new EntityNotFoundException(
         `Unable to retrieve entities on space for creating challenge: ${space.id}`,
@@ -1002,9 +1023,9 @@ export class SpaceService {
   }
 
   async getChallenge(challengeID: string, space: ISpace): Promise<IChallenge> {
-    return await this.challengeService.getChallengeInNameableScopeOrFail(
+    return await this.challengeService.getChallengeInAccountScopeOrFail(
       challengeID,
-      space.id
+      space.account.id
     );
   }
 
@@ -1080,16 +1101,6 @@ export class SpaceService {
     return await this.baseChallengeService.getMembersCount(
       space,
       this.spaceRepository
-    );
-  }
-
-  async getCommunityInNameableScope(
-    communityID: string,
-    space: ISpace
-  ): Promise<ICommunity> {
-    return await this.communityService.getCommunityInNameableScopeOrFail(
-      communityID,
-      space.id
     );
   }
 

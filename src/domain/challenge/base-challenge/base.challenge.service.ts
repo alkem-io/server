@@ -59,7 +59,10 @@ export class BaseChallengeService {
     collaborationInput?: CreateCollaborationInput
   ) {
     baseChallenge.authorization = new AuthorizationPolicy();
-    await this.isNameAvailableOrFail(baseChallengeData.nameID, spaceID);
+    await this.isNameAvailableInAccountOrFail(
+      baseChallengeData.nameID,
+      spaceID
+    );
 
     baseChallenge.community = await this.communityService.createCommunity(
       baseChallengeData.profileData.displayName,
@@ -209,12 +212,12 @@ export class BaseChallengeService {
     return challenge;
   }
 
-  public async isNameAvailableOrFail(nameID: string, nameableScopeID: string) {
+  public async isNameAvailableInAccountOrFail(
+    nameID: string,
+    accountID: string
+  ) {
     if (
-      !(await this.namingService.isNameIdAvailableInSpace(
-        nameID,
-        nameableScopeID
-      ))
+      !(await this.namingService.isNameIdAvailableInAccount(nameID, accountID))
     )
       throw new ValidationException(
         `Unable to create entity: the provided nameID is already taken: ${nameID}`,

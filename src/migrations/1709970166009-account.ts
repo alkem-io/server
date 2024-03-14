@@ -46,6 +46,9 @@ export class account1709970166009 implements MigrationInterface {
       }[] = await queryRunner.query(
         `SELECT id, accountId FROM space WHERE id = '${challenge.spaceId}'`
       );
+      if (!space || !space.accountId) {
+        continue;
+      }
       await queryRunner.query(
         `UPDATE challenge SET accountId = '${space.accountId}' WHERE id = '${challenge.id}'`
       );
@@ -106,6 +109,9 @@ export class account1709970166009 implements MigrationInterface {
       }[] = await queryRunner.query(
         `SELECT id, spaceID FROM account WHERE id = '${challenge.accountId}'`
       );
+      if (!account || !account.spaceID) {
+        continue;
+      }
       await queryRunner.query(
         `UPDATE challenge SET spaceId = '${account.spaceID}' WHERE id = '${challenge.id}'`
       );
@@ -121,6 +127,9 @@ export class account1709970166009 implements MigrationInterface {
       }[] = await queryRunner.query(
         `SELECT id, spaceID FROM account WHERE id = '${opportunity.accountId}'`
       );
+      if (!account || !account.spaceID) {
+        continue;
+      }
       await queryRunner.query(
         `UPDATE challenge SET spaceID = '${account.spaceID}' WHERE id = '${opportunity.id}'`
       );
@@ -158,20 +167,7 @@ export class account1709970166009 implements MigrationInterface {
       `ALTER TABLE \`opportunity\` ADD \`accountId\` char(36) NULL`
     );
     await queryRunner.query(
-      `ALTER TABLE \`opportunity\` ADD UNIQUE INDEX \`IDX_69e32f4f4652f654dc8641ae2b\` (\`accountId\`)`
-    );
-    await queryRunner.query(
-      `CREATE UNIQUE INDEX \`REL_69e32f4f4652f654dc8641ae2b\` ON \`opportunity\` (\`accountId\`)`
-    );
-
-    await queryRunner.query(
       `ALTER TABLE \`challenge\` ADD \`accountId\` char(36) NULL`
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`challenge\` ADD UNIQUE INDEX \`IDX_78017461e03bd2a6cd47044bf6\` (\`accountId\`)`
-    );
-    await queryRunner.query(
-      `CREATE UNIQUE INDEX \`REL_78017461e03bd2a6cd47044bf6\` ON \`challenge\` (\`accountId\`)`
     );
   }
 
@@ -197,7 +193,6 @@ export class account1709970166009 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE \`challenge\` ADD CONSTRAINT \`FK_78017461e03bd2a6cd47044bf6a\` FOREIGN KEY (\`accountId\`) REFERENCES \`account\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
-
     await queryRunner.query(
       `ALTER TABLE \`space\` DROP FOREIGN KEY \`FK_3ef80ef55ba1a1d45e625ea8389\``
     );
@@ -266,20 +261,6 @@ export class account1709970166009 implements MigrationInterface {
     );
     await queryRunner.query(
       `ALTER TABLE \`space\` DROP FOREIGN KEY \`FK_6bdeffaf6ea6159b4672a2aed70\``
-    );
-
-    await queryRunner.query(
-      `DROP INDEX \`REL_78017461e03bd2a6cd47044bf6\` ON \`challenge\``
-    );
-
-    await queryRunner.query(
-      `ALTER TABLE \`challenge\` DROP INDEX \`IDX_78017461e03bd2a6cd47044bf6\``
-    );
-    await queryRunner.query(
-      `DROP INDEX \`REL_69e32f4f4652f654dc8641ae2b\` ON \`opportunity\``
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`opportunity\` DROP INDEX \`IDX_69e32f4f4652f654dc8641ae2b\``
     );
     await queryRunner.query(
       `DROP INDEX \`REL_6bdeffaf6ea6159b4672a2aed7\` ON \`space\``
@@ -362,12 +343,12 @@ export class account1709970166009 implements MigrationInterface {
   private async challengeHierarchyDown(
     queryRunner: QueryRunner
   ): Promise<void> {
-    // await queryRunner.query(
-    //   `ALTER TABLE \`challenge\` DROP FOREIGN KEY \`FK_494b27cb13b59128fb24b365ca6\``
-    // );
-    // await queryRunner.query(
-    //   `ALTER TABLE \`challenge\` RENAME COLUMN \`spaceId\` TO \`parentSpaceId\``
-    // );
+    await queryRunner.query(
+      `ALTER TABLE \`challenge\` DROP FOREIGN KEY \`FK_494b27cb13b59128fb24b365ca6\``
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`challenge\` RENAME COLUMN \`spaceId\` TO \`parentSpaceId\``
+    );
     await queryRunner.query(
       `ALTER TABLE \`challenge\` ADD \`spaceId\` char(36) NULL`
     );

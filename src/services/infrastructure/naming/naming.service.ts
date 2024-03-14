@@ -49,7 +49,7 @@ export class NamingService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async isNameIdAvailableInSpace(
+  async isNameIdAvailableInAccount(
     nameID: string,
     accountID: string
   ): Promise<boolean> {

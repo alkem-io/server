@@ -91,9 +91,9 @@ export class ChallengeService {
         challengeData.profileData.displayName
       );
     }
-    await this.baseChallengeService.isNameAvailableOrFail(
+    await this.baseChallengeService.isNameAvailableInAccountOrFail(
       challengeData.nameID,
-      challengeData.spaceID
+      account.id
     );
 
     const challenge: IChallenge = Challenge.create(challengeData);
@@ -232,7 +232,7 @@ export class ChallengeService {
     if (challengeData.nameID && challenge.account) {
       if (challengeData.nameID !== challenge.nameID) {
         // updating the nameID, check new value is allowed
-        await this.baseChallengeService.isNameAvailableOrFail(
+        await this.baseChallengeService.isNameAvailableInAccountOrFail(
           challengeData.nameID,
           challenge.account.id
         );
@@ -301,9 +301,9 @@ export class ChallengeService {
     return result;
   }
 
-  async getChallengeInNameableScope(
+  async getChallengeInAccount(
     challengeID: string,
-    nameableScopeID: string,
+    accountID: string,
     options?: FindOneOptions<Challenge>
   ): Promise<IChallenge | null> {
     let challenge: IChallenge | null = null;
@@ -312,7 +312,7 @@ export class ChallengeService {
         where: {
           id: challengeID,
           account: {
-            id: nameableScopeID,
+            id: accountID,
           },
         },
         ...options,
@@ -324,7 +324,7 @@ export class ChallengeService {
         where: {
           nameID: challengeID,
           account: {
-            id: nameableScopeID,
+            id: accountID,
           },
         },
         ...options,
@@ -334,14 +334,14 @@ export class ChallengeService {
     return challenge;
   }
 
-  async getChallengeInNameableScopeOrFail(
+  async getChallengeInAccountScopeOrFail(
     challengeID: string,
-    nameableScopeID: string,
+    accountID: string,
     options?: FindOneOptions<Challenge>
   ): Promise<IChallenge | never> {
-    const challenge = await this.getChallengeInNameableScope(
+    const challenge = await this.getChallengeInAccount(
       challengeID,
-      nameableScopeID,
+      accountID,
       options
     );
 
@@ -488,6 +488,7 @@ export class ChallengeService {
           storageAggregator: true,
           opportunities: true,
           community: true,
+          account: true,
         },
       }
     );
@@ -499,12 +500,13 @@ export class ChallengeService {
       );
     }
 
-    await this.baseChallengeService.isNameAvailableOrFail(
+    await this.baseChallengeService.isNameAvailableInAccountOrFail(
       opportunityData.nameID,
       account.id
     );
 
     opportunityData.storageAggregatorParent = challenge.storageAggregator;
+    opportunityData.spaceID = challenge.account.spaceID;
     const opportunity = await this.opportunityService.createOpportunity(
       opportunityData,
       account,

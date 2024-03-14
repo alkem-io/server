@@ -25,7 +25,7 @@ export class AccountResolverFields {
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('library', () => ITemplatesSet, {
     nullable: true,
-    description: 'The templates in use by this Account',
+    description: 'The Library in use by this Account',
   })
   @UseGuards(GraphqlGuard)
   async library(
@@ -66,6 +66,6 @@ export class AccountResolverFields {
   })
   @Profiling.api
   async host(@Parent() account: Account): Promise<IOrganization | undefined> {
-    return await this.accountService.getHost(account.id);
+    return await this.accountService.getHost(account);
   }
 }

@@ -7,25 +7,13 @@ import { Agent } from '@domain/agent/agent/agent.entity';
 import { Collaboration } from '../../collaboration/collaboration/collaboration.entity';
 import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
 import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
-import { Account } from '../account/account.entity';
 
-export abstract class BaseChallenge
-  extends NameableEntity
-  implements IBaseChallenge
-{
+export class BaseChallenge extends NameableEntity implements IBaseChallenge {
   @Column({
     unique: true,
   })
   @Generated('increment')
   rowId!: number;
-
-  @OneToOne(() => Account, {
-    eager: true,
-    cascade: true,
-    onDelete: 'SET NULL',
-  })
-  @JoinColumn()
-  account!: Account;
 
   @OneToOne(() => Collaboration, {
     eager: false,
