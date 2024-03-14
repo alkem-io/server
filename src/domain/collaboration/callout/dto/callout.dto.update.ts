@@ -6,7 +6,6 @@ import { Type } from 'class-transformer';
 import { ValidateNested } from 'class-validator';
 import { UpdateCalloutFramingInput } from '@domain/collaboration/callout-framing/dto/callout.framing.dto.update';
 import { UpdateCalloutContributionPolicyInput } from '@domain/collaboration/callout-contribution-policy/dto/callout.contribution.policy.dto.update';
-import { ICalloutGroup } from '@domain/collaboration/callout-groups/callout.group.interface';
 
 @InputType()
 export class UpdateCalloutInput extends UpdateBaseAlkemioInput {
@@ -31,11 +30,11 @@ export class UpdateCalloutInput extends UpdateBaseAlkemioInput {
   @Type(() => UpdateCalloutContributionPolicyInput)
   contributionPolicy?: UpdateCalloutContributionPolicyInput;
 
-  @Field(() => ICalloutGroup, {
+  @Field(() => String, {
     nullable: true,
     description: 'Set Group for this Callout.',
   })
-  group?: ICalloutGroup;
+  groupName?: string;
 
   @Field(() => NameID, {
     nullable: true,

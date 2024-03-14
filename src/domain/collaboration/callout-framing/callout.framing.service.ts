@@ -22,7 +22,7 @@ import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { TagsetType } from '@common/enums/tagset.type';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { ICalloutGroup } from '../callout-groups/callout.group.interface';
+import { ITagset } from '@domain/common/tagset';
 
 @Injectable()
 export class CalloutFramingService {
@@ -241,19 +241,25 @@ export class CalloutFramingService {
     };
   }
 
-  updateDisplayLocationTagsetValue(
+  updateCalloutGroupTagsetValue(
     framing: ICalloutFraming,
-    group: ICalloutGroup
-  ) {
-    const displayLocationTagset = framing.profile.tagsets?.find(
+    groupName: string
+  ): ITagset {
+    const calloutGroupTagset = this.getCalloutGroupTagset(framing);
+    calloutGroupTagset.tags = [groupName];
+    return calloutGroupTagset;
+  }
+
+  getCalloutGroupTagset(framing: ICalloutFraming): ITagset {
+    const calloutGroupTagset = framing.profile.tagsets?.find(
       tagset => tagset.name === TagsetReservedName.CALLOUT_GROUP
     );
-    if (!displayLocationTagset) {
+    if (!calloutGroupTagset) {
       throw new EntityNotFoundException(
         `Callout Group tagset not found for profile: ${framing.profile.id}`,
         LogContext.TAGSET
       );
     }
-    displayLocationTagset.tags = [group.displayName];
+    return calloutGroupTagset;
   }
 }

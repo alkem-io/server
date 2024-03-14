@@ -2,8 +2,6 @@ import { CalloutState } from '@common/enums/callout.state';
 import { CalloutType } from '@common/enums/callout.type';
 import { ChallengeDisplayLocation } from '@domain/challenge/space.defaults/definitions/challenge.display.location';
 import { CommonDisplayLocation } from '@domain/challenge/space.defaults/definitions/common.display.location';
-import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { TagsetType } from '@common/enums/tagset.type';
 import { CreateCalloutInput } from '@domain/collaboration/callout';
 import { EMPTY_WHITEBOARD_CONTENT } from '@domain/common/whiteboard/empty.whiteboard.content';
 
@@ -15,17 +13,11 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.CLOSED,
     },
     sortOrder: 1,
+    groupName: CommonDisplayLocation.HOME_RIGHT,
     framing: {
       profile: {
         displayName: 'Getting Started',
         description: '⬇️ Here are some quick links to help you get started',
-        tagsets: [
-          {
-            name: TagsetReservedName.CALLOUT_GROUP,
-            type: TagsetType.SELECT_ONE,
-            tags: [CommonDisplayLocation.HOME_RIGHT],
-          },
-        ],
       },
     },
   },
@@ -36,17 +28,11 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 2,
+    groupName: CommonDisplayLocation.HOME_LEFT,
     framing: {
       profile: {
         displayName: 'General chat 💬',
         description: 'Things you would like to discuss with the community.',
-        tagsets: [
-          {
-            name: TagsetReservedName.CALLOUT_GROUP,
-            type: TagsetType.SELECT_ONE,
-            tags: [CommonDisplayLocation.HOME_LEFT],
-          },
-        ],
       },
     },
   },
@@ -57,18 +43,12 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 2,
+    groupName: CommonDisplayLocation.HOME_RIGHT,
     framing: {
       profile: {
         displayName: '👥 This is us!',
         description:
           'Here you will find the profiles of all contributors to this Challenge. Are you joining us? 👋 Nice to meet you! Please also provide your details below.',
-        tagsets: [
-          {
-            name: TagsetReservedName.CALLOUT_GROUP,
-            type: TagsetType.SELECT_ONE,
-            tags: [CommonDisplayLocation.HOME_RIGHT],
-          },
-        ],
       },
     },
     contributionDefaults: {
@@ -83,18 +63,12 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 1,
+    groupName: ChallengeDisplayLocation.CONTRIBUTE_RIGHT,
     framing: {
       profile: {
         displayName: 'Relevant news, research or use cases 📰',
         description:
           'Please share any relevant insights to help us better understand the Challenge. You can describe why it is relevant and add a link or upload a document with the article. You can also comment on the insights already submitted by other community members!',
-        tagsets: [
-          {
-            name: TagsetReservedName.CALLOUT_GROUP,
-            type: TagsetType.SELECT_ONE,
-            tags: [ChallengeDisplayLocation.CONTRIBUTE_RIGHT],
-          },
-        ],
       },
     },
     contributionDefaults: {
@@ -109,18 +83,12 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 2,
+    groupName: ChallengeDisplayLocation.CONTRIBUTE_RIGHT,
     framing: {
       profile: {
         displayName: 'Who are the stakeholders?',
         description:
           'Choose one of the templates from the library to map your stakeholders here!',
-        tagsets: [
-          {
-            name: TagsetReservedName.CALLOUT_GROUP,
-            type: TagsetType.SELECT_ONE,
-            tags: [ChallengeDisplayLocation.CONTRIBUTE_RIGHT],
-          },
-        ],
       },
       whiteboard: {
         content: EMPTY_WHITEBOARD_CONTENT,
@@ -138,17 +106,11 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 3,
+    groupName: ChallengeDisplayLocation.CONTRIBUTE,
     framing: {
       profile: {
         displayName: 'Reference / important documents',
         description: 'Please add links to documents with reference material.💥',
-        tagsets: [
-          {
-            name: TagsetReservedName.CALLOUT_GROUP,
-            type: TagsetType.SELECT_ONE,
-            tags: [ChallengeDisplayLocation.CONTRIBUTE],
-          },
-        ],
       },
     },
   },
@@ -159,18 +121,12 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 1,
+    groupName: ChallengeDisplayLocation.OPPORTUNITIES_LEFT,
     framing: {
       profile: {
         displayName: '💡 What Opportunities do you see?',
         description:
           'Please share any relevant direction for a solution that you can think of or have seen.',
-        tagsets: [
-          {
-            name: TagsetReservedName.CALLOUT_GROUP,
-            type: TagsetType.SELECT_ONE,
-            tags: [ChallengeDisplayLocation.OPPORTUNITIES_LEFT],
-          },
-        ],
       },
     },
   },
@@ -181,18 +137,12 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 1,
+    groupName: ChallengeDisplayLocation.OPPORTUNITIES_RIGHT,
     framing: {
       profile: {
         displayName: 'Opportunity proposals',
         description:
           'What are the 💡 Opportunities that you think we should be working on? Please add them below and use the template provided.',
-        tagsets: [
-          {
-            name: TagsetReservedName.CALLOUT_GROUP,
-            type: TagsetType.SELECT_ONE,
-            tags: [ChallengeDisplayLocation.OPPORTUNITIES_RIGHT],
-          },
-        ],
       },
     },
     contributionDefaults: {

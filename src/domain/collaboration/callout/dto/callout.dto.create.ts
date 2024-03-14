@@ -7,7 +7,6 @@ import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { CreateCalloutFramingInput } from '@domain/collaboration/callout-framing/dto';
 import { CreateCalloutContributionDefaultsInput } from '@domain/collaboration/callout-contribution-defaults/dto';
 import { CreateCalloutContributionPolicyInput } from '@domain/collaboration/callout-contribution-policy/dto/callout.contribution.policy.dto.create';
-import { ICalloutGroup } from '@domain/collaboration/callout-groups/callout.group.interface';
 
 @InputType()
 export class CreateCalloutInput {
@@ -37,11 +36,11 @@ export class CreateCalloutInput {
   })
   type!: CalloutType;
 
-  @Field(() => ICalloutGroup, {
-    nullable: true,
-    description: 'Set Callout Group location for this Callout.',
+  @Field(() => String, {
+    nullable: false,
+    description: 'Set Callout Group for this Callout.',
   })
-  group?: ICalloutGroup;
+  groupName!: string;
 
   @Field(() => Number, {
     nullable: true,
