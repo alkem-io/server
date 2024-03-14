@@ -109,13 +109,16 @@ export class SpaceService {
       await this.storageAggregatorService.createStorageAggregator();
 
     space.account = await this.accountService.createAccount(
-      spaceData.accountData,
       space.storageAggregator
     );
 
     // remove context before saving as want to control that creation
     space.context = undefined;
     await this.spaceRepository.save(space);
+    await this.accountService.setAccountHost(
+      space.account,
+      spaceData.accountData.hostID
+    );
     await this.baseChallengeService.initialise(
       space,
       spaceData,

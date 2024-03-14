@@ -19,7 +19,6 @@ import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.a
 import { ILicense } from '@domain/license/license/license.interface';
 import { LicenseService } from '@domain/license/license/license.service';
 import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
-import { CreateAccountInput } from './dto/account.dto.create';
 import { UpdateAccountDefaultsInput } from './dto/account.dto.update.defaults';
 import { ISpaceDefaults } from '../space.defaults/space.defaults.interface';
 import { UpdateAccountInput } from './dto/account.dto.update';
@@ -38,7 +37,6 @@ export class AccountService {
   ) {}
 
   async createAccount(
-    accountData: CreateAccountInput,
     storageAggregator: IStorageAggregator
   ): Promise<IAccount> {
     const account: IAccount = new Account();
@@ -69,12 +67,7 @@ export class AccountService {
 
     account.license = await this.licenseService.createLicense();
 
-    // save before assigning host in case that fails
-    const savedAccount = await this.accountRepository.save(account);
-
-    await this.setAccountHost(account.id, accountData.hostID);
-
-    return savedAccount;
+    return await this.accountRepository.save(account);
   }
 
   async save(account: IAccount): Promise<IAccount> {
@@ -138,7 +131,7 @@ export class AccountService {
     }
 
     if (updateData.hostID) {
-      await this.setAccountHost(account.id, updateData.hostID);
+      await this.setAccountHost(account, updateData.hostID);
     }
 
     if (updateData.license) {
@@ -248,15 +241,16 @@ export class AccountService {
   }
 
   async setAccountHost(
-    accountID: string,
+    account: IAccount,
     hostOrgID: string
   ): Promise<IAccount> {
+    const spaceID = account.spaceID;
     const organization = await this.organizationService.getOrganizationOrFail(
       hostOrgID,
       { relations: { groups: true, agent: true } }
     );
 
-    const existingHost = await this.getHost(accountID);
+    const existingHost = await this.getHost(account);
 
     if (existingHost) {
       const agentExisting = await this.organizationService.getAgent(
@@ -265,7 +259,7 @@ export class AccountService {
       organization.agent = await this.agentService.revokeCredential({
         agentID: agentExisting.id,
         type: AuthorizationCredential.SPACE_HOST,
-        resourceID: accountID,
+        resourceID: spaceID,
       });
     }
 
@@ -274,25 +268,25 @@ export class AccountService {
     organization.agent = await this.agentService.grantCredential({
       agentID: agent.id,
       type: AuthorizationCredential.SPACE_HOST,
-      resourceID: accountID,
+      resourceID: spaceID,
     });
 
     await this.organizationService.save(organization);
-    return await this.getAccountOrFail(accountID);
+    return await this.getAccountOrFail(spaceID);
   }
 
-  async getHost(accountID: string): Promise<IOrganization | undefined> {
+  async getHost(account: IAccount): Promise<IOrganization | undefined> {
     const organizations =
       await this.organizationService.organizationsWithCredentials({
         type: AuthorizationCredential.SPACE_HOST,
-        resourceID: accountID,
+        resourceID: account.spaceID,
       });
     if (organizations.length == 0) {
       return undefined;
     }
     if (organizations.length > 1) {
       throw new RelationshipNotFoundException(
-        `More than one host for Account ${accountID} `,
+        `More than one host for Account ${account.id} `,
         LogContext.CHALLENGES
       );
     }

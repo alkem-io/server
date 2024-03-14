@@ -66,6 +66,6 @@ export class AccountResolverFields {
   })
   @Profiling.api
   async host(@Parent() account: Account): Promise<IOrganization | undefined> {
-    return await this.accountService.getHost(account.id);
+    return await this.accountService.getHost(account);
   }
 }
