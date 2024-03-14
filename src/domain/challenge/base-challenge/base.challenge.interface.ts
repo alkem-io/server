@@ -6,7 +6,6 @@ import { ICommunity } from '@domain/community/community/community.interface';
 import { IPreferenceSet } from '@domain/common/preference-set';
 import { INameable } from '@domain/common/entity/nameable-entity/nameable.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { IAccount } from '../account/account.interface';
 
 @ObjectType('IBaseChallenge')
 export abstract class IBaseChallenge extends INameable {
@@ -23,10 +22,4 @@ export abstract class IBaseChallenge extends INameable {
   preferenceSet?: IPreferenceSet;
 
   storageAggregator?: IStorageAggregator;
-
-  @Field(() => IAccount, {
-    nullable: false,
-    description: 'The Account for this space',
-  })
-  account!: IAccount;
 }

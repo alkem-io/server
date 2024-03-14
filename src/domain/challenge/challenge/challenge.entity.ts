@@ -5,6 +5,7 @@ import { Opportunity } from '@domain/challenge/opportunity/opportunity.entity';
 import { PreferenceSet } from '@domain/common/preference-set';
 import { IChallenge } from './challenge.interface';
 import { BaseChallenge } from '../base-challenge/base.challenge.entity';
+import { Account } from '../account/account.entity';
 
 @Entity()
 export class Challenge extends BaseChallenge implements IChallenge {
@@ -14,6 +15,13 @@ export class Challenge extends BaseChallenge implements IChallenge {
     onDelete: 'CASCADE',
   })
   space?: Space;
+
+  @ManyToOne(() => Account, account => account.challenges, {
+    eager: false,
+    cascade: false,
+    onDelete: 'SET NULL',
+  })
+  account!: Account;
 
   @OneToMany(() => Opportunity, opportunity => opportunity.challenge, {
     eager: false,

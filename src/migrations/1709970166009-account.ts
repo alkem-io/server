@@ -46,6 +46,9 @@ export class account1709970166009 implements MigrationInterface {
       }[] = await queryRunner.query(
         `SELECT id, accountId FROM space WHERE id = '${challenge.spaceId}'`
       );
+      if (!space || !space.accountId) {
+        continue;
+      }
       await queryRunner.query(
         `UPDATE challenge SET accountId = '${space.accountId}' WHERE id = '${challenge.id}'`
       );
@@ -158,20 +161,7 @@ export class account1709970166009 implements MigrationInterface {
       `ALTER TABLE \`opportunity\` ADD \`accountId\` char(36) NULL`
     );
     await queryRunner.query(
-      `ALTER TABLE \`opportunity\` ADD UNIQUE INDEX \`IDX_69e32f4f4652f654dc8641ae2b\` (\`accountId\`)`
-    );
-    await queryRunner.query(
-      `CREATE UNIQUE INDEX \`REL_69e32f4f4652f654dc8641ae2b\` ON \`opportunity\` (\`accountId\`)`
-    );
-
-    await queryRunner.query(
       `ALTER TABLE \`challenge\` ADD \`accountId\` char(36) NULL`
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`challenge\` ADD UNIQUE INDEX \`IDX_78017461e03bd2a6cd47044bf6\` (\`accountId\`)`
-    );
-    await queryRunner.query(
-      `CREATE UNIQUE INDEX \`REL_78017461e03bd2a6cd47044bf6\` ON \`challenge\` (\`accountId\`)`
     );
   }
 
@@ -197,7 +187,6 @@ export class account1709970166009 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE \`challenge\` ADD CONSTRAINT \`FK_78017461e03bd2a6cd47044bf6a\` FOREIGN KEY (\`accountId\`) REFERENCES \`account\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
-
     await queryRunner.query(
       `ALTER TABLE \`space\` DROP FOREIGN KEY \`FK_3ef80ef55ba1a1d45e625ea8389\``
     );

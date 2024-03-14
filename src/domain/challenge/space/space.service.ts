@@ -74,6 +74,8 @@ import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.a
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { SpaceMembershipCollaborationInfo } from '@services/api/me/space.membership.type';
 import { AccountService } from '../account/account.service';
+import { ProfileService } from '@domain/common/profile/profile.service';
+import { ContextService } from '@domain/context/context/context.service';
 
 @Injectable()
 export class SpaceService {
@@ -90,6 +92,8 @@ export class SpaceService {
     private storageAggregatorService: StorageAggregatorService,
     private collaborationService: CollaborationService,
     private accountService: AccountService,
+    private contextService: ContextService,
+    private profileService: ProfileService,
     @InjectRepository(Space)
     private spaceRepository: Repository<Space>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -218,10 +222,27 @@ export class SpaceService {
   }
 
   async update(spaceData: UpdateSpaceInput): Promise<ISpace> {
-    const space: ISpace = await this.baseChallengeService.update(
-      spaceData,
-      this.spaceRepository
-    );
+    const space = await this.getSpaceOrFail(spaceData.ID, {
+      relations: { context: true, community: true, profile: true },
+    });
+
+    if (spaceData.context) {
+      if (!space.context)
+        throw new EntityNotInitializedException(
+          `Space not initialised: ${spaceData.ID}`,
+          LogContext.CHALLENGES
+        );
+      space.context = await this.contextService.updateContext(
+        space.context,
+        spaceData.context
+      );
+    }
+    if (spaceData.profileData) {
+      space.profile = await this.profileService.updateProfile(
+        space.profile,
+        spaceData.profileData
+      );
+    }
 
     return await this.spaceRepository.save(space);
   }
