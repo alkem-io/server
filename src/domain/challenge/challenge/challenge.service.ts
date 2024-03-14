@@ -488,6 +488,7 @@ export class ChallengeService {
           storageAggregator: true,
           opportunities: true,
           community: true,
+          account: true,
         },
       }
     );
