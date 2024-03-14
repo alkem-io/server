@@ -198,24 +198,6 @@ export class SpaceResolverFields {
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @ResolveField('opportunities', () => [IOpportunity], {
-    nullable: true,
-    description: 'All opportunities within the space',
-  })
-  @UseGuards(GraphqlGuard)
-  @Profiling.api
-  async opportunities(
-    @Parent() space: Space,
-    @Args('IDs', {
-      type: () => [UUID],
-      nullable: true,
-    })
-    IDs: string[]
-  ): Promise<IOpportunity[]> {
-    return await this.spaceService.getOpportunitiesInAccount(space, IDs);
-  }
-
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('opportunity', () => IOpportunity, {
     nullable: false,
     description: 'A particular Opportunity, either by its ID or nameID',

@@ -1,6 +1,6 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, In, Repository } from 'typeorm';
+import { FindOneOptions, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -217,38 +217,6 @@ export class OpportunityService {
     }
 
     return opportunity;
-  }
-
-  public async getOpportunities(
-    options?: FindOneOptions<Opportunity>
-  ): Promise<IOpportunity[]> {
-    return this.opportunityRepository.find(options);
-  }
-
-  async getOpportunitiesInSpace(
-    nameableScopeID: string,
-    IDs?: string[]
-  ): Promise<IOpportunity[]> {
-    if (IDs && IDs.length > 0) {
-      return await this.opportunityRepository.find({
-        where: {
-          id: In(IDs),
-          challenge: {
-            space: {
-              id: nameableScopeID,
-            },
-          },
-        },
-      });
-    }
-
-    return await this.opportunityRepository.findBy({
-      challenge: {
-        space: {
-          id: nameableScopeID,
-        },
-      },
-    });
   }
 
   async deleteOpportunity(opportunityID: string): Promise<IOpportunity> {

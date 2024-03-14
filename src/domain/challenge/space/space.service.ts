@@ -889,13 +889,6 @@ export class SpaceService {
     return await this.communityService.getUserGroups(community);
   }
 
-  async getOpportunitiesInAccount(
-    space: ISpace,
-    IDs?: string[]
-  ): Promise<IOpportunity[]> {
-    return await this.opportunityService.getOpportunitiesInSpace(space.id, IDs);
-  }
-
   async getOpportunityInAccount(
     opportunityID: string,
     space: ISpace
