@@ -109,6 +109,9 @@ export class account1709970166009 implements MigrationInterface {
       }[] = await queryRunner.query(
         `SELECT id, spaceID FROM account WHERE id = '${challenge.accountId}'`
       );
+      if (!account || !account.spaceID) {
+        continue;
+      }
       await queryRunner.query(
         `UPDATE challenge SET spaceId = '${account.spaceID}' WHERE id = '${challenge.id}'`
       );
@@ -124,6 +127,9 @@ export class account1709970166009 implements MigrationInterface {
       }[] = await queryRunner.query(
         `SELECT id, spaceID FROM account WHERE id = '${opportunity.accountId}'`
       );
+      if (!account || !account.spaceID) {
+        continue;
+      }
       await queryRunner.query(
         `UPDATE challenge SET spaceID = '${account.spaceID}' WHERE id = '${opportunity.id}'`
       );
@@ -256,20 +262,6 @@ export class account1709970166009 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE \`space\` DROP FOREIGN KEY \`FK_6bdeffaf6ea6159b4672a2aed70\``
     );
-
-    await queryRunner.query(
-      `DROP INDEX \`REL_78017461e03bd2a6cd47044bf6\` ON \`challenge\``
-    );
-
-    await queryRunner.query(
-      `ALTER TABLE \`challenge\` DROP INDEX \`IDX_78017461e03bd2a6cd47044bf6\``
-    );
-    await queryRunner.query(
-      `DROP INDEX \`REL_69e32f4f4652f654dc8641ae2b\` ON \`opportunity\``
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`opportunity\` DROP INDEX \`IDX_69e32f4f4652f654dc8641ae2b\``
-    );
     await queryRunner.query(
       `DROP INDEX \`REL_6bdeffaf6ea6159b4672a2aed7\` ON \`space\``
     );
@@ -351,12 +343,12 @@ export class account1709970166009 implements MigrationInterface {
   private async challengeHierarchyDown(
     queryRunner: QueryRunner
   ): Promise<void> {
-    // await queryRunner.query(
-    //   `ALTER TABLE \`challenge\` DROP FOREIGN KEY \`FK_494b27cb13b59128fb24b365ca6\``
-    // );
-    // await queryRunner.query(
-    //   `ALTER TABLE \`challenge\` RENAME COLUMN \`spaceId\` TO \`parentSpaceId\``
-    // );
+    await queryRunner.query(
+      `ALTER TABLE \`challenge\` DROP FOREIGN KEY \`FK_494b27cb13b59128fb24b365ca6\``
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`challenge\` RENAME COLUMN \`spaceId\` TO \`parentSpaceId\``
+    );
     await queryRunner.query(
       `ALTER TABLE \`challenge\` ADD \`spaceId\` char(36) NULL`
     );
