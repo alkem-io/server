@@ -23,7 +23,6 @@ import { CommunityAuthorizationService } from '@domain/community/community/commu
 import { CollaborationAuthorizationService } from '@domain/collaboration/collaboration/collaboration.service.authorization';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 import { ILicense } from '@domain/license/license/license.interface';
-import { LicenseResolverService } from '@services/infrastructure/license-resolver/license.resolver.service';
 
 @Injectable()
 export class OpportunityAuthorizationService {
@@ -35,21 +34,40 @@ export class OpportunityAuthorizationService {
     private contextAuthorizationService: ContextAuthorizationService,
     private communityAuthorizationService: CommunityAuthorizationService,
     private collaborationAuthorizationService: CollaborationAuthorizationService,
-    private licenseResolverService: LicenseResolverService,
     private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService
   ) {}
 
   async applyAuthorizationPolicy(
-    opportunity: IOpportunity,
+    opportunityInput: IOpportunity,
     challengeAuthorization: IAuthorizationPolicy | undefined,
     challengeCommunityPolicy: ICommunityPolicy
   ): Promise<IOpportunity> {
-    const license = await this.licenseResolverService.getlicenseForSpace(
-      opportunity.account.spaceID
+    const opportunity = await this.opportunityService.getOpportunityOrFail(
+      opportunityInput.id,
+      {
+        relations: {
+          account: {
+            license: true,
+          },
+          community: {
+            policy: true,
+          },
+        },
+      }
     );
-    const communityPolicy = await this.opportunityService.getCommunityPolicy(
-      opportunity.id
-    );
+    if (
+      !opportunity.account ||
+      !opportunity.account.license ||
+      !opportunity.community ||
+      !opportunity.community.policy
+    ) {
+      throw new RelationshipNotFoundException(
+        `Unable to load entities to reset auth for challenge ${opportunity.id} `,
+        LogContext.CHALLENGES
+      );
+    }
+    const license = opportunity.account.license;
+    const communityPolicy = opportunity.community.policy;
 
     this.setCommunityPolicyFlags(communityPolicy, challengeCommunityPolicy);
 

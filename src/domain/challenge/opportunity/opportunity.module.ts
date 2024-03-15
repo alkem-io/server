@@ -19,7 +19,6 @@ import { CollaborationModule } from '@domain/collaboration/collaboration/collabo
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { ContextModule } from '@domain/context/context/context.module';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
-import { LicenseResolverModule } from '@services/infrastructure/license-resolver/license.resolver.module';
 import { SpaceDefaultsModule } from '../space.defaults/space.defaults.module';
 
 @Module({
@@ -39,7 +38,6 @@ import { SpaceDefaultsModule } from '../space.defaults/space.defaults.module';
     ContributionReporterModule,
     SpaceDefaultsModule,
     StorageAggregatorModule,
-    LicenseResolverModule,
     TypeOrmModule.forFeature([Opportunity]),
   ],
   providers: [

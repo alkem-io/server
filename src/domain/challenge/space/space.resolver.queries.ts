@@ -55,6 +55,7 @@ export class SpaceResolverQueries {
     return this.spaceService.getPaginatedSpaces(pagination, filter);
   }
 
+  @UseGuards(GraphqlGuard)
   @Query(() => ISpace, {
     nullable: false,
     description:
