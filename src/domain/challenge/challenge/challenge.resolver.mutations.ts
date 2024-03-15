@@ -100,11 +100,12 @@ export class ChallengeResolverMutations {
         challenge.preferenceSet,
         challenge.community.policy
       );
-    await this.opportunityAuthorizationService.applyAuthorizationPolicy(
-      opportunity,
-      challenge.authorization,
-      challengeCommunityPolicy
-    );
+    const opportunityWithAuth =
+      await this.opportunityAuthorizationService.applyAuthorizationPolicy(
+        opportunity,
+        challenge.authorization,
+        challengeCommunityPolicy
+      );
 
     this.contributionReporter.opportunityCreated(
       {
@@ -134,7 +135,7 @@ export class ChallengeResolverMutations {
       opportunityCreatedEvent
     );
 
-    return opportunity;
+    return opportunityWithAuth;
   }
 
   @UseGuards(GraphqlGuard)
