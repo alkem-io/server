@@ -1,6 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
-import replaceSpecialCharacters from 'replace-special-characters';
 import { escapeString } from './utils/escape-string';
+import replaceSpecialCharacters from 'replace-special-characters';
 
 export class calloutGroups1710272553085 implements MigrationInterface {
   name = 'calloutGroups1710272553085';
@@ -83,8 +83,9 @@ export class calloutGroups1710272553085 implements MigrationInterface {
       id: string;
       name: string;
       allowedValues: string;
-    }[] = await queryRunner.query(`SELECT id, name,       allowedValues: string;
-    FROM tagset_template`);
+    }[] = await queryRunner.query(
+      `SELECT id, name, allowedValues FROM tagset_template`
+    );
     for (const tagset_template of tagset_templates) {
       if (tagset_template.name === 'callout-display-location') {
         await queryRunner.query(
@@ -142,13 +143,18 @@ export class calloutGroups1710272553085 implements MigrationInterface {
   ) {
     const journeys: {
       id: string;
-    }[] = await queryRunner.query(`SELECT id FROM ${journeyType}`);
+      collaborationId: string;
+    }[] = await queryRunner.query(
+      `SELECT id, collaborationId FROM ${journeyType}`
+    );
     for (const journey of journeys) {
       await queryRunner.query(
-        `UPDATE ${journeyType} SET defaults = '${this.convertGroupsToText(
-          calloutGroups
-        )}', type = '${journeyType}' WHERE id = '${journey.id}'`
+        `UPDATE ${journeyType} SET type = '${journeyType}' WHERE id = '${journey.id}'`
       );
+      // TODO: what is not working with this?!
+      // await queryRunner.query(
+      //   `UPDATE collaboration SET groups = '${this.convertGroupsToText(calloutGroups)}' WHERE id = '${journey.collaborationId}'`
+      // );
     }
   }
 
