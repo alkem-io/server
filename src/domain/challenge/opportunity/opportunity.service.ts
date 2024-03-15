@@ -21,7 +21,6 @@ import { INVP } from '@domain/common/nvp/nvp.interface';
 import { CommunityService } from '@domain/community/community/community.service';
 import { NVP } from '@domain/common/nvp';
 import { UUID_LENGTH } from '@common/constants';
-import { CommunityType } from '@common/enums/community.type';
 import { AgentInfo } from '@src/core/authentication/agent-info';
 import { IContext } from '@domain/context/context/context.interface';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
@@ -39,6 +38,7 @@ import { StorageAggregatorService } from '@domain/storage/storage-aggregator/sto
 import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
 import { IAccount } from '../account/account.interface';
 import { SubspaceCalloutGroupName } from '../space.defaults/definitions/subspace.callout.group.name';
+import { SpaceType } from '@common/enums/space.type';
 @Injectable()
 export class OpportunityService {
   constructor(
@@ -80,8 +80,8 @@ export class OpportunityService {
     await this.baseChallengeService.initialise(
       opportunity,
       opportunityData,
-      opportunityData.spaceID,
-      CommunityType.OPPORTUNITY,
+      account,
+      SpaceType.OPPORTUNITY,
       opportunityCommunityPolicy,
       opportunityCommunityApplicationForm,
       ProfileType.OPPORTUNITY,

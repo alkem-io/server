@@ -40,7 +40,6 @@ import { AgentService } from '@domain/agent/agent/agent.service';
 import { UpdateSpaceInput } from './dto/space.dto.update';
 import { CreateChallengeOnSpaceInput } from './dto/space.dto.create.challenge';
 import { CommunityService } from '@domain/community/community/community.service';
-import { CommunityType } from '@common/enums/community.type';
 import { AgentInfo } from '@src/core/authentication/agent-info';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { IPreference } from '@domain/common/preference/preference.interface';
@@ -75,6 +74,7 @@ import { SpaceMembershipCollaborationInfo } from '@services/api/me/space.members
 import { AccountService } from '../account/account.service';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { ContextService } from '@domain/context/context/context.service';
+import { SpaceType } from '@common/enums/space.type';
 
 @Injectable()
 export class SpaceService {
@@ -127,8 +127,8 @@ export class SpaceService {
     await this.baseChallengeService.initialise(
       space,
       spaceData,
-      space.id,
-      CommunityType.SPACE,
+      space.account,
+      SpaceType.SPACE,
       spaceCommunityPolicy,
       spaceCommunityApplicationForm,
       ProfileType.SPACE,

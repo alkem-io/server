@@ -53,6 +53,8 @@ import { CreateCollaborationInput } from './dto/collaboration.dto.create';
 import { Space } from '@domain/challenge/space/space.entity';
 import { ICalloutGroup } from '../callout-groups/callout.group.interface';
 import { CalloutGroupsService } from '../callout-groups/callout.group.service';
+import { IAccount } from '@domain/challenge/account/account.interface';
+import { SpaceType } from '@common/enums/space.type';
 
 @Injectable()
 export class CollaborationService {
@@ -77,13 +79,17 @@ export class CollaborationService {
   async createCollaboration(
     collaborationData: CreateCollaborationInput,
     storageAggregator: IStorageAggregator,
-    spaceID: string
+    account: IAccount,
+    spaceType: SpaceType
   ): Promise<ICollaboration> {
     const collaboration: ICollaboration = Collaboration.create();
     collaboration.authorization = new AuthorizationPolicy();
     collaboration.relations = [];
     collaboration.callouts = [];
     collaboration.timeline = await this.timelineService.createTimeline();
+    const calloutGroups = this.spaceDefaultsService.getCalloutGroups(spaceType);
+    collaboration.groups =
+      this.calloutGroupsService.serializeGroups(calloutGroups);
 
     collaboration.tagsetTemplateSet =
       await this.tagsetTemplateSetService.createTagsetTemplateSet();
@@ -91,7 +97,7 @@ export class CollaborationService {
     // Rely on the logic in Space Defaults to create the right innovation flow input
     const innovationFlowInput =
       await this.spaceDefaultsService.getCreateInnovationFlowInput(
-        spaceID,
+        account.id,
         collaborationData.innovationFlowTemplateID
       );
     const allowedStates = innovationFlowInput.states.map(

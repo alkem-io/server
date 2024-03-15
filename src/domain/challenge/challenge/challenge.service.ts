@@ -35,7 +35,6 @@ import { IAgent } from '@domain/agent/agent';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { IChallenge } from './challenge.interface';
 import { AgentService } from '@domain/agent/agent/agent.service';
-import { CommunityType } from '@common/enums/community.type';
 import { AgentInfo } from '@src/core/authentication/agent-info';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { IPreferenceSet } from '@domain/common/preference-set';
@@ -61,6 +60,7 @@ import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.a
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
 import { IAccount } from '../account/account.interface';
+import { SpaceType } from '@common/enums/space.type';
 @Injectable()
 export class ChallengeService {
   constructor(
@@ -108,8 +108,8 @@ export class ChallengeService {
     await this.baseChallengeService.initialise(
       challenge,
       challengeData,
-      challengeData.spaceID,
-      CommunityType.CHALLENGE,
+      account,
+      SpaceType.CHALLENGE,
       challengeCommunityPolicy,
       challengeCommunityApplicationForm,
       ProfileType.CHALLENGE,
