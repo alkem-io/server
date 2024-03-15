@@ -91,7 +91,7 @@ export class OpportunityService {
     if (opportunity.collaboration) {
       await this.collaborationService.addCalloutGroupTagsetTemplate(
         opportunity.collaboration,
-        CalloutGroupName.CONTRIBUTE_RIGHT
+        CalloutGroupName.CONTRIBUTE_2
       );
 
       // Finally create default callouts, using the defaults service to decide what to add

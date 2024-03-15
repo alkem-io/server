@@ -440,16 +440,16 @@ export class ConversionService {
       }
       const location = locationTagset.tags[0];
       switch (location) {
-        case CalloutGroupName.SUBSPACES_LEFT:
-          locationTagset.tags = [CalloutGroupName.SUBSPACES_RIGHT];
+        case CalloutGroupName.SUBSPACES_1:
+          locationTagset.tags = [CalloutGroupName.SUBSPACES_2];
           break;
-        case CalloutGroupName.SUBSPACES_LEFT:
-          locationTagset.tags = [CalloutGroupName.SUBSPACES_LEFT];
+        case CalloutGroupName.SUBSPACES_1:
+          locationTagset.tags = [CalloutGroupName.SUBSPACES_1];
           break;
-        case CalloutGroupName.CONTRIBUTE_RIGHT:
+        case CalloutGroupName.CONTRIBUTE_2:
           locationTagset.tags = [CalloutGroupName.KNOWLEDGE];
           break;
-        case CalloutGroupName.CONTRIBUTE_LEFT:
+        case CalloutGroupName.CONTRIBUTE_1:
           locationTagset.tags = [CalloutGroupName.KNOWLEDGE];
           break;
       }
@@ -486,11 +486,11 @@ export class ConversionService {
       }
       const location = locationTagset.tags[0];
       switch (location) {
-        case CalloutGroupName.CONTRIBUTE_LEFT:
-          locationTagset.tags = [CalloutGroupName.CONTRIBUTE_LEFT];
+        case CalloutGroupName.CONTRIBUTE_1:
+          locationTagset.tags = [CalloutGroupName.CONTRIBUTE_1];
           break;
-        case CalloutGroupName.CONTRIBUTE_RIGHT:
-          locationTagset.tags = [CalloutGroupName.CONTRIBUTE_RIGHT];
+        case CalloutGroupName.CONTRIBUTE_2:
+          locationTagset.tags = [CalloutGroupName.CONTRIBUTE_2];
           break;
       }
     }

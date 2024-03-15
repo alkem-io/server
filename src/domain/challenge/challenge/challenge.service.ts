@@ -142,7 +142,7 @@ export class ChallengeService {
 
     await this.collaborationService.addCalloutGroupTagsetTemplate(
       challenge.collaboration,
-      CalloutGroupName.CONTRIBUTE_RIGHT
+      CalloutGroupName.CONTRIBUTE_2
     );
 
     const savedChallenge = await this.challengeRepository.save(challenge);

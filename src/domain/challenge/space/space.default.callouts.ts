@@ -12,7 +12,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.CLOSED,
     },
     sortOrder: 1,
-    groupName: CalloutGroupName.HOME_RIGHT,
+    groupName: CalloutGroupName.HOME_2,
     framing: {
       profile: {
         displayName: 'Getting Started',
@@ -27,7 +27,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 1,
-    groupName: CalloutGroupName.HOME_LEFT,
+    groupName: CalloutGroupName.HOME_1,
     framing: {
       profile: {
         displayName: 'General chat 💬',
@@ -42,7 +42,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 2,
-    groupName: CalloutGroupName.HOME_LEFT,
+    groupName: CalloutGroupName.HOME_1,
     framing: {
       profile: {
         displayName: 'Any questions or feedback?',
@@ -57,7 +57,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 2,
-    groupName: CalloutGroupName.HOME_RIGHT,
+    groupName: CalloutGroupName.HOME_2,
     framing: {
       profile: {
         displayName: 'What is this Space about?',
@@ -80,7 +80,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 1,
-    groupName: CalloutGroupName.COMMUNITY_LEFT,
+    groupName: CalloutGroupName.COMMUNITY_1,
     framing: {
       profile: {
         displayName: 'Welcome to the community!',
@@ -96,7 +96,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 1,
-    groupName: CalloutGroupName.COMMUNITY_RIGHT,
+    groupName: CalloutGroupName.COMMUNITY_2,
     framing: {
       profile: {
         displayName: 'Understanding the existing and potential community',
@@ -119,7 +119,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 1,
-    groupName: CalloutGroupName.SUBSPACES_LEFT,
+    groupName: CalloutGroupName.SUBSPACES_1,
     framing: {
       profile: {
         displayName: '🚩 What Challenges do you care about?',
@@ -134,7 +134,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 1,
-    groupName: CalloutGroupName.SUBSPACES_RIGHT,
+    groupName: CalloutGroupName.SUBSPACES_2,
     framing: {
       profile: {
         displayName: 'Challenge proposals',
