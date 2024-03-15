@@ -37,10 +37,10 @@ export class CreateCalloutInput {
   type!: CalloutType;
 
   @Field(() => String, {
-    nullable: false,
+    nullable: true,
     description: 'Set Callout Group for this Callout.',
   })
-  groupName!: string;
+  groupName?: string;
 
   @Field(() => Number, {
     nullable: true,
