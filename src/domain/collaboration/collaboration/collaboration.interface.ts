@@ -26,5 +26,5 @@ export abstract class ICollaboration extends IAuthorizable {
 
   innovationFlow?: IInnovationFlow;
 
-  groups!: string;
+  groupsStr!: string;
 }

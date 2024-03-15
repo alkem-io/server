@@ -7,7 +7,7 @@ export class calloutGroups1710272553085 implements MigrationInterface {
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
-      `ALTER TABLE \`collaboration\` ADD \`groups\` text NOT NULL DEFAULT ('[]')`
+      `ALTER TABLE \`collaboration\` ADD \`groupsStr\` text NOT NULL DEFAULT ('[]')`
     );
     await queryRunner.query(
       `ALTER TABLE \`space\` ADD \`type\`  varchar(32) NOT NULL DEFAULT ('space')`
@@ -129,7 +129,7 @@ export class calloutGroups1710272553085 implements MigrationInterface {
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
-      `ALTER TABLE \`collaboration\` DROP COLUMN \`groups\``
+      `ALTER TABLE \`collaboration\` DROP COLUMN \`groupsStr\``
     );
     await queryRunner.query(`ALTER TABLE \`space\` DROP COLUMN \`type\``);
     await queryRunner.query(`ALTER TABLE \`challenge\` DROP COLUMN \`type\``);
@@ -154,10 +154,9 @@ export class calloutGroups1710272553085 implements MigrationInterface {
       const groupsStr = escapeString(
         replaceSpecialCharacters(JSON.stringify(calloutGroups))
       );
-      // TODO: what is not working with this?!
-      // await queryRunner.query(
-      //   `UPDATE collaboration SET groups = '${groupsStr}' WHERE id = '${journey.collaborationId}'`
-      // );
+      await queryRunner.query(
+        `UPDATE collaboration SET groupsStr = '${groupsStr}' WHERE id = '${journey.collaborationId}'`
+      );
     }
   }
 

@@ -48,5 +48,5 @@ export class Collaboration
   innovationFlow?: InnovationFlow;
 
   @Column('text')
-  groups: string = '[]';
+  groupsStr: string = '[]';
 }

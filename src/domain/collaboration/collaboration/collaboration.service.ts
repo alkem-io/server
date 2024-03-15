@@ -89,7 +89,7 @@ export class CollaborationService {
     collaboration.callouts = [];
     collaboration.timeline = await this.timelineService.createTimeline();
     const calloutGroups = this.spaceDefaultsService.getCalloutGroups(spaceType);
-    collaboration.groups =
+    collaboration.groupsStr =
       this.calloutGroupsService.serializeGroups(calloutGroups);
 
     collaboration.tagsetTemplateSet =
@@ -131,7 +131,7 @@ export class CollaborationService {
   }
 
   public getCalloutGroupNames(collaboration: ICollaboration): string[] {
-    return this.calloutGroupsService.getGroupNames(collaboration.groups);
+    return this.calloutGroupsService.getGroupNames(collaboration.groupsStr);
   }
 
   public async addCalloutGroupTagsetTemplate(
@@ -392,7 +392,7 @@ export class CollaborationService {
   }
 
   public getGroups(collaboration: ICollaboration): ICalloutGroup[] {
-    return this.calloutGroupsService.getGroups(collaboration.groups);
+    return this.calloutGroupsService.getGroups(collaboration.groupsStr);
   }
 
   public async createCalloutOnCollaboration(
@@ -509,7 +509,7 @@ export class CollaborationService {
     const groupNames: string[] = [];
     if (args.groups && args.groups.length) {
       const allowedGroups = await this.calloutGroupsService.getGroups(
-        collaboration.groups
+        collaboration.groupsStr
       );
 
       for (const group of args.groups) {
