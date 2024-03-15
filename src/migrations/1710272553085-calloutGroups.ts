@@ -45,40 +45,17 @@ export class calloutGroups1710272553085 implements MigrationInterface {
         await queryRunner.query(
           `UPDATE tagset SET name = 'callout-group' WHERE id = '${tagset.id}'`
         );
-        if (tagset.tags.includes('CHALLENGES_1')) {
-          await queryRunner.query(
-            `UPDATE tagset SET tags = '${tagset.tags.replace(
-              'CHALLENGES_1',
-              'SUBSPACES_1'
-            )}' WHERE id = '${tagset.id}'`
-          );
-        }
-        if (tagset.tags.includes('OPPORTUNITIES_1')) {
-          await queryRunner.query(
-            `UPDATE tagset SET tags = '${tagset.tags.replace(
-              'OPPORTUNITIES_1',
-              'SUBSPACES_1'
-            )}' WHERE id = '${tagset.id}'`
-          );
-        }
-        if (tagset.tags.includes('CHALLENGES_2')) {
-          await queryRunner.query(
-            `UPDATE tagset SET tags = '${tagset.tags.replace(
-              'CHALLENGES_2',
-              'SUBSPACES_2'
-            )}' WHERE id = '${tagset.id}'`
-          );
-        }
-        if (tagset.tags.includes('OPPORTUNITIES_2')) {
-          await queryRunner.query(
-            `UPDATE tagset SET tags = '${tagset.tags.replace(
-              'OPPORTUNITIES_2',
-              'SUBSPACES_2'
-            )}' WHERE id = '${tagset.id}'`
-          );
-        }
+        let tags = tagset.tags;
+        tags = tags.replace('CHALLENGES_1', 'SUBSPACES_1');
+        tags = tags.replace('OPPORTUNITIES_1', 'SUBSPACES_1');
+        tags = tags.replace('CHALLENGES_2', 'SUBSPACES_2');
+        tags = tags.replace('OPPORTUNITIES_2', 'SUBSPACES_2');
+        await queryRunner.query(
+          `UPDATE tagset SET tags = '${tags}' WHERE id = '${tagset.id}'`
+        );
       }
     }
+
     const tagset_templates: {
       id: string;
       name: string;
@@ -91,38 +68,14 @@ export class calloutGroups1710272553085 implements MigrationInterface {
         await queryRunner.query(
           `UPDATE tagset_template SET name = 'callout-group' WHERE id = '${tagset_template.id}'`
         );
-        if (tagset_template.allowedValues.includes('CHALLENGES_1')) {
-          await queryRunner.query(
-            `UPDATE tagset_template SET tags = '${tagset_template.allowedValues.replace(
-              'CHALLENGES_1',
-              'SUBSPACES_1'
-            )}' WHERE id = '${tagset_template.id}'`
-          );
-        }
-        if (tagset_template.allowedValues.includes('OPPORTUNITIES_1')) {
-          await queryRunner.query(
-            `UPDATE tagset_template SET tags = '${tagset_template.allowedValues.replace(
-              'OPPORTUNITIES_1',
-              'SUBSPACES_1'
-            )}' WHERE id = '${tagset_template.id}'`
-          );
-        }
-        if (tagset_template.allowedValues.includes('CHALLENGES_2')) {
-          await queryRunner.query(
-            `UPDATE tagset_template SET tags = '${tagset_template.allowedValues.replace(
-              'CHALLENGES_2',
-              'SUBSPACES_2'
-            )}' WHERE id = '${tagset_template.id}'`
-          );
-        }
-        if (tagset_template.allowedValues.includes('OPPORTUNITIES_2')) {
-          await queryRunner.query(
-            `UPDATE tagset_template SET tags = '${tagset_template.allowedValues.replace(
-              'OPPORTUNITIES_2',
-              'SUBSPACES_2'
-            )}' WHERE id = '${tagset_template.id}'`
-          );
-        }
+        let allowedValues = tagset_template.allowedValues;
+        allowedValues = allowedValues.replace('CHALLENGES_1', 'SUBSPACES_1');
+        allowedValues = allowedValues.replace('OPPORTUNITIES_1', 'SUBSPACES_1');
+        allowedValues = allowedValues.replace('CHALLENGES_2', 'SUBSPACES_2');
+        allowedValues = allowedValues.replace('OPPORTUNITIES_2', 'SUBSPACES_2');
+        await queryRunner.query(
+          `UPDATE tagset_template SET allowedValues = '${allowedValues}' WHERE id = '${tagset_template.id}'`
+        );
       }
     }
   }
