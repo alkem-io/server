@@ -1,14 +1,15 @@
-import { EntityManager } from 'typeorm';
-import { Inject, Injectable } from '@nestjs/common';
+import { EntityManager, Not } from 'typeorm';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { Client as ElasticClient } from '@elastic/elasticsearch';
+import { ErrorCause } from '@elastic/elasticsearch/lib/api/types';
 import { ELASTICSEARCH_CLIENT_PROVIDER } from '@common/constants';
 import { Space } from '@domain/challenge/space/space.entity';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { Opportunity } from '@domain/challenge/opportunity/opportunity.entity';
 import { Organization } from '@domain/community/organization';
 import { User } from '@domain/community/user';
-import { ErrorCause } from '@elastic/elasticsearch/lib/api/types';
 import { FindManyOptions } from 'typeorm/find-options/FindManyOptions';
 import { BaseChallenge } from '@domain/challenge/base-challenge/base.challenge.entity';
 import { SpaceVisibility } from '@common/enums/space.visibility';
@@ -50,15 +51,17 @@ const journeyFindOptions: FindManyOptions<BaseChallenge> = {
   },
 };
 
+const EMPTY_VALUE = 'N/A';
+
 @Injectable()
 export class SearchIngestService {
   private readonly client: ElasticClient;
 
   constructor(
     @Inject(ELASTICSEARCH_CLIENT_PROVIDER)
-    private readonly elasticClient: ElasticClient | undefined,
-    @InjectEntityManager()
-    private readonly entityManager: EntityManager
+    private elasticClient: ElasticClient | undefined,
+    @InjectEntityManager() private entityManager: EntityManager,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService
   ) {
     // if (!elasticClient) {
     //   throw new Error('Elasticsearch client not initialized');
@@ -95,7 +98,7 @@ export class SearchIngestService {
   }
 
   private async ingestBulk(data: unknown[], index: string) {
-    return;
+    // return;
 
     const operations = data.flatMap(doc => [{ index: { _index: index } }, doc]);
 
@@ -128,123 +131,128 @@ export class SearchIngestService {
           });
         }
       });
-      console.log(erroredDocuments);
+      this.logger.error(erroredDocuments);
+    } else {
+      this.logger.verbose?.(`All ${data.length} documents have been indexed`);
     }
   }
-  // todo: process return object for ingestion
+  // TODO: validate the loaded data for missing relations
   private fetchSpaces() {
-    return (
-      this.entityManager
-        .find<Space>(Space, {
-          ...journeyFindOptions,
-          relations: {
-            ...journeyFindOptions.relations,
+    return this.entityManager
+      .find<Space>(Space, {
+        ...journeyFindOptions,
+        where: { license: { visibility: Not(SpaceVisibility.ARCHIVED) } },
+        relations: {
+          ...journeyFindOptions.relations,
+          license: true,
+        },
+        select: {
+          ...journeyFindOptions.select,
+          license: {
+            visibility: true,
+          },
+        },
+      })
+      .then(spaces => {
+        return spaces.map(space => ({
+          ...space,
+          profile: {
+            ...space.profile,
+            tags: processTagsets(space.profile.tagsets),
+            tagsets: undefined,
+          },
+        }));
+      });
+  }
+
+  private fetchChallenges() {
+    return this.entityManager
+      .find<Challenge>(Challenge, {
+        ...journeyFindOptions,
+        where: {
+          parentSpace: {
+            license: { visibility: Not(SpaceVisibility.ARCHIVED) },
+          },
+        },
+        relations: {
+          ...journeyFindOptions.relations,
+          parentSpace: {
             license: true,
           },
-          select: {
-            ...journeyFindOptions.select,
+        },
+        select: {
+          ...journeyFindOptions.select,
+          parentSpace: {
+            id: true,
             license: {
               visibility: true,
             },
           },
-        })
-        // todo: filter out archived spaces
-        // todo: use where clause instead of filtering
-        .then(spaces => {
-          spaces.forEach(space => {
-            (space.profile as any).tags = processTagsets(space.profile.tagsets);
-            delete space.profile.tagsets;
-            return spaces;
-          });
-          return spaces;
-        })
-    );
+        },
+      })
+      .then(challenges => {
+        return challenges.map(challenge => ({
+          ...challenge,
+          parentSpace: undefined,
+          license: {
+            visibility: challenge?.parentSpace?.license?.visibility,
+          },
+          profile: {
+            ...challenge.profile,
+            tags: processTagsets(challenge.profile.tagsets),
+            tagsets: undefined,
+          },
+        }));
+      });
   }
 
-  private fetchChallenges() {
-    return (
-      this.entityManager
-        .find<Challenge>(Challenge, {
-          ...journeyFindOptions,
-          relations: {
-            ...journeyFindOptions.relations,
+  private fetchOpportunities() {
+    return this.entityManager
+      .find<Opportunity>(Opportunity, {
+        ...journeyFindOptions,
+        where: {
+          challenge: {
+            parentSpace: {
+              license: { visibility: Not(SpaceVisibility.ARCHIVED) },
+            },
+          },
+        },
+        relations: {
+          ...journeyFindOptions.relations,
+          challenge: {
             parentSpace: {
               license: true,
             },
           },
-          select: {
-            ...journeyFindOptions.select,
+        },
+        select: {
+          ...journeyFindOptions.select,
+          challenge: {
+            id: true,
             parentSpace: {
+              id: true,
               license: {
                 visibility: true,
               },
             },
           },
-        })
-        // todo: use where clause instead of filtering
-        .then(challenges =>
-          challenges.filter(
-            challenge =>
-              challenge?.parentSpace?.license?.visibility !==
-              SpaceVisibility.ARCHIVED
-          )
-        )
-        .then(challenges => {
-          challenges.forEach(challenge => {
-            (challenge.profile as any).tags = processTagsets(
-              challenge.profile.tagsets
-            );
-            delete challenge.parentSpace;
-            delete challenge.profile.tagsets;
-          });
-          return challenges;
-        })
-    );
-  }
-
-  private fetchOpportunities() {
-    return (
-      this.entityManager
-        .find<Opportunity>(Opportunity, {
-          ...journeyFindOptions,
-          relations: {
-            ...journeyFindOptions.relations,
-            challenge: {
-              parentSpace: {
-                license: true,
-              },
-            },
+        },
+      })
+      .then(opportunities => {
+        return opportunities.map(opportunity => ({
+          ...opportunity,
+          challenge: undefined,
+          license: {
+            visibility:
+              opportunity?.challenge?.parentSpace?.license?.visibility,
           },
-          select: {
-            ...journeyFindOptions.select,
-            challenge: {
-              parentSpace: {
-                license: {
-                  visibility: true,
-                },
-              },
-            },
+          profile: {
+            ...opportunity.profile,
+            tags: processTagsets(opportunity.profile.tagsets),
+            tagsets: undefined,
           },
-        })
-        // todo: use where clause instead of filtering
-        .then(opportunities =>
-          opportunities.filter(
-            opportunity =>
-              opportunity.challenge?.parentSpace?.license?.visibility !==
-              SpaceVisibility.ARCHIVED
-          )
-        )
-        .then(opportunities => {
-          opportunities.forEach(opportunity => {
-            (opportunity.profile as any).tags = processTagsets(
-              opportunity.profile.tagsets
-            );
-            delete opportunity.profile.tagsets;
-            delete opportunity.challenge;
-          });
-          return opportunities;
-        })
-    );
+        }));
+      });
   }
 
   private fetchOrganization() {
@@ -259,13 +267,14 @@ export class SearchIngestService {
         },
       })
       .then(organizations => {
-        organizations.forEach(organization => {
-          (organization.profile as any).tags = processTagsets(
-            organization.profile.tagsets
-          );
-          delete organization.profile.tagsets;
-        });
-        return organizations;
+        return organizations.map(organization => ({
+          ...organization,
+          profile: {
+            ...organization.profile,
+            tags: processTagsets(organization.profile.tagsets),
+            tagsets: undefined,
+          },
+        }));
       });
   }
 
@@ -291,9 +300,11 @@ export class SearchIngestService {
 
   private fetchPosts() {
     return this.entityManager
-      .find(Space, {
+      .find<Space>(Space, {
         loadEagerRelations: false,
+        where: { license: { visibility: Not(SpaceVisibility.ARCHIVED) } },
         relations: {
+          license: true,
           collaboration: {
             callouts: {
               contributions: {
@@ -328,6 +339,7 @@ export class SearchIngestService {
         },
         select: {
           id: true,
+          license: { visibility: true },
           collaboration: {
             id: true,
             callouts: {
@@ -336,6 +348,9 @@ export class SearchIngestService {
                 id: true,
                 post: {
                   id: true,
+                  createdBy: true,
+                  createdDate: true,
+                  nameID: true,
                   profile: profileSelectOptions,
                 },
               },
@@ -351,6 +366,9 @@ export class SearchIngestService {
                   id: true,
                   post: {
                     id: true,
+                    createdBy: true,
+                    createdDate: true,
+                    nameID: true,
                     profile: profileSelectOptions,
                   },
                 },
@@ -366,6 +384,9 @@ export class SearchIngestService {
                     id: true,
                     post: {
                       id: true,
+                      createdBy: true,
+                      createdDate: true,
+                      nameID: true,
                       profile: profileSelectOptions,
                     },
                   },
@@ -385,11 +406,16 @@ export class SearchIngestService {
               }
               spacePosts.push({
                 ...contribution.post,
+                license: {
+                  visibility: space?.license?.visibility ?? EMPTY_VALUE,
+                },
                 spaceID: space.id,
+                calloutID: callout.id,
+                collaborationID: space?.collaboration?.id ?? EMPTY_VALUE,
                 profile: {
                   ...contribution.post.profile,
-                  tagsets: undefined,
                   tags: processTagsets(contribution.post?.profile?.tagsets),
+                  tagsets: undefined,
                 },
               });
             })
@@ -405,8 +431,13 @@ export class SearchIngestService {
                 }
                 challengePosts.push({
                   ...contribution.post,
+                  license: {
+                    visibility: space?.license?.visibility ?? EMPTY_VALUE,
+                  },
                   spaceID: space.id,
                   challengeID: challenge.id,
+                  calloutID: callout.id,
+                  collaborationID: space?.collaboration?.id ?? EMPTY_VALUE,
                   profile: {
                     ...contribution.post.profile,
                     tagsets: undefined,
@@ -429,9 +460,14 @@ export class SearchIngestService {
                   }
                   opportunityPosts.push({
                     ...contribution.post,
+                    license: {
+                      visibility: space?.license?.visibility ?? EMPTY_VALUE,
+                    },
                     spaceID: space.id,
                     challengeID: challenge.id,
                     opportunityID: opportunity.id,
+                    calloutID: callout.id,
+                    collaborationID: space?.collaboration?.id ?? EMPTY_VALUE,
                     profile: {
                       ...contribution.post.profile,
                       tagsets: undefined,
