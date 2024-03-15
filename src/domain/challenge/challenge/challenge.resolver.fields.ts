@@ -39,7 +39,6 @@ export class ChallengeResolverFields {
     private authorizationService: AuthorizationService
   ) {}
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('community', () => ICommunity, {
     nullable: true,
@@ -49,8 +48,16 @@ export class ChallengeResolverFields {
     @Parent() challenge: IChallenge,
     @Loader(JourneyCommunityLoaderCreator, { parentClassRef: Challenge })
     loader: ILoader<ICommunity>
-  ) {
-    return loader.load(challenge.id);
+  ): Promise<ICommunity> {
+    const community = await loader.load(challenge.id);
+    // Do not check for READ access here, rely on per field check on resolver in Community
+    // await this.authorizationService.grantAccessOrFail(
+    //   agentInfo,
+    //   community.authorization,
+    //   AuthorizationPrivilege.READ,
+    //   `read community on space: ${community.id}`
+    // );
+    return community;
   }
 
   // Check authorization inside the field resolver
@@ -75,7 +82,7 @@ export class ChallengeResolverFields {
     return context;
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  //@AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('collaboration', () => ICollaboration, {
     nullable: true,
@@ -86,7 +93,8 @@ export class ChallengeResolverFields {
     @Loader(JourneyCollaborationLoaderCreator, { parentClassRef: Challenge })
     loader: ILoader<ICollaboration>
   ): Promise<ICollaboration> {
-    return loader.load(challenge.id);
+    const collaboration = await loader.load(challenge.id);
+    return collaboration;
   }
 
   // Check authorization inside the field resolver
