@@ -1,12 +1,16 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { Client as ElasticClient } from '@elastic/elasticsearch';
+import {
+  QueryDslFunctionScoreContainer,
+  QueryDslQueryContainer,
+} from '@elastic/elasticsearch/lib/api/types';
 import { SearchInput } from '@services/api/search';
 import { validateSearchParameters } from '@services/api/search/util/validate.search.parameters';
 import { validateSearchTerms } from '@services/api/search/util/validate.search.terms';
 import { ELASTICSEARCH_CLIENT_PROVIDER } from '@common/constants';
-import { Client as ElasticClient } from '@elastic/elasticsearch';
 import { ISearchResult } from '@services/api/search/dto/search.result.entry.interface';
 import { IBaseAlkemio } from '@domain/common/entity/base-entity';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums';
 
 enum SearchEntityTypes {
@@ -55,8 +59,7 @@ export class SearchExtractService {
   constructor(
     @Inject(ELASTICSEARCH_CLIENT_PROVIDER)
     private elasticClient: ElasticClient | undefined,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private logger: LoggerService
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService
   ) {
     this.client = elasticClient!;
   }
@@ -76,28 +79,80 @@ export class SearchExtractService {
       onlyPublicResults
     );
 
-    const result = await this.client.search<IBaseAlkemio>({
-      index: indicesToSearchOn,
-      query: {
-        bool: {
-          must: [
-            {
-              multi_match: {
-                query: terms,
-                type: 'most_fields',
-                fields: ['*'],
+    const query: QueryDslQueryContainer = {
+      bool: {
+        must: [
+          {
+            multi_match: {
+              query: terms,
+              type: 'most_fields',
+              fields: ['*'],
+            },
+          },
+        ],
+        filter: searchData.searchInSpaceFilter
+          ? [{ match: { spaceID: searchData.searchInSpaceFilter } }]
+          : undefined,
+      },
+    };
+    // use with function_score to boost results based on visibility
+    const functions: QueryDslFunctionScoreContainer[] = [
+      {
+        filter: {
+          term: {
+            'license.visibility': 'active',
+          },
+        },
+        weight: 2,
+      },
+      {
+        filter: {
+          term: {
+            'license.visibility': 'demo',
+          },
+        },
+        weight: 1,
+      },
+      {
+        filter: {
+          term: {
+            'license.visibility': 'archived',
+          },
+        },
+        weight: 0,
+      },
+      {
+        filter: {
+          bool: {
+            must_not: {
+              exists: {
+                field: 'license.visibility',
               },
             },
-          ],
-          filter: searchData.searchInSpaceFilter
-            ? [{ match: { spaceID: searchData.searchInSpaceFilter } }]
-            : undefined,
+          },
+        },
+        weight: 1,
+      },
+    ];
+
+    const result = await this.client.search<IBaseAlkemio>({
+      index: indicesToSearchOn,
+      // there will be a query building in the future to construct different queries
+      // the current query is searching in everything, and boosting entities based on their visibility
+      query: {
+        function_score: {
+          query,
+          functions,
+          /** how each of the assigned weights are combined */
+          score_mode: 'sum', // the filters are mutually exclusive, so only one filter will be applied at a time
+          /** how the combined weights are combined with the score */
+          boost_mode: 'multiply',
         },
       },
       fields: ['id'],
       _source: false,
       from: 0,
-      size: 50,
+      size: 25,
     });
 
     return result.hits.hits.map<ISearchResult>(hit => {

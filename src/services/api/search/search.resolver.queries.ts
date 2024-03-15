@@ -24,7 +24,6 @@ export class SearchResolverQueries {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('searchData') searchData: SearchInput
   ): Promise<ISearchResults> {
-    // const result = await this.search2Service.search(searchData, agentInfo);
     // return await this.searchService.search(searchData, agentInfo);
     return this.search2Service.search(searchData, agentInfo);
   }
