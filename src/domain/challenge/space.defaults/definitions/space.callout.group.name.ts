@@ -1,4 +1,4 @@
-export enum SpaceCalloutGroup {
+export enum SpaceCalloutGroupName {
   HOME_LEFT = 'HOME_1',
   HOME_RIGHT = 'HOME_2',
   COMMUNITY_LEFT = 'COMMUNITY_1',

@@ -59,7 +59,7 @@ import { IProfile } from '@domain/common/profile/profile.interface';
 import { InnovationHub, InnovationHubType } from '@domain/innovation-hub/types';
 import { OperationNotAllowedException } from '@common/exceptions/operation.not.allowed.exception';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
-import { SpaceCalloutGroup } from '@domain/challenge/space.defaults/definitions/space.callout.group';
+import { SpaceCalloutGroupName } from '@domain/challenge/space.defaults/definitions/space.callout.group.name';
 import { CreateTagsetTemplateInput } from '@domain/common/tagset-template/dto/tagset.template.dto.create';
 import { TagsetType } from '@common/enums/tagset.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
@@ -143,13 +143,13 @@ export class SpaceService {
     }
 
     const locations = Object.values({
-      ...SpaceCalloutGroup,
+      ...SpaceCalloutGroupName,
     });
     const tagsetTemplateData: CreateTagsetTemplateInput = {
       name: TagsetReservedName.CALLOUT_GROUP,
       type: TagsetType.SELECT_ONE,
       allowedValues: locations,
-      defaultSelectedValue: SpaceCalloutGroup.KNOWLEDGE,
+      defaultSelectedValue: SpaceCalloutGroupName.KNOWLEDGE,
     };
     await this.collaborationService.addTagsetTemplate(
       space.collaboration,

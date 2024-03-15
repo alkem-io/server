@@ -56,7 +56,7 @@ import { TagsetType } from '@common/enums/tagset.type';
 import { CreateTagsetTemplateInput } from '@domain/common/tagset-template/dto/tagset.template.dto.create';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { challengeDefaultCallouts } from './challenge.default.callouts';
-import { SubspaceCalloutGroup } from '@domain/challenge/space.defaults/definitions/subspace.callout.group';
+import { SubspaceCalloutGroupName } from '@domain/challenge/space.defaults/definitions/subspace.callout.group.name';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
@@ -143,13 +143,13 @@ export class ChallengeService {
     }
 
     const locations = Object.values({
-      ...SubspaceCalloutGroup,
+      ...SubspaceCalloutGroupName,
     });
     const tagsetTemplateData: CreateTagsetTemplateInput = {
       name: TagsetReservedName.CALLOUT_GROUP,
       type: TagsetType.SELECT_ONE,
       allowedValues: locations,
-      defaultSelectedValue: SubspaceCalloutGroup.CONTRIBUTE_RIGHT,
+      defaultSelectedValue: SubspaceCalloutGroupName.CONTRIBUTE_RIGHT,
     };
     await this.collaborationService.addTagsetTemplate(
       challenge.collaboration,

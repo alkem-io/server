@@ -23,8 +23,8 @@ import { DiscussionCategoryCommunity } from '@common/enums/communication.discuss
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { ICallout } from '@domain/collaboration/callout';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { SubspaceCalloutGroup } from '@domain/challenge/space.defaults/definitions/subspace.callout.group';
-import { SpaceCalloutGroup } from '@domain/challenge/space.defaults/definitions/space.callout.group';
+import { SubspaceCalloutGroupName } from '@domain/challenge/space.defaults/definitions/subspace.callout.group.name';
+import { SpaceCalloutGroupName } from '@domain/challenge/space.defaults/definitions/space.callout.group.name';
 
 export class ConversionService {
   constructor(
@@ -445,17 +445,17 @@ export class ConversionService {
       }
       const location = locationTagset.tags[0];
       switch (location) {
-        case SubspaceCalloutGroup.SUBSPACES_LEFT:
-          locationTagset.tags = [SpaceCalloutGroup.SUBSPACES_RIGHT];
+        case SubspaceCalloutGroupName.SUBSPACES_LEFT:
+          locationTagset.tags = [SpaceCalloutGroupName.SUBSPACES_RIGHT];
           break;
-        case SubspaceCalloutGroup.SUBSPACES_LEFT:
-          locationTagset.tags = [SpaceCalloutGroup.SUBSPACES_LEFT];
+        case SubspaceCalloutGroupName.SUBSPACES_LEFT:
+          locationTagset.tags = [SpaceCalloutGroupName.SUBSPACES_LEFT];
           break;
-        case SubspaceCalloutGroup.CONTRIBUTE_RIGHT:
-          locationTagset.tags = [SpaceCalloutGroup.KNOWLEDGE];
+        case SubspaceCalloutGroupName.CONTRIBUTE_RIGHT:
+          locationTagset.tags = [SpaceCalloutGroupName.KNOWLEDGE];
           break;
-        case SubspaceCalloutGroup.CONTRIBUTE_LEFT:
-          locationTagset.tags = [SpaceCalloutGroup.KNOWLEDGE];
+        case SubspaceCalloutGroupName.CONTRIBUTE_LEFT:
+          locationTagset.tags = [SpaceCalloutGroupName.KNOWLEDGE];
           break;
       }
     }
@@ -493,11 +493,11 @@ export class ConversionService {
       }
       const location = locationTagset.tags[0];
       switch (location) {
-        case SubspaceCalloutGroup.CONTRIBUTE_LEFT:
-          locationTagset.tags = [SubspaceCalloutGroup.CONTRIBUTE_LEFT];
+        case SubspaceCalloutGroupName.CONTRIBUTE_LEFT:
+          locationTagset.tags = [SubspaceCalloutGroupName.CONTRIBUTE_LEFT];
           break;
-        case SubspaceCalloutGroup.CONTRIBUTE_RIGHT:
-          locationTagset.tags = [SubspaceCalloutGroup.CONTRIBUTE_RIGHT];
+        case SubspaceCalloutGroupName.CONTRIBUTE_RIGHT:
+          locationTagset.tags = [SubspaceCalloutGroupName.CONTRIBUTE_RIGHT];
           break;
       }
     }

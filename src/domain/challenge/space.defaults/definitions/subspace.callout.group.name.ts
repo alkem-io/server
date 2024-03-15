@@ -1,4 +1,4 @@
-export enum SubspaceCalloutGroup {
+export enum SubspaceCalloutGroupName {
   HOME_LEFT = 'HOME_1',
   HOME_RIGHT = 'HOME_2',
   CONTRIBUTE_LEFT = 'CONTRIBUTE_1',

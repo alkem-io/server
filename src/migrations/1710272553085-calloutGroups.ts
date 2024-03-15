@@ -14,12 +14,12 @@ export class calloutGroups1710272553085 implements MigrationInterface {
     await this.addCalloutGroups(
       queryRunner,
       'challenge',
-      this.spaceCalloutGroups
+      this.subspaceCalloutGroups
     );
     await this.addCalloutGroups(
       queryRunner,
       'opportunity',
-      this.spaceCalloutGroups
+      this.subspaceCalloutGroups
     );
 
     // TODO: update the name + entries for old display location tagsets
@@ -52,8 +52,59 @@ export class calloutGroups1710272553085 implements MigrationInterface {
 
   spaceCalloutGroups: CalloutGroup[] = [
     {
-      displayName: 'prepare',
-      description: 'The innovation is being prepared.',
+      displayName: 'HOME_1',
+      description: 'The left column on the Home page.',
+    },
+    {
+      displayName: 'HOME_2',
+      description: 'The right column on the Home page.',
+    },
+    {
+      displayName: 'COMMUNITY_1',
+      description: 'The left column on the Community page.',
+    },
+    {
+      displayName: 'COMMUNITY_2',
+      description: 'The right column on the Community page.',
+    },
+    {
+      displayName: 'SUBSPACES_1',
+      description: 'The left column on the Subspaces page.',
+    },
+    {
+      displayName: 'SUBSPACES_2',
+      description: 'The right column on the Subspaces page.',
+    },
+    {
+      displayName: 'KNOWLEDGE',
+      description: 'The knowledge page.',
+    },
+  ];
+
+  subspaceCalloutGroups: CalloutGroup[] = [
+    {
+      displayName: 'HOME_1',
+      description: 'The left column on the Home page.',
+    },
+    {
+      displayName: 'HOME_2',
+      description: 'The right column on the Home page.',
+    },
+    {
+      displayName: 'CONTRIBUTE_1',
+      description: 'The left column on the Contribute page.',
+    },
+    {
+      displayName: 'CONTRIBUTE_2',
+      description: 'The right column on the Contribute page.',
+    },
+    {
+      displayName: 'SUBSPACES_1',
+      description: 'The left column on the Subspaces page.',
+    },
+    {
+      displayName: 'SUBSPACES_2',
+      description: 'The right column on the Subspaces page.',
     },
   ];
 

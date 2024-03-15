@@ -38,7 +38,7 @@ import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.a
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
 import { IAccount } from '../account/account.interface';
-import { SubspaceCalloutGroup } from '../space.defaults/definitions/subspace.callout.group';
+import { SubspaceCalloutGroupName } from '../space.defaults/definitions/subspace.callout.group.name';
 @Injectable()
 export class OpportunityService {
   constructor(
@@ -92,12 +92,12 @@ export class OpportunityService {
     await this.opportunityRepository.save(opportunity);
 
     if (opportunity.collaboration) {
-      const locations = Object.values(SubspaceCalloutGroup);
+      const locations = Object.values(SubspaceCalloutGroupName);
       const tagsetTemplateData: CreateTagsetTemplateInput = {
         name: TagsetReservedName.CALLOUT_GROUP,
         type: TagsetType.SELECT_ONE,
         allowedValues: locations,
-        defaultSelectedValue: SubspaceCalloutGroup.CONTRIBUTE_RIGHT,
+        defaultSelectedValue: SubspaceCalloutGroupName.CONTRIBUTE_RIGHT,
       };
       await this.collaborationService.addTagsetTemplate(
         opportunity.collaboration,
