@@ -1,5 +1,8 @@
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
+import {
+  AuthorizationAgentPrivilege,
+  CurrentUser,
+} from '@src/common/decorators';
 import { ChallengeService } from './challenge.service';
 import { ICommunity } from '@domain/community/community/community.interface';
 import { IContext } from '@domain/context/context/context.interface';
@@ -26,11 +29,18 @@ import {
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { AgentInfo } from '@core/authentication/agent-info';
 
 @Resolver(() => IChallenge)
 export class ChallengeResolverFields {
-  constructor(private challengeService: ChallengeService) {}
+  constructor(
+    private challengeService: ChallengeService,
+    private authorizationService: AuthorizationService
+  ) {}
 
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('community', () => ICommunity, {
     nullable: true,
     description: 'The community for the challenge.',
@@ -43,6 +53,7 @@ export class ChallengeResolverFields {
     return loader.load(challenge.id);
   }
 
+  // Check authorization inside the field resolver
   @UseGuards(GraphqlGuard)
   @ResolveField('context', () => IContext, {
     nullable: true,
@@ -52,8 +63,16 @@ export class ChallengeResolverFields {
     @Parent() challenge: IChallenge,
     @Loader(JourneyContextLoaderCreator, { parentClassRef: Challenge })
     loader: ILoader<IContext>
-  ) {
-    return loader.load(challenge.id);
+  ): Promise<IContext> {
+    const context = await loader.load(challenge.id);
+    // Do not check for READ access here, rely on per field check on resolver in Community
+    // await this.authorizationService.grantAccessOrFail(
+    //   agentInfo,
+    //   community.authorization,
+    //   AuthorizationPrivilege.READ,
+    //   `read community on space: ${community.id}`
+    // );
+    return context;
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -62,34 +81,42 @@ export class ChallengeResolverFields {
     nullable: true,
     description: 'The collaboration for the challenge.',
   })
-  @Profiling.api
   async collaboration(
     @Parent() challenge: IChallenge,
     @Loader(JourneyCollaborationLoaderCreator, { parentClassRef: Challenge })
     loader: ILoader<ICollaboration>
-  ) {
+  ): Promise<ICollaboration> {
     return loader.load(challenge.id);
   }
 
+  // Check authorization inside the field resolver
+  @UseGuards(GraphqlGuard)
   @ResolveField('profile', () => IProfile, {
     nullable: false,
     description: 'The Profile for the  Challenge.',
   })
-  @Profiling.api
   async profile(
     @Parent() challenge: IChallenge,
+    @CurrentUser() agentInfo: AgentInfo,
     @Loader(ProfileLoaderCreator, { parentClassRef: Challenge })
     loader: ILoader<IProfile>
-  ) {
-    return loader.load(challenge.id);
+  ): Promise<IProfile> {
+    const profile = await loader.load(challenge.id);
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      profile.authorization,
+      AuthorizationPrivilege.READ,
+      `read profile on challenge: ${profile.displayName}`
+    );
+    return profile;
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('storageAggregator', () => IStorageAggregator, {
     nullable: true,
     description: 'The StorageAggregator in use by this Challenge',
   })
-  @UseGuards(GraphqlGuard)
   async storageAggregator(
     @Parent() challenge: Challenge
   ): Promise<IStorageAggregator> {
@@ -102,19 +129,19 @@ export class ChallengeResolverFields {
     nullable: true,
     description: 'The Opportunities for the challenge.',
   })
-  @Profiling.api
   async opportunities(
     @Parent() challenge: IChallenge,
     @Args({ nullable: true }) args: LimitAndShuffleIdsQueryArgs
-  ) {
+  ): Promise<IOpportunity[]> {
     return await this.challengeService.getOpportunities(challenge.id, args);
   }
 
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('agent', () => IAgent, {
     nullable: true,
     description: 'The Agent representing this Challenge.',
   })
-  @Profiling.api
   async agent(
     @Parent() challenge: IChallenge,
     @Loader(AgentLoaderCreator, { parentClassRef: Challenge })
@@ -127,17 +154,16 @@ export class ChallengeResolverFields {
     nullable: true,
     description: 'Metrics about activity within this Challenge.',
   })
-  @Profiling.api
   async metrics(@Parent() challenge: IChallenge) {
     return await this.challengeService.getMetrics(challenge);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('preferences', () => [IPreference], {
     nullable: false,
     description: 'The preferences for this Challenge',
   })
-  @UseGuards(GraphqlGuard)
   async preferences(
     @Parent() challenge: IChallenge,
     @Loader(PreferencesLoaderCreator, {

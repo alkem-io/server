@@ -13,7 +13,6 @@ import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import {
   AuthorizationAgentPrivilege,
   CurrentUser,
-  Profiling,
 } from '@src/common/decorators';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { SpaceService } from '@domain/challenge/space/space.service';
@@ -47,6 +46,8 @@ export class SpaceResolverFields {
     private authorizationService: AuthorizationService
   ) {}
 
+  // Check authorization inside the field resolver directly on the Community
+  @UseGuards(GraphqlGuard)
   @ResolveField('community', () => ICommunity, {
     nullable: true,
     description: 'Get the Community for the Space. ',
@@ -55,15 +56,24 @@ export class SpaceResolverFields {
     @Parent() space: Space,
     @Loader(JourneyCommunityLoaderCreator, { parentClassRef: Space })
     loader: ILoader<ICommunity>
-  ) {
-    return loader.load(space.id);
+  ): Promise<ICommunity> {
+    const community = await loader.load(space.id);
+    // Do not check for READ access here, rely on per field check on resolver in Community
+    // await this.authorizationService.grantAccessOrFail(
+    //   agentInfo,
+    //   community.authorization,
+    //   AuthorizationPrivilege.READ,
+    //   `read community on space: ${community.id}`
+    // );
+    return community;
   }
 
+  // Check authorization inside the field resolver directly on the Context
+  @UseGuards(GraphqlGuard)
   @ResolveField('context', () => IContext, {
     nullable: true,
     description: 'The context for the space.',
   })
-  @UseGuards(GraphqlGuard)
   async context(
     @Parent() space: Space,
     @CurrentUser() agentInfo: AgentInfo,
@@ -87,22 +97,20 @@ export class SpaceResolverFields {
     nullable: true,
     description: 'The collaboration for the Space.',
   })
-  @Profiling.api
   async collaboration(
     @Parent() space: Space,
     @Loader(JourneyCollaborationLoaderCreator, { parentClassRef: Space })
     loader: ILoader<IContext>
-  ) {
+  ): Promise<ICollaboration> {
     return loader.load(space.id);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('agent', () => IAgent, {
     nullable: true,
     description: 'The Agent representing this Space.',
   })
-  @UseGuards(GraphqlGuard)
-  @Profiling.api
   async agent(
     @Parent() space: Space,
     @Loader(AgentLoaderCreator, { parentClassRef: Space })
@@ -112,21 +120,21 @@ export class SpaceResolverFields {
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('storageAggregator', () => IStorageAggregator, {
     nullable: true,
     description: 'The StorageAggregator in use by this Space',
   })
-  @UseGuards(GraphqlGuard)
   async storageAggregator(@Parent() space: Space): Promise<IStorageAggregator> {
     return await this.spaceService.getStorageAggregatorOrFail(space.id);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('preferences', () => [IPreference], {
     nullable: true,
     description: 'The preferences for this Space',
   })
-  @UseGuards(GraphqlGuard)
   async preferences(
     @Parent() space: Space,
     @Loader(PreferencesLoaderCreator, {
@@ -139,24 +147,24 @@ export class SpaceResolverFields {
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('challenges', () => [IChallenge], {
     nullable: true,
     description: 'The challenges for the space.',
   })
-  @UseGuards(GraphqlGuard)
-  @Profiling.api
   async challenges(
     @Parent() space: Space,
     @Args({ nullable: true }) args: LimitAndShuffleIdsQueryArgs
-  ) {
+  ): Promise<IChallenge[]> {
     return await this.spaceService.getChallenges(space, args);
   }
 
+  // Check authorization inside the field resolver
+  @UseGuards(GraphqlGuard)
   @ResolveField('profile', () => IProfile, {
     nullable: false,
     description: 'The Profile for the Space.',
   })
-  @UseGuards(GraphqlGuard)
   async profile(
     @Parent() space: Space,
     @CurrentUser() agentInfo: AgentInfo,
@@ -175,12 +183,11 @@ export class SpaceResolverFields {
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('challenge', () => IChallenge, {
     nullable: false,
     description: 'A particular Challenge, either by its ID or nameID',
   })
-  @UseGuards(GraphqlGuard)
-  @Profiling.api
   async challenge(
     @Args('ID', { type: () => UUID_NAMEID }) id: string,
     @CurrentUser() agentInfo: AgentInfo,
@@ -198,12 +205,11 @@ export class SpaceResolverFields {
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('opportunity', () => IOpportunity, {
     nullable: false,
     description: 'A particular Opportunity, either by its ID or nameID',
   })
-  @UseGuards(GraphqlGuard)
-  @Profiling.api
   async opportunity(
     @Args('ID', { type: () => UUID_NAMEID }) id: string,
     @CurrentUser() agentInfo: AgentInfo,
@@ -229,7 +235,6 @@ export class SpaceResolverFields {
     nullable: false,
     description: 'The User Groups on this Space',
   })
-  @Profiling.api
   async groups(@Parent() space: Space): Promise<IUserGroup[]> {
     return await this.groupService.getGroups({
       where: { spaceID: space.id },
@@ -242,7 +247,6 @@ export class SpaceResolverFields {
     nullable: false,
     description: 'The user group with the specified id anywhere in the space',
   })
-  @Profiling.api
   async group(
     @Parent() space: Space,
     @Args('ID', { type: () => UUID }) groupID: string
@@ -256,7 +260,6 @@ export class SpaceResolverFields {
     nullable: true,
     description: 'Metrics about activity within this Space.',
   })
-  @Profiling.api
   async metrics(@Parent() space: Space) {
     return await this.spaceService.getMetrics(space);
   }
@@ -265,7 +268,6 @@ export class SpaceResolverFields {
     nullable: true,
     description: 'The Space host.',
   })
-  @Profiling.api
   async host(@Parent() space: Space): Promise<IOrganization | undefined> {
     return await this.spaceService.getHost(space.id);
   }

@@ -3,7 +3,6 @@ import { Args, Query, Resolver } from '@nestjs/graphql';
 import {
   CurrentUser,
   InnovationHub as InnovationHubDecorator,
-  Profiling,
 } from '@src/common/decorators';
 import { UUID_NAMEID } from '@domain/common/scalars';
 import { SpaceService } from './space.service';
@@ -25,12 +24,12 @@ export class SpaceResolverQueries {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
+  @UseGuards(GraphqlGuard)
   @Query(() => [ISpace], {
     nullable: false,
     description:
       'The Spaces on this platform; If accessed through an Innovation Hub will return ONLY the Spaces defined in it.',
   })
-  @Profiling.api
   spaces(
     @InnovationHubDecorator() innovationHub: InnovationHub | undefined,
     @Args({ nullable: true }) args: SpacesQueryArgs
@@ -47,7 +46,6 @@ export class SpaceResolverQueries {
     nullable: false,
     description: 'The Spaces on this platform',
   })
-  @Profiling.api
   async spacesPaginated(
     @Args({ nullable: true }) pagination: PaginationArgs,
     @Args('filter', { nullable: true }) filter?: SpaceFilterInput
@@ -61,7 +59,6 @@ export class SpaceResolverQueries {
     description:
       'An space. If no ID is specified then the first Space is returned.',
   })
-  @Profiling.api
   async space(
     @Args('ID', { type: () => UUID_NAMEID }) ID: string,
     @CurrentUser() agentInfo: AgentInfo
