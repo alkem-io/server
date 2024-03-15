@@ -93,7 +93,7 @@ export class calloutGroups1710272553085 implements MigrationInterface {
         );
         if (tagset_template.allowedValues.includes('CHALLENGES_1')) {
           await queryRunner.query(
-            `UPDATE tagset SET tags = '${tagset_template.allowedValues.replace(
+            `UPDATE tagset_template SET tags = '${tagset_template.allowedValues.replace(
               'CHALLENGES_1',
               'SUBSPACES_1'
             )}' WHERE id = '${tagset_template.id}'`
@@ -101,7 +101,7 @@ export class calloutGroups1710272553085 implements MigrationInterface {
         }
         if (tagset_template.allowedValues.includes('OPPORTUNITIES_1')) {
           await queryRunner.query(
-            `UPDATE tagset SET tags = '${tagset_template.allowedValues.replace(
+            `UPDATE tagset_template SET tags = '${tagset_template.allowedValues.replace(
               'OPPORTUNITIES_1',
               'SUBSPACES_1'
             )}' WHERE id = '${tagset_template.id}'`
@@ -109,7 +109,7 @@ export class calloutGroups1710272553085 implements MigrationInterface {
         }
         if (tagset_template.allowedValues.includes('CHALLENGES_2')) {
           await queryRunner.query(
-            `UPDATE tagset SET tags = '${tagset_template.allowedValues.replace(
+            `UPDATE tagset_template SET tags = '${tagset_template.allowedValues.replace(
               'CHALLENGES_2',
               'SUBSPACES_2'
             )}' WHERE id = '${tagset_template.id}'`
@@ -117,7 +117,7 @@ export class calloutGroups1710272553085 implements MigrationInterface {
         }
         if (tagset_template.allowedValues.includes('OPPORTUNITIES_2')) {
           await queryRunner.query(
-            `UPDATE tagset SET tags = '${tagset_template.allowedValues.replace(
+            `UPDATE tagset_template SET tags = '${tagset_template.allowedValues.replace(
               'OPPORTUNITIES_2',
               'SUBSPACES_2'
             )}' WHERE id = '${tagset_template.id}'`
