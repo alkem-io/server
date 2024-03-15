@@ -52,6 +52,7 @@ export const getJourneyRolesForContributorEntityData = async (
           displayName: true,
         },
         account: {
+          id: true,
           license: true,
         },
       },
