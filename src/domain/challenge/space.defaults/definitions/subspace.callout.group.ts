@@ -1,28 +1,29 @@
+import { SubspaceCalloutGroupName } from '@common/enums/subspace.callout.group.name';
 import { ICalloutGroup } from '@domain/collaboration/callout-groups/callout.group.interface';
 
 export const subspaceCalloutGroups: ICalloutGroup[] = [
   {
-    displayName: 'HOME_1',
+    displayName: SubspaceCalloutGroupName.HOME_LEFT,
     description: 'The left column on the Home page.',
   },
   {
-    displayName: 'HOME_2',
+    displayName: SubspaceCalloutGroupName.HOME_RIGHT,
     description: 'The right column on the Home page.',
   },
   {
-    displayName: 'CONTRIBUTE_1',
+    displayName: SubspaceCalloutGroupName.CONTRIBUTE_LEFT,
     description: 'The left column on the Contribute page.',
   },
   {
-    displayName: 'CONTRIBUTE_2',
+    displayName: SubspaceCalloutGroupName.CONTRIBUTE_RIGHT,
     description: 'The right column on the Contribute page.',
   },
   {
-    displayName: 'SUBSPACES_1',
+    displayName: SubspaceCalloutGroupName.SUBSPACES_LEFT,
     description: 'The left column on the Subspaces page.',
   },
   {
-    displayName: 'SUBSPACES_2',
+    displayName: SubspaceCalloutGroupName.SUBSPACES_RIGHT,
     description: 'The right column on the Subspaces page.',
   },
 ];

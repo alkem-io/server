@@ -58,7 +58,7 @@ import { IProfile } from '@domain/common/profile/profile.interface';
 import { InnovationHub, InnovationHubType } from '@domain/innovation-hub/types';
 import { OperationNotAllowedException } from '@common/exceptions/operation.not.allowed.exception';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
-import { SpaceCalloutGroupName } from '@domain/challenge/space.defaults/definitions/space.callout.group.name';
+import { SpaceCalloutGroupName } from '@common/enums/space.callout.group.name';
 import { CreateTagsetTemplateInput } from '@domain/common/tagset-template/dto/tagset.template.dto.create';
 import { TagsetType } from '@common/enums/tagset.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';

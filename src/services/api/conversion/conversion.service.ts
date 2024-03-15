@@ -23,8 +23,8 @@ import { DiscussionCategoryCommunity } from '@common/enums/communication.discuss
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { ICallout } from '@domain/collaboration/callout';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { SubspaceCalloutGroupName } from '@domain/challenge/space.defaults/definitions/subspace.callout.group.name';
-import { SpaceCalloutGroupName } from '@domain/challenge/space.defaults/definitions/space.callout.group.name';
+import { SubspaceCalloutGroupName } from '@common/enums/subspace.callout.group.name';
+import { SpaceCalloutGroupName } from '@common/enums/space.callout.group.name';
 
 export class ConversionService {
   constructor(

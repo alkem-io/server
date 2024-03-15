@@ -1,6 +1,6 @@
 import { CalloutState } from '@common/enums/callout.state';
 import { CalloutType } from '@common/enums/callout.type';
-import { SubspaceCalloutGroupName } from '@domain/challenge/space.defaults/definitions/subspace.callout.group.name';
+import { SubspaceCalloutGroupName } from '@common/enums/subspace.callout.group.name';
 import { CreateCalloutInput } from '@domain/collaboration/callout';
 import { EMPTY_WHITEBOARD_CONTENT } from '@domain/common/whiteboard/empty.whiteboard.content';
 

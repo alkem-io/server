@@ -37,7 +37,7 @@ import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.a
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
 import { IAccount } from '../account/account.interface';
-import { SubspaceCalloutGroupName } from '../space.defaults/definitions/subspace.callout.group.name';
+import { SubspaceCalloutGroupName } from '../../../common/enums/subspace.callout.group.name';
 import { SpaceType } from '@common/enums/space.type';
 @Injectable()
 export class OpportunityService {

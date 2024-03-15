@@ -1,3 +1,5 @@
+import { registerEnumType } from '@nestjs/graphql';
+
 export enum SubspaceCalloutGroupName {
   HOME_LEFT = 'HOME_1',
   HOME_RIGHT = 'HOME_2',
@@ -6,3 +8,7 @@ export enum SubspaceCalloutGroupName {
   SUBSPACES_LEFT = 'SUBSPACES_1',
   SUBSPACES_RIGHT = 'SUBSPACES_2',
 }
+
+registerEnumType(SubspaceCalloutGroupName, {
+  name: 'SubspaceCalloutGroupName',
+});
