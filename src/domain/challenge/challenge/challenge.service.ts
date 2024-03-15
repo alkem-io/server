@@ -96,6 +96,7 @@ export class ChallengeService {
     );
 
     const challenge: IChallenge = Challenge.create(challengeData);
+    challenge.type = SpaceType.CHALLENGE;
     challenge.account = account;
 
     challenge.opportunities = [];
@@ -109,7 +110,6 @@ export class ChallengeService {
       challenge,
       challengeData,
       account,
-      SpaceType.CHALLENGE,
       challengeCommunityPolicy,
       challengeCommunityApplicationForm,
       ProfileType.CHALLENGE,

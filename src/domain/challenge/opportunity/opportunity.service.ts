@@ -70,6 +70,7 @@ export class OpportunityService {
     );
 
     const opportunity: IOpportunity = Opportunity.create(opportunityData);
+    opportunity.type = SpaceType.OPPORTUNITY;
     opportunity.account = account;
 
     opportunity.storageAggregator =
@@ -81,7 +82,6 @@ export class OpportunityService {
       opportunity,
       opportunityData,
       account,
-      SpaceType.OPPORTUNITY,
       opportunityCommunityPolicy,
       opportunityCommunityApplicationForm,
       ProfileType.OPPORTUNITY,

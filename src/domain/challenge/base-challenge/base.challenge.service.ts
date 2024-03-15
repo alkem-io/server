@@ -33,7 +33,6 @@ import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
 import { IAccount } from '../account/account.interface';
-import { SpaceType } from '@common/enums/space.type';
 
 @Injectable()
 export class BaseChallengeService {
@@ -52,7 +51,6 @@ export class BaseChallengeService {
     baseChallenge: IBaseChallenge,
     baseChallengeData: CreateBaseChallengeInput,
     account: IAccount,
-    spaceType: SpaceType,
     communityPolicy: ICommunityPolicyDefinition,
     applicationFormData: CreateFormInput,
     profileType: ProfileType,
@@ -68,7 +66,7 @@ export class BaseChallengeService {
     baseChallenge.community = await this.communityService.createCommunity(
       baseChallengeData.profileData.displayName,
       account.spaceID,
-      spaceType,
+      baseChallenge.type,
       communityPolicy,
       applicationFormData
     );
@@ -111,7 +109,7 @@ export class BaseChallengeService {
         },
         storageAggregator,
         account,
-        spaceType
+        baseChallenge.type
       );
 
     baseChallenge.agent = await this.agentService.createAgent({

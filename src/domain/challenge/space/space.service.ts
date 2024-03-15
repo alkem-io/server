@@ -104,6 +104,7 @@ export class SpaceService {
   ): Promise<ISpace> {
     await this.validateSpaceData(spaceData);
     const space: ISpace = Space.create(spaceData);
+    space.type = SpaceType.SPACE;
 
     ///////////
     // Create the contextual elements for the space
@@ -128,7 +129,6 @@ export class SpaceService {
       space,
       spaceData,
       space.account,
-      SpaceType.SPACE,
       spaceCommunityPolicy,
       spaceCommunityApplicationForm,
       ProfileType.SPACE,
