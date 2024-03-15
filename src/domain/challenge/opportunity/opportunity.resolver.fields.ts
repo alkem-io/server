@@ -43,7 +43,7 @@ export class OpportunityResolverFields {
     @Parent() opportunity: IOpportunity,
     @Loader(JourneyCommunityLoaderCreator, { parentClassRef: Opportunity })
     loader: ILoader<ICommunity>
-  ) {
+  ): Promise<ICommunity> {
     const community = await loader.load(opportunity.id);
     // Do not check for READ access here, rely on per field check on resolver in Community
     // await this.authorizationService.grantAccessOrFail(
@@ -66,7 +66,7 @@ export class OpportunityResolverFields {
     @CurrentUser() agentInfo: AgentInfo,
     @Loader(JourneyContextLoaderCreator, { parentClassRef: Opportunity })
     loader: ILoader<IContext>
-  ) {
+  ): Promise<IContext> {
     const context = await loader.load(opportunity.id);
     // Check if the user can read the Context entity, not the space
     await this.authorizationService.grantAccessOrFail(
@@ -102,7 +102,7 @@ export class OpportunityResolverFields {
     @Parent() opportunity: IOpportunity,
     @Loader(JourneyCollaborationLoaderCreator, { parentClassRef: Opportunity })
     loader: ILoader<ICollaboration>
-  ) {
+  ): Promise<ICollaboration> {
     return loader.load(opportunity.id);
   }
 
@@ -115,7 +115,7 @@ export class OpportunityResolverFields {
   async profile(
     @Parent() opportunity: IOpportunity,
     @CurrentUser() agentInfo: AgentInfo
-  ) {
+  ): Promise<IProfile> {
     const profile = await this.opportunityService.getProfile(opportunity);
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -142,7 +142,7 @@ export class OpportunityResolverFields {
     @Parent() opportunity: IOpportunity,
     @Loader(OpportunityParentNameLoaderCreator)
     loader: ILoader<string>
-  ) {
+  ): Promise<string> {
     return loader.load(opportunity.id);
   }
 }

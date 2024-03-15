@@ -85,7 +85,7 @@ export class ChallengeResolverFields {
     @Parent() challenge: IChallenge,
     @Loader(JourneyCollaborationLoaderCreator, { parentClassRef: Challenge })
     loader: ILoader<ICollaboration>
-  ) {
+  ): Promise<ICollaboration> {
     return loader.load(challenge.id);
   }
 
@@ -100,7 +100,7 @@ export class ChallengeResolverFields {
     @CurrentUser() agentInfo: AgentInfo,
     @Loader(ProfileLoaderCreator, { parentClassRef: Challenge })
     loader: ILoader<IProfile>
-  ) {
+  ): Promise<IProfile> {
     const profile = await loader.load(challenge.id);
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -108,6 +108,7 @@ export class ChallengeResolverFields {
       AuthorizationPrivilege.READ,
       `read profile on challenge: ${profile.displayName}`
     );
+    return profile;
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -131,7 +132,7 @@ export class ChallengeResolverFields {
   async opportunities(
     @Parent() challenge: IChallenge,
     @Args({ nullable: true }) args: LimitAndShuffleIdsQueryArgs
-  ) {
+  ): Promise<IOpportunity[]> {
     return await this.challengeService.getOpportunities(challenge.id, args);
   }
 

@@ -56,7 +56,7 @@ export class SpaceResolverFields {
     @Parent() space: Space,
     @Loader(JourneyCommunityLoaderCreator, { parentClassRef: Space })
     loader: ILoader<ICommunity>
-  ) {
+  ): Promise<ICommunity> {
     const community = await loader.load(space.id);
     // Do not check for READ access here, rely on per field check on resolver in Community
     // await this.authorizationService.grantAccessOrFail(
@@ -101,7 +101,7 @@ export class SpaceResolverFields {
     @Parent() space: Space,
     @Loader(JourneyCollaborationLoaderCreator, { parentClassRef: Space })
     loader: ILoader<IContext>
-  ) {
+  ): Promise<ICollaboration> {
     return loader.load(space.id);
   }
 
@@ -155,7 +155,7 @@ export class SpaceResolverFields {
   async challenges(
     @Parent() space: Space,
     @Args({ nullable: true }) args: LimitAndShuffleIdsQueryArgs
-  ) {
+  ): Promise<IChallenge[]> {
     return await this.spaceService.getChallenges(space, args);
   }
 
