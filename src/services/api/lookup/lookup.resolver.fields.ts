@@ -226,16 +226,16 @@ export class LookupResolverFields {
     description: 'Lookup the specified Community',
   })
   async community(
-    @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<ICommunity> {
     const community = await this.communityService.getCommunityOrFail(id);
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      community.authorization,
-      AuthorizationPrivilege.READ,
-      `lookup Community: ${community.id}`
-    );
+    // Do not check for READ access here, rely on per field check on resolver in Community
+    // await this.authorizationService.grantAccessOrFail(
+    //   agentInfo,
+    //   community.authorization,
+    //   AuthorizationPrivilege.READ,
+    //   `lookup Community: ${community.id}`
+    // );
 
     return community;
   }
