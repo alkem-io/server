@@ -40,7 +40,7 @@ import { CommunityAuthorizationService } from '@domain/community/community/commu
 import { CollaborationAuthorizationService } from '@domain/collaboration/collaboration/collaboration.service.authorization';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 import { ILicense } from '@domain/license/license/license.interface';
-import { LicenseResolverService } from '@services/infrastructure/license-resolver/license.resolver.service';
+import { IPreferenceSet } from '@domain/common/preference-set';
 
 @Injectable()
 export class ChallengeAuthorizationService {
@@ -56,7 +56,6 @@ export class ChallengeAuthorizationService {
     private profileAuthorizationService: ProfileAuthorizationService,
     private contextAuthorizationService: ContextAuthorizationService,
     private communityAuthorizationService: CommunityAuthorizationService,
-    private licenseResolverService: LicenseResolverService,
     private collaborationAuthorizationService: CollaborationAuthorizationService
   ) {}
 
@@ -64,10 +63,39 @@ export class ChallengeAuthorizationService {
     challengeInput: IChallenge,
     parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<IChallenge> {
-    const license = await this.licenseResolverService.getlicenseForSpace(
-      challengeInput.account.spaceID
+    const challenge = await this.challengeService.getChallengeOrFail(
+      challengeInput.id,
+      {
+        relations: {
+          account: {
+            license: true,
+          },
+          community: {
+            policy: true,
+          },
+          preferenceSet: {
+            preferences: true,
+          },
+        },
+      }
     );
-    const communityPolicy = await this.setCommunityPolicyFlags(challengeInput);
+    if (
+      !challenge.account ||
+      !challenge.account.license ||
+      !challenge.community ||
+      !challenge.preferenceSet ||
+      !challenge.community.policy
+    ) {
+      throw new RelationshipNotFoundException(
+        `Unable to load entities to reset auth for challenge ${challenge.id} `,
+        LogContext.CHALLENGES
+      );
+    }
+    const license = challenge.account.license;
+    const communityPolicy = await this.setCommunityPolicyFlags(
+      challenge.preferenceSet,
+      challenge.community.policy
+    );
 
     // private challenge or not?
     // If it is a private challenge then cannot inherit from Space
@@ -110,12 +138,9 @@ export class ChallengeAuthorizationService {
   }
 
   public async setCommunityPolicyFlags(
-    challenge: IChallenge
+    preferenceSet: IPreferenceSet,
+    policy: ICommunityPolicy
   ): Promise<ICommunityPolicy> {
-    const preferenceSet = await this.challengeService.getPreferenceSetOrFail(
-      challenge.id
-    );
-    const policy = await this.challengeService.getCommunityPolicy(challenge.id);
     // Anonymouse Read access
     const allowContextReview = this.preferenceSetService.getPreferenceValue(
       preferenceSet,

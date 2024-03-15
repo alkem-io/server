@@ -50,11 +50,26 @@ export class ChallengeResolverMutations {
   ): Promise<IOpportunity> {
     const challenge = await this.challengeService.getChallengeOrFail(
       opportunityData.challengeID,
-      { relations: { account: true } }
+      {
+        relations: {
+          account: true,
+          community: {
+            policy: true,
+          },
+          preferenceSet: {
+            preferences: true,
+          },
+        },
+      }
     );
-    if (!challenge.account) {
+    if (
+      !challenge.account ||
+      !challenge.community ||
+      !challenge.preferenceSet ||
+      !challenge.community.policy
+    ) {
       throw new EntityNotInitializedException(
-        `account not found on challenge: ${challenge.nameID}`,
+        `not able to load all data for creating opportunity on challenge: ${challenge.nameID}`,
         LogContext.CHALLENGES
       );
     }
@@ -82,7 +97,8 @@ export class ChallengeResolverMutations {
 
     const challengeCommunityPolicy =
       await this.challengeAuthorizationService.setCommunityPolicyFlags(
-        challenge
+        challenge.preferenceSet,
+        challenge.community.policy
       );
     await this.opportunityAuthorizationService.applyAuthorizationPolicy(
       opportunity,
