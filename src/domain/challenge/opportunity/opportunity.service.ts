@@ -29,16 +29,13 @@ import { ICommunityPolicy } from '@domain/community/community-policy/community.p
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { CommunityRole } from '@common/enums/community.role';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
-import { TagsetType } from '@common/enums/tagset.type';
-import { CreateTagsetTemplateInput } from '@domain/common/tagset-template/dto/tagset.template.dto.create';
 import { opportunityDefaultCallouts } from './opportunity.default.callouts';
-import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
 import { IAccount } from '../account/account.interface';
-import { SubspaceCalloutGroupName } from '../../../common/enums/subspace.callout.group.name';
 import { SpaceType } from '@common/enums/space.type';
+import { CalloutGroupName } from '@common/enums/callout.group.name';
 @Injectable()
 export class OpportunityService {
   constructor(
@@ -92,16 +89,9 @@ export class OpportunityService {
     await this.opportunityRepository.save(opportunity);
 
     if (opportunity.collaboration) {
-      const locations = Object.values(SubspaceCalloutGroupName);
-      const tagsetTemplateData: CreateTagsetTemplateInput = {
-        name: TagsetReservedName.CALLOUT_GROUP,
-        type: TagsetType.SELECT_ONE,
-        allowedValues: locations,
-        defaultSelectedValue: SubspaceCalloutGroupName.CONTRIBUTE_RIGHT,
-      };
-      await this.collaborationService.addTagsetTemplate(
+      await this.collaborationService.addCalloutGroupTagsetTemplate(
         opportunity.collaboration,
-        tagsetTemplateData
+        CalloutGroupName.CONTRIBUTE_RIGHT
       );
 
       // Finally create default callouts, using the defaults service to decide what to add

@@ -1,15 +1,17 @@
 import { registerEnumType } from '@nestjs/graphql';
 
-export enum SpaceCalloutGroupName {
+export enum CalloutGroupName {
   HOME_LEFT = 'HOME_1',
   HOME_RIGHT = 'HOME_2',
   COMMUNITY_LEFT = 'COMMUNITY_1',
   COMMUNITY_RIGHT = 'COMMUNITY_2',
+  CONTRIBUTE_LEFT = 'CONTRIBUTE_1',
+  CONTRIBUTE_RIGHT = 'CONTRIBUTE_2',
   KNOWLEDGE = 'KNOWLEDGE',
   SUBSPACES_LEFT = 'SUBSPACES_1',
   SUBSPACES_RIGHT = 'SUBSPACES_2',
 }
 
-registerEnumType(SpaceCalloutGroupName, {
-  name: 'SpaceCalloutGroupName',
+registerEnumType(CalloutGroupName, {
+  name: 'CalloutGroupName',
 });

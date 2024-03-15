@@ -58,10 +58,7 @@ import { IProfile } from '@domain/common/profile/profile.interface';
 import { InnovationHub, InnovationHubType } from '@domain/innovation-hub/types';
 import { OperationNotAllowedException } from '@common/exceptions/operation.not.allowed.exception';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
-import { SpaceCalloutGroupName } from '@common/enums/space.callout.group.name';
-import { CreateTagsetTemplateInput } from '@domain/common/tagset-template/dto/tagset.template.dto.create';
-import { TagsetType } from '@common/enums/tagset.type';
-import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { CalloutGroupName } from '@common/enums/callout.group.name';
 import { CommunityRole } from '@common/enums/community.role';
 import { spaceDefaultCallouts } from './space.default.callouts';
 import { IPaginatedType } from '@core/pagination/paginated.type';
@@ -142,18 +139,9 @@ export class SpaceService {
       );
     }
 
-    const locations = Object.values({
-      ...SpaceCalloutGroupName,
-    });
-    const tagsetTemplateData: CreateTagsetTemplateInput = {
-      name: TagsetReservedName.CALLOUT_GROUP,
-      type: TagsetType.SELECT_ONE,
-      allowedValues: locations,
-      defaultSelectedValue: SpaceCalloutGroupName.KNOWLEDGE,
-    };
-    await this.collaborationService.addTagsetTemplate(
+    await this.collaborationService.addCalloutGroupTagsetTemplate(
       space.collaboration,
-      tagsetTemplateData
+      CalloutGroupName.KNOWLEDGE
     );
 
     space.collaboration = await this.collaborationService.addDefaultCallouts(

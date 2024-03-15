@@ -55,6 +55,7 @@ import { ICalloutGroup } from '../callout-groups/callout.group.interface';
 import { CalloutGroupsService } from '../callout-groups/callout.group.service';
 import { IAccount } from '@domain/challenge/account/account.interface';
 import { SpaceType } from '@common/enums/space.type';
+import { CalloutGroupName } from '@common/enums/callout.group.name';
 
 @Injectable()
 export class CollaborationService {
@@ -127,6 +128,23 @@ export class CollaborationService {
       );
 
     return await this.save(collaboration);
+  }
+
+  public getCalloutGroupNames(collaboration: ICollaboration): string[] {
+    return this.calloutGroupsService.getGroupNames(collaboration.groups);
+  }
+
+  public async addCalloutGroupTagsetTemplate(
+    collaboration: ICollaboration,
+    defaultGroup: CalloutGroupName
+  ) {
+    const tagsetTemplateData: CreateTagsetTemplateInput = {
+      name: TagsetReservedName.CALLOUT_GROUP,
+      type: TagsetType.SELECT_ONE,
+      allowedValues: this.getCalloutGroupNames(collaboration),
+      defaultSelectedValue: defaultGroup,
+    };
+    await this.addTagsetTemplate(collaboration, tagsetTemplateData);
   }
 
   public async addTagsetTemplate(

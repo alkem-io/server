@@ -51,16 +51,14 @@ import { ICommunityPolicy } from '@domain/community/community-policy/community.p
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { OperationNotAllowedException } from '@common/exceptions/operation.not.allowed.exception';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
-import { TagsetType } from '@common/enums/tagset.type';
-import { CreateTagsetTemplateInput } from '@domain/common/tagset-template/dto/tagset.template.dto.create';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { challengeDefaultCallouts } from './challenge.default.callouts';
-import { SubspaceCalloutGroupName } from '@common/enums/subspace.callout.group.name';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
 import { IAccount } from '../account/account.interface';
 import { SpaceType } from '@common/enums/space.type';
+import { CalloutGroupName } from '@common/enums/callout.group.name';
 @Injectable()
 export class ChallengeService {
   constructor(
@@ -142,18 +140,9 @@ export class ChallengeService {
       );
     }
 
-    const locations = Object.values({
-      ...SubspaceCalloutGroupName,
-    });
-    const tagsetTemplateData: CreateTagsetTemplateInput = {
-      name: TagsetReservedName.CALLOUT_GROUP,
-      type: TagsetType.SELECT_ONE,
-      allowedValues: locations,
-      defaultSelectedValue: SubspaceCalloutGroupName.CONTRIBUTE_RIGHT,
-    };
-    await this.collaborationService.addTagsetTemplate(
+    await this.collaborationService.addCalloutGroupTagsetTemplate(
       challenge.collaboration,
-      tagsetTemplateData
+      CalloutGroupName.CONTRIBUTE_RIGHT
     );
 
     const savedChallenge = await this.challengeRepository.save(challenge);

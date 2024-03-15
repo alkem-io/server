@@ -13,7 +13,7 @@ export class CalloutGroupsService {
     return groups;
   }
 
-  public getStateNames(groupsStr: string): string[] {
+  public getGroupNames(groupsStr: string): string[] {
     const groups = this.getGroups(groupsStr);
     return groups.map(group => group.displayName);
   }
@@ -26,12 +26,3 @@ export class CalloutGroupsService {
     return JSON.parse(groupsStr);
   }
 }
-
-// "allowedValues":[7 items
-//   0:"HOME_1"
-//   1:"HOME_RIGHT"
-//   2:"KNOWLEDGE"
-//   3:"CONTRIBUTE_1"
-//   4:"CONTRIBUTE_2"
-//   5:"OPPORTUNITIES_1"
-//   6:"OPPORTUNITIES_2"

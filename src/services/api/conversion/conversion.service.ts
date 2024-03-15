@@ -23,8 +23,7 @@ import { DiscussionCategoryCommunity } from '@common/enums/communication.discuss
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { ICallout } from '@domain/collaboration/callout';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { SubspaceCalloutGroupName } from '@common/enums/subspace.callout.group.name';
-import { SpaceCalloutGroupName } from '@common/enums/space.callout.group.name';
+import { CalloutGroupName } from '@common/enums/callout.group.name';
 
 export class ConversionService {
   constructor(
@@ -164,7 +163,7 @@ export class ConversionService {
     space.collaboration = challengeCollaboration;
     challenge.collaboration = spaceCollaboration;
     // Update display locations for callouts to use space locations
-    this.updateSpaceCalloutsDisplayLocation(space.collaboration.callouts);
+    this.updateSpaceCalloutsGroups(space.collaboration.callouts);
 
     // Swap the profiles
     const challengeProfile = challenge.profile;
@@ -369,9 +368,7 @@ export class ConversionService {
     challenge.collaboration = opportunityCollaboration;
     opportunity.collaboration = challengeCollaboration;
     // Update display locations for callouts to use space locations
-    this.updateChallengeCalloutsDisplayLocation(
-      challenge.collaboration.callouts
-    );
+    this.updateChallengeCalloutGroups(challenge.collaboration.callouts);
 
     // Swap the profiles
     const opportunityProfile = opportunity.profile;
@@ -413,9 +410,7 @@ export class ConversionService {
     return await this.spaceService.addChallengeToSpace(spaceID, challenge);
   }
 
-  private updateSpaceCalloutsDisplayLocation(
-    callouts: ICallout[] | undefined
-  ): void {
+  private updateSpaceCalloutsGroups(callouts: ICallout[] | undefined): void {
     if (!callouts) {
       throw new EntityNotInitializedException(
         'Callouts not defined',
@@ -445,25 +440,23 @@ export class ConversionService {
       }
       const location = locationTagset.tags[0];
       switch (location) {
-        case SubspaceCalloutGroupName.SUBSPACES_LEFT:
-          locationTagset.tags = [SpaceCalloutGroupName.SUBSPACES_RIGHT];
+        case CalloutGroupName.SUBSPACES_LEFT:
+          locationTagset.tags = [CalloutGroupName.SUBSPACES_RIGHT];
           break;
-        case SubspaceCalloutGroupName.SUBSPACES_LEFT:
-          locationTagset.tags = [SpaceCalloutGroupName.SUBSPACES_LEFT];
+        case CalloutGroupName.SUBSPACES_LEFT:
+          locationTagset.tags = [CalloutGroupName.SUBSPACES_LEFT];
           break;
-        case SubspaceCalloutGroupName.CONTRIBUTE_RIGHT:
-          locationTagset.tags = [SpaceCalloutGroupName.KNOWLEDGE];
+        case CalloutGroupName.CONTRIBUTE_RIGHT:
+          locationTagset.tags = [CalloutGroupName.KNOWLEDGE];
           break;
-        case SubspaceCalloutGroupName.CONTRIBUTE_LEFT:
-          locationTagset.tags = [SpaceCalloutGroupName.KNOWLEDGE];
+        case CalloutGroupName.CONTRIBUTE_LEFT:
+          locationTagset.tags = [CalloutGroupName.KNOWLEDGE];
           break;
       }
     }
   }
 
-  private updateChallengeCalloutsDisplayLocation(
-    callouts: ICallout[] | undefined
-  ): void {
+  private updateChallengeCalloutGroups(callouts: ICallout[] | undefined): void {
     if (!callouts) {
       throw new EntityNotInitializedException(
         'Callouts not defined',
@@ -493,11 +486,11 @@ export class ConversionService {
       }
       const location = locationTagset.tags[0];
       switch (location) {
-        case SubspaceCalloutGroupName.CONTRIBUTE_LEFT:
-          locationTagset.tags = [SubspaceCalloutGroupName.CONTRIBUTE_LEFT];
+        case CalloutGroupName.CONTRIBUTE_LEFT:
+          locationTagset.tags = [CalloutGroupName.CONTRIBUTE_LEFT];
           break;
-        case SubspaceCalloutGroupName.CONTRIBUTE_RIGHT:
-          locationTagset.tags = [SubspaceCalloutGroupName.CONTRIBUTE_RIGHT];
+        case CalloutGroupName.CONTRIBUTE_RIGHT:
+          locationTagset.tags = [CalloutGroupName.CONTRIBUTE_RIGHT];
           break;
       }
     }

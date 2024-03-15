@@ -1,8 +1,8 @@
+import { CalloutGroupName } from '@common/enums/callout.group.name';
 import { CalloutState } from '@common/enums/callout.state';
 import { CalloutType } from '@common/enums/callout.type';
 import { CreateCalloutInput } from '@domain/collaboration/callout';
 import { EMPTY_WHITEBOARD_CONTENT } from '@domain/common/whiteboard/empty.whiteboard.content';
-import { SubspaceCalloutGroupName } from '../../../common/enums/subspace.callout.group.name';
 
 export const opportunityDefaultCallouts: CreateCalloutInput[] = [
   {
@@ -12,7 +12,7 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.CLOSED,
     },
     sortOrder: 1,
-    groupName: SubspaceCalloutGroupName.HOME_RIGHT,
+    groupName: CalloutGroupName.HOME_RIGHT,
     framing: {
       profile: {
         displayName: 'Getting Started',
@@ -27,7 +27,7 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 1,
-    groupName: SubspaceCalloutGroupName.HOME_LEFT,
+    groupName: CalloutGroupName.HOME_LEFT,
     framing: {
       profile: {
         displayName: 'General chat 💬',
@@ -42,7 +42,7 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 2,
-    groupName: SubspaceCalloutGroupName.HOME_RIGHT,
+    groupName: CalloutGroupName.HOME_RIGHT,
     framing: {
       profile: {
         displayName: '💪 Jobs to be done...',
@@ -61,7 +61,7 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 3,
-    groupName: SubspaceCalloutGroupName.HOME_RIGHT,
+    groupName: CalloutGroupName.HOME_RIGHT,
     framing: {
       profile: {
         displayName: '👋 Hi, this is us!',
@@ -77,7 +77,7 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 1,
-    groupName: SubspaceCalloutGroupName.CONTRIBUTE_RIGHT,
+    groupName: CalloutGroupName.CONTRIBUTE_RIGHT,
     framing: {
       profile: {
         displayName: 'Relevant news, research or use cases 📰',
@@ -97,7 +97,7 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 3,
-    groupName: SubspaceCalloutGroupName.CONTRIBUTE_LEFT,
+    groupName: CalloutGroupName.CONTRIBUTE_LEFT,
     framing: {
       profile: {
         displayName: 'Reference / important documents',
@@ -112,7 +112,7 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 2,
-    groupName: SubspaceCalloutGroupName.CONTRIBUTE_RIGHT,
+    groupName: CalloutGroupName.CONTRIBUTE_RIGHT,
     framing: {
       profile: {
         displayName: 'What do we need?',
