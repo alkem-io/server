@@ -1,7 +1,6 @@
 import { CalloutState } from '@common/enums/callout.state';
 import { CalloutType } from '@common/enums/callout.type';
-import { ChallengeDisplayLocation } from '@domain/challenge/space.defaults/definitions/challenge.display.location';
-import { CommonDisplayLocation } from '@domain/challenge/space.defaults/definitions/common.display.location';
+import { SubspaceCalloutGroup } from '@domain/challenge/space.defaults/definitions/subspace.callout.group';
 import { CreateCalloutInput } from '@domain/collaboration/callout';
 import { EMPTY_WHITEBOARD_CONTENT } from '@domain/common/whiteboard/empty.whiteboard.content';
 
@@ -13,7 +12,7 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.CLOSED,
     },
     sortOrder: 1,
-    groupName: CommonDisplayLocation.HOME_RIGHT,
+    groupName: SubspaceCalloutGroup.HOME_RIGHT,
     framing: {
       profile: {
         displayName: 'Getting Started',
@@ -28,7 +27,7 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 2,
-    groupName: CommonDisplayLocation.HOME_LEFT,
+    groupName: SubspaceCalloutGroup.HOME_LEFT,
     framing: {
       profile: {
         displayName: 'General chat 💬',
@@ -43,7 +42,7 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 2,
-    groupName: CommonDisplayLocation.HOME_RIGHT,
+    groupName: SubspaceCalloutGroup.HOME_RIGHT,
     framing: {
       profile: {
         displayName: '👥 This is us!',
@@ -63,7 +62,7 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 1,
-    groupName: ChallengeDisplayLocation.CONTRIBUTE_RIGHT,
+    groupName: SubspaceCalloutGroup.CONTRIBUTE_RIGHT,
     framing: {
       profile: {
         displayName: 'Relevant news, research or use cases 📰',
@@ -83,7 +82,7 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 2,
-    groupName: ChallengeDisplayLocation.CONTRIBUTE_RIGHT,
+    groupName: SubspaceCalloutGroup.CONTRIBUTE_RIGHT,
     framing: {
       profile: {
         displayName: 'Who are the stakeholders?',
@@ -106,7 +105,7 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 3,
-    groupName: ChallengeDisplayLocation.CONTRIBUTE,
+    groupName: SubspaceCalloutGroup.CONTRIBUTE_LEFT,
     framing: {
       profile: {
         displayName: 'Reference / important documents',
@@ -121,7 +120,7 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 1,
-    groupName: ChallengeDisplayLocation.OPPORTUNITIES_LEFT,
+    groupName: SubspaceCalloutGroup.SUBSPACES_LEFT,
     framing: {
       profile: {
         displayName: '💡 What Opportunities do you see?',
@@ -137,7 +136,7 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 1,
-    groupName: ChallengeDisplayLocation.OPPORTUNITIES_RIGHT,
+    groupName: SubspaceCalloutGroup.SUBSPACES_RIGHT,
     framing: {
       profile: {
         displayName: 'Opportunity proposals',

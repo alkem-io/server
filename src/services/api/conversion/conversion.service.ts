@@ -23,10 +23,8 @@ import { DiscussionCategoryCommunity } from '@common/enums/communication.discuss
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { ICallout } from '@domain/collaboration/callout';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { ChallengeDisplayLocation } from '@domain/challenge/space.defaults/definitions/challenge.display.location';
-import { SpaceDisplayLocation } from '@domain/challenge/space.defaults/definitions/space.display.location';
-import { CommonDisplayLocation } from '@domain/challenge/space.defaults/definitions/common.display.location';
-import { OpportunityDisplayLocation } from '@domain/challenge/space.defaults/definitions/opportunity.display.location';
+import { SubspaceCalloutGroup } from '@domain/challenge/space.defaults/definitions/subspace.callout.group';
+import { SpaceCalloutGroup } from '@domain/challenge/space.defaults/definitions/space.callout.group';
 
 export class ConversionService {
   constructor(
@@ -447,17 +445,17 @@ export class ConversionService {
       }
       const location = locationTagset.tags[0];
       switch (location) {
-        case ChallengeDisplayLocation.OPPORTUNITIES_RIGHT:
-          locationTagset.tags = [SpaceDisplayLocation.CHALLENGES_RIGHT];
+        case SubspaceCalloutGroup.SUBSPACES_LEFT:
+          locationTagset.tags = [SpaceCalloutGroup.SUBSPACES_RIGHT];
           break;
-        case ChallengeDisplayLocation.OPPORTUNITIES_LEFT:
-          locationTagset.tags = [SpaceDisplayLocation.CHALLENGES_RIGHT];
+        case SubspaceCalloutGroup.SUBSPACES_LEFT:
+          locationTagset.tags = [SpaceCalloutGroup.SUBSPACES_LEFT];
           break;
-        case ChallengeDisplayLocation.CONTRIBUTE_RIGHT:
-          locationTagset.tags = [CommonDisplayLocation.KNOWLEDGE];
+        case SubspaceCalloutGroup.CONTRIBUTE_RIGHT:
+          locationTagset.tags = [SpaceCalloutGroup.KNOWLEDGE];
           break;
-        case ChallengeDisplayLocation.CONTRIBUTE:
-          locationTagset.tags = [CommonDisplayLocation.KNOWLEDGE];
+        case SubspaceCalloutGroup.CONTRIBUTE_LEFT:
+          locationTagset.tags = [SpaceCalloutGroup.KNOWLEDGE];
           break;
       }
     }
@@ -495,11 +493,11 @@ export class ConversionService {
       }
       const location = locationTagset.tags[0];
       switch (location) {
-        case OpportunityDisplayLocation.CONTRIBUTE:
-          locationTagset.tags = [ChallengeDisplayLocation.CONTRIBUTE];
+        case SubspaceCalloutGroup.CONTRIBUTE_LEFT:
+          locationTagset.tags = [SubspaceCalloutGroup.CONTRIBUTE_LEFT];
           break;
-        case OpportunityDisplayLocation.CONTRIBUTE_RIGHT:
-          locationTagset.tags = [ChallengeDisplayLocation.CONTRIBUTE_RIGHT];
+        case SubspaceCalloutGroup.CONTRIBUTE_RIGHT:
+          locationTagset.tags = [SubspaceCalloutGroup.CONTRIBUTE_RIGHT];
           break;
       }
     }

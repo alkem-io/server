@@ -1,7 +1,6 @@
 import { CalloutState } from '@common/enums/callout.state';
 import { CalloutType } from '@common/enums/callout.type';
-import { CommonDisplayLocation } from '@domain/challenge/space.defaults/definitions/common.display.location';
-import { SpaceDisplayLocation } from '@domain/challenge/space.defaults/definitions/space.display.location';
+import { SpaceCalloutGroup } from '@domain/challenge/space.defaults/definitions/space.callout.group';
 import { CreateCalloutInput } from '@domain/collaboration/callout';
 import { EMPTY_WHITEBOARD_CONTENT } from '@domain/common/whiteboard/empty.whiteboard.content';
 
@@ -13,7 +12,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.CLOSED,
     },
     sortOrder: 1,
-    groupName: CommonDisplayLocation.HOME_RIGHT,
+    groupName: SpaceCalloutGroup.HOME_RIGHT,
     framing: {
       profile: {
         displayName: 'Getting Started',
@@ -28,7 +27,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 1,
-    groupName: CommonDisplayLocation.HOME_LEFT,
+    groupName: SpaceCalloutGroup.HOME_LEFT,
     framing: {
       profile: {
         displayName: 'General chat 💬',
@@ -43,7 +42,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 2,
-    groupName: CommonDisplayLocation.HOME_LEFT,
+    groupName: SpaceCalloutGroup.HOME_LEFT,
     framing: {
       profile: {
         displayName: 'Any questions or feedback?',
@@ -58,7 +57,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 2,
-    groupName: CommonDisplayLocation.HOME_RIGHT,
+    groupName: SpaceCalloutGroup.HOME_RIGHT,
     framing: {
       profile: {
         displayName: 'What is this Space about?',
@@ -81,7 +80,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 1,
-    groupName: SpaceDisplayLocation.COMMUNITY_LEFT,
+    groupName: SpaceCalloutGroup.COMMUNITY_LEFT,
     framing: {
       profile: {
         displayName: 'Welcome to the community!',
@@ -97,7 +96,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 1,
-    groupName: SpaceDisplayLocation.COMMUNITY_RIGHT,
+    groupName: SpaceCalloutGroup.COMMUNITY_RIGHT,
     framing: {
       profile: {
         displayName: 'Understanding the existing and potential community',
@@ -120,7 +119,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 1,
-    groupName: SpaceDisplayLocation.CHALLENGES_LEFT,
+    groupName: SpaceCalloutGroup.SUBSPACES_LEFT,
     framing: {
       profile: {
         displayName: '🚩 What Challenges do you care about?',
@@ -135,7 +134,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 1,
-    groupName: SpaceDisplayLocation.CHALLENGES_RIGHT,
+    groupName: SpaceCalloutGroup.SUBSPACES_RIGHT,
     framing: {
       profile: {
         displayName: 'Challenge proposals',
@@ -155,7 +154,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 1,
-    groupName: CommonDisplayLocation.KNOWLEDGE,
+    groupName: SpaceCalloutGroup.KNOWLEDGE,
     framing: {
       profile: {
         displayName: 'Relevant news, research or use cases 📰',
@@ -175,7 +174,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 2,
-    groupName: CommonDisplayLocation.KNOWLEDGE,
+    groupName: SpaceCalloutGroup.KNOWLEDGE,
     framing: {
       profile: {
         displayName: 'Reference / important documents',
@@ -190,7 +189,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 3,
-    groupName: CommonDisplayLocation.KNOWLEDGE,
+    groupName: SpaceCalloutGroup.KNOWLEDGE,
     framing: {
       profile: {
         displayName: '❓ FAQ',
