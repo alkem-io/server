@@ -151,9 +151,12 @@ export class calloutGroups1710272553085 implements MigrationInterface {
       await queryRunner.query(
         `UPDATE ${journeyType} SET type = '${journeyType}' WHERE id = '${journey.id}'`
       );
+      const groupsStr = escapeString(
+        replaceSpecialCharacters(JSON.stringify(calloutGroups))
+      );
       // TODO: what is not working with this?!
       // await queryRunner.query(
-      //   `UPDATE collaboration SET groups = '${this.convertGroupsToText(calloutGroups)}' WHERE id = '${journey.collaborationId}'`
+      //   `UPDATE collaboration SET groups = '${groupsStr}' WHERE id = '${journey.collaborationId}'`
       // );
     }
   }
@@ -215,10 +218,6 @@ export class calloutGroups1710272553085 implements MigrationInterface {
       description: 'The right column on the Subspaces page.',
     },
   ];
-
-  private convertGroupsToText(groups: CalloutGroup[]) {
-    return `${escapeString(replaceSpecialCharacters(JSON.stringify(groups)))}`;
-  }
 }
 
 export type CalloutGroup = {
