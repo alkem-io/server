@@ -17,7 +17,6 @@ import { ProfileType } from '@common/enums';
 import { License } from '@domain/license/license/license.entity';
 import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
 import { Account } from '../account/account.entity';
-import { ICalloutGroup } from '@domain/collaboration/callout-groups/callout.group.interface';
 import { SpaceType } from '@common/enums/space.type';
 
 const moduleMocker = new ModuleMocker(global);
@@ -102,7 +101,36 @@ const getChallengesMock = (
       type: SpaceType.SPACE,
       collaboration: {
         id: '',
-        groupsStr: JSON.stringify(spaceCalloutGroups),
+        groupsStr: JSON.stringify([
+          {
+            displayName: 'HOME_1',
+            description: 'The left column on the Home page.',
+          },
+          {
+            displayName: 'HOME_2',
+            description: 'The right column on the Home page.',
+          },
+          {
+            displayName: 'COMMUNITY_1',
+            description: 'The left column on the Community page.',
+          },
+          {
+            displayName: 'COMMUNITY_2',
+            description: 'The right column on the Community page.',
+          },
+          {
+            displayName: 'SUBSPACES_1',
+            description: 'The left column on the Subspaces page.',
+          },
+          {
+            displayName: 'SUBSPACES_2',
+            description: 'The right column on the Subspaces page.',
+          },
+          {
+            displayName: 'KNOWLEDGE',
+            description: 'The knowledge page.',
+          },
+        ]),
         innovationFlow: {
           id: '',
           states: JSON.stringify([
@@ -175,7 +203,36 @@ const getOpportunitiesMock = (
       type: SpaceType.OPPORTUNITY,
       collaboration: {
         id: '',
-        groupsStr: JSON.stringify(spaceCalloutGroups),
+        groupsStr: JSON.stringify([
+          {
+            displayName: 'HOME_1',
+            description: 'The left column on the Home page.',
+          },
+          {
+            displayName: 'HOME_2',
+            description: 'The right column on the Home page.',
+          },
+          {
+            displayName: 'COMMUNITY_1',
+            description: 'The left column on the Community page.',
+          },
+          {
+            displayName: 'COMMUNITY_2',
+            description: 'The right column on the Community page.',
+          },
+          {
+            displayName: 'SUBSPACES_1',
+            description: 'The left column on the Subspaces page.',
+          },
+          {
+            displayName: 'SUBSPACES_2',
+            description: 'The right column on the Subspaces page.',
+          },
+          {
+            displayName: 'KNOWLEDGE',
+            description: 'The knowledge page.',
+          },
+        ]),
         innovationFlow: {
           id: '',
           states: JSON.stringify([
@@ -430,34 +487,3 @@ describe('SpacesSorting', () => {
     expect(JSON.stringify(result)).toBe('["7"]');
   });
 });
-
-const spaceCalloutGroups: ICalloutGroup[] = [
-  {
-    displayName: 'HOME_1',
-    description: 'The left column on the Home page.',
-  },
-  {
-    displayName: 'HOME_2',
-    description: 'The right column on the Home page.',
-  },
-  {
-    displayName: 'COMMUNITY_1',
-    description: 'The left column on the Community page.',
-  },
-  {
-    displayName: 'COMMUNITY_2',
-    description: 'The right column on the Community page.',
-  },
-  {
-    displayName: 'SUBSPACES_1',
-    description: 'The left column on the Subspaces page.',
-  },
-  {
-    displayName: 'SUBSPACES_2',
-    description: 'The right column on the Subspaces page.',
-  },
-  {
-    displayName: 'KNOWLEDGE',
-    description: 'The knowledge page.',
-  },
-];
