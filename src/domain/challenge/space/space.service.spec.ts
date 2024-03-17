@@ -92,6 +92,7 @@ const getChallengesMock = (
       rowId: i,
       nameID: `challenge-${spaceId}.${i}`,
       spaceID: `${spaceId}`,
+      settingsStr: JSON.stringify({}),
       collaboration: {
         id: '',
         innovationFlow: {
@@ -159,6 +160,7 @@ const getOpportunitiesMock = (
       rowId: i,
       nameID: `opportunity-${challengeId}.${i}`,
       spaceID: `${challengeId}`,
+      settingsStr: JSON.stringify({}),
       collaboration: {
         id: '',
         innovationFlow: {
@@ -228,6 +230,7 @@ const getSpaceMock = ({
     id,
     rowId: parseInt(id),
     nameID: `space-${id}`,
+    settingsStr: JSON.stringify({}),
     profile: {
       id: `profile-${id}`,
       displayName: `Space ${id}`,
