@@ -1,9 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import {
-  AuthorizationPrivilege,
-  AuthorizationVerifiedCredential,
-  LogContext,
-} from '@common/enums';
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import {
   EntityNotInitializedException,
@@ -13,10 +9,8 @@ import { OpportunityAuthorizationService } from '@domain/challenge/opportunity/o
 import { ChallengeService } from './challenge.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IChallenge } from './challenge.interface';
-import { AuthorizationPolicyRuleVerifiedCredential } from '@core/authorization/authorization.policy.rule.verified.credential';
 import { CommunityPolicyService } from '@domain/community/community-policy/community.policy.service';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
-import { CommunityPolicyFlag } from '@common/enums/community.policy.flag';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { IAuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege.interface';
@@ -40,6 +34,7 @@ import { ILicense } from '@domain/license/license/license.interface';
 import { LicenseResolverService } from '@services/infrastructure/license-resolver/license.resolver.service';
 import { SpaceSettingsService } from '../space.settings/space.settings.service';
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
+import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
 
 @Injectable()
 export class ChallengeAuthorizationService {
@@ -89,10 +84,7 @@ export class ChallengeAuthorizationService {
       challengeInput.authorization,
       communityPolicy
     );
-    challengeInput.authorization = this.appendVerifiedCredentialRules(
-      challengeInput.authorization,
-      communityPolicy
-    );
+
     challengeInput.authorization = this.appendPrivilegeRules(
       challengeInput.authorization,
       communityPolicy
@@ -105,6 +97,7 @@ export class ChallengeAuthorizationService {
       license
     );
   }
+
   public async getCommunityPolicyWithSettings(
     challenge: IChallenge
   ): Promise<ICommunityPolicy> {
@@ -187,8 +180,7 @@ export class ChallengeAuthorizationService {
       );
     challenge = await this.propagateAuthorizationToProfileContext(challenge);
     return await this.propagateAuthorizationToOpportunitiesStorageChildChallengesPreferences(
-      challenge,
-      policy
+      challenge
     );
   }
 
@@ -280,8 +272,7 @@ export class ChallengeAuthorizationService {
   }
 
   public async propagateAuthorizationToOpportunitiesStorageChildChallengesPreferences(
-    challengeBase: IChallenge,
-    communityPolicy: ICommunityPolicy
+    challengeBase: IChallenge
   ): Promise<IChallenge> {
     const challenge = await this.challengeService.getChallengeOrFail(
       challengeBase.id,
@@ -317,8 +308,7 @@ export class ChallengeAuthorizationService {
     for (const opportunity of challenge.opportunities) {
       await this.opportunityAuthorizationService.applyAuthorizationPolicy(
         opportunity,
-        challenge.authorization,
-        communityPolicy
+        challenge.authorization
       );
     }
 
@@ -379,12 +369,8 @@ export class ChallengeAuthorizationService {
       );
     rules.push(challengeMember);
 
-    if (
-      this.communityPolicyService.getFlag(
-        policy,
-        CommunityPolicyFlag.ALLOW_CONTRIBUTORS_TO_CREATE_OPPORTUNITIES
-      )
-    ) {
+    const collaborationSettings = policy.settings.collaboration;
+    if (collaborationSettings.allowMembersToCreateSubspaces) {
       const criteria = this.getContributorCriteria(policy);
       const createOpportunityRule =
         this.authorizationPolicyService.createCredentialRule(
@@ -406,12 +392,8 @@ export class ChallengeAuthorizationService {
         CommunityRole.MEMBER
       ),
     ];
-    if (
-      this.communityPolicyService.getFlag(
-        policy,
-        CommunityPolicyFlag.ALLOW_SPACE_MEMBERS_TO_CONTRIBUTE
-      )
-    ) {
+    const collaborationSettings = policy.settings.collaboration;
+    if (collaborationSettings.inheritMembershipRights) {
       criteria.push(
         this.communityPolicyService.getDirectParentCredentialForRole(
           policy,
@@ -420,44 +402,6 @@ export class ChallengeAuthorizationService {
       );
     }
     return criteria;
-  }
-
-  private appendVerifiedCredentialRules(
-    authorization: IAuthorizationPolicy | undefined,
-    policy: ICommunityPolicy
-  ): IAuthorizationPolicy {
-    if (!authorization)
-      throw new EntityNotInitializedException(
-        'Authorization definition not found on Challenge',
-        LogContext.CHALLENGES
-      );
-
-    return this.authorizationPolicyService.appendVerifiedCredentialAuthorizationRules(
-      authorization,
-      this.createVerifiedCredentialRules(policy)
-    );
-  }
-
-  private createVerifiedCredentialRules(
-    communityPolicy: ICommunityPolicy
-  ): AuthorizationPolicyRuleVerifiedCredential[] {
-    const rules: AuthorizationPolicyRuleVerifiedCredential[] = [];
-
-    // Allow feedback based on a particular VC
-    const allowContextReview = this.communityPolicyService.getFlag(
-      communityPolicy,
-      CommunityPolicyFlag.MEMBERSHIP_FEEDBACK_ON_CHALLENGE_CONTEXT
-    );
-    if (allowContextReview) {
-      const theHagueCredential = new AuthorizationPolicyRuleVerifiedCredential(
-        [AuthorizationPrivilege.COMMUNITY_CONTEXT_REVIEW],
-        AuthorizationVerifiedCredential.THE_HAGUE_ADDRESS,
-        { name: 'plaats', value: 'Den Haag' }
-      );
-      rules.push(theHagueCredential);
-    }
-
-    return rules;
   }
 
   private extendCommunityAuthorizationPolicy(
@@ -479,35 +423,28 @@ export class ChallengeAuthorizationService {
       );
 
     // Allow member of the parent community to Apply
-    const allowSpaceMembersToApply = this.communityPolicyService.getFlag(
-      policy,
-      CommunityPolicyFlag.MEMBERSHIP_APPLY_CHALLENGE_FROM_SPACE_MEMBERS
-    );
-    if (allowSpaceMembersToApply) {
-      const spaceMemberCanApply =
-        this.authorizationPolicyService.createCredentialRule(
-          [AuthorizationPrivilege.COMMUNITY_APPLY],
-          [parentCommunityCredential],
-          CREDENTIAL_RULE_CHALLENGE_SPACE_MEMBER_APPLY
-        );
-      spaceMemberCanApply.cascade = false;
-      newRules.push(spaceMemberCanApply);
-    }
-
-    // Allow member of the parent community to Join
-    const allowSpaceMembersToJoin = this.communityPolicyService.getFlag(
-      policy,
-      CommunityPolicyFlag.MEMBERSHIP_JOIN_CHALLENGE_FROM_SPACE_MEMBERS
-    );
-    if (allowSpaceMembersToJoin) {
-      const spaceMemberCanJoin =
-        this.authorizationPolicyService.createCredentialRule(
-          [AuthorizationPrivilege.COMMUNITY_JOIN],
-          [parentCommunityCredential],
-          CREDENTIAL_RULE_CHALLENGE_SPACE_MEMBER_JOIN
-        );
-      spaceMemberCanJoin.cascade = false;
-      newRules.push(spaceMemberCanJoin);
+    const membershipSettings = policy.settings.membership;
+    switch (membershipSettings.policy) {
+      case CommunityMembershipPolicy.APPLICATIONS:
+        const spaceMemberCanApply =
+          this.authorizationPolicyService.createCredentialRule(
+            [AuthorizationPrivilege.COMMUNITY_APPLY],
+            [parentCommunityCredential],
+            CREDENTIAL_RULE_CHALLENGE_SPACE_MEMBER_APPLY
+          );
+        spaceMemberCanApply.cascade = false;
+        newRules.push(spaceMemberCanApply);
+        break;
+      case CommunityMembershipPolicy.OPEN:
+        const spaceMemberCanJoin =
+          this.authorizationPolicyService.createCredentialRule(
+            [AuthorizationPrivilege.COMMUNITY_JOIN],
+            [parentCommunityCredential],
+            CREDENTIAL_RULE_CHALLENGE_SPACE_MEMBER_JOIN
+          );
+        spaceMemberCanJoin.cascade = false;
+        newRules.push(spaceMemberCanJoin);
+        break;
     }
 
     const adminCredentials =

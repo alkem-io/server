@@ -9,7 +9,6 @@ import { OpportunityService } from './opportunity.service';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { CommunityPolicyService } from '@domain/community/community-policy/community.policy.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
-import { CommunityPolicyFlag } from '@common/enums/community.policy.flag';
 import {
   CREDENTIAL_RULE_COMMUNITY_ADD_MEMBER,
   CREDENTIAL_RULE_OPPORTUNITY_ADMIN,
@@ -24,6 +23,7 @@ import { CollaborationAuthorizationService } from '@domain/collaboration/collabo
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 import { ILicense } from '@domain/license/license/license.interface';
 import { LicenseResolverService } from '@services/infrastructure/license-resolver/license.resolver.service';
+import { SpaceSettingsService } from '../space.settings/space.settings.service';
 
 @Injectable()
 export class OpportunityAuthorizationService {
@@ -35,23 +35,21 @@ export class OpportunityAuthorizationService {
     private contextAuthorizationService: ContextAuthorizationService,
     private communityAuthorizationService: CommunityAuthorizationService,
     private collaborationAuthorizationService: CollaborationAuthorizationService,
+    private spaceSettingsService: SpaceSettingsService,
     private licenseResolverService: LicenseResolverService,
     private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService
   ) {}
 
   async applyAuthorizationPolicy(
     opportunity: IOpportunity,
-    challengeAuthorization: IAuthorizationPolicy | undefined,
-    challengeCommunityPolicy: ICommunityPolicy
+    challengeAuthorization: IAuthorizationPolicy | undefined
   ): Promise<IOpportunity> {
     const license = await this.licenseResolverService.getlicenseForSpace(
       opportunity.spaceID
     );
-    const communityPolicy = await this.opportunityService.getCommunityPolicy(
-      opportunity.id
+    const communityPolicy = await this.getCommunityPolicyWithSettings(
+      opportunity
     );
-
-    this.setCommunityPolicyFlags(communityPolicy, challengeCommunityPolicy);
 
     // Start with parent authorization
     opportunity.authorization =
@@ -73,31 +71,17 @@ export class OpportunityAuthorizationService {
     );
   }
 
-  private setCommunityPolicyFlags(
-    policy: ICommunityPolicy,
-    challengeCommunityPolicy: ICommunityPolicy
-  ) {
-    // propagate the value of the parent community policy into the opportunity community policy
-    const challengeContributors = this.communityPolicyService.getFlag(
-      challengeCommunityPolicy,
-      CommunityPolicyFlag.ALLOW_SPACE_MEMBERS_TO_CONTRIBUTE
+  public async getCommunityPolicyWithSettings(
+    opportunity: IOpportunity
+  ): Promise<ICommunityPolicy> {
+    const communityPolicy = await this.opportunityService.getCommunityPolicy(
+      opportunity.id
     );
-    this.communityPolicyService.setFlag(
-      policy,
-      CommunityPolicyFlag.ALLOW_SPACE_MEMBERS_TO_CONTRIBUTE,
-      challengeContributors
+    const settings = this.spaceSettingsService.getSettings(
+      opportunity.settingsStr
     );
-
-    // Propagate the callout flag from challenge community policy also
-    const challengeCalloutCreation = this.communityPolicyService.getFlag(
-      challengeCommunityPolicy,
-      CommunityPolicyFlag.ALLOW_CONTRIBUTORS_TO_CREATE_CALLOUTS
-    );
-    this.communityPolicyService.setFlag(
-      policy,
-      CommunityPolicyFlag.ALLOW_CONTRIBUTORS_TO_CREATE_CALLOUTS,
-      challengeCalloutCreation
-    );
+    communityPolicy.settings = settings;
+    return communityPolicy;
   }
 
   private appendCredentialRules(

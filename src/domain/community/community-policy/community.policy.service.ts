@@ -1,4 +1,3 @@
-import { CommunityPolicyFlag } from '@common/enums/community.policy.flag';
 import { CommunityRole } from '@common/enums/community.role';
 import { LogContext } from '@common/enums/logging.context';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
@@ -62,21 +61,6 @@ export class CommunityPolicyService {
           LogContext.COMMUNITY
         );
     }
-  }
-
-  setFlag(policy: ICommunityPolicy, flag: CommunityPolicyFlag, value: boolean) {
-    policy.flags.set(flag, value);
-  }
-
-  getFlag(policy: ICommunityPolicy, flag: CommunityPolicyFlag): boolean {
-    const result = policy.flags.get(flag);
-    if (result === undefined) {
-      throw new EntityNotInitializedException(
-        `Unable to locate flag for community policy: ${policy.id}, flag: ${flag}`,
-        LogContext.COMMUNITY
-      );
-    }
-    return result;
   }
 
   getDirectParentCredentialForRole(

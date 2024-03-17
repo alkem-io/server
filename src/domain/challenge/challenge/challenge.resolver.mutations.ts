@@ -108,14 +108,9 @@ export class ChallengeResolverMutations {
       agentInfo
     );
 
-    const challengeCommunityPolicy =
-      await this.challengeAuthorizationService.getCommunityPolicyWithSettings(
-        challenge
-      );
     await this.opportunityAuthorizationService.applyAuthorizationPolicy(
       opportunity,
-      challenge.authorization,
-      challengeCommunityPolicy
+      challenge.authorization
     );
 
     this.contributionReporter.opportunityCreated(

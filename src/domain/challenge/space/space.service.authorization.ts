@@ -13,14 +13,12 @@ import {
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ISpace } from './space.interface';
 import { Space } from './space.entity';
-import { IOrganization } from '@domain/community/organization';
 import { AuthorizationPolicyRuleVerifiedCredential } from '@core/authorization/authorization.policy.rule.verified.credential';
 import { TemplatesSetAuthorizationService } from '@domain/template/templates-set/templates.set.service.authorization';
 import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
-import { CommunityPolicyFlag } from '@common/enums/community.policy.flag';
 import { CommunityPolicyService } from '@domain/community/community-policy/community.policy.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
@@ -45,6 +43,8 @@ import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-a
 import { LicenseAuthorizationService } from '@domain/license/license/license.service.authorization';
 import { ILicense } from '@domain/license/license/license.interface';
 import { SpaceSettingsService } from '../space.settings/space.settings.service';
+import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
+import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
 
 @Injectable()
 export class SpaceAuthorizationService {
@@ -87,7 +87,6 @@ export class SpaceAuthorizationService {
     const communityPolicyWithFlags = space.community.policy;
     communityPolicyWithFlags.settings = spaceSettings;
 
-    const hostOrg = await this.spaceService.getHost(space.id);
     const license = space.license;
 
     // Ensure always applying from a clean state
@@ -152,8 +151,7 @@ export class SpaceAuthorizationService {
       case SpaceVisibility.DEMO:
         space.community.authorization = this.extendCommunityAuthorizationPolicy(
           space.community.authorization,
-          communityPolicyWithFlags,
-          hostOrg
+          communityPolicyWithFlags
         );
         break;
       case SpaceVisibility.ARCHIVED:
@@ -412,10 +410,10 @@ export class SpaceAuthorizationService {
       );
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
-    authorization.anonymousReadAccess = this.communityPolicyService.getFlag(
-      policy,
-      CommunityPolicyFlag.AUTHORIZATION_ANONYMOUS_READ_ACCESS
-    );
+    authorization.anonymousReadAccess = true;
+    if (policy.settings.privacy.mode === SpacePrivacyMode.PRIVATE) {
+      authorization.anonymousReadAccess = false;
+    }
 
     const spaceAdmin = this.authorizationPolicyService.createCredentialRule(
       [
@@ -435,13 +433,7 @@ export class SpaceAuthorizationService {
     );
     newRules.push(spaceAdmin);
 
-    // Members allowed to create challenges?
-    const allowMembersToCreateChallengesPref =
-      this.communityPolicyService.getFlag(
-        policy,
-        CommunityPolicyFlag.ALLOW_MEMBERS_TO_CREATE_CHALLENGES
-      );
-    if (allowMembersToCreateChallengesPref) {
+    if (policy.settings.collaboration.allowMembersToCreateSubspaces) {
       const memberChallenge =
         this.authorizationPolicyService.createCredentialRule(
           [AuthorizationPrivilege.CREATE_CHALLENGE],
@@ -479,8 +471,7 @@ export class SpaceAuthorizationService {
 
   private extendCommunityAuthorizationPolicy(
     communityAuthorization: IAuthorizationPolicy | undefined,
-    policy: ICommunityPolicy,
-    hostOrg?: IOrganization
+    policy: ICommunityPolicy
   ): IAuthorizationPolicy {
     if (!communityAuthorization)
       throw new EntityNotInitializedException(
@@ -490,58 +481,40 @@ export class SpaceAuthorizationService {
 
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
-    // Any registered user can apply
-    const allowAnyRegisteredUserToApply = this.communityPolicyService.getFlag(
-      policy,
-      CommunityPolicyFlag.MEMBERSHIP_APPLICATIONS_FROM_ANYONE
-    );
-
-    if (allowAnyRegisteredUserToApply) {
-      const anyUserCanApply =
-        this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-          [AuthorizationPrivilege.COMMUNITY_APPLY],
-          [AuthorizationCredential.GLOBAL_REGISTERED],
-          CREDENTIAL_RULE_TYPES_SPACE_COMMUNITY_APPLY_GLOBAL_REGISTERED
-        );
-      anyUserCanApply.cascade = false;
-      newRules.push(anyUserCanApply);
+    const membershipPolicy = policy.settings.membership.policy;
+    switch (membershipPolicy) {
+      case CommunityMembershipPolicy.APPLICATIONS:
+        const anyUserCanApply =
+          this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+            [AuthorizationPrivilege.COMMUNITY_APPLY],
+            [AuthorizationCredential.GLOBAL_REGISTERED],
+            CREDENTIAL_RULE_TYPES_SPACE_COMMUNITY_APPLY_GLOBAL_REGISTERED
+          );
+        anyUserCanApply.cascade = false;
+        newRules.push(anyUserCanApply);
+        break;
+      case CommunityMembershipPolicy.OPEN:
+        const anyUserCanJoin =
+          this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+            [AuthorizationPrivilege.COMMUNITY_JOIN],
+            [AuthorizationCredential.GLOBAL_REGISTERED],
+            CREDENTIAL_RULE_TYPES_SPACE_COMMUNITY_JOIN_GLOBAL_REGISTERED
+          );
+        anyUserCanJoin.cascade = false;
+        newRules.push(anyUserCanJoin);
+        break;
     }
 
-    // Any registered user can join
-    const allowAnyRegisteredUserToJoin = this.communityPolicyService.getFlag(
-      policy,
-      CommunityPolicyFlag.MEMBERSHIP_JOIN_SPACE_FROM_ANYONE
-    );
-    if (allowAnyRegisteredUserToJoin) {
-      const anyUserCanJoin =
-        this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-          [AuthorizationPrivilege.COMMUNITY_JOIN],
-          [AuthorizationCredential.GLOBAL_REGISTERED],
-          CREDENTIAL_RULE_TYPES_SPACE_COMMUNITY_JOIN_GLOBAL_REGISTERED
-        );
-      anyUserCanJoin.cascade = false;
-      newRules.push(anyUserCanJoin);
-    }
-
-    // Host Org members to join
-    const allowHostOrganizationMemberToJoin =
-      this.communityPolicyService.getFlag(
-        policy,
-        CommunityPolicyFlag.MEMBERSHIP_JOIN_SPACE_FROM_HOST_ORGANIZATION_MEMBERS
-      );
-    if (allowHostOrganizationMemberToJoin) {
-      if (!hostOrg)
-        throw new EntityNotInitializedException(
-          'Not able to extend to allowing membership for host org that is not specified',
-          LogContext.CHALLENGES
-        );
+    // Associates of trusted organizations can join
+    const trustedOrganizationIDs: string[] = [];
+    for (const trustedOrganizationID of trustedOrganizationIDs) {
       const hostOrgMembersCanJoin =
         this.authorizationPolicyService.createCredentialRule(
           [AuthorizationPrivilege.COMMUNITY_JOIN],
           [
             {
               type: AuthorizationCredential.ORGANIZATION_ASSOCIATE,
-              resourceID: hostOrg.id,
+              resourceID: trustedOrganizationID,
             },
           ],
           CREDENTIAL_RULE_SPACE_HOST_ASSOCIATES_JOIN
