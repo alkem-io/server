@@ -20,6 +20,8 @@ import { innovationFlowStatesDefault } from './definitions/space.defaults.innova
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
 import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
+import { ISpaceSettings } from '../space.settings/space.settings.interface';
+import { spaceSettingsDefaults } from './definitions/space.settings';
 
 @Injectable()
 export class SpaceDefaultsService {
@@ -120,6 +122,10 @@ export class SpaceDefaultsService {
     spaceDefaults: ISpaceDefaults
   ): IInnovationFlowTemplate | undefined {
     return spaceDefaults.innovationFlowTemplate;
+  }
+
+  public getDefaultSpaceSettings(): ISpaceSettings {
+    return spaceSettingsDefaults;
   }
 
   public async getCreateInnovationFlowInput(

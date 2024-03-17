@@ -45,6 +45,9 @@ export abstract class BaseChallenge
   @JoinColumn()
   agent?: Agent;
 
+  @Column('text')
+  settingsStr: string = '';
+
   constructor() {
     super();
     this.nameID = '';

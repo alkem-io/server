@@ -33,6 +33,8 @@ import { VisualType } from '@common/enums/visual.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
+import { SpaceSettingsService } from '../space.settings/space.settings.service';
+import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
 
 @Injectable()
 export class BaseChallengeService {
@@ -43,6 +45,8 @@ export class BaseChallengeService {
     private communityService: CommunityService,
     private namingService: NamingService,
     private profileService: ProfileService,
+    private spaceSettingsService: SpaceSettingsService,
+    private spaceDefaultsService: SpaceDefaultsService,
     private collaborationService: CollaborationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -59,6 +63,9 @@ export class BaseChallengeService {
     collaborationInput?: CreateCollaborationInput
   ) {
     baseChallenge.authorization = new AuthorizationPolicy();
+    baseChallenge.settingsStr = this.spaceSettingsService.serializeSettings(
+      this.spaceDefaultsService.getDefaultSpaceSettings()
+    );
     await this.isNameAvailableOrFail(baseChallengeData.nameID, spaceID);
 
     baseChallenge.community = await this.communityService.createCommunity(

@@ -19,4 +19,6 @@ export abstract class IBaseChallenge extends INameable {
   context?: IContext;
   community?: ICommunity;
   preferenceSet?: IPreferenceSet;
+
+  settingsStr!: string;
 }

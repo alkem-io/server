@@ -3,6 +3,7 @@ export enum CommunityPolicyFlag {
   MEMBERSHIP_JOIN_SPACE_FROM_ANYONE = 'MembershipJoinSpaceFromAnyone',
   MEMBERSHIP_JOIN_SPACE_FROM_HOST_ORGANIZATION_MEMBERS = 'MembershipJoinSpaceFromHostOrganizationMembers',
   MEMBERSHIP_APPLICATIONS_FROM_ANYONE = 'MembershipApplicationsFromAnyone',
+  // eslint-disable-next-line @typescript-eslint/no-duplicate-enum-values
   AUTHORIZATION_ANONYMOUS_READ_ACCESS = 'AuthorizationAnonymousReadAccess',
   ALLOW_MEMBERS_TO_CREATE_CHALLENGES = 'AllowMembersToCreateChallenges',
 
