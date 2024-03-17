@@ -25,6 +25,7 @@ import { CommunityMembershipStatus } from '@common/enums/community.membership.st
 import { AgentInfo } from '@core/authentication';
 import { IInvitation } from '../invitation';
 import { IInvitationExternal } from '../invitation.external';
+import { ICommunityGuidelines } from '../community-guidelines/community.guidelines.interface';
 
 @Resolver(() => ICommunity)
 export class CommunityResolverFields {
@@ -279,5 +280,16 @@ export class CommunityResolverFields {
     @Parent() community: ICommunity
   ): Promise<CommunityRole[]> {
     return this.communityService.getCommunityRoles(agentInfo, community);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField('guidelines', () => ICommunityGuidelines, {
+    nullable: true,
+    description: 'The guidelines for members of this Community.',
+  })
+  async guidelines(
+    @Parent() community: ICommunity
+  ): Promise<ICommunityGuidelines> {
+    return await this.communityService.getCommunityGuidelines(community);
   }
 }

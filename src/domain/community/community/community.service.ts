@@ -57,6 +57,7 @@ import { StorageAggregatorResolverService } from '@services/infrastructure/stora
 import { CommunityGuidelinesService } from '../community-guidelines/community.guidelines.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { CreateCommunityInput } from './dto/community.dto.create';
+import { ICommunityGuidelines } from '../community-guidelines/community.guidelines.interface';
 
 @Injectable()
 export class CommunityService {
@@ -576,6 +577,25 @@ export class CommunityService {
       );
     }
     return policy;
+  }
+
+  public async getCommunityGuidelines(
+    community: ICommunity
+  ): Promise<ICommunityGuidelines> {
+    const communityWithGuidelines = await this.getCommunityOrFail(
+      community.id,
+      {
+        relations: { guidelines: true },
+      }
+    );
+
+    if (!communityWithGuidelines.guidelines) {
+      throw new EntityNotInitializedException(
+        `Unable to locate guidelines for community: ${community.id}`,
+        LogContext.COMMUNITY
+      );
+    }
+    return communityWithGuidelines.guidelines;
   }
 
   async getCommunication(

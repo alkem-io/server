@@ -69,12 +69,10 @@ export class CommunityGuidelinesService {
     communityGuidelines: ICommunityGuidelines,
     communityGuidelinesData: UpdateCommunityGuidelinesInput
   ): Promise<ICommunityGuidelines> {
-    if (communityGuidelinesData.profile) {
-      communityGuidelines.profile = await this.profileService.updateProfile(
-        communityGuidelines.profile,
-        communityGuidelinesData.profile
-      );
-    }
+    communityGuidelines.profile = await this.profileService.updateProfile(
+      communityGuidelines.profile,
+      communityGuidelinesData.profile
+    );
 
     return await this.communityGuidelinesRepository.save(communityGuidelines);
   }
