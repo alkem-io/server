@@ -79,6 +79,7 @@ import { ISpaceDefaults } from '../space.defaults/space.defaults.interface';
 import { SpaceMembershipCollaborationInfo } from '@services/api/me/space.membership.type';
 import { ISpaceSettings } from '../space.settings/space.settings.interface';
 import { SpaceSettingsService } from '../space.settings/space.settings.service';
+import { UpdateSpaceSettingsOnSpaceInput } from './dto/space.dto.update.settings';
 
 @Injectable()
 export class SpaceService {
@@ -776,6 +777,20 @@ export class SpaceService {
       });
     }
     return space;
+  }
+
+  public async updateSpaceSettings(
+    space: ISpace,
+    settingsData: UpdateSpaceSettingsOnSpaceInput
+  ): Promise<ISpace> {
+    const settings = this.spaceSettingsService.getSettings(space.settingsStr);
+    const updatedSettings = this.spaceSettingsService.updateSettings(
+      settings,
+      settingsData.settings
+    );
+    space.settingsStr =
+      this.spaceSettingsService.serializeSettings(updatedSettings);
+    return await this.save(space);
   }
 
   async getTemplatesSetOrFail(spaceId: string): Promise<ITemplatesSet> {

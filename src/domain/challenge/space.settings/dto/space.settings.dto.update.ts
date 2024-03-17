@@ -1,25 +1,25 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { ISpaceSettingsMembership } from '../space.settings.membership.interface';
-import { ISpaceSettingsPrivacy } from '../space.settings.privacy.interface';
-import { ISpaceSettingsCollaboration } from '../space.settings.collaboration.interface';
+import { UpdateSpaceSettingsPrivacyInput } from './space.settings.privacy.dto.update';
+import { UpdateSpaceSettingsMembershipInput } from './space.settings.membership.dto.update';
+import { UpdateSpaceSettingsCollaborationInput } from './space.settings.collaboration.dto.update';
 
 @InputType()
 export class UpdateSpaceSettingsInput {
-  @Field(() => ISpaceSettingsPrivacy, {
-    nullable: false,
+  @Field(() => UpdateSpaceSettingsPrivacyInput, {
+    nullable: true,
     description: '',
   })
-  privacy!: ISpaceSettingsPrivacy;
+  privacy?: UpdateSpaceSettingsPrivacyInput;
 
-  @Field(() => ISpaceSettingsMembership, {
-    nullable: false,
+  @Field(() => UpdateSpaceSettingsMembershipInput, {
+    nullable: true,
     description: '',
   })
-  membership!: ISpaceSettingsMembership;
+  membership?: UpdateSpaceSettingsMembershipInput;
 
-  @Field(() => ISpaceSettingsCollaboration, {
-    nullable: false,
+  @Field(() => UpdateSpaceSettingsCollaborationInput, {
+    nullable: true,
     description: '',
   })
-  collaboration!: ISpaceSettingsCollaboration;
+  collaboration?: UpdateSpaceSettingsCollaborationInput;
 }

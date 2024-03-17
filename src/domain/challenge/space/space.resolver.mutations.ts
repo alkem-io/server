@@ -31,8 +31,8 @@ import { EntityNotInitializedException } from '@common/exceptions/entity.not.ini
 import { LogContext } from '@common/enums';
 import { ISpaceDefaults } from '../space.defaults/space.defaults.interface';
 import { UpdateSpaceDefaultsInput } from './dto/space.dto.update.defaults';
-import { UpdateSpaceSettingsInput } from './dto/space.dto.update.settings';
 import { UpdateChallengeSettingsInput } from '../challenge/dto/challenge.dto.update.settings';
+import { UpdateSpaceSettingsOnSpaceInput } from './dto/space.dto.update.settings';
 
 @Resolver()
 export class SpaceResolverMutations {
@@ -188,7 +188,7 @@ export class SpaceResolverMutations {
   @Profiling.api
   async updateSpaceSettings(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('settingsData') settingsData: UpdateSpaceSettingsInput
+    @Args('settingsData') settingsData: UpdateSpaceSettingsOnSpaceInput
   ): Promise<ISpace> {
     const space = await this.spaceService.getSpaceOrFail(settingsData.spaceID);
 
@@ -198,12 +198,13 @@ export class SpaceResolverMutations {
       AuthorizationPrivilege.UPDATE,
       `space settings update: ${space.id}`
     );
-    // TODO
-    // const updatedSpace = await this.spaceService.updateSpaceSettings(
-    //   settingsData
-    // );
+
+    const updatedSpace = await this.spaceService.updateSpaceSettings(
+      space,
+      settingsData
+    );
     // As the settings may update the authorization for the Space, the authorization policy will need to be reset
-    await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
+    await this.spaceAuthorizationService.applyAuthorizationPolicy(updatedSpace);
     return await this.spaceService.getSpaceOrFail(space.id);
   }
 
@@ -235,9 +236,13 @@ export class SpaceResolverMutations {
       this.challengeService.getSpaceID(challenge)
     );
     // TODO: pass through the updated settings to the challenge service
+    const updatedChallenge = await this.challengeService.updateSpaceSettings(
+      challenge,
+      settingsData
+    );
     // As the settings may update the authorization, the authorization policy will need to be reset
     await this.challengeAuthorizationService.applyAuthorizationPolicy(
-      challenge,
+      updatedChallenge,
       space.authorization
     );
     return await this.challengeService.getChallengeOrFail(challenge.id);

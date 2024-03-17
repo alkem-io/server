@@ -1,6 +1,7 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ISpaceSettings } from './space.settings.interface';
+import { UpdateSpaceSettingsInput } from './dto/space.settings.dto.update';
 
 @Injectable()
 export class SpaceSettingsService {
@@ -19,5 +20,21 @@ export class SpaceSettingsService {
 
   private deserializeSettings(settingsStr: string): ISpaceSettings {
     return JSON.parse(settingsStr);
+  }
+
+  public updateSettings(
+    settings: ISpaceSettings,
+    updateData: UpdateSpaceSettingsInput
+  ): ISpaceSettings {
+    if (updateData.privacy) {
+      settings.privacy = updateData.privacy;
+    }
+    if (updateData.membership) {
+      settings.membership = updateData.membership;
+    }
+    if (updateData.collaboration) {
+      settings.collaboration = updateData.collaboration;
+    }
+    return settings;
   }
 }

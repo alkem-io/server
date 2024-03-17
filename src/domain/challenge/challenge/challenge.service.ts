@@ -61,6 +61,7 @@ import { StorageAggregatorService } from '@domain/storage/storage-aggregator/sto
 import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
 import { ISpaceSettings } from '../space.settings/space.settings.interface';
 import { SpaceSettingsService } from '../space.settings/space.settings.service';
+import { UpdateChallengeSettingsInput } from './dto/challenge.dto.update.settings';
 @Injectable()
 export class ChallengeService {
   constructor(
@@ -404,6 +405,22 @@ export class ChallengeService {
       challengeId,
       this.challengeRepository
     );
+  }
+
+  public async updateSpaceSettings(
+    challenge: IChallenge,
+    settingsData: UpdateChallengeSettingsInput
+  ): Promise<IChallenge> {
+    const settings = this.spaceSettingsService.getSettings(
+      challenge.settingsStr
+    );
+    const updatedSettings = this.spaceSettingsService.updateSettings(
+      settings,
+      settingsData.settings
+    );
+    challenge.settingsStr =
+      this.spaceSettingsService.serializeSettings(updatedSettings);
+    return await this.save(challenge);
   }
 
   async getOpportunities(

@@ -87,6 +87,9 @@ import {
 import { UpdateUserPlatformSettingsInput } from '@domain/community/user/dto/user.dto.update.platform.settings';
 import { UpdateInnovationFlowStateInput } from '@domain/collaboration/innovation-flow-states/dto/innovation.flow.state.dto.update';
 import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
+import { UpdateChallengeSettingsInput } from '@domain/challenge/challenge/dto/challenge.dto.update.settings';
+import { UpdateSpaceSettingsInput } from '@domain/challenge/space.settings/dto/space.settings.dto.update';
+import { UpdateSpaceSettingsOnSpaceInput } from '@domain/challenge/space/dto/space.dto.update.settings';
 
 export class BaseHandler extends AbstractHandler {
   public async handle(
@@ -151,6 +154,9 @@ export class BaseHandler extends AbstractHandler {
       UpdateWhiteboardTemplateInput,
       UpdateDiscussionInput,
       UpdateEcosystemModelInput,
+      UpdateSpaceSettingsInput,
+      UpdateSpaceSettingsOnSpaceInput,
+      UpdateChallengeSettingsInput,
       VisualUploadImageInput,
       CommunityApplyInput,
       CreateInvitationExistingUserOnCommunityInput,
