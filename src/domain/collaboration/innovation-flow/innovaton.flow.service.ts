@@ -27,6 +27,7 @@ import { IInnovationFlowState } from '../innovation-flow-states/innovation.flow.
 import { UpdateInnovationFlowFromTemplateInput } from './dto/innovation.flow.dto.update.from.template';
 import { InnovationFlowTemplateService } from '@domain/template/innovation-flow-template/innovation.flow.template.service';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
+import { UpdateInnovationFlowSingleStateInput } from './dto/innovation.flow.dto.update.single.state';
 
 @Injectable()
 export class InnovationFlowService {
@@ -198,7 +199,7 @@ export class InnovationFlowService {
     if (!newStateAllowed) {
       throw new ValidationException(
         `New state '${newStateName}' not in allowed states: ${statesTagset.tags}`,
-        LogContext.CHALLENGES
+        LogContext.INNOVATION_FLOW
       );
     }
 
@@ -214,6 +215,75 @@ export class InnovationFlowService {
         relations: { profile: true },
       }
     );
+  }
+
+  async updateSingleState(
+    updateData: UpdateInnovationFlowSingleStateInput
+  ): Promise<IInnovationFlow> {
+    const innovationFlow = await this.getInnovationFlowOrFail(
+      updateData.innovationFlowID,
+      {
+        relations: { profile: true },
+      }
+    );
+    const states = this.innovationFlowStatesService.getStates(
+      innovationFlow.states
+    );
+    // First update the states definition
+    const stateToUpdate = states.find(
+      s => s.displayName === updateData.stateDisplayName
+    );
+    if (!stateToUpdate) {
+      throw new ValidationException(
+        `Unable to find '${
+          updateData.stateDisplayName
+        }' in existing set of state names: ${this.innovationFlowStatesService.getStateNames(
+          innovationFlow.states
+        )}`,
+        LogContext.INNOVATION_FLOW
+      );
+    }
+    const newStates: IInnovationFlowState[] = [];
+    for (const state of states) {
+      if (state.displayName === updateData.stateDisplayName) {
+        state.displayName = updateData.stateUpdatedData.displayName;
+        state.description = updateData.stateUpdatedData.description;
+      }
+      newStates.push(state);
+    }
+    innovationFlow.states =
+      this.innovationFlowStatesService.serializeStates(newStates);
+
+    // Now update the selected state
+
+    const statesTagset = await this.profileService.getTagset(
+      innovationFlow.profile.id,
+      TagsetReservedName.FLOW_STATE.valueOf()
+    );
+    if (statesTagset.tags.length !== 1) {
+      throw new ValidationException(
+        `Unable to find selected value on flow tagset: ${statesTagset.tags}`,
+        LogContext.INNOVATION_FLOW
+      );
+    }
+
+    // Update the allowed values on the tagset, and any tagsets with the old value
+    const newStateNames = newStates.map(state => state.displayName);
+    const defaultSelectedState = newStateNames[0]; // default to first in the list
+    const updateTagsetDefinitionData: UpdateProfileSelectTagsetDefinitionInput =
+      {
+        profileID: innovationFlow.profile.id,
+        allowedValues: newStateNames,
+        defaultSelectedValue: defaultSelectedState,
+        tagsetName: TagsetReservedName.FLOW_STATE.valueOf(),
+        oldSelectedValue: updateData.stateDisplayName,
+        newSelectedValue: updateData.stateUpdatedData.displayName,
+      };
+    await this.profileService.updateSelectTagsetDefinition(
+      updateTagsetDefinitionData
+    );
+
+    return await this.getInnovationFlowOrFail(updateData.innovationFlowID);
   }
 
   async deleteInnovationFlow(
