@@ -66,7 +66,8 @@ export class BaseChallengeService {
       spaceID,
       communityType,
       communityPolicy,
-      applicationFormData
+      applicationFormData,
+      storageAggregator
     );
 
     if (!baseChallengeData.context) {

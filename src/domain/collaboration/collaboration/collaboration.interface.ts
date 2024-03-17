@@ -8,10 +8,6 @@ import { IInnovationFlow } from '../innovation-flow/innovation.flow.interface';
 
 @ObjectType('Collaboration')
 export abstract class ICollaboration extends IAuthorizable {
-  @Field(() => [ICallout], {
-    nullable: true,
-    description: 'List of callouts',
-  })
   callouts?: ICallout[];
 
   @Field(() => [IRelation], {
