@@ -254,6 +254,9 @@ export class InnovationFlowService {
     innovationFlow.states =
       this.innovationFlowStatesService.serializeStates(newStates);
 
+    // Save with new states before updating selected values
+    await this.innovationFlowRepository.save(innovationFlow);
+
     // Now update the selected state
 
     const statesTagset = await this.profileService.getTagset(
