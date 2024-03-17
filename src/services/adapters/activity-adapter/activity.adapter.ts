@@ -22,7 +22,7 @@ import { ActivityInputUpdateSent } from './dto/activity.dto.input.update.sent';
 import { Community } from '@domain/community/community/community.entity';
 import { ActivityInputMessageRemoved } from './dto/activity.dto.input.message.removed';
 import { ActivityInputBase } from './dto/activity.dto.input.base';
-import { stringifyWithoutAuthorization } from '@common/utils/stringify.util';
+import { stringifyWithoutAuthorizationMetaInfo } from '@common/utils/stringify.util';
 import { ActivityInputCalloutLinkCreated } from './dto/activity.dto.input.callout.link.created';
 import { ActivityInputCalendarEventCreated } from './dto/activity.dto.input.calendar.event.created';
 import { TimelineResolverService } from '@services/infrastructure/entity-resolver/timeline.resolver.service';
@@ -604,7 +604,7 @@ export class ActivityAdapter {
     eventType: ActivityEventType
   ) {
     // Stringify without authorization information
-    const loggedData = stringifyWithoutAuthorization(eventData);
+    const loggedData = stringifyWithoutAuthorizationMetaInfo(eventData);
     this.logger.verbose?.(
       `[${eventType}] - received: ${loggedData}`,
       LogContext.ACTIVITY
