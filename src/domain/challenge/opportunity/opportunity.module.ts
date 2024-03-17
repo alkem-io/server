@@ -22,6 +22,7 @@ import { ContextModule } from '@domain/context/context/context.module';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
 import { LicenseResolverModule } from '@services/infrastructure/license-resolver/license.resolver.module';
 import { SpaceDefaultsModule } from '../space.defaults/space.defaults.module';
+import { SpaceSettingssModule } from '../space.settings/space.settings.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { SpaceDefaultsModule } from '../space.defaults/space.defaults.module';
     ContextModule,
     ContributionReporterModule,
     SpaceDefaultsModule,
+    SpaceSettingssModule,
     StorageAggregatorModule,
     LicenseResolverModule,
     TypeOrmModule.forFeature([Opportunity]),
