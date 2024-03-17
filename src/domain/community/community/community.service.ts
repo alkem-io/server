@@ -26,7 +26,6 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { CommunicationService } from '@domain/communication/communication/communication.service';
 import { ICommunication } from '@domain/communication/communication';
 import { LogContext } from '@common/enums/logging.context';
-import { CommunityType } from '@common/enums/community.type';
 import { OrganizationService } from '../organization/organization.service';
 import { IOrganization } from '../organization/organization.interface';
 import { IAgent } from '@domain/agent/agent/agent.interface';
@@ -42,7 +41,6 @@ import { ICommunityPolicyDefinition } from '../community-policy/community.policy
 import { DiscussionCategoryCommunity } from '@common/enums/communication.discussion.category.community';
 import { IForm } from '@domain/common/form/form.interface';
 import { FormService } from '@domain/common/form/form.service';
-import { CreateFormInput } from '@domain/common/form/dto/form.dto.create';
 import { UpdateFormInput } from '@domain/common/form/dto/form.dto.update';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 import { InvitationService } from '../invitation/invitation.service';
@@ -57,8 +55,8 @@ import { CommunityMembershipException } from '@common/exceptions/community.membe
 import { CommunityEventsService } from './community.service.events';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { CommunityGuidelinesService } from '../community-guidelines/community.guidelines.service';
-import { CreateCommunityGuidelinesInput } from '../community-guidelines';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { CreateCommunityInput } from './dto/community.dto.create';
 
 @Injectable()
 export class CommunityService {
@@ -84,35 +82,27 @@ export class CommunityService {
   ) {}
 
   async createCommunity(
-    name: string,
-    spaceID: string,
-    type: CommunityType,
-    policy: ICommunityPolicyDefinition,
-    applicationFormData: CreateFormInput,
+    communityData: CreateCommunityInput,
     storageAggregator: IStorageAggregator
   ): Promise<ICommunity> {
-    const community: ICommunity = new Community(type);
+    const community: ICommunity = new Community(communityData.type);
     community.authorization = new AuthorizationPolicy();
+    const policy = communityData.policy as ICommunityPolicyDefinition;
     community.policy = await this.communityPolicyService.createCommunityPolicy(
       policy.member,
       policy.lead,
       policy.admin,
       policy.host
     );
-    const communityGuidelinesInput: CreateCommunityGuidelinesInput = {
-      profile: {
-        displayName: name,
-        tagsets: [],
-      },
-    };
+
     community.guidelines =
       await this.communityGuidelinesService.createCommunityGuidelines(
-        communityGuidelinesInput,
+        communityData.guidelines,
         storageAggregator
       );
-    community.spaceID = spaceID;
+    community.spaceID = communityData.spaceID;
     community.applicationForm = await this.formService.createForm(
-      applicationFormData
+      communityData.applicationForm
     );
 
     community.applications = [];
@@ -122,8 +112,8 @@ export class CommunityService {
     community.groups = [];
     community.communication =
       await this.communicationService.createCommunication(
-        name,
-        spaceID,
+        communityData.name,
+        communityData.spaceID,
         Object.values(DiscussionCategoryCommunity)
       );
     return await this.communityRepository.save(community);

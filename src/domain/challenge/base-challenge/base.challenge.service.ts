@@ -33,6 +33,7 @@ import { VisualType } from '@common/enums/visual.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
+import { CreateCommunityInput } from '@domain/community/community/dto/community.dto.create';
 
 @Injectable()
 export class BaseChallengeService {
@@ -61,12 +62,23 @@ export class BaseChallengeService {
     baseChallenge.authorization = new AuthorizationPolicy();
     await this.isNameAvailableOrFail(baseChallengeData.nameID, spaceID);
 
+    const communityData: CreateCommunityInput = {
+      name: baseChallengeData.profileData.displayName,
+      type: communityType,
+      policy: communityPolicy,
+      applicationForm: applicationFormData,
+      spaceID: spaceID,
+      guidelines: {
+        // TODO: get this from defaults service
+        profile: {
+          displayName: baseChallengeData.profileData.displayName,
+          description: baseChallengeData.profileData.description,
+        },
+      },
+    };
+
     baseChallenge.community = await this.communityService.createCommunity(
-      baseChallengeData.profileData.displayName,
-      spaceID,
-      communityType,
-      communityPolicy,
-      applicationFormData,
+      communityData,
       storageAggregator
     );
 
