@@ -16,8 +16,6 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
 import { AgentModule } from '@domain/agent/agent/agent.module';
 import { ProjectModule } from '@domain/collaboration/project/project.module';
 import { UserModule } from '@domain/community/user/user.module';
-import { PreferenceModule } from '@domain/common/preference';
-import { PreferenceSetModule } from '@domain/common/preference-set/preference.set.module';
 import { ChallengeResolverSubscriptions } from './challenge.resolver.subscriptions';
 import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
 import { CommunityPolicyModule } from '@domain/community/community-policy/community.policy.module';
@@ -30,6 +28,7 @@ import { ProfileModule } from '@domain/common/profile/profile.module';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
 import { LicenseResolverModule } from '@services/infrastructure/license-resolver/license.resolver.module';
 import { SpaceDefaultsModule } from '../space.defaults/space.defaults.module';
+import { SpaceSettingssModule } from '../space.settings/space.settings.module';
 
 @Module({
   imports: [
@@ -48,8 +47,6 @@ import { SpaceDefaultsModule } from '../space.defaults/space.defaults.module';
     PlatformAuthorizationPolicyModule,
     ProjectModule,
     UserModule,
-    PreferenceModule,
-    PreferenceSetModule,
     ContributionReporterModule,
     TypeOrmModule.forFeature([Challenge]),
     LoaderCreatorModule,
@@ -57,6 +54,7 @@ import { SpaceDefaultsModule } from '../space.defaults/space.defaults.module';
     ContextModule,
     ProfileModule,
     CollaborationModule,
+    SpaceSettingssModule,
     SpaceDefaultsModule,
     LicenseResolverModule,
   ],

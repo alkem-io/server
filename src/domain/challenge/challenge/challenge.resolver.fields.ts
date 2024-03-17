@@ -10,7 +10,6 @@ import { UseGuards } from '@nestjs/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege } from '@common/enums';
 import { IAgent } from '@domain/agent/agent';
-import { IPreference } from '@domain/common/preference';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
 import { IProfile } from '@domain/common/profile/profile.interface';
@@ -19,13 +18,13 @@ import {
   JourneyCollaborationLoaderCreator,
   JourneyCommunityLoaderCreator,
   JourneyContextLoaderCreator,
-  PreferencesLoaderCreator,
   AgentLoaderCreator,
   ProfileLoaderCreator,
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { ISpaceSettings } from '../space.settings/space.settings.interface';
 
 @Resolver(() => IChallenge)
 export class ChallengeResolverFields {
@@ -143,20 +142,11 @@ export class ChallengeResolverFields {
     return await this.challengeService.getMetrics(challenge);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @ResolveField('preferences', () => [IPreference], {
+  @ResolveField('settings', () => ISpaceSettings, {
     nullable: false,
-    description: 'The preferences for this Challenge',
+    description: 'The settings for this Space.',
   })
-  @UseGuards(GraphqlGuard)
-  async preferences(
-    @Parent() challenge: IChallenge,
-    @Loader(PreferencesLoaderCreator, {
-      parentClassRef: Challenge,
-      getResult: r => r?.preferenceSet?.preferences,
-    })
-    loader: ILoader<IPreference[]>
-  ): Promise<IPreference[]> {
-    return loader.load(challenge.id);
+  states(@Parent() challenge: IChallenge): ISpaceSettings {
+    return this.challengeService.getSettings(challenge);
   }
 }

@@ -13,12 +13,8 @@ import {
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ISpace } from './space.interface';
 import { Space } from './space.entity';
-import { SpacePreferenceType } from '@common/enums/space.preference.type';
 import { IOrganization } from '@domain/community/organization';
 import { AuthorizationPolicyRuleVerifiedCredential } from '@core/authorization/authorization.policy.rule.verified.credential';
-import { PreferenceSetAuthorizationService } from '@domain/common/preference-set/preference.set.service.authorization';
-import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
-import { IPreferenceSet } from '@domain/common/preference-set';
 import { TemplatesSetAuthorizationService } from '@domain/template/templates-set/templates.set.service.authorization';
 import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
 import { SpaceVisibility } from '@common/enums/space.visibility';
@@ -48,6 +44,7 @@ import { CollaborationAuthorizationService } from '@domain/collaboration/collabo
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 import { LicenseAuthorizationService } from '@domain/license/license/license.service.authorization';
 import { ILicense } from '@domain/license/license/license.interface';
+import { SpaceSettingsService } from '../space.settings/space.settings.service';
 
 @Injectable()
 export class SpaceAuthorizationService {
@@ -55,8 +52,6 @@ export class SpaceAuthorizationService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private challengeAuthorizationService: ChallengeAuthorizationService,
     private templatesSetAuthorizationService: TemplatesSetAuthorizationService,
-    private preferenceSetAuthorizationService: PreferenceSetAuthorizationService,
-    private preferenceSetService: PreferenceSetService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private communityPolicyService: CommunityPolicyService,
     private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
@@ -65,6 +60,7 @@ export class SpaceAuthorizationService {
     private communityAuthorizationService: CommunityAuthorizationService,
     private collaborationAuthorizationService: CollaborationAuthorizationService,
     private licenseAuthorizationService: LicenseAuthorizationService,
+    private spaceSettingsService: SpaceSettingsService,
     private spaceService: SpaceService,
     @InjectRepository(Space)
     private spaceRepository: Repository<Space>
@@ -73,30 +69,23 @@ export class SpaceAuthorizationService {
   async applyAuthorizationPolicy(spaceInput: ISpace): Promise<ISpace> {
     let space = await this.spaceService.getSpaceOrFail(spaceInput.id, {
       relations: {
-        preferenceSet: {
-          preferences: true,
-        },
         community: {
           policy: true,
         },
         license: true,
       },
     });
-    if (
-      !space.community ||
-      !space.community.policy ||
-      !space.preferenceSet ||
-      !space.license
-    )
+    if (!space.community || !space.community.policy || !space.license)
       throw new RelationshipNotFoundException(
         `Unable to load Space with entities at start of auth reset: ${space.id} `,
         LogContext.CHALLENGES
       );
 
-    const communityPolicyWithFlags = this.setCommunityPolicyFlags(
-      space.community.policy,
-      space.preferenceSet
+    const spaceSettings = await this.spaceSettingsService.getSettings(
+      space.settingsStr
     );
+    const communityPolicyWithFlags = space.community.policy;
+    communityPolicyWithFlags.settings = spaceSettings;
 
     const hostOrg = await this.spaceService.getHost(space.id);
     const license = space.license;
@@ -172,92 +161,6 @@ export class SpaceAuthorizationService {
     }
 
     return await this.spaceRepository.save(space);
-  }
-
-  private setCommunityPolicyFlags(
-    policy: ICommunityPolicy,
-    preferenceSet: IPreferenceSet
-  ) {
-    // Anonymouse Read access
-    const anonReadAccess = this.preferenceSetService.getPreferenceValue(
-      preferenceSet,
-      SpacePreferenceType.AUTHORIZATION_ANONYMOUS_READ_ACCESS
-    );
-    this.communityPolicyService.setFlag(
-      policy,
-      CommunityPolicyFlag.ALLOW_ANONYMOUS_READ_ACCESS,
-      anonReadAccess
-    );
-
-    // Allow applications from anyone
-    const allowAnyRegisteredUserToApply =
-      this.preferenceSetService.getPreferenceValue(
-        preferenceSet,
-        SpacePreferenceType.MEMBERSHIP_APPLICATIONS_FROM_ANYONE
-      );
-
-    this.communityPolicyService.setFlag(
-      policy,
-      CommunityPolicyFlag.MEMBERSHIP_APPLICATIONS_FROM_ANYONE,
-      allowAnyRegisteredUserToApply
-    );
-
-    //
-    const allowAnyRegisteredUserToJoin =
-      this.preferenceSetService.getPreferenceValue(
-        preferenceSet,
-        SpacePreferenceType.MEMBERSHIP_JOIN_SPACE_FROM_ANYONE
-      );
-    this.communityPolicyService.setFlag(
-      policy,
-      CommunityPolicyFlag.MEMBERSHIP_JOIN_SPACE_FROM_ANYONE,
-      allowAnyRegisteredUserToJoin
-    );
-
-    //
-    const allowHostOrganizationMemberToJoin =
-      this.preferenceSetService.getPreferenceValue(
-        preferenceSet,
-        SpacePreferenceType.MEMBERSHIP_JOIN_SPACE_FROM_HOST_ORGANIZATION_MEMBERS
-      );
-    this.communityPolicyService.setFlag(
-      policy,
-      CommunityPolicyFlag.MEMBERSHIP_JOIN_SPACE_FROM_HOST_ORGANIZATION_MEMBERS,
-      allowHostOrganizationMemberToJoin
-    );
-
-    //
-    const allowMembersToCreateChallengesPref =
-      this.preferenceSetService.getPreferenceValue(
-        preferenceSet,
-        SpacePreferenceType.ALLOW_MEMBERS_TO_CREATE_CHALLENGES
-      );
-    this.communityPolicyService.setFlag(
-      policy,
-      CommunityPolicyFlag.ALLOW_MEMBERS_TO_CREATE_CHALLENGES,
-      allowMembersToCreateChallengesPref
-    );
-
-    //
-    const allowMembersToCreateCalloutsPref =
-      this.preferenceSetService.getPreferenceValue(
-        preferenceSet,
-        SpacePreferenceType.ALLOW_MEMBERS_TO_CREATE_CALLOUTS
-      );
-    // Set the flag that is understood by Collaboration entity
-    this.communityPolicyService.setFlag(
-      policy,
-      CommunityPolicyFlag.ALLOW_CONTRIBUTORS_TO_CREATE_CALLOUTS,
-      allowMembersToCreateCalloutsPref
-    );
-
-    // Allow space members to contribute
-    this.communityPolicyService.setFlag(
-      policy,
-      CommunityPolicyFlag.ALLOW_SPACE_MEMBERS_TO_CONTRIBUTE,
-      true
-    );
-    return policy;
   }
 
   private async propagateAuthorizationToProfileContextLicense(
@@ -377,7 +280,6 @@ export class SpaceAuthorizationService {
         challenges: true,
         storageAggregator: true,
         templatesSet: true,
-        preferenceSet: true,
         defaults: true,
       },
     });
@@ -385,11 +287,10 @@ export class SpaceAuthorizationService {
       !space.challenges ||
       !space.storageAggregator ||
       !space.templatesSet ||
-      !space.preferenceSet ||
       !space.defaults
     )
       throw new RelationshipNotFoundException(
-        `Unable to load challenges or storage or templates or preferences for space ${space.id} `,
+        `Unable to load challenges or storage or templates for space ${space.id} `,
         LogContext.CHALLENGES
       );
 
@@ -409,12 +310,6 @@ export class SpaceAuthorizationService {
           CREDENTIAL_RULE_CHALLENGE_SPACE_ADMIN_DELETE
         );
     }
-
-    space.preferenceSet =
-      await this.preferenceSetAuthorizationService.applyAuthorizationPolicy(
-        space.preferenceSet,
-        space.authorization
-      );
 
     space.templatesSet =
       await this.templatesSetAuthorizationService.applyAuthorizationPolicy(

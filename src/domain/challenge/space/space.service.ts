@@ -45,11 +45,6 @@ import { CommunityService } from '@domain/community/community/community.service'
 import { CommunityType } from '@common/enums/community.type';
 import { AgentInfo } from '@src/core/authentication/agent-info';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
-import { IPreference } from '@domain/common/preference/preference.interface';
-import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set';
-import { IPreferenceSet } from '@domain/common/preference-set';
-import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
-import { PreferenceType } from '@common/enums/preference.type';
 import { ITemplatesSet } from '@domain/template/templates-set/templates.set.interface';
 import { TemplatesSetService } from '@domain/template/templates-set/templates.set.service';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
@@ -82,6 +77,8 @@ import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
 import { UpdateSpaceDefaultsInput } from './dto/space.dto.update.defaults';
 import { ISpaceDefaults } from '../space.defaults/space.defaults.interface';
 import { SpaceMembershipCollaborationInfo } from '@services/api/me/space.membership.type';
+import { ISpaceSettings } from '../space.settings/space.settings.interface';
+import { SpaceSettingsService } from '../space.settings/space.settings.service';
 
 @Injectable()
 export class SpaceService {
@@ -94,12 +91,12 @@ export class SpaceService {
     private namingService: NamingService,
     private communityService: CommunityService,
     private challengeService: ChallengeService,
-    private preferenceSetService: PreferenceSetService,
     private spacesFilterService: SpaceFilterService,
     private templatesSetService: TemplatesSetService,
     private storageAggregatorService: StorageAggregatorService,
     private collaborationService: CollaborationService,
     private spaceDefaultsService: SpaceDefaultsService,
+    private spaceSettingsService: SpaceSettingsService,
     private licenseService: LicenseService,
     @InjectRepository(Space)
     private spaceRepository: Repository<Space>,
@@ -205,10 +202,6 @@ export class SpaceService {
         );
       }
     }
-    space.preferenceSet = await this.preferenceSetService.createPreferenceSet(
-      PreferenceDefinitionSet.SPACE,
-      this.createPreferenceDefaults()
-    );
 
     // save before assigning host in case that fails
     const savedSpace = await this.spaceRepository.save(space);
@@ -216,15 +209,6 @@ export class SpaceService {
     await this.setSpaceHost(space.id, spaceData.hostID);
 
     return savedSpace;
-  }
-
-  createPreferenceDefaults(): Map<PreferenceType, string> {
-    const defaults: Map<PreferenceType, string> = new Map();
-    defaults.set(PreferenceType.MEMBERSHIP_APPLICATIONS_FROM_ANYONE, 'true');
-    defaults.set(PreferenceType.AUTHORIZATION_ANONYMOUS_READ_ACCESS, 'false');
-    defaults.set(PreferenceType.ALLOW_MEMBERS_TO_CREATE_CHALLENGES, 'false');
-
-    return defaults;
   }
 
   async validateSpaceData(spaceData: CreateSpaceInput) {
@@ -335,9 +319,6 @@ export class SpaceService {
     const space = await this.getSpaceOrFail(deleteData.ID, {
       relations: {
         challenges: true,
-        preferenceSet: {
-          preferences: true,
-        },
         templatesSet: true,
         profile: true,
         storageAggregator: true,
@@ -348,7 +329,6 @@ export class SpaceService {
 
     if (
       !space.challenges ||
-      !space.preferenceSet ||
       !space.templatesSet ||
       !space.profile ||
       !space.storageAggregator ||
@@ -373,8 +353,6 @@ export class SpaceService {
       space.id,
       this.spaceRepository
     );
-
-    await this.preferenceSetService.deletePreferenceSet(space.preferenceSet.id);
 
     await this.templatesSetService.deleteTemplatesSet(space.templatesSet.id);
 
@@ -429,6 +407,10 @@ export class SpaceService {
       `Unsupported Innovation Hub type: '${type}'`,
       LogContext.INNOVATION_HUB
     );
+  }
+
+  public getSettings(space: ISpace): ISpaceSettings {
+    return this.spaceSettingsService.getSettings(space.settingsStr);
   }
 
   /***
@@ -854,26 +836,6 @@ export class SpaceService {
     return license;
   }
 
-  async getPreferenceSetOrFail(spaceId: string): Promise<IPreferenceSet> {
-    const spaceWithPreferences = await this.getSpaceOrFail(spaceId, {
-      relations: {
-        preferenceSet: {
-          preferences: true,
-        },
-      },
-    });
-    const preferenceSet = spaceWithPreferences.preferenceSet;
-
-    if (!preferenceSet) {
-      throw new EntityNotFoundException(
-        `Unable to find preferenceSet for space with nameID: ${spaceWithPreferences.nameID}`,
-        LogContext.COMMUNITY
-      );
-    }
-
-    return preferenceSet;
-  }
-
   async setSpaceHost(spaceID: string, hostOrgID: string): Promise<ISpace> {
     const organization = await this.organizationService.getOrganizationOrFail(
       hostOrgID,
@@ -1231,20 +1193,5 @@ export class SpaceService {
       );
     }
     return organizations[0];
-  }
-
-  async getPreferences(space: ISpace): Promise<IPreference[]> {
-    const preferenceSet = await this.getPreferenceSetOrFail(space.id);
-
-    const preferences = preferenceSet.preferences;
-
-    if (!preferences) {
-      throw new EntityNotInitializedException(
-        `Space preferences not initialized: ${space.id}`,
-        LogContext.CHALLENGES
-      );
-    }
-
-    return preferences;
   }
 }

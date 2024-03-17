@@ -40,10 +40,6 @@ import { CreateChallengeOnChallengeInput } from './dto/challenge.dto.create.in.c
 import { CommunityType } from '@common/enums/community.type';
 import { AgentInfo } from '@src/core/authentication/agent-info';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
-import { IPreferenceSet } from '@domain/common/preference-set';
-import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
-import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set';
-import { PreferenceType } from '@common/enums/preference.type';
 import { CommunityRole } from '@common/enums/community.role';
 import { challengeCommunityPolicy } from './challenge.community.policy';
 import { challengeCommunityApplicationForm } from './challenge.community.application.form';
@@ -63,6 +59,8 @@ import { CommonDisplayLocation } from '@common/enums/common.display.location';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
+import { ISpaceSettings } from '../space.settings/space.settings.interface';
+import { SpaceSettingsService } from '../space.settings/space.settings.service';
 @Injectable()
 export class ChallengeService {
   constructor(
@@ -72,10 +70,10 @@ export class ChallengeService {
     private projectService: ProjectService,
     private baseChallengeService: BaseChallengeService,
     private organizationService: OrganizationService,
-    private preferenceSetService: PreferenceSetService,
     private storageAggregatorService: StorageAggregatorService,
     private collaborationService: CollaborationService,
     private spaceDefaultsService: SpaceDefaultsService,
+    private spaceSettingsService: SpaceSettingsService,
     private namingService: NamingService,
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>,
@@ -130,12 +128,6 @@ export class ChallengeService {
           challenge.id
         );
     }
-
-    challenge.preferenceSet =
-      await this.preferenceSetService.createPreferenceSet(
-        PreferenceDefinitionSet.CHALLENGE,
-        this.createPreferenceDefaults()
-      );
 
     if (!challenge.collaboration) {
       throw new EntityNotInitializedException(
@@ -247,9 +239,6 @@ export class ChallengeService {
       relations: {
         childChallenges: true,
         opportunities: true,
-        preferenceSet: {
-          preferences: true,
-        },
         profile: true,
         storageAggregator: true,
       },
@@ -280,12 +269,6 @@ export class ChallengeService {
         resourceID: challengeID,
       });
       await this.organizationService.save(challengeLead);
-    }
-
-    if (challenge.preferenceSet) {
-      await this.preferenceSetService.deletePreferenceSet(
-        challenge.preferenceSet.id
-      );
     }
 
     if (challenge.storageAggregator) {
@@ -684,29 +667,6 @@ export class ChallengeService {
     return organizations;
   }
 
-  async getPreferenceSetOrFail(challengeId: string): Promise<IPreferenceSet> {
-    const challengeWithPreferences = await this.getChallengeOrFail(
-      challengeId,
-      {
-        relations: {
-          preferenceSet: {
-            preferences: true,
-          },
-        },
-      }
-    );
-    const preferenceSet = challengeWithPreferences.preferenceSet;
-
-    if (!preferenceSet) {
-      throw new EntityNotFoundException(
-        `Unable to find preferenceSet for challenge with nameID: ${challengeWithPreferences.nameID}`,
-        LogContext.COMMUNITY
-      );
-    }
-
-    return preferenceSet;
-  }
-
   async getStorageAggregatorOrFail(
     challengeId: string
   ): Promise<IStorageAggregator> {
@@ -730,30 +690,6 @@ export class ChallengeService {
     return storageAggregator;
   }
 
-  createPreferenceDefaults(): Map<PreferenceType, string> {
-    const defaults: Map<PreferenceType, string> = new Map();
-    defaults.set(
-      PreferenceType.MEMBERSHIP_JOIN_CHALLENGE_FROM_SPACE_MEMBERS,
-      'true'
-    );
-    defaults.set(
-      PreferenceType.MEMBERSHIP_APPLY_CHALLENGE_FROM_SPACE_MEMBERS,
-      'true'
-    );
-    defaults.set(
-      PreferenceType.MEMBERSHIP_FEEDBACK_ON_CHALLENGE_CONTEXT,
-      'false'
-    );
-    defaults.set(
-      PreferenceType.ALLOW_CONTRIBUTORS_TO_CREATE_OPPORTUNITIES,
-      'false'
-    );
-    defaults.set(PreferenceType.ALLOW_SPACE_MEMBERS_TO_CONTRIBUTE, 'true');
-    defaults.set(PreferenceType.ALLOW_NON_MEMBERS_READ_ACCESS, 'true');
-
-    return defaults;
-  }
-
   async getChallengeForCommunity(
     communityID: string
   ): Promise<IChallenge | null> {
@@ -763,5 +699,8 @@ export class ChallengeService {
         community: { id: communityID },
       },
     });
+  }
+  public getSettings(challenge: IChallenge): ISpaceSettings {
+    return this.spaceSettingsService.getSettings(challenge.settingsStr);
   }
 }

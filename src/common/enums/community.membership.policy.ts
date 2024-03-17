@@ -4,7 +4,6 @@ export enum CommunityMembershipPolicy {
   OPEN = 'open',
   INVITATIONS = 'invitations',
   APPLICATIONS = 'applications',
-  INHERIT = 'inherit',
 }
 
 registerEnumType(CommunityMembershipPolicy, {

@@ -13,9 +13,6 @@ import { OpportunityAuthorizationService } from '@domain/challenge/opportunity/o
 import { ChallengeService } from './challenge.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IChallenge } from './challenge.interface';
-import { PreferenceSetAuthorizationService } from '@domain/common/preference-set/preference.set.service.authorization';
-import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
-import { ChallengePreferenceType } from '@common/enums/challenge.preference.type';
 import { AuthorizationPolicyRuleVerifiedCredential } from '@core/authorization/authorization.policy.rule.verified.credential';
 import { CommunityPolicyService } from '@domain/community/community-policy/community.policy.service';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
@@ -41,6 +38,8 @@ import { CollaborationAuthorizationService } from '@domain/collaboration/collabo
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 import { ILicense } from '@domain/license/license/license.interface';
 import { LicenseResolverService } from '@services/infrastructure/license-resolver/license.resolver.service';
+import { SpaceSettingsService } from '../space.settings/space.settings.service';
+import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 
 @Injectable()
 export class ChallengeAuthorizationService {
@@ -48,12 +47,11 @@ export class ChallengeAuthorizationService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private challengeService: ChallengeService,
     private opportunityAuthorizationService: OpportunityAuthorizationService,
-    private preferenceSetAuthorizationService: PreferenceSetAuthorizationService,
     private communityPolicyService: CommunityPolicyService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
-    private preferenceSetService: PreferenceSetService,
     private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
     private profileAuthorizationService: ProfileAuthorizationService,
+    private spaceSettingsService: SpaceSettingsService,
     private contextAuthorizationService: ContextAuthorizationService,
     private communityAuthorizationService: CommunityAuthorizationService,
     private licenseResolverService: LicenseResolverService,
@@ -67,15 +65,14 @@ export class ChallengeAuthorizationService {
     const license = await this.licenseResolverService.getlicenseForSpace(
       challengeInput.spaceID
     );
-    const communityPolicy = await this.setCommunityPolicyFlags(challengeInput);
 
+    const communityPolicy = await this.getCommunityPolicyWithSettings(
+      challengeInput
+    );
     // private challenge or not?
     // If it is a private challenge then cannot inherit from Space
-    const privateChallenge = !this.communityPolicyService.getFlag(
-      communityPolicy,
-      CommunityPolicyFlag.ALLOW_NON_MEMBERS_READ_ACCESS
-    );
-    if (!privateChallenge) {
+
+    if (communityPolicy.settings.privacy.mode === SpacePrivacyMode.PRIVATE) {
       challengeInput.authorization =
         this.authorizationPolicyService.inheritParentAuthorization(
           challengeInput.authorization,
@@ -108,96 +105,17 @@ export class ChallengeAuthorizationService {
       license
     );
   }
-
-  public async setCommunityPolicyFlags(
+  public async getCommunityPolicyWithSettings(
     challenge: IChallenge
   ): Promise<ICommunityPolicy> {
-    const preferenceSet = await this.challengeService.getPreferenceSetOrFail(
+    const communityPolicy = await this.challengeService.getCommunityPolicy(
       challenge.id
     );
-    const policy = await this.challengeService.getCommunityPolicy(challenge.id);
-    // Anonymouse Read access
-    const allowContextReview = this.preferenceSetService.getPreferenceValue(
-      preferenceSet,
-      ChallengePreferenceType.MEMBERSHIP_FEEDBACK_ON_CHALLENGE_CONTEXT
+    const settings = this.spaceSettingsService.getSettings(
+      challenge.settingsStr
     );
-    this.communityPolicyService.setFlag(
-      policy,
-      CommunityPolicyFlag.MEMBERSHIP_FEEDBACK_ON_CHALLENGE_CONTEXT,
-      allowContextReview
-    );
-
-    //
-    const allowSpaceMembersToApply =
-      this.preferenceSetService.getPreferenceValue(
-        preferenceSet,
-        ChallengePreferenceType.MEMBERSHIP_APPLY_CHALLENGE_FROM_SPACE_MEMBERS
-      );
-    this.communityPolicyService.setFlag(
-      policy,
-      CommunityPolicyFlag.MEMBERSHIP_APPLY_CHALLENGE_FROM_SPACE_MEMBERS,
-      allowSpaceMembersToApply
-    );
-
-    //
-    const allowSpaceMembersToJoin =
-      this.preferenceSetService.getPreferenceValue(
-        preferenceSet,
-        ChallengePreferenceType.MEMBERSHIP_JOIN_CHALLENGE_FROM_SPACE_MEMBERS
-      );
-    this.communityPolicyService.setFlag(
-      policy,
-      CommunityPolicyFlag.MEMBERSHIP_JOIN_CHALLENGE_FROM_SPACE_MEMBERS,
-      allowSpaceMembersToJoin
-    );
-
-    //
-    const allowSpaceMembersToContribute =
-      this.preferenceSetService.getPreferenceValue(
-        preferenceSet,
-        ChallengePreferenceType.ALLOW_SPACE_MEMBERS_TO_CONTRIBUTE
-      );
-    this.communityPolicyService.setFlag(
-      policy,
-      CommunityPolicyFlag.ALLOW_SPACE_MEMBERS_TO_CONTRIBUTE,
-      allowSpaceMembersToContribute
-    );
-
-    //
-    const allowContributorsToCreateOpportunities =
-      this.preferenceSetService.getPreferenceValue(
-        preferenceSet,
-        ChallengePreferenceType.ALLOW_CONTRIBUTORS_TO_CREATE_OPPORTUNITIES
-      );
-    this.communityPolicyService.setFlag(
-      policy,
-      CommunityPolicyFlag.ALLOW_CONTRIBUTORS_TO_CREATE_OPPORTUNITIES,
-      allowContributorsToCreateOpportunities
-    );
-
-    //
-    const allowContributorsToCreateCallouts =
-      this.preferenceSetService.getPreferenceValue(
-        preferenceSet,
-        ChallengePreferenceType.ALLOW_CONTRIBUTORS_TO_CREATE_CALLOUTS
-      );
-    this.communityPolicyService.setFlag(
-      policy,
-      CommunityPolicyFlag.ALLOW_CONTRIBUTORS_TO_CREATE_CALLOUTS,
-      allowContributorsToCreateCallouts
-    );
-    //
-    const allowNonMembersReadAccess =
-      this.preferenceSetService.getPreferenceValue(
-        preferenceSet,
-        ChallengePreferenceType.ALLOW_NON_MEMBERS_READ_ACCESS
-      );
-    this.communityPolicyService.setFlag(
-      policy,
-      CommunityPolicyFlag.ALLOW_NON_MEMBERS_READ_ACCESS,
-      allowNonMembersReadAccess
-    );
-    return policy;
+    communityPolicy.settings = settings;
+    return communityPolicy;
   }
 
   private initializeAuthorizationPrivateChallenge(
@@ -372,15 +290,10 @@ export class ChallengeAuthorizationService {
           opportunities: true,
           childChallenges: true,
           storageAggregator: true,
-          preferenceSet: true,
         },
       }
     );
-    if (
-      !challenge.opportunities ||
-      !challenge.storageAggregator ||
-      !challenge.preferenceSet
-    )
+    if (!challenge.opportunities || !challenge.storageAggregator)
       throw new RelationshipNotFoundException(
         `Unable to load child entities for challenge authorization: ${challenge.id} - ${challenge.opportunities} - ${challenge.storageAggregator}`,
         LogContext.CHALLENGES
@@ -408,12 +321,6 @@ export class ChallengeAuthorizationService {
         communityPolicy
       );
     }
-
-    challenge.preferenceSet =
-      await this.preferenceSetAuthorizationService.applyAuthorizationPolicy(
-        challenge.preferenceSet,
-        challenge.authorization
-      );
 
     return await this.challengeService.save(challenge);
   }

@@ -78,7 +78,14 @@ export class ChallengeResolverMutations {
     @Args('opportunityData') opportunityData: CreateOpportunityInput
   ): Promise<IOpportunity> {
     const challenge = await this.challengeService.getChallengeOrFail(
-      opportunityData.challengeID
+      opportunityData.challengeID,
+      {
+        relations: {
+          community: {
+            policy: true,
+          },
+        },
+      }
     );
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -102,7 +109,7 @@ export class ChallengeResolverMutations {
     );
 
     const challengeCommunityPolicy =
-      await this.challengeAuthorizationService.setCommunityPolicyFlags(
+      await this.challengeAuthorizationService.getCommunityPolicyWithSettings(
         challenge
       );
     await this.opportunityAuthorizationService.applyAuthorizationPolicy(

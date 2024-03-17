@@ -1,4 +1,3 @@
-import { set } from 'lodash';
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
 export class spaceSettings1710683933038 implements MigrationInterface {
@@ -13,6 +12,13 @@ export class spaceSettings1710683933038 implements MigrationInterface {
     );
     await queryRunner.query(
       `ALTER TABLE \`challenge\` ADD \`settingsStr\` text NOT NULL`
+    );
+
+    await queryRunner.query(
+      `ALTER TABLE \`space\` DROP FOREIGN KEY  \`FK_6bf7adf4308991457fdb04624e2\``
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`challenge\` DROP FOREIGN KEY  \`FK_c890de5a08d363719a41703a638\``
     );
 
     const spaces: {
@@ -48,9 +54,9 @@ export class spaceSettings1710683933038 implements MigrationInterface {
             break;
           case SpacePreferenceType.AUTHORIZATION_ANONYMOUS_READ_ACCESS:
             if (preference.value === 'true') {
-              settings.privace.mode = 'public';
+              settings.privacy.mode = 'public';
             } else {
-              settings.privace.mode = 'private';
+              settings.privacy.mode = 'private';
             }
             break;
           case SpacePreferenceType.ALLOW_MEMBERS_TO_CREATE_CHALLENGES:
@@ -64,7 +70,13 @@ export class spaceSettings1710683933038 implements MigrationInterface {
             }
             break;
           case SpacePreferenceType.MEMBERSHIP_JOIN_SPACE_FROM_HOST_ORGANIZATION_MEMBERS:
-            // TODO: get this via Account
+            const hostOrganizationId = await this.getHostOrganizationId(
+              queryRunner,
+              space.id
+            );
+            if (hostOrganizationId) {
+              settings.membership.trustedOrganizations = [hostOrganizationId];
+            }
             break;
         }
         await queryRunner.query(
@@ -74,6 +86,7 @@ export class spaceSettings1710683933038 implements MigrationInterface {
         );
       }
       // drop preferences that match the preferenceSetId
+
       await queryRunner.query(
         `DELETE FROM preference WHERE preferenceSetId = '${space.preferenceSetId}'`
       );
@@ -94,7 +107,7 @@ export class spaceSettings1710683933038 implements MigrationInterface {
       }[] = await queryRunner.query(
         `SELECT id, value, preferenceDefinitionId FROM preference WHERE preferenceSetId = '${challenge.preferenceSetId}'`
       );
-      const settings = this.getClonedSpaceSettings();
+      const settings: SpaceSettings = this.getClonedSpaceSettings();
       for (const preference of preferences) {
         const [preferenceDeinition]: {
           id: string;
@@ -115,9 +128,9 @@ export class spaceSettings1710683933038 implements MigrationInterface {
             break;
           case ChallengePreferenceType.ALLOW_NON_MEMBERS_READ_ACCESS:
             if (preference.value === 'true') {
-              settings.privace.mode = 'public';
+              settings.privacy.mode = 'public';
             } else {
-              settings.privace.mode = 'private';
+              settings.privacy.mode = 'private';
             }
             break;
           case ChallengePreferenceType.ALLOW_CONTRIBUTORS_TO_CREATE_OPPORTUNITIES:
@@ -189,12 +202,36 @@ export class spaceSettings1710683933038 implements MigrationInterface {
 
   public async down(queryRunner: QueryRunner): Promise<void> {}
 
-  private getClonedSpaceSettings(): any {
+  private getClonedSpaceSettings(): SpaceSettings {
     return JSON.parse(JSON.stringify(spaceSettingsDefaults));
+  }
+
+  private async getHostOrganizationId(
+    queryRunner: QueryRunner,
+    spaceID: string
+  ): Promise<string | undefined> {
+    const [credential]: {
+      id: string;
+      agentId: string;
+    }[] = await queryRunner.query(
+      `SELECT id, agentId FROM credential WHERE type = 'space-host' AND resourceID = '${spaceID}'`
+    );
+    if (!credential) {
+      return undefined;
+    }
+    const [organization]: {
+      id: string;
+    }[] = await queryRunner.query(
+      `SELECT id FROM organization WHERE agentId = '${credential.agentId}'`
+    );
+    if (!organization) {
+      return undefined;
+    }
+    return organization.id;
   }
 }
 
-export const spaceSettingsDefaults: any = {
+export const spaceSettingsDefaults: SpaceSettings = {
   privacy: {
     mode: 'public',
   },
@@ -204,8 +241,8 @@ export const spaceSettingsDefaults: any = {
   },
   collaboration: {
     inheritMembershipRights: true,
-    allowMembersToCreateSubspaces: true,
-    allowMembersToCreateCallouts: true,
+    allowMembersToCreateSubspaces: false,
+    allowMembersToCreateCallouts: false,
   },
 };
 
@@ -227,3 +264,18 @@ export enum SpacePreferenceType {
   ALLOW_MEMBERS_TO_CREATE_CHALLENGES = 'AllowMembersToCreateChallenges',
   ALLOW_MEMBERS_TO_CREATE_CALLOUTS = 'AllowMembersToCreateCallouts',
 }
+
+export type SpaceSettings = {
+  privacy: {
+    mode: 'public' | 'private';
+  };
+  membership: {
+    policy: 'open' | 'applications' | 'invitations';
+    trustedOrganizations: string[];
+  };
+  collaboration: {
+    inheritMembershipRights: boolean;
+    allowMembersToCreateSubspaces: boolean;
+    allowMembersToCreateCallouts: boolean;
+  };
+};

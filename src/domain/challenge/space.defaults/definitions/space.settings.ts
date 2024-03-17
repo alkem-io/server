@@ -12,7 +12,7 @@ export const spaceSettingsDefaults: ISpaceSettings = {
   },
   collaboration: {
     inheritMembershipRights: true,
-    allowMembersToCreateSubspaces: true,
+    allowMembersToCreateSubspaces: false,
     allowMembersToCreateCallouts: true,
   },
 };

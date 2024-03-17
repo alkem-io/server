@@ -9,7 +9,6 @@ import {
 } from 'typeorm';
 import { Space } from '@domain/challenge/space/space.entity';
 import { Opportunity } from '@domain/challenge/opportunity/opportunity.entity';
-import { PreferenceSet } from '@domain/common/preference-set';
 import { IChallenge } from './challenge.interface';
 import { BaseChallenge } from '../base-challenge/base.challenge.entity';
 import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
@@ -44,14 +43,6 @@ export class Challenge extends BaseChallenge implements IChallenge {
 
   @Column()
   spaceID!: string;
-
-  @OneToOne(() => PreferenceSet, {
-    eager: false,
-    cascade: true,
-    onDelete: 'SET NULL',
-  })
-  @JoinColumn()
-  preferenceSet?: PreferenceSet;
 
   @OneToOne(() => StorageAggregator, {
     eager: false,

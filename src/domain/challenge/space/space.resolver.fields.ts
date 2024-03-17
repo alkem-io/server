@@ -21,7 +21,6 @@ import { SpaceService } from '@domain/challenge/space/space.service';
 import { ISpace } from '@domain/challenge/space/space.interface';
 import { IOpportunity } from '@domain/challenge/opportunity';
 import { IAgent } from '@domain/agent/agent';
-import { IPreference } from '@domain/common/preference/preference.interface';
 import { ITemplatesSet } from '@domain/template/templates-set';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
@@ -32,7 +31,6 @@ import {
   JourneyCollaborationLoaderCreator,
   JourneyCommunityLoaderCreator,
   JourneyContextLoaderCreator,
-  PreferencesLoaderCreator,
   AgentLoaderCreator,
   ProfileLoaderCreator,
   SpaceLicenseLoaderCreator,
@@ -45,6 +43,7 @@ import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.a
 import { ILicense } from '@domain/license/license/license.interface';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { ISpaceDefaults } from '../space.defaults/space.defaults.interface';
+import { ISpaceSettings } from '../space.settings/space.settings.interface';
 
 @Resolver(() => ISpace)
 export class SpaceResolverFields {
@@ -169,23 +168,6 @@ export class SpaceResolverFields {
     @Parent() space: Space,
     @Loader(SpaceLicenseLoaderCreator) loader: ILoader<ILicense>
   ): Promise<ILicense> {
-    return loader.load(space.id);
-  }
-
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @ResolveField('preferences', () => [IPreference], {
-    nullable: true,
-    description: 'The preferences for this Space',
-  })
-  @UseGuards(GraphqlGuard)
-  async preferences(
-    @Parent() space: Space,
-    @Loader(PreferencesLoaderCreator, {
-      parentClassRef: Space,
-      getResult: r => r?.preferenceSet?.preferences,
-    })
-    loader: ILoader<IPreference[]>
-  ): Promise<IPreference[]> {
     return loader.load(space.id);
   }
 
@@ -374,5 +356,13 @@ export class SpaceResolverFields {
   async createdDate(@Parent() space: Space): Promise<Date> {
     const createdDate = (space as Space).createdDate;
     return new Date(createdDate);
+  }
+
+  @ResolveField('settings', () => ISpaceSettings, {
+    nullable: false,
+    description: 'The settings for this Space.',
+  })
+  states(@Parent() space: ISpace): ISpaceSettings {
+    return this.spaceService.getSettings(space);
   }
 }

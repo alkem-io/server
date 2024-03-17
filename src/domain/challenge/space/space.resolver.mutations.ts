@@ -17,12 +17,6 @@ import { ChallengeAuthorizationService } from '@domain/challenge/challenge/chall
 import { ISpace } from './space.interface';
 import { SpaceAuthorizationResetInput } from './dto/space.dto.reset.authorization';
 import { CreateChallengeOnSpaceInput } from './dto/space.dto.create.challenge';
-import { PreferenceService } from '@domain/common/preference/preference.service';
-import { IPreference } from '@domain/common/preference/preference.interface';
-import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set';
-import { UpdateSpacePreferenceInput } from './dto/space.dto.update.preference';
-import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
-import { UpdateChallengePreferenceInput } from '@domain/challenge/challenge/dto/challenge.dto.update.preference';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
 import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
 import { UpdateSpacePlatformSettingsInput } from './dto/space.dto.update.platform.settings';
@@ -37,6 +31,8 @@ import { EntityNotInitializedException } from '@common/exceptions/entity.not.ini
 import { LogContext } from '@common/enums';
 import { ISpaceDefaults } from '../space.defaults/space.defaults.interface';
 import { UpdateSpaceDefaultsInput } from './dto/space.dto.update.defaults';
+import { UpdateSpaceSettingsInput } from './dto/space.dto.update.settings';
+import { UpdateChallengeSettingsInput } from '../challenge/dto/challenge.dto.update.settings';
 
 @Resolver()
 export class SpaceResolverMutations {
@@ -48,8 +44,6 @@ export class SpaceResolverMutations {
     private spaceAuthorizationService: SpaceAuthorizationService,
     private challengeService: ChallengeService,
     private challengeAuthorizationService: ChallengeAuthorizationService,
-    private preferenceService: PreferenceService,
-    private preferenceSetService: PreferenceSetService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     @Inject(SUBSCRIPTION_CHALLENGE_CREATED)
     private challengeCreatedSubscription: PubSubEngine,
@@ -188,43 +182,29 @@ export class SpaceResolverMutations {
   }
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => IPreference, {
-    description: 'Updates one of the Preferences on a Space',
+  @Mutation(() => ISpace, {
+    description: 'Updates one of the Setting on a Space',
   })
   @Profiling.api
-  async updatePreferenceOnSpace(
+  async updateSpaceSettings(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('preferenceData') preferenceData: UpdateSpacePreferenceInput
-  ) {
-    const space = await this.spaceService.getSpaceOrFail(
-      preferenceData.spaceID
-    );
-    const preferenceSet = await this.spaceService.getPreferenceSetOrFail(
-      space.id
-    );
-
-    const preference = this.preferenceSetService.getPreferenceOrFail(
-      preferenceSet,
-      preferenceData.type
-    );
-    this.preferenceService.validatePreferenceTypeOrFail(
-      preference,
-      PreferenceDefinitionSet.SPACE
-    );
+    @Args('settingsData') settingsData: UpdateSpaceSettingsInput
+  ): Promise<ISpace> {
+    const space = await this.spaceService.getSpaceOrFail(settingsData.spaceID);
 
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      preference.authorization,
+      space.authorization,
       AuthorizationPrivilege.UPDATE,
-      `space preference update: ${preference.id}`
+      `space settings update: ${space.id}`
     );
-    const preferenceUpdated = await this.preferenceService.updatePreference(
-      preference,
-      preferenceData.value
-    );
-    // As the preferences may update the authorization for the Space, the authorization policy will need to be reset
+    // TODO
+    // const updatedSpace = await this.spaceService.updateSpaceSettings(
+    //   settingsData
+    // );
+    // As the settings may update the authorization for the Space, the authorization policy will need to be reset
     await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
-    return preferenceUpdated;
+    return await this.spaceService.getSpaceOrFail(space.id);
   }
 
   // create mutation here because authorization policies need to be reset
@@ -232,50 +212,35 @@ export class SpaceResolverMutations {
   // this way we avoid the complexity and circular dependencies introduced
   // resetting the challenge policies
   @UseGuards(GraphqlGuard)
-  @Mutation(() => IPreference, {
-    description: 'Updates one of the Preferences on a Challenge',
+  @Mutation(() => IChallenge, {
+    description: 'Updates one of the settings on a Challenge',
   })
   @Profiling.api
-  async updatePreferenceOnChallenge(
+  async updateChallengeSettings(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('preferenceData') preferenceData: UpdateChallengePreferenceInput
-  ) {
+    @Args('settignsData') settingsData: UpdateChallengeSettingsInput
+  ): Promise<IChallenge> {
     const challenge = await this.challengeService.getChallengeOrFail(
-      preferenceData.challengeID
-    );
-    const preferenceSet = await this.challengeService.getPreferenceSetOrFail(
-      challenge.id
-    );
-
-    const preference = await this.preferenceSetService.getPreferenceOrFail(
-      preferenceSet,
-      preferenceData.type
-    );
-    this.preferenceService.validatePreferenceTypeOrFail(
-      preference,
-      PreferenceDefinitionSet.CHALLENGE
+      settingsData.challengeID
     );
 
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      preference.authorization,
+      challenge.authorization,
       AuthorizationPrivilege.UPDATE,
-      `challenge preference update: ${preference.id}`
-    );
-    const preferenceUpdated = await this.preferenceService.updatePreference(
-      preference,
-      preferenceData.value
+      `challenge settings update: ${challenge.id}`
     );
 
     const space = await this.spaceService.getSpaceOrFail(
       this.challengeService.getSpaceID(challenge)
     );
-    // As the preferences may update the authorization, the authorization policy will need to be reset
+    // TODO: pass through the updated settings to the challenge service
+    // As the settings may update the authorization, the authorization policy will need to be reset
     await this.challengeAuthorizationService.applyAuthorizationPolicy(
       challenge,
       space.authorization
     );
-    return preferenceUpdated;
+    return await this.challengeService.getChallengeOrFail(challenge.id);
   }
 
   @UseGuards(GraphqlGuard)
@@ -388,14 +353,7 @@ export class SpaceResolverMutations {
     authorizationResetData: SpaceAuthorizationResetInput
   ): Promise<ISpace> {
     const space = await this.spaceService.getSpaceOrFail(
-      authorizationResetData.spaceID,
-      {
-        relations: {
-          preferenceSet: {
-            preferences: true,
-          },
-        },
-      }
+      authorizationResetData.spaceID
     );
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
