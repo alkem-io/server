@@ -102,7 +102,6 @@ export class ActivityService {
       userID?: string;
       orderBy?: 'ASC' | 'DESC';
       paginationArgs?: PaginationArgs;
-      onlyUnique?: boolean;
       excludeTypes?: ActivityEventType[];
     }
   ) {
@@ -112,7 +111,6 @@ export class ActivityService {
       userID,
       orderBy = 'DESC',
       paginationArgs = {},
-      onlyUnique = false,
       excludeTypes,
     } = options ?? {};
 
@@ -139,10 +137,6 @@ export class ActivityService {
           ? types.filter(type => !excludeTypes.includes(type))
           : types;
       qb.andWhere({ type: In(filteredTypes) });
-    }
-
-    if (onlyUnique) {
-      qb.groupBy('activity.resourceID, activity.triggeredBy, activity.type');
     }
 
     return getPaginationResults(qb, paginationArgs, orderBy);
@@ -200,15 +194,16 @@ export class ActivityService {
 
     const activityIDs = groupedActivities.map(a => a.latest);
 
-    const qb = this.activityRepository.createQueryBuilder('activity');
-    qb.where({
-      rowId: In(activityIDs),
+    const activities = await this.activityRepository.find({
+      where: {
+        rowId: In(activityIDs),
+      },
+      order: {
+        createdDate: orderBy,
+      },
     });
-    qb.orderBy('activity.createdDate', orderBy);
 
-    const results = await qb.getMany();
-
-    return results;
+    return activities;
   }
 
   async getActivityForMessage(messageID: string): Promise<IActivity | null> {
