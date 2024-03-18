@@ -5,7 +5,10 @@ import { TagsetTemplate } from './tagset.template.entity';
 import { ITagsetTemplate } from './tagset.template.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums';
-import { EntityNotFoundException } from '@common/exceptions';
+import {
+  EntityNotFoundException,
+  ValidationException,
+} from '@common/exceptions';
 import { CreateTagsetTemplateInput } from '@domain/common/tagset-template/dto/tagset.template.dto.create';
 import { UpdateTagsetTemplateDefinitionInput } from './dto/tagset.template.dto.update';
 
@@ -68,13 +71,41 @@ export class TagsetTemplateService {
       tagsetTemplate.defaultSelectedValue =
         tagsetTemplateData.defaultSelectedValue;
     }
+
+    if (tagsetTemplateData.newSelectedValue) {
+      // verify in new allowed values
+      const isNameAllowed = tagsetTemplate.allowedValues.some(
+        allowedValue => tagsetTemplateData.newSelectedValue === allowedValue
+      );
+      if (!isNameAllowed) {
+        throw new ValidationException(
+          `TagsetTemplate newSelectedValue(${tagsetTemplateData.newSelectedValue}) is not in allowedValues!`,
+          LogContext.TAGSET
+        );
+      }
+    }
+    // Finally update
     if (tagsetTemplate.tagsets)
       for (const tagset of tagsetTemplate.tagsets) {
-        const isNameAllowed = tagsetTemplate.allowedValues.some(allowedValue =>
-          tagset.tags.includes(allowedValue)
+        const tagsetSelectedValue = tagset.tags[0];
+        const isNameAllowed = tagsetTemplate.allowedValues.some(
+          allowedValue => tagsetSelectedValue === allowedValue
         );
-        if (!isNameAllowed && tagsetTemplate.defaultSelectedValue) {
-          tagset.tags = [tagsetTemplate.defaultSelectedValue];
+        if (!isNameAllowed) {
+          if (
+            tagsetSelectedValue === tagsetTemplateData.oldSelectedValue &&
+            tagsetTemplateData.newSelectedValue
+          ) {
+            tagset.tags = [tagsetTemplateData.newSelectedValue];
+          } else {
+            if (!tagsetTemplate.defaultSelectedValue) {
+              throw new ValidationException(
+                `TagsetTemplate defaultSelectedValue must be set (${tagsetTemplate.id})`,
+                LogContext.TAGSET
+              );
+            }
+            tagset.tags = [tagsetTemplate.defaultSelectedValue];
+          }
         }
       }
 
