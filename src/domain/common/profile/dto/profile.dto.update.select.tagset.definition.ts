@@ -6,4 +6,8 @@ export class UpdateProfileSelectTagsetDefinitionInput {
   defaultSelectedValue?: string;
 
   allowedValues!: string[];
+
+  // To allow for updating from one value to a new one
+  oldSelectedValue?: string;
+  newSelectedValue?: string;
 }

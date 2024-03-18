@@ -407,6 +407,8 @@ export class ProfileService {
       {
         allowedValues: updateData.allowedValues,
         defaultSelectedValue: updateData.defaultSelectedValue,
+        newSelectedValue: updateData.newSelectedValue,
+        oldSelectedValue: updateData.oldSelectedValue,
       }
     );
 
