@@ -89,7 +89,9 @@ export class ConversionService {
     }
     const hostOrg = challengeCommunityLeadOrgs[0];
     const createSpaceInput: CreateSpaceInput = {
-      hostID: hostOrg.nameID,
+      accountData: {
+        hostID: hostOrg.nameID,
+      },
       nameID: challenge.nameID,
       profileData: {
         displayName: challenge.profile.displayName,
@@ -227,6 +229,7 @@ export class ConversionService {
           community: true,
           context: true,
           profile: true,
+          account: true,
           storageAggregator: true,
           collaboration: {
             callouts: {
@@ -244,6 +247,7 @@ export class ConversionService {
       !opportunity.community ||
       !opportunity.context ||
       !opportunity.profile ||
+      !opportunity.account ||
       !opportunity.collaboration ||
       !opportunity.storageAggregator ||
       !opportunity.collaboration.callouts
@@ -282,6 +286,7 @@ export class ConversionService {
         storageAggregatorParent: spaceStorageAggregator,
         spaceID: spaceID,
       },
+      opportunity.account,
       agentInfo
     );
 

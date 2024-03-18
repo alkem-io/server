@@ -2,25 +2,20 @@ import { UseGuards } from '@nestjs/common';
 import { Resolver, Mutation, Args } from '@nestjs/graphql';
 import {} from '@domain/context/actor-group';
 import { CurrentUser, Profiling } from '@src/common/decorators';
-import { IProject } from '@domain/collaboration/project';
 import { GraphqlGuard } from '@core/authorization';
 import { OpportunityService } from './opportunity.service';
-import { AuthorizationPrivilege } from '@common/enums';
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication';
-import { ProjectService } from '@domain/collaboration/project/project.service';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IOpportunity } from './opportunity.interface';
 import { DeleteOpportunityInput, UpdateOpportunityInput } from './dto';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
-import { CreateProjectInput } from '@domain/collaboration/project/dto';
+import { EntityNotInitializedException } from '@common/exceptions';
 
 @Resolver()
 export class OpportunityResolverMutations {
   constructor(
     private contributionReporter: ContributionReporterService,
-    private projectService: ProjectService,
-    private authorizationPolicyService: AuthorizationPolicyService,
     private authorizationService: AuthorizationService,
     private opportunityService: OpportunityService
   ) {}
@@ -35,8 +30,20 @@ export class OpportunityResolverMutations {
     @Args('opportunityData') opportunityData: UpdateOpportunityInput
   ): Promise<IOpportunity> {
     const opportunity = await this.opportunityService.getOpportunityOrFail(
-      opportunityData.ID
+      opportunityData.ID,
+      {
+        relations: {
+          account: true,
+        },
+      }
     );
+    if (!opportunity.account) {
+      throw new EntityNotInitializedException(
+        'account no found on opportunity: ${opportunity.nameID}',
+        LogContext.CHALLENGES
+      );
+    }
+    const spaceID = opportunity.account.spaceID;
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       opportunity.authorization,
@@ -52,7 +59,7 @@ export class OpportunityResolverMutations {
       {
         id: updatedOpportunity.id,
         name: updatedOpportunity.profile.displayName,
-        space: updatedOpportunity.spaceID,
+        space: spaceID,
       },
       {
         id: agentInfo.userID,
@@ -81,32 +88,5 @@ export class OpportunityResolverMutations {
       `delete opportunity: ${opportunity.nameID}`
     );
     return await this.opportunityService.deleteOpportunity(deleteData.ID);
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IProject, {
-    description: 'Create a new Project on the Opportunity',
-  })
-  @Profiling.api
-  async createProject(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('projectData') projectData: CreateProjectInput
-  ): Promise<IProject> {
-    const opportunity = await this.opportunityService.getOpportunityOrFail(
-      projectData.opportunityID
-    );
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      opportunity.authorization,
-      AuthorizationPrivilege.UPDATE,
-      `create project (${projectData.nameID}) on Opportunity: ${opportunity.nameID}`
-    );
-    const project = await this.opportunityService.createProject(projectData);
-    project.authorization =
-      await this.authorizationPolicyService.inheritParentAuthorization(
-        project.authorization,
-        opportunity.authorization
-      );
-    return await this.projectService.saveProject(project);
   }
 }

@@ -228,13 +228,15 @@ export class WhiteboardService {
 
     const space = await this.entityManager.findOneOrFail(Space, {
       relations: {
-        license: {
-          featureFlags: true,
+        account: {
+          license: {
+            featureFlags: true,
+          },
         },
       },
       where: { id: community.spaceID },
     });
-    const license = space.license;
+    const license = space.account?.license;
 
     if (!license) {
       throw new EntityNotFoundException(

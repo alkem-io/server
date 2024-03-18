@@ -14,6 +14,7 @@ import { TimelineResolverService } from '../entity-resolver/timeline.resolver.se
 import { StorageAggregatorNotFoundException } from '@common/exceptions/storage.aggregator.not.found.exception';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { StorageAggregatorParentType } from '@common/enums/storage.aggregator.parent.type';
+import { Space } from '@domain/challenge/space/space.entity';
 
 @Injectable()
 export class StorageAggregatorResolverService {
@@ -112,17 +113,26 @@ export class StorageAggregatorResolverService {
   public async getStorageAggregatorForTemplatesSet(
     templatesSetId: string
   ): Promise<IStorageAggregator> {
-    let query = `SELECT \`storageAggregatorId\` FROM \`space\`
-      WHERE \`space\`.\`templatesSetId\`='${templatesSetId}'`;
-    let [result] = await this.entityManager.connection.query(query);
+    const space = await this.entityManager.findOne(Space, {
+      where: {
+        account: {
+          library: {
+            id: templatesSetId,
+          },
+        },
+      },
+      relations: {
+        storageAggregator: true,
+      },
+    });
 
-    if (result) {
-      return await this.getStorageAggregatorOrFail(result.storageAggregatorId);
+    if (space && space.storageAggregator) {
+      return await this.getStorageAggregatorOrFail(space.storageAggregator.id);
     }
 
-    query = `SELECT \`id\` FROM \`innovation_pack\`
+    const query = `SELECT \`id\` FROM \`innovation_pack\`
       WHERE \`innovation_pack\`.\`templatesSetId\`='${templatesSetId}'`;
-    [result] = await this.entityManager.connection.query(query);
+    const [result] = await this.entityManager.connection.query(query);
     if (result) {
       // use the library sorage aggregator
       return await this.getLibraryStorageAggregator();
