@@ -192,7 +192,7 @@ export class SpaceResolverMutations {
   @Profiling.api
   async updateChallengeSettings(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('settignsData') settingsData: UpdateChallengeSettingsInput
+    @Args('settingsData') settingsData: UpdateChallengeSettingsInput
   ): Promise<IChallenge> {
     const challenge = await this.challengeService.getChallengeOrFail(
       settingsData.challengeID,
