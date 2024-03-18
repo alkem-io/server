@@ -524,7 +524,7 @@ export class ActivityAdapter {
   private async getCollaborationIdWithCalloutIdForWhiteboard(
     whiteboardID: string
   ): Promise<{ collaborationID: string; calloutID: string }> {
-    const [result]: {
+    const [contributionResult]: {
       collaborationID: string;
       calloutID: string;
     }[] = await this.entityManager.connection.query(
@@ -537,14 +537,29 @@ export class ActivityAdapter {
       `
     );
 
-    if (!result) {
-      throw new EntityNotFoundException(
-        `Unable to identify Collaboration for Whiteboard with ID: ${whiteboardID}`,
-        LogContext.ACTIVITY
+    if (!contributionResult) {
+      const [profileResult]: {
+        collaborationID: string;
+        calloutID: string;
+      }[] = await this.entityManager.connection.query(
+        `
+          SELECT \`callout\`.\`id\` as \`calloutID\`, \`collaboration\`.\`id\` as collaborationID FROM \`collaboration\`
+          LEFT JOIN \`callout\` on \`callout\`.\`collaborationId\` = \`collaboration\`.\`id\`
+          LEFT JOIN \`callout_framing\` on \`callout\`.\`framingId\` = \`callout_framing\`.\`id\`
+          WHERE \`callout_framing\`.\`whiteboardId\` = '${whiteboardID}'
+        `
       );
+
+      if (!profileResult) {
+        throw new EntityNotFoundException(
+          `Unable to identify Collaboration for Whiteboard with ID: ${whiteboardID}`,
+          LogContext.ACTIVITY
+        );
+      }
+      return profileResult;
     }
 
-    return result;
+    return contributionResult;
   }
 
   private async getCollaborationIdFromCommunity(communityId: string) {
