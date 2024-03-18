@@ -26,8 +26,11 @@ type ActivityFeedFilters = {
   spaceIds?: Array<string>;
   roles?: Array<ActivityFeedRoles>;
   pagination?: PaginationArgs;
-  onlyUnique?: boolean;
   excludeTypes?: Array<ActivityEventType>;
+};
+
+type ActivityFeedGroupedFilters = ActivityFeedFilters & {
+  limit?: number;
 };
 
 @Injectable()
@@ -50,7 +53,6 @@ export class ActivityFeedService {
       types = [],
       myActivity = false,
       pagination: paginationArgs = {},
-      onlyUnique = false,
       excludeTypes,
       ...qualifyingSpacesOptions
     } = filters ?? {};
@@ -71,8 +73,37 @@ export class ActivityFeedService {
       visibility: true,
       paginationArgs,
       sort: 'DESC', // the most recent first
-      onlyUnique,
       excludeTypes,
+    });
+  }
+
+  public async getGroupedActivityFeed(
+    agentInfo: AgentInfo,
+    filters?: ActivityFeedGroupedFilters
+  ): Promise<IActivityLogEntry[]> {
+    const {
+      types = [],
+      myActivity = false,
+      limit,
+      ...qualifyingSpacesOptions
+    } = filters ?? {};
+    // get all Spaces the user has credentials for
+    const spaceIds = await this.getQualifyingSpaces(
+      agentInfo,
+      qualifyingSpacesOptions
+    );
+    // get the collaborations with read access based on the filtered Spaces
+    const collaborationIds = await this.getAllAuthorizedCollaborations(
+      agentInfo,
+      spaceIds
+    );
+
+    return this.getGroupedActivity(collaborationIds, {
+      types,
+      userID: myActivity ? agentInfo.userID : undefined,
+      visibility: true,
+      limit: limit ? limit : undefined,
+      sort: 'DESC', // the most recent first
     });
   }
 
@@ -135,7 +166,6 @@ export class ActivityFeedService {
       userID?: string;
       sort?: 'ASC' | 'DESC';
       paginationArgs?: PaginationArgs;
-      onlyUnique?: boolean;
       excludeTypes?: ActivityEventType[];
     }
   ) {
@@ -160,6 +190,32 @@ export class ActivityFeedService {
       pageInfo: rawPaginatedActivities.pageInfo,
       items: convertedActivities,
     };
+  }
+
+  private async getGroupedActivity(
+    collaborationIds: string[],
+    options?: {
+      types?: ActivityEventType[];
+      visibility?: boolean;
+      userID?: string;
+      sort?: 'ASC' | 'DESC';
+      limit?: number;
+    }
+  ) {
+    const rawPaginatedActivities =
+      await this.activityService.getGroupedActivity(collaborationIds, options);
+
+    const convertedActivities = (
+      await this.activityLogService.convertRawActivityToResults(
+        rawPaginatedActivities
+      )
+    ).filter((x): x is IActivityLogEntry => !!x);
+
+    // todo solve issue below
+    // may return incorrect paginated results due to convertRawActivityToResults returning
+    // undefined entries due to errors in processing or missing data
+    // may return wrong pageInfo data OR not all less amount of items than asked for
+    return convertedActivities;
   }
 
   private async getAllAuthorizedCollaborations(
