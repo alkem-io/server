@@ -1,6 +1,7 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { intersection } from 'lodash';
+import { IActivity } from '@platform/activity';
 import { ActivityService } from '@platform/activity/activity.service';
 import { ActivityFeedRoles } from '@domain/activity-feed/activity.feed.roles.enum';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
@@ -202,19 +203,41 @@ export class ActivityFeedService {
       limit?: number;
     }
   ) {
-    const rawPaginatedActivities =
-      await this.activityService.getGroupedActivity(collaborationIds, options);
+    const MAX_REQUESTED_GROUPED_ACTIVITIES = 10;
+    const DEFAULT_GROUPED_ACTIVITIES_LIMIT = 10;
+    const requestedActivitiesLimit =
+      options?.limit ?? DEFAULT_GROUPED_ACTIVITIES_LIMIT;
+    let rawPaginatedActivities: IActivity[] = [];
+    let convertedActivities: IActivityLogEntry[] = [];
+    let requestedActivitiesNumber = requestedActivitiesLimit;
+    let requestedAndCovertedActivitiesDifference = 0;
 
-    const convertedActivities = (
-      await this.activityLogService.convertRawActivityToResults(
-        rawPaginatedActivities
-      )
-    ).filter((x): x is IActivityLogEntry => !!x);
+    // the requested and converted number of activities may not be the same,
+    // we will try to refetch the requested amount of activities + difference between requested and converted
+    // we have a hard limit of 100 requested activities to prevent infinite loops
+    do {
+      rawPaginatedActivities = await this.activityService.getGroupedActivity(
+        collaborationIds,
+        {
+          ...options,
+          limit: requestedActivitiesNumber,
+        }
+      );
 
-    // todo solve issue below
-    // may return incorrect paginated results due to convertRawActivityToResults returning
-    // undefined entries due to errors in processing or missing data
-    // may return wrong pageInfo data OR not all less amount of items than asked for
+      convertedActivities = (
+        await this.activityLogService.convertRawActivityToResults(
+          rawPaginatedActivities
+        )
+      ).filter((x): x is IActivityLogEntry => !!x);
+
+      requestedAndCovertedActivitiesDifference =
+        requestedActivitiesNumber - convertedActivities.length;
+      requestedActivitiesNumber =
+        requestedActivitiesNumber + requestedAndCovertedActivitiesDifference;
+
+      if (requestedActivitiesNumber > MAX_REQUESTED_GROUPED_ACTIVITIES) break;
+    } while (convertedActivities.length < requestedActivitiesLimit);
+
     return convertedActivities;
   }
 
