@@ -1,9 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { AgentInfo } from '@core/authentication';
-// todo: make types common to both implementations
 import { SearchInput } from '../search';
 import { ISearchResults } from '../search/dto/search.result.dto';
-import { SearchExtractService } from './search.extract';
+import { SearchExtractService } from './search.extract.service';
 import { SearchResultService } from './search.result.service';
 
 @Injectable()

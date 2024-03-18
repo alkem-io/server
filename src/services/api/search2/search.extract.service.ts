@@ -58,7 +58,7 @@ export class SearchExtractService {
 
   constructor(
     @Inject(ELASTICSEARCH_CLIENT_PROVIDER)
-    private elasticClient: ElasticClient | undefined,
+    elasticClient: ElasticClient | undefined,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService
   ) {
     this.client = elasticClient!;
@@ -70,9 +70,7 @@ export class SearchExtractService {
   ): Promise<ISearchResult[]> {
     validateSearchParameters(searchData);
     const filteredTerms = validateSearchTerms(searchData.terms);
-    // todo: if space filter is specified - do not return users & orgs
-    // you can get them, but then filter them out on the server
-    // involves working with credentials
+
     const terms = filteredTerms.join(' ');
     const indicesToSearchOn = this.getIndices(
       searchData.typesFilter,
@@ -171,7 +169,7 @@ export class SearchExtractService {
         id: hit._id,
         score: hit._score ?? -1,
         type,
-        terms: [], // todo
+        terms: [], // todo - https://github.com/alkem-io/server/issues/3702
         result: { id: entityId ?? 'N/A' },
       };
     });

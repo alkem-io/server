@@ -136,7 +136,7 @@ export class SearchIngestService {
       this.logger.verbose?.(`All ${data.length} documents have been indexed`);
     }
   }
-  // TODO: validate the loaded data for missing relations
+  // TODO: validate the loaded data for missing relations - https://github.com/alkem-io/server/issues/3699
   private fetchSpaces() {
     return this.entityManager
       .find<Space>(Space, {

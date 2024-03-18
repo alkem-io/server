@@ -30,7 +30,7 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { PlatformAuthorizationService } from '@platform/platfrom/platform.service.authorization';
 import { InnovationHubService } from '@domain/innovation-hub';
 import { NameReporterService } from '@services/external/elasticsearch/name-reporter/name.reporter.service';
-import { SearchIngestService } from "@services/api/search2/search.ingest/search.ingest.service";
+import { SearchIngestService } from '@services/api/search2/search.ingest/search.ingest.service';
 
 @Injectable()
 export class BootstrapService {
@@ -59,7 +59,7 @@ export class BootstrapService {
   ) {}
 
   async bootstrap() {
-    // this.ingestService.ingest();
+    // this.ingestService.ingest(); // todo remove later
     try {
       this.logger.verbose?.('Bootstrapping...', LogContext.BOOTSTRAP);
       this.logConfiguration();
