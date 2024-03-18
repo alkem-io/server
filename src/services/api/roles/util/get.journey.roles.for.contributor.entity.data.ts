@@ -12,7 +12,7 @@ export const getJourneyRolesForContributorEntityData = async (
   challengeIds: string[],
   opportunityIds: string[]
 ) => {
-  const fetchData = <T extends Space | BaseChallenge>(
+  const fetchData = <T extends BaseChallenge>(
     ref: EntityTarget<T>,
     ids: string[],
     visibility?: SpaceVisibility[]
@@ -22,6 +22,7 @@ export const getJourneyRolesForContributorEntityData = async (
     };
 
     let relations: any = {
+      account: true,
       profile: true,
     };
 
@@ -43,7 +44,7 @@ export const getJourneyRolesForContributorEntityData = async (
         },
       };
     }
-    return entityManager.find(ref, {
+    const results = entityManager.find(ref, {
       where,
       relations,
       select: {
@@ -51,10 +52,12 @@ export const getJourneyRolesForContributorEntityData = async (
           displayName: true,
         },
         account: {
+          id: true,
           license: true,
         },
       },
     } as FindManyOptions);
+    return results;
   };
 
   const [spaces, challenges, opportunities] = await Promise.all([
