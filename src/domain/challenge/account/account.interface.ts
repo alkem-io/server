@@ -3,7 +3,6 @@ import { ITemplatesSet } from '@domain/template/templates-set';
 import { ILicense } from '@domain/license/license/license.interface';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { ISpaceDefaults } from '../space.defaults/space.defaults.interface';
-import { ISpace } from '../space/space.interface';
 
 @ObjectType('Account')
 export class IAccount extends IAuthorizable {
@@ -11,9 +10,9 @@ export class IAccount extends IAuthorizable {
   defaults?: ISpaceDefaults;
   license?: ILicense;
 
-  @Field(() => ISpace, {
-    description: 'The space of the associated root Space.',
+  @Field(() => String, {
+    description: 'The ID of the associated root Space.',
     nullable: false,
   })
-  space!: ISpace;
+  spaceID!: string;
 }

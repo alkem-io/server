@@ -52,9 +52,7 @@ export class ChallengeResolverMutations {
       opportunityData.challengeID,
       {
         relations: {
-          account: {
-            space: true,
-          },
+          account: true,
           community: {
             policy: true,
           },
@@ -113,7 +111,7 @@ export class ChallengeResolverMutations {
       {
         id: opportunity.id,
         name: opportunity.profile.displayName,
-        space: challenge.account.space.id,
+        space: challenge.account.spaceID,
       },
       {
         id: agentInfo.userID,
@@ -151,7 +149,7 @@ export class ChallengeResolverMutations {
   ): Promise<IChallenge> {
     const challenge = await this.challengeService.getChallengeOrFail(
       challengeData.ID,
-      { relations: { profile: true, account: { space: true } } }
+      { relations: { profile: true, account: true } }
     );
     if (!challenge.account) {
       throw new EntityNotInitializedException(
@@ -173,7 +171,7 @@ export class ChallengeResolverMutations {
       {
         id: challenge.id,
         name: challenge.profile.displayName,
-        space: challenge.account.space.id ?? '',
+        space: challenge.account.spaceID ?? '',
       },
       {
         id: agentInfo.userID,

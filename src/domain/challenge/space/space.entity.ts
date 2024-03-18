@@ -12,7 +12,7 @@ export class Space extends BaseChallenge implements ISpace {
   })
   challenges?: Challenge[];
 
-  @OneToOne(() => Account, account => account.space, {
+  @OneToOne(() => Account, {
     eager: true,
     cascade: true,
     onDelete: 'SET NULL',

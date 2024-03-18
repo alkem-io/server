@@ -1083,9 +1083,7 @@ export class SearchService {
     const challengesQuery = this.challengeRepository
       .createQueryBuilder('challenge')
       .leftJoinAndSelect('challenge.collaboration', 'collaboration')
-      .leftJoinAndSelect('challenge.account', 'account')
-      .leftJoinAndSelect('account.space', 'space')
-      .where('space.id IN (:spaceFilter)', {
+      .where('challenge.spaceID IN (:spaceFilter)', {
         spaceFilter: spaceFilter,
       });
 
@@ -1098,9 +1096,7 @@ export class SearchService {
     const opportunitiesQuery = this.opportunityRepository
       .createQueryBuilder('opportunity')
       .leftJoinAndSelect('opportunity.collaboration', 'collaboration')
-      .leftJoinAndSelect('opportunity.account', 'account')
-      .leftJoinAndSelect('account.space', 'space')
-      .where('space.id IN (:spaceFilter)', {
+      .where('opportunity.spaceID IN (:spaceFilter)', {
         spaceFilter: spaceFilter,
       });
 

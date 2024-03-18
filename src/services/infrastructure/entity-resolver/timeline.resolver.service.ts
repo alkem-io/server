@@ -87,9 +87,7 @@ export class TimelineResolverService {
     if (space && space.id) return space.id;
     const challenge = await this.entityManager.findOne(Challenge, {
       relations: {
-        account: {
-          space: true,
-        },
+        account: true,
       },
       where: [
         {
@@ -99,12 +97,10 @@ export class TimelineResolverService {
         },
       ],
     });
-    if (challenge && challenge.account) return challenge.account.space.id;
+    if (challenge && challenge.account) return challenge.account.spaceID;
     const opportuntiy = await this.entityManager.findOne(Opportunity, {
       relations: {
-        account: {
-          space: true,
-        },
+        account: true,
       },
       where: [
         {
@@ -114,7 +110,7 @@ export class TimelineResolverService {
         },
       ],
     });
-    if (opportuntiy && opportuntiy.account) return opportuntiy.account.space.id;
+    if (opportuntiy && opportuntiy.account) return opportuntiy.account.spaceID;
     throw new EntityNotFoundError(
       `Unable to identify Space for provided calendar ID: ${calendarID}`,
       LogContext.CALENDAR

@@ -74,11 +74,7 @@ export default class SearchResultBuilderService
     const challenge = await this.challengeService.getChallengeOrFail(
       rawSearchResult.result.id,
       {
-        relations: {
-          account: {
-            space: true,
-          },
-        },
+        relations: { account: true },
       }
     );
     if (!challenge.account) {
@@ -88,7 +84,7 @@ export default class SearchResultBuilderService
       );
     }
     const space = await this.spaceService.getSpaceOrFail(
-      challenge.account.space.id
+      challenge.account.spaceID
     );
     const searchResultChallenge: ISearchResultChallenge = {
       ...this.searchResultBase,
@@ -102,7 +98,7 @@ export default class SearchResultBuilderService
     const opportunity = await this.opportunityService.getOpportunityOrFail(
       rawSearchResult.result.id,
       {
-        relations: { challenge: true, account: { space: true } },
+        relations: { challenge: true, account: true },
       }
     );
     if (!opportunity.account) {
@@ -112,7 +108,7 @@ export default class SearchResultBuilderService
       );
     }
     const space = await this.spaceService.getSpaceOrFail(
-      opportunity.account.space.id
+      opportunity.account.spaceID
     );
     if (!opportunity.challenge) {
       throw new RelationshipNotFoundException(
