@@ -55,4 +55,5 @@ export enum LogContext {
   TASKS = 'tasks',
   LICENSE = 'license',
   LOCAL_STORAGE = 'local-storage',
+  INNOVATION_FLOW = 'innovation-flow',
 }

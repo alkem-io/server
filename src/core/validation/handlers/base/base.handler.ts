@@ -63,7 +63,7 @@ import {
 import { VisualUploadImageInput } from '@domain/common/visual/dto/visual.dto.upload.image';
 import { CreateInvitationExistingUserOnCommunityInput } from '@domain/community/community/dto/community.dto.invite.existing.user';
 import { CreateInvitationExternalUserOnCommunityInput } from '@domain/community/community/dto/community.dto.invite.external.user';
-import { UpdateInnovationFlowInput } from '@domain/collaboration/innovation-flow';
+import { UpdateInnovationFlowInput } from '@domain/collaboration/innovation-flow/dto';
 import {
   CreateCalloutFramingInput,
   UpdateCalloutFramingInput,
