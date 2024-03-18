@@ -56,7 +56,7 @@ export class ActivityAdapter {
 
     const challenge = eventData.challenge;
 
-    const spaceID = challenge.account.spaceID;
+    const spaceID = challenge.account.space.id;
 
     const collaborationID = await this.getCollaborationIdForSpace(spaceID);
     const description = challenge.profile.displayName;

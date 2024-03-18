@@ -33,7 +33,9 @@ export class OpportunityResolverMutations {
       opportunityData.ID,
       {
         relations: {
-          account: true,
+          account: {
+            space: true,
+          },
         },
       }
     );
@@ -43,7 +45,7 @@ export class OpportunityResolverMutations {
         LogContext.CHALLENGES
       );
     }
-    const spaceID = opportunity.account.spaceID;
+    const spaceID = opportunity.account.space.id;
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       opportunity.authorization,

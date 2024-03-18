@@ -89,7 +89,9 @@ export class ConversionResolverMutations {
       convertOpportunityToChallengeData.opportunityID,
       {
         relations: {
-          account: true,
+          account: {
+            space: true,
+          },
         },
       }
     );
@@ -99,7 +101,7 @@ export class ConversionResolverMutations {
         LogContext.CHALLENGES
       );
     }
-    const spaceID = opportunity.account.spaceID;
+    const spaceID = opportunity.account.space.id;
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       this.authorizationGlobalAdminPolicy,

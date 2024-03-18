@@ -217,7 +217,9 @@ export class SpaceResolverMutations {
       preferenceData.challengeID,
       {
         relations: {
-          account: true,
+          account: {
+            space: true,
+          },
         },
       }
     );
@@ -227,7 +229,7 @@ export class SpaceResolverMutations {
         LogContext.CHALLENGES
       );
     }
-    const spaceID = challenge.account.spaceID;
+    const spaceID = challenge.account.space.id;
 
     const preferenceSet = await this.challengeService.getPreferenceSetOrFail(
       challenge.id

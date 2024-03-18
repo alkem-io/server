@@ -41,8 +41,6 @@ export class AccountService {
   ): Promise<IAccount> {
     const account: IAccount = new Account();
 
-    account.spaceID = ''; // set later
-
     ///////////
     // Create the contextual elements for the account
 
@@ -244,7 +242,7 @@ export class AccountService {
     account: IAccount,
     hostOrgID: string
   ): Promise<IAccount> {
-    const spaceID = account.spaceID;
+    const spaceID = account.space.id;
     const organization = await this.organizationService.getOrganizationOrFail(
       hostOrgID,
       { relations: { groups: true, agent: true } }
@@ -279,7 +277,7 @@ export class AccountService {
     const organizations =
       await this.organizationService.organizationsWithCredentials({
         type: AuthorizationCredential.SPACE_HOST,
-        resourceID: account.spaceID,
+        resourceID: account.space.id,
       });
     if (organizations.length == 0) {
       return undefined;

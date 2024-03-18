@@ -1,4 +1,4 @@
-import { Column, Entity, JoinColumn, OneToMany, OneToOne } from 'typeorm';
+import { Entity, JoinColumn, OneToMany, OneToOne } from 'typeorm';
 import { IAccount } from '@domain/challenge/account/account.interface';
 import { TemplatesSet } from '@domain/template/templates-set/templates.set.entity';
 import { License } from '@domain/license/license/license.entity';
@@ -6,6 +6,7 @@ import { SpaceDefaults } from '../space.defaults/space.defaults.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { Challenge } from '../challenge/challenge.entity';
 import { Opportunity } from '../opportunity';
+import { Space } from '../space/space.entity';
 @Entity()
 export class Account extends AuthorizableEntity implements IAccount {
   @OneToOne(() => License, {
@@ -44,6 +45,6 @@ export class Account extends AuthorizableEntity implements IAccount {
   })
   opportunities?: Opportunity[];
 
-  @Column()
-  spaceID!: string;
+  @OneToOne(() => Space, space => space.account)
+  space!: Space;
 }

@@ -119,7 +119,6 @@ export class SpaceService {
     // remove context before saving as want to control that creation
     space.context = undefined;
     await this.spaceRepository.save(space);
-    space.account.spaceID = space.id;
 
     await this.accountService.setAccountHost(
       space.account,
