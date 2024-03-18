@@ -22,7 +22,6 @@ import { CommunityAuthorizationService } from '@domain/community/community/commu
 import { CollaborationAuthorizationService } from '@domain/collaboration/collaboration/collaboration.service.authorization';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 import { ILicense } from '@domain/license/license/license.interface';
-import { LicenseResolverService } from '@services/infrastructure/license-resolver/license.resolver.service';
 import { SpaceSettingsService } from '../space.settings/space.settings.service';
 
 @Injectable()
@@ -36,20 +35,39 @@ export class OpportunityAuthorizationService {
     private communityAuthorizationService: CommunityAuthorizationService,
     private collaborationAuthorizationService: CollaborationAuthorizationService,
     private spaceSettingsService: SpaceSettingsService,
-    private licenseResolverService: LicenseResolverService,
     private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService
   ) {}
 
   async applyAuthorizationPolicy(
-    opportunity: IOpportunity,
+    opportunityInput: IOpportunity,
     challengeAuthorization: IAuthorizationPolicy | undefined
   ): Promise<IOpportunity> {
-    const license = await this.licenseResolverService.getlicenseForSpace(
-      opportunity.spaceID
+    const opportunity = await this.opportunityService.getOpportunityOrFail(
+      opportunityInput.id,
+      {
+        relations: {
+          account: {
+            license: true,
+          },
+          community: {
+            policy: true,
+          },
+        },
+      }
     );
-    const communityPolicy = await this.getCommunityPolicyWithSettings(
-      opportunity
-    );
+    if (
+      !opportunity.account ||
+      !opportunity.account.license ||
+      !opportunity.community ||
+      !opportunity.community.policy
+    ) {
+      throw new RelationshipNotFoundException(
+        `Unable to load entities to reset auth for challenge ${opportunity.id} `,
+        LogContext.CHALLENGES
+      );
+    }
+    const license = opportunity.account.license;
+    const communityPolicy = opportunity.community.policy;
 
     // Start with parent authorization
     opportunity.authorization =
@@ -179,18 +197,13 @@ export class OpportunityAuthorizationService {
   ): Promise<IOpportunity> {
     await this.opportunityService.save(opportunityInput);
 
-    let opportunity =
+    const opportunity =
       await this.propagateAuthorizationToCommunityCollaborationAgent(
         opportunityInput,
         policy,
         license
       );
-    opportunity = await this.propagateAuthorizationToProfileContext(
-      opportunity
-    );
-    return await this.propagateAuthorizationToProjectsInnovationFlow(
-      opportunity
-    );
+    return await this.propagateAuthorizationToProfileContext(opportunity);
   }
 
   private async propagateAuthorizationToProfileContext(
@@ -294,34 +307,6 @@ export class OpportunityAuthorizationService {
         opportunity.agent.authorization,
         opportunity.authorization
       );
-    return await this.opportunityService.save(opportunity);
-  }
-
-  public async propagateAuthorizationToProjectsInnovationFlow(
-    opportunityBase: IOpportunity
-  ): Promise<IOpportunity> {
-    const opportunity = await this.opportunityService.getOpportunityOrFail(
-      opportunityBase.id,
-      {
-        relations: {
-          projects: true,
-        },
-      }
-    );
-    if (!opportunity.projects)
-      throw new RelationshipNotFoundException(
-        `Unable to load child entities for opportunity: ${opportunity.id} `,
-        LogContext.CHALLENGES
-      );
-
-    for (const project of opportunity.projects) {
-      project.authorization =
-        this.authorizationPolicyService.inheritParentAuthorization(
-          project.authorization,
-          opportunity.authorization
-        );
-    }
-
     return await this.opportunityService.save(opportunity);
   }
 }

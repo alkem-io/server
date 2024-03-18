@@ -6,11 +6,9 @@ import { IBaseChallenge } from './base.challenge.interface';
 import { Agent } from '@domain/agent/agent/agent.entity';
 import { Collaboration } from '../../collaboration/collaboration/collaboration.entity';
 import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
+import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
 
-export abstract class BaseChallenge
-  extends NameableEntity
-  implements IBaseChallenge
-{
+export class BaseChallenge extends NameableEntity implements IBaseChallenge {
   @Column({
     unique: true,
   })
@@ -47,6 +45,14 @@ export abstract class BaseChallenge
 
   @Column('text')
   settingsStr: string = '';
+
+  @OneToOne(() => StorageAggregator, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  storageAggregator?: StorageAggregator;
 
   constructor() {
     super();

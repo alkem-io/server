@@ -31,7 +31,6 @@ import { CommunityAuthorizationService } from '@domain/community/community/commu
 import { CollaborationAuthorizationService } from '@domain/collaboration/collaboration/collaboration.service.authorization';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 import { ILicense } from '@domain/license/license/license.interface';
-import { LicenseResolverService } from '@services/infrastructure/license-resolver/license.resolver.service';
 import { SpaceSettingsService } from '../space.settings/space.settings.service';
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
@@ -49,7 +48,6 @@ export class ChallengeAuthorizationService {
     private spaceSettingsService: SpaceSettingsService,
     private contextAuthorizationService: ContextAuthorizationService,
     private communityAuthorizationService: CommunityAuthorizationService,
-    private licenseResolverService: LicenseResolverService,
     private collaborationAuthorizationService: CollaborationAuthorizationService
   ) {}
 
@@ -57,9 +55,31 @@ export class ChallengeAuthorizationService {
     challengeInput: IChallenge,
     parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<IChallenge> {
-    const license = await this.licenseResolverService.getlicenseForSpace(
-      challengeInput.spaceID
+    const challenge = await this.challengeService.getChallengeOrFail(
+      challengeInput.id,
+      {
+        relations: {
+          account: {
+            license: true,
+          },
+          community: {
+            policy: true,
+          },
+        },
+      }
     );
+    if (
+      !challenge.account ||
+      !challenge.account.license ||
+      !challenge.community ||
+      !challenge.community.policy
+    ) {
+      throw new RelationshipNotFoundException(
+        `Unable to load entities to reset auth for challenge ${challenge.id} `,
+        LogContext.CHALLENGES
+      );
+    }
+    const license = challenge.account.license;
 
     const communityPolicy = await this.getCommunityPolicyWithSettings(
       challengeInput
@@ -279,7 +299,6 @@ export class ChallengeAuthorizationService {
       {
         relations: {
           opportunities: true,
-          childChallenges: true,
           storageAggregator: true,
         },
       }
@@ -295,15 +314,6 @@ export class ChallengeAuthorizationService {
         challenge.storageAggregator,
         challenge.authorization
       );
-
-    if (challenge.childChallenges) {
-      for (const childChallenge of challenge.childChallenges) {
-        await this.applyAuthorizationPolicy(
-          childChallenge,
-          challenge.authorization
-        );
-      }
-    }
 
     for (const opportunity of challenge.opportunities) {
       await this.opportunityAuthorizationService.applyAuthorizationPolicy(

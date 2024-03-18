@@ -1,6 +1,7 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { intersection } from 'lodash';
+import { IActivity } from '@platform/activity';
 import { ActivityService } from '@platform/activity/activity.service';
 import { ActivityFeedRoles } from '@domain/activity-feed/activity.feed.roles.enum';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
@@ -26,8 +27,11 @@ type ActivityFeedFilters = {
   spaceIds?: Array<string>;
   roles?: Array<ActivityFeedRoles>;
   pagination?: PaginationArgs;
-  onlyUnique?: boolean;
   excludeTypes?: Array<ActivityEventType>;
+};
+
+type ActivityFeedGroupedFilters = ActivityFeedFilters & {
+  limit?: number;
 };
 
 @Injectable()
@@ -50,7 +54,6 @@ export class ActivityFeedService {
       types = [],
       myActivity = false,
       pagination: paginationArgs = {},
-      onlyUnique = false,
       excludeTypes,
       ...qualifyingSpacesOptions
     } = filters ?? {};
@@ -71,8 +74,37 @@ export class ActivityFeedService {
       visibility: true,
       paginationArgs,
       sort: 'DESC', // the most recent first
-      onlyUnique,
       excludeTypes,
+    });
+  }
+
+  public async getGroupedActivityFeed(
+    agentInfo: AgentInfo,
+    filters?: ActivityFeedGroupedFilters
+  ): Promise<IActivityLogEntry[]> {
+    const {
+      types = [],
+      myActivity = false,
+      limit,
+      ...qualifyingSpacesOptions
+    } = filters ?? {};
+    // get all Spaces the user has credentials for
+    const spaceIds = await this.getQualifyingSpaces(
+      agentInfo,
+      qualifyingSpacesOptions
+    );
+    // get the collaborations with read access based on the filtered Spaces
+    const collaborationIds = await this.getAllAuthorizedCollaborations(
+      agentInfo,
+      spaceIds
+    );
+
+    return this.getGroupedActivity(collaborationIds, {
+      types,
+      userID: myActivity ? agentInfo.userID : undefined,
+      visibility: true,
+      limit: limit ? limit : undefined,
+      sort: 'DESC', // the most recent first
     });
   }
 
@@ -135,7 +167,6 @@ export class ActivityFeedService {
       userID?: string;
       sort?: 'ASC' | 'DESC';
       paginationArgs?: PaginationArgs;
-      onlyUnique?: boolean;
       excludeTypes?: ActivityEventType[];
     }
   ) {
@@ -160,6 +191,54 @@ export class ActivityFeedService {
       pageInfo: rawPaginatedActivities.pageInfo,
       items: convertedActivities,
     };
+  }
+
+  private async getGroupedActivity(
+    collaborationIds: string[],
+    options?: {
+      types?: ActivityEventType[];
+      visibility?: boolean;
+      userID?: string;
+      sort?: 'ASC' | 'DESC';
+      limit?: number;
+    }
+  ) {
+    const MAX_REQUESTED_GROUPED_ACTIVITIES = 100;
+    const DEFAULT_GROUPED_ACTIVITIES_LIMIT = 10;
+    const requestedActivitiesLimit =
+      options?.limit ?? DEFAULT_GROUPED_ACTIVITIES_LIMIT;
+    let rawPaginatedActivities: IActivity[] = [];
+    let convertedActivities: IActivityLogEntry[] = [];
+    let requestedActivitiesNumber = requestedActivitiesLimit;
+    let requestedAndCovertedActivitiesDifference = 0;
+
+    // the requested and converted number of activities may not be the same,
+    // we will try to refetch the requested amount of activities + difference between requested and converted
+    // we have a hard limit of 100 requested activities to prevent infinite loops
+    do {
+      rawPaginatedActivities = await this.activityService.getGroupedActivity(
+        collaborationIds,
+        {
+          ...options,
+          limit: requestedActivitiesNumber,
+        }
+      );
+
+      convertedActivities = (
+        await this.activityLogService.convertRawActivityToResults(
+          rawPaginatedActivities
+        )
+      ).filter((x): x is IActivityLogEntry => !!x);
+
+      requestedAndCovertedActivitiesDifference =
+        requestedActivitiesNumber - convertedActivities.length;
+      requestedActivitiesNumber =
+        requestedActivitiesNumber + requestedAndCovertedActivitiesDifference;
+
+      if (requestedActivitiesNumber > MAX_REQUESTED_GROUPED_ACTIVITIES) break;
+    } while (convertedActivities.length < requestedActivitiesLimit);
+
+    return convertedActivities;
   }
 
   private async getAllAuthorizedCollaborations(

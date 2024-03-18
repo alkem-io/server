@@ -1,5 +1,8 @@
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
+import {
+  AuthorizationAgentPrivilege,
+  CurrentUser,
+} from '@src/common/decorators';
 import { IOpportunity } from './opportunity.interface';
 import { OpportunityService } from './opportunity.service';
 import { IContext } from '@domain/context/context/context.interface';
@@ -20,11 +23,17 @@ import {
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { AgentInfo } from '@core/authentication/agent-info';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 
 @Resolver(() => IOpportunity)
 export class OpportunityResolverFields {
-  constructor(private opportunityService: OpportunityService) {}
+  constructor(
+    private opportunityService: OpportunityService,
+    private authorizationService: AuthorizationService
+  ) {}
 
+  // Check authorization inside the field resolver
   @UseGuards(GraphqlGuard)
   @ResolveField('community', () => ICommunity, {
     nullable: true,
@@ -34,31 +43,47 @@ export class OpportunityResolverFields {
     @Parent() opportunity: IOpportunity,
     @Loader(JourneyCommunityLoaderCreator, { parentClassRef: Opportunity })
     loader: ILoader<ICommunity>
-  ) {
-    return loader.load(opportunity.id);
+  ): Promise<ICommunity> {
+    const community = await loader.load(opportunity.id);
+    // Do not check for READ access here, rely on per field check on resolver in Community
+    // await this.authorizationService.grantAccessOrFail(
+    //   agentInfo,
+    //   community.authorization,
+    //   AuthorizationPrivilege.READ,
+    //   `read community on space: ${community.id}`
+    // );
+    return community;
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  // Check authorization inside the field resolver
   @UseGuards(GraphqlGuard)
   @ResolveField('context', () => IContext, {
     nullable: true,
     description: 'The context for the Opportunity.',
   })
-  @Profiling.api
   async context(
     @Parent() opportunity: IOpportunity,
+    @CurrentUser() agentInfo: AgentInfo,
     @Loader(JourneyContextLoaderCreator, { parentClassRef: Opportunity })
     loader: ILoader<IContext>
-  ) {
-    return loader.load(opportunity.id);
+  ): Promise<IContext> {
+    const context = await loader.load(opportunity.id);
+    // Check if the user can read the Context entity, not the space
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      context.authorization,
+      AuthorizationPrivilege.READ,
+      `read context on opportunity: ${context.id}`
+    );
+    return context;
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('storageAggregator', () => IStorageAggregator, {
     nullable: true,
     description: 'The StorageAggregator in use by this Opportunity',
   })
-  @UseGuards(GraphqlGuard)
   async storageAggregator(
     @Parent() opportunity: IOpportunity
   ): Promise<IStorageAggregator> {
@@ -73,29 +98,38 @@ export class OpportunityResolverFields {
     nullable: true,
     description: 'The collaboration for the Opportunity.',
   })
-  @Profiling.api
   async collaboration(
     @Parent() opportunity: IOpportunity,
     @Loader(JourneyCollaborationLoaderCreator, { parentClassRef: Opportunity })
     loader: ILoader<ICollaboration>
-  ) {
+  ): Promise<ICollaboration> {
     return loader.load(opportunity.id);
   }
 
+  // Check authorization inside the field resolver
+  @UseGuards(GraphqlGuard)
   @ResolveField('profile', () => IProfile, {
     nullable: false,
     description: 'The Profile for the Opportunity.',
   })
-  @Profiling.api
-  async profile(@Parent() opportunity: IOpportunity) {
-    return await this.opportunityService.getProfile(opportunity);
+  async profile(
+    @Parent() opportunity: IOpportunity,
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<IProfile> {
+    const profile = await this.opportunityService.getProfile(opportunity);
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      profile.authorization,
+      AuthorizationPrivilege.READ,
+      `read profile on opportunity: ${profile.displayName}`
+    );
+    return profile;
   }
 
   @ResolveField('metrics', () => [INVP], {
     nullable: true,
     description: 'Metrics about the activity within this Opportunity.',
   })
-  @Profiling.api
   async metrics(@Parent() opportunity: IOpportunity) {
     return await this.opportunityService.getMetrics(opportunity);
   }
@@ -104,12 +138,11 @@ export class OpportunityResolverFields {
     nullable: true,
     description: 'The parent entity name (challenge) ID.',
   })
-  @Profiling.api
   async parentNameID(
     @Parent() opportunity: IOpportunity,
     @Loader(OpportunityParentNameLoaderCreator)
     loader: ILoader<string>
-  ) {
+  ): Promise<string> {
     return loader.load(opportunity.id);
   }
 }

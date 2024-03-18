@@ -1,54 +1,30 @@
 /* eslint-disable @typescript-eslint/no-inferrable-types */
-import {
-  Column,
-  Entity,
-  JoinColumn,
-  ManyToOne,
-  OneToMany,
-  OneToOne,
-} from 'typeorm';
+import { Entity, ManyToOne, OneToMany } from 'typeorm';
 import { Space } from '@domain/challenge/space/space.entity';
 import { Opportunity } from '@domain/challenge/opportunity/opportunity.entity';
 import { IChallenge } from './challenge.interface';
 import { BaseChallenge } from '../base-challenge/base.challenge.entity';
-import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
+import { Account } from '../account/account.entity';
 
 @Entity()
 export class Challenge extends BaseChallenge implements IChallenge {
-  @OneToMany(() => Opportunity, opportunity => opportunity.challenge, {
-    eager: false,
-    cascade: true,
-  })
-  opportunities?: Opportunity[];
-
-  @OneToMany(() => Challenge, challenge => challenge.parentChallenge, {
-    eager: false,
-    cascade: true,
-  })
-  childChallenges?: Challenge[];
-
-  @ManyToOne(() => Challenge, challenge => challenge.childChallenges, {
-    eager: false,
-    cascade: false,
-    onDelete: 'CASCADE',
-  })
-  parentChallenge?: Challenge;
-
   @ManyToOne(() => Space, space => space.challenges, {
     eager: false,
     cascade: false,
     onDelete: 'CASCADE',
   })
-  parentSpace?: Space;
+  space?: Space;
 
-  @Column()
-  spaceID!: string;
-
-  @OneToOne(() => StorageAggregator, {
+  @ManyToOne(() => Account, account => account.challenges, {
     eager: false,
-    cascade: true,
+    cascade: false,
     onDelete: 'SET NULL',
   })
-  @JoinColumn()
-  storageAggregator?: StorageAggregator;
+  account!: Account;
+
+  @OneToMany(() => Opportunity, opportunity => opportunity.challenge, {
+    eager: false,
+    cascade: true,
+  })
+  opportunities?: Opportunity[];
 }

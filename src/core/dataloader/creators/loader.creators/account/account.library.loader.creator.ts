@@ -1,22 +1,22 @@
 import { EntityManager } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
-import { Space } from '@domain/challenge/space/space.entity';
+import { Account } from '@domain/challenge/account/account.entity';
+import { ITemplatesSet } from '@domain/template/templates-set';
 import { createTypedRelationDataLoader } from '../../../utils';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
-import { ILicense } from '@domain/license/license/license.interface';
 
 @Injectable()
-export class SpaceLicenseLoaderCreator
-  implements DataLoaderCreator<ILicense[]>
+export class AccountLibraryLoaderCreator
+  implements DataLoaderCreator<ITemplatesSet[]>
 {
   constructor(@InjectEntityManager() private manager: EntityManager) {}
 
-  create(options?: DataLoaderCreatorOptions<ILicense[]>) {
+  create(options?: DataLoaderCreatorOptions<ITemplatesSet[]>) {
     return createTypedRelationDataLoader(
       this.manager,
-      Space,
-      { license: { featureFlags: true } },
+      Account,
+      { library: true },
       this.constructor.name,
       options
     );

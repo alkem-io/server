@@ -14,7 +14,7 @@ import { InnovationFlowTemplateService } from '@domain/template/innovation-flow-
 import { ITemplatesSet } from '@domain/template/templates-set';
 import { TemplatesSetService } from '@domain/template/templates-set/templates.set.service';
 import { IInnovationFlowTemplate } from '@domain/template/innovation-flow-template/innovation.flow.template.interface';
-import { CreateInnovationFlowInput } from '@domain/collaboration/innovation-flow';
+import { CreateInnovationFlowInput } from '@domain/collaboration/innovation-flow/dto';
 import { templatesSetDefaults } from './definitions/space.defaults.templates';
 import { innovationFlowStatesDefault } from './definitions/space.defaults.innovation.flow';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
@@ -104,10 +104,12 @@ export class SpaceDefaultsService {
       const space = await this.spaceRepository.findOne({
         where: { id: spaceID },
         relations: {
-          defaults: true,
+          account: {
+            defaults: true,
+          },
         },
       });
-      if (space) spaceDefaults = space?.defaults;
+      if (space) spaceDefaults = space?.account?.defaults;
     }
 
     if (!spaceDefaults)
@@ -205,7 +207,7 @@ export class SpaceDefaultsService {
     return calloutInputs;
   }
 
-  public async addDefaultTemplatesToSpace(
+  public async addDefaultTemplatesToSpaceLibrary(
     templatesSet: ITemplatesSet,
     storageAggregator: IStorageAggregator
   ): Promise<ITemplatesSet> {

@@ -1,6 +1,8 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IInnovationFlowState } from './innovation.flow.state.interface';
+import { ValidationException } from '@common/exceptions';
+import { LogContext } from '@common/enums';
 
 @Injectable()
 export class InnovationFlowStatesService {
@@ -24,5 +26,22 @@ export class InnovationFlowStatesService {
 
   private deserializeStates(statesStr: string): IInnovationFlowState[] {
     return JSON.parse(statesStr);
+  }
+
+  public validateDefinition(states: IInnovationFlowState[]) {
+    if (states.length === 0) {
+      throw new ValidationException(
+        `At least one state must be defined: ${states}`,
+        LogContext.INNOVATION_FLOW
+      );
+    }
+    const stateNames = states.map(state => state.displayName);
+    const uniqueStateNames = new Set(stateNames);
+    if (uniqueStateNames.size !== stateNames.length) {
+      throw new ValidationException(
+        `State names must be unique: ${stateNames}`,
+        LogContext.INNOVATION_FLOW
+      );
+    }
   }
 }

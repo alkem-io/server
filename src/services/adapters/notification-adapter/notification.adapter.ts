@@ -19,7 +19,7 @@ import { NotificationInputUserRemoved } from './dto/notification.dto.input.user.
 import { NotificationInputWhiteboardCreated } from './dto/notification.dto.input.whiteboard.created';
 import { NotificationInputDiscussionComment } from './dto/notification.dto.input.discussion.comment';
 import { NotificationInputBase } from './dto/notification.dto.input.base';
-import { stringifyWithoutAuthorization } from '@common/utils';
+import { stringifyWithoutAuthorizationMetaInfo } from '@common/utils';
 import { NotificationInputUserMessage } from './dto/notification.dto.input.user.message';
 import { NotificationInputOrganizationMessage } from './dto/notification.input.organization.message';
 import { NotificationInputCommunityLeadsMessage } from './dto/notification.dto.input.community.leads.message';
@@ -421,7 +421,7 @@ export class NotificationAdapter {
     eventType: NotificationEventType
   ) {
     // Stringify without authorization information
-    const loggedData = stringifyWithoutAuthorization(eventData);
+    const loggedData = stringifyWithoutAuthorizationMetaInfo(eventData);
     this.logger.verbose?.(
       `[${eventType}] - received: ${loggedData}`,
       LogContext.NOTIFICATIONS

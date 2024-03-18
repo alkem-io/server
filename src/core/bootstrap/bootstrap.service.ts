@@ -23,12 +23,10 @@ import { OrganizationService } from '@domain/community/organization/organization
 import { OrganizationAuthorizationService } from '@domain/community/organization/organization.service.authorization';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AdminAuthorizationService } from '@platform/admin/authorization/admin.authorization.service';
-import { CommunicationService } from '@domain/communication/communication/communication.service';
 import { PlatformService } from '@platform/platfrom/platform.service';
 import { CreateSpaceInput } from '@domain/challenge/space/dto/space.dto.create';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { PlatformAuthorizationService } from '@platform/platfrom/platform.service.authorization';
-import { InnovationHubService } from '@domain/innovation-hub';
 import { NameReporterService } from '@services/external/elasticsearch/name-reporter/name.reporter.service';
 
 @Injectable()
@@ -43,11 +41,9 @@ export class BootstrapService {
     private configService: ConfigService,
     private organizationService: OrganizationService,
     private platformService: PlatformService,
-    private communicationService: CommunicationService,
     private organizationAuthorizationService: OrganizationAuthorizationService,
     private platformAuthorizationService: PlatformAuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
-    private innovationHubService: InnovationHubService,
     @InjectRepository(Space)
     private spaceRepository: Repository<Space>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -278,10 +274,12 @@ export class BootstrapService {
 
       const spaceInput: CreateSpaceInput = {
         nameID: DEFAULT_SPACE_NAMEID,
-        hostID: DEFAULT_HOST_ORG_NAMEID,
         profileData: {
           displayName: DEFAULT_SPACE_DISPLAYNAME,
           tagline: 'An empty space to be populated',
+        },
+        accountData: {
+          hostID: DEFAULT_HOST_ORG_NAMEID,
         },
       };
       const space = await this.spaceService.createSpace(spaceInput);

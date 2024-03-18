@@ -13,18 +13,18 @@ import {
   CreateOpportunityInput,
   IOpportunity,
 } from '@domain/challenge/opportunity';
-import { AuthorizationPrivilege } from '@common/enums';
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { AgentInfo } from '@core/authentication';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { ChallengeAuthorizationService } from '@domain/challenge/challenge/challenge.service.authorization';
 import { OpportunityAuthorizationService } from '@domain/challenge/opportunity/opportunity.service.authorization';
 import { IChallenge } from './challenge.interface';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
-import { CreateChallengeOnChallengeInput } from './dto/challenge.dto.create.in.challenge';
 import { OpportunityCreatedPayload } from './dto/challenge.opportunity.created.payload';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { SUBSCRIPTION_OPPORTUNITY_CREATED } from '@common/constants';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
+import { EntityNotInitializedException } from '@common/exceptions';
 
 @Resolver()
 export class ChallengeResolverMutations {
@@ -38,35 +38,6 @@ export class ChallengeResolverMutations {
     @Inject(SUBSCRIPTION_OPPORTUNITY_CREATED)
     private opportunityCreatedSubscription: PubSubEngine
   ) {}
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IChallenge, {
-    description: 'Creates a new child challenge within the parent Challenge.',
-  })
-  @Profiling.api
-  async createChildChallenge(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('challengeData') challengeData: CreateChallengeOnChallengeInput
-  ): Promise<IChallenge> {
-    const challenge = await this.challengeService.getChallengeOrFail(
-      challengeData.challengeID
-    );
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      challenge.authorization,
-      AuthorizationPrivilege.CREATE,
-      `challengeCreate: ${challenge.nameID}`
-    );
-    const childChallenge = await this.challengeService.createChildChallenge(
-      challengeData,
-      agentInfo
-    );
-
-    return await this.challengeAuthorizationService.applyAuthorizationPolicy(
-      childChallenge,
-      challenge.authorization
-    );
-  }
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IOpportunity, {
@@ -84,9 +55,20 @@ export class ChallengeResolverMutations {
           community: {
             policy: true,
           },
+          account: true,
         },
       }
     );
+    if (
+      !challenge.account ||
+      !challenge.community ||
+      !challenge.community.policy
+    ) {
+      throw new EntityNotInitializedException(
+        `not able to load all data for creating opportunity on challenge: ${challenge.nameID}`,
+        LogContext.CHALLENGES
+      );
+    }
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       challenge.authorization,
@@ -105,6 +87,7 @@ export class ChallengeResolverMutations {
     }
     const opportunity = await this.challengeService.createOpportunity(
       opportunityData,
+      challenge.account,
       agentInfo
     );
 
@@ -113,11 +96,17 @@ export class ChallengeResolverMutations {
       challenge.authorization
     );
 
+    const opportunityWithAuth =
+      await this.opportunityAuthorizationService.applyAuthorizationPolicy(
+        opportunity,
+        challenge.authorization
+      );
+
     this.contributionReporter.opportunityCreated(
       {
         id: opportunity.id,
         name: opportunity.profile.displayName,
-        space: opportunity.spaceID,
+        space: challenge.account.spaceID,
       },
       {
         id: agentInfo.userID,
@@ -141,7 +130,7 @@ export class ChallengeResolverMutations {
       opportunityCreatedEvent
     );
 
-    return opportunity;
+    return opportunityWithAuth;
   }
 
   @UseGuards(GraphqlGuard)
@@ -155,8 +144,14 @@ export class ChallengeResolverMutations {
   ): Promise<IChallenge> {
     const challenge = await this.challengeService.getChallengeOrFail(
       challengeData.ID,
-      { relations: { profile: true } }
+      { relations: { profile: true, account: true } }
     );
+    if (!challenge.account) {
+      throw new EntityNotInitializedException(
+        `account not found on challenge: ${challenge.nameID}`,
+        LogContext.CHALLENGES
+      );
+    }
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       challenge.authorization,
@@ -171,7 +166,7 @@ export class ChallengeResolverMutations {
       {
         id: challenge.id,
         name: challenge.profile.displayName,
-        space: challenge.spaceID ?? '',
+        space: challenge.account.spaceID ?? '',
       },
       {
         id: agentInfo.userID,

@@ -66,7 +66,10 @@ export class BaseChallengeService {
     baseChallenge.settingsStr = this.spaceSettingsService.serializeSettings(
       this.spaceDefaultsService.getDefaultSpaceSettings()
     );
-    await this.isNameAvailableOrFail(baseChallengeData.nameID, spaceID);
+    await this.isNameAvailableInAccountOrFail(
+      baseChallengeData.nameID,
+      spaceID
+    );
 
     baseChallenge.community = await this.communityService.createCommunity(
       baseChallengeData.profileData.displayName,
@@ -216,12 +219,12 @@ export class BaseChallengeService {
     return challenge;
   }
 
-  public async isNameAvailableOrFail(nameID: string, nameableScopeID: string) {
+  public async isNameAvailableInAccountOrFail(
+    nameID: string,
+    accountID: string
+  ) {
     if (
-      !(await this.namingService.isNameIdAvailableInSpace(
-        nameID,
-        nameableScopeID
-      ))
+      !(await this.namingService.isNameIdAvailableInAccount(nameID, accountID))
     )
       throw new ValidationException(
         `Unable to create entity: the provided nameID is already taken: ${nameID}`,
@@ -277,6 +280,28 @@ export class BaseChallengeService {
         LogContext.CONTEXT
       );
     return context;
+  }
+
+  public async getStorageAggregator(
+    challengeId: string,
+    repository: Repository<BaseChallenge>
+  ): Promise<IContext> {
+    const challengeWithContext = await this.getBaseChallengeOrFail(
+      challengeId,
+      repository,
+      {
+        relations: {
+          storageAggregator: true,
+        },
+      }
+    );
+    const storageAggregator = challengeWithContext.storageAggregator;
+    if (!storageAggregator)
+      throw new RelationshipNotFoundException(
+        `Unable to load storage aggregator for challenge ${challengeId} `,
+        LogContext.CONTEXT
+      );
+    return storageAggregator;
   }
 
   public async getProfile(

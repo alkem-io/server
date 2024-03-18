@@ -29,8 +29,6 @@ import { ContributionReporterService } from '@services/external/elasticsearch/co
 import { NameReporterService } from '@services/external/elasticsearch/name-reporter/name.reporter.service';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { LogContext } from '@common/enums';
-import { ISpaceDefaults } from '../space.defaults/space.defaults.interface';
-import { UpdateSpaceDefaultsInput } from './dto/space.dto.update.defaults';
 import { UpdateChallengeSettingsInput } from '../challenge/dto/challenge.dto.update.settings';
 import { UpdateSpaceSettingsOnSpaceInput } from './dto/space.dto.update.settings';
 
@@ -127,31 +125,6 @@ export class SpaceResolverMutations {
 
     return updatedSpace;
   }
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => ISpaceDefaults, {
-    description: 'Updates the specified SpaceDefaults.',
-  })
-  async updateSpaceDefaults(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('spaceDefaultsData')
-    spaceDefaultsData: UpdateSpaceDefaultsInput
-  ): Promise<ISpaceDefaults> {
-    const space = await this.spaceService.getSpaceOrFail(
-      spaceDefaultsData.spaceID,
-      {
-        relations: {
-          defaults: true,
-        },
-      }
-    );
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      space.authorization,
-      AuthorizationPrivilege.UPDATE,
-      `update spaceDefaults: ${space.id}`
-    );
-    return await this.spaceService.updateSpaceDefaults(spaceDefaultsData);
-  }
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => ISpace, {
@@ -222,8 +195,20 @@ export class SpaceResolverMutations {
     @Args('settignsData') settingsData: UpdateChallengeSettingsInput
   ): Promise<IChallenge> {
     const challenge = await this.challengeService.getChallengeOrFail(
-      settingsData.challengeID
+      settingsData.challengeID,
+      {
+        relations: {
+          account: true,
+        },
+      }
     );
+    if (!challenge.account) {
+      throw new EntityNotInitializedException(
+        `Unable to find account for ${challenge.nameID}`,
+        LogContext.CHALLENGES
+      );
+    }
+    const spaceID = challenge.account.spaceID;
 
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -232,9 +217,7 @@ export class SpaceResolverMutations {
       `challenge settings update: ${challenge.id}`
     );
 
-    const space = await this.spaceService.getSpaceOrFail(
-      this.challengeService.getSpaceID(challenge)
-    );
+    const space = await this.spaceService.getSpaceOrFail(spaceID);
     // TODO: pass through the updated settings to the challenge service
     const updatedChallenge = await this.challengeService.updateSpaceSettings(
       challenge,
@@ -279,13 +262,15 @@ export class SpaceResolverMutations {
       challengeData.spaceID,
       {
         relations: {
-          license: {
-            featureFlags: true,
+          account: {
+            license: {
+              featureFlags: true,
+            },
           },
         },
       }
     );
-    if (!space.license) {
+    if (!space.account || !space.account.license) {
       throw new EntityNotInitializedException(
         `Unabl to load license for Space: ${space.id}`,
         LogContext.CHALLENGES
@@ -326,7 +311,7 @@ export class SpaceResolverMutations {
       {
         id: challenge.id,
         name: challenge.profile.displayName,
-        space: challenge.spaceID ?? '',
+        space: space.id,
       },
       {
         id: agentInfo.userID,

@@ -60,7 +60,7 @@ import { RegisterNewUserResponsePayload } from '@alkemio/matrix-adapter-lib';
 import { BaseMatrixAdapterEventPayload } from '@alkemio/matrix-adapter-lib';
 import { BaseMatrixAdapterEventResponsePayload } from '@alkemio/matrix-adapter-lib/dist/dto/base.event.response.payload';
 import { getRandomId } from '@common/utils/random.id.generator.util';
-import { stringifyWithoutAuthorization } from '@common/utils/stringify.util';
+import { stringifyWithoutAuthorizationMetaInfo } from '@common/utils/stringify.util';
 import { CommunicationTimedOutException } from '@common/exceptions/communication';
 import { CommunicationSendMessageReplyInput } from './dto/communications.dto.message.reply';
 import { CommunicationAddRectionToMessageInput } from './dto/communication.dto.add.reaction';
@@ -818,7 +818,7 @@ export class CommunicationAdapter {
     payload: BaseMatrixAdapterEventPayload
   ): number {
     const randomID = getRandomId();
-    const payloadData = stringifyWithoutAuthorization(payload);
+    const payloadData = stringifyWithoutAuthorizationMetaInfo(payload);
     this.logger.verbose?.(
       `[${event}-${randomID}] - Input payload: ${payloadData}`,
       LogContext.COMMUNICATION_EVENTS
@@ -831,7 +831,7 @@ export class CommunicationAdapter {
     payload: BaseMatrixAdapterEventResponsePayload,
     eventID: number | undefined
   ) {
-    const loggedData = stringifyWithoutAuthorization(payload);
+    const loggedData = stringifyWithoutAuthorizationMetaInfo(payload);
     this.logger.verbose?.(
       `...[${event}-${eventID}] - Response payload: ${loggedData}`,
       LogContext.COMMUNICATION_EVENTS

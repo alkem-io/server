@@ -31,6 +31,10 @@ const createTestSpace = (id: string): ISpace => {
       tagline: '',
       type: 'space',
     },
+    account: {
+      id: `account${id}`,
+      spaceID: `${id}`,
+    },
   };
 };
 

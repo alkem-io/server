@@ -25,6 +25,9 @@ export class InnovationFlowTemplateService {
     innovationFlowTemplateData: CreateInnovationFlowTemplateInput,
     storageAggregator: IStorageAggregator
   ): Promise<IInnovationFlowTemplate> {
+    this.innovationFlowStatesService.validateDefinition(
+      innovationFlowTemplateData.states
+    );
     const innovationFlowTemplate: IInnovationFlowTemplate =
       new InnovationFlowTemplate();
     await this.templateBaseService.initialise(
@@ -77,6 +80,9 @@ export class InnovationFlowTemplateService {
       innovationFlowTemplateData
     );
     if (innovationFlowTemplateData.states) {
+      this.innovationFlowStatesService.validateDefinition(
+        innovationFlowTemplateData.states
+      );
       innovationFlowTemplate.states =
         this.innovationFlowStatesService.serializeStates(
           innovationFlowTemplateData.states

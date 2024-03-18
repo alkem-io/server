@@ -1,21 +1,18 @@
 import { IOpportunity } from '@domain/challenge/opportunity/opportunity.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
-import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { IJourney } from '../base-challenge/journey.interface';
 import { IBaseChallenge } from '../base-challenge/base.challenge.interface';
+import { IAccount } from '../account/account.interface';
 @ObjectType('Challenge', {
   implements: () => [IJourney],
 })
 export abstract class IChallenge extends IBaseChallenge implements IJourney {
   rowId!: number;
-  childChallenges?: IChallenge[];
   opportunities?: IOpportunity[];
 
-  storageAggregator?: IStorageAggregator;
-
-  @Field(() => String, {
-    description: 'The ID of the containing Space.',
+  @Field(() => IAccount, {
     nullable: false,
+    description: 'The Account for this Challenge',
   })
-  spaceID!: string;
+  account!: IAccount;
 }

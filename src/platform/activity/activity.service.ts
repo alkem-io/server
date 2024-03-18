@@ -102,7 +102,6 @@ export class ActivityService {
       userID?: string;
       orderBy?: 'ASC' | 'DESC';
       paginationArgs?: PaginationArgs;
-      onlyUnique?: boolean;
       excludeTypes?: ActivityEventType[];
     }
   ) {
@@ -112,7 +111,6 @@ export class ActivityService {
       userID,
       orderBy = 'DESC',
       paginationArgs = {},
-      onlyUnique = false,
       excludeTypes,
     } = options ?? {};
 
@@ -141,11 +139,69 @@ export class ActivityService {
       qb.andWhere({ type: In(filteredTypes) });
     }
 
-    if (onlyUnique) {
-      qb.groupBy('activity.resourceID, activity.triggeredBy, activity.type');
-    }
-
     return getPaginationResults(qb, paginationArgs, orderBy);
+  }
+
+  public async getGroupedActivity(
+    collaborationIDs: string[],
+    options?: {
+      types?: ActivityEventType[];
+      visibility?: boolean;
+      userID?: string;
+      orderBy?: 'ASC' | 'DESC';
+      limit?: number;
+    }
+  ): Promise<IActivity[]> {
+    const {
+      types,
+      visibility = true,
+      userID,
+      orderBy = 'DESC',
+      limit,
+    } = options ?? {};
+
+    const defaultCondition = `activity.visibility = ${visibility} AND activity.collaborationId IN (${collaborationIDs
+      .map(c => `'${c}'`)
+      .join(',')})`;
+    const typesCondition =
+      types && types.length > 0
+        ? `activity.type IN (${types.map(t => `'${t}'`).join(',')})`
+        : undefined;
+
+    const triggeredByCondition = userID
+      ? `activity.triggeredBy = '${userID}'`
+      : undefined;
+
+    const whereConditions = [
+      defaultCondition,
+      typesCondition,
+      triggeredByCondition,
+    ]
+      .filter(condition => condition !== undefined)
+      .join(' AND ');
+
+    const groupedActivities: {
+      latest: string;
+    }[] = await this.entityManager.connection.query(
+      `
+      SELECT activity.triggeredBy, activity.resourceId, activity.type, MAX(activity.rowId) as latest FROM alkemio.activity
+      WHERE ${whereConditions}
+      group by activity.resourceId, activity.triggeredBy, activity.type
+      order by latest ${orderBy}
+      ${limit ? `LIMIT ${limit}` : ''};
+      `
+    );
+
+    const activityIDs = groupedActivities.map(a => a.latest);
+
+    return this.activityRepository.find({
+      where: {
+        rowId: In(activityIDs),
+      },
+      order: {
+        createdDate: orderBy,
+      },
+    });
   }
 
   async getActivityForMessage(messageID: string): Promise<IActivity | null> {
