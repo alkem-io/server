@@ -194,7 +194,7 @@ export class ActivityService {
 
     const activityIDs = groupedActivities.map(a => a.latest);
 
-    const activities = await this.activityRepository.find({
+    return this.activityRepository.find({
       where: {
         rowId: In(activityIDs),
       },
@@ -202,8 +202,6 @@ export class ActivityService {
         createdDate: orderBy,
       },
     });
-
-    return activities;
   }
 
   async getActivityForMessage(messageID: string): Promise<IActivity | null> {
