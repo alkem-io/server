@@ -51,6 +51,7 @@ import { SpaceDefaultsService } from '@domain/challenge/space.defaults/space.def
 import { TagsetType } from '@common/enums/tagset.type';
 import { IInnovationFlow } from '../innovation-flow/innovation.flow.interface';
 import { CreateCollaborationInput } from './dto/collaboration.dto.create';
+import { Space } from '@domain/challenge/space/space.entity';
 
 @Injectable()
 export class CollaborationService {
@@ -229,8 +230,25 @@ export class CollaborationService {
     );
 
     if (spaceId) {
+      const space = await this.entityManager.findOne(Space, {
+        where: { id: spaceId },
+        relations: {
+          account: true,
+        },
+      });
+      if (!space?.account) {
+        throw new EntityNotFoundException(
+          `Unable to find Space found with the given id: ${spaceId}`,
+          LogContext.COLLABORATION
+        );
+      }
+      const accountID = space.account.id;
       const challengesWithCollab = await this.entityManager.find(Challenge, {
-        where: { spaceID: spaceId },
+        where: {
+          account: {
+            id: accountID,
+          },
+        },
         relations: {
           collaboration: true,
         },
@@ -241,7 +259,11 @@ export class CollaborationService {
         },
       });
       const oppsWithCollab = await this.entityManager.find(Opportunity, {
-        where: { spaceID: spaceId },
+        where: {
+          account: {
+            id: accountID,
+          },
+        },
         relations: {
           collaboration: true,
         },

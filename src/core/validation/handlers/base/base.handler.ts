@@ -4,11 +4,6 @@
 import { CreateActorGroupInput } from '@domain/context/actor-group';
 import { UpdateChallengeInput } from '@domain/challenge/challenge';
 import { UpdateSpaceInput } from '@domain/challenge/space/dto/space.dto.update';
-import {
-  CreateProjectInput,
-  ProjectEventInput,
-  UpdateProjectInput,
-} from '@domain/collaboration/project/dto';
 import { CreateRelationInput } from '@domain/collaboration/relation/relation.dto.create';
 import { CreateUserInput, UpdateUserInput } from '@domain/community/user/dto';
 import { ValidationException } from '@common/exceptions';
@@ -28,7 +23,6 @@ import {
   UpdateUserGroupInput,
 } from '@domain/community/user-group/dto';
 import { CreateChallengeOnSpaceInput } from '@domain/challenge/space/dto/space.dto.create.challenge';
-import { CreateChallengeOnChallengeInput } from '@domain/challenge/challenge/dto/challenge.dto.create.in.challenge';
 import { CreateActorInput, UpdateActorInput } from '@domain/context/actor';
 import { CommunityApplyInput } from '@domain/community/community/dto/community.dto.apply';
 import { CommunicationCreateDiscussionInput } from '@domain/communication/communication/dto/communication.dto.create.discussion';
@@ -87,6 +81,11 @@ import {
 import { UpdateUserPlatformSettingsInput } from '@domain/community/user/dto/user.dto.update.platform.settings';
 import { UpdateInnovationFlowStateInput } from '@domain/collaboration/innovation-flow-states/dto/innovation.flow.state.dto.update';
 import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
+import {
+  CreateAccountInput,
+  UpdateAccountInput,
+} from '@domain/challenge/account/dto';
+import { UpdateAccountDefaultsInput } from '@domain/challenge/account/dto/account.dto.update.defaults';
 
 export class BaseHandler extends AbstractHandler {
   public async handle(
@@ -98,7 +97,6 @@ export class BaseHandler extends AbstractHandler {
       UpdateInnovationFlowInput,
       RoomSendMessageInput,
       OrganizationVerificationEventInput,
-      ProjectEventInput,
       CreateCalloutFramingInput,
       CreateCalloutContributionPolicyInput,
       CreateCalloutContributionDefaultsInput,
@@ -112,20 +110,21 @@ export class BaseHandler extends AbstractHandler {
       CreatePostTemplateOnTemplatesSetInput,
       CreateWhiteboardTemplateOnTemplatesSetInput,
       CreateChallengeOnSpaceInput,
-      CreateChallengeOnChallengeInput,
       CreateLinkInput,
       CreateOpportunityInput,
       CreateOrganizationInput,
       CreateUserGroupInput,
-      CreateProjectInput,
       CreateRelationInput,
       CreateUserInput,
       CreateFeedbackOnCommunityContextInput,
       CreateReferenceOnProfileInput,
       CreateTagsetOnProfileInput,
       CreateCalendarEventOnCalendarInput,
+      CreateAccountInput,
       DeleteDocumentInput,
       UpdateActorInput,
+      UpdateAccountInput,
+      UpdateAccountDefaultsInput,
       UpdatePostInput,
       UpdateDocumentInput,
       UpdateCalloutFramingInput,
@@ -146,7 +145,6 @@ export class BaseHandler extends AbstractHandler {
       UpdateUserInput,
       UpdateUserPlatformSettingsInput,
       UpdateProfileInput,
-      UpdateProjectInput,
       UpdateWhiteboardDirectInput,
       UpdateWhiteboardTemplateInput,
       UpdateDiscussionInput,

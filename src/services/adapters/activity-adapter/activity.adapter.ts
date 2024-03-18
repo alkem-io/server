@@ -6,10 +6,7 @@ import { LogContext } from '@common/enums/logging.context';
 import { ActivityService } from '@src/platform/activity/activity.service';
 import { ActivityEventType } from '@common/enums/activity.event.type';
 import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
-import {
-  EntityNotFoundException,
-  EntityNotInitializedException,
-} from '@common/exceptions';
+import { EntityNotFoundException } from '@common/exceptions';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { SubscriptionPublishService } from '../../subscriptions/subscription-service';
 import { ActivityInputCalloutPublished } from './dto/activity.dto.input.callout.published';
@@ -25,7 +22,7 @@ import { ActivityInputUpdateSent } from './dto/activity.dto.input.update.sent';
 import { Community } from '@domain/community/community/community.entity';
 import { ActivityInputMessageRemoved } from './dto/activity.dto.input.message.removed';
 import { ActivityInputBase } from './dto/activity.dto.input.base';
-import { stringifyWithoutAuthorization } from '@common/utils/stringify.util';
+import { stringifyWithoutAuthorizationMetaInfo } from '@common/utils/stringify.util';
 import { ActivityInputCalloutLinkCreated } from './dto/activity.dto.input.callout.link.created';
 import { ActivityInputCalendarEventCreated } from './dto/activity.dto.input.calendar.event.created';
 import { TimelineResolverService } from '@services/infrastructure/entity-resolver/timeline.resolver.service';
@@ -59,23 +56,16 @@ export class ActivityAdapter {
 
     const challenge = eventData.challenge;
 
-    if (!challenge.spaceID) {
-      throw new EntityNotInitializedException(
-        `Unable to get spaceID of Challenge: ${challenge.id}`,
-        LogContext.ACTIVITY
-      );
-    }
+    const spaceID = challenge.account.spaceID;
 
-    const collaborationID = await this.getCollaborationIdForSpace(
-      challenge.spaceID
-    );
+    const collaborationID = await this.getCollaborationIdForSpace(spaceID);
     const description = challenge.profile.displayName;
 
     const activity = await this.activityService.createActivity({
       collaborationID,
       triggeredBy: eventData.triggeredBy,
       resourceID: challenge.id,
-      parentID: challenge.spaceID,
+      parentID: spaceID,
       description,
       type: eventType,
     });
@@ -614,7 +604,7 @@ export class ActivityAdapter {
     eventType: ActivityEventType
   ) {
     // Stringify without authorization information
-    const loggedData = stringifyWithoutAuthorization(eventData);
+    const loggedData = stringifyWithoutAuthorizationMetaInfo(eventData);
     this.logger.verbose?.(
       `[${eventType}] - received: ${loggedData}`,
       LogContext.ACTIVITY
