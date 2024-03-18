@@ -31,7 +31,7 @@ export class InnovationFlowStatesService {
   public validateDefinition(states: IInnovationFlowState[]) {
     if (states.length === 0) {
       throw new ValidationException(
-        `At least one state must be definede: ${states}`,
+        `At least one state must be defined: ${states}`,
         LogContext.INNOVATION_FLOW
       );
     }
