@@ -1049,14 +1049,17 @@ export class SearchService {
     let postIDsFilter: string[] | undefined = undefined;
     if (searchInSpaceID) {
       searchInSpace = await this.spaceService.getSpaceOrFail(searchInSpaceID, {
-        relations: { collaboration: true },
+        relations: { collaboration: true, account: true },
       });
       spaceIDsFilter = [searchInSpace.id];
+      const accountIDsFilter = [searchInSpace.account.id];
 
-      const challengesFilter = await this.getChallengesFilter(spaceIDsFilter);
+      const challengesFilter = await this.getChallengesInAccountFilter(
+        accountIDsFilter
+      );
       challengeIDsFilter = challengesFilter.map(challenge => challenge.id);
-      const opportunitiesFilter = await this.getOpportunitiesFilter(
-        spaceIDsFilter
+      const opportunitiesFilter = await this.getOpportunitiesInAccountFilter(
+        accountIDsFilter
       );
       opportunityIDsFilter = opportunitiesFilter.map(opp => opp.id);
       userIDsFilter = await this.getUsersFilter(searchInSpace);
@@ -1077,27 +1080,29 @@ export class SearchService {
     };
   }
 
-  private async getChallengesFilter(
-    spaceFilter: string[]
+  private async getChallengesInAccountFilter(
+    accountIDsFilter: string[]
   ): Promise<IChallenge[]> {
     const challengesQuery = this.challengeRepository
       .createQueryBuilder('challenge')
+      .leftJoinAndSelect('challenge.account', 'account')
       .leftJoinAndSelect('challenge.collaboration', 'collaboration')
-      .where('challenge.spaceID IN (:spaceFilter)', {
-        spaceFilter: spaceFilter,
+      .where('account.id IN (:accountIDsFilter)', {
+        accountIDsFilter: accountIDsFilter,
       });
 
     return await challengesQuery.getMany();
   }
 
-  private async getOpportunitiesFilter(
-    spaceFilter: string[]
+  private async getOpportunitiesInAccountFilter(
+    accountIDsFilter: string[]
   ): Promise<IOpportunity[]> {
     const opportunitiesQuery = this.opportunityRepository
       .createQueryBuilder('opportunity')
       .leftJoinAndSelect('opportunity.collaboration', 'collaboration')
-      .where('opportunity.spaceID IN (:spaceFilter)', {
-        spaceFilter: spaceFilter,
+      .leftJoinAndSelect('opportunity.account', 'account')
+      .where('account.id IN (:accountIDsFilter)', {
+        accountIDsFilter: accountIDsFilter,
       });
 
     return await opportunitiesQuery.getMany();
