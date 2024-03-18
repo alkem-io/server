@@ -30,6 +30,14 @@ type ActivityFeedFilters = {
   excludeTypes?: Array<ActivityEventType>;
 };
 
+type GroupedActivityFeedFilters = {
+  types?: Array<ActivityEventType>;
+  myActivity?: boolean;
+  spaceIds?: Array<string>;
+  roles?: Array<ActivityFeedRoles>;
+  limit?: number;
+};
+
 @Injectable()
 export class ActivityFeedService {
   constructor(
@@ -73,6 +81,36 @@ export class ActivityFeedService {
       sort: 'DESC', // the most recent first
       onlyUnique,
       excludeTypes,
+    });
+  }
+
+  public async getGroupedActivityFeed(
+    agentInfo: AgentInfo,
+    filters?: GroupedActivityFeedFilters
+  ): Promise<IActivityLogEntry[]> {
+    const {
+      types = [],
+      myActivity = false,
+      limit,
+      ...qualifyingSpacesOptions
+    } = filters ?? {};
+    // get all Spaces the user has credentials for
+    const spaceIds = await this.getQualifyingSpaces(
+      agentInfo,
+      qualifyingSpacesOptions
+    );
+    // get the collaborations with read access based on the filtered Spaces
+    const collaborationIds = await this.getAllAuthorizedCollaborations(
+      agentInfo,
+      spaceIds
+    );
+
+    return this.getGroupedActivity(collaborationIds, {
+      types,
+      userID: myActivity ? agentInfo.userID : undefined,
+      visibility: true,
+      limit: limit ? limit : undefined,
+      sort: 'DESC', // the most recent first
     });
   }
 
@@ -160,6 +198,32 @@ export class ActivityFeedService {
       pageInfo: rawPaginatedActivities.pageInfo,
       items: convertedActivities,
     };
+  }
+
+  private async getGroupedActivity(
+    collaborationIds: string[],
+    options?: {
+      types?: ActivityEventType[];
+      visibility?: boolean;
+      userID?: string;
+      sort?: 'ASC' | 'DESC';
+      limit?: number;
+    }
+  ) {
+    const rawPaginatedActivities =
+      await this.activityService.getGroupedActivity(collaborationIds, options);
+
+    const convertedActivities = (
+      await this.activityLogService.convertRawActivityToResults(
+        rawPaginatedActivities
+      )
+    ).filter((x): x is IActivityLogEntry => !!x);
+
+    // todo solve issue below
+    // may return incorrect paginated results due to convertRawActivityToResults returning
+    // undefined entries due to errors in processing or missing data
+    // may return wrong pageInfo data OR not all less amount of items than asked for
+    return convertedActivities;
   }
 
   private async getAllAuthorizedCollaborations(

@@ -10,6 +10,8 @@ import { ActivityFeedQueryArgs } from './activity.feed.query.args';
 import { ActivityFeedService } from './activity.feed.service';
 import { ActivityFeed } from './activity.feed.interface';
 import { PaginationArgs } from '@core/pagination';
+import { IActivityLogEntry } from '@services/api/activity-log/dto/activity.log.entry.interface';
+import { GroupedActivityFeedQueryArgs } from './grouped.activity.feed.query.args';
 
 @Resolver()
 export class ActivityFeedResolverQueries {
@@ -40,5 +42,28 @@ export class ActivityFeedResolverQueries {
     );
 
     return this.feedService.getActivityFeed(agentInfo, { ...args, pagination });
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Query(() => [IActivityLogEntry], {
+    nullable: false,
+    description: 'Activity events related to the current user.',
+  })
+  @Profiling.api
+  public async groupedActivityFeed(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('args', { nullable: true })
+    args?: GroupedActivityFeedQueryArgs
+  ): Promise<IActivityLogEntry[]> {
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
+      AuthorizationPrivilege.READ_USERS,
+      `Activity feed query: ${agentInfo.email}`
+    );
+
+    return this.feedService.getGroupedActivityFeed(agentInfo, {
+      ...args,
+    });
   }
 }

@@ -148,6 +148,69 @@ export class ActivityService {
     return getPaginationResults(qb, paginationArgs, orderBy);
   }
 
+  public async getGroupedActivity(
+    collaborationIDs: string[],
+    options?: {
+      types?: ActivityEventType[];
+      visibility?: boolean;
+      userID?: string;
+      orderBy?: 'ASC' | 'DESC';
+      limit?: number;
+    }
+  ) {
+    const {
+      types,
+      visibility = true,
+      userID,
+      orderBy = 'DESC',
+      limit,
+    } = options ?? {};
+
+    const defaultCondition = `activity.visibility = ${visibility} AND activity.collaborationId IN (${collaborationIDs
+      .map(c => `'${c}'`)
+      .join(',')})`;
+    const typesCondition =
+      types && types.length > 0
+        ? `activity.type IN (${types.map(t => `'${t}'`).join(',')})`
+        : undefined;
+
+    const triggeredByCondition = userID
+      ? `activity.triggeredBy = '${userID}'`
+      : undefined;
+
+    const whereConditions = [
+      defaultCondition,
+      typesCondition,
+      triggeredByCondition,
+    ]
+      .filter(condition => condition !== undefined)
+      .join(' AND ');
+
+    const groupedActivities: {
+      latest: string;
+    }[] = await this.entityManager.connection.query(
+      `
+      SELECT activity.triggeredBy, activity.resourceId, activity.type, MAX(activity.rowId) as latest FROM alkemio.activity
+      WHERE ${whereConditions}
+      group by activity.resourceId, activity.triggeredBy, activity.type
+      order by latest ${orderBy}
+      ${limit ? `LIMIT ${limit}` : ''};
+      `
+    );
+
+    const activityIDs = groupedActivities.map(a => a.latest);
+
+    const qb = this.activityRepository.createQueryBuilder('activity');
+    qb.where({
+      rowId: In(activityIDs),
+    });
+    qb.orderBy('activity.createdDate', orderBy);
+
+    const results = await qb.getMany();
+
+    return results;
+  }
+
   async getActivityForMessage(messageID: string): Promise<IActivity | null> {
     const entry: IActivity | null = await this.activityRepository
       .createQueryBuilder('activity')
