@@ -203,7 +203,7 @@ export class ActivityFeedService {
       limit?: number;
     }
   ) {
-    const MAX_REQUESTED_GROUPED_ACTIVITIES = 10;
+    const MAX_REQUESTED_GROUPED_ACTIVITIES = 100;
     const DEFAULT_GROUPED_ACTIVITIES_LIMIT = 10;
     const requestedActivitiesLimit =
       options?.limit ?? DEFAULT_GROUPED_ACTIVITIES_LIMIT;
