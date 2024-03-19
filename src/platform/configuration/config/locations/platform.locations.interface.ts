@@ -102,6 +102,13 @@ export abstract class IPlatformLocations {
 
   @Field(() => String, {
     nullable: false,
+    description:
+      'URL to latest forum release discussion where users can get information about the latest release',
+  })
+  forumreleases!: string;
+
+  @Field(() => String, {
+    nullable: false,
     description: 'URL where users can get help',
   })
   help!: string;
