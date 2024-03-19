@@ -35,6 +35,10 @@ import { ContributionReporterService } from '@services/external/elasticsearch/co
 import { NameReporterService } from '@services/external/elasticsearch/name-reporter/name.reporter.service';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { LogContext } from '@common/enums';
+import { ISpaceDefaults } from '../space.defaults/space.defaults.interface';
+import { UpdateSpaceDefaultsInput } from './dto/space.dto.update.defaults';
+import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
+import { InnovationFlowTemplateService } from '@domain/template/innovation-flow-template/innovation.flow.template.service';
 
 @Resolver()
 export class SpaceResolverMutations {
@@ -44,6 +48,8 @@ export class SpaceResolverMutations {
     private authorizationService: AuthorizationService,
     private spaceService: SpaceService,
     private spaceAuthorizationService: SpaceAuthorizationService,
+    private spaceDefaultsService: SpaceDefaultsService,
+    private innovationFlowTemplateService: InnovationFlowTemplateService,
     private challengeService: ChallengeService,
     private challengeAuthorizationService: ChallengeAuthorizationService,
     private preferenceService: PreferenceService,
@@ -158,6 +164,48 @@ export class SpaceResolverMutations {
     return await this.spaceAuthorizationService.applyAuthorizationPolicy(
       result
     );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => ISpaceDefaults, {
+    description: 'Updates the specified SpaceDefaults.',
+  })
+  async updateSpaceDefaults(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('spaceDefaultsData')
+    spaceDefaultsData: UpdateSpaceDefaultsInput
+  ): Promise<ISpaceDefaults> {
+    const space = await this.spaceService.getSpaceOrFail(
+      spaceDefaultsData.spaceID,
+      {
+        relations: {
+          account: true,
+        },
+      }
+    );
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      space.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `update spaceDefaults: ${space.id}`
+    );
+
+    const spaceDefaults =
+      await this.spaceDefaultsService.getSpaceDefaultsForSpaceOrFail(
+        spaceDefaultsData.spaceID
+      );
+
+    if (spaceDefaultsData.flowTemplateID) {
+      const innovationFlowTemplate =
+        await this.innovationFlowTemplateService.getInnovationFlowTemplateOrFail(
+          spaceDefaultsData.flowTemplateID
+        );
+      return await this.spaceDefaultsService.updateSpaceDefaults(
+        spaceDefaults,
+        innovationFlowTemplate
+      );
+    }
+    return spaceDefaults;
   }
 
   @UseGuards(GraphqlGuard)
