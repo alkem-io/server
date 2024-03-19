@@ -12,32 +12,52 @@ export const getJourneyRolesForContributorEntityData = async (
   challengeIds: string[],
   opportunityIds: string[]
 ) => {
-  const fetchData = <T extends Space | BaseChallenge>(
+  const fetchData = <T extends BaseChallenge>(
     ref: EntityTarget<T>,
     ids: string[],
     visibility?: SpaceVisibility[]
   ): Promise<T[]> => {
-    const where: any = {
+    let where: any = {
       id: In(ids),
     };
 
-    const relations: any = { profile: true };
+    let relations: any = {
+      account: true,
+      profile: true,
+    };
 
     if (visibility) {
-      where.license = {
-        visibility: In(visibility),
+      where = {
+        id: In(ids),
+        account: {
+          license: {
+            visibility: In(visibility),
+          },
+        },
       };
-      relations.license = { featureFlags: true };
+      relations = {
+        profile: true,
+        account: {
+          license: {
+            featureFlags: true,
+          },
+        },
+      };
     }
-    return entityManager.find(ref, {
+    const results = entityManager.find(ref, {
       where,
       relations,
       select: {
         profile: {
           displayName: true,
         },
+        account: {
+          id: true,
+          license: true,
+        },
       },
     } as FindManyOptions);
+    return results;
   };
 
   const [spaces, challenges, opportunities] = await Promise.all([

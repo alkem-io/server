@@ -151,7 +151,7 @@ export class ActivityService {
       orderBy?: 'ASC' | 'DESC';
       limit?: number;
     }
-  ) {
+  ): Promise<IActivity[]> {
     const {
       types,
       visibility = true,

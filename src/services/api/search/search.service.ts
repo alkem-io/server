@@ -431,7 +431,9 @@ export class SearchService {
             location: true,
             tagsets: true,
           },
-          license: true,
+          account: {
+            license: true,
+          },
         },
       });
 
@@ -458,8 +460,9 @@ export class SearchService {
       // Filter the spaces + score them
       for (const space of filteredSpaceMatches) {
         if (
-          space.license &&
-          space.license.visibility !== SpaceVisibility.ARCHIVED
+          space.account &&
+          space.account.license &&
+          space.account.license.visibility !== SpaceVisibility.ARCHIVED
         ) {
           // Score depends on various factors, hardcoded for now
           const score_increment = this.getScoreIncrementSpace(space, agentInfo);
@@ -478,7 +481,7 @@ export class SearchService {
 
   // Determine the score increment based on whether the user has read access or not
   private getScoreIncrementSpace(space: ISpace, agentInfo: AgentInfo): number {
-    switch (space.license?.visibility) {
+    switch (space.account?.license?.visibility) {
       case SpaceVisibility.ACTIVE:
         return this.getScoreIncrementReadAccess(space.authorization, agentInfo);
       case SpaceVisibility.DEMO:
@@ -528,8 +531,10 @@ export class SearchService {
             location: true,
             tagsets: true,
           },
-          parentSpace: {
-            license: true,
+          space: {
+            account: {
+              license: true,
+            },
           },
         },
       });
@@ -563,7 +568,7 @@ export class SearchService {
       // Only show challenges that the current user has read access to
       for (const challenge of filteredChallengeMatches) {
         if (
-          challenge.parentSpace?.license?.visibility !==
+          challenge.space?.account?.license?.visibility !==
             SpaceVisibility.ARCHIVED &&
           this.authorizationService.isAccessGranted(
             agentInfo,
@@ -605,10 +610,8 @@ export class SearchService {
         relations: {
           context: true,
           collaboration: true,
-          challenge: {
-            parentSpace: {
-              license: true,
-            },
+          account: {
+            license: true,
           },
           profile: {
             location: true,
@@ -646,7 +649,7 @@ export class SearchService {
       // Only show challenges that the current user has read access to
       for (const opportunity of filteredOpportunityMatches) {
         if (
-          opportunity.challenge?.parentSpace?.license?.visibility !==
+          opportunity.account.license?.visibility !==
             SpaceVisibility.ARCHIVED &&
           this.authorizationService.isAccessGranted(
             agentInfo,
@@ -994,14 +997,17 @@ export class SearchService {
     let postIDsFilter: string[] | undefined = undefined;
     if (searchInSpaceID) {
       searchInSpace = await this.spaceService.getSpaceOrFail(searchInSpaceID, {
-        relations: { collaboration: true },
+        relations: { collaboration: true, account: true },
       });
       spaceIDsFilter = [searchInSpace.id];
+      const accountIDsFilter = [searchInSpace.account.id];
 
-      const challengesFilter = await this.getChallengesFilter(spaceIDsFilter);
+      const challengesFilter = await this.getChallengesInAccountFilter(
+        accountIDsFilter
+      );
       challengeIDsFilter = challengesFilter.map(challenge => challenge.id);
-      const opportunitiesFilter = await this.getOpportunitiesFilter(
-        spaceIDsFilter
+      const opportunitiesFilter = await this.getOpportunitiesInAccountFilter(
+        accountIDsFilter
       );
       opportunityIDsFilter = opportunitiesFilter.map(opp => opp.id);
       userIDsFilter = await this.getUsersFilter(searchInSpace);
@@ -1022,27 +1028,29 @@ export class SearchService {
     };
   }
 
-  private async getChallengesFilter(
-    spaceFilter: string[]
+  private async getChallengesInAccountFilter(
+    accountIDsFilter: string[]
   ): Promise<IChallenge[]> {
     const challengesQuery = this.challengeRepository
       .createQueryBuilder('challenge')
+      .leftJoinAndSelect('challenge.account', 'account')
       .leftJoinAndSelect('challenge.collaboration', 'collaboration')
-      .where('challenge.spaceID IN (:spaceFilter)', {
-        spaceFilter: spaceFilter,
+      .where('account.id IN (:accountIDsFilter)', {
+        accountIDsFilter: accountIDsFilter,
       });
 
     return await challengesQuery.getMany();
   }
 
-  private async getOpportunitiesFilter(
-    spaceFilter: string[]
+  private async getOpportunitiesInAccountFilter(
+    accountIDsFilter: string[]
   ): Promise<IOpportunity[]> {
     const opportunitiesQuery = this.opportunityRepository
       .createQueryBuilder('opportunity')
       .leftJoinAndSelect('opportunity.collaboration', 'collaboration')
-      .where('opportunity.spaceID IN (:spaceFilter)', {
-        spaceFilter: spaceFilter,
+      .leftJoinAndSelect('opportunity.account', 'account')
+      .where('account.id IN (:accountIDsFilter)', {
+        accountIDsFilter: accountIDsFilter,
       });
 
     return await opportunitiesQuery.getMany();

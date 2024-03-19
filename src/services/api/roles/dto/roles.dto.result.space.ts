@@ -32,6 +32,7 @@ export class RolesResultSpace extends RolesResultCommunity {
     super(space.nameID, space.id, space.profile.displayName);
     this.spaceID = space.id;
     this.space = space;
-    this.visibility = space.license?.visibility ?? SpaceVisibility.ACTIVE;
+    this.visibility =
+      space.account?.license?.visibility ?? SpaceVisibility.ACTIVE;
   }
 }
