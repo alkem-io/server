@@ -94,7 +94,6 @@ export class SearchIngestService {
     await this.fetchPosts().then(posts =>
       this.ingestBulk(posts, 'alkemio-data-posts')
     );
-    setTimeout(() => {}, 1000);
   }
 
   private async ingestBulk(data: unknown[], index: string) {
@@ -141,21 +140,23 @@ export class SearchIngestService {
     return this.entityManager
       .find<Space>(Space, {
         ...journeyFindOptions,
-        where: { license: { visibility: Not(SpaceVisibility.ARCHIVED) } },
+        where: {
+          account: { license: { visibility: Not(SpaceVisibility.ARCHIVED) } },
+        },
         relations: {
           ...journeyFindOptions.relations,
-          license: true,
+          account: { license: true },
         },
         select: {
           ...journeyFindOptions.select,
-          license: {
-            visibility: true,
-          },
+          account: { id: true, license: { visibility: true } },
         },
       })
       .then(spaces => {
         return spaces.map(space => ({
           ...space,
+          account: undefined,
+          license: { visibility: space?.account?.license?.visibility },
           profile: {
             ...space.profile,
             tags: processTagsets(space.profile.tagsets),
@@ -170,32 +171,32 @@ export class SearchIngestService {
       .find<Challenge>(Challenge, {
         ...journeyFindOptions,
         where: {
-          parentSpace: {
-            license: { visibility: Not(SpaceVisibility.ARCHIVED) },
+          space: {
+            account: { license: { visibility: Not(SpaceVisibility.ARCHIVED) } },
           },
         },
         relations: {
           ...journeyFindOptions.relations,
-          parentSpace: {
-            license: true,
+          space: {
+            account: { license: true },
           },
         },
         select: {
           ...journeyFindOptions.select,
-          parentSpace: {
+          space: {
             id: true,
-            license: {
-              visibility: true,
-            },
+            account: { id: true, license: { visibility: true } },
           },
         },
       })
       .then(challenges => {
         return challenges.map(challenge => ({
           ...challenge,
-          parentSpace: undefined,
+          spaceID: challenge?.space?.id,
+          space: undefined,
+          account: undefined,
           license: {
-            visibility: challenge?.parentSpace?.license?.visibility,
+            visibility: challenge?.space?.account?.license?.visibility,
           },
           profile: {
             ...challenge.profile,
@@ -212,16 +213,18 @@ export class SearchIngestService {
         ...journeyFindOptions,
         where: {
           challenge: {
-            parentSpace: {
-              license: { visibility: Not(SpaceVisibility.ARCHIVED) },
+            space: {
+              account: {
+                license: { visibility: Not(SpaceVisibility.ARCHIVED) },
+              },
             },
           },
         },
         relations: {
           ...journeyFindOptions.relations,
           challenge: {
-            parentSpace: {
-              license: true,
+            space: {
+              account: { license: true },
             },
           },
         },
@@ -229,11 +232,9 @@ export class SearchIngestService {
           ...journeyFindOptions.select,
           challenge: {
             id: true,
-            parentSpace: {
+            space: {
               id: true,
-              license: {
-                visibility: true,
-              },
+              account: { id: true, license: { visibility: true } },
             },
           },
         },
@@ -241,10 +242,12 @@ export class SearchIngestService {
       .then(opportunities => {
         return opportunities.map(opportunity => ({
           ...opportunity,
+          spaceID: opportunity?.challenge?.space?.id,
+          challengeID: opportunity?.challenge?.id,
           challenge: undefined,
           license: {
             visibility:
-              opportunity?.challenge?.parentSpace?.license?.visibility,
+              opportunity?.challenge?.space?.account?.license?.visibility,
           },
           profile: {
             ...opportunity.profile,
@@ -282,6 +285,7 @@ export class SearchIngestService {
     return this.entityManager
       .find(User, {
         loadEagerRelations: false,
+        where: { serviceProfile: false },
         relations: {
           profile: profileRelationOptions,
         },
@@ -289,22 +293,35 @@ export class SearchIngestService {
           profile: profileSelectOptions,
         },
       })
-      .then(users => {
-        users.forEach(user => {
-          (user.profile as any).tags = processTagsets(user.profile.tagsets);
-          delete user.profile.tagsets;
-        });
-        return users;
-      });
+      .then(users =>
+        users.map(user => ({
+          ...user,
+          accountUpn: undefined,
+          communicationID: undefined,
+          email: undefined,
+          phone: undefined,
+          serviceProfile: undefined,
+          gender: undefined,
+          profile: {
+            ...user.profile,
+            tags: processTagsets(user.profile.tagsets),
+            tagsets: undefined,
+          },
+        }))
+      );
   }
 
   private fetchPosts() {
     return this.entityManager
       .find<Space>(Space, {
         loadEagerRelations: false,
-        where: { license: { visibility: Not(SpaceVisibility.ARCHIVED) } },
+        where: {
+          account: {
+            license: { visibility: Not(SpaceVisibility.ARCHIVED) },
+          },
+        },
         relations: {
-          license: true,
+          account: { license: true },
           collaboration: {
             callouts: {
               contributions: {
@@ -339,7 +356,7 @@ export class SearchIngestService {
         },
         select: {
           id: true,
-          license: { visibility: true },
+          account: { id: true, license: { visibility: true } },
           collaboration: {
             id: true,
             callouts: {
@@ -407,7 +424,8 @@ export class SearchIngestService {
               spacePosts.push({
                 ...contribution.post,
                 license: {
-                  visibility: space?.license?.visibility ?? EMPTY_VALUE,
+                  visibility:
+                    space?.account?.license?.visibility ?? EMPTY_VALUE,
                 },
                 spaceID: space.id,
                 calloutID: callout.id,
@@ -432,7 +450,8 @@ export class SearchIngestService {
                 challengePosts.push({
                   ...contribution.post,
                   license: {
-                    visibility: space?.license?.visibility ?? EMPTY_VALUE,
+                    visibility:
+                      space?.account?.license?.visibility ?? EMPTY_VALUE,
                   },
                   spaceID: space.id,
                   challengeID: challenge.id,
@@ -461,7 +480,8 @@ export class SearchIngestService {
                   opportunityPosts.push({
                     ...contribution.post,
                     license: {
-                      visibility: space?.license?.visibility ?? EMPTY_VALUE,
+                      visibility:
+                        space?.account?.license?.visibility ?? EMPTY_VALUE,
                     },
                     spaceID: space.id,
                     challengeID: challenge.id,

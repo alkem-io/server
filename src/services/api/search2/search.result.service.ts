@@ -182,9 +182,9 @@ export class SearchResultService {
     const challengeIds = rawSearchResults.map(hit => hit.result.id);
 
     const challenges = await this.entityManager.find(Challenge, {
-      where: { id: In(challengeIds), spaceID: spaceId },
-      relations: { parentSpace: true },
-      select: { id: true, parentSpace: { id: true } },
+      where: { id: In(challengeIds), space: { id: spaceId } },
+      relations: { space: true },
+      select: { id: true, space: { id: true } },
     });
 
     return challenges
@@ -218,7 +218,7 @@ export class SearchResultService {
           return undefined;
         }
 
-        if (!challenge.parentSpace) {
+        if (!challenge.space) {
           const error = new BaseException(
             'Unable to find parent space for challenge while building search results',
             LogContext.SEARCH,
@@ -235,7 +235,7 @@ export class SearchResultService {
         return {
           ...rawSearchResult,
           challenge: challenge as IChallenge,
-          space: challenge.parentSpace as ISpace,
+          space: challenge.space as ISpace,
         };
       })
       .filter((challenge): challenge is ISearchResultChallenge => !!challenge);
@@ -253,9 +253,9 @@ export class SearchResultService {
     const opportunityIds = rawSearchResults.map(hit => hit.result.id);
 
     const opportunities = await this.entityManager.find(Opportunity, {
-      where: { id: In(opportunityIds), spaceID: spaceId },
-      relations: { challenge: { parentSpace: true } },
-      select: { challenge: { id: true, parentSpace: { id: true } } },
+      where: { id: In(opportunityIds), challenge: { space: { id: spaceId } } },
+      relations: { challenge: { space: true } },
+      select: { challenge: { id: true, space: { id: true } } },
     });
 
     return opportunities
@@ -295,7 +295,7 @@ export class SearchResultService {
           );
         }
 
-        if (!opportunity.challenge.parentSpace) {
+        if (!opportunity.challenge.space) {
           throw new BaseException(
             'Unable to find parent space for challenge while building search results',
             LogContext.SEARCH,
@@ -312,7 +312,7 @@ export class SearchResultService {
           ...rawSearchResult,
           opportunity: opportunity as IOpportunity,
           challenge: opportunity.challenge as IChallenge,
-          space: opportunity.challenge.parentSpace as ISpace,
+          space: opportunity.challenge.space as ISpace,
         };
       })
       .filter(
