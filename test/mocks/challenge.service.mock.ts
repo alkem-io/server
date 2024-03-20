@@ -8,6 +8,5 @@ export const MockChallengeService: ValueProvider<PublicPart<ChallengeService>> =
     useValue: {
       getChallengeOrFail: jest.fn(),
       getChallengeForCommunity: jest.fn(),
-      getSpaceID: jest.fn(),
     },
   };

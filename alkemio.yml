@@ -105,7 +105,7 @@ identity:
     api_access_enabled: ${AUTH_API_ENABLED}:true
 
     # Time-to-live of the cache for user authentication info (credentials, verified credentials) in seconds. Defaults to 60.
-    cache_ttl: ${AUTH_CACHE_TTL}:900
+    cache_ttl: ${AUTH_CACHE_TTL}:60
 
     # A list of Identity Providers that can be used for authenticating the user.
     # The claims in the access token that are used in Alkemio are the user email and the token expiration time.

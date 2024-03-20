@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Opportunity } from '@domain/challenge/opportunity';
 import { OpportunityService } from './opportunity.service';
-import { ProjectModule } from '@domain/collaboration/project/project.module';
 import { RelationModule } from '@domain/collaboration/relation/relation.module';
 import { OpportunityResolverFields } from './opportunity.resolver.fields';
 import { OpportunityResolverMutations } from './opportunity.resolver.mutations';
@@ -20,14 +19,12 @@ import { CollaborationModule } from '@domain/collaboration/collaboration/collabo
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { ContextModule } from '@domain/context/context/context.module';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
-import { LicenseResolverModule } from '@services/infrastructure/license-resolver/license.resolver.module';
 import { SpaceDefaultsModule } from '../space.defaults/space.defaults.module';
 
 @Module({
   imports: [
     AuthorizationModule,
     AuthorizationPolicyModule,
-    ProjectModule,
     RelationModule,
     BaseChallengeModule,
     CommunityModule,
@@ -41,7 +38,6 @@ import { SpaceDefaultsModule } from '../space.defaults/space.defaults.module';
     ContributionReporterModule,
     SpaceDefaultsModule,
     StorageAggregatorModule,
-    LicenseResolverModule,
     TypeOrmModule.forFeature([Opportunity]),
   ],
   providers: [

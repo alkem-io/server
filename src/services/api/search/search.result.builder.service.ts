@@ -72,10 +72,19 @@ export default class SearchResultBuilderService
 
   async [SearchResultType.CHALLENGE](rawSearchResult: ISearchResult) {
     const challenge = await this.challengeService.getChallengeOrFail(
-      rawSearchResult.result.id
+      rawSearchResult.result.id,
+      {
+        relations: { account: true },
+      }
     );
+    if (!challenge.account) {
+      throw new RelationshipNotFoundException(
+        `Unable to find account for ${challenge.nameID}`,
+        LogContext.SEARCH
+      );
+    }
     const space = await this.spaceService.getSpaceOrFail(
-      this.challengeService.getSpaceID(challenge)
+      challenge.account.spaceID
     );
     const searchResultChallenge: ISearchResultChallenge = {
       ...this.searchResultBase,
@@ -89,11 +98,17 @@ export default class SearchResultBuilderService
     const opportunity = await this.opportunityService.getOpportunityOrFail(
       rawSearchResult.result.id,
       {
-        relations: { challenge: true },
+        relations: { challenge: true, account: true },
       }
     );
+    if (!opportunity.account) {
+      throw new RelationshipNotFoundException(
+        `Unable to find account for ${opportunity.nameID}`,
+        LogContext.SEARCH
+      );
+    }
     const space = await this.spaceService.getSpaceOrFail(
-      this.opportunityService.getSpaceID(opportunity)
+      opportunity.account.spaceID
     );
     if (!opportunity.challenge) {
       throw new RelationshipNotFoundException(
@@ -152,7 +167,7 @@ export default class SearchResultBuilderService
         `
       SELECT \`space\`.\`id\` as \`spaceID\`, \`challenge\`.\`id\` as \`challengeID\`, null as \'opportunityID\', \`callout\`.\`id\` as \`calloutID\` FROM \`callout\`
       RIGHT JOIN \`challenge\` on \`challenge\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
-      JOIN \`space\` on \`challenge\`.\`spaceID\` = \`space\`.\`id\`
+      JOIN \`space\` on \`challenge\`.\`accountId\` = \`space\`.\`accountId\`
       JOIN \`callout_contribution\` on \`callout\`.\`id\` = \`callout_contribution\`.\`calloutId\`
       JOIN \`post\` on \`post\`.\`id\` = \`callout_contribution\`.\`postId\`
       WHERE \`post\`.\`id\` = '${postId}' UNION
@@ -166,7 +181,7 @@ export default class SearchResultBuilderService
       SELECT  \`space\`.\`id\` as \`spaceID\`, \`challenge\`.\`id\` as \`challengeID\`, \`opportunity\`.\`id\` as \`opportunityID\`, \`callout\`.\`id\` as \`calloutID\` FROM \`callout\`
       RIGHT JOIN \`opportunity\` on \`opportunity\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
       JOIN \`challenge\` on \`opportunity\`.\`challengeId\` = \`challenge\`.\`id\`
-      JOIN \`space\` on \`opportunity\`.\`spaceID\` = \`space\`.\`id\`
+      JOIN \`space\` on \`opportunity\`.\`accountId\` = \`space\`.\`accountId\`
       JOIN \`callout_contribution\` on \`callout\`.\`id\` = \`callout_contribution\`.\`calloutId\`
       JOIN \`post\` on \`post\`.\`id\` = \`callout_contribution\`.\`postId\`
       WHERE \`post\`.\`id\` = '${postId}';

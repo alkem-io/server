@@ -37,32 +37,59 @@ export const getJourneyRolesForContributorQueryResult = (
     );
 
     if (readAccessSpace) {
-      spaceResult.challenges = challenges
-        .filter(challenge => challenge.spaceID === space.id)
-        .map(x => {
+      const accountID = space.account?.id;
+      if (!accountID) {
+        throw new RelationshipNotFoundException(
+          `Unable to load account on Space in roles user: ${space.nameID}`,
+          LogContext.ROLES
+        );
+      }
+      const challengeResults: RolesResultCommunity[] = [];
+      for (const challenge of challenges) {
+        const challengeAccountID = challenge.account?.id;
+        if (!challengeAccountID) {
+          throw new RelationshipNotFoundException(
+            `Unable to load account on Challenge in roles user: ${space.nameID}`,
+            LogContext.ROLES
+          );
+        }
+        if (challengeAccountID === accountID) {
           const challengeResult = new RolesResultCommunity(
-            x.nameID,
-            x.id,
-            x.profile.displayName
+            challenge.nameID,
+            challenge.id,
+            challenge.profile.displayName
           );
           challengeResult.userGroups = [];
-          challengeResult.roles = map.get('challenges')?.get(x.id) ?? [];
-          return challengeResult;
-        });
+          challengeResult.roles =
+            map.get('challenges')?.get(challenge.id) ?? [];
+          challengeResults.push(challengeResult);
+        }
+        spaceResult.challenges = challengeResults;
+      }
 
       // TODO: also filter out opportunities in private challenges, for later...
-      spaceResult.opportunities = opportunities
-        .filter(opp => opp.spaceID === space.id)
-        .map(x => {
-          const oppResult = new RolesResultCommunity(
-            x.nameID,
-            x.id,
-            x.profile.displayName
+      const opportunityResults: RolesResultCommunity[] = [];
+      for (const opportunity of opportunities) {
+        const opportunityAccountID = opportunity.account?.id;
+        if (!opportunityAccountID) {
+          throw new RelationshipNotFoundException(
+            `Unable to load account on Opportunity in roles user: ${space.nameID}`,
+            LogContext.ROLES
           );
-          oppResult.userGroups = [];
-          oppResult.roles = map.get('opportunities')?.get(x.id) ?? [];
-          return oppResult;
-        });
+        }
+        if (opportunityAccountID === accountID) {
+          const opportunityResult = new RolesResultCommunity(
+            opportunity.nameID,
+            opportunity.id,
+            opportunity.profile.displayName
+          );
+          opportunityResult.userGroups = [];
+          opportunityResult.roles =
+            map.get('opportunities')?.get(opportunity.id) ?? [];
+          opportunityResults.push(opportunityResult);
+        }
+        spaceResult.opportunities = opportunityResults;
+      }
     }
     return spaceResult;
   });

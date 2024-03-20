@@ -1055,13 +1055,13 @@ export class CommunityService {
     }
   }
 
-  async getCommunityInNameableScopeOrFail(
+  async getCommunityInAccountOrFail(
     communityID: string,
-    nameableScopeID: string
+    accountID: string
   ): Promise<ICommunity> {
     const community = await this.communityRepository.findOneBy({
       id: communityID,
-      spaceID: nameableScopeID,
+      spaceID: accountID,
     });
 
     if (!community) {

@@ -1,10 +1,9 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, In, Repository } from 'typeorm';
+import { FindOneOptions, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
-  RelationshipNotFoundException,
 } from '@common/exceptions';
 import {
   CreateOpportunityInput,
@@ -15,8 +14,6 @@ import {
   UpdateOpportunityInput,
 } from '@domain/challenge/opportunity';
 import { LogContext, ProfileType } from '@common/enums';
-import { ProjectService } from '@domain/collaboration/project/project.service';
-import { IProject } from '@domain/collaboration/project';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { BaseChallengeService } from '@domain/challenge/base-challenge/base.challenge.service';
 import { ICommunity } from '@domain/community/community/community.interface';
@@ -31,9 +28,7 @@ import { ICollaboration } from '@domain/collaboration/collaboration/collaboratio
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { IProfile } from '@domain/common/profile/profile.interface';
-import { CreateProjectInput } from '@domain/collaboration/project/dto/project.dto.create';
 import { CommunityRole } from '@common/enums/community.role';
-import { OperationNotAllowedException } from '@common/exceptions/operation.not.allowed.exception';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { TagsetType } from '@common/enums/tagset.type';
 import { CreateTagsetTemplateInput } from '@domain/common/tagset-template/dto/tagset.template.dto.create';
@@ -43,11 +38,11 @@ import { OpportunityDisplayLocation } from '@common/enums/opportunity.display.lo
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
+import { IAccount } from '../account/account.interface';
 @Injectable()
 export class OpportunityService {
   constructor(
     private baseChallengeService: BaseChallengeService,
-    private projectService: ProjectService,
     private communityService: CommunityService,
     private collaborationService: CollaborationService,
     private storageAggregatorService: StorageAggregatorService,
@@ -61,6 +56,7 @@ export class OpportunityService {
 
   async createOpportunity(
     opportunityData: CreateOpportunityInput,
+    account: IAccount,
     agentInfo?: AgentInfo
   ): Promise<IOpportunity> {
     if (!opportunityData.nameID) {
@@ -68,13 +64,13 @@ export class OpportunityService {
         opportunityData.profileData?.displayName || ''
       );
     }
-    await this.baseChallengeService.isNameAvailableOrFail(
+    await this.baseChallengeService.isNameAvailableInAccountOrFail(
       opportunityData.nameID,
-      opportunityData.spaceID
+      account.id
     );
 
     const opportunity: IOpportunity = Opportunity.create(opportunityData);
-    opportunity.projects = [];
+    opportunity.account = account;
 
     opportunity.storageAggregator =
       await this.storageAggregatorService.createStorageAggregator(
@@ -166,22 +162,32 @@ export class OpportunityService {
     return await this.opportunityRepository.save(opportunity);
   }
 
-  async getOpportunityInNameableScope(
+  async getOpportunityInAccount(
     opportunityID: string,
-    nameableScopeID: string,
+    accountID: string,
     options?: FindOneOptions<Opportunity>
   ): Promise<IOpportunity | null> {
     let opportunity: IOpportunity | null = null;
     if (opportunityID.length == UUID_LENGTH) {
       opportunity = await this.opportunityRepository.findOne({
-        where: { id: opportunityID, spaceID: nameableScopeID },
+        where: {
+          id: opportunityID,
+          account: {
+            id: accountID,
+          },
+        },
         ...options,
       });
     }
     if (!opportunity) {
       // look up based on nameID
       opportunity = await this.opportunityRepository.findOne({
-        where: { nameID: opportunityID, spaceID: nameableScopeID },
+        where: {
+          nameID: opportunityID,
+          account: {
+            id: accountID,
+          },
+        },
         ...options,
       });
     }
@@ -213,42 +219,12 @@ export class OpportunityService {
     return opportunity;
   }
 
-  public async getOpportunities(
-    options?: FindOneOptions<Opportunity>
-  ): Promise<IOpportunity[]> {
-    return this.opportunityRepository.find(options);
-  }
-
-  async getOpportunitiesInNameableScope(
-    nameableScopeID: string,
-    IDs?: string[]
-  ): Promise<IOpportunity[]> {
-    if (IDs && IDs.length > 0) {
-      return await this.opportunityRepository.find({
-        where: { id: In(IDs), spaceID: nameableScopeID },
-      });
-    }
-
-    return await this.opportunityRepository.findBy({
-      spaceID: nameableScopeID,
-    });
-  }
-
   async deleteOpportunity(opportunityID: string): Promise<IOpportunity> {
     const opportunity = await this.getOpportunityOrFail(opportunityID, {
       relations: {
-        projects: true,
         storageAggregator: true,
       },
     });
-    // disable deletion if projects are present
-    const projects = opportunity.projects;
-    if (projects && projects.length > 0) {
-      throw new OperationNotAllowedException(
-        `Unable to remove Opportunity (${opportunity.nameID}) as it contains ${projects.length} Projects`,
-        LogContext.OPPORTUNITY
-      );
-    }
 
     await this.baseChallengeService.deleteEntities(
       opportunity.id,
@@ -276,14 +252,20 @@ export class OpportunityService {
       this.opportunityRepository
     );
     const opportunity = await this.getOpportunityOrFail(baseOpportunity.id, {
-      relations: { profile: true },
+      relations: { profile: true, account: true },
     });
+    if (!opportunity.account) {
+      throw new EntityNotInitializedException(
+        `Opportunity account not set: ${opportunity.id}`,
+        LogContext.CHALLENGES
+      );
+    }
     if (opportunityData.nameID) {
       if (opportunityData.nameID !== baseOpportunity.nameID) {
         // updating the nameID, check new value is allowed
-        await this.baseChallengeService.isNameAvailableOrFail(
+        await this.baseChallengeService.isNameAvailableInAccountOrFail(
           opportunityData.nameID,
-          this.getSpaceID(opportunity)
+          opportunity.account.id
         );
         baseOpportunity.nameID = opportunityData.nameID;
         await this.opportunityRepository.save(baseOpportunity);
@@ -326,63 +308,13 @@ export class OpportunityService {
     );
   }
 
-  async createProject(projectData: CreateProjectInput): Promise<IProject> {
-    const opportunityId = projectData.opportunityID;
-
-    this.logger.verbose?.(
-      `Adding project to opportunity (${opportunityId})`,
-      LogContext.OPPORTUNITY
-    );
-
-    const opportunity = await this.getOpportunityOrFail(opportunityId);
-
-    const project = await this.projectService.createProject(
-      projectData,
-      this.getSpaceID(opportunity)
-    );
-    if (!opportunity.projects)
-      throw new EntityNotInitializedException(
-        `Opportunity (${opportunityId}) not initialised`,
-        LogContext.OPPORTUNITY
-      );
-    opportunity.projects.push(project);
-    await this.opportunityRepository.save(opportunity);
-    return project;
-  }
-
-  getSpaceID(opportunity: IOpportunity): string {
-    const spaceID = opportunity.spaceID;
-    if (!spaceID) {
-      throw new RelationshipNotFoundException(
-        `Unable to load spaceID for opportunity: ${opportunity.id} `,
-        LogContext.CHALLENGES
-      );
-    }
-    return spaceID;
-  }
-
   async getStorageAggregatorOrFail(
-    challengeId: string
+    opportunityId: string
   ): Promise<IStorageAggregator> {
-    const opportunityWithStorageAggregator = await this.getOpportunityOrFail(
-      challengeId,
-      {
-        relations: {
-          storageAggregator: true,
-        },
-      }
+    return await this.baseChallengeService.getStorageAggregator(
+      opportunityId,
+      this.opportunityRepository
     );
-    const storageAggregator =
-      opportunityWithStorageAggregator.storageAggregator;
-
-    if (!storageAggregator) {
-      throw new EntityNotFoundException(
-        `Unable to find storage aggregator for Opportunity with nameID: ${opportunityWithStorageAggregator.nameID}`,
-        LogContext.COMMUNITY
-      );
-    }
-
-    return storageAggregator;
   }
 
   async getMetrics(opportunity: IOpportunity): Promise<INVP[]> {
@@ -394,23 +326,6 @@ export class OpportunityService {
     const membersTopic = new NVP('members', membersCount.toString());
     membersTopic.id = `members-${opportunity.id}`;
     metrics.push(membersTopic);
-
-    // Projects
-    const projectsCount =
-      await this.projectService.getProjectsInOpportunityCount(opportunity.id);
-    const projectsTopic = new NVP('projects', projectsCount.toString());
-    projectsTopic.id = `projects-${opportunity.id}`;
-    metrics.push(projectsTopic);
-
-    // Relations
-    const relationsCount = await this.baseChallengeService.getRelationsCount(
-      opportunity,
-      this.opportunityRepository
-    );
-
-    const relationsTopic = new NVP('relations', relationsCount.toString());
-    relationsTopic.id = `relations-${opportunity.id}`;
-    metrics.push(relationsTopic);
 
     // Posts
     const postsCount = await this.baseChallengeService.getPostsCount(
@@ -437,8 +352,12 @@ export class OpportunityService {
     return metrics;
   }
 
-  async getOpportunitiesInSpaceCount(spaceID: string): Promise<number> {
-    return await this.opportunityRepository.countBy({ spaceID: spaceID });
+  async getOpportunitiesInAccountCount(accountID: string): Promise<number> {
+    return await this.opportunityRepository.countBy({
+      account: {
+        id: accountID,
+      },
+    });
   }
 
   async getOpportunitiesInChallengeCount(challengeID: string): Promise<number> {

@@ -15,9 +15,9 @@ export * from './authorization.loader.creator';
 export * from './user.loader.creator';
 export * from './visual.loader.creator';
 
-export * from './space/space.templates.set.loader.creator';
-export * from './space/space.defaults.loader.creator';
-export * from './space/space.license.loader.creator';
+export * from './account/account.library.loader.creator';
+export * from './account/account.defaults.loader.creator';
+export * from './account/account.license.loader.creator';
 export * from './collaboration/collaboration.timeline.loader.creator';
 
 export * from './journey/journey.collaboration.loader.creator';
