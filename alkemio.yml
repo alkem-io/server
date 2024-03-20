@@ -390,6 +390,9 @@ platform:
   # Link for support requests
   support: ${PLATFORM_SUPPORT}:https://alkemio.org/support/
 
+  # Link for latest platform release notification
+  forumreleases: ${PLATFORM_FORUM_RELEASES}:https://alkem.io/forum/releases/latest
+
   # Feedback form for the platform
   feedback: ${PLATFORM_FEEDBACK}:https://alkemio.org/contact/
 
