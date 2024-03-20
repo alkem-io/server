@@ -464,6 +464,10 @@ export class SearchResultService {
   }
 
   private async getPostParents(posts: Post[]): Promise<PostParents[]> {
+    if (!posts.length) {
+      return [];
+    }
+
     const postIdsFormatted = posts.map(({ id }) => `'${id}'`).join(',');
     const queryResult: PostParentIDs[] = await this.entityManager.connection
       .query(`
@@ -483,7 +487,8 @@ export class SearchResultService {
         SELECT \`post\`.\`id\` as postID, \`space\`.\`id\` as \`spaceID\`, \`challenge\`.\`id\` as \`challengeID\`, \`opportunity\`.\`id\` as \`opportunityID\`, \`callout\`.\`id\` as \`calloutID\` FROM \`callout\`
         RIGHT JOIN \`opportunity\` on \`opportunity\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
         JOIN \`challenge\` on \`opportunity\`.\`challengeId\` = \`challenge\`.\`id\`
-        JOIN \`space\` on \`opportunity\`.\`spaceID\` = \`space\`.\`id\`
+        JOIN \`account\` on \`opportunity\`.\`accountId\` = \`account\`.\`id\`
+        JOIN \`space\` on \`account\`.\`id\` = \`space\`.\`accountId\`
         JOIN \`callout_contribution\` on \`callout\`.\`id\` = \`callout_contribution\`.\`calloutId\`
         JOIN \`post\` on \`post\`.\`id\` = \`callout_contribution\`.\`postId\`
         WHERE \`post\`.\`id\` in (${postIdsFormatted});

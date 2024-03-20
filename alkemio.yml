@@ -80,6 +80,9 @@ security:
 innovation_hub:
   header: ${INNOVATION_HUB_HEADER}:origin
 
+search:
+  use_new: ${SEARCH_USE_NEW}:true
+
 ## identity ##
 
 # Defines all authentication and authorization configuration.
@@ -293,16 +296,6 @@ storage:
     # Flag setting whether MySQL operations should be logged to the console.
     logging: ${ENABLE_ORM_LOGGING}:false
 
-  # IPFS (https://ipfs.io/) configuration.
-  ipfs:
-    # IPFS API endpoint. The name that the server uses for access IPFS for uploads.
-    endpoint: ${IPFS_ENDPOINT}:http://localhost:5001
-
-    # IPFS http proxy endpoint. Exposed through traefik (or any ingress / reverse proxy of choice).
-    client_endpoint: ${IPFS_CLIENT_ENDPOINT}:http://localhost:3000/ipfs
-    # Timeout to abort the request after a fixed time, in milliseconds.
-    timeout: ${IPFS_TIMEOUT}:15000
-
   local_storage:
     # Absolute path
     path: ${LOCAL_STORAGE_PATH}:.storage
@@ -374,7 +367,6 @@ collaboration:
     collaborator_mode_timeout: ${WHITEBOARD_COLLABORATOR_MODE_TIMEOUT}:1800
     # number of simultaneous collaborators
     max_collaborators_in_room: ${WHITEBOARD_MAX_COLLABORATORS_IN_ROOM}:20
-
 
 ## Configuration of the legal / usability aspects of the platform
 platform:
