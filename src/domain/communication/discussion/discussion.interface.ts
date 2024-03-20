@@ -16,7 +16,8 @@ export abstract class IDiscussion extends INameable {
   comments!: IRoom;
 
   @Field(() => CommunicationDiscussionPrivacy, {
-    description: 'Visibility of the Callout.',
+    description:
+      'Privacy mode for the Discussion. Note: this is not yet implemented in the authorization policy.',
   })
   privacy!: string;
 }
