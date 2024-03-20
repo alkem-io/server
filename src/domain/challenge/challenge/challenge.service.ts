@@ -529,6 +529,17 @@ export class ChallengeService {
     return count;
   }
 
+  // Note: this is not strictly looking for opportunities within the current challenge, but within the account
+  async getOpportunityInChallenge(
+    opportunityID: string,
+    challenge: IChallenge
+  ): Promise<IOpportunity | null> {
+    return await this.opportunityService.getOpportunityInAccount(
+      opportunityID,
+      challenge.account.id
+    );
+  }
+
   async getMembersCount(challenge: IChallenge): Promise<number> {
     const community = await this.getCommunity(challenge.id);
     return await this.communityService.getMembersCount(community);

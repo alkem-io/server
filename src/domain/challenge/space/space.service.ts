@@ -19,7 +19,6 @@ import {
   spaceCommunityApplicationForm,
   spaceCommunityPolicy,
 } from '@domain/challenge/space';
-import { IOpportunity } from '@domain/challenge/opportunity/opportunity.interface';
 import { OpportunityService } from '@domain/challenge/opportunity/opportunity.service';
 import { INVP, NVP } from '@domain/common/nvp';
 import { IOrganization } from '@domain/community/organization/organization.interface';
@@ -850,16 +849,6 @@ export class SpaceService {
   async getGroups(space: ISpace): Promise<IUserGroup[]> {
     const community = await this.getCommunity(space);
     return await this.communityService.getUserGroups(community);
-  }
-
-  async getOpportunityInAccount(
-    opportunityID: string,
-    space: ISpace
-  ): Promise<IOpportunity | null> {
-    return await this.opportunityService.getOpportunityInAccount(
-      opportunityID,
-      space.account.id
-    );
   }
 
   async getChallengeInAccount(

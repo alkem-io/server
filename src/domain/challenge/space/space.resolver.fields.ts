@@ -17,7 +17,6 @@ import {
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { SpaceService } from '@domain/challenge/space/space.service';
 import { ISpace } from '@domain/challenge/space/space.interface';
-import { IOpportunity } from '@domain/challenge/opportunity';
 import { IAgent } from '@domain/agent/agent';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
@@ -184,31 +183,6 @@ export class SpaceResolverFields {
       );
     }
     return challenge;
-  }
-
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
-  @ResolveField('opportunity', () => IOpportunity, {
-    nullable: false,
-    description: 'A particular Opportunity, either by its ID or nameID',
-  })
-  async opportunity(
-    @Args('ID', { type: () => UUID_NAMEID }) id: string,
-    @CurrentUser() agentInfo: AgentInfo,
-    @Parent() space: ISpace
-  ): Promise<IOpportunity> {
-    const opportunity = await this.spaceService.getOpportunityInAccount(
-      id,
-      space
-    );
-    if (!opportunity) {
-      throw new EntityNotFoundException(
-        `Unable to find Opportunity with ID: '${id}'`,
-        LogContext.CHALLENGES,
-        { opportunityId: id, spaceId: space.id, userId: agentInfo.userID }
-      );
-    }
-    return opportunity;
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

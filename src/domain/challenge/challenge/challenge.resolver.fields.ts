@@ -11,7 +11,7 @@ import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { INVP } from '@domain/common/nvp/nvp.interface';
 import { UseGuards } from '@nestjs/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
-import { AuthorizationPrivilege } from '@common/enums';
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { IAgent } from '@domain/agent/agent';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
@@ -30,6 +30,8 @@ import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.a
 import { ISpaceSettings } from '../space.settings/space.settings.interface';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication/agent-info';
+import { UUID_NAMEID } from '@domain/common/scalars/scalar.uuid.nameid';
+import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 
 @Resolver(() => IChallenge)
 export class ChallengeResolverFields {
@@ -141,6 +143,36 @@ export class ChallengeResolverFields {
     @Args({ nullable: true }) args: LimitAndShuffleIdsQueryArgs
   ): Promise<IOpportunity[]> {
     return await this.challengeService.getOpportunities(challenge.id, args);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('opportunity', () => IOpportunity, {
+    nullable: false,
+    description:
+      'A particular Opportunity, either by its ID or nameID, in the same account as the parent Challenge',
+  })
+  async opportunity(
+    @Args('ID', { type: () => UUID_NAMEID }) id: string,
+    @CurrentUser() agentInfo: AgentInfo,
+    @Parent() challenge: IChallenge
+  ): Promise<IOpportunity> {
+    const opportunity = await this.challengeService.getOpportunityInChallenge(
+      id,
+      challenge
+    );
+    if (!opportunity) {
+      throw new EntityNotFoundException(
+        `Unable to find Opportunity with ID: '${id}'`,
+        LogContext.CHALLENGES,
+        {
+          opportunityId: id,
+          challengeId: challenge.id,
+          userId: agentInfo.userID,
+        }
+      );
+    }
+    return opportunity;
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
