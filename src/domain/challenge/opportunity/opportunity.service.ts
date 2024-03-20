@@ -31,7 +31,6 @@ import { CommunityRole } from '@common/enums/community.role';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { opportunityDefaultCallouts } from './opportunity.default.callouts';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
 import { IAccount } from '../account/account.interface';
 import { SpaceType } from '@common/enums/space.type';
@@ -42,7 +41,6 @@ export class OpportunityService {
     private baseChallengeService: BaseChallengeService,
     private communityService: CommunityService,
     private collaborationService: CollaborationService,
-    private storageAggregatorService: StorageAggregatorService,
     private spaceDefaultsService: SpaceDefaultsService,
     private namingService: NamingService,
     @InjectRepository(Opportunity)
@@ -70,11 +68,6 @@ export class OpportunityService {
     opportunity.type = SpaceType.OPPORTUNITY;
     opportunity.account = account;
 
-    opportunity.storageAggregator =
-      await this.storageAggregatorService.createStorageAggregator(
-        opportunityData.storageAggregatorParent
-      );
-
     await this.baseChallengeService.initialise(
       opportunity,
       opportunityData,
@@ -82,48 +75,57 @@ export class OpportunityService {
       opportunityCommunityPolicy,
       opportunityCommunityApplicationForm,
       ProfileType.OPPORTUNITY,
-      opportunity.storageAggregator,
+      opportunityData.storageAggregatorParent,
+      undefined,
       opportunityData.collaborationData
     );
 
     await this.opportunityRepository.save(opportunity);
 
-    if (opportunity.collaboration) {
-      await this.collaborationService.addCalloutGroupTagsetTemplate(
-        opportunity.collaboration,
-        CalloutGroupName.CONTRIBUTE_2
+    if (
+      !opportunity.collaboration ||
+      !opportunity.storageAggregator ||
+      !opportunity.community
+    ) {
+      throw new EntityNotInitializedException(
+        `Entities not initialized on Opportunity creation: ${opportunity.nameID}`,
+        LogContext.CHALLENGES
+      );
+    }
+
+    await this.collaborationService.addCalloutGroupTagsetTemplate(
+      opportunity.collaboration,
+      CalloutGroupName.CONTRIBUTE_2
+    );
+
+    // Finally create default callouts, using the defaults service to decide what to add
+    const calloutInputsFromCollaborationTemplate =
+      await this.collaborationService.createCalloutInputsFromCollaborationTemplate(
+        opportunityData.collaborationData?.collaborationTemplateID
+      );
+    const calloutInputs =
+      await this.spaceDefaultsService.getCreateCalloutInputs(
+        opportunityDefaultCallouts,
+        calloutInputsFromCollaborationTemplate,
+        opportunityData.collaborationData
       );
 
-      // Finally create default callouts, using the defaults service to decide what to add
-      const calloutInputsFromCollaborationTemplate =
-        await this.collaborationService.createCalloutInputsFromCollaborationTemplate(
-          opportunityData.collaborationData?.collaborationTemplateID
-        );
-      const calloutInputs =
-        await this.spaceDefaultsService.getCreateCalloutInputs(
-          opportunityDefaultCallouts,
-          calloutInputsFromCollaborationTemplate,
-          opportunityData.collaborationData
-        );
-
-      opportunity.collaboration =
-        await this.collaborationService.addDefaultCallouts(
-          opportunity.collaboration,
-          calloutInputs,
-          opportunity.storageAggregator,
-          agentInfo?.userID
-        );
-    }
+    opportunity.collaboration =
+      await this.collaborationService.addDefaultCallouts(
+        opportunity.collaboration,
+        calloutInputs,
+        opportunity.storageAggregator,
+        agentInfo?.userID
+      );
 
     // set immediate community parent
-    if (opportunity.community) {
-      opportunity.community.parentID = opportunity.id;
-      opportunity.community.policy =
-        await this.communityService.updateCommunityPolicyResourceID(
-          opportunity.community,
-          opportunity.id
-        );
-    }
+
+    opportunity.community.parentID = opportunity.id;
+    opportunity.community.policy =
+      await this.communityService.updateCommunityPolicyResourceID(
+        opportunity.community,
+        opportunity.id
+      );
 
     if (agentInfo && opportunity.community) {
       await this.communityService.assignUserToRole(
@@ -220,12 +222,6 @@ export class OpportunityService {
       opportunity.id,
       this.opportunityRepository
     );
-
-    if (opportunity.storageAggregator) {
-      await this.storageAggregatorService.delete(
-        opportunity.storageAggregator.id
-      );
-    }
 
     const result = await this.opportunityRepository.remove(
       opportunity as Opportunity

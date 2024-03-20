@@ -50,7 +50,6 @@ import { CollaborationService } from '@domain/collaboration/collaboration/collab
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { challengeDefaultCallouts } from './challenge.default.callouts';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
 import { ISpaceSettings } from '../space.settings/space.settings.interface';
 import { SpaceSettingsService } from '../space.settings/space.settings.service';
@@ -66,7 +65,6 @@ export class ChallengeService {
     private opportunityService: OpportunityService,
     private baseChallengeService: BaseChallengeService,
     private organizationService: OrganizationService,
-    private storageAggregatorService: StorageAggregatorService,
     private collaborationService: CollaborationService,
     private spaceDefaultsService: SpaceDefaultsService,
     private spaceSettingsService: SpaceSettingsService,
@@ -98,11 +96,6 @@ export class ChallengeService {
 
     challenge.opportunities = [];
 
-    challenge.storageAggregator =
-      await this.storageAggregatorService.createStorageAggregator(
-        challengeData.storageAggregatorParent
-      );
-
     await this.baseChallengeService.initialise(
       challenge,
       challengeData,
@@ -110,28 +103,30 @@ export class ChallengeService {
       challengeCommunityPolicy,
       challengeCommunityApplicationForm,
       ProfileType.CHALLENGE,
-      challenge.storageAggregator,
+      challengeData.storageAggregatorParent,
+      undefined,
       challengeData.collaborationData
     );
 
     await this.challengeRepository.save(challenge);
-
-    // set immediate community parent + resourceID
-    if (challenge.community) {
-      challenge.community.parentID = challenge.id;
-      challenge.community.policy =
-        await this.communityService.updateCommunityPolicyResourceID(
-          challenge.community,
-          challenge.id
-        );
-    }
-
-    if (!challenge.collaboration) {
+    if (
+      !challenge.collaboration ||
+      !challenge.storageAggregator ||
+      !challenge.community
+    ) {
       throw new EntityNotInitializedException(
-        `Collaboration not initialized on Challenge: ${challenge.nameID}`,
+        `Entities not initialized on Challenge creation: ${challenge.nameID}`,
         LogContext.CHALLENGES
       );
     }
+
+    // set immediate community parent + resourceID
+    challenge.community.parentID = challenge.id;
+    challenge.community.policy =
+      await this.communityService.updateCommunityPolicyResourceID(
+        challenge.community,
+        challenge.id
+      );
 
     await this.collaborationService.addCalloutGroupTagsetTemplate(
       challenge.collaboration,
@@ -252,12 +247,6 @@ export class ChallengeService {
         resourceID: challengeID,
       });
       await this.organizationService.save(challengeLead);
-    }
-
-    if (challenge.storageAggregator) {
-      await this.storageAggregatorService.delete(
-        challenge.storageAggregator.id
-      );
     }
 
     await this.baseChallengeService.deleteEntities(

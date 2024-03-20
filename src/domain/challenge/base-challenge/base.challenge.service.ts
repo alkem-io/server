@@ -35,6 +35,7 @@ import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dt
 import { SpaceSettingsService } from '../space.settings/space.settings.service';
 import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
 import { IAccount } from '../account/account.interface';
+import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 
 @Injectable()
 export class BaseChallengeService {
@@ -47,6 +48,7 @@ export class BaseChallengeService {
     private profileService: ProfileService,
     private spaceSettingsService: SpaceSettingsService,
     private spaceDefaultsService: SpaceDefaultsService,
+    private storageAggregatorService: StorageAggregatorService,
     private collaborationService: CollaborationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -58,7 +60,8 @@ export class BaseChallengeService {
     communityPolicy: ICommunityPolicyDefinition,
     applicationFormData: CreateFormInput,
     profileType: ProfileType,
-    storageAggregator: IStorageAggregator,
+    parentStorageAggregator: IStorageAggregator | undefined,
+    storageAggregator: IStorageAggregator | undefined, // there is a bootsrap issue to be addressed after merge
     collaborationInput?: CreateCollaborationInput
   ) {
     baseChallenge.authorization = new AuthorizationPolicy();
@@ -69,6 +72,23 @@ export class BaseChallengeService {
       baseChallengeData.nameID,
       account.id
     );
+
+    // Either use the one passed in or create a new one
+    if (!storageAggregator) {
+      baseChallenge.storageAggregator =
+        await this.storageAggregatorService.createStorageAggregator(
+          parentStorageAggregator
+        );
+    } else {
+      baseChallenge.storageAggregator = storageAggregator;
+    }
+
+    if (!baseChallenge.storageAggregator) {
+      throw new EntityNotInitializedException(
+        `Entities not initialized on base challenge creation: ${baseChallenge.nameID}`,
+        LogContext.CHALLENGES
+      );
+    }
 
     baseChallenge.community = await this.communityService.createCommunity(
       baseChallengeData.profileData.displayName,
@@ -89,7 +109,7 @@ export class BaseChallengeService {
     baseChallenge.profile = await this.profileService.createProfile(
       baseChallengeData.profileData,
       profileType,
-      storageAggregator
+      baseChallenge.storageAggregator
     );
     await this.profileService.addTagsetOnProfile(baseChallenge.profile, {
       name: TagsetReservedName.DEFAULT,
@@ -114,7 +134,7 @@ export class BaseChallengeService {
         {
           ...collaborationInput,
         },
-        storageAggregator,
+        baseChallenge.storageAggregator,
         account,
         baseChallenge.type
       );
@@ -171,35 +191,38 @@ export class BaseChallengeService {
           context: true,
           agent: true,
           profile: true,
+          storageAggregator: true,
         },
       }
     );
-    if (baseChallenge.context) {
-      await this.contextService.removeContext(baseChallenge.context.id);
-    }
 
-    if (baseChallenge.collaboration) {
-      await this.collaborationService.deleteCollaboration(
-        baseChallenge.collaboration.id
+    if (
+      !baseChallenge.collaboration ||
+      !baseChallenge.community ||
+      !baseChallenge.context ||
+      !baseChallenge.agent ||
+      !baseChallenge.profile ||
+      !baseChallenge.storageAggregator ||
+      !baseChallenge.authorization
+    ) {
+      throw new RelationshipNotFoundException(
+        `Unable to load entities to delete base challenge: ${baseChallenge.id} `,
+        LogContext.CHALLENGES
       );
     }
 
-    const community = baseChallenge.community;
-    if (community) {
-      await this.communityService.removeCommunity(community.id);
-    }
+    await this.contextService.removeContext(baseChallenge.context.id);
+    await this.collaborationService.deleteCollaboration(
+      baseChallenge.collaboration.id
+    );
+    await this.communityService.removeCommunity(baseChallenge.community.id);
+    await this.profileService.deleteProfile(baseChallenge.profile.id);
+    await this.agentService.deleteAgent(baseChallenge.agent.id);
+    await this.authorizationPolicyService.delete(baseChallenge.authorization);
 
-    if (baseChallenge.profile) {
-      await this.profileService.deleteProfile(baseChallenge.profile.id);
-    }
-
-    if (baseChallenge.agent) {
-      await this.agentService.deleteAgent(baseChallenge.agent.id);
-    }
-
-    if (baseChallenge.authorization) {
-      await this.authorizationPolicyService.delete(baseChallenge.authorization);
-    }
+    await this.storageAggregatorService.delete(
+      baseChallenge.storageAggregator.id
+    );
   }
 
   public async getBaseChallengeOrFail(

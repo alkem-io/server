@@ -11,6 +11,7 @@ import { CommunityPolicyModule } from '@domain/community/community-policy/commun
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { SpaceDefaultsModule } from '../space.defaults/space.defaults.module';
 import { SpaceSettingssModule } from '../space.settings/space.settings.module';
+import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { SpaceSettingssModule } from '../space.settings/space.settings.module';
     NamingModule,
     SpaceDefaultsModule,
     SpaceSettingssModule,
+    StorageAggregatorModule,
     CollaborationModule,
   ],
   providers: [BaseChallengeService],

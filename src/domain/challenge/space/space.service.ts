@@ -126,6 +126,7 @@ export class SpaceService {
       spaceCommunityPolicy,
       spaceCommunityApplicationForm,
       ProfileType.SPACE,
+      undefined, // no parent
       space.storageAggregator
     );
 
