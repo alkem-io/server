@@ -11,28 +11,44 @@ import {
   AuthorizationPrivilege,
   LogContext,
 } from '@common/enums';
-import { DocumentService } from './document.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { CREDENTIAL_RULE_DOCUMENT_CREATED_BY } from '@common/constants/authorization/credential.rule.constants';
+import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
+import { DocumentService } from './document.service';
 @Injectable()
 export class DocumentAuthorizationService {
   constructor(
-    private documentService: DocumentService,
     private authorizationPolicyService: AuthorizationPolicyService,
+    private documentService: DocumentService,
     @InjectRepository(Document)
     private documentRepository: Repository<Document>
   ) {}
 
   async applyAuthorizationPolicy(
-    documentInput: IDocument,
+    document: IDocument,
     parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<IDocument> {
-    const document = await this.documentService.getDocumentOrFail(
-      documentInput.id,
-      {
-        relations: { tagset: true },
+    // Note: do not reload unless the tagset entity is missing
+    if (!document.tagset) {
+      const loadedDocument = await this.documentService.getDocumentOrFail(
+        document.id,
+        {
+          relations: {
+            tagset: true,
+          },
+        }
+      );
+      if (loadedDocument.tagset) {
+        document.tagset = loadedDocument.tagset;
       }
-    );
+    }
+    if (!document.tagset) {
+      throw new RelationshipNotFoundException(
+        `Unable to find entities required to reset auth for Document ${document.id} `,
+        LogContext.STORAGE_BUCKET
+      );
+    }
+
     document.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         document.authorization,
