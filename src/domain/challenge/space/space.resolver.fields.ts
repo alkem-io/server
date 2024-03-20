@@ -99,7 +99,7 @@ export class SpaceResolverFields {
   async collaboration(
     @Parent() space: Space,
     @Loader(JourneyCollaborationLoaderCreator, { parentClassRef: Space })
-    loader: ILoader<IContext>
+    loader: ILoader<ICollaboration>
   ): Promise<ICollaboration> {
     return loader.load(space.id);
   }

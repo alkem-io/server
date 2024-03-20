@@ -38,7 +38,6 @@ import {
 import { ITagsetTemplateSet } from '@domain/common/tagset-template-set';
 import { CreateCalloutInput } from '../callout/dto/callout.dto.create';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { CalloutDisplayLocation } from '@common/enums/callout.display.location';
 import { TimelineService } from '@domain/timeline/timeline/timeline.service';
 import { ITimeline } from '@domain/timeline/timeline/timeline.interface';
 import { keyBy } from 'lodash';
@@ -52,6 +51,11 @@ import { TagsetType } from '@common/enums/tagset.type';
 import { IInnovationFlow } from '../innovation-flow/innovation.flow.interface';
 import { CreateCollaborationInput } from './dto/collaboration.dto.create';
 import { Space } from '@domain/challenge/space/space.entity';
+import { ICalloutGroup } from '../callout-groups/callout.group.interface';
+import { CalloutGroupsService } from '../callout-groups/callout.group.service';
+import { IAccount } from '@domain/challenge/account/account.interface';
+import { SpaceType } from '@common/enums/space.type';
+import { CalloutGroupName } from '@common/enums/callout.group.name';
 
 @Injectable()
 export class CollaborationService {
@@ -69,19 +73,24 @@ export class CollaborationService {
     @InjectEntityManager('default')
     private entityManager: EntityManager,
     private timelineService: TimelineService,
-    private spaceDefaultsService: SpaceDefaultsService
+    private spaceDefaultsService: SpaceDefaultsService,
+    private calloutGroupsService: CalloutGroupsService
   ) {}
 
   async createCollaboration(
     collaborationData: CreateCollaborationInput,
     storageAggregator: IStorageAggregator,
-    spaceID: string
+    account: IAccount,
+    spaceType: SpaceType
   ): Promise<ICollaboration> {
     const collaboration: ICollaboration = Collaboration.create();
     collaboration.authorization = new AuthorizationPolicy();
     collaboration.relations = [];
     collaboration.callouts = [];
     collaboration.timeline = await this.timelineService.createTimeline();
+    const calloutGroups = this.spaceDefaultsService.getCalloutGroups(spaceType);
+    collaboration.groupsStr =
+      this.calloutGroupsService.serializeGroups(calloutGroups);
 
     collaboration.tagsetTemplateSet =
       await this.tagsetTemplateSetService.createTagsetTemplateSet();
@@ -89,7 +98,7 @@ export class CollaborationService {
     // Rely on the logic in Space Defaults to create the right innovation flow input
     const innovationFlowInput =
       await this.spaceDefaultsService.getCreateInnovationFlowInput(
-        spaceID,
+        account.id,
         collaborationData.innovationFlowTemplateID
       );
     const allowedStates = innovationFlowInput.states.map(
@@ -119,6 +128,23 @@ export class CollaborationService {
       );
 
     return await this.save(collaboration);
+  }
+
+  public getCalloutGroupNames(collaboration: ICollaboration): string[] {
+    return this.calloutGroupsService.getGroupNames(collaboration.groupsStr);
+  }
+
+  public async addCalloutGroupTagsetTemplate(
+    collaboration: ICollaboration,
+    defaultGroup: CalloutGroupName
+  ) {
+    const tagsetTemplateData: CreateTagsetTemplateInput = {
+      name: TagsetReservedName.CALLOUT_GROUP,
+      type: TagsetType.SELECT_ONE,
+      allowedValues: this.getCalloutGroupNames(collaboration),
+      defaultSelectedValue: defaultGroup,
+    };
+    await this.addTagsetTemplate(collaboration, tagsetTemplateData);
   }
 
   public async addTagsetTemplate(
@@ -365,6 +391,10 @@ export class CollaborationService {
     );
   }
 
+  public getGroups(collaboration: ICollaboration): ICalloutGroup[] {
+    return this.calloutGroupsService.getGroups(collaboration.groupsStr);
+  }
+
   public async createCalloutOnCollaboration(
     calloutData: CreateCalloutOnCollaborationInput,
     userID: string
@@ -476,25 +506,41 @@ export class CollaborationService {
     }
 
     // Single pass filter operation
+    const groupNames: string[] = [];
+    if (args.groups && args.groups.length) {
+      const allowedGroups = await this.calloutGroupsService.getGroups(
+        collaboration.groupsStr
+      );
+
+      for (const group of args.groups) {
+        // Validate that the groups are valid
+        const groupAllowed = allowedGroups.find(g => g.displayName === group);
+        if (!groupAllowed) {
+          throw new ValidationException(
+            `Specified group not found: ${group}; allowed groups: ${allowedGroups
+              .map(g => g.displayName)
+              .join(', ')}`,
+            LogContext.COLLABORATION
+          );
+        }
+        groupNames.push(group);
+      }
+    }
     const availableCallouts = allCallouts.filter(callout => {
       // Check for READ privilege
       const hasAccess = this.hasAgentAccessToCallout(callout, agentInfo);
       if (!hasAccess) return false;
 
-      // Filter by Callout display locations
-      const locationCheck =
-        args.displayLocations && args.displayLocations.length
-          ? callout.framing.profile.tagsets?.some(
-              tagset =>
-                tagset.name === TagsetReservedName.CALLOUT_DISPLAY_LOCATION &&
-                tagset.tags.length > 0 &&
-                args.displayLocations?.includes(
-                  tagset.tags[0] as CalloutDisplayLocation
-                )
-            )
-          : true;
-
-      if (!locationCheck) return false;
+      // Filter by Callout groups
+      if (groupNames.length > 0) {
+        const hasMatchingTagset = callout.framing.profile.tagsets?.some(
+          tagset =>
+            tagset.name === TagsetReservedName.CALLOUT_GROUP &&
+            tagset.tags.length > 0 &&
+            groupNames?.includes(tagset.tags[0])
+        );
+        if (!hasMatchingTagset) return false;
+      }
 
       // Filter by tagsets
       const tagsetCheck =

@@ -1,5 +1,4 @@
 import { ConfigurationTypes, LogContext } from '@common/enums';
-import { CommunityType } from '@common/enums/community.type';
 import { EntityNotFoundException } from '@common/exceptions';
 import { NotificationEventException } from '@common/exceptions/notification.event.exception';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
@@ -61,6 +60,7 @@ import { NotificationInputWhiteboardCreated } from './dto/notification.dto.input
 import { NotificationInputPostCreated } from './dto/notification.dto.input.post.created';
 import { NotificationInputPostComment } from './dto/notification.dto.input.post.comment';
 import { ContributionResolverService } from '@services/infrastructure/entity-resolver/contribution.resolver.service';
+import { SpaceType } from '@common/enums/space.type';
 
 @Injectable()
 export class NotificationPayloadBuilder {
@@ -811,12 +811,12 @@ export class NotificationPayloadBuilder {
       displayName: displayName,
       type: community.type,
     };
-    if (community.type === CommunityType.CHALLENGE) {
+    if (community.type === SpaceType.CHALLENGE) {
       result.challenge = {
         id: community.parentID,
         nameID: await this.getChallengeNameIdOrFail(community.parentID),
       };
-    } else if (community.type === CommunityType.OPPORTUNITY) {
+    } else if (community.type === SpaceType.OPPORTUNITY) {
       const communityWithParent =
         await this.communityResolverService.getCommunityWithParentOrFail(
           community.id

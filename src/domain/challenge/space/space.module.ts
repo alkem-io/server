@@ -32,6 +32,7 @@ import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/stor
 import { SpaceDefaultsModule } from '../space.defaults/space.defaults.module';
 import { SpaceSettingssModule } from '../space.settings/space.settings.module';
 import { AccountModule } from '../account/account.module';
+import { InnovationFlowTemplateModule } from '@domain/template/innovation-flow-template/innovation.flow.template.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { AccountModule } from '../account/account.module';
     ChallengeModule,
     BaseChallengeModule,
     OpportunityModule,
+    InnovationFlowTemplateModule,
     PlatformAuthorizationPolicyModule,
     OrganizationModule,
     StorageAggregatorModule,

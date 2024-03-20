@@ -7,6 +7,8 @@ import { Agent } from '@domain/agent/agent/agent.entity';
 import { Collaboration } from '../../collaboration/collaboration/collaboration.entity';
 import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
 import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
+import { TINY_TEXT_LENGTH } from '@common/constants/entity.field.length.constants';
+import { SpaceType } from '@common/enums/space.type';
 
 export class BaseChallenge extends NameableEntity implements IBaseChallenge {
   @Column({
@@ -53,6 +55,11 @@ export class BaseChallenge extends NameableEntity implements IBaseChallenge {
   })
   @JoinColumn()
   storageAggregator?: StorageAggregator;
+
+  @Column({
+    length: TINY_TEXT_LENGTH,
+  })
+  type!: SpaceType;
 
   constructor() {
     super();

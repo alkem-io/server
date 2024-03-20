@@ -9,7 +9,6 @@ import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { SpaceDefaults } from './space.defaults.entity';
 import { InnovationFlowStatesService } from '@domain/collaboration/innovation-flow-states/innovaton.flow.state.service';
-import { Space } from '../space/space.entity';
 import { InnovationFlowTemplateService } from '@domain/template/innovation-flow-template/innovation.flow.template.service';
 import { ITemplatesSet } from '@domain/template/templates-set';
 import { TemplatesSetService } from '@domain/template/templates-set/templates.set.service';
@@ -22,6 +21,11 @@ import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dt
 import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
 import { ISpaceSettings } from '../space.settings/space.settings.interface';
 import { spaceSettingsDefaults } from './definitions/space.settings';
+import { ICalloutGroup } from '@domain/collaboration/callout-groups/callout.group.interface';
+import { SpaceType } from '@common/enums/space.type';
+import { spaceCalloutGroups } from './definitions/space.callout.group';
+import { subspaceCalloutGroups } from './definitions/subspace.callout.group';
+import { Account } from '../account/account.entity';
 
 @Injectable()
 export class SpaceDefaultsService {
@@ -32,8 +36,8 @@ export class SpaceDefaultsService {
     private templatesSetService: TemplatesSetService,
     @InjectRepository(SpaceDefaults)
     private spaceDefaultsRepository: Repository<SpaceDefaults>,
-    @InjectRepository(Space)
-    private spaceRepository: Repository<Space>
+    @InjectRepository(Account)
+    private accountRepository: Repository<Account>
   ) {}
 
   public async createSpaceDefaults(): Promise<ISpaceDefaults> {
@@ -96,28 +100,36 @@ export class SpaceDefaultsService {
     return spaceDefaults;
   }
 
-  public async getSpaceDefaultsForSpaceOrFail(
-    spaceID: string
+  public async getDefaultsForAccountOrFail(
+    accountID: string
   ): Promise<ISpaceDefaults | never> {
     let spaceDefaults: ISpaceDefaults | undefined = undefined;
-    if (spaceID.length === UUID_LENGTH) {
-      const space = await this.spaceRepository.findOne({
-        where: { id: spaceID },
+    if (accountID.length === UUID_LENGTH) {
+      const account = await this.accountRepository.findOne({
+        where: { id: accountID },
         relations: {
-          account: {
-            defaults: true,
-          },
+          defaults: true,
         },
       });
-      if (space) spaceDefaults = space?.account?.defaults;
+      if (account) spaceDefaults = account?.defaults;
     }
 
     if (!spaceDefaults)
       throw new EntityNotFoundException(
-        `No SpaceDefaults found for the given space ID: ${spaceID}`,
+        `No SpaceDefaults found for the given accountID: ${accountID}`,
         LogContext.COLLABORATION
       );
     return spaceDefaults;
+  }
+
+  public getCalloutGroups(spaceType: SpaceType): ICalloutGroup[] {
+    switch (spaceType) {
+      case SpaceType.CHALLENGE:
+      case SpaceType.OPPORTUNITY:
+        return subspaceCalloutGroups;
+      case SpaceType.SPACE:
+        return spaceCalloutGroups;
+    }
   }
 
   public getDefaultInnovationFlowTemplate(
@@ -131,7 +143,7 @@ export class SpaceDefaultsService {
   }
 
   public async getCreateInnovationFlowInput(
-    spaceID: string,
+    accountID: string,
     innovationFlowTemplateID?: string
   ): Promise<CreateInnovationFlowInput> {
     // Start with using the provided argument
@@ -155,7 +167,7 @@ export class SpaceDefaultsService {
     }
 
     // If no argument is provided, then use the default template for the space, if set
-    const spaceDefaults = await this.getSpaceDefaultsForSpaceOrFail(spaceID);
+    const spaceDefaults = await this.getDefaultsForAccountOrFail(accountID);
     if (spaceDefaults.innovationFlowTemplate) {
       const template =
         await this.innovationFlowTemplateService.getInnovationFlowTemplateOrFail(

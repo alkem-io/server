@@ -23,10 +23,7 @@ import { DiscussionCategoryCommunity } from '@common/enums/communication.discuss
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { ICallout } from '@domain/collaboration/callout';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { ChallengeDisplayLocation } from '@common/enums/challenge.display.location';
-import { SpaceDisplayLocation } from '@common/enums/space.display.location';
-import { CommonDisplayLocation } from '@common/enums/common.display.location';
-import { OpportunityDisplayLocation } from '@common/enums/opportunity.display.location';
+import { CalloutGroupName } from '@common/enums/callout.group.name';
 
 export class ConversionService {
   constructor(
@@ -166,7 +163,7 @@ export class ConversionService {
     space.collaboration = challengeCollaboration;
     challenge.collaboration = spaceCollaboration;
     // Update display locations for callouts to use space locations
-    this.updateSpaceCalloutsDisplayLocation(space.collaboration.callouts);
+    this.updateSpaceCalloutsGroups(space.collaboration.callouts);
 
     // Swap the profiles
     const challengeProfile = challenge.profile;
@@ -371,9 +368,7 @@ export class ConversionService {
     challenge.collaboration = opportunityCollaboration;
     opportunity.collaboration = challengeCollaboration;
     // Update display locations for callouts to use space locations
-    this.updateChallengeCalloutsDisplayLocation(
-      challenge.collaboration.callouts
-    );
+    this.updateChallengeCalloutGroups(challenge.collaboration.callouts);
 
     // Swap the profiles
     const opportunityProfile = opportunity.profile;
@@ -415,9 +410,7 @@ export class ConversionService {
     return await this.spaceService.addChallengeToSpace(spaceID, challenge);
   }
 
-  private updateSpaceCalloutsDisplayLocation(
-    callouts: ICallout[] | undefined
-  ): void {
+  private updateSpaceCalloutsGroups(callouts: ICallout[] | undefined): void {
     if (!callouts) {
       throw new EntityNotInitializedException(
         'Callouts not defined',
@@ -437,7 +430,7 @@ export class ConversionService {
       }
 
       const locationTagset = callout.framing.profile.tagsets.find(
-        t => t.name === TagsetReservedName.CALLOUT_DISPLAY_LOCATION
+        t => t.name === TagsetReservedName.CALLOUT_GROUP
       );
       if (!locationTagset || locationTagset.tags.length !== 1) {
         throw new EntityNotInitializedException(
@@ -447,25 +440,23 @@ export class ConversionService {
       }
       const location = locationTagset.tags[0];
       switch (location) {
-        case ChallengeDisplayLocation.OPPORTUNITIES_RIGHT:
-          locationTagset.tags = [SpaceDisplayLocation.CHALLENGES_RIGHT];
+        case CalloutGroupName.SUBSPACES_1:
+          locationTagset.tags = [CalloutGroupName.SUBSPACES_2];
           break;
-        case ChallengeDisplayLocation.OPPORTUNITIES_LEFT:
-          locationTagset.tags = [SpaceDisplayLocation.CHALLENGES_RIGHT];
+        case CalloutGroupName.SUBSPACES_1:
+          locationTagset.tags = [CalloutGroupName.SUBSPACES_1];
           break;
-        case ChallengeDisplayLocation.CONTRIBUTE_RIGHT:
-          locationTagset.tags = [CommonDisplayLocation.KNOWLEDGE];
+        case CalloutGroupName.CONTRIBUTE_2:
+          locationTagset.tags = [CalloutGroupName.KNOWLEDGE];
           break;
-        case ChallengeDisplayLocation.CONTRIBUTE:
-          locationTagset.tags = [CommonDisplayLocation.KNOWLEDGE];
+        case CalloutGroupName.CONTRIBUTE_1:
+          locationTagset.tags = [CalloutGroupName.KNOWLEDGE];
           break;
       }
     }
   }
 
-  private updateChallengeCalloutsDisplayLocation(
-    callouts: ICallout[] | undefined
-  ): void {
+  private updateChallengeCalloutGroups(callouts: ICallout[] | undefined): void {
     if (!callouts) {
       throw new EntityNotInitializedException(
         'Callouts not defined',
@@ -485,7 +476,7 @@ export class ConversionService {
       }
 
       const locationTagset = callout.framing.profile.tagsets.find(
-        t => t.name === TagsetReservedName.CALLOUT_DISPLAY_LOCATION
+        t => t.name === TagsetReservedName.CALLOUT_GROUP
       );
       if (!locationTagset || locationTagset.tags.length !== 1) {
         throw new EntityNotInitializedException(
@@ -495,11 +486,11 @@ export class ConversionService {
       }
       const location = locationTagset.tags[0];
       switch (location) {
-        case OpportunityDisplayLocation.CONTRIBUTE:
-          locationTagset.tags = [ChallengeDisplayLocation.CONTRIBUTE];
+        case CalloutGroupName.CONTRIBUTE_1:
+          locationTagset.tags = [CalloutGroupName.CONTRIBUTE_1];
           break;
-        case OpportunityDisplayLocation.CONTRIBUTE_RIGHT:
-          locationTagset.tags = [ChallengeDisplayLocation.CONTRIBUTE_RIGHT];
+        case CalloutGroupName.CONTRIBUTE_2:
+          locationTagset.tags = [CalloutGroupName.CONTRIBUTE_2];
           break;
       }
     }

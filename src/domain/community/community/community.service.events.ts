@@ -4,10 +4,10 @@ import { NotificationAdapter } from '@services/adapters/notification-adapter/not
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { NotificationInputCommunityNewMember } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.new.member';
 import { ICommunity } from './community.interface';
-import { CommunityType } from '@common/enums/community.type';
 import { ActivityInputMemberJoined } from '@services/adapters/activity-adapter/dto/activity.dto.input.member.joined';
 import { IUser } from '../user/user.interface';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
+import { SpaceType } from '@common/enums/space.type';
 
 @Injectable()
 export class CommunityEventsService {
@@ -46,7 +46,7 @@ export class CommunityEventsService {
 
     // Record the contribution events
     switch (community.type) {
-      case CommunityType.SPACE:
+      case SpaceType.SPACE:
         this.contributionReporter.spaceJoined(
           {
             id: community.parentID,
@@ -59,7 +59,7 @@ export class CommunityEventsService {
           }
         );
         break;
-      case CommunityType.CHALLENGE:
+      case SpaceType.CHALLENGE:
         this.contributionReporter.challengeJoined(
           {
             id: community.parentID,
@@ -72,7 +72,7 @@ export class CommunityEventsService {
           }
         );
         break;
-      case CommunityType.OPPORTUNITY:
+      case SpaceType.OPPORTUNITY:
         this.contributionReporter.opportunityJoined(
           {
             id: community.parentID,
