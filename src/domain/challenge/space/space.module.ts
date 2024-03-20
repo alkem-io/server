@@ -9,7 +9,6 @@ import { SpaceResolverQueries } from '@domain/challenge/space/space.resolver.que
 import { SpaceService } from '@domain/challenge/space/space.service';
 import { SpaceResolverFields } from '@domain/challenge/space/space.resolver.fields';
 import { CommunityModule } from '@domain/community/community/community.module';
-import { UserGroupModule } from '@domain/community/user-group/user-group.module';
 import { OpportunityModule } from '@domain/challenge/opportunity/opportunity.module';
 import { BaseChallengeModule } from '@domain/challenge/base-challenge/base.challenge.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
@@ -51,7 +50,6 @@ import { InnovationFlowTemplateModule } from '@domain/template/innovation-flow-t
     PlatformAuthorizationPolicyModule,
     OrganizationModule,
     StorageAggregatorModule,
-    UserGroupModule,
     UserModule,
     NamingModule,
     CollaborationModule,

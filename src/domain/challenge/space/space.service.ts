@@ -1,9 +1,5 @@
 import { UUID_LENGTH } from '@common/constants';
-import {
-  AuthorizationCredential,
-  LogContext,
-  ProfileType,
-} from '@common/enums';
+import { LogContext, ProfileType } from '@common/enums';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -21,9 +17,7 @@ import {
 } from '@domain/challenge/space';
 import { OpportunityService } from '@domain/challenge/opportunity/opportunity.service';
 import { INVP, NVP } from '@domain/common/nvp';
-import { IOrganization } from '@domain/community/organization/organization.interface';
 import { ICommunity } from '@domain/community/community';
-import { OrganizationService } from '@domain/community/organization/organization.service';
 import { IContext } from '@domain/context/context';
 import { BaseChallengeService } from '@domain/challenge/base-challenge/base.challenge.service';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
@@ -34,7 +28,6 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { Space } from './space.entity';
 import { ISpace } from './space.interface';
-import { AgentService } from '@domain/agent/agent/agent.service';
 import { UpdateSpaceInput } from './dto/space.dto.update';
 import { CreateChallengeOnSpaceInput } from './dto/space.dto.create.challenge';
 import { CommunityService } from '@domain/community/community/community.service';
@@ -72,8 +65,6 @@ import { SpaceType } from '@common/enums/space.type';
 @Injectable()
 export class SpaceService {
   constructor(
-    private agentService: AgentService,
-    private organizationService: OrganizationService,
     private opportunityService: OpportunityService,
     private baseChallengeService: BaseChallengeService,
     private namingService: NamingService,
@@ -175,7 +166,6 @@ export class SpaceService {
       }
     }
 
-    // save before assigning host in case that fails
     return await this.spaceRepository.save(space);
   }
 
@@ -752,37 +742,6 @@ export class SpaceService {
     );
   }
 
-  async setSpaceHost(spaceID: string, hostOrgID: string): Promise<ISpace> {
-    const organization = await this.organizationService.getOrganizationOrFail(
-      hostOrgID,
-      { relations: { groups: true, agent: true } }
-    );
-
-    const existingHost = await this.getHost(spaceID);
-
-    if (existingHost) {
-      const agentExisting = await this.organizationService.getAgent(
-        existingHost
-      );
-      organization.agent = await this.agentService.revokeCredential({
-        agentID: agentExisting.id,
-        type: AuthorizationCredential.SPACE_HOST,
-        resourceID: spaceID,
-      });
-    }
-
-    // assign the credential
-    const agent = await this.organizationService.getAgent(organization);
-    organization.agent = await this.agentService.grantCredential({
-      agentID: agent.id,
-      type: AuthorizationCredential.SPACE_HOST,
-      resourceID: spaceID,
-    });
-
-    await this.organizationService.save(organization);
-    return await this.getSpaceOrFail(spaceID);
-  }
-
   async isNameIdAvailable(nameID: string): Promise<boolean> {
     const challengeCount = await this.spaceRepository.countBy({
       nameID: nameID,
@@ -1049,23 +1008,5 @@ export class SpaceService {
       space,
       this.spaceRepository
     );
-  }
-
-  async getHost(spaceID: string): Promise<IOrganization | undefined> {
-    const organizations =
-      await this.organizationService.organizationsWithCredentials({
-        type: AuthorizationCredential.SPACE_HOST,
-        resourceID: spaceID,
-      });
-    if (organizations.length == 0) {
-      return undefined;
-    }
-    if (organizations.length > 1) {
-      throw new RelationshipNotFoundException(
-        `More than one host for Space ${spaceID} `,
-        LogContext.CHALLENGES
-      );
-    }
-    return organizations[0];
   }
 }

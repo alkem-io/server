@@ -3,9 +3,7 @@ import { GraphqlGuard } from '@core/authorization';
 import { Space } from '@domain/challenge/space/space.entity';
 import { INVP } from '@domain/common/nvp';
 import { UUID_NAMEID } from '@domain/common/scalars';
-import { IOrganization } from '@domain/community/organization';
 import { ICommunity } from '@domain/community/community';
-import { UserGroupService } from '@domain/community/user-group/user-group.service';
 import { IContext } from '@domain/context/context';
 import { UseGuards } from '@nestjs/common';
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
@@ -38,7 +36,6 @@ import { ISpaceSettings } from '../space.settings/space.settings.interface';
 @Resolver(() => ISpace)
 export class SpaceResolverFields {
   constructor(
-    private groupService: UserGroupService,
     private spaceService: SpaceService,
     private authorizationService: AuthorizationService
   ) {}
@@ -190,14 +187,6 @@ export class SpaceResolverFields {
   })
   async metrics(@Parent() space: ISpace) {
     return await this.spaceService.getMetrics(space);
-  }
-
-  @ResolveField('host', () => IOrganization, {
-    nullable: true,
-    description: 'The Space host.',
-  })
-  async host(@Parent() space: Space): Promise<IOrganization | undefined> {
-    return await this.spaceService.getHost(space.id);
   }
 
   @ResolveField('createdDate', () => Date, {
