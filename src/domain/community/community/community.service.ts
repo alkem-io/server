@@ -155,6 +155,33 @@ export class CommunityService {
     return communityWithGroups.groups;
   }
 
+  // Loads the group into the Community entity if not already present
+  async getUserGroup(
+    community: ICommunity,
+    groupID: string
+  ): Promise<IUserGroup> {
+    const communityWithGroups = await this.getCommunityOrFail(community.id, {
+      relations: { groups: true },
+    });
+    if (!communityWithGroups.groups) {
+      throw new EntityNotInitializedException(
+        `Community not initialized: ${community.id}`,
+        LogContext.COMMUNITY
+      );
+    }
+    const result = communityWithGroups.groups.find(
+      group => group.id === groupID
+    );
+    if (!result) {
+      throw new EntityNotFoundException(
+        `Unable to find group with ID: '${groupID}'`,
+        LogContext.COMMUNITY,
+        { communityId: community.id, spaceId: community.spaceID }
+      );
+    }
+    return result;
+  }
+
   async getCommunityOrFail(
     communityID: string,
     options?: FindOneOptions<Community>

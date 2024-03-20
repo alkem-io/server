@@ -24,7 +24,6 @@ import { INVP, NVP } from '@domain/common/nvp';
 import { IOrganization } from '@domain/community/organization/organization.interface';
 import { ICommunity } from '@domain/community/community';
 import { OrganizationService } from '@domain/community/organization/organization.service';
-import { IUserGroup } from '@domain/community/user-group';
 import { IContext } from '@domain/context/context';
 import { BaseChallengeService } from '@domain/challenge/base-challenge/base.challenge.service';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
@@ -845,11 +844,6 @@ export class SpaceService {
         : -1
     );
     return sortedChallenges;
-  }
-
-  async getGroups(space: ISpace): Promise<IUserGroup[]> {
-    const community = await this.getCommunity(space);
-    return await this.communityService.getUserGroups(community);
   }
 
   async getChallengeInAccount(

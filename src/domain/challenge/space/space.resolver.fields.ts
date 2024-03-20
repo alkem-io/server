@@ -2,10 +2,9 @@ import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
 import { Space } from '@domain/challenge/space/space.entity';
 import { INVP } from '@domain/common/nvp';
-import { UUID, UUID_NAMEID } from '@domain/common/scalars';
+import { UUID_NAMEID } from '@domain/common/scalars';
 import { IOrganization } from '@domain/community/organization';
 import { ICommunity } from '@domain/community/community';
-import { IUserGroup } from '@domain/community/user-group';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
 import { IContext } from '@domain/context/context';
 import { UseGuards } from '@nestjs/common';
@@ -183,33 +182,6 @@ export class SpaceResolverFields {
       );
     }
     return challenge;
-  }
-
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
-  @ResolveField('groups', () => [IUserGroup], {
-    nullable: false,
-    description: 'The User Groups on this Space',
-  })
-  async groups(@Parent() space: Space): Promise<IUserGroup[]> {
-    return await this.groupService.getGroups({
-      where: { spaceID: space.id },
-    });
-  }
-
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
-  @ResolveField('group', () => IUserGroup, {
-    nullable: false,
-    description: 'The user group with the specified id anywhere in the space',
-  })
-  async group(
-    @Parent() space: Space,
-    @Args('ID', { type: () => UUID }) groupID: string
-  ): Promise<IUserGroup> {
-    return await this.groupService.getUserGroupOrFail(groupID, {
-      where: { spaceID: space.id },
-    });
   }
 
   @ResolveField('metrics', () => [INVP], {
