@@ -191,7 +191,7 @@ export class SpaceResolverMutations {
     );
 
     const spaceDefaults =
-      await this.spaceDefaultsService.getSpaceDefaultsForSpaceOrFail(
+      await this.spaceDefaultsService.getSpaceDefaultsOrFail(
         spaceDefaultsData.spaceID
       );
 
