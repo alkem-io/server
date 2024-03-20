@@ -7,7 +7,7 @@ import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { Communication } from '@domain/communication/communication/communication.entity';
 import { Profile } from '@domain/common/profile/profile.entity';
-import { CommunityType } from '@common/enums/community.type';
+import { SpaceType } from '@common/enums/space.type';
 
 @Injectable()
 export class CommunityResolverService {
@@ -251,13 +251,13 @@ export class CommunityResolverService {
 
   public async getDisplayNameForCommunityOrFail(
     communityId: string,
-    communityType: CommunityType
+    spaceType: SpaceType
   ): Promise<string> {
     const [result]: {
       profileId: string;
     }[] = await this.entityManager.connection.query(
-      `SELECT profileId from \`${communityType}\`
-        WHERE \`${communityType}\`.\`communityId\` = '${communityId}';`
+      `SELECT profileId from \`${spaceType}\`
+        WHERE \`${spaceType}\`.\`communityId\` = '${communityId}';`
     );
 
     const profileId = result.profileId;
