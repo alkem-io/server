@@ -2,6 +2,7 @@ import { registerEnumType } from '@nestjs/graphql';
 
 // Credentials to be added later:
 export enum DiscussionCategoryPlatform {
+  RELEASES = 'releases',
   PLATFORM_FUNCTIONALITIES = 'platform-functionalities',
   COMMUNITY_BUILDING = 'community-building',
   CHALLENGE_CENTRIC = 'challenge-centric',

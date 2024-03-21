@@ -25,6 +25,7 @@ import { ILoader } from '@core/dataloader/loader.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { AgentInfo } from '@core/authentication/agent-info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { IAccount } from '../account/account.interface';
 
 @Resolver(() => IOpportunity)
 export class OpportunityResolverFields {
@@ -124,6 +125,16 @@ export class OpportunityResolverFields {
       `read profile on opportunity: ${profile.displayName}`
     );
     return profile;
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('account', () => IAccount, {
+    nullable: true,
+    description: 'The Account for the Opportunity.',
+  })
+  async account(@Parent() challenge: IOpportunity): Promise<IAccount> {
+    return await this.opportunityService.getAccountOrFail(challenge.id);
   }
 
   @ResolveField('metrics', () => [INVP], {

@@ -1,9 +1,6 @@
 import { CalloutState } from '@common/enums/callout.state';
 import { CalloutType } from '@common/enums/callout.type';
-import { CommonDisplayLocation } from '@common/enums/common.display.location';
-import { SpaceDisplayLocation } from '@common/enums/space.display.location';
-import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { TagsetType } from '@common/enums/tagset.type';
+import { CalloutGroupName } from '@common/enums/callout.group.name';
 import { CreateCalloutInput } from '@domain/collaboration/callout';
 import { EMPTY_WHITEBOARD_CONTENT } from '@domain/common/whiteboard/empty.whiteboard.content';
 
@@ -15,17 +12,11 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.CLOSED,
     },
     sortOrder: 1,
+    groupName: CalloutGroupName.HOME_2,
     framing: {
       profile: {
         displayName: 'Getting Started',
         description: '⬇️ Here are some quick links to help you get started',
-        tagsets: [
-          {
-            name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
-            type: TagsetType.SELECT_ONE,
-            tags: [CommonDisplayLocation.HOME_RIGHT],
-          },
-        ],
       },
     },
   },
@@ -36,17 +27,11 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 1,
+    groupName: CalloutGroupName.HOME_1,
     framing: {
       profile: {
         displayName: 'General chat 💬',
         description: 'Things you would like to discuss with the community?',
-        tagsets: [
-          {
-            name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
-            type: TagsetType.SELECT_ONE,
-            tags: [CommonDisplayLocation.HOME_LEFT],
-          },
-        ],
       },
     },
   },
@@ -57,17 +42,11 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 2,
+    groupName: CalloutGroupName.HOME_1,
     framing: {
       profile: {
         displayName: 'Any questions or feedback?',
         description: 'Please share it here :)',
-        tagsets: [
-          {
-            name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
-            type: TagsetType.SELECT_ONE,
-            tags: [CommonDisplayLocation.HOME_LEFT],
-          },
-        ],
       },
     },
   },
@@ -78,18 +57,12 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 2,
+    groupName: CalloutGroupName.HOME_2,
     framing: {
       profile: {
         displayName: 'What is this Space about?',
         description:
           'We can use this whiteboard to further define our mission and vision, who we want to involve, and what impact we want to make!',
-        tagsets: [
-          {
-            name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
-            type: TagsetType.SELECT_ONE,
-            tags: [CommonDisplayLocation.HOME_RIGHT],
-          },
-        ],
       },
       whiteboard: {
         content: EMPTY_WHITEBOARD_CONTENT,
@@ -107,18 +80,12 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 1,
+    groupName: CalloutGroupName.COMMUNITY_1,
     framing: {
       profile: {
         displayName: 'Welcome to the community!',
         description:
           '👋 Do you have any suggestions or ideas to grow the community and our impact? Please share!',
-        tagsets: [
-          {
-            name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
-            type: TagsetType.SELECT_ONE,
-            tags: [SpaceDisplayLocation.COMMUNITY_LEFT],
-          },
-        ],
       },
     },
   },
@@ -129,18 +96,12 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 1,
+    groupName: CalloutGroupName.COMMUNITY_2,
     framing: {
       profile: {
         displayName: 'Understanding the existing and potential community',
         description:
           'Choose one of the templates from the library to map our your ecosystem or stakeholders here!',
-        tagsets: [
-          {
-            name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
-            type: TagsetType.SELECT_ONE,
-            tags: [SpaceDisplayLocation.COMMUNITY_RIGHT],
-          },
-        ],
       },
       whiteboard: {
         content: EMPTY_WHITEBOARD_CONTENT,
@@ -158,17 +119,11 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 1,
+    groupName: CalloutGroupName.SUBSPACES_1,
     framing: {
       profile: {
         displayName: '🚩 What Challenges do you care about?',
         description: 'Please share any relevant Challenges that you encounter.',
-        tagsets: [
-          {
-            name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
-            type: TagsetType.SELECT_ONE,
-            tags: [SpaceDisplayLocation.CHALLENGES_LEFT],
-          },
-        ],
       },
     },
   },
@@ -179,18 +134,12 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 1,
+    groupName: CalloutGroupName.SUBSPACES_2,
     framing: {
       profile: {
         displayName: 'Challenge proposals',
         description:
           'What are the 🚩Challenges that you think we should be working on? Please add them below and use the template provided.',
-        tagsets: [
-          {
-            name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
-            type: TagsetType.SELECT_ONE,
-            tags: [SpaceDisplayLocation.CHALLENGES_RIGHT],
-          },
-        ],
       },
     },
     contributionDefaults: {
@@ -205,18 +154,12 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 1,
+    groupName: CalloutGroupName.KNOWLEDGE,
     framing: {
       profile: {
         displayName: 'Relevant news, research or use cases 📰',
         description:
           'Please share any relevant insights to help us better understand the context. You can describe why it is relevant and add a link or upload a document with the article. You can also comment on the insights already submitted by other community members!',
-        tagsets: [
-          {
-            name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
-            type: TagsetType.SELECT_ONE,
-            tags: [CommonDisplayLocation.KNOWLEDGE],
-          },
-        ],
       },
     },
     contributionDefaults: {
@@ -231,17 +174,11 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 2,
+    groupName: CalloutGroupName.KNOWLEDGE,
     framing: {
       profile: {
         displayName: 'Reference / important documents',
         description: 'Please add links to documents with reference material.💥',
-        tagsets: [
-          {
-            name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
-            type: TagsetType.SELECT_ONE,
-            tags: [CommonDisplayLocation.KNOWLEDGE],
-          },
-        ],
       },
     },
   },
@@ -252,18 +189,12 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 3,
+    groupName: CalloutGroupName.KNOWLEDGE,
     framing: {
       profile: {
         displayName: '❓ FAQ',
         description:
           'Below you will find various questions and answers on this topic. Please feel invited to join in and share your answers as well!',
-        tagsets: [
-          {
-            name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
-            type: TagsetType.SELECT_ONE,
-            tags: [CommonDisplayLocation.KNOWLEDGE],
-          },
-        ],
       },
     },
     contributionDefaults: {

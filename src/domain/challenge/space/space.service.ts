@@ -40,7 +40,6 @@ import { AgentService } from '@domain/agent/agent/agent.service';
 import { UpdateSpaceInput } from './dto/space.dto.update';
 import { CreateChallengeOnSpaceInput } from './dto/space.dto.create.challenge';
 import { CommunityService } from '@domain/community/community/community.service';
-import { CommunityType } from '@common/enums/community.type';
 import { AgentInfo } from '@src/core/authentication/agent-info';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { IPreference } from '@domain/common/preference/preference.interface';
@@ -59,13 +58,9 @@ import { IProfile } from '@domain/common/profile/profile.interface';
 import { InnovationHub, InnovationHubType } from '@domain/innovation-hub/types';
 import { OperationNotAllowedException } from '@common/exceptions/operation.not.allowed.exception';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
-import { SpaceDisplayLocation } from '@common/enums/space.display.location';
-import { CreateTagsetTemplateInput } from '@domain/common/tagset-template/dto/tagset.template.dto.create';
-import { TagsetType } from '@common/enums/tagset.type';
-import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { CalloutGroupName } from '@common/enums/callout.group.name';
 import { CommunityRole } from '@common/enums/community.role';
 import { spaceDefaultCallouts } from './space.default.callouts';
-import { CommonDisplayLocation } from '@common/enums/common.display.location';
 import { IPaginatedType } from '@core/pagination/paginated.type';
 import { SpaceFilterInput } from '@services/infrastructure/space-filter/dto/space.filter.dto.input';
 import { PaginationArgs } from '@core/pagination';
@@ -76,6 +71,7 @@ import { SpaceMembershipCollaborationInfo } from '@services/api/me/space.members
 import { AccountService } from '../account/account.service';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { ContextService } from '@domain/context/context/context.service';
+import { SpaceType } from '@common/enums/space.type';
 
 @Injectable()
 export class SpaceService {
@@ -105,6 +101,7 @@ export class SpaceService {
   ): Promise<ISpace> {
     await this.validateSpaceData(spaceData);
     const space: ISpace = Space.create(spaceData);
+    space.type = SpaceType.SPACE;
 
     ///////////
     // Create the contextual elements for the space
@@ -128,8 +125,7 @@ export class SpaceService {
     await this.baseChallengeService.initialise(
       space,
       spaceData,
-      space.id,
-      CommunityType.SPACE,
+      space.account,
       spaceCommunityPolicy,
       spaceCommunityApplicationForm,
       ProfileType.SPACE,
@@ -143,19 +139,9 @@ export class SpaceService {
       );
     }
 
-    const locations = Object.values({
-      ...CommonDisplayLocation,
-      ...SpaceDisplayLocation,
-    });
-    const tagsetTemplateData: CreateTagsetTemplateInput = {
-      name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
-      type: TagsetType.SELECT_ONE,
-      allowedValues: locations,
-      defaultSelectedValue: CommonDisplayLocation.KNOWLEDGE,
-    };
-    await this.collaborationService.addTagsetTemplate(
+    await this.collaborationService.addCalloutGroupTagsetTemplate(
       space.collaboration,
-      tagsetTemplateData
+      CalloutGroupName.KNOWLEDGE
     );
 
     space.collaboration = await this.collaborationService.addDefaultCallouts(
