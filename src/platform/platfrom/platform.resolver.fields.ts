@@ -118,12 +118,12 @@ export class PlatformResolverFields {
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField('latestReleaseDiscussionURL', () => String, {
+  @ResolveField('latestReleaseDiscussionNameID', () => String, {
     nullable: false,
-    description: 'The url of the latest release discussion.',
+    description: 'The nameID of the latest release discussion.',
   })
   @Profiling.api
-  async latestReleaseDiscussionURL(): Promise<string> {
-    return this.platformService.getLatestReleaseDiscussionURL();
+  async latestReleaseDiscussionNameID(): Promise<string> {
+    return this.platformService.getLatestReleaseDiscussionNameID();
   }
 }

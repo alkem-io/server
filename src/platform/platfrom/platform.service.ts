@@ -20,13 +20,10 @@ import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.a
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { DiscussionCategory } from '@common/enums/communication.discussion.category';
 import { Discussion } from '@domain/communication/discussion/discussion.entity';
-import { ConfigService } from '@nestjs/config';
-import { ConfigurationTypes } from '@common/enums';
 
 @Injectable()
 export class PlatformService {
   constructor(
-    private configService: ConfigService,
     private communicationService: CommunicationService,
     private entityManager: EntityManager,
     @InjectRepository(Platform)
@@ -135,7 +132,7 @@ export class PlatformService {
     return authorization;
   }
 
-  public async getLatestReleaseDiscussionURL(): Promise<string> {
+  public async getLatestReleaseDiscussionNameID(): Promise<string> {
     const latestDiscussion = await this.entityManager
       .getRepository(Discussion)
       .findOneOrFail({
@@ -149,10 +146,6 @@ export class PlatformService {
         LogContext.COMMUNICATION
       );
 
-    const { endpoint_cluster } = this.configService.get(
-      ConfigurationTypes.HOSTING
-    );
-
-    return `${endpoint_cluster}/forum/discussion/${latestDiscussion.nameID}`;
+    return `${latestDiscussion.nameID}`;
   }
 }
