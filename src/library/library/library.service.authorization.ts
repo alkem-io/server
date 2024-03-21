@@ -41,6 +41,8 @@ export class LibraryAuthorizationService {
         library.authorization,
         parentAuthorization
       );
+    // For now the library is world visible
+    library.authorization.anonymousReadAccess = true;
 
     // Cascade down
     const libraryPropagated = await this.propagateAuthorizationToChildEntities(

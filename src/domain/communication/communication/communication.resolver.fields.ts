@@ -21,7 +21,6 @@ export class CommunicationResolverFields {
   @Profiling.api
   async discussions(
     @Parent() communication: ICommunication,
-
     @Args('queryData', { type: () => DiscussionsInput, nullable: true })
     queryData?: DiscussionsInput
   ): Promise<IDiscussion[]> {

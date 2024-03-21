@@ -12,7 +12,6 @@ import { IConfig } from '@platform/configuration/config/config.interface';
 import { KonfigService } from '@platform/configuration/config/config.service';
 import { IMetadata } from '@platform/metadata/metadata.interface';
 import { MetadataService } from '@platform/metadata/metadata.service';
-import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 
@@ -22,8 +21,7 @@ export class PlatformResolverFields {
     private platformService: PlatformService,
     private configService: KonfigService,
     private metadataService: MetadataService,
-    private innovationHubService: InnovationHubService,
-    private platformAuthorizationPolicyService: PlatformAuthorizationPolicyService
+    private innovationHubService: InnovationHubService
   ) {}
 
   @ResolveField('authorization', () => IAuthorizationPolicy, {
