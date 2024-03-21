@@ -276,6 +276,24 @@ export class OpportunityService {
     );
   }
 
+  public async getAccountOrFail(opportunityId: string): Promise<IAccount> {
+    const opportunity = await this.opportunityRepository.findOne({
+      where: { id: opportunityId },
+      relations: {
+        account: true,
+      },
+    });
+
+    if (!opportunity) {
+      throw new EntityNotFoundException(
+        `Unable to find opportunity with ID: ${opportunityId}`,
+        LogContext.CHALLENGES
+      );
+    }
+
+    return opportunity.account;
+  }
+
   async getContext(opportunityId: string): Promise<IContext> {
     return await this.baseChallengeService.getContext(
       opportunityId,
