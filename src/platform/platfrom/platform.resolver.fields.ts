@@ -118,7 +118,7 @@ export class PlatformResolverFields {
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField('latestReleaseDiscussion', () => String, {
+  @ResolveField('latestReleaseDiscussionURL', () => String, {
     nullable: false,
     description: 'The url of the latest release discussion.',
   })
