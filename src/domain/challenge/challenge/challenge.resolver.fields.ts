@@ -31,6 +31,7 @@ import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication/agent-info';
+import { IAccount } from '../account/account.interface';
 
 @Resolver(() => IChallenge)
 export class ChallengeResolverFields {
@@ -142,6 +143,16 @@ export class ChallengeResolverFields {
     @Args({ nullable: true }) args: LimitAndShuffleIdsQueryArgs
   ): Promise<IOpportunity[]> {
     return await this.challengeService.getOpportunities(challenge.id, args);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('account', () => IAccount, {
+    nullable: true,
+    description: 'The Account for the Challenge.',
+  })
+  async account(@Parent() challenge: IChallenge): Promise<IAccount> {
+    return await this.challengeService.getAccountOrFail(challenge.id);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
