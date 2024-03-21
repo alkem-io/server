@@ -44,6 +44,20 @@ export class AddMissingStorageBuckets1711017129997
       await queryRunner.query(
         `UPDATE profile SET storageBucketId = '${storageBucketID}' WHERE id = '${linkProfile.id}'`
       );
+      // Update document storageBucketId
+      const [link] = await queryRunner.query(
+        `SELECT id, uri FROM link WHERE profileId = '${linkProfile.id}'`
+      );
+      const isAlkemioDocumentUri = this.isAlkemioDocumentUri(link.uri);
+      if (isAlkemioDocumentUri) {
+        const documentId = this.getDocumentId(link.uri);
+        console.log(
+          `Updating document storageBucketId for document with id: ${documentId}`
+        );
+        await queryRunner.query(
+          `UPDATE document SET storageBucketId = '${storageBucketID}' WHERE id = '${documentId}'`
+        );
+      }
     }
 
     const spaces: {
@@ -145,5 +159,20 @@ export class AddMissingStorageBuckets1711017129997
       `SELECT id, storageAggregatorId FROM storage_bucket WHERE id = '${profile.storageBucketId}'`
     );
     return storageBucket.storageAggregatorId;
+  }
+
+  private isAlkemioDocumentUri(uri: string) {
+    const lastSlashIndex = uri.lastIndexOf('/');
+    const prefix = uri.slice(0, lastSlashIndex);
+    // for localhost use: 'https://alkem.io/api/private/rest/storage/document'
+    if (prefix === 'https://alkem.io/api/private/rest/storage/document') {
+      return true;
+    }
+    return false;
+  }
+
+  private getDocumentId(uri: string) {
+    const lastSlashIndex = uri.lastIndexOf('/');
+    return uri.slice(lastSlashIndex + 1);
   }
 }
