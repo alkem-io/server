@@ -53,7 +53,6 @@ export class BaseChallengeService {
     baseChallenge: IBaseChallenge,
     baseChallengeData: CreateBaseChallengeInput,
     account: IAccount,
-    spaceID: string,
     communityType: SpaceType,
     communityPolicy: ICommunityPolicyDefinition,
     applicationFormData: CreateFormInput,
@@ -72,7 +71,7 @@ export class BaseChallengeService {
       type: communityType,
       policy: communityPolicy,
       applicationForm: applicationFormData,
-      spaceID: spaceID,
+      spaceID: account.spaceID,
       guidelines: {
         // TODO: get this from defaults service
         profile: {

@@ -79,6 +79,7 @@ export class OpportunityService {
       opportunity,
       opportunityData,
       account,
+      SpaceType.OPPORTUNITY,
       opportunityCommunityPolicy,
       opportunityCommunityApplicationForm,
       ProfileType.OPPORTUNITY,
