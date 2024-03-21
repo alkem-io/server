@@ -3,7 +3,6 @@ import { ElasticsearchClientProvider } from '@services/external/elasticsearch/el
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { UserModule } from '@domain/community/user/user.module';
 import { OrganizationModule } from '@domain/community/organization/organization.module';
-import { SearchIngestService } from './search.ingest/search.ingest.service';
 import { Search2Service } from './search2.service';
 import { SearchExtractService } from './search.extract.service';
 import { SearchResultService } from './search.result.service';
@@ -11,7 +10,6 @@ import { SearchResultService } from './search.result.service';
 @Module({
   providers: [
     Search2Service,
-    SearchIngestService,
     SearchExtractService,
     SearchResultService,
     ElasticsearchClientProvider,

@@ -68,6 +68,7 @@ import { IpfsLogModule } from '@services/api-rest/ipfs-log/ipfs.log.module';
 import { ContributionMoveModule } from '@domain/collaboration/callout-contribution/callout.contribution.move.module';
 import { TaskGraphqlModule } from '@domain/task/task.module';
 import { ActivityFeedModule } from '@domain/activity-feed';
+import { AdminSearchIngestModule } from '@platform/admin/search/admin.search.ingest.module';
 
 @Module({
   imports: [
@@ -225,6 +226,7 @@ import { ActivityFeedModule } from '@domain/activity-feed';
     RolesModule,
     KonfigModule,
     AdminCommunicationModule,
+    AdminSearchIngestModule,
     AgentModule,
     MessageModule,
     MessageReactionModule,

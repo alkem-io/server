@@ -1,3 +1,4 @@
+import { setTimeout } from 'timers/promises';
 import { EntityManager, Not } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
@@ -14,6 +15,8 @@ import { FindManyOptions } from 'typeorm/find-options/FindManyOptions';
 import { BaseChallenge } from '@domain/challenge/base-challenge/base.challenge.entity';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { Tagset } from '@domain/common/tagset';
+import { LogContext } from '@common/enums';
+import { asyncReduceSequential } from '@common/utils/async.reduce.sequential';
 
 const profileRelationOptions = {
   location: true,
@@ -53,66 +56,131 @@ const journeyFindOptions: FindManyOptions<BaseChallenge> = {
 
 const EMPTY_VALUE = 'N/A';
 
+type ErroredDocument = {
+  status: number | undefined;
+  error: ErrorCause | undefined;
+  operation: unknown;
+  document: unknown;
+};
+
+type IngestBulkReturnType = {
+  success: boolean;
+  message?: string;
+  erroredDocuments?: ErroredDocument[];
+};
+type IngestReturnType = Record<string, IngestBulkReturnType>;
+
 @Injectable()
 export class SearchIngestService {
-  private readonly client: ElasticClient;
-
   constructor(
     @Inject(ELASTICSEARCH_CLIENT_PROVIDER)
     private elasticClient: ElasticClient | undefined,
     @InjectEntityManager() private entityManager: EntityManager,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService
   ) {
-    // if (!elasticClient) {
-    //   throw new Error('Elasticsearch client not initialized');
-    // }
+    if (!elasticClient) {
+      this.logger.error(
+        'Elasticsearch client not initialized',
+        undefined,
+        LogContext.SEARCH_INGEST
+      );
+      return;
+    }
+  }
 
-    this.client = elasticClient!;
+  public async removeIndices(): Promise<{
+    acknowledged: boolean;
+    message?: string;
+  }> {
+    if (!this.elasticClient) {
+      return {
+        acknowledged: false,
+        message: 'Elasticsearch client not initialized',
+      };
+    }
+    const indices = [
+      'alkemio-data-spaces',
+      'alkemio-data-challenges',
+      'alkemio-data-opportunities',
+      'alkemio-data-organizations',
+      'alkemio-data-users',
+      'alkemio-data-posts',
+    ];
+    return this.elasticClient.indices
+      .delete({ index: indices })
+      .then(x => ({ acknowledged: x.acknowledged }));
   }
 
   public async ingest() {
-    await this.fetchSpaces().then(spaces =>
-      this.ingestBulk(spaces, 'alkemio-data-spaces')
-    );
-    setTimeout(() => {}, 1000);
-    await this.fetchChallenges().then(challenges =>
-      this.ingestBulk(challenges, 'alkemio-data-challenges')
-    );
-    setTimeout(() => {}, 1000);
-    await this.fetchOpportunities().then(opportunities =>
-      this.ingestBulk(opportunities, 'alkemio-data-opportunities')
-    );
-    setTimeout(() => {}, 1000);
-    await this.fetchOrganization().then(organizations =>
-      this.ingestBulk(organizations, 'alkemio-data-organizations')
-    );
-    setTimeout(() => {}, 1000);
-    await this.fetchUsers().then(users =>
-      this.ingestBulk(users, 'alkemio-data-users')
-    );
-    setTimeout(() => {}, 1000);
-    await this.fetchPosts().then(posts =>
-      this.ingestBulk(posts, 'alkemio-data-posts')
+    if (!this.elasticClient) {
+      return {
+        'N/A': {
+          success: false,
+          message: 'Elasticsearch client not initialized',
+        },
+      };
+    }
+    const result: IngestReturnType = {};
+    const params = [
+      { index: 'alkemio-data-spaces', fetchFn: this.fetchSpaces.bind(this) },
+      {
+        index: 'alkemio-data-challenges',
+        fetchFn: this.fetchChallenges.bind(this),
+      },
+      {
+        index: 'alkemio-data-opportunities',
+        fetchFn: this.fetchOpportunities.bind(this),
+      },
+      {
+        index: 'alkemio-data-organizations',
+        fetchFn: this.fetchOrganization.bind(this),
+      },
+      { index: 'alkemio-data-users', fetchFn: this.fetchUsers.bind(this) },
+      { index: 'alkemio-data-posts', fetchFn: this.fetchPosts.bind(this) },
+    ];
+
+    return asyncReduceSequential(
+      params,
+      async (acc, { index, fetchFn }) => {
+        // introduced some delay between the ingestion of different entities
+        // to not overwhelm the elasticsearch cluster
+        await setTimeout(500, null);
+        acc[index] = await this._ingest(index, fetchFn);
+        return acc;
+      },
+      result
     );
   }
 
-  private async ingestBulk(data: unknown[], index: string) {
+  private async _ingest(
+    index: string,
+    fetchFn: () => Promise<unknown[]>
+  ): Promise<IngestBulkReturnType> {
+    const fetched = await fetchFn();
+    return this.ingestBulk(fetched, index);
+  }
+
+  private async ingestBulk(
+    data: unknown[],
+    index: string
+  ): Promise<IngestBulkReturnType> {
+    if (!this.elasticClient) {
+      return {
+        success: false,
+        message: 'Elasticsearch client not initialized',
+      };
+    }
     // return;
 
     const operations = data.flatMap(doc => [{ index: { _index: index } }, doc]);
 
-    const bulkResponse = await this.client.bulk({ refresh: true, operations });
+    const bulkResponse = await this.elasticClient.bulk({
+      refresh: true,
+      operations,
+    });
 
     if (bulkResponse.errors) {
-      const erroredDocuments: {
-        // If the status is 429 it means that you can retry the document,
-        // otherwise it's very likely a mapping error, and you should
-        // fix the document before to try it again.
-        status: number | undefined;
-        error: ErrorCause | undefined;
-        operation: unknown;
-        document: unknown;
-      }[] = [];
+      const erroredDocuments: ErroredDocument[] = [];
       // The items array has the same order of the dataset we just indexed.
       // The presence of the `error` key indicates that the operation
       // that we did for the document has failed.
@@ -130,9 +198,22 @@ export class SearchIngestService {
           });
         }
       });
-      this.logger.error(erroredDocuments);
+      const message = `${erroredDocuments.length} documents errored. ${
+        data.length - erroredDocuments.length
+      } documents indexed.`;
+      this.logger.error(message, undefined, LogContext.SEARCH_INGEST);
+      return {
+        success: false,
+        message,
+        erroredDocuments: erroredDocuments,
+      };
     } else {
-      this.logger.verbose?.(`All ${data.length} documents have been indexed`);
+      const message = `${data.length} documents indexed`;
+      this.logger.verbose?.(message, LogContext.SEARCH_INGEST);
+      return {
+        success: true,
+        message,
+      };
     }
   }
   // TODO: validate the loaded data for missing relations - https://github.com/alkem-io/server/issues/3699
