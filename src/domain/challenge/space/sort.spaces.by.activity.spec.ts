@@ -3,6 +3,7 @@ import { IActivity } from '@platform/activity/activity.interface';
 import { LatestActivitiesPerSpace } from '@services/api/me/space.membership.type';
 import { ISpace } from './space.interface';
 import { sortSpacesByActivity } from './sort.spaces.by.activity';
+import { SpaceType } from '@common/enums/space.type';
 
 const createTestActivity = (createdDate: Date): IActivity => {
   return {
@@ -34,6 +35,7 @@ const createTestSpace = (id: string): ISpace => {
       id: `account${id}`,
       spaceID: `${id}`,
     },
+    type: SpaceType.SPACE,
   };
 };
 

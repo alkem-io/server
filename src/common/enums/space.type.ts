@@ -1,4 +1,4 @@
-export enum CommunityType {
+export enum SpaceType {
   SPACE = 'space',
   CHALLENGE = 'challenge',
   OPPORTUNITY = 'opportunity',

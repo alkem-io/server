@@ -12,7 +12,6 @@ import { ICommunity } from '@domain/community/community/community.interface';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { Application } from '@domain/community/application/application.entity';
 import { Communication } from '@domain/communication/communication/communication.entity';
-import { CommunityType } from '@common/enums/community.type';
 import {
   TINY_TEXT_LENGTH,
   UUID_LENGTH,
@@ -22,6 +21,7 @@ import { Form } from '@domain/common/form/form.entity';
 import { Invitation } from '../invitation/invitation.entity';
 import { InvitationExternal } from '../invitation.external/invitation.external.entity';
 import { CommunityGuidelines } from '../community-guidelines/community.guidelines.entity';
+import { SpaceType } from '@common/enums/space.type';
 
 @Entity()
 export class Community
@@ -102,14 +102,14 @@ export class Community
   @Column({
     length: TINY_TEXT_LENGTH,
   })
-  type!: CommunityType;
+  type!: SpaceType;
 
   @Column({
     length: UUID_LENGTH,
   })
   parentID!: string;
 
-  constructor(type: CommunityType) {
+  constructor(type: SpaceType) {
     super();
     this.type = type;
     this.spaceID = '';
