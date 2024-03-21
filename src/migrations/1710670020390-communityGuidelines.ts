@@ -92,11 +92,12 @@ export class communityGuidelines1710670020390 implements MigrationInterface {
         );
 
         await queryRunner.query(
-          `INSERT INTO profile (id, version, displayName, description, type, authorizationId) VALUES
+          `INSERT INTO profile (id, version, displayName, description, storageBucketId, type, authorizationId) VALUES
                     ('${profileID}',
                     1,
                     'Default Community Guidelines',
                     '',
+                    ${storageBucketID},
                     'community-guidelines',
                     '${profileAuthID}')`
         );
