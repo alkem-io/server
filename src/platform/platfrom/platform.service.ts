@@ -8,16 +8,27 @@ import { ILibrary } from '@library/library/library.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
+import {
+  EntityManager,
+  FindOneOptions,
+  FindOptionsRelations,
+  Repository,
+} from 'typeorm';
 import { Platform } from './platform.entity';
 import { IPlatform } from './platform.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
+import { DiscussionCategory } from '@common/enums/communication.discussion.category';
+import { Discussion } from '@domain/communication/discussion/discussion.entity';
+import { ConfigService } from '@nestjs/config';
+import { ConfigurationTypes } from '@common/enums';
 
 @Injectable()
 export class PlatformService {
   constructor(
+    private configService: ConfigService,
     private communicationService: CommunicationService,
+    private entityManager: EntityManager,
     @InjectRepository(Platform)
     private platformRepository: Repository<Platform>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -122,5 +133,26 @@ export class PlatformService {
     }
 
     return authorization;
+  }
+
+  public async getLatestReleaseDiscussionURL(): Promise<string> {
+    const latestDiscussion = await this.entityManager
+      .getRepository(Discussion)
+      .findOneOrFail({
+        where: { category: DiscussionCategory.RELEASES },
+        order: { createdDate: 'DESC' },
+      });
+
+    if (!latestDiscussion)
+      throw new EntityNotFoundException(
+        'Not able to locate latest release discussion!',
+        LogContext.COMMUNICATION
+      );
+
+    const { endpoint_cluster } = this.configService.get(
+      ConfigurationTypes.HOSTING
+    );
+
+    return `${endpoint_cluster}/forum/discussion/${latestDiscussion.nameID}`;
   }
 }
