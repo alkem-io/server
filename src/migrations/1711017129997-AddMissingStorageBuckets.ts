@@ -1,7 +1,5 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 import { randomUUID } from 'crypto';
-import replaceSpecialCharacters from 'replace-special-characters';
-import { escapeString } from './utils/escape-string';
 
 export class AddMissingStorageBuckets1711017129997
   implements MigrationInterface
