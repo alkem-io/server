@@ -45,6 +45,57 @@ export class AddMissingStorageBuckets1711017129997
         `UPDATE profile SET storageBucketId = '${storageBucketID}' WHERE id = '${linkProfile.id}'`
       );
     }
+
+    const spaces: {
+      id: string;
+      collaborationId: string;
+      storageAggregatorId: string;
+    }[] = await queryRunner.query(
+      `SELECT id, collaborationId, storageAggregatorId FROM space`
+    );
+
+    for (const space of spaces) {
+      const storageBucketID = randomUUID();
+      const storageBucketAuthID = randomUUID();
+
+      await queryRunner.query(
+        `INSERT INTO authorization_policy (id, version, credentialRules, verifiedCredentialRules, anonymousReadAccess, privilegeRules) VALUES
+                      ('${storageBucketAuthID}',
+                      1, '', '', 0, '')`
+      );
+
+      await queryRunner.query(
+        `INSERT INTO storage_bucket (id, version, storageAggregatorId, authorizationId) VALUES
+                      ('${storageBucketID}',
+                      1,
+                      '${space.storageAggregatorId}',
+                      '${storageBucketAuthID}')`
+      );
+
+      const [collaboration]: {
+        id: string;
+        innovationFlowId: string;
+      }[] = await queryRunner.query(
+        `SELECT id, innovationFlowId FROM collaboration WHERE id = '${space.collaborationId}'`
+      );
+
+      const [innovationFlow]: {
+        id: string;
+        profileId: string;
+      }[] = await queryRunner.query(
+        `SELECT id, profileId FROM innovation_flow WHERE id = '${collaboration.innovationFlowId}'`
+      );
+
+      const [innovationFlowProfile]: {
+        id: string;
+      }[] = await queryRunner.query(
+        `SELECT id FROM profile WHERE id = '${innovationFlow.profileId}'`
+      );
+
+      await queryRunner.query(
+        `UPDATE profile SET storageBucketId = '${storageBucketID}' WHERE id = '${innovationFlowProfile.id}'`
+      );
+    }
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {}
