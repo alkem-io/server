@@ -31,7 +31,6 @@ import { IChallenge } from './challenge.interface';
 import { AgentInfo } from '@src/core/authentication/agent-info';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
-import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { IProfile } from '@domain/common/profile/profile.interface';
@@ -49,7 +48,6 @@ export class ChallengeService {
     private opportunityService: OpportunityService,
     private baseChallengeService: BaseChallengeService,
     private spaceSettingsService: SpaceSettingsService,
-    private namingService: NamingService,
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -61,19 +59,8 @@ export class ChallengeService {
     account: IAccount,
     agentInfo?: AgentInfo
   ): Promise<IChallenge> {
-    if (!challengeData.nameID) {
-      challengeData.nameID = this.namingService.createNameID(
-        challengeData.profileData.displayName
-      );
-    }
-    await this.baseChallengeService.isNameAvailableInAccountOrFail(
-      challengeData.nameID,
-      account.id
-    );
-
     const challenge: IChallenge = Challenge.create(challengeData);
     challenge.type = SpaceType.CHALLENGE;
-    challenge.account = account;
 
     challenge.opportunities = [];
 

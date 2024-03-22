@@ -8,7 +8,6 @@ import { ChallengeService } from './challenge.service';
 import { CommunityModule } from '@domain/community/community/community.module';
 import { OpportunityModule } from '@domain/challenge/opportunity/opportunity.module';
 import { BaseChallengeModule } from '@domain/challenge/base-challenge/base.challenge.module';
-import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { ChallengeAuthorizationService } from '@domain/challenge/challenge/challenge.service.authorization';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
@@ -38,7 +37,6 @@ import { SpaceSettingssModule } from '../space.settings/space.settings.module';
     CommunityModule,
     CommunityPolicyModule,
     OpportunityModule,
-    NamingModule,
     PlatformAuthorizationPolicyModule,
     UserModule,
     ContributionReporterModule,

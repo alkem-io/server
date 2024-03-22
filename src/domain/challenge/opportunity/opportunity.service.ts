@@ -19,7 +19,6 @@ import { UUID_LENGTH } from '@common/constants';
 import { AgentInfo } from '@src/core/authentication/agent-info';
 import { IContext } from '@domain/context/context/context.interface';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
-import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
@@ -30,7 +29,6 @@ export class OpportunityService {
   constructor(
     private baseChallengeService: BaseChallengeService,
     private communityService: CommunityService,
-    private namingService: NamingService,
     @InjectRepository(Opportunity)
     private opportunityRepository: Repository<Opportunity>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -42,19 +40,8 @@ export class OpportunityService {
     account: IAccount,
     agentInfo?: AgentInfo
   ): Promise<IOpportunity> {
-    if (!opportunityData.nameID) {
-      opportunityData.nameID = this.namingService.createNameID(
-        opportunityData.profileData?.displayName || ''
-      );
-    }
-    await this.baseChallengeService.isNameAvailableInAccountOrFail(
-      opportunityData.nameID,
-      account.id
-    );
-
     const opportunity: IOpportunity = Opportunity.create(opportunityData);
     opportunity.type = SpaceType.OPPORTUNITY;
-    opportunity.account = account;
 
     await this.baseChallengeService.initialise(
       opportunity,

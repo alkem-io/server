@@ -12,7 +12,6 @@ import { OpportunityAuthorizationService } from './opportunity.service.authoriza
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { UserModule } from '@domain/community/user/user.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
-import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { CommunityPolicyModule } from '@domain/community/community-policy/community.policy.module';
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
 import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
@@ -32,7 +31,6 @@ import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/stor
     AgentModule,
     CommunityPolicyModule,
     CollaborationModule,
-    NamingModule,
     ProfileModule,
     ContextModule,
     ContributionReporterModule,

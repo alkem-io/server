@@ -77,9 +77,6 @@ export class SpaceService {
     const space: ISpace = Space.create(spaceData);
     space.type = SpaceType.SPACE;
 
-    // remove context before saving as want to control that creation
-    space.context = undefined;
-
     await this.baseChallengeService.initialise(
       space,
       spaceData,
