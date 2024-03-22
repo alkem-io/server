@@ -351,6 +351,24 @@ export class ChallengeService {
     );
   }
 
+  public async getAccountOrFail(challengeId: string): Promise<IAccount> {
+    const challenge = await this.challengeRepository.findOne({
+      where: { id: challengeId },
+      relations: {
+        account: true,
+      },
+    });
+
+    if (!challenge) {
+      throw new EntityNotFoundException(
+        `Unable to find challenge with ID: ${challengeId}`,
+        LogContext.CHALLENGES
+      );
+    }
+
+    return challenge.account;
+  }
+
   async getProfile(challenge: IChallenge): Promise<IProfile> {
     return await this.baseChallengeService.getProfile(
       challenge.id,
