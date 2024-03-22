@@ -29,7 +29,7 @@ export class AdminWhiteboardResolverMutations {
   @UseGuards(GraphqlGuard)
   @Mutation(() => AdminSearchIngestResult, {
     description:
-      'Uploads the files from the Whiteboard content into the StorageBucket of that Whiteboard.',
+      'Ingests new data into Elasticsearch from scratch. This will delete all existing data and ingest new data from the source. This is an admin only operation.',
   })
   @Profiling.api
   async adminSearchIngestFromScratch(@CurrentUser() agentInfo: AgentInfo) {
