@@ -20,6 +20,7 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy/author
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { GraphqlGuard } from '@core/authorization';
 import { UseGuards } from '@nestjs/common';
+import { ReleaseDiscussionOutput } from './dto/release.discussion.dto';
 
 @Resolver(() => IPlatform)
 export class PlatformResolverFields {
@@ -118,12 +119,14 @@ export class PlatformResolverFields {
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField('latestReleaseDiscussionNameID', () => String, {
-    nullable: false,
-    description: 'The nameID of the latest release discussion.',
+  @ResolveField('latestReleaseDiscussion', () => ReleaseDiscussionOutput, {
+    nullable: true,
+    description: 'The latest release discussion.',
   })
   @Profiling.api
-  async latestReleaseDiscussionNameID(): Promise<string> {
-    return this.platformService.getLatestReleaseDiscussionNameID();
+  async latestReleaseDiscussion(): Promise<
+    ReleaseDiscussionOutput | undefined
+  > {
+    return this.platformService.getLatestReleaseDiscussion();
   }
 }

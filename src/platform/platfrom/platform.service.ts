@@ -20,6 +20,7 @@ import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.a
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { DiscussionCategory } from '@common/enums/communication.discussion.category';
 import { Discussion } from '@domain/communication/discussion/discussion.entity';
+import { ReleaseDiscussionOutput } from './dto/release.discussion.dto';
 
 @Injectable()
 export class PlatformService {
@@ -132,20 +133,21 @@ export class PlatformService {
     return authorization;
   }
 
-  public async getLatestReleaseDiscussionNameID(): Promise<string> {
-    const latestDiscussion = await this.entityManager
-      .getRepository(Discussion)
-      .findOneOrFail({
-        where: { category: DiscussionCategory.RELEASES },
-        order: { createdDate: 'DESC' },
-      });
+  public async getLatestReleaseDiscussion(): Promise<
+    ReleaseDiscussionOutput | undefined
+  > {
+    let latestDiscussion: Discussion | undefined;
+    try {
+      latestDiscussion = await this.entityManager
+        .getRepository(Discussion)
+        .findOneOrFail({
+          where: { category: DiscussionCategory.RELEASES },
+          order: { createdDate: 'DESC' },
+        });
+    } catch (error) {
+      return undefined;
+    }
 
-    if (!latestDiscussion)
-      throw new EntityNotFoundException(
-        'Not able to locate latest release discussion!',
-        LogContext.COMMUNICATION
-      );
-
-    return `${latestDiscussion.nameID}`;
+    return { nameID: latestDiscussion.nameID, id: latestDiscussion.id };
   }
 }
