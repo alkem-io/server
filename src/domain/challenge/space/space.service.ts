@@ -46,7 +46,7 @@ import { OperationNotAllowedException } from '@common/exceptions/operation.not.a
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { CalloutGroupName } from '@common/enums/callout.group.name';
 import { CommunityRole } from '@common/enums/community.role';
-import { spaceDefaultCallouts } from './space.default.callouts';
+import { spaceDefaultCallouts } from '../space.defaults/definitions/space.default.callouts';
 import { IPaginatedType } from '@core/pagination/paginated.type';
 import { SpaceFilterInput } from '@services/infrastructure/space-filter/dto/space.filter.dto.input';
 import { PaginationArgs } from '@core/pagination';

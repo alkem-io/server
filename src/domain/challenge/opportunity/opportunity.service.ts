@@ -29,7 +29,7 @@ import { ICommunityPolicy } from '@domain/community/community-policy/community.p
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { CommunityRole } from '@common/enums/community.role';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
-import { opportunityDefaultCallouts } from './opportunity.default.callouts';
+import { opportunityDefaultCallouts } from '../space.defaults/definitions/opportunity.default.callouts';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
 import { IAccount } from '../account/account.interface';

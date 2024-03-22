@@ -1,3 +1,3 @@
 export * from './dto';
-export * from './challenge.community.policy';
-export * from './challenge.community.application.form';
+export * from '../space.defaults/definitions/challenge.community.policy';
+export * from '../space.defaults/definitions/challenge.community.application.form';
