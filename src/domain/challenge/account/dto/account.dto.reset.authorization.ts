@@ -2,11 +2,11 @@ import { UUID_NAMEID } from '@domain/common/scalars';
 import { Field, InputType } from '@nestjs/graphql';
 
 @InputType()
-export class SpaceAuthorizationResetInput {
+export class AccountAuthorizationResetInput {
   @Field(() => UUID_NAMEID, {
     nullable: false,
     description:
-      'The identifier of the Space whose Authorization Policy should be reset.',
+      'The identifier of the Account whose Authorization Policy should be reset.',
   })
-  spaceID!: string;
+  accountID!: string;
 }

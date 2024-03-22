@@ -3,13 +3,13 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { LogContext } from '@common/enums';
 import { Repository } from 'typeorm';
 import { AccountService } from './account.service';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IAccount } from './account.interface';
 import { Account } from './account.entity';
 import { TemplatesSetAuthorizationService } from '@domain/template/templates-set/templates.set.service.authorization';
 import { LicenseAuthorizationService } from '@domain/license/license/license.service.authorization';
+import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 
 @Injectable()
 export class AccountAuthorizationService {
@@ -17,15 +17,13 @@ export class AccountAuthorizationService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private templatesSetAuthorizationService: TemplatesSetAuthorizationService,
     private licenseAuthorizationService: LicenseAuthorizationService,
+    private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private accountService: AccountService,
     @InjectRepository(Account)
     private accountRepository: Repository<Account>
   ) {}
 
-  async applyAuthorizationPolicy(
-    accountInput: IAccount,
-    parentAuthorization: IAuthorizationPolicy | undefined
-  ): Promise<IAccount> {
+  async applyAuthorizationPolicy(accountInput: IAccount): Promise<IAccount> {
     const account = await this.accountService.getAccountOrFail(
       accountInput.id,
       {
@@ -43,10 +41,13 @@ export class AccountAuthorizationService {
       );
 
     // Ensure always applying from a clean state
+    account.authorization = this.authorizationPolicyService.reset(
+      account.authorization
+    );
+    account.authorization.anonymousReadAccess = false;
     account.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
-        account.authorization,
-        parentAuthorization
+      this.platformAuthorizationService.inheritRootAuthorizationPolicy(
+        account.authorization
       );
 
     account.license =

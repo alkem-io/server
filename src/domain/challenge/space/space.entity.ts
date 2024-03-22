@@ -1,8 +1,7 @@
-import { Entity, JoinColumn, OneToMany, OneToOne } from 'typeorm';
+import { Entity, OneToMany } from 'typeorm';
 import { ISpace } from '@domain/challenge/space/space.interface';
 import { BaseChallenge } from '@domain/challenge/base-challenge/base.challenge.entity';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
-import { Account } from '../account/account.entity';
 @Entity()
 export class Space extends BaseChallenge implements ISpace {
   @OneToMany(() => Challenge, challenge => challenge.space, {
@@ -10,12 +9,4 @@ export class Space extends BaseChallenge implements ISpace {
     cascade: true,
   })
   challenges?: Challenge[];
-
-  @OneToOne(() => Account, {
-    eager: true,
-    cascade: true,
-    onDelete: 'SET NULL',
-  })
-  @JoinColumn()
-  account!: Account;
 }

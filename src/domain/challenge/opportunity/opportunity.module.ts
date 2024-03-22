@@ -18,9 +18,8 @@ import { ContributionReporterModule } from '@services/external/elasticsearch/con
 import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { ContextModule } from '@domain/context/context/context.module';
-import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
-import { SpaceDefaultsModule } from '../space.defaults/space.defaults.module';
 import { SpaceSettingssModule } from '../space.settings/space.settings.module';
+import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
 
 @Module({
   imports: [
@@ -37,7 +36,6 @@ import { SpaceSettingssModule } from '../space.settings/space.settings.module';
     ProfileModule,
     ContextModule,
     ContributionReporterModule,
-    SpaceDefaultsModule,
     SpaceSettingssModule,
     StorageAggregatorModule,
     TypeOrmModule.forFeature([Opportunity]),

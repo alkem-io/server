@@ -49,14 +49,13 @@ export class ActivityAdapter {
   ) {}
 
   public async challengeCreated(
-    eventData: ActivityInputChallengeCreated
+    eventData: ActivityInputChallengeCreated,
+    spaceID: string
   ): Promise<boolean> {
     const eventType = ActivityEventType.CHALLENGE_CREATED;
     this.logEventTriggered(eventData, eventType);
 
     const challenge = eventData.challenge;
-
-    const spaceID = challenge.account.spaceID;
 
     const collaborationID = await this.getCollaborationIdForSpace(spaceID);
     const description = challenge.profile.displayName;

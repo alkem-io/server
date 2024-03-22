@@ -3,6 +3,7 @@ import {
   EntityNotFoundException,
   NotSupportedException,
   RelationshipNotFoundException,
+  ValidationException,
 } from '@common/exceptions';
 import { IOrganization } from '@domain/community/organization/organization.interface';
 import { OrganizationService } from '@domain/community/organization/organization.service';
@@ -15,17 +16,22 @@ import { IAccount } from './account.interface';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { ITemplatesSet } from '@domain/template/templates-set/templates.set.interface';
 import { TemplatesSetService } from '@domain/template/templates-set/templates.set.service';
-import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { ILicense } from '@domain/license/license/license.interface';
 import { LicenseService } from '@domain/license/license/license.service';
 import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
 import { UpdateAccountDefaultsInput } from './dto/account.dto.update.defaults';
 import { ISpaceDefaults } from '../space.defaults/space.defaults.interface';
 import { UpdateAccountInput } from './dto/account.dto.update';
+import { SpaceService } from '../space/space.service';
+import { AgentInfo } from '@core/authentication/agent-info';
+import { CreateSpaceInput } from '../space/dto/space.dto.create';
+import { UpdateSpacePlatformSettingsInput } from '../space/dto/space.dto.update.platform.settings';
+import { ISpace } from '../space/space.interface';
 
 @Injectable()
 export class AccountService {
   constructor(
+    private spaceService: SpaceService,
     private agentService: AgentService,
     private organizationService: OrganizationService,
     private templatesSetService: TemplatesSetService,
@@ -37,19 +43,24 @@ export class AccountService {
   ) {}
 
   async createAccount(
-    storageAggregator: IStorageAggregator
+    spaceData: CreateSpaceInput,
+    agentInfo?: AgentInfo
   ): Promise<IAccount> {
     const account: IAccount = new Account();
-
-    account.spaceID = ''; // set later
-
-    ///////////
-    // Create the contextual elements for the account
-
-    // The account library (templates set) and defaults are separate but related concepts
     account.library = await this.templatesSetService.createTemplatesSet();
     account.defaults = await this.spaceDefaultsService.createSpaceDefaults();
+    account.license = await this.licenseService.createLicense();
+    await this.save(account);
 
+    account.space = await this.spaceService.createSpace(
+      spaceData,
+      account,
+      agentInfo
+    );
+    await this.setAccountHost(account, spaceData.accountData.hostID);
+
+    const storageAggregator =
+      await this.spaceService.getStorageAggregatorOrFail(account.space.id);
     // And set the defaults
     account.library =
       await this.spaceDefaultsService.addDefaultTemplatesToSpaceLibrary(
@@ -64,8 +75,6 @@ export class AccountService {
       account.defaults.innovationFlowTemplate =
         account.library.innovationFlowTemplates[0];
     }
-
-    account.license = await this.licenseService.createLicense();
 
     return await this.accountRepository.save(account);
   }
@@ -92,7 +101,7 @@ export class AccountService {
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load all required data to update the defaults on  Account ${account.id} `,
-        LogContext.CHALLENGES
+        LogContext.ACCOUNT
       );
     }
 
@@ -103,7 +112,7 @@ export class AccountService {
     if (!template) {
       throw new NotSupportedException(
         `InnovationFlowTemplate ID provided (${accountDefaultsData.flowTemplateID}) is not part of the Library for the Account ${account.id} `,
-        LogContext.CHALLENGES
+        LogContext.ACCOUNT
       );
     }
 
@@ -111,6 +120,48 @@ export class AccountService {
       account.defaults,
       template
     );
+  }
+
+  public async updateSpacePlatformSettings(
+    updateData: UpdateSpacePlatformSettingsInput
+  ): Promise<ISpace> {
+    const space = await this.spaceService.getSpaceOrFail(updateData.spaceID, {
+      relations: {
+        account: true,
+      },
+    });
+
+    if (!space.account) {
+      throw new RelationshipNotFoundException(
+        `Unable to load account for space ${space.id} `,
+        LogContext.ACCOUNT
+      );
+    }
+
+    if (updateData.nameID) {
+      if (updateData.nameID !== space.nameID) {
+        // updating the nameID, check new value is allowed
+        const updateAllowed = await this.spaceService.isNameIdAvailable(
+          updateData.nameID
+        );
+        if (!updateAllowed) {
+          throw new ValidationException(
+            `Unable to update Space nameID: the provided nameID is already taken: ${updateData.nameID}`,
+            LogContext.ACCOUNT
+          );
+        }
+        space.nameID = updateData.nameID;
+      }
+    }
+
+    if (updateData.account) {
+      space.account = await this.updateAccountPlatformSettings(
+        updateData.account,
+        space.account
+      );
+    }
+
+    return await this.spaceService.save(space);
   }
 
   public async updateAccountPlatformSettings(
@@ -126,7 +177,7 @@ export class AccountService {
     if (!account.license) {
       throw new RelationshipNotFoundException(
         `Unable to load license for account ${account.id} `,
-        LogContext.CHALLENGES
+        LogContext.ACCOUNT
       );
     }
 
@@ -162,7 +213,7 @@ export class AccountService {
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load all entities for deletion of account ${account.id} `,
-        LogContext.CHALLENGES
+        LogContext.ACCOUNT
       );
     }
 
@@ -184,7 +235,7 @@ export class AccountService {
     if (!account)
       throw new EntityNotFoundException(
         `Unable to find Account with ID: ${accountID}`,
-        LogContext.CHALLENGES
+        LogContext.ACCOUNT
       );
     return account;
   }
@@ -215,7 +266,7 @@ export class AccountService {
     if (!templatesSet) {
       throw new EntityNotFoundException(
         `Unable to find templatesSet for account with id: ${accountId}`,
-        LogContext.CHALLENGES
+        LogContext.ACCOUNT
       );
     }
 
@@ -233,18 +284,36 @@ export class AccountService {
     if (!license) {
       throw new EntityNotFoundException(
         `Unable to find license for account with nameID: ${accountId}`,
-        LogContext.LICENSE
+        LogContext.ACCOUNT
       );
     }
 
     return license;
   }
 
+  async getRootSpace(accountInput: IAccount): Promise<ISpace> {
+    if (accountInput.space) {
+      return accountInput.space;
+    }
+    const account = await this.getAccountOrFail(accountInput.id, {
+      relations: {
+        space: true,
+      },
+    });
+    if (!account.space) {
+      throw new EntityNotFoundException(
+        `Unable to find space for account: ${accountInput.id}`,
+        LogContext.ACCOUNT
+      );
+    }
+    return account.space;
+  }
   async setAccountHost(
     account: IAccount,
     hostOrgID: string
   ): Promise<IAccount> {
-    const spaceID = account.spaceID;
+    const rootSpace = await this.getRootSpace(account);
+    const spaceID = rootSpace.id;
     const organization = await this.organizationService.getOrganizationOrFail(
       hostOrgID,
       { relations: { groups: true, agent: true } }
@@ -276,10 +345,12 @@ export class AccountService {
   }
 
   async getHost(account: IAccount): Promise<IOrganization | undefined> {
+    const rootSpace = await this.getRootSpace(account);
+
     const organizations =
       await this.organizationService.organizationsWithCredentials({
         type: AuthorizationCredential.ACCOUNT_HOST,
-        resourceID: account.spaceID,
+        resourceID: rootSpace.id,
       });
     if (organizations.length == 0) {
       return undefined;
@@ -287,7 +358,7 @@ export class AccountService {
     if (organizations.length > 1) {
       throw new RelationshipNotFoundException(
         `More than one host for Account ${account.id} `,
-        LogContext.CHALLENGES
+        LogContext.ACCOUNT
       );
     }
     return organizations[0];

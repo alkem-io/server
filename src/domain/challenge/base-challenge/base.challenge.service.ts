@@ -28,8 +28,6 @@ import { ProfileService } from '@domain/common/profile/profile.service';
 import { IProfile } from '@domain/common/profile';
 import { VisualType } from '@common/enums/visual.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
 import { SpaceSettingsService } from '../space.settings/space.settings.service';
 import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
 import { IAccount } from '../account/account.interface';
@@ -57,12 +55,10 @@ export class BaseChallengeService {
     baseChallenge: IBaseChallenge,
     baseChallengeData: CreateBaseChallengeInput,
     account: IAccount,
-    parentStorageAggregator: IStorageAggregator | undefined,
-    storageAggregator: IStorageAggregator | undefined, // there is a bootsrap issue to be addressed after merge
-    collaborationInput: CreateCollaborationInput | undefined,
     agentInfo: AgentInfo | undefined
   ) {
     baseChallenge.authorization = new AuthorizationPolicy();
+    baseChallenge.account = account;
     baseChallenge.settingsStr = this.spaceSettingsService.serializeSettings(
       this.spaceDefaultsService.getDefaultSpaceSettings()
     );
@@ -71,15 +67,11 @@ export class BaseChallengeService {
       account.id
     );
 
-    // Either use the one passed in or create a new one
-    if (!storageAggregator) {
-      baseChallenge.storageAggregator =
-        await this.storageAggregatorService.createStorageAggregator(
-          parentStorageAggregator
-        );
-    } else {
-      baseChallenge.storageAggregator = storageAggregator;
-    }
+    const parentStorageAggregator = baseChallengeData.storageAggregatorParent;
+    baseChallenge.storageAggregator =
+      await this.storageAggregatorService.createStorageAggregator(
+        parentStorageAggregator
+      );
 
     if (!baseChallenge.storageAggregator) {
       throw new EntityNotInitializedException(
@@ -96,7 +88,7 @@ export class BaseChallengeService {
 
     baseChallenge.community = await this.communityService.createCommunity(
       baseChallengeData.profileData.displayName,
-      account.spaceID,
+      account.id,
       baseChallenge.type,
       communityPolicy,
       applicationFormData
@@ -142,7 +134,7 @@ export class BaseChallengeService {
     baseChallenge.collaboration =
       await this.collaborationService.createCollaboration(
         {
-          ...collaborationInput,
+          ...baseChallengeData.collaborationData,
         },
         baseChallenge.storageAggregator,
         account,

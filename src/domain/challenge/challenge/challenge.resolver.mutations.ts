@@ -55,12 +55,15 @@ export class ChallengeResolverMutations {
           community: {
             policy: true,
           },
-          account: true,
+          account: {
+            space: true,
+          },
         },
       }
     );
     if (
       !challenge.account ||
+      !challenge.account.space ||
       !challenge.community ||
       !challenge.community.policy
     ) {
@@ -106,7 +109,7 @@ export class ChallengeResolverMutations {
       {
         id: opportunity.id,
         name: opportunity.profile.displayName,
-        space: challenge.account.spaceID,
+        space: challenge.account.space.id,
       },
       {
         id: agentInfo.userID,
@@ -144,9 +147,16 @@ export class ChallengeResolverMutations {
   ): Promise<IChallenge> {
     const challenge = await this.challengeService.getChallengeOrFail(
       challengeData.ID,
-      { relations: { profile: true, account: true } }
+      {
+        relations: {
+          profile: true,
+          account: {
+            space: true,
+          },
+        },
+      }
     );
-    if (!challenge.account) {
+    if (!challenge.account || !challenge.account.space) {
       throw new EntityNotInitializedException(
         `account not found on challenge: ${challenge.nameID}`,
         LogContext.CHALLENGES
@@ -168,7 +178,7 @@ export class ChallengeResolverMutations {
       {
         id: challenge.id,
         name: challenge.profile.displayName,
-        space: challenge.account.spaceID ?? '',
+        space: challenge.account.space.id,
       },
       {
         id: agentInfo.userID,

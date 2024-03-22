@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-inferrable-types */
-import { Column, Generated, JoinColumn, OneToOne } from 'typeorm';
+import { Column, Generated, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
 import { Community } from '@domain/community/community/community.entity';
 import { Context } from '@domain/context/context/context.entity';
 import { IBaseChallenge } from './base.challenge.interface';
@@ -9,8 +9,17 @@ import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.e
 import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
 import { TINY_TEXT_LENGTH } from '@common/constants/entity.field.length.constants';
 import { SpaceType } from '@common/enums/space.type';
+import { Account } from '../account/account.entity';
 
 export class BaseChallenge extends NameableEntity implements IBaseChallenge {
+  // Note: no counter OneToMany as this is a pre ManyToOne relationship
+  @ManyToOne(() => Account, {
+    eager: true,
+    cascade: false,
+    onDelete: 'SET NULL',
+  })
+  account!: Account;
+
   @Column({
     unique: true,
   })

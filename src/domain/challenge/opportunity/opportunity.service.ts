@@ -60,9 +60,6 @@ export class OpportunityService {
       opportunity,
       opportunityData,
       account,
-      opportunityData.storageAggregatorParent,
-      undefined,
-      opportunityData.collaborationData,
       agentInfo
     );
 

@@ -33,17 +33,19 @@ export class OpportunityResolverMutations {
       opportunityData.ID,
       {
         relations: {
-          account: true,
+          account: {
+            space: true,
+          },
         },
       }
     );
-    if (!opportunity.account) {
+    if (!opportunity.account || !opportunity.account.space) {
       throw new EntityNotInitializedException(
         'account no found on opportunity: ${opportunity.nameID}',
         LogContext.CHALLENGES
       );
     }
-    const spaceID = opportunity.account.spaceID;
+    const spaceID = opportunity.account.space.id;
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       opportunity.authorization,

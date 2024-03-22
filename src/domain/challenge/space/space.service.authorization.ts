@@ -14,7 +14,6 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { ISpace } from './space.interface';
 import { Space } from './space.entity';
 import { AuthorizationPolicyRuleVerifiedCredential } from '@core/authorization/authorization.policy.rule.verified.credential';
-import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
@@ -43,14 +42,12 @@ import { ILicense } from '@domain/license/license/license.interface';
 import { SpaceSettingsService } from '../space.settings/space.settings.service';
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
-import { AccountAuthorizationService } from '../account/account.service.authorization';
 
 @Injectable()
 export class SpaceAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private challengeAuthorizationService: ChallengeAuthorizationService,
-    private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private communityPolicyService: CommunityPolicyService,
     private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
     private profileAuthorizationService: ProfileAuthorizationService,
@@ -58,13 +55,15 @@ export class SpaceAuthorizationService {
     private communityAuthorizationService: CommunityAuthorizationService,
     private collaborationAuthorizationService: CollaborationAuthorizationService,
     private spaceSettingsService: SpaceSettingsService,
-    private accountAuthorizationService: AccountAuthorizationService,
     private spaceService: SpaceService,
     @InjectRepository(Space)
     private spaceRepository: Repository<Space>
   ) {}
 
-  async applyAuthorizationPolicy(spaceInput: ISpace): Promise<ISpace> {
+  async applyAuthorizationPolicy(
+    spaceInput: ISpace,
+    parentAuthorization?: IAuthorizationPolicy | undefined
+  ): Promise<ISpace> {
     let space = await this.spaceService.getSpaceOrFail(spaceInput.id, {
       relations: {
         community: {
@@ -85,6 +84,15 @@ export class SpaceAuthorizationService {
         `Unable to load Space with entities at start of auth reset: ${space.id} `,
         LogContext.CHALLENGES
       );
+    let parentAuthorizationPolicy = parentAuthorization;
+    if (!parentAuthorizationPolicy) {
+      parentAuthorizationPolicy = space.account.authorization;
+    }
+    space.authorization =
+      this.authorizationPolicyService.inheritParentAuthorization(
+        space.authorization,
+        parentAuthorization
+      );
 
     const spaceSettings = await this.spaceSettingsService.getSettings(
       space.settingsStr
@@ -92,16 +100,6 @@ export class SpaceAuthorizationService {
     const communityPolicyWithFlags = space.community.policy;
     communityPolicyWithFlags.settings = spaceSettings;
     const license = space.account.license;
-
-    // Ensure always applying from a clean state
-    space.authorization = this.authorizationPolicyService.reset(
-      space.authorization
-    );
-    space.authorization.anonymousReadAccess = false;
-    space.authorization =
-      this.platformAuthorizationService.inheritRootAuthorizationPolicy(
-        space.authorization
-      );
 
     // Extend for global roles
     space.authorization = this.extendAuthorizationPolicyGlobal(
@@ -198,12 +196,6 @@ export class SpaceAuthorizationService {
       await this.contextAuthorizationService.applyAuthorizationPolicy(
         space.context,
         clonedAuthorization
-      );
-
-    space.account =
-      await this.accountAuthorizationService.applyAuthorizationPolicy(
-        space.account,
-        spaceBase.authorization
       );
 
     return await this.spaceService.save(space);

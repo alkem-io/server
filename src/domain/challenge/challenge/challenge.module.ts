@@ -6,7 +6,6 @@ import { ChallengeResolverFields } from './challenge.resolver.fields';
 import { ChallengeResolverMutations } from './challenge.resolver.mutations';
 import { ChallengeService } from './challenge.service';
 import { CommunityModule } from '@domain/community/community/community.module';
-import { OrganizationModule } from '@domain/community/organization/organization.module';
 import { OpportunityModule } from '@domain/challenge/opportunity/opportunity.module';
 import { BaseChallengeModule } from '@domain/challenge/base-challenge/base.challenge.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
@@ -25,7 +24,6 @@ import { LoaderCreatorModule } from '@core/dataloader/creators';
 import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
-import { SpaceDefaultsModule } from '../space.defaults/space.defaults.module';
 import { SpaceSettingssModule } from '../space.settings/space.settings.module';
 
 @Module({
@@ -40,7 +38,6 @@ import { SpaceSettingssModule } from '../space.settings/space.settings.module';
     CommunityModule,
     CommunityPolicyModule,
     OpportunityModule,
-    OrganizationModule,
     NamingModule,
     PlatformAuthorizationPolicyModule,
     UserModule,
@@ -52,7 +49,6 @@ import { SpaceSettingssModule } from '../space.settings/space.settings.module';
     ProfileModule,
     CollaborationModule,
     SpaceSettingssModule,
-    SpaceDefaultsModule,
   ],
   providers: [
     ChallengeService,

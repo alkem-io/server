@@ -24,6 +24,7 @@ import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.a
 import { ICallout } from '@domain/collaboration/callout';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { CalloutGroupName } from '@common/enums/callout.group.name';
+import { CreateChallengeInput } from '@domain/challenge';
 
 export class ConversionService {
   constructor(
@@ -39,10 +40,12 @@ export class ConversionService {
     conversionData: ConvertChallengeToSpaceInput,
     agentInfo: AgentInfo
   ): Promise<ISpace> {
+    // TODO: needs to create a new ACCOUNT etc.
     const challenge = await this.challengeService.getChallengeOrFail(
       conversionData.challengeID,
       {
         relations: {
+          account: true,
           community: true,
           context: true,
           profile: true,
@@ -61,6 +64,7 @@ export class ConversionService {
     );
     if (
       !challenge.community ||
+      !challenge.account ||
       !challenge.context ||
       !challenge.profile ||
       !challenge.collaboration ||
@@ -96,6 +100,7 @@ export class ConversionService {
     };
     const emptySpace = await this.spaceService.createSpace(
       createSpaceInput,
+      challenge.account,
       agentInfo
     );
     const space = await this.spaceService.getSpaceOrFail(emptySpace.id, {
@@ -271,18 +276,18 @@ export class ConversionService {
     //     );
     //   innovationFlowTemplateID = defaultChallengeLifecycleTemplate.id;
     // }
-    const emptyChallenge = await this.challengeService.createChallenge(
-      {
-        nameID: challengeNameID,
-        collaborationData: {
-          innovationFlowTemplateID: innovationFlowTemplateID,
-        },
-        profileData: {
-          displayName: opportunity.profile.displayName,
-        },
-        storageAggregatorParent: spaceStorageAggregator,
-        spaceID: spaceID,
+    const challengeData: CreateChallengeInput = {
+      nameID: challengeNameID,
+      collaborationData: {
+        innovationFlowTemplateID: innovationFlowTemplateID,
       },
+      profileData: {
+        displayName: opportunity.profile.displayName,
+      },
+      storageAggregatorParent: spaceStorageAggregator,
+    };
+    const emptyChallenge = await this.challengeService.createChallenge(
+      challengeData,
       opportunity.account,
       agentInfo
     );

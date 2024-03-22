@@ -81,9 +81,6 @@ export class ChallengeService {
       challenge,
       challengeData,
       account,
-      challengeData.storageAggregatorParent,
-      undefined,
-      challengeData.collaborationData,
       agentInfo
     );
 
@@ -371,7 +368,6 @@ export class ChallengeService {
     );
 
     opportunityData.storageAggregatorParent = challenge.storageAggregator;
-    opportunityData.spaceID = challenge.account.spaceID;
     const opportunity = await this.opportunityService.createOpportunity(
       opportunityData,
       account,

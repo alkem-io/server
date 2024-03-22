@@ -4,6 +4,23 @@ export class subspaces1711092635967 implements MigrationInterface {
   name = 'subspaces1711092635967';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(
+      `ALTER TABLE \`account\` RENAME COLUMN \`spaceID\` TO \`spaceId2\``
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`account\` ADD \`spaceId\` char(36) NULL`
+    );
+
+    const accounts: {
+      id: string;
+      spaceId2: string;
+    }[] = await queryRunner.query(`SELECT id, spaceId2 FROM account`);
+    for (const account of accounts) {
+      await queryRunner.query(
+        `UPDATE account SET spaceId = '${account.spaceId2}' WHERE id = '${account.id}'`
+      );
+    }
+
     // Update the type for all credentials
     const credentials: {
       id: string;
@@ -46,6 +63,7 @@ export class subspaces1711092635967 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE \`community_policy\` DROP COLUMN \`host\``
     );
+    await queryRunner.query(`ALTER TABLE \`account\` DROP COLUMN \`spaceId2\``);
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {}

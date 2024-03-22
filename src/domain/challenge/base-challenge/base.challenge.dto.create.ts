@@ -4,6 +4,7 @@ import { CreateContextInput } from '@domain/context/context/dto/context.dto.crea
 import { Type } from 'class-transformer';
 import { CreateNameableInput } from '@domain/common/entity/nameable-entity/dto/nameable.dto.create';
 import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 
 @InputType()
 export class CreateBaseChallengeInput extends CreateNameableInput {
@@ -22,4 +23,7 @@ export class CreateBaseChallengeInput extends CreateNameableInput {
   @ValidateNested()
   @Type(() => CreateCollaborationInput)
   collaborationData?: CreateCollaborationInput;
+
+  // For passing on the hierarchy of storage aggregators
+  storageAggregatorParent?: IStorageAggregator;
 }
