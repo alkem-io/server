@@ -28,6 +28,7 @@ import { CollaborationService } from '@domain/collaboration/collaboration/collab
 import { SpaceService } from '@domain/challenge/space/space.service';
 import { JourneyTypeEnum } from '@common/enums/journey.type';
 import { LinkService } from '@domain/collaboration/link/link.service';
+import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 
 export class ActivityLogService {
   constructor(
@@ -45,6 +46,7 @@ export class ActivityLogService {
     private calendarEventService: CalendarEventService,
     private communityService: CommunityService,
     private collaborationService: CollaborationService,
+    private urlGeneratorService: UrlGeneratorService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     @InjectEntityManager()
@@ -150,13 +152,16 @@ export class ActivityLogService {
           this.calloutService,
           this.postService,
           this.whiteboardService,
+          this.spaceService,
           this.challengeService,
           this.opportunityService,
           this.communityService,
           this.roomService,
           this.linkService,
           this.calendarService,
-          this.calendarEventService
+          this.calendarEventService,
+          this.collaborationService,
+          this.urlGeneratorService
         );
       const activityType = rawActivity.type as ActivityEventType;
       return await activityBuilder[activityType](rawActivity);

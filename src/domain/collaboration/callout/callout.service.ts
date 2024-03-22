@@ -88,10 +88,10 @@ export class CalloutService {
       storageAggregator,
       userID
     );
-    if (calloutData.displayLocation) {
-      this.calloutFramingService.updateDisplayLocationTagsetValue(
+    if (calloutData.groupName) {
+      this.calloutFramingService.updateCalloutGroupTagsetValue(
         callout.framing,
-        calloutData.displayLocation
+        calloutData.groupName
       );
     }
 
@@ -249,10 +249,10 @@ export class CalloutService {
     if (calloutUpdateData.sortOrder)
       callout.sortOrder = calloutUpdateData.sortOrder;
 
-    if (calloutUpdateData.displayLocation) {
-      this.calloutFramingService.updateDisplayLocationTagsetValue(
+    if (calloutUpdateData.groupName) {
+      this.calloutFramingService.updateCalloutGroupTagsetValue(
         callout.framing,
-        calloutUpdateData.displayLocation
+        calloutUpdateData.groupName
       );
     }
 
@@ -325,10 +325,13 @@ export class CalloutService {
         },
       },
     });
+    const calloutGroupTagset =
+      await this.calloutFramingService.getCalloutGroupTagset(callout.framing);
     return {
       nameID: callout.nameID,
       type: callout.type,
       visibility: callout.visibility,
+      groupName: calloutGroupTagset.tags[0],
       framing:
         this.calloutFramingService.createCalloutFramingInputFromCalloutFraming(
           callout.framing
