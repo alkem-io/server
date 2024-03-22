@@ -38,7 +38,7 @@ import { LogContext } from '@common/enums';
 import { ISpaceDefaults } from '../space.defaults/space.defaults.interface';
 import { UpdateSpaceDefaultsInput } from './dto/space.dto.update.defaults';
 import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
-import { InnovationFlowTemplateService } from '@domain/template/innovation-flow-template/innovation.flow.template.service';
+import { EntityNotFoundException } from '@common/exceptions';
 
 @Resolver()
 export class SpaceResolverMutations {
@@ -49,7 +49,6 @@ export class SpaceResolverMutations {
     private spaceService: SpaceService,
     private spaceAuthorizationService: SpaceAuthorizationService,
     private spaceDefaultsService: SpaceDefaultsService,
-    private innovationFlowTemplateService: InnovationFlowTemplateService,
     private challengeService: ChallengeService,
     private challengeAuthorizationService: ChallengeAuthorizationService,
     private preferenceService: PreferenceService,
@@ -181,6 +180,9 @@ export class SpaceResolverMutations {
         relations: {
           account: {
             defaults: true,
+            library: {
+              innovationFlowTemplates: true,
+            },
           },
         },
       }
@@ -201,9 +203,17 @@ export class SpaceResolverMutations {
 
     if (spaceDefaultsData.flowTemplateID) {
       const innovationFlowTemplate =
-        await this.innovationFlowTemplateService.getInnovationFlowTemplateOrFail(
-          spaceDefaultsData.flowTemplateID
+        space.account.library?.innovationFlowTemplates.find(
+          innovationFlowTemplate =>
+            innovationFlowTemplate.id === spaceDefaultsData.flowTemplateID
         );
+      if (!innovationFlowTemplate) {
+        throw new EntityNotFoundException(
+          `Flow Template not found in the Space Library: ${spaceDefaultsData.flowTemplateID} SpaceId: ${space.id}`,
+          LogContext.COLLABORATION
+        );
+      }
+
       return await this.spaceDefaultsService.updateSpaceDefaults(
         space.account.defaults,
         innovationFlowTemplate
