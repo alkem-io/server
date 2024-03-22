@@ -13,7 +13,7 @@ export class CommunityGuidelinesAuthorizationService {
     private communityGuidelinesService: CommunityGuidelinesService
   ) {}
 
-  async applyAuthorizationPolicy(
+  public async applyAuthorizationPolicy(
     communityGuidelines: ICommunityGuidelines,
     parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<ICommunityGuidelines> {

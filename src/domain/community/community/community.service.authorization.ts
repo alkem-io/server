@@ -25,6 +25,7 @@ import {
 import { InvitationExternalAuthorizationService } from '../invitation.external/invitation.external.service.authorization';
 import { InvitationAuthorizationService } from '../invitation/invitation.service.authorization';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
+import { CommunityGuidelinesAuthorizationService } from '../community-guidelines/community.guidelines.service.authorization';
 
 @Injectable()
 export class CommunityAuthorizationService {
@@ -36,6 +37,7 @@ export class CommunityAuthorizationService {
     private applicationAuthorizationService: ApplicationAuthorizationService,
     private invitationAuthorizationService: InvitationAuthorizationService,
     private invitationExternalAuthorizationService: InvitationExternalAuthorizationService,
+    private communityGuidelinesAuthorizationService: CommunityGuidelinesAuthorizationService,
     @InjectRepository(Community)
     private communityRepository: Repository<Community>
   ) {}
@@ -136,6 +138,11 @@ export class CommunityAuthorizationService {
         );
       externalInvitation.authorization = invitationSaved.authorization;
     }
+
+    await this.communityGuidelinesAuthorizationService.applyAuthorizationPolicy(
+      community.guidelines,
+      community.authorization
+    );
 
     return await this.communityRepository.save(community);
   }
