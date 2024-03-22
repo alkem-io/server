@@ -9,11 +9,9 @@ import {
   CreateOpportunityInput,
   IOpportunity,
   Opportunity,
-  opportunityCommunityApplicationForm,
-  opportunityCommunityPolicy,
   UpdateOpportunityInput,
 } from '@domain/challenge/opportunity';
-import { LogContext, ProfileType } from '@common/enums';
+import { LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { BaseChallengeService } from '@domain/challenge/base-challenge/base.challenge.service';
 import { ICommunity } from '@domain/community/community/community.interface';
@@ -27,21 +25,14 @@ import { ICollaboration } from '@domain/collaboration/collaboration/collaboratio
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { IProfile } from '@domain/common/profile/profile.interface';
-import { CommunityRole } from '@common/enums/community.role';
-import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
-import { opportunityDefaultCallouts } from '../space.defaults/definitions/opportunity.default.callouts';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
 import { IAccount } from '../account/account.interface';
 import { SpaceType } from '@common/enums/space.type';
-import { CalloutGroupName } from '@common/enums/callout.group.name';
 @Injectable()
 export class OpportunityService {
   constructor(
     private baseChallengeService: BaseChallengeService,
     private communityService: CommunityService,
-    private collaborationService: CollaborationService,
-    private spaceDefaultsService: SpaceDefaultsService,
     private namingService: NamingService,
     @InjectRepository(Opportunity)
     private opportunityRepository: Repository<Opportunity>,
@@ -72,80 +63,11 @@ export class OpportunityService {
       opportunity,
       opportunityData,
       account,
-      opportunityCommunityPolicy,
-      opportunityCommunityApplicationForm,
-      ProfileType.OPPORTUNITY,
       opportunityData.storageAggregatorParent,
       undefined,
-      opportunityData.collaborationData
+      opportunityData.collaborationData,
+      agentInfo
     );
-
-    await this.opportunityRepository.save(opportunity);
-
-    if (
-      !opportunity.collaboration ||
-      !opportunity.storageAggregator ||
-      !opportunity.community
-    ) {
-      throw new EntityNotInitializedException(
-        `Entities not initialized on Opportunity creation: ${opportunity.nameID}`,
-        LogContext.CHALLENGES
-      );
-    }
-
-    await this.collaborationService.addCalloutGroupTagsetTemplate(
-      opportunity.collaboration,
-      CalloutGroupName.CONTRIBUTE_2
-    );
-
-    // Finally create default callouts, using the defaults service to decide what to add
-    const calloutInputsFromCollaborationTemplate =
-      await this.collaborationService.createCalloutInputsFromCollaborationTemplate(
-        opportunityData.collaborationData?.collaborationTemplateID
-      );
-    const calloutInputs =
-      await this.spaceDefaultsService.getCreateCalloutInputs(
-        opportunityDefaultCallouts,
-        calloutInputsFromCollaborationTemplate,
-        opportunityData.collaborationData
-      );
-
-    opportunity.collaboration =
-      await this.collaborationService.addDefaultCallouts(
-        opportunity.collaboration,
-        calloutInputs,
-        opportunity.storageAggregator,
-        agentInfo?.userID
-      );
-
-    // set immediate community parent
-
-    opportunity.community.parentID = opportunity.id;
-    opportunity.community.policy =
-      await this.communityService.updateCommunityPolicyResourceID(
-        opportunity.community,
-        opportunity.id
-      );
-
-    if (agentInfo && opportunity.community) {
-      await this.communityService.assignUserToRole(
-        opportunity.community,
-        agentInfo.userID,
-        CommunityRole.MEMBER
-      );
-
-      await this.communityService.assignUserToRole(
-        opportunity.community,
-        agentInfo.userID,
-        CommunityRole.LEAD
-      );
-
-      await this.communityService.assignUserToRole(
-        opportunity.community,
-        agentInfo.userID,
-        CommunityRole.ADMIN
-      );
-    }
 
     return await this.saveOpportunity(opportunity);
   }

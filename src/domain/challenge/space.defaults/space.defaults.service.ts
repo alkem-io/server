@@ -26,6 +26,17 @@ import { SpaceType } from '@common/enums/space.type';
 import { spaceCalloutGroups } from './definitions/space.callout.group';
 import { subspaceCalloutGroups } from './definitions/subspace.callout.group';
 import { Account } from '../account/account.entity';
+import { subspaceDefaultCallouts } from './definitions/subspace.default.callouts';
+import { subspaceCommunityPolicy } from './definitions/subspace.community.policy';
+import { spaceDefaultCallouts } from './definitions/space.default.callouts';
+import { spaceCommunityPolicy } from './definitions/space.community.policy';
+import { ICommunityPolicyDefinition } from '@domain/community/community-policy/community.policy.definition';
+import { opportunityCommunityPolicy } from './definitions/opportunity.community.policy';
+import { CreateFormInput } from '@domain/common/form/dto/form.dto.create';
+import { subspceCommunityApplicationForm } from './definitions/subspace.community.application.form';
+import { spaceCommunityApplicationForm } from './definitions/space.community.application.form';
+import { ProfileType } from '@common/enums';
+import { CalloutGroupName } from '@common/enums/callout.group.name';
 
 @Injectable()
 export class SpaceDefaultsService {
@@ -129,6 +140,59 @@ export class SpaceDefaultsService {
         return subspaceCalloutGroups;
       case SpaceType.SPACE:
         return spaceCalloutGroups;
+    }
+  }
+
+  public getCalloutGroupDefault(spaceType: SpaceType): CalloutGroupName {
+    switch (spaceType) {
+      case SpaceType.CHALLENGE:
+      case SpaceType.OPPORTUNITY:
+        return CalloutGroupName.CONTRIBUTE_2;
+      case SpaceType.SPACE:
+        return CalloutGroupName.KNOWLEDGE;
+    }
+  }
+
+  public getCommunityPolicy(spaceType: SpaceType): ICommunityPolicyDefinition {
+    switch (spaceType) {
+      case SpaceType.CHALLENGE:
+        return subspaceCommunityPolicy;
+      case SpaceType.OPPORTUNITY:
+        // TODO: also needs to be the subspace one after merge
+        return opportunityCommunityPolicy;
+      case SpaceType.SPACE:
+        return spaceCommunityPolicy;
+    }
+  }
+
+  public getProfileType(spaceType: SpaceType): ProfileType {
+    switch (spaceType) {
+      case SpaceType.CHALLENGE:
+        return ProfileType.CHALLENGE;
+      case SpaceType.OPPORTUNITY:
+        return ProfileType.OPPORTUNITY;
+      case SpaceType.SPACE:
+        return ProfileType.SPACE;
+    }
+  }
+
+  public getCommunityApplicationForm(spaceType: SpaceType): CreateFormInput {
+    switch (spaceType) {
+      case SpaceType.CHALLENGE:
+      case SpaceType.OPPORTUNITY:
+        return subspceCommunityApplicationForm;
+      case SpaceType.SPACE:
+        return spaceCommunityApplicationForm;
+    }
+  }
+
+  public getDefaultCallouts(spaceType: SpaceType): CreateCalloutInput[] {
+    switch (spaceType) {
+      case SpaceType.CHALLENGE:
+      case SpaceType.OPPORTUNITY:
+        return subspaceDefaultCallouts;
+      case SpaceType.SPACE:
+        return spaceDefaultCallouts;
     }
   }
 

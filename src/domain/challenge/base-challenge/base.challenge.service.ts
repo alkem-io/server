@@ -1,4 +1,4 @@
-import { LogContext, ProfileType } from '@common/enums';
+import { LogContext } from '@common/enums';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -23,9 +23,7 @@ import { AgentService } from '@domain/agent/agent/agent.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
-import { ICommunityPolicyDefinition } from '@domain/community/community-policy/community.policy.definition';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
-import { CreateFormInput } from '@domain/common/form/dto/form.dto.create';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { IProfile } from '@domain/common/profile';
 import { VisualType } from '@common/enums/visual.type';
@@ -36,6 +34,8 @@ import { SpaceSettingsService } from '../space.settings/space.settings.service';
 import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
 import { IAccount } from '../account/account.interface';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
+import { AgentInfo } from '@core/authentication';
+import { CommunityRole } from '@common/enums/community.role';
 
 @Injectable()
 export class BaseChallengeService {
@@ -57,12 +57,10 @@ export class BaseChallengeService {
     baseChallenge: IBaseChallenge,
     baseChallengeData: CreateBaseChallengeInput,
     account: IAccount,
-    communityPolicy: ICommunityPolicyDefinition,
-    applicationFormData: CreateFormInput,
-    profileType: ProfileType,
     parentStorageAggregator: IStorageAggregator | undefined,
     storageAggregator: IStorageAggregator | undefined, // there is a bootsrap issue to be addressed after merge
-    collaborationInput?: CreateCollaborationInput
+    collaborationInput: CreateCollaborationInput | undefined,
+    agentInfo: AgentInfo | undefined
   ) {
     baseChallenge.authorization = new AuthorizationPolicy();
     baseChallenge.settingsStr = this.spaceSettingsService.serializeSettings(
@@ -90,6 +88,12 @@ export class BaseChallengeService {
       );
     }
 
+    const communityPolicy = this.spaceDefaultsService.getCommunityPolicy(
+      baseChallenge.type
+    );
+    const applicationFormData =
+      this.spaceDefaultsService.getCommunityApplicationForm(baseChallenge.type);
+
     baseChallenge.community = await this.communityService.createCommunity(
       baseChallengeData.profileData.displayName,
       account.spaceID,
@@ -106,6 +110,9 @@ export class BaseChallengeService {
       );
     }
 
+    const profileType = this.spaceDefaultsService.getProfileType(
+      baseChallenge.type
+    );
     baseChallenge.profile = await this.profileService.createProfile(
       baseChallengeData.profileData,
       profileType,
@@ -115,6 +122,7 @@ export class BaseChallengeService {
       name: TagsetReservedName.DEFAULT,
       tags: baseChallengeData.tags,
     });
+
     // add the visuals
     await this.profileService.addVisualOnProfile(
       baseChallenge.profile,
@@ -129,6 +137,8 @@ export class BaseChallengeService {
       VisualType.CARD
     );
 
+    //// Collaboration
+
     baseChallenge.collaboration =
       await this.collaborationService.createCollaboration(
         {
@@ -139,9 +149,67 @@ export class BaseChallengeService {
         baseChallenge.type
       );
 
+    const calloutGroupDefault =
+      this.spaceDefaultsService.getCalloutGroupDefault(baseChallenge.type);
+    await this.collaborationService.addCalloutGroupTagsetTemplate(
+      baseChallenge.collaboration,
+      calloutGroupDefault
+    );
+
+    const calloutInputsFromCollaborationTemplate =
+      await this.collaborationService.createCalloutInputsFromCollaborationTemplate(
+        baseChallengeData.collaborationData?.collaborationTemplateID
+      );
+    const defaultCallouts = this.spaceDefaultsService.getDefaultCallouts(
+      baseChallenge.type
+    );
+    const calloutInputs =
+      await this.spaceDefaultsService.getCreateCalloutInputs(
+        defaultCallouts,
+        calloutInputsFromCollaborationTemplate,
+        baseChallengeData.collaborationData
+      );
+    baseChallenge.collaboration =
+      await this.collaborationService.addDefaultCallouts(
+        baseChallenge.collaboration,
+        calloutInputs,
+        baseChallenge.storageAggregator,
+        agentInfo?.userID
+      );
+
+    /////////// Agents
+
     baseChallenge.agent = await this.agentService.createAgent({
       parentDisplayID: `${baseChallenge.nameID}`,
     });
+
+    ////// Community
+    // set immediate community parent + resourceID
+    baseChallenge.community.parentID = baseChallenge.id;
+    baseChallenge.community.policy =
+      await this.communityService.updateCommunityPolicyResourceID(
+        baseChallenge.community,
+        baseChallenge.id
+      );
+    if (agentInfo && baseChallenge.community) {
+      await this.communityService.assignUserToRole(
+        baseChallenge.community,
+        agentInfo.userID,
+        CommunityRole.MEMBER
+      );
+
+      await this.communityService.assignUserToRole(
+        baseChallenge.community,
+        agentInfo.userID,
+        CommunityRole.LEAD
+      );
+
+      await this.communityService.assignUserToRole(
+        baseChallenge.community,
+        agentInfo.userID,
+        CommunityRole.ADMIN
+      );
+    }
   }
 
   public async update(

@@ -1,5 +1,5 @@
 import { UUID_LENGTH } from '@common/constants';
-import { LogContext, ProfileType } from '@common/enums';
+import { LogContext } from '@common/enums';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -9,12 +9,7 @@ import {
 } from '@common/exceptions';
 import { IAgent } from '@domain/agent/agent';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
-import {
-  CreateSpaceInput,
-  DeleteSpaceInput,
-  spaceCommunityApplicationForm,
-  spaceCommunityPolicy,
-} from '@domain/challenge/space';
+import { CreateSpaceInput, DeleteSpaceInput } from '@domain/challenge/space';
 import { OpportunityService } from '@domain/challenge/opportunity/opportunity.service';
 import { INVP, NVP } from '@domain/common/nvp';
 import { ICommunity } from '@domain/community/community';
@@ -43,10 +38,6 @@ import { ICommunityPolicy } from '@domain/community/community-policy/community.p
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { InnovationHub, InnovationHubType } from '@domain/innovation-hub/types';
 import { OperationNotAllowedException } from '@common/exceptions/operation.not.allowed.exception';
-import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
-import { CalloutGroupName } from '@common/enums/callout.group.name';
-import { CommunityRole } from '@common/enums/community.role';
-import { spaceDefaultCallouts } from '../space.defaults/definitions/space.default.callouts';
 import { IPaginatedType } from '@core/pagination/paginated.type';
 import { SpaceFilterInput } from '@services/infrastructure/space-filter/dto/space.filter.dto.input';
 import { PaginationArgs } from '@core/pagination';
@@ -72,7 +63,6 @@ export class SpaceService {
     private challengeService: ChallengeService,
     private spacesFilterService: SpaceFilterService,
     private storageAggregatorService: StorageAggregatorService,
-    private collaborationService: CollaborationService,
     private spaceSettingsService: SpaceSettingsService,
     private accountService: AccountService,
     private contextService: ContextService,
@@ -113,60 +103,13 @@ export class SpaceService {
       space,
       spaceData,
       space.account,
-      spaceCommunityPolicy,
-      spaceCommunityApplicationForm,
-      ProfileType.SPACE,
       undefined, // no parent
-      space.storageAggregator
-    );
-
-    if (!space.collaboration || !space.storageAggregator) {
-      throw new EntityNotInitializedException(
-        `Space not fully initialized: ${space.nameID}`,
-        LogContext.CHALLENGES
-      );
-    }
-
-    await this.collaborationService.addCalloutGroupTagsetTemplate(
-      space.collaboration,
-      CalloutGroupName.KNOWLEDGE
-    );
-
-    space.collaboration = await this.collaborationService.addDefaultCallouts(
-      space.collaboration,
-      spaceDefaultCallouts,
       space.storageAggregator,
-      agentInfo?.userID
+      undefined,
+      agentInfo
     );
-    await this.save(space);
 
-    // set immediate community parent and  community policy
-    if (space.community) {
-      space.community.parentID = space.id;
-      space.community.policy =
-        await this.communityService.updateCommunityPolicyResourceID(
-          space.community,
-          space.id
-        );
-
-      if (agentInfo) {
-        await this.communityService.assignUserToRole(
-          space.community,
-          agentInfo?.userID,
-          CommunityRole.MEMBER,
-          agentInfo
-        );
-
-        await this.communityService.assignUserToRole(
-          space.community,
-          agentInfo?.userID,
-          CommunityRole.ADMIN,
-          agentInfo
-        );
-      }
-    }
-
-    return await this.spaceRepository.save(space);
+    return await this.save(space);
   }
 
   async validateSpaceData(spaceData: CreateSpaceInput) {

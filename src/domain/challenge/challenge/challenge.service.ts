@@ -16,11 +16,7 @@ import {
   IOpportunity,
 } from '@domain/challenge/opportunity';
 import { BaseChallengeService } from '@domain/challenge/base-challenge/base.challenge.service';
-import {
-  AuthorizationCredential,
-  LogContext,
-  ProfileType,
-} from '@common/enums';
+import { AuthorizationCredential, LogContext } from '@common/enums';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { CommunityService } from '@domain/community/community/community.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
@@ -37,26 +33,18 @@ import { IChallenge } from './challenge.interface';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AgentInfo } from '@src/core/authentication/agent-info';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
-import { CommunityRole } from '@common/enums/community.role';
-import { challengeCommunityPolicy } from '../space.defaults/definitions/challenge.community.policy';
-import { challengeCommunityApplicationForm } from '../space.defaults/definitions/challenge.community.application.form';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { OperationNotAllowedException } from '@common/exceptions/operation.not.allowed.exception';
-import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
-import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { challengeDefaultCallouts } from '../space.defaults/definitions/challenge.default.callouts';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
 import { ISpaceSettings } from '../space.settings/space.settings.interface';
 import { SpaceSettingsService } from '../space.settings/space.settings.service';
 import { UpdateChallengeSettingsInput } from './dto/challenge.dto.update.settings';
 import { IAccount } from '../account/account.interface';
 import { SpaceType } from '@common/enums/space.type';
-import { CalloutGroupName } from '@common/enums/callout.group.name';
 @Injectable()
 export class ChallengeService {
   constructor(
@@ -65,8 +53,6 @@ export class ChallengeService {
     private opportunityService: OpportunityService,
     private baseChallengeService: BaseChallengeService,
     private organizationService: OrganizationService,
-    private collaborationService: CollaborationService,
-    private spaceDefaultsService: SpaceDefaultsService,
     private spaceSettingsService: SpaceSettingsService,
     private namingService: NamingService,
     @InjectRepository(Challenge)
@@ -100,92 +86,13 @@ export class ChallengeService {
       challenge,
       challengeData,
       account,
-      challengeCommunityPolicy,
-      challengeCommunityApplicationForm,
-      ProfileType.CHALLENGE,
       challengeData.storageAggregatorParent,
       undefined,
-      challengeData.collaborationData
+      challengeData.collaborationData,
+      agentInfo
     );
 
-    await this.challengeRepository.save(challenge);
-    if (
-      !challenge.collaboration ||
-      !challenge.storageAggregator ||
-      !challenge.community
-    ) {
-      throw new EntityNotInitializedException(
-        `Entities not initialized on Challenge creation: ${challenge.nameID}`,
-        LogContext.CHALLENGES
-      );
-    }
-
-    // set immediate community parent + resourceID
-    challenge.community.parentID = challenge.id;
-    challenge.community.policy =
-      await this.communityService.updateCommunityPolicyResourceID(
-        challenge.community,
-        challenge.id
-      );
-
-    await this.collaborationService.addCalloutGroupTagsetTemplate(
-      challenge.collaboration,
-      CalloutGroupName.CONTRIBUTE_2
-    );
-
-    const savedChallenge = await this.challengeRepository.save(challenge);
-
-    const stateTagset =
-      savedChallenge.collaboration?.innovationFlow?.profile.tagsets?.find(
-        t => t.tagsetTemplate?.name === TagsetReservedName.FLOW_STATE
-      );
-    if (!stateTagset) {
-      throw new EntityNotInitializedException(
-        `State tagset not found on InnovationFlow: ${challenge.nameID}`,
-        LogContext.CHALLENGES
-      );
-    }
-
-    // Finally create default callouts, using the defaults service to decide what to add
-    const calloutInputsFromCollaborationTemplate =
-      await this.collaborationService.createCalloutInputsFromCollaborationTemplate(
-        challengeData.collaborationData?.collaborationTemplateID
-      );
-    const calloutInputs =
-      await this.spaceDefaultsService.getCreateCalloutInputs(
-        challengeDefaultCallouts,
-        calloutInputsFromCollaborationTemplate,
-        challengeData.collaborationData
-      );
-    challenge.collaboration =
-      await this.collaborationService.addDefaultCallouts(
-        challenge.collaboration,
-        calloutInputs,
-        challenge.storageAggregator,
-        agentInfo?.userID
-      );
-
-    if (agentInfo && challenge.community) {
-      await this.communityService.assignUserToRole(
-        challenge.community,
-        agentInfo.userID,
-        CommunityRole.MEMBER
-      );
-
-      await this.communityService.assignUserToRole(
-        challenge.community,
-        agentInfo.userID,
-        CommunityRole.LEAD
-      );
-
-      await this.communityService.assignUserToRole(
-        challenge.community,
-        agentInfo.userID,
-        CommunityRole.ADMIN
-      );
-    }
-
-    return savedChallenge;
+    return await this.save(challenge);
   }
 
   async save(challenge: IChallenge): Promise<IChallenge> {
