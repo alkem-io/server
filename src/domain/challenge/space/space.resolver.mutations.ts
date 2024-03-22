@@ -448,7 +448,7 @@ export class SpaceResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       space.authorization,
-      AuthorizationPrivilege.UPDATE, // todo: replace with AUTHORIZATION_RESET once that has been granted
+      AuthorizationPrivilege.AUTHORIZATION_RESET,
       `reset authorization definition: ${agentInfo.email}`
     );
     return await this.spaceAuthorizationService.applyAuthorizationPolicy(space);

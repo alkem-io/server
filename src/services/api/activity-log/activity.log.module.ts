@@ -20,6 +20,7 @@ import { CalendarModule } from '@domain/timeline/calendar/calendar.module';
 import { CalendarEventModule } from '@domain/timeline/event/event.module';
 import { SpaceModule } from '@domain/challenge/space/space.module';
 import { LinkModule } from '@domain/collaboration/link/link.module';
+import { UrlGeneratorModule } from '@services/infrastructure/url-generator';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { LinkModule } from '@domain/collaboration/link/link.module';
     CalendarEventModule,
     SubscriptionServiceModule,
     PlatformAuthorizationPolicyModule,
+    UrlGeneratorModule,
   ],
   providers: [
     ActivityLogService,

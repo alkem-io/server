@@ -256,7 +256,6 @@ export class AdminAuthorizationResolverMutations {
   @Mutation(() => String, {
     description: 'Reset the Authorization Policy on all entities',
   })
-  @Profiling.api
   public async authorizationPolicyResetAll(
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<string> {
@@ -270,5 +269,32 @@ export class AdminAuthorizationResolverMutations {
     );
 
     return this.authResetService.publishResetAll();
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IAuthorizationPolicy, {
+    description:
+      'Reset the specified Authorization Policy to global admin privileges',
+  })
+  public async authorizationPolicyResetToGlobalAdminsAccess(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('authorizationID') authorizationID: string
+  ): Promise<IAuthorizationPolicy> {
+    const platformPolicy =
+      await this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();
+    const platformPolicyUpdated =
+      this.adminAuthorizationService.extendAuthorizationPolicyWithAuthorizationReset(
+        platformPolicy
+      );
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      platformPolicyUpdated,
+      AuthorizationPrivilege.AUTHORIZATION_RESET,
+      `reset authorization on a single authorization policy: ${agentInfo.email}`
+    );
+
+    return this.adminAuthorizationService.resetAuthorizationPolicy(
+      authorizationID
+    );
   }
 }
