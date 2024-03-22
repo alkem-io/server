@@ -65,6 +65,10 @@ export class UrlGeneratorService {
     );
   }
 
+  public async revokeUrlCache(entityId: string): Promise<void> {
+    await this.cacheManager.del(this.getUrlIdCacheKey(entityId));
+  }
+
   public async getUrlFromCache(entityId: string): Promise<string | undefined> {
     const url = await this.cacheManager.get<string>(
       this.getUrlIdCacheKey(entityId)
