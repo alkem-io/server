@@ -4,54 +4,34 @@ export const templatesSetDefaults: any = {
   posts: [
     {
       profile: {
-        displayName: 'knowledge',
-        description: 'To share relevant knowledge, building blocks etc.',
-        tags: [],
+        displayName: "📝 Meeting Notes",
+        description: "A sample post template for capturing the **results of meetings** is a structured format designed to efficiently document key outcomes, decisions, and 👉 action items from a meeting. This template provides a systematic approach to ensure that important information is recorded comprehensively and can be easily referenced later. 📝\n",
+        tags: ["Notes"],
       },
-      type: 'knowledge',
-      defaultDescription: 'Please describe the knowledge that is relevant.',
+      type: 'Meeting Notes',
+      defaultDescription: "## 💭 Your meeting insights\n\n📅 **Date:**\n\n*Let's note the date of your interaction for context.*\n\n👥 **Present:**\n\n*Mention who attended or participated in the community activity.*\n\n📝 **Notes:**\n\n*Capture your observations or key takeaways from the community interaction.*\n\n🔁 **Next steps:**\n\n*Describe the specific actions or initiatives you plan to take based on the insights gained during the community interaction, propelling the community forward!*\n",
     },
     {
       profile: {
-        displayName: 'stakeholder persona',
+        displayName: "👀 Related Initiative",
         description:
-          'To share a relevant persona, who would be either actively engaged, impacted by results, needs to profilermed, supportive etc',
-        tags: [],
+          "Utilize this template to collect information about other **relevant initiatives**. Whether they are similar in nature, provide support, or simply need to be acknowledged, this template helps you keep track of them.\n",
+        tags: ["Suggestions", "Initiatives"],
       },
-      type: 'stakeholder persona',
+      type: "Related Initiative",
       defaultDescription:
-        'Please describe the stakeholder persona that is relevant.',
+        "👀 **Name of the related initiative**:\n\n*Name/title*\n\n🤝 **Description of the related initiative:**\n\n*Description*\n\n🗻 **Describe the relevane of the related initiative:**\n\n*Explore how these initiatives align with this initiative*\n\n✏️ **Additional information**\n\n*Provide any extra information or context relevant to the initiative*\n",
     },
     {
       profile: {
-        displayName: 'related initiative',
+        displayName: "Community Needs 👥",
         description:
-          'Other initiatives that are relevant, be they similar in nature, supporting or just to be aware of.',
-        tags: [],
+          "Progress needs people and so do we! Gather the knowledge, activities or other blockers that are needed to start making impact by using this template. Ask people if they are you someone that can help you or if they know someone who can !💬\n\nTogether, transform challenges into opportunities and propel your space forward! 🚀💪\n",
+        tags: ["Cooperation", "Guidance"],
       },
-      type: 'related initiative',
+      type: "Community Needs 👥",
       defaultDescription:
-        'Please describe the related initiative that is relevant.',
-    },
-    {
-      profile: {
-        displayName: 'idea',
-        description:
-          'Ideas that are later elicited and can be used to make progress.',
-        tags: [],
-      },
-      type: 'idea',
-      defaultDescription: 'Please describe the idea that is relevant.',
-    },
-    {
-      profile: {
-        displayName: 'other',
-        description:
-          'Any other relevant information that can contribute to make progress.',
-        tags: [],
-      },
-      type: 'other',
-      defaultDescription: 'Please describe the post that you wish to share.',
+        "💬**What is blocking this space at the moment?**\n\n*Uncover the current challenges and obstacles that hinder progress in this space. What barriers are present, and how do they impact the community?*\n\n📢 **Describe your call to action**:\n\n*What steps can we take to address these challenges, and how can we overcome these obstacles?*\n\n📚 **Type of knowledge, expertise, and resources:**\n\n*Specify the types of knowledge, expertise, and resources needed to navigate and overcome the identified challenges*\n\n✏️ **Additional context:**\n\n*providing additional context*\n\nTogether, let's transform challenges into opportunities and propel this space forward! 🚀💪\n",
     },
   ],
   innovationFlows: [
