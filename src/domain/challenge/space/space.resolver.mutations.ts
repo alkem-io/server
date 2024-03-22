@@ -39,13 +39,11 @@ import { ISpaceDefaults } from '../space.defaults/space.defaults.interface';
 import { UpdateSpaceDefaultsInput } from './dto/space.dto.update.defaults';
 import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
 import { InnovationFlowTemplateService } from '@domain/template/innovation-flow-template/innovation.flow.template.service';
-import { AccountService } from '../account/account.service';
 
 @Resolver()
 export class SpaceResolverMutations {
   constructor(
     private contributionReporter: ContributionReporterService,
-    private accountService: AccountService,
     private activityAdapter: ActivityAdapter,
     private authorizationService: AuthorizationService,
     private spaceService: SpaceService,
@@ -181,7 +179,9 @@ export class SpaceResolverMutations {
       spaceDefaultsData.spaceID,
       {
         relations: {
-          account: true,
+          account: {
+            defaults: true,
+          },
         },
       }
     );
@@ -191,25 +191,13 @@ export class SpaceResolverMutations {
       AuthorizationPrivilege.UPDATE,
       `update spaceDefaults: ${space.id}`
     );
-    const account = await this.accountService.getAccountOrFail(
-      space.account.id,
-      {
-        relations: {
-          defaults: true,
-        },
-      }
-    );
-    if (!account.defaults) {
+
+    if (!space.account.defaults) {
       throw new EntityNotInitializedException(
-        `Account doesn't have Defaults: ${account.id}`,
+        `Account doesn't have Defaults: ${space.account.id}`,
         LogContext.COLLABORATION
       );
     }
-
-    const spaceDefaults =
-      await this.spaceDefaultsService.getSpaceDefaultsOrFail(
-        account.defaults.id
-      );
 
     if (spaceDefaultsData.flowTemplateID) {
       const innovationFlowTemplate =
@@ -217,11 +205,11 @@ export class SpaceResolverMutations {
           spaceDefaultsData.flowTemplateID
         );
       return await this.spaceDefaultsService.updateSpaceDefaults(
-        spaceDefaults,
+        space.account.defaults,
         innovationFlowTemplate
       );
     }
-    return spaceDefaults;
+    return space.account.defaults;
   }
 
   @UseGuards(GraphqlGuard)
