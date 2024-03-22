@@ -220,9 +220,24 @@ export class BaseChallengeService {
       baseChallengeData.ID,
       repository,
       {
-        relations: { context: true, community: true, profile: true },
+        relations: {
+          context: true,
+          community: true,
+          profile: true,
+        },
       }
     );
+
+    if (baseChallengeData.nameID) {
+      if (baseChallengeData.nameID !== baseChallenge.nameID) {
+        // updating the nameID, check new value is allowed
+        await this.isNameAvailableInAccountOrFail(
+          baseChallengeData.nameID,
+          baseChallengeData.accountID
+        );
+        baseChallenge.nameID = baseChallengeData.nameID;
+      }
+    }
 
     if (baseChallengeData.context) {
       if (!baseChallenge.context)

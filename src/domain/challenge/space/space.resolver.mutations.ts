@@ -225,10 +225,11 @@ export class SpaceResolverMutations {
 
     const space = await this.spaceService.getSpaceOrFail(spaceID);
     // TODO: pass through the updated settings to the challenge service
-    const updatedChallenge = await this.challengeService.updateSpaceSettings(
-      challenge,
-      settingsData
-    );
+    const updatedChallenge =
+      await this.challengeService.updateChallengeSettings(
+        challenge,
+        settingsData
+      );
     // As the settings may update the authorization, the authorization policy will need to be reset
     await this.challengeAuthorizationService.applyAuthorizationPolicy(
       updatedChallenge,

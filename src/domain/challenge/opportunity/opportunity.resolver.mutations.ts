@@ -51,6 +51,7 @@ export class OpportunityResolverMutations {
       `update opportunity: ${opportunity.nameID}`
     );
 
+    opportunityData.accountID = opportunity.account.id;
     const updatedOpportunity = await this.opportunityService.updateOpportunity(
       opportunityData
     );

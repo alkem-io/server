@@ -16,21 +16,18 @@ import {
   IOpportunity,
 } from '@domain/challenge/opportunity';
 import { BaseChallengeService } from '@domain/challenge/base-challenge/base.challenge.service';
-import { AuthorizationCredential, LogContext } from '@common/enums';
+import { LogContext } from '@common/enums';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { CommunityService } from '@domain/community/community/community.service';
-import { OrganizationService } from '@domain/community/organization/organization.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, IsNull, Not, Repository } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { IOrganization } from '@domain/community/organization';
 import { ICommunity } from '@domain/community/community';
 import { INVP } from '@domain/common/nvp/nvp.interface';
 import { UUID_LENGTH } from '@common/constants';
 import { IAgent } from '@domain/agent/agent';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { IChallenge } from './challenge.interface';
-import { AgentService } from '@domain/agent/agent/agent.service';
 import { AgentInfo } from '@src/core/authentication/agent-info';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
@@ -48,11 +45,9 @@ import { SpaceType } from '@common/enums/space.type';
 @Injectable()
 export class ChallengeService {
   constructor(
-    private agentService: AgentService,
     private communityService: CommunityService,
     private opportunityService: OpportunityService,
     private baseChallengeService: BaseChallengeService,
-    private organizationService: OrganizationService,
     private spaceSettingsService: SpaceSettingsService,
     private namingService: NamingService,
     @InjectRepository(Challenge)
@@ -106,23 +101,8 @@ export class ChallengeService {
       challengeData,
       this.challengeRepository
     );
-    const challenge = await this.getChallengeOrFail(baseChallenge.id, {
-      relations: {
-        account: true,
-      },
-    });
-    if (challengeData.nameID && challenge.account) {
-      if (challengeData.nameID !== challenge.nameID) {
-        // updating the nameID, check new value is allowed
-        await this.baseChallengeService.isNameAvailableInAccountOrFail(
-          challengeData.nameID,
-          challenge.account.id
-        );
-        challenge.nameID = challengeData.nameID;
-        await this.challengeRepository.save(challenge);
-      }
-    }
-    return challenge;
+
+    return await this.getChallengeOrFail(baseChallenge.id);
   }
 
   async deleteChallenge(deleteData: DeleteChallengeInput): Promise<IChallenge> {
@@ -131,8 +111,6 @@ export class ChallengeService {
     const challenge = await this.getChallengeOrFail(challengeID, {
       relations: {
         opportunities: true,
-        profile: true,
-        storageAggregator: true,
       },
     });
 
@@ -141,20 +119,6 @@ export class ChallengeService {
         `Unable to remove challenge (${challenge.nameID}) as it contains ${challenge.opportunities.length} opportunities`,
         LogContext.CHALLENGES
       );
-
-    // Remove any challenge lead credentials
-    const challengeLeads = await this.getLeadOrganizations(challengeID);
-    for (const challengeLead of challengeLeads) {
-      const agentHostOrg = await this.organizationService.getAgent(
-        challengeLead
-      );
-      challengeLead.agent = await this.agentService.revokeCredential({
-        agentID: agentHostOrg.id,
-        type: AuthorizationCredential.SUBSPACE_LEAD,
-        resourceID: challengeID,
-      });
-      await this.organizationService.save(challengeLead);
-    }
 
     await this.baseChallengeService.deleteEntities(
       challengeID,
@@ -313,7 +277,7 @@ export class ChallengeService {
     );
   }
 
-  public async updateSpaceSettings(
+  public async updateChallengeSettings(
     challenge: IChallenge,
     settingsData: UpdateChallengeSettingsInput
   ): Promise<IChallenge> {
@@ -504,15 +468,6 @@ export class ChallengeService {
     metrics.push(whiteboardsTopic);
 
     return metrics;
-  }
-
-  async getLeadOrganizations(challengeID: string): Promise<IOrganization[]> {
-    const organizations =
-      await this.organizationService.organizationsWithCredentials({
-        type: AuthorizationCredential.SUBSPACE_LEAD,
-        resourceID: challengeID,
-      });
-    return organizations;
   }
 
   async getStorageAggregatorOrFail(

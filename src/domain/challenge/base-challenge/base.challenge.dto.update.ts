@@ -14,4 +14,6 @@ export class UpdateBaseChallengeInput extends UpdateNameableInput {
   @ValidateNested()
   @Type(() => UpdateContextInput)
   context?: UpdateContextInput;
+
+  accountID!: string;
 }

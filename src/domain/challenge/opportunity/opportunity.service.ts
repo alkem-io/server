@@ -1,10 +1,7 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, Repository } from 'typeorm';
-import {
-  EntityNotFoundException,
-  EntityNotInitializedException,
-} from '@common/exceptions';
+import { EntityNotFoundException } from '@common/exceptions';
 import {
   CreateOpportunityInput,
   IOpportunity,
@@ -134,11 +131,7 @@ export class OpportunityService {
   }
 
   async deleteOpportunity(opportunityID: string): Promise<IOpportunity> {
-    const opportunity = await this.getOpportunityOrFail(opportunityID, {
-      relations: {
-        storageAggregator: true,
-      },
-    });
+    const opportunity = await this.getOpportunityOrFail(opportunityID);
 
     await this.baseChallengeService.deleteEntities(
       opportunity.id,
@@ -155,31 +148,12 @@ export class OpportunityService {
   async updateOpportunity(
     opportunityData: UpdateOpportunityInput
   ): Promise<IOpportunity> {
-    const baseOpportunity = await this.baseChallengeService.update(
+    await this.baseChallengeService.update(
       opportunityData,
       this.opportunityRepository
     );
-    const opportunity = await this.getOpportunityOrFail(baseOpportunity.id, {
-      relations: { profile: true, account: true },
-    });
-    if (!opportunity.account) {
-      throw new EntityNotInitializedException(
-        `Opportunity account not set: ${opportunity.id}`,
-        LogContext.CHALLENGES
-      );
-    }
-    if (opportunityData.nameID) {
-      if (opportunityData.nameID !== baseOpportunity.nameID) {
-        // updating the nameID, check new value is allowed
-        await this.baseChallengeService.isNameAvailableInAccountOrFail(
-          opportunityData.nameID,
-          opportunity.account.id
-        );
-        baseOpportunity.nameID = opportunityData.nameID;
-        await this.opportunityRepository.save(baseOpportunity);
-      }
-    }
-    return opportunity;
+
+    return await this.getOpportunityOrFail(opportunityData.ID);
   }
 
   async saveOpportunity(opportunity: IOpportunity): Promise<IOpportunity> {

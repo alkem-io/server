@@ -158,6 +158,8 @@ export class ChallengeResolverMutations {
       AuthorizationPrivilege.UPDATE,
       `challenge update: ${challenge.nameID}`
     );
+    challengeData.accountID = challenge.account.id;
+
     const updatedChallenge = await this.challengeService.updateChallenge(
       challengeData
     );
