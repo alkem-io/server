@@ -258,7 +258,7 @@ export class AccountService {
       );
       organization.agent = await this.agentService.revokeCredential({
         agentID: agentExisting.id,
-        type: AuthorizationCredential.SPACE_HOST,
+        type: AuthorizationCredential.ACCOUNT_HOST,
         resourceID: spaceID,
       });
     }
@@ -267,7 +267,7 @@ export class AccountService {
     const agent = await this.organizationService.getAgent(organization);
     organization.agent = await this.agentService.grantCredential({
       agentID: agent.id,
-      type: AuthorizationCredential.SPACE_HOST,
+      type: AuthorizationCredential.ACCOUNT_HOST,
       resourceID: spaceID,
     });
 
@@ -278,7 +278,7 @@ export class AccountService {
   async getHost(account: IAccount): Promise<IOrganization | undefined> {
     const organizations =
       await this.organizationService.organizationsWithCredentials({
-        type: AuthorizationCredential.SPACE_HOST,
+        type: AuthorizationCredential.ACCOUNT_HOST,
         resourceID: account.spaceID,
       });
     if (organizations.length == 0) {

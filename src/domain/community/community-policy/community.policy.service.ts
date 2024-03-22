@@ -21,13 +21,11 @@ export class CommunityPolicyService {
   public createCommunityPolicy(
     member: ICommunityRolePolicy,
     lead: ICommunityRolePolicy,
-    admin: ICommunityRolePolicy,
-    host: ICommunityRolePolicy
+    admin: ICommunityRolePolicy
   ): Promise<ICommunityPolicy> {
     const policy: ICommunityPolicy = new CommunityPolicy(
       this.serializeRolePolicy(member),
       this.serializeRolePolicy(lead),
-      this.serializeRolePolicy(host),
       this.serializeRolePolicy(admin)
     );
     return this.save(policy);
@@ -53,8 +51,6 @@ export class CommunityPolicyService {
         return this.deserializeRolePolicy(policy.lead);
       case CommunityRole.ADMIN:
         return this.deserializeRolePolicy(policy.admin);
-      case CommunityRole.HOST:
-        return this.deserializeRolePolicy(policy.host);
       default:
         throw new EntityNotInitializedException(
           `Unable to locate role '${role}' for community policy: ${policy.id}`,
@@ -116,10 +112,6 @@ export class CommunityPolicyService {
     adminPolicy.credential.resourceID = resourceID;
     communityPolicy.admin = this.serializeRolePolicy(adminPolicy);
 
-    const hostPolicy = this.deserializeRolePolicy(communityPolicy.host);
-    hostPolicy.credential.resourceID = resourceID;
-    communityPolicy.host = this.serializeRolePolicy(hostPolicy);
-
     return this.save(communityPolicy);
   }
 
@@ -139,15 +131,10 @@ export class CommunityPolicyService {
       communityPolicyParent.admin,
       communityPolicy.admin
     );
-    const hostPolicy = this.inheritParentRoleCredentials(
-      communityPolicyParent.host,
-      communityPolicy.host
-    );
 
     communityPolicy.member = this.serializeRolePolicy(memberPolicy);
     communityPolicy.lead = this.serializeRolePolicy(leadPolicy);
     communityPolicy.admin = this.serializeRolePolicy(adminPolicy);
-    communityPolicy.host = this.serializeRolePolicy(hostPolicy);
 
     return this.save(communityPolicy);
   }

@@ -90,8 +90,7 @@ export class CommunityService {
     community.policy = await this.communityPolicyService.createCommunityPolicy(
       policy.member,
       policy.lead,
-      policy.admin,
-      policy.host
+      policy.admin
     );
     community.spaceID = spaceID;
     community.applicationForm = await this.formService.createForm(

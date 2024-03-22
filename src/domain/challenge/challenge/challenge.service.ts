@@ -150,7 +150,7 @@ export class ChallengeService {
       );
       challengeLead.agent = await this.agentService.revokeCredential({
         agentID: agentHostOrg.id,
-        type: AuthorizationCredential.CHALLENGE_LEAD,
+        type: AuthorizationCredential.SUBSPACE_LEAD,
         resourceID: challengeID,
       });
       await this.organizationService.save(challengeLead);
@@ -509,7 +509,7 @@ export class ChallengeService {
   async getLeadOrganizations(challengeID: string): Promise<IOrganization[]> {
     const organizations =
       await this.organizationService.organizationsWithCredentials({
-        type: AuthorizationCredential.CHALLENGE_LEAD,
+        type: AuthorizationCredential.SUBSPACE_LEAD,
         resourceID: challengeID,
       });
     return organizations;

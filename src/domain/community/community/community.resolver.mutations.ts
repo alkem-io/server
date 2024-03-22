@@ -105,7 +105,6 @@ export class CommunityResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('roleData') roleData: AssignCommunityRoleToUserInput
   ): Promise<IUser> {
-    this.validateNotHostRole(roleData.role);
     const community = await this.communityService.getCommunityOrFail(
       roleData.communityID
     );
@@ -144,7 +143,6 @@ export class CommunityResolverMutations {
     @Args('roleData')
     roleData: AssignCommunityRoleToOrganizationInput
   ): Promise<IOrganization> {
-    this.validateNotHostRole(roleData.role);
     const community = await this.communityService.getCommunityOrFail(
       roleData.communityID
     );
@@ -171,7 +169,6 @@ export class CommunityResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('roleData') roleData: RemoveCommunityRoleFromUserInput
   ): Promise<IUser> {
-    this.validateNotHostRole(roleData.role);
     const community = await this.communityService.getCommunityOrFail(
       roleData.communityID
     );
@@ -213,7 +210,6 @@ export class CommunityResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('roleData') roleData: RemoveCommunityRoleFromOrganizationInput
   ): Promise<IOrganization> {
-    this.validateNotHostRole(roleData.role);
     const community = await this.communityService.getCommunityOrFail(
       roleData.communityID
     );
@@ -558,15 +554,5 @@ export class CommunityResolverMutations {
     await this.notificationAdapter.communityContextReview(notificationInput);
 
     return true;
-  }
-
-  // For now Host role is only allowed to be assigned via platform level settings
-  private validateNotHostRole(role: CommunityRole) {
-    if (role === CommunityRole.HOST) {
-      throw new CommunityMembershipException(
-        `Unable to assign Role (${role}) in community: setting of Host role requires platform settings`,
-        LogContext.COMMUNITY
-      );
-    }
   }
 }

@@ -17,16 +17,12 @@ export class CommunityPolicy
   @Column('text')
   admin!: string;
 
-  @Column('text')
-  host!: string;
-
   settings!: ISpaceSettings;
 
-  constructor(member: string, lead: string, host: string, admin: string) {
+  constructor(member: string, lead: string, admin: string) {
     super();
     this.member = member;
     this.lead = lead;
     this.admin = admin;
-    this.host = host;
   }
 }

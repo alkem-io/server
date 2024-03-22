@@ -309,7 +309,7 @@ export class PlatformAuthorizationService {
         [AuthorizationPrivilege.CREATE_ORGANIZATION],
         [
           AuthorizationCredential.SPACE_ADMIN,
-          AuthorizationCredential.CHALLENGE_ADMIN,
+          AuthorizationCredential.SUBSPACE_ADMIN,
         ],
         CREDENTIAL_RULE_TYPES_PLATFORM_ANY_ADMIN
       );
@@ -324,8 +324,8 @@ export class PlatformAuthorizationService {
           AuthorizationCredential.GLOBAL_ADMIN_SPACES,
           AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY,
           AuthorizationCredential.SPACE_ADMIN,
-          AuthorizationCredential.CHALLENGE_ADMIN,
-          AuthorizationCredential.OPPORTUNITY_ADMIN,
+          AuthorizationCredential.SUBSPACE_ADMIN,
+          AuthorizationCredential.SUBSPACE_ADMIN,
           AuthorizationCredential.ORGANIZATION_ADMIN,
         ],
         CREDENTIAL_RULE_TYPES_PLATFORM_ANY_ADMIN

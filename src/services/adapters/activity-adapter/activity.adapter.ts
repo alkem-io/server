@@ -336,8 +336,8 @@ export class ActivityAdapter {
   public async messageRemoved(
     eventData: ActivityInputMessageRemoved
   ): Promise<boolean> {
-    const eventType = ActivityEventType.CHALLENGE_CREATED;
-    this.logEventTriggered(eventData, eventType);
+    //const eventType = ActivityEventType.MESSAGE_REMOVED;
+    //this.logEventTriggered(eventData, eventType);
 
     const activity = await this.activityService.getActivityForMessage(
       eventData.messageID

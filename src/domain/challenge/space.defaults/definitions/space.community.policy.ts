@@ -39,16 +39,4 @@ export const spaceCommunityPolicy: ICommunityPolicyDefinition = {
     minUser: 0,
     maxUser: -1,
   },
-  host: {
-    enabled: true,
-    credential: {
-      type: AuthorizationCredential.SPACE_HOST,
-      resourceID: '',
-    },
-    parentCredentials: [],
-    minOrg: 1,
-    maxOrg: 1,
-    minUser: 0,
-    maxUser: 0,
-  },
 };

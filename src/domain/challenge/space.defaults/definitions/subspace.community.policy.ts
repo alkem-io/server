@@ -5,7 +5,7 @@ export const subspaceCommunityPolicy: ICommunityPolicyDefinition = {
   member: {
     enabled: true,
     credential: {
-      type: AuthorizationCredential.CHALLENGE_MEMBER,
+      type: AuthorizationCredential.SUBSPACE_MEMBER,
       resourceID: '',
     },
     parentCredentials: [],
@@ -17,7 +17,7 @@ export const subspaceCommunityPolicy: ICommunityPolicyDefinition = {
   lead: {
     enabled: true,
     credential: {
-      type: AuthorizationCredential.CHALLENGE_LEAD,
+      type: AuthorizationCredential.SUBSPACE_LEAD,
       resourceID: '',
     },
     parentCredentials: [],
@@ -29,7 +29,7 @@ export const subspaceCommunityPolicy: ICommunityPolicyDefinition = {
   admin: {
     enabled: true,
     credential: {
-      type: AuthorizationCredential.CHALLENGE_ADMIN,
+      type: AuthorizationCredential.SUBSPACE_ADMIN,
       resourceID: '',
     },
     parentCredentials: [],
@@ -37,17 +37,5 @@ export const subspaceCommunityPolicy: ICommunityPolicyDefinition = {
     maxOrg: 0,
     minUser: 0,
     maxUser: -1,
-  },
-  host: {
-    enabled: false,
-    credential: {
-      type: AuthorizationCredential.CHALLENGE_HOST,
-      resourceID: '',
-    },
-    parentCredentials: [],
-    minOrg: 0,
-    maxOrg: 0,
-    minUser: 0,
-    maxUser: 0,
   },
 };

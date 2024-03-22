@@ -126,7 +126,7 @@ export class ChallengeResolverMutations {
       opportunity,
     };
     this.opportunityCreatedSubscription.publish(
-      SubscriptionType.OPPORTUNITY_CREATED,
+      SubscriptionType.CHALLENGE_CREATED,
       opportunityCreatedEvent
     );
 

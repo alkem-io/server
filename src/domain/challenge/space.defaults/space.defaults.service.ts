@@ -31,7 +31,6 @@ import { subspaceCommunityPolicy } from './definitions/subspace.community.policy
 import { spaceDefaultCallouts } from './definitions/space.default.callouts';
 import { spaceCommunityPolicy } from './definitions/space.community.policy';
 import { ICommunityPolicyDefinition } from '@domain/community/community-policy/community.policy.definition';
-import { opportunityCommunityPolicy } from './definitions/opportunity.community.policy';
 import { CreateFormInput } from '@domain/common/form/dto/form.dto.create';
 import { subspceCommunityApplicationForm } from './definitions/subspace.community.application.form';
 import { spaceCommunityApplicationForm } from './definitions/space.community.application.form';
@@ -156,10 +155,8 @@ export class SpaceDefaultsService {
   public getCommunityPolicy(spaceType: SpaceType): ICommunityPolicyDefinition {
     switch (spaceType) {
       case SpaceType.CHALLENGE:
-        return subspaceCommunityPolicy;
       case SpaceType.OPPORTUNITY:
-        // TODO: also needs to be the subspace one after merge
-        return opportunityCommunityPolicy;
+        return subspaceCommunityPolicy;
       case SpaceType.SPACE:
         return spaceCommunityPolicy;
     }

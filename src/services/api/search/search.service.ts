@@ -1149,7 +1149,7 @@ export class SearchService {
     }
     const leadsInSpace =
       await this.organizationService.organizationsWithCredentials({
-        type: AuthorizationCredential.SPACE_HOST,
+        type: AuthorizationCredential.SPACE_LEAD,
         resourceID: searchInSpace.id,
       });
     for (const org of leadsInSpace) {

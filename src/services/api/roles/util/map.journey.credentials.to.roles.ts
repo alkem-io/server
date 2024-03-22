@@ -17,18 +17,15 @@ export const mapJourneyCredentialsToRoles = async (
   const credentialMap = groupCredentialsByEntity(credentials);
 
   const spaceIds = Array.from(credentialMap.get('spaces')?.keys() ?? []);
-  const challengeIds = Array.from(
-    credentialMap.get('challenges')?.keys() ?? []
-  );
-  const oppIds = Array.from(credentialMap.get('opportunities')?.keys() ?? []);
+  const accountIds = Array.from(credentialMap.get('accounts')?.keys() ?? []);
+  const subspaceIds = Array.from(credentialMap.get('subspaces')?.keys() ?? []);
 
   const { spaces, challenges, opportunities } =
     await getJourneyRolesForContributorEntityData(
       entityManager,
-      spaceIds,
+      spaceIds.concat(accountIds), // For now merge accounts with spaces
       allowedVisibilities,
-      challengeIds,
-      oppIds
+      subspaceIds
     );
 
   return getJourneyRolesForContributorQueryResult(
