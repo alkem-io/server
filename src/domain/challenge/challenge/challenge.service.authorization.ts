@@ -20,20 +20,14 @@ import {
   CREDENTIAL_RULE_CHALLENGE_ADMINS,
   CREDENTIAL_RULE_CHALLENGE_MEMBER_READ,
   CREDENTIAL_RULE_CHALLENGE_CREATE_OPPORTUNITY,
-  CREDENTIAL_RULE_CHALLENGE_SPACE_MEMBER_APPLY,
-  CREDENTIAL_RULE_CHALLENGE_SPACE_MEMBER_JOIN,
-  CREDENTIAL_RULE_COMMUNITY_ADD_MEMBER,
 } from '@common/constants';
 import { CommunityRole } from '@common/enums/community.role';
-import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
-import { ContextAuthorizationService } from '@domain/context/context/context.service.authorization';
-import { CommunityAuthorizationService } from '@domain/community/community/community.service.authorization';
-import { CollaborationAuthorizationService } from '@domain/collaboration/collaboration/collaboration.service.authorization';
-import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
-import { ILicense } from '@domain/license/license/license.interface';
 import { SpaceSettingsService } from '../space.settings/space.settings.service';
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
-import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
+import { BaseChallengeAuthorizationService } from '../base-challenge/base.challenge.service.authorization';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Challenge } from './challenge.entity';
+import { Repository } from 'typeorm';
 
 @Injectable()
 export class ChallengeAuthorizationService {
@@ -43,12 +37,10 @@ export class ChallengeAuthorizationService {
     private opportunityAuthorizationService: OpportunityAuthorizationService,
     private communityPolicyService: CommunityPolicyService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
-    private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
-    private profileAuthorizationService: ProfileAuthorizationService,
     private spaceSettingsService: SpaceSettingsService,
-    private contextAuthorizationService: ContextAuthorizationService,
-    private communityAuthorizationService: CommunityAuthorizationService,
-    private collaborationAuthorizationService: CollaborationAuthorizationService
+    private baseChallengeAuthorizationService: BaseChallengeAuthorizationService,
+    @InjectRepository(Challenge)
+    private challengeRepository: Repository<Challenge>
   ) {}
 
   async applyAuthorizationPolicy(
@@ -84,9 +76,8 @@ export class ChallengeAuthorizationService {
     const communityPolicy = await this.getCommunityPolicyWithSettings(
       challengeInput
     );
-    // private challenge or not?
-    // If it is a private challenge then cannot inherit from Space
 
+    // If it is a private challenge then cannot inherit from Space
     if (communityPolicy.settings.privacy.mode === SpacePrivacyMode.PRIVATE) {
       challengeInput.authorization =
         this.authorizationPolicyService.inheritParentAuthorization(
@@ -111,10 +102,14 @@ export class ChallengeAuthorizationService {
     );
 
     // propagate authorization rules for child entities
-    return await this.propagateAuthorizationToChildEntities(
-      challengeInput,
-      communityPolicy,
-      license
+    const challengePropagated =
+      await this.baseChallengeAuthorizationService.propagateAuthorizationToChildEntities(
+        challenge,
+        license,
+        this.challengeRepository
+      );
+    return await this.propagateAuthorizationToOpportunities(
+      challengePropagated
     );
   }
 
@@ -185,113 +180,7 @@ export class ChallengeAuthorizationService {
     return rules;
   }
 
-  private async propagateAuthorizationToChildEntities(
-    challengeBase: IChallenge,
-    policy: ICommunityPolicy,
-    license: ILicense
-  ): Promise<IChallenge> {
-    await this.challengeService.save(challengeBase);
-
-    let challenge =
-      await this.propagateAuthorizationToCommunityCollaborationAgent(
-        challengeBase,
-        policy,
-        license
-      );
-    challenge = await this.propagateAuthorizationToProfileContext(challenge);
-    return await this.propagateAuthorizationToOpportunitiesStorageChildChallengesPreferences(
-      challenge
-    );
-  }
-
-  private async propagateAuthorizationToProfileContext(
-    challengeBase: IChallenge
-  ): Promise<IChallenge> {
-    const challenge = await this.challengeService.getChallengeOrFail(
-      challengeBase.id,
-      {
-        relations: {
-          context: true,
-          profile: true,
-        },
-      }
-    );
-    if (!challenge.context || !challenge.profile)
-      throw new RelationshipNotFoundException(
-        `Unable to load context or profile for challenge ${challenge.id} `,
-        LogContext.CONTEXT
-      );
-    // Clone the authorization policy
-    const clonedAuthorization =
-      this.authorizationPolicyService.cloneAuthorizationPolicy(
-        challenge.authorization
-      );
-    // To ensure that profile + context on a space are always publicly visible, even for private challenges
-    clonedAuthorization.anonymousReadAccess = true;
-
-    challenge.profile =
-      await this.profileAuthorizationService.applyAuthorizationPolicy(
-        challenge.profile,
-        clonedAuthorization
-      );
-
-    challenge.context =
-      await this.contextAuthorizationService.applyAuthorizationPolicy(
-        challenge.context,
-        clonedAuthorization
-      );
-    return challenge;
-  }
-
-  public async propagateAuthorizationToCommunityCollaborationAgent(
-    challengeBase: IChallenge,
-    communityPolicy: ICommunityPolicy,
-    license: ILicense
-  ): Promise<IChallenge> {
-    const challenge = await this.challengeService.getChallengeOrFail(
-      challengeBase.id,
-      {
-        relations: {
-          community: true,
-          collaboration: true,
-          agent: true,
-        },
-      }
-    );
-    if (!challenge.community || !challenge.collaboration || !challenge.agent)
-      throw new RelationshipNotFoundException(
-        `Unable to load community or collaboration or agent for space ${challenge.id} `,
-        LogContext.CHALLENGES
-      );
-
-    challenge.community =
-      await this.communityAuthorizationService.applyAuthorizationPolicy(
-        challenge.community,
-        challenge.authorization
-      );
-    // Specific extension
-    challenge.community.authorization = this.extendCommunityAuthorizationPolicy(
-      challenge.community.authorization,
-      communityPolicy
-    );
-
-    challenge.collaboration =
-      await this.collaborationAuthorizationService.applyAuthorizationPolicy(
-        challenge.collaboration,
-        challenge.authorization,
-        communityPolicy,
-        license
-      );
-
-    challenge.agent.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
-        challenge.agent.authorization,
-        challenge.authorization
-      );
-    return await this.challengeService.save(challenge);
-  }
-
-  public async propagateAuthorizationToOpportunitiesStorageChildChallengesPreferences(
+  public async propagateAuthorizationToOpportunities(
     challengeBase: IChallenge
   ): Promise<IChallenge> {
     const challenge = await this.challengeService.getChallengeOrFail(
@@ -299,20 +188,13 @@ export class ChallengeAuthorizationService {
       {
         relations: {
           opportunities: true,
-          storageAggregator: true,
         },
       }
     );
-    if (!challenge.opportunities || !challenge.storageAggregator)
+    if (!challenge.opportunities)
       throw new RelationshipNotFoundException(
         `Unable to load child entities for challenge authorization: ${challenge.id} - ${challenge.opportunities} - ${challenge.storageAggregator}`,
         LogContext.CHALLENGES
-      );
-
-    challenge.storageAggregator =
-      await this.storageAggregatorAuthorizationService.applyAuthorizationPolicy(
-        challenge.storageAggregator,
-        challenge.authorization
       );
 
     for (const opportunity of challenge.opportunities) {
@@ -414,70 +296,6 @@ export class ChallengeAuthorizationService {
     return criteria;
   }
 
-  private extendCommunityAuthorizationPolicy(
-    authorization: IAuthorizationPolicy | undefined,
-    policy: ICommunityPolicy
-  ): IAuthorizationPolicy {
-    if (!authorization)
-      throw new EntityNotInitializedException(
-        'Authorization definition not found',
-        LogContext.CHALLENGES
-      );
-
-    const newRules: IAuthorizationPolicyRuleCredential[] = [];
-
-    const parentCommunityCredential =
-      this.communityPolicyService.getDirectParentCredentialForRole(
-        policy,
-        CommunityRole.MEMBER
-      );
-
-    // Allow member of the parent community to Apply
-    const membershipSettings = policy.settings.membership;
-    switch (membershipSettings.policy) {
-      case CommunityMembershipPolicy.APPLICATIONS:
-        const spaceMemberCanApply =
-          this.authorizationPolicyService.createCredentialRule(
-            [AuthorizationPrivilege.COMMUNITY_APPLY],
-            [parentCommunityCredential],
-            CREDENTIAL_RULE_CHALLENGE_SPACE_MEMBER_APPLY
-          );
-        spaceMemberCanApply.cascade = false;
-        newRules.push(spaceMemberCanApply);
-        break;
-      case CommunityMembershipPolicy.OPEN:
-        const spaceMemberCanJoin =
-          this.authorizationPolicyService.createCredentialRule(
-            [AuthorizationPrivilege.COMMUNITY_JOIN],
-            [parentCommunityCredential],
-            CREDENTIAL_RULE_CHALLENGE_SPACE_MEMBER_JOIN
-          );
-        spaceMemberCanJoin.cascade = false;
-        newRules.push(spaceMemberCanJoin);
-        break;
-    }
-
-    const adminCredentials =
-      this.communityPolicyService.getAllCredentialsForRole(
-        policy,
-        CommunityRole.ADMIN
-      );
-
-    const addMembers = this.authorizationPolicyService.createCredentialRule(
-      [AuthorizationPrivilege.COMMUNITY_ADD_MEMBER],
-      adminCredentials,
-      CREDENTIAL_RULE_COMMUNITY_ADD_MEMBER
-    );
-    addMembers.cascade = false;
-    newRules.push(addMembers);
-
-    this.authorizationPolicyService.appendCredentialAuthorizationRules(
-      authorization,
-      newRules
-    );
-
-    return authorization;
-  }
   private appendPrivilegeRules(
     authorization: IAuthorizationPolicy | undefined,
     policy: ICommunityPolicy

@@ -252,6 +252,13 @@ export class BaseChallengeService {
     return await repository.save(baseChallenge);
   }
 
+  public async save(
+    baseChallenge: IBaseChallenge,
+    repository: Repository<BaseChallenge>
+  ): Promise<IBaseChallenge> {
+    return await repository.save(baseChallenge);
+  }
+
   public async deleteEntities(
     baseChallengeID: string,
     repository: Repository<BaseChallenge>

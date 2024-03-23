@@ -16,13 +16,11 @@ import {
 } from '@common/constants';
 import { CommunityRole } from '@common/enums/community.role';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
-import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
-import { ContextAuthorizationService } from '@domain/context/context/context.service.authorization';
-import { CommunityAuthorizationService } from '@domain/community/community/community.service.authorization';
-import { CollaborationAuthorizationService } from '@domain/collaboration/collaboration/collaboration.service.authorization';
-import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
-import { ILicense } from '@domain/license/license/license.interface';
 import { SpaceSettingsService } from '../space.settings/space.settings.service';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Opportunity } from './opportunity.entity';
+import { Repository } from 'typeorm';
+import { BaseChallengeAuthorizationService } from '../base-challenge/base.challenge.service.authorization';
 
 @Injectable()
 export class OpportunityAuthorizationService {
@@ -30,12 +28,10 @@ export class OpportunityAuthorizationService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private opportunityService: OpportunityService,
     private communityPolicyService: CommunityPolicyService,
-    private profileAuthorizationService: ProfileAuthorizationService,
-    private contextAuthorizationService: ContextAuthorizationService,
-    private communityAuthorizationService: CommunityAuthorizationService,
-    private collaborationAuthorizationService: CollaborationAuthorizationService,
     private spaceSettingsService: SpaceSettingsService,
-    private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService
+    private baseChallengeAuthorizationService: BaseChallengeAuthorizationService,
+    @InjectRepository(Opportunity)
+    private opportunityRepository: Repository<Opportunity>
   ) {}
 
   async applyAuthorizationPolicy(
@@ -82,10 +78,10 @@ export class OpportunityAuthorizationService {
     );
 
     // propagate authorization rules for child entities
-    return await this.propagateAuthorizationToChildEntities(
+    return await this.baseChallengeAuthorizationService.propagateAuthorizationToChildEntities(
       opportunity,
-      communityPolicy,
-      license
+      license,
+      this.opportunityRepository
     );
   }
 
@@ -189,124 +185,5 @@ export class OpportunityAuthorizationService {
     rules.push(opportunityMember);
 
     return rules;
-  }
-  private async propagateAuthorizationToChildEntities(
-    opportunityInput: IOpportunity,
-    policy: ICommunityPolicy,
-    license: ILicense
-  ): Promise<IOpportunity> {
-    await this.opportunityService.save(opportunityInput);
-
-    const opportunity =
-      await this.propagateAuthorizationToCommunityCollaborationAgent(
-        opportunityInput,
-        policy,
-        license
-      );
-    return await this.propagateAuthorizationToProfileContext(opportunity);
-  }
-
-  private async propagateAuthorizationToProfileContext(
-    opportunityBase: IOpportunity
-  ): Promise<IOpportunity> {
-    const opportunity = await this.opportunityService.getOpportunityOrFail(
-      opportunityBase.id,
-      {
-        relations: {
-          context: true,
-          profile: true,
-          storageAggregator: true,
-        },
-      }
-    );
-    if (
-      !opportunity.context ||
-      !opportunity.profile ||
-      !opportunity.storageAggregator
-    )
-      throw new RelationshipNotFoundException(
-        `Unable to load context, profile or storage aggregator for opportunity ${opportunity.id} `,
-        LogContext.CONTEXT
-      );
-    // Clone the authorization policy
-    const clonedAuthorization =
-      this.authorizationPolicyService.cloneAuthorizationPolicy(
-        opportunity.authorization
-      );
-    // To ensure that profile + context on a space are always publicly visible, even for private challenges
-    clonedAuthorization.anonymousReadAccess = true;
-
-    opportunity.profile =
-      await this.profileAuthorizationService.applyAuthorizationPolicy(
-        opportunity.profile,
-        clonedAuthorization
-      );
-
-    opportunity.context =
-      await this.contextAuthorizationService.applyAuthorizationPolicy(
-        opportunity.context,
-        clonedAuthorization
-      );
-
-    opportunity.storageAggregator =
-      await this.storageAggregatorAuthorizationService.applyAuthorizationPolicy(
-        opportunity.storageAggregator,
-        opportunity.authorization
-      );
-
-    return opportunity;
-  }
-
-  public async propagateAuthorizationToCommunityCollaborationAgent(
-    opportunityBase: IOpportunity,
-    communityPolicy: ICommunityPolicy,
-    license: ILicense
-  ): Promise<IOpportunity> {
-    const opportunity = await this.opportunityService.getOpportunityOrFail(
-      opportunityBase.id,
-      {
-        relations: {
-          community: true,
-          collaboration: true,
-          agent: true,
-        },
-      }
-    );
-    if (
-      !opportunity.community ||
-      !opportunity.collaboration ||
-      !opportunity.agent
-    )
-      throw new RelationshipNotFoundException(
-        `Unable to load community or collaboration or agent for opportunity: ${opportunity.id} `,
-        LogContext.CHALLENGES
-      );
-
-    opportunity.community =
-      await this.communityAuthorizationService.applyAuthorizationPolicy(
-        opportunity.community,
-        opportunity.authorization
-      );
-    // Specific extension
-    opportunity.community.authorization =
-      this.extendCommunityAuthorizationPolicy(
-        opportunity.community.authorization,
-        communityPolicy
-      );
-
-    opportunity.collaboration =
-      await this.collaborationAuthorizationService.applyAuthorizationPolicy(
-        opportunity.collaboration,
-        opportunity.authorization,
-        communityPolicy,
-        license
-      );
-
-    opportunity.agent.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
-        opportunity.agent.authorization,
-        opportunity.authorization
-      );
-    return await this.opportunityService.save(opportunity);
   }
 }
