@@ -10,7 +10,6 @@ import { ICommunityPolicy } from '@domain/community/community-policy/community.p
 import { CommunityPolicyService } from '@domain/community/community-policy/community.policy.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
-  CREDENTIAL_RULE_COMMUNITY_ADD_MEMBER,
   CREDENTIAL_RULE_OPPORTUNITY_ADMIN,
   CREDENTIAL_RULE_OPPORTUNITY_MEMBER,
 } from '@common/constants';
@@ -62,6 +61,8 @@ export class OpportunityAuthorizationService {
         LogContext.CHALLENGES
       );
     }
+    opportunity.community.policy.settings =
+      this.spaceSettingsService.getSettings(opportunity.settingsStr);
     const license = opportunity.account.license;
     const communityPolicy = opportunity.community.policy;
 
@@ -85,19 +86,6 @@ export class OpportunityAuthorizationService {
     );
   }
 
-  public async getCommunityPolicyWithSettings(
-    opportunity: IOpportunity
-  ): Promise<ICommunityPolicy> {
-    const communityPolicy = await this.opportunityService.getCommunityPolicy(
-      opportunity.id
-    );
-    const settings = this.spaceSettingsService.getSettings(
-      opportunity.settingsStr
-    );
-    communityPolicy.settings = settings;
-    return communityPolicy;
-  }
-
   private appendCredentialRules(
     authorization: IAuthorizationPolicy | undefined,
     policy: ICommunityPolicy
@@ -112,39 +100,6 @@ export class OpportunityAuthorizationService {
       authorization,
       this.createCredentialRules(policy)
     );
-  }
-
-  private extendCommunityAuthorizationPolicy(
-    authorization: IAuthorizationPolicy | undefined,
-    policy: ICommunityPolicy
-  ): IAuthorizationPolicy {
-    if (!authorization)
-      throw new EntityNotInitializedException(
-        'Authorization definition not found',
-        LogContext.CHALLENGES
-      );
-
-    const newRules: IAuthorizationPolicyRuleCredential[] = [];
-    const adminCredentials =
-      this.communityPolicyService.getAllCredentialsForRole(
-        policy,
-        CommunityRole.ADMIN
-      );
-
-    const addMembers = this.authorizationPolicyService.createCredentialRule(
-      [AuthorizationPrivilege.COMMUNITY_ADD_MEMBER],
-      adminCredentials,
-      CREDENTIAL_RULE_COMMUNITY_ADD_MEMBER
-    );
-    addMembers.cascade = false;
-    newRules.push(addMembers);
-
-    this.authorizationPolicyService.appendCredentialAuthorizationRules(
-      authorization,
-      newRules
-    );
-
-    return authorization;
   }
 
   private createCredentialRules(

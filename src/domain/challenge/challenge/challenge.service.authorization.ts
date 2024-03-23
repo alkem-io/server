@@ -73,9 +73,10 @@ export class ChallengeAuthorizationService {
     }
     const license = challenge.account.license;
 
-    const communityPolicy = await this.getCommunityPolicyWithSettings(
-      challengeInput
+    challenge.community.policy.settings = this.spaceSettingsService.getSettings(
+      challenge.settingsStr
     );
+    const communityPolicy = challenge.community.policy;
 
     // If it is a private challenge then cannot inherit from Space
     if (communityPolicy.settings.privacy.mode === SpacePrivacyMode.PRIVATE) {
@@ -111,19 +112,6 @@ export class ChallengeAuthorizationService {
     return await this.propagateAuthorizationToOpportunities(
       challengePropagated
     );
-  }
-
-  public async getCommunityPolicyWithSettings(
-    challenge: IChallenge
-  ): Promise<ICommunityPolicy> {
-    const communityPolicy = await this.challengeService.getCommunityPolicy(
-      challenge.id
-    );
-    const settings = this.spaceSettingsService.getSettings(
-      challenge.settingsStr
-    );
-    communityPolicy.settings = settings;
-    return communityPolicy;
   }
 
   private initializeAuthorizationPrivateChallenge(
