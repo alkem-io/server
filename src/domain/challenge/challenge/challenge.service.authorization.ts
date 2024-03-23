@@ -19,7 +19,7 @@ import {
   CREDENTIAL_RULE_CHALLENGE_SPACE_ADMINS,
   CREDENTIAL_RULE_CHALLENGE_ADMINS,
   CREDENTIAL_RULE_CHALLENGE_MEMBER_READ,
-  CREDENTIAL_RULE_CHALLENGE_CREATE_OPPORTUNITY,
+  CREDENTIAL_RULE_MEMBER_CREATE_SUBSPACE,
 } from '@common/constants';
 import { CommunityRole } from '@common/enums/community.role';
 import { SpaceSettingsService } from '../space.settings/space.settings.service';
@@ -256,7 +256,7 @@ export class ChallengeAuthorizationService {
         this.authorizationPolicyService.createCredentialRule(
           [AuthorizationPrivilege.CREATE_SUBSPACE],
           criteria,
-          CREDENTIAL_RULE_CHALLENGE_CREATE_OPPORTUNITY
+          CREDENTIAL_RULE_MEMBER_CREATE_SUBSPACE
         );
       createOpportunityRule.cascade = false;
       rules.push(createOpportunityRule);
@@ -298,7 +298,7 @@ export class ChallengeAuthorizationService {
     const createPrivilege = new AuthorizationPolicyRulePrivilege(
       [AuthorizationPrivilege.CREATE_SUBSPACE],
       AuthorizationPrivilege.CREATE,
-      CREDENTIAL_RULE_CHALLENGE_CREATE_OPPORTUNITY
+      CREDENTIAL_RULE_MEMBER_CREATE_SUBSPACE
     );
     privilegeRules.push(createPrivilege);
 

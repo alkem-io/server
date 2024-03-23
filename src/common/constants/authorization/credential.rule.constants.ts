@@ -4,8 +4,8 @@ export const CREDENTIAL_RULE_CHALLENGE_ADMINS =
   'credentialRule-challengeAdmins';
 export const CREDENTIAL_RULE_CHALLENGE_MEMBER_READ =
   'credentialRule-challengeMemberRead';
-export const CREDENTIAL_RULE_CHALLENGE_CREATE_OPPORTUNITY =
-  'credentialRule-challengeCreateOpportunity';
+export const CREDENTIAL_RULE_MEMBER_CREATE_SUBSPACE =
+  'credentialRule-memberCreateSubspace';
 export const CREDENTIAL_RULE_CHALLENGE_SPACE_MEMBER_JOIN =
   'credentialRule-challengeSpaceMemberJoin';
 export const CREDENTIAL_RULE_CHALLENGE_SPACE_MEMBER_APPLY =
@@ -13,8 +13,6 @@ export const CREDENTIAL_RULE_CHALLENGE_SPACE_MEMBER_APPLY =
 export const CREDENTIAL_RULE_CHALLENGE_SPACE_ADMIN_DELETE =
   'credentialRule-challengeSpaceAdminDelete';
 export const CREDENTIAL_RULE_SPACE_ADMINS = 'credentialRule-spaceAdmins';
-export const CREDENTIAL_RULE_SPACE_MEMBERS_CREATE_CHALLENGES =
-  'credentialRule-spaceMembersCreateChallenges';
 export const CREDENTIAL_RULE_SPACE_MEMBERS_READ =
   'credentialRule-spaceMembersRead';
 export const CREDENTIAL_RULE_SPACE_HOST_ASSOCIATES_JOIN =

@@ -26,11 +26,11 @@ import {
   CREDENTIAL_RULE_TYPES_SPACE_AUTHORIZATION_GLOBAL_ADMIN_GRANT,
   POLICY_RULE_SPACE_CREATE_CHALLENGE,
   CREDENTIAL_RULE_SPACE_ADMINS,
-  CREDENTIAL_RULE_SPACE_MEMBERS_CREATE_CHALLENGES,
   CREDENTIAL_RULE_SPACE_MEMBERS_READ,
   CREDENTIAL_RULE_TYPES_SPACE_COMMUNITY_APPLY_GLOBAL_REGISTERED,
   CREDENTIAL_RULE_TYPES_SPACE_COMMUNITY_JOIN_GLOBAL_REGISTERED,
   CREDENTIAL_RULE_SPACE_HOST_ASSOCIATES_JOIN,
+  CREDENTIAL_RULE_MEMBER_CREATE_SUBSPACE,
 } from '@common/constants';
 import { CommunityRole } from '@common/enums/community.role';
 import { SpaceSettingsService } from '../space.settings/space.settings.service';
@@ -305,7 +305,7 @@ export class SpaceAuthorizationService {
               CommunityRole.MEMBER
             ),
           ],
-          CREDENTIAL_RULE_SPACE_MEMBERS_CREATE_CHALLENGES
+          CREDENTIAL_RULE_MEMBER_CREATE_SUBSPACE
         );
       memberChallenge.cascade = false;
       newRules.push(memberChallenge);
