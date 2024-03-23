@@ -19,6 +19,8 @@ import { InnovationFlowTemplateService } from '@domain/template/innovation-flow-
 import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
 import { UpdateSpaceDefaultsInput } from '../space/dto/space.dto.update.defaults';
 import { ISpaceDefaults } from '../space.defaults/space.defaults.interface';
+import { DeleteSpaceInput } from '../space/dto/space.dto.delete';
+import { SpaceType } from '@common/enums/space.type';
 
 @Resolver()
 export class AccountResolverMutations {
@@ -62,6 +64,36 @@ export class AccountResolverMutations {
     const accountUpdated =
       await this.accountAuthorizationService.applyAuthorizationPolicy(account);
     return await this.accountService.getRootSpace(accountUpdated);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => ISpace, {
+    description: 'Deletes the specified Space.',
+  })
+  async deleteSpace(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('deleteData') deleteData: DeleteSpaceInput
+  ): Promise<ISpace> {
+    const space = await this.spaceService.getSpaceOrFail(deleteData.ID, {
+      relations: {
+        account: true,
+      },
+    });
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      space.authorization,
+      AuthorizationPrivilege.DELETE,
+      `deleteSpace: ${space.nameID}`
+    );
+    switch (space.type) {
+      case SpaceType.SPACE:
+        // delete via the account
+        await this.accountService.deleteAccount(space.account);
+        return space;
+      case SpaceType.CHALLENGE:
+      case SpaceType.OPPORTUNITY:
+        return await this.spaceService.deleteSpace(deleteData);
+    }
   }
 
   @UseGuards(GraphqlGuard)

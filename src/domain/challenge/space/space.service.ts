@@ -131,16 +131,10 @@ export class SpaceService {
         challenges: true,
         profile: true,
         storageAggregator: true,
-        account: true,
       },
     });
 
-    if (
-      !space.challenges ||
-      !space.account ||
-      !space.profile ||
-      !space.storageAggregator
-    ) {
+    if (!space.challenges || !space.profile || !space.storageAggregator) {
       throw new RelationshipNotFoundException(
         `Unable to load all entities for deletion of space ${space.id} `,
         LogContext.CHALLENGES
@@ -158,7 +152,6 @@ export class SpaceService {
       space.id,
       this.spaceRepository
     );
-    // TODO: delete the ACCOUNT
 
     await this.storageAggregatorService.delete(space.storageAggregator.id);
 

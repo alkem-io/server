@@ -199,6 +199,7 @@ export class AccountService {
     const accountID = accountInput.id;
     const account = await this.getAccountOrFail(accountID, {
       relations: {
+        space: true,
         library: true,
         license: { featureFlags: true },
         defaults: true,
@@ -206,6 +207,7 @@ export class AccountService {
     });
 
     if (
+      !account.space ||
       !account.license ||
       !account.license?.featureFlags ||
       !account.defaults ||
@@ -216,6 +218,9 @@ export class AccountService {
         LogContext.ACCOUNT
       );
     }
+    await this.spaceService.deleteSpace({
+      ID: account.space.id,
+    });
 
     await this.templatesSetService.deleteTemplatesSet(account.library.id);
 
