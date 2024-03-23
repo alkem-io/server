@@ -201,7 +201,7 @@ export class SpaceResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       space.authorization,
-      AuthorizationPrivilege.CREATE_CHALLENGE,
+      AuthorizationPrivilege.CREATE_SUBSPACE,
       `challengeCreate: ${space.nameID}`
     );
 

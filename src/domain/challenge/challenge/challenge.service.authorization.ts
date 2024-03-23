@@ -254,7 +254,7 @@ export class ChallengeAuthorizationService {
       const criteria = this.getContributorCriteria(policy);
       const createOpportunityRule =
         this.authorizationPolicyService.createCredentialRule(
-          [AuthorizationPrivilege.CREATE_OPPORTUNITY],
+          [AuthorizationPrivilege.CREATE_SUBSPACE],
           criteria,
           CREDENTIAL_RULE_CHALLENGE_CREATE_OPPORTUNITY
         );
@@ -296,7 +296,7 @@ export class ChallengeAuthorizationService {
     const privilegeRules: IAuthorizationPolicyRulePrivilege[] = [];
 
     const createPrivilege = new AuthorizationPolicyRulePrivilege(
-      [AuthorizationPrivilege.CREATE_OPPORTUNITY],
+      [AuthorizationPrivilege.CREATE_SUBSPACE],
       AuthorizationPrivilege.CREATE,
       CREDENTIAL_RULE_CHALLENGE_CREATE_OPPORTUNITY
     );

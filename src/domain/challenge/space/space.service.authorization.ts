@@ -248,7 +248,7 @@ export class SpaceAuthorizationService {
 
     // Ensure that CREATE also allows CREATE_CHALLENGE
     const createChallengePrivilege = new AuthorizationPolicyRulePrivilege(
-      [AuthorizationPrivilege.CREATE_CHALLENGE],
+      [AuthorizationPrivilege.CREATE_SUBSPACE],
       AuthorizationPrivilege.CREATE,
       POLICY_RULE_SPACE_CREATE_CHALLENGE
     );
@@ -298,7 +298,7 @@ export class SpaceAuthorizationService {
     if (policy.settings.collaboration.allowMembersToCreateSubspaces) {
       const memberChallenge =
         this.authorizationPolicyService.createCredentialRule(
-          [AuthorizationPrivilege.CREATE_CHALLENGE],
+          [AuthorizationPrivilege.CREATE_SUBSPACE],
           [
             this.communityPolicyService.getCredentialForRole(
               policy,
