@@ -379,6 +379,27 @@ export class BaseChallengeService {
     return await this.save(baseChallenge, repository);
   }
 
+  public async getAccountOrFail(
+    baseChallengeId: string,
+    repository: Repository<BaseChallenge>
+  ): Promise<IAccount> {
+    const baseChallenge = await repository.findOne({
+      where: { id: baseChallengeId },
+      relations: {
+        account: true,
+      },
+    });
+
+    if (!baseChallenge) {
+      throw new EntityNotFoundException(
+        `Unable to find base challenge with ID: ${baseChallengeId}`,
+        LogContext.CHALLENGES
+      );
+    }
+
+    return baseChallenge.account;
+  }
+
   public async getCommunity(
     baseChallengeId: string,
     repository: Repository<BaseChallenge>

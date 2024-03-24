@@ -17,7 +17,6 @@ import { UUID_LENGTH } from '@common/constants';
 import { AgentInfo } from '@src/core/authentication/agent-info';
 import { IContext } from '@domain/context/context/context.interface';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
-import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { IAccount } from '../account/account.interface';
@@ -149,21 +148,10 @@ export class OpportunityService {
   }
 
   public async getAccountOrFail(opportunityId: string): Promise<IAccount> {
-    const opportunity = await this.opportunityRepository.findOne({
-      where: { id: opportunityId },
-      relations: {
-        account: true,
-      },
-    });
-
-    if (!opportunity) {
-      throw new EntityNotFoundException(
-        `Unable to find opportunity with ID: ${opportunityId}`,
-        LogContext.CHALLENGES
-      );
-    }
-
-    return opportunity.account;
+    return await this.baseChallengeService.getAccountOrFail(
+      opportunityId,
+      this.opportunityRepository
+    );
   }
 
   async getContext(opportunityId: string): Promise<IContext> {
@@ -207,14 +195,6 @@ export class OpportunityService {
     return metrics;
   }
 
-  async getOpportunitiesInAccountCount(accountID: string): Promise<number> {
-    return await this.opportunityRepository.countBy({
-      account: {
-        id: accountID,
-      },
-    });
-  }
-
   async getOpportunitiesInChallengeCount(challengeID: string): Promise<number> {
     return await this.opportunityRepository.countBy({
       challenge: { id: challengeID },
@@ -230,12 +210,5 @@ export class OpportunityService {
         community: { id: communityID },
       },
     });
-  }
-
-  async getCommunityPolicy(opportunityID: string): Promise<ICommunityPolicy> {
-    return await this.baseChallengeService.getCommunityPolicy(
-      opportunityID,
-      this.opportunityRepository
-    );
   }
 }
