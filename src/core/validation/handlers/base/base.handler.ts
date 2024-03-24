@@ -86,7 +86,7 @@ import { UpdateSpaceSettingsInput } from '@domain/challenge/space.settings/dto/s
 import { UpdateSpaceSettingsOnSpaceInput } from '@domain/challenge/space/dto/space.dto.update.settings';
 import {
   CreateAccountInput,
-  UpdateAccountInput,
+  UpdateAccountPlatformSettingsInput,
 } from '@domain/challenge/account/dto';
 import { UpdateAccountDefaultsInput } from '@domain/challenge/account/dto/account.dto.update.defaults';
 
@@ -126,7 +126,7 @@ export class BaseHandler extends AbstractHandler {
       CreateAccountInput,
       DeleteDocumentInput,
       UpdateActorInput,
-      UpdateAccountInput,
+      UpdateAccountPlatformSettingsInput,
       UpdateAccountDefaultsInput,
       UpdatePostInput,
       UpdateDocumentInput,
@@ -137,6 +137,7 @@ export class BaseHandler extends AbstractHandler {
       UpdatePostTemplateInput,
       UpdateCommunityApplicationFormInput,
       UpdateSpaceInput,
+      UpdateSpaceSettingsInput,
       UpdateOrganizationInput,
       UpdateOpportunityInput,
       UpdateChallengeInput,

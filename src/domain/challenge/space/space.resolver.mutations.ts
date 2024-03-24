@@ -24,6 +24,7 @@ import { EntityNotInitializedException } from '@common/exceptions/entity.not.ini
 import { LogContext } from '@common/enums';
 import { UpdateChallengeSettingsInput } from '../challenge/dto/challenge.dto.update.settings';
 import { UpdateSpaceSettingsOnSpaceInput } from './dto/space.dto.update.settings';
+import { UpdateSpacePlatformSettingsInput } from './dto/space.dto.update.platform.settings';
 
 @Resolver()
 export class SpaceResolverMutations {
@@ -118,7 +119,30 @@ export class SpaceResolverMutations {
     return await this.spaceService.getSpaceOrFail(space.id);
   }
 
-  // create mutation here because authorization policies need to be reset
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => ISpace, {
+    description:
+      'Update the platform settings, such as nameID, of the specified Space.',
+  })
+  async updateSpacePlatformSettings(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('updateData') updateData: UpdateSpacePlatformSettingsInput
+  ): Promise<ISpace> {
+    const space = await this.spaceService.getSpaceOrFail(updateData.spaceID);
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      space.authorization,
+      AuthorizationPrivilege.PLATFORM_ADMIN,
+      `update platform settings on space: ${space.id}`
+    );
+
+    return await this.spaceService.updateSpacePlatformSettings(
+      space,
+      updateData
+    );
+  }
+
+  // Mutation is here because authorization policies need to be reset
   // resetting works only on top level entities
   // this way we avoid the complexity and circular dependencies introduced
   // resetting the challenge policies

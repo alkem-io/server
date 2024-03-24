@@ -3,13 +3,12 @@ import {
   EntityNotFoundException,
   NotSupportedException,
   RelationshipNotFoundException,
-  ValidationException,
 } from '@common/exceptions';
 import { IOrganization } from '@domain/community/organization/organization.interface';
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, Repository } from 'typeorm';
+import { FindManyOptions, FindOneOptions, Repository } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Account } from './account.entity';
 import { IAccount } from './account.interface';
@@ -21,12 +20,11 @@ import { LicenseService } from '@domain/license/license/license.service';
 import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
 import { UpdateAccountDefaultsInput } from './dto/account.dto.update.defaults';
 import { ISpaceDefaults } from '../space.defaults/space.defaults.interface';
-import { UpdateAccountInput } from './dto/account.dto.update';
 import { SpaceService } from '../space/space.service';
 import { AgentInfo } from '@core/authentication/agent-info';
 import { CreateSpaceInput } from '../space/dto/space.dto.create';
-import { UpdateSpacePlatformSettingsInput } from '../space/dto/space.dto.update.platform.settings';
 import { ISpace } from '../space/space.interface';
+import { UpdateAccountPlatformSettingsInput } from './dto/account.dto.update.platform.settings';
 
 @Injectable()
 export class AccountService {
@@ -122,53 +120,10 @@ export class AccountService {
     );
   }
 
-  public async updateSpacePlatformSettings(
-    updateData: UpdateSpacePlatformSettingsInput
-  ): Promise<ISpace> {
-    const space = await this.spaceService.getSpaceOrFail(updateData.spaceID, {
-      relations: {
-        account: true,
-      },
-    });
-
-    if (!space.account) {
-      throw new RelationshipNotFoundException(
-        `Unable to load account for space ${space.id} `,
-        LogContext.ACCOUNT
-      );
-    }
-
-    if (updateData.nameID) {
-      if (updateData.nameID !== space.nameID) {
-        // updating the nameID, check new value is allowed
-        const updateAllowed = await this.spaceService.isNameIdAvailable(
-          updateData.nameID
-        );
-        if (!updateAllowed) {
-          throw new ValidationException(
-            `Unable to update Space nameID: the provided nameID is already taken: ${updateData.nameID}`,
-            LogContext.ACCOUNT
-          );
-        }
-        space.nameID = updateData.nameID;
-      }
-    }
-
-    if (updateData.account) {
-      space.account = await this.updateAccountPlatformSettings(
-        updateData.account,
-        space.account
-      );
-    }
-
-    return await this.spaceService.save(space);
-  }
-
   public async updateAccountPlatformSettings(
-    updateData: UpdateAccountInput,
-    accountInput: IAccount
+    updateData: UpdateAccountPlatformSettingsInput
   ): Promise<IAccount> {
-    const account = await this.getAccountOrFail(accountInput.id, {
+    const account = await this.getAccountOrFail(updateData.accountID, {
       relations: {
         license: true,
       },
@@ -256,6 +211,15 @@ export class AccountService {
     });
 
     return account;
+  }
+  async getAccounts(options?: FindManyOptions<Account>): Promise<IAccount[]> {
+    const accounts = await this.accountRepository.find({
+      ...options,
+    });
+
+    if (accounts.length === 0) return [];
+
+    return accounts;
   }
 
   async getLibraryOrFail(accountId: string): Promise<ITemplatesSet> {

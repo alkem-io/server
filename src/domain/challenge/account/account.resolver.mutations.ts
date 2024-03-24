@@ -13,7 +13,6 @@ import { AccountAuthorizationResetInput } from './dto/account.dto.reset.authoriz
 import { AccountAuthorizationService } from './account.service.authorization';
 import { AccountService } from './account.service';
 import { IAccount } from './account.interface';
-import { UpdateSpacePlatformSettingsInput } from '../space/dto/space.dto.update.platform.settings';
 import { SpaceService } from '../space/space.service';
 import { InnovationFlowTemplateService } from '@domain/template/innovation-flow-template/innovation.flow.template.service';
 import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
@@ -21,6 +20,7 @@ import { UpdateSpaceDefaultsInput } from '../space/dto/space.dto.update.defaults
 import { ISpaceDefaults } from '../space.defaults/space.defaults.interface';
 import { DeleteSpaceInput } from '../space/dto/space.dto.delete';
 import { SpaceType } from '@common/enums/space.type';
+import { UpdateAccountPlatformSettingsInput } from './dto/account.dto.update.platform.settings';
 
 @Resolver()
 export class AccountResolverMutations {
@@ -122,30 +122,30 @@ export class AccountResolverMutations {
   @UseGuards(GraphqlGuard)
   @Mutation(() => ISpace, {
     description:
-      'Update the platform settings, such as license, of the specified Space.',
+      'Update the platform settings, such as license, of the specified Account.',
   })
-  async updateSpacePlatformSettings(
+  async updateAccountPlatformSettings(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('updateData') updateData: UpdateSpacePlatformSettingsInput
-  ): Promise<ISpace> {
-    const space = await this.spaceService.getSpaceOrFail(updateData.spaceID);
+    @Args('updateData') updateData: UpdateAccountPlatformSettingsInput
+  ): Promise<IAccount> {
+    const account = await this.accountService.getAccountOrFail(
+      updateData.accountID
+    );
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      space.authorization,
+      account.authorization,
       AuthorizationPrivilege.PLATFORM_ADMIN,
-      `update platform settings on space: ${space.id}`
+      `update platform settings on space: ${account.id}`
     );
 
-    const result = await this.accountService.updateSpacePlatformSettings(
+    const result = await this.accountService.updateAccountPlatformSettings(
       updateData
     );
 
     // Update the authorization policy as most of the changes imply auth policy updates
-    const account =
-      await this.accountAuthorizationService.applyAuthorizationPolicy(
-        result.account
-      );
-    return await this.accountService.getRootSpace(account);
+    return await this.accountAuthorizationService.applyAuthorizationPolicy(
+      result
+    );
   }
 
   @UseGuards(GraphqlGuard)

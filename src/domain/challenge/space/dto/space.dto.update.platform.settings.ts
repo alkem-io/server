@@ -1,8 +1,5 @@
-import { UpdateAccountInput } from '@domain/challenge/account/dto/account.dto.update';
 import { NameID } from '@domain/common/scalars/scalar.nameid';
 import { Field, InputType } from '@nestjs/graphql';
-import { Type } from 'class-transformer';
-import { IsOptional, ValidateNested } from 'class-validator';
 
 @InputType()
 export class UpdateSpacePlatformSettingsInput {
@@ -13,15 +10,9 @@ export class UpdateSpacePlatformSettingsInput {
   })
   spaceID!: string;
 
-  @Field(() => UpdateAccountInput, { nullable: true })
-  @IsOptional()
-  @ValidateNested()
-  @Type(() => UpdateAccountInput)
-  account?: UpdateAccountInput;
-
   @Field(() => NameID, {
-    nullable: true,
+    nullable: false,
     description: 'Upate the URL path for the Space.',
   })
-  nameID?: string;
+  nameID!: string;
 }

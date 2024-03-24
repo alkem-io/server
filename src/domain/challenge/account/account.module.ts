@@ -16,6 +16,7 @@ import { SpaceModule } from '../space/space.module';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { NameReporterModule } from '@services/external/elasticsearch/name-reporter/name.reporter.module';
 import { InnovationFlowTemplateModule } from '@domain/template/innovation-flow-template/innovation.flow.template.module';
+import { AccountResolverQueries } from './account.resolver.queries';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { InnovationFlowTemplateModule } from '@domain/template/innovation-flow-t
     AccountAuthorizationService,
     AccountResolverFields,
     AccountResolverMutations,
+    AccountResolverQueries,
   ],
   exports: [AccountService, AccountAuthorizationService],
 })

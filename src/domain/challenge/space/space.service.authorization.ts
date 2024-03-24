@@ -21,16 +21,13 @@ import { CommunityPolicyService } from '@domain/community/community-policy/commu
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
   CREDENTIAL_RULE_CHALLENGE_SPACE_ADMIN_DELETE,
-  CREDENTIAL_RULE_TYPES_SPACE_AUTHORIZATION_RESET,
-  CREDENTIAL_RULE_TYPES_SPACE_GLOBAL_ADMIN_COMMUNITY_READ,
-  CREDENTIAL_RULE_TYPES_SPACE_AUTHORIZATION_GLOBAL_ADMIN_GRANT,
-  POLICY_RULE_SPACE_CREATE_CHALLENGE,
   CREDENTIAL_RULE_SPACE_ADMINS,
   CREDENTIAL_RULE_SPACE_MEMBERS_READ,
   CREDENTIAL_RULE_TYPES_SPACE_COMMUNITY_APPLY_GLOBAL_REGISTERED,
   CREDENTIAL_RULE_TYPES_SPACE_COMMUNITY_JOIN_GLOBAL_REGISTERED,
   CREDENTIAL_RULE_SPACE_HOST_ASSOCIATES_JOIN,
   CREDENTIAL_RULE_MEMBER_CREATE_SUBSPACE,
+  POLICY_RULE_SPACE_CREATE_SUBSPACE,
 } from '@common/constants';
 import { CommunityRole } from '@common/enums/community.role';
 import { SpaceSettingsService } from '../space.settings/space.settings.service';
@@ -93,7 +90,7 @@ export class SpaceAuthorizationService {
     const license = space.account.license;
 
     // Extend for global roles
-    space.authorization = this.extendAuthorizationPolicyGlobal(
+    space.authorization = this.extendPrivilegeRuleCreateChallenge(
       space.authorization,
       space.id
     );
@@ -192,7 +189,7 @@ export class SpaceAuthorizationService {
     return await this.spaceRepository.save(space);
   }
 
-  private extendAuthorizationPolicyGlobal(
+  private extendPrivilegeRuleCreateChallenge(
     authorization: IAuthorizationPolicy | undefined,
     spaceID: string
   ): IAuthorizationPolicy {
@@ -201,56 +198,12 @@ export class SpaceAuthorizationService {
         `Authorization definition not found for: ${spaceID}`,
         LogContext.CHALLENGES
       );
-    const newRules: IAuthorizationPolicyRuleCredential[] = [];
-    // By default it is world visible
-    authorization.anonymousReadAccess = true;
-
-    // Allow global admins to reset authorization
-    const authorizationReset =
-      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [
-          AuthorizationPrivilege.AUTHORIZATION_RESET,
-          AuthorizationPrivilege.PLATFORM_ADMIN,
-        ],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_ADMIN_SPACES,
-        ],
-        CREDENTIAL_RULE_TYPES_SPACE_AUTHORIZATION_RESET
-      );
-    authorizationReset.cascade = false;
-    newRules.push(authorizationReset);
-
-    const communityAdmin =
-      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.READ],
-        [AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY],
-        CREDENTIAL_RULE_TYPES_SPACE_GLOBAL_ADMIN_COMMUNITY_READ
-      );
-    newRules.push(communityAdmin);
-
-    // Allow Global admins + Global Space Admins to manage access to Spaces + contents
-    const globalAdmin =
-      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.GRANT],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_ADMIN_SPACES,
-        ],
-        CREDENTIAL_RULE_TYPES_SPACE_AUTHORIZATION_GLOBAL_ADMIN_GRANT
-      );
-    newRules.push(globalAdmin);
-
-    this.authorizationPolicyService.appendCredentialAuthorizationRules(
-      authorization,
-      newRules
-    );
 
     // Ensure that CREATE also allows CREATE_CHALLENGE
     const createChallengePrivilege = new AuthorizationPolicyRulePrivilege(
       [AuthorizationPrivilege.CREATE_SUBSPACE],
       AuthorizationPrivilege.CREATE,
-      POLICY_RULE_SPACE_CREATE_CHALLENGE
+      POLICY_RULE_SPACE_CREATE_SUBSPACE
     );
     this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
       authorization,

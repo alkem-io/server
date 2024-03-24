@@ -50,6 +50,7 @@ import { ProfileService } from '@domain/common/profile/profile.service';
 import { ContextService } from '@domain/context/context/context.service';
 import { SpaceType } from '@common/enums/space.type';
 import { IAccount } from '../account/account.interface';
+import { UpdateSpacePlatformSettingsInput } from './dto/space.dto.update.platform.settings';
 
 @Injectable()
 export class SpaceService {
@@ -587,6 +588,24 @@ export class SpaceService {
       });
     }
     return space;
+  }
+
+  public async updateSpacePlatformSettings(
+    space: ISpace,
+    updateData: UpdateSpacePlatformSettingsInput
+  ): Promise<ISpace> {
+    if (updateData.nameID !== space.nameID) {
+      // updating the nameID, check new value is allowed
+      const updateAllowed = await this.isNameIdAvailable(updateData.nameID);
+      if (!updateAllowed) {
+        throw new ValidationException(
+          `Unable to update Space nameID: the provided nameID is already taken: ${updateData.nameID}`,
+          LogContext.ACCOUNT
+        );
+      }
+      space.nameID = updateData.nameID;
+    }
+    return await this.save(space);
   }
 
   public async updateSpaceSettings(
