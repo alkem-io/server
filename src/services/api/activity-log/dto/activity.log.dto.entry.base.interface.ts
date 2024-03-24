@@ -4,7 +4,7 @@ import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { IUser } from '@domain/community/user';
 import { Field } from '@nestjs/graphql';
 import { NameID } from '@domain/common/scalars';
-import { ISpace } from '@domain/challenge/space/space.interface';
+import { IJourney } from '@domain/challenge/base-challenge/journey.interface';
 
 export abstract class IActivityLogEntryBase {
   @Field(() => UUID, {
@@ -66,9 +66,9 @@ export abstract class IActivityLogEntryBase {
   })
   journeyType?: JourneyTypeEnum;
 
-  @Field(() => ISpace, {
+  @Field(() => IJourney, {
     nullable: true,
     description: 'The journey where the activity happened',
   })
-  journey?: ISpace;
+  journey?: IJourney;
 }

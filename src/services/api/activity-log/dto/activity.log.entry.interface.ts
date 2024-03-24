@@ -16,7 +16,7 @@ import { IActivityLogEntryUpdateSent } from './activity.log.dto.entry.update.sen
 import { IActivityLogEntryCalendarEventCreated } from './activity.log.dto.entry.calendar.event.created';
 import { IActivityLogEntryCalloutLinkCreated } from './activity.log.dto.entry.callout.link.created';
 import { IActivityLogEntryCalloutWhiteboardContentModified } from './activity.log.dto.entry.callout.whiteboard.content.modified';
-import { ISpace } from '@domain/challenge/space/space.interface';
+import { IJourney } from '@domain/challenge/base-challenge/journey.interface';
 
 @InterfaceType('ActivityLogEntry', {
   resolveType(activityLogEntry) {
@@ -108,9 +108,9 @@ export class IActivityLogEntry {
   })
   parentDisplayName!: string;
 
-  @Field(() => ISpace, {
+  @Field(() => IJourney, {
     nullable: true,
     description: 'The journey where the activity happened',
   })
-  journey?: ISpace;
+  journey?: IJourney;
 }
