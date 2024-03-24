@@ -16,7 +16,6 @@ import {
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { AgentInfo } from '@core/authentication';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { ChallengeAuthorizationService } from '@domain/challenge/challenge/challenge.service.authorization';
 import { OpportunityAuthorizationService } from '@domain/challenge/opportunity/opportunity.service.authorization';
 import { IChallenge } from './challenge.interface';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
@@ -32,7 +31,6 @@ export class ChallengeResolverMutations {
     private contributionReporter: ContributionReporterService,
     private activityAdapter: ActivityAdapter,
     private opportunityAuthorizationService: OpportunityAuthorizationService,
-    private challengeAuthorizationService: ChallengeAuthorizationService,
     private authorizationService: AuthorizationService,
     private challengeService: ChallengeService,
     @Inject(SUBSCRIPTION_OPPORTUNITY_CREATED)
