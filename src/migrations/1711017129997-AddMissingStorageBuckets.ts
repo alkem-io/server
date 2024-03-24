@@ -44,20 +44,21 @@ export class AddMissingStorageBuckets1711017129997
       await queryRunner.query(
         `UPDATE profile SET storageBucketId = '${storageBucketID}' WHERE id = '${linkProfile.id}'`
       );
+      // We are not sure if someone has pasted an alkemio url of a document or directly uploaded on this link. Commenting out until we are sure.
       // Update document storageBucketId
-      const [link] = await queryRunner.query(
-        `SELECT id, uri FROM link WHERE profileId = '${linkProfile.id}'`
-      );
-      const isAlkemioDocumentUri = this.isAlkemioDocumentUri(link.uri);
-      if (isAlkemioDocumentUri) {
-        const documentId = this.getDocumentId(link.uri);
-        console.log(
-          `Updating document storageBucketId for document with id: ${documentId}`
-        );
-        await queryRunner.query(
-          `UPDATE document SET storageBucketId = '${storageBucketID}' WHERE id = '${documentId}'`
-        );
-      }
+      // const [link] = await queryRunner.query(
+      //   `SELECT id, uri FROM link WHERE profileId = '${linkProfile.id}'`
+      // );
+      // const isAlkemioDocumentUri = this.isAlkemioDocumentUri(link.uri);
+      // if (isAlkemioDocumentUri) {
+      //   const documentId = this.getDocumentId(link.uri);
+      //   console.log(
+      //     `Updating document storageBucketId for document with id: ${documentId}`
+      //   );
+      //   await queryRunner.query(
+      //     `UPDATE document SET storageBucketId = '${storageBucketID}' WHERE id = '${documentId}'`
+      //   );
+      // }
     }
 
     const spaces: {
