@@ -22,6 +22,7 @@ import {
   CREDENTIAL_RULE_SPACE_ADMIN_DELETE_SUBSPACE,
   CREDENTIAL_RULE_SPACE_HOST_ASSOCIATES_JOIN,
   CREDENTIAL_RULE_SPACE_MEMBERS_READ,
+  CREDENTIAL_RULE_SUBSPACE_ADMINS,
   CREDENTIAL_RULE_TYPES_SPACE_COMMUNITY_APPLY_GLOBAL_REGISTERED,
   CREDENTIAL_RULE_TYPES_SPACE_COMMUNITY_JOIN_GLOBAL_REGISTERED,
   POLICY_RULE_SPACE_CREATE_SUBSPACE,
@@ -42,6 +43,7 @@ import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { CredentialsSearchInput } from '@domain/agent';
 import { SpaceSettingsService } from '../space.settings/space.settings.service';
+import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 
 @Injectable()
 export class BaseChallengeAuthorizationService {
@@ -212,20 +214,17 @@ export class BaseChallengeAuthorizationService {
     );
     newRules.push(spaceAdmin);
 
-    if (policy.settings.collaboration.allowMembersToCreateSubspaces) {
-      const memberChallenge =
+    const collaborationSettings = policy.settings.collaboration;
+    if (collaborationSettings.allowMembersToCreateSubspaces) {
+      const criteria = this.getContributorCriteria(policy);
+      const createSubspacePrilegeRule =
         this.authorizationPolicyService.createCredentialRule(
           [AuthorizationPrivilege.CREATE_SUBSPACE],
-          [
-            this.communityPolicyService.getCredentialForRole(
-              policy,
-              CommunityRole.MEMBER
-            ),
-          ],
+          criteria,
           CREDENTIAL_RULE_MEMBER_CREATE_SUBSPACE
         );
-      memberChallenge.cascade = false;
-      newRules.push(memberChallenge);
+      createSubspacePrilegeRule.cascade = false;
+      newRules.push(createSubspacePrilegeRule);
     }
 
     this.authorizationPolicyService.appendCredentialAuthorizationRules(
@@ -318,6 +317,44 @@ export class BaseChallengeAuthorizationService {
     return authorization;
   }
 
+  public extendPrivateSubspaceAdmins(
+    authorization: IAuthorizationPolicy | undefined,
+    policy: ICommunityPolicy
+  ): IAuthorizationPolicy {
+    if (!authorization)
+      throw new EntityNotInitializedException(
+        `Authorization definition not found for: ${JSON.stringify(policy)}`,
+        LogContext.CHALLENGES
+      );
+    const rules: IAuthorizationPolicyRuleCredential[] = [];
+
+    const challengeSpaceAdmins =
+      this.authorizationPolicyService.createCredentialRule(
+        [
+          AuthorizationPrivilege.CREATE,
+          AuthorizationPrivilege.READ,
+          AuthorizationPrivilege.UPDATE,
+          AuthorizationPrivilege.GRANT,
+          AuthorizationPrivilege.DELETE,
+        ],
+        [
+          ...this.communityPolicyService.getAllCredentialsForRole(
+            policy,
+            CommunityRole.ADMIN
+          ),
+        ],
+        CREDENTIAL_RULE_SUBSPACE_ADMINS
+      );
+    rules.push(challengeSpaceAdmins);
+
+    this.authorizationPolicyService.appendCredentialAuthorizationRules(
+      authorization,
+      rules
+    );
+
+    return authorization;
+  }
+
   public extendCommunityAuthorizationPolicySpace(
     communityAuthorization: IAuthorizationPolicy | undefined,
     policy: ICommunityPolicy
@@ -396,5 +433,29 @@ export class BaseChallengeAuthorizationService {
       CREDENTIAL_RULE_SPACE_ADMIN_DELETE_SUBSPACE
     );
     return authorization;
+  }
+
+  private getContributorCriteria(
+    policy: ICommunityPolicy
+  ): ICredentialDefinition[] {
+    const criteria = [
+      this.communityPolicyService.getCredentialForRole(
+        policy,
+        CommunityRole.MEMBER
+      ),
+    ];
+    const collaborationSettings = policy.settings.collaboration;
+    if (
+      collaborationSettings.inheritMembershipRights &&
+      policy.settings.privacy.mode === SpacePrivacyMode.PUBLIC
+    ) {
+      criteria.push(
+        this.communityPolicyService.getDirectParentCredentialForRole(
+          policy,
+          CommunityRole.MEMBER
+        )
+      );
+    }
+    return criteria;
   }
 }

@@ -2,22 +2,14 @@ import { Injectable } from '@nestjs/common';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { IOpportunity } from './opportunity.interface';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { LogContext } from '@common/enums/logging.context';
-import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { OpportunityService } from './opportunity.service';
-import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
-import { CommunityPolicyService } from '@domain/community/community-policy/community.policy.service';
-import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
-import {
-  CREDENTIAL_RULE_OPPORTUNITY_ADMIN,
-  CREDENTIAL_RULE_OPPORTUNITY_MEMBER,
-} from '@common/constants';
-import { CommunityRole } from '@common/enums/community.role';
+
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Opportunity } from './opportunity.entity';
 import { Repository } from 'typeorm';
+import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 import { BaseChallengeAuthorizationService } from '../base-challenge/base.challenge.service.authorization';
 
 @Injectable()
@@ -25,7 +17,6 @@ export class OpportunityAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private opportunityService: OpportunityService,
-    private communityPolicyService: CommunityPolicyService,
     private baseChallengeAuthorizationService: BaseChallengeAuthorizationService,
     @InjectRepository(Opportunity)
     private opportunityRepository: Repository<Opportunity>
@@ -33,7 +24,7 @@ export class OpportunityAuthorizationService {
 
   async applyAuthorizationPolicy(
     opportunityInput: IOpportunity,
-    challengeAuthorization: IAuthorizationPolicy | undefined
+    parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<IOpportunity> {
     const opportunity = await this.opportunityService.getOpportunityOrFail(
       opportunityInput.id,
@@ -41,42 +32,62 @@ export class OpportunityAuthorizationService {
         relations: {
           account: {
             license: true,
+            authorization: true,
           },
           community: {
             policy: true,
           },
+          authorization: true,
         },
       }
     );
     if (
       !opportunity.account ||
       !opportunity.account.license ||
+      !opportunity.account.authorization ||
       !opportunity.community ||
-      !opportunity.community.policy
+      !opportunity.community.policy ||
+      !opportunity.authorization
     ) {
       throw new RelationshipNotFoundException(
-        `Unable to load entities to reset auth for challenge ${opportunity.id} `,
+        `Unable to load entities to reset auth for opportunity ${opportunity.id} `,
         LogContext.CHALLENGES
       );
     }
-
     const license = opportunity.account.license;
+
     const communityPolicy =
       this.baseChallengeAuthorizationService.getCommunityPolicyWithSettings(
         opportunity
       );
 
-    // Start with parent authorization
-    opportunity.authorization =
+    // If it is a private opportunity then cannot inherit from Space
+    const baseAuthorization = opportunity.authorization;
+    if (communityPolicy.settings.privacy.mode === SpacePrivacyMode.PRIVATE) {
       this.authorizationPolicyService.inheritParentAuthorization(
-        opportunity.authorization,
-        challengeAuthorization
+        baseAuthorization,
+        parentAuthorization
       );
-    // Add in opportunity specified policy rules
-    opportunity.authorization = this.appendCredentialRules(
-      opportunity.authorization,
-      communityPolicy
-    );
+    } else {
+      // Inherite from account, and extend for admins
+      const accountAuthorization = opportunity.account.authorization;
+      this.authorizationPolicyService.inheritParentAuthorization(
+        baseAuthorization,
+        accountAuthorization
+      );
+      baseAuthorization.anonymousReadAccess = false;
+      this.baseChallengeAuthorizationService.extendPrivateSubspaceAdmins(
+        baseAuthorization,
+        communityPolicy
+      );
+    }
+
+    opportunityInput.authorization =
+      this.baseChallengeAuthorizationService.extendAuthorizationPolicyLocal(
+        baseAuthorization,
+        communityPolicy
+      );
+    opportunity.authorization = baseAuthorization;
 
     // propagate authorization rules for child entities
     return await this.baseChallengeAuthorizationService.propagateAuthorizationToChildEntities(
@@ -84,61 +95,5 @@ export class OpportunityAuthorizationService {
       license,
       this.opportunityRepository
     );
-  }
-
-  private appendCredentialRules(
-    authorization: IAuthorizationPolicy | undefined,
-    policy: ICommunityPolicy
-  ): IAuthorizationPolicy {
-    if (!authorization)
-      throw new EntityNotInitializedException(
-        `Authorization definition not found for: ${policy}`,
-        LogContext.OPPORTUNITY
-      );
-
-    return this.authorizationPolicyService.appendCredentialAuthorizationRules(
-      authorization,
-      this.createCredentialRules(policy)
-    );
-  }
-
-  private createCredentialRules(
-    policy: ICommunityPolicy
-  ): IAuthorizationPolicyRuleCredential[] {
-    const rules: IAuthorizationPolicyRuleCredential[] = [];
-
-    const opportunityAdmin =
-      this.authorizationPolicyService.createCredentialRule(
-        [
-          AuthorizationPrivilege.CREATE,
-          AuthorizationPrivilege.READ,
-          AuthorizationPrivilege.UPDATE,
-          AuthorizationPrivilege.GRANT,
-          AuthorizationPrivilege.DELETE,
-        ],
-        [
-          this.communityPolicyService.getCredentialForRole(
-            policy,
-            CommunityRole.ADMIN
-          ),
-        ],
-        CREDENTIAL_RULE_OPPORTUNITY_ADMIN
-      );
-    rules.push(opportunityAdmin);
-
-    const opportunityMember =
-      this.authorizationPolicyService.createCredentialRule(
-        [AuthorizationPrivilege.READ],
-        [
-          this.communityPolicyService.getCredentialForRole(
-            policy,
-            CommunityRole.MEMBER
-          ),
-        ],
-        CREDENTIAL_RULE_OPPORTUNITY_MEMBER
-      );
-    rules.push(opportunityMember);
-
-    return rules;
   }
 }

@@ -1,9 +1,4 @@
-export const CREDENTIAL_RULE_CHALLENGE_SPACE_ADMINS =
-  'credentialRule-challengeSpaceAdmins';
-export const CREDENTIAL_RULE_CHALLENGE_ADMINS =
-  'credentialRule-challengeAdmins';
-export const CREDENTIAL_RULE_CHALLENGE_MEMBER_READ =
-  'credentialRule-challengeMemberRead';
+export const CREDENTIAL_RULE_SUBSPACE_ADMINS = 'credentialRule-SubspaceAdmins';
 export const CREDENTIAL_RULE_MEMBER_CREATE_SUBSPACE =
   'credentialRule-memberCreateSubspace';
 export const CREDENTIAL_RULE_CHALLENGE_SPACE_MEMBER_JOIN =

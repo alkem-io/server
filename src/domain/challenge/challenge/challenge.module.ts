@@ -16,7 +16,6 @@ import { UserModule } from '@domain/community/user/user.module';
 import { ChallengeResolverSubscriptions } from './challenge.resolver.subscriptions';
 import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
 import { CommunityPolicyModule } from '@domain/community/community-policy/community.policy.module';
-import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { LoaderCreatorModule } from '@core/dataloader/creators';
@@ -36,7 +35,6 @@ import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/stor
     CommunityModule,
     CommunityPolicyModule,
     OpportunityModule,
-    PlatformAuthorizationPolicyModule,
     UserModule,
     ContributionReporterModule,
     TypeOrmModule.forFeature([Challenge]),
