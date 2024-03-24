@@ -1,5 +1,5 @@
 import { InputType, Field } from '@nestjs/graphql';
-import { CreateBaseChallengeInput } from '@domain/challenge/base-challenge/base.challenge.dto.create';
+import { CreateBaseChallengeInput } from '@domain/challenge/base-challenge/dto/base.challenge.dto.create';
 import { NameID, UUID } from '@domain/common/scalars';
 
 @InputType()

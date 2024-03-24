@@ -13,8 +13,6 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { BaseChallengeService } from '@domain/challenge/base-challenge/base.challenge.service';
 import { ICommunity } from '@domain/community/community/community.interface';
 import { INVP } from '@domain/common/nvp/nvp.interface';
-import { CommunityService } from '@domain/community/community/community.service';
-import { NVP } from '@domain/common/nvp';
 import { UUID_LENGTH } from '@common/constants';
 import { AgentInfo } from '@src/core/authentication/agent-info';
 import { IContext } from '@domain/context/context/context.interface';
@@ -28,7 +26,6 @@ import { SpaceType } from '@common/enums/space.type';
 export class OpportunityService {
   constructor(
     private baseChallengeService: BaseChallengeService,
-    private communityService: CommunityService,
     @InjectRepository(Opportunity)
     private opportunityRepository: Repository<Opportunity>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -202,36 +199,10 @@ export class OpportunityService {
   }
 
   async getMetrics(opportunity: IOpportunity): Promise<INVP[]> {
-    const metrics: INVP[] = [];
-    const community = await this.getCommunity(opportunity.id);
-
-    // Members
-    const membersCount = await this.communityService.getMembersCount(community);
-    const membersTopic = new NVP('members', membersCount.toString());
-    membersTopic.id = `members-${opportunity.id}`;
-    metrics.push(membersTopic);
-
-    // Posts
-    const postsCount = await this.baseChallengeService.getPostsCount(
+    const metrics = await this.baseChallengeService.getMetrics(
       opportunity,
       this.opportunityRepository
     );
-    const postsTopic = new NVP('posts', postsCount.toString());
-    postsTopic.id = `posts-${opportunity.id}`;
-    metrics.push(postsTopic);
-
-    // Whiteboards
-    const whiteboardsCount =
-      await this.baseChallengeService.getWhiteboardsCount(
-        opportunity,
-        this.opportunityRepository
-      );
-    const whiteboardsTopic = new NVP(
-      'whiteboards',
-      whiteboardsCount.toString()
-    );
-    whiteboardsTopic.id = `whiteboards-${opportunity.id}`;
-    metrics.push(whiteboardsTopic);
 
     return metrics;
   }

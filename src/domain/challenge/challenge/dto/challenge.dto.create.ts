@@ -1,6 +1,6 @@
 import { NameID, UUID_NAMEID } from '@domain/common/scalars';
 import { Field, InputType } from '@nestjs/graphql';
-import { CreateBaseChallengeInput } from '@domain/challenge/base-challenge/base.challenge.dto.create';
+import { CreateBaseChallengeInput } from '@domain/challenge/base-challenge/dto/base.challenge.dto.create';
 import { IsOptional } from 'class-validator';
 
 @InputType()

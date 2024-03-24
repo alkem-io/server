@@ -394,20 +394,11 @@ export class ChallengeService {
     );
   }
 
-  async getMembersCount(challenge: IChallenge): Promise<number> {
-    const community = await this.getCommunity(challenge.id);
-    return await this.communityService.getMembersCount(community);
-  }
-
   async getMetrics(challenge: IChallenge): Promise<INVP[]> {
-    const metrics: INVP[] = [];
-
-    // Members
-    const community = await this.getCommunity(challenge.id);
-    const membersCount = await this.communityService.getMembersCount(community);
-    const membersTopic = new NVP('members', membersCount.toString());
-    membersTopic.id = `members-${challenge.id}`;
-    metrics.push(membersTopic);
+    const metrics = await this.baseChallengeService.getMetrics(
+      challenge,
+      this.challengeRepository
+    );
 
     // Opportunities
     const opportunitiesCount =
@@ -420,28 +411,6 @@ export class ChallengeService {
     );
     opportunitiesTopic.id = `opportunities-${challenge.id}`;
     metrics.push(opportunitiesTopic);
-
-    // Posts
-    const postsCount = await this.baseChallengeService.getPostsCount(
-      challenge,
-      this.challengeRepository
-    );
-    const postsTopic = new NVP('posts', postsCount.toString());
-    postsTopic.id = `posts-${challenge.id}`;
-    metrics.push(postsTopic);
-
-    // Whiteboards
-    const whiteboardsCount =
-      await this.baseChallengeService.getWhiteboardsCount(
-        challenge,
-        this.challengeRepository
-      );
-    const whiteboardsTopic = new NVP(
-      'whiteboards',
-      whiteboardsCount.toString()
-    );
-    whiteboardsTopic.id = `whiteboards-${challenge.id}`;
-    metrics.push(whiteboardsTopic);
 
     return metrics;
   }

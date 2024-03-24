@@ -14,7 +14,6 @@ import { INVP, NVP } from '@domain/common/nvp';
 import { ICommunity } from '@domain/community/community';
 import { IContext } from '@domain/context/context';
 import { BaseChallengeService } from '@domain/challenge/base-challenge/base.challenge.service';
-import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindManyOptions, FindOneOptions, In, Repository } from 'typeorm';
@@ -41,13 +40,9 @@ import { SpaceFilterInput } from '@services/infrastructure/space-filter/dto/spac
 import { PaginationArgs } from '@core/pagination';
 import { getPaginationResults } from '@core/pagination/pagination.fn';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { SpaceMembershipCollaborationInfo } from '@services/api/me/space.membership.type';
 import { ISpaceSettings } from '../space.settings/space.settings.interface';
-import { SpaceSettingsService } from '../space.settings/space.settings.service';
 import { UpdateSpaceSettingsOnSpaceInput } from './dto/space.dto.update.settings';
-import { ProfileService } from '@domain/common/profile/profile.service';
-import { ContextService } from '@domain/context/context/context.service';
 import { SpaceType } from '@common/enums/space.type';
 import { IAccount } from '../account/account.interface';
 import { UpdateSpacePlatformSettingsInput } from './dto/space.dto.update.platform.settings';
@@ -56,14 +51,9 @@ import { UpdateSpacePlatformSettingsInput } from './dto/space.dto.update.platfor
 export class SpaceService {
   constructor(
     private baseChallengeService: BaseChallengeService,
-    private namingService: NamingService,
     private communityService: CommunityService,
     private challengeService: ChallengeService,
     private spacesFilterService: SpaceFilterService,
-    private storageAggregatorService: StorageAggregatorService,
-    private spaceSettingsService: SpaceSettingsService,
-    private contextService: ContextService,
-    private profileService: ProfileService,
     @InjectRepository(Space)
     private spaceRepository: Repository<Space>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -101,37 +91,16 @@ export class SpaceService {
   }
 
   async update(spaceData: UpdateSpaceInput): Promise<ISpace> {
-    const space = await this.getSpaceOrFail(spaceData.ID, {
-      relations: { context: true, community: true, profile: true },
-    });
-
-    if (spaceData.context) {
-      if (!space.context)
-        throw new EntityNotInitializedException(
-          `Space not initialised: ${spaceData.ID}`,
-          LogContext.CHALLENGES
-        );
-      space.context = await this.contextService.updateContext(
-        space.context,
-        spaceData.context
-      );
-    }
-    if (spaceData.profileData) {
-      space.profile = await this.profileService.updateProfile(
-        space.profile,
-        spaceData.profileData
-      );
-    }
-
-    return await this.spaceRepository.save(space);
+    return await this.baseChallengeService.update(
+      spaceData,
+      this.spaceRepository
+    );
   }
 
   async deleteSpace(deleteData: DeleteSpaceInput): Promise<ISpace> {
     const space = await this.getSpaceOrFail(deleteData.ID, {
       relations: {
         challenges: true,
-        profile: true,
-        storageAggregator: true,
       },
     });
 
@@ -153,8 +122,6 @@ export class SpaceService {
       space.id,
       this.spaceRepository
     );
-
-    await this.storageAggregatorService.delete(space.storageAggregator.id);
 
     const result = await this.spaceRepository.remove(space as Space);
     result.id = deleteData.ID;
@@ -208,7 +175,7 @@ export class SpaceService {
   }
 
   public getSettings(space: ISpace): ISpaceSettings {
-    return this.spaceSettingsService.getSettings(space.settingsStr);
+    return this.baseChallengeService.getSettings(space);
   }
 
   /***
@@ -612,14 +579,11 @@ export class SpaceService {
     space: ISpace,
     settingsData: UpdateSpaceSettingsOnSpaceInput
   ): Promise<ISpace> {
-    const settings = this.spaceSettingsService.getSettings(space.settingsStr);
-    const updatedSettings = this.spaceSettingsService.updateSettings(
-      settings,
+    return await this.baseChallengeService.updateSettings(
+      space,
+      this.spaceRepository,
       settingsData.settings
     );
-    space.settingsStr =
-      this.spaceSettingsService.serializeSettings(updatedSettings);
-    return await this.save(space);
   }
 
   async getStorageAggregatorOrFail(
@@ -749,15 +713,10 @@ export class SpaceService {
     proposedNameID: string,
     accountID: string
   ) {
-    const nameAvailable = await this.namingService.isNameIdAvailableInAccount(
+    await this.baseChallengeService.isNameAvailableInAccountOrFail(
       proposedNameID,
       accountID
     );
-    if (!nameAvailable)
-      throw new ValidationException(
-        `Unable to create Challenge: the provided nameID is already taken: ${proposedNameID}`,
-        LogContext.CHALLENGES
-      );
   }
 
   async createChallengeInSpace(
@@ -825,7 +784,10 @@ export class SpaceService {
   }
 
   async getMetrics(space: ISpace): Promise<INVP[]> {
-    const metrics: INVP[] = [];
+    const metrics = await this.baseChallengeService.getMetrics(
+      space,
+      this.spaceRepository
+    );
 
     if (!space.account) {
       throw new EntityNotInitializedException(
@@ -840,34 +802,6 @@ export class SpaceService {
     const challengesTopic = new NVP('challenges', challengesCount.toString());
     challengesTopic.id = `challenges-${space.id}`;
     metrics.push(challengesTopic);
-
-    // Members
-    const membersCount = await this.getMembersCount(space);
-    const membersTopic = new NVP('members', membersCount.toString());
-    membersTopic.id = `members-${space.id}`;
-    metrics.push(membersTopic);
-
-    // Posts
-    const postsCount = await this.baseChallengeService.getPostsCount(
-      space,
-      this.spaceRepository
-    );
-    const postsTopic = new NVP('posts', postsCount.toString());
-    postsTopic.id = `posts-${space.id}`;
-    metrics.push(postsTopic);
-
-    // Whiteboards
-    const whiteboardsCount =
-      await this.baseChallengeService.getWhiteboardsCount(
-        space,
-        this.spaceRepository
-      );
-    const whiteboardsTopic = new NVP(
-      'whiteboards',
-      whiteboardsCount.toString()
-    );
-    whiteboardsTopic.id = `whiteboards-${space.id}`;
-    metrics.push(whiteboardsTopic);
 
     return metrics;
   }

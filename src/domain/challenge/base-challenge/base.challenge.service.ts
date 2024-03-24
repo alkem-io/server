@@ -5,7 +5,7 @@ import {
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
-import { UpdateBaseChallengeInput } from '@domain/challenge/base-challenge/base.challenge.dto.update';
+import { UpdateBaseChallengeInput } from '@domain/challenge/base-challenge/dto/base.challenge.dto.update';
 import { ICommunity } from '@domain/community/community/community.interface';
 import { CommunityService } from '@domain/community/community/community.service';
 import { IContext } from '@domain/context/context/context.interface';
@@ -14,7 +14,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
 import { BaseChallenge } from '@domain/challenge/base-challenge/base.challenge.entity';
-import { CreateBaseChallengeInput } from '@domain/challenge/base-challenge/base.challenge.dto.create';
+import { CreateBaseChallengeInput } from '@domain/challenge/base-challenge/dto/base.challenge.dto.create';
 import { IBaseChallenge } from '@domain/challenge/base-challenge/base.challenge.interface';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
@@ -36,6 +36,8 @@ import { AgentInfo } from '@core/authentication';
 import { CommunityRole } from '@common/enums/community.role';
 import { UpdateSpaceSettingsInput } from '../space.settings/dto/space.settings.dto.update';
 import { ISpaceSettings } from '../space.settings/space.settings.interface';
+import { NVP } from '@domain/common/nvp/nvp.entity';
+import { INVP } from '@domain/common/nvp/nvp.interface';
 
 @Injectable()
 export class BaseChallengeService {
@@ -490,6 +492,40 @@ export class BaseChallengeService {
         LogContext.AGENT
       );
     return agent;
+  }
+
+  async getMetrics(
+    baseChallenge: IBaseChallenge,
+    repository: Repository<BaseChallenge>
+  ): Promise<INVP[]> {
+    const metrics: INVP[] = [];
+    const community = await this.getCommunity(baseChallenge.id, repository);
+
+    // Members
+    const membersCount = await this.communityService.getMembersCount(community);
+    const membersTopic = new NVP('members', membersCount.toString());
+    membersTopic.id = `members-${baseChallenge.id}`;
+    metrics.push(membersTopic);
+
+    // Posts
+    const postsCount = await this.getPostsCount(baseChallenge, repository);
+    const postsTopic = new NVP('posts', postsCount.toString());
+    postsTopic.id = `posts-${baseChallenge.id}`;
+    metrics.push(postsTopic);
+
+    // Whiteboards
+    const whiteboardsCount = await this.getWhiteboardsCount(
+      baseChallenge,
+      repository
+    );
+    const whiteboardsTopic = new NVP(
+      'whiteboards',
+      whiteboardsCount.toString()
+    );
+    whiteboardsTopic.id = `whiteboards-${baseChallenge.id}`;
+    metrics.push(whiteboardsTopic);
+
+    return metrics;
   }
 
   public async getMembersCount(
