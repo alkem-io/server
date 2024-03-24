@@ -412,7 +412,13 @@ export class ConversionService {
     );
 
     // Add the new challenge to the space
-    return await this.spaceService.addChallengeToSpace(spaceID, challenge);
+    const space = await this.spaceService.getSpaceOrFail(spaceID, {
+      relations: {
+        challenges: true,
+        community: true,
+      },
+    });
+    return await this.spaceService.addChallengeToSpace(space, challenge);
   }
 
   private updateSpaceCalloutsGroups(callouts: ICallout[] | undefined): void {

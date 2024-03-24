@@ -345,6 +345,23 @@ export class BaseChallengeService {
     return this.spaceSettingsService.getSettings(baseChallenge.settingsStr);
   }
 
+  public async setCommunityHierarchyForSubspace(
+    parentCommunity: ICommunity,
+    childCommunity: ICommunity | undefined
+  ) {
+    if (!childCommunity) {
+      throw new RelationshipNotFoundException(
+        `Unable to set subspace community relationship, child community not provied: ${parentCommunity.id}`,
+        LogContext.CHALLENGES
+      );
+    }
+    // Finally set the community relationship
+    await this.communityService.setParentCommunity(
+      childCommunity,
+      parentCommunity
+    );
+  }
+
   public async updateSettings(
     baseChallenge: IBaseChallenge,
     repository: Repository<BaseChallenge>,

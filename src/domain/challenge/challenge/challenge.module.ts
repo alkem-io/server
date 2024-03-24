@@ -4,7 +4,6 @@ import { Challenge } from './challenge.entity';
 import { ChallengeResolverFields } from './challenge.resolver.fields';
 import { ChallengeResolverMutations } from './challenge.resolver.mutations';
 import { ChallengeService } from './challenge.service';
-import { CommunityModule } from '@domain/community/community/community.module';
 import { OpportunityModule } from '@domain/challenge/opportunity/opportunity.module';
 import { BaseChallengeModule } from '@domain/challenge/base-challenge/base.challenge.module';
 import { ChallengeAuthorizationService } from '@domain/challenge/challenge/challenge.service.authorization';
@@ -21,7 +20,6 @@ import { LoaderCreatorModule } from '@core/dataloader/creators';
     AuthorizationPolicyModule,
     AuthorizationModule,
     BaseChallengeModule,
-    CommunityModule,
     OpportunityModule,
     ContributionReporterModule,
     TypeOrmModule.forFeature([Challenge]),

@@ -25,10 +25,6 @@ export const CREDENTIAL_RULE_CALLOUT_CREATED_BY =
   'credentialRule-calloutCreatedBy';
 export const CREDENTIAL_RULE_COLLABORATION_CONTRIBUTORS =
   'credentialRule-collaborationContributors';
-export const CREDENTIAL_RULE_OPPORTUNITY_ADMIN =
-  'credentialRule-opportunityAdmin';
-export const CREDENTIAL_RULE_OPPORTUNITY_MEMBER =
-  'credentialRule-opportunityMember';
 export const CREDENTIAL_RULE_RELATION_CREATED_BY =
   'credentialRule-relationCreatedBy';
 export const CREDENTIAL_RULE_WHITEBOARD_CREATED_BY =

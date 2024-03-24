@@ -23,7 +23,6 @@ import { Space } from './space.entity';
 import { ISpace } from './space.interface';
 import { UpdateSpaceInput } from './dto/space.dto.update';
 import { CreateChallengeOnSpaceInput } from './dto/space.dto.create.challenge';
-import { CommunityService } from '@domain/community/community/community.service';
 import { AgentInfo } from '@src/core/authentication/agent-info';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
@@ -51,7 +50,6 @@ import { UpdateSpacePlatformSettingsInput } from './dto/space.dto.update.platfor
 export class SpaceService {
   constructor(
     private baseChallengeService: BaseChallengeService,
-    private communityService: CommunityService,
     private challengeService: ChallengeService,
     private spacesFilterService: SpaceFilterService,
     @InjectRepository(Space)
@@ -727,6 +725,8 @@ export class SpaceService {
       relations: {
         account: true,
         storageAggregator: true,
+        challenges: true,
+        community: true,
       },
     });
     await this.validateChallengeNameIdOrFail(
@@ -749,27 +749,24 @@ export class SpaceService {
       agentInfo
     );
 
-    return await this.addChallengeToSpace(space.id, newChallenge);
+    return await this.addChallengeToSpace(space, newChallenge);
   }
 
   async addChallengeToSpace(
-    spaceID: string,
+    space: ISpace,
     challenge: IChallenge
   ): Promise<IChallenge> {
-    const space = await this.getSpaceOrFail(spaceID, {
-      relations: { challenges: true, community: true },
-    });
-    if (!space.challenges)
+    if (!space.challenges || !space.community)
       throw new ValidationException(
-        `Unable to create Challenge: challenges not initialized: ${spaceID}`,
+        `Unable to add Challenge to space, missing relations: ${space.id}`,
         LogContext.CHALLENGES
       );
 
     space.challenges.push(challenge);
     // Finally set the community relationship
-    challenge.community = await this.communityService.setParentCommunity(
-      challenge.community,
-      space.community
+    await this.baseChallengeService.setCommunityHierarchyForSubspace(
+      space.community,
+      challenge.community
     );
 
     await this.spaceRepository.save(space);

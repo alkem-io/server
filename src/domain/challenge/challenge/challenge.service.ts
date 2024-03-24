@@ -18,7 +18,6 @@ import {
 import { BaseChallengeService } from '@domain/challenge/base-challenge/base.challenge.service';
 import { LogContext } from '@common/enums';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { CommunityService } from '@domain/community/community/community.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, IsNull, Not, Repository } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -43,7 +42,6 @@ import { SpaceType } from '@common/enums/space.type';
 @Injectable()
 export class ChallengeService {
   constructor(
-    private communityService: CommunityService,
     private opportunityService: OpportunityService,
     private baseChallengeService: BaseChallengeService,
     @InjectRepository(Challenge)
@@ -335,9 +333,13 @@ export class ChallengeService {
       }
     );
 
-    if (!challenge.storageAggregator) {
+    if (
+      !challenge.storageAggregator ||
+      !challenge.opportunities ||
+      !challenge.community
+    ) {
       throw new EntityNotInitializedException(
-        'Unable to find StorageAggregator for Challenge',
+        `Unable to load entities to create opportunity for challenge ${opportunityData.challengeID} `,
         LogContext.CHALLENGES
       );
     }
@@ -354,12 +356,12 @@ export class ChallengeService {
       agentInfo
     );
 
-    challenge.opportunities?.push(opportunity);
+    challenge.opportunities.push(opportunity);
 
     // Finally set the community relationship
-    await this.communityService.setParentCommunity(
-      opportunity.community,
-      challenge.community
+    await this.baseChallengeService.setCommunityHierarchyForSubspace(
+      challenge.community,
+      opportunity.community
     );
 
     await this.challengeRepository.save(challenge);

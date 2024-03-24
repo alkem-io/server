@@ -6,7 +6,6 @@ import { SpaceResolverMutations } from '@domain/challenge/space/space.resolver.m
 import { SpaceResolverQueries } from '@domain/challenge/space/space.resolver.queries';
 import { SpaceService } from '@domain/challenge/space/space.service';
 import { SpaceResolverFields } from '@domain/challenge/space/space.resolver.fields';
-import { CommunityModule } from '@domain/community/community/community.module';
 import { BaseChallengeModule } from '@domain/challenge/base-challenge/base.challenge.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { SpaceAuthorizationService } from '@domain/challenge/space/space.service.authorization';
@@ -23,7 +22,6 @@ import { NameReporterModule } from '@services/external/elasticsearch/name-report
     ActivityAdapterModule,
     AuthorizationPolicyModule,
     AuthorizationModule,
-    CommunityModule,
     ChallengeModule,
     BaseChallengeModule,
     SpaceFilterModule,
