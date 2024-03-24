@@ -10,6 +10,7 @@ import { Account } from './account.entity';
 import { TemplatesSetAuthorizationService } from '@domain/template/templates-set/templates.set.service.authorization';
 import { LicenseAuthorizationService } from '@domain/license/license/license.service.authorization';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
+import { SpaceAuthorizationService } from '../space/space.service.authorization';
 
 @Injectable()
 export class AccountAuthorizationService {
@@ -18,6 +19,7 @@ export class AccountAuthorizationService {
     private templatesSetAuthorizationService: TemplatesSetAuthorizationService,
     private licenseAuthorizationService: LicenseAuthorizationService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
+    private spaceAuthorizationService: SpaceAuthorizationService,
     private accountService: AccountService,
     @InjectRepository(Account)
     private accountRepository: Repository<Account>
@@ -31,10 +33,16 @@ export class AccountAuthorizationService {
           license: true,
           library: true,
           defaults: true,
+          space: true,
         },
       }
     );
-    if (!account.library || !account.license || !account.defaults)
+    if (
+      !account.library ||
+      !account.license ||
+      !account.defaults ||
+      !account.space
+    )
       throw new RelationshipNotFoundException(
         `Unable to load Account with entities at start of auth reset: ${account.id} `,
         LogContext.CHALLENGES
@@ -56,16 +64,24 @@ export class AccountAuthorizationService {
         account.authorization
       );
 
+    account.space =
+      await this.spaceAuthorizationService.applyAuthorizationPolicy(
+        account.space,
+        account.authorization
+      );
+
+    // Library and defaults are inherited from the space
+    const spaceAuthorization = account.space.authorization;
     account.library =
       await this.templatesSetAuthorizationService.applyAuthorizationPolicy(
         account.library,
-        account.authorization
+        spaceAuthorization
       );
 
     account.defaults.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         account.defaults.authorization,
-        account.authorization
+        spaceAuthorization
       );
 
     return await this.accountRepository.save(account);

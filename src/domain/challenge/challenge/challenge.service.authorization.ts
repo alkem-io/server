@@ -28,6 +28,7 @@ import { BaseChallengeAuthorizationService } from '../base-challenge/base.challe
 import { InjectRepository } from '@nestjs/typeorm';
 import { Challenge } from './challenge.entity';
 import { Repository } from 'typeorm';
+import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 
 @Injectable()
 export class ChallengeAuthorizationService {
@@ -265,7 +266,9 @@ export class ChallengeAuthorizationService {
     return rules;
   }
 
-  private getContributorCriteria(policy: ICommunityPolicy) {
+  private getContributorCriteria(
+    policy: ICommunityPolicy
+  ): ICredentialDefinition[] {
     const criteria = [
       this.communityPolicyService.getCredentialForRole(
         policy,
