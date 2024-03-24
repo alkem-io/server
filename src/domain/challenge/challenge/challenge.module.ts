@@ -23,7 +23,6 @@ import { LoaderCreatorModule } from '@core/dataloader/creators';
 import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
-import { SpaceSettingssModule } from '../space.settings/space.settings.module';
 
 @Module({
   imports: [
@@ -46,7 +45,6 @@ import { SpaceSettingssModule } from '../space.settings/space.settings.module';
     ContextModule,
     ProfileModule,
     CollaborationModule,
-    SpaceSettingssModule,
   ],
   providers: [
     ChallengeService,

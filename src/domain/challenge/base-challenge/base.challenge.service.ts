@@ -34,6 +34,8 @@ import { IAccount } from '../account/account.interface';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { AgentInfo } from '@core/authentication';
 import { CommunityRole } from '@common/enums/community.role';
+import { UpdateSpaceSettingsInput } from '../space.settings/dto/space.settings.dto.update';
+import { ISpaceSettings } from '../space.settings/space.settings.interface';
 
 @Injectable()
 export class BaseChallengeService {
@@ -335,6 +337,27 @@ export class BaseChallengeService {
         `Unable to create entity: the provided nameID is already taken: ${nameID}`,
         LogContext.CHALLENGES
       );
+  }
+
+  public getSettings(baseChallenge: IBaseChallenge): ISpaceSettings {
+    return this.spaceSettingsService.getSettings(baseChallenge.settingsStr);
+  }
+
+  public async updateSettings(
+    baseChallenge: IBaseChallenge,
+    repository: Repository<BaseChallenge>,
+    settingsData: UpdateSpaceSettingsInput
+  ): Promise<IBaseChallenge> {
+    const settings = this.spaceSettingsService.getSettings(
+      baseChallenge.settingsStr
+    );
+    const updatedSettings = this.spaceSettingsService.updateSettings(
+      settings,
+      settingsData
+    );
+    baseChallenge.settingsStr =
+      this.spaceSettingsService.serializeSettings(updatedSettings);
+    return await this.save(baseChallenge, repository);
   }
 
   public async getCommunity(

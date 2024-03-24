@@ -37,7 +37,6 @@ import { IProfile } from '@domain/common/profile/profile.interface';
 import { OperationNotAllowedException } from '@common/exceptions/operation.not.allowed.exception';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { ISpaceSettings } from '../space.settings/space.settings.interface';
-import { SpaceSettingsService } from '../space.settings/space.settings.service';
 import { UpdateChallengeSettingsInput } from './dto/challenge.dto.update.settings';
 import { IAccount } from '../account/account.interface';
 import { SpaceType } from '@common/enums/space.type';
@@ -47,7 +46,6 @@ export class ChallengeService {
     private communityService: CommunityService,
     private opportunityService: OpportunityService,
     private baseChallengeService: BaseChallengeService,
-    private spaceSettingsService: SpaceSettingsService,
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -265,16 +263,11 @@ export class ChallengeService {
     challenge: IChallenge,
     settingsData: UpdateChallengeSettingsInput
   ): Promise<IChallenge> {
-    const settings = this.spaceSettingsService.getSettings(
-      challenge.settingsStr
-    );
-    const updatedSettings = this.spaceSettingsService.updateSettings(
-      settings,
+    return this.baseChallengeService.updateSettings(
+      challenge,
+      this.challengeRepository,
       settingsData.settings
     );
-    challenge.settingsStr =
-      this.spaceSettingsService.serializeSettings(updatedSettings);
-    return await this.save(challenge);
   }
 
   async getOpportunities(
@@ -473,6 +466,6 @@ export class ChallengeService {
     });
   }
   public getSettings(challenge: IChallenge): ISpaceSettings {
-    return this.spaceSettingsService.getSettings(challenge.settingsStr);
+    return this.baseChallengeService.getSettings(challenge);
   }
 }

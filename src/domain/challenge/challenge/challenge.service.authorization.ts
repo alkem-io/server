@@ -22,7 +22,6 @@ import {
   CREDENTIAL_RULE_MEMBER_CREATE_SUBSPACE,
 } from '@common/constants';
 import { CommunityRole } from '@common/enums/community.role';
-import { SpaceSettingsService } from '../space.settings/space.settings.service';
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 import { BaseChallengeAuthorizationService } from '../base-challenge/base.challenge.service.authorization';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -38,7 +37,6 @@ export class ChallengeAuthorizationService {
     private opportunityAuthorizationService: OpportunityAuthorizationService,
     private communityPolicyService: CommunityPolicyService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
-    private spaceSettingsService: SpaceSettingsService,
     private baseChallengeAuthorizationService: BaseChallengeAuthorizationService,
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>
@@ -74,10 +72,10 @@ export class ChallengeAuthorizationService {
     }
     const license = challenge.account.license;
 
-    challenge.community.policy.settings = this.spaceSettingsService.getSettings(
-      challenge.settingsStr
-    );
-    const communityPolicy = challenge.community.policy;
+    const communityPolicy =
+      this.baseChallengeAuthorizationService.getCommunityPolicyWithSettings(
+        challenge
+      );
 
     // If it is a private challenge then cannot inherit from Space
     if (communityPolicy.settings.privacy.mode === SpacePrivacyMode.PRIVATE) {

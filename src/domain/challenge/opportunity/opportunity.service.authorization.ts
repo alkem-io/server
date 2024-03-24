@@ -15,7 +15,6 @@ import {
 } from '@common/constants';
 import { CommunityRole } from '@common/enums/community.role';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
-import { SpaceSettingsService } from '../space.settings/space.settings.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Opportunity } from './opportunity.entity';
 import { Repository } from 'typeorm';
@@ -27,7 +26,6 @@ export class OpportunityAuthorizationService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private opportunityService: OpportunityService,
     private communityPolicyService: CommunityPolicyService,
-    private spaceSettingsService: SpaceSettingsService,
     private baseChallengeAuthorizationService: BaseChallengeAuthorizationService,
     @InjectRepository(Opportunity)
     private opportunityRepository: Repository<Opportunity>
@@ -61,10 +59,12 @@ export class OpportunityAuthorizationService {
         LogContext.CHALLENGES
       );
     }
-    opportunity.community.policy.settings =
-      this.spaceSettingsService.getSettings(opportunity.settingsStr);
+
     const license = opportunity.account.license;
-    const communityPolicy = opportunity.community.policy;
+    const communityPolicy =
+      this.baseChallengeAuthorizationService.getCommunityPolicyWithSettings(
+        opportunity
+      );
 
     // Start with parent authorization
     opportunity.authorization =
