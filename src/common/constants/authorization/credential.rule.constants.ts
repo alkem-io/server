@@ -10,8 +10,8 @@ export const CREDENTIAL_RULE_CHALLENGE_SPACE_MEMBER_JOIN =
   'credentialRule-challengeSpaceMemberJoin';
 export const CREDENTIAL_RULE_CHALLENGE_SPACE_MEMBER_APPLY =
   'credentialRule-challengeSpaceMemberApply';
-export const CREDENTIAL_RULE_CHALLENGE_SPACE_ADMIN_DELETE =
-  'credentialRule-challengeSpaceAdminDelete';
+export const CREDENTIAL_RULE_SPACE_ADMIN_DELETE_SUBSPACE =
+  'credentialRule-SpaceAdminDeleteSubspace';
 export const CREDENTIAL_RULE_SPACE_ADMINS = 'credentialRule-spaceAdmins';
 export const CREDENTIAL_RULE_SPACE_MEMBERS_READ =
   'credentialRule-spaceMembersRead';
