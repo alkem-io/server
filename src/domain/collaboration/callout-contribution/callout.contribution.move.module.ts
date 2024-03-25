@@ -8,6 +8,7 @@ import { CalloutModule } from '../callout/callout.module';
 import { CalloutContributionMoveService } from './callout.contribution.move.service';
 import { CalloutContributionMoveResolverMutations } from './callout.contribution.move.resolver.mutations';
 import { CalloutContributionModule } from './callout.contribution.module';
+import { UrlGeneratorModule } from '@services/infrastructure/url-generator';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { CalloutContributionModule } from './callout.contribution.module';
     AuthorizationModule,
     EntityResolverModule,
     CalloutContributionModule,
+    UrlGeneratorModule,
     TypeOrmModule.forFeature([CalloutContribution, Callout]),
   ],
   providers: [
