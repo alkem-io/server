@@ -411,12 +411,16 @@ export class StorageBucketService {
       },
     });
     if (profile) {
-      return {
-        id: profile.id,
-        type: profile.type as ProfileType,
-        displayName: profile.displayName,
-        url: await this.urlGeneratorService.generateUrlForProfile(profile),
-      };
+      try {
+        return {
+          id: profile.id,
+          type: profile.type as ProfileType,
+          displayName: profile.displayName,
+          url: await this.urlGeneratorService.generateUrlForProfile(profile),
+        };
+      } catch (error) {
+        return null;
+      }
     }
 
     return null;
