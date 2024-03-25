@@ -25,7 +25,6 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { CommunicationService } from '@domain/communication/communication/communication.service';
 import { ICommunication } from '@domain/communication/communication';
 import { LogContext } from '@common/enums/logging.context';
-import { CommunityType } from '@common/enums/community.type';
 import { OrganizationService } from '../organization/organization.service';
 import { IOrganization } from '../organization/organization.interface';
 import { IAgent } from '@domain/agent/agent/agent.interface';
@@ -55,6 +54,7 @@ import { CreateInvitationInput } from '../invitation/dto/invitation.dto.create';
 import { CommunityMembershipException } from '@common/exceptions/community.membership.exception';
 import { CommunityEventsService } from './community.service.events';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
+import { SpaceType } from '@common/enums/space.type';
 
 @Injectable()
 export class CommunityService {
@@ -81,7 +81,7 @@ export class CommunityService {
   async createCommunity(
     name: string,
     spaceID: string,
-    type: CommunityType,
+    type: SpaceType,
     policy: ICommunityPolicyDefinition,
     applicationFormData: CreateFormInput
   ): Promise<ICommunity> {
@@ -1020,13 +1020,13 @@ export class CommunityService {
     }
   }
 
-  async getCommunityInNameableScopeOrFail(
+  async getCommunityInAccountOrFail(
     communityID: string,
-    nameableScopeID: string
+    accountID: string
   ): Promise<ICommunity> {
     const community = await this.communityRepository.findOneBy({
       id: communityID,
-      spaceID: nameableScopeID,
+      spaceID: accountID,
     });
 
     if (!community) {

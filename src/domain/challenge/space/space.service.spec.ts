@@ -16,6 +16,8 @@ import { InnovationFlow } from '@domain/collaboration/innovation-flow/innovation
 import { ProfileType } from '@common/enums';
 import { License } from '@domain/license/license/license.entity';
 import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
+import { Account } from '../account/account.entity';
+import { SpaceType } from '@common/enums/space.type';
 
 const moduleMocker = new ModuleMocker(global);
 
@@ -91,9 +93,44 @@ const getChallengesMock = (
       id: `${spaceId}.${i}`,
       rowId: i,
       nameID: `challenge-${spaceId}.${i}`,
-      spaceID: `${spaceId}`,
+      account: {
+        id: `account-${spaceId}.${i}`,
+        spaceID: `${spaceId}`,
+        ...getEntityMock<Account>(),
+      },
+      type: SpaceType.SPACE,
       collaboration: {
         id: '',
+        groupsStr: JSON.stringify([
+          {
+            displayName: 'HOME_1',
+            description: 'The left column on the Home page.',
+          },
+          {
+            displayName: 'HOME_2',
+            description: 'The right column on the Home page.',
+          },
+          {
+            displayName: 'COMMUNITY_1',
+            description: 'The left column on the Community page.',
+          },
+          {
+            displayName: 'COMMUNITY_2',
+            description: 'The right column on the Community page.',
+          },
+          {
+            displayName: 'SUBSPACES_1',
+            description: 'The left column on the Subspaces page.',
+          },
+          {
+            displayName: 'SUBSPACES_2',
+            description: 'The right column on the Subspaces page.',
+          },
+          {
+            displayName: 'KNOWLEDGE',
+            description: 'The knowledge page.',
+          },
+        ]),
         innovationFlow: {
           id: '',
           states: JSON.stringify([
@@ -158,9 +195,44 @@ const getOpportunitiesMock = (
       id: `${challengeId}.${i}`,
       rowId: i,
       nameID: `opportunity-${challengeId}.${i}`,
-      spaceID: `${challengeId}`,
+      account: {
+        id: `account-${challengeId}.${i}`,
+        spaceID: `account-spaceID-${challengeId}.${i}`,
+        ...getEntityMock<Account>(),
+      },
+      type: SpaceType.OPPORTUNITY,
       collaboration: {
         id: '',
+        groupsStr: JSON.stringify([
+          {
+            displayName: 'HOME_1',
+            description: 'The left column on the Home page.',
+          },
+          {
+            displayName: 'HOME_2',
+            description: 'The right column on the Home page.',
+          },
+          {
+            displayName: 'COMMUNITY_1',
+            description: 'The left column on the Community page.',
+          },
+          {
+            displayName: 'COMMUNITY_2',
+            description: 'The right column on the Community page.',
+          },
+          {
+            displayName: 'SUBSPACES_1',
+            description: 'The left column on the Subspaces page.',
+          },
+          {
+            displayName: 'SUBSPACES_2',
+            description: 'The right column on the Subspaces page.',
+          },
+          {
+            displayName: 'KNOWLEDGE',
+            description: 'The knowledge page.',
+          },
+        ]),
         innovationFlow: {
           id: '',
           states: JSON.stringify([
@@ -236,11 +308,17 @@ const getSpaceMock = ({
       type: ProfileType.SPACE,
       ...getEntityMock<Profile>(),
     },
-    license: {
-      id,
-      visibility,
-      featureFlags: [],
-      ...getEntityMock<License>(),
+    type: SpaceType.SPACE,
+    account: {
+      id: `account-${id}`,
+      spaceID: `space-${id}`,
+      license: {
+        id,
+        visibility,
+        featureFlags: [],
+        ...getEntityMock<License>(),
+      },
+      ...getEntityMock<Account>(),
     },
     authorization: getAuthorizationPolicyMock(
       `auth-${id}`,
@@ -256,7 +334,8 @@ const getFilteredSpaces = (
   visibilities: SpaceVisibility[]
 ): Space[] => {
   return spaces.filter(space => {
-    const visibility = space.license?.visibility || SpaceVisibility.ACTIVE;
+    const visibility =
+      space.account.license?.visibility || SpaceVisibility.ACTIVE;
     return visibilities.includes(visibility);
   });
 };

@@ -247,6 +247,7 @@ export class CommunityResolverFields {
     });
   }
 
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('policy', () => ICommunityPolicy, {
     nullable: true,

@@ -31,4 +31,10 @@ export class ActivityFeedQueryArgs {
       'Activity from which Spaces to include; Includes all by default.',
   })
   roles?: Array<ActivityFeedRoles>;
+
+  @Field(() => [ActivityEventType], {
+    nullable: true,
+    description: 'What events to exclude.',
+  })
+  excludeTypes?: Array<ActivityEventType>;
 }

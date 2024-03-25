@@ -19,7 +19,6 @@ import { AuthorizationPolicyRuleVerifiedCredential } from '@core/authorization/a
 import { PreferenceSetAuthorizationService } from '@domain/common/preference-set/preference.set.service.authorization';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { IPreferenceSet } from '@domain/common/preference-set';
-import { TemplatesSetAuthorizationService } from '@domain/template/templates-set/templates.set.service.authorization';
 import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
@@ -46,15 +45,14 @@ import { ContextAuthorizationService } from '@domain/context/context/context.ser
 import { CommunityAuthorizationService } from '@domain/community/community/community.service.authorization';
 import { CollaborationAuthorizationService } from '@domain/collaboration/collaboration/collaboration.service.authorization';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
-import { LicenseAuthorizationService } from '@domain/license/license/license.service.authorization';
 import { ILicense } from '@domain/license/license/license.interface';
+import { AccountAuthorizationService } from '../account/account.service.authorization';
 
 @Injectable()
 export class SpaceAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private challengeAuthorizationService: ChallengeAuthorizationService,
-    private templatesSetAuthorizationService: TemplatesSetAuthorizationService,
     private preferenceSetAuthorizationService: PreferenceSetAuthorizationService,
     private preferenceSetService: PreferenceSetService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
@@ -64,7 +62,7 @@ export class SpaceAuthorizationService {
     private contextAuthorizationService: ContextAuthorizationService,
     private communityAuthorizationService: CommunityAuthorizationService,
     private collaborationAuthorizationService: CollaborationAuthorizationService,
-    private licenseAuthorizationService: LicenseAuthorizationService,
+    private accountAuthorizationService: AccountAuthorizationService,
     private spaceService: SpaceService,
     @InjectRepository(Space)
     private spaceRepository: Repository<Space>
@@ -79,14 +77,17 @@ export class SpaceAuthorizationService {
         community: {
           policy: true,
         },
-        license: true,
+        account: {
+          license: true,
+        },
       },
     });
     if (
       !space.community ||
       !space.community.policy ||
       !space.preferenceSet ||
-      !space.license
+      !space.account ||
+      !space.account.license
     )
       throw new RelationshipNotFoundException(
         `Unable to load Space with entities at start of auth reset: ${space.id} `,
@@ -99,7 +100,7 @@ export class SpaceAuthorizationService {
     );
 
     const hostOrg = await this.spaceService.getHost(space.id);
-    const license = space.license;
+    const license = space.account.license;
 
     // Ensure always applying from a clean state
     space.authorization = this.authorizationPolicyService.reset(
@@ -140,7 +141,7 @@ export class SpaceAuthorizationService {
     await this.propagateAuthorizationToChildEntities(
       space,
       communityPolicyWithFlags,
-      space.license
+      license
     );
 
     // Reload, to get all the saves from save above + with
@@ -267,17 +268,10 @@ export class SpaceAuthorizationService {
       relations: {
         context: true,
         profile: true,
-        license: {
-          featureFlags: true,
-        },
+        account: true,
       },
     });
-    if (
-      !space.context ||
-      !space.profile ||
-      !space.license ||
-      !space.license.featureFlags
-    )
+    if (!space.context || !space.profile || !space.account)
       throw new RelationshipNotFoundException(
         `Unable to load context or profile for space ${space.id} `,
         LogContext.CHALLENGES
@@ -302,10 +296,10 @@ export class SpaceAuthorizationService {
         clonedAuthorization
       );
 
-    space.license =
-      await this.licenseAuthorizationService.applyAuthorizationPolicy(
-        space.license,
-        clonedAuthorization
+    space.account =
+      await this.accountAuthorizationService.applyAuthorizationPolicy(
+        space.account,
+        spaceBase.authorization
       );
 
     return await this.spaceService.save(space);
@@ -321,9 +315,6 @@ export class SpaceAuthorizationService {
         community: true,
         collaboration: true,
         agent: true,
-        license: {
-          featureFlags: true,
-        },
       },
     });
     if (!space.community || !space.collaboration || !space.agent)
@@ -376,18 +367,10 @@ export class SpaceAuthorizationService {
       relations: {
         challenges: true,
         storageAggregator: true,
-        templatesSet: true,
         preferenceSet: true,
-        defaults: true,
       },
     });
-    if (
-      !space.challenges ||
-      !space.storageAggregator ||
-      !space.templatesSet ||
-      !space.preferenceSet ||
-      !space.defaults
-    )
+    if (!space.challenges || !space.storageAggregator || !space.preferenceSet)
       throw new RelationshipNotFoundException(
         `Unable to load challenges or storage or templates or preferences for space ${space.id} `,
         LogContext.CHALLENGES
@@ -413,18 +396,6 @@ export class SpaceAuthorizationService {
     space.preferenceSet =
       await this.preferenceSetAuthorizationService.applyAuthorizationPolicy(
         space.preferenceSet,
-        space.authorization
-      );
-
-    space.templatesSet =
-      await this.templatesSetAuthorizationService.applyAuthorizationPolicy(
-        space.templatesSet,
-        space.authorization
-      );
-
-    space.defaults.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
-        space.defaults.authorization,
         space.authorization
       );
 

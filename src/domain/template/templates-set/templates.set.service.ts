@@ -305,7 +305,7 @@ export class TemplatesSetService {
     );
     if (existingWithSameName) {
       throw new ValidationException(
-        `Whiteboard Template with the provided type already exists: ${existingWithSameName.profile.displayName}`,
+        `Whiteboard Template with the provided name already exists: ${existingWithSameName.profile.displayName}`,
         LogContext.CONTEXT
       );
     }
@@ -364,7 +364,7 @@ export class TemplatesSetService {
     );
     if (existingWithSameName) {
       throw new ValidationException(
-        `InnovationFlow Template with the provided type already exists: ${existingWithSameName.profile.displayName}`,
+        `InnovationFlow Template with the provided name already exists: ${existingWithSameName.profile.displayName}`,
         LogContext.CONTEXT
       );
     }

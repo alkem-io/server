@@ -65,7 +65,7 @@ selfservice:
       enabled: true
       ui_url: http://localhost:3000/verify
       after:
-        default_browser_return_url: http://localhost:3000/verify/success
+        default_browser_return_url: http://localhost:3000/login
 
     logout:
       after:
@@ -87,6 +87,7 @@ selfservice:
         password:
           default_browser_return_url: http://localhost:3000/registration/success
         oidc:
+          default_browser_return_url: http://localhost:3000
           hooks:
             - hook: session
 

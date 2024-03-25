@@ -13,6 +13,7 @@ import { InjectEntityManager } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { EntityManager } from 'typeorm';
 import { Cache, CachingConfig } from 'cache-manager';
+import { Space } from '@domain/challenge/space/space.entity';
 
 @Injectable()
 export class UrlGeneratorService {
@@ -62,6 +63,10 @@ export class UrlGeneratorService {
       url,
       this.cacheOptions
     );
+  }
+
+  public async revokeUrlCache(entityId: string): Promise<void> {
+    await this.cacheManager.del(this.getUrlIdCacheKey(entityId));
   }
 
   public async getUrlFromCache(entityId: string): Promise<string | undefined> {
@@ -311,14 +316,18 @@ export class UrlGeneratorService {
     }
     const templatesSetID = templateInfo.templatesSetID;
 
-    const spaceInfo = await this.getNameableEntityInfo(
-      'space',
-      'templatesSetId',
-      templatesSetID
-    );
+    const space = await this.entityManager.findOne(Space, {
+      where: {
+        account: {
+          library: {
+            id: templatesSetID,
+          },
+        },
+      },
+    });
 
-    if (spaceInfo) {
-      return this.generateUrlForSpace(spaceInfo.entityNameID);
+    if (space) {
+      return this.generateUrlForSpace(space.nameID);
     }
     const innovationPackInfo = await this.getNameableEntityInfoOrFail(
       'innovation_pack',

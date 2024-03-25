@@ -4,6 +4,7 @@ export const JOIN_ROOM = 'join-room';
 export const FIRST_IN_ROOM = 'first-in-room';
 export const NEW_USER = 'new-user';
 export const ROOM_USER_CHANGE = 'room-user-change';
+export const SCENE_INIT = 'scene-init';
 export const SERVER_BROADCAST = 'server-broadcast';
 export const SERVER_VOLATILE_BROADCAST = 'server-volatile-broadcast';
 export const IDLE_STATE = 'idle-state';

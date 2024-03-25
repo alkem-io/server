@@ -24,6 +24,10 @@ import { IActivityLogEntryCalloutLinkCreated } from './dto/activity.log.dto.entr
 import { CalendarService } from '@domain/timeline/calendar/calendar.service';
 import { CalendarEventService } from '@domain/timeline/event/event.service';
 import { LinkService } from '@domain/collaboration/link/link.service';
+import { IActivityLogEntryCalloutWhiteboardContentModified } from './dto/activity.log.dto.entry.callout.whiteboard.content.modified';
+import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
+import { SpaceService } from '@domain/challenge/space/space.service';
+import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 
 export default class ActivityLogBuilderService implements IActivityLogBuilder {
   constructor(
@@ -32,13 +36,16 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
     private readonly calloutService: CalloutService,
     private readonly postService: PostService,
     private readonly whiteboardService: WhiteboardService,
+    private readonly spaceService: SpaceService,
     private readonly challengeService: ChallengeService,
     private readonly opportunityService: OpportunityService,
     private readonly communityService: CommunityService,
     private readonly roomService: RoomService,
     private readonly linkService: LinkService,
     private readonly calendarService: CalendarService,
-    private readonly calendarEventService: CalendarEventService
+    private readonly calendarEventService: CalendarEventService,
+    private readonly collaborationService: CollaborationService,
+    private readonly urlGeneratorService: UrlGeneratorService
   ) {}
 
   async [ActivityEventType.MEMBER_JOINED](rawActivity: IActivity) {
@@ -114,6 +121,24 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
     return activityCalloutWhiteboardCreated;
   }
 
+  async [ActivityEventType.CALLOUT_WHITEBOARD_CONTENT_MODIFIED](
+    rawActivity: IActivity
+  ) {
+    const parentCallout = await this.calloutService.getCalloutOrFail(
+      rawActivity.parentID
+    );
+    const updatedWhiteboard = await this.whiteboardService.getWhiteboardOrFail(
+      rawActivity.resourceID
+    );
+    const activityCalloutWhiteboardContentModified: IActivityLogEntryCalloutWhiteboardContentModified =
+      {
+        ...this.activityLogEntryBase,
+        callout: parentCallout,
+        whiteboard: updatedWhiteboard,
+      };
+    return activityCalloutWhiteboardContentModified;
+  }
+
   async [ActivityEventType.CALLOUT_POST_COMMENT](rawActivity: IActivity) {
     const calloutPostComment = await this.calloutService.getCalloutOrFail(
       rawActivity.parentID
@@ -168,10 +193,46 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
     const updates = await this.roomService.getRoomOrFail(
       rawActivity.resourceID
     );
+
+    const result = await this.collaborationService.getJourneyFromCollaboration(
+      rawActivity.collaborationID
+    );
+    const space = result?.spaceId
+      ? await this.spaceService.getSpaceOrFail(result.spaceId, {
+          relations: { profile: true },
+        })
+      : undefined;
+    const challenge = result?.challengeId
+      ? await this.challengeService.getChallengeOrFail(result.challengeId, {
+          relations: { profile: true },
+        })
+      : undefined;
+    const opportunity = result?.opportunityId
+      ? await this.opportunityService.getOpportunityOrFail(
+          result.opportunityId,
+          {
+            relations: { profile: true },
+          }
+        )
+      : undefined;
+
+    const journeyProfile =
+      space?.profile || challenge?.profile || opportunity?.profile;
+    if (!journeyProfile) {
+      throw new Error(
+        `Unable to resolve profile of parent journey with id ${
+          space?.id || challenge?.id || opportunity?.id
+        }`
+      );
+    }
+    const journeyUrl = await this.urlGeneratorService.generateUrlForProfile(
+      journeyProfile
+    );
     const activityUpdateSent: IActivityLogEntryUpdateSent = {
       ...this.activityLogEntryBase,
       updates: updates,
       message: rawActivity.description || '',
+      journeyUrl,
     };
     return activityUpdateSent;
   }

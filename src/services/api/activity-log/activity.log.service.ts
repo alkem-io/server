@@ -28,6 +28,7 @@ import { CollaborationService } from '@domain/collaboration/collaboration/collab
 import { SpaceService } from '@domain/challenge/space/space.service';
 import { JourneyTypeEnum } from '@common/enums/journey.type';
 import { LinkService } from '@domain/collaboration/link/link.service';
+import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 
 export class ActivityLogService {
   constructor(
@@ -45,6 +46,7 @@ export class ActivityLogService {
     private calendarEventService: CalendarEventService,
     private communityService: CommunityService,
     private collaborationService: CollaborationService,
+    private urlGeneratorService: UrlGeneratorService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     @InjectEntityManager()
@@ -82,31 +84,6 @@ export class ActivityLogService {
       }
     }
     return results;
-  }
-
-  public async myActivityLog(
-    userId: string,
-    queryData: ActivityLogInput
-  ): Promise<IActivityLogEntry[]> {
-    const activities = await this.activityLog({
-      collaborationID: queryData.collaborationID,
-      includeChild: queryData.includeChild,
-    });
-    const myActivities = activities.filter(x => {
-      if (queryData.types) {
-        return x.triggeredBy.id === userId && queryData.types.includes(x.type);
-      } else {
-        return x.triggeredBy.id === userId;
-      }
-    });
-
-    if (myActivities.length > 0) {
-      myActivities.sort(
-        (a, b) => b.createdDate.getTime() - a.createdDate.getTime()
-      );
-    }
-
-    return myActivities.slice(0, queryData.limit ?? myActivities.length);
   }
 
   public async convertRawActivityToResults(
@@ -175,13 +152,16 @@ export class ActivityLogService {
           this.calloutService,
           this.postService,
           this.whiteboardService,
+          this.spaceService,
           this.challengeService,
           this.opportunityService,
           this.communityService,
           this.roomService,
           this.linkService,
           this.calendarService,
-          this.calendarEventService
+          this.calendarEventService,
+          this.collaborationService,
+          this.urlGeneratorService
         );
       const activityType = rawActivity.type as ActivityEventType;
       return await activityBuilder[activityType](rawActivity);

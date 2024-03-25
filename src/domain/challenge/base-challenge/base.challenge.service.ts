@@ -21,7 +21,6 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { IAgent } from '@domain/agent/agent/agent.interface';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { CommunityType } from '@common/enums/community.type';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { ICommunityPolicyDefinition } from '@domain/community/community-policy/community.policy.definition';
@@ -33,6 +32,7 @@ import { VisualType } from '@common/enums/visual.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
+import { IAccount } from '../account/account.interface';
 
 @Injectable()
 export class BaseChallengeService {
@@ -50,8 +50,7 @@ export class BaseChallengeService {
   public async initialise(
     baseChallenge: IBaseChallenge,
     baseChallengeData: CreateBaseChallengeInput,
-    spaceID: string,
-    communityType: CommunityType,
+    account: IAccount,
     communityPolicy: ICommunityPolicyDefinition,
     applicationFormData: CreateFormInput,
     profileType: ProfileType,
@@ -59,12 +58,15 @@ export class BaseChallengeService {
     collaborationInput?: CreateCollaborationInput
   ) {
     baseChallenge.authorization = new AuthorizationPolicy();
-    await this.isNameAvailableOrFail(baseChallengeData.nameID, spaceID);
+    await this.isNameAvailableInAccountOrFail(
+      baseChallengeData.nameID,
+      account.id
+    );
 
     baseChallenge.community = await this.communityService.createCommunity(
       baseChallengeData.profileData.displayName,
-      spaceID,
-      communityType,
+      account.spaceID,
+      baseChallenge.type,
       communityPolicy,
       applicationFormData
     );
@@ -106,7 +108,8 @@ export class BaseChallengeService {
           ...collaborationInput,
         },
         storageAggregator,
-        spaceID
+        account,
+        baseChallenge.type
       );
 
     baseChallenge.agent = await this.agentService.createAgent({
@@ -209,12 +212,12 @@ export class BaseChallengeService {
     return challenge;
   }
 
-  public async isNameAvailableOrFail(nameID: string, nameableScopeID: string) {
+  public async isNameAvailableInAccountOrFail(
+    nameID: string,
+    accountID: string
+  ) {
     if (
-      !(await this.namingService.isNameIdAvailableInSpace(
-        nameID,
-        nameableScopeID
-      ))
+      !(await this.namingService.isNameIdAvailableInAccount(nameID, accountID))
     )
       throw new ValidationException(
         `Unable to create entity: the provided nameID is already taken: ${nameID}`,
@@ -270,6 +273,28 @@ export class BaseChallengeService {
         LogContext.CONTEXT
       );
     return context;
+  }
+
+  public async getStorageAggregator(
+    challengeId: string,
+    repository: Repository<BaseChallenge>
+  ): Promise<IContext> {
+    const challengeWithContext = await this.getBaseChallengeOrFail(
+      challengeId,
+      repository,
+      {
+        relations: {
+          storageAggregator: true,
+        },
+      }
+    );
+    const storageAggregator = challengeWithContext.storageAggregator;
+    if (!storageAggregator)
+      throw new RelationshipNotFoundException(
+        `Unable to load storage aggregator for challenge ${challengeId} `,
+        LogContext.CONTEXT
+      );
+    return storageAggregator;
   }
 
   public async getProfile(

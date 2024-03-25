@@ -28,6 +28,7 @@ import { NotificationInputCommunityLeadsMessage } from '@services/adapters/notif
 import { CommunicationSendMessageToCommunityLeadsInput } from './dto/communication.dto.send.message.community.leads';
 import { ValidationException } from '@common/exceptions/validation.exception';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
+import { DiscussionCategory } from '@common/enums/communication.discussion.category';
 
 @Resolver()
 export class CommunicationResolverMutations {
@@ -62,6 +63,17 @@ export class CommunicationResolverMutations {
       AuthorizationPrivilege.CREATE_DISCUSSION,
       `create discussion on communication: ${communication.id}`
     );
+
+    if (createData.category === DiscussionCategory.RELEASES) {
+      const platformAuthorization =
+        await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
+      await this.authorizationService.grantAccessOrFail(
+        agentInfo,
+        platformAuthorization,
+        AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
+        `User not authorized to create discussion with ${DiscussionCategory.RELEASES} category.`
+      );
+    }
 
     const displayNameAvailable =
       await this.namingService.isDiscussionDisplayNameAvailableInCommunication(

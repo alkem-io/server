@@ -35,9 +35,6 @@ import { IAgent } from '@domain/agent/agent';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { IChallenge } from './challenge.interface';
 import { AgentService } from '@domain/agent/agent/agent.service';
-import { ProjectService } from '@domain/collaboration/project/project.service';
-import { CreateChallengeOnChallengeInput } from './dto/challenge.dto.create.in.challenge';
-import { CommunityType } from '@common/enums/community.type';
 import { AgentInfo } from '@src/core/authentication/agent-info';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { IPreferenceSet } from '@domain/common/preference-set';
@@ -54,22 +51,20 @@ import { ICommunityPolicy } from '@domain/community/community-policy/community.p
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { OperationNotAllowedException } from '@common/exceptions/operation.not.allowed.exception';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
-import { TagsetType } from '@common/enums/tagset.type';
-import { CreateTagsetTemplateInput } from '@domain/common/tagset-template/dto/tagset.template.dto.create';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { challengeDefaultCallouts } from './challenge.default.callouts';
-import { ChallengeDisplayLocation } from '@common/enums/challenge.display.location';
-import { CommonDisplayLocation } from '@common/enums/common.display.location';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
+import { IAccount } from '../account/account.interface';
+import { SpaceType } from '@common/enums/space.type';
+import { CalloutGroupName } from '@common/enums/callout.group.name';
 @Injectable()
 export class ChallengeService {
   constructor(
     private agentService: AgentService,
     private communityService: CommunityService,
     private opportunityService: OpportunityService,
-    private projectService: ProjectService,
     private baseChallengeService: BaseChallengeService,
     private organizationService: OrganizationService,
     private preferenceSetService: PreferenceSetService,
@@ -85,6 +80,7 @@ export class ChallengeService {
 
   async createChallenge(
     challengeData: CreateChallengeInput,
+    account: IAccount,
     agentInfo?: AgentInfo
   ): Promise<IChallenge> {
     if (!challengeData.nameID) {
@@ -92,13 +88,14 @@ export class ChallengeService {
         challengeData.profileData.displayName
       );
     }
-    await this.baseChallengeService.isNameAvailableOrFail(
+    await this.baseChallengeService.isNameAvailableInAccountOrFail(
       challengeData.nameID,
-      challengeData.spaceID
+      account.id
     );
 
     const challenge: IChallenge = Challenge.create(challengeData);
-    challenge.childChallenges = [];
+    challenge.type = SpaceType.CHALLENGE;
+    challenge.account = account;
 
     challenge.opportunities = [];
 
@@ -110,8 +107,7 @@ export class ChallengeService {
     await this.baseChallengeService.initialise(
       challenge,
       challengeData,
-      challengeData.spaceID,
-      CommunityType.CHALLENGE,
+      account,
       challengeCommunityPolicy,
       challengeCommunityApplicationForm,
       ProfileType.CHALLENGE,
@@ -144,19 +140,9 @@ export class ChallengeService {
       );
     }
 
-    const locations = Object.values({
-      ...CommonDisplayLocation,
-      ...ChallengeDisplayLocation,
-    });
-    const tagsetTemplateData: CreateTagsetTemplateInput = {
-      name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
-      type: TagsetType.SELECT_ONE,
-      allowedValues: locations,
-      defaultSelectedValue: ChallengeDisplayLocation.CONTRIBUTE_RIGHT,
-    };
-    await this.collaborationService.addTagsetTemplate(
+    await this.collaborationService.addCalloutGroupTagsetTemplate(
       challenge.collaboration,
-      tagsetTemplateData
+      CalloutGroupName.CONTRIBUTE_2
     );
 
     const savedChallenge = await this.challengeRepository.save(challenge);
@@ -225,13 +211,17 @@ export class ChallengeService {
       challengeData,
       this.challengeRepository
     );
-    const challenge = await this.getChallengeOrFail(baseChallenge.id);
-    if (challengeData.nameID) {
+    const challenge = await this.getChallengeOrFail(baseChallenge.id, {
+      relations: {
+        account: true,
+      },
+    });
+    if (challengeData.nameID && challenge.account) {
       if (challengeData.nameID !== challenge.nameID) {
         // updating the nameID, check new value is allowed
-        await this.baseChallengeService.isNameAvailableOrFail(
+        await this.baseChallengeService.isNameAvailableInAccountOrFail(
           challengeData.nameID,
-          this.getSpaceID(challenge)
+          challenge.account.id
         );
         challenge.nameID = challengeData.nameID;
         await this.challengeRepository.save(challenge);
@@ -245,7 +235,6 @@ export class ChallengeService {
     // Note need to load it in with all contained entities so can remove fully
     const challenge = await this.getChallengeOrFail(challengeID, {
       relations: {
-        childChallenges: true,
         opportunities: true,
         preferenceSet: {
           preferences: true,
@@ -254,13 +243,6 @@ export class ChallengeService {
         storageAggregator: true,
       },
     });
-
-    // Do not remove a challenge that has child challenges , require these to be individually first removed
-    if (challenge.childChallenges && challenge.childChallenges.length > 0)
-      throw new OperationNotAllowedException(
-        `Unable to remove challenge (${challenge.nameID}) as it contains ${challenge.childChallenges.length} child challenges`,
-        LogContext.CHALLENGES
-      );
 
     if (challenge.opportunities && challenge.opportunities.length > 0)
       throw new OperationNotAllowedException(
@@ -306,22 +288,32 @@ export class ChallengeService {
     return result;
   }
 
-  async getChallengeInNameableScope(
+  async getChallengeInAccount(
     challengeID: string,
-    nameableScopeID: string,
+    accountID: string,
     options?: FindOneOptions<Challenge>
   ): Promise<IChallenge | null> {
     let challenge: IChallenge | null = null;
     if (challengeID.length == UUID_LENGTH) {
       challenge = await this.challengeRepository.findOne({
-        where: { id: challengeID, spaceID: nameableScopeID },
+        where: {
+          id: challengeID,
+          account: {
+            id: accountID,
+          },
+        },
         ...options,
       });
     }
     if (!challenge) {
       // look up based on nameID
       challenge = await this.challengeRepository.findOne({
-        where: { nameID: challengeID, spaceID: nameableScopeID },
+        where: {
+          nameID: challengeID,
+          account: {
+            id: accountID,
+          },
+        },
         ...options,
       });
     }
@@ -329,14 +321,14 @@ export class ChallengeService {
     return challenge;
   }
 
-  async getChallengeInNameableScopeOrFail(
+  async getChallengeInAccountScopeOrFail(
     challengeID: string,
-    nameableScopeID: string,
+    accountID: string,
     options?: FindOneOptions<Challenge>
   ): Promise<IChallenge | never> {
-    const challenge = await this.getChallengeInNameableScope(
+    const challenge = await this.getChallengeInAccount(
       challengeID,
-      nameableScopeID,
+      accountID,
       options
     );
 
@@ -384,6 +376,24 @@ export class ChallengeService {
       challengeId,
       this.challengeRepository
     );
+  }
+
+  public async getAccountOrFail(challengeId: string): Promise<IAccount> {
+    const challenge = await this.challengeRepository.findOne({
+      where: { id: challengeId },
+      relations: {
+        account: true,
+      },
+    });
+
+    if (!challenge) {
+      throw new EntityNotFoundException(
+        `Unable to find challenge with ID: ${challengeId}`,
+        LogContext.CHALLENGES
+      );
+    }
+
+    return challenge.account;
   }
 
   async getProfile(challenge: IChallenge): Promise<IProfile> {
@@ -466,77 +476,9 @@ export class ChallengeService {
     return sortedOpportunities;
   }
 
-  // Loads the challenges into the challenge entity if not already present
-  async getChildChallenges(challenge: IChallenge): Promise<IChallenge[]> {
-    if (challenge.childChallenges && challenge.childChallenges.length > 0) {
-      // challenge already has groups loaded
-      return challenge.childChallenges;
-    }
-
-    const challengeWithChildChallenges = await this.getChallengeOrFail(
-      challenge.id,
-      {
-        relations: { childChallenges: true },
-      }
-    );
-    const childChallenges = challengeWithChildChallenges.childChallenges;
-    if (!childChallenges)
-      throw new RelationshipNotFoundException(
-        `Unable to load child challenges for challenge ${challenge.id} `,
-        LogContext.CHALLENGES
-      );
-
-    return childChallenges;
-  }
-
-  async createChildChallenge(
-    challengeData: CreateChallengeOnChallengeInput,
-    agentInfo?: AgentInfo
-  ): Promise<IChallenge> {
-    this.logger.verbose?.(
-      `Adding child Challenge to Challenge (${challengeData.challengeID})`,
-      LogContext.CHALLENGES
-    );
-
-    const challenge = await this.getChallengeOrFail(challengeData.challengeID, {
-      relations: { childChallenges: true, community: true },
-    });
-
-    const spaceID = this.getSpaceID(challenge);
-    await this.baseChallengeService.isNameAvailableOrFail(
-      challengeData.nameID,
-      spaceID
-    );
-
-    challengeData.spaceID = spaceID;
-    const childChallenge = await this.createChallenge(challengeData, agentInfo);
-
-    challenge.childChallenges?.push(childChallenge);
-
-    // Finally set the community relationship
-    await this.communityService.setParentCommunity(
-      childChallenge.community,
-      challenge.community
-    );
-
-    await this.challengeRepository.save(challenge);
-
-    return childChallenge;
-  }
-
-  getSpaceID(challenge: IChallenge): string {
-    const spaceID = challenge.spaceID;
-    if (!spaceID) {
-      throw new RelationshipNotFoundException(
-        `Unable to find spaceID for challenge: ${challenge.id} `,
-        LogContext.CHALLENGES
-      );
-    }
-    return spaceID;
-  }
-
   async createOpportunity(
     opportunityData: CreateOpportunityInput,
+    account: IAccount,
     agentInfo?: AgentInfo
   ): Promise<IOpportunity> {
     this.logger.verbose?.(
@@ -551,6 +493,7 @@ export class ChallengeService {
           storageAggregator: true,
           opportunities: true,
           community: true,
+          account: true,
         },
       }
     );
@@ -562,16 +505,16 @@ export class ChallengeService {
       );
     }
 
-    const spaceID = this.getSpaceID(challenge);
-    await this.baseChallengeService.isNameAvailableOrFail(
+    await this.baseChallengeService.isNameAvailableInAccountOrFail(
       opportunityData.nameID,
-      spaceID
+      account.id
     );
 
     opportunityData.storageAggregatorParent = challenge.storageAggregator;
-    opportunityData.spaceID = spaceID;
+    opportunityData.spaceID = challenge.account.spaceID;
     const opportunity = await this.opportunityService.createOpportunity(
       opportunityData,
+      account,
       agentInfo
     );
 
@@ -594,21 +537,16 @@ export class ChallengeService {
     return this.challengeRepository.find(options);
   }
 
-  async getChallengesInSpaceCount(spaceID: string): Promise<number> {
+  async getChallengesInAccountCount(accountId: string): Promise<number> {
     const count = await this.challengeRepository.countBy({
-      spaceID: spaceID,
-      parentSpace: Not(IsNull()),
+      account: {
+        id: accountId,
+      },
+      space: Not(IsNull()),
     });
     return count;
   }
 
-  async getChildChallengesCount(challengeID: string): Promise<number> {
-    return await this.challengeRepository.countBy({
-      parentChallenge: {
-        id: challengeID,
-      },
-    });
-  }
   async getMembersCount(challenge: IChallenge): Promise<number> {
     const community = await this.getCommunity(challenge.id);
     return await this.communityService.getMembersCount(community);
@@ -635,20 +573,6 @@ export class ChallengeService {
     );
     opportunitiesTopic.id = `opportunities-${challenge.id}`;
     metrics.push(opportunitiesTopic);
-
-    // Projects
-    const projectsCount = await this.projectService.getProjectsInChallengeCount(
-      challenge.id
-    );
-    const projectsTopic = new NVP('projects', projectsCount.toString());
-    projectsTopic.id = `projects-${challenge.id}`;
-    metrics.push(projectsTopic);
-
-    // Challenges
-    const challengesCount = await this.getChildChallengesCount(challenge.id);
-    const challengesTopic = new NVP('challenges', challengesCount.toString());
-    challengesTopic.id = `challenges-${challenge.id}`;
-    metrics.push(challengesTopic);
 
     // Posts
     const postsCount = await this.baseChallengeService.getPostsCount(
@@ -710,24 +634,10 @@ export class ChallengeService {
   async getStorageAggregatorOrFail(
     challengeId: string
   ): Promise<IStorageAggregator> {
-    const challengeWithStorageAggregator = await this.getChallengeOrFail(
+    return await this.baseChallengeService.getStorageAggregator(
       challengeId,
-      {
-        relations: {
-          storageAggregator: true,
-        },
-      }
+      this.challengeRepository
     );
-    const storageAggregator = challengeWithStorageAggregator.storageAggregator;
-
-    if (!storageAggregator) {
-      throw new EntityNotFoundException(
-        `Unable to find storage aggregator for Challenge with nameID: ${challengeWithStorageAggregator.nameID}`,
-        LogContext.COMMUNITY
-      );
-    }
-
-    return storageAggregator;
   }
 
   createPreferenceDefaults(): Map<PreferenceType, string> {

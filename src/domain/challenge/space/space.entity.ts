@@ -3,17 +3,22 @@ import { ISpace } from '@domain/challenge/space/space.interface';
 import { BaseChallenge } from '@domain/challenge/base-challenge/base.challenge.entity';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { PreferenceSet } from '@domain/common/preference-set/preference.set.entity';
-import { TemplatesSet } from '@domain/template/templates-set/templates.set.entity';
-import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
-import { License } from '@domain/license/license/license.entity';
-import { SpaceDefaults } from '../space.defaults/space.defaults.entity';
+import { Account } from '../account/account.entity';
 @Entity()
 export class Space extends BaseChallenge implements ISpace {
-  @OneToMany(() => Challenge, challenge => challenge.parentSpace, {
+  @OneToMany(() => Challenge, challenge => challenge.space, {
     eager: false,
     cascade: true,
   })
   challenges?: Challenge[];
+
+  @OneToOne(() => Account, {
+    eager: true,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  account!: Account;
 
   @OneToOne(() => PreferenceSet, {
     eager: false,
@@ -22,40 +27,4 @@ export class Space extends BaseChallenge implements ISpace {
   })
   @JoinColumn()
   preferenceSet?: PreferenceSet;
-
-  @OneToOne(() => License, {
-    eager: false,
-    cascade: true,
-    onDelete: 'SET NULL',
-  })
-  @JoinColumn()
-  license?: License;
-
-  @OneToOne(() => TemplatesSet, {
-    eager: false,
-    cascade: true,
-    onDelete: 'SET NULL',
-  })
-  @JoinColumn()
-  templatesSet?: TemplatesSet;
-
-  @OneToOne(() => SpaceDefaults, {
-    eager: false,
-    cascade: true,
-    onDelete: 'SET NULL',
-  })
-  @JoinColumn()
-  defaults?: SpaceDefaults;
-
-  @OneToOne(() => StorageAggregator, {
-    eager: false,
-    cascade: true,
-    onDelete: 'SET NULL',
-  })
-  @JoinColumn()
-  storageAggregator?: StorageAggregator;
-
-  constructor() {
-    super();
-  }
 }
