@@ -35,7 +35,6 @@ import { IAgent } from '@domain/agent/agent';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { IChallenge } from './challenge.interface';
 import { AgentService } from '@domain/agent/agent/agent.service';
-import { CommunityType } from '@common/enums/community.type';
 import { AgentInfo } from '@src/core/authentication/agent-info';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { IPreferenceSet } from '@domain/common/preference-set';
@@ -52,16 +51,14 @@ import { ICommunityPolicy } from '@domain/community/community-policy/community.p
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { OperationNotAllowedException } from '@common/exceptions/operation.not.allowed.exception';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
-import { TagsetType } from '@common/enums/tagset.type';
-import { CreateTagsetTemplateInput } from '@domain/common/tagset-template/dto/tagset.template.dto.create';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { challengeDefaultCallouts } from './challenge.default.callouts';
-import { ChallengeDisplayLocation } from '@common/enums/challenge.display.location';
-import { CommonDisplayLocation } from '@common/enums/common.display.location';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
 import { IAccount } from '../account/account.interface';
+import { SpaceType } from '@common/enums/space.type';
+import { CalloutGroupName } from '@common/enums/callout.group.name';
 @Injectable()
 export class ChallengeService {
   constructor(
@@ -97,6 +94,7 @@ export class ChallengeService {
     );
 
     const challenge: IChallenge = Challenge.create(challengeData);
+    challenge.type = SpaceType.CHALLENGE;
     challenge.account = account;
 
     challenge.opportunities = [];
@@ -109,8 +107,8 @@ export class ChallengeService {
     await this.baseChallengeService.initialise(
       challenge,
       challengeData,
-      challengeData.spaceID,
-      CommunityType.CHALLENGE,
+      account,
+      SpaceType.CHALLENGE,
       challengeCommunityPolicy,
       challengeCommunityApplicationForm,
       ProfileType.CHALLENGE,
@@ -143,19 +141,9 @@ export class ChallengeService {
       );
     }
 
-    const locations = Object.values({
-      ...CommonDisplayLocation,
-      ...ChallengeDisplayLocation,
-    });
-    const tagsetTemplateData: CreateTagsetTemplateInput = {
-      name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
-      type: TagsetType.SELECT_ONE,
-      allowedValues: locations,
-      defaultSelectedValue: ChallengeDisplayLocation.CONTRIBUTE_RIGHT,
-    };
-    await this.collaborationService.addTagsetTemplate(
+    await this.collaborationService.addCalloutGroupTagsetTemplate(
       challenge.collaboration,
-      tagsetTemplateData
+      CalloutGroupName.CONTRIBUTE_2
     );
 
     const savedChallenge = await this.challengeRepository.save(challenge);
@@ -389,6 +377,24 @@ export class ChallengeService {
       challengeId,
       this.challengeRepository
     );
+  }
+
+  public async getAccountOrFail(challengeId: string): Promise<IAccount> {
+    const challenge = await this.challengeRepository.findOne({
+      where: { id: challengeId },
+      relations: {
+        account: true,
+      },
+    });
+
+    if (!challenge) {
+      throw new EntityNotFoundException(
+        `Unable to find challenge with ID: ${challengeId}`,
+        LogContext.CHALLENGES
+      );
+    }
+
+    return challenge.account;
   }
 
   async getProfile(challenge: IChallenge): Promise<IProfile> {

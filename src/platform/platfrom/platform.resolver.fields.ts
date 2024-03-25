@@ -1,7 +1,10 @@
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { ILibrary } from '@library/library/library.interface';
 import { ICommunication } from '@domain/communication/communication/communication.interface';
-import { InnovationHub as InnovationHubDecorator } from '@src/common/decorators';
+import {
+  InnovationHub as InnovationHubDecorator,
+  Profiling,
+} from '@src/common/decorators';
 import { InnovationHubArgsQuery } from '@domain/innovation-hub/dto';
 import { InnovationHubService } from '@domain/innovation-hub';
 import { IInnovationHub } from '@domain/innovation-hub/types';
@@ -15,6 +18,9 @@ import { MetadataService } from '@platform/metadata/metadata.service';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { GraphqlGuard } from '@core/authorization';
+import { UseGuards } from '@nestjs/common';
+import { ReleaseDiscussionOutput } from './dto/release.discussion.dto';
 
 @Resolver(() => IPlatform)
 export class PlatformResolverFields {
@@ -110,5 +116,17 @@ export class PlatformResolverFields {
   })
   public async metadata(): Promise<IMetadata> {
     return await this.metadataService.getMetadata();
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField('latestReleaseDiscussion', () => ReleaseDiscussionOutput, {
+    nullable: true,
+    description: 'The latest release discussion.',
+  })
+  @Profiling.api
+  async latestReleaseDiscussion(): Promise<
+    ReleaseDiscussionOutput | undefined
+  > {
+    return this.platformService.getLatestReleaseDiscussion();
   }
 }

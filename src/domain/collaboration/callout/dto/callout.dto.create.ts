@@ -3,7 +3,6 @@ import { CalloutType } from '@common/enums/callout.type';
 import { ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { NameID } from '@domain/common/scalars/scalar.nameid';
-import { CalloutDisplayLocation } from '@common/enums/callout.display.location';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { CreateCalloutFramingInput } from '@domain/collaboration/callout-framing/dto';
 import { CreateCalloutContributionDefaultsInput } from '@domain/collaboration/callout-contribution-defaults/dto';
@@ -37,11 +36,11 @@ export class CreateCalloutInput {
   })
   type!: CalloutType;
 
-  @Field(() => CalloutDisplayLocation, {
+  @Field(() => String, {
     nullable: true,
-    description: 'Set callout display location for this Callout.',
+    description: 'Set Callout Group for this Callout.',
   })
-  displayLocation?: CalloutDisplayLocation;
+  groupName?: string;
 
   @Field(() => Number, {
     nullable: true,

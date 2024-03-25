@@ -21,7 +21,6 @@ import { INVP } from '@domain/common/nvp/nvp.interface';
 import { CommunityService } from '@domain/community/community/community.service';
 import { NVP } from '@domain/common/nvp';
 import { UUID_LENGTH } from '@common/constants';
-import { CommunityType } from '@common/enums/community.type';
 import { AgentInfo } from '@src/core/authentication/agent-info';
 import { IContext } from '@domain/context/context/context.interface';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
@@ -30,15 +29,13 @@ import { ICommunityPolicy } from '@domain/community/community-policy/community.p
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { CommunityRole } from '@common/enums/community.role';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
-import { TagsetType } from '@common/enums/tagset.type';
-import { CreateTagsetTemplateInput } from '@domain/common/tagset-template/dto/tagset.template.dto.create';
 import { opportunityDefaultCallouts } from './opportunity.default.callouts';
-import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { OpportunityDisplayLocation } from '@common/enums/opportunity.display.location';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
 import { IAccount } from '../account/account.interface';
+import { SpaceType } from '@common/enums/space.type';
+import { CalloutGroupName } from '@common/enums/callout.group.name';
 @Injectable()
 export class OpportunityService {
   constructor(
@@ -70,6 +67,7 @@ export class OpportunityService {
     );
 
     const opportunity: IOpportunity = Opportunity.create(opportunityData);
+    opportunity.type = SpaceType.OPPORTUNITY;
     opportunity.account = account;
 
     opportunity.storageAggregator =
@@ -80,8 +78,8 @@ export class OpportunityService {
     await this.baseChallengeService.initialise(
       opportunity,
       opportunityData,
-      opportunityData.spaceID,
-      CommunityType.OPPORTUNITY,
+      account,
+      SpaceType.OPPORTUNITY,
       opportunityCommunityPolicy,
       opportunityCommunityApplicationForm,
       ProfileType.OPPORTUNITY,
@@ -92,16 +90,9 @@ export class OpportunityService {
     await this.opportunityRepository.save(opportunity);
 
     if (opportunity.collaboration) {
-      const locations = Object.values(OpportunityDisplayLocation);
-      const tagsetTemplateData: CreateTagsetTemplateInput = {
-        name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
-        type: TagsetType.SELECT_ONE,
-        allowedValues: locations,
-        defaultSelectedValue: OpportunityDisplayLocation.CONTRIBUTE_RIGHT,
-      };
-      await this.collaborationService.addTagsetTemplate(
+      await this.collaborationService.addCalloutGroupTagsetTemplate(
         opportunity.collaboration,
-        tagsetTemplateData
+        CalloutGroupName.CONTRIBUTE_2
       );
 
       // Finally create default callouts, using the defaults service to decide what to add
@@ -283,6 +274,24 @@ export class OpportunityService {
       opportunityId,
       this.opportunityRepository
     );
+  }
+
+  public async getAccountOrFail(opportunityId: string): Promise<IAccount> {
+    const opportunity = await this.opportunityRepository.findOne({
+      where: { id: opportunityId },
+      relations: {
+        account: true,
+      },
+    });
+
+    if (!opportunity) {
+      throw new EntityNotFoundException(
+        `Unable to find opportunity with ID: ${opportunityId}`,
+        LogContext.CHALLENGES
+      );
+    }
+
+    return opportunity.account;
   }
 
   async getContext(opportunityId: string): Promise<IContext> {

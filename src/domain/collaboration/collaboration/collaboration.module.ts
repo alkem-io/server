@@ -23,6 +23,7 @@ import { StorageAggregatorResolverModule } from '@services/infrastructure/storag
 import { LicenseModule } from '@domain/license/license/license.module';
 import { InnovationFlowModule } from '../innovation-flow/innovation.flow.module';
 import { SpaceDefaultsModule } from '@domain/challenge/space.defaults/space.defaults.module';
+import { CalloutGroupsModule } from '../callout-groups/callout.group.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { SpaceDefaultsModule } from '@domain/challenge/space.defaults/space.defa
     TagsetTemplateSetModule,
     InnovationFlowModule,
     SpaceDefaultsModule,
+    CalloutGroupsModule,
     LicenseModule,
     TypeOrmModule.forFeature([Collaboration]),
   ],
