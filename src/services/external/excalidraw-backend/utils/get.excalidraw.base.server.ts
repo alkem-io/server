@@ -1,5 +1,6 @@
 import http from 'http';
 import { Namespace, Server as SocketIO } from 'socket.io';
+import { instrument } from '@socket.io/admin-ui';
 import { Adapter } from 'socket.io-adapter';
 import { ConfigService } from '@nestjs/config';
 import { LoggerService } from '@nestjs/common';
@@ -45,11 +46,19 @@ export const getExcalidrawBaseServerOrFail = (
 
   return (() => {
     try {
-      return new SocketIO(httpServer, {
-        transports: ['websocket'],
+      const io = new SocketIO(httpServer, {
+        transports: ['websocket', 'polling'],
         allowEIO3: true,
         adapter: adapterFactory,
+        cors: {
+          origin: ['http://localhost:8080'],
+          credentials: true,
+        },
       });
+
+      instrument(io, { auth: false });
+
+      return io;
     } catch (e) {
       throw new BaseException(
         `Error when initializing Excalidraw SocketIO server: ${e}`,

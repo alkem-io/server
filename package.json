@@ -65,6 +65,7 @@
     "@nestjs/platform-express": "^9.4.0",
     "@nestjs/typeorm": "9.0.1",
     "@ory/kratos-client": "^0.11.1",
+    "@socket.io/admin-ui": "^0.5.1",
     "@socket.io/redis-adapter": "^8.2.1",
     "@types/lodash": "^4.14.197",
     "ajv": "^8.11.0",
