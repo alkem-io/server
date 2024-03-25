@@ -72,7 +72,7 @@ export class subspaces1711092635967 implements MigrationInterface {
     let result = type;
     result = result.replace('space-host', 'account-host');
     result = result.replace('challenge-', 'subspace-');
-    result = result.replace('opportunity', 'subspace-');
+    result = result.replace('opportunity-', 'subspace-');
     return result;
   }
 }
