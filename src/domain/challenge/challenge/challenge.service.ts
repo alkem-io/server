@@ -108,6 +108,7 @@ export class ChallengeService {
       challenge,
       challengeData,
       account,
+      SpaceType.CHALLENGE,
       challengeCommunityPolicy,
       challengeCommunityApplicationForm,
       ProfileType.CHALLENGE,

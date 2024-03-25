@@ -21,6 +21,7 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { IAgent } from '@domain/agent/agent/agent.interface';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { SpaceType } from '@common/enums/space.type';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { ICommunityPolicyDefinition } from '@domain/community/community-policy/community.policy.definition';
@@ -32,6 +33,7 @@ import { VisualType } from '@common/enums/visual.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
+import { CreateCommunityInput } from '@domain/community/community/dto/community.dto.create';
 import { IAccount } from '../account/account.interface';
 
 @Injectable()
@@ -51,6 +53,7 @@ export class BaseChallengeService {
     baseChallenge: IBaseChallenge,
     baseChallengeData: CreateBaseChallengeInput,
     account: IAccount,
+    communityType: SpaceType,
     communityPolicy: ICommunityPolicyDefinition,
     applicationFormData: CreateFormInput,
     profileType: ProfileType,
@@ -63,12 +66,24 @@ export class BaseChallengeService {
       account.id
     );
 
+    const communityData: CreateCommunityInput = {
+      name: baseChallengeData.profileData.displayName,
+      type: communityType,
+      policy: communityPolicy,
+      applicationForm: applicationFormData,
+      spaceID: account.spaceID,
+      guidelines: {
+        // TODO: get this from defaults service
+        profile: {
+          displayName: baseChallengeData.profileData.displayName,
+          description: baseChallengeData.profileData.description,
+        },
+      },
+    };
+
     baseChallenge.community = await this.communityService.createCommunity(
-      baseChallengeData.profileData.displayName,
-      account.spaceID,
-      baseChallenge.type,
-      communityPolicy,
-      applicationFormData
+      communityData,
+      storageAggregator
     );
 
     if (!baseChallengeData.context) {
