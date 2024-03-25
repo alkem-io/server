@@ -126,6 +126,7 @@ export class SpaceService {
       space,
       spaceData,
       space.account,
+      SpaceType.SPACE,
       spaceCommunityPolicy,
       spaceCommunityApplicationForm,
       ProfileType.SPACE,

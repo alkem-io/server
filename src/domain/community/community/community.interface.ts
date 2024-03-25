@@ -8,6 +8,7 @@ import { ICommunityPolicy } from '../community-policy/community.policy.interface
 import { IForm } from '@domain/common/form/form.interface';
 import { IInvitation } from '../invitation/invitation.interface';
 import { IInvitationExternal } from '../invitation.external/invitation.external.interface';
+import { ICommunityGuidelines } from '../community-guidelines/community.guidelines.interface';
 import { SpaceType } from '@common/enums/space.type';
 
 @ObjectType('Community', {
@@ -25,6 +26,7 @@ export abstract class ICommunity extends IAuthorizable {
   parentCommunity?: ICommunity;
 
   policy!: ICommunityPolicy;
+  guidelines?: ICommunityGuidelines;
 
   spaceID!: string;
 

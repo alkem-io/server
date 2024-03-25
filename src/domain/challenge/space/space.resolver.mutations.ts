@@ -38,7 +38,7 @@ import { LogContext } from '@common/enums';
 import { ISpaceDefaults } from '../space.defaults/space.defaults.interface';
 import { UpdateSpaceDefaultsInput } from './dto/space.dto.update.defaults';
 import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
-import { InnovationFlowTemplateService } from '@domain/template/innovation-flow-template/innovation.flow.template.service';
+import { EntityNotFoundException } from '@common/exceptions';
 
 @Resolver()
 export class SpaceResolverMutations {
@@ -49,7 +49,6 @@ export class SpaceResolverMutations {
     private spaceService: SpaceService,
     private spaceAuthorizationService: SpaceAuthorizationService,
     private spaceDefaultsService: SpaceDefaultsService,
-    private innovationFlowTemplateService: InnovationFlowTemplateService,
     private challengeService: ChallengeService,
     private challengeAuthorizationService: ChallengeAuthorizationService,
     private preferenceService: PreferenceService,
@@ -179,7 +178,12 @@ export class SpaceResolverMutations {
       spaceDefaultsData.spaceID,
       {
         relations: {
-          account: true,
+          account: {
+            defaults: true,
+            library: {
+              innovationFlowTemplates: true,
+            },
+          },
         },
       }
     );
@@ -190,22 +194,32 @@ export class SpaceResolverMutations {
       `update spaceDefaults: ${space.id}`
     );
 
-    const spaceDefaults =
-      await this.spaceDefaultsService.getSpaceDefaultsOrFail(
-        spaceDefaultsData.spaceID
+    if (!space.account.defaults) {
+      throw new EntityNotInitializedException(
+        `Account doesn't have Defaults: ${space.account.id}`,
+        LogContext.COLLABORATION
       );
+    }
 
     if (spaceDefaultsData.flowTemplateID) {
       const innovationFlowTemplate =
-        await this.innovationFlowTemplateService.getInnovationFlowTemplateOrFail(
-          spaceDefaultsData.flowTemplateID
+        space.account.library?.innovationFlowTemplates.find(
+          innovationFlowTemplate =>
+            innovationFlowTemplate.id === spaceDefaultsData.flowTemplateID
         );
+      if (!innovationFlowTemplate) {
+        throw new EntityNotFoundException(
+          `Flow Template not found in the Space Library: ${spaceDefaultsData.flowTemplateID} SpaceId: ${space.id}`,
+          LogContext.COLLABORATION
+        );
+      }
+
       return await this.spaceDefaultsService.updateSpaceDefaults(
-        spaceDefaults,
+        space.account.defaults,
         innovationFlowTemplate
       );
     }
-    return spaceDefaults;
+    return space.account.defaults;
   }
 
   @UseGuards(GraphqlGuard)
@@ -434,7 +448,7 @@ export class SpaceResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       space.authorization,
-      AuthorizationPrivilege.UPDATE, // todo: replace with AUTHORIZATION_RESET once that has been granted
+      AuthorizationPrivilege.AUTHORIZATION_RESET,
       `reset authorization definition: ${agentInfo.email}`
     );
     return await this.spaceAuthorizationService.applyAuthorizationPolicy(space);

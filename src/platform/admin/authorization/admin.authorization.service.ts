@@ -27,6 +27,8 @@ import { IOrganization } from '@domain/community/organization';
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { RevokeOrganizationAuthorizationCredentialInput } from './dto/authorization.dto.credential.revoke.organization';
 import { GrantOrganizationAuthorizationCredentialInput } from './dto/authorization.dto.credential.grant.organization';
+import { CREDENTIAL_RULE_TYPES_PLATFORM_GLOBAL_ADMINS } from '@common/constants/authorization/credential.rule.types.constants';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 
 @Injectable()
 export class AdminAuthorizationService {
@@ -272,6 +274,39 @@ export class AdminAuthorizationService {
     });
 
     return organization;
+  }
+
+  public async resetAuthorizationPolicy(authorizationID: string) {
+    const authorization =
+      await this.authorizationPolicyService.getAuthorizationPolicyOrFail(
+        authorizationID
+      );
+
+    this.authorizationPolicyService.reset(authorization);
+
+    const updatedAuthorization =
+      this.extendAuthorizationPolicyWithAuthorizationReset(authorization);
+    return await this.authorizationPolicyService.save(updatedAuthorization);
+  }
+
+  public extendAuthorizationPolicyWithAuthorizationReset(
+    authorization: IAuthorizationPolicy
+  ) {
+    const globalAdminsAuthorizationReset =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.AUTHORIZATION_RESET],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_ADMIN_SPACES,
+        ],
+        CREDENTIAL_RULE_TYPES_PLATFORM_GLOBAL_ADMINS
+      );
+    globalAdminsAuthorizationReset.cascade = false;
+
+    return this.authorizationPolicyService.appendCredentialAuthorizationRules(
+      authorization,
+      [globalAdminsAuthorizationReset]
+    );
   }
 
   isGlobalAuthorizationCredential(credentialType: string): boolean {

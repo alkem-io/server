@@ -8,13 +8,14 @@ import { IStorageBucket } from './storage.bucket.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { DocumentAuthorizationService } from '../document/document.service.authorization';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
-import { AuthorizationPrivilege } from '@common/enums';
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import {
   POLICY_RULE_STORAGE_BUCKET_UPDATER_FILE_UPLOAD,
   POLICY_RULE_PLATFORM_DELETE,
   POLICY_RULE_STORAGE_BUCKET_CONTRIBUTOR_FILE_UPLOAD,
 } from '@common/constants';
 import { IDocument } from '../document';
+import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 
 @Injectable()
 export class StorageBucketAuthorizationService {
@@ -27,9 +28,26 @@ export class StorageBucketAuthorizationService {
   ) {}
 
   async applyAuthorizationPolicy(
-    storageBucket: IStorageBucket,
+    storageBucketInput: IStorageBucket,
     parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<IStorageBucket> {
+    const storageBucket =
+      await this.storageBucketService.getStorageBucketOrFail(
+        storageBucketInput.id,
+        {
+          relations: {
+            documents: {
+              tagset: true,
+            },
+          },
+        }
+      );
+    if (!storageBucket.documents) {
+      throw new RelationshipNotFoundException(
+        `Unable to load entities to reset auth for StorageBucket ${storageBucket.id} `,
+        LogContext.STORAGE_BUCKET
+      );
+    }
     // Ensure always applying from a clean state
     storageBucket.authorization = this.authorizationPolicyService.reset(
       storageBucket.authorization
@@ -45,19 +63,6 @@ export class StorageBucketAuthorizationService {
     );
 
     // Cascade down
-    const storagePropagated = await this.propagateAuthorizationToChildEntities(
-      storageBucket
-    );
-
-    return await this.storageRepository.save(storagePropagated);
-  }
-
-  private async propagateAuthorizationToChildEntities(
-    storageBucket: IStorageBucket
-  ): Promise<IStorageBucket> {
-    storageBucket.documents = await this.storageBucketService.getDocuments(
-      storageBucket
-    );
     const updatedDocuments: IDocument[] = [];
     for (const document of storageBucket.documents) {
       document.authorization = (
@@ -68,10 +73,9 @@ export class StorageBucketAuthorizationService {
       ).authorization;
       updatedDocuments.push(document);
     }
-
     storageBucket.documents = updatedDocuments;
 
-    return storageBucket;
+    return await this.storageRepository.save(storageBucket);
   }
 
   private appendPrivilegeRules(
