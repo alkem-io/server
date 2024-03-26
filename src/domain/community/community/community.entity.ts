@@ -27,9 +27,6 @@ export class Community
   extends AuthorizableEntity
   implements ICommunity, IGroupable
 {
-  @Column()
-  spaceID: string;
-
   @OneToOne(() => Communication, {
     eager: false,
     cascade: true,
@@ -103,7 +100,6 @@ export class Community
   constructor(type: SpaceType) {
     super();
     this.type = type;
-    this.spaceID = '';
     this.parentID = '';
   }
 }

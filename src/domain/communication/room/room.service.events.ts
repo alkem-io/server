@@ -170,9 +170,13 @@ export class RoomServiceEvents {
     };
     this.activityAdapter.updateSent(activityLogInput);
 
-    const { spaceID } =
+    const community =
       await this.communityResolverService.getCommunityFromUpdatesOrFail(
         room.id
+      );
+    const spaceID =
+      await this.communityResolverService.getRootSpaceFromCommunityOrFail(
+        community
       );
 
     this.contributionReporter.updateCreated(

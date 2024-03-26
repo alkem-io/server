@@ -525,7 +525,7 @@ export class ConversionService {
     const tmpCommunication =
       await this.communicationService.createCommunication(
         'temp',
-        parentCommunity.spaceID,
+        '',
         Object.values(DiscussionCategoryCommunity)
       );
     childCommunity.communication = tmpCommunication;

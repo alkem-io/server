@@ -80,7 +80,6 @@ export class CommunityService {
 
   async createCommunity(
     name: string,
-    spaceID: string,
     type: SpaceType,
     policy: ICommunityPolicyDefinition,
     applicationFormData: CreateFormInput
@@ -92,7 +91,6 @@ export class CommunityService {
       policy.lead,
       policy.admin
     );
-    community.spaceID = spaceID;
     community.applicationForm = await this.formService.createForm(
       applicationFormData
     );
@@ -105,7 +103,7 @@ export class CommunityService {
     community.communication =
       await this.communicationService.createCommunication(
         name,
-        spaceID,
+        '',
         Object.values(DiscussionCategoryCommunity)
       );
     return await this.communityRepository.save(community);
@@ -174,7 +172,7 @@ export class CommunityService {
       throw new EntityNotFoundException(
         `Unable to find group with ID: '${groupID}'`,
         LogContext.COMMUNITY,
-        { communityId: community.id, spaceId: community.spaceID }
+        { communityId: community.id, communityType: community.type }
       );
     }
     return result;
@@ -515,8 +513,8 @@ export class CommunityService {
       role,
       CommunityContributorType.USER
     );
-
     if (role === CommunityRole.MEMBER) {
+      const spaceID = await this.getSpaceID(community);
       this.addMemberToCommunication(user, community);
 
       if (agentInfo) {
@@ -530,6 +528,7 @@ export class CommunityService {
           const displayName = await this.getDisplayName(community);
           await this.communityEventsService.processCommunityNewMemberEvents(
             community,
+            spaceID,
             displayName,
             agentInfo,
             user
@@ -882,15 +881,8 @@ export class CommunityService {
 
     await this.validateApplicationFromUser(user, agent, community);
 
-    const spaceID = community.spaceID;
-    if (!spaceID)
-      throw new EntityNotInitializedException(
-        `Unable to locate containing space: ${community.id}`,
-        LogContext.COMMUNITY
-      );
     const application = await this.applicationService.createApplication(
-      applicationData,
-      spaceID
+      applicationData
     );
     community.applications?.push(application);
     await this.communityRepository.save(community);
@@ -1042,25 +1034,6 @@ export class CommunityService {
         );
       }
     }
-  }
-
-  async getCommunityInAccountOrFail(
-    communityID: string,
-    accountID: string
-  ): Promise<ICommunity> {
-    const community = await this.communityRepository.findOneBy({
-      id: communityID,
-      spaceID: accountID,
-    });
-
-    if (!community) {
-      throw new EntityNotFoundException(
-        `Unable to find Community with ID: ${communityID}`,
-        LogContext.COMMUNITY
-      );
-    }
-
-    return community;
   }
 
   async getApplications(community: ICommunity): Promise<IApplication[]> {

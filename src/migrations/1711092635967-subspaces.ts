@@ -24,6 +24,14 @@ export class subspaces1711092635967 implements MigrationInterface {
     );
     await queryRunner.query(`ALTER TABLE \`user_group\` DROP COLUMN \`name\``); // TODO: check user group data on production. This might need to be a migration script as well as a schema change
 
+    // User group had some legacy fields that are no longer needed
+    await queryRunner.query(
+      `ALTER TABLE \`community\` DROP COLUMN \`spaceID\``
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`application\` DROP COLUMN \`spaceID\``
+    );
+
     const accounts: {
       id: string;
       spaceId2: string;
