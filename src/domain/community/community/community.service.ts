@@ -762,6 +762,12 @@ export class CommunityService {
       );
   }
 
+  public async getSpaceID(community: ICommunity): Promise<string> {
+    return await this.communityResolverService.getRootSpaceFromCommunityOrFail(
+      community
+    );
+  }
+
   private async assignContributorToRole(
     community: ICommunity,
     agent: IAgent,
