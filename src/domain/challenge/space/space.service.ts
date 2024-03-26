@@ -65,14 +65,13 @@ export class SpaceService {
     const space: ISpace = Space.create(spaceData);
     space.type = SpaceType.SPACE;
 
-    await this.baseChallengeService.initialise(
+    return await this.baseChallengeService.initialise(
       space,
+      this.spaceRepository,
       spaceData,
       account,
       agentInfo
     );
-
-    return await this.save(space);
   }
 
   async validateSpaceData(spaceData: CreateSpaceInput) {

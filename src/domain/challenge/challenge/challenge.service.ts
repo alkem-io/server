@@ -60,14 +60,13 @@ export class ChallengeService {
 
     challenge.opportunities = [];
 
-    await this.baseChallengeService.initialise(
+    return await this.baseChallengeService.initialise(
       challenge,
+      this.challengeRepository,
       challengeData,
       account,
       agentInfo
     );
-
-    return await this.save(challenge);
   }
 
   async save(challenge: IChallenge): Promise<IChallenge> {

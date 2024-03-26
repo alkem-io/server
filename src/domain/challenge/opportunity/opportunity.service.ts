@@ -39,14 +39,13 @@ export class OpportunityService {
     const opportunity: IOpportunity = Opportunity.create(opportunityData);
     opportunity.type = SpaceType.OPPORTUNITY;
 
-    await this.baseChallengeService.initialise(
+    return await this.baseChallengeService.initialise(
       opportunity,
+      this.opportunityRepository,
       opportunityData,
       account,
       agentInfo
     );
-
-    return await this.saveOpportunity(opportunity);
   }
 
   async save(opportunity: IOpportunity): Promise<IOpportunity> {

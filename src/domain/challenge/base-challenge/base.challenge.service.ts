@@ -57,10 +57,11 @@ export class BaseChallengeService {
 
   public async initialise(
     baseChallenge: IBaseChallenge,
+    repository: Repository<BaseChallenge>,
     baseChallengeData: CreateBaseChallengeInput,
     account: IAccount,
     agentInfo: AgentInfo | undefined
-  ) {
+  ): Promise<IBaseChallenge> {
     baseChallenge.authorization = new AuthorizationPolicy();
     baseChallenge.account = account;
     baseChallenge.settingsStr = this.spaceSettingsService.serializeSettings(
@@ -206,6 +207,7 @@ export class BaseChallengeService {
         CommunityRole.ADMIN
       );
     }
+    return await this.save(baseChallenge, repository);
   }
 
   public async update(
