@@ -97,6 +97,7 @@ export class ConversionService {
       profileData: {
         displayName: challenge.profile.displayName,
       },
+      level: 0,
     };
     const emptySpace = await this.spaceService.createSpace(
       createSpaceInput,
@@ -285,6 +286,7 @@ export class ConversionService {
         displayName: opportunity.profile.displayName,
       },
       storageAggregatorParent: spaceStorageAggregator,
+      level: 1,
     };
     const emptyChallenge = await this.challengeService.createChallenge(
       challengeData,

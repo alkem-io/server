@@ -10,6 +10,13 @@ export class subspaces1711092635967 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE \`account\` ADD \`spaceId\` char(36) NULL`
     );
+    await queryRunner.query(
+      `ALTER TABLE \`opportunity\` ADD \`level\` int NOT NULL`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`challenge\` ADD \`level\` int NOT NULL`
+    );
+    await queryRunner.query(`ALTER TABLE \`space\` ADD \`level\` int NOT NULL`);
 
     const accounts: {
       id: string;

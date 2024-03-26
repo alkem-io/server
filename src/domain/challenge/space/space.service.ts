@@ -62,7 +62,6 @@ export class SpaceService {
     account: IAccount,
     agentInfo?: AgentInfo
   ): Promise<ISpace> {
-    await this.validateSpaceData(spaceData);
     const space: ISpace = Space.create(spaceData);
     space.type = SpaceType.SPACE;
 
@@ -742,7 +741,7 @@ export class SpaceService {
 
     // Update the challenge data being passed in to set the storage aggregator to use
     challengeData.storageAggregatorParent = space.storageAggregator;
-    challengeData.spaceID = space.id;
+    challengeData.level = space.level + 1;
     const newChallenge = await this.challengeService.createChallenge(
       challengeData,
       space.account,

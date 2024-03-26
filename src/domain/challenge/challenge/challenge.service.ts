@@ -339,6 +339,7 @@ export class ChallengeService {
     );
 
     opportunityData.storageAggregatorParent = challenge.storageAggregator;
+    opportunityData.level = challenge.level + 1;
     const opportunity = await this.opportunityService.createOpportunity(
       opportunityData,
       account,

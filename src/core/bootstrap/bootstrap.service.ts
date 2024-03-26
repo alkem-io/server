@@ -283,6 +283,7 @@ export class BootstrapService {
         accountData: {
           hostID: DEFAULT_HOST_ORG_NAMEID,
         },
+        level: 0,
       };
       const account = await this.accountService.createAccount(spaceInput);
       return await this.accountAuthorizationService.applyAuthorizationPolicy(

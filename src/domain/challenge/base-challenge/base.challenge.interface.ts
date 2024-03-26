@@ -16,6 +16,12 @@ export abstract class IBaseChallenge extends INameable {
   })
   account!: IAccount;
 
+  @Field(() => Number, {
+    description:
+      'The level of this Space, representing the number of Spaces above this one.',
+  })
+  level!: number;
+
   rowId!: number;
   agent?: IAgent;
 

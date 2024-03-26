@@ -25,6 +25,7 @@ import { AgentInfo } from '@core/authentication/agent-info';
 import { CreateSpaceInput } from '../space/dto/space.dto.create';
 import { ISpace } from '../space/space.interface';
 import { UpdateAccountPlatformSettingsInput } from './dto/account.dto.update.platform.settings';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 
 @Injectable()
 export class AccountService {
@@ -44,12 +45,17 @@ export class AccountService {
     spaceData: CreateSpaceInput,
     agentInfo?: AgentInfo
   ): Promise<IAccount> {
+    // Before doing any creation check the space data!
+    await this.spaceService.validateSpaceData(spaceData);
+
     const account: IAccount = new Account();
+    account.authorization = new AuthorizationPolicy();
     account.library = await this.templatesSetService.createTemplatesSet();
     account.defaults = await this.spaceDefaultsService.createSpaceDefaults();
     account.license = await this.licenseService.createLicense();
     await this.save(account);
 
+    spaceData.level = 0;
     account.space = await this.spaceService.createSpace(
       spaceData,
       account,

@@ -26,4 +26,6 @@ export class CreateBaseChallengeInput extends CreateNameableInput {
 
   // For passing on the hierarchy of storage aggregators
   storageAggregatorParent?: IStorageAggregator;
+
+  level!: number;
 }

@@ -70,6 +70,9 @@ export class BaseChallenge extends NameableEntity implements IBaseChallenge {
   })
   type!: SpaceType;
 
+  @Column('int', { nullable: false })
+  level!: number;
+
   constructor() {
     super();
     this.nameID = '';
