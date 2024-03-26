@@ -272,28 +272,30 @@ export class BaseChallengeAuthorizationService {
       );
 
     // Allow member of the parent community to Apply
-    const membershipSettings = policy.settings.membership;
-    switch (membershipSettings.policy) {
-      case CommunityMembershipPolicy.APPLICATIONS:
-        const spaceMemberCanApply =
-          this.authorizationPolicyService.createCredentialRule(
-            [AuthorizationPrivilege.COMMUNITY_APPLY],
-            [parentCommunityCredential],
-            CREDENTIAL_RULE_CHALLENGE_SPACE_MEMBER_APPLY
-          );
-        spaceMemberCanApply.cascade = false;
-        newRules.push(spaceMemberCanApply);
-        break;
-      case CommunityMembershipPolicy.OPEN:
-        const spaceMemberCanJoin =
-          this.authorizationPolicyService.createCredentialRule(
-            [AuthorizationPrivilege.COMMUNITY_JOIN],
-            [parentCommunityCredential],
-            CREDENTIAL_RULE_CHALLENGE_SPACE_MEMBER_JOIN
-          );
-        spaceMemberCanJoin.cascade = false;
-        newRules.push(spaceMemberCanJoin);
-        break;
+    if (parentCommunityCredential) {
+      const membershipSettings = policy.settings.membership;
+      switch (membershipSettings.policy) {
+        case CommunityMembershipPolicy.APPLICATIONS:
+          const spaceMemberCanApply =
+            this.authorizationPolicyService.createCredentialRule(
+              [AuthorizationPrivilege.COMMUNITY_APPLY],
+              [parentCommunityCredential],
+              CREDENTIAL_RULE_CHALLENGE_SPACE_MEMBER_APPLY
+            );
+          spaceMemberCanApply.cascade = false;
+          newRules.push(spaceMemberCanApply);
+          break;
+        case CommunityMembershipPolicy.OPEN:
+          const spaceMemberCanJoin =
+            this.authorizationPolicyService.createCredentialRule(
+              [AuthorizationPrivilege.COMMUNITY_JOIN],
+              [parentCommunityCredential],
+              CREDENTIAL_RULE_CHALLENGE_SPACE_MEMBER_JOIN
+            );
+          spaceMemberCanJoin.cascade = false;
+          newRules.push(spaceMemberCanJoin);
+          break;
+      }
     }
 
     const adminCredentials =
@@ -450,12 +452,12 @@ export class BaseChallengeAuthorizationService {
       collaborationSettings.inheritMembershipRights &&
       policy.settings.privacy.mode === SpacePrivacyMode.PUBLIC
     ) {
-      criteria.push(
+      const parentCredential =
         this.communityPolicyService.getDirectParentCredentialForRole(
           policy,
           CommunityRole.MEMBER
-        )
-      );
+        );
+      if (parentCredential) criteria.push(parentCredential);
     }
     return criteria;
   }

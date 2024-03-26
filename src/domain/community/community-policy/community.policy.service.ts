@@ -62,10 +62,13 @@ export class CommunityPolicyService {
   getDirectParentCredentialForRole(
     policy: ICommunityPolicy,
     role: CommunityRole
-  ): ICredentialDefinition {
+  ): ICredentialDefinition | undefined {
     const rolePolicy = this.getCommunityRolePolicy(policy, role);
 
     // First entry is the immediate parent
+    if (rolePolicy.parentCredentials.length === 0) {
+      return undefined;
+    }
     const parentCommunityCredential = rolePolicy.parentCredentials[0];
     return parentCommunityCredential;
   }
