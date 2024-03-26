@@ -14,6 +14,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { EntityManager } from 'typeorm';
 import { Cache, CachingConfig } from 'cache-manager';
 import { Space } from '@domain/challenge/space/space.entity';
+import { Callout } from '@domain/collaboration/callout/callout.entity';
 
 @Injectable()
 export class UrlGeneratorService {
@@ -578,10 +579,16 @@ export class UrlGeneratorService {
       calloutId: string;
     }[] = await this.entityManager.connection.query(
       `
-        SELECT callout_contribution.id as contributionId, callout_contribution.calloutId as calloutId FROM callout_contribution
+        SELECT callout_contribution.id, callout_contribution.calloutId as calloutId FROM callout_contribution
         WHERE callout_contribution.postId = '${result.postId}'
       `
     );
+    if (!contributionResult) {
+      throw new EntityNotFoundException(
+        `Unable to contribution for post where postID: ${result.postId}`,
+        LogContext.URL_GENERATOR
+      );
+    }
 
     const calloutUrlPath = await this.getCalloutUrlPath(
       contributionResult.calloutId
@@ -590,56 +597,52 @@ export class UrlGeneratorService {
   }
 
   private async getWhiteboardUrlPath(profileID: string): Promise<string> {
-    const [result]: {
-      whiteboardId: string;
-      whiteboardNameId: string;
+    const [whiteboard]: {
+      id: string;
+      nameID: string;
     }[] = await this.entityManager.connection.query(
       `
-          SELECT whiteboard.id as whiteboardId, whiteboard.nameID as whiteboardNameId FROM whiteboard
+          SELECT whiteboard.id, whiteboard.nameID FROM whiteboard
           WHERE whiteboard.profileId = '${profileID}'
         `
     );
 
-    if (!result) {
+    if (!whiteboard) {
       throw new EntityNotFoundException(
         `Unable to find whiteboard where profile: ${profileID}`,
         LogContext.URL_GENERATOR
       );
     }
 
-    let calloutId = '';
-    const [contributionResult]: {
-      calloutId: string;
-    }[] = await this.entityManager.connection.query(
-      `
-          SELECT callout_contribution.id as contributionId, callout_contribution.calloutId as calloutId FROM callout_contribution
-          WHERE callout_contribution.whiteboardId = '${result.whiteboardId}'
-        `
-    );
-
-    if (!contributionResult) {
-      const [whiteboardFromFramingResult]: {
-        calloutId: string;
-      }[] = await this.entityManager.connection.query(
-        `SELECT c.id AS calloutId
-          FROM callout AS c JOIN callout_framing AS cf ON cf.id = c.framingId
-          WHERE cf.whiteboardId = '${result.whiteboardId}'`
-      );
-
-      calloutId = whiteboardFromFramingResult.calloutId;
-
-      if (!whiteboardFromFramingResult) {
-        throw new EntityNotFoundException(
-          `Unable to find callout where whiteboardId: ${result.whiteboardId}`,
-          LogContext.URL_GENERATOR
-        );
-      }
-    } else {
-      calloutId = contributionResult.calloutId;
+    let callout = await this.entityManager.findOne(Callout, {
+      where: {
+        framing: {
+          whiteboard: {
+            id: whiteboard.id,
+          },
+        },
+      },
+    });
+    if (!callout) {
+      callout = await this.entityManager.findOne(Callout, {
+        where: {
+          contributions: {
+            whiteboard: {
+              id: whiteboard.id,
+            },
+          },
+        },
+      });
+    }
+    if (callout) {
+      const calloutUrlPath = await this.getCalloutUrlPath(callout.id);
+      return `${calloutUrlPath}/${this.PATH_WHITEBOARDS}/${whiteboard.nameID}`;
     }
 
-    const calloutUrlPath = await this.getCalloutUrlPath(calloutId);
-    return `${calloutUrlPath}/${this.PATH_WHITEBOARDS}/${result.whiteboardNameId}`;
+    throw new EntityNotFoundException(
+      `Unable to find callout where whiteboardId: ${whiteboard.id}`,
+      LogContext.URL_GENERATOR
+    );
   }
 
   private async getInnovationPackUrlPath(profileID: string): Promise<string> {
