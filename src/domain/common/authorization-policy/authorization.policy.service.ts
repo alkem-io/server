@@ -288,7 +288,9 @@ export class AuthorizationPolicyService {
     let child = childAuthorization;
     if (!child) {
       this.logger.error(
-        `Encountered undefined child authorization policy, parent authorization: ${parentAuthorization}`,
+        `Encountered undefined child authorization policy, parent authorization: ${JSON.stringify(
+          parentAuthorization
+        )}`,
         LogContext.AUTH
       );
       child = new AuthorizationPolicy();

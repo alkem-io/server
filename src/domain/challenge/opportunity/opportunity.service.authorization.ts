@@ -88,6 +88,7 @@ export class OpportunityAuthorizationService {
         communityPolicy
       );
     opportunity.authorization = baseAuthorization;
+    await this.opportunityService.save(opportunity);
 
     // propagate authorization rules for child entities
     return await this.baseChallengeAuthorizationService.propagateAuthorizationToChildEntities(

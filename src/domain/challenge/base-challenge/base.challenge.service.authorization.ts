@@ -73,11 +73,13 @@ export class BaseChallengeAuthorizationService {
             account: {
               license: true,
             },
+            agent: true,
+            collaboration: true,
             community: {
               policy: true,
             },
-            collaboration: true,
-            agent: true,
+            context: true,
+            profile: true,
             storageAggregator: true,
           },
         }
@@ -85,13 +87,12 @@ export class BaseChallengeAuthorizationService {
     if (
       !challengeBase.account ||
       !challengeBase.account.license ||
+      !challengeBase.agent ||
+      !challengeBase.collaboration ||
       !challengeBase.community ||
       !challengeBase.community.policy ||
       !challengeBase.context ||
       !challengeBase.profile ||
-      !challengeBase.community ||
-      !challengeBase.collaboration ||
-      !challengeBase.agent ||
       !challengeBase.storageAggregator
     ) {
       throw new RelationshipNotFoundException(
@@ -99,7 +100,7 @@ export class BaseChallengeAuthorizationService {
         LogContext.CHALLENGES
       );
     }
-    const communityPolicy = challengeBase.community.policy;
+    const communityPolicy = this.getCommunityPolicyWithSettings(challengeBase);
 
     // Clone the authorization policy
     const clonedAuthorization =

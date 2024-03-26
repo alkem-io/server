@@ -79,6 +79,7 @@ export class SpaceAuthorizationService {
     }
 
     space.authorization = inheritedAuthorization;
+    await this.spaceService.save(space);
 
     // Cascade down
     // propagate authorization rules for child entities

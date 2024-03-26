@@ -89,6 +89,7 @@ export class ChallengeAuthorizationService {
         communityPolicy
       );
     challenge.authorization = baseAuthorization;
+    await this.challengeService.save(challenge);
 
     // propagate authorization rules for child entities
     const challengePropagated =
