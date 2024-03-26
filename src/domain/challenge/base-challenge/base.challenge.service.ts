@@ -93,7 +93,7 @@ export class BaseChallengeService {
 
     baseChallenge.community = await this.communityService.createCommunity(
       baseChallengeData.profileData.displayName,
-      account.id,
+      account.id, // TODOTODO - this needs to be fixed.
       baseChallenge.type,
       communityPolicy,
       applicationFormData

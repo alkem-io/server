@@ -33,7 +33,7 @@ export class UserGroupResolverMutations {
       agentInfo,
       group.authorization,
       AuthorizationPrivilege.DELETE,
-      `user group delete: ${group.name}`
+      `user group delete: ${group.id}`
     );
     return await this.groupService.removeUserGroup(deleteData);
   }
@@ -52,7 +52,7 @@ export class UserGroupResolverMutations {
       agentInfo,
       group.authorization,
       AuthorizationPrivilege.UPDATE,
-      `user group update: ${group.name}`
+      `user group update: ${group.id}`
     );
     return await this.groupService.updateUserGroup(userGroupData);
   }
@@ -73,7 +73,7 @@ export class UserGroupResolverMutations {
       agentInfo,
       group.authorization,
       AuthorizationPrivilege.GRANT,
-      `Assign user to group: ${group.name}`
+      `Assign user to group: ${group.id}`
     );
     return await this.groupService.assignUser(membershipData);
   }
@@ -94,7 +94,7 @@ export class UserGroupResolverMutations {
       agentInfo,
       group.authorization,
       AuthorizationPrivilege.DELETE,
-      `user group remove user: ${group.name}`
+      `user group remove user: ${group.id}`
     );
     return await this.groupService.removeUser(membershipData);
   }

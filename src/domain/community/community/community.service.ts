@@ -113,7 +113,7 @@ export class CommunityService {
 
   async createGroup(groupData: CreateUserGroupInput): Promise<IUserGroup> {
     const communityID = groupData.parentID;
-    const groupName = groupData.profileData.displayName;
+    const groupName = groupData.profile.displayName;
 
     this.logger.verbose?.(
       `Adding userGroup (${groupName}) to Community (${communityID})`,
@@ -132,8 +132,7 @@ export class CommunityService {
     const group = await this.userGroupService.addGroupWithName(
       community,
       groupName,
-      storageAggregator,
-      community.spaceID
+      storageAggregator
     );
     await this.communityRepository.save(community);
 
@@ -863,13 +862,6 @@ export class CommunityService {
       }
     );
     return validCredential;
-  }
-
-  async getCommunities(spaceId: string): Promise<Community[]> {
-    const communites = await this.communityRepository.find({
-      where: { spaceID: spaceId },
-    });
-    return communites || [];
   }
 
   async createApplication(

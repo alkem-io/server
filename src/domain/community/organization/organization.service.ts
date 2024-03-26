@@ -511,7 +511,7 @@ export class OrganizationService {
 
   async createGroup(groupData: CreateUserGroupInput): Promise<IUserGroup> {
     const orgID = groupData.parentID;
-    const groupName = groupData.profileData.displayName;
+    const groupName = groupData.profile.displayName;
     // First find the Challenge
     this.logger.verbose?.(
       `Adding userGroup (${groupName}) to organization (${orgID})`
