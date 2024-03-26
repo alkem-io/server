@@ -62,8 +62,8 @@ export class SpaceService {
     account: IAccount,
     agentInfo?: AgentInfo
   ): Promise<ISpace> {
+    spaceData.type = SpaceType.SPACE;
     const space: ISpace = Space.create(spaceData);
-    space.type = SpaceType.SPACE;
 
     return await this.baseChallengeService.initialise(
       space,

@@ -5,6 +5,7 @@ import { Type } from 'class-transformer';
 import { CreateNameableInput } from '@domain/common/entity/nameable-entity/dto/nameable.dto.create';
 import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { SpaceType } from '@common/enums/space.type';
 
 @InputType()
 export class CreateBaseChallengeInput extends CreateNameableInput {
@@ -28,4 +29,6 @@ export class CreateBaseChallengeInput extends CreateNameableInput {
   storageAggregatorParent?: IStorageAggregator;
 
   level!: number;
+
+  type!: SpaceType;
 }

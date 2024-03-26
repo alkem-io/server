@@ -36,8 +36,8 @@ export class OpportunityService {
     account: IAccount,
     agentInfo?: AgentInfo
   ): Promise<IOpportunity> {
+    opportunityData.type = SpaceType.OPPORTUNITY;
     const opportunity: IOpportunity = Opportunity.create(opportunityData);
-    opportunity.type = SpaceType.OPPORTUNITY;
 
     return await this.baseChallengeService.initialise(
       opportunity,

@@ -55,8 +55,8 @@ export class ChallengeService {
     account: IAccount,
     agentInfo?: AgentInfo
   ): Promise<IChallenge> {
+    challengeData.type = SpaceType.CHALLENGE;
     const challenge: IChallenge = Challenge.create(challengeData);
-    challenge.type = SpaceType.CHALLENGE;
 
     challenge.opportunities = [];
 
