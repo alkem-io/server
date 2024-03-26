@@ -108,6 +108,7 @@ export class CommunityResolverMutations {
     const community = await this.communityService.getCommunityOrFail(
       roleData.communityID
     );
+    const spaceID = await this.communityService.getSpaceID(community);
 
     let requiredPrivilege = AuthorizationPrivilege.GRANT;
     if (roleData.role === CommunityRole.MEMBER) {
@@ -121,6 +122,7 @@ export class CommunityResolverMutations {
       `assign user community role: ${community.id}`
     );
     await this.communityService.assignUserToRole(
+      spaceID,
       community,
       roleData.userID,
       roleData.role,
@@ -407,6 +409,7 @@ export class CommunityResolverMutations {
     const community = await this.communityService.getCommunityOrFail(
       joiningData.communityID
     );
+    const spaceID = await this.communityService.getSpaceID(community);
 
     const membershipStatus = await this.communityService.getMembershipStatus(
       agentInfo,
@@ -427,6 +430,7 @@ export class CommunityResolverMutations {
     );
 
     await this.communityService.assignUserToRole(
+      spaceID,
       community,
       agentInfo.userID,
       CommunityRole.MEMBER,

@@ -489,6 +489,7 @@ export class CommunityService {
   }
 
   async assignUserToRole(
+    spaceID: string, // TODO: temporary until have spaces merged
     community: ICommunity,
     userID: string,
     role: CommunityRole,
@@ -514,7 +515,6 @@ export class CommunityService {
       CommunityContributorType.USER
     );
     if (role === CommunityRole.MEMBER) {
-      const spaceID = await this.getSpaceID(community);
       this.addMemberToCommunication(user, community);
 
       if (agentInfo) {

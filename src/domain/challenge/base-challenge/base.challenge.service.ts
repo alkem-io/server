@@ -99,12 +99,11 @@ export class BaseChallengeService {
     );
 
     if (!baseChallengeData.context) {
-      baseChallenge.context = await this.contextService.createContext({});
-    } else {
-      baseChallenge.context = await this.contextService.createContext(
-        baseChallengeData.context
-      );
+      baseChallengeData.context = {};
     }
+    baseChallenge.context = await this.contextService.createContext(
+      baseChallengeData.context
+    );
 
     const profileType = this.spaceDefaultsService.getProfileType(
       baseChallenge.type
@@ -179,6 +178,8 @@ export class BaseChallengeService {
       parentDisplayID: `${baseChallenge.nameID}`,
     });
 
+    await this.save(baseChallenge, repository);
+
     ////// Community
     // set immediate community parent + resourceID
     baseChallenge.community.parentID = baseChallenge.id;
@@ -187,26 +188,43 @@ export class BaseChallengeService {
         baseChallenge.community,
         baseChallenge.id
       );
+
+    const savedBaseChallenge = await this.save(baseChallenge, repository);
+    await this.assignUserToRoles(savedBaseChallenge, agentInfo);
+    return savedBaseChallenge;
+  }
+
+  private async assignUserToRoles(
+    baseChallenge: IBaseChallenge,
+    agentInfo: AgentInfo | undefined
+  ) {
+    // TODO: Hack to deal with initialization issues
+    let spaceID = baseChallenge.id;
+    if (baseChallenge.community && baseChallenge.community.type !== 'space') {
+      spaceID = await this.communityService.getSpaceID(baseChallenge.community);
+    }
     if (agentInfo && baseChallenge.community) {
       await this.communityService.assignUserToRole(
+        spaceID,
         baseChallenge.community,
         agentInfo.userID,
         CommunityRole.MEMBER
       );
 
       await this.communityService.assignUserToRole(
+        spaceID,
         baseChallenge.community,
         agentInfo.userID,
         CommunityRole.LEAD
       );
 
       await this.communityService.assignUserToRole(
+        spaceID,
         baseChallenge.community,
         agentInfo.userID,
         CommunityRole.ADMIN
       );
     }
-    return await this.save(baseChallenge, repository);
   }
 
   public async update(
