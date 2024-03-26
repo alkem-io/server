@@ -25,6 +25,7 @@ import { ICallout } from '@domain/collaboration/callout';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { CalloutGroupName } from '@common/enums/callout.group.name';
 import { CreateChallengeInput } from '@domain/challenge';
+import { SpaceType } from '@common/enums/space.type';
 
 export class ConversionService {
   constructor(
@@ -98,6 +99,7 @@ export class ConversionService {
         displayName: challenge.profile.displayName,
       },
       level: 0,
+      type: SpaceType.SPACE,
     };
     const emptySpace = await this.spaceService.createSpace(
       createSpaceInput,
@@ -287,6 +289,7 @@ export class ConversionService {
       },
       storageAggregatorParent: spaceStorageAggregator,
       level: 1,
+      type: SpaceType.CHALLENGE,
     };
     const emptyChallenge = await this.challengeService.createChallenge(
       challengeData,

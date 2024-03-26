@@ -29,6 +29,7 @@ import { NameReporterService } from '@services/external/elasticsearch/name-repor
 import { AccountService } from '@domain/challenge/account/account.service';
 import { AccountAuthorizationService } from '@domain/challenge/account/account.service.authorization';
 import { Account } from '@domain/challenge/account/account.entity';
+import { SpaceType } from '@common/enums/space.type';
 
 @Injectable()
 export class BootstrapService {
@@ -284,6 +285,7 @@ export class BootstrapService {
           hostID: DEFAULT_HOST_ORG_NAMEID,
         },
         level: 0,
+        type: SpaceType.SPACE,
       };
       const account = await this.accountService.createAccount(spaceInput);
       return await this.accountAuthorizationService.applyAuthorizationPolicy(
