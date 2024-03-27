@@ -1,6 +1,10 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 import { randomUUID } from 'crypto';
 
+const localhostDocumentUriPrefix =
+  'http://localhost:3000/api/private/rest/storage/document';
+const productionDocumentUriPrefix =
+  'https://alkem.io/api/private/rest/storage/document';
 export class AddMissingStorageBuckets1711017129997
   implements MigrationInterface
 {
@@ -46,19 +50,37 @@ export class AddMissingStorageBuckets1711017129997
       );
       // We are not sure if someone has pasted an alkemio url of a document or directly uploaded on this link. Commenting out until we are sure.
       // Update document storageBucketId
-      // const [link] = await queryRunner.query(
-      //   `SELECT id, uri FROM link WHERE profileId = '${linkProfile.id}'`
-      // );
-      // const isAlkemioDocumentUri = this.isAlkemioDocumentUri(link.uri);
-      // if (isAlkemioDocumentUri) {
-      //   const documentId = this.getDocumentId(link.uri);
-      //   console.log(
-      //     `Updating document storageBucketId for document with id: ${documentId}`
-      //   );
-      //   await queryRunner.query(
-      //     `UPDATE document SET storageBucketId = '${storageBucketID}' WHERE id = '${documentId}'`
-      //   );
-      // }
+      const [link] = await queryRunner.query(
+        `SELECT id, uri FROM link WHERE profileId = '${linkProfile.id}'`
+      );
+      const isAlkemioDocumentUri = this.isAlkemioDocumentUri(link.uri);
+      if (isAlkemioDocumentUri) {
+        const links: {
+          id: string;
+          uri: string;
+          createdDate: string;
+        }[] = await queryRunner.query(
+          `SELECT id, uri, createdDate FROM link WHERE uri = '${link.uri}'`
+        );
+        if (links.length > 1) {
+          const dates = links.map(link => new Date(link.createdDate));
+          const oldestDate = Math.min(...dates.map(date => date.getTime()));
+          const oldestLink = links.find(
+            link => new Date(link.createdDate).getTime() === oldestDate
+          );
+          console.log(
+            `Multiple links with same uri found. Skipping storage bucket update. Oldest link id: ${oldestLink?.id}`
+          );
+          continue;
+        }
+        const documentId = this.getDocumentId(link.uri);
+        console.log(
+          `Updating document storageBucketId for document with id: ${documentId}`
+        );
+        await queryRunner.query(
+          `UPDATE document SET storageBucketId = '${storageBucketID}' WHERE id = '${documentId}'`
+        );
+      }
     }
 
     const spaces: {
@@ -165,8 +187,8 @@ export class AddMissingStorageBuckets1711017129997
   private isAlkemioDocumentUri(uri: string) {
     const lastSlashIndex = uri.lastIndexOf('/');
     const prefix = uri.slice(0, lastSlashIndex);
-    // for localhost use: 'https://alkem.io/api/private/rest/storage/document'
-    if (prefix === 'https://alkem.io/api/private/rest/storage/document') {
+    // we can maybe use condition: if (prefix === productionDocumentUriPrefix || prefix === localhostDocumentUriPrefix)
+    if (prefix === productionDocumentUriPrefix) {
       return true;
     }
     return false;
