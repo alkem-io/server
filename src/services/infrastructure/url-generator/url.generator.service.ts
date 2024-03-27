@@ -14,11 +14,12 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { EntityManager } from 'typeorm';
 import { Cache, CachingConfig } from 'cache-manager';
 import { Space } from '@domain/challenge/space/space.entity';
+import { Callout } from '@domain/collaboration/callout/callout.entity';
 
 @Injectable()
 export class UrlGeneratorService {
   cacheOptions: CachingConfig = {
-    ttl: 300000, // milliseconds
+    ttl: 1, // milliseconds
   };
 
   PATH_USER = 'user';
@@ -190,7 +191,7 @@ export class UrlGeneratorService {
         );
         return `${this.endpoint_cluster}/${this.PATH_ORGANIZATION}/${organizationEntityInfo.entityNameID}`;
       case ProfileType.CALLOUT_FRAMING:
-        return await this.getCalloutUrlPath(this.FIELD_PROFILE_ID, profile.id);
+        return await this.getCalloutFramingUrlPathOrFail(profile.id);
       case ProfileType.POST:
         return await this.getPostUrlPath(profile.id);
       case ProfileType.WHITEBOARD:
@@ -303,12 +304,8 @@ export class UrlGeneratorService {
     entityTableName: string,
     profileID: string
   ): Promise<string> {
-    const ignoreTemplatesOnCallout = true;
     const templateInfo = await this.getTemplateInfo(entityTableName, profileID);
     if (!templateInfo || !templateInfo.templatesSetID) {
-      if (ignoreTemplatesOnCallout) {
-        return 'https://not.used.with.new.callouts';
-      }
       throw new EntityNotFoundException(
         `Unable to find templatesSet for ${entityTableName} using profile: ${profileID}`,
         LogContext.URL_GENERATOR
@@ -327,7 +324,8 @@ export class UrlGeneratorService {
     });
 
     if (space) {
-      return this.generateUrlForSpace(space.nameID);
+      // TODO: this later should link fully to the actual template by nameID when the client properly picks that up
+      return `${this.endpoint_cluster}/admin/spaces/${space.nameID}/templates`;
     }
     const innovationPackInfo = await this.getNameableEntityInfoOrFail(
       'innovation_pack',
@@ -454,31 +452,72 @@ export class UrlGeneratorService {
     );
   }
 
-  private async getCalloutUrlPath(
-    fieldName: string,
-    fieldID: string
+  private async getCalloutFramingUrlPathOrFail(
+    profileID: string
   ): Promise<string> {
-    const query =
-      fieldName === 'profileId' || fieldName === 'whiteboardId'
-        ? `
-    SELECT c.id AS calloutId, c.nameID AS calloutNameId, c.collaborationId AS collaborationId
-    FROM callout AS c JOIN callout_framing AS cf ON cf.id = c.framingId
-    WHERE cf.${fieldName} = '${fieldID}'
-  `
-        : `SELECT c.id AS calloutId, c.nameID AS calloutNameId, c.collaborationId AS collaborationId
-  FROM callout AS c JOIN callout_framing AS cf ON cf.id = c.framingId
-  WHERE c.${fieldName} = '${fieldID}'
-`;
+    // Framing is used in both Callout and CalloutTemplate entities
+    const [calloutFraming]: {
+      id: string;
+    }[] = await this.entityManager.connection.query(
+      `
+        SELECT callout_framing.id FROM callout_framing
+        WHERE callout_framing.profileId = '${profileID}'
+      `
+    );
+    if (!calloutFraming) {
+      throw new EntityNotFoundException(
+        `Unable to find CalloutFraming with profile ID: ${profileID}`,
+        LogContext.URL_GENERATOR
+      );
+    }
 
+    const [callout]: {
+      id: string;
+      nameID: string;
+    }[] = await this.entityManager.connection.query(
+      `
+        SELECT callout.id, callout.nameID FROM callout
+        WHERE callout.framingId = '${calloutFraming.id}'
+      `
+    );
+    if (callout) {
+      return await this.getCalloutUrlPath(callout.id);
+    }
+
+    const [calloutTemplate]: {
+      id: string;
+      profileId: string;
+    }[] = await this.entityManager.connection.query(
+      `
+        SELECT callout_template.id, callout_template.profileId FROM callout_template
+        WHERE callout_template.framingId = '${calloutFraming.id}'
+      `
+    );
+    if (calloutTemplate) {
+      return await this.getTemplateUrlPathOrFail(
+        'callout_template',
+        calloutTemplate.profileId
+      );
+    }
+
+    throw new EntityNotFoundException(
+      `Unable to find path for CalloutFraming with ID: ${calloutFraming.id}`,
+      LogContext.URL_GENERATOR
+    );
+  }
+
+  private async getCalloutUrlPath(calloutID: string): Promise<string> {
     const [result]: {
       calloutId: string;
       calloutNameId: string;
       collaborationId: string;
-    }[] = await this.entityManager.connection.query(query);
+    }[] = await this.entityManager.connection
+      .query(`SELECT callout.id AS calloutId, callout.nameID AS calloutNameId, callout.collaborationId AS collaborationId
+      FROM callout WHERE callout.id = '${calloutID}'`);
 
     if (!result) {
       throw new EntityNotFoundException(
-        `Unable to find callout where ${fieldName}: ${fieldID}`,
+        `Unable to find callout where id: ${calloutID}`,
         LogContext.URL_GENERATOR
       );
     }
@@ -540,72 +579,70 @@ export class UrlGeneratorService {
       calloutId: string;
     }[] = await this.entityManager.connection.query(
       `
-        SELECT callout_contribution.id as contributionId, callout_contribution.calloutId as calloutId FROM callout_contribution
+        SELECT callout_contribution.calloutId as calloutId FROM callout_contribution
         WHERE callout_contribution.postId = '${result.postId}'
       `
     );
+    if (!contributionResult) {
+      throw new EntityNotFoundException(
+        `Unable to contribution for post where postID: ${result.postId}`,
+        LogContext.URL_GENERATOR
+      );
+    }
 
     const calloutUrlPath = await this.getCalloutUrlPath(
-      this.FIELD_ID,
       contributionResult.calloutId
     );
     return `${calloutUrlPath}/${this.PATH_POSTS}/${result.postNameId}`;
   }
 
   private async getWhiteboardUrlPath(profileID: string): Promise<string> {
-    const [result]: {
-      whiteboardId: string;
-      whiteboardNameId: string;
+    const [whiteboard]: {
+      id: string;
+      nameID: string;
     }[] = await this.entityManager.connection.query(
       `
-          SELECT whiteboard.id as whiteboardId, whiteboard.nameID as whiteboardNameId FROM whiteboard
+          SELECT whiteboard.id, whiteboard.nameID FROM whiteboard
           WHERE whiteboard.profileId = '${profileID}'
         `
     );
 
-    if (!result) {
+    if (!whiteboard) {
       throw new EntityNotFoundException(
         `Unable to find whiteboard where profile: ${profileID}`,
         LogContext.URL_GENERATOR
       );
     }
 
-    let calloutId = '';
-    const [contributionResult]: {
-      calloutId: string;
-    }[] = await this.entityManager.connection.query(
-      `
-          SELECT callout_contribution.id as contributionId, callout_contribution.calloutId as calloutId FROM callout_contribution
-          WHERE callout_contribution.whiteboardId = '${result.whiteboardId}'
-        `
-    );
-
-    if (!contributionResult) {
-      const [whiteboardFromFramingResult]: {
-        calloutId: string;
-      }[] = await this.entityManager.connection.query(
-        `SELECT c.id AS calloutId
-          FROM callout AS c JOIN callout_framing AS cf ON cf.id = c.framingId
-          WHERE cf.whiteboardId = '${result.whiteboardId}'`
-      );
-
-      calloutId = whiteboardFromFramingResult.calloutId;
-
-      if (!whiteboardFromFramingResult) {
-        throw new EntityNotFoundException(
-          `Unable to find callout where whiteboardId: ${result.whiteboardId}`,
-          LogContext.URL_GENERATOR
-        );
-      }
-    } else {
-      calloutId = contributionResult.calloutId;
+    let callout = await this.entityManager.findOne(Callout, {
+      where: {
+        framing: {
+          whiteboard: {
+            id: whiteboard.id,
+          },
+        },
+      },
+    });
+    if (!callout) {
+      callout = await this.entityManager.findOne(Callout, {
+        where: {
+          contributions: {
+            whiteboard: {
+              id: whiteboard.id,
+            },
+          },
+        },
+      });
+    }
+    if (callout) {
+      const calloutUrlPath = await this.getCalloutUrlPath(callout.id);
+      return `${calloutUrlPath}/${this.PATH_WHITEBOARDS}/${whiteboard.nameID}`;
     }
 
-    const calloutUrlPath = await this.getCalloutUrlPath(
-      this.FIELD_ID,
-      calloutId
+    throw new EntityNotFoundException(
+      `Unable to find callout where whiteboardId: ${whiteboard.id}`,
+      LogContext.URL_GENERATOR
     );
-    return `${calloutUrlPath}/${this.PATH_WHITEBOARDS}/${result.whiteboardNameId}`;
   }
 
   private async getInnovationPackUrlPath(profileID: string): Promise<string> {
