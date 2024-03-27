@@ -21,6 +21,7 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { IAgent } from '@domain/agent/agent/agent.interface';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { SpaceType } from '@common/enums/space.type';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
@@ -30,6 +31,7 @@ import { VisualType } from '@common/enums/visual.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { SpaceSettingsService } from '../space.settings/space.settings.service';
 import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
+import { CreateCommunityInput } from '@domain/community/community/dto/community.dto.create';
 import { IAccount } from '../account/account.interface';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { AgentInfo } from '@core/authentication';
@@ -73,17 +75,11 @@ export class BaseChallengeService {
     );
 
     const parentStorageAggregator = baseChallengeData.storageAggregatorParent;
-    baseChallenge.storageAggregator =
+    const storageAggregator =
       await this.storageAggregatorService.createStorageAggregator(
         parentStorageAggregator
       );
-
-    if (!baseChallenge.storageAggregator) {
-      throw new EntityNotInitializedException(
-        `Entities not initialized on base challenge creation: ${baseChallenge.nameID}`,
-        LogContext.CHALLENGES
-      );
-    }
+    baseChallenge.storageAggregator = storageAggregator;
 
     const communityPolicy = this.spaceDefaultsService.getCommunityPolicy(
       baseChallenge.type
@@ -91,11 +87,23 @@ export class BaseChallengeService {
     const applicationFormData =
       this.spaceDefaultsService.getCommunityApplicationForm(baseChallenge.type);
 
+    const communityData: CreateCommunityInput = {
+      name: baseChallengeData.profileData.displayName,
+      type: baseChallengeData.type as SpaceType,
+      policy: communityPolicy,
+      applicationForm: applicationFormData,
+      guidelines: {
+        // TODO: get this from defaults service
+        profile: {
+          displayName: baseChallengeData.profileData.displayName,
+          description: baseChallengeData.profileData.description,
+        },
+      },
+    };
+
     baseChallenge.community = await this.communityService.createCommunity(
-      baseChallengeData.profileData.displayName,
-      baseChallenge.type,
-      communityPolicy,
-      applicationFormData
+      communityData,
+      storageAggregator
     );
 
     if (!baseChallengeData.context) {

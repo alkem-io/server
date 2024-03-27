@@ -11,6 +11,7 @@ import {
   CommunityPolicyRoleLimitsException,
   EntityNotFoundException,
   EntityNotInitializedException,
+  RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -40,7 +41,6 @@ import { ICommunityPolicyDefinition } from '../community-policy/community.policy
 import { DiscussionCategoryCommunity } from '@common/enums/communication.discussion.category.community';
 import { IForm } from '@domain/common/form/form.interface';
 import { FormService } from '@domain/common/form/form.service';
-import { CreateFormInput } from '@domain/common/form/dto/form.dto.create';
 import { UpdateFormInput } from '@domain/common/form/dto/form.dto.update';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 import { InvitationService } from '../invitation/invitation.service';
@@ -54,7 +54,10 @@ import { CreateInvitationInput } from '../invitation/dto/invitation.dto.create';
 import { CommunityMembershipException } from '@common/exceptions/community.membership.exception';
 import { CommunityEventsService } from './community.service.events';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
-import { SpaceType } from '@common/enums/space.type';
+import { CommunityGuidelinesService } from '../community-guidelines/community.guidelines.service';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { CreateCommunityInput } from './dto/community.dto.create';
+import { ICommunityGuidelines } from '../community-guidelines/community.guidelines.interface';
 
 @Injectable()
 export class CommunityService {
@@ -70,6 +73,7 @@ export class CommunityService {
     private communicationService: CommunicationService,
     private communityResolverService: CommunityResolverService,
     private communityEventsService: CommunityEventsService,
+    private communityGuidelinesService: CommunityGuidelinesService,
     private formService: FormService,
     private communityPolicyService: CommunityPolicyService,
     private storageAggregatorResolverService: StorageAggregatorResolverService,
@@ -79,20 +83,25 @@ export class CommunityService {
   ) {}
 
   async createCommunity(
-    name: string,
-    type: SpaceType,
-    policy: ICommunityPolicyDefinition,
-    applicationFormData: CreateFormInput
+    communityData: CreateCommunityInput,
+    storageAggregator: IStorageAggregator
   ): Promise<ICommunity> {
-    const community: ICommunity = new Community(type);
+    const community: ICommunity = new Community(communityData.type);
     community.authorization = new AuthorizationPolicy();
+    const policy = communityData.policy as ICommunityPolicyDefinition;
     community.policy = await this.communityPolicyService.createCommunityPolicy(
       policy.member,
       policy.lead,
       policy.admin
     );
+
+    community.guidelines =
+      await this.communityGuidelinesService.createCommunityGuidelines(
+        communityData.guidelines,
+        storageAggregator
+      );
     community.applicationForm = await this.formService.createForm(
-      applicationFormData
+      communityData.applicationForm
     );
 
     community.applications = [];
@@ -102,7 +111,7 @@ export class CommunityService {
     community.groups = [];
     community.communication =
       await this.communicationService.createCommunication(
-        name,
+        communityData.name,
         '',
         Object.values(DiscussionCategoryCommunity)
       );
@@ -204,16 +213,31 @@ export class CommunityService {
         groups: true,
         communication: true,
         applicationForm: true,
+        guidelines: true,
       },
     });
+    if (
+      !community.communication ||
+      !community.communication.updates ||
+      !community.policy ||
+      !community.groups ||
+      !community.applications ||
+      !community.invitations ||
+      !community.externalInvitations ||
+      !community.guidelines ||
+      !community.applicationForm
+    ) {
+      throw new RelationshipNotFoundException(
+        `Unable to load child entities for community for deletion: ${community.id} `,
+        LogContext.COMMUNITY
+      );
+    }
 
     // Remove all groups
-    if (community.groups) {
-      for (const group of community.groups) {
-        await this.userGroupService.removeUserGroup({
-          ID: group.id,
-        });
-      }
+    for (const group of community.groups) {
+      await this.userGroupService.removeUserGroup({
+        ID: group.id,
+      });
     }
 
     // Remove all issued role credentials for contributors
@@ -241,43 +265,36 @@ export class CommunityService {
       await this.authorizationPolicyService.delete(community.authorization);
 
     // Remove all applications
-    if (community.applications) {
-      for (const application of community.applications) {
-        await this.applicationService.deleteApplication({
-          ID: application.id,
-        });
-      }
+    for (const application of community.applications) {
+      await this.applicationService.deleteApplication({
+        ID: application.id,
+      });
     }
 
     // Remove all invitations
-    if (community.invitations) {
-      for (const invitation of community.invitations) {
-        await this.invitationService.deleteInvitation({
-          ID: invitation.id,
-        });
-      }
-    }
-    if (community.externalInvitations) {
-      for (const externalInvitation of community.externalInvitations) {
-        await this.invitationExternalService.deleteInvitationExternal({
-          ID: externalInvitation.id,
-        });
-      }
+    for (const invitation of community.invitations) {
+      await this.invitationService.deleteInvitation({
+        ID: invitation.id,
+      });
     }
 
-    if (community.communication) {
-      await this.communicationService.removeCommunication(
-        community.communication.id
-      );
+    for (const externalInvitation of community.externalInvitations) {
+      await this.invitationExternalService.deleteInvitationExternal({
+        ID: externalInvitation.id,
+      });
     }
 
-    if (community.applicationForm) {
-      await this.formService.removeForm(community.applicationForm);
-    }
+    await this.communicationService.removeCommunication(
+      community.communication.id
+    );
 
-    if (community.policy) {
-      await this.communityPolicyService.removeCommunityPolicy(community.policy);
-    }
+    await this.formService.removeForm(community.applicationForm);
+
+    await this.communityPolicyService.removeCommunityPolicy(community.policy);
+
+    await this.communityGuidelinesService.deleteCommunityGuidelines(
+      community.guidelines.id
+    );
 
     await this.communityRepository.remove(community as Community);
     return true;
@@ -585,6 +602,25 @@ export class CommunityService {
       );
     }
     return policy;
+  }
+
+  public async getCommunityGuidelines(
+    community: ICommunity
+  ): Promise<ICommunityGuidelines> {
+    const communityWithGuidelines = await this.getCommunityOrFail(
+      community.id,
+      {
+        relations: { guidelines: true },
+      }
+    );
+
+    if (!communityWithGuidelines.guidelines) {
+      throw new EntityNotInitializedException(
+        `Unable to locate guidelines for community: ${community.id}`,
+        LogContext.COMMUNITY
+      );
+    }
+    return communityWithGuidelines.guidelines;
   }
 
   async getCommunication(
