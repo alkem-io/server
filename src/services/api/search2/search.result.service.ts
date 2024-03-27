@@ -1,7 +1,7 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager, In } from 'typeorm';
-import { groupBy, union } from 'lodash';
+import { groupBy, union, orderBy } from 'lodash';
 import { Space } from '@domain/challenge/space/space.entity';
 import { ISearchResult } from '@services/api/search/dto/search.result.entry.interface';
 import { ISearchResultSpace } from '@services/api/search/dto/search.result.dto.entry.space';
@@ -101,12 +101,23 @@ export class SearchResultService {
         this.getPostSearchResults(groupedResults.post ?? [], agentInfo),
       ]);
     // todo: count - https://github.com/alkem-io/server/issues/3700
+    const contributorResults = orderBy(
+      [...users, ...organizations],
+      'score',
+      'desc'
+    );
+    const contributionResults = orderBy([...posts], 'score', 'desc');
+    const journeyResults = orderBy(
+      [...spaces, ...challenges, ...opportunities],
+      'score',
+      'desc'
+    );
     return {
-      contributorResults: [...users, ...organizations],
+      contributorResults,
       contributorResultsCount: -1,
-      contributionResults: [...posts],
+      contributionResults,
       contributionResultsCount: -1,
-      journeyResults: [...spaces, ...challenges, ...opportunities],
+      journeyResults,
       journeyResultsCount: -1,
       groupResults: [],
       calloutResults: [],
@@ -477,13 +488,13 @@ export class SearchResultService {
         JOIN \`callout_contribution\` on \`callout\`.\`id\` = \`callout_contribution\`.\`calloutId\`
         JOIN \`post\` on \`post\`.\`id\` = \`callout_contribution\`.\`postId\`
         WHERE \`post\`.\`id\` in (${postIdsFormatted}) UNION
-  
+
         SELECT \`post\`.\`id\` as postID, \`space\`.\`id\` as \`spaceID\`, null as \'challengeID\', null as \'opportunityID\', \`callout\`.\`id\` as \`calloutID\`  FROM \`callout\`
         RIGHT JOIN \`space\` on \`space\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
         JOIN \`callout_contribution\` on \`callout\`.\`id\` = \`callout_contribution\`.\`calloutId\`
         JOIN \`post\` on \`post\`.\`id\` = \`callout_contribution\`.\`postId\`
         WHERE \`post\`.\`id\` in (${postIdsFormatted}) UNION
-  
+
         SELECT \`post\`.\`id\` as postID, \`space\`.\`id\` as \`spaceID\`, \`challenge\`.\`id\` as \`challengeID\`, \`opportunity\`.\`id\` as \`opportunityID\`, \`callout\`.\`id\` as \`calloutID\` FROM \`callout\`
         RIGHT JOIN \`opportunity\` on \`opportunity\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
         JOIN \`challenge\` on \`opportunity\`.\`challengeId\` = \`challenge\`.\`id\`

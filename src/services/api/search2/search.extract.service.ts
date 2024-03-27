@@ -11,7 +11,8 @@ import { validateSearchTerms } from '@services/api/search/util/validate.search.t
 import { ELASTICSEARCH_CLIENT_PROVIDER } from '@common/constants';
 import { ISearchResult } from '@services/api/search/dto/search.result.entry.interface';
 import { IBaseAlkemio } from '@domain/common/entity/base-entity';
-import { LogContext } from '@common/enums';
+import { AlkemioErrorStatus, LogContext } from '@common/enums';
+import { BaseException } from '@common/exceptions/base.exception';
 
 enum SearchEntityTypes {
   USER = 'user',
@@ -67,7 +68,10 @@ export class SearchExtractService {
   public async search(
     searchData: SearchInput,
     onlyPublicResults: boolean
-  ): Promise<ISearchResult[]> {
+  ): Promise<ISearchResult[] | never> {
+    if (!this.client) {
+      throw new Error('Elasticsearch client not initialized');
+    }
     validateSearchParameters(searchData);
     const filteredTerms = validateSearchTerms(searchData.terms);
 
@@ -133,46 +137,65 @@ export class SearchExtractService {
       },
     ];
 
-    const result = await this.client.search<IBaseAlkemio>({
-      index: indicesToSearchOn,
-      // there will be a query building in the future to construct different queries
-      // the current query is searching in everything, and boosting entities based on their visibility
-      query: {
-        function_score: {
-          query,
-          functions,
-          /** how each of the assigned weights are combined */
-          score_mode: 'sum', // the filters are mutually exclusive, so only one filter will be applied at a time
-          /** how the combined weights are combined with the score */
-          boost_mode: 'multiply',
-        },
-      },
-      fields: ['id'],
-      _source: false,
-      from: 0,
-      size: 25,
-    });
+    try {
+      return await this.client
+        .search<IBaseAlkemio>({
+          index: indicesToSearchOn,
+          // there will be a query building in the future to construct different queries
+          // the current query is searching in everything, and boosting entities based on their visibility
+          query: {
+            /**
+             * The function_score allows you to modify the score of documents that are retrieved by a query.
+             * This can be useful if, for example, a score function is computationally expensive and
+             * it is sufficient to compute the score on a filtered set of documents.
+             **/
+            function_score: {
+              query,
+              functions,
+              /** how each of the assigned weights are combined */
+              score_mode: 'sum', // the filters are mutually exclusive, so only one filter will be applied at a time
+              /** how the combined weights are combined with the score */
+              boost_mode: 'multiply',
+            },
+          },
+          fields: ['id'],
+          _source: false,
+          from: 0,
+          size: 5,
+        })
+        .then(result =>
+          result.hits.hits.map<ISearchResult>(hit => {
+            const entityId = hit.fields?.id?.[0];
+            const type = INDEX_TO_TYPE[hit._index];
 
-    return result.hits.hits.map<ISearchResult>(hit => {
-      const entityId = hit.fields?.id?.[0];
-      const type = INDEX_TO_TYPE[hit._index];
+            if (!entityId) {
+              this.logger.error(
+                `Search result with no entity id: ${JSON.stringify(hit)}`,
+                undefined,
+                LogContext.SEARCH
+              );
+            }
 
-      if (!entityId) {
-        this.logger.error(
-          `Search result with no entity id: ${JSON.stringify(hit)}`,
-          undefined,
-          LogContext.SEARCH
+            return {
+              id: hit._id,
+              score: hit._score ?? -1,
+              type,
+              terms: [], // todo - https://github.com/alkem-io/server/issues/3702
+              result: { id: entityId ?? 'N/A' },
+            };
+          })
         );
-      }
-
-      return {
-        id: hit._id,
-        score: hit._score ?? -1,
-        type,
-        terms: [], // todo - https://github.com/alkem-io/server/issues/3702
-        result: { id: entityId ?? 'N/A' },
-      };
-    });
+    } catch (e: any) {
+      throw new BaseException(
+        'Failed to search',
+        LogContext.SEARCH,
+        AlkemioErrorStatus.UNSPECIFIED,
+        {
+          message: e?.message,
+          searchData,
+        }
+      );
+    }
   }
 
   private getIndices(
