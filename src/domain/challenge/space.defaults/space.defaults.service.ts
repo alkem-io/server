@@ -36,6 +36,7 @@ import { subspceCommunityApplicationForm } from './definitions/subspace.communit
 import { spaceCommunityApplicationForm } from './definitions/space.community.application.form';
 import { ProfileType } from '@common/enums';
 import { CalloutGroupName } from '@common/enums/callout.group.name';
+import { subspaceSettingsDefaults } from './definitions/subspace.settings';
 
 @Injectable()
 export class SpaceDefaultsService {
@@ -199,8 +200,14 @@ export class SpaceDefaultsService {
     return spaceDefaults.innovationFlowTemplate;
   }
 
-  public getDefaultSpaceSettings(): ISpaceSettings {
-    return spaceSettingsDefaults;
+  public getDefaultSpaceSettings(spaceType: SpaceType): ISpaceSettings {
+    switch (spaceType) {
+      case SpaceType.CHALLENGE:
+      case SpaceType.OPPORTUNITY:
+        return subspaceSettingsDefaults;
+      case SpaceType.SPACE:
+        return spaceSettingsDefaults;
+    }
   }
 
   public async getCreateInnovationFlowInput(

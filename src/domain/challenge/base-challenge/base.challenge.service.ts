@@ -67,7 +67,7 @@ export class BaseChallengeService {
     baseChallenge.authorization = new AuthorizationPolicy();
     baseChallenge.account = account;
     baseChallenge.settingsStr = this.spaceSettingsService.serializeSettings(
-      this.spaceDefaultsService.getDefaultSpaceSettings()
+      this.spaceDefaultsService.getDefaultSpaceSettings(baseChallengeData.type)
     );
     await this.isNameAvailableInAccountOrFail(
       baseChallengeData.nameID,

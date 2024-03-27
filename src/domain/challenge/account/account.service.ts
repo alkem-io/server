@@ -26,6 +26,7 @@ import { CreateSpaceInput } from '../space/dto/space.dto.create';
 import { ISpace } from '../space/space.interface';
 import { UpdateAccountPlatformSettingsInput } from './dto/account.dto.update.platform.settings';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
+import { SpaceVisibility } from '@common/enums/space.visibility';
 
 @Injectable()
 export class AccountService {
@@ -52,7 +53,9 @@ export class AccountService {
     account.authorization = new AuthorizationPolicy();
     account.library = await this.templatesSetService.createTemplatesSet();
     account.defaults = await this.spaceDefaultsService.createSpaceDefaults();
-    account.license = await this.licenseService.createLicense();
+    account.license = await this.licenseService.createLicense({
+      visibility: SpaceVisibility.ACTIVE,
+    });
     await this.save(account);
 
     spaceData.level = 0;
