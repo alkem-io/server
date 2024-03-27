@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class spaceSettings1710683933038 implements MigrationInterface {
-  name = 'spaceSettings1710683933038';
+export class spaceSettings1710843986354 implements MigrationInterface {
+  name = 'spaceSettings1710843986354';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
@@ -19,6 +19,11 @@ export class spaceSettings1710683933038 implements MigrationInterface {
     );
     await queryRunner.query(
       `ALTER TABLE \`challenge\` DROP FOREIGN KEY  \`FK_c890de5a08d363719a41703a638\``
+    );
+
+    // Temporary remove foreign key constraint, we'll add it back in the end
+    await queryRunner.query(
+      `ALTER TABLE \`preference\` DROP FOREIGN KEY  \`FK_650fb4e564a8b4b4ac344270744\``
     );
 
     const spaces: {
@@ -198,6 +203,10 @@ export class spaceSettings1710683933038 implements MigrationInterface {
         `DELETE FROM preference_definition WHERE type = '${preferenceDefinition}'`
       );
     }
+
+    await queryRunner.query(
+      `ALTER TABLE \`preference\` ADD CONSTRAINT \`FK_650fb4e564a8b4b4ac344270744\` FOREIGN KEY (\`preferenceDefinitionId\`) REFERENCES \`preference_definition\`(\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION`
+    );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {}

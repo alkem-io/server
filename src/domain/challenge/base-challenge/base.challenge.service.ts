@@ -64,6 +64,11 @@ export class BaseChallengeService {
     account: IAccount,
     agentInfo: AgentInfo | undefined
   ): Promise<IBaseChallenge> {
+    if (!baseChallengeData.nameID) {
+      baseChallengeData.nameID = this.namingService.createNameID(
+        baseChallengeData.profileData.displayName
+      );
+    }
     baseChallenge.authorization = new AuthorizationPolicy();
     baseChallenge.account = account;
     baseChallenge.settingsStr = this.spaceSettingsService.serializeSettings(
