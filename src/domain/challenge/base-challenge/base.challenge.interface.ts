@@ -22,6 +22,12 @@ export abstract class IBaseChallenge extends INameable {
   })
   level!: number;
 
+  @Field(() => SpaceType, {
+    nullable: false,
+    description: 'The Type of the Space e.g. space/challenge/opportunity.',
+  })
+  type!: SpaceType;
+
   rowId!: number;
   agent?: IAgent;
 
@@ -33,6 +39,4 @@ export abstract class IBaseChallenge extends INameable {
   settingsStr!: string;
 
   storageAggregator?: IStorageAggregator;
-
-  type!: SpaceType;
 }

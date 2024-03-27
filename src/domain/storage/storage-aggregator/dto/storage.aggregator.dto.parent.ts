@@ -1,4 +1,4 @@
-import { StorageAggregatorParentType } from '@common/enums/storage.aggregator.parent.type';
+import { SpaceType } from '@common/enums/space.type';
 import { UUID } from '@domain/common/scalars';
 import { Field, ObjectType } from '@nestjs/graphql';
 
@@ -22,7 +22,7 @@ export abstract class IStorageAggregatorParent {
   })
   url!: string;
 
-  @Field(() => StorageAggregatorParentType, {
+  @Field(() => SpaceType, {
     nullable: false,
     description: 'The Type of the parent Entity, space/challenge/opportunity.',
   })

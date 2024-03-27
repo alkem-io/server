@@ -59,7 +59,7 @@ export class AccountAuthorizationService {
     )
       throw new RelationshipNotFoundException(
         `Unable to load Account with entities at start of auth reset: ${account.id} `,
-        LogContext.CHALLENGES
+        LogContext.ACCOUNT
       );
 
     // Ensure always applying from a clean state
