@@ -579,7 +579,7 @@ export class UrlGeneratorService {
       calloutId: string;
     }[] = await this.entityManager.connection.query(
       `
-        SELECT callout_contribution.id, callout_contribution.calloutId as calloutId FROM callout_contribution
+        SELECT callout_contribution.calloutId as calloutId FROM callout_contribution
         WHERE callout_contribution.postId = '${result.postId}'
       `
     );
