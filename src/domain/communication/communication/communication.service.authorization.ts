@@ -3,7 +3,7 @@ import { ICommunication } from '@domain/communication/communication';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { DiscussionAuthorizationService } from '../discussion/discussion.service.authorization';
-import { AuthorizationPrivilege } from '@common/enums';
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { CommunicationService } from './communication.service';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import {
@@ -11,6 +11,7 @@ import {
   POLICY_RULE_COMMUNICATION_CREATE,
 } from '@common/constants';
 import { RoomAuthorizationService } from '../room/room.service.authorization';
+import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 
 @Injectable()
 export class CommunicationAuthorizationService {
@@ -22,9 +23,31 @@ export class CommunicationAuthorizationService {
   ) {}
 
   async applyAuthorizationPolicy(
-    communication: ICommunication,
+    communicationInput: ICommunication,
     parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<ICommunication> {
+    const communication =
+      await this.communicationService.getCommunicationOrFail(
+        communicationInput.id,
+        {
+          relations: {
+            discussions: {
+              comments: true,
+            },
+            updates: {
+              authorization: true,
+            },
+          },
+        }
+      );
+
+    if (!communication.discussions || !communication.updates) {
+      throw new RelationshipNotFoundException(
+        `Unable to load entities to reset auth for communication ${communication.id} `,
+        LogContext.COMMUNICATION
+      );
+    }
+
     communication.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         communication.authorization,
@@ -35,9 +58,6 @@ export class CommunicationAuthorizationService {
       communication.authorization
     );
 
-    communication.discussions = await this.communicationService.getDiscussions(
-      communication
-    );
     for (const discussion of communication.discussions) {
       await this.discussionAuthorizationService.applyAuthorizationPolicy(
         discussion,
@@ -45,7 +65,6 @@ export class CommunicationAuthorizationService {
       );
     }
 
-    communication.updates = this.communicationService.getUpdates(communication);
     communication.updates =
       await this.roomAuthorizationService.applyAuthorizationPolicy(
         communication.updates,
