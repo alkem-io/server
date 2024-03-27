@@ -68,9 +68,20 @@ export class ConversionResolverMutations {
       convertChallengeToSpaceData,
       agentInfo
     );
+    const spaceWithAccount = await this.spaceService.getSpaceOrFail(
+      newSpace.id,
+      {
+        relations: {
+          account: {
+            authorization: true,
+          },
+        },
+      }
+    );
 
     return await this.spaceAuthorizationService.applyAuthorizationPolicy(
-      newSpace
+      newSpace,
+      spaceWithAccount.account.authorization
     );
   }
 
@@ -117,8 +128,17 @@ export class ConversionResolverMutations {
         agentInfo,
         spaceStorageAggregator
       );
-    const parentSpace = await this.spaceService.getSpaceOrFail(spaceID);
-    await this.spaceAuthorizationService.applyAuthorizationPolicy(parentSpace);
+    const parentSpace = await this.spaceService.getSpaceOrFail(spaceID, {
+      relations: {
+        account: {
+          authorization: true,
+        },
+      },
+    });
+    await this.spaceAuthorizationService.applyAuthorizationPolicy(
+      parentSpace,
+      parentSpace.account.authorization
+    );
     return this.challengeService.getChallengeOrFail(newChallenge.id);
   }
 }

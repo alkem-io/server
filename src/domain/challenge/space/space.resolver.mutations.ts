@@ -101,7 +101,13 @@ export class SpaceResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('settingsData') settingsData: UpdateSpaceSettingsOnSpaceInput
   ): Promise<ISpace> {
-    const space = await this.spaceService.getSpaceOrFail(settingsData.spaceID);
+    const space = await this.spaceService.getSpaceOrFail(settingsData.spaceID, {
+      relations: {
+        account: {
+          authorization: true,
+        },
+      },
+    });
 
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -115,7 +121,10 @@ export class SpaceResolverMutations {
       settingsData
     );
     // As the settings may update the authorization for the Space, the authorization policy will need to be reset
-    await this.spaceAuthorizationService.applyAuthorizationPolicy(updatedSpace);
+    await this.spaceAuthorizationService.applyAuthorizationPolicy(
+      updatedSpace,
+      space.account.authorization
+    );
     return await this.spaceService.getSpaceOrFail(space.id);
   }
 

@@ -25,10 +25,11 @@ export class SpaceAuthorizationService {
 
   async applyAuthorizationPolicy(
     spaceInput: ISpace,
-    parentAuthorization?: IAuthorizationPolicy | undefined
+    parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<ISpace> {
     let space = await this.spaceService.getSpaceOrFail(spaceInput.id, {
       relations: {
+        authorization: true,
         community: {
           policy: true,
         },
@@ -39,6 +40,7 @@ export class SpaceAuthorizationService {
       },
     });
     if (
+      !space.authorization ||
       !space.community ||
       !space.community.policy ||
       !space.account ||
