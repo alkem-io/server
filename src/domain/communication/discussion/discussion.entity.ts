@@ -3,6 +3,7 @@ import { IDiscussion } from './discussion.interface';
 import { Communication } from '../communication/communication.entity';
 import { Room } from '../room/room.entity';
 import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
+import { CommunicationDiscussionPrivacy } from '@common/enums/communication.discussion.privacy';
 
 @Entity()
 export class Discussion extends NameableEntity implements IDiscussion {
@@ -26,4 +27,11 @@ export class Discussion extends NameableEntity implements IDiscussion {
     onDelete: 'CASCADE',
   })
   communication?: Communication;
+
+  @Column('varchar', {
+    length: 255,
+    nullable: false,
+    default: CommunicationDiscussionPrivacy.AUTHENTICATED,
+  })
+  privacy!: string;
 }

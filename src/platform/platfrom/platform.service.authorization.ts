@@ -74,7 +74,6 @@ export class PlatformAuthorizationService {
       this.platformAuthorizationPolicyService.inheritRootAuthorizationPolicy(
         platform.authorization
       );
-    platform.authorization.anonymousReadAccess = true;
     platform.authorization = await this.appendCredentialRules(
       platform.authorization
     );
@@ -149,10 +148,11 @@ export class PlatformAuthorizationService {
     const extendedAuthPolicy = await this.appendCredentialRulesCommunication(
       copyPlatformAuthorization
     );
-    await this.communicationAuthorizationService.applyAuthorizationPolicy(
-      platform.communication,
-      extendedAuthPolicy
-    );
+    platform.communication =
+      await this.communicationAuthorizationService.applyAuthorizationPolicy(
+        platform.communication,
+        extendedAuthPolicy
+      );
 
     platform.storageAggregator =
       await this.storageAggregatorAuthorizationService.applyAuthorizationPolicy(
@@ -194,6 +194,9 @@ export class PlatformAuthorizationService {
         'platformReadContributeRegistered'
       );
     newRules.push(communicationRules);
+
+    // Set globally visible to replicate what already
+    authorization.anonymousReadAccess = true;
 
     this.authorizationPolicyService.appendCredentialAuthorizationRules(
       authorization,

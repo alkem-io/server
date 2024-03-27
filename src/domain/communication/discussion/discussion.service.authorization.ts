@@ -9,6 +9,9 @@ import { RoomAuthorizationService } from '../room/room.service.authorization';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { CREDENTIAL_RULE_TYPES_UPDATE_FORUM_DISCUSSION } from '@common/constants/authorization/credential.rule.types.constants';
+import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
+import { LogContext } from '@common/enums/logging.context';
+import { CommunicationDiscussionPrivacy } from '@common/enums/communication.discussion.privacy';
 
 @Injectable()
 export class DiscussionAuthorizationService {
@@ -26,9 +29,24 @@ export class DiscussionAuthorizationService {
   ) {}
 
   async applyAuthorizationPolicy(
-    discussion: IDiscussion,
+    discussionInput: IDiscussion,
     parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<IDiscussion> {
+    const discussion = await this.discussionService.getDiscussionOrFail(
+      discussionInput.id,
+      {
+        relations: {
+          profile: true,
+          comments: true,
+        },
+      }
+    );
+    if (!discussion.profile || !discussion.comments) {
+      throw new RelationshipNotFoundException(
+        `Unable to load entities to reset auth for Discussion ${discussion.id} `,
+        LogContext.COMMUNICATION
+      );
+    }
     discussion.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         discussion.authorization,
@@ -38,21 +56,33 @@ export class DiscussionAuthorizationService {
     discussion.authorization = this.extendAuthorizationPolicy(
       discussion.authorization
     );
+    // Clone the authorization policy so can control what children get what setting
+    const clonedAuthorization =
+      this.authorizationPolicyService.cloneAuthorizationPolicy(
+        discussion.authorization
+      );
+    switch (discussion.privacy) {
+      case CommunicationDiscussionPrivacy.PUBLIC:
+        // To ensure that the discussion + discussion profile is visible for non-authenticated users
+        discussion.authorization.anonymousReadAccess = true;
+        break;
+      case CommunicationDiscussionPrivacy.AUTHENTICATED:
+        break;
+      case CommunicationDiscussionPrivacy.AUTHOR:
+        // This actually requires a NOT in the authorization framework; for later
+        break;
+    }
 
-    discussion.profile = await this.discussionService.getProfile(discussion);
     discussion.profile =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
         discussion.profile,
         discussion.authorization
       );
 
-    discussion.comments = await this.discussionService.getComments(
-      discussion.id
-    );
     discussion.comments =
       await this.roomAuthorizationService.applyAuthorizationPolicy(
         discussion.comments,
-        discussion.authorization
+        clonedAuthorization
       );
     discussion.comments.authorization =
       this.roomAuthorizationService.allowContributorsToCreateMessages(
