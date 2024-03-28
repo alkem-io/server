@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { Search2Service } from './search2.service';
 import { MockSearchExtractService } from '@test/mocks/search/search.extract.service.mock';
-import { MockSearchIngestService } from '@test/mocks/search/search.ingest.service.mock';
+import { MockSearchResultsService } from '@test/mocks/search/search.result.service.mock';
 
 describe('Search2Service', () => {
   let service: Search2Service;
@@ -11,7 +11,7 @@ describe('Search2Service', () => {
       providers: [
         Search2Service,
         MockSearchExtractService,
-        MockSearchIngestService,
+        MockSearchResultsService,
       ],
     }).compile();
 

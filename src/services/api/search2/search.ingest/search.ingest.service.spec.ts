@@ -1,10 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import {
   MockElasticsearchClientProvider,
+  MockEntityManagerProvider,
   MockWinstonProvider,
 } from '@test/mocks';
 import { SearchIngestService } from './search.ingest.service';
-import { TypeOrmModule } from '@nestjs/typeorm';
 
 describe('SearchIngestService', () => {
   let service: SearchIngestService;
@@ -15,7 +15,7 @@ describe('SearchIngestService', () => {
         SearchIngestService,
         MockElasticsearchClientProvider,
         MockWinstonProvider,
-        TypeOrmModule,
+        MockEntityManagerProvider,
       ],
     }).compile();
 
