@@ -2,6 +2,7 @@ import { setTimeout } from 'timers/promises';
 import { EntityManager, Not } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { Client as ElasticClient } from '@elastic/elasticsearch';
 import { ErrorCause } from '@elastic/elasticsearch/lib/api/types';
@@ -17,6 +18,7 @@ import { SpaceVisibility } from '@common/enums/space.visibility';
 import { Tagset } from '@domain/common/tagset';
 import { LogContext } from '@common/enums';
 import { asyncReduceSequential } from '@common/utils/async.reduce.sequential';
+import { getIndexPattern } from '../get.index.pattern';
 
 const profileRelationOptions = {
   location: true,
@@ -72,12 +74,16 @@ type IngestReturnType = Record<string, IngestBulkReturnType>;
 
 @Injectable()
 export class SearchIngestService {
+  private readonly indexPattern: string;
   constructor(
     @Inject(ELASTICSEARCH_CLIENT_PROVIDER)
     private elasticClient: ElasticClient | undefined,
     @InjectEntityManager() private entityManager: EntityManager,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService,
+    private configService: ConfigService
   ) {
+    this.indexPattern = getIndexPattern(this.configService);
+
     if (!elasticClient) {
       this.logger.error(
         'Elasticsearch client not initialized',
@@ -99,12 +105,12 @@ export class SearchIngestService {
       };
     }
     const indices = [
-      'alkemio-data-spaces',
-      'alkemio-data-challenges',
-      'alkemio-data-opportunities',
-      'alkemio-data-organizations',
-      'alkemio-data-users',
-      'alkemio-data-posts',
+      `${this.indexPattern}-spaces`,
+      `${this.indexPattern}-challenges`,
+      `${this.indexPattern}-opportunities`,
+      `${this.indexPattern}-organizations`,
+      `${this.indexPattern}-users`,
+      `${this.indexPattern}-posts`,
     ];
     return this.elasticClient.indices
       .delete({ index: indices })
@@ -122,21 +128,30 @@ export class SearchIngestService {
     }
     const result: IngestReturnType = {};
     const params = [
-      { index: 'alkemio-data-spaces', fetchFn: this.fetchSpaces.bind(this) },
       {
-        index: 'alkemio-data-challenges',
+        index: `${this.indexPattern}-spaces`,
+        fetchFn: this.fetchSpaces.bind(this),
+      },
+      {
+        index: `${this.indexPattern}-challenges`,
         fetchFn: this.fetchChallenges.bind(this),
       },
       {
-        index: 'alkemio-data-opportunities',
+        index: `${this.indexPattern}-opportunities`,
         fetchFn: this.fetchOpportunities.bind(this),
       },
       {
-        index: 'alkemio-data-organizations',
+        index: `${this.indexPattern}-organizations`,
         fetchFn: this.fetchOrganization.bind(this),
       },
-      { index: 'alkemio-data-users', fetchFn: this.fetchUsers.bind(this) },
-      { index: 'alkemio-data-posts', fetchFn: this.fetchPosts.bind(this) },
+      {
+        index: `${this.indexPattern}-users`,
+        fetchFn: this.fetchUsers.bind(this),
+      },
+      {
+        index: `${this.indexPattern}-posts`,
+        fetchFn: this.fetchPosts.bind(this),
+      },
     ];
 
     return asyncReduceSequential(
