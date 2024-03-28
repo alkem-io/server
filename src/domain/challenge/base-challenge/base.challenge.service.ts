@@ -64,8 +64,8 @@ export class BaseChallengeService {
     account: IAccount,
     agentInfo: AgentInfo | undefined
   ): Promise<IBaseChallenge> {
-    if (!baseChallengeData.nameID) {
-      baseChallengeData.nameID = this.namingService.createNameID(
+    if (!baseChallenge.nameID) {
+      baseChallenge.nameID = this.namingService.createNameID(
         baseChallengeData.profileData.displayName
       );
     }
