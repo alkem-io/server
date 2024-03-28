@@ -26,6 +26,8 @@ export class CommunityGuidelinesAuthorizationService {
         communityGuidelines.authorization,
         parentAuthorization
       );
+    // All content on community guidelines is public
+    communityGuidelines.authorization.anonymousReadAccess = true;
 
     communityGuidelines.profile =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
