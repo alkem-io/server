@@ -6,7 +6,10 @@ import { MockOrganizationService } from '@test/mocks/organization.service.mock';
 import { MockUserService } from '@test/mocks/user.service.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { MockSpaceFilterService } from '@test/mocks/space.filter.service.mock';
-import { EntityManagerProvider, MockAuthorizationService } from '@test/mocks';
+import {
+  MockEntityManagerProvider,
+  MockAuthorizationService,
+} from '@test/mocks';
 import { Test } from '@nestjs/testing';
 import { RolesService } from './roles.service';
 import { UserService } from '@domain/community/user/user.service';
@@ -44,7 +47,7 @@ describe('RolesService', () => {
         MockCommunityResolverService,
         MockAuthorizationService,
         MockWinstonProvider,
-        EntityManagerProvider,
+        MockEntityManagerProvider,
         RolesService,
       ],
     }).compile();

@@ -28,6 +28,7 @@ import { CreateSpaceInput } from '@domain/challenge/space/dto/space.dto.create';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { PlatformAuthorizationService } from '@platform/platfrom/platform.service.authorization';
 import { NameReporterService } from '@services/external/elasticsearch/name-reporter/name.reporter.service';
+import { SearchIngestService } from '@services/api/search2/search.ingest/search.ingest.service';
 
 @Injectable()
 export class BootstrapService {
@@ -48,10 +49,13 @@ export class BootstrapService {
     private spaceRepository: Repository<Space>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    private nameReporter: NameReporterService
+    private nameReporter: NameReporterService,
+    // todo remove later
+    private ingestService: SearchIngestService
   ) {}
 
   async bootstrap() {
+    // this.ingestService.ingest(); // todo remove later
     try {
       this.logger.verbose?.('Bootstrapping...', LogContext.BOOTSTRAP);
       this.logConfiguration();
@@ -68,7 +72,7 @@ export class BootstrapService {
       await this.platformService.ensureCommunicationCreated();
       // reset auth as last in the actions
       await this.ensureAuthorizationsPopulated();
-      await this.ensureSpaceNamesInElastic();
+      // await this.ensureSpaceNamesInElastic();
     } catch (error: any) {
       this.logger.error(
         `Unable to complete bootstrap process: ${error}`,

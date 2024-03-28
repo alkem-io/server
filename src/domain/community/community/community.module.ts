@@ -27,6 +27,7 @@ import { InvitationExternalModule } from '../invitation.external/invitation.exte
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { CommunityEventsService } from './community.service.events';
 import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
+import { CommunityGuidelinesModule } from '../community-guidelines/community.guidelines.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { StorageAggregatorResolverModule } from '@services/infrastructure/storag
     InvitationExternalModule,
     CommunicationModule,
     CommunityPolicyModule,
+    CommunityGuidelinesModule,
     LifecycleModule,
     AgentModule,
     EntityResolverModule,
