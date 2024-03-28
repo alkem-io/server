@@ -13,7 +13,6 @@ To simplify setting up the Server development environment, a pre-configured dock
   - 8888 (traefik dashobard)
   - 3000 (alkemio client)
   - 8008 (synapse server)
-  - 5001 (ipfs server)
   - 4436 (mailslurper UI)
   - 4437 (mailslurper API)
   - 5672 (rabbitMQ amqp)
