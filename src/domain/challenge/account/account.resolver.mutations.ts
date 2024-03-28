@@ -36,13 +36,13 @@ export class AccountResolverMutations {
   ) {}
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => ISpace, {
+  @Mutation(() => IAccount, {
     description: 'Creates a new Space.',
   })
   async createSpace(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('spaceData') spaceData: CreateSpaceInput
-  ): Promise<ISpace> {
+  ): Promise<IAccount> {
     const authorizationPolicy =
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
     await this.authorizationService.grantAccessOrFail(
@@ -55,15 +55,16 @@ export class AccountResolverMutations {
       spaceData,
       agentInfo
     );
-    const space = await this.accountService.getRootSpace(account);
+
+    const accountUpdated =
+      await this.accountAuthorizationService.applyAuthorizationPolicy(account);
+    const space = await this.accountService.getRootSpace(accountUpdated);
+
     this.namingReporter.createOrUpdateName(
       space.id,
       spaceData.profileData.displayName
     );
-
-    const accountUpdated =
-      await this.accountAuthorizationService.applyAuthorizationPolicy(account);
-    return await this.accountService.getRootSpace(accountUpdated);
+    return accountUpdated;
   }
 
   @UseGuards(GraphqlGuard)

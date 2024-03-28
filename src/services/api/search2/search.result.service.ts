@@ -583,7 +583,7 @@ export class SearchResultService {
 
     const leadsInSpace =
       await this.organizationService.organizationsWithCredentials({
-        type: AuthorizationCredential.SPACE_HOST,
+        type: AuthorizationCredential.SPACE_LEAD,
         resourceID: spaceId,
       });
     orgsInSpace.push(...leadsInSpace.map(org => org.id));
