@@ -1,3 +1,4 @@
+import { UUID } from '@domain/common/scalars';
 import { UUID_NAMEID } from '@domain/common/scalars/scalar.uuid.nameid';
 import { UpdateLicenseInput } from '@domain/license/license/dto/license.dto.update';
 import { Field, InputType } from '@nestjs/graphql';
@@ -6,7 +7,7 @@ import { IsOptional, ValidateNested } from 'class-validator';
 
 @InputType()
 export class UpdateAccountPlatformSettingsInput {
-  @Field(() => String, {
+  @Field(() => UUID, {
     nullable: false,
     description:
       'The identifier for the Account whose license etc is to be updated.',
