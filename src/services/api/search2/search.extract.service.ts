@@ -11,8 +11,13 @@ import { validateSearchTerms } from '@services/api/search/util/validate.search.t
 import { ELASTICSEARCH_CLIENT_PROVIDER } from '@common/constants';
 import { ISearchResult } from '@services/api/search/dto/search.result.entry.interface';
 import { IBaseAlkemio } from '@domain/common/entity/base-entity';
-import { AlkemioErrorStatus, LogContext } from '@common/enums';
+import {
+  AlkemioErrorStatus,
+  ConfigurationTypes,
+  LogContext,
+} from '@common/enums';
 import { BaseException } from '@common/exceptions/base.exception';
+import { ConfigService } from '@nestjs/config';
 
 enum SearchEntityTypes {
   USER = 'user',
@@ -28,41 +33,67 @@ type SearchEntityTypesPublic = Exclude<
   SearchEntityTypes.USER | SearchEntityTypes.ORGANIZATION
 >;
 
-const indexPrefix = 'alkemio-data-';
-const TYPE_TO_INDEX: Record<SearchEntityTypes, string> = {
-  [SearchEntityTypes.SPACE]: `${indexPrefix}spaces`,
-  [SearchEntityTypes.CHALLENGE]: `${indexPrefix}challenges`,
-  [SearchEntityTypes.OPPORTUNITY]: `${indexPrefix}opportunities`,
-  [SearchEntityTypes.POST]: `${indexPrefix}posts`,
-  [SearchEntityTypes.USER]: `${indexPrefix}users`,
-  [SearchEntityTypes.ORGANIZATION]: `${indexPrefix}organizations`,
-};
-const INDEX_TO_TYPE: Record<string, SearchEntityTypes> = {
-  [TYPE_TO_INDEX[SearchEntityTypes.SPACE]]: SearchEntityTypes.SPACE,
-  [TYPE_TO_INDEX[SearchEntityTypes.CHALLENGE]]: SearchEntityTypes.CHALLENGE,
-  [TYPE_TO_INDEX[SearchEntityTypes.OPPORTUNITY]]: SearchEntityTypes.OPPORTUNITY,
-  [TYPE_TO_INDEX[SearchEntityTypes.POST]]: SearchEntityTypes.POST,
-  [TYPE_TO_INDEX[SearchEntityTypes.USER]]: SearchEntityTypes.USER,
-  [TYPE_TO_INDEX[SearchEntityTypes.ORGANIZATION]]:
+const TYPE_TO_INDEX = (
+  indexPattern: string
+): Record<SearchEntityTypes, string> => ({
+  [SearchEntityTypes.SPACE]: `${indexPattern}spaces`,
+  [SearchEntityTypes.CHALLENGE]: `${indexPattern}challenges`,
+  [SearchEntityTypes.OPPORTUNITY]: `${indexPattern}opportunities`,
+  [SearchEntityTypes.POST]: `${indexPattern}posts`,
+  [SearchEntityTypes.USER]: `${indexPattern}users`,
+  [SearchEntityTypes.ORGANIZATION]: `${indexPattern}organizations`,
+});
+const INDEX_TO_TYPE = (
+  indexPattern: string
+): Record<string, SearchEntityTypes> => ({
+  [TYPE_TO_INDEX(indexPattern)[SearchEntityTypes.SPACE]]:
+    SearchEntityTypes.SPACE,
+  [TYPE_TO_INDEX(indexPattern)[SearchEntityTypes.CHALLENGE]]:
+    SearchEntityTypes.CHALLENGE,
+  [TYPE_TO_INDEX(indexPattern)[SearchEntityTypes.OPPORTUNITY]]:
+    SearchEntityTypes.OPPORTUNITY,
+  [TYPE_TO_INDEX(indexPattern)[SearchEntityTypes.POST]]: SearchEntityTypes.POST,
+  [TYPE_TO_INDEX(indexPattern)[SearchEntityTypes.USER]]: SearchEntityTypes.USER,
+  [TYPE_TO_INDEX(indexPattern)[SearchEntityTypes.ORGANIZATION]]:
     SearchEntityTypes.ORGANIZATION,
-};
-const TYPE_TO_PUBLIC_INDEX: Record<SearchEntityTypesPublic, string> = {
-  [SearchEntityTypes.SPACE]: `${indexPrefix}spaces`,
-  [SearchEntityTypes.CHALLENGE]: `${indexPrefix}challenges`,
-  [SearchEntityTypes.OPPORTUNITY]: `${indexPrefix}opportunities`,
-  [SearchEntityTypes.POST]: `${indexPrefix}posts`,
-};
+});
+const TYPE_TO_PUBLIC_INDEX = (
+  indexPattern: string
+): Record<SearchEntityTypesPublic, string> => ({
+  [SearchEntityTypes.SPACE]: `${indexPattern}spaces`,
+  [SearchEntityTypes.CHALLENGE]: `${indexPattern}challenges`,
+  [SearchEntityTypes.OPPORTUNITY]: `${indexPattern}opportunities`,
+  [SearchEntityTypes.POST]: `${indexPattern}posts`,
+});
+
+const DEFAULT_MAX_RESULTS = 25;
+const DEFAULT_INDEX_PATTERN = 'alkemio-data-';
 
 @Injectable()
 export class SearchExtractService {
   private readonly client: ElasticClient;
+  private readonly indexPattern: string;
+  private readonly maxResults: number;
 
   constructor(
     @Inject(ELASTICSEARCH_CLIENT_PROVIDER)
     elasticClient: ElasticClient | undefined,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService,
+    private configService: ConfigService
   ) {
     this.client = elasticClient!;
+
+    const pattern =
+      this.configService.get(ConfigurationTypes.SEARCH)?.index_pattern ??
+      DEFAULT_INDEX_PATTERN;
+    const prefix =
+      this.configService.get(ConfigurationTypes.SEARCH)?.index_pattern_prefix ??
+      '';
+
+    this.indexPattern = `${prefix}${prefix ? '-' : ''}${pattern}`;
+    this.maxResults =
+      this.configService.get(ConfigurationTypes.SEARCH)?.max_results ??
+      DEFAULT_MAX_RESULTS;
   }
 
   public async search(
@@ -161,12 +192,12 @@ export class SearchExtractService {
           fields: ['id'],
           _source: false,
           from: 0,
-          size: 5,
+          size: this.maxResults,
         })
         .then(result =>
           result.hits.hits.map<ISearchResult>(hit => {
             const entityId = hit.fields?.id?.[0];
-            const type = INDEX_TO_TYPE[hit._index];
+            const type = INDEX_TO_TYPE(this.indexPattern)[hit._index];
 
             if (!entityId) {
               this.logger.error(
@@ -205,9 +236,11 @@ export class SearchExtractService {
     if (onlyPublicResults) {
       return Object.values(TYPE_TO_PUBLIC_INDEX);
     } else if (!entityTypesFilter.length) {
-      return [`${indexPrefix}*`]; // return all
+      return [`${this.indexPattern}*`]; // return all
     } else {
-      return Object.values(SearchEntityTypes).map(type => TYPE_TO_INDEX[type]);
+      return Object.values(SearchEntityTypes).map(
+        type => TYPE_TO_INDEX(this.indexPattern)[type]
+      );
     }
   }
 }

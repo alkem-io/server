@@ -15,6 +15,6 @@ import { SearchResultService } from './search.result.service';
     ElasticsearchClientProvider,
   ],
   imports: [AuthorizationModule, UserModule, OrganizationModule],
-  exports: [Search2Service],
+  exports: [Search2Service, SearchExtractService, SearchResultService],
 })
 export class Search2Module {}
