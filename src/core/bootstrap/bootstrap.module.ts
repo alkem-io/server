@@ -14,6 +14,8 @@ import { InnovationHubModule } from '@domain/innovation-hub';
 import { NameReporterModule } from '@services/external/elasticsearch/name-reporter/name.reporter.module';
 import { AccountModule } from '@domain/challenge/account/account.module';
 import { Account } from '@domain/challenge/account/account.entity';
+import { SearchIngestModule } from '@services/api/search2/search.ingest/search.ingest.module';
+
 
 @Module({
   imports: [
@@ -30,6 +32,7 @@ import { Account } from '@domain/challenge/account/account.entity';
     TypeOrmModule.forFeature([Account]),
     InnovationHubModule,
     NameReporterModule,
+    SearchIngestModule,
   ],
   providers: [BootstrapService],
   exports: [BootstrapService],

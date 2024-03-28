@@ -30,6 +30,8 @@ import { AccountService } from '@domain/challenge/account/account.service';
 import { AccountAuthorizationService } from '@domain/challenge/account/account.service.authorization';
 import { Account } from '@domain/challenge/account/account.entity';
 import { SpaceType } from '@common/enums/space.type';
+import { SearchIngestService } from '@services/api/search2/search.ingest/search.ingest.service';
+
 
 @Injectable()
 export class BootstrapService {
@@ -51,10 +53,13 @@ export class BootstrapService {
     private accountRepository: Repository<Account>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    private nameReporter: NameReporterService
+    private nameReporter: NameReporterService,
+    // todo remove later
+    private ingestService: SearchIngestService
   ) {}
 
   async bootstrap() {
+    // this.ingestService.ingest(); // todo remove later
     try {
       this.logger.verbose?.('Bootstrapping...', LogContext.BOOTSTRAP);
       this.logConfiguration();
@@ -71,7 +76,7 @@ export class BootstrapService {
       await this.platformService.ensureCommunicationCreated();
       // reset auth as last in the actions
       await this.ensureAuthorizationsPopulated();
-      await this.ensureSpaceNamesInElastic();
+      // await this.ensureSpaceNamesInElastic();
     } catch (error: any) {
       this.logger.error(
         `Unable to complete bootstrap process: ${error}`,

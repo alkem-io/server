@@ -38,6 +38,8 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy/author
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
 import { CalloutType } from '@common/enums/callout.type';
+import { validateSearchParameters } from './util/validate.search.parameters';
+import { validateSearchTerms } from './util/validate.search.terms';
 
 enum SearchEntityTypes {
   USER = 'user',
@@ -50,19 +52,6 @@ enum SearchEntityTypes {
   CALLOUT = 'callout',
 }
 
-const SEARCH_ENTITIES: string[] = [
-  SearchEntityTypes.USER,
-  SearchEntityTypes.GROUP,
-  SearchEntityTypes.ORGANIZATION,
-  SearchEntityTypes.SPACE,
-  SearchEntityTypes.CHALLENGE,
-  SearchEntityTypes.OPPORTUNITY,
-  SearchEntityTypes.POST,
-];
-
-const SEARCH_TERM_LIMIT = 10;
-const TAGSET_NAMES_LIMIT = 2;
-const TERM_MINIMUM_LENGTH = 2;
 const SCORE_INCREMENT = 10;
 const RESULTS_LIMIT = 8;
 
@@ -118,7 +107,7 @@ export class SearchService {
     searchData: SearchInput,
     agentInfo: AgentInfo
   ): Promise<ISearchResults> {
-    this.validateSearchParameters(searchData);
+    validateSearchParameters(searchData);
 
     // Use maps to aggregate results as searching; data structure chosen for linear lookup o(1)
     const userResults: Map<number, Match> = new Map();
@@ -130,7 +119,7 @@ export class SearchService {
     const postResults: Map<number, Match> = new Map();
     // const calloutResults: Map<number, Match> = new Map();
 
-    const filteredTerms = this.validateSearchTerms(searchData.terms);
+    const filteredTerms = validateSearchTerms(searchData.terms);
 
     const {
       spaceIDsFilter,
@@ -246,21 +235,6 @@ export class SearchService {
     this.processResults(results.groupResults, RESULTS_LIMIT);
 
     return results;
-  }
-
-  validateSearchTerms(terms: string[]): string[] {
-    const filteredTerms: string[] = [];
-    for (const term of terms) {
-      if (term.length < TERM_MINIMUM_LENGTH) {
-        throw new ValidationException(
-          `Search: Skipping term below minimum length: ${term}`,
-          LogContext.SEARCH
-        );
-      } else {
-        filteredTerms.push(term);
-      }
-    }
-    return filteredTerms;
   }
 
   private processResults(results: ISearchResult[], limit: number) {
@@ -1003,32 +977,6 @@ export class SearchService {
       existingMatch.terms.push(match.terms[0]);
     } else {
       resultsMap.set(match.key, match);
-    }
-  }
-
-  validateSearchParameters(searchData: SearchInput) {
-    if (searchData.terms.length > SEARCH_TERM_LIMIT)
-      throw new ValidationException(
-        `Maximum number of search terms is ${SEARCH_TERM_LIMIT}; supplied: ${searchData.terms.length}`,
-        LogContext.SEARCH
-      );
-    // Check limit on tagsets that can be searched
-    const tagsetNames = searchData.tagsetNames;
-    if (tagsetNames && tagsetNames.length > TAGSET_NAMES_LIMIT)
-      throw new ValidationException(
-        `Maximum number of tagset names is ${TAGSET_NAMES_LIMIT}; supplied: ${tagsetNames.length}`,
-        LogContext.SEARCH
-      );
-    // Check only allowed entity types supplied
-    const entityTypes = searchData.typesFilter;
-    if (entityTypes) {
-      entityTypes.forEach(entityType => {
-        if (!SEARCH_ENTITIES.includes(entityType))
-          throw new ValidationException(
-            `Not allowed typeFilter encountered: ${entityType}`,
-            LogContext.SEARCH
-          );
-      });
     }
   }
 
