@@ -85,6 +85,27 @@ export class subspaces1711092635967 implements MigrationInterface {
       `ALTER TABLE \`community_policy\` DROP COLUMN \`host\``
     );
     await queryRunner.query(`ALTER TABLE \`account\` DROP COLUMN \`spaceId2\``);
+
+    const authorizationPolicies: {
+      id: string;
+      credentialRules: string;
+      privilegeRules: string;
+      admin: string;
+    }[] = await queryRunner.query(
+      `SELECT id, authorization_policy.credentialRules, authorization_policy.privilegeRules FROM authorization_policy`
+    );
+    for (const policy of authorizationPolicies) {
+      await queryRunner.query(
+        `UPDATE authorization_policy SET credentialRules = '${this.updateAuthorizationPoliciesType(
+          policy.credentialRules
+        )}' WHERE id = '${policy.id}'`
+      );
+      await queryRunner.query(
+        `UPDATE authorization_policy SET privilegeRules = '${this.updateAuthorizationPoliciesType(
+          policy.privilegeRules
+        )}' WHERE id = '${policy.id}'`
+      );
+    }
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {}
@@ -94,6 +115,13 @@ export class subspaces1711092635967 implements MigrationInterface {
     result = result.replace('space-host', 'account-host');
     result = result.replace('challenge-', 'subspace-');
     result = result.replace('opportunity-', 'subspace-');
+    return result;
+  }
+
+  private updateAuthorizationPoliciesType(type: string): string {
+    let result = type;
+    result = result.replace('create-challenge', 'create-subspace');
+    result = result.replace('create-opportunity', 'create-subspace');
     return result;
   }
 }
