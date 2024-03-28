@@ -1,11 +1,11 @@
 import { AuthorizationCredential } from '@common/enums';
 import { ICommunityPolicyDefinition } from '@domain/community/community-policy/community.policy.definition';
 
-export const challengeCommunityPolicy: ICommunityPolicyDefinition = {
+export const spaceCommunityPolicy: ICommunityPolicyDefinition = {
   member: {
     enabled: true,
     credential: {
-      type: AuthorizationCredential.CHALLENGE_MEMBER,
+      type: AuthorizationCredential.SPACE_MEMBER,
       resourceID: '',
     },
     parentCredentials: [],
@@ -17,19 +17,20 @@ export const challengeCommunityPolicy: ICommunityPolicyDefinition = {
   lead: {
     enabled: true,
     credential: {
-      type: AuthorizationCredential.CHALLENGE_LEAD,
+      type: AuthorizationCredential.SPACE_LEAD,
       resourceID: '',
     },
     parentCredentials: [],
     minOrg: 0,
-    maxOrg: 9,
+    maxOrg: 2,
     minUser: 0,
     maxUser: 2,
   },
+
   admin: {
     enabled: true,
     credential: {
-      type: AuthorizationCredential.CHALLENGE_ADMIN,
+      type: AuthorizationCredential.SPACE_ADMIN,
       resourceID: '',
     },
     parentCredentials: [],
@@ -37,17 +38,5 @@ export const challengeCommunityPolicy: ICommunityPolicyDefinition = {
     maxOrg: 0,
     minUser: 0,
     maxUser: -1,
-  },
-  host: {
-    enabled: false,
-    credential: {
-      type: AuthorizationCredential.CHALLENGE_HOST,
-      resourceID: '',
-    },
-    parentCredentials: [],
-    minOrg: 0,
-    maxOrg: 0,
-    minUser: 0,
-    maxUser: 0,
   },
 };

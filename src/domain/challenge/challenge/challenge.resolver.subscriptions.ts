@@ -88,7 +88,7 @@ export class ChallengeResolverSubscriptions {
     );
 
     return this.opportunityCreatedSubscription.asyncIterator(
-      SubscriptionType.OPPORTUNITY_CREATED
+      SubscriptionType.CHALLENGE_CREATED
     );
   }
 }

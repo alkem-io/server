@@ -68,9 +68,20 @@ export class ConversionResolverMutations {
       convertChallengeToSpaceData,
       agentInfo
     );
+    const spaceWithAccount = await this.spaceService.getSpaceOrFail(
+      newSpace.id,
+      {
+        relations: {
+          account: {
+            authorization: true,
+          },
+        },
+      }
+    );
 
     return await this.spaceAuthorizationService.applyAuthorizationPolicy(
-      newSpace
+      newSpace,
+      spaceWithAccount.account.authorization
     );
   }
 
@@ -89,17 +100,19 @@ export class ConversionResolverMutations {
       convertOpportunityToChallengeData.opportunityID,
       {
         relations: {
-          account: true,
+          account: {
+            space: true,
+          },
         },
       }
     );
-    if (!opportunity.account) {
+    if (!opportunity.account || !opportunity.account.space) {
       throw new EntityNotInitializedException(
         `account not found on opportunity: ${opportunity.nameID}`,
         LogContext.CHALLENGES
       );
     }
-    const spaceID = opportunity.account.spaceID;
+    const spaceID = opportunity.account.space.id;
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       this.authorizationGlobalAdminPolicy,
@@ -115,8 +128,17 @@ export class ConversionResolverMutations {
         agentInfo,
         spaceStorageAggregator
       );
-    const parentSpace = await this.spaceService.getSpaceOrFail(spaceID);
-    await this.spaceAuthorizationService.applyAuthorizationPolicy(parentSpace);
+    const parentSpace = await this.spaceService.getSpaceOrFail(spaceID, {
+      relations: {
+        account: {
+          authorization: true,
+        },
+      },
+    });
+    await this.spaceAuthorizationService.applyAuthorizationPolicy(
+      parentSpace,
+      parentSpace.account.authorization
+    );
     return this.challengeService.getChallengeOrFail(newChallenge.id);
   }
 }

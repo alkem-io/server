@@ -4,7 +4,6 @@ import {
   CurrentUser,
   Profiling,
 } from '@src/common/decorators';
-import { IRelation } from '@domain/collaboration/relation/relation.interface';
 import { AuthorizationPrivilege } from '@common/enums';
 import { UseGuards } from '@nestjs/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
@@ -15,10 +14,7 @@ import { ICallout } from '../callout/callout.interface';
 import { CollaborationArgsCallouts } from './dto/collaboration.args.callouts';
 import { AgentInfo } from '@core/authentication/agent-info';
 import { Loader } from '@core/dataloader/decorators';
-import {
-  CollaborationRelationsLoaderCreator,
-  CollaborationTimelineLoaderCreator,
-} from '@core/dataloader/creators';
+import { CollaborationTimelineLoaderCreator } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { ITagsetTemplate } from '@domain/common/tagset-template/tagset.template.interface';
 import { ITimeline } from '@domain/timeline/timeline/timeline.interface';
@@ -28,20 +24,6 @@ import { ICalloutGroup } from '../callout-groups/callout.group.interface';
 @Resolver(() => ICollaboration)
 export class CollaborationResolverFields {
   constructor(private collaborationService: CollaborationService) {}
-
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
-  @ResolveField('relations', () => [IRelation], {
-    nullable: true,
-    description: 'The list of Relations for this Collaboration object.',
-  })
-  @Profiling.api
-  async relations(
-    @Parent() collaboration: Collaboration,
-    @Loader(CollaborationRelationsLoaderCreator) loader: ILoader<IRelation[]>
-  ) {
-    return loader.load(collaboration.id);
-  }
 
   @UseGuards(GraphqlGuard)
   @ResolveField('innovationFlow', () => IInnovationFlow, {

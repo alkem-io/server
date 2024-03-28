@@ -4,7 +4,7 @@ import { CalloutType } from '@common/enums/callout.type';
 import { CreateCalloutInput } from '@domain/collaboration/callout';
 import { EMPTY_WHITEBOARD_CONTENT } from '@domain/common/whiteboard/empty.whiteboard.content';
 
-export const opportunityDefaultCallouts: CreateCalloutInput[] = [
+export const subspaceDefaultCallouts: CreateCalloutInput[] = [
   {
     nameID: 'getting-started',
     type: CalloutType.LINK_COLLECTION,
@@ -26,7 +26,7 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
     contributionPolicy: {
       state: CalloutState.OPEN,
     },
-    sortOrder: 1,
+    sortOrder: 2,
     groupName: CalloutGroupName.HOME_1,
     framing: {
       profile: {
@@ -36,7 +36,7 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
     },
   },
   {
-    nameID: 'tasks',
+    nameID: 'contributor-profiles',
     type: CalloutType.POST_COLLECTION,
     contributionPolicy: {
       state: CalloutState.OPEN,
@@ -45,29 +45,14 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
     groupName: CalloutGroupName.HOME_2,
     framing: {
       profile: {
-        displayName: '💪 Jobs to be done...',
-        description: '',
+        displayName: '👥 This is us!',
+        description:
+          'Here you will find the profiles of all contributors to this Space. Are you joining us? 👋 Nice to meet you! Please also provide your details below.',
       },
     },
     contributionDefaults: {
       postDescription:
-        'Task: <p>  Related to: <p> People involved: <p> Deadline:',
-    },
-  },
-  {
-    nameID: 'roles',
-    type: CalloutType.POST,
-    contributionPolicy: {
-      state: CalloutState.OPEN,
-    },
-    sortOrder: 3,
-    groupName: CalloutGroupName.HOME_2,
-    framing: {
-      profile: {
-        displayName: '👋 Hi, this is us!',
-        description:
-          'Please introduce yourself to each other, sharing a bit about your background, goal, and (envisioned) role in this project',
-      },
+        'Hi! I am... <p> In daily life I... <p> And I also like to... <p> You can contact me for anything related to... <p> My wish for this Space is.. <p> <i>And of course feel invited to insert a nice picture!</i>',
     },
   },
   {
@@ -82,12 +67,35 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
       profile: {
         displayName: 'Relevant news, research or use cases 📰',
         description:
-          'Please share any relevant insights to help us better understand the context. You can describe why it is relevant and add a link or upload a document with the article. You can also comment on the insights already submitted by other community members!',
+          'Please share any relevant insights to help us better understand the Space. You can describe why it is relevant and add a link or upload a document with the article. You can also comment on the insights already submitted by other community members!',
       },
     },
     contributionDefaults: {
       postDescription:
-        'Please share your contribution. The more details the better!',
+        '✍️ Please share your contribution. The more details the better!',
+    },
+  },
+  {
+    nameID: 'stakeholder-map',
+    type: CalloutType.WHITEBOARD,
+    contributionPolicy: {
+      state: CalloutState.OPEN,
+    },
+    sortOrder: 2,
+    groupName: CalloutGroupName.CONTRIBUTE_2,
+    framing: {
+      profile: {
+        displayName: 'Who are the stakeholders?',
+        description:
+          'Choose one of the templates from the library to map your stakeholders here!',
+      },
+      whiteboard: {
+        content: EMPTY_WHITEBOARD_CONTENT,
+        nameID: 'stakeholders',
+        profileData: {
+          displayName: 'stakeholder map',
+        },
+      },
     },
   },
   {
@@ -106,26 +114,23 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
     },
   },
   {
-    nameID: 'needs',
-    type: CalloutType.WHITEBOARD,
+    nameID: 'proposals',
+    type: CalloutType.POST_COLLECTION,
     contributionPolicy: {
       state: CalloutState.OPEN,
     },
-    sortOrder: 2,
-    groupName: CalloutGroupName.CONTRIBUTE_2,
+    sortOrder: 1,
+    groupName: CalloutGroupName.SUBSPACES_2,
     framing: {
       profile: {
-        displayName: 'What do we need?',
+        displayName: 'Proposals',
         description:
-          'We can use this whiteboard to further define what is needed to realize this Opportunity! Think about research, insights, stakeholders or other resources.',
+          'What are the 💡 Opportunities that you think we should be working on? Please add them below and use the template provided.',
       },
-      whiteboard: {
-        content: EMPTY_WHITEBOARD_CONTENT,
-        nameID: 'needs',
-        profileData: {
-          displayName: 'Identify needs',
-        },
-      },
+    },
+    contributionDefaults: {
+      postDescription:
+        '💡 Title <p> 💬 Description <p> 🗣️ Who to involve <p> 🌟 Why this has great potential',
     },
   },
 ];

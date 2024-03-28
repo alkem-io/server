@@ -805,9 +805,14 @@ export class NotificationPayloadBuilder {
         community.id,
         community.type
       );
+    const spaceID =
+      await this.communityResolverService.getRootSpaceFromCommunityOrFail(
+        community
+      );
+
     const result: JourneyPayload = {
-      spaceID: community.spaceID,
-      spaceNameID: await this.getSpaceNameIdOrFail(community.spaceID),
+      spaceID: spaceID,
+      spaceNameID: await this.getSpaceNameIdOrFail(spaceID),
       displayName: displayName,
       type: community.type,
     };

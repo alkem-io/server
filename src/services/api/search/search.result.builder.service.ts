@@ -74,18 +74,20 @@ export default class SearchResultBuilderService
     const challenge = await this.challengeService.getChallengeOrFail(
       rawSearchResult.result.id,
       {
-        relations: { account: true },
+        relations: {
+          account: {
+            space: true,
+          },
+        },
       }
     );
-    if (!challenge.account) {
+    if (!challenge.account || !challenge.account.space) {
       throw new RelationshipNotFoundException(
         `Unable to find account for ${challenge.nameID}`,
         LogContext.SEARCH
       );
     }
-    const space = await this.spaceService.getSpaceOrFail(
-      challenge.account.spaceID
-    );
+    const space = challenge.account.space;
     const searchResultChallenge: ISearchResultChallenge = {
       ...this.searchResultBase,
       challenge,
@@ -98,18 +100,21 @@ export default class SearchResultBuilderService
     const opportunity = await this.opportunityService.getOpportunityOrFail(
       rawSearchResult.result.id,
       {
-        relations: { challenge: true, account: true },
+        relations: {
+          challenge: true,
+          account: {
+            space: true,
+          },
+        },
       }
     );
-    if (!opportunity.account) {
+    if (!opportunity.account || !opportunity.account.space) {
       throw new RelationshipNotFoundException(
         `Unable to find account for ${opportunity.nameID}`,
         LogContext.SEARCH
       );
     }
-    const space = await this.spaceService.getSpaceOrFail(
-      opportunity.account.spaceID
-    );
+    const space = opportunity.account.space;
     if (!opportunity.challenge) {
       throw new RelationshipNotFoundException(
         `Unable to find challenge for ${opportunity.nameID}`,

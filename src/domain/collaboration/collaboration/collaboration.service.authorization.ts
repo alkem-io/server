@@ -16,7 +16,6 @@ import { ICommunityPolicy } from '@domain/community/community-policy/community.p
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { CommunityPolicyService } from '@domain/community/community-policy/community.policy.service';
-import { CommunityPolicyFlag } from '@common/enums/community.policy.flag';
 import {
   CREDENTIAL_RULE_TYPES_COLLABORATION_CREATE_RELATION_REGISTERED,
   CREDENTIAL_RULE_COLLABORATION_CONTRIBUTORS,
@@ -169,12 +168,8 @@ export class CollaborationAuthorizationService {
       ),
     ];
     // optionally add space members
-    if (
-      this.communityPolicyService.getFlag(
-        policy,
-        CommunityPolicyFlag.ALLOW_SPACE_MEMBERS_TO_CONTRIBUTE
-      )
-    ) {
+    const collaborationSettings = policy.settings.collaboration;
+    if (collaborationSettings.inheritMembershipRights) {
       const parentCredentials =
         this.communityPolicyService.getParentCredentialsForRole(
           policy,
@@ -302,12 +297,8 @@ export class CollaborationAuthorizationService {
       );
       privilegeRules.push(createWhiteboardRtPrivilege);
     }
-    if (
-      this.communityPolicyService.getFlag(
-        policy,
-        CommunityPolicyFlag.ALLOW_CONTRIBUTORS_TO_CREATE_CALLOUTS
-      )
-    ) {
+    const collaborationSettings = policy.settings.collaboration;
+    if (collaborationSettings.allowMembersToCreateCallouts) {
       const createCalloutPrivilege = new AuthorizationPolicyRulePrivilege(
         [AuthorizationPrivilege.CREATE_CALLOUT],
         AuthorizationPrivilege.CONTRIBUTE,

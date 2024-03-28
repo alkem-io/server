@@ -137,12 +137,16 @@ export class RolesService {
         community.id,
         community.type
       );
+    const spaceID =
+      await this.communityResolverService.getRootSpaceFromCommunityOrFail(
+        community
+      );
     const applicationResult = new ApplicationForRoleResult(
       community.id,
       communityDisplayName,
       state,
       application.id,
-      community.spaceID,
+      spaceID,
       application.createdDate,
       application.updatedDate
     );
@@ -220,12 +224,17 @@ export class RolesService {
         community.id,
         community.type
       );
+    const spaceID =
+      await this.communityResolverService.getRootSpaceFromCommunityOrFail(
+        community
+      );
+
     const invitationResult = new InvitationForRoleResult(
       community.id,
       communityDisplayName,
       state,
       invitation.id,
-      community.spaceID,
+      spaceID,
       invitation.createdDate,
       invitation.updatedDate
     );

@@ -19,11 +19,24 @@ import { innovationFlowStatesDefault } from './definitions/space.defaults.innova
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
 import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
+import { ISpaceSettings } from '../space.settings/space.settings.interface';
+import { spaceSettingsDefaults } from './definitions/space.settings';
 import { ICalloutGroup } from '@domain/collaboration/callout-groups/callout.group.interface';
 import { SpaceType } from '@common/enums/space.type';
 import { spaceCalloutGroups } from './definitions/space.callout.group';
 import { subspaceCalloutGroups } from './definitions/subspace.callout.group';
 import { Account } from '../account/account.entity';
+import { subspaceDefaultCallouts } from './definitions/subspace.default.callouts';
+import { subspaceCommunityPolicy } from './definitions/subspace.community.policy';
+import { spaceDefaultCallouts } from './definitions/space.default.callouts';
+import { spaceCommunityPolicy } from './definitions/space.community.policy';
+import { ICommunityPolicyDefinition } from '@domain/community/community-policy/community.policy.definition';
+import { CreateFormInput } from '@domain/common/form/dto/form.dto.create';
+import { subspceCommunityApplicationForm } from './definitions/subspace.community.application.form';
+import { spaceCommunityApplicationForm } from './definitions/space.community.application.form';
+import { ProfileType } from '@common/enums';
+import { CalloutGroupName } from '@common/enums/callout.group.name';
+import { subspaceSettingsDefaults } from './definitions/subspace.settings';
 
 @Injectable()
 export class SpaceDefaultsService {
@@ -130,10 +143,71 @@ export class SpaceDefaultsService {
     }
   }
 
+  public getCalloutGroupDefault(spaceType: SpaceType): CalloutGroupName {
+    switch (spaceType) {
+      case SpaceType.CHALLENGE:
+      case SpaceType.OPPORTUNITY:
+        return CalloutGroupName.CONTRIBUTE_2;
+      case SpaceType.SPACE:
+        return CalloutGroupName.KNOWLEDGE;
+    }
+  }
+
+  public getCommunityPolicy(spaceType: SpaceType): ICommunityPolicyDefinition {
+    switch (spaceType) {
+      case SpaceType.CHALLENGE:
+      case SpaceType.OPPORTUNITY:
+        return subspaceCommunityPolicy;
+      case SpaceType.SPACE:
+        return spaceCommunityPolicy;
+    }
+  }
+
+  public getProfileType(spaceType: SpaceType): ProfileType {
+    switch (spaceType) {
+      case SpaceType.CHALLENGE:
+        return ProfileType.CHALLENGE;
+      case SpaceType.OPPORTUNITY:
+        return ProfileType.OPPORTUNITY;
+      case SpaceType.SPACE:
+        return ProfileType.SPACE;
+    }
+  }
+
+  public getCommunityApplicationForm(spaceType: SpaceType): CreateFormInput {
+    switch (spaceType) {
+      case SpaceType.CHALLENGE:
+      case SpaceType.OPPORTUNITY:
+        return subspceCommunityApplicationForm;
+      case SpaceType.SPACE:
+        return spaceCommunityApplicationForm;
+    }
+  }
+
+  public getDefaultCallouts(spaceType: SpaceType): CreateCalloutInput[] {
+    switch (spaceType) {
+      case SpaceType.CHALLENGE:
+      case SpaceType.OPPORTUNITY:
+        return subspaceDefaultCallouts;
+      case SpaceType.SPACE:
+        return spaceDefaultCallouts;
+    }
+  }
+
   public getDefaultInnovationFlowTemplate(
     spaceDefaults: ISpaceDefaults
   ): IInnovationFlowTemplate | undefined {
     return spaceDefaults.innovationFlowTemplate;
+  }
+
+  public getDefaultSpaceSettings(spaceType: SpaceType): ISpaceSettings {
+    switch (spaceType) {
+      case SpaceType.CHALLENGE:
+      case SpaceType.OPPORTUNITY:
+        return subspaceSettingsDefaults;
+      case SpaceType.SPACE:
+        return spaceSettingsDefaults;
+    }
   }
 
   public async getCreateInnovationFlowInput(

@@ -1,11 +1,11 @@
 import { AuthorizationCredential } from '@common/enums';
 import { ICommunityPolicyDefinition } from '@domain/community/community-policy/community.policy.definition';
 
-export const opportunityCommunityPolicy: ICommunityPolicyDefinition = {
+export const subspaceCommunityPolicy: ICommunityPolicyDefinition = {
   member: {
     enabled: true,
     credential: {
-      type: AuthorizationCredential.OPPORTUNITY_MEMBER,
+      type: AuthorizationCredential.SUBSPACE_MEMBER,
       resourceID: '',
     },
     parentCredentials: [],
@@ -17,7 +17,7 @@ export const opportunityCommunityPolicy: ICommunityPolicyDefinition = {
   lead: {
     enabled: true,
     credential: {
-      type: AuthorizationCredential.OPPORTUNITY_LEAD,
+      type: AuthorizationCredential.SUBSPACE_LEAD,
       resourceID: '',
     },
     parentCredentials: [],
@@ -29,7 +29,7 @@ export const opportunityCommunityPolicy: ICommunityPolicyDefinition = {
   admin: {
     enabled: true,
     credential: {
-      type: AuthorizationCredential.OPPORTUNITY_ADMIN,
+      type: AuthorizationCredential.SUBSPACE_ADMIN,
       resourceID: '',
     },
     parentCredentials: [],
@@ -37,17 +37,5 @@ export const opportunityCommunityPolicy: ICommunityPolicyDefinition = {
     maxOrg: 0,
     minUser: 0,
     maxUser: -1,
-  },
-  host: {
-    enabled: false,
-    credential: {
-      type: AuthorizationCredential.OPPORTUNITY_HOST,
-      resourceID: '',
-    },
-    parentCredentials: [],
-    minOrg: 0,
-    maxOrg: 0,
-    minUser: 0,
-    maxUser: 0,
   },
 };

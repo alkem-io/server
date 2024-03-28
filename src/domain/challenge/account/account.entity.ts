@@ -1,13 +1,20 @@
-import { Column, Entity, JoinColumn, OneToMany, OneToOne } from 'typeorm';
+import { Entity, JoinColumn, OneToOne } from 'typeorm';
 import { IAccount } from '@domain/challenge/account/account.interface';
 import { TemplatesSet } from '@domain/template/templates-set/templates.set.entity';
 import { License } from '@domain/license/license/license.entity';
 import { SpaceDefaults } from '../space.defaults/space.defaults.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
-import { Challenge } from '../challenge/challenge.entity';
-import { Opportunity } from '../opportunity';
+import { Space } from '../space/space.entity';
 @Entity()
 export class Account extends AuthorizableEntity implements IAccount {
+  @OneToOne(() => Space, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  space?: Space;
+
   @OneToOne(() => License, {
     eager: false,
     cascade: true,
@@ -31,19 +38,4 @@ export class Account extends AuthorizableEntity implements IAccount {
   })
   @JoinColumn()
   defaults?: SpaceDefaults;
-
-  @OneToMany(() => Challenge, challenge => challenge.account, {
-    eager: false,
-    cascade: true,
-  })
-  challenges?: Challenge[];
-
-  @OneToMany(() => Opportunity, opportunity => opportunity.account, {
-    eager: false,
-    cascade: true,
-  })
-  opportunities?: Opportunity[];
-
-  @Column()
-  spaceID!: string;
 }

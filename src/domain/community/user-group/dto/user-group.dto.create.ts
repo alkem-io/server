@@ -12,5 +12,5 @@ export class CreateUserGroupInput {
   @Field(() => CreateProfileInput, { nullable: false })
   @ValidateNested({ each: true })
   @Type(() => CreateProfileInput)
-  profileData!: CreateProfileInput;
+  profile!: CreateProfileInput;
 }

@@ -1,11 +1,11 @@
-import { LogContext, ProfileType } from '@common/enums';
+import { LogContext } from '@common/enums';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
-import { UpdateBaseChallengeInput } from '@domain/challenge/base-challenge/base.challenge.dto.update';
+import { UpdateBaseChallengeInput } from '@domain/challenge/base-challenge/dto/base.challenge.dto.update';
 import { ICommunity } from '@domain/community/community/community.interface';
 import { CommunityService } from '@domain/community/community/community.service';
 import { IContext } from '@domain/context/context/context.interface';
@@ -14,7 +14,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
 import { BaseChallenge } from '@domain/challenge/base-challenge/base.challenge.entity';
-import { CreateBaseChallengeInput } from '@domain/challenge/base-challenge/base.challenge.dto.create';
+import { CreateBaseChallengeInput } from '@domain/challenge/base-challenge/dto/base.challenge.dto.create';
 import { IBaseChallenge } from '@domain/challenge/base-challenge/base.challenge.interface';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
@@ -24,17 +24,22 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { SpaceType } from '@common/enums/space.type';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
-import { ICommunityPolicyDefinition } from '@domain/community/community-policy/community.policy.definition';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
-import { CreateFormInput } from '@domain/common/form/dto/form.dto.create';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { IProfile } from '@domain/common/profile';
 import { VisualType } from '@common/enums/visual.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
+import { SpaceSettingsService } from '../space.settings/space.settings.service';
+import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
 import { CreateCommunityInput } from '@domain/community/community/dto/community.dto.create';
 import { IAccount } from '../account/account.interface';
+import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
+import { AgentInfo } from '@core/authentication';
+import { CommunityRole } from '@common/enums/community.role';
+import { UpdateSpaceSettingsInput } from '../space.settings/dto/space.settings.dto.update';
+import { ISpaceSettings } from '../space.settings/space.settings.interface';
+import { NVP } from '@domain/common/nvp/nvp.entity';
+import { INVP } from '@domain/common/nvp/nvp.interface';
 
 @Injectable()
 export class BaseChallengeService {
@@ -45,33 +50,53 @@ export class BaseChallengeService {
     private communityService: CommunityService,
     private namingService: NamingService,
     private profileService: ProfileService,
+    private spaceSettingsService: SpaceSettingsService,
+    private spaceDefaultsService: SpaceDefaultsService,
+    private storageAggregatorService: StorageAggregatorService,
     private collaborationService: CollaborationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   public async initialise(
     baseChallenge: IBaseChallenge,
+    repository: Repository<BaseChallenge>,
     baseChallengeData: CreateBaseChallengeInput,
     account: IAccount,
-    communityType: SpaceType,
-    communityPolicy: ICommunityPolicyDefinition,
-    applicationFormData: CreateFormInput,
-    profileType: ProfileType,
-    storageAggregator: IStorageAggregator,
-    collaborationInput?: CreateCollaborationInput
-  ) {
+    agentInfo: AgentInfo | undefined
+  ): Promise<IBaseChallenge> {
+    if (!baseChallenge.nameID) {
+      baseChallenge.nameID = this.namingService.createNameID(
+        baseChallengeData.profileData.displayName
+      );
+    }
     baseChallenge.authorization = new AuthorizationPolicy();
+    baseChallenge.account = account;
+    baseChallenge.settingsStr = this.spaceSettingsService.serializeSettings(
+      this.spaceDefaultsService.getDefaultSpaceSettings(baseChallengeData.type)
+    );
     await this.isNameAvailableInAccountOrFail(
       baseChallengeData.nameID,
       account.id
     );
 
+    const parentStorageAggregator = baseChallengeData.storageAggregatorParent;
+    const storageAggregator =
+      await this.storageAggregatorService.createStorageAggregator(
+        parentStorageAggregator
+      );
+    baseChallenge.storageAggregator = storageAggregator;
+
+    const communityPolicy = this.spaceDefaultsService.getCommunityPolicy(
+      baseChallenge.type
+    );
+    const applicationFormData =
+      this.spaceDefaultsService.getCommunityApplicationForm(baseChallenge.type);
+
     const communityData: CreateCommunityInput = {
       name: baseChallengeData.profileData.displayName,
-      type: communityType,
+      type: baseChallengeData.type as SpaceType,
       policy: communityPolicy,
       applicationForm: applicationFormData,
-      spaceID: account.spaceID,
       guidelines: {
         // TODO: get this from defaults service
         profile: {
@@ -87,22 +112,25 @@ export class BaseChallengeService {
     );
 
     if (!baseChallengeData.context) {
-      baseChallenge.context = await this.contextService.createContext({});
-    } else {
-      baseChallenge.context = await this.contextService.createContext(
-        baseChallengeData.context
-      );
+      baseChallengeData.context = {};
     }
+    baseChallenge.context = await this.contextService.createContext(
+      baseChallengeData.context
+    );
 
+    const profileType = this.spaceDefaultsService.getProfileType(
+      baseChallenge.type
+    );
     baseChallenge.profile = await this.profileService.createProfile(
       baseChallengeData.profileData,
       profileType,
-      storageAggregator
+      baseChallenge.storageAggregator
     );
     await this.profileService.addTagsetOnProfile(baseChallenge.profile, {
       name: TagsetReservedName.DEFAULT,
       tags: baseChallengeData.tags,
     });
+
     // add the visuals
     await this.profileService.addVisualOnProfile(
       baseChallenge.profile,
@@ -117,19 +145,99 @@ export class BaseChallengeService {
       VisualType.CARD
     );
 
+    //// Collaboration
+
     baseChallenge.collaboration =
       await this.collaborationService.createCollaboration(
         {
-          ...collaborationInput,
+          ...baseChallengeData.collaborationData,
         },
-        storageAggregator,
+        baseChallenge.storageAggregator,
         account,
         baseChallenge.type
       );
 
+    const calloutGroupDefault =
+      this.spaceDefaultsService.getCalloutGroupDefault(baseChallenge.type);
+    await this.collaborationService.addCalloutGroupTagsetTemplate(
+      baseChallenge.collaboration,
+      calloutGroupDefault
+    );
+
+    const calloutInputsFromCollaborationTemplate =
+      await this.collaborationService.createCalloutInputsFromCollaborationTemplate(
+        baseChallengeData.collaborationData?.collaborationTemplateID
+      );
+    const defaultCallouts = this.spaceDefaultsService.getDefaultCallouts(
+      baseChallenge.type
+    );
+    const calloutInputs =
+      await this.spaceDefaultsService.getCreateCalloutInputs(
+        defaultCallouts,
+        calloutInputsFromCollaborationTemplate,
+        baseChallengeData.collaborationData
+      );
+    baseChallenge.collaboration =
+      await this.collaborationService.addDefaultCallouts(
+        baseChallenge.collaboration,
+        calloutInputs,
+        baseChallenge.storageAggregator,
+        agentInfo?.userID
+      );
+
+    /////////// Agents
+
     baseChallenge.agent = await this.agentService.createAgent({
       parentDisplayID: `${baseChallenge.nameID}`,
     });
+
+    await this.save(baseChallenge, repository);
+
+    ////// Community
+    // set immediate community parent + resourceID
+    baseChallenge.community.parentID = baseChallenge.id;
+    baseChallenge.community.policy =
+      await this.communityService.updateCommunityPolicyResourceID(
+        baseChallenge.community,
+        baseChallenge.id
+      );
+
+    const savedBaseChallenge = await this.save(baseChallenge, repository);
+    await this.assignUserToRoles(savedBaseChallenge, agentInfo);
+    return savedBaseChallenge;
+  }
+
+  private async assignUserToRoles(
+    baseChallenge: IBaseChallenge,
+    agentInfo: AgentInfo | undefined
+  ) {
+    // TODO: Hack to deal with initialization issues
+    let spaceID = baseChallenge.id;
+    if (baseChallenge.community && baseChallenge.community.type !== 'space') {
+      spaceID = await this.communityService.getSpaceID(baseChallenge.community);
+    }
+    if (agentInfo && baseChallenge.community) {
+      await this.communityService.assignUserToRole(
+        spaceID,
+        baseChallenge.community,
+        agentInfo.userID,
+        CommunityRole.MEMBER
+      );
+
+      await this.communityService.assignUserToRole(
+        spaceID,
+        baseChallenge.community,
+        agentInfo.userID,
+        CommunityRole.LEAD
+      );
+
+      await this.communityService.assignUserToRole(
+        spaceID,
+        baseChallenge.community,
+        agentInfo.userID,
+        CommunityRole.ADMIN
+      );
+    }
   }
 
   public async update(
@@ -140,9 +248,24 @@ export class BaseChallengeService {
       baseChallengeData.ID,
       repository,
       {
-        relations: { context: true, community: true, profile: true },
+        relations: {
+          context: true,
+          community: true,
+          profile: true,
+        },
       }
     );
+
+    if (baseChallengeData.nameID) {
+      if (baseChallengeData.nameID !== baseChallenge.nameID) {
+        // updating the nameID, check new value is allowed
+        await this.isNameAvailableInAccountOrFail(
+          baseChallengeData.nameID,
+          baseChallengeData.accountID
+        );
+        baseChallenge.nameID = baseChallengeData.nameID;
+      }
+    }
 
     if (baseChallengeData.context) {
       if (!baseChallenge.context)
@@ -165,6 +288,13 @@ export class BaseChallengeService {
     return await repository.save(baseChallenge);
   }
 
+  public async save(
+    baseChallenge: IBaseChallenge,
+    repository: Repository<BaseChallenge>
+  ): Promise<IBaseChallenge> {
+    return await repository.save(baseChallenge);
+  }
+
   public async deleteEntities(
     baseChallengeID: string,
     repository: Repository<BaseChallenge>
@@ -179,35 +309,38 @@ export class BaseChallengeService {
           context: true,
           agent: true,
           profile: true,
+          storageAggregator: true,
         },
       }
     );
-    if (baseChallenge.context) {
-      await this.contextService.removeContext(baseChallenge.context.id);
-    }
 
-    if (baseChallenge.collaboration) {
-      await this.collaborationService.deleteCollaboration(
-        baseChallenge.collaboration.id
+    if (
+      !baseChallenge.collaboration ||
+      !baseChallenge.community ||
+      !baseChallenge.context ||
+      !baseChallenge.agent ||
+      !baseChallenge.profile ||
+      !baseChallenge.storageAggregator ||
+      !baseChallenge.authorization
+    ) {
+      throw new RelationshipNotFoundException(
+        `Unable to load entities to delete base challenge: ${baseChallenge.id} `,
+        LogContext.CHALLENGES
       );
     }
 
-    const community = baseChallenge.community;
-    if (community) {
-      await this.communityService.removeCommunity(community.id);
-    }
+    await this.contextService.removeContext(baseChallenge.context.id);
+    await this.collaborationService.deleteCollaboration(
+      baseChallenge.collaboration.id
+    );
+    await this.communityService.removeCommunity(baseChallenge.community.id);
+    await this.profileService.deleteProfile(baseChallenge.profile.id);
+    await this.agentService.deleteAgent(baseChallenge.agent.id);
+    await this.authorizationPolicyService.delete(baseChallenge.authorization);
 
-    if (baseChallenge.profile) {
-      await this.profileService.deleteProfile(baseChallenge.profile.id);
-    }
-
-    if (baseChallenge.agent) {
-      await this.agentService.deleteAgent(baseChallenge.agent.id);
-    }
-
-    if (baseChallenge.authorization) {
-      await this.authorizationPolicyService.delete(baseChallenge.authorization);
-    }
+    await this.storageAggregatorService.delete(
+      baseChallenge.storageAggregator.id
+    );
   }
 
   public async getBaseChallengeOrFail(
@@ -238,6 +371,65 @@ export class BaseChallengeService {
         `Unable to create entity: the provided nameID is already taken: ${nameID}`,
         LogContext.CHALLENGES
       );
+  }
+
+  public getSettings(baseChallenge: IBaseChallenge): ISpaceSettings {
+    return this.spaceSettingsService.getSettings(baseChallenge.settingsStr);
+  }
+
+  public async setCommunityHierarchyForSubspace(
+    parentCommunity: ICommunity,
+    childCommunity: ICommunity | undefined
+  ) {
+    if (!childCommunity) {
+      throw new RelationshipNotFoundException(
+        `Unable to set subspace community relationship, child community not provied: ${parentCommunity.id}`,
+        LogContext.CHALLENGES
+      );
+    }
+    // Finally set the community relationship
+    await this.communityService.setParentCommunity(
+      childCommunity,
+      parentCommunity
+    );
+  }
+
+  public async updateSettings(
+    baseChallenge: IBaseChallenge,
+    repository: Repository<BaseChallenge>,
+    settingsData: UpdateSpaceSettingsInput
+  ): Promise<IBaseChallenge> {
+    const settings = this.spaceSettingsService.getSettings(
+      baseChallenge.settingsStr
+    );
+    const updatedSettings = this.spaceSettingsService.updateSettings(
+      settings,
+      settingsData
+    );
+    baseChallenge.settingsStr =
+      this.spaceSettingsService.serializeSettings(updatedSettings);
+    return await this.save(baseChallenge, repository);
+  }
+
+  public async getAccountOrFail(
+    baseChallengeId: string,
+    repository: Repository<BaseChallenge>
+  ): Promise<IAccount> {
+    const baseChallenge = await repository.findOne({
+      where: { id: baseChallengeId },
+      relations: {
+        account: true,
+      },
+    });
+
+    if (!baseChallenge) {
+      throw new EntityNotFoundException(
+        `Unable to find base challenge with ID: ${baseChallengeId}`,
+        LogContext.CHALLENGES
+      );
+    }
+
+    return baseChallenge.account;
   }
 
   public async getCommunity(
@@ -370,6 +562,40 @@ export class BaseChallengeService {
         LogContext.AGENT
       );
     return agent;
+  }
+
+  async getMetrics(
+    baseChallenge: IBaseChallenge,
+    repository: Repository<BaseChallenge>
+  ): Promise<INVP[]> {
+    const metrics: INVP[] = [];
+    const community = await this.getCommunity(baseChallenge.id, repository);
+
+    // Members
+    const membersCount = await this.communityService.getMembersCount(community);
+    const membersTopic = new NVP('members', membersCount.toString());
+    membersTopic.id = `members-${baseChallenge.id}`;
+    metrics.push(membersTopic);
+
+    // Posts
+    const postsCount = await this.getPostsCount(baseChallenge, repository);
+    const postsTopic = new NVP('posts', postsCount.toString());
+    postsTopic.id = `posts-${baseChallenge.id}`;
+    metrics.push(postsTopic);
+
+    // Whiteboards
+    const whiteboardsCount = await this.getWhiteboardsCount(
+      baseChallenge,
+      repository
+    );
+    const whiteboardsTopic = new NVP(
+      'whiteboards',
+      whiteboardsCount.toString()
+    );
+    whiteboardsTopic.id = `whiteboards-${baseChallenge.id}`;
+    metrics.push(whiteboardsTopic);
+
+    return metrics;
   }
 
   public async getMembersCount(

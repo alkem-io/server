@@ -9,20 +9,15 @@ export enum AuthorizationCredential {
 
   USER_SELF_MANAGEMENT = 'user-self', // able to update a user
 
-  SPACE_HOST = 'space-host', // host for an space; can only be one...
+  ACCOUNT_HOST = 'account-host',
+
   SPACE_ADMIN = 'space-admin',
   SPACE_MEMBER = 'space-member',
   SPACE_LEAD = 'space-lead',
 
-  CHALLENGE_HOST = 'challenge-host',
-  CHALLENGE_ADMIN = 'challenge-admin',
-  CHALLENGE_MEMBER = 'challenge-member',
-  CHALLENGE_LEAD = 'challenge-lead',
-
-  OPPORTUNITY_HOST = 'opportunity-host',
-  OPPORTUNITY_MEMBER = 'opportunity-member',
-  OPPORTUNITY_ADMIN = 'opportunity-admin',
-  OPPORTUNITY_LEAD = 'opportunity-lead',
+  SUBSPACE_ADMIN = 'subspace-admin',
+  SUBSPACE_MEMBER = 'subspace-member',
+  SUBSPACE_LEAD = 'subspace-lead',
 
   ORGANIZATION_OWNER = 'organization-owner', // Able to commit an organization
   ORGANIZATION_ADMIN = 'organization-admin', // Able to administer an organization

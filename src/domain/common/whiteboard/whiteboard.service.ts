@@ -48,7 +48,7 @@ export class WhiteboardService {
     private profileService: ProfileService,
     private profileDocumentsService: ProfileDocumentsService,
     private whiteboardAuthService: WhiteboardAuthorizationService,
-    private communityResolver: CommunityResolverService,
+    private communityResolverService: CommunityResolverService,
     @InjectEntityManager() private entityManager: EntityManager
   ) {}
 
@@ -222,8 +222,12 @@ export class WhiteboardService {
 
   async isMultiUser(whiteboardId: string): Promise<boolean | never> {
     const community =
-      await this.communityResolver.getCommunityFromWhiteboardOrFail(
+      await this.communityResolverService.getCommunityFromWhiteboardOrFail(
         whiteboardId
+      );
+    const spaceID =
+      await this.communityResolverService.getRootSpaceFromCommunityOrFail(
+        community
       );
 
     const space = await this.entityManager.findOneOrFail(Space, {
@@ -234,7 +238,7 @@ export class WhiteboardService {
           },
         },
       },
-      where: { id: community.spaceID },
+      where: { id: spaceID },
     });
     const license = space.account?.license;
 
@@ -243,7 +247,7 @@ export class WhiteboardService {
         'Feature flag not found',
         LogContext.COLLABORATION,
         {
-          spaceId: community.spaceID,
+          spaceId: spaceID,
         }
       );
     }
@@ -257,7 +261,7 @@ export class WhiteboardService {
         'Feature flag not found',
         LogContext.COLLABORATION,
         {
-          spaceId: community.spaceID,
+          spaceId: spaceID,
           featureFlagName: LicenseFeatureFlagName.WHITEBOARD_MULTI_USER,
           licenseId: license.id,
         }

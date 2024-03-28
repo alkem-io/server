@@ -17,6 +17,7 @@ import {
   AccountLicenseLoaderCreator,
   AccountLibraryLoaderCreator,
 } from '@core/dataloader/creators/loader.creators';
+import { ISpace } from '../space/space.interface';
 
 @Resolver(() => IAccount)
 export class AccountResolverFields {
@@ -67,5 +68,14 @@ export class AccountResolverFields {
   @Profiling.api
   async host(@Parent() account: Account): Promise<IOrganization | undefined> {
     return await this.accountService.getHost(account);
+  }
+
+  @ResolveField('space', () => ISpace, {
+    nullable: false,
+    description: 'The root space for the Account .',
+  })
+  @Profiling.api
+  async space(@Parent() account: Account): Promise<ISpace> {
+    return await this.accountService.getRootSpace(account);
   }
 }

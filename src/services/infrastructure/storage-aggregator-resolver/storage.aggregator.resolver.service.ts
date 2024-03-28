@@ -13,8 +13,8 @@ import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exc
 import { TimelineResolverService } from '../entity-resolver/timeline.resolver.service';
 import { StorageAggregatorNotFoundException } from '@common/exceptions/storage.aggregator.not.found.exception';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { StorageAggregatorParentType } from '@common/enums/storage.aggregator.parent.type';
 import { Space } from '@domain/challenge/space/space.entity';
+import { SpaceType } from '@common/enums/space.type';
 
 @Injectable()
 export class StorageAggregatorResolverService {
@@ -74,13 +74,13 @@ export class StorageAggregatorResolverService {
   ): Promise<{
     id: string;
     displayName: string;
-    type: StorageAggregatorParentType;
+    type: SpaceType;
     nameID: string;
   }> {
     const spaceInfo = await this.getJourneyInfo('space', storageAggregatorID);
     if (spaceInfo) {
       return {
-        type: StorageAggregatorParentType.SPACE,
+        type: SpaceType.SPACE,
         ...spaceInfo,
       };
     }
@@ -90,7 +90,7 @@ export class StorageAggregatorResolverService {
     );
     if (challengeInfo) {
       return {
-        type: StorageAggregatorParentType.CHALLENGE,
+        type: SpaceType.CHALLENGE,
         ...challengeInfo,
       };
     }
@@ -100,7 +100,7 @@ export class StorageAggregatorResolverService {
     );
     if (opportunityInfo) {
       return {
-        type: StorageAggregatorParentType.OPPORTUNITY,
+        type: SpaceType.OPPORTUNITY,
         ...opportunityInfo,
       };
     }

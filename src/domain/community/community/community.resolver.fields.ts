@@ -25,6 +25,7 @@ import { CommunityMembershipStatus } from '@common/enums/community.membership.st
 import { AgentInfo } from '@core/authentication';
 import { IInvitation } from '../invitation';
 import { IInvitationExternal } from '../invitation.external';
+import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { ICommunityGuidelines } from '../community-guidelines/community.guidelines.interface';
 
 @Resolver(() => ICommunity)
@@ -43,6 +44,19 @@ export class CommunityResolverFields {
   @Profiling.api
   async groups(@Parent() community: Community) {
     return await this.communityService.getUserGroups(community);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('group', () => IUserGroup, {
+    nullable: false,
+    description: 'The user group with the specified id anywhere in the space',
+  })
+  async group(
+    @Parent() community: ICommunity,
+    @Args('ID', { type: () => UUID }) groupID: string
+  ): Promise<IUserGroup> {
+    return await this.communityService.getUserGroup(community, groupID);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

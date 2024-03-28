@@ -1,14 +1,14 @@
 import { CreateFormInput } from '@domain/common/form/dto/form.dto.create';
 
-export const challengeCommunityApplicationForm: CreateFormInput = {
+export const subspceCommunityApplicationForm: CreateFormInput = {
   description: '',
 
   questions: [
     {
-      question: 'What makes you want to join this Challenge?',
+      question: 'Why do you want to join?',
+      explanation: 'Please tell us your rational for joining.',
       required: true,
       maxLength: 500,
-      explanation: '',
       sortOrder: 1,
     },
     {

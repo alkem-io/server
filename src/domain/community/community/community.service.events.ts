@@ -32,6 +32,7 @@ export class CommunityEventsService {
 
   public async processCommunityNewMemberEvents(
     community: ICommunity,
+    spaceID: string,
     displayName: string,
     agentInfo: AgentInfo,
     newMember: IUser
@@ -51,7 +52,7 @@ export class CommunityEventsService {
           {
             id: community.parentID,
             name: displayName,
-            space: community.spaceID,
+            space: spaceID,
           },
           {
             id: agentInfo.userID,
@@ -64,7 +65,7 @@ export class CommunityEventsService {
           {
             id: community.parentID,
             name: displayName,
-            space: community.spaceID,
+            space: spaceID,
           },
           {
             id: agentInfo.userID,
@@ -77,7 +78,7 @@ export class CommunityEventsService {
           {
             id: community.parentID,
             name: displayName,
-            space: community.spaceID,
+            space: spaceID,
           },
           {
             id: agentInfo.userID,

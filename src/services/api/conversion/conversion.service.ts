@@ -24,6 +24,8 @@ import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.a
 import { ICallout } from '@domain/collaboration/callout';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { CalloutGroupName } from '@common/enums/callout.group.name';
+import { CreateChallengeInput } from '@domain/challenge';
+import { SpaceType } from '@common/enums/space.type';
 
 export class ConversionService {
   constructor(
@@ -39,10 +41,12 @@ export class ConversionService {
     conversionData: ConvertChallengeToSpaceInput,
     agentInfo: AgentInfo
   ): Promise<ISpace> {
+    // TODO: needs to create a new ACCOUNT etc.
     const challenge = await this.challengeService.getChallengeOrFail(
       conversionData.challengeID,
       {
         relations: {
+          account: true,
           community: true,
           context: true,
           profile: true,
@@ -61,6 +65,7 @@ export class ConversionService {
     );
     if (
       !challenge.community ||
+      !challenge.account ||
       !challenge.context ||
       !challenge.profile ||
       !challenge.collaboration ||
@@ -93,9 +98,12 @@ export class ConversionService {
       profileData: {
         displayName: challenge.profile.displayName,
       },
+      level: 0,
+      type: SpaceType.SPACE,
     };
     const emptySpace = await this.spaceService.createSpace(
       createSpaceInput,
+      challenge.account,
       agentInfo
     );
     const space = await this.spaceService.getSpaceOrFail(emptySpace.id, {
@@ -187,6 +195,7 @@ export class ConversionService {
 
     // Assign users to roles in new space
     await this.assignContributors(
+      space.id,
       space.community,
       userMembers,
       userLeads,
@@ -271,18 +280,20 @@ export class ConversionService {
     //     );
     //   innovationFlowTemplateID = defaultChallengeLifecycleTemplate.id;
     // }
-    const emptyChallenge = await this.challengeService.createChallenge(
-      {
-        nameID: challengeNameID,
-        collaborationData: {
-          innovationFlowTemplateID: innovationFlowTemplateID,
-        },
-        profileData: {
-          displayName: opportunity.profile.displayName,
-        },
-        storageAggregatorParent: spaceStorageAggregator,
-        spaceID: spaceID,
+    const challengeData: CreateChallengeInput = {
+      nameID: challengeNameID,
+      collaborationData: {
+        innovationFlowTemplateID: innovationFlowTemplateID,
       },
+      profileData: {
+        displayName: opportunity.profile.displayName,
+      },
+      storageAggregatorParent: spaceStorageAggregator,
+      level: 1,
+      type: SpaceType.CHALLENGE,
+    };
+    const emptyChallenge = await this.challengeService.createChallenge(
+      challengeData,
       opportunity.account,
       agentInfo
     );
@@ -399,6 +410,7 @@ export class ConversionService {
 
     // Assign users to roles in new challenge
     await this.assignContributors(
+      spaceID,
       challengeCommunityUpdated,
       userMembers,
       userLeads,
@@ -407,7 +419,13 @@ export class ConversionService {
     );
 
     // Add the new challenge to the space
-    return await this.spaceService.addChallengeToSpace(spaceID, challenge);
+    const space = await this.spaceService.getSpaceOrFail(spaceID, {
+      relations: {
+        challenges: true,
+        community: true,
+      },
+    });
+    return await this.spaceService.addChallengeToSpace(space, challenge);
   }
 
   private updateSpaceCalloutsGroups(callouts: ICallout[] | undefined): void {
@@ -509,7 +527,7 @@ export class ConversionService {
     const tmpCommunication =
       await this.communicationService.createCommunication(
         'temp',
-        parentCommunity.spaceID,
+        '',
         Object.values(DiscussionCategoryCommunity)
       );
     childCommunity.communication = tmpCommunication;
@@ -563,6 +581,7 @@ export class ConversionService {
   }
 
   private async assignContributors(
+    spaceID: string,
     community: ICommunity,
     userMembers: IUser[],
     userLeads: IUser[],
@@ -571,6 +590,7 @@ export class ConversionService {
   ) {
     for (const userMember of userMembers) {
       await this.communityService.assignUserToRole(
+        spaceID,
         community,
         userMember.id,
         CommunityRole.MEMBER
@@ -578,6 +598,7 @@ export class ConversionService {
     }
     for (const userLead of userLeads) {
       await this.communityService.assignUserToRole(
+        spaceID,
         community,
         userLead.id,
         CommunityRole.LEAD

@@ -81,9 +81,12 @@ import {
 import { UpdateUserPlatformSettingsInput } from '@domain/community/user/dto/user.dto.update.platform.settings';
 import { UpdateInnovationFlowStateInput } from '@domain/collaboration/innovation-flow-states/dto/innovation.flow.state.dto.update';
 import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
+import { UpdateChallengeSettingsInput } from '@domain/challenge/challenge/dto/challenge.dto.update.settings';
+import { UpdateSpaceSettingsInput } from '@domain/challenge/space.settings/dto/space.settings.dto.update';
+import { UpdateSpaceSettingsOnSpaceInput } from '@domain/challenge/space/dto/space.dto.update.settings';
 import {
   CreateAccountInput,
-  UpdateAccountInput,
+  UpdateAccountPlatformSettingsInput,
 } from '@domain/challenge/account/dto';
 import { UpdateAccountDefaultsInput } from '@domain/challenge/account/dto/account.dto.update.defaults';
 
@@ -123,7 +126,7 @@ export class BaseHandler extends AbstractHandler {
       CreateAccountInput,
       DeleteDocumentInput,
       UpdateActorInput,
-      UpdateAccountInput,
+      UpdateAccountPlatformSettingsInput,
       UpdateAccountDefaultsInput,
       UpdatePostInput,
       UpdateDocumentInput,
@@ -134,6 +137,7 @@ export class BaseHandler extends AbstractHandler {
       UpdatePostTemplateInput,
       UpdateCommunityApplicationFormInput,
       UpdateSpaceInput,
+      UpdateSpaceSettingsInput,
       UpdateOrganizationInput,
       UpdateOpportunityInput,
       UpdateChallengeInput,
@@ -149,6 +153,9 @@ export class BaseHandler extends AbstractHandler {
       UpdateWhiteboardTemplateInput,
       UpdateDiscussionInput,
       UpdateEcosystemModelInput,
+      UpdateSpaceSettingsInput,
+      UpdateSpaceSettingsOnSpaceInput,
+      UpdateChallengeSettingsInput,
       VisualUploadImageInput,
       CommunityApplyInput,
       CreateInvitationExistingUserOnCommunityInput,

@@ -44,21 +44,19 @@ export class UserGroupService {
 
   async createUserGroup(
     userGroupData: CreateUserGroupInput,
-    storageAggregator: IStorageAggregator,
-    spaceID = ''
+    storageAggregator: IStorageAggregator
   ): Promise<IUserGroup> {
-    const group = UserGroup.create({ ...userGroupData, spaceID });
-    group.spaceID = spaceID;
+    const group = UserGroup.create(userGroupData);
     group.authorization = new AuthorizationPolicy();
 
     (group as IUserGroup).profile = await this.profileService.createProfile(
-      userGroupData.profileData,
+      userGroupData.profile,
       ProfileType.USER_GROUP,
       storageAggregator
     );
     const savedUserGroup = await this.userGroupRepository.save(group);
     this.logger.verbose?.(
-      `Created new group (${group.id}) with name: ${group.name}`,
+      `Created new group (${group.id}) with name: ${group.profile?.displayName}`,
       LogContext.COMMUNITY
     );
     return savedUserGroup;
@@ -95,19 +93,23 @@ export class UserGroupService {
     const group = await this.getUserGroupOrFail(userGroupInput.ID, {
       relations: { profile: true },
     });
+    if (!group.profile) {
+      throw new EntityNotFoundException(
+        `Group profile not initialised: ${group.id}`,
+        LogContext.COMMUNITY
+      );
+    }
 
     const newName = userGroupInput.name;
-    if (newName && newName.length > 0 && newName !== group.name) {
-      group.name = newName;
+    if (
+      newName &&
+      newName.length > 0 &&
+      newName !== group.profile.displayName
+    ) {
+      group.profile.displayName = newName;
     }
 
     if (userGroupInput.profileData) {
-      if (!group.profile) {
-        throw new EntityNotFoundException(
-          `Group profile not initialised: ${group.id}`,
-          LogContext.COMMUNITY
-        );
-      }
       group.profile = await this.profileService.updateProfile(
         group.profile,
         userGroupInput.profileData
@@ -128,7 +130,7 @@ export class UserGroupService {
     if (groupWithParent?.community) return groupWithParent?.community;
     if (groupWithParent?.organization) return groupWithParent?.organization;
     throw new EntityNotFoundException(
-      `Unable to locate parent for user group: ${group.name}`,
+      `Unable to locate parent for user group: ${group.profile?.displayName}`,
       LogContext.COMMUNITY
     );
   }
@@ -202,7 +204,7 @@ export class UserGroupService {
 
     // Find the right group
     for (const group of groupable.groups) {
-      if (group.name === name) {
+      if (group.profile?.displayName === name) {
         return true;
       }
     }
@@ -214,8 +216,7 @@ export class UserGroupService {
   async addGroupWithName(
     groupable: IGroupable,
     name: string,
-    storageAggregator: IStorageAggregator,
-    spaceID?: string
+    storageAggregator: IStorageAggregator
   ): Promise<IUserGroup> {
     // Check if the group already exists, if so log a warning
     const alreadyExists = this.hasGroupWithName(groupable, name);
@@ -229,12 +230,11 @@ export class UserGroupService {
     const newGroup = await this.createUserGroup(
       {
         parentID: groupable.id,
-        profileData: {
+        profile: {
           displayName: name,
         },
       },
-      storageAggregator,
-      spaceID
+      storageAggregator
     );
     await groupable.groups?.push(newGroup);
     return newGroup;

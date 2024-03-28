@@ -8,6 +8,10 @@ import { LogContext } from '@common/enums';
 import { Communication } from '@domain/communication/communication/communication.entity';
 import { Profile } from '@domain/common/profile/profile.entity';
 import { SpaceType } from '@common/enums/space.type';
+import { Space } from '@domain/challenge/space/space.entity';
+import { IBaseChallenge } from '@domain/challenge/base-challenge/base.challenge.interface';
+import { Challenge } from '@domain/challenge/challenge/challenge.entity';
+import { Opportunity } from '@domain/challenge/opportunity';
 
 @Injectable()
 export class CommunityResolverService {
@@ -23,6 +27,66 @@ export class CommunityResolverService {
     @InjectEntityManager('default')
     private entityManager: EntityManager
   ) {}
+
+  public async getRootSpaceFromCommunityOrFail(community: ICommunity) {
+    let baseChallenge: IBaseChallenge | null = null;
+    switch (community.type) {
+      case SpaceType.SPACE:
+        baseChallenge = await this.entityManager.findOne(Space, {
+          where: {
+            community: {
+              id: community.id,
+            },
+          },
+          relations: {
+            account: {
+              space: true,
+            },
+          },
+        });
+        break;
+      case SpaceType.CHALLENGE:
+        baseChallenge = await this.entityManager.findOne(Challenge, {
+          where: {
+            community: {
+              id: community.id,
+            },
+          },
+          relations: {
+            account: {
+              space: true,
+            },
+          },
+        });
+        break;
+      case SpaceType.OPPORTUNITY:
+        baseChallenge = await this.entityManager.findOne(Opportunity, {
+          where: {
+            community: {
+              id: community.id,
+            },
+          },
+          relations: {
+            account: {
+              space: true,
+            },
+          },
+        });
+        break;
+    }
+    if (
+      !baseChallenge ||
+      !baseChallenge.account ||
+      !baseChallenge.account.space
+    ) {
+      throw new EntityNotFoundException(
+        `Unable to find Space for given community id: ${community.id}`,
+        LogContext.COLLABORATION
+      );
+    }
+    const space = baseChallenge.account.space;
+    return space.id;
+  }
 
   public async getCommunityFromDiscussionOrFail(
     discussionID: string

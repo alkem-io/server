@@ -2,11 +2,8 @@ import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
 import { Space } from '@domain/challenge/space/space.entity';
 import { INVP } from '@domain/common/nvp';
-import { UUID, UUID_NAMEID } from '@domain/common/scalars';
-import { IOrganization } from '@domain/community/organization';
+import { UUID_NAMEID } from '@domain/common/scalars';
 import { ICommunity } from '@domain/community/community';
-import { IUserGroup } from '@domain/community/user-group';
-import { UserGroupService } from '@domain/community/user-group/user-group.service';
 import { IContext } from '@domain/context/context';
 import { UseGuards } from '@nestjs/common';
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
@@ -17,9 +14,7 @@ import {
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { SpaceService } from '@domain/challenge/space/space.service';
 import { ISpace } from '@domain/challenge/space/space.interface';
-import { IOpportunity } from '@domain/challenge/opportunity';
 import { IAgent } from '@domain/agent/agent';
-import { IPreference } from '@domain/common/preference/preference.interface';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
 import { IProfile } from '@domain/common/profile';
@@ -28,7 +23,6 @@ import {
   JourneyCollaborationLoaderCreator,
   JourneyCommunityLoaderCreator,
   JourneyContextLoaderCreator,
-  PreferencesLoaderCreator,
   AgentLoaderCreator,
   ProfileLoaderCreator,
 } from '@core/dataloader/creators';
@@ -37,11 +31,11 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { AgentInfo } from '@core/authentication/agent-info';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
+import { ISpaceSettings } from '../space.settings/space.settings.interface';
 
 @Resolver(() => ISpace)
 export class SpaceResolverFields {
   constructor(
-    private groupService: UserGroupService,
     private spaceService: SpaceService,
     private authorizationService: AuthorizationService
   ) {}
@@ -131,29 +125,12 @@ export class SpaceResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('preferences', () => [IPreference], {
-    nullable: true,
-    description: 'The preferences for this Space',
-  })
-  async preferences(
-    @Parent() space: Space,
-    @Loader(PreferencesLoaderCreator, {
-      parentClassRef: Space,
-      getResult: r => r?.preferenceSet?.preferences,
-    })
-    loader: ILoader<IPreference[]>
-  ): Promise<IPreference[]> {
-    return loader.load(space.id);
-  }
-
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
   @ResolveField('challenges', () => [IChallenge], {
     nullable: true,
     description: 'The challenges for the space.',
   })
   async challenges(
-    @Parent() space: Space,
+    @Parent() space: ISpace,
     @Args({ nullable: true }) args: LimitAndShuffleIdsQueryArgs
   ): Promise<IChallenge[]> {
     return await this.spaceService.getChallenges(space, args);
@@ -191,7 +168,7 @@ export class SpaceResolverFields {
   async challenge(
     @Args('ID', { type: () => UUID_NAMEID }) id: string,
     @CurrentUser() agentInfo: AgentInfo,
-    @Parent() space: Space
+    @Parent() space: ISpace
   ): Promise<IChallenge> {
     const challenge = await this.spaceService.getChallengeInAccount(id, space);
     if (!challenge) {
@@ -204,72 +181,12 @@ export class SpaceResolverFields {
     return challenge;
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
-  @ResolveField('opportunity', () => IOpportunity, {
-    nullable: false,
-    description: 'A particular Opportunity, either by its ID or nameID',
-  })
-  async opportunity(
-    @Args('ID', { type: () => UUID_NAMEID }) id: string,
-    @CurrentUser() agentInfo: AgentInfo,
-    @Parent() space: Space
-  ): Promise<IOpportunity> {
-    const opportunity = await this.spaceService.getOpportunityInAccount(
-      id,
-      space
-    );
-    if (!opportunity) {
-      throw new EntityNotFoundException(
-        `Unable to find Opportunity with ID: '${id}'`,
-        LogContext.CHALLENGES,
-        { opportunityId: id, spaceId: space.id, userId: agentInfo.userID }
-      );
-    }
-    return opportunity;
-  }
-
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
-  @ResolveField('groups', () => [IUserGroup], {
-    nullable: false,
-    description: 'The User Groups on this Space',
-  })
-  async groups(@Parent() space: Space): Promise<IUserGroup[]> {
-    return await this.groupService.getGroups({
-      where: { spaceID: space.id },
-    });
-  }
-
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
-  @ResolveField('group', () => IUserGroup, {
-    nullable: false,
-    description: 'The user group with the specified id anywhere in the space',
-  })
-  async group(
-    @Parent() space: Space,
-    @Args('ID', { type: () => UUID }) groupID: string
-  ): Promise<IUserGroup> {
-    return await this.groupService.getUserGroupOrFail(groupID, {
-      where: { spaceID: space.id },
-    });
-  }
-
   @ResolveField('metrics', () => [INVP], {
     nullable: true,
     description: 'Metrics about activity within this Space.',
   })
-  async metrics(@Parent() space: Space) {
+  async metrics(@Parent() space: ISpace) {
     return await this.spaceService.getMetrics(space);
-  }
-
-  @ResolveField('host', () => IOrganization, {
-    nullable: true,
-    description: 'The Space host.',
-  })
-  async host(@Parent() space: Space): Promise<IOrganization | undefined> {
-    return await this.spaceService.getHost(space.id);
   }
 
   @ResolveField('createdDate', () => Date, {
@@ -279,5 +196,13 @@ export class SpaceResolverFields {
   async createdDate(@Parent() space: Space): Promise<Date> {
     const createdDate = (space as Space).createdDate;
     return new Date(createdDate);
+  }
+
+  @ResolveField('settings', () => ISpaceSettings, {
+    nullable: false,
+    description: 'The settings for this Space.',
+  })
+  states(@Parent() space: ISpace): ISpaceSettings {
+    return this.spaceService.getSettings(space);
   }
 }
