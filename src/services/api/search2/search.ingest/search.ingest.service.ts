@@ -105,13 +105,21 @@ export class SearchIngestService {
       };
     }
     const indices = [
-      `${this.indexPattern}-spaces`,
-      `${this.indexPattern}-challenges`,
-      `${this.indexPattern}-opportunities`,
-      `${this.indexPattern}-organizations`,
-      `${this.indexPattern}-users`,
-      `${this.indexPattern}-posts`,
+      `${this.indexPattern}spaces`,
+      `${this.indexPattern}challenges`,
+      `${this.indexPattern}opportunities`,
+      `${this.indexPattern}organizations`,
+      `${this.indexPattern}users`,
+      `${this.indexPattern}posts`,
     ];
+
+    if (!(await this.elasticClient.indices.exists({ index: indices }))) {
+      return {
+        acknowledged: true,
+        message: 'Indices do not exist',
+      };
+    }
+
     return this.elasticClient.indices
       .delete({ index: indices })
       .then(x => ({ acknowledged: x.acknowledged }));
@@ -129,27 +137,27 @@ export class SearchIngestService {
     const result: IngestReturnType = {};
     const params = [
       {
-        index: `${this.indexPattern}-spaces`,
+        index: `${this.indexPattern}spaces`,
         fetchFn: this.fetchSpaces.bind(this),
       },
       {
-        index: `${this.indexPattern}-challenges`,
+        index: `${this.indexPattern}challenges`,
         fetchFn: this.fetchChallenges.bind(this),
       },
       {
-        index: `${this.indexPattern}-opportunities`,
+        index: `${this.indexPattern}opportunities`,
         fetchFn: this.fetchOpportunities.bind(this),
       },
       {
-        index: `${this.indexPattern}-organizations`,
+        index: `${this.indexPattern}organizations`,
         fetchFn: this.fetchOrganization.bind(this),
       },
       {
-        index: `${this.indexPattern}-users`,
+        index: `${this.indexPattern}users`,
         fetchFn: this.fetchUsers.bind(this),
       },
       {
-        index: `${this.indexPattern}-posts`,
+        index: `${this.indexPattern}posts`,
         fetchFn: this.fetchPosts.bind(this),
       },
     ];

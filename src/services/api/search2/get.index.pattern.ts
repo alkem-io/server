@@ -10,5 +10,5 @@ export const getIndexPattern = (configService: ConfigService) => {
   const prefix =
     configService.get(ConfigurationTypes.SEARCH)?.index_pattern_prefix ?? '';
 
-  return `${prefix}${prefix ? '-' : ''}${pattern}`;
+  return `${prefix}${pattern}`;
 };
