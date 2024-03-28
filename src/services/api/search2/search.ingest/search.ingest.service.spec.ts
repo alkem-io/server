@@ -1,27 +1,25 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import {
+  MockElasticsearchClientProvider,
   MockEntityManagerProvider,
-  MockAuthResetService,
   MockWinstonProvider,
 } from '@test/mocks';
-import { MockTaskService } from '@test/mocks/task.service.mock';
-import { AuthResetService } from './auth-reset.service';
+import { SearchIngestService } from './search.ingest.service';
 
-describe('AuthResetService', () => {
-  let service: AuthResetService;
+describe('SearchIngestService', () => {
+  let service: SearchIngestService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        AuthResetService,
-        MockAuthResetService,
-        MockTaskService,
-        MockEntityManagerProvider,
+        SearchIngestService,
+        MockElasticsearchClientProvider,
         MockWinstonProvider,
+        MockEntityManagerProvider,
       ],
     }).compile();
 
-    service = module.get<AuthResetService>(AuthResetService);
+    service = module.get<SearchIngestService>(SearchIngestService);
   });
 
   it('should be defined', () => {
