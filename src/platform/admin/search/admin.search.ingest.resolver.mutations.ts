@@ -19,7 +19,7 @@ import { SearchIngestService } from '@services/api/search2/search.ingest/search.
 import { BaseException } from '@common/exceptions/base.exception';
 
 @Resolver()
-export class AdminWhiteboardResolverMutations {
+export class AdminSearchIngestResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
     private platformAuthorizationPolicyService: PlatformAuthorizationPolicyService,

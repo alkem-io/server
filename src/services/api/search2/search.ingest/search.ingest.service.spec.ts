@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import {
+  MockConfigService,
   MockElasticsearchClientProvider,
   MockEntityManagerProvider,
   MockWinstonProvider,
@@ -16,6 +17,7 @@ describe('SearchIngestService', () => {
         MockElasticsearchClientProvider,
         MockWinstonProvider,
         MockEntityManagerProvider,
+        MockConfigService,
       ],
     }).compile();
 
