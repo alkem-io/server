@@ -86,6 +86,7 @@ import {
   UpdateAccountInput,
 } from '@domain/challenge/account/dto';
 import { UpdateAccountDefaultsInput } from '@domain/challenge/account/dto/account.dto.update.defaults';
+import { UpdateCommunityGuidelinesInput } from '@domain/community/community-guidelines/dto/community.guidelines.dto.update';
 
 export class BaseHandler extends AbstractHandler {
   public async handle(
@@ -133,6 +134,7 @@ export class BaseHandler extends AbstractHandler {
       UpdateCalloutTemplateInput,
       UpdatePostTemplateInput,
       UpdateCommunityApplicationFormInput,
+      UpdateCommunityGuidelinesInput,
       UpdateSpaceInput,
       UpdateOrganizationInput,
       UpdateOpportunityInput,
