@@ -15,6 +15,7 @@ import { EntityManager } from 'typeorm';
 import { Cache, CachingConfig } from 'cache-manager';
 import { Space } from '@domain/challenge/space/space.entity';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
+import { CalloutTemplate } from '@domain/template/callout-template/callout.template.entity';
 
 @Injectable()
 export class UrlGeneratorService {
@@ -634,13 +635,36 @@ export class UrlGeneratorService {
         },
       });
     }
+    if (!callout) {
+      const calloutTemplate = await this.entityManager.findOne(
+        CalloutTemplate,
+        {
+          where: {
+            framing: {
+              whiteboard: {
+                id: whiteboard.id,
+              },
+            },
+          },
+          relations: {
+            profile: true,
+          },
+        }
+      );
+      if (calloutTemplate) {
+        return await this.getTemplateUrlPathOrFail(
+          'callout_template',
+          calloutTemplate.profile.id
+        );
+      }
+    }
     if (callout) {
       const calloutUrlPath = await this.getCalloutUrlPath(callout.id);
       return `${calloutUrlPath}/${this.PATH_WHITEBOARDS}/${whiteboard.nameID}`;
     }
 
     throw new EntityNotFoundException(
-      `Unable to find callout where whiteboardId: ${whiteboard.id}`,
+      `Unable to find callout or calloutTempalte where whiteboardId: ${whiteboard.id}`,
       LogContext.URL_GENERATOR
     );
   }
