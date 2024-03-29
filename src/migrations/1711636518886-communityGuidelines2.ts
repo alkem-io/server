@@ -10,17 +10,42 @@ export class communityGuideliness1711636518886 implements MigrationInterface {
     const communities: {
       id: string;
       type: string;
-    }[] = await queryRunner.query(`SELECT id, type FROM community`);
+      guidelinesId: string;
+    }[] = await queryRunner.query(
+      `SELECT id, type, guidelinesId FROM community`
+    );
     for (const community of communities) {
-      // Process all non-space communities
-      if (community.type !== 'space') {
-        const [space]: {
-          id: string;
-          storageAggregatorId: string;
-        }[] = await queryRunner.query(
-          `SELECT id, storageAggregatorId FROM space WHERE communityId = '${community.id}'`
-        );
-        const storageAggregatorID = space.storageAggregatorId;
+      // Add to all communities that don't have guidelines
+      if (community.guidelinesId === null) {
+        let storageAggregatorID: string | undefined = undefined;
+        if (community.type === 'space') {
+          const [space]: {
+            id: string;
+            storageAggregatorId: string;
+          }[] = await queryRunner.query(
+            `SELECT id, storageAggregatorId FROM space WHERE communityId = '${community.id}'`
+          );
+          storageAggregatorID = space.storageAggregatorId;
+        } else if (community.type === 'challenge') {
+          const [challenge]: {
+            id: string;
+            storageAggregatorId: string;
+          }[] = await queryRunner.query(
+            `SELECT id, storageAggregatorId FROM challenge WHERE communityId = '${community.id}'`
+          );
+          storageAggregatorID = challenge.storageAggregatorId;
+        } else if (community.type === 'opportunity') {
+          const [opportunity]: {
+            id: string;
+            storageAggregatorId: string;
+          }[] = await queryRunner.query(
+            `SELECT id, storageAggregatorId FROM opportunity WHERE communityId = '${community.id}'`
+          );
+          storageAggregatorID = opportunity.storageAggregatorId;
+        } else {
+          console.log(`Unknown community type: ${community.type}`);
+          break;
+        }
 
         // Create and link the Profile
         const guidelinesID = randomUUID();
