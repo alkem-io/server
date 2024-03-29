@@ -3,6 +3,7 @@ import { CreateBaseChallengeInput } from '@domain/challenge/base-challenge/dto/b
 import { CreateAccountInput } from '@domain/challenge/account/dto';
 import { IsOptional, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
+import { NameID } from '@domain/common/scalars/scalar.nameid';
 
 @InputType()
 export class CreateSpaceInput extends CreateBaseChallengeInput {
@@ -11,4 +12,11 @@ export class CreateSpaceInput extends CreateBaseChallengeInput {
   @ValidateNested()
   @Type(() => CreateAccountInput)
   accountData!: CreateAccountInput;
+
+  // Override
+  @Field(() => NameID, {
+    nullable: false,
+    description: 'A readable identifier, unique within the containing scope.',
+  })
+  nameID!: string;
 }

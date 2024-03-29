@@ -6,6 +6,7 @@ import { CreateNameableInput } from '@domain/common/entity/nameable-entity/dto/n
 import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { SpaceType } from '@common/enums/space.type';
+import { NameID } from '@domain/common/scalars/scalar.nameid';
 
 @InputType()
 export class CreateBaseChallengeInput extends CreateNameableInput {
@@ -24,6 +25,12 @@ export class CreateBaseChallengeInput extends CreateNameableInput {
   @ValidateNested()
   @Type(() => CreateCollaborationInput)
   collaborationData?: CreateCollaborationInput;
+
+  @Field(() => NameID, {
+    nullable: true,
+    description: 'A readable identifier, unique within the containing scope.',
+  })
+  nameID!: string;
 
   // For passing on the hierarchy of storage aggregators
   storageAggregatorParent?: IStorageAggregator;

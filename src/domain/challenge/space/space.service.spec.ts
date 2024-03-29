@@ -96,7 +96,10 @@ const getChallengesMock = (
       settingsStr: JSON.stringify({}),
       account: {
         id: `account-${spaceId}.${i}`,
-        spaceID: `${spaceId}`,
+        space: {
+          id: `${spaceId}`,
+          ...getEntityMock<Space>(),
+        },
         ...getEntityMock<Account>(),
       },
       type: SpaceType.SPACE,

@@ -1,4 +1,4 @@
-import { NameID, UUID_NAMEID } from '@domain/common/scalars';
+import { UUID_NAMEID } from '@domain/common/scalars';
 import { Field, InputType } from '@nestjs/graphql';
 import { CreateBaseChallengeInput } from '@domain/challenge/base-challenge/dto/base.challenge.dto.create';
 import { IsOptional } from 'class-validator';
@@ -11,11 +11,4 @@ export class CreateChallengeInput extends CreateBaseChallengeInput {
   })
   @IsOptional()
   leadOrganizations?: string[];
-
-  // Override
-  @Field(() => NameID, {
-    nullable: true,
-    description: 'A readable identifier, unique within the containing scope.',
-  })
-  nameID!: string;
 }
