@@ -69,8 +69,7 @@ export class CommunityAuthorizationService {
       !community.groups ||
       !community.applications ||
       !community.invitations ||
-      !community.externalInvitations ||
-      !community.guidelines
+      !community.externalInvitations
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load child entities for community authorization: ${community.id} `,
@@ -139,10 +138,12 @@ export class CommunityAuthorizationService {
       externalInvitation.authorization = invitationSaved.authorization;
     }
 
-    await this.communityGuidelinesAuthorizationService.applyAuthorizationPolicy(
-      community.guidelines,
-      community.authorization
-    );
+    if (community.guidelines) {
+      await this.communityGuidelinesAuthorizationService.applyAuthorizationPolicy(
+        community.guidelines,
+        community.authorization
+      );
+    }
 
     return await this.communityRepository.save(community);
   }
