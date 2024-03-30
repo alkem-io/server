@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class subspaces1711092635967 implements MigrationInterface {
-  name = 'subspaces1711092635967';
+export class subspaces1711636518888 implements MigrationInterface {
+  name = 'subspaces1711636518888';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
