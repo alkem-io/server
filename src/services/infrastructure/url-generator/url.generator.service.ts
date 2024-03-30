@@ -16,6 +16,8 @@ import { Cache, CachingConfig } from 'cache-manager';
 import { Space } from '@domain/challenge/space/space.entity';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { CalloutTemplate } from '@domain/template/callout-template/callout.template.entity';
+import { SpaceType } from '@common/enums/space.type';
+import { IBaseChallenge } from '@domain/challenge/base-challenge/base.challenge.interface';
 
 @Injectable()
 export class UrlGeneratorService {
@@ -126,6 +128,10 @@ export class UrlGeneratorService {
     return `${this.endpoint_cluster}/${spaceNameID}`;
   }
 
+  private generateAdminUrlForSpace(spaceNameID: string): string {
+    return `${this.endpoint_cluster}/admin/spaces/${spaceNameID}`;
+  }
+
   async generateUrlForProfile(profile: IProfile): Promise<string> {
     const cachedUrl = await this.getUrlFromCache(profile.id);
     if (cachedUrl) {
@@ -136,6 +142,36 @@ export class UrlGeneratorService {
       await this.setUrlCache(profile.id, url);
     }
     return url;
+  }
+
+  async createJourneyAdminCommunityURL(
+    baseChallenge: IBaseChallenge
+  ): Promise<string> {
+    const spaceNameID = baseChallenge.nameID;
+    const baseURL = `${this.endpoint_cluster}/admin/spaces/${spaceNameID}`;
+    switch (baseChallenge.type) {
+      case SpaceType.SPACE:
+        const spaceAdminUrl = await this.generateAdminUrlForSpace(
+          baseChallenge.nameID
+        );
+        return `${spaceAdminUrl}/community`;
+      case SpaceType.CHALLENGE:
+        const challengeAdminUrl = await this.getChallengeUrlPath(
+          this.FIELD_ID,
+          baseChallenge.id,
+          true
+        );
+        return `${challengeAdminUrl}/community`;
+      case SpaceType.OPPORTUNITY:
+        const opportunityAdminURL = await this.getOpportunityUrlPath(
+          this.FIELD_ID,
+          baseChallenge.id,
+          true
+        );
+        return `${opportunityAdminURL}/community`;
+    }
+
+    return baseURL;
   }
 
   private async generateUrlForProfileNotCached(
@@ -183,20 +219,28 @@ export class UrlGeneratorService {
           this.FIELD_PROFILE_ID,
           profile.id
         );
-        return `${this.endpoint_cluster}/${this.PATH_USER}/${userEntityInfo.entityNameID}`;
+        return this.createUrlForUserNameID(userEntityInfo.entityNameID);
       case ProfileType.ORGANIZATION:
         const organizationEntityInfo = await this.getNameableEntityInfoOrFail(
           'organization',
           this.FIELD_PROFILE_ID,
           profile.id
         );
-        return `${this.endpoint_cluster}/${this.PATH_ORGANIZATION}/${organizationEntityInfo.entityNameID}`;
+        return this.createUrlForOrganizationNameID(
+          organizationEntityInfo.entityNameID
+        );
       case ProfileType.CALLOUT_FRAMING:
         return await this.getCalloutFramingUrlPathOrFail(profile.id);
       case ProfileType.POST:
-        return await this.getPostUrlPath(this.FIELD_PROFILE_ID, profile.id);
+        return await this.getPostUrlPathByField(
+          this.FIELD_PROFILE_ID,
+          profile.id
+        );
       case ProfileType.WHITEBOARD:
-        return await this.getWhiteboardUrlPath(profile.id);
+        return await this.getWhiteboardUrlPathByField(
+          this.FIELD_PROFILE_ID,
+          profile.id
+        );
       case ProfileType.INNOVATION_FLOW:
         return await this.getInnovationFlowUrlPathOrFail(profile.id);
       case ProfileType.WHITEBOARD_TEMPLATE:
@@ -219,13 +263,13 @@ export class UrlGeneratorService {
       case ProfileType.INNOVATION_PACK:
         return await this.getInnovationPackUrlPath(profile.id);
       case ProfileType.CALENDAR_EVENT:
-        return await this.getCalendarEventUrlPath(
+        return await this.getCalendarEventUrlPathByField(
           this.FIELD_PROFILE_ID,
           profile.id
         );
 
       case ProfileType.DISCUSSION:
-        return await this.getForumDiscussionUrlPath(
+        return await this.getForumDiscussionUrlPathByField(
           this.FIELD_PROFILE_ID,
           profile.id
         );
@@ -242,6 +286,14 @@ export class UrlGeneratorService {
         return '';
     }
     return '';
+  }
+
+  public createUrlForUserNameID(userNameID: string): string {
+    return `${this.endpoint_cluster}/${this.PATH_USER}/${userNameID}`;
+  }
+
+  public createUrlForOrganizationNameID(organizationNameID: string): string {
+    return `${this.endpoint_cluster}/${this.PATH_ORGANIZATION}/${organizationNameID}`;
   }
 
   public async getNameableEntityInfoOrFail(
@@ -339,7 +391,8 @@ export class UrlGeneratorService {
 
   private async getSpaceUrlPath(
     fieldName: string,
-    fieldID: string
+    fieldID: string,
+    admin = false
   ): Promise<string | undefined> {
     const spaceInfo = await this.getNameableEntityInfo(
       'space',
@@ -351,12 +404,14 @@ export class UrlGeneratorService {
       return undefined;
     }
 
-    return this.generateUrlForSpace(spaceInfo.entityNameID);
+    if (!admin) this.generateUrlForSpace(spaceInfo.entityNameID);
+    return this.generateAdminUrlForSpace(spaceInfo.entityNameID);
   }
 
   private async getChallengeUrlPath(
     fieldName: string,
-    fieldID: string
+    fieldID: string,
+    admin = false
   ): Promise<string | undefined> {
     const [result]: {
       challengeId: string;
@@ -375,7 +430,8 @@ export class UrlGeneratorService {
 
     const spaceUrlPath = await this.getSpaceUrlPath(
       this.FIELD_ID,
-      result.spaceId
+      result.spaceId,
+      admin
     );
     if (!spaceUrlPath) {
       throw new EntityNotFoundException(
@@ -388,7 +444,8 @@ export class UrlGeneratorService {
 
   private async getOpportunityUrlPath(
     fieldName: string,
-    fieldID: string
+    fieldID: string,
+    admin = false
   ): Promise<string | undefined> {
     const [result]: {
       opportunityId: string;
@@ -407,7 +464,8 @@ export class UrlGeneratorService {
 
     const challengeUrlPath = await this.getChallengeUrlPath(
       this.FIELD_ID,
-      result.challengeId
+      result.challengeId,
+      admin
     );
     return `${challengeUrlPath}/opportunities/${result.opportunityNameId}`;
   }
@@ -559,7 +617,11 @@ export class UrlGeneratorService {
     return collaborationJourneyUrlPath;
   }
 
-  public async getPostUrlPath(
+  public async getPostUrlPath(calloutID: string): Promise<string> {
+    return await this.getPostUrlPathByField(this.FIELD_ID, calloutID);
+  }
+
+  private async getPostUrlPathByField(
     fieldName: string,
     fieldID: string
   ): Promise<string> {
@@ -601,20 +663,27 @@ export class UrlGeneratorService {
     return `${calloutUrlPath}/${this.PATH_POSTS}/${result.postNameId}`;
   }
 
-  private async getWhiteboardUrlPath(profileID: string): Promise<string> {
+  public async getWhiteboardUrlPath(whiteboardID: string): Promise<string> {
+    return await this.getWhiteboardUrlPathByField(this.FIELD_ID, whiteboardID);
+  }
+
+  private async getWhiteboardUrlPathByField(
+    fieldName: string,
+    fieldID: string
+  ): Promise<string> {
     const [whiteboard]: {
       id: string;
       nameID: string;
     }[] = await this.entityManager.connection.query(
       `
           SELECT whiteboard.id, whiteboard.nameID FROM whiteboard
-          WHERE whiteboard.profileId = '${profileID}'
+          WHERE whiteboard.${fieldName} = '${fieldID}'
         `
     );
 
     if (!whiteboard) {
       throw new EntityNotFoundException(
-        `Unable to find whiteboard where profile: ${profileID}`,
+        `Unable to find whiteboard where profile: ${fieldID}`,
         LogContext.URL_GENERATOR
       );
     }
@@ -684,6 +753,15 @@ export class UrlGeneratorService {
   }
 
   public async getForumDiscussionUrlPath(
+    forumDiscussionID: string
+  ): Promise<string> {
+    return await this.getForumDiscussionUrlPathByField(
+      this.FIELD_ID,
+      forumDiscussionID
+    );
+  }
+
+  private async getForumDiscussionUrlPathByField(
     fieldName: string,
     fieldID: string
   ): Promise<string> {
@@ -696,6 +774,15 @@ export class UrlGeneratorService {
   }
 
   public async getCalendarEventUrlPath(
+    calendarEventID: string
+  ): Promise<string> {
+    return await this.getCalendarEventUrlPathByField(
+      this.FIELD_ID,
+      calendarEventID
+    );
+  }
+
+  private async getCalendarEventUrlPathByField(
     fieldName: string,
     fieldID: string
   ): Promise<string> {

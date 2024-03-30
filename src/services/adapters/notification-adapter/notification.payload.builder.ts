@@ -46,8 +46,9 @@ import { NotificationInputWhiteboardCreated } from './dto/notification.dto.input
 import { NotificationInputPostCreated } from './dto/notification.dto.input.post.created';
 import { NotificationInputPostComment } from './dto/notification.dto.input.post.comment';
 import { ContributionResolverService } from '@services/infrastructure/entity-resolver/contribution.resolver.service';
-import { SpaceBaseEventPayload } from '@alkemio/notifications-lib/dist/dto/space.base.event.payload';
+import { SpaceBaseEventPayload } from '@alkemio/notifications-lib';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
+import { ContributorPayload } from '@alkemio/notifications-lib';
 
 @Injectable()
 export class NotificationPayloadBuilder {
@@ -75,12 +76,11 @@ export class NotificationPayloadBuilder {
       community,
       applicationCreatorID
     );
+    const applicantPayload = await this.getUserContributorPayloadOrFail(
+      applicantID
+    );
     const payload: CommunityApplicationCreatedEventPayload = {
-      applicant: {
-        id: applicantID,
-        url: 'TO: fix me',
-        displayName: 'TO: fix me',
-      },
+      applicant: applicantPayload,
       ...spacePayload,
     };
 
@@ -96,12 +96,11 @@ export class NotificationPayloadBuilder {
       community,
       invitationCreatorID
     );
+    const inviteePayload = await this.getUserContributorPayloadOrFail(
+      invitedUserID
+    );
     const payload: CommunityInvitationCreatedEventPayload = {
-      invitee: {
-        id: invitedUserID,
-        url: 'TO: fix me',
-        displayName: 'TO: fix me',
-      },
+      invitee: inviteePayload,
       ...spacePayload,
     };
 
@@ -142,11 +141,15 @@ export class NotificationPayloadBuilder {
       community,
       eventData.triggeredBy
     );
+    const calloutURL = await this.urlGeneratorService.getCalloutUrlPath(
+      callout.id
+    );
+    const postURL = await this.urlGeneratorService.getPostUrlPath(post.id);
     const payload: CollaborationPostCreatedEventPayload = {
       callout: {
         displayName: callout.framing.profile.displayName,
         nameID: callout.nameID,
-        url: 'TO: fix me',
+        url: calloutURL,
       },
       post: {
         id: post.id,
@@ -154,7 +157,7 @@ export class NotificationPayloadBuilder {
         displayName: post.profile.displayName,
         nameID: post.nameID,
         type: post.type,
-        url: 'TO: fix me',
+        url: postURL,
       },
       ...spacePayload,
     };
@@ -176,18 +179,24 @@ export class NotificationPayloadBuilder {
       community,
       eventData.triggeredBy
     );
+    const calloutURL = await this.urlGeneratorService.getCalloutUrlPath(
+      callout.id
+    );
+    const whiteboardURL = await this.urlGeneratorService.getWhiteboardUrlPath(
+      whiteboard.id
+    );
     const payload: CollaborationWhiteboardCreatedEventPayload = {
       callout: {
         displayName: callout.framing.profile.displayName,
         nameID: callout.nameID,
-        url: 'TO: fix me',
+        url: calloutURL,
       },
       whiteboard: {
         id: eventData.whiteboard.id,
         createdBy: whiteboard.createdBy || '',
         displayName: whiteboard.profile.displayName,
         nameID: whiteboard.nameID,
-        url: 'TO: fix me',
+        url: whiteboardURL,
       },
       ...spacePayload,
     };
@@ -205,6 +214,9 @@ export class NotificationPayloadBuilder {
       );
 
     const spacePayload = await this.buildSpacePayload(community, userId);
+    const calloutURL = await this.urlGeneratorService.getCalloutUrlPath(
+      callout.id
+    );
     const payload: CollaborationCalloutPublishedEventPayload = {
       callout: {
         id: callout.id,
@@ -212,7 +224,7 @@ export class NotificationPayloadBuilder {
         description: callout.framing.profile.description,
         nameID: callout.nameID,
         type: callout.type,
-        url: 'TO: fix me',
+        url: calloutURL,
       },
       ...spacePayload,
     };
@@ -246,17 +258,21 @@ export class NotificationPayloadBuilder {
       community,
       post.createdBy
     );
+    const calloutURL = await this.urlGeneratorService.getCalloutUrlPath(
+      callout.id
+    );
+    const postURL = await this.urlGeneratorService.getPostUrlPath(post.id);
     const payload: CollaborationPostCommentEventPayload = {
       callout: {
         displayName: callout.framing.profile.displayName,
         nameID: callout.nameID,
-        url: 'TO: fix me',
+        url: calloutURL,
       },
       post: {
         displayName: post.profile.displayName,
         createdBy: post.createdBy,
         nameID: post.nameID,
-        url: 'TO: fix me',
+        url: postURL,
       },
       comment: {
         message: messageResult.message,
@@ -289,11 +305,14 @@ export class NotificationPayloadBuilder {
       community,
       messageResult.sender
     );
+    const calloutURL = await this.urlGeneratorService.getCalloutUrlPath(
+      callout.id
+    );
     const payload: CollaborationDiscussionCommentEventPayload = {
       callout: {
         displayName: callout.framing.profile.displayName,
         nameID: callout.nameID,
-        url: 'TO: fix me',
+        url: calloutURL,
       },
 
       comment: {
@@ -309,7 +328,9 @@ export class NotificationPayloadBuilder {
   async buildCommentReplyPayload(
     data: NotificationInputCommentReply
   ): Promise<CommentReplyEventPayload> {
-    const userData = await this.getUserDataOrFail(data.commentOwnerID);
+    const userData = await this.getUserContributorPayloadOrFail(
+      data.commentOwnerID
+    );
 
     const commentOriginUrl = await this.buildCommentOriginUrl(
       data.commentType,
@@ -335,16 +356,18 @@ export class NotificationPayloadBuilder {
     message: IMessage
   ): Promise<PlatformForumDiscussionCommentEventPayload> {
     const basePayload = this.buildBaseEventPayload(message.sender);
+    const discussionURL =
+      await this.urlGeneratorService.getForumDiscussionUrlPath(discussion.id);
     const payload: PlatformForumDiscussionCommentEventPayload = {
       discussion: {
         displayName: discussion.profile.displayName,
         createdBy: discussion.createdBy,
-        url: 'to: fix me',
+        url: discussionURL,
       },
       comment: {
         message: message.message,
         createdBy: message.sender,
-        url: 'to: fix me',
+        url: '',
       },
       ...basePayload,
     };
@@ -358,12 +381,9 @@ export class NotificationPayloadBuilder {
     community: ICommunity
   ): Promise<CommunityNewMemberPayload> {
     const spacePayload = await this.buildSpacePayload(community, triggeredBy);
+    const memberPayload = await this.getUserContributorPayloadOrFail(userID);
     const payload: CommunityNewMemberPayload = {
-      user: {
-        id: userID,
-        url: 'TO: fix me',
-        displayName: 'TO: fix me',
-      },
+      user: memberPayload,
       ...spacePayload,
     };
 
@@ -387,7 +407,7 @@ export class NotificationPayloadBuilder {
       update: {
         id: updates.id,
         createdBy: updateCreatorId,
-        url: 'TO: fix me',
+        url: 'not used',
       },
       ...spacePayload,
     };
@@ -395,17 +415,14 @@ export class NotificationPayloadBuilder {
     return payload;
   }
 
-  buildUserRegisteredNotificationPayload(
+  async buildUserRegisteredNotificationPayload(
     triggeredBy: string,
     userID: string
-  ): PlatformUserRegistrationEventPayload {
+  ): Promise<PlatformUserRegistrationEventPayload> {
     const basePayload = this.buildBaseEventPayload(triggeredBy);
+    const userPayload = await this.getUserContributorPayloadOrFail(userID);
     const result: PlatformUserRegistrationEventPayload = {
-      user: {
-        id: userID,
-        url: 'TO: fix me',
-        displayName: 'TO: fix me',
-      },
+      user: userPayload,
       ...basePayload,
     };
     return result;
@@ -430,12 +447,14 @@ export class NotificationPayloadBuilder {
     discussion: IDiscussion
   ): Promise<PlatformForumDiscussionCreatedEventPayload> {
     const basePayload = this.buildBaseEventPayload(discussion.createdBy);
+    const discussionURL =
+      await this.urlGeneratorService.getForumDiscussionUrlPath(discussion.id);
     const payload: PlatformForumDiscussionCreatedEventPayload = {
       discussion: {
         id: discussion.id,
         createdBy: discussion.createdBy,
         displayName: discussion.profile.displayName,
-        url: 'TO: fix me',
+        url: discussionURL,
       },
       ...basePayload,
     };
@@ -449,15 +468,11 @@ export class NotificationPayloadBuilder {
     message: string
   ): Promise<CommunicationUserMessageEventPayload> {
     const basePayload = this.buildBaseEventPayload(senderID);
-    const { displayName: receiverDisplayName } = await this.getUserDataOrFail(
+    const receiverPayload = await this.getUserContributorPayloadOrFail(
       receiverID
     );
     const payload: CommunicationUserMessageEventPayload = {
-      messageReceiver: {
-        id: receiverID,
-        displayName: receiverDisplayName,
-        url: 'TO: fix me',
-      },
+      messageReceiver: receiverPayload,
       message,
       ...basePayload,
     };
@@ -465,9 +480,9 @@ export class NotificationPayloadBuilder {
     return payload;
   }
 
-  private async getUserDataOrFail(
+  private async getUserContributorPayloadOrFail(
     userId: string
-  ): Promise<{ id: string; displayName: string }> {
+  ): Promise<ContributorPayload> {
     const user = await this.entityManager.findOne(User, {
       where: {
         id: userId,
@@ -483,7 +498,19 @@ export class NotificationPayloadBuilder {
         LogContext.COMMUNITY
       );
     }
-    return { id: user.id, displayName: user.profile.displayName };
+
+    const userURL = await this.urlGeneratorService.createUrlForUserNameID(
+      user.nameID
+    );
+    const result: ContributorPayload = {
+      id: user.id,
+      nameID: user.nameID,
+      profile: {
+        displayName: user.profile.displayName,
+        url: userURL,
+      },
+    };
+    return result;
   }
 
   async buildCommunicationOrganizationMessageNotificationPayload(
@@ -492,25 +519,21 @@ export class NotificationPayloadBuilder {
     organizationID: string
   ): Promise<CommunicationOrganizationMessageEventPayload> {
     const basePayload = this.buildBaseEventPayload(senderID);
-    const { displayName: orgDisplayName } = await this.getOrgDataOrFail(
+    const orgContribtor = await this.getOrgContributorPayloadOrFail(
       organizationID
     );
     const payload: CommunicationOrganizationMessageEventPayload = {
       message,
-      organization: {
-        id: organizationID,
-        displayName: orgDisplayName,
-        url: 'TO: fix me',
-      },
+      organization: orgContribtor,
       ...basePayload,
     };
 
     return payload;
   }
 
-  private async getOrgDataOrFail(
+  private async getOrgContributorPayloadOrFail(
     orgId: string
-  ): Promise<{ id: string; displayName: string }> {
+  ): Promise<ContributorPayload> {
     const org = await this.entityManager.findOne(Organization, {
       where: {
         id: orgId,
@@ -526,7 +549,19 @@ export class NotificationPayloadBuilder {
         LogContext.NOTIFICATIONS
       );
     }
-    return { id: org.id, displayName: org.profile.displayName };
+
+    const orgURL =
+      await this.urlGeneratorService.createUrlForOrganizationNameID(org.nameID);
+    const result: ContributorPayload = {
+      id: org.id,
+      nameID: org.nameID,
+      profile: {
+        displayName: org.profile.displayName,
+        url: orgURL,
+      },
+    };
+
+    return result;
   }
 
   async buildCommunicationCommunityLeadsMessageNotificationPayload(
@@ -552,7 +587,9 @@ export class NotificationPayloadBuilder {
     originEntityDisplayName: string,
     commentType: RoomType
   ): Promise<CommunicationUserMentionEventPayload | undefined> {
-    const userData = await this.getUserDataOrFail(mentionedUserNameID);
+    const userContributor = await this.getUserContributorPayloadOrFail(
+      mentionedUserNameID
+    );
 
     const commentOriginUrl = await this.buildCommentOriginUrl(
       commentType,
@@ -562,11 +599,7 @@ export class NotificationPayloadBuilder {
     const basePayload = this.buildBaseEventPayload(senderID);
     //const userURL = await this.urlGeneratorService.
     const payload: CommunicationUserMentionEventPayload = {
-      mentionedUser: {
-        id: userData.id,
-        displayName: userData.displayName,
-        url: 'TO: fix me',
-      },
+      mentionedUser: userContributor,
       comment,
       commentOrigin: {
         url: commentOriginUrl,
@@ -586,7 +619,9 @@ export class NotificationPayloadBuilder {
     originEntityDisplayName: string,
     commentType: RoomType
   ): Promise<CommunicationOrganizationMentionEventPayload | undefined> {
-    const orgData = await this.getOrgDataOrFail(mentionedOrgNameID);
+    const orgData = await this.getOrgContributorPayloadOrFail(
+      mentionedOrgNameID
+    );
 
     const commentOriginUrl = await this.buildCommentOriginUrl(
       commentType,
@@ -595,13 +630,7 @@ export class NotificationPayloadBuilder {
 
     const basePayload = this.buildBaseEventPayload(senderID);
     const payload: CommunicationOrganizationMentionEventPayload = {
-      mentionedOrganization: {
-        id: orgData.id,
-        profile: {
-          displayName: orgData.displayName,
-          url: 'TO: fix me',
-        },
-      },
+      mentionedOrganization: orgData,
       comment,
       commentOrigin: {
         url: commentOriginUrl,
@@ -635,19 +664,17 @@ export class NotificationPayloadBuilder {
         );
       }
 
-      return await this.urlGeneratorService.getPostUrlPath('id', post.id);
+      return await this.urlGeneratorService.getPostUrlPath(post.id);
     }
 
     if (commentType === RoomType.CALENDAR_EVENT) {
       return await this.urlGeneratorService.getCalendarEventUrlPath(
-        'id',
         originEntityId
       );
     }
 
     if (commentType === RoomType.DISCUSSION_FORUM) {
       return await this.urlGeneratorService.getForumDiscussionUrlPath(
-        'id',
         originEntityId
       );
     }
@@ -671,6 +698,10 @@ export class NotificationPayloadBuilder {
     const url = await this.urlGeneratorService.generateUrlForProfile(
       baseChallenge.profile
     );
+    const communityAdminURL =
+      await this.urlGeneratorService.createJourneyAdminCommunityURL(
+        baseChallenge
+      );
     const result: SpaceBaseEventPayload = {
       space: {
         id: baseChallenge.id,
@@ -680,7 +711,7 @@ export class NotificationPayloadBuilder {
           displayName: baseChallenge.profile.displayName,
           url: url,
         },
-        adminURL: 'TO: fix me',
+        adminURL: communityAdminURL,
       },
       ...basePayload,
     };
