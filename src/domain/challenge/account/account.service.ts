@@ -135,6 +135,7 @@ export class AccountService {
     const account = await this.getAccountOrFail(updateData.accountID, {
       relations: {
         license: true,
+        space: true,
       },
     });
 
