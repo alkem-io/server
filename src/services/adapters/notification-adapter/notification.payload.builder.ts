@@ -1,15 +1,12 @@
 import { ConfigurationTypes, LogContext } from '@common/enums';
 import { EntityNotFoundException } from '@common/exceptions';
 import { NotificationEventException } from '@common/exceptions/notification.event.exception';
-import { Challenge } from '@domain/challenge/challenge/challenge.entity';
-import { Space } from '@domain/challenge/space/space.entity';
 import { IDiscussion } from '@domain/communication/discussion/discussion.interface';
 import { ICommunity } from '@domain/community/community';
-import { Opportunity } from '@domain/challenge/opportunity/opportunity.entity';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import { Post } from '@domain/collaboration/post/post.entity';
 import {
   CollaborationPostCreatedEventPayload,
@@ -55,21 +52,13 @@ import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.
 @Injectable()
 export class NotificationPayloadBuilder {
   constructor(
-    @InjectRepository(Space)
-    private spaceRepository: Repository<Space>,
-    @InjectRepository(Challenge)
-    private challengeRepository: Repository<Challenge>,
-    @InjectRepository(Opportunity)
-    private opportunityRepository: Repository<Opportunity>,
     private communityResolverService: CommunityResolverService,
     @InjectRepository(Post)
     private postRepository: Repository<Post>,
-    @InjectRepository(User)
-    private userRepository: Repository<User>,
-    @InjectRepository(Organization)
-    private organizationRepository: Repository<Organization>,
     @InjectRepository(Community)
     private communityRepository: Repository<Community>,
+    @InjectEntityManager('default')
+    private entityManager: EntityManager,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private configService: ConfigService,
@@ -320,13 +309,7 @@ export class NotificationPayloadBuilder {
   async buildCommentReplyPayload(
     data: NotificationInputCommentReply
   ): Promise<CommentReplyEventPayload> {
-    const userData = await this.getUserData(data.commentOwnerID);
-
-    if (!userData)
-      throw new NotificationEventException(
-        `Could not find User with id: ${data.commentOwnerID}`,
-        LogContext.NOTIFICATIONS
-      );
+    const userData = await this.getUserDataOrFail(data.commentOwnerID);
 
     const commentOriginUrl = await this.buildCommentOriginUrl(
       data.commentType,
@@ -485,39 +468,20 @@ export class NotificationPayloadBuilder {
   private async getUserDataOrFail(
     userId: string
   ): Promise<{ id: string; displayName: string }> {
-    const user = await this.userRepository
-      .createQueryBuilder('user')
-      .select(['user.id', 'user.nameID'])
-      .leftJoin('user.profile', 'profile')
-      .addSelect(['profile.displayName'])
-      .where('user.nameID = :id')
-      .orWhere('user.id = :id')
-      .setParameters({ id: userId })
-      .getOne();
+    const user = await this.entityManager.findOne(User, {
+      where: {
+        id: userId,
+      },
+      relations: {
+        profile: true,
+      },
+    });
 
     if (!user || !user.profile) {
       throw new EntityNotFoundException(
         `Unable to find User with profile for id: ${userId}`,
         LogContext.COMMUNITY
       );
-    }
-    return { id: user.id, displayName: user.profile.displayName };
-  }
-
-  private async getUserData(
-    userId: string
-  ): Promise<{ id: string; displayName: string } | undefined> {
-    const user = await this.userRepository
-      .createQueryBuilder('user')
-      .select(['user.id'])
-      .leftJoinAndSelect('user.profile', 'profile')
-      .where('user.nameID = :id')
-      .orWhere('user.id = :id')
-      .setParameters({ id: userId })
-      .getOne();
-
-    if (!user || !user.profile) {
-      return undefined;
     }
     return { id: user.id, displayName: user.profile.displayName };
   }
@@ -547,40 +511,20 @@ export class NotificationPayloadBuilder {
   private async getOrgDataOrFail(
     orgId: string
   ): Promise<{ id: string; displayName: string }> {
-    const org = await this.organizationRepository
-      .createQueryBuilder('organization')
-      .select(['organization.id'])
-      .leftJoin('organization.profile', 'profile')
-      .addSelect(['profile.displayName'])
-      .where('organization.id = :id')
-      .orWhere('organization.nameID = :id')
-      .setParameters({ id: orgId })
-      .getOne();
+    const org = await this.entityManager.findOne(Organization, {
+      where: {
+        id: orgId,
+      },
+      relations: {
+        profile: true,
+      },
+    });
 
     if (!org || !org.profile) {
       throw new EntityNotFoundException(
         `Unable to find Organization with id: ${orgId}`,
-        LogContext.COMMUNITY
+        LogContext.NOTIFICATIONS
       );
-    }
-    return { id: org.id, displayName: org.profile.displayName };
-  }
-
-  private async getOrgData(
-    orgId: string
-  ): Promise<{ id: string; displayName: string } | undefined> {
-    const org = await this.organizationRepository
-      .createQueryBuilder('organization')
-      .select(['organization.id'])
-      .leftJoin('organization.profile', 'profile')
-      .addSelect(['profile.displayName'])
-      .where('organization.id = :id')
-      .orWhere('organization.nameID = :id')
-      .setParameters({ id: orgId })
-      .getOne();
-
-    if (!org || !org.profile) {
-      return undefined;
     }
     return { id: org.id, displayName: org.profile.displayName };
   }
@@ -608,13 +552,7 @@ export class NotificationPayloadBuilder {
     originEntityDisplayName: string,
     commentType: RoomType
   ): Promise<CommunicationUserMentionEventPayload | undefined> {
-    const userData = await this.getUserData(mentionedUserNameID);
-
-    if (!userData)
-      throw new NotificationEventException(
-        `Could not find User with id: ${mentionedUserNameID}`,
-        LogContext.NOTIFICATIONS
-      );
+    const userData = await this.getUserDataOrFail(mentionedUserNameID);
 
     const commentOriginUrl = await this.buildCommentOriginUrl(
       commentType,
@@ -622,6 +560,7 @@ export class NotificationPayloadBuilder {
     );
 
     const basePayload = this.buildBaseEventPayload(senderID);
+    //const userURL = await this.urlGeneratorService.
     const payload: CommunicationUserMentionEventPayload = {
       mentionedUser: {
         id: userData.id,
@@ -647,13 +586,7 @@ export class NotificationPayloadBuilder {
     originEntityDisplayName: string,
     commentType: RoomType
   ): Promise<CommunicationOrganizationMentionEventPayload | undefined> {
-    const orgData = await this.getOrgData(mentionedOrgNameID);
-
-    if (!orgData)
-      throw new NotificationEventException(
-        `Could not find User with id: ${mentionedOrgNameID}`,
-        LogContext.NOTIFICATIONS
-      );
+    const orgData = await this.getOrgDataOrFail(mentionedOrgNameID);
 
     const commentOriginUrl = await this.buildCommentOriginUrl(
       commentType,
