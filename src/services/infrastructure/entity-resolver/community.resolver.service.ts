@@ -313,6 +313,88 @@ export class CommunityResolverService {
     return community;
   }
 
+  public async getSpaceForCommunityOrFail(
+    communityId: string,
+    spaceType: SpaceType
+  ): Promise<string> {
+    const [result]: {
+      profileId: string;
+    }[] = await this.entityManager.connection.query(
+      `SELECT profileId from \`${spaceType}\`
+        WHERE \`${spaceType}\`.\`communityId\` = '${communityId}';`
+    );
+
+    const profileId = result.profileId;
+    const profile = await this.profileRepository.findOne({
+      where: { id: profileId },
+    });
+    if (!profile) {
+      throw new EntityNotFoundException(
+        `Unable to find Profile for Community: ${communityId}`,
+        LogContext.NOTIFICATIONS
+      );
+    }
+    return profile.displayName;
+  }
+
+  public async getBaseChallengeForCommunityOrFail(
+    communityId: string,
+    spaceType: SpaceType
+  ): Promise<IBaseChallenge> {
+    switch (spaceType) {
+      case SpaceType.SPACE:
+        const space = await this.entityManager.findOne(Space, {
+          where: {
+            community: {
+              id: communityId,
+            },
+          },
+          relations: {
+            profile: true,
+          },
+        });
+        if (space) {
+          return space;
+        }
+        break;
+      case SpaceType.CHALLENGE:
+        const challenge = await this.entityManager.findOne(Challenge, {
+          where: {
+            community: {
+              id: communityId,
+            },
+          },
+          relations: {
+            profile: true,
+          },
+        });
+        if (challenge && challenge.profile) {
+          return challenge;
+        }
+        break;
+      case SpaceType.OPPORTUNITY:
+        const opportunity = await this.entityManager.findOne(Opportunity, {
+          where: {
+            community: {
+              id: communityId,
+            },
+          },
+          relations: {
+            profile: true,
+          },
+        });
+        if (opportunity && opportunity.profile) {
+          return opportunity;
+        }
+        break;
+    }
+
+    throw new EntityNotFoundException(
+      `Unable to find base challenge for community of type '${spaceType}': ${communityId}`,
+      LogContext.URL_GENERATOR
+    );
+  }
+
   public async getDisplayNameForCommunityOrFail(
     communityId: string,
     spaceType: SpaceType

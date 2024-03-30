@@ -194,7 +194,7 @@ export class UrlGeneratorService {
       case ProfileType.CALLOUT_FRAMING:
         return await this.getCalloutFramingUrlPathOrFail(profile.id);
       case ProfileType.POST:
-        return await this.getPostUrlPath(profile.id);
+        return await this.getPostUrlPath(this.FIELD_PROFILE_ID, profile.id);
       case ProfileType.WHITEBOARD:
         return await this.getWhiteboardUrlPath(profile.id);
       case ProfileType.INNOVATION_FLOW:
@@ -219,15 +219,16 @@ export class UrlGeneratorService {
       case ProfileType.INNOVATION_PACK:
         return await this.getInnovationPackUrlPath(profile.id);
       case ProfileType.CALENDAR_EVENT:
-        return await this.getCalendarEventUrlPath(profile.id);
-
-      case ProfileType.DISCUSSION:
-        const discussionEntityInfo = await this.getNameableEntityInfoOrFail(
-          'discussion',
+        return await this.getCalendarEventUrlPath(
           this.FIELD_PROFILE_ID,
           profile.id
         );
-        return `${this.endpoint_cluster}/forum/discussion/${discussionEntityInfo.entityNameID}`;
+
+      case ProfileType.DISCUSSION:
+        return await this.getForumDiscussionUrlPath(
+          this.FIELD_PROFILE_ID,
+          profile.id
+        );
       case ProfileType.INNOVATION_HUB:
         const innovationHubEntityInfo = await this.getNameableEntityInfoOrFail(
           'innovation_hub',
@@ -507,7 +508,7 @@ export class UrlGeneratorService {
     );
   }
 
-  private async getCalloutUrlPath(calloutID: string): Promise<string> {
+  public async getCalloutUrlPath(calloutID: string): Promise<string> {
     const [result]: {
       calloutId: string;
       calloutNameId: string;
@@ -558,20 +559,23 @@ export class UrlGeneratorService {
     return collaborationJourneyUrlPath;
   }
 
-  private async getPostUrlPath(profileID: string): Promise<string> {
+  public async getPostUrlPath(
+    fieldName: string,
+    fieldID: string
+  ): Promise<string> {
     const [result]: {
       postId: string;
       postNameId: string;
     }[] = await this.entityManager.connection.query(
       `
         SELECT post.id as postId, post.nameID as postNameId FROM post
-        WHERE post.profileId = '${profileID}'
+        WHERE post.${fieldName} = '${fieldID}'
       `
     );
 
     if (!result) {
       throw new EntityNotFoundException(
-        `Unable to find post where profile: ${profileID}`,
+        `Unable to find post where profile: ${fieldID}`,
         LogContext.URL_GENERATOR
       );
     }
@@ -679,7 +683,22 @@ export class UrlGeneratorService {
     return `${this.endpoint_cluster}/${this.PATH_INNOVATION_PACKS}/${innovationPackInfo.entityNameID}`;
   }
 
-  private async getCalendarEventUrlPath(profileID: string): Promise<string> {
+  public async getForumDiscussionUrlPath(
+    fieldName: string,
+    fieldID: string
+  ): Promise<string> {
+    const discussionEntityInfo = await this.getNameableEntityInfoOrFail(
+      'discussion',
+      fieldName,
+      fieldID
+    );
+    return `${this.endpoint_cluster}/forum/discussion/${discussionEntityInfo.entityNameID}`;
+  }
+
+  public async getCalendarEventUrlPath(
+    fieldName: string,
+    fieldID: string
+  ): Promise<string> {
     const [calendarEventInfo]: {
       entityID: string;
       entityNameID: string;
@@ -687,13 +706,13 @@ export class UrlGeneratorService {
     }[] = await this.entityManager.connection.query(
       `
         SELECT calendar_event.id as entityID, calendar_event.nameID as entityNameID, calendar_event.calendarId as calendarID FROM calendar_event
-        WHERE calendar_event.profileId = '${profileID}'
+        WHERE calendar_event.${fieldName} = '${fieldID}'
       `
     );
 
     if (!calendarEventInfo) {
       throw new EntityNotFoundException(
-        `Unable to find calendar event where profile: ${profileID}`,
+        `Unable to find calendar event where profile: ${fieldID}`,
         LogContext.URL_GENERATOR
       );
     }

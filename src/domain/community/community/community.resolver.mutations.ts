@@ -31,7 +31,6 @@ import { CommunityRole } from '@common/enums/community.role';
 import { AssignCommunityRoleToUserInput } from './dto/community.dto.role.assign.user';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { NotificationInputCommunityApplication } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.application';
-import { NotificationInputCommunityContextReview } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.context.review';
 import { CommunityAuthorizationService } from './community.service.authorization';
 import { UpdateCommunityApplicationFormInput } from './dto/community.dto.update.application.form';
 import { InvitationAuthorizationService } from '../invitation/invitation.service.authorization';
@@ -548,14 +547,6 @@ export class CommunityResolverMutations {
       AuthorizationPrivilege.COMMUNITY_CONTEXT_REVIEW,
       `creating feedback on community: ${community.id}`
     );
-
-    // Send the notification
-    const notificationInput: NotificationInputCommunityContextReview = {
-      triggeredBy: agentInfo.userID,
-      community: community,
-      questions: feedbackData.questions,
-    };
-    await this.notificationAdapter.communityContextReview(notificationInput);
 
     return true;
   }

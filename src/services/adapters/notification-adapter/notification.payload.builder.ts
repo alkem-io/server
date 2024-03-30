@@ -3,7 +3,6 @@ import { EntityNotFoundException } from '@common/exceptions';
 import { NotificationEventException } from '@common/exceptions/notification.event.exception';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { Space } from '@domain/challenge/space/space.entity';
-import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { IDiscussion } from '@domain/communication/discussion/discussion.interface';
 import { ICommunity } from '@domain/community/community';
 import { Opportunity } from '@domain/challenge/opportunity/opportunity.entity';
@@ -11,19 +10,15 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
-import { CreateNVPInput } from '@src/domain/common/nvp/nvp.dto.create';
 import { Post } from '@domain/collaboration/post/post.entity';
 import {
   CollaborationPostCreatedEventPayload,
   CollaborationPostCommentEventPayload,
-  CollaborationInterestPayload,
   CollaborationCalloutPublishedEventPayload,
-  JourneyPayload,
   PlatformUserRegistrationEventPayload,
   PlatformUserRemovedEventPayload,
   CommunityNewMemberPayload,
   CommunicationUpdateEventPayload,
-  CollaborationContextReviewSubmittedPayload,
   PlatformForumDiscussionCreatedEventPayload,
   CommunicationUserMessageEventPayload,
   CommunicationOrganizationMessageEventPayload,
@@ -33,18 +28,12 @@ import {
   CommunityApplicationCreatedEventPayload,
   CollaborationDiscussionCommentEventPayload,
   PlatformForumDiscussionCommentEventPayload,
-  createJourneyURL,
-  createCalloutURL,
-  createPostURL,
-  createCalendarEventURL,
-  createForumDiscussionUrl,
   CommunityInvitationCreatedEventPayload,
   CollaborationWhiteboardCreatedEventPayload,
   CommentReplyEventPayload,
   CommunityExternalInvitationCreatedEventPayload,
+  BaseEventPayload,
 } from '@alkemio/notifications-lib';
-
-import { IRelation } from '@domain/collaboration/relation/relation.interface';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { IMessage } from '@domain/communication/message/message.interface';
@@ -60,7 +49,8 @@ import { NotificationInputWhiteboardCreated } from './dto/notification.dto.input
 import { NotificationInputPostCreated } from './dto/notification.dto.input.post.created';
 import { NotificationInputPostComment } from './dto/notification.dto.input.post.comment';
 import { ContributionResolverService } from '@services/infrastructure/entity-resolver/contribution.resolver.service';
-import { SpaceType } from '@common/enums/space.type';
+import { SpaceBaseEventPayload } from '@alkemio/notifications-lib/dist/dto/space.base.event.payload';
+import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 
 @Injectable()
 export class NotificationPayloadBuilder {
@@ -83,7 +73,8 @@ export class NotificationPayloadBuilder {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private configService: ConfigService,
-    private contributionResolverService: ContributionResolverService
+    private contributionResolverService: ContributionResolverService,
+    private urlGeneratorService: UrlGeneratorService
   ) {}
 
   async buildApplicationCreatedNotificationPayload(
@@ -91,11 +82,17 @@ export class NotificationPayloadBuilder {
     applicantID: string,
     community: ICommunity
   ): Promise<CommunityApplicationCreatedEventPayload> {
-    const journeyPayload = await this.buildJourneyPayload(community);
+    const spacePayload = await this.buildSpacePayload(
+      community,
+      applicationCreatorID
+    );
     const payload: CommunityApplicationCreatedEventPayload = {
-      triggeredBy: applicationCreatorID,
-      applicantID,
-      journey: journeyPayload,
+      applicant: {
+        id: applicantID,
+        url: 'TO: fix me',
+        displayName: 'TO: fix me',
+      },
+      ...spacePayload,
     };
 
     return payload;
@@ -106,11 +103,17 @@ export class NotificationPayloadBuilder {
     invitedUserID: string,
     community: ICommunity
   ): Promise<CommunityInvitationCreatedEventPayload> {
-    const journeyPayload = await this.buildJourneyPayload(community);
+    const spacePayload = await this.buildSpacePayload(
+      community,
+      invitationCreatorID
+    );
     const payload: CommunityInvitationCreatedEventPayload = {
-      triggeredBy: invitationCreatorID,
-      inviteeID: invitedUserID,
-      journey: journeyPayload,
+      invitee: {
+        id: invitedUserID,
+        url: 'TO: fix me',
+        displayName: 'TO: fix me',
+      },
+      ...spacePayload,
     };
 
     return payload;
@@ -122,12 +125,14 @@ export class NotificationPayloadBuilder {
     community: ICommunity,
     message?: string
   ): Promise<CommunityExternalInvitationCreatedEventPayload> {
-    const journeyPayload = await this.buildJourneyPayload(community);
+    const spacePayload = await this.buildSpacePayload(
+      community,
+      invitationCreatorID
+    );
     const payload: CommunityExternalInvitationCreatedEventPayload = {
-      triggeredBy: invitationCreatorID,
       invitees: [{ email: invitedUserEmail }],
       welcomeMessage: message,
-      journey: journeyPayload,
+      ...spacePayload,
     };
 
     return payload;
@@ -144,12 +149,15 @@ export class NotificationPayloadBuilder {
         callout.id
       );
 
-    const journeyPayload = await this.buildJourneyPayload(community);
+    const spacePayload = await this.buildSpacePayload(
+      community,
+      eventData.triggeredBy
+    );
     const payload: CollaborationPostCreatedEventPayload = {
-      triggeredBy: eventData.triggeredBy,
       callout: {
         displayName: callout.framing.profile.displayName,
         nameID: callout.nameID,
+        url: 'TO: fix me',
       },
       post: {
         id: post.id,
@@ -157,8 +165,9 @@ export class NotificationPayloadBuilder {
         displayName: post.profile.displayName,
         nameID: post.nameID,
         type: post.type,
+        url: 'TO: fix me',
       },
-      journey: journeyPayload,
+      ...spacePayload,
     };
 
     return payload;
@@ -174,20 +183,24 @@ export class NotificationPayloadBuilder {
         callout.id
       );
 
-    const journeyPayload = await this.buildJourneyPayload(community);
+    const spacePayload = await this.buildSpacePayload(
+      community,
+      eventData.triggeredBy
+    );
     const payload: CollaborationWhiteboardCreatedEventPayload = {
-      triggeredBy: eventData.triggeredBy,
       callout: {
         displayName: callout.framing.profile.displayName,
         nameID: callout.nameID,
+        url: 'TO: fix me',
       },
       whiteboard: {
         id: eventData.whiteboard.id,
         createdBy: whiteboard.createdBy || '',
         displayName: whiteboard.profile.displayName,
         nameID: whiteboard.nameID,
+        url: 'TO: fix me',
       },
-      journey: journeyPayload,
+      ...spacePayload,
     };
 
     return payload;
@@ -202,17 +215,17 @@ export class NotificationPayloadBuilder {
         callout.id
       );
 
-    const journeyPayload = await this.buildJourneyPayload(community);
+    const spacePayload = await this.buildSpacePayload(community, userId);
     const payload: CollaborationCalloutPublishedEventPayload = {
-      triggeredBy: userId,
       callout: {
         id: callout.id,
         displayName: callout.framing.profile.displayName,
         description: callout.framing.profile.description,
         nameID: callout.nameID,
         type: callout.type,
+        url: 'TO: fix me',
       },
-      journey: journeyPayload,
+      ...spacePayload,
     };
 
     return payload;
@@ -240,23 +253,27 @@ export class NotificationPayloadBuilder {
       );
     }
 
-    const journeyPayload = await this.buildJourneyPayload(community);
+    const spacePayload = await this.buildSpacePayload(
+      community,
+      post.createdBy
+    );
     const payload: CollaborationPostCommentEventPayload = {
-      triggeredBy: post.createdBy,
       callout: {
         displayName: callout.framing.profile.displayName,
         nameID: callout.nameID,
+        url: 'TO: fix me',
       },
       post: {
         displayName: post.profile.displayName,
         createdBy: post.createdBy,
         nameID: post.nameID,
+        url: 'TO: fix me',
       },
       comment: {
         message: messageResult.message,
         createdBy: messageResult.sender,
       },
-      journey: journeyPayload,
+      ...spacePayload,
     };
 
     return payload;
@@ -279,19 +296,22 @@ export class NotificationPayloadBuilder {
       );
     }
 
-    const journeyPayload = await this.buildJourneyPayload(community);
+    const spacePayload = await this.buildSpacePayload(
+      community,
+      messageResult.sender
+    );
     const payload: CollaborationDiscussionCommentEventPayload = {
-      triggeredBy: messageResult.sender,
       callout: {
         displayName: callout.framing.profile.displayName,
         nameID: callout.nameID,
+        url: 'TO: fix me',
       },
 
       comment: {
         message: messageResult.message,
         createdBy: messageResult.sender,
       },
-      journey: journeyPayload,
+      ...spacePayload,
     };
 
     return payload;
@@ -310,19 +330,18 @@ export class NotificationPayloadBuilder {
 
     const commentOriginUrl = await this.buildCommentOriginUrl(
       data.commentType,
-      data.originEntity.id,
-      data.originEntity.nameId,
-      data.roomId
+      data.originEntity.id
     );
 
+    const basePayload = this.buildBaseEventPayload(data.triggeredBy);
     const payload: CommentReplyEventPayload = {
-      triggeredBy: data.triggeredBy,
       reply: data.reply,
       comment: {
         commentUrl: commentOriginUrl,
         commentOrigin: data.originEntity.displayName,
         commentOwnerId: userData.id,
       },
+      ...basePayload,
     };
 
     return payload;
@@ -332,21 +351,19 @@ export class NotificationPayloadBuilder {
     discussion: IDiscussion,
     message: IMessage
   ): Promise<PlatformForumDiscussionCommentEventPayload> {
-    const endpoint = this.configService.get(
-      ConfigurationTypes.HOSTING
-    )?.endpoint_cluster;
-    const discussionUrl = createForumDiscussionUrl(endpoint, discussion.nameID);
+    const basePayload = this.buildBaseEventPayload(message.sender);
     const payload: PlatformForumDiscussionCommentEventPayload = {
-      triggeredBy: message.sender,
       discussion: {
         displayName: discussion.profile.displayName,
         createdBy: discussion.createdBy,
-        url: discussionUrl,
+        url: 'to: fix me',
       },
       comment: {
         message: message.message,
         createdBy: message.sender,
+        url: 'to: fix me',
       },
+      ...basePayload,
     };
 
     return payload;
@@ -357,33 +374,14 @@ export class NotificationPayloadBuilder {
     userID: string,
     community: ICommunity
   ): Promise<CommunityNewMemberPayload> {
-    const journeyPayload = await this.buildJourneyPayload(community);
+    const spacePayload = await this.buildSpacePayload(community, triggeredBy);
     const payload: CommunityNewMemberPayload = {
-      triggeredBy,
-      userID,
-      journey: journeyPayload,
-    };
-
-    return payload;
-  }
-
-  async buildCollaborationInterestPayload(
-    userID: string,
-    collaboration: ICollaboration,
-    relation: IRelation
-  ): Promise<CollaborationInterestPayload> {
-    const community =
-      await this.communityResolverService.getCommunityFromCollaborationOrFail(
-        collaboration.id
-      );
-    const journeyPayload = await this.buildJourneyPayload(community);
-    const payload: CollaborationInterestPayload = {
-      triggeredBy: userID,
-      relation: {
-        role: relation.actorRole || '',
-        description: relation.description || '',
+      user: {
+        id: userID,
+        url: 'TO: fix me',
+        displayName: 'TO: fix me',
       },
-      journey: journeyPayload,
+      ...spacePayload,
     };
 
     return payload;
@@ -398,14 +396,17 @@ export class NotificationPayloadBuilder {
         updates.id
       );
 
-    const journeyPayload = await this.buildJourneyPayload(community);
+    const spacePayload = await this.buildSpacePayload(
+      community,
+      updateCreatorId
+    );
     const payload: CommunicationUpdateEventPayload = {
-      triggeredBy: updateCreatorId,
       update: {
         id: updates.id,
         createdBy: updateCreatorId,
+        url: 'TO: fix me',
       },
-      journey: journeyPayload,
+      ...spacePayload,
     };
 
     return payload;
@@ -415,9 +416,14 @@ export class NotificationPayloadBuilder {
     triggeredBy: string,
     userID: string
   ): PlatformUserRegistrationEventPayload {
+    const basePayload = this.buildBaseEventPayload(triggeredBy);
     const result: PlatformUserRegistrationEventPayload = {
-      triggeredBy: triggeredBy,
-      userID: userID,
+      user: {
+        id: userID,
+        url: 'TO: fix me',
+        displayName: 'TO: fix me',
+      },
+      ...basePayload,
     };
     return result;
   }
@@ -426,55 +432,29 @@ export class NotificationPayloadBuilder {
     triggeredBy: string,
     user: IUser
   ): PlatformUserRemovedEventPayload {
+    const basePayload = this.buildBaseEventPayload(triggeredBy);
     const result: PlatformUserRemovedEventPayload = {
-      triggeredBy: triggeredBy,
       user: {
         displayName: user.profile.displayName,
         email: user.email,
       },
+      ...basePayload,
     };
     return result;
-  }
-
-  async buildCommunityContextReviewSubmittedNotificationPayload(
-    userId: string,
-    communityId: string,
-    questions: CreateNVPInput[]
-  ): Promise<CollaborationContextReviewSubmittedPayload> {
-    const community = await this.communityResolverService.getCommunity(
-      communityId
-    );
-    if (!community) {
-      throw new NotificationEventException(
-        `Could not acquire community with id: ${communityId}`,
-        LogContext.COMMUNITY
-      );
-    }
-
-    const journeyPayload = await this.buildJourneyPayload(community);
-
-    return {
-      triggeredBy: userId,
-      journey: journeyPayload,
-      questions,
-    };
   }
 
   async buildPlatformForumDiscussionCreatedNotificationPayload(
     discussion: IDiscussion
   ): Promise<PlatformForumDiscussionCreatedEventPayload> {
-    const endpoint = this.configService.get(
-      ConfigurationTypes.HOSTING
-    )?.endpoint_cluster;
-    const discussionUrl = createForumDiscussionUrl(endpoint, discussion.nameID);
+    const basePayload = this.buildBaseEventPayload(discussion.createdBy);
     const payload: PlatformForumDiscussionCreatedEventPayload = {
-      triggeredBy: discussion.createdBy,
       discussion: {
         id: discussion.id,
         createdBy: discussion.createdBy,
         displayName: discussion.profile.displayName,
-        url: discussionUrl,
+        url: 'TO: fix me',
       },
+      ...basePayload,
     };
 
     return payload;
@@ -485,16 +465,18 @@ export class NotificationPayloadBuilder {
     receiverID: string,
     message: string
   ): Promise<CommunicationUserMessageEventPayload> {
+    const basePayload = this.buildBaseEventPayload(senderID);
     const { displayName: receiverDisplayName } = await this.getUserDataOrFail(
       receiverID
     );
     const payload: CommunicationUserMessageEventPayload = {
-      triggeredBy: senderID,
       messageReceiver: {
         id: receiverID,
         displayName: receiverDisplayName,
+        url: 'TO: fix me',
       },
       message,
+      ...basePayload,
     };
 
     return payload;
@@ -545,16 +527,18 @@ export class NotificationPayloadBuilder {
     message: string,
     organizationID: string
   ): Promise<CommunicationOrganizationMessageEventPayload> {
+    const basePayload = this.buildBaseEventPayload(senderID);
     const { displayName: orgDisplayName } = await this.getOrgDataOrFail(
       organizationID
     );
     const payload: CommunicationOrganizationMessageEventPayload = {
-      triggeredBy: senderID,
       message,
       organization: {
         id: organizationID,
         displayName: orgDisplayName,
+        url: 'TO: fix me',
       },
+      ...basePayload,
     };
 
     return payload;
@@ -607,11 +591,10 @@ export class NotificationPayloadBuilder {
     communityID: string
   ): Promise<CommunicationCommunityLeadsMessageEventPayload> {
     const community = await this.getCommunityOrFail(communityID);
-    const journeyPayload = await this.buildJourneyPayload(community);
+    const spacePayload = await this.buildSpacePayload(community, senderID);
     const payload: CommunicationCommunityLeadsMessageEventPayload = {
-      triggeredBy: senderID,
       message,
-      journey: journeyPayload,
+      ...spacePayload,
     };
 
     return payload;
@@ -621,9 +604,7 @@ export class NotificationPayloadBuilder {
     senderID: string,
     mentionedUserNameID: string,
     comment: string,
-    commentsId: string,
     originEntityId: string,
-    originEntityNameId: string,
     originEntityDisplayName: string,
     commentType: RoomType
   ): Promise<CommunicationUserMentionEventPayload | undefined> {
@@ -637,22 +618,22 @@ export class NotificationPayloadBuilder {
 
     const commentOriginUrl = await this.buildCommentOriginUrl(
       commentType,
-      originEntityId,
-      originEntityNameId,
-      commentsId
+      originEntityId
     );
 
+    const basePayload = this.buildBaseEventPayload(senderID);
     const payload: CommunicationUserMentionEventPayload = {
-      triggeredBy: senderID,
       mentionedUser: {
         id: userData.id,
         displayName: userData.displayName,
+        url: 'TO: fix me',
       },
       comment,
       commentOrigin: {
         url: commentOriginUrl,
         displayName: originEntityDisplayName,
       },
+      ...basePayload,
     };
 
     return payload;
@@ -662,9 +643,7 @@ export class NotificationPayloadBuilder {
     senderID: string,
     mentionedOrgNameID: string,
     comment: string,
-    commentsId: string,
     originEntityId: string,
-    originEntityNameId: string,
     originEntityDisplayName: string,
     commentType: RoomType
   ): Promise<CommunicationOrganizationMentionEventPayload | undefined> {
@@ -678,22 +657,24 @@ export class NotificationPayloadBuilder {
 
     const commentOriginUrl = await this.buildCommentOriginUrl(
       commentType,
-      originEntityId,
-      originEntityNameId,
-      commentsId
+      originEntityId
     );
 
+    const basePayload = this.buildBaseEventPayload(senderID);
     const payload: CommunicationOrganizationMentionEventPayload = {
-      triggeredBy: senderID,
       mentionedOrganization: {
         id: orgData.id,
-        displayName: orgData.displayName,
+        profile: {
+          displayName: orgData.displayName,
+          url: 'TO: fix me',
+        },
       },
       comment,
       commentOrigin: {
         url: commentOriginUrl,
         displayName: originEntityDisplayName,
       },
+      ...basePayload,
     };
 
     return payload;
@@ -701,30 +682,10 @@ export class NotificationPayloadBuilder {
 
   private async buildCommentOriginUrl(
     commentType: RoomType,
-    originEntityId: string,
-    originEntityNameId: string,
-    commentsId: string
+    originEntityId: string
   ): Promise<string> {
-    const endpoint = this.configService.get(
-      ConfigurationTypes.HOSTING
-    )?.endpoint_cluster;
-
     if (commentType === RoomType.CALLOUT) {
-      const community =
-        await this.communityResolverService.getCommunityFromCalloutOrFail(
-          originEntityId
-        );
-
-      if (!community) {
-        throw new NotificationEventException(
-          `Could not acquire community from callout with id: ${originEntityId}`,
-          LogContext.NOTIFICATIONS
-        );
-      }
-
-      const journeyPayload = await this.buildJourneyPayload(community);
-      const journeyUrl = createJourneyURL(endpoint, journeyPayload);
-      return createCalloutURL(journeyUrl, originEntityNameId);
+      return await this.urlGeneratorService.getCalloutUrlPath(originEntityId);
     }
 
     if (commentType === RoomType.POST) {
@@ -740,55 +701,22 @@ export class NotificationPayloadBuilder {
           LogContext.NOTIFICATIONS
         );
       }
-      const callout =
-        await this.contributionResolverService.getCalloutForPostContribution(
-          originEntityId
-        );
 
-      const community =
-        await this.communityResolverService.getCommunityFromPostRoomOrFail(
-          commentsId
-        );
-
-      if (!community) {
-        throw new NotificationEventException(
-          `Could not acquire community from comments with id: ${commentsId}`,
-          LogContext.NOTIFICATIONS
-        );
-      }
-
-      if (!callout) {
-        throw new NotificationEventException(
-          `Could not acquire callout from post with id: ${post.id}`,
-          LogContext.NOTIFICATIONS
-        );
-      }
-
-      const journeyPayload = await this.buildJourneyPayload(community);
-      const journeyUrl = createJourneyURL(endpoint, journeyPayload);
-      return createPostURL(journeyUrl, callout.nameID, post.nameID);
+      return await this.urlGeneratorService.getPostUrlPath('id', post.id);
     }
 
     if (commentType === RoomType.CALENDAR_EVENT) {
-      const community =
-        await this.communityResolverService.getCommunityFromCalendarEventOrFail(
-          originEntityId
-        );
-
-      if (!community) {
-        throw new NotificationEventException(
-          `Could not acquire community from calendar event with id: ${originEntityId}`,
-          LogContext.NOTIFICATIONS
-        );
-      }
-
-      const journeyPayload = await this.buildJourneyPayload(community);
-      const journeyUrl = createJourneyURL(endpoint, journeyPayload);
-      return createCalendarEventURL(journeyUrl, originEntityNameId);
+      return await this.urlGeneratorService.getCalendarEventUrlPath(
+        'id',
+        originEntityId
+      );
     }
 
     if (commentType === RoomType.DISCUSSION_FORUM) {
-      return createForumDiscussionUrl(endpoint, originEntityNameId);
+      return await this.urlGeneratorService.getForumDiscussionUrlPath(
+        'id',
+        originEntityId
+      );
     }
 
     throw new NotificationEventException(
@@ -797,53 +725,43 @@ export class NotificationPayloadBuilder {
     );
   }
 
-  private async buildJourneyPayload(
-    community: ICommunity
-  ): Promise<JourneyPayload> {
-    const displayName =
-      await this.communityResolverService.getDisplayNameForCommunityOrFail(
+  private async buildSpacePayload(
+    community: ICommunity,
+    triggeredBy: string
+  ): Promise<SpaceBaseEventPayload> {
+    const basePayload = this.buildBaseEventPayload(triggeredBy);
+    const baseChallenge =
+      await this.communityResolverService.getBaseChallengeForCommunityOrFail(
         community.id,
         community.type
       );
-    const spaceID =
-      await this.communityResolverService.getRootSpaceFromCommunityOrFail(
-        community
-      );
-
-    const result: JourneyPayload = {
-      spaceID: spaceID,
-      spaceNameID: await this.getSpaceNameIdOrFail(spaceID),
-      displayName: displayName,
-      type: community.type,
-    };
-    if (community.type === SpaceType.CHALLENGE) {
-      result.challenge = {
-        id: community.parentID,
-        nameID: await this.getChallengeNameIdOrFail(community.parentID),
-      };
-    } else if (community.type === SpaceType.OPPORTUNITY) {
-      const communityWithParent =
-        await this.communityResolverService.getCommunityWithParentOrFail(
-          community.id
-        );
-      const parentCommunity = communityWithParent?.parentCommunity;
-
-      if (!parentCommunity) {
-        // this will block sending the event
-        throw new EntityNotFoundException(
-          `Unable to find parent community of opportunity ${community.id}`,
-          LogContext.CHALLENGES
-        );
-      }
-      result.challenge = {
-        nameID: await this.getChallengeNameIdOrFail(parentCommunity.parentID),
-        id: parentCommunity.parentID,
-        opportunity: {
-          id: community.parentID,
-          nameID: await this.getOpportunityNameIdOrFail(community.parentID),
+    const url = await this.urlGeneratorService.generateUrlForProfile(
+      baseChallenge.profile
+    );
+    const result: SpaceBaseEventPayload = {
+      space: {
+        id: baseChallenge.id,
+        nameID: baseChallenge.nameID,
+        type: community.type,
+        profile: {
+          displayName: baseChallenge.profile.displayName,
+          url: url,
         },
-      };
-    }
+        adminURL: 'TO: fix me',
+      },
+      ...basePayload,
+    };
+
+    return result;
+  }
+
+  private buildBaseEventPayload(triggeredBy: string): BaseEventPayload {
+    const result: BaseEventPayload = {
+      triggeredBy: triggeredBy,
+      platform: {
+        url: this.getPlatformURL(),
+      },
+    };
 
     return result;
   }
@@ -864,53 +782,10 @@ export class NotificationPayloadBuilder {
     return community;
   }
 
-  private async getSpaceNameIdOrFail(spaceID: string): Promise<string> {
-    const space = await this.spaceRepository
-      .createQueryBuilder('space')
-      .where('space.id = :id')
-      .setParameters({ id: `${spaceID}` })
-      .getOne();
-
-    if (!space) {
-      throw new EntityNotFoundException(
-        `Unable to find Space with id: ${spaceID}`,
-        LogContext.CHALLENGES
-      );
-    }
-    return space.nameID;
-  }
-
-  private async getChallengeNameIdOrFail(challengeID: string): Promise<string> {
-    const challenge = await this.challengeRepository
-      .createQueryBuilder('challenge')
-      .where('challenge.id = :id')
-      .setParameters({ id: `${challengeID}` })
-      .getOne();
-    if (!challenge) {
-      throw new EntityNotFoundException(
-        `Unable to find Challenge with id: ${challengeID}`,
-        LogContext.CHALLENGES
-      );
-    }
-    return challenge.nameID;
-  }
-
-  private async getOpportunityNameIdOrFail(
-    opportunityID: string
-  ): Promise<string> {
-    const opportunity = await this.opportunityRepository
-      .createQueryBuilder('opportunity')
-      .where('opportunity.id = :id')
-      .setParameters({ id: `${opportunityID}` })
-      .getOne();
-
-    if (!opportunity) {
-      throw new EntityNotFoundException(
-        `Unable to find Opportunity with id: ${opportunityID}`,
-        LogContext.CHALLENGES
-      );
-    }
-
-    return opportunity.nameID;
+  private getPlatformURL(): string {
+    const endpoint = this.configService.get(
+      ConfigurationTypes.HOSTING
+    )?.endpoint_cluster;
+    return endpoint;
   }
 }

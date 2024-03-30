@@ -12,11 +12,13 @@ import { EntityResolverModule } from '@services/infrastructure/entity-resolver/e
 import { ActivityModule } from '@src/platform/activity/activity.module';
 import { NotificationAdapter } from './notification.adapter';
 import { NotificationPayloadBuilder } from './notification.payload.builder';
+import { UrlGeneratorModule } from '@services/infrastructure/url-generator/url.generator.module';
 
 @Module({
   imports: [
     ActivityModule,
     EntityResolverModule,
+    UrlGeneratorModule,
     TypeOrmModule.forFeature([
       Space,
       Challenge,
