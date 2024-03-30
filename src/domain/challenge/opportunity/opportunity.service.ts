@@ -132,7 +132,11 @@ export class OpportunityService {
       this.opportunityRepository
     );
 
-    return await this.getOpportunityOrFail(opportunityData.ID);
+    return await this.getOpportunityOrFail(opportunityData.ID, {
+      relations: {
+        profile: true,
+      },
+    });
   }
 
   async saveOpportunity(opportunity: IOpportunity): Promise<IOpportunity> {

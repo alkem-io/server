@@ -23,6 +23,7 @@ import {
   CREDENTIAL_RULE_SPACE_HOST_ASSOCIATES_JOIN,
   CREDENTIAL_RULE_SPACE_MEMBERS_READ,
   CREDENTIAL_RULE_SUBSPACE_ADMINS,
+  CREDENTIAL_RULE_TYPES_ACCOUNT_AUTHORIZATION_RESET,
   CREDENTIAL_RULE_TYPES_SPACE_COMMUNITY_APPLY_GLOBAL_REGISTERED,
   CREDENTIAL_RULE_TYPES_SPACE_COMMUNITY_JOIN_GLOBAL_REGISTERED,
   POLICY_RULE_SPACE_CREATE_SUBSPACE,
@@ -214,6 +215,19 @@ export class BaseChallengeAuthorizationService {
       CREDENTIAL_RULE_SPACE_ADMINS
     );
     newRules.push(spaceAdmin);
+
+    // Allow global admins to update platform settings
+    const authorizationReset =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.PLATFORM_ADMIN],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_ADMIN_SPACES,
+        ],
+        CREDENTIAL_RULE_TYPES_ACCOUNT_AUTHORIZATION_RESET
+      );
+    authorizationReset.cascade = false;
+    newRules.push(authorizationReset);
 
     const collaborationSettings = policy.settings.collaboration;
     if (collaborationSettings.allowMembersToCreateSubspaces) {
