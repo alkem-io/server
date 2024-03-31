@@ -30,12 +30,14 @@ export class GraphqlExceptionFilter implements GqlExceptionFilter {
      */
     this.logger.error(exception, stack, context);
     // something needs to be returned so the default ExceptionsHandler is not triggered
-    return {
-      ...exception,
-      details:
-        process.env.NODE_ENV !== 'production' ? exception.details : undefined,
-      extension:
-        process.env.NODE_ENV !== 'production' ? exception.stack : undefined,
-    };
+    return exception;
+    // TODO: this is causing errors to not be cascaeded through graphql
+    // return {
+    //   ...exception,
+    //   details:
+    //     process.env.NODE_ENV !== 'production' ? exception.details : undefined,
+    //   extension:
+    //     process.env.NODE_ENV !== 'production' ? exception.stack : undefined,
+    // };
   }
 }
