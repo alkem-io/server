@@ -23,6 +23,7 @@ import {
   CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_GUIDANCE,
   CREDENTIAL_RULE_TYPES_PLATFORM_ADMINS,
   CREDENTIAL_RULE_TYPES_PLATFORM_ANY_ADMIN,
+  CREDENTIAL_RULE_TYPES_PLATFORM_AUTH_RESET,
   CREDENTIAL_RULE_TYPES_PLATFORM_FILE_UPLOAD_ANY_USER,
   CREDENTIAL_RULE_TYPES_PLATFORM_GRANT_GLOBAL_ADMINS,
   CREDENTIAL_RULE_TYPES_PLATFORM_READ_REGISTERED,
@@ -294,6 +295,19 @@ export class PlatformAuthorizationService {
     platformAdmin.cascade = false;
     credentialRules.push(platformAdmin);
 
+    // Allow global admin Spaces to reset auth
+    const platformResetAuth =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.AUTHORIZATION_RESET],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_ADMIN_SPACES,
+        ],
+        CREDENTIAL_RULE_TYPES_PLATFORM_AUTH_RESET
+      );
+    platformAdmin.cascade = false;
+    credentialRules.push(platformResetAuth);
+
     // Allow all registered users to query non-protected user information
     const userNotInherited =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
@@ -309,7 +323,7 @@ export class PlatformAuthorizationService {
         [AuthorizationPrivilege.CREATE_ORGANIZATION],
         [
           AuthorizationCredential.SPACE_ADMIN,
-          AuthorizationCredential.CHALLENGE_ADMIN,
+          AuthorizationCredential.SUBSPACE_ADMIN,
         ],
         CREDENTIAL_RULE_TYPES_PLATFORM_ANY_ADMIN
       );
@@ -324,8 +338,8 @@ export class PlatformAuthorizationService {
           AuthorizationCredential.GLOBAL_ADMIN_SPACES,
           AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY,
           AuthorizationCredential.SPACE_ADMIN,
-          AuthorizationCredential.CHALLENGE_ADMIN,
-          AuthorizationCredential.OPPORTUNITY_ADMIN,
+          AuthorizationCredential.SUBSPACE_ADMIN,
+          AuthorizationCredential.SUBSPACE_ADMIN,
           AuthorizationCredential.ORGANIZATION_ADMIN,
         ],
         CREDENTIAL_RULE_TYPES_PLATFORM_ANY_ADMIN
