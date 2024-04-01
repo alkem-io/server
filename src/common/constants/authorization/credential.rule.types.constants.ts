@@ -40,6 +40,8 @@ export const CREDENTIAL_RULE_TYPES_PLATFORM_GRANT_GLOBAL_ADMINS =
   'credentialRuleTypes-platformGrantGlobalAdmins';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_ADMINS =
   'credentialRuleTypes-platformPlatformAdmins';
+export const CREDENTIAL_RULE_TYPES_PLATFORM_AUTH_RESET =
+  'credentialRuleTypes-platformPlatformAuthReset';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_READ_REGISTERED =
   'credentialRuleTypes-platformReadRegistered';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_CREATE_ORG_FILE_UPLOAD =
