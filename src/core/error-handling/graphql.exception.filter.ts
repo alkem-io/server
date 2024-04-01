@@ -18,26 +18,26 @@ export class GraphqlExceptionFilter implements GqlExceptionFilter {
       ...exception.details,
       userId: ctx.req.user.userID,
     };
-    /* add values in 'stack' that you want to include as additional data
-      e.g. stack = { code: '123' };
-      THE VAR NAME DOES NOT CORRESPOND WITH ITS VALUE OR PURPOSE
-     */
-    const stack = undefined;
-    const context = undefined;
-
+    /* add values that you want to include as additional data
+     e.g. secondParam = { code: '123' };
+    */
+    const secondParam = undefined;
+    const thirdParam = undefined;
     /* the logger will handle the passed exception by iteration over all it's fields
      * you can provide additional data in the stack and context
      */
-    this.logger.error(exception, stack, context);
+    this.logger.error(exception, secondParam, thirdParam);
     // something needs to be returned so the default ExceptionsHandler is not triggered
+    if (process.env.NODE_ENV === 'production') {
+      // return a new error with only the message and the id
+      // that way we are not exposing any internal information
+      return new GraphQLError(exception.message, {
+        extensions: {
+          errorId: exception.errorId,
+        },
+      });
+    }
+    // if not in PROD, return everything
     return exception;
-    // TODO: this is causing errors to not be cascaeded through graphql
-    // return {
-    //   ...exception,
-    //   details:
-    //     process.env.NODE_ENV !== 'production' ? exception.details : undefined,
-    //   extension:
-    //     process.env.NODE_ENV !== 'production' ? exception.stack : undefined,
-    // };
   }
 }
