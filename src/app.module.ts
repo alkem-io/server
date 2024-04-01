@@ -57,6 +57,7 @@ import { MessageReactionModule } from '@domain/communication/message.reaction/me
 import {
   HttpExceptionFilter,
   GraphqlExceptionFilter,
+  UnhandledExceptionFilter,
 } from '@core/error-handling';
 import { MeModule } from '@services/api/me';
 import { ExcalidrawServerModule } from '@services/external/excalidraw-backend';
@@ -267,6 +268,10 @@ import { AdminSearchIngestModule } from '@platform/admin/search/admin.search.ing
     {
       provide: APP_FILTER,
       useClass: HttpExceptionFilter,
+    },
+    {
+      provide: APP_FILTER,
+      useClass: UnhandledExceptionFilter,
     },
     {
       provide: APP_PIPE,

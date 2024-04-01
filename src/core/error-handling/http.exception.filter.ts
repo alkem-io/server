@@ -29,24 +29,24 @@ export class HttpExceptionFilter implements ExceptionFilter {
       ...exception.details,
       userId: req.user.userID,
     };
-
-    /* add values in 'stack' that you want to include as additional data
-     e.g. stack = { code: '123' };
+    /* add values that you want to include as additional data
+     e.g. secondParam = { code: '123' };
     */
-    const stack = undefined;
-    const context = undefined;
-
+    const secondParam = undefined;
+    const thirdParam = undefined;
     /* the logger will handle the passed exception by iteration over all it's fields
      * you can provide additional data in the stack and context
      */
-    this.logger.error(exception, stack, context);
+    this.logger.error(exception, secondParam, thirdParam);
 
     response.status(status).json({
       statusCode: status,
       code: exception.code,
       timestamp: new Date().toISOString(),
       message: exception.message,
-      context: process.env.NODE_ENV !== 'production' ? context : undefined,
+      errorId: exception.errorId,
+      context:
+        process.env.NODE_ENV !== 'production' ? exception.context : undefined,
       details:
         process.env.NODE_ENV !== 'production' ? exception.details : undefined,
       stack:
