@@ -8,5 +8,4 @@ export type ExceptionExtraDetails = {
    */
   cause?: string;
   originalException?: Error;
-  errorId?: string;
 };
