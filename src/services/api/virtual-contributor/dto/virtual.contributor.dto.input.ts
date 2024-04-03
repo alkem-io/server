@@ -1,4 +1,5 @@
 import { Field, InputType } from '@nestjs/graphql';
+import { VirtualContributorType } from '@services/adapters/virtual-contributor-adapter/virtual.contributor.type';
 
 @InputType()
 export class VirtualContributorInput {
@@ -13,4 +14,10 @@ export class VirtualContributorInput {
     description: 'Prompt.',
   })
   prompt!: string;
+
+  @Field(() => VirtualContributorType, {
+    nullable: false,
+    description: 'Virtual Contributor Type.',
+  })
+  virtualContributorType!: VirtualContributorType;
 }

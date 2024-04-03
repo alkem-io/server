@@ -6,6 +6,7 @@ import { ConfigurationTypes } from '@common/enums/configuration.type';
 import { ConfigService } from '@nestjs/config';
 import { VirtualContributorInput } from './dto/virtual.contributor.dto.input';
 import { VirtualContributorAdapter } from '@services/adapters/virtual-contributor-adapter/virtual.contributor.adapter';
+import { VirtualContributorType } from '@services/adapters/virtual-contributor-adapter/virtual.contributor.type';
 
 export class VirtualContributorService {
   constructor(
@@ -22,6 +23,9 @@ export class VirtualContributorService {
       userId: agentInfo.userID,
       question: chatData.question,
       prompt: chatData.prompt,
+      virtualContributorType:
+        chatData.virtualContributorType ??
+        VirtualContributorType.VIRTUAL_CONTRIBUTOR,
     });
 
     return response;
