@@ -1,4 +1,5 @@
 import { Field, ObjectType } from '@nestjs/graphql';
+import { ISource } from '@services/api/chat-guidance/dto/chat.guidance.query.result.dto';
 
 @ObjectType('VirtualContributorResult')
 export abstract class IVirtualContributorQueryResult {
@@ -25,19 +26,4 @@ export abstract class IVirtualContributorQueryResult {
     description: 'The answer to the question',
   })
   answer!: string;
-}
-
-@ObjectType('Source')
-export abstract class ISource {
-  @Field(() => String, {
-    nullable: true,
-    description: 'The URI of the source',
-  })
-  uri?: string;
-
-  @Field(() => String, {
-    nullable: true,
-    description: 'The title of the source',
-  })
-  title?: string;
 }

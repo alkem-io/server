@@ -4,12 +4,12 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { firstValueFrom } from 'rxjs';
 import { LogContext } from '@common/enums';
 import { VIRTUAL_CONTRIBUTOR_SERVICE } from '@common/constants';
-import { Source } from './source.type';
 import { VirtualContributorInputBase } from './dto/virtual.contributor.dto.base';
 import { VirtualContributorBaseResponse } from './dto/virtual.contributor.dto.base.response';
 import { VirtualContributorQueryInput } from './dto/virtual.contributor.dto.query';
 import { VirtualContributorQueryResponse } from './dto/virtual.contributor.dto.question.response';
 import { IVirtualContributorQueryResult } from '@services/api/virtual-contributor/dto/virtual.contributor.query.result.dto';
+import { Source } from '../chat-guidance-adapter/source.type';
 
 enum VirtualContributorEventType {
   QUERY = 'query',
