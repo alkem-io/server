@@ -2,7 +2,6 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ClientProxy } from '@nestjs/microservices';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { firstValueFrom } from 'rxjs';
-import { IChatGuidanceQueryResult } from '@services/api/chat-guidance/dto/chat.guidance.query.result.dto';
 import { LogContext } from '@common/enums';
 import { VIRTUAL_CONTRIBUTOR_SERVICE } from '@common/constants';
 import { Source } from './source.type';
@@ -10,15 +9,16 @@ import { VirtualContributorInputBase } from './dto/virtual.contributor.dto.base'
 import { VirtualContributorBaseResponse } from './dto/virtual.contributor.dto.base.response';
 import { VirtualContributorQueryInput } from './dto/virtual.contributor.dto.query';
 import { VirtualContributorQueryResponse } from './dto/virtual.contributor.dto.question.response';
+import { IVirtualContributorQueryResult } from '@services/api/virtual-contributor/dto/virtual.contributor.query.result.dto';
 
 enum VirtualContributorEventType {
   QUERY = 'query',
   INGEST = 'ingest',
-  // RESET = 'reset',
+  RESET = 'reset',
 }
 
 const successfulIngestionResponse = 'Ingest successful';
-// const successfulResetResponse = 'Reset function executed';
+const successfulResetResponse = 'Reset function executed';
 
 @Injectable()
 export class VirtualContributorAdapter {
@@ -31,7 +31,7 @@ export class VirtualContributorAdapter {
 
   public async sendQuery(
     eventData: VirtualContributorQueryInput
-  ): Promise<IChatGuidanceQueryResult> {
+  ): Promise<IVirtualContributorQueryResult> {
     let responseData: VirtualContributorQueryResponse | undefined;
 
     try {
@@ -78,29 +78,29 @@ export class VirtualContributorAdapter {
     }
   }
 
-  // public async sendReset(
-  //   eventData: VirtualContributorInputBase
-  // ): Promise<boolean> {
-  //   const response = this.VirtualContributorClient.send(
-  //     { cmd: VirtualContributorEventType.RESET },
-  //     eventData
-  //   );
+  public async sendReset(
+    eventData: VirtualContributorInputBase
+  ): Promise<boolean> {
+    const response = this.VirtualContributorClient.send(
+      { cmd: VirtualContributorEventType.RESET },
+      eventData
+    );
 
-  //   try {
-  //     const responseData = await firstValueFrom<VirtualContributorBaseResponse>(
-  //       response
-  //     );
+    try {
+      const responseData = await firstValueFrom<VirtualContributorBaseResponse>(
+        response
+      );
 
-  //     return responseData.result === successfulResetResponse;
-  //   } catch (err: any) {
-  //     this.logger.error(
-  //       `Could not send reset to chat guidance adapter! ${err}`,
-  //       err?.stack,
-  //       LogContext.CHAT_GUIDANCE
-  //     );
-  //     return false;
-  //   }
-  // }
+      return responseData.result === successfulResetResponse;
+    } catch (err: any) {
+      this.logger.error(
+        `Could not send reset to chat guidance adapter! ${err}`,
+        err?.stack,
+        LogContext.CHAT_GUIDANCE
+      );
+      return false;
+    }
+  }
 
   public async sendIngest(
     eventData: VirtualContributorInputBase

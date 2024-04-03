@@ -6,16 +6,9 @@ import { AgentInfo } from '@core/authentication';
 import { VirtualContributorInput } from './dto/virtual.contributor.dto.input';
 import { VirtualContributorService } from './virtual.contributor.service';
 import { IVirtualContributorQueryResult } from './dto/virtual.contributor.query.result.dto';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
-import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 @Resolver()
 export class VirtualContributorResolverQueries {
-  constructor(
-    private virtualContributorService: VirtualContributorService,
-    private authorizationService: AuthorizationService,
-    private platformAuthorizationService: PlatformAuthorizationPolicyService
-  ) {}
+  constructor(private virtualContributorService: VirtualContributorService) {}
 
   @UseGuards(GraphqlGuard)
   @Query(() => IVirtualContributorQueryResult, {
@@ -26,13 +19,6 @@ export class VirtualContributorResolverQueries {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('chatData') chatData: VirtualContributorInput
   ): Promise<IVirtualContributorQueryResult> {
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
-      AuthorizationPrivilege.ACCESS_INTERACTIVE_GUIDANCE,
-      `Access interactive guidance: ${agentInfo.email}`
-    );
-
     return this.virtualContributorService.askQuestion(chatData, agentInfo);
   }
 }
