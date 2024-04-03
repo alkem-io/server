@@ -16,6 +16,7 @@ import {
   CHAT_GUIDANCE_SERVICE,
   AUTH_RESET_SERVICE,
   EXCALIDRAW_PUBSUB_PROVIDER,
+  VIRTUAL_CONTRIBUTOR_SERVICE,
 } from '@common/constants/providers';
 import { MessagingQueue } from '@common/enums/messaging.queue';
 import {
@@ -28,6 +29,7 @@ import { walletManagerServiceFactory } from './wallet-manager.service.factory';
 import { matrixAdapterServiceFactory } from './matrix.adapter.service.factory';
 import { chatGuidanceServiceFactory } from './chat.guidance.service.factory';
 import { authResetServiceFactory } from './auth.reset.service.factory';
+import { virtualContributorServiceFactory } from './virtual.contributor.service.factory';
 
 const subscriptionConfig: { provide: string; queueName: MessagingQueue }[] = [
   {
@@ -104,6 +106,11 @@ const excalidrawPubSubFactoryProvider = subscriptionFactoryProvider(
       inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
     },
     {
+      provide: VIRTUAL_CONTRIBUTOR_SERVICE,
+      useFactory: virtualContributorServiceFactory,
+      inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
+    },
+    {
       provide: AUTH_RESET_SERVICE,
       useFactory: authResetServiceFactory,
       inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
@@ -116,6 +123,7 @@ const excalidrawPubSubFactoryProvider = subscriptionFactoryProvider(
     WALLET_MANAGEMENT_SERVICE,
     MATRIX_ADAPTER_SERVICE,
     CHAT_GUIDANCE_SERVICE,
+    VIRTUAL_CONTRIBUTOR_SERVICE,
     AUTH_RESET_SERVICE,
     EXCALIDRAW_PUBSUB_PROVIDER,
   ],
