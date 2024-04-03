@@ -21,7 +21,6 @@ export class VirtualContributorService {
     const response = await this.guidanceEngineAdapter.sendQuery({
       userId: agentInfo.userID,
       question: chatData.question,
-      language: chatData.language ?? 'EN',
     });
 
     return response;

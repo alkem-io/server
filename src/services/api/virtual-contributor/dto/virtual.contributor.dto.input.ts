@@ -1,5 +1,4 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { languageType } from '@services/adapters/chat-guidance-adapter/dto/guidance.engine.dto.query';
 
 @InputType()
 export class VirtualContributorInput {
@@ -10,8 +9,8 @@ export class VirtualContributorInput {
   question!: string;
 
   @Field(() => String, {
-    nullable: true,
-    description: 'The language of the answer.',
+    nullable: false,
+    description: 'Prompt.',
   })
-  language?: languageType;
+  prompt!: string;
 }
