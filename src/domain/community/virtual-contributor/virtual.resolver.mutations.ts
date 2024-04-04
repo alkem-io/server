@@ -6,7 +6,7 @@ import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege } from '@common/enums';
 import { VirtualAuthorizationService } from './virtual.service.authorization';
 import { AgentInfo } from '@core/authentication/agent-info';
-import { VirtualAuthorizationResetInput } from './dto/virtual.dto.reset.authorization';
+import { VirtualAuthorizationResetInput } from './dto/virtual.contributor.dto.reset.authorization';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
 import { IVirtual } from './virtual.interface';

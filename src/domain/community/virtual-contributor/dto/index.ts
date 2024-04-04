@@ -1,3 +1,3 @@
-export * from './virtual.dto.create';
-export * from './virtual.dto.update';
-export * from './virtualn.dto.delete';
+export * from './virtual.contributor.dto.create';
+export * from './virtual.contributor.dto.update';
+export * from './virtual.contributor.dto.delete';
