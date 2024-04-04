@@ -7,5 +7,5 @@ export enum VirtualPersonaType {
 }
 
 registerEnumType(VirtualPersonaType, {
-  name: 'VirtualContributorType',
+  name: 'VirtualPersonaType',
 });
