@@ -40,20 +40,24 @@ export class VirtualContributorService {
   ) {}
 
   async createVirtualContributor(
-    virtualData: CreateVirtualContributorInput
+    virtualContributorData: CreateVirtualContributorInput
   ): Promise<IVirtualContributor> {
     // Convert nameID to lower case
-    virtualData.nameID = virtualData.nameID.toLowerCase();
-    await this.checkNameIdOrFail(virtualData.nameID);
-    await this.checkDisplayNameOrFail(virtualData.profileData?.displayName);
+    virtualContributorData.nameID = virtualContributorData.nameID.toLowerCase();
+    await this.checkNameIdOrFail(virtualContributorData.nameID);
+    await this.checkDisplayNameOrFail(
+      virtualContributorData.profileData?.displayName
+    );
 
-    const virtual: IVirtualContributor = VirtualContributor.create(virtualData);
+    const virtual: IVirtualContributor = VirtualContributor.create(
+      virtualContributorData
+    );
     virtual.authorization = new AuthorizationPolicy();
 
     virtual.storageAggregator =
       await this.storageAggregatorService.createStorageAggregator();
     virtual.profile = await this.profileService.createProfile(
-      virtualData.profileData,
+      virtualContributorData.profileData,
       ProfileType.ORGANIZATION,
       virtual.storageAggregator
     );
@@ -66,7 +70,7 @@ export class VirtualContributorService {
       tags: [],
     });
     // Set the visuals
-    let avatarURL = virtualData.profileData?.avatarURL;
+    let avatarURL = virtualContributorData.profileData?.avatarURL;
     if (!avatarURL) {
       avatarURL = this.profileService.generateRandomAvatar(
         virtual.profile.displayName,

@@ -63,12 +63,12 @@ export class VirtualResolverFields {
   })
   @UseGuards(GraphqlGuard)
   async profile(
-    @Parent() virtual: VirtualContributor,
+    @Parent() virtualContributor: VirtualContributor,
     @CurrentUser() agentInfo: AgentInfo,
     @Loader(ProfileLoaderCreator, { parentClassRef: VirtualContributor })
     loader: ILoader<IProfile>
   ) {
-    const profile = await loader.load(virtual.id);
+    const profile = await loader.load(virtualContributor.id);
     // Note: the Virtual profile is public.
     // Check if the user can read the profile entity, not the actual Virtual entity
     await this.authorizationService.grantAccessOrFail(
@@ -86,11 +86,11 @@ export class VirtualResolverFields {
   })
   @Profiling.api
   async agent(
-    @Parent() virtual: VirtualContributor,
+    @Parent() virtualContributor: VirtualContributor,
     @Loader(AgentLoaderCreator, { parentClassRef: VirtualContributor })
     loader: ILoader<IAgent>
   ): Promise<IAgent> {
-    return loader.load(virtual.id);
+    return loader.load(virtualContributor.id);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -101,10 +101,10 @@ export class VirtualResolverFields {
   })
   @UseGuards(GraphqlGuard)
   async storageAggregator(
-    @Parent() virtual: VirtualContributor,
+    @Parent() virtualContributor: VirtualContributor,
     @Loader(VirtualStorageAggregatorLoaderCreator)
     loader: ILoader<IStorageAggregator>
   ): Promise<IStorageAggregator> {
-    return loader.load(virtual.id);
+    return loader.load(virtualContributor.id);
   }
 }

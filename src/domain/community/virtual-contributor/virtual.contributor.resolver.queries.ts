@@ -7,27 +7,27 @@ import { ContributorQueryArgs } from '../contributor/dto/contributor.query.args'
 
 @Resolver()
 export class VirtualContributorResolverQueries {
-  constructor(private virtualService: VirtualContributorService) {}
+  constructor(private virtualContributorService: VirtualContributorService) {}
 
   @Query(() => [IVirtualContributor], {
     nullable: false,
-    description: 'The Virtuals on this platform',
+    description: 'The VirtualContributors on this platform',
   })
   @Profiling.api
-  async virtuals(
+  async virtualContributors(
     @Args({ nullable: true }) args: ContributorQueryArgs
   ): Promise<IVirtualContributor[]> {
-    return await this.virtualService.getVirtualContributors(args);
+    return await this.virtualContributorService.getVirtualContributors(args);
   }
 
   @Query(() => IVirtualContributor, {
     nullable: false,
-    description: 'A particular Virtual',
+    description: 'A particular VirtualContributor',
   })
   @Profiling.api
-  async virtual(
+  async virtualContributor(
     @Args('ID', { type: () => UUID_NAMEID, nullable: false }) id: string
   ): Promise<IVirtualContributor> {
-    return await this.virtualService.getVirtualContributorOrFail(id);
+    return await this.virtualContributorService.getVirtualContributorOrFail(id);
   }
 }
