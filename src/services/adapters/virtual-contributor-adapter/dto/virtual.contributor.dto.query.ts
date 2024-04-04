@@ -6,4 +6,6 @@ export interface VirtualContributorQueryInput
   question: string;
   prompt: string;
   virtualContributorType: VirtualContributorType;
+  spaceID: string;
+  roomID: string;
 }

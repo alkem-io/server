@@ -1,3 +1,4 @@
+import { UUID, UUID_NAMEID } from '@domain/common/scalars';
 import { Field, InputType } from '@nestjs/graphql';
 import { VirtualContributorType } from '@services/adapters/virtual-contributor-adapter/virtual.contributor.type';
 
@@ -20,4 +21,16 @@ export class VirtualContributorInput {
     description: 'Virtual Contributor Type.',
   })
   virtualContributorType!: VirtualContributorType;
+
+  @Field(() => UUID_NAMEID, {
+    description: 'The Space in which the question to the VC is aked',
+    nullable: false,
+  })
+  spaceID!: string;
+
+  @Field(() => UUID, {
+    nullable: false,
+    description: 'The Room in the context of which the VC is asked',
+  })
+  roomID!: string;
 }

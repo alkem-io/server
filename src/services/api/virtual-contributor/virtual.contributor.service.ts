@@ -26,6 +26,8 @@ export class VirtualContributorService {
       virtualContributorType:
         chatData.virtualContributorType ??
         VirtualContributorType.VIRTUAL_CONTRIBUTOR,
+      roomID: chatData.roomID,
+      spaceID: chatData.spaceID,
     });
 
     return response;
@@ -46,7 +48,6 @@ export class VirtualContributorService {
   public isGuidanceEngineEnabled(): boolean {
     const result = this.configService.get(ConfigurationTypes.PLATFORM)
       .guidance_engine?.enabled;
-
     return Boolean(result);
   }
 }
