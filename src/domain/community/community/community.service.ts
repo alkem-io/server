@@ -58,6 +58,8 @@ import { CommunityGuidelinesService } from '../community-guidelines/community.gu
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { CreateCommunityInput } from './dto/community.dto.create';
 import { ICommunityGuidelines } from '../community-guidelines/community.guidelines.interface';
+import { VirtualService } from '../virutal/virtual.service';
+import { IVirtual } from '../virutal';
 
 @Injectable()
 export class CommunityService {
@@ -66,6 +68,7 @@ export class CommunityService {
     private agentService: AgentService,
     private userService: UserService,
     private organizationService: OrganizationService,
+    private virtualService: VirtualService,
     private userGroupService: UserGroupService,
     private applicationService: ApplicationService,
     private invitationService: InvitationService,
@@ -532,6 +535,35 @@ export class CommunityService {
     return user;
   }
 
+  async assignVirtualToRole(
+    community: ICommunity,
+    virtualID: string,
+    role: CommunityRole
+  ): Promise<IVirtual> {
+    const { virtual, agent } = await this.virtualService.getVirtualAndAgent(
+      virtualID
+    );
+    const hasMemberRoleInParent = await this.isMemberInParentCommunity(
+      agent,
+      community.id
+    );
+    if (!hasMemberRoleInParent) {
+      throw new ValidationException(
+        `Unable to assign Agent (${agent.id}) to community (${community.id}): agent is not a member of parent community`,
+        LogContext.CHALLENGES
+      );
+    }
+
+    virtual.agent = await this.assignContributorToRole(
+      community,
+      agent,
+      role,
+      CommunityContributorType.VIRTUAL
+    );
+
+    return virtual;
+  }
+
   private async addMemberToCommunication(
     user: IUser,
     community: ICommunity
@@ -684,6 +716,27 @@ export class CommunityService {
     );
 
     return organization;
+  }
+
+  async removeVirtualFromRole(
+    community: ICommunity,
+    virtualID: string,
+    role: CommunityRole,
+    validatePolicyLimits = true
+  ): Promise<IVirtual> {
+    const { virtual, agent } = await this.virtualService.getVirtualAndAgent(
+      virtualID
+    );
+
+    virtual.agent = await this.removeContributorFromRole(
+      community,
+      agent,
+      role,
+      CommunityContributorType.VIRTUAL,
+      validatePolicyLimits
+    );
+
+    return virtual;
   }
 
   private async validateUserCommunityPolicy(

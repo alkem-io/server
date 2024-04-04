@@ -49,6 +49,11 @@ import { IInvitationExternal } from '../invitation.external';
 import { NotificationInputCommunityInvitationExternal } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.invitation.external';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 import { CommunityMembershipException } from '@common/exceptions/community.membership.exception';
+import { AssignCommunityRoleToVirtualInput } from './dto/community.dto.role.assign.virtual';
+import { IVirtual } from '../virutal';
+import { VirtualAuthorizationService } from '../virutal/virtual.service.authorization';
+import { VirtualService } from '../virutal/virtual.service';
+import { RemoveCommunityRoleFromVirtualInput } from './dto/community.dto.role.remove.virtual';
 
 @Resolver()
 export class CommunityResolverMutations {
@@ -57,6 +62,8 @@ export class CommunityResolverMutations {
     private notificationAdapter: NotificationAdapter,
     private userService: UserService,
     private userAuthorizationService: UserAuthorizationService,
+    private virtualService: VirtualService,
+    private virtualAuthorizationService: VirtualAuthorizationService,
     private userGroupAuthorizationService: UserGroupAuthorizationService,
     private communityService: CommunityService,
     @Inject(CommunityApplicationLifecycleOptionsProvider)
@@ -163,6 +170,47 @@ export class CommunityResolverMutations {
   }
 
   @UseGuards(GraphqlGuard)
+  @Mutation(() => IVirtual, {
+    description:
+      'Assigns a Virtual Contributor to a role in the specified Community.',
+  })
+  @Profiling.api
+  async assignCommunityRoleToVirtual(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('roleData') roleData: AssignCommunityRoleToVirtualInput
+  ): Promise<IVirtual> {
+    this.validateNotHostRole(roleData.role);
+    const community = await this.communityService.getCommunityOrFail(
+      roleData.communityID
+    );
+
+    let requiredPrivilege = AuthorizationPrivilege.GRANT;
+    if (roleData.role === CommunityRole.MEMBER) {
+      requiredPrivilege = AuthorizationPrivilege.COMMUNITY_ADD_MEMBER;
+    }
+
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      community.authorization,
+      requiredPrivilege,
+      `assign user community role: ${community.id}`
+    );
+    await this.communityService.assignUserToRole(
+      community,
+      roleData.virtualID,
+      roleData.role
+    );
+
+    // reset the user authorization policy so that their profile is visible to other community members
+    const virtual = await this.virtualService.getVirtualOrFail(
+      roleData.virtualID
+    );
+    return await this.virtualAuthorizationService.applyAuthorizationPolicy(
+      virtual
+    );
+  }
+
+  @UseGuards(GraphqlGuard)
   @Mutation(() => IUser, {
     description: 'Removes a User from a Role in the specified Community.',
   })
@@ -228,6 +276,41 @@ export class CommunityResolverMutations {
       community,
       roleData.organizationID,
       roleData.role
+    );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IVirtual, {
+    description: 'Removes a Virtual from a Role in the specified Community.',
+  })
+  @Profiling.api
+  async removeCommunityRoleFromVirtual(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('roleData') roleData: RemoveCommunityRoleFromVirtualInput
+  ): Promise<IVirtual> {
+    const community = await this.communityService.getCommunityOrFail(
+      roleData.communityID
+    );
+
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      community.authorization,
+      AuthorizationPrivilege.GRANT,
+      `remove virtual from community role: ${community.id}`
+    );
+
+    await this.communityService.removeVirtualFromRole(
+      community,
+      roleData.virtualID,
+      roleData.role
+    );
+    // reset the user authorization policy so that their profile is not visible
+    // to other community members
+    const virtual = await this.virtualService.getVirtualOrFail(
+      roleData.virtualID
+    );
+    return await this.virtualAuthorizationService.applyAuthorizationPolicy(
+      virtual
     );
   }
 
