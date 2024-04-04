@@ -1,0 +1,18 @@
+mutation createVirtualContributor($virtualContributorData: CreateVirtualContributorInput!) {
+  createVirtualContributor(virtualContributorData: $virtualContributorData ) {
+    id
+    prompt
+  }
+}
+
+
+{
+  "virtualContributorData": {
+    "prompt": "my super prompt",
+    "nameID": "virtual1",
+    "profileData": {
+      "displayName": "virtual 11"
+    },
+    "type": "COMMUNITY_MANAGER"
+  }
+}

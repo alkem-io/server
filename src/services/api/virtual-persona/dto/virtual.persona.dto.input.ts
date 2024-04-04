@@ -1,9 +1,9 @@
-import { UUID, UUID_NAMEID } from '@domain/common/scalars';
+import { UUID_NAMEID, UUID } from '@domain/common/scalars';
 import { Field, InputType } from '@nestjs/graphql';
-import { VirtualContributorType } from '@services/adapters/virtual-contributor-adapter/virtual.contributor.type';
+import { VirtualPersonaType } from '@services/adapters/virtual-persona-adapter/virtual.persona.type';
 
 @InputType()
-export class VirtualContributorInput {
+export class VirtualPersonaInput {
   @Field(() => String, {
     nullable: false,
     description: 'The question that is being asked.',
@@ -16,11 +16,11 @@ export class VirtualContributorInput {
   })
   prompt!: string;
 
-  @Field(() => VirtualContributorType, {
+  @Field(() => VirtualPersonaType, {
     nullable: false,
-    description: 'Virtual Contributor Type.',
+    description: 'Virtual Persona Type.',
   })
-  virtualContributorType!: VirtualContributorType;
+  virtualPersonaType!: VirtualPersonaType;
 
   @Field(() => UUID_NAMEID, {
     description: 'The Space in which the question to the VC is aked',

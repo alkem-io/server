@@ -3,15 +3,15 @@ import { ClientProxy } from '@nestjs/microservices';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { firstValueFrom } from 'rxjs';
 import { LogContext } from '@common/enums';
-import { VIRTUAL_CONTRIBUTOR_SERVICE } from '@common/constants';
-import { VirtualContributorInputBase } from './dto/virtual.contributor.dto.base';
-import { VirtualContributorBaseResponse } from './dto/virtual.contributor.dto.base.response';
-import { VirtualContributorQueryInput } from './dto/virtual.contributor.dto.query';
-import { VirtualContributorQueryResponse } from './dto/virtual.contributor.dto.question.response';
-import { IVirtualContributorQueryResult } from '@services/api/virtual-contributor/dto/virtual.contributor.query.result.dto';
+import { VIRTUAL_CONTRIBUTOR_SERVICE as VIRTUAL_PERSONA_SERVICE } from '@common/constants';
+import { VirtualPersonaInputBase } from './dto/virtual.persona.dto.base';
+import { VirtualPersonaBaseResponse } from './dto/virtual.persona.dto.base.response';
+import { VirtualPersonaQueryInput } from './dto/virtual.persona.dto.query';
+import { VirtualPersonaQueryResponse } from './dto/virtual.persona.dto.question.response';
 import { Source } from '../chat-guidance-adapter/source.type';
+import { IVirtualPersonaQueryResult } from '@services/api/virtual-persona/dto/virtual.persona.query.result.dto';
 
-enum VirtualContributorEventType {
+enum VirtualPersonaEventType {
   QUERY = 'query',
   INGEST = 'ingest',
   RESET = 'reset',
@@ -21,24 +21,24 @@ const successfulIngestionResponse = 'Ingest successful';
 const successfulResetResponse = 'Reset function executed';
 
 @Injectable()
-export class VirtualContributorAdapter {
+export class VirtualPersonaAdapter {
   constructor(
-    @Inject(VIRTUAL_CONTRIBUTOR_SERVICE)
-    private VirtualContributorClient: ClientProxy,
+    @Inject(VIRTUAL_PERSONA_SERVICE)
+    private virtualPersonaClient: ClientProxy,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
 
   public async sendQuery(
-    eventData: VirtualContributorQueryInput
-  ): Promise<IVirtualContributorQueryResult> {
-    let responseData: VirtualContributorQueryResponse | undefined;
+    eventData: VirtualPersonaQueryInput
+  ): Promise<IVirtualPersonaQueryResult> {
+    let responseData: VirtualPersonaQueryResponse | undefined;
 
     try {
-      const response = this.VirtualContributorClient.send<
-        VirtualContributorQueryResponse,
-        VirtualContributorQueryInput
-      >({ cmd: VirtualContributorEventType.QUERY }, eventData);
+      const response = this.virtualPersonaClient.send<
+        VirtualPersonaQueryResponse,
+        VirtualPersonaQueryInput
+      >({ cmd: VirtualPersonaEventType.QUERY }, eventData);
       responseData = await firstValueFrom(response);
     } catch (e) {
       const errorMessage = `Error received from guidance chat server! ${e}`;
@@ -78,16 +78,14 @@ export class VirtualContributorAdapter {
     }
   }
 
-  public async sendReset(
-    eventData: VirtualContributorInputBase
-  ): Promise<boolean> {
-    const response = this.VirtualContributorClient.send(
-      { cmd: VirtualContributorEventType.RESET },
+  public async sendReset(eventData: VirtualPersonaInputBase): Promise<boolean> {
+    const response = this.virtualPersonaClient.send(
+      { cmd: VirtualPersonaEventType.RESET },
       eventData
     );
 
     try {
-      const responseData = await firstValueFrom<VirtualContributorBaseResponse>(
+      const responseData = await firstValueFrom<VirtualPersonaBaseResponse>(
         response
       );
 
@@ -103,15 +101,15 @@ export class VirtualContributorAdapter {
   }
 
   public async sendIngest(
-    eventData: VirtualContributorInputBase
+    eventData: VirtualPersonaInputBase
   ): Promise<boolean> {
-    const response = this.VirtualContributorClient.send(
-      { cmd: VirtualContributorEventType.INGEST },
+    const response = this.virtualPersonaClient.send(
+      { cmd: VirtualPersonaEventType.INGEST },
       eventData
     );
 
     try {
-      const responseData = await firstValueFrom<VirtualContributorBaseResponse>(
+      const responseData = await firstValueFrom<VirtualPersonaBaseResponse>(
         response
       );
       return responseData.result === successfulIngestionResponse;

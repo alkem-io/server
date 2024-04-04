@@ -1,18 +1,18 @@
 import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AgentInfo } from '@core/authentication/agent-info';
-import { IVirtualContributorQueryResult } from './dto/virtual.contributor.query.result.dto';
+import { IVirtualPersonaQueryResult } from './dto/virtual.persona.query.result.dto';
 import { ConfigurationTypes } from '@common/enums/configuration.type';
 import { ConfigService } from '@nestjs/config';
-import { VirtualContributorInput } from './dto/virtual.contributor.dto.input';
-import { VirtualContributorAdapter } from '@services/adapters/virtual-contributor-adapter/virtual.contributor.adapter';
-import { VirtualContributorType } from '@services/adapters/virtual-contributor-adapter/virtual.contributor.type';
-import { RoomService } from '@domain/communication/room/room.service';
+import { VirtualPersonaInput } from './dto/virtual.persona.dto.input';
+import { VirtualPersonaAdapter } from '@services/adapters/virtual-persona-adapter/virtual.persona.adapter';
+import { VirtualPersonaType } from '@services/adapters/virtual-persona-adapter/virtual.persona.type';
 import { SpaceService } from '@domain/challenge/space/space.service';
+import { RoomService } from '@domain/communication/room/room.service';
 
-export class VirtualContributorService {
+export class VirtualPersonaService {
   constructor(
-    private virtualContributorAdapter: VirtualContributorAdapter,
+    private virtualPersonaAdapter: VirtualPersonaAdapter,
     private configService: ConfigService,
     private roomService: RoomService,
     private spaceService: SpaceService,
@@ -20,9 +20,9 @@ export class VirtualContributorService {
   ) {}
 
   public async askQuestion(
-    chatData: VirtualContributorInput,
+    chatData: VirtualPersonaInput,
     agentInfo: AgentInfo
-  ): Promise<IVirtualContributorQueryResult> {
+  ): Promise<IVirtualPersonaQueryResult> {
     const space = await this.spaceService.getSpaceOrFail(chatData.spaceID, {
       relations: {
         profile: true,
@@ -31,13 +31,12 @@ export class VirtualContributorService {
     const room = await this.roomService.getRoomOrFail(chatData.roomID);
     const messages = await this.roomService.getMessages(room);
 
-    const response = await this.virtualContributorAdapter.sendQuery({
+    const response = await this.virtualPersonaAdapter.sendQuery({
       userId: agentInfo.userID,
       question: chatData.question,
       prompt: chatData.prompt,
       virtualContributorType:
-        chatData.virtualContributorType ??
-        VirtualContributorType.VIRTUAL_CONTRIBUTOR,
+        chatData.virtualPersonaType ?? VirtualPersonaType.COMMUNITY_MANAGER,
       roomID: chatData.roomID,
       spaceID: chatData.spaceID,
       context: {
@@ -53,13 +52,13 @@ export class VirtualContributorService {
   }
 
   public async resetUserHistory(agentInfo: AgentInfo): Promise<boolean> {
-    return this.virtualContributorAdapter.sendReset({
+    return this.virtualPersonaAdapter.sendReset({
       userId: agentInfo.userID,
     });
   }
 
   public async ingest(agentInfo: AgentInfo): Promise<boolean> {
-    return this.virtualContributorAdapter.sendIngest({
+    return this.virtualPersonaAdapter.sendIngest({
       userId: agentInfo.userID,
     });
   }
@@ -67,6 +66,7 @@ export class VirtualContributorService {
   public isGuidanceEngineEnabled(): boolean {
     const result = this.configService.get(ConfigurationTypes.PLATFORM)
       .guidance_engine?.enabled;
+
     return Boolean(result);
   }
 }

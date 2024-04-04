@@ -3,11 +3,11 @@ import { Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication';
-import { VirtualContributorService } from './virtual.contributor.service';
+import { VirtualPersonaService } from './virtual.persona.service';
 
 @Resolver()
-export class VirtualContributorResolverMutations {
-  constructor(private virtualContributorService: VirtualContributorService) {}
+export class VirtualPersonaResolverMutations {
+  constructor(private virtualContributorService: VirtualPersonaService) {}
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => Boolean, {
