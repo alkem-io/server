@@ -1,0 +1,17 @@
+mutation createVirtual($virtualData: CreateVirtualInput!) {
+  createVirtual(virtualData: $virtualData ) {
+    id
+    prompt
+  }
+}
+
+
+{
+  "virtualData": {
+    "prompt": "my super prompt",
+    "nameID": "virtual1"
+    "profileData": {
+      "displayName": "virtual 11"
+    }
+  }
+}

@@ -428,6 +428,20 @@ export class CommunityService {
     );
   }
 
+  async getVirtualsWithRole(
+    community: ICommunity,
+    role: CommunityRole
+  ): Promise<IVirtual[]> {
+    const membershipCredential = this.getCredentialDefinitionForRole(
+      community,
+      role
+    );
+    return await this.virtualService.virtualsWithCredentials({
+      type: membershipCredential.type,
+      resourceID: membershipCredential.resourceID,
+    });
+  }
+
   async getOrganizationsWithRole(
     community: ICommunity,
     role: CommunityRole

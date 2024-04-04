@@ -179,7 +179,6 @@ export class CommunityResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('roleData') roleData: AssignCommunityRoleToVirtualInput
   ): Promise<IVirtual> {
-    this.validateNotHostRole(roleData.role);
     const community = await this.communityService.getCommunityOrFail(
       roleData.communityID
     );
@@ -193,9 +192,9 @@ export class CommunityResolverMutations {
       agentInfo,
       community.authorization,
       requiredPrivilege,
-      `assign user community role: ${community.id}`
+      `assign virtual community role: ${community.id}`
     );
-    await this.communityService.assignUserToRole(
+    await this.communityService.assignVirtualToRole(
       community,
       roleData.virtualID,
       roleData.role
