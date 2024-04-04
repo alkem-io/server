@@ -5,4 +5,6 @@ export interface VirtualPersonaQueryInput extends VirtualPersonaInputBase {
   question: string;
   prompt: string;
   virtualContributorType: VirtualPersonaType;
+  spaceID: string;
+  roomID: string;
 }

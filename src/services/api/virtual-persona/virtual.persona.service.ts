@@ -25,6 +25,8 @@ export class VirtualPersonaService {
       prompt: chatData.prompt,
       virtualContributorType:
         chatData.virtualPersonaType ?? VirtualPersonaType.COMMUNITY_MANAGER,
+      spaceID: chatData.spaceID,
+      roomID: chatData.roomID,
     });
 
     return response;
