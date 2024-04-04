@@ -5,12 +5,16 @@ import { VirtualPersonaService } from './virtual.persona.service';
 import { VirtualPersonaResolverQueries } from './virtual.persona.resolver.queries';
 import { VirtualPersonaResolverMutations } from './virtual.persona.resolver.mutations';
 import { VirtualPersonaAdapterModule } from '@services/adapters/virtual-persona-adapter/virtual.persona.adapter.module';
+import { SpaceModule } from '@domain/challenge/space/space.module';
+import { RoomModule } from '@domain/communication/room/room.module';
 
 @Module({
   imports: [
     AuthorizationModule,
     PlatformAuthorizationPolicyModule,
     VirtualPersonaAdapterModule,
+    SpaceModule,
+    RoomModule,
   ],
   providers: [
     VirtualPersonaService,

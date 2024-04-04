@@ -7,11 +7,15 @@ import { ConfigService } from '@nestjs/config';
 import { VirtualPersonaInput } from './dto/virtual.persona.dto.input';
 import { VirtualPersonaAdapter } from '@services/adapters/virtual-persona-adapter/virtual.persona.adapter';
 import { VirtualPersonaType } from '@services/adapters/virtual-persona-adapter/virtual.persona.type';
+import { SpaceService } from '@domain/challenge/space/space.service';
+import { RoomService } from '@domain/communication/room/room.service';
 
 export class VirtualPersonaService {
   constructor(
     private virtualPersonaAdapter: VirtualPersonaAdapter,
     private configService: ConfigService,
+    private roomService: RoomService,
+    private spaceService: SpaceService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -19,14 +23,29 @@ export class VirtualPersonaService {
     chatData: VirtualPersonaInput,
     agentInfo: AgentInfo
   ): Promise<IVirtualPersonaQueryResult> {
+    const space = await this.spaceService.getSpaceOrFail(chatData.spaceID, {
+      relations: {
+        profile: true,
+      },
+    });
+    const room = await this.roomService.getRoomOrFail(chatData.roomID);
+    const messages = await this.roomService.getMessages(room);
+
     const response = await this.virtualPersonaAdapter.sendQuery({
       userId: agentInfo.userID,
       question: chatData.question,
       prompt: chatData.prompt,
       virtualContributorType:
         chatData.virtualPersonaType ?? VirtualPersonaType.COMMUNITY_MANAGER,
-      spaceID: chatData.spaceID,
       roomID: chatData.roomID,
+      spaceID: chatData.spaceID,
+      context: {
+        space: {
+          description: space.profile.description,
+          tagline: space.profile.tagline,
+        },
+        messages,
+      },
     });
 
     return response;
