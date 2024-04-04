@@ -1,0 +1,108 @@
+import { UseGuards } from '@nestjs/common';
+import { Resolver } from '@nestjs/graphql';
+import { Parent, ResolveField } from '@nestjs/graphql';
+import { Virtual } from './virtual.entity';
+import { VirtualService } from './virtual.service';
+import { AuthorizationPrivilege } from '@common/enums';
+import { GraphqlGuard } from '@core/authorization';
+import { IProfile } from '@domain/common/profile';
+import {
+  AuthorizationAgentPrivilege,
+  CurrentUser,
+  Profiling,
+} from '@common/decorators';
+import { IAgent } from '@domain/agent/agent';
+import { AgentInfo } from '@src/core/authentication/agent-info';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
+import { Loader } from '@core/dataloader/decorators';
+import {
+  AgentLoaderCreator,
+  ProfileLoaderCreator,
+} from '@core/dataloader/creators';
+import { ILoader } from '@core/dataloader/loader.interface';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { IVirtual } from './virtual.interface';
+import { VirtualStorageAggregatorLoaderCreator } from '@core/dataloader/creators/loader.creators/community/virtual.storage.aggregator.loader.creator';
+
+@Resolver(() => IVirtual)
+export class VirtualResolverFields {
+  constructor(
+    private authorizationService: AuthorizationService,
+    private virtualService: VirtualService
+  ) {}
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField('authorization', () => IAuthorizationPolicy, {
+    nullable: true,
+    description: 'The Authorization for this Virtual.',
+  })
+  @Profiling.api
+  async authorization(
+    @Parent() parent: Virtual,
+    @CurrentUser() agentInfo: AgentInfo
+  ) {
+    // Reload to ensure the authorization is loaded
+    const virtual = await this.virtualService.getVirtualOrFail(parent.id);
+
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      virtual.authorization,
+      AuthorizationPrivilege.READ,
+      `virtual authorization access: ${virtual.nameID}`
+    );
+
+    return virtual.authorization;
+  }
+
+  @ResolveField('profile', () => IProfile, {
+    nullable: false,
+    description: 'The profile for this Virtual.',
+  })
+  @UseGuards(GraphqlGuard)
+  async profile(
+    @Parent() virtual: Virtual,
+    @CurrentUser() agentInfo: AgentInfo,
+    @Loader(ProfileLoaderCreator, { parentClassRef: Virtual })
+    loader: ILoader<IProfile>
+  ) {
+    const profile = await loader.load(virtual.id);
+    // Note: the Virtual profile is public.
+    // Check if the user can read the profile entity, not the actual Virtual entity
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      profile.authorization,
+      AuthorizationPrivilege.READ,
+      `read profile on Virtual: ${profile.displayName}`
+    );
+    return profile;
+  }
+
+  @ResolveField('agent', () => IAgent, {
+    nullable: true,
+    description: 'The Agent representing this User.',
+  })
+  @Profiling.api
+  async agent(
+    @Parent() virtual: Virtual,
+    @Loader(AgentLoaderCreator, { parentClassRef: Virtual })
+    loader: ILoader<IAgent>
+  ): Promise<IAgent> {
+    return loader.load(virtual.id);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @ResolveField('storageAggregator', () => IStorageAggregator, {
+    nullable: true,
+    description:
+      'The StorageAggregator for managing storage buckets in use by this Virtual',
+  })
+  @UseGuards(GraphqlGuard)
+  async storageAggregator(
+    @Parent() virtual: Virtual,
+    @Loader(VirtualStorageAggregatorLoaderCreator)
+    loader: ILoader<IStorageAggregator>
+  ): Promise<IStorageAggregator> {
+    return loader.load(virtual.id);
+  }
+}
