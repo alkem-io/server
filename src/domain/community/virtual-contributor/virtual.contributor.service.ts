@@ -258,7 +258,7 @@ export class VirtualContributorService {
 
     if (!virtualContributor.agent) {
       throw new EntityNotInitializedException(
-        `Virtual Agent not initialized: ${virtualID}`,
+        `Virtual Contributor Agent not initialized: ${virtualID}`,
         LogContext.AUTH
       );
     }
@@ -274,7 +274,7 @@ export class VirtualContributorService {
     const limit = args.limit;
     const shuffle = args.shuffle || false;
     this.logger.verbose?.(
-      `Querying all virtuals with limit: ${limit} and shuffle: ${shuffle}`,
+      `Querying all virtual contributors with limit: ${limit} and shuffle: ${shuffle}`,
       LogContext.COMMUNITY
     );
 
@@ -282,8 +282,8 @@ export class VirtualContributorService {
     let virtualContributors: IVirtualContributor[] = [];
     if (credentialsFilter) {
       virtualContributors = await this.virtualContributorRepository
-        .createQueryBuilder('virtual')
-        .leftJoinAndSelect('virtual.agent', 'agent')
+        .createQueryBuilder('virtual_contributor')
+        .leftJoinAndSelect('virtual_contributor.agent', 'agent')
         .leftJoinAndSelect('agent.credentials', 'credential')
         .where('credential.type IN (:credentialsFilter)')
         .setParameters({
@@ -313,7 +313,7 @@ export class VirtualContributorService {
     const agent = virtualContributorWithAgent.agent;
     if (!agent)
       throw new EntityNotInitializedException(
-        `User Agent not initialized: ${virtualContributor.id}`,
+        `Virtual Contributor Agent not initialized: ${virtualContributor.id}`,
         LogContext.AUTH
       );
 
@@ -347,8 +347,8 @@ export class VirtualContributorService {
   ): Promise<IVirtualContributor[]> {
     const credResourceID = credentialCriteria.resourceID || '';
     const virtualContributorMatches = await this.virtualContributorRepository
-      .createQueryBuilder('virtual')
-      .leftJoinAndSelect('virtual.agent', 'agent')
+      .createQueryBuilder('virtual_contributor')
+      .leftJoinAndSelect('virtual_contributor.agent', 'agent')
       .leftJoinAndSelect('agent.credentials', 'credential')
       .where('credential.type = :type')
       .andWhere('credential.resourceID = :resourceID')

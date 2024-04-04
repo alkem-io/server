@@ -13,6 +13,7 @@ export class virtual1712213355890 implements MigrationInterface {
                                                          \`profileId\` char(36) NULL,
                                                          \`agentId\` char(36) NULL,
                                                          \`storageAggregatorId\` char(36) NULL,
+                                                         \`type\` text NOT NULL,
                                                          UNIQUE INDEX \`REL_a1a11662383fefcb81416116a6\` (\`authorizationId\`),
                                                          UNIQUE INDEX \`REL_7b8b29a41564c268b864bc85ff\` (\`profileId\`),
                                                          UNIQUE INDEX \`REL_c947646f184a6f7aeee68be999\` (\`agentId\`),
@@ -54,7 +55,7 @@ export class virtual1712213355890 implements MigrationInterface {
       `DROP INDEX \`REL_c947646f184a6f7aeee68be999\` ON \`virtual_contributor\``
     );
     await queryRunner.query(
-      `DROP INDEX \`REL_7b8b29a41564c268b864bc85ff\` ON \`virtual\``
+      `DROP INDEX \`REL_7b8b29a41564c268b864bc85ff\` ON \`virtual_contributor\``
     );
     await queryRunner.query(
       `DROP INDEX \`REL_a1a11662383fefcb81416116a6\` ON \`virtual_contributor\``
