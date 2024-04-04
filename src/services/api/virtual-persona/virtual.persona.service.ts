@@ -1,44 +1,43 @@
 import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AgentInfo } from '@core/authentication/agent-info';
-import { IVirtualContributorQueryResult } from './dto/virtual.contributor.query.result.dto';
+import { IVirtualPersonaQueryResult } from './dto/virtual.persona.query.result.dto';
 import { ConfigurationTypes } from '@common/enums/configuration.type';
 import { ConfigService } from '@nestjs/config';
-import { VirtualContributorInput } from './dto/virtual.contributor.dto.input';
-import { VirtualContributorAdapter } from '@services/adapters/virtual-contributor-adapter/virtual.contributor.adapter';
-import { VirtualContributorType } from '@services/adapters/virtual-contributor-adapter/virtual.contributor.type';
+import { VirtualPersonaInput } from './dto/virtual.persona.dto.input';
+import { VirtualPersonaAdapter } from '@services/adapters/virtual-persona-adapter/virtual.persona.adapter';
+import { VirtualPersonaType } from '@services/adapters/virtual-persona-adapter/virtual.persona.type';
 
-export class VirtualContributorService {
+export class VirtualPersonaService {
   constructor(
-    private virtualContributorAdapter: VirtualContributorAdapter,
+    private virtualPersonaAdapter: VirtualPersonaAdapter,
     private configService: ConfigService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   public async askQuestion(
-    chatData: VirtualContributorInput,
+    chatData: VirtualPersonaInput,
     agentInfo: AgentInfo
-  ): Promise<IVirtualContributorQueryResult> {
-    const response = await this.virtualContributorAdapter.sendQuery({
+  ): Promise<IVirtualPersonaQueryResult> {
+    const response = await this.virtualPersonaAdapter.sendQuery({
       userId: agentInfo.userID,
       question: chatData.question,
       prompt: chatData.prompt,
       virtualContributorType:
-        chatData.virtualContributorType ??
-        VirtualContributorType.VIRTUAL_CONTRIBUTOR,
+        chatData.virtualPersonaType ?? VirtualPersonaType.COMMUNITY_MANAGER,
     });
 
     return response;
   }
 
   public async resetUserHistory(agentInfo: AgentInfo): Promise<boolean> {
-    return this.virtualContributorAdapter.sendReset({
+    return this.virtualPersonaAdapter.sendReset({
       userId: agentInfo.userID,
     });
   }
 
   public async ingest(agentInfo: AgentInfo): Promise<boolean> {
-    return this.virtualContributorAdapter.sendIngest({
+    return this.virtualPersonaAdapter.sendIngest({
       userId: agentInfo.userID,
     });
   }

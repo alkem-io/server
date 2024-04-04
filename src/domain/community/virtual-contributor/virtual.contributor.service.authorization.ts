@@ -10,7 +10,7 @@ import {
   EntityNotInitializedException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
-import { VirtualService } from './virtual.service';
+import { VirtualContributorService } from './virtual.contributor.service';
 import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
@@ -22,24 +22,26 @@ import {
   CREDENTIAL_RULE_ORGANIZATION_SELF_REMOVAL,
 } from '@common/constants';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
-import { Virtual } from './virtual.entity';
-import { IVirtual } from './virtual.interface';
+import { VirtualContributor } from './virtual.contributor.entity';
+import { IVirtualContributor } from './virtual.contributor.interface';
 
 @Injectable()
-export class VirtualAuthorizationService {
+export class VirtualContributorAuthorizationService {
   constructor(
-    private virtualService: VirtualService,
+    private virtualService: VirtualContributorService,
     private authorizationPolicy: AuthorizationPolicyService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private profileAuthorizationService: ProfileAuthorizationService,
     private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
-    @InjectRepository(Virtual)
-    private virtualRepository: Repository<Virtual>
+    @InjectRepository(VirtualContributor)
+    private virtualRepository: Repository<VirtualContributor>
   ) {}
 
-  async applyAuthorizationPolicy(virtualInput: IVirtual): Promise<IVirtual> {
-    const virtual = await this.virtualService.getVirtualOrFail(
+  async applyAuthorizationPolicy(
+    virtualInput: IVirtualContributor
+  ): Promise<IVirtualContributor> {
+    const virtual = await this.virtualService.getVirtualContributorOrFail(
       virtualInput.id,
       {
         relations: {
@@ -201,7 +203,7 @@ export class VirtualAuthorizationService {
   }
 
   public extendAuthorizationPolicyForSelfRemoval(
-    virtual: IVirtual,
+    virtual: IVirtualContributor,
     userToBeRemovedID: string
   ): IAuthorizationPolicy {
     const newRules: IAuthorizationPolicyRuleCredential[] = [];

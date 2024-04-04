@@ -1,8 +1,8 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 import { ISource } from '@services/api/chat-guidance/dto/chat.guidance.query.result.dto';
 
-@ObjectType('VirtualContributorResult')
-export abstract class IVirtualContributorQueryResult {
+@ObjectType('VirtualPersonaResult')
+export abstract class IVirtualPersonaQueryResult {
   @Field(() => String, {
     nullable: true,
     description: 'The id of the answer; null if an error was returned',

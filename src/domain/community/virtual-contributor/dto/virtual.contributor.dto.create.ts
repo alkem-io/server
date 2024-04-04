@@ -2,7 +2,7 @@ import { Field, InputType } from '@nestjs/graphql';
 import { MaxLength } from 'class-validator';
 import { LONG_TEXT_LENGTH } from '@src/common/constants';
 import { CreateContributorInput } from '@domain/community/contributor/dto/contributor.dto.create';
-import { VirtualContributorType } from '@services/adapters/virtual-contributor-adapter/virtual.contributor.type';
+import { VirtualPersonaType } from '@services/adapters/virtual-persona-adapter/virtual.persona.type';
 
 @InputType()
 export class CreateVirtualInput extends CreateContributorInput {
@@ -10,8 +10,8 @@ export class CreateVirtualInput extends CreateContributorInput {
   @MaxLength(LONG_TEXT_LENGTH)
   prompt!: string;
 
-  @Field(() => VirtualContributorType, {
-    description: 'VC  type.',
+  @Field(() => VirtualPersonaType, {
+    description: 'VirtualContributor Persona  type.',
   })
-  type!: VirtualContributorType;
+  type!: VirtualPersonaType;
 }

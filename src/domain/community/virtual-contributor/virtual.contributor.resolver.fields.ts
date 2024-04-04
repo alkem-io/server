@@ -1,8 +1,8 @@
 import { UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Parent, ResolveField } from '@nestjs/graphql';
-import { Virtual } from './virtual.entity';
-import { VirtualService } from './virtual.service';
+import { VirtualContributor } from './virtual.contributor.entity';
+import { VirtualContributorService } from './virtual.contributor.service';
 import { AuthorizationPrivilege } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
 import { IProfile } from '@domain/common/profile';
@@ -22,14 +22,14 @@ import {
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { IVirtual } from './virtual.interface';
+import { IVirtualContributor } from './virtual.contributor.interface';
 import { VirtualStorageAggregatorLoaderCreator } from '@core/dataloader/creators/loader.creators/community/virtual.storage.aggregator.loader.creator';
 
-@Resolver(() => IVirtual)
+@Resolver(() => IVirtualContributor)
 export class VirtualResolverFields {
   constructor(
     private authorizationService: AuthorizationService,
-    private virtualService: VirtualService
+    private virtualService: VirtualContributorService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -39,11 +39,13 @@ export class VirtualResolverFields {
   })
   @Profiling.api
   async authorization(
-    @Parent() parent: Virtual,
+    @Parent() parent: VirtualContributor,
     @CurrentUser() agentInfo: AgentInfo
   ) {
     // Reload to ensure the authorization is loaded
-    const virtual = await this.virtualService.getVirtualOrFail(parent.id);
+    const virtual = await this.virtualService.getVirtualContributorOrFail(
+      parent.id
+    );
 
     this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -61,9 +63,9 @@ export class VirtualResolverFields {
   })
   @UseGuards(GraphqlGuard)
   async profile(
-    @Parent() virtual: Virtual,
+    @Parent() virtual: VirtualContributor,
     @CurrentUser() agentInfo: AgentInfo,
-    @Loader(ProfileLoaderCreator, { parentClassRef: Virtual })
+    @Loader(ProfileLoaderCreator, { parentClassRef: VirtualContributor })
     loader: ILoader<IProfile>
   ) {
     const profile = await loader.load(virtual.id);
@@ -84,8 +86,8 @@ export class VirtualResolverFields {
   })
   @Profiling.api
   async agent(
-    @Parent() virtual: Virtual,
-    @Loader(AgentLoaderCreator, { parentClassRef: Virtual })
+    @Parent() virtual: VirtualContributor,
+    @Loader(AgentLoaderCreator, { parentClassRef: VirtualContributor })
     loader: ILoader<IAgent>
   ): Promise<IAgent> {
     return loader.load(virtual.id);
@@ -99,7 +101,7 @@ export class VirtualResolverFields {
   })
   @UseGuards(GraphqlGuard)
   async storageAggregator(
-    @Parent() virtual: Virtual,
+    @Parent() virtual: VirtualContributor,
     @Loader(VirtualStorageAggregatorLoaderCreator)
     loader: ILoader<IStorageAggregator>
   ): Promise<IStorageAggregator> {

@@ -58,8 +58,8 @@ import { CommunityGuidelinesService } from '../community-guidelines/community.gu
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { CreateCommunityInput } from './dto/community.dto.create';
 import { ICommunityGuidelines } from '../community-guidelines/community.guidelines.interface';
-import { VirtualService } from '../virutal/virtual.service';
-import { IVirtual } from '../virutal';
+import { IVirtualContributor } from '../virtual-contributor';
+import { VirtualContributorService } from '../virtual-contributor/virtual.contributor.service';
 
 @Injectable()
 export class CommunityService {
@@ -68,7 +68,7 @@ export class CommunityService {
     private agentService: AgentService,
     private userService: UserService,
     private organizationService: OrganizationService,
-    private virtualService: VirtualService,
+    private virtualContributorService: VirtualContributorService,
     private userGroupService: UserGroupService,
     private applicationService: ApplicationService,
     private invitationService: InvitationService,
@@ -428,18 +428,20 @@ export class CommunityService {
     );
   }
 
-  async getVirtualsWithRole(
+  async getVirtualContributorsWithRole(
     community: ICommunity,
     role: CommunityRole
-  ): Promise<IVirtual[]> {
+  ): Promise<IVirtualContributor[]> {
     const membershipCredential = this.getCredentialDefinitionForRole(
       community,
       role
     );
-    return await this.virtualService.virtualsWithCredentials({
-      type: membershipCredential.type,
-      resourceID: membershipCredential.resourceID,
-    });
+    return await this.virtualContributorService.virtualContributorsWithCredentials(
+      {
+        type: membershipCredential.type,
+        resourceID: membershipCredential.resourceID,
+      }
+    );
   }
 
   async getOrganizationsWithRole(
@@ -551,12 +553,13 @@ export class CommunityService {
 
   async assignVirtualToRole(
     community: ICommunity,
-    virtualID: string,
+    virtualContributorID: string,
     role: CommunityRole
-  ): Promise<IVirtual> {
-    const { virtual, agent } = await this.virtualService.getVirtualAndAgent(
-      virtualID
-    );
+  ): Promise<IVirtualContributor> {
+    const { virtualContributor, agent } =
+      await this.virtualContributorService.getVirtualContributorAndAgent(
+        virtualContributorID
+      );
     const hasMemberRoleInParent = await this.isMemberInParentCommunity(
       agent,
       community.id
@@ -568,14 +571,14 @@ export class CommunityService {
       );
     }
 
-    virtual.agent = await this.assignContributorToRole(
+    virtualContributor.agent = await this.assignContributorToRole(
       community,
       agent,
       role,
       CommunityContributorType.VIRTUAL
     );
 
-    return virtual;
+    return virtualContributor;
   }
 
   private async addMemberToCommunication(
@@ -734,15 +737,16 @@ export class CommunityService {
 
   async removeVirtualFromRole(
     community: ICommunity,
-    virtualID: string,
+    virtualContributorID: string,
     role: CommunityRole,
     validatePolicyLimits = true
-  ): Promise<IVirtual> {
-    const { virtual, agent } = await this.virtualService.getVirtualAndAgent(
-      virtualID
-    );
+  ): Promise<IVirtualContributor> {
+    const { virtualContributor, agent } =
+      await this.virtualContributorService.getVirtualContributorAndAgent(
+        virtualContributorID
+      );
 
-    virtual.agent = await this.removeContributorFromRole(
+    virtualContributor.agent = await this.removeContributorFromRole(
       community,
       agent,
       role,
@@ -750,7 +754,7 @@ export class CommunityService {
       validatePolicyLimits
     );
 
-    return virtual;
+    return virtualContributor;
   }
 
   private async validateUserCommunityPolicy(

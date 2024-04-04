@@ -26,7 +26,7 @@ import { AgentInfo } from '@core/authentication';
 import { IInvitation } from '../invitation';
 import { IInvitationExternal } from '../invitation.external';
 import { ICommunityGuidelines } from '../community-guidelines/community.guidelines.interface';
-import { IVirtual } from '../virutal';
+import { IVirtualContributor } from '../virtual-contributor';
 
 @Resolver(() => ICommunity)
 export class CommunityResolverFields {
@@ -154,7 +154,7 @@ export class CommunityResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('virtualsInRole', () => [IVirtual], {
+  @ResolveField('virtualContributorsInRole', () => [IVirtualContributor], {
     nullable: true,
     description: 'All virtuals that have the specified Role in this Community.',
   })
@@ -164,7 +164,10 @@ export class CommunityResolverFields {
     @Args('role', { type: () => CommunityRole, nullable: false })
     role: CommunityRole
   ) {
-    return await this.communityService.getVirtualsWithRole(community, role);
+    return await this.communityService.getVirtualContributorsWithRole(
+      community,
+      role
+    );
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

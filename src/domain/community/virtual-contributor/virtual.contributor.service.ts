@@ -16,36 +16,38 @@ import { AgentService } from '@domain/agent/agent/agent.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CredentialsSearchInput } from '@domain/agent/credential/dto/credentials.dto.search';
 import { ContributorQueryArgs } from '../contributor/dto/contributor.query.args';
-import { Virtual } from './virtual.entity';
-import { IVirtual } from './virtual.interface';
+import { VirtualContributor } from './virtual.contributor.entity';
+import { IVirtualContributor } from './virtual.contributor.interface';
 import { VisualType } from '@common/enums/visual.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
-import { CreateVirtualInput } from './dto/virtual.contributor.dto.create';
-import { UpdateVirtualInput } from './dto/virtual.contributor.dto.update';
-import { DeleteVirtualInput } from './dto/virtual.contributor.dto.delete';
+import { CreateVirtualInput as CreateVirtualContributorInput } from './dto/virtual.contributor.dto.create';
+import { UpdateVirtualInput as UpdateVirtualContributorInput } from './dto/virtual.contributor.dto.update';
+import { DeleteVirtualInput as DeleteVirtualContributorInput } from './dto/virtual.contributor.dto.delete';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 
 @Injectable()
-export class VirtualService {
+export class VirtualContributorService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private agentService: AgentService,
     private profileService: ProfileService,
     private storageAggregatorService: StorageAggregatorService,
-    @InjectRepository(Virtual)
-    private virtualRepository: Repository<Virtual>,
+    @InjectRepository(VirtualContributor)
+    private virtualContributorRepository: Repository<VirtualContributor>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async createVirtual(virtualData: CreateVirtualInput): Promise<IVirtual> {
+  async createVirtualContributor(
+    virtualData: CreateVirtualContributorInput
+  ): Promise<IVirtualContributor> {
     // Convert nameID to lower case
     virtualData.nameID = virtualData.nameID.toLowerCase();
     await this.checkNameIdOrFail(virtualData.nameID);
     await this.checkDisplayNameOrFail(virtualData.profileData?.displayName);
 
-    const virtual: IVirtual = Virtual.create(virtualData);
+    const virtual: IVirtualContributor = VirtualContributor.create(virtualData);
     virtual.authorization = new AuthorizationPolicy();
 
     virtual.storageAggregator =
@@ -81,7 +83,7 @@ export class VirtualService {
       parentDisplayID: `virtual-${virtual.nameID}`,
     });
 
-    const savedOrg = await this.virtualRepository.save(virtual);
+    const savedOrg = await this.virtualContributorRepository.save(virtual);
     this.logger.verbose?.(
       `Created new virtual with id ${virtual.id}`,
       LogContext.COMMUNITY
@@ -91,7 +93,7 @@ export class VirtualService {
   }
 
   async checkNameIdOrFail(nameID: string) {
-    const virtualCount = await this.virtualRepository.countBy({
+    const virtualCount = await this.virtualContributorRepository.countBy({
       nameID: nameID,
     });
     if (virtualCount >= 1)
@@ -111,7 +113,7 @@ export class VirtualService {
     if (newDisplayName === existingDisplayName) {
       return;
     }
-    const virtualCount = await this.virtualRepository.countBy({
+    const virtualCount = await this.virtualContributorRepository.countBy({
       profile: {
         displayName: newDisplayName,
       },
@@ -123,46 +125,56 @@ export class VirtualService {
       );
   }
 
-  async updateVirtual(virtualData: UpdateVirtualInput): Promise<IVirtual> {
-    const virtual = await this.getVirtualOrFail(virtualData.ID, {
-      relations: { profile: true },
-    });
+  async updateVirtualContributor(
+    virtualContributorData: UpdateVirtualContributorInput
+  ): Promise<IVirtualContributor> {
+    const virtual = await this.getVirtualContributorOrFail(
+      virtualContributorData.ID,
+      {
+        relations: { profile: true },
+      }
+    );
 
     await this.checkDisplayNameOrFail(
-      virtualData.profileData?.displayName,
+      virtualContributorData.profileData?.displayName,
       virtual.profile.displayName
     );
 
     // Check the tagsets
-    if (virtualData.profileData && virtual.profile) {
+    if (virtualContributorData.profileData && virtual.profile) {
       virtual.profile = await this.profileService.updateProfile(
         virtual.profile,
-        virtualData.profileData
+        virtualContributorData.profileData
       );
     }
 
-    if (virtualData.nameID) {
+    if (virtualContributorData.nameID) {
       this.logger.verbose?.(
-        `${virtualData.nameID} - ${virtual.nameID}`,
+        `${virtualContributorData.nameID} - ${virtual.nameID}`,
         LogContext.COMMUNICATION
       );
-      if (virtualData.nameID.toLowerCase() !== virtual.nameID.toLowerCase()) {
+      if (
+        virtualContributorData.nameID.toLowerCase() !==
+        virtual.nameID.toLowerCase()
+      ) {
         // updating the nameID, check new value is allowed
-        await this.checkNameIdOrFail(virtualData.nameID);
-        virtual.nameID = virtualData.nameID;
+        await this.checkNameIdOrFail(virtualContributorData.nameID);
+        virtual.nameID = virtualContributorData.nameID;
       }
     }
 
-    if (virtualData.prompt !== undefined) {
-      virtual.prompt = virtualData.prompt;
+    if (virtualContributorData.prompt !== undefined) {
+      virtual.prompt = virtualContributorData.prompt;
     }
 
-    return await this.virtualRepository.save(virtual);
+    return await this.virtualContributorRepository.save(virtual);
   }
 
-  async deleteVirtual(deleteData: DeleteVirtualInput): Promise<IVirtual> {
+  async deleteVirtualContributor(
+    deleteData: DeleteVirtualContributorInput
+  ): Promise<IVirtualContributor> {
     const orgID = deleteData.ID;
-    const virtual = await this.getVirtualOrFail(orgID, {
+    const virtualContributor = await this.getVirtualContributorOrFail(orgID, {
       relations: {
         profile: true,
         agent: true,
@@ -170,52 +182,58 @@ export class VirtualService {
       },
     });
 
-    if (virtual.profile) {
-      await this.profileService.deleteProfile(virtual.profile.id);
+    if (virtualContributor.profile) {
+      await this.profileService.deleteProfile(virtualContributor.profile.id);
     }
 
-    if (virtual.storageAggregator) {
-      await this.storageAggregatorService.delete(virtual.storageAggregator.id);
+    if (virtualContributor.storageAggregator) {
+      await this.storageAggregatorService.delete(
+        virtualContributor.storageAggregator.id
+      );
     }
 
-    if (virtual.authorization) {
-      await this.authorizationPolicyService.delete(virtual.authorization);
+    if (virtualContributor.authorization) {
+      await this.authorizationPolicyService.delete(
+        virtualContributor.authorization
+      );
     }
 
-    if (virtual.agent) {
-      await this.agentService.deleteAgent(virtual.agent.id);
+    if (virtualContributor.agent) {
+      await this.agentService.deleteAgent(virtualContributor.agent.id);
     }
 
-    const result = await this.virtualRepository.remove(virtual as Virtual);
+    const result = await this.virtualContributorRepository.remove(
+      virtualContributor as VirtualContributor
+    );
     result.id = orgID;
     return result;
   }
 
-  async getVirtual(
-    virtualID: string,
-    options?: FindOneOptions<Virtual>
-  ): Promise<IVirtual | null> {
-    let virtual: IVirtual | null;
-    if (virtualID.length === UUID_LENGTH) {
-      virtual = await this.virtualRepository.findOne({
+  async getVirtualContributor(
+    virtualContributorID: string,
+    options?: FindOneOptions<VirtualContributor>
+  ): Promise<IVirtualContributor | null> {
+    let virtualContributor: IVirtualContributor | null;
+    if (virtualContributorID.length === UUID_LENGTH) {
+      virtualContributor = await this.virtualContributorRepository.findOne({
         ...options,
-        where: { ...options?.where, id: virtualID },
+        where: { ...options?.where, id: virtualContributorID },
       });
     } else {
       // look up based on nameID
-      virtual = await this.virtualRepository.findOne({
+      virtualContributor = await this.virtualContributorRepository.findOne({
         ...options,
-        where: { ...options?.where, nameID: virtualID },
+        where: { ...options?.where, nameID: virtualContributorID },
       });
     }
-    return virtual;
+    return virtualContributor;
   }
 
-  async getVirtualOrFail(
+  async getVirtualContributorOrFail(
     virtualID: string,
-    options?: FindOneOptions<Virtual>
-  ): Promise<IVirtual | never> {
-    const virtual = await this.getVirtual(virtualID, options);
+    options?: FindOneOptions<VirtualContributor>
+  ): Promise<IVirtualContributor | never> {
+    const virtual = await this.getVirtualContributor(virtualID, options);
     if (!virtual)
       throw new EntityNotFoundException(
         `Unable to find Virtual with ID: ${virtualID}`,
@@ -224,23 +242,31 @@ export class VirtualService {
     return virtual;
   }
 
-  async getVirtualAndAgent(
+  async getVirtualContributorAndAgent(
     virtualID: string
-  ): Promise<{ virtual: IVirtual; agent: IAgent }> {
-    const virtual = await this.getVirtualOrFail(virtualID, {
-      relations: { agent: true },
-    });
+  ): Promise<{ virtualContributor: IVirtualContributor; agent: IAgent }> {
+    const virtualContributor = await this.getVirtualContributorOrFail(
+      virtualID,
+      {
+        relations: { agent: true },
+      }
+    );
 
-    if (!virtual.agent) {
+    if (!virtualContributor.agent) {
       throw new EntityNotInitializedException(
         `Virtual Agent not initialized: ${virtualID}`,
         LogContext.AUTH
       );
     }
-    return { virtual: virtual, agent: virtual.agent };
+    return {
+      virtualContributor: virtualContributor,
+      agent: virtualContributor.agent,
+    };
   }
 
-  async getVirtuals(args: ContributorQueryArgs): Promise<IVirtual[]> {
+  async getVirtualContributors(
+    args: ContributorQueryArgs
+  ): Promise<IVirtualContributor[]> {
     const limit = args.limit;
     const shuffle = args.shuffle || false;
     this.logger.verbose?.(
@@ -249,9 +275,9 @@ export class VirtualService {
     );
 
     const credentialsFilter = args.filter?.credentials;
-    let virtuals: IVirtual[] = [];
+    let virtualContributors: IVirtualContributor[] = [];
     if (credentialsFilter) {
-      virtuals = await this.virtualRepository
+      virtualContributors = await this.virtualContributorRepository
         .createQueryBuilder('virtual')
         .leftJoinAndSelect('virtual.agent', 'agent')
         .leftJoinAndSelect('agent.credentials', 'credential')
@@ -261,24 +287,29 @@ export class VirtualService {
         })
         .getMany();
     } else {
-      virtuals = await this.virtualRepository.find();
+      virtualContributors = await this.virtualContributorRepository.find();
     }
 
-    return limitAndShuffle(virtuals, limit, shuffle);
+    return limitAndShuffle(virtualContributors, limit, shuffle);
   }
 
-  async save(virtual: IVirtual): Promise<IVirtual> {
-    return await this.virtualRepository.save(virtual);
+  async save(
+    virtualContributor: IVirtualContributor
+  ): Promise<IVirtualContributor> {
+    return await this.virtualContributorRepository.save(virtualContributor);
   }
 
-  async getAgent(virtual: IVirtual): Promise<IAgent> {
-    const virtualWithAgent = await this.getVirtualOrFail(virtual.id, {
-      relations: { agent: true },
-    });
-    const agent = virtualWithAgent.agent;
+  async getAgent(virtualContributor: IVirtualContributor): Promise<IAgent> {
+    const virtualContributorWithAgent = await this.getVirtualContributorOrFail(
+      virtualContributor.id,
+      {
+        relations: { agent: true },
+      }
+    );
+    const agent = virtualContributorWithAgent.agent;
     if (!agent)
       throw new EntityNotInitializedException(
-        `User Agent not initialized: ${virtual.id}`,
+        `User Agent not initialized: ${virtualContributor.id}`,
         LogContext.AUTH
       );
 
@@ -288,19 +319,18 @@ export class VirtualService {
   async getStorageAggregatorOrFail(
     virtualID: string
   ): Promise<IStorageAggregator> {
-    const virtualWithStorageAggregator = await this.getVirtualOrFail(
-      virtualID,
-      {
+    const virtualContributorWithStorageAggregator =
+      await this.getVirtualContributorOrFail(virtualID, {
         relations: {
           storageAggregator: true,
         },
-      }
-    );
-    const storageAggregator = virtualWithStorageAggregator.storageAggregator;
+      });
+    const storageAggregator =
+      virtualContributorWithStorageAggregator.storageAggregator;
 
     if (!storageAggregator) {
       throw new EntityNotFoundException(
-        `Unable to find storageAggregator for Virtual with nameID: ${virtualWithStorageAggregator.nameID}`,
+        `Unable to find storageAggregator for Virtual with nameID: ${virtualContributorWithStorageAggregator.nameID}`,
         LogContext.COMMUNITY
       );
     }
@@ -308,11 +338,11 @@ export class VirtualService {
     return storageAggregator;
   }
 
-  async virtualsWithCredentials(
+  async virtualContributorsWithCredentials(
     credentialCriteria: CredentialsSearchInput
-  ): Promise<IVirtual[]> {
+  ): Promise<IVirtualContributor[]> {
     const credResourceID = credentialCriteria.resourceID || '';
-    const virtualMatches = await this.virtualRepository
+    const virtualContributorMatches = await this.virtualContributorRepository
       .createQueryBuilder('virtual')
       .leftJoinAndSelect('virtual.agent', 'agent')
       .leftJoinAndSelect('agent.credentials', 'credential')
@@ -325,30 +355,33 @@ export class VirtualService {
       .getMany();
 
     // reload to go through the normal loading path
-    const results: IVirtual[] = [];
-    for (const virtual of virtualMatches) {
-      const loadedVirtual = await this.getVirtualOrFail(virtual.id);
+    const results: IVirtualContributor[] = [];
+    for (const virtualContributor of virtualContributorMatches) {
+      const loadedVirtual = await this.getVirtualContributorOrFail(
+        virtualContributor.id
+      );
       results.push(loadedVirtual);
     }
     return results;
   }
 
-  async countVirtualsWithCredentials(
+  async countVirtualContributorsWithCredentials(
     credentialCriteria: CredentialsSearchInput
   ): Promise<number> {
     const credResourceID = credentialCriteria.resourceID || '';
-    const virtualMatchesCount = await this.virtualRepository
-      .createQueryBuilder('virtual')
-      .leftJoinAndSelect('virtual.agent', 'agent')
-      .leftJoinAndSelect('agent.credentials', 'credential')
-      .where('credential.type = :type')
-      .andWhere('credential.resourceID = :resourceID')
-      .setParameters({
-        type: `${credentialCriteria.type}`,
-        resourceID: credResourceID,
-      })
-      .getCount();
+    const virtualContributorMatchesCount =
+      await this.virtualContributorRepository
+        .createQueryBuilder('virtual')
+        .leftJoinAndSelect('virtual.agent', 'agent')
+        .leftJoinAndSelect('agent.credentials', 'credential')
+        .where('credential.type = :type')
+        .andWhere('credential.resourceID = :resourceID')
+        .setParameters({
+          type: `${credentialCriteria.type}`,
+          resourceID: credResourceID,
+        })
+        .getCount();
 
-    return virtualMatchesCount;
+    return virtualContributorMatchesCount;
   }
 }

@@ -1,33 +1,33 @@
 import { UUID_NAMEID } from '@domain/common/scalars';
 import { Args, Query, Resolver } from '@nestjs/graphql';
 import { Profiling } from '@src/common/decorators';
-import { IVirtual } from './virtual.interface';
-import { VirtualService } from './virtual.service';
+import { IVirtualContributor } from './virtual.contributor.interface';
+import { VirtualContributorService } from './virtual.contributor.service';
 import { ContributorQueryArgs } from '../contributor/dto/contributor.query.args';
 
 @Resolver()
-export class VirtualResolverQueries {
-  constructor(private virtualService: VirtualService) {}
+export class VirtualContributorResolverQueries {
+  constructor(private virtualService: VirtualContributorService) {}
 
-  @Query(() => [IVirtual], {
+  @Query(() => [IVirtualContributor], {
     nullable: false,
     description: 'The Virtuals on this platform',
   })
   @Profiling.api
   async virtuals(
     @Args({ nullable: true }) args: ContributorQueryArgs
-  ): Promise<IVirtual[]> {
-    return await this.virtualService.getVirtuals(args);
+  ): Promise<IVirtualContributor[]> {
+    return await this.virtualService.getVirtualContributors(args);
   }
 
-  @Query(() => IVirtual, {
+  @Query(() => IVirtualContributor, {
     nullable: false,
     description: 'A particular Virtual',
   })
   @Profiling.api
   async virtual(
     @Args('ID', { type: () => UUID_NAMEID, nullable: false }) id: string
-  ): Promise<IVirtual> {
-    return await this.virtualService.getVirtualOrFail(id);
+  ): Promise<IVirtualContributor> {
+    return await this.virtualService.getVirtualContributorOrFail(id);
   }
 }

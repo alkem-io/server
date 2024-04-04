@@ -8,7 +8,7 @@ export class AssignCommunityRoleToVirtualInput {
   communityID!: string;
 
   @Field(() => UUID_NAMEID, { nullable: false })
-  virtualID!: string;
+  virtualContributorID!: string;
 
   @Field(() => CommunityRole, { nullable: false })
   role!: CommunityRole;

@@ -28,7 +28,7 @@ import { EntityResolverModule } from '@services/infrastructure/entity-resolver/e
 import { CommunityEventsService } from './community.service.events';
 import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
 import { CommunityGuidelinesModule } from '../community-guidelines/community.guidelines.module';
-import { VirtualModule } from '../virutal/virtual.module';
+import { VirtualContributorModule } from '../virtual-contributor/virtual.contributor.module';
 
 @Module({
   imports: [
@@ -40,7 +40,7 @@ import { VirtualModule } from '../virutal/virtual.module';
     UserGroupModule,
     UserModule,
     OrganizationModule,
-    VirtualModule,
+    VirtualContributorModule,
     ApplicationModule,
     InvitationModule,
     InvitationExternalModule,

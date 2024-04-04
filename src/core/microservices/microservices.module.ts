@@ -29,7 +29,7 @@ import { walletManagerServiceFactory } from './wallet-manager.service.factory';
 import { matrixAdapterServiceFactory } from './matrix.adapter.service.factory';
 import { chatGuidanceServiceFactory } from './chat.guidance.service.factory';
 import { authResetServiceFactory } from './auth.reset.service.factory';
-import { virtualContributorServiceFactory } from './virtual.contributor.service.factory';
+import { virtualPersonaServiceFactory } from './virtual.persona.service.factory';
 
 const subscriptionConfig: { provide: string; queueName: MessagingQueue }[] = [
   {
@@ -107,7 +107,7 @@ const excalidrawPubSubFactoryProvider = subscriptionFactoryProvider(
     },
     {
       provide: VIRTUAL_CONTRIBUTOR_SERVICE,
-      useFactory: virtualContributorServiceFactory,
+      useFactory: virtualPersonaServiceFactory,
       inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
     },
     {

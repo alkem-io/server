@@ -4,7 +4,7 @@ import { InjectEntityManager } from '@nestjs/typeorm';
 import { createTypedRelationDataLoader } from '../../../utils';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { Virtual } from '@domain/community/virutal';
+import { VirtualContributor } from '@domain/community/virtual-contributor';
 
 @Injectable()
 export class VirtualStorageAggregatorLoaderCreator
@@ -15,7 +15,7 @@ export class VirtualStorageAggregatorLoaderCreator
   create(options?: DataLoaderCreatorOptions<IStorageAggregator[]>) {
     return createTypedRelationDataLoader(
       this.manager,
-      Virtual,
+      VirtualContributor,
       { storageAggregator: true },
       this.constructor.name,
       options

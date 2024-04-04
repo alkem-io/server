@@ -1,39 +1,39 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Resolver, Mutation } from '@nestjs/graphql';
-import { VirtualService } from './virtual.service';
+import { VirtualContributorService } from './virtual.contributor.service';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege } from '@common/enums';
-import { VirtualAuthorizationService } from './virtual.service.authorization';
+import { VirtualContributorAuthorizationService } from './virtual.contributor.service.authorization';
 import { AgentInfo } from '@core/authentication/agent-info';
 import { VirtualAuthorizationResetInput } from './dto/virtual.contributor.dto.reset.authorization';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
-import { IVirtual } from './virtual.interface';
+import { IVirtualContributor } from './virtual.contributor.interface';
 import {
   CreateVirtualInput,
   DeleteVirtualInput,
   UpdateVirtualInput,
 } from './dto';
 
-@Resolver(() => IVirtual)
-export class VirtualResolverMutations {
+@Resolver(() => IVirtualContributor)
+export class VirtualContributorResolverMutations {
   constructor(
-    private virtualAuthorizationService: VirtualAuthorizationService,
-    private virtualService: VirtualService,
+    private virtualAuthorizationService: VirtualContributorAuthorizationService,
+    private virtualService: VirtualContributorService,
     private authorizationService: AuthorizationService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService
   ) {}
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => IVirtual, {
+  @Mutation(() => IVirtualContributor, {
     description: 'Creates a new Virtual on the platform.',
   })
   @Profiling.api
   async createVirtual(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('virtualData') virtualData: CreateVirtualInput
-  ): Promise<IVirtual> {
+  ): Promise<IVirtualContributor> {
     const authorizationPolicy =
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
 
@@ -43,7 +43,9 @@ export class VirtualResolverMutations {
       AuthorizationPrivilege.CREATE_ORGANIZATION,
       `create Virtual: ${virtualData.nameID}`
     );
-    const virtual = await this.virtualService.createVirtual(virtualData);
+    const virtual = await this.virtualService.createVirtualContributor(
+      virtualData
+    );
 
     return await this.virtualAuthorizationService.applyAuthorizationPolicy(
       virtual
@@ -51,15 +53,17 @@ export class VirtualResolverMutations {
   }
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => IVirtual, {
+  @Mutation(() => IVirtualContributor, {
     description: 'Updates the specified Virtual.',
   })
   @Profiling.api
   async updateVirtual(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('virtualData') virtualData: UpdateVirtualInput
-  ): Promise<IVirtual> {
-    const virtual = await this.virtualService.getVirtualOrFail(virtualData.ID);
+  ): Promise<IVirtualContributor> {
+    const virtual = await this.virtualService.getVirtualContributorOrFail(
+      virtualData.ID
+    );
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       virtual.authorization,
@@ -67,29 +71,31 @@ export class VirtualResolverMutations {
       `orgUpdate: ${virtual.nameID}`
     );
 
-    return await this.virtualService.updateVirtual(virtualData);
+    return await this.virtualService.updateVirtualContributor(virtualData);
   }
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => IVirtual, {
+  @Mutation(() => IVirtualContributor, {
     description: 'Deletes the specified Virtual.',
   })
   async deleteVirtual(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('deleteData') deleteData: DeleteVirtualInput
-  ): Promise<IVirtual> {
-    const virtual = await this.virtualService.getVirtualOrFail(deleteData.ID);
+  ): Promise<IVirtualContributor> {
+    const virtual = await this.virtualService.getVirtualContributorOrFail(
+      deleteData.ID
+    );
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       virtual.authorization,
       AuthorizationPrivilege.DELETE,
       `deleteOrg: ${virtual.nameID}`
     );
-    return await this.virtualService.deleteVirtual(deleteData);
+    return await this.virtualService.deleteVirtualContributor(deleteData);
   }
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => IVirtual, {
+  @Mutation(() => IVirtualContributor, {
     description: 'Reset the Authorization Policy on the specified Virtual.',
   })
   @Profiling.api
@@ -97,8 +103,8 @@ export class VirtualResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('authorizationResetData')
     authorizationResetData: VirtualAuthorizationResetInput
-  ): Promise<IVirtual> {
-    const virtual = await this.virtualService.getVirtualOrFail(
+  ): Promise<IVirtualContributor> {
+    const virtual = await this.virtualService.getVirtualContributorOrFail(
       authorizationResetData.virtualID,
       {
         relations: {

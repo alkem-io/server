@@ -1,2 +1,2 @@
-export * from './virtual.entity';
-export * from './virtual.interface';
+export * from './virtual.contributor.entity';
+export * from './virtual.contributor.interface';
