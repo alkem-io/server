@@ -22,9 +22,9 @@ import { VisualType } from '@common/enums/visual.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
-import { CreateVirtualInput as CreateVirtualContributorInput } from './dto/virtual.contributor.dto.create';
+import { CreateVirtualContributorInput as CreateVirtualContributorInput } from './dto/virtual.contributor.dto.create';
 import { UpdateVirtualInput as UpdateVirtualContributorInput } from './dto/virtual.contributor.dto.update';
-import { DeleteVirtualInput as DeleteVirtualContributorInput } from './dto/virtual.contributor.dto.delete';
+import { DeleteVirtualContributorInput as DeleteVirtualContributorInput } from './dto/virtual.contributor.dto.delete';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 
 @Injectable()

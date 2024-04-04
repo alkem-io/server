@@ -1,5 +1,5 @@
-mutation createVirtual($virtualData: CreateVirtualInput!) {
-  createVirtual(virtualData: $virtualData ) {
+mutation createVirtualContributor($virtualContributorData: CreateVirtualContributorInput!) {
+  createVirtualContributor(virtualContributorData: $virtualContributorData ) {
     id
     prompt
   }
@@ -7,11 +7,12 @@ mutation createVirtual($virtualData: CreateVirtualInput!) {
 
 
 {
-  "virtualData": {
+  "virtualContributorData": {
     "prompt": "my super prompt",
-    "nameID": "virtual1"
+    "nameID": "virtual1",
     "profileData": {
       "displayName": "virtual 11"
-    }
+    },
+    "type": "COMMUNITY_MANAGER"
   }
 }

@@ -5,7 +5,7 @@ import { CreateContributorInput } from '@domain/community/contributor/dto/contri
 import { VirtualPersonaType } from '@services/adapters/virtual-persona-adapter/virtual.persona.type';
 
 @InputType()
-export class CreateVirtualInput extends CreateContributorInput {
+export class CreateVirtualContributorInput extends CreateContributorInput {
   @Field(() => String, { nullable: false })
   @MaxLength(LONG_TEXT_LENGTH)
   prompt!: string;
