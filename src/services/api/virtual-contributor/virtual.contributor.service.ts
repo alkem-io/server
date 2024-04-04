@@ -7,11 +7,15 @@ import { ConfigService } from '@nestjs/config';
 import { VirtualContributorInput } from './dto/virtual.contributor.dto.input';
 import { VirtualContributorAdapter } from '@services/adapters/virtual-contributor-adapter/virtual.contributor.adapter';
 import { VirtualContributorType } from '@services/adapters/virtual-contributor-adapter/virtual.contributor.type';
+import { RoomService } from '@domain/communication/room/room.service';
+import { SpaceService } from '@domain/challenge/space/space.service';
 
 export class VirtualContributorService {
   constructor(
     private virtualContributorAdapter: VirtualContributorAdapter,
     private configService: ConfigService,
+    private roomService: RoomService,
+    private spaceService: SpaceService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -19,6 +23,14 @@ export class VirtualContributorService {
     chatData: VirtualContributorInput,
     agentInfo: AgentInfo
   ): Promise<IVirtualContributorQueryResult> {
+    const space = await this.spaceService.getSpaceOrFail(chatData.spaceID, {
+      relations: {
+        profile: true,
+      },
+    });
+    const room = await this.roomService.getRoomOrFail(chatData.roomID);
+    const messages = await this.roomService.getMessages(room);
+
     const response = await this.virtualContributorAdapter.sendQuery({
       userId: agentInfo.userID,
       question: chatData.question,
@@ -28,6 +40,13 @@ export class VirtualContributorService {
         VirtualContributorType.VIRTUAL_CONTRIBUTOR,
       roomID: chatData.roomID,
       spaceID: chatData.spaceID,
+      context: {
+        space: {
+          description: space.profile.description,
+          tagline: space.profile.tagline,
+        },
+        messages,
+      },
     });
 
     return response;
