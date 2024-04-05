@@ -100,7 +100,7 @@ export class SpaceService {
       },
     });
 
-    if (!space.challenges || !space.profile || !space.storageAggregator) {
+    if (!space.challenges) {
       throw new RelationshipNotFoundException(
         `Unable to load all entities for deletion of space ${space.id} `,
         LogContext.CHALLENGES
