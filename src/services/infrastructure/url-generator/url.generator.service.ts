@@ -404,8 +404,11 @@ export class UrlGeneratorService {
       return undefined;
     }
 
-    if (!admin) this.generateUrlForSpace(spaceInfo.entityNameID);
-    return this.generateAdminUrlForSpace(spaceInfo.entityNameID);
+    if (!admin) {
+      return this.generateUrlForSpace(spaceInfo.entityNameID);
+    } else {
+      return this.generateAdminUrlForSpace(spaceInfo.entityNameID);
+    }
   }
 
   private async getChallengeUrlPath(
