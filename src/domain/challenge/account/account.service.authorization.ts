@@ -47,7 +47,9 @@ export class AccountAuthorizationService {
           license: true,
           library: true,
           defaults: true,
-          space: true,
+          space: {
+            profile: true,
+          },
         },
       }
     );
@@ -55,7 +57,8 @@ export class AccountAuthorizationService {
       !account.library ||
       !account.license ||
       !account.defaults ||
-      !account.space
+      !account.space ||
+      !account.space.profile
     )
       throw new RelationshipNotFoundException(
         `Unable to load Account with entities at start of auth reset: ${account.id} `,

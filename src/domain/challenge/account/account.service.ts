@@ -272,12 +272,14 @@ export class AccountService {
   }
 
   async getRootSpace(accountInput: IAccount): Promise<ISpace> {
-    if (accountInput.space) {
+    if (accountInput.space && accountInput.space.profile) {
       return accountInput.space;
     }
     const account = await this.getAccountOrFail(accountInput.id, {
       relations: {
-        space: true,
+        space: {
+          profile: true,
+        },
       },
     });
     if (!account.space) {

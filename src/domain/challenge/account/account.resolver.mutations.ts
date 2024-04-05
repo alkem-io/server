@@ -60,7 +60,10 @@ export class AccountResolverMutations {
       await this.accountAuthorizationService.applyAuthorizationPolicy(account);
     const space = await this.accountService.getRootSpace(accountUpdated);
 
-    this.namingReporter.createOrUpdateName(space.id, space.profile.displayName);
+    await this.namingReporter.createOrUpdateName(
+      space.id,
+      space.profile.displayName
+    );
     return accountUpdated;
   }
 
