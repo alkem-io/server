@@ -3,7 +3,6 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AgentInfo } from '@core/authentication/agent-info';
 import { LogContext } from '@common/enums/logging.context';
 import { ConvertChallengeToSpaceInput } from './dto/convert.dto.challenge.to.space.input';
-import { SpaceService } from '@domain/challenge/space/space.service';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
 import { ISpace } from '@domain/challenge/space/space.interface';
 import { CommunityService } from '@domain/community/community/community.service';
@@ -12,7 +11,6 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { CommunityRole } from '@common/enums/community.role';
-import { CreateSpaceInput } from '@domain/challenge/space/dto/space.dto.create';
 import { IOrganization } from '@domain/community/organization/organization.interface';
 import { IUser } from '@domain/community/user/user.interface';
 import { ICommunity } from '@domain/community/community/community.interface';
@@ -26,9 +24,13 @@ import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { CalloutGroupName } from '@common/enums/callout.group.name';
 import { CreateChallengeInput } from '@domain/challenge';
 import { SpaceType } from '@common/enums/space.type';
+import { CreateAccountInput } from '@domain/challenge/account/dto';
+import { AccountService } from '@domain/challenge/account/account.service';
+import { SpaceService } from '@domain/challenge/space/space.service';
 
 export class ConversionService {
   constructor(
+    private accountService: AccountService,
     private spaceService: SpaceService,
     private challengeService: ChallengeService,
     private opportunityService: OpportunityService,
@@ -90,31 +92,40 @@ export class ConversionService {
       );
     }
     const hostOrg = challengeCommunityLeadOrgs[0];
-    const createSpaceInput: CreateSpaceInput = {
-      accountData: {
-        hostID: hostOrg.nameID,
+    const createAccountInput: CreateAccountInput = {
+      hostID: hostOrg.nameID,
+      spaceData: {
+        nameID: challenge.nameID,
+        profileData: {
+          displayName: challenge.profile.displayName,
+        },
+        level: 0,
+        type: SpaceType.SPACE,
       },
-      nameID: challenge.nameID,
-      profileData: {
-        displayName: challenge.profile.displayName,
-      },
-      level: 0,
-      type: SpaceType.SPACE,
     };
-    const emptySpace = await this.spaceService.createSpace(
-      createSpaceInput,
-      challenge.account,
+    const emptyAccount = await this.accountService.createAccount(
+      createAccountInput,
       agentInfo
     );
-    const space = await this.spaceService.getSpaceOrFail(emptySpace.id, {
-      relations: {
-        community: true,
-        context: true,
-        profile: true,
-        collaboration: true,
-        storageAggregator: true,
-      },
-    });
+
+    if (!emptyAccount.space) {
+      throw new EntityNotInitializedException(
+        `Unable to locate space on new Account: ${emptyAccount.id}`,
+        LogContext.CONVERSION
+      );
+    }
+    const space = await this.spaceService.getSpaceOrFail(
+      emptyAccount.space.id,
+      {
+        relations: {
+          community: true,
+          context: true,
+          profile: true,
+          collaboration: true,
+          storageAggregator: true,
+        },
+      }
+    );
     if (
       !space.community ||
       !space.context ||
