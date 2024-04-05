@@ -118,7 +118,7 @@ export class AccountResolverMutations {
   }
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => ISpace, {
+  @Mutation(() => IAccount, {
     description:
       'Update the platform settings, such as license, of the specified Account.',
   })
