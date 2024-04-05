@@ -19,11 +19,11 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { OpportunityAuthorizationService } from '@domain/challenge/opportunity/opportunity.service.authorization';
 import { IChallenge } from './challenge.interface';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
-import { OpportunityCreatedPayload } from './dto/challenge.opportunity.created.payload';
 import { SubscriptionType } from '@common/enums/subscription.type';
-import { SUBSCRIPTION_OPPORTUNITY_CREATED } from '@common/constants';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { EntityNotInitializedException } from '@common/exceptions';
+import { SUBSCRIPTION_SUBSPACE_CREATED } from '@common/constants/providers';
+import { SubspaceCreatedPayload } from '../space/dto/space.subspace.created.payload';
 
 @Resolver()
 export class ChallengeResolverMutations {
@@ -33,8 +33,8 @@ export class ChallengeResolverMutations {
     private opportunityAuthorizationService: OpportunityAuthorizationService,
     private authorizationService: AuthorizationService,
     private challengeService: ChallengeService,
-    @Inject(SUBSCRIPTION_OPPORTUNITY_CREATED)
-    private opportunityCreatedSubscription: PubSubEngine
+    @Inject(SUBSCRIPTION_SUBSPACE_CREATED)
+    private subspaceCreatedSubscription: PubSubEngine
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -121,13 +121,13 @@ export class ChallengeResolverMutations {
       challengeId: opportunityData.challengeID,
     });
 
-    const opportunityCreatedEvent: OpportunityCreatedPayload = {
+    const opportunityCreatedEvent: SubspaceCreatedPayload = {
       eventID: `opportunity-created-${Math.round(Math.random() * 100)}`,
-      challengeID: challenge.id,
-      opportunity,
+      journeyID: challenge.id,
+      childJourney: opportunity,
     };
-    this.opportunityCreatedSubscription.publish(
-      SubscriptionType.CHALLENGE_CREATED,
+    this.subspaceCreatedSubscription.publish(
+      SubscriptionType.SUBSPACE_CREATED,
       opportunityCreatedEvent
     );
 

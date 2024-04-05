@@ -6,10 +6,8 @@ export const SUBSCRIPTION_CALLOUT_POST_CREATED =
   'alkemio-subscriptions-callout-post-created';
 export const SUBSCRIPTION_PROFILE_VERIFIED_CREDENTIAL =
   'alkemio-subscriptions-profile-verified-credential';
-export const SUBSCRIPTION_OPPORTUNITY_CREATED =
-  'alkemio-subscriptions-opportunity-created';
-export const SUBSCRIPTION_CHALLENGE_CREATED =
-  'alkemio-subscriptions-challenge-created';
+export const SUBSCRIPTION_SUBSPACE_CREATED =
+  'alkemio-subscriptions-subspace-created';
 export const SUBSCRIPTION_ACTIVITY_CREATED =
   'alkemio-subscriptions-activity-created';
 export const AUTH_RESET_SERVICE = 'alkemio-auth-reset';

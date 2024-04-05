@@ -13,9 +13,8 @@ import { ChallengeAuthorizationService } from '@domain/challenge/challenge/chall
 import { ISpace } from './space.interface';
 import { CreateChallengeOnSpaceInput } from './dto/space.dto.create.challenge';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
-import { ChallengeCreatedPayload } from './dto/space.challenge.created.payload';
+import { SubspaceCreatedPayload } from './dto/space.subspace.created.payload';
 import { SubscriptionType } from '@common/enums/subscription.type';
-import { SUBSCRIPTION_CHALLENGE_CREATED } from '@common/constants';
 import { PubSubEngine } from 'graphql-subscriptions';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
@@ -25,6 +24,7 @@ import { LogContext } from '@common/enums';
 import { UpdateChallengeSettingsInput } from '../challenge/dto/challenge.dto.update.settings';
 import { UpdateSpaceSettingsOnSpaceInput } from './dto/space.dto.update.settings';
 import { UpdateSpacePlatformSettingsInput } from './dto/space.dto.update.platform.settings';
+import { SUBSCRIPTION_SUBSPACE_CREATED } from '@common/constants/providers';
 
 @Resolver()
 export class SpaceResolverMutations {
@@ -36,8 +36,8 @@ export class SpaceResolverMutations {
     private spaceAuthorizationService: SpaceAuthorizationService,
     private challengeService: ChallengeService,
     private challengeAuthorizationService: ChallengeAuthorizationService,
-    @Inject(SUBSCRIPTION_CHALLENGE_CREATED)
-    private challengeCreatedSubscription: PubSubEngine,
+    @Inject(SUBSCRIPTION_SUBSPACE_CREATED)
+    private subspaceCreatedSubscription: PubSubEngine,
     private namingReporter: NameReporterService
   ) {}
 
@@ -277,13 +277,13 @@ export class SpaceResolverMutations {
       }
     );
 
-    const challengeCreatedEvent: ChallengeCreatedPayload = {
+    const challengeCreatedEvent: SubspaceCreatedPayload = {
       eventID: `space-challenge-created-${Math.round(Math.random() * 100)}`,
-      spaceID: space.id,
-      challenge,
+      journeyID: space.id,
+      childJourney: challenge,
     };
-    this.challengeCreatedSubscription.publish(
-      SubscriptionType.CHALLENGE_CREATED,
+    this.subspaceCreatedSubscription.publish(
+      SubscriptionType.SUBSPACE_CREATED,
       challengeCreatedEvent
     );
 

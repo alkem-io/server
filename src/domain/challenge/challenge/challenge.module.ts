@@ -9,7 +9,6 @@ import { BaseChallengeModule } from '@domain/challenge/base-challenge/base.chall
 import { ChallengeAuthorizationService } from '@domain/challenge/challenge/challenge.service.authorization';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
-import { ChallengeResolverSubscriptions } from './challenge.resolver.subscriptions';
 import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
 import { LoaderCreatorModule } from '@core/dataloader/creators';
@@ -30,7 +29,6 @@ import { LoaderCreatorModule } from '@core/dataloader/creators';
     ChallengeAuthorizationService,
     ChallengeResolverMutations,
     ChallengeResolverFields,
-    ChallengeResolverSubscriptions,
   ],
   exports: [ChallengeService, ChallengeAuthorizationService],
 })
