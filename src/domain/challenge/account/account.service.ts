@@ -22,11 +22,11 @@ import { UpdateAccountDefaultsInput } from './dto/account.dto.update.defaults';
 import { ISpaceDefaults } from '../space.defaults/space.defaults.interface';
 import { SpaceService } from '../space/space.service';
 import { AgentInfo } from '@core/authentication/agent-info';
-import { CreateSpaceInput } from '../space/dto/space.dto.create';
 import { ISpace } from '../space/space.interface';
 import { UpdateAccountPlatformSettingsInput } from './dto/account.dto.update.platform.settings';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { SpaceVisibility } from '@common/enums/space.visibility';
+import { CreateAccountInput } from './dto/account.dto.create';
 
 @Injectable()
 export class AccountService {
@@ -43,10 +43,11 @@ export class AccountService {
   ) {}
 
   async createAccount(
-    spaceData: CreateSpaceInput,
+    accountData: CreateAccountInput,
     agentInfo?: AgentInfo
   ): Promise<IAccount> {
     // Before doing any creation check the space data!
+    const spaceData = accountData.spaceData;
     await this.spaceService.validateSpaceData(spaceData);
 
     const account: IAccount = new Account();
@@ -64,7 +65,7 @@ export class AccountService {
       account,
       agentInfo
     );
-    await this.setAccountHost(account, spaceData.accountData.hostID);
+    await this.setAccountHost(account, accountData.hostID);
 
     const storageAggregator =
       await this.spaceService.getStorageAggregatorOrFail(account.space.id);

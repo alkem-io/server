@@ -6,7 +6,6 @@ import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { ISpace } from '../space/space.interface';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { AgentInfo } from '@core/authentication/agent-info';
-import { CreateSpaceInput } from '../space/dto/space.dto.create';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { NameReporterService } from '@services/external/elasticsearch/name-reporter/name.reporter.service';
 import { AccountAuthorizationResetInput } from './dto/account.dto.reset.authorization';
@@ -21,6 +20,7 @@ import { ISpaceDefaults } from '../space.defaults/space.defaults.interface';
 import { DeleteSpaceInput } from '../space/dto/space.dto.delete';
 import { SpaceType } from '@common/enums/space.type';
 import { UpdateAccountPlatformSettingsInput } from './dto/account.dto.update.platform.settings';
+import { CreateAccountInput } from './dto';
 
 @Resolver()
 export class AccountResolverMutations {
@@ -37,11 +37,11 @@ export class AccountResolverMutations {
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IAccount, {
-    description: 'Creates a new Space.',
+    description: 'Creates a new Account with a single root Space.',
   })
-  async createSpace(
+  async createAccount(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('spaceData') spaceData: CreateSpaceInput
+    @Args('accountData') accountData: CreateAccountInput
   ): Promise<IAccount> {
     const authorizationPolicy =
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
@@ -49,10 +49,10 @@ export class AccountResolverMutations {
       agentInfo,
       authorizationPolicy,
       AuthorizationPrivilege.CREATE_SPACE,
-      `create space: ${spaceData.nameID}`
+      `create space: ${accountData.spaceData?.nameID}`
     );
     const account = await this.accountService.createAccount(
-      spaceData,
+      accountData,
       agentInfo
     );
 
@@ -60,10 +60,7 @@ export class AccountResolverMutations {
       await this.accountAuthorizationService.applyAuthorizationPolicy(account);
     const space = await this.accountService.getRootSpace(accountUpdated);
 
-    this.namingReporter.createOrUpdateName(
-      space.id,
-      spaceData.profileData.displayName
-    );
+    this.namingReporter.createOrUpdateName(space.id, space.profile.displayName);
     return accountUpdated;
   }
 

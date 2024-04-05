@@ -22,7 +22,6 @@ import { OrganizationAuthorizationService } from '@domain/community/organization
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AdminAuthorizationService } from '@platform/admin/authorization/admin.authorization.service';
 import { PlatformService } from '@platform/platfrom/platform.service';
-import { CreateSpaceInput } from '@domain/challenge/space/dto/space.dto.create';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { PlatformAuthorizationService } from '@platform/platfrom/platform.service.authorization';
 import { NameReporterService } from '@services/external/elasticsearch/name-reporter/name.reporter.service';
@@ -31,7 +30,7 @@ import { AccountAuthorizationService } from '@domain/challenge/account/account.s
 import { Account } from '@domain/challenge/account/account.entity';
 import { SpaceType } from '@common/enums/space.type';
 import { SearchIngestService } from '@services/api/search2/search.ingest/search.ingest.service';
-
+import { CreateAccountInput } from '@domain/challenge/account/dto/account.dto.create';
 
 @Injectable()
 export class BootstrapService {
@@ -280,17 +279,17 @@ export class BootstrapService {
         );
       }
 
-      const spaceInput: CreateSpaceInput = {
-        nameID: DEFAULT_SPACE_NAMEID,
-        profileData: {
-          displayName: DEFAULT_SPACE_DISPLAYNAME,
-          tagline: 'An empty space to be populated',
+      const spaceInput: CreateAccountInput = {
+        spaceData: {
+          nameID: DEFAULT_SPACE_NAMEID,
+          profileData: {
+            displayName: DEFAULT_SPACE_DISPLAYNAME,
+            tagline: 'An empty space to be populated',
+          },
+          level: 0,
+          type: SpaceType.SPACE,
         },
-        accountData: {
-          hostID: DEFAULT_HOST_ORG_NAMEID,
-        },
-        level: 0,
-        type: SpaceType.SPACE,
+        hostID: DEFAULT_HOST_ORG_NAMEID,
       };
       const account = await this.accountService.createAccount(spaceInput);
       return await this.accountAuthorizationService.applyAuthorizationPolicy(
