@@ -2,14 +2,18 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ClientProxy } from '@nestjs/microservices';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { firstValueFrom } from 'rxjs';
-import { LogContext } from '@common/enums';
-import { VIRTUAL_CONTRIBUTOR_SERVICE as VIRTUAL_PERSONA_SERVICE } from '@common/constants';
-import { VirtualPersonaInputBase } from './dto/virtual.persona.dto.base';
-import { VirtualPersonaBaseResponse } from './dto/virtual.persona.dto.base.response';
-import { VirtualPersonaQueryInput } from './dto/virtual.persona.dto.query';
-import { VirtualPersonaQueryResponse } from './dto/virtual.persona.dto.question.response';
+import {
+  VIRTUAL_PERSONA_ENGINE_ALKEMIO_DIGILEEFOMGEVING,
+  VIRTUAL_PERSONA_ENGINE_COMMUNITY_MANAGER,
+} from '@common/constants';
 import { Source } from '../chat-guidance-adapter/source.type';
-import { IVirtualPersonaQueryResult } from '@services/api/virtual-persona/dto/virtual.persona.query.result.dto';
+import { VirtualPersonaEngineAdapterQueryInput } from './dto/virtual.persona.engine.adapter.dto.question.input';
+import { VirtualPersonaEngineAdapterQueryResponse } from './dto/virtual.persona.engine.adapter.dto.question.response';
+import { LogContext } from '@common/enums/logging.context';
+import { VirtualPersonaEngineAdapterInputBase } from './dto/virtual.persona.engine.adapter.dto.base';
+import { VirtualPersonaEngineAdapterBaseResponse } from './dto/virtual.persona.engine.adapter.dto.base.response';
+import { IVirtualPersonaQuestionResult } from '@domain/community/virtual-persona/dto/virtual.persona.question.dto.result';
+import { VirtualPersonaEngine } from '@common/enums/virtual.persona.engine';
 
 enum VirtualPersonaEventType {
   QUERY = 'query',
@@ -21,27 +25,52 @@ const successfulIngestionResponse = 'Ingest successful';
 const successfulResetResponse = 'Reset function executed';
 
 @Injectable()
-export class VirtualPersonaAdapter {
+export class VirtualPersonaEngineAdapter {
   constructor(
-    @Inject(VIRTUAL_PERSONA_SERVICE)
-    private virtualPersonaClient: ClientProxy,
+    @Inject(VIRTUAL_PERSONA_ENGINE_COMMUNITY_MANAGER)
+    private virtualPersonaEngineCommunityManager: ClientProxy,
+    @Inject(VIRTUAL_PERSONA_ENGINE_ALKEMIO_DIGILEEFOMGEVING)
+    private virtualPersonaEngineAlkemioDigileefomgeving: ClientProxy,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
 
   public async sendQuery(
-    eventData: VirtualPersonaQueryInput
-  ): Promise<IVirtualPersonaQueryResult> {
-    let responseData: VirtualPersonaQueryResponse | undefined;
+    eventData: VirtualPersonaEngineAdapterQueryInput
+  ): Promise<IVirtualPersonaQuestionResult> {
+    let responseData: VirtualPersonaEngineAdapterQueryResponse | undefined;
 
     try {
-      const response = this.virtualPersonaClient.send<
-        VirtualPersonaQueryResponse,
-        VirtualPersonaQueryInput
-      >({ cmd: VirtualPersonaEventType.QUERY }, eventData);
-      responseData = await firstValueFrom(response);
+      switch (eventData.engine) {
+        case VirtualPersonaEngine.COMMUNITY_MANGER:
+          const responseCommunityManager =
+            this.virtualPersonaEngineCommunityManager.send<
+              VirtualPersonaEngineAdapterQueryResponse,
+              VirtualPersonaEngineAdapterQueryInput
+            >({ cmd: VirtualPersonaEventType.QUERY }, eventData);
+          responseData = await firstValueFrom(responseCommunityManager);
+          break;
+        case VirtualPersonaEngine.ALKEMIO_DIGILEEFOMGEVING:
+          const responseAlkemioDigileefomgeving =
+            this.virtualPersonaEngineAlkemioDigileefomgeving.send<
+              VirtualPersonaEngineAdapterQueryResponse,
+              VirtualPersonaEngineAdapterQueryInput
+            >({ cmd: VirtualPersonaEventType.QUERY }, eventData);
+          responseData = await firstValueFrom(responseAlkemioDigileefomgeving);
+          break;
+      }
     } catch (e) {
       const errorMessage = `Error received from guidance chat server! ${e}`;
+      this.logger.error(errorMessage, undefined, LogContext.CHAT_GUIDANCE);
+      // not a real answer; just return an error
+      return {
+        answer: errorMessage,
+        question: eventData.question,
+      };
+    }
+
+    if (!responseData) {
+      const errorMessage = `Unable to get a response from virtual persona engine ('${eventData.engine}') server!`;
       this.logger.error(errorMessage, undefined, LogContext.CHAT_GUIDANCE);
       // not a real answer; just return an error
       return {
@@ -78,16 +107,17 @@ export class VirtualPersonaAdapter {
     }
   }
 
-  public async sendReset(eventData: VirtualPersonaInputBase): Promise<boolean> {
-    const response = this.virtualPersonaClient.send(
+  public async sendReset(
+    eventData: VirtualPersonaEngineAdapterInputBase
+  ): Promise<boolean> {
+    const response = this.virtualPersonaEngineCommunityManager.send(
       { cmd: VirtualPersonaEventType.RESET },
       eventData
     );
 
     try {
-      const responseData = await firstValueFrom<VirtualPersonaBaseResponse>(
-        response
-      );
+      const responseData =
+        await firstValueFrom<VirtualPersonaEngineAdapterBaseResponse>(response);
 
       return responseData.result === successfulResetResponse;
     } catch (err: any) {
@@ -101,17 +131,16 @@ export class VirtualPersonaAdapter {
   }
 
   public async sendIngest(
-    eventData: VirtualPersonaInputBase
+    eventData: VirtualPersonaEngineAdapterInputBase
   ): Promise<boolean> {
-    const response = this.virtualPersonaClient.send(
+    const response = this.virtualPersonaEngineCommunityManager.send(
       { cmd: VirtualPersonaEventType.INGEST },
       eventData
     );
 
     try {
-      const responseData = await firstValueFrom<VirtualPersonaBaseResponse>(
-        response
-      );
+      const responseData =
+        await firstValueFrom<VirtualPersonaEngineAdapterBaseResponse>(response);
       return responseData.result === successfulIngestionResponse;
     } catch (err: any) {
       this.logger.error(

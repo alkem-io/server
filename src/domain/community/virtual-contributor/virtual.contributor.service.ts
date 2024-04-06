@@ -23,7 +23,7 @@ import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { CreateVirtualContributorInput as CreateVirtualContributorInput } from './dto/virtual.contributor.dto.create';
-import { UpdateVirtualInput as UpdateVirtualContributorInput } from './dto/virtual.contributor.dto.update';
+import { UpdateVirtualContributorInput as UpdateVirtualContributorInput } from './dto/virtual.contributor.dto.update';
 import { DeleteVirtualContributorInput as DeleteVirtualContributorInput } from './dto/virtual.contributor.dto.delete';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 
@@ -58,7 +58,7 @@ export class VirtualContributorService {
       await this.storageAggregatorService.createStorageAggregator();
     virtual.profile = await this.profileService.createProfile(
       virtualContributorData.profileData,
-      ProfileType.ORGANIZATION,
+      ProfileType.VIRTUAL_CONTRIBUTOR,
       virtual.storageAggregator
     );
     await this.profileService.addTagsetOnProfile(virtual.profile, {
@@ -87,13 +87,13 @@ export class VirtualContributorService {
       parentDisplayID: `virtual-${virtual.nameID}`,
     });
 
-    const savedOrg = await this.virtualContributorRepository.save(virtual);
+    const savedVC = await this.virtualContributorRepository.save(virtual);
     this.logger.verbose?.(
       `Created new virtual with id ${virtual.id}`,
       LogContext.COMMUNITY
     );
 
-    return savedOrg;
+    return savedVC;
   }
 
   async checkNameIdOrFail(nameID: string) {
@@ -165,10 +165,6 @@ export class VirtualContributorService {
         await this.checkNameIdOrFail(virtualContributorData.nameID);
         virtual.nameID = virtualContributorData.nameID;
       }
-    }
-
-    if (virtualContributorData.prompt !== undefined) {
-      virtual.prompt = virtualContributorData.prompt;
     }
 
     return await this.virtualContributorRepository.save(virtual);
