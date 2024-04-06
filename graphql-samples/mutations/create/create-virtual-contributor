@@ -1,18 +1,15 @@
 mutation createVirtualContributor($virtualContributorData: CreateVirtualContributorInput!) {
   createVirtualContributor(virtualContributorData: $virtualContributorData ) {
     id
-    prompt
   }
 }
 
-
 {
   "virtualContributorData": {
-    "prompt": "my super prompt",
-    "nameID": "virtual1",
+    "virtualPersonaID": "412daca4-c745-4d10-828f-3eac1073431c",
+    "nameID": "virtual-cont",
     "profileData": {
-      "displayName": "virtual 11"
-    },
-    "type": "COMMUNITY_MANAGER"
+      "displayName": "virtual contributor 11"
+    }
   }
 }

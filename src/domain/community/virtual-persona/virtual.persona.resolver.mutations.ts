@@ -41,7 +41,7 @@ export class VirtualPersonaResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       authorizationPolicy,
-      AuthorizationPrivilege.CREATE_ORGANIZATION,
+      AuthorizationPrivilege.PLATFORM_ADMIN,
       `create Virtual persona: ${virtualPersonaData.engine}`
     );
     const virtual = await this.virtualPersonaService.createVirtualPersona(
