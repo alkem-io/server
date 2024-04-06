@@ -4,6 +4,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { firstValueFrom } from 'rxjs';
 import {
   VIRTUAL_PERSONA_ENGINE_ALKEMIO_DIGILEEFOMGEVING,
+  VIRTUAL_PERSONA_ENGINE_CHAT_GUIDANCE,
   VIRTUAL_PERSONA_ENGINE_COMMUNITY_MANAGER,
 } from '@common/constants';
 import { Source } from '../chat-guidance-adapter/source.type';
@@ -31,6 +32,8 @@ export class VirtualPersonaEngineAdapter {
     private virtualPersonaEngineCommunityManager: ClientProxy,
     @Inject(VIRTUAL_PERSONA_ENGINE_ALKEMIO_DIGILEEFOMGEVING)
     private virtualPersonaEngineAlkemioDigileefomgeving: ClientProxy,
+    @Inject(VIRTUAL_PERSONA_ENGINE_CHAT_GUIDANCE)
+    private virtualPersonaEngineChatGuidance: ClientProxy,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -57,6 +60,14 @@ export class VirtualPersonaEngineAdapter {
               VirtualPersonaEngineAdapterQueryInput
             >({ cmd: VirtualPersonaEventType.QUERY }, eventData);
           responseData = await firstValueFrom(responseAlkemioDigileefomgeving);
+          break;
+        case VirtualPersonaEngine.GUIDANCE:
+          const responseChatGuidance =
+            this.virtualPersonaEngineChatGuidance.send<
+              VirtualPersonaEngineAdapterQueryResponse,
+              VirtualPersonaEngineAdapterQueryInput
+            >({ cmd: VirtualPersonaEventType.QUERY }, eventData);
+          responseData = await firstValueFrom(responseChatGuidance);
           break;
       }
     } catch (e) {
