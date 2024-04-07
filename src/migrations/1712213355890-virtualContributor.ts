@@ -1,4 +1,5 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
+import { randomUUID } from 'crypto';
 
 export class virtual1712213355890 implements MigrationInterface {
   name = 'virtual1712213355890';
@@ -60,6 +61,22 @@ export class virtual1712213355890 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE \`virtual_persona\` ADD CONSTRAINT \`FK_a6a9c0a62d17b6737eeb90b7903\` FOREIGN KEY (\`storageAggregatorId\`) REFERENCES \`storage_aggregator\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
+    // Update all the licenses to add a feature flag for the usage of virtual contributors in a space
+    const licenses: {
+      id: string;
+    }[] = await queryRunner.query(`SELECT id FROM license`);
+
+    for (const license of licenses) {
+      const featureFlagUUID = randomUUID();
+      await queryRunner.query(
+        `INSERT INTO feature_flag (id, version, licenseId, name, enabled) VALUES
+                      ('${featureFlagUUID}',
+                      1,
+                      '${license.id}',
+                      'virtual-contributors',
+                      0)`
+      );
+    }
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {}

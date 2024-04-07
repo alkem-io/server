@@ -22,8 +22,15 @@ import { ICallout } from '@domain/collaboration/callout';
 import { ActivityInputCalloutDiscussionComment } from '@services/adapters/activity-adapter/dto/activity.dto.input.callout.discussion.comment';
 import { NotificationInputCommentReply } from '@services/adapters/notification-adapter/dto/notification.dto.input.comment.reply';
 import { IProfile } from '@domain/common/profile';
-import { Mention } from '../messaging/mention.interface';
+import { Mention, MentionedEntityType } from '../messaging/mention.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { LogContext } from '@common/enums/logging.context';
+import { VirtualPersonaService } from '@domain/community/virtual-persona/virtual.persona.service';
+import { VirtualPersonaQuestionInput } from '@domain/community/virtual-persona/dto/virtual.persona.question.dto.input';
+import { MutationType } from '@common/enums/subscriptions/mutation.type';
+import { RoomSendMessageInput } from './dto/room.dto.send.message';
+import { SubscriptionPublishService } from '@services/subscriptions/subscription-service/subscription.publish.service';
+import { RoomService } from './room.service';
 
 @Injectable()
 export class RoomServiceEvents {
@@ -32,9 +39,62 @@ export class RoomServiceEvents {
     private contributionReporter: ContributionReporterService,
     private notificationAdapter: NotificationAdapter,
     private communityResolverService: CommunityResolverService,
+    private roomService: RoomService,
+    private subscriptionPublishService: SubscriptionPublishService,
+    private virtualPersonaService: VirtualPersonaService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
+
+  public async processVirtualContributorMentions(
+    mentions: Mention[],
+    question: string,
+    agentInfo: AgentInfo,
+    room: IRoom
+  ) {
+    for (const mention of mentions) {
+      if (mention.type === MentionedEntityType.VIRTUAL_CONTRIBUTOR) {
+        this.logger.warn(
+          `got mention for VC: ${mention.nameId}`,
+          LogContext.COMMUNICATION
+        );
+
+        const virtualPersona =
+          await this.virtualPersonaService.getVirtualPersonaOrFail(
+            mention.nameId
+          );
+        const chatData: VirtualPersonaQuestionInput = {
+          virtualPersonaID: virtualPersona.id,
+          question: question,
+        };
+
+        const result = await this.virtualPersonaService.askQuestion(
+          chatData,
+          agentInfo
+        );
+        const answer = result.answer;
+        this.logger.warn(
+          `got answer for VC: ${answer}`,
+          LogContext.COMMUNICATION
+        );
+        const answerData: RoomSendMessageInput = {
+          message: answer,
+          roomID: room.id,
+        };
+        const answerMessage = await this.roomService.sendMessage(
+          room,
+          agentInfo.communicationID,
+          answerData
+        );
+
+        this.subscriptionPublishService.publishRoomEvent(
+          room.id,
+          MutationType.CREATE,
+          answerMessage
+        );
+      }
+    }
+  }
 
   public processNotificationMentions(
     parentEntityId: string,
