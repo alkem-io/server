@@ -22,9 +22,8 @@ import { ICallout } from '@domain/collaboration/callout';
 import { ActivityInputCalloutDiscussionComment } from '@services/adapters/activity-adapter/dto/activity.dto.input.callout.discussion.comment';
 import { NotificationInputCommentReply } from '@services/adapters/notification-adapter/dto/notification.dto.input.comment.reply';
 import { IProfile } from '@domain/common/profile';
-import { MentionedEntityType } from '../messaging/mention.interface';
+import { Mention } from '../messaging/mention.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { LogContext } from '@common/enums';
 
 @Injectable()
 export class RoomServiceEvents {
@@ -44,7 +43,7 @@ export class RoomServiceEvents {
     room: IRoom,
     message: IMessage,
     agentInfo: AgentInfo
-  ) {
+  ): Mention[] {
     const mentions = getMentionsFromText(message.message);
     const entityMentionsNotificationInput: NotificationInputEntityMentions = {
       triggeredBy: agentInfo.userID,
@@ -59,14 +58,7 @@ export class RoomServiceEvents {
       commentType: room.type as RoomType,
     };
     this.notificationAdapter.entityMentions(entityMentionsNotificationInput);
-    for (const mention of mentions) {
-      if (mention.type === MentionedEntityType.VIRTUAL_CONTRIBUTOR) {
-        this.logger.warn(
-          `got mention for VC: ${mention.nameId}`,
-          LogContext.COMMUNICATION
-        );
-      }
-    }
+    return mentions;
   }
 
   public async processNotificationCommentReply(

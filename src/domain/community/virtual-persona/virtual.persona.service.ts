@@ -135,6 +135,12 @@ export class VirtualPersonaService {
         ...options,
         where: { ...options?.where, id: virtualPersonaID },
       });
+    } else {
+      // look up based on nameID
+      virtualPersona = await this.virtualPersonaRepository.findOne({
+        ...options,
+        where: { ...options?.where, nameID: virtualPersonaID },
+      });
     }
     return virtualPersona;
   }

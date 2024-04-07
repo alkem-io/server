@@ -27,6 +27,9 @@ import { IMessageReaction } from '../message.reaction/message.reaction.interface
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
 import { MutationType } from '@common/enums/subscriptions';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { MentionedEntityType } from '../messaging/mention.interface';
+import { VirtualPersonaService } from '@domain/community/virtual-persona/virtual.persona.service';
+import { VirtualPersonaQuestionInput } from '@domain/community/virtual-persona/dto/virtual.persona.question.dto.input';
 
 @Resolver()
 export class RoomResolverMutations {
@@ -37,6 +40,7 @@ export class RoomResolverMutations {
     private roomAuthorizationService: RoomAuthorizationService,
     private roomServiceEvents: RoomServiceEvents,
     private subscriptionPublishService: SubscriptionPublishService,
+    private virtualPersonaService: VirtualPersonaService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -96,7 +100,7 @@ export class RoomResolverMutations {
           messageData.roomID
         );
 
-        this.roomServiceEvents.processNotificationMentions(
+        const mentions = this.roomServiceEvents.processNotificationMentions(
           post.id,
           post.nameID,
           post.profile,
@@ -104,6 +108,48 @@ export class RoomResolverMutations {
           message,
           agentInfo
         );
+        for (const mention of mentions) {
+          if (mention.type === MentionedEntityType.VIRTUAL_CONTRIBUTOR) {
+            this.logger.warn(
+              `got mention for VC: ${mention.nameId}`,
+              LogContext.COMMUNICATION
+            );
+
+            const virtualPersona =
+              await this.virtualPersonaService.getVirtualPersonaOrFail(
+                mention.nameId
+              );
+            const chatData: VirtualPersonaQuestionInput = {
+              virtualPersonaID: virtualPersona.id,
+              question: message.message,
+            };
+
+            const result = await this.virtualPersonaService.askQuestion(
+              chatData,
+              agentInfo
+            );
+            const answer = result.answer;
+            this.logger.warn(
+              `got answer for VC: ${answer}`,
+              LogContext.COMMUNICATION
+            );
+            const answerData: RoomSendMessageInput = {
+              message: answer,
+              roomID: messageData.roomID,
+            };
+            const answerMessage = await this.roomService.sendMessage(
+              room,
+              agentInfo.communicationID,
+              answerData
+            );
+
+            this.subscriptionPublishService.publishRoomEvent(
+              room.id,
+              MutationType.CREATE,
+              answerMessage
+            );
+          }
+        }
         if (post.createdBy !== agentInfo.userID) {
           this.roomServiceEvents.processNotificationPostComment(
             post,

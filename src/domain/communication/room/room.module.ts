@@ -17,6 +17,7 @@ import { Room } from './room.entity';
 import { RoomServiceEvents } from './room.service.events';
 import { RoomEventResolverSubscription } from './room.event.resolver.subscription';
 import { SubscriptionServiceModule } from '@services/subscriptions/subscription-service';
+import { VirtualPersonaModule } from '@domain/community/virtual-persona/virtual.persona.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { SubscriptionServiceModule } from '@services/subscriptions/subscription-
     RoomModule,
     CommunicationAdapterModule,
     MessagingModule,
+    VirtualPersonaModule,
     TypeOrmModule.forFeature([Room]),
     SubscriptionServiceModule,
   ],
