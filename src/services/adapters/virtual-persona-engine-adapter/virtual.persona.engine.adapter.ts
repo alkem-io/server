@@ -45,7 +45,7 @@ export class VirtualPersonaEngineAdapter {
 
     try {
       switch (eventData.engine) {
-        case VirtualPersonaEngine.COMMUNITY_MANGER:
+        case VirtualPersonaEngine.COMMUNITY_MANAGER:
           const responseCommunityManager =
             this.virtualPersonaEngineCommunityManager.send<
               VirtualPersonaEngineAdapterQueryResponse,
