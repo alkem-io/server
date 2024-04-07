@@ -162,15 +162,15 @@ services:
     volumes:
       - alkemio_dev_postgres:/var/lib/postgresql/data
 
-  synapse-admin:
-    container_name: alkemio_dev_synapse_admin
-    hostname: synapse-admin
-    image: awesometechnologies/synapse-admin:0.8.1
-    restart: always
-    networks:
-      - alkemio_dev_net
-    ports:
-      - 80
+  # synapse-admin:
+  #   container_name: alkemio_dev_synapse_admin
+  #   hostname: synapse-admin
+  #   image: awesometechnologies/synapse-admin:0.8.1
+  #   restart: always
+  #   networks:
+  #     - alkemio_dev_net
+  #   ports:
+  #     - 80
 
   rabbitmq:
     container_name: alkemio_dev_rabbitmq
@@ -305,23 +305,23 @@ services:
   #     - LANGCHAIN_ENDPOINT
   #     - LANGCHAIN_API_KEY
   #     - LANGCHAIN_PROJECT
-  community-manager:
-    container_name: alkemio_dev_community_manager
-    hostname: community-manager
-    # image: alkemio/guidance-engine:v0.6.1
-    build:
-      context: '../community-manager-engine'
-      dockerfile: ../community-manager-engine/Dockerfile
-    platform: linux/x86_64
-    restart: always
-    volumes:
-       - /dev/shm:/dev/shm
-       - ~/alkemio/data:${AI_LOCAL_PATH:-/home/alkemio/data}
-    networks:
-      - alkemio_dev_net
-    depends_on:
-      rabbitmq:
-        condition: "service_healthy"
+  # community-manager:
+  #   container_name: alkemio_dev_community_manager
+  #   hostname: community-manager
+  #   # image: alkemio/guidance-engine:v0.6.1
+  #   build:
+  #     context: '../community-manager-engine'
+  #     dockerfile: ../community-manager-engine/Dockerfile
+  #   platform: linux/x86_64
+  #   restart: always
+  #   volumes:
+  #      - /dev/shm:/dev/shm
+  #      - ~/alkemio/data:${AI_LOCAL_PATH:-/home/alkemio/data}
+  #   networks:
+  #     - alkemio_dev_net
+  #   depends_on:
+  #     rabbitmq:
+  #       condition: "service_healthy"
 
   virtual_contributor:
     container_name: alkemio_dev_virtual_contributor
