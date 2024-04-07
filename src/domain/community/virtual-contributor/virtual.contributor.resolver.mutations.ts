@@ -13,7 +13,7 @@ import { IVirtualContributor } from './virtual.contributor.interface';
 import {
   CreateVirtualContributorInput as CreateVirtualContributorInput,
   DeleteVirtualContributorInput,
-  UpdateVirtualInput,
+  UpdateVirtualContributorInput,
 } from './dto';
 
 @Resolver(() => IVirtualContributor)
@@ -60,7 +60,8 @@ export class VirtualContributorResolverMutations {
   @Profiling.api
   async updateVirtualContributor(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('virtualContributorData') virtualContributorData: UpdateVirtualInput
+    @Args('virtualContributorData')
+    virtualContributorData: UpdateVirtualContributorInput
   ): Promise<IVirtualContributor> {
     const virtual = await this.virtualService.getVirtualContributorOrFail(
       virtualContributorData.ID
@@ -109,7 +110,7 @@ export class VirtualContributorResolverMutations {
     authorizationResetData: VirtualContributorAuthorizationResetInput
   ): Promise<IVirtualContributor> {
     const virtual = await this.virtualService.getVirtualContributorOrFail(
-      authorizationResetData.virtualID,
+      authorizationResetData.virtualContributorID,
       {
         relations: {
           profile: {
@@ -122,7 +123,7 @@ export class VirtualContributorResolverMutations {
       agentInfo,
       virtual.authorization,
       AuthorizationPrivilege.AUTHORIZATION_RESET,
-      `reset authorization definition on VirtualContributor: ${authorizationResetData.virtualID}`
+      `reset authorization definition on VirtualContributor: ${authorizationResetData.virtualContributorID}`
     );
     return await this.virtualAuthorizationService.applyAuthorizationPolicy(
       virtual

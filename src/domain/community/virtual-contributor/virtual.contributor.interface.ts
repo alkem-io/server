@@ -1,17 +1,11 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IContributor } from '../contributor/contributor.interface';
-import { VirtualPersonaType } from '@services/adapters/virtual-persona-adapter/virtual.persona.type';
+import { IVirtualPersona } from '../virtual-persona';
 
 @ObjectType('VirtualContributor')
 export class IVirtualContributor extends IContributor {
-  @Field(() => String, {
-    nullable: true,
-    description: 'The prompt being used by this Virtual',
+  @Field(() => IVirtualPersona, {
+    description: 'The virtual persona being used by this virtual contributor',
   })
-  prompt!: string;
-
-  @Field(() => VirtualPersonaType, {
-    description: 'The VirtualContributor Persona type',
-  })
-  type!: VirtualPersonaType;
+  virtualPersona!: IVirtualPersona;
 }

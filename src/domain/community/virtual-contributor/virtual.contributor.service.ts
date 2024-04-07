@@ -23,9 +23,10 @@ import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { CreateVirtualContributorInput as CreateVirtualContributorInput } from './dto/virtual.contributor.dto.create';
-import { UpdateVirtualInput as UpdateVirtualContributorInput } from './dto/virtual.contributor.dto.update';
+import { UpdateVirtualContributorInput as UpdateVirtualContributorInput } from './dto/virtual.contributor.dto.update';
 import { DeleteVirtualContributorInput as DeleteVirtualContributorInput } from './dto/virtual.contributor.dto.delete';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
+import { VirtualPersonaService } from '../virtual-persona/virtual.persona.service';
 
 @Injectable()
 export class VirtualContributorService {
@@ -34,6 +35,7 @@ export class VirtualContributorService {
     private agentService: AgentService,
     private profileService: ProfileService,
     private storageAggregatorService: StorageAggregatorService,
+    private virtualPersonaService: VirtualPersonaService,
     @InjectRepository(VirtualContributor)
     private virtualContributorRepository: Repository<VirtualContributor>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -49,23 +51,28 @@ export class VirtualContributorService {
       virtualContributorData.profileData?.displayName
     );
 
-    const virtual: IVirtualContributor = VirtualContributor.create(
+    const virtualContributor: IVirtualContributor = VirtualContributor.create(
       virtualContributorData
     );
-    virtual.authorization = new AuthorizationPolicy();
+    virtualContributor.authorization = new AuthorizationPolicy();
+    const virtualPersona =
+      await this.virtualPersonaService.getVirtualPersonaOrFail(
+        virtualContributorData.virtualPersonaID
+      );
+    virtualContributor.virtualPersona = virtualPersona;
 
-    virtual.storageAggregator =
+    virtualContributor.storageAggregator =
       await this.storageAggregatorService.createStorageAggregator();
-    virtual.profile = await this.profileService.createProfile(
+    virtualContributor.profile = await this.profileService.createProfile(
       virtualContributorData.profileData,
-      ProfileType.ORGANIZATION,
-      virtual.storageAggregator
+      ProfileType.VIRTUAL_CONTRIBUTOR,
+      virtualContributor.storageAggregator
     );
-    await this.profileService.addTagsetOnProfile(virtual.profile, {
+    await this.profileService.addTagsetOnProfile(virtualContributor.profile, {
       name: TagsetReservedName.KEYWORDS,
       tags: [],
     });
-    await this.profileService.addTagsetOnProfile(virtual.profile, {
+    await this.profileService.addTagsetOnProfile(virtualContributor.profile, {
       name: TagsetReservedName.CAPABILITIES,
       tags: [],
     });
@@ -73,27 +80,29 @@ export class VirtualContributorService {
     let avatarURL = virtualContributorData.profileData?.avatarURL;
     if (!avatarURL) {
       avatarURL = this.profileService.generateRandomAvatar(
-        virtual.profile.displayName,
+        virtualContributor.profile.displayName,
         ''
       );
     }
     await this.profileService.addVisualOnProfile(
-      virtual.profile,
+      virtualContributor.profile,
       VisualType.AVATAR,
       avatarURL
     );
 
-    virtual.agent = await this.agentService.createAgent({
-      parentDisplayID: `virtual-${virtual.nameID}`,
+    virtualContributor.agent = await this.agentService.createAgent({
+      parentDisplayID: `virtual-${virtualContributor.nameID}`,
     });
 
-    const savedOrg = await this.virtualContributorRepository.save(virtual);
+    const savedVC = await this.virtualContributorRepository.save(
+      virtualContributor
+    );
     this.logger.verbose?.(
-      `Created new virtual with id ${virtual.id}`,
+      `Created new virtual with id ${virtualContributor.id}`,
       LogContext.COMMUNITY
     );
 
-    return savedOrg;
+    return savedVC;
   }
 
   async checkNameIdOrFail(nameID: string) {
@@ -165,10 +174,6 @@ export class VirtualContributorService {
         await this.checkNameIdOrFail(virtualContributorData.nameID);
         virtual.nameID = virtualContributorData.nameID;
       }
-    }
-
-    if (virtualContributorData.prompt !== undefined) {
-      virtual.prompt = virtualContributorData.prompt;
     }
 
     return await this.virtualContributorRepository.save(virtual);

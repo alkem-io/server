@@ -26,7 +26,7 @@ import { IVirtualContributor } from './virtual.contributor.interface';
 import { VirtualStorageAggregatorLoaderCreator } from '@core/dataloader/creators/loader.creators/community/virtual.storage.aggregator.loader.creator';
 
 @Resolver(() => IVirtualContributor)
-export class VirtualResolverFields {
+export class VirtualContributorResolverFields {
   constructor(
     private authorizationService: AuthorizationService,
     private virtualService: VirtualContributorService

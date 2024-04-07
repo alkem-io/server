@@ -1,18 +1,20 @@
-import { Column, Entity } from 'typeorm';
+import { Entity, JoinColumn, OneToOne } from 'typeorm';
 import { IVirtualContributor } from './virtual.contributor.interface';
 import { Contributor } from '../contributor/contributor.entity';
-import { VirtualPersonaType } from '@services/adapters/virtual-persona-adapter/virtual.persona.type';
+import { VirtualPersona } from '../virtual-persona';
 
 @Entity()
 export class VirtualContributor
   extends Contributor
   implements IVirtualContributor
 {
-  @Column()
-  prompt!: string;
-
-  @Column('text', { nullable: false })
-  type!: VirtualPersonaType;
+  @OneToOne(() => VirtualPersona, {
+    eager: true,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  virtualPersona!: VirtualPersona;
 
   constructor() {
     super();

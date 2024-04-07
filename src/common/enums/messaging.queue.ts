@@ -1,6 +1,7 @@
 export enum MessagingQueue {
-  CHAT_GUIDANCE = 'alkemio-chat-guidance',
-  VIRTUAL_PERSONA = 'alkemio-virtual-persona',
+  VIRTUAL_PERSONA_ENGINE_CHAT_GUIDANCE = 'alkemio-chat-guidance',
+  VIRTUAL_PERSONA_ENGINE_COMMUNITY_MANAGER = 'virtual-persona-engine-community-manager',
+  VIRTUAL_PERSONA_ENGINE_ALKEMIO_DIGILEEFOMGEVING = 'virtual-persona-engine-alkemio-digileefomgeving',
   WALLET_MANAGER = 'alkemio-wallet-manager',
   NOTIFICATIONS = 'alkemio-notifications',
   MATRIX_ADAPTER = 'alkemio-matrix-adapter',

@@ -70,7 +70,7 @@ import { ContributionMoveModule } from '@domain/collaboration/callout-contributi
 import { TaskGraphqlModule } from '@domain/task/task.module';
 import { ActivityFeedModule } from '@domain/activity-feed';
 import { AdminSearchIngestModule } from '@platform/admin/search/admin.search.ingest.module';
-import { VirtualPersonaModule } from '@services/api/virtual-persona/virtual.persona.module';
+import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
 
 @Module({
   imports: [
@@ -247,7 +247,7 @@ import { VirtualPersonaModule } from '@services/api/virtual-persona/virtual.pers
     MeModule,
     ExcalidrawServerModule,
     ChatGuidanceModule,
-    VirtualPersonaModule,
+    VirtualContributorModule,
     LookupModule,
     AuthResetSubscriberModule,
     TaskGraphqlModule,
