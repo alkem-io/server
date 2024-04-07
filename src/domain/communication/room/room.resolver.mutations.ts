@@ -100,7 +100,7 @@ export class RoomResolverMutations {
           messageData.roomID
         );
 
-        const mentions = this.roomServiceEvents.processNotificationMentions(
+        this.roomServiceEvents.processNotificationMentions(
           post.id,
           post.nameID,
           post.profile,
@@ -108,48 +108,7 @@ export class RoomResolverMutations {
           message,
           agentInfo
         );
-        for (const mention of mentions) {
-          if (mention.type === MentionedEntityType.VIRTUAL_CONTRIBUTOR) {
-            this.logger.warn(
-              `got mention for VC: ${mention.nameId}`,
-              LogContext.COMMUNICATION
-            );
 
-            const virtualPersona =
-              await this.virtualPersonaService.getVirtualPersonaOrFail(
-                mention.nameId
-              );
-            const chatData: VirtualPersonaQuestionInput = {
-              virtualPersonaID: virtualPersona.id,
-              question: message.message,
-            };
-
-            const result = await this.virtualPersonaService.askQuestion(
-              chatData,
-              agentInfo
-            );
-            const answer = result.answer;
-            this.logger.warn(
-              `got answer for VC: ${answer}`,
-              LogContext.COMMUNICATION
-            );
-            const answerData: RoomSendMessageInput = {
-              message: answer,
-              roomID: messageData.roomID,
-            };
-            const answerMessage = await this.roomService.sendMessage(
-              room,
-              agentInfo.communicationID,
-              answerData
-            );
-
-            this.subscriptionPublishService.publishRoomEvent(
-              room.id,
-              MutationType.CREATE,
-              answerMessage
-            );
-          }
-        }
         if (post.createdBy !== agentInfo.userID) {
           this.roomServiceEvents.processNotificationPostComment(
             post,
@@ -228,7 +187,7 @@ export class RoomResolverMutations {
         );
 
         // Mentions notificaitons should be sent regardless of callout visibility per client-web#5557
-        this.roomServiceEvents.processNotificationMentions(
+        const mentions = this.roomServiceEvents.processNotificationMentions(
           callout.id,
           callout.nameID,
           callout.framing.profile,
@@ -236,6 +195,48 @@ export class RoomResolverMutations {
           message,
           agentInfo
         );
+        for (const mention of mentions) {
+          if (mention.type === MentionedEntityType.VIRTUAL_CONTRIBUTOR) {
+            this.logger.warn(
+              `got mention for VC: ${mention.nameId}`,
+              LogContext.COMMUNICATION
+            );
+
+            const virtualPersona =
+              await this.virtualPersonaService.getVirtualPersonaOrFail(
+                mention.nameId
+              );
+            const chatData: VirtualPersonaQuestionInput = {
+              virtualPersonaID: virtualPersona.id,
+              question: message.message,
+            };
+
+            const result = await this.virtualPersonaService.askQuestion(
+              chatData,
+              agentInfo
+            );
+            const answer = result.answer;
+            this.logger.warn(
+              `got answer for VC: ${answer}`,
+              LogContext.COMMUNICATION
+            );
+            const answerData: RoomSendMessageInput = {
+              message: answer,
+              roomID: messageData.roomID,
+            };
+            const answerMessage = await this.roomService.sendMessage(
+              room,
+              agentInfo.communicationID,
+              answerData
+            );
+
+            this.subscriptionPublishService.publishRoomEvent(
+              room.id,
+              MutationType.CREATE,
+              answerMessage
+            );
+          }
+        }
 
         if (callout.visibility === CalloutVisibility.PUBLISHED) {
           this.roomServiceEvents.processActivityCalloutCommentCreated(
