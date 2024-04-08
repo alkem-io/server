@@ -31,6 +31,7 @@ import { MutationType } from '@common/enums/subscriptions/mutation.type';
 import { RoomSendMessageInput } from './dto/room.dto.send.message';
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service/subscription.publish.service';
 import { RoomService } from './room.service';
+import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
 
 @Injectable()
 export class RoomServiceEvents {
@@ -42,6 +43,7 @@ export class RoomServiceEvents {
     private roomService: RoomService,
     private subscriptionPublishService: SubscriptionPublishService,
     private virtualPersonaService: VirtualPersonaService,
+    private virtualContributorService: VirtualContributorService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -59,10 +61,24 @@ export class RoomServiceEvents {
           LogContext.COMMUNICATION
         );
 
-        const virtualPersona =
-          await this.virtualPersonaService.getVirtualPersonaOrFail(
-            mention.nameId
+        const virtualContributor =
+          await this.virtualContributorService.getVirtualContributor(
+            mention.nameId,
+            {
+              relations: {
+                virtualPersona: true,
+              },
+            }
           );
+
+        const virtualPersona = virtualContributor?.virtualPersona;
+
+        if (!virtualPersona) {
+          throw new Error(
+            `VirtualPersona not loaded for VirtualContributor ${virtualContributor?.nameID}`
+          );
+        }
+
         const chatData: VirtualPersonaQuestionInput = {
           virtualPersonaID: virtualPersona.id,
           question: question,
