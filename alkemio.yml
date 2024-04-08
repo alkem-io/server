@@ -80,6 +80,18 @@ security:
 innovation_hub:
   header: ${INNOVATION_HUB_HEADER}:origin
 
+search:
+  # use the new search implementation; alternatively it will use the original mysql search implementation
+  use_new: ${SEARCH_USE_NEW}:true
+  # max results per search
+  max_results: ${SEARCH_MAX_RESULTS}:25
+  # the index pattern used when ingesting data, e.g. alkemio-data-[organization];
+  # The dash at the end is MANDATORY
+  index_pattern: ${SEARCH_INDEX_PATTERN}:alkemio-data-
+  # add a prefix to the index pattern; useful when you want to ingest data for multiple users, e.g. sve-alkemio-data-organization
+  # !!! a good practice is to add a dash at the END of the prefix
+  index_pattern_prefix: ${SEARCH_INDEX_PATTERN_PREFIX}
+
 ## identity ##
 
 # Defines all authentication and authorization configuration.
@@ -293,16 +305,6 @@ storage:
     # Flag setting whether MySQL operations should be logged to the console.
     logging: ${ENABLE_ORM_LOGGING}:false
 
-  # IPFS (https://ipfs.io/) configuration.
-  ipfs:
-    # IPFS API endpoint. The name that the server uses for access IPFS for uploads.
-    endpoint: ${IPFS_ENDPOINT}:http://localhost:5001
-
-    # IPFS http proxy endpoint. Exposed through traefik (or any ingress / reverse proxy of choice).
-    client_endpoint: ${IPFS_CLIENT_ENDPOINT}:http://localhost:3000/ipfs
-    # Timeout to abort the request after a fixed time, in milliseconds.
-    timeout: ${IPFS_TIMEOUT}:15000
-
   local_storage:
     # Absolute path
     path: ${LOCAL_STORAGE_PATH}:.storage
@@ -374,7 +376,6 @@ collaboration:
     collaborator_mode_timeout: ${WHITEBOARD_COLLABORATOR_MODE_TIMEOUT}:1800
     # number of simultaneous collaborators
     max_collaborators_in_room: ${WHITEBOARD_MAX_COLLABORATORS_IN_ROOM}:20
-
 
 ## Configuration of the legal / usability aspects of the platform
 platform:

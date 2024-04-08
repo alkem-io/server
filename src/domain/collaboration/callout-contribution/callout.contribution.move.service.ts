@@ -8,10 +8,10 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Callout } from '../callout';
-import { ContributionResolverService } from '@services/infrastructure/entity-resolver/contribution.resolver.service';
 import { CalloutContribution } from './callout.contribution.entity';
 import { CalloutContributionService } from './callout.contribution.service';
 import { ICalloutContribution } from './callout.contribution.interface';
+import { UrlGeneratorService } from '@services/infrastructure/url-generator';
 
 @Injectable()
 export class CalloutContributionMoveService {
@@ -20,8 +20,8 @@ export class CalloutContributionMoveService {
     private calloutRepository: Repository<Callout>,
     @InjectRepository(CalloutContribution)
     private calloutContributionRepository: Repository<CalloutContribution>,
-    private contributionResolverService: ContributionResolverService,
-    private calloutContributionService: CalloutContributionService
+    private calloutContributionService: CalloutContributionService,
+    private urlGeneratorService: UrlGeneratorService
   ) {}
 
   public async moveContributionToCallout(
@@ -35,6 +35,12 @@ export class CalloutContributionMoveService {
           relations: {
             callout: {
               collaboration: true,
+            },
+            post: {
+              profile: true,
+            },
+            whiteboard: {
+              profile: true,
             },
           },
         }
@@ -88,6 +94,17 @@ export class CalloutContributionMoveService {
     }
 
     contribution.callout = targetCallout;
+
+    if (contribution?.post?.profile.id) {
+      await this.urlGeneratorService.revokeUrlCache(
+        contribution?.post?.profile.id
+      );
+    }
+    if (contribution?.whiteboard?.profile.id) {
+      await this.urlGeneratorService.revokeUrlCache(
+        contribution?.whiteboard?.profile.id
+      );
+    }
 
     return await this.calloutContributionRepository.save(contribution);
   }

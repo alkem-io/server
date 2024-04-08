@@ -20,6 +20,7 @@ export enum ProfileType {
   INNOVATION_FLOW_TEMPLATE = 'innovation-flow-template',
   POST_TEMPLATE = 'post-template',
   WHITEBOARD_TEMPLATE = 'whiteboard-template',
+  COMMUNITY_GUIDELINES = 'community-guidelines',
 }
 
 registerEnumType(ProfileType, {

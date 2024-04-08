@@ -57,6 +57,7 @@ import { MessageReactionModule } from '@domain/communication/message.reaction/me
 import {
   HttpExceptionFilter,
   GraphqlExceptionFilter,
+  UnhandledExceptionFilter,
 } from '@core/error-handling';
 import { MeModule } from '@services/api/me';
 import { ExcalidrawServerModule } from '@services/external/excalidraw-backend';
@@ -68,6 +69,7 @@ import { IpfsLogModule } from '@services/api-rest/ipfs-log/ipfs.log.module';
 import { ContributionMoveModule } from '@domain/collaboration/callout-contribution/callout.contribution.move.module';
 import { TaskGraphqlModule } from '@domain/task/task.module';
 import { ActivityFeedModule } from '@domain/activity-feed';
+import { AdminSearchIngestModule } from '@platform/admin/search/admin.search.ingest.module';
 
 @Module({
   imports: [
@@ -225,6 +227,7 @@ import { ActivityFeedModule } from '@domain/activity-feed';
     RolesModule,
     KonfigModule,
     AdminCommunicationModule,
+    AdminSearchIngestModule,
     AgentModule,
     MessageModule,
     MessageReactionModule,
@@ -265,6 +268,10 @@ import { ActivityFeedModule } from '@domain/activity-feed';
     {
       provide: APP_FILTER,
       useClass: HttpExceptionFilter,
+    },
+    {
+      provide: APP_FILTER,
+      useClass: UnhandledExceptionFilter,
     },
     {
       provide: APP_PIPE,

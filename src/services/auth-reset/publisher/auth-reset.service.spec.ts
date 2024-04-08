@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import {
-  EntityManagerProvider,
+  MockEntityManagerProvider,
   MockAuthResetService,
   MockWinstonProvider,
 } from '@test/mocks';
@@ -16,7 +16,7 @@ describe('AuthResetService', () => {
         AuthResetService,
         MockAuthResetService,
         MockTaskService,
-        EntityManagerProvider,
+        MockEntityManagerProvider,
         MockWinstonProvider,
       ],
     }).compile();

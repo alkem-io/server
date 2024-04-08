@@ -472,10 +472,13 @@ export class CalloutService {
       );
 
     if (contributionData.whiteboard) {
-      this.setNameIdOnWhiteboardData(contributionData.whiteboard, callout);
+      await this.setNameIdOnWhiteboardData(
+        contributionData.whiteboard,
+        callout
+      );
     }
     if (contributionData.post) {
-      this.setNameIdOnPostData(contributionData.post, callout);
+      await this.setNameIdOnPostData(contributionData.post, callout);
     }
 
     const storageAggregator = await this.getStorageAggregator(callout);

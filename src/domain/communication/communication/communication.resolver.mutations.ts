@@ -70,7 +70,7 @@ export class CommunicationResolverMutations {
       await this.authorizationService.grantAccessOrFail(
         agentInfo,
         platformAuthorization,
-        AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
+        AuthorizationPrivilege.PLATFORM_ADMIN,
         `User not authorized to create discussion with ${DiscussionCategory.RELEASES} category.`
       );
     }

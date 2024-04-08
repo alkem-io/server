@@ -3,7 +3,11 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CommunityService } from './community.service';
 import { Community, ICommunity } from '@domain/community/community';
-import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
+import {
+  AuthorizationCredential,
+  AuthorizationPrivilege,
+  LogContext,
+} from '@common/enums';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
@@ -20,6 +24,8 @@ import {
 } from '@common/constants';
 import { InvitationExternalAuthorizationService } from '../invitation.external/invitation.external.service.authorization';
 import { InvitationAuthorizationService } from '../invitation/invitation.service.authorization';
+import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
+import { CommunityGuidelinesAuthorizationService } from '../community-guidelines/community.guidelines.service.authorization';
 
 @Injectable()
 export class CommunityAuthorizationService {
@@ -31,14 +37,45 @@ export class CommunityAuthorizationService {
     private applicationAuthorizationService: ApplicationAuthorizationService,
     private invitationAuthorizationService: InvitationAuthorizationService,
     private invitationExternalAuthorizationService: InvitationExternalAuthorizationService,
+    private communityGuidelinesAuthorizationService: CommunityGuidelinesAuthorizationService,
     @InjectRepository(Community)
     private communityRepository: Repository<Community>
   ) {}
 
   async applyAuthorizationPolicy(
-    community: ICommunity,
+    communityInput: ICommunity,
     parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<ICommunity> {
+    const community = await this.communityService.getCommunityOrFail(
+      communityInput.id,
+      {
+        relations: {
+          communication: {
+            updates: true,
+          },
+          policy: true,
+          groups: true,
+          applications: true,
+          invitations: true,
+          externalInvitations: true,
+          guidelines: true,
+        },
+      }
+    );
+    if (
+      !community.communication ||
+      !community.communication.updates ||
+      !community.policy ||
+      !community.groups ||
+      !community.applications ||
+      !community.invitations ||
+      !community.externalInvitations
+    ) {
+      throw new RelationshipNotFoundException(
+        `Unable to load child entities for community authorization: ${community.id} `,
+        LogContext.COMMUNITY
+      );
+    }
     community.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         community.authorization,
@@ -59,21 +96,12 @@ export class CommunityAuthorizationService {
     // always false
     community.authorization.anonymousReadAccess = false;
 
-    // cascade to communication child entity
-    community.communication = await this.communityService.getCommunication(
-      community.id,
-      { communication: { updates: true } }
-    );
-    community.policy = await this.communityService.getCommunityPolicy(
-      community
-    );
     await this.communicationAuthorizationService.applyAuthorizationPolicy(
       community.communication,
       community.authorization
     );
 
     // cascade
-    community.groups = await this.communityService.getUserGroups(community);
     for (const group of community.groups) {
       const savedGroup =
         await this.userGroupAuthorizationService.applyAuthorizationPolicy(
@@ -83,9 +111,6 @@ export class CommunityAuthorizationService {
       group.authorization = savedGroup.authorization;
     }
 
-    community.applications = await this.communityService.getApplications(
-      community
-    );
     for (const application of community.applications) {
       const applicationSaved =
         await this.applicationAuthorizationService.applyAuthorizationPolicy(
@@ -95,9 +120,6 @@ export class CommunityAuthorizationService {
       application.authorization = applicationSaved.authorization;
     }
 
-    community.invitations = await this.communityService.getInvitations(
-      community
-    );
     for (const invitation of community.invitations) {
       const invitationSaved =
         await this.invitationAuthorizationService.applyAuthorizationPolicy(
@@ -107,8 +129,6 @@ export class CommunityAuthorizationService {
       invitation.authorization = invitationSaved.authorization;
     }
 
-    community.externalInvitations =
-      await this.communityService.getExternalInvitations(community);
     for (const externalInvitation of community.externalInvitations) {
       const invitationSaved =
         await this.invitationExternalAuthorizationService.applyAuthorizationPolicy(
@@ -116,6 +136,13 @@ export class CommunityAuthorizationService {
           community.authorization
         );
       externalInvitation.authorization = invitationSaved.authorization;
+    }
+
+    if (community.guidelines) {
+      await this.communityGuidelinesAuthorizationService.applyAuthorizationPolicy(
+        community.guidelines,
+        community.authorization
+      );
     }
 
     return await this.communityRepository.save(community);
