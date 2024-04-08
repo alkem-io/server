@@ -7,7 +7,7 @@ import { InjectEntityManager } from '@nestjs/typeorm';
 import { Client as ElasticClient } from '@elastic/elasticsearch';
 import { ErrorCause } from '@elastic/elasticsearch/lib/api/types';
 import { ELASTICSEARCH_CLIENT_PROVIDER } from '@common/constants';
-import { Space } from '@domain/challenge/space/space.entity';
+import { Space } from '@domain/space/space/space.entity';
 import { Organization } from '@domain/community/organization';
 import { User } from '@domain/community/user';
 import { FindManyOptions } from 'typeorm/find-options/FindManyOptions';

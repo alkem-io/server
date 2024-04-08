@@ -1,4 +1,4 @@
-import { Space } from '@domain/challenge/space/space.entity';
+import { Space } from '@domain/space/space/space.entity';
 import { RolesResultSpace } from '../dto/roles.dto.result.space';
 import { RolesResultCommunity } from '../dto/roles.dto.result.community';
 import { CredentialMap } from './group.credentials.by.entity';

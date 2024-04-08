@@ -2,7 +2,7 @@ import { Inject, UseGuards } from '@nestjs/common';
 import { Resolver, Args, Mutation } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { SpaceService } from './space.service';
-import { UpdateSpaceInput } from '@domain/challenge/space';
+import { UpdateSpaceInput } from '@domain/space/space';
 import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication';
 import { AuthorizationService } from '@core/authorization/authorization.service';

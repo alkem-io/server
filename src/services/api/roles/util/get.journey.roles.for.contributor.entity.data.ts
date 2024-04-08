@@ -1,5 +1,5 @@
 import { EntityManager, EntityTarget, FindManyOptions, In } from 'typeorm';
-import { Space } from '@domain/challenge/space/space.entity';
+import { Space } from '@domain/space/space/space.entity';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { SpaceType } from '@common/enums/space.type';
 

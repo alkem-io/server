@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { UserGroupModule } from '@domain/community/user-group/user-group.module';
 import { UserModule } from '@domain/community/user/user.module';
 import { OrganizationModule } from '@domain/community/organization/organization.module';
-import { SpaceModule } from '@domain/challenge/space/space.module';
+import { SpaceModule } from '@domain/space/space/space.module';
 import { RolesService } from './roles.service';
 import { RolesResolverQueries } from './roles.resolver.queries';
 import { CommunityModule } from '@domain/community/community/community.module';

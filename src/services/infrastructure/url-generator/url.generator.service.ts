@@ -13,11 +13,11 @@ import { InjectEntityManager } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { EntityManager } from 'typeorm';
 import { Cache, CachingConfig } from 'cache-manager';
-import { Space } from '@domain/challenge/space/space.entity';
+import { Space } from '@domain/space/space/space.entity';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { CalloutTemplate } from '@domain/template/callout-template/callout.template.entity';
 import { SpaceType } from '@common/enums/space.type';
-import { ISpace } from '@domain/challenge/space/space.interface';
+import { ISpace } from '@domain/space/space/space.interface';
 
 @Injectable()
 export class UrlGeneratorService {

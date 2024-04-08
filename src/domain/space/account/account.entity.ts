@@ -1,5 +1,5 @@
 import { Entity, JoinColumn, OneToOne } from 'typeorm';
-import { IAccount } from '@domain/challenge/account/account.interface';
+import { IAccount } from '@domain/space/account/account.interface';
 import { TemplatesSet } from '@domain/template/templates-set/templates.set.entity';
 import { License } from '@domain/license/license/license.entity';
 import { SpaceDefaults } from '../space.defaults/space.defaults.entity';

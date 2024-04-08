@@ -1,12 +1,12 @@
 import { AuthorizationPrivilege } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
-import { Account } from '@domain/challenge/account/account.entity';
+import { Account } from '@domain/space/account/account.entity';
 import { IOrganization } from '@domain/community/organization';
 import { UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { AuthorizationAgentPrivilege } from '@src/common/decorators';
-import { AccountService } from '@domain/challenge/account/account.service';
-import { IAccount } from '@domain/challenge/account/account.interface';
+import { AccountService } from '@domain/space/account/account.service';
+import { IAccount } from '@domain/space/account/account.interface';
 import { ITemplatesSet } from '@domain/template/templates-set';
 import { Loader } from '@core/dataloader/decorators';
 import { ILoader } from '@core/dataloader/loader.interface';

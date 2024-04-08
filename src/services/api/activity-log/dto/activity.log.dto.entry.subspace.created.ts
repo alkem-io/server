@@ -1,7 +1,7 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IActivityLogEntryBase } from './activity.log.dto.entry.base.interface';
 import { IActivityLogEntry } from './activity.log.entry.interface';
-import { ISpace } from '@domain/challenge/space/space.interface';
+import { ISpace } from '@domain/space/space/space.interface';
 
 @ObjectType('ActivityLogEntryChallengeCreated', {
   implements: () => [IActivityLogEntry],

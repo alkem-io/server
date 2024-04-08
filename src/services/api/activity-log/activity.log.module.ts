@@ -16,7 +16,7 @@ import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platf
 import { RoomModule } from '@domain/communication/room/room.module';
 import { CalendarModule } from '@domain/timeline/calendar/calendar.module';
 import { CalendarEventModule } from '@domain/timeline/event/event.module';
-import { SpaceModule } from '@domain/challenge/space/space.module';
+import { SpaceModule } from '@domain/space/space/space.module';
 import { LinkModule } from '@domain/collaboration/link/link.module';
 import { UrlGeneratorModule } from '@services/infrastructure/url-generator';
 

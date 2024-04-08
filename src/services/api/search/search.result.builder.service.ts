@@ -1,6 +1,6 @@
 import { UserService } from '@domain/community/user/user.service';
 import { ISearchResultBuilder } from './search.result.builder.interface';
-import { SpaceService } from '@domain/challenge/space/space.service';
+import { SpaceService } from '@domain/space/space/space.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { ISearchResultBase } from './dto/search.result.dto.entry.base.interface';
 import { SearchResultType } from '@common/enums/search.result.type';
@@ -19,12 +19,12 @@ import {
 import { LogContext } from '@common/enums';
 import { PostService } from '@domain/collaboration/post/post.service';
 import { ISearchResultPost } from './dto/search.result.dto.entry.post';
-import { ISpace } from '@domain/challenge/space/space.interface';
+import { ISpace } from '@domain/space/space/space.interface';
 import { Callout, ICallout } from '@domain/collaboration/callout';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { EntityManager } from 'typeorm';
 import { ISearchResultCallout } from './dto/search.result.dto.entry.callout';
-import { Space } from '@domain/challenge/space/space.entity';
+import { Space } from '@domain/space/space/space.entity';
 import { SpaceType } from '@common/enums/space.type';
 
 export type PostParents = {

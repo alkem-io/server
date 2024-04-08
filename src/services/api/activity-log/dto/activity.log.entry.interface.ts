@@ -16,7 +16,7 @@ import { IActivityLogEntryUpdateSent } from './activity.log.dto.entry.update.sen
 import { IActivityLogEntryCalendarEventCreated } from './activity.log.dto.entry.calendar.event.created';
 import { IActivityLogEntryCalloutLinkCreated } from './activity.log.dto.entry.callout.link.created';
 import { IActivityLogEntryCalloutWhiteboardContentModified } from './activity.log.dto.entry.callout.whiteboard.content.modified';
-import { ISpace } from '@domain/challenge/space/space.interface';
+import { ISpace } from '@domain/space/space/space.interface';
 
 @InterfaceType('ActivityLogEntry', {
   resolveType(activityLogEntry) {

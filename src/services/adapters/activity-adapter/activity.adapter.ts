@@ -26,7 +26,7 @@ import { ActivityInputCalloutLinkCreated } from './dto/activity.dto.input.callou
 import { ActivityInputCalendarEventCreated } from './dto/activity.dto.input.calendar.event.created';
 import { TimelineResolverService } from '@services/infrastructure/entity-resolver/timeline.resolver.service';
 import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
-import { Space } from '@domain/challenge/space/space.entity';
+import { Space } from '@domain/space/space/space.entity';
 import { ActivityInputSubsubspaceCreated } from './dto/activity.dto.input.subsubspace.created';
 
 @Injectable()

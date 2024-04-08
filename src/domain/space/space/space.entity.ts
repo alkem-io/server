@@ -7,7 +7,7 @@ import {
   OneToMany,
   OneToOne,
 } from 'typeorm';
-import { ISpace } from '@domain/challenge/space/space.interface';
+import { ISpace } from '@domain/space/space/space.interface';
 import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
 import { TINY_TEXT_LENGTH } from '@common/constants';
 import { SpaceType } from '@common/enums/space.type';

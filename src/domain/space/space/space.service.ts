@@ -8,7 +8,7 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { IAgent } from '@domain/agent/agent';
-import { CreateSpaceInput, DeleteSpaceInput } from '@domain/challenge/space';
+import { CreateSpaceInput, DeleteSpaceInput } from '@domain/space/space';
 import { INVP, NVP } from '@domain/common/nvp';
 import { ICommunity } from '@domain/community/community';
 import { IContext } from '@domain/context/context';

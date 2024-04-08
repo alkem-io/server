@@ -1,6 +1,6 @@
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
-import { Space } from '@domain/challenge/space/space.entity';
+import { Space } from '@domain/space/space/space.entity';
 import { INVP } from '@domain/common/nvp';
 import { UUID_NAMEID } from '@domain/common/scalars';
 import { ICommunity } from '@domain/community/community';
@@ -11,8 +11,8 @@ import {
   AuthorizationAgentPrivilege,
   CurrentUser,
 } from '@src/common/decorators';
-import { SpaceService } from '@domain/challenge/space/space.service';
-import { ISpace } from '@domain/challenge/space/space.interface';
+import { SpaceService } from '@domain/space/space/space.service';
+import { ISpace } from '@domain/space/space/space.interface';
 import { IAgent } from '@domain/agent/agent';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';

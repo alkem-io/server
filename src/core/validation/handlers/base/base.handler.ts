@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/ban-types */
 
 import { CreateActorGroupInput } from '@domain/context/actor-group';
-import { UpdateSpaceInput } from '@domain/challenge/space/dto/space.dto.update';
+import { UpdateSpaceInput } from '@domain/space/space/dto/space.dto.update';
 import { CreateRelationInput } from '@domain/collaboration/relation/relation.dto.create';
 import { CreateUserInput, UpdateUserInput } from '@domain/community/user/dto';
 import { ValidationException } from '@common/exceptions';
@@ -18,7 +18,7 @@ import {
   CreateUserGroupInput,
   UpdateUserGroupInput,
 } from '@domain/community/user-group/dto';
-import { CreateSubspaceOnSpaceInput } from '@domain/challenge/space/dto/space.dto.create.subspace';
+import { CreateSubspaceOnSpaceInput } from '@domain/space/space/dto/space.dto.create.subspace';
 import { CreateActorInput, UpdateActorInput } from '@domain/context/actor';
 import { CommunityApplyInput } from '@domain/community/community/dto/community.dto.apply';
 import { CommunicationCreateDiscussionInput } from '@domain/communication/communication/dto/communication.dto.create.discussion';
@@ -76,14 +76,14 @@ import {
 import { UpdateUserPlatformSettingsInput } from '@domain/community/user/dto/user.dto.update.platform.settings';
 import { UpdateInnovationFlowStateInput } from '@domain/collaboration/innovation-flow-states/dto/innovation.flow.state.dto.update';
 import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
-import { UpdateSubspaceSettingsInput } from '@domain/challenge/space/dto/subspace.dto.update.settings';
-import { UpdateSpaceSettingsInput } from '@domain/challenge/space.settings/dto/space.settings.dto.update';
-import { UpdateSpaceSettingsOnSpaceInput } from '@domain/challenge/space/dto/space.dto.update.settings';
+import { UpdateSubspaceSettingsInput } from '@domain/space/space/dto/subspace.dto.update.settings';
+import { UpdateSpaceSettingsInput } from '@domain/space/space.settings/dto/space.settings.dto.update';
+import { UpdateSpaceSettingsOnSpaceInput } from '@domain/space/space/dto/space.dto.update.settings';
 import {
   CreateAccountInput,
   UpdateAccountPlatformSettingsInput,
-} from '@domain/challenge/account/dto';
-import { UpdateAccountDefaultsInput } from '@domain/challenge/account/dto/account.dto.update.defaults';
+} from '@domain/space/account/dto';
+import { UpdateAccountDefaultsInput } from '@domain/space/account/dto/account.dto.update.defaults';
 import { UpdateCommunityGuidelinesInput } from '@domain/community/community-guidelines/dto/community.guidelines.dto.update';
 
 export class BaseHandler extends AbstractHandler {

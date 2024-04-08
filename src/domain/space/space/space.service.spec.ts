@@ -8,7 +8,7 @@ import { repositoryProviderMockFactory } from '@test/utils/repository.provider.m
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { Profile } from '@domain/common/profile';
-import { Opportunity } from '@domain/challenge/opportunity';
+import { Opportunity } from '@domain/space/opportunity';
 import { SpaceFilterService } from '@services/infrastructure/space-filter/space.filter.service';
 import { MockFunctionMetadata, ModuleMocker } from 'jest-mock';
 import { InnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.entity';

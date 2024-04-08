@@ -1,4 +1,4 @@
-import { ISpace } from '@domain/challenge/space/space.interface';
+import { ISpace } from '@domain/space/space/space.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IActivityLogEntry } from '@services/api/activity-log/dto/activity.log.entry.interface';
 

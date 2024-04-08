@@ -6,7 +6,7 @@ import { UserModule } from '@domain/community/user/user.module';
 import { MeService } from './me.service';
 import { MeResolverQueries } from './me.resolver.queries';
 import { MeResolverFields } from './me.resolver.fields';
-import { SpaceModule } from '@domain/challenge/space/space.module';
+import { SpaceModule } from '@domain/space/space/space.module';
 import { RolesModule } from '../roles/roles.module';
 import { ActivityLogModule } from '../activity-log/activity.log.module';
 import { ActivityModule } from '@platform/activity/activity.module';

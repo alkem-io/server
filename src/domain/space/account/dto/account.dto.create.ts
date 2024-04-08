@@ -2,7 +2,7 @@ import { Field, InputType } from '@nestjs/graphql';
 import { UUID_NAMEID } from '@domain/common/scalars/scalar.uuid.nameid';
 import { ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
-import { CreateSpaceInput } from '@domain/challenge/space/dto/space.dto.create';
+import { CreateSpaceInput } from '@domain/space/space/dto/space.dto.create';
 
 @InputType()
 export class CreateAccountInput {

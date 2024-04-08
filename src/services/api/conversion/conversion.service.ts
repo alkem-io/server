@@ -3,7 +3,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AgentInfo } from '@core/authentication/agent-info';
 import { LogContext } from '@common/enums/logging.context';
 import { ConvertSubspaceToSpaceInput } from './dto/convert.dto.subspace.to.space.input';
-import { ISpace } from '@domain/challenge/space/space.interface';
+import { ISpace } from '@domain/space/space/space.interface';
 import { CommunityService } from '@domain/community/community/community.service';
 import {
   EntityNotInitializedException,
@@ -20,10 +20,10 @@ import { ICallout } from '@domain/collaboration/callout';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { CalloutGroupName } from '@common/enums/callout.group.name';
 import { SpaceType } from '@common/enums/space.type';
-import { CreateAccountInput } from '@domain/challenge/account/dto';
-import { AccountService } from '@domain/challenge/account/account.service';
-import { SpaceService } from '@domain/challenge/space/space.service';
-import { CreateSubspaceOnSpaceInput } from '@domain/challenge/space/dto/space.dto.create.subspace';
+import { CreateAccountInput } from '@domain/space/account/dto';
+import { AccountService } from '@domain/space/account/account.service';
+import { SpaceService } from '@domain/space/space/space.service';
+import { CreateSubspaceOnSpaceInput } from '@domain/space/space/dto/space.dto.create.subspace';
 
 export class ConversionService {
   constructor(

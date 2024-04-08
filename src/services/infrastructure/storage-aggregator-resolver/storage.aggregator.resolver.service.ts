@@ -13,7 +13,7 @@ import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exc
 import { TimelineResolverService } from '../entity-resolver/timeline.resolver.service';
 import { StorageAggregatorNotFoundException } from '@common/exceptions/storage.aggregator.not.found.exception';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Space } from '@domain/challenge/space/space.entity';
+import { Space } from '@domain/space/space/space.entity';
 import { SpaceType } from '@common/enums/space.type';
 
 @Injectable()

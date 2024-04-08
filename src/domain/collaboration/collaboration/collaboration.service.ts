@@ -43,14 +43,14 @@ import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.a
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { CalloutType } from '@common/enums/callout.type';
 import { InnovationFlowService } from '../innovation-flow/innovaton.flow.service';
-import { SpaceDefaultsService } from '@domain/challenge/space.defaults/space.defaults.service';
+import { SpaceDefaultsService } from '@domain/space/space.defaults/space.defaults.service';
 import { TagsetType } from '@common/enums/tagset.type';
 import { IInnovationFlow } from '../innovation-flow/innovation.flow.interface';
 import { CreateCollaborationInput } from './dto/collaboration.dto.create';
-import { Space } from '@domain/challenge/space/space.entity';
+import { Space } from '@domain/space/space/space.entity';
 import { ICalloutGroup } from '../callout-groups/callout.group.interface';
 import { CalloutGroupsService } from '../callout-groups/callout.group.service';
-import { IAccount } from '@domain/challenge/account/account.interface';
+import { IAccount } from '@domain/space/account/account.interface';
 import { SpaceType } from '@common/enums/space.type';
 import { CalloutGroupName } from '@common/enums/callout.group.name';
 

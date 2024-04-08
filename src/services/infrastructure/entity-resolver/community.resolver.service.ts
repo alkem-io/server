@@ -8,8 +8,8 @@ import { LogContext } from '@common/enums';
 import { Communication } from '@domain/communication/communication/communication.entity';
 import { Profile } from '@domain/common/profile/profile.entity';
 import { SpaceType } from '@common/enums/space.type';
-import { Space } from '@domain/challenge/space/space.entity';
-import { ISpace } from '@domain/challenge/space/space.interface';
+import { Space } from '@domain/space/space/space.entity';
+import { ISpace } from '@domain/space/space/space.interface';
 
 @Injectable()
 export class CommunityResolverService {

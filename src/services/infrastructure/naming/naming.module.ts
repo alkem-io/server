@@ -8,7 +8,7 @@ import { CalendarEvent } from '@domain/timeline/event';
 import { Discussion } from '@domain/communication/discussion/discussion.entity';
 import { InnovationHub } from '@domain/innovation-hub/innovation.hub.entity';
 import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
-import { Space } from '@domain/challenge/space/space.entity';
+import { Space } from '@domain/space/space/space.entity';
 
 @Module({
   imports: [

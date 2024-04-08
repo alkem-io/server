@@ -1,4 +1,4 @@
-import { ISpace } from '@domain/challenge/space/space.interface';
+import { ISpace } from '@domain/space/space/space.interface';
 import { IPost } from '@domain/collaboration/post/post.interface';
 import { ICallout } from '@domain/collaboration/callout';
 import { Field, ObjectType } from '@nestjs/graphql';

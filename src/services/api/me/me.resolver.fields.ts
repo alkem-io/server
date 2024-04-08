@@ -8,7 +8,7 @@ import { MeQueryResults } from '@services/api/me/dto';
 import { IUser } from '@domain/community/user';
 import { AuthenticationException } from '@common/exceptions';
 import { UserService } from '@domain/community/user/user.service';
-import { ISpace } from '@domain/challenge/space/space.interface';
+import { ISpace } from '@domain/space/space/space.interface';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { MeService } from './me.service';
 import { ApplicationForRoleResult } from '../roles/dto/roles.dto.result.application';

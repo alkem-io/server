@@ -10,8 +10,8 @@ import { OrganizationModule } from '@domain/community/organization/organization.
 import { Organization } from '@domain/community/organization';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
-import { Space } from '@domain/challenge/space/space.entity';
-import { SpaceModule } from '@domain/challenge/space/space.module';
+import { Space } from '@domain/space/space/space.entity';
+import { SpaceModule } from '@domain/space/space/space.module';
 import { PostModule } from '@domain/collaboration/post/post.module';
 import { Post } from '@domain/collaboration/post/post.entity';
 import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';

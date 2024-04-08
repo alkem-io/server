@@ -2,11 +2,11 @@ import { Module } from '@nestjs/common';
 import { ConversionService } from './conversion.service';
 import { ConversionResolverMutations } from './conversion.resolver.mutations';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
-import { SpaceModule } from '@domain/challenge/space/space.module';
+import { SpaceModule } from '@domain/space/space/space.module';
 import { CommunityModule } from '@domain/community/community/community.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { CommunicationModule } from '@domain/communication/communication/communication.module';
-import { AccountModule } from '@domain/challenge/account/account.module';
+import { AccountModule } from '@domain/space/account/account.module';
 
 @Module({
   imports: [

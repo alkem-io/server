@@ -21,7 +21,7 @@ import { IDiscussion } from '@domain/communication/discussion/discussion.interfa
 import { ICallout } from '@domain/collaboration/callout';
 import { NAMEID_LENGTH } from '@common/constants';
 import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
-import { Space } from '@domain/challenge/space/space.entity';
+import { Space } from '@domain/space/space/space.entity';
 
 export class NamingService {
   replaceSpecialCharacters = require('replace-special-characters');

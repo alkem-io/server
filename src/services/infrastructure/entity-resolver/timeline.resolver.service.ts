@@ -2,7 +2,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager, EntityNotFoundError } from 'typeorm';
 import { LogContext } from '@common/enums';
-import { Space } from '@domain/challenge/space/space.entity';
+import { Space } from '@domain/space/space/space.entity';
 import { Timeline } from '@domain/timeline/timeline/timeline.entity';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Collaboration } from '@domain/collaboration/collaboration';

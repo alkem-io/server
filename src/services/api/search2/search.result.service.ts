@@ -2,11 +2,11 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager, In } from 'typeorm';
 import { groupBy, union, orderBy } from 'lodash';
-import { Space } from '@domain/challenge/space/space.entity';
+import { Space } from '@domain/space/space/space.entity';
 import { ISearchResult } from '@services/api/search/dto/search.result.entry.interface';
 import { ISearchResultSpace } from '@services/api/search/dto/search.result.dto.entry.space';
 import { ISearchResultChallenge } from '@services/api/search/dto/search.result.dto.entry.challenge';
-import { ISpace } from '@domain/challenge/space/space.interface';
+import { ISpace } from '@domain/space/space/space.interface';
 import { BaseException } from '@common/exceptions/base.exception';
 import {
   AlkemioErrorStatus,

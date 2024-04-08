@@ -16,7 +16,7 @@ import { IActivityLogBuilder } from './activity.log.builder.interface';
 import ActivityLogBuilderService from './activity.log.builder.service';
 import { CalendarService } from '@domain/timeline/calendar/calendar.service';
 import { CalendarEventService } from '@domain/timeline/event/event.service';
-import { SpaceService } from '@domain/challenge/space/space.service';
+import { SpaceService } from '@domain/space/space/space.service';
 import { LinkService } from '@domain/collaboration/link/link.service';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { EntityManager } from 'typeorm/entity-manager/EntityManager';

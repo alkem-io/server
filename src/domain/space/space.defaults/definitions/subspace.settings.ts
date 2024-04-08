@@ -1,6 +1,6 @@
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
-import { ISpaceSettings } from '@domain/challenge/space.settings/space.settings.interface';
+import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 
 export const subspaceSettingsDefaults: ISpaceSettings = {
   privacy: {

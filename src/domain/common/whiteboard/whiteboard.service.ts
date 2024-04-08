@@ -24,7 +24,7 @@ import { ProfileDocumentsService } from '@domain/profile-documents/profile.docum
 import { CalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.entity';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { LicenseFeatureFlagName } from '@common/enums/license.feature.flag.name';
-import { Space } from '@domain/challenge/space/space.entity';
+import { Space } from '@domain/space/space/space.entity';
 import { AuthorizationPolicy } from '../authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import { ProfileService } from '../profile/profile.service';

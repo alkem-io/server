@@ -1,19 +1,19 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { groupCredentialsByEntity } from '@services/api/roles/util/group.credentials.by.entity';
-import { SpaceService } from '@domain/challenge/space/space.service';
+import { SpaceService } from '@domain/space/space/space.service';
 import { RolesService } from '../roles/roles.service';
 import { ApplicationForRoleResult } from '../roles/dto/roles.dto.result.application';
 import { InvitationForRoleResult } from '../roles/dto/roles.dto.result.invitation';
-import { ISpace } from '@domain/challenge/space/space.interface';
-import { SpacesQueryArgs } from '@domain/challenge/space/dto/space.args.query.spaces';
+import { ISpace } from '@domain/space/space/space.interface';
+import { SpacesQueryArgs } from '@domain/space/space/dto/space.args.query.spaces';
 import { ActivityLogService } from '../activity-log';
 import { AgentInfo } from '@core/authentication';
 import { MyJourneyResults } from './dto/my.journeys.results';
 import { ActivityService } from '@platform/activity/activity.service';
 import { LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { sortSpacesByActivity } from '@domain/challenge/space/sort.spaces.by.activity';
+import { sortSpacesByActivity } from '@domain/space/space/sort.spaces.by.activity';
 
 @Injectable()
 export class MeService {

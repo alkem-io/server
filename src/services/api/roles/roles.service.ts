@@ -22,7 +22,7 @@ import { mapOrganizationCredentialsToRoles } from './util/map.organization.crede
 import { RolesResultSpace } from './dto/roles.dto.result.space';
 import { AgentInfo } from '@core/authentication';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { SpaceService } from '@domain/challenge/space/space.service';
+import { SpaceService } from '@domain/space/space/space.service';
 import { SpaceType } from '@common/enums/space.type';
 
 export class RolesService {

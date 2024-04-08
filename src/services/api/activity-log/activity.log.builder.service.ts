@@ -23,11 +23,11 @@ import { CalendarService } from '@domain/timeline/calendar/calendar.service';
 import { CalendarEventService } from '@domain/timeline/event/event.service';
 import { LinkService } from '@domain/collaboration/link/link.service';
 import { IActivityLogEntryCalloutWhiteboardContentModified } from './dto/activity.log.dto.entry.callout.whiteboard.content.modified';
-import { SpaceService } from '@domain/challenge/space/space.service';
+import { SpaceService } from '@domain/space/space/space.service';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager } from 'typeorm';
-import { Space } from '@domain/challenge/space/space.entity';
+import { Space } from '@domain/space/space/space.entity';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { LogContext } from '@common/enums/logging.context';
 

@@ -1,20 +1,20 @@
-import { UpdateSpaceSettingsInput } from '@domain/challenge/space.settings/dto/space.settings.dto.update';
+import { UpdateSpaceSettingsInput } from '@domain/space/space.settings/dto/space.settings.dto.update';
 import { Field, InputType } from '@nestjs/graphql';
 import { Type } from 'class-transformer';
 import { ValidateNested } from 'class-validator';
 
 @InputType()
-export class UpdateSubspaceSettingsInput {
+export class UpdateSpaceSettingsOnSpaceInput {
   @Field(() => String, {
     nullable: false,
     description:
-      'The identifier for the Subspace whose settings are to be updated.',
+      'The identifier for the Space whose settings are to be updated.',
   })
-  subspaceID!: string;
+  spaceID!: string;
 
   @Field(() => UpdateSpaceSettingsInput, {
     nullable: false,
-    description: 'Update the settings for the Subspace.',
+    description: 'Update the settings for the Space.',
   })
   @ValidateNested()
   @Type(() => UpdateSpaceSettingsInput)
