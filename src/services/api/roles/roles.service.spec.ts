@@ -77,8 +77,8 @@ describe('RolesService', () => {
         )
         .mockResolvedValue({
           spaces: [testData.space as any],
-          challenges: [testData.challenge as any],
-          opportunities: [testData.opportunity as any],
+          subspaces: [testData.challenge as any],
+          subsubspaces: [testData.opportunity as any],
         });
 
       jest

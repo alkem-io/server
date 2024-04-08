@@ -390,7 +390,7 @@ export class CollaborationService {
       if (!nameAvailable)
         throw new ValidationException(
           `Unable to create Callout: the provided nameID is already taken: ${calloutData.nameID}`,
-          LogContext.CHALLENGES
+          LogContext.SPACES
         );
     } else {
       calloutData.nameID = this.namingService.createNameID(
@@ -406,7 +406,7 @@ export class CollaborationService {
     if (!displayNameAvailable)
       throw new ValidationException(
         `Unable to create Callout: the provided displayName is already taken: ${calloutData.framing.profile.displayName}`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
 
     const tagsetTemplates = collaboration.tagsetTemplateSet.tagsetTemplates;
@@ -602,17 +602,17 @@ export class CollaborationService {
   }
 
   async getInnovationFlow(collaborationID: string): Promise<IInnovationFlow> {
-    const challenge = await this.getCollaborationOrFail(collaborationID, {
+    const collaboration = await this.getCollaborationOrFail(collaborationID, {
       relations: {
         innovationFlow: true,
       },
     });
 
-    const innovationFlow = challenge.innovationFlow;
+    const innovationFlow = collaboration.innovationFlow;
     if (!innovationFlow)
       throw new RelationshipNotFoundException(
         `Unable to load InnovationFlow for Collaboration ${collaborationID} `,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
 
     return innovationFlow;
@@ -801,58 +801,5 @@ export class CollaborationService {
     );
 
     return calloutsInOrder;
-  }
-
-  public async getJourneyFromCollaboration(collaborationId: string): Promise<
-    | {
-        spaceId?: string;
-        challengeId?: string;
-        opportunityId?: string;
-      }
-    | undefined
-  > {
-    const [space]: { id: string }[] = await this.entityManager.query(
-      `
-      SELECT space.id FROM alkemio.collaboration
-      RIGHT JOIN space on collaboration.id = space.collaborationId
-      WHERE collaboration.id = '${collaborationId}'
-    `
-    );
-
-    if (space) {
-      return {
-        spaceId: space.id,
-      };
-    }
-
-    const [challenge]: { id: string }[] = await this.entityManager.query(
-      `
-      SELECT challenge.id FROM alkemio.collaboration
-      RIGHT JOIN challenge on collaboration.id = challenge.collaborationId
-      WHERE collaboration.id = '${collaborationId}'
-    `
-    );
-
-    if (challenge) {
-      return {
-        challengeId: challenge.id,
-      };
-    }
-
-    const [opportunity]: { id: string }[] = await this.entityManager.query(
-      `
-      SELECT opportunity.id FROM alkemio.collaboration
-      RIGHT JOIN opportunity on collaboration.id = opportunity.collaborationId
-      WHERE collaboration.id = '${collaborationId}'
-    `
-    );
-
-    if (opportunity) {
-      return {
-        opportunityId: opportunity.id,
-      };
-    }
-
-    return undefined;
   }
 }

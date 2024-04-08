@@ -16,10 +16,11 @@ import { IActivityLogBuilder } from './activity.log.builder.interface';
 import ActivityLogBuilderService from './activity.log.builder.service';
 import { CalendarService } from '@domain/timeline/calendar/calendar.service';
 import { CalendarEventService } from '@domain/timeline/event/event.service';
-import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { SpaceService } from '@domain/challenge/space/space.service';
 import { LinkService } from '@domain/collaboration/link/link.service';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
+import { EntityManager } from 'typeorm/entity-manager/EntityManager';
+import { InjectEntityManager } from '@nestjs/typeorm';
 
 export class ActivityLogService {
   constructor(
@@ -34,8 +35,9 @@ export class ActivityLogService {
     private calendarService: CalendarService,
     private calendarEventService: CalendarEventService,
     private communityService: CommunityService,
-    private collaborationService: CollaborationService,
     private urlGeneratorService: UrlGeneratorService,
+    @InjectEntityManager('default')
+    private entityManager: EntityManager,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -136,8 +138,8 @@ export class ActivityLogService {
           this.linkService,
           this.calendarService,
           this.calendarEventService,
-          this.collaborationService,
-          this.urlGeneratorService
+          this.urlGeneratorService,
+          this.entityManager
         );
       const activityType = rawActivity.type as ActivityEventType;
       return await activityBuilder[activityType](rawActivity);

@@ -418,8 +418,8 @@ export class UrlGeneratorService {
       spaceId: string;
     }[] = await this.entityManager.connection.query(
       `
-        SELECT challenge.id as challengeId, challenge.nameID as challengeNameId, challenge.spaceID as spaceId FROM challenge
-        WHERE challenge.${fieldName} = '${fieldID}'
+        SELECT space.id as challengeId, space.nameID as challengeNameId, space.parentSpaceId as spaceId FROM space
+        WHERE space.${fieldName} = '${fieldID}'
       `
     );
 
@@ -452,8 +452,8 @@ export class UrlGeneratorService {
       challengeId: string;
     }[] = await this.entityManager.connection.query(
       `
-        SELECT opportunity.id as opportunityId, opportunity.nameID as opportunityNameId, opportunity.challengeId as challengeId FROM opportunity
-        WHERE opportunity.${fieldName} = '${fieldID}'
+        SELECT space.id as opportunityId, space.nameID as opportunityNameId, space.parentSpaceId as challengeId FROM space
+        WHERE space.${fieldName} = '${fieldID}'
       `
     );
 

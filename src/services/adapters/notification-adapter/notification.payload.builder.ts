@@ -737,7 +737,7 @@ export class NotificationPayloadBuilder {
     if (!community) {
       throw new EntityNotFoundException(
         `Unable to find Community with id: ${communityID}`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     }
     return community;

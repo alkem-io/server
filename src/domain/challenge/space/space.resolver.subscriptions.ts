@@ -12,7 +12,7 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { TypedSubscription } from '@common/decorators/typed.subscription/typed.subscription.decorator';
 import { SpaceService } from './space.service';
 import { SubspaceCreatedPayload } from './dto/space.subspace.created.payload';
-import { SubspaceCreatedArgs } from './dto/space.challenge.created.args';
+import { SubspaceCreatedArgs } from './dto/space.subspace.created.args';
 import { SubspaceCreated as SubspaceCreated } from './dto/space.dto.event.subspace.created';
 import { SUBSCRIPTION_SUBSPACE_CREATED } from '@common/constants/providers';
 

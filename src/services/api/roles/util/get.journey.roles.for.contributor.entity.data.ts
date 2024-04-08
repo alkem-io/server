@@ -66,5 +66,5 @@ export const getJourneyRolesForContributorEntityData = async (
     fetchData(Space, subspaceIds, SpaceType.OPPORTUNITY),
   ]);
 
-  return { spaces, challenges: subspaces, opportunities: subsubspaces };
+  return { spaces, subspaces, subsubspaces };
 };

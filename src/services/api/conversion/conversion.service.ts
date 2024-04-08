@@ -207,11 +207,11 @@ export class ConversionService {
       orgMembers
     );
 
-    // Now migrate all the child opportunities...
-    const opportunities = await this.spaceService.getSubspaces(updatedSubspace);
-    for (const opportunity of opportunities) {
+    // Now migrate all the child subsubspaces...
+    const subsubspaces = await this.spaceService.getSubspaces(updatedSubspace);
+    for (const subsubspace of subsubspaces) {
       await this.convertOpportunityToChallenge(
-        opportunity.id,
+        subsubspace.id,
         space.id,
         agentInfo,
         space.storageAggregator

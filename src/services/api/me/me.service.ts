@@ -56,7 +56,7 @@ export class MeService {
       },
     };
 
-    // get spaces and their children challenges and opportunities
+    // get spaces and their subspaces
     const spaces = await this.spaceService.getSpacesWithChildJourneys(args);
 
     const spaceMembershipCollaborationInfo =

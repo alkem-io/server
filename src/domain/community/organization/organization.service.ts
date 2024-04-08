@@ -261,7 +261,7 @@ export class OrganizationService {
     if (isSpaceHost) {
       throw new ForbiddenException(
         'Unable to delete Organization: host of one or more accounts',
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     }
     // Start by removing all issued org owner credentials in case this causes issues

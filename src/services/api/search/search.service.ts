@@ -504,7 +504,7 @@ export class SearchService {
     for (const term of terms) {
       const readableChallengeMatches: Space[] = [];
       // First part: Retrieve data using TypeORM
-      const challenges = await this.spaceRepository.find({
+      const subspaces = await this.spaceRepository.find({
         where: challengeIDsFilter ? { id: In(challengeIDsFilter) } : undefined,
         relations: {
           context: true,
@@ -520,42 +520,37 @@ export class SearchService {
       });
       const lowerCasedTerm = term.toLowerCase();
       // Second part: Filter the results in TypeScript
-      const filteredChallengeMatches = challenges.filter(challenge => {
+      const filteredChallengeMatches = subspaces.filter(subspace => {
         return (
-          challenge.nameID.toLowerCase().includes(lowerCasedTerm) ||
-          challenge.profile.displayName
-            .toLowerCase()
-            .includes(lowerCasedTerm) ||
-          challenge.profile.tagline.toLowerCase().includes(lowerCasedTerm) ||
-          challenge.profile.description
-            .toLowerCase()
-            .includes(lowerCasedTerm) ||
-          challenge.profile.tagsets?.some(tagset =>
+          subspace.nameID.toLowerCase().includes(lowerCasedTerm) ||
+          subspace.profile.displayName.toLowerCase().includes(lowerCasedTerm) ||
+          subspace.profile.tagline.toLowerCase().includes(lowerCasedTerm) ||
+          subspace.profile.description.toLowerCase().includes(lowerCasedTerm) ||
+          subspace.profile.tagsets?.some(tagset =>
             tagset.tags.map(tag => tag.toLowerCase()).includes(lowerCasedTerm)
           ) ||
-          challenge.context?.impact?.toLowerCase().includes(lowerCasedTerm) ||
-          challenge.context?.vision?.toLowerCase().includes(lowerCasedTerm) ||
-          challenge.context?.who?.toLowerCase().includes(lowerCasedTerm) ||
-          challenge.profile.location?.country
+          subspace.context?.impact?.toLowerCase().includes(lowerCasedTerm) ||
+          subspace.context?.vision?.toLowerCase().includes(lowerCasedTerm) ||
+          subspace.context?.who?.toLowerCase().includes(lowerCasedTerm) ||
+          subspace.profile.location?.country
             .toLowerCase()
             .includes(lowerCasedTerm) ||
-          challenge.profile.location?.city
-            .toLowerCase()
-            .includes(lowerCasedTerm)
+          subspace.profile.location?.city.toLowerCase().includes(lowerCasedTerm)
         );
       });
 
       // Only show challenges that the current user has read access to
-      for (const challenge of filteredChallengeMatches) {
+      for (const filteredSubspace of filteredChallengeMatches) {
         if (
-          challenge.account?.license?.visibility !== SpaceVisibility.ARCHIVED &&
+          filteredSubspace.account?.license?.visibility !==
+            SpaceVisibility.ARCHIVED &&
           this.authorizationService.isAccessGranted(
             agentInfo,
-            challenge.authorization,
+            filteredSubspace.authorization,
             AuthorizationPrivilege.READ
           )
         ) {
-          readableChallengeMatches.push(challenge);
+          readableChallengeMatches.push(filteredSubspace);
         }
       }
       // Create results for each match
@@ -582,7 +577,7 @@ export class SearchService {
     for (const term of terms) {
       const readableOpportunityMatches: Space[] = [];
       // First part: Retrieve data using TypeORM
-      const opportunities = await this.spaceRepository.find({
+      const subsubspaces = await this.spaceRepository.find({
         where: opportunityIDsFilter
           ? { id: In(opportunityIDsFilter) }
           : undefined,
@@ -601,42 +596,42 @@ export class SearchService {
 
       const lowerCasedTerm = term.toLowerCase();
       // Second part: Filter the results in TypeScript
-      const filteredOpportunityMatches = opportunities.filter(opportunity => {
+      const filteredOpportunityMatches = subsubspaces.filter(subsubspace => {
         return (
-          opportunity.nameID.toLowerCase().includes(lowerCasedTerm) ||
-          opportunity.profile.displayName
+          subsubspace.nameID.toLowerCase().includes(lowerCasedTerm) ||
+          subsubspace.profile.displayName
             .toLowerCase()
             .includes(lowerCasedTerm) ||
-          opportunity.profile.tagline.toLowerCase().includes(lowerCasedTerm) ||
-          opportunity.profile.description
+          subsubspace.profile.tagline.toLowerCase().includes(lowerCasedTerm) ||
+          subsubspace.profile.description
             .toLowerCase()
             .includes(lowerCasedTerm) ||
-          opportunity.profile.tagsets?.some(tagset =>
+          subsubspace.profile.tagsets?.some(tagset =>
             tagset.tags.map(tag => tag.toLowerCase()).includes(lowerCasedTerm)
           ) ||
-          opportunity.context?.impact?.toLowerCase().includes(lowerCasedTerm) ||
-          opportunity.context?.vision?.toLowerCase().includes(lowerCasedTerm) ||
-          opportunity.context?.who?.toLowerCase().includes(lowerCasedTerm) ||
-          opportunity.profile.location?.country
+          subsubspace.context?.impact?.toLowerCase().includes(lowerCasedTerm) ||
+          subsubspace.context?.vision?.toLowerCase().includes(lowerCasedTerm) ||
+          subsubspace.context?.who?.toLowerCase().includes(lowerCasedTerm) ||
+          subsubspace.profile.location?.country
             .toLowerCase()
             .includes(lowerCasedTerm) ||
-          opportunity.profile.location?.city
+          subsubspace.profile.location?.city
             .toLowerCase()
             .includes(lowerCasedTerm)
         );
       });
       // Only show challenges that the current user has read access to
-      for (const opportunity of filteredOpportunityMatches) {
+      for (const filteredSubsubspace of filteredOpportunityMatches) {
         if (
-          opportunity.account.license?.visibility !==
+          filteredSubsubspace.account.license?.visibility !==
             SpaceVisibility.ARCHIVED &&
           this.authorizationService.isAccessGranted(
             agentInfo,
-            opportunity.authorization,
+            filteredSubsubspace.authorization,
             AuthorizationPrivilege.READ
           )
         ) {
-          readableOpportunityMatches.push(opportunity);
+          readableOpportunityMatches.push(filteredSubsubspace);
         }
       }
 
@@ -979,20 +974,20 @@ export class SearchService {
       spaceIDsFilter = [searchInSpace.id];
       const accountIDsFilter = [searchInSpace.account.id];
 
-      const challengesFilter = await this.getChallengesInAccountFilter(
+      const subspacesFilter = await this.getSubspacesInAccountFilter(
         accountIDsFilter
       );
-      challengeIDsFilter = challengesFilter.map(challenge => challenge.id);
-      const opportunitiesFilter = await this.getOpportunitiesInAccountFilter(
+      challengeIDsFilter = subspacesFilter.map(subspace => subspace.id);
+      const subsubspacesFilter = await this.getSubsubspacesInAccountFilter(
         accountIDsFilter
       );
-      opportunityIDsFilter = opportunitiesFilter.map(opp => opp.id);
+      opportunityIDsFilter = subsubspacesFilter.map(opp => opp.id);
       userIDsFilter = await this.getUsersFilter(searchInSpace);
       organizationIDsFilter = await this.getOrganizationsFilter(searchInSpace);
       postIDsFilter = await this.getPostsFilter(
         searchInSpace,
-        challengesFilter,
-        opportunitiesFilter
+        subspacesFilter,
+        subsubspacesFilter
       );
     }
     return {
@@ -1005,10 +1000,10 @@ export class SearchService {
     };
   }
 
-  private async getChallengesInAccountFilter(
+  private async getSubspacesInAccountFilter(
     accountIDsFilter: string[]
   ): Promise<ISpace[]> {
-    const challenges = await this.spaceRepository.find({
+    const subspaces = await this.spaceRepository.find({
       where: {
         account: {
           id: In(accountIDsFilter),
@@ -1021,13 +1016,13 @@ export class SearchService {
       },
     });
 
-    return challenges;
+    return subspaces;
   }
 
-  private async getOpportunitiesInAccountFilter(
+  private async getSubsubspacesInAccountFilter(
     accountIDsFilter: string[]
   ): Promise<ISpace[]> {
-    const opportunities = await this.spaceRepository.find({
+    const subsubspaces = await this.spaceRepository.find({
       where: {
         account: {
           id: In(accountIDsFilter),
@@ -1040,7 +1035,7 @@ export class SearchService {
       },
     });
 
-    return opportunities;
+    return subsubspaces;
   }
 
   private async getUsersFilter(searchInSpace: ISpace): Promise<string[]> {
@@ -1095,15 +1090,13 @@ export class SearchService {
 
   private async getPostsFilter(
     spaceFilter: ISpace,
-    challengesFilter: ISpace[],
-    opportunitiesFilter: ISpace[]
+    subspacesFilter: ISpace[],
+    subsubspacesFilter: ISpace[]
   ): Promise<string[]> {
     // Get all the relevant collaborations
     const collaborationFilter = [spaceFilter.collaboration?.id];
-    challengesFilter.forEach(c =>
-      collaborationFilter.push(c.collaboration?.id)
-    );
-    opportunitiesFilter.forEach(c =>
+    subspacesFilter.forEach(c => collaborationFilter.push(c.collaboration?.id));
+    subsubspacesFilter.forEach(c =>
       collaborationFilter.push(c.collaboration?.id)
     );
 

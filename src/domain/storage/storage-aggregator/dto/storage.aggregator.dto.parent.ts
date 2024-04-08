@@ -24,7 +24,7 @@ export abstract class IStorageAggregatorParent {
 
   @Field(() => SpaceType, {
     nullable: false,
-    description: 'The Type of the parent Entity, space/challenge/opportunity.',
+    description: 'The Type of the parent Entity.',
   })
   type!: string;
 }

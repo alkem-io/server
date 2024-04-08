@@ -28,6 +28,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UserService } from '@domain/community/user/user.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
+import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 
 export type PostParents = {
   post: IPost;
@@ -68,7 +69,7 @@ export class SearchResultService {
   ): Promise<ISearchResults> {
     const groupedResults = groupBy(rawSearchResults, 'type');
     // authorize entities with requester and enrich with data
-    const [spaces, challenges, opportunities, users, organizations, posts] =
+    const [spaces, subspaces, subsubspaces, users, organizations, posts] =
       await Promise.all([
         this.getSpaceSearchResults(
           groupedResults.space ?? [],
@@ -105,7 +106,7 @@ export class SearchResultService {
     );
     const contributionResults = orderBy([...posts], 'score', 'desc');
     const journeyResults = orderBy(
-      [...spaces, ...challenges, ...opportunities],
+      [...spaces, ...subspaces, ...subsubspaces],
       'score',
       'desc'
     );
@@ -475,62 +476,44 @@ export class SearchResultService {
   }
 
   private async getPostParents(posts: Post[]): Promise<PostParents[]> {
-    if (!posts.length) {
-      return [];
-    }
-
-    const postIdsFormatted = posts.map(({ id }) => `'${id}'`).join(',');
-    const queryResult: PostParentIDs[] = await this.entityManager.connection
-      .query(`
-        SELECT \`post\`.\`id\` as postID, \`space\`.\`id\` as \`spaceID\`, \`challenge\`.\`id\` as \`challengeID\`, null as \'opportunityID\', \`callout\`.\`id\` as \`calloutID\` FROM \`callout\`
-        RIGHT JOIN \`challenge\` on \`challenge\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
-        JOIN \`space\` on \`challenge\`.\`spaceID\` = \`space\`.\`id\`
-        JOIN \`callout_contribution\` on \`callout\`.\`id\` = \`callout_contribution\`.\`calloutId\`
-        JOIN \`post\` on \`post\`.\`id\` = \`callout_contribution\`.\`postId\`
-        WHERE \`post\`.\`id\` in (${postIdsFormatted}) UNION
-
-        SELECT \`post\`.\`id\` as postID, \`space\`.\`id\` as \`spaceID\`, null as \'challengeID\', null as \'opportunityID\', \`callout\`.\`id\` as \`calloutID\`  FROM \`callout\`
-        RIGHT JOIN \`space\` on \`space\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
-        JOIN \`callout_contribution\` on \`callout\`.\`id\` = \`callout_contribution\`.\`calloutId\`
-        JOIN \`post\` on \`post\`.\`id\` = \`callout_contribution\`.\`postId\`
-        WHERE \`post\`.\`id\` in (${postIdsFormatted}) UNION
-
-        SELECT \`post\`.\`id\` as postID, \`space\`.\`id\` as \`spaceID\`, \`challenge\`.\`id\` as \`challengeID\`, \`opportunity\`.\`id\` as \`opportunityID\`, \`callout\`.\`id\` as \`calloutID\` FROM \`callout\`
-        RIGHT JOIN \`opportunity\` on \`opportunity\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
-        JOIN \`challenge\` on \`opportunity\`.\`challengeId\` = \`challenge\`.\`id\`
-        JOIN \`account\` on \`opportunity\`.\`accountId\` = \`account\`.\`id\`
-        JOIN \`space\` on \`account\`.\`id\` = \`space\`.\`accountId\`
-        JOIN \`callout_contribution\` on \`callout\`.\`id\` = \`callout_contribution\`.\`calloutId\`
-        JOIN \`post\` on \`post\`.\`id\` = \`callout_contribution\`.\`postId\`
-        WHERE \`post\`.\`id\` in (${postIdsFormatted});
-      `);
-
     const postParents: PostParents[] = [];
-    for (const result of queryResult) {
-      const [callout, space, challenge, opportunity] = await Promise.all([
-        this.entityManager.findOneByOrFail(Callout, { id: result.calloutID }),
-        this.entityManager.findOneByOrFail(Space, { id: result.spaceID }),
-        this.entityManager
-          .findOneBy(Space, { id: result.subspaceID })
-          .then(x => (x === null ? undefined : x)),
-        this.entityManager
-          .findOneBy(Space, {
-            id: result.subsubspaceID,
-          })
-          .then(x => (x === null ? undefined : x)),
-      ]);
-      const post = posts.find(post => post.id === result.postID);
-
-      if (!post) {
-        throw new BaseException(
-          'Post not found in Posts array while building search results',
-          LogContext.SEARCH,
-          AlkemioErrorStatus.NOT_FOUND,
-          {
-            postID: result.postID,
-            cause:
-              'Post is not found in the return search results. Cause unknown',
-          }
+    if (!posts.length) {
+      return postParents;
+    }
+    for (const post of posts) {
+      const callout = await this.entityManager.findOne(Callout, {
+        where: {
+          contributions: {
+            post: {
+              id: post.id,
+            },
+          },
+        },
+      });
+      if (!callout) {
+        throw new RelationshipNotFoundException(
+          `Unable to find callout for post: ${post.id}`,
+          LogContext.SEARCH
+        );
+      }
+      const space = await this.entityManager.findOne(Space, {
+        where: {
+          collaboration: {
+            callouts: {
+              id: callout.id,
+            },
+          },
+        },
+        relations: {
+          parentSpace: {
+            parentSpace: true,
+          },
+        },
+      });
+      if (!space) {
+        throw new RelationshipNotFoundException(
+          `Unable to find space parents for callout${callout.id}`,
+          LogContext.SEARCH
         );
       }
 
@@ -538,8 +521,8 @@ export class SearchResultService {
         post,
         callout,
         space,
-        subspace: challenge,
-        subsubspace: opportunity,
+        subspace: space.parentSpace,
+        subsubspace: space.parentSpace?.parentSpace,
       });
     }
 

@@ -176,7 +176,7 @@ export class SpaceResolverFields {
     if (!subspace) {
       throw new EntityNotFoundException(
         `Unable to find subspace with ID: '${id}'`,
-        LogContext.CHALLENGES,
+        LogContext.SPACES,
         { subspaceId: id, spaceId: space.id, userId: agentInfo.userID }
       );
     }

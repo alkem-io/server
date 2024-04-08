@@ -10,8 +10,8 @@ import { IActivityLogEntryCalloutPostCreated } from './activity.log.dto.entry.ca
 import { IActivityLogEntryCalloutWhiteboardCreated } from './activity.log.dto.entry.callout.whiteboard.created';
 import { IActivityLogEntryCalloutPostComment } from './activity.log.dto.entry.callout.post.comment';
 import { IActivityLogEntryCalloutDiscussionComment } from './activity.log.dto.entry.callout.discussion.comment';
-import { IActivityLogEntryChallengeCreated } from './activity.log.dto.entry.challenge.created';
-import { IActivityLogEntryOpportunityCreated } from './activity.log.dto.entry.opportunity.created';
+import { IActivityLogEntryChallengeCreated } from './activity.log.dto.entry.subspace.created';
+import { IActivityLogEntryOpportunityCreated } from './activity.log.dto.entry.subsubspace.created';
 import { IActivityLogEntryUpdateSent } from './activity.log.dto.entry.update.sent';
 import { IActivityLogEntryCalendarEventCreated } from './activity.log.dto.entry.calendar.event.created';
 import { IActivityLogEntryCalloutLinkCreated } from './activity.log.dto.entry.callout.link.created';

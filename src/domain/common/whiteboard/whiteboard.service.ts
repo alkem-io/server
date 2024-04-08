@@ -93,7 +93,7 @@ export class WhiteboardService {
     if (!whiteboard)
       throw new EntityNotFoundException(
         `Not able to locate Whiteboard with the specified ID: ${whiteboardID}`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     return whiteboard;
   }
@@ -109,14 +109,14 @@ export class WhiteboardService {
     if (!whiteboard.profile) {
       throw new RelationshipNotFoundException(
         `Profile not found on whiteboard: '${whiteboard.id}'`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     }
 
     if (!whiteboard.authorization) {
       throw new RelationshipNotFoundException(
         `Authorization not found on whiteboard: '${whiteboard.id}'`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     }
 

@@ -154,12 +154,12 @@ export class RolesService {
         return applicationResult;
       case SpaceType.CHALLENGE:
         // the application is issued for a challenge
-        applicationResult.challengeID = space.id;
+        applicationResult.subspaceID = space.id;
         return applicationResult;
       case SpaceType.OPPORTUNITY:
         // the application is issued for an an opportunity
-        applicationResult.opportunityID = space.id;
-        applicationResult.challengeID = space.parentSpace?.id || '';
+        applicationResult.subsubspaceID = space.id;
+        applicationResult.subspaceID = space.parentSpace?.id || '';
         return applicationResult;
     }
   }
@@ -231,12 +231,12 @@ export class RolesService {
         return invitationResult;
       case SpaceType.CHALLENGE:
         // the application is issued for a challenge
-        invitationResult.challengeID = space.id;
+        invitationResult.subspaceID = space.id;
         return invitationResult;
       case SpaceType.OPPORTUNITY:
         // the application is issued for an an opportunity
         invitationResult.opportunityID = space.id;
-        invitationResult.challengeID = space.parentSpace?.id || '';
+        invitationResult.subspaceID = space.parentSpace?.id || '';
         return invitationResult;
     }
   }

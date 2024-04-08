@@ -88,7 +88,7 @@ export class SpaceAuthorizationService {
     )
       throw new RelationshipNotFoundException(
         `Unable to load Space with entities at start of auth reset: ${space.id} `,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
 
     const communityPolicyWithFlags = this.getCommunityPolicyWithSettings(space);
@@ -137,7 +137,7 @@ export class SpaceAuthorizationService {
     if (!space.community)
       throw new RelationshipNotFoundException(
         `Unable to load Space after first save: ${space.id} `,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
 
     // Finally update the child entities that depend on license
@@ -189,7 +189,7 @@ export class SpaceAuthorizationService {
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load entities on auth reset for space base ${space.id} `,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     }
     const communityPolicy = this.getCommunityPolicyWithSettings(space);
@@ -345,7 +345,7 @@ export class SpaceAuthorizationService {
     if (!spaceInput.community?.policy)
       throw new EntityNotInitializedException(
         `Unable to load community policy on base space: ${spaceInput.id}`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
 
     const spaceSettings = this.spaceSettingsService.getSettings(
@@ -363,7 +363,7 @@ export class SpaceAuthorizationService {
     if (!authorization)
       throw new EntityNotInitializedException(
         'Authorization definition not found',
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
 
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
@@ -430,7 +430,7 @@ export class SpaceAuthorizationService {
     if (!authorization)
       throw new EntityNotInitializedException(
         `Authorization definition not found for: ${JSON.stringify(policy)}`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     const rules: IAuthorizationPolicyRuleCredential[] = [];
 
@@ -468,7 +468,7 @@ export class SpaceAuthorizationService {
     if (!communityAuthorization)
       throw new EntityNotInitializedException(
         `Authorization definition not found for: ${JSON.stringify(policy)}`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
 
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
@@ -530,7 +530,7 @@ export class SpaceAuthorizationService {
         `Authorization definition not found for: ${JSON.stringify(
           credentialCriteria
         )}`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     this.authorizationPolicyService.appendCredentialAuthorizationRule(
       authorization,
@@ -577,7 +577,7 @@ export class SpaceAuthorizationService {
     if (!space.subspaces)
       throw new RelationshipNotFoundException(
         `Unable to load subspaces for space ${space.id} `,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
 
     const spaceAdminCriteria = {

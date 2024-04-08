@@ -67,7 +67,7 @@ export class SpaceResolverQueries {
     if (!space) {
       throw new EntityNotFoundException(
         `Unable to find Space with ID: '${ID}'`,
-        LogContext.CHALLENGES,
+        LogContext.SPACES,
         { userId: agentInfo.userID }
       );
     }

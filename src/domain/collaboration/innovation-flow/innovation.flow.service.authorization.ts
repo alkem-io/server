@@ -52,7 +52,7 @@ export class InnovationFlowAuthorizationService {
     if (!authorization)
       throw new EntityNotInitializedException(
         'Authorization definition not found for: InnovationFlow}',
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
 
     this.authorizationPolicyService.appendCredentialAuthorizationRules(
@@ -75,7 +75,7 @@ export class InnovationFlowAuthorizationService {
     if (!authorization)
       throw new EntityNotInitializedException(
         'Authorization definition not found',
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     const privilegeRules: IAuthorizationPolicyRulePrivilege[] = [];
 

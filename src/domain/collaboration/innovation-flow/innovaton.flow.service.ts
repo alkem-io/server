@@ -51,7 +51,7 @@ export class InnovationFlowService {
     if (innovationFlowData.states.length === 0) {
       throw new ValidationException(
         `Require at least one state to create an InnovationFlow: ${innovationFlowData}`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     }
 
@@ -331,7 +331,7 @@ export class InnovationFlowService {
     if (!innovationFlow)
       throw new EntityNotFoundException(
         `Unable to find InnovationFlow with ID: ${innovationFlowID}`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     return innovationFlow;
   }

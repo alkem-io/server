@@ -92,7 +92,7 @@ export class SpaceService {
     if (!(await this.isNameIdAvailable(spaceData.nameID)))
       throw new ValidationException(
         `Unable to create Space: the provided nameID is already taken: ${spaceData.nameID}`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
   }
 
@@ -250,7 +250,7 @@ export class SpaceService {
     if (!space.subspaces) {
       throw new RelationshipNotFoundException(
         `Unable to load all entities for deletion of space ${space.id} `,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     }
 
@@ -258,7 +258,7 @@ export class SpaceService {
     if (space.subspaces.length > 0)
       throw new OperationNotAllowedException(
         `Unable to remove Space (${space.nameID}) as it contains ${space.subspaces.length} subspaces`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
 
     await this.deleteEntities(space.id);
@@ -503,7 +503,7 @@ export class SpaceService {
         this.logger.error(
           'Invalid state error when sorting Spaces!',
           undefined,
-          LogContext.CHALLENGES
+          LogContext.SPACES
         );
       }
     }
@@ -587,7 +587,7 @@ export class SpaceService {
       if (!a.subspaces || !b.subspaces)
         throw new ValidationException(
           `Critical error when comparing Spaces! Critical error when loading Subspaces for Space ${a} and Space ${b}`,
-          LogContext.CHALLENGES
+          LogContext.SPACES
         );
 
       const subspacesCountA = this.getSubspaceAndSubsubspacesCount(
@@ -666,7 +666,7 @@ export class SpaceService {
     if (!space)
       throw new EntityNotFoundException(
         `Unable to find Space with ID: ${spaceID}`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     return space;
   }
@@ -761,7 +761,7 @@ export class SpaceService {
     if (!subspaces) {
       throw new RelationshipNotFoundException(
         `Unable to load subspaces for Space ${space.id} `,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     }
 
@@ -806,7 +806,7 @@ export class SpaceService {
     if (!space.storageAggregator || !space.account) {
       throw new EntityNotFoundException(
         `Unable to retrieve entities on space for creating subspace: ${space.id}`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     }
 
@@ -826,7 +826,7 @@ export class SpaceService {
     if (!space.subspaces || !space.community)
       throw new ValidationException(
         `Unable to add Subspace to space, missing relations: ${space.id}`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
 
     space.subspaces.push(subspace);
@@ -909,7 +909,7 @@ export class SpaceService {
       if (!space.context)
         throw new EntityNotInitializedException(
           `Subspace not initialised: ${spaceData.ID}`,
-          LogContext.CHALLENGES
+          LogContext.SPACES
         );
       space.context = await this.contextService.updateContext(
         space.context,
@@ -949,7 +949,7 @@ export class SpaceService {
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load entities to delete base subspace: ${space.id} `,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     }
 
@@ -972,7 +972,7 @@ export class SpaceService {
     )
       throw new ValidationException(
         `Unable to create entity: the provided nameID is already taken: ${nameID}`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
   }
 
@@ -1023,7 +1023,7 @@ export class SpaceService {
     if (!subspace) {
       throw new EntityNotFoundException(
         `Unable to find Space with ID: ${subspaceID}`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     }
 
@@ -1041,7 +1041,7 @@ export class SpaceService {
     if (!childCommunity) {
       throw new RelationshipNotFoundException(
         `Unable to set subspace community relationship, child community not provied: ${parentCommunity.id}`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     }
     // Finally set the community relationship
@@ -1067,7 +1067,7 @@ export class SpaceService {
     if (!space) {
       throw new EntityNotFoundException(
         `Unable to find space for community: ${communityId}`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     }
     return space;
@@ -1089,7 +1089,7 @@ export class SpaceService {
     if (!space) {
       throw new EntityNotFoundException(
         `Unable to find space for collaboration: ${collaborationID}`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     }
     return space;
@@ -1120,7 +1120,7 @@ export class SpaceService {
     if (!space) {
       throw new EntityNotFoundException(
         `Unable to find base subspace with ID: ${spaceId}`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     }
 
@@ -1248,7 +1248,7 @@ export class SpaceService {
     if (!space.account) {
       throw new EntityNotInitializedException(
         'Space account not initialized',
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     }
     const account = space.account;

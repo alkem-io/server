@@ -104,8 +104,8 @@ export class SearchIngestService {
     }
     const indices = [
       `${this.indexPattern}spaces`,
-      `${this.indexPattern}challenges`,
-      `${this.indexPattern}opportunities`,
+      `${this.indexPattern}subspaces`,
+      `${this.indexPattern}subsubspaces`,
       `${this.indexPattern}organizations`,
       `${this.indexPattern}users`,
       `${this.indexPattern}posts`,
@@ -139,11 +139,11 @@ export class SearchIngestService {
         fetchFn: this.fetchSpaces.bind(this),
       },
       {
-        index: `${this.indexPattern}challenges`,
+        index: `${this.indexPattern}subspaces`,
         fetchFn: this.fetchSubspaces.bind(this),
       },
       {
-        index: `${this.indexPattern}opportunities`,
+        index: `${this.indexPattern}subsubspaces`,
         fetchFn: this.fetchOpportunities.bind(this),
       },
       {
@@ -289,18 +289,18 @@ export class SearchIngestService {
           account: { id: true, license: { visibility: true } },
         },
       })
-      .then(challenges => {
-        return challenges.map(challenge => ({
-          ...challenge,
-          spaceID: challenge?.parentSpace?.id,
+      .then(subspaces => {
+        return subspaces.map(subspace => ({
+          ...subspace,
+          spaceID: subspace?.parentSpace?.id,
           space: undefined,
           account: undefined,
           license: {
-            visibility: challenge?.account?.license?.visibility,
+            visibility: subspace?.account?.license?.visibility,
           },
           profile: {
-            ...challenge.profile,
-            tags: processTagsets(challenge.profile.tagsets),
+            ...subspace.profile,
+            tags: processTagsets(subspace.profile.tagsets),
             tagsets: undefined,
           },
         }));
@@ -330,18 +330,18 @@ export class SearchIngestService {
           account: { id: true, license: { visibility: true } },
         },
       })
-      .then(opportunities => {
-        return opportunities.map(opportunity => ({
-          ...opportunity,
-          spaceID: opportunity?.account?.space?.id,
-          challengeID: opportunity?.parentSpace?.id,
+      .then(subsubspaces => {
+        return subsubspaces.map(subsubspace => ({
+          ...subsubspace,
+          spaceID: subsubspace?.account?.space?.id,
+          challengeID: subsubspace?.parentSpace?.id,
           challenge: undefined,
           license: {
-            visibility: opportunity?.account?.license?.visibility,
+            visibility: subsubspace?.account?.license?.visibility,
           },
           profile: {
-            ...opportunity.profile,
-            tags: processTagsets(opportunity.profile.tagsets),
+            ...subsubspace.profile,
+            tags: processTagsets(subsubspace.profile.tagsets),
             tagsets: undefined,
           },
         }));
@@ -531,8 +531,8 @@ export class SearchIngestService {
         );
         const challengePosts: any[] = [];
         spaces.forEach(space =>
-          space?.subspaces?.forEach(challenge =>
-            challenge?.collaboration?.callouts?.forEach(callout =>
+          space?.subspaces?.forEach(subspace =>
+            subspace?.collaboration?.callouts?.forEach(callout =>
               callout?.contributions?.forEach(contribution => {
                 if (!contribution.post) {
                   return;
@@ -544,7 +544,7 @@ export class SearchIngestService {
                       space?.account?.license?.visibility ?? EMPTY_VALUE,
                   },
                   spaceID: space.id,
-                  challengeID: challenge.id,
+                  challengeID: subspace.id,
                   calloutID: callout.id,
                   collaborationID: space?.collaboration?.id ?? EMPTY_VALUE,
                   profile: {

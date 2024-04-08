@@ -46,10 +46,10 @@ export class InvitationForRoleResult {
 
   @Field(() => UUID, {
     description:
-      'ID for the Challenge being invited to, if any. Or the Challenge containing the Opportunity being invited to.',
+      'ID for the Subspace being invited to, if any. Or the Challenge containing the Opportunity being invited to.',
     nullable: true,
   })
-  challengeID?: string;
+  subspaceID?: string;
 
   @Field(() => UUID, {
     description: 'ID for the Opportunity being invited to, if any.',

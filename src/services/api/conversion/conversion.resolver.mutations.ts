@@ -104,7 +104,7 @@ export class ConversionResolverMutations {
     if (!subsubspace.account || !subsubspace.account.space) {
       throw new EntityNotInitializedException(
         `account not found on opportunity: ${subsubspace.nameID}`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     }
     const spaceID = subsubspace.account.space.id;

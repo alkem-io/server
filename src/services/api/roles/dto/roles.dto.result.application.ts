@@ -43,13 +43,13 @@ export class ApplicationForRoleResult {
       'ID for the Challenge being applied to, if any. Or the Challenge containing the Opportunity being applied to.',
     nullable: true,
   })
-  challengeID?: string;
+  subspaceID?: string;
 
   @Field(() => UUID, {
     description: 'ID for the Opportunity being applied to, if any.',
     nullable: true,
   })
-  opportunityID?: string;
+  subsubspaceID?: string;
 
   constructor(
     communityID: string,

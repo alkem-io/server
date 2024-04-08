@@ -10,7 +10,7 @@ export class UpdateSubspaceSettingsInput {
     description:
       'The identifier for the Subspace whose settings are to be updated.',
   })
-  challengeID!: string;
+  subspaceID!: string;
 
   @Field(() => UpdateSpaceSettingsInput, {
     nullable: false,

@@ -16,8 +16,7 @@ import { ActivityInputCalloutWhiteboardContentModified } from './dto/activity.dt
 import { ActivityInputMemberJoined } from './dto/activity.dto.input.member.joined';
 import { ActivityInputCalloutPostComment } from './dto/activity.dto.input.callout.post.comment';
 import { ActivityInputCalloutDiscussionComment } from './dto/activity.dto.input.callout.discussion.comment';
-import { ActivityInputChallengeCreated } from './dto/activity.dto.input.challenge.created';
-import { ActivityInputOpportunityCreated } from './dto/activity.dto.input.opportunity.created';
+import { ActivityInputSubspaceCreated } from './dto/activity.dto.input.subspace.created';
 import { ActivityInputUpdateSent } from './dto/activity.dto.input.update.sent';
 import { Community } from '@domain/community/community/community.entity';
 import { ActivityInputMessageRemoved } from './dto/activity.dto.input.message.removed';
@@ -27,6 +26,8 @@ import { ActivityInputCalloutLinkCreated } from './dto/activity.dto.input.callou
 import { ActivityInputCalendarEventCreated } from './dto/activity.dto.input.calendar.event.created';
 import { TimelineResolverService } from '@services/infrastructure/entity-resolver/timeline.resolver.service';
 import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
+import { Space } from '@domain/challenge/space/space.entity';
+import { ActivityInputSubsubspaceCreated } from './dto/activity.dto.input.subsubspace.created';
 
 @Injectable()
 export class ActivityAdapter {
@@ -49,21 +50,21 @@ export class ActivityAdapter {
   ) {}
 
   public async challengeCreated(
-    eventData: ActivityInputChallengeCreated,
+    eventData: ActivityInputSubspaceCreated,
     spaceID: string
   ): Promise<boolean> {
     const eventType = ActivityEventType.CHALLENGE_CREATED;
     this.logEventTriggered(eventData, eventType);
 
-    const challenge = eventData.subspace;
+    const subspace = eventData.subspace;
 
     const collaborationID = await this.getCollaborationIdForSpace(spaceID);
-    const description = challenge.profile.displayName;
+    const description = subspace.profile.displayName;
 
     const activity = await this.activityService.createActivity({
       collaborationID,
       triggeredBy: eventData.triggeredBy,
-      resourceID: challenge.id,
+      resourceID: subspace.id,
       parentID: spaceID,
       description,
       type: eventType,
@@ -75,23 +76,23 @@ export class ActivityAdapter {
   }
 
   public async opportunityCreated(
-    eventData: ActivityInputOpportunityCreated
+    eventData: ActivityInputSubsubspaceCreated
   ): Promise<boolean> {
     const eventType = ActivityEventType.OPPORTUNITY_CREATED;
     this.logEventTriggered(eventData, eventType);
 
-    const opportunity = eventData.opportunity;
+    const subsubspace = eventData.subsubspace;
 
-    const collaborationID = await this.getCollaborationIdForChallenge(
-      eventData.challengeId
+    const collaborationID = await this.getCollaborationIdForSpace(
+      eventData.subspaceID
     );
-    const description = opportunity.profile.displayName;
+    const description = subsubspace.profile.displayName;
 
     const activity = await this.activityService.createActivity({
       collaborationID,
       triggeredBy: eventData.triggeredBy,
-      resourceID: opportunity.id,
-      parentID: eventData.challengeId,
+      resourceID: subsubspace.id,
+      parentID: eventData.subspaceID,
       description,
       type: eventType,
     });
@@ -379,45 +380,24 @@ export class ActivityAdapter {
   }
 
   private async getCollaborationIdForSpace(spaceID: string): Promise<string> {
-    const [result]: { collaborationId: string }[] =
-      await this.entityManager.connection.query(
-        `
-          SELECT collaboration.id as collaborationId FROM collaboration
-          LEFT JOIN space ON space.collaborationId = collaboration.id
-          WHERE space.id = '${spaceID}'
-        `
-      );
-
-    if (!result) {
+    const space = await this.entityManager.findOne(Space, {
+      where: {
+        subspaces: {
+          id: spaceID,
+        },
+      },
+      relations: {
+        collaboration: true,
+      },
+    });
+    if (!space || !space.collaboration) {
       throw new EntityNotFoundException(
-        `Unable to identify Collaboration for Space with ID: ${spaceID}`,
-        LogContext.ACTIVITY
+        `Unable to find collaboration for spaceID: ${spaceID}`,
+        LogContext.COLLABORATION
       );
     }
 
-    return result.collaborationId;
-  }
-
-  private async getCollaborationIdForChallenge(
-    challengeID: string
-  ): Promise<string> {
-    const [result]: { collaborationId: string }[] =
-      await this.entityManager.connection.query(
-        `
-          SELECT collaboration.id as collaborationId FROM collaboration
-          LEFT JOIN challenge ON challenge.collaborationId = collaboration.id
-          WHERE challenge.id = '${challengeID}'
-        `
-      );
-
-    if (!result) {
-      throw new EntityNotFoundException(
-        `Unable to identify Collaboration for Challenge with ID: ${challengeID}`,
-        LogContext.ACTIVITY
-      );
-    }
-
-    return result.collaborationId;
+    return space.collaboration.id;
   }
 
   private async getCollaborationIdForCallout(

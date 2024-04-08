@@ -86,7 +86,7 @@ export class PreferenceService {
     if (!reference)
       throw new EntityNotFoundException(
         `Not able to locate preference with the specified ID: ${preferenceID}`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     return reference;
   }
@@ -129,7 +129,7 @@ export class PreferenceService {
     if (preference.preferenceDefinition.definitionSet !== definitionSet) {
       throw new ValidationException(
         `Expected preference to be in the following definition set: ${definitionSet}`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     }
   }

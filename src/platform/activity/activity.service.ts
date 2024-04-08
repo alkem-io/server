@@ -47,7 +47,7 @@ export class ActivityService {
     if (!activity)
       throw new EntityNotFoundException(
         `Not able to locate Activity with the specified ID: ${activityID}`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     return activity;
   }

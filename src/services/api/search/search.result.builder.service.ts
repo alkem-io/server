@@ -60,7 +60,7 @@ export default class SearchResultBuilderService
   }
 
   async [SearchResultType.CHALLENGE](rawSearchResult: ISearchResult) {
-    const challenge = await this.spaceService.getSpaceOrFail(
+    const subspace = await this.spaceService.getSpaceOrFail(
       rawSearchResult.result.id,
       {
         relations: {
@@ -70,23 +70,23 @@ export default class SearchResultBuilderService
         },
       }
     );
-    if (!challenge.account || !challenge.account.space) {
+    if (!subspace.account || !subspace.account.space) {
       throw new RelationshipNotFoundException(
-        `Unable to find account for ${challenge.nameID}`,
+        `Unable to find account for ${subspace.nameID}`,
         LogContext.SEARCH
       );
     }
-    const space = challenge.account.space;
+    const space = subspace.account.space;
     const searchResultChallenge: ISearchResultChallenge = {
       ...this.searchResultBase,
-      subspace: challenge,
+      subspace: subspace,
       space,
     };
     return searchResultChallenge;
   }
 
   async [SearchResultType.OPPORTUNITY](rawSearchResult: ISearchResult) {
-    const opportunity = await this.spaceService.getSpaceOrFail(
+    const subsubspace = await this.spaceService.getSpaceOrFail(
       rawSearchResult.result.id,
       {
         relations: {
@@ -97,25 +97,25 @@ export default class SearchResultBuilderService
         },
       }
     );
-    if (!opportunity.account || !opportunity.account.space) {
+    if (!subsubspace.account || !subsubspace.account.space) {
       throw new RelationshipNotFoundException(
-        `Unable to find account for ${opportunity.nameID}`,
+        `Unable to find account for ${subsubspace.nameID}`,
         LogContext.SEARCH
       );
     }
-    const space = opportunity.account.space;
-    if (!opportunity.parentSpace) {
+    const space = subsubspace.account.space;
+    if (!subsubspace.parentSpace) {
       throw new RelationshipNotFoundException(
-        `Unable to find parent subspace for ${opportunity.nameID}`,
+        `Unable to find parent subspace for ${subsubspace.nameID}`,
         LogContext.SEARCH
       );
     }
     const challenge = await this.spaceService.getSpaceOrFail(
-      opportunity.parentSpace.id
+      subsubspace.parentSpace.id
     );
     const searchResultOpportunity: ISearchResultOpportunity = {
       ...this.searchResultBase,
-      opportunity,
+      opportunity: subsubspace,
       space,
       subspace: challenge,
     };

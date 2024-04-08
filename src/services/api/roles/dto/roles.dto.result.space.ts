@@ -15,12 +15,12 @@ export class RolesResultSpace extends RolesResultCommunity {
   @Field(() => [RolesResultCommunity], {
     description: 'Details of the Challenges the user is a member of',
   })
-  challenges: RolesResultCommunity[] = [];
+  subspaces: RolesResultCommunity[] = [];
 
   @Field(() => [RolesResultCommunity], {
     description: 'Details of the Opportunities the Contributor is a member of',
   })
-  opportunities: RolesResultCommunity[] = [];
+  subsubspaces: RolesResultCommunity[] = [];
 
   @Field(() => SpaceVisibility, {
     nullable: false,

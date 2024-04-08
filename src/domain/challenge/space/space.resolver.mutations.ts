@@ -160,7 +160,7 @@ export class SpaceResolverMutations {
     @Args('settingsData') settingsData: UpdateSubspaceSettingsInput
   ): Promise<ISpace> {
     const subspace = await this.spaceService.getSpaceOrFail(
-      settingsData.challengeID,
+      settingsData.subspaceID,
       {
         relations: {
           account: {
@@ -172,7 +172,7 @@ export class SpaceResolverMutations {
     if (!subspace.account || !subspace.account.space) {
       throw new EntityNotInitializedException(
         `Unable to find account for ${subspace.nameID}`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     }
     const spaceID = subspace.account.space.id;
@@ -219,7 +219,7 @@ export class SpaceResolverMutations {
     if (!space.account || !space.account.license) {
       throw new EntityNotInitializedException(
         `Unabl to load license for Space: ${space.id}`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     }
     await this.authorizationService.grantAccessOrFail(
@@ -238,28 +238,28 @@ export class SpaceResolverMutations {
         `challengeCreate using challenge template: ${space.nameID} - ${subspaceData.collaborationData.collaborationTemplateID}`
       );
     }
-    const challenge = await this.spaceService.createSubspace(
+    const subspace = await this.spaceService.createSubspace(
       subspaceData,
       agentInfo
     );
 
     await this.spaceAuthorizationService.applyAuthorizationPolicy(
-      challenge,
+      subspace,
       space.authorization
     );
 
     this.activityAdapter.challengeCreated(
       {
         triggeredBy: agentInfo.userID,
-        subspace: challenge,
+        subspace: subspace,
       },
       space.id
     );
 
     this.contributionReporter.challengeCreated(
       {
-        id: challenge.id,
-        name: challenge.profile.displayName,
+        id: subspace.id,
+        name: subspace.profile.displayName,
         space: space.id,
       },
       {
@@ -271,13 +271,13 @@ export class SpaceResolverMutations {
     const challengeCreatedEvent: SubspaceCreatedPayload = {
       eventID: `space-challenge-created-${Math.round(Math.random() * 100)}`,
       journeyID: space.id,
-      childJourney: challenge,
+      childJourney: subspace,
     };
     this.subspaceCreatedSubscription.publish(
       SubscriptionType.SUBSPACE_CREATED,
       challengeCreatedEvent
     );
 
-    return challenge;
+    return subspace;
   }
 }

@@ -1,7 +1,7 @@
 import { ISpace } from '@domain/challenge/space/space.interface';
 import { ActivityInputBase } from './activity.dto.input.base';
 
-export class ActivityInputOpportunityCreated extends ActivityInputBase {
-  opportunity!: ISpace;
-  challengeId!: string;
+export class ActivityInputSubsubspaceCreated extends ActivityInputBase {
+  subsubspace!: ISpace;
+  subspaceID!: string;
 }

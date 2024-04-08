@@ -11,7 +11,7 @@ export const spacesQuery = gql`
         id
         displayName
       }
-      challenges {
+      subspaces {
         nameID
         profile {
           displayName
@@ -20,7 +20,7 @@ export const spacesQuery = gql`
           id
           displayName
         }
-        opportunities {
+        subspaces {
           nameID
           profile {
             displayName

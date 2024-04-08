@@ -4,8 +4,8 @@ import { IActivityLogEntryMemberJoined } from '@services/api/activity-log/dto/ac
 import { IActivityLogEntryCalloutPublished } from '@services/api/activity-log/dto/activity.log.dto.entry.callout.published';
 import { IActivityLogEntryCalloutPostCreated } from '@services/api/activity-log/dto/activity.log.dto.entry.callout.post.created';
 import { IActivityLogEntryCalloutWhiteboardCreated } from '@services/api/activity-log/dto/activity.log.dto.entry.callout.whiteboard.created';
-import { IActivityLogEntryChallengeCreated } from '@services/api/activity-log/dto/activity.log.dto.entry.challenge.created';
-import { IActivityLogEntryOpportunityCreated } from '@services/api/activity-log/dto/activity.log.dto.entry.opportunity.created';
+import { IActivityLogEntryChallengeCreated } from '@services/api/activity-log/dto/activity.log.dto.entry.subspace.created';
+import { IActivityLogEntryOpportunityCreated } from '@services/api/activity-log/dto/activity.log.dto.entry.subsubspace.created';
 import { IActivityLogEntryCalloutPostComment } from '@services/api/activity-log/dto/activity.log.dto.entry.callout.post.comment';
 import { IActivityLogEntryCalloutDiscussionComment } from '@services/api/activity-log/dto/activity.log.dto.entry.callout.discussion.comment';
 import { UserService } from '@domain/community/user/user.service';
@@ -23,9 +23,13 @@ import { CalendarService } from '@domain/timeline/calendar/calendar.service';
 import { CalendarEventService } from '@domain/timeline/event/event.service';
 import { LinkService } from '@domain/collaboration/link/link.service';
 import { IActivityLogEntryCalloutWhiteboardContentModified } from './dto/activity.log.dto.entry.callout.whiteboard.content.modified';
-import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { SpaceService } from '@domain/challenge/space/space.service';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
+import { InjectEntityManager } from '@nestjs/typeorm';
+import { EntityManager } from 'typeorm';
+import { Space } from '@domain/challenge/space/space.entity';
+import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
+import { LogContext } from '@common/enums/logging.context';
 
 export default class ActivityLogBuilderService implements IActivityLogBuilder {
   constructor(
@@ -40,8 +44,9 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
     private readonly linkService: LinkService,
     private readonly calendarService: CalendarService,
     private readonly calendarEventService: CalendarEventService,
-    private readonly collaborationService: CollaborationService,
-    private readonly urlGeneratorService: UrlGeneratorService
+    private readonly urlGeneratorService: UrlGeneratorService,
+    @InjectEntityManager('default')
+    private entityManager: EntityManager
   ) {}
 
   async [ActivityEventType.MEMBER_JOINED](rawActivity: IActivity) {
@@ -190,42 +195,32 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
       rawActivity.resourceID
     );
 
-    const result = await this.collaborationService.getJourneyFromCollaboration(
-      rawActivity.collaborationID
-    );
-    const space = result?.spaceId
-      ? await this.spaceService.getSpaceOrFail(result.spaceId, {
-          relations: { profile: true },
-        })
-      : undefined;
-    const challenge = result?.challengeId
-      ? await this.spaceService.getSpaceOrFail(result.challengeId, {
-          relations: { profile: true },
-        })
-      : undefined;
-    const opportunity = result?.opportunityId
-      ? await this.spaceService.getSpaceOrFail(result.opportunityId, {
-          relations: { profile: true },
-        })
-      : undefined;
-
-    const journeyProfile =
-      space?.profile || challenge?.profile || opportunity?.profile;
-    if (!journeyProfile) {
-      throw new Error(
-        `Unable to resolve profile of parent journey with id ${
-          space?.id || challenge?.id || opportunity?.id
-        }`
+    const collaborationID = rawActivity.collaborationID;
+    const space = await this.entityManager.findOne(Space, {
+      where: {
+        collaboration: {
+          id: collaborationID,
+        },
+      },
+      relations: {
+        profile: true,
+      },
+    });
+    if (!space) {
+      throw new EntityNotFoundException(
+        `Unable to find Space for provided collaborationID: ${collaborationID}`,
+        LogContext.COLLABORATION
       );
     }
-    const journeyUrl = await this.urlGeneratorService.generateUrlForProfile(
-      journeyProfile
+
+    const spaceUrl = await this.urlGeneratorService.generateUrlForProfile(
+      space.profile
     );
     const activityUpdateSent: IActivityLogEntryUpdateSent = {
       ...this.activityLogEntryBase,
       updates: updates,
       message: rawActivity.description || '',
-      journeyUrl,
+      journeyUrl: spaceUrl,
     };
     return activityUpdateSent;
   }
