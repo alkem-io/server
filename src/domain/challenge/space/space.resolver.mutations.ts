@@ -205,20 +205,17 @@ export class SpaceResolverMutations {
   @Profiling.api
   async createSpace(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('challengeData') challengeData: CreateSubspaceOnSpaceInput
+    @Args('subspaceData') subspaceData: CreateSubspaceOnSpaceInput
   ): Promise<ISpace> {
-    const space = await this.spaceService.getSpaceOrFail(
-      challengeData.spaceID,
-      {
-        relations: {
-          account: {
-            license: {
-              featureFlags: true,
-            },
+    const space = await this.spaceService.getSpaceOrFail(subspaceData.spaceID, {
+      relations: {
+        account: {
+          license: {
+            featureFlags: true,
           },
         },
-      }
-    );
+      },
+    });
     if (!space.account || !space.account.license) {
       throw new EntityNotInitializedException(
         `Unabl to load license for Space: ${space.id}`,
@@ -233,16 +230,16 @@ export class SpaceResolverMutations {
     );
 
     // For the creation based on the template from another challenge require platform admin privileges
-    if (challengeData.collaborationData?.collaborationTemplateID) {
+    if (subspaceData.collaborationData?.collaborationTemplateID) {
       await this.authorizationService.grantAccessOrFail(
         agentInfo,
         space.authorization,
         AuthorizationPrivilege.CREATE,
-        `challengeCreate using challenge template: ${space.nameID} - ${challengeData.collaborationData.collaborationTemplateID}`
+        `challengeCreate using challenge template: ${space.nameID} - ${subspaceData.collaborationData.collaborationTemplateID}`
       );
     }
     const challenge = await this.spaceService.createSubspace(
-      challengeData,
+      subspaceData,
       agentInfo
     );
 
