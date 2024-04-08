@@ -326,7 +326,6 @@ services:
   virtual_contributor:
     container_name: alkemio_dev_virtual_contributor
     hostname: virtual-contributor
-    # image: alkemio/guidance-engine:v0.6.1
     build:
       context: '../virtual-contributor-service'
       dockerfile: ../virtual-contributor-service/Dockerfile
@@ -340,5 +339,21 @@ services:
     depends_on:
       rabbitmq:
         condition: "service_healthy"
+    environment:
+      - RABBITMQ_HOST
+      - RABBITMQ_USER
+      - RABBITMQ_PASSWORD
+      - RABBITMQ_QUEUE=virtual-persona-engine-alkemio-digileefomgeving
+      - ENVIRONMENT=dev
+      - EMBEDDINGS_DEPLOYMENT_NAME
+      - AZURE_OPENAI_API_KEY
+      - AZURE_OPENAI_ENDPOINT
+      - OPENAI_API_VERSION
+      - AI_MODEL_TEMPERATURE
+      - LLM_DEPLOYMENT_NAME
+      - LANGCHAIN_TRACING_V2
+      - LANGCHAIN_ENDPOINT
+      - LANGCHAIN_API_KEY
+      - LANGCHAIN_PROJECT
 
         # 4b262af068ff4546a69b996bea9e41cb
