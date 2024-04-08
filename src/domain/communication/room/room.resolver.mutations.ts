@@ -121,7 +121,7 @@ export class RoomResolverMutations {
         );
         this.roomServiceEvents.processVirtualContributorMentions(
           mentionsPost,
-          messageData.message,
+          message,
           agentInfo,
           room
         );
@@ -200,7 +200,7 @@ export class RoomResolverMutations {
 
         this.roomServiceEvents.processVirtualContributorMentions(
           mentions,
-          messageData.message,
+          message,
           agentInfo,
           room
         );

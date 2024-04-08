@@ -28,7 +28,7 @@ import { LogContext } from '@common/enums/logging.context';
 import { VirtualPersonaService } from '@domain/community/virtual-persona/virtual.persona.service';
 import { VirtualPersonaQuestionInput } from '@domain/community/virtual-persona/dto/virtual.persona.question.dto.input';
 import { MutationType } from '@common/enums/subscriptions/mutation.type';
-import { RoomSendMessageInput } from './dto/room.dto.send.message';
+import { RoomSendMessageReplyInput } from '@domain/communication/room/dto/room.dto.send.message.reply';
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service/subscription.publish.service';
 import { RoomService } from './room.service';
 import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
@@ -50,7 +50,7 @@ export class RoomServiceEvents {
 
   public async processVirtualContributorMentions(
     mentions: Mention[],
-    question: string,
+    question: Pick<IMessage, 'id' | 'message'>,
     agentInfo: AgentInfo,
     room: IRoom
   ) {
@@ -81,7 +81,7 @@ export class RoomServiceEvents {
 
         const chatData: VirtualPersonaQuestionInput = {
           virtualPersonaID: virtualPersona.id,
-          question: question,
+          question: question.message,
         };
 
         const result = await this.virtualPersonaService.askQuestion(
@@ -93,11 +93,12 @@ export class RoomServiceEvents {
           `got answer for VC: ${answer}`,
           LogContext.COMMUNICATION
         );
-        const answerData: RoomSendMessageInput = {
+        const answerData: RoomSendMessageReplyInput = {
           message: answer,
           roomID: room.id,
+          threadID: question.id,
         };
-        const answerMessage = await this.roomService.sendMessage(
+        const answerMessage = await this.roomService.sendMessageReply(
           room,
           agentInfo.communicationID,
           answerData
