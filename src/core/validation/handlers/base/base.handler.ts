@@ -22,7 +22,6 @@ import { CreateSubspaceOnSpaceInput } from '@domain/challenge/space/dto/space.dt
 import { CreateActorInput, UpdateActorInput } from '@domain/context/actor';
 import { CommunityApplyInput } from '@domain/community/community/dto/community.dto.apply';
 import { CommunicationCreateDiscussionInput } from '@domain/communication/communication/dto/communication.dto.create.discussion';
-import { CreateFeedbackOnCommunityContextInput } from '@domain/community/community/dto/community.dto.create.feedback.on.context';
 import { CreateReferenceOnProfileInput } from '@domain/common/profile/dto/profile.dto.create.reference';
 import {
   CreateTagsetOnProfileInput,
@@ -115,7 +114,6 @@ export class BaseHandler extends AbstractHandler {
       CreateUserGroupInput,
       CreateRelationInput,
       CreateUserInput,
-      CreateFeedbackOnCommunityContextInput,
       CreateReferenceOnProfileInput,
       CreateTagsetOnProfileInput,
       CreateCalendarEventOnCalendarInput,

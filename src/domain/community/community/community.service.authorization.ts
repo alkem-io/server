@@ -140,12 +140,12 @@ export class CommunityAuthorizationService {
     }
 
     if (community.guidelines) {
-      community.guidelines = await this.communityGuidelinesAuthorizationService.applyAuthorizationPolicy(
-        community.guidelines,
-        community.authorization
-      );
+      community.guidelines =
+        await this.communityGuidelinesAuthorizationService.applyAuthorizationPolicy(
+          community.guidelines,
+          community.authorization
+        );
     }
-
 
     return await this.communityRepository.save(community);
   }
