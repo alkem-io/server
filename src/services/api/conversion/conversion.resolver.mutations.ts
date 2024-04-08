@@ -11,13 +11,10 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { ConvertChallengeToSpaceInput } from './dto/convert.dto.challenge.to.space.input';
+import { ConvertSubspaceToSpaceInput } from './dto/convert.dto.subspace.to.space.input';
 import { SpaceAuthorizationService } from '@domain/challenge/space/space.service.authorization';
-import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
-import { ConvertOpportunityToChallengeInput } from './dto/convert.dto.opportunity.to.challenge.input';
-import { OpportunityService } from '@domain/challenge/opportunity/opportunity.service';
+import { ConvertSubsubspaceToSubspaceInput } from './dto/convert.dto.subsubspace.to.subspace.input';
 import { SpaceService } from '@domain/challenge/space/space.service';
-import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
 import { GLOBAL_POLICY_CONVERSION_GLOBAL_ADMINS } from '@common/constants/authorization/global.policy.constants';
 import { LogContext } from '@common/enums/logging.context';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
@@ -32,8 +29,6 @@ export class ConversionResolverMutations {
     private conversionService: ConversionService,
     private spaceAuthorizationService: SpaceAuthorizationService,
     private spaceService: SpaceService,
-    private opportunityService: OpportunityService,
-    private challengeService: ChallengeService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {
@@ -56,7 +51,7 @@ export class ConversionResolverMutations {
   async convertChallengeToSpace(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('convertData')
-    convertChallengeToSpaceData: ConvertChallengeToSpaceInput
+    convertChallengeToSpaceData: ConvertSubspaceToSpaceInput
   ): Promise<ISpace> {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -86,7 +81,7 @@ export class ConversionResolverMutations {
   }
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => IChallenge, {
+  @Mutation(() => ISpace, {
     description:
       'Creates a new Challenge by converting an existing Opportunity.',
   })
@@ -94,9 +89,9 @@ export class ConversionResolverMutations {
   async convertOpportunityToChallenge(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('convertData')
-    convertOpportunityToChallengeData: ConvertOpportunityToChallengeInput
-  ): Promise<IChallenge> {
-    const opportunity = await this.opportunityService.getOpportunityOrFail(
+    convertOpportunityToChallengeData: ConvertSubsubspaceToSubspaceInput
+  ): Promise<ISpace> {
+    const subsubspace = await this.spaceService.getSpaceOrFail(
       convertOpportunityToChallengeData.opportunityID,
       {
         relations: {
@@ -106,13 +101,13 @@ export class ConversionResolverMutations {
         },
       }
     );
-    if (!opportunity.account || !opportunity.account.space) {
+    if (!subsubspace.account || !subsubspace.account.space) {
       throw new EntityNotInitializedException(
-        `account not found on opportunity: ${opportunity.nameID}`,
+        `account not found on opportunity: ${subsubspace.nameID}`,
         LogContext.CHALLENGES
       );
     }
-    const spaceID = opportunity.account.space.id;
+    const spaceID = subsubspace.account.space.id;
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       this.authorizationGlobalAdminPolicy,
@@ -139,6 +134,6 @@ export class ConversionResolverMutations {
       parentSpace,
       parentSpace.account.authorization
     );
-    return this.challengeService.getChallengeOrFail(newChallenge.id);
+    return this.spaceService.getSpaceOrFail(newChallenge.id);
   }
 }

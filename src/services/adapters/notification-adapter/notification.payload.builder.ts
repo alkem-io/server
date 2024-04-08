@@ -691,9 +691,8 @@ export class NotificationPayloadBuilder {
   ): Promise<SpaceBaseEventPayload> {
     const basePayload = this.buildBaseEventPayload(triggeredBy);
     const baseChallenge =
-      await this.communityResolverService.getBaseChallengeForCommunityOrFail(
-        community.id,
-        community.type
+      await this.communityResolverService.getSpaceForCommunityOrFail(
+        community.id
       );
     const url = await this.urlGeneratorService.generateUrlForProfile(
       baseChallenge.profile

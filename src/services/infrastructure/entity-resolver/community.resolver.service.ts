@@ -9,9 +9,7 @@ import { Communication } from '@domain/communication/communication/communication
 import { Profile } from '@domain/common/profile/profile.entity';
 import { SpaceType } from '@common/enums/space.type';
 import { Space } from '@domain/challenge/space/space.entity';
-import { IBaseChallenge } from '@domain/challenge/base-challenge/base.challenge.interface';
-import { Challenge } from '@domain/challenge/challenge/challenge.entity';
-import { Opportunity } from '@domain/challenge/opportunity';
+import { ISpace } from '@domain/challenge/space/space.interface';
 
 @Injectable()
 export class CommunityResolverService {
@@ -28,64 +26,29 @@ export class CommunityResolverService {
     private entityManager: EntityManager
   ) {}
 
-  public async getRootSpaceFromCommunityOrFail(community: ICommunity) {
-    let baseChallenge: IBaseChallenge | null = null;
-    switch (community.type) {
-      case SpaceType.SPACE:
-        baseChallenge = await this.entityManager.findOne(Space, {
-          where: {
-            community: {
-              id: community.id,
-            },
-          },
-          relations: {
-            account: {
-              space: true,
-            },
-          },
-        });
-        break;
-      case SpaceType.CHALLENGE:
-        baseChallenge = await this.entityManager.findOne(Challenge, {
-          where: {
-            community: {
-              id: community.id,
-            },
-          },
-          relations: {
-            account: {
-              space: true,
-            },
-          },
-        });
-        break;
-      case SpaceType.OPPORTUNITY:
-        baseChallenge = await this.entityManager.findOne(Opportunity, {
-          where: {
-            community: {
-              id: community.id,
-            },
-          },
-          relations: {
-            account: {
-              space: true,
-            },
-          },
-        });
-        break;
+  public async getRootSpaceIDFromCommunityOrFail(
+    community: ICommunity
+  ): Promise<string> {
+    const space = await this.entityManager.findOne(Space, {
+      where: {
+        community: {
+          id: community.id,
+        },
+      },
+      relations: {
+        account: {
+          space: true,
+        },
+      },
+    });
+    if (space && space.account && space.account.space) {
+      return space.account.space.id;
     }
-    if (
-      !baseChallenge ||
-      !baseChallenge.account ||
-      !baseChallenge.account.space
-    ) {
-      throw new EntityNotFoundException(
-        `Unable to find Space for given community id: ${community.id}`,
-        LogContext.COLLABORATION
-      );
-    }
-    const space = baseChallenge.account.space;
-    return space.id;
+
+    throw new EntityNotFoundException(
+      `Unable to find Space for given community id: ${community.id}`,
+      LogContext.COLLABORATION
+    );
   }
 
   public async getCommunityFromDiscussionOrFail(
@@ -314,85 +277,25 @@ export class CommunityResolverService {
   }
 
   public async getSpaceForCommunityOrFail(
-    communityId: string,
-    spaceType: SpaceType
-  ): Promise<string> {
-    const [result]: {
-      profileId: string;
-    }[] = await this.entityManager.connection.query(
-      `SELECT profileId from \`${spaceType}\`
-        WHERE \`${spaceType}\`.\`communityId\` = '${communityId}';`
-    );
-
-    const profileId = result.profileId;
-    const profile = await this.profileRepository.findOne({
-      where: { id: profileId },
+    communityId: string
+  ): Promise<ISpace> {
+    const space = await this.entityManager.findOne(Space, {
+      where: {
+        community: {
+          id: communityId,
+        },
+      },
+      relations: {
+        profile: true,
+      },
     });
-    if (!profile) {
+    if (!space) {
       throw new EntityNotFoundException(
-        `Unable to find Profile for Community: ${communityId}`,
-        LogContext.NOTIFICATIONS
+        `Unable to find space for community: ${communityId}`,
+        LogContext.URL_GENERATOR
       );
     }
-    return profile.displayName;
-  }
-
-  public async getBaseChallengeForCommunityOrFail(
-    communityId: string,
-    spaceType: SpaceType
-  ): Promise<IBaseChallenge> {
-    switch (spaceType) {
-      case SpaceType.SPACE:
-        const space = await this.entityManager.findOne(Space, {
-          where: {
-            community: {
-              id: communityId,
-            },
-          },
-          relations: {
-            profile: true,
-          },
-        });
-        if (space) {
-          return space;
-        }
-        break;
-      case SpaceType.CHALLENGE:
-        const challenge = await this.entityManager.findOne(Challenge, {
-          where: {
-            community: {
-              id: communityId,
-            },
-          },
-          relations: {
-            profile: true,
-          },
-        });
-        if (challenge && challenge.profile) {
-          return challenge;
-        }
-        break;
-      case SpaceType.OPPORTUNITY:
-        const opportunity = await this.entityManager.findOne(Opportunity, {
-          where: {
-            community: {
-              id: communityId,
-            },
-          },
-          relations: {
-            profile: true,
-          },
-        });
-        if (opportunity && opportunity.profile) {
-          return opportunity;
-        }
-        break;
-    }
-
-    throw new EntityNotFoundException(
-      `Unable to find base challenge for community of type '${spaceType}': ${communityId}`,
-      LogContext.URL_GENERATOR
-    );
+    return space;
   }
 
   public async getDisplayNameForCommunityOrFail(

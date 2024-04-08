@@ -17,7 +17,7 @@ import { Space } from '@domain/challenge/space/space.entity';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { CalloutTemplate } from '@domain/template/callout-template/callout.template.entity';
 import { SpaceType } from '@common/enums/space.type';
-import { IBaseChallenge } from '@domain/challenge/base-challenge/base.challenge.interface';
+import { ISpace } from '@domain/challenge/space/space.interface';
 
 @Injectable()
 export class UrlGeneratorService {
@@ -144,28 +144,24 @@ export class UrlGeneratorService {
     return url;
   }
 
-  async createJourneyAdminCommunityURL(
-    baseChallenge: IBaseChallenge
-  ): Promise<string> {
-    const spaceNameID = baseChallenge.nameID;
+  async createJourneyAdminCommunityURL(space: ISpace): Promise<string> {
+    const spaceNameID = space.nameID;
     const baseURL = `${this.endpoint_cluster}/admin/spaces/${spaceNameID}`;
-    switch (baseChallenge.type) {
+    switch (space.type) {
       case SpaceType.SPACE:
-        const spaceAdminUrl = await this.generateAdminUrlForSpace(
-          baseChallenge.nameID
-        );
+        const spaceAdminUrl = await this.generateAdminUrlForSpace(space.nameID);
         return `${spaceAdminUrl}/community`;
       case SpaceType.CHALLENGE:
         const challengeAdminUrl = await this.getChallengeUrlPath(
           this.FIELD_ID,
-          baseChallenge.id,
+          space.id,
           true
         );
         return `${challengeAdminUrl}/community`;
       case SpaceType.OPPORTUNITY:
         const opportunityAdminURL = await this.getOpportunityUrlPath(
           this.FIELD_ID,
-          baseChallenge.id,
+          space.id,
           true
         );
         return `${opportunityAdminURL}/community`;

@@ -28,8 +28,6 @@ import { CollaborationArgsCallouts } from './dto/collaboration.args.callouts';
 import { AgentInfo } from '@core/authentication/agent-info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UpdateCollaborationCalloutsSortOrderInput } from './dto/collaboration.dto.update.callouts.sort.order';
-import { getJourneyByCollaboration } from '@common/utils';
-import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { TagsetTemplateSetService } from '@domain/common/tagset-template-set/tagset.template.set.service';
 import {
   CreateTagsetTemplateInput,
@@ -44,7 +42,6 @@ import { keyBy } from 'lodash';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { CalloutType } from '@common/enums/callout.type';
-import { Opportunity } from '@domain/challenge/opportunity';
 import { InnovationFlowService } from '../innovation-flow/innovaton.flow.service';
 import { SpaceDefaultsService } from '@domain/challenge/space.defaults/space.defaults.service';
 import { TagsetType } from '@common/enums/tagset.type';
@@ -247,98 +244,65 @@ export class CollaborationService {
   public async getChildCollaborationsOrFail(
     collaborationID: string
   ): Promise<ICollaboration[] | never> {
-    // check if exists
-    await this.getCollaborationOrFail(collaborationID);
-
-    const { spaceId, challengeId } = await getJourneyByCollaboration(
-      this.entityManager,
-      collaborationID
-    );
-
-    if (spaceId) {
-      const space = await this.entityManager.findOne(Space, {
-        where: { id: spaceId },
-        relations: {
-          account: true,
-        },
-      });
-      if (!space?.account) {
-        throw new EntityNotFoundException(
-          `Unable to find Space found with the given id: ${spaceId}`,
-          LogContext.COLLABORATION
-        );
-      }
-      const accountID = space.account.id;
-      const challengesWithCollab = await this.entityManager.find(Challenge, {
-        where: {
-          account: {
-            id: accountID,
-          },
-        },
-        relations: {
-          collaboration: true,
-        },
-        select: {
-          collaboration: {
-            id: true,
-          },
-        },
-      });
-      const oppsWithCollab = await this.entityManager.find(Opportunity, {
-        where: {
-          account: {
-            id: accountID,
-          },
-        },
-        relations: {
-          collaboration: true,
-        },
-        select: {
-          collaboration: {
-            id: true,
-          },
-        },
-      });
-
-      return [...challengesWithCollab, ...oppsWithCollab].map(x => {
-        if (!x.collaboration) {
-          throw new EntityNotInitializedException(
-            `Collaboration not found on ${
-              x instanceof Challenge ? 'Challenge' : 'Opportunity'
-            } '${x.id}'`,
-            LogContext.COLLABORATION
-          );
-        }
-        return x.collaboration;
-      });
+    const space = await this.entityManager.findOne(Space, {
+      where: { collaboration: { id: collaborationID } },
+      relations: {
+        account: true,
+        subspaces: true,
+      },
+    });
+    if (!space) {
+      throw new EntityNotFoundException(
+        `Unable to find Space for provided collaborationID: ${collaborationID}`,
+        LogContext.COLLABORATION
+      );
     }
+    const accountID = space.account.id;
 
-    if (challengeId) {
-      const challenge = await this.entityManager.findOneOrFail(Challenge, {
-        where: { id: challengeId },
-        relations: {
-          opportunities: {
+    switch (space.type) {
+      case SpaceType.SPACE:
+        const spacesInAccount = await this.entityManager.find(Space, {
+          where: {
+            account: {
+              id: accountID,
+            },
+          },
+          relations: {
             collaboration: true,
           },
-        },
-      });
-
-      if (!challenge.opportunities) {
-        throw new EntityNotInitializedException(
-          `Opportunities not found on challenge ${challengeId}`,
-          LogContext.COLLABORATION
-        );
-      }
-
-      return challenge.opportunities?.map(opp => {
-        if (!opp.collaboration) {
+          select: {
+            collaboration: {
+              id: true,
+            },
+          },
+        });
+        return [...spacesInAccount].map(x => {
+          if (!x.collaboration) {
+            throw new EntityNotInitializedException(
+              `Collaboration not found on ${x.type} '${x.id}'`,
+              LogContext.COLLABORATION
+            );
+          }
+          return x.collaboration;
+        });
+      case SpaceType.CHALLENGE:
+        const subsubspaces = space.subspaces;
+        if (!subsubspaces) {
           throw new EntityNotInitializedException(
-            `Collaboration not found on opportunity ${opp.id}`,
+            `Subsubspaces not found on subspace ${space.type}`,
             LogContext.COLLABORATION
           );
         }
-        return opp.collaboration;
-      });
+
+        return subsubspaces?.map(opp => {
+          if (!opp.collaboration) {
+            throw new EntityNotInitializedException(
+              `Collaboration not found on subsubspace ${opp.id}`,
+              LogContext.COLLABORATION
+            );
+          }
+          return opp.collaboration;
+        });
     }
 
     return [];

@@ -1,7 +1,7 @@
-import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IActivityLogEntryBase } from './activity.log.dto.entry.base.interface';
 import { IActivityLogEntry } from './activity.log.entry.interface';
+import { ISpace } from '@domain/challenge/space/space.interface';
 
 @ObjectType('ActivityLogEntryChallengeCreated', {
   implements: () => [IActivityLogEntry],
@@ -10,9 +10,9 @@ export abstract class IActivityLogEntryChallengeCreated
   extends IActivityLogEntryBase
   implements IActivityLogEntry
 {
-  @Field(() => IChallenge, {
+  @Field(() => ISpace, {
     nullable: false,
-    description: 'The Challenge that was created.',
+    description: 'The Subspace that was created.',
   })
-  challenge!: IChallenge;
+  subspace!: ISpace;
 }

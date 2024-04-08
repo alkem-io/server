@@ -1,4 +1,3 @@
-import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { Inject, UseGuards } from '@nestjs/common';
 import { Resolver, Args, Mutation } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
@@ -9,10 +8,8 @@ import { AgentInfo } from '@core/authentication';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { SpaceAuthorizationService } from './space.service.authorization';
-import { ChallengeAuthorizationService } from '@domain/challenge/challenge/challenge.service.authorization';
 import { ISpace } from './space.interface';
-import { CreateChallengeOnSpaceInput } from './dto/space.dto.create.challenge';
-import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
+import { CreateSubspaceOnSpaceInput } from './dto/space.dto.create.subspace';
 import { SubspaceCreatedPayload } from './dto/space.subspace.created.payload';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { PubSubEngine } from 'graphql-subscriptions';
@@ -21,7 +18,7 @@ import { ContributionReporterService } from '@services/external/elasticsearch/co
 import { NameReporterService } from '@services/external/elasticsearch/name-reporter/name.reporter.service';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { LogContext } from '@common/enums';
-import { UpdateChallengeSettingsInput } from '../challenge/dto/challenge.dto.update.settings';
+import { UpdateSubspaceSettingsInput } from './dto/subspace.dto.update.settings';
 import { UpdateSpaceSettingsOnSpaceInput } from './dto/space.dto.update.settings';
 import { UpdateSpacePlatformSettingsInput } from './dto/space.dto.update.platform.settings';
 import { SUBSCRIPTION_SUBSPACE_CREATED } from '@common/constants/providers';
@@ -34,8 +31,6 @@ export class SpaceResolverMutations {
     private authorizationService: AuthorizationService,
     private spaceService: SpaceService,
     private spaceAuthorizationService: SpaceAuthorizationService,
-    private challengeService: ChallengeService,
-    private challengeAuthorizationService: ChallengeAuthorizationService,
     @Inject(SUBSCRIPTION_SUBSPACE_CREATED)
     private subspaceCreatedSubscription: PubSubEngine,
     private namingReporter: NameReporterService
@@ -156,15 +151,15 @@ export class SpaceResolverMutations {
   // this way we avoid the complexity and circular dependencies introduced
   // resetting the challenge policies
   @UseGuards(GraphqlGuard)
-  @Mutation(() => IChallenge, {
-    description: 'Updates one of the settings on a Challenge',
+  @Mutation(() => ISpace, {
+    description: 'Updates one of the settings on a Space',
   })
   @Profiling.api
-  async updateChallengeSettings(
+  async updateSubspaceSettings(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('settingsData') settingsData: UpdateChallengeSettingsInput
-  ): Promise<IChallenge> {
-    const challenge = await this.challengeService.getChallengeOrFail(
+    @Args('settingsData') settingsData: UpdateSubspaceSettingsInput
+  ): Promise<ISpace> {
+    const subspace = await this.spaceService.getSpaceOrFail(
       settingsData.challengeID,
       {
         relations: {
@@ -174,45 +169,44 @@ export class SpaceResolverMutations {
         },
       }
     );
-    if (!challenge.account || !challenge.account.space) {
+    if (!subspace.account || !subspace.account.space) {
       throw new EntityNotInitializedException(
-        `Unable to find account for ${challenge.nameID}`,
+        `Unable to find account for ${subspace.nameID}`,
         LogContext.CHALLENGES
       );
     }
-    const spaceID = challenge.account.space.id;
+    const spaceID = subspace.account.space.id;
 
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      challenge.authorization,
+      subspace.authorization,
       AuthorizationPrivilege.UPDATE,
-      `challenge settings update: ${challenge.id}`
+      `subspace settings update: ${subspace.id}`
     );
 
     const space = await this.spaceService.getSpaceOrFail(spaceID);
     // TODO: pass through the updated settings to the challenge service
-    const updatedChallenge =
-      await this.challengeService.updateChallengeSettings(
-        challenge,
-        settingsData
-      );
+    const updatedSpace = await this.updateSubspaceSettings(
+      agentInfo,
+      settingsData
+    );
     // As the settings may update the authorization, the authorization policy will need to be reset
-    await this.challengeAuthorizationService.applyAuthorizationPolicy(
-      updatedChallenge,
+    await this.spaceAuthorizationService.applyAuthorizationPolicy(
+      updatedSpace,
       space.authorization
     );
-    return await this.challengeService.getChallengeOrFail(challenge.id);
+    return await this.spaceService.getSpaceOrFail(subspace.id);
   }
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => IChallenge, {
-    description: 'Creates a new Challenge within the specified Space.',
+  @Mutation(() => ISpace, {
+    description: 'Creates a new Space within the specified Space.',
   })
   @Profiling.api
-  async createChallenge(
+  async createSpace(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('challengeData') challengeData: CreateChallengeOnSpaceInput
-  ): Promise<IChallenge> {
+    @Args('challengeData') challengeData: CreateSubspaceOnSpaceInput
+  ): Promise<ISpace> {
     const space = await this.spaceService.getSpaceOrFail(
       challengeData.spaceID,
       {
@@ -247,12 +241,12 @@ export class SpaceResolverMutations {
         `challengeCreate using challenge template: ${space.nameID} - ${challengeData.collaborationData.collaborationTemplateID}`
       );
     }
-    const challenge = await this.spaceService.createChallengeInSpace(
+    const challenge = await this.spaceService.createSubspace(
       challengeData,
       agentInfo
     );
 
-    await this.challengeAuthorizationService.applyAuthorizationPolicy(
+    await this.spaceAuthorizationService.applyAuthorizationPolicy(
       challenge,
       space.authorization
     );
@@ -260,7 +254,7 @@ export class SpaceResolverMutations {
     this.activityAdapter.challengeCreated(
       {
         triggeredBy: agentInfo.userID,
-        challenge: challenge,
+        subspace: challenge,
       },
       space.id
     );

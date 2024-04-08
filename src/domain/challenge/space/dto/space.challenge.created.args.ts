@@ -4,7 +4,7 @@ import { UUID } from '@domain/common/scalars';
 @ArgsType()
 export class SubspaceCreatedArgs {
   @Field(() => UUID, {
-    description: 'The Space to receive the Challenge from.',
+    description: 'The Space to receive the Subspaces from.',
     nullable: false,
   })
   journeyID!: string;

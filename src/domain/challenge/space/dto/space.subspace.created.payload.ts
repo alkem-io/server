@@ -1,7 +1,7 @@
 import { BaseSubscriptionPayload } from '@src/common/interfaces';
-import { IJourney } from '@domain/challenge/base-challenge/journey.interface';
+import { ISpace } from '../space.interface';
 
 export interface SubspaceCreatedPayload extends BaseSubscriptionPayload {
   journeyID: string;
-  childJourney: IJourney;
+  childJourney: ISpace;
 }

@@ -12,8 +12,6 @@ import { UserService } from '@domain/community/user/user.service';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { PostService } from '@domain/collaboration/post/post.service';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
-import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
-import { OpportunityService } from '@domain/challenge/opportunity/opportunity.service';
 import { CommunityService } from '@domain/community/community/community.service';
 import { IActivityLogEntry } from './dto/activity.log.entry.interface';
 import { IActivityLogEntryUpdateSent } from './dto/activity.log.dto.entry.update.sent';
@@ -37,8 +35,6 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
     private readonly postService: PostService,
     private readonly whiteboardService: WhiteboardService,
     private readonly spaceService: SpaceService,
-    private readonly challengeService: ChallengeService,
-    private readonly opportunityService: OpportunityService,
     private readonly communityService: CommunityService,
     private readonly roomService: RoomService,
     private readonly linkService: LinkService,
@@ -156,18 +152,18 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
   }
 
   async [ActivityEventType.CHALLENGE_CREATED](rawActivity: IActivity) {
-    const challenge = await this.challengeService.getChallengeOrFail(
+    const challenge = await this.spaceService.getSpaceOrFail(
       rawActivity.resourceID
     );
     const activityChallengeCreated: IActivityLogEntryChallengeCreated = {
       ...this.activityLogEntryBase,
-      challenge: challenge,
+      subspace: challenge,
     };
     return activityChallengeCreated;
   }
 
   async [ActivityEventType.OPPORTUNITY_CREATED](rawActivity: IActivity) {
-    const opportunity = await this.opportunityService.getOpportunityOrFail(
+    const opportunity = await this.spaceService.getSpaceOrFail(
       rawActivity.resourceID
     );
     const activityOpportunityCreated: IActivityLogEntryOpportunityCreated = {
@@ -203,17 +199,14 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
         })
       : undefined;
     const challenge = result?.challengeId
-      ? await this.challengeService.getChallengeOrFail(result.challengeId, {
+      ? await this.spaceService.getSpaceOrFail(result.challengeId, {
           relations: { profile: true },
         })
       : undefined;
     const opportunity = result?.opportunityId
-      ? await this.opportunityService.getOpportunityOrFail(
-          result.opportunityId,
-          {
-            relations: { profile: true },
-          }
-        )
+      ? await this.spaceService.getSpaceOrFail(result.opportunityId, {
+          relations: { profile: true },
+        })
       : undefined;
 
     const journeyProfile =

@@ -226,7 +226,7 @@ export class WhiteboardService {
         whiteboardId
       );
     const spaceID =
-      await this.communityResolverService.getRootSpaceFromCommunityOrFail(
+      await this.communityResolverService.getRootSpaceIDFromCommunityOrFail(
         community
       );
 

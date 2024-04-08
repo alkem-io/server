@@ -1,6 +1,4 @@
 import { Space } from '@domain/challenge/space/space.entity';
-import { Challenge } from '@domain/challenge/challenge/challenge.entity';
-import { Opportunity } from '@domain/challenge/opportunity';
 import { RolesResultSpace } from '../dto/roles.dto.result.space';
 import { RolesResultCommunity } from '../dto/roles.dto.result.community';
 import { CredentialMap } from './group.credentials.by.entity';
@@ -12,8 +10,8 @@ import { AuthorizationPrivilege, LogContext } from '@common/enums';
 export const getJourneyRolesForContributorQueryResult = (
   map: CredentialMap,
   spaces: Space[],
-  challenges: Challenge[],
-  opportunities: Opportunity[],
+  subspaces: Space[],
+  subsubspaces: Space[],
   agentInfo: AgentInfo,
   authorizationService: AuthorizationService
 ): RolesResultSpace[] => {
@@ -45,7 +43,7 @@ export const getJourneyRolesForContributorQueryResult = (
         );
       }
       const challengeResults: RolesResultCommunity[] = [];
-      for (const challenge of challenges) {
+      for (const challenge of subspaces) {
         const challengeAccountID = challenge.account?.id;
         if (!challengeAccountID) {
           throw new RelationshipNotFoundException(
@@ -68,7 +66,7 @@ export const getJourneyRolesForContributorQueryResult = (
 
       // TODO: also filter out opportunities in private challenges, for later...
       const opportunityResults: RolesResultCommunity[] = [];
-      for (const opportunity of opportunities) {
+      for (const opportunity of subsubspaces) {
         const opportunityAccountID = opportunity.account?.id;
         if (!opportunityAccountID) {
           throw new RelationshipNotFoundException(

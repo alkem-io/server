@@ -798,7 +798,7 @@ export class CommunityService {
   }
 
   public async getSpaceID(community: ICommunity): Promise<string> {
-    return await this.communityResolverService.getRootSpaceFromCommunityOrFail(
+    return await this.communityResolverService.getRootSpaceIDFromCommunityOrFail(
       community
     );
   }

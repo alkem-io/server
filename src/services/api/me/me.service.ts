@@ -86,7 +86,7 @@ export class MeService {
       const activityLog =
         await this.activityLogService.convertRawActivityToResult(rawActivity);
 
-      if (!activityLog?.journey) {
+      if (!activityLog?.space) {
         this.logger.warn(
           `Unable to process activity entry ${rawActivity.id} because it does not have a journey.`,
           LogContext.ACTIVITY
@@ -94,7 +94,7 @@ export class MeService {
         continue;
       }
       myJourneyResults.push({
-        journey: activityLog.journey,
+        journey: activityLog.space,
         latestActivity: activityLog,
       });
     }

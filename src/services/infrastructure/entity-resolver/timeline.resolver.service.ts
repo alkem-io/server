@@ -6,8 +6,6 @@ import { Space } from '@domain/challenge/space/space.entity';
 import { Timeline } from '@domain/timeline/timeline/timeline.entity';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Collaboration } from '@domain/collaboration/collaboration';
-import { Challenge } from '@domain/challenge/challenge/challenge.entity';
-import { Opportunity } from '@domain/challenge/opportunity';
 
 @Injectable()
 export class TimelineResolverService {
@@ -85,38 +83,6 @@ export class TimelineResolverService {
     });
 
     if (space && space.id) return space.id;
-    const challenge = await this.entityManager.findOne(Challenge, {
-      relations: {
-        account: {
-          space: true,
-        },
-      },
-      where: [
-        {
-          collaboration: {
-            id: collaborationID,
-          },
-        },
-      ],
-    });
-    if (challenge && challenge.account && challenge.account.space)
-      return challenge.account.space.id;
-    const opportuntiy = await this.entityManager.findOne(Opportunity, {
-      relations: {
-        account: {
-          space: true,
-        },
-      },
-      where: [
-        {
-          collaboration: {
-            id: collaborationID,
-          },
-        },
-      ],
-    });
-    if (opportuntiy && opportuntiy.account && opportuntiy.account.space)
-      return opportuntiy.account.space.id;
     throw new EntityNotFoundError(
       `Unable to identify Space for provided calendar ID: ${calendarID}`,
       LogContext.CALENDAR

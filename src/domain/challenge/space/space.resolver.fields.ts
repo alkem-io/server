@@ -11,7 +11,6 @@ import {
   AuthorizationAgentPrivilege,
   CurrentUser,
 } from '@src/common/decorators';
-import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { SpaceService } from '@domain/challenge/space/space.service';
 import { ISpace } from '@domain/challenge/space/space.interface';
 import { IAgent } from '@domain/agent/agent';
@@ -125,15 +124,15 @@ export class SpaceResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('challenges', () => [IChallenge], {
+  @ResolveField('subspaces', () => [ISpace], {
     nullable: true,
-    description: 'The challenges for the space.',
+    description: 'The subspaces for the space.',
   })
-  async challenges(
+  async subspaces(
     @Parent() space: ISpace,
     @Args({ nullable: true }) args: LimitAndShuffleIdsQueryArgs
-  ): Promise<IChallenge[]> {
-    return await this.spaceService.getChallenges(space, args);
+  ): Promise<ISpace[]> {
+    return await this.spaceService.getSubspaces(space, args);
   }
 
   // Check authorization inside the field resolver
@@ -161,24 +160,27 @@ export class SpaceResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('challenge', () => IChallenge, {
+  @ResolveField('subspace', () => ISpace, {
     nullable: false,
-    description: 'A particular Challenge, either by its ID or nameID',
+    description: 'A particular subspace, either by its ID or nameID',
   })
-  async challenge(
+  async subspace(
     @Args('ID', { type: () => UUID_NAMEID }) id: string,
     @CurrentUser() agentInfo: AgentInfo,
     @Parent() space: ISpace
-  ): Promise<IChallenge> {
-    const challenge = await this.spaceService.getChallengeInAccount(id, space);
-    if (!challenge) {
+  ): Promise<ISpace> {
+    const subspace = await this.spaceService.getSubspaceInAccount(
+      id,
+      space.account.id
+    );
+    if (!subspace) {
       throw new EntityNotFoundException(
-        `Unable to find challenge with ID: '${id}'`,
+        `Unable to find subspace with ID: '${id}'`,
         LogContext.CHALLENGES,
-        { challengeId: id, spaceId: space.id, userId: agentInfo.userID }
+        { subspaceId: id, spaceId: space.id, userId: agentInfo.userID }
       );
     }
-    return challenge;
+    return subspace;
   }
 
   @ResolveField('metrics', () => [INVP], {

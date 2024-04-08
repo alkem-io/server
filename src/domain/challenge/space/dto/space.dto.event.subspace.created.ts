@@ -1,6 +1,6 @@
 import { Field, ObjectType } from '@nestjs/graphql';
-import { IJourney } from '@domain/challenge/base-challenge/journey.interface';
 import { UUID } from '@domain/common/scalars';
+import { ISpace } from '../space.interface';
 
 @ObjectType('SubspaceCreated')
 export class SubspaceCreated {
@@ -13,9 +13,9 @@ export class SubspaceCreated {
   })
   journeyID!: string;
 
-  @Field(() => IJourney, {
+  @Field(() => ISpace, {
     nullable: false,
     description: 'The subspace that has been created.',
   })
-  childJourney!: IJourney;
+  childJourney!: ISpace;
 }

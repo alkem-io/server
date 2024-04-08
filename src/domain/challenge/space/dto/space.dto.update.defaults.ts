@@ -13,7 +13,7 @@ export class UpdateSpaceDefaultsInput {
   @Field(() => UUID, {
     nullable: false,
     description:
-      'The ID for the InnovationFlowtemplate to use for new Challenges and Opportunities.',
+      'The ID for the InnovationFlowtemplate to use for new Subspaces.',
   })
   flowTemplateID?: string;
 }

@@ -8,7 +8,6 @@ import { repositoryProviderMockFactory } from '@test/utils/repository.provider.m
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { Profile } from '@domain/common/profile';
-import { Challenge } from '../challenge/challenge.entity';
 import { Opportunity } from '@domain/challenge/opportunity';
 import { SpaceFilterService } from '@services/infrastructure/space-filter/space.filter.service';
 import { MockFunctionMetadata, ModuleMocker } from 'jest-mock';
@@ -330,7 +329,7 @@ const getSpaceMock = ({
       `auth-${id}`,
       anonymousReadAccess
     ),
-    challenges: getChallengesMock(id, challengesCount, opportunitiesCounts),
+    subspaces: getChallengesMock(id, challengesCount, opportunitiesCounts),
     ...getEntityMock<Space>(),
   };
 };

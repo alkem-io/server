@@ -6,14 +6,9 @@ import { SpaceModule } from '@domain/challenge/space/space.module';
 import { RolesService } from './roles.service';
 import { RolesResolverQueries } from './roles.resolver.queries';
 import { CommunityModule } from '@domain/community/community/community.module';
-import { ChallengeModule } from '@domain/challenge/challenge/challenge.module';
-import { OpportunityModule } from '@domain/challenge/opportunity/opportunity.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { ApplicationModule } from '@domain/community/application/application.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { Opportunity } from '@domain/challenge/opportunity/opportunity.entity';
-import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { PlatformAuthorizationPolicyModule } from '@src/platform/authorization/platform.authorization.policy.module';
 import { SpaceFilterModule } from '@services/infrastructure/space-filter/space.filter.module';
 import { InvitationModule } from '@domain/community/invitation/invitation.module';
@@ -28,16 +23,12 @@ import { RolesResolverFields } from './roles.resolver.fields';
     InvitationModule,
     UserModule,
     UserGroupModule,
-    ChallengeModule,
-    OpportunityModule,
     CommunityModule,
     OrganizationModule,
     SpaceModule,
     PlatformAuthorizationPolicyModule,
     SpaceFilterModule,
     EntityResolverModule,
-    TypeOrmModule.forFeature([Challenge]),
-    TypeOrmModule.forFeature([Opportunity]),
   ],
   providers: [RolesService, RolesResolverQueries, RolesResolverFields],
   exports: [RolesService],

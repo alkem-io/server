@@ -31,7 +31,7 @@ export class SpaceResolverSubscriptions {
   @TypedSubscription<SubspaceCreatedPayload, SubspaceCreatedArgs>(
     () => SubspaceCreated,
     {
-      description: 'Receive new Challenges created on the Space.',
+      description: 'Receive new Subspaces created on the Space.',
       resolve(this: SpaceResolverSubscriptions, payload, args, context) {
         const agentInfo = context.req.user;
         const logMsgPrefix = `[SubspaceCreated subscription] - [${agentInfo.email}] -`;
@@ -77,7 +77,7 @@ export class SpaceResolverSubscriptions {
       agentInfo,
       space.authorization,
       AuthorizationPrivilege.READ,
-      `subscription to new Challenges on Space: ${space.id}`
+      `subscription to new Subspaces on Space: ${space.id}`
     );
 
     return this.subspaceCreatedSubscription.asyncIterator(

@@ -1,6 +1,6 @@
-import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { ActivityInputBase } from './activity.dto.input.base';
+import { ISpace } from '@domain/challenge/space/space.interface';
 
 export class ActivityInputChallengeCreated extends ActivityInputBase {
-  challenge!: IChallenge;
+  subspace!: ISpace;
 }

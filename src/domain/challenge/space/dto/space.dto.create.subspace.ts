@@ -1,9 +1,9 @@
 import { UUID_NAMEID } from '@domain/common/scalars';
 import { Field, InputType } from '@nestjs/graphql';
-import { CreateChallengeInput } from '../../challenge/dto/challenge.dto.create';
+import { CreateSpaceInput } from './space.dto.create';
 
 @InputType()
-export class CreateChallengeOnSpaceInput extends CreateChallengeInput {
+export class CreateSubspaceOnSpaceInput extends CreateSpaceInput {
   @Field(() => UUID_NAMEID, { nullable: false })
   spaceID!: string;
 }

@@ -13,15 +13,11 @@ import {
 import { ValidationException } from '@common/exceptions/validation.exception';
 import { Organization } from '@domain/community/organization/organization.entity';
 import { AgentInfo } from '@core/authentication/agent-info';
-import { Opportunity } from '@domain/challenge/opportunity/opportunity.entity';
-import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { Space } from '@domain/challenge/space/space.entity';
 import { ISearchResult } from './dto/search.result.entry.interface';
 import { SearchResultType } from '@common/enums/search.result.type';
 import { SpaceService } from '@domain/challenge/space/space.service';
-import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
-import { OpportunityService } from '@domain/challenge/opportunity/opportunity.service';
 import { UserService } from '@domain/community/user/user.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
@@ -29,8 +25,6 @@ import SearchResultBuilderService from './search.result.builder.service';
 import { PostService } from '@domain/collaboration/post/post.service';
 import { Post } from '@domain/collaboration/post/post.entity';
 import { ISpace } from '@domain/challenge/space/space.interface';
-import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
-import { IOpportunity } from '@domain/challenge/opportunity';
 import { ISearchResults } from './dto/search.result.dto';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { ISearchResultBuilder } from './search.result.builder.interface';
@@ -40,6 +34,7 @@ import { CalloutContribution } from '@domain/collaboration/callout-contribution/
 import { CalloutType } from '@common/enums/callout.type';
 import { validateSearchParameters } from './util/validate.search.parameters';
 import { validateSearchTerms } from './util/validate.search.terms';
+import { SpaceLevel } from '@common/enums/space.level';
 
 enum SearchEntityTypes {
   USER = 'user',
@@ -59,14 +54,7 @@ class Match {
   key = 0;
   score = 0;
   terms: string[] = [];
-  entity!:
-    | User
-    | UserGroup
-    | Organization
-    | Space
-    | Challenge
-    | Opportunity
-    | Post;
+  entity!: User | UserGroup | Organization | Space | Post;
   type!: SearchResultType;
 }
 
@@ -80,17 +68,11 @@ export class SearchService {
     private organizationRepository: Repository<Organization>,
     @InjectRepository(Space)
     private spaceRepository: Repository<Space>,
-    @InjectRepository(Challenge)
-    private challengeRepository: Repository<Challenge>,
-    @InjectRepository(Opportunity)
-    private opportunityRepository: Repository<Opportunity>,
     @InjectRepository(Post)
     private postRepository: Repository<Post>,
     @InjectRepository(CalloutContribution)
     private contributionRepository: Repository<CalloutContribution>,
     private spaceService: SpaceService,
-    private challengeService: ChallengeService,
-    private opportunityService: OpportunityService,
     private userService: UserService,
     private organizationService: OrganizationService,
     private userGroupService: UserGroupService,
@@ -520,9 +502,9 @@ export class SearchService {
       return;
     }
     for (const term of terms) {
-      const readableChallengeMatches: Challenge[] = [];
+      const readableChallengeMatches: Space[] = [];
       // First part: Retrieve data using TypeORM
-      const challenges = await this.challengeRepository.find({
+      const challenges = await this.spaceRepository.find({
         where: challengeIDsFilter ? { id: In(challengeIDsFilter) } : undefined,
         relations: {
           context: true,
@@ -531,10 +513,8 @@ export class SearchService {
             location: true,
             tagsets: true,
           },
-          space: {
-            account: {
-              license: true,
-            },
+          account: {
+            license: true,
           },
         },
       });
@@ -568,8 +548,7 @@ export class SearchService {
       // Only show challenges that the current user has read access to
       for (const challenge of filteredChallengeMatches) {
         if (
-          challenge.space?.account?.license?.visibility !==
-            SpaceVisibility.ARCHIVED &&
+          challenge.account?.license?.visibility !== SpaceVisibility.ARCHIVED &&
           this.authorizationService.isAccessGranted(
             agentInfo,
             challenge.authorization,
@@ -601,9 +580,9 @@ export class SearchService {
       return;
     }
     for (const term of terms) {
-      const readableOpportunityMatches: Opportunity[] = [];
+      const readableOpportunityMatches: Space[] = [];
       // First part: Retrieve data using TypeORM
-      const opportunities = await this.opportunityRepository.find({
+      const opportunities = await this.spaceRepository.find({
         where: opportunityIDsFilter
           ? { id: In(opportunityIDsFilter) }
           : undefined,
@@ -933,8 +912,6 @@ export class SearchService {
         new SearchResultBuilderService(
           searchResultBase,
           this.spaceService,
-          this.challengeService,
-          this.opportunityService,
           this.userService,
           this.organizationService,
           this.userGroupService,
@@ -1030,30 +1007,40 @@ export class SearchService {
 
   private async getChallengesInAccountFilter(
     accountIDsFilter: string[]
-  ): Promise<IChallenge[]> {
-    const challengesQuery = this.challengeRepository
-      .createQueryBuilder('challenge')
-      .leftJoinAndSelect('challenge.account', 'account')
-      .leftJoinAndSelect('challenge.collaboration', 'collaboration')
-      .where('account.id IN (:accountIDsFilter)', {
-        accountIDsFilter: accountIDsFilter,
-      });
+  ): Promise<ISpace[]> {
+    const challenges = await this.spaceRepository.find({
+      where: {
+        account: {
+          id: In(accountIDsFilter),
+        },
+        level: SpaceLevel.CHALLENGE,
+      },
+      relations: {
+        collaboration: true,
+        account: true,
+      },
+    });
 
-    return await challengesQuery.getMany();
+    return challenges;
   }
 
   private async getOpportunitiesInAccountFilter(
     accountIDsFilter: string[]
-  ): Promise<IOpportunity[]> {
-    const opportunitiesQuery = this.opportunityRepository
-      .createQueryBuilder('opportunity')
-      .leftJoinAndSelect('opportunity.collaboration', 'collaboration')
-      .leftJoinAndSelect('opportunity.account', 'account')
-      .where('account.id IN (:accountIDsFilter)', {
-        accountIDsFilter: accountIDsFilter,
-      });
+  ): Promise<ISpace[]> {
+    const opportunities = await this.spaceRepository.find({
+      where: {
+        account: {
+          id: In(accountIDsFilter),
+        },
+        level: SpaceLevel.OPPORTUNITY,
+      },
+      relations: {
+        collaboration: true,
+        account: true,
+      },
+    });
 
-    return await opportunitiesQuery.getMany();
+    return opportunities;
   }
 
   private async getUsersFilter(searchInSpace: ISpace): Promise<string[]> {
@@ -1108,8 +1095,8 @@ export class SearchService {
 
   private async getPostsFilter(
     spaceFilter: ISpace,
-    challengesFilter: IChallenge[],
-    opportunitiesFilter: IOpportunity[]
+    challengesFilter: ISpace[],
+    opportunitiesFilter: ISpace[]
   ): Promise<string[]> {
     // Get all the relevant collaborations
     const collaborationFilter = [spaceFilter.collaboration?.id];

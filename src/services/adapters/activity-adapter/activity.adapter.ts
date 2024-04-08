@@ -55,7 +55,7 @@ export class ActivityAdapter {
     const eventType = ActivityEventType.CHALLENGE_CREATED;
     this.logEventTriggered(eventData, eventType);
 
-    const challenge = eventData.challenge;
+    const challenge = eventData.subspace;
 
     const collaborationID = await this.getCollaborationIdForSpace(spaceID);
     const description = challenge.profile.displayName;
