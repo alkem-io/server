@@ -119,7 +119,7 @@ export class RoomResolverMutations {
           message,
           agentInfo
         );
-        await this.roomServiceEvents.processVirtualContributorMentions(
+        this.roomServiceEvents.processVirtualContributorMentions(
           mentionsPost,
           messageData.message,
           agentInfo,
@@ -198,7 +198,7 @@ export class RoomResolverMutations {
           agentInfo
         );
 
-        await this.roomServiceEvents.processVirtualContributorMentions(
+        this.roomServiceEvents.processVirtualContributorMentions(
           mentions,
           messageData.message,
           agentInfo,
