@@ -1,5 +1,7 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { intersection } from 'lodash';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Client as ElasticClient } from '@elastic/elasticsearch';
 import {
   QueryDslFunctionScoreContainer,
@@ -17,7 +19,6 @@ import {
   LogContext,
 } from '@common/enums';
 import { BaseException } from '@common/exceptions/base.exception';
-import { ConfigService } from '@nestjs/config';
 
 enum SearchEntityTypes {
   USER = 'user',
@@ -233,14 +234,19 @@ export class SearchExtractService {
     entityTypesFilter: string[] = [],
     onlyPublicResults: boolean
   ): string[] {
+    const filteredIndices = entityTypesFilter.map(
+      type => TYPE_TO_INDEX(this.indexPattern)[type as SearchEntityTypes]
+    );
+
     if (onlyPublicResults) {
-      return Object.values(TYPE_TO_PUBLIC_INDEX);
-    } else if (!entityTypesFilter.length) {
-      return [`${this.indexPattern}*`]; // return all
-    } else {
-      return Object.values(SearchEntityTypes).map(
-        type => TYPE_TO_INDEX(this.indexPattern)[type]
-      );
+      const publicIndices = Object.values(TYPE_TO_PUBLIC_INDEX);
+      return intersection(filteredIndices, publicIndices);
     }
+
+    if (!entityTypesFilter.length) {
+      return [`${this.indexPattern}*`]; // return all
+    }
+
+    return filteredIndices;
   }
 }
