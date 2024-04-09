@@ -17,6 +17,8 @@ import { LogContext } from '@common/enums';
 import { asyncReduceSequential } from '@common/utils/async.reduce.sequential';
 import { getIndexPattern } from '../get.index.pattern';
 import { SpaceLevel } from '@common/enums/space.level';
+import { asyncMap } from '@common/utils/async.map';
+import { ElasticResponseError } from '@services/external/elasticsearch/types';
 
 const profileRelationOptions = {
   location: true,
@@ -111,16 +113,33 @@ export class SearchIngestService {
       `${this.indexPattern}posts`,
     ];
 
-    if (!(await this.elasticClient.indices.exists({ index: indices }))) {
-      return {
-        acknowledged: true,
-        message: 'Indices do not exist',
-      };
-    }
+    const results = await asyncMap(indices, async index => {
+      if (!(await this.elasticClient!.indices.exists({ index }))) {
+        return { acknowledged: true };
+      }
 
-    return this.elasticClient.indices
-      .delete({ index: indices })
-      .then(x => ({ acknowledged: x.acknowledged }));
+      try {
+        const ack = await this.elasticClient!.indices.delete({ index });
+        return { acknowledged: ack.acknowledged };
+      } catch (error) {
+        const err = error as ElasticResponseError;
+        return {
+          acknowledged: false,
+          message: err.meta.body.error.reason,
+        };
+      }
+    });
+
+    return results.reduce(
+      (acc, val) => {
+        if (!val.acknowledged) {
+          acc.acknowledged = false;
+          acc.message = val.message;
+        }
+        return acc;
+      },
+      { acknowledged: true }
+    );
   }
 
   public async ingest() {
@@ -192,6 +211,13 @@ export class SearchIngestService {
       };
     }
     // return;
+
+    if (!data.length) {
+      return {
+        success: true,
+        message: 'No data indexed',
+      };
+    }
 
     const operations = data.flatMap(doc => [{ index: { _index: index } }, doc]);
 

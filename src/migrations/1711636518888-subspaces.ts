@@ -106,6 +106,25 @@ export class subspaces1711636518888 implements MigrationInterface {
         )}' WHERE id = '${policy.id}'`
       );
     }
+
+    const challenges: {
+      id: string;
+      preferenceSetId: string;
+    }[] = await queryRunner.query(`SELECT id, preferenceSetId FROM challenge`);
+    for (const challenge of challenges) {
+      await queryRunner.query(
+        `UPDATE challenge SET level = 1 WHERE id = '${challenge.id}'`
+      );
+    }
+
+    const opportunities: {
+      id: string;
+    }[] = await queryRunner.query(`SELECT id FROM opportunity`);
+    for (const opportunity of opportunities) {
+      await queryRunner.query(
+        `UPDATE opportunity SET level = 2 WHERE id = '${opportunity.id}'`
+      );
+    }
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {}
