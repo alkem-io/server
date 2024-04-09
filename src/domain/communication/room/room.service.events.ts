@@ -100,8 +100,9 @@ export class RoomServiceEvents {
         };
         const answerMessage = await this.roomService.sendMessageReply(
           room,
-          agentInfo.communicationID,
-          answerData
+          virtualContributor.communicationID,
+          answerData,
+          'virtualContributor'
         );
 
         this.subscriptionPublishService.publishRoomEvent(

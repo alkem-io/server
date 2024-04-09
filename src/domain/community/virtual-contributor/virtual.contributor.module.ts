@@ -14,6 +14,7 @@ import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/stor
 import { VirtualContributor } from './virtual.contributor.entity';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { VirtualPersonaModule } from '../virtual-persona/virtual.persona.module';
+import { CommunicationAdapterModule } from '@services/adapters/communication-adapter/communication-adapter.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { VirtualPersonaModule } from '../virtual-persona/virtual.persona.module'
     ProfileModule,
     StorageAggregatorModule,
     VirtualPersonaModule,
+    CommunicationAdapterModule,
     TypeOrmModule.forFeature([VirtualContributor]),
   ],
   providers: [
