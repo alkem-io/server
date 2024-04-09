@@ -109,8 +109,7 @@ export class subspaces1711636518888 implements MigrationInterface {
 
     const challenges: {
       id: string;
-      preferenceSetId: string;
-    }[] = await queryRunner.query(`SELECT id, preferenceSetId FROM challenge`);
+    }[] = await queryRunner.query(`SELECT id FROM challenge`);
     for (const challenge of challenges) {
       await queryRunner.query(
         `UPDATE challenge SET level = 1 WHERE id = '${challenge.id}'`
