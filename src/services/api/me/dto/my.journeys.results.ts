@@ -3,9 +3,9 @@ import { Field, ObjectType } from '@nestjs/graphql';
 import { IActivityLogEntry } from '@services/api/activity-log/dto/activity.log.entry.interface';
 
 @ObjectType()
-export class MyJourneyResults {
+export class MySpaceResults {
   @Field(() => ISpace, { nullable: false })
-  journey!: ISpace;
+  space!: ISpace;
 
   @Field(() => IActivityLogEntry, { nullable: true })
   latestActivity?: IActivityLogEntry;

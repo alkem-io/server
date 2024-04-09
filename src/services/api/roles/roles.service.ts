@@ -235,7 +235,7 @@ export class RolesService {
         return invitationResult;
       case SpaceType.OPPORTUNITY:
         // the application is issued for an an opportunity
-        invitationResult.opportunityID = space.id;
+        invitationResult.subsubspaceID = space.id;
         invitationResult.subspaceID = space.parentSpace?.id || '';
         return invitationResult;
     }

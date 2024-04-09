@@ -55,7 +55,8 @@ export class InvitationForRoleResult {
     description: 'ID for the Opportunity being invited to, if any.',
     nullable: true,
   })
-  opportunityID?: string;
+  subsubspaceID?: string;
+
   @Field(() => UUID, {
     description: 'The welcome message of the invitation',
     nullable: true,

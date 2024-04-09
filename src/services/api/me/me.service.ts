@@ -9,7 +9,7 @@ import { ISpace } from '@domain/space/space/space.interface';
 import { SpacesQueryArgs } from '@domain/space/space/dto/space.args.query.spaces';
 import { ActivityLogService } from '../activity-log';
 import { AgentInfo } from '@core/authentication';
-import { MyJourneyResults } from './dto/my.journeys.results';
+import { MySpaceResults } from './dto/my.journeys.results';
 import { ActivityService } from '@platform/activity/activity.service';
 import { LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -71,16 +71,16 @@ export class MeService {
     return sortSpacesByActivity(spaces, latestActivitiesPerSpace);
   }
 
-  public async getMyJourneys(
+  public async getMySpaces(
     agentInfo: AgentInfo,
     limit = 20
-  ): Promise<MyJourneyResults[]> {
-    const rawActivities = await this.activityService.getMyJourneysActivity(
+  ): Promise<MySpaceResults[]> {
+    const rawActivities = await this.activityService.getMySpacesActivity(
       agentInfo.userID,
       limit * 2 //magic number, should not be needed. toDo Fix in https://app.zenhub.com/workspaces/alkemio-development-5ecb98b262ebd9f4aec4194c/issues/gh/alkem-io/server/3626
     );
 
-    const myJourneyResults: MyJourneyResults[] = [];
+    const mySpaceResults: MySpaceResults[] = [];
 
     for (const rawActivity of rawActivities) {
       const activityLog =
@@ -93,12 +93,12 @@ export class MeService {
         );
         continue;
       }
-      myJourneyResults.push({
-        journey: activityLog.space,
+      mySpaceResults.push({
+        space: activityLog.space,
         latestActivity: activityLog,
       });
     }
 
-    return myJourneyResults.slice(0, limit);
+    return mySpaceResults.slice(0, limit);
   }
 }

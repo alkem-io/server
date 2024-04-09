@@ -223,7 +223,7 @@ export class ActivityService {
     return entry;
   }
 
-  public async getMyJourneysActivity(
+  public async getMySpacesActivity(
     triggeredBy: string,
     limit: number
   ): Promise<any> {
