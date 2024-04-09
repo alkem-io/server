@@ -163,7 +163,7 @@ export class journeyMerge1712649061199 implements MigrationInterface {
                                             '${challenge.contextId}', '${challenge.communityId}', '${challenge.agentId}',
                                             '${challenge.spaceId}', '${challenge.collaborationId}', '${challenge.profileId}',
                                             '${challenge.storageAggregatorId}', '${challenge.accountId}', '${challenge.type}',
-                                            '${challenge.settingsStr}', '1
+                                            '${challenge.settingsStr}', '${challenge.level}'
                                           )`);
 
       // Set the created / updated date based on old values; strings gave an issue so needs to be done at the db level
@@ -195,7 +195,7 @@ export class journeyMerge1712649061199 implements MigrationInterface {
                                             '${opportunity.contextId}', '${opportunity.communityId}', '${opportunity.agentId}',
                                             '${opportunity.challengeId}', '${opportunity.collaborationId}', '${opportunity.profileId}',
                                             '${opportunity.storageAggregatorId}', '${opportunity.accountId}', '${opportunity.type}',
-                                            '${opportunity.settingsStr}', 2
+                                            '${opportunity.settingsStr}', '${opportunity.level}'
                                           )`);
       // Set the created / updated date based on old values; strings gave an issue so needs to be done at the db level
       await queryRunner.query(
