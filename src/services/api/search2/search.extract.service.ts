@@ -19,11 +19,6 @@ import {
   LogContext,
 } from '@common/enums';
 import { BaseException } from '@common/exceptions/base.exception';
-import { isUUID } from 'class-validator';
-import { InjectEntityManager } from '@nestjs/typeorm';
-import { EntityManager } from 'typeorm';
-import { Space } from '@domain/challenge/space/space.entity';
-import { EntityNotFoundException } from '@common/exceptions';
 
 enum SearchEntityTypes {
   USER = 'user',
@@ -85,7 +80,6 @@ export class SearchExtractService {
     @Inject(ELASTICSEARCH_CLIENT_PROVIDER)
     elasticClient: ElasticClient | undefined,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService,
-    @InjectEntityManager() private entityManager: EntityManager,
     private configService: ConfigService
   ) {
     this.client = elasticClient!;
@@ -97,7 +91,7 @@ export class SearchExtractService {
       this.configService.get(ConfigurationTypes.SEARCH)?.index_pattern_prefix ??
       '';
 
-    this.indexPattern = `${prefix}${pattern}`;
+    this.indexPattern = `${prefix}${prefix ? '-' : ''}${pattern}`;
     this.maxResults =
       this.configService.get(ConfigurationTypes.SEARCH)?.max_results ??
       DEFAULT_MAX_RESULTS;
@@ -112,22 +106,6 @@ export class SearchExtractService {
     }
     validateSearchParameters(searchData);
     const filteredTerms = validateSearchTerms(searchData.terms);
-    const filterBySpaceId = isUUID(searchData.searchInSpaceFilter)
-      ? searchData.searchInSpaceFilter
-      : await this.entityManager
-          .findOneByOrFail(Space, {
-            nameID: searchData.searchInSpaceFilter,
-          })
-          .then(space => space.id)
-          .catch(() => {
-            throw new EntityNotFoundException(
-              'Space with the given identifier not found',
-              LogContext.SEARCH,
-              {
-                message: `Space with the given identifier not found: ${searchData.searchInSpaceFilter}`,
-              }
-            );
-          });
 
     const terms = filteredTerms.join(' ');
     const indicesToSearchOn = this.getIndices(
@@ -146,8 +124,8 @@ export class SearchExtractService {
             },
           },
         ],
-        filter: filterBySpaceId
-          ? [{ match: { spaceID: filterBySpaceId } }]
+        filter: searchData.searchInSpaceFilter
+          ? [{ match: { spaceID: searchData.searchInSpaceFilter } }]
           : undefined,
       },
     };
