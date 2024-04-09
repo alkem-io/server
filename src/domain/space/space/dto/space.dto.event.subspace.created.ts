@@ -11,11 +11,11 @@ export class SubspaceCreated {
     description:
       'The identifier for the Space on which the subspace was created.',
   })
-  journeyID!: string;
+  spaceID!: string;
 
   @Field(() => ISpace, {
     nullable: false,
     description: 'The subspace that has been created.',
   })
-  childJourney!: ISpace;
+  subspace!: ISpace;
 }

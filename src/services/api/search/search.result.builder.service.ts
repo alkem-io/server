@@ -110,14 +110,14 @@ export default class SearchResultBuilderService
         LogContext.SEARCH
       );
     }
-    const challenge = await this.spaceService.getSpaceOrFail(
+    const subspace = await this.spaceService.getSpaceOrFail(
       subsubspace.parentSpace.id
     );
     const searchResultOpportunity: ISearchResultOpportunity = {
       ...this.searchResultBase,
-      opportunity: subsubspace,
+      subsubspace,
       space,
-      subspace: challenge,
+      subspace,
     };
     return searchResultOpportunity;
   }

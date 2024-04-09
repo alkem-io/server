@@ -7,5 +7,5 @@ export class SubspaceCreatedArgs {
     description: 'The Space to receive the Subspaces from.',
     nullable: false,
   })
-  journeyID!: string;
+  spaceID!: string;
 }

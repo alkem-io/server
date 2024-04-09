@@ -12,7 +12,7 @@ export abstract class IActivityLogEntryOpportunityCreated
 {
   @Field(() => ISpace, {
     nullable: false,
-    description: 'The Opportunity that was created.',
+    description: 'The Subsubspace that was created.',
   })
-  opportunity!: ISpace;
+  subsubspace!: ISpace;
 }

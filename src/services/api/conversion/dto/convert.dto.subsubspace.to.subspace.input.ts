@@ -8,5 +8,5 @@ export class ConvertSubsubspaceToSubspaceInput {
     description:
       'The subsubspace to be promoted. Note: the original Opportunity will no longer exist after the conversion. ',
   })
-  opportunityID!: string;
+  subsubspaceID!: string;
 }

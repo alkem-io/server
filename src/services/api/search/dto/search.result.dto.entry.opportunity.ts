@@ -14,7 +14,7 @@ export abstract class ISearchResultOpportunity
     nullable: false,
     description: 'The Opportunity that was found.',
   })
-  opportunity!: ISpace;
+  subsubspace!: ISpace;
 
   @Field(() => ISpace, {
     nullable: false,

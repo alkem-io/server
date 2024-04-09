@@ -92,7 +92,7 @@ export class ConversionResolverMutations {
     convertOpportunityToChallengeData: ConvertSubsubspaceToSubspaceInput
   ): Promise<ISpace> {
     const subsubspace = await this.spaceService.getSpaceOrFail(
-      convertOpportunityToChallengeData.opportunityID,
+      convertOpportunityToChallengeData.subsubspaceID,
       {
         relations: {
           account: {
@@ -118,7 +118,7 @@ export class ConversionResolverMutations {
       await this.spaceService.getStorageAggregatorOrFail(spaceID);
     const newChallenge =
       await this.conversionService.convertOpportunityToChallenge(
-        convertOpportunityToChallengeData.opportunityID,
+        convertOpportunityToChallengeData.subsubspaceID,
         spaceID,
         agentInfo,
         spaceStorageAggregator

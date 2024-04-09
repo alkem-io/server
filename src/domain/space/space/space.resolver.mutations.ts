@@ -200,10 +200,10 @@ export class SpaceResolverMutations {
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => ISpace, {
-    description: 'Creates a new Space within the specified Space.',
+    description: 'Creates a new Subspace within the specified Space.',
   })
   @Profiling.api
-  async createSpace(
+  async createSubspace(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('subspaceData') subspaceData: CreateSubspaceOnSpaceInput
   ): Promise<ISpace> {
@@ -270,8 +270,8 @@ export class SpaceResolverMutations {
 
     const challengeCreatedEvent: SubspaceCreatedPayload = {
       eventID: `space-challenge-created-${Math.round(Math.random() * 100)}`,
-      journeyID: space.id,
-      childJourney: subspace,
+      spaceID: space.id,
+      subspace: subspace,
     };
     this.subspaceCreatedSubscription.publish(
       SubscriptionType.SUBSPACE_CREATED,

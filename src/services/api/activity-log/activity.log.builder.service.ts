@@ -157,23 +157,23 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
   }
 
   async [ActivityEventType.CHALLENGE_CREATED](rawActivity: IActivity) {
-    const challenge = await this.spaceService.getSpaceOrFail(
+    const subspace = await this.spaceService.getSpaceOrFail(
       rawActivity.resourceID
     );
     const activityChallengeCreated: IActivityLogEntryChallengeCreated = {
       ...this.activityLogEntryBase,
-      subspace: challenge,
+      subspace: subspace,
     };
     return activityChallengeCreated;
   }
 
   async [ActivityEventType.OPPORTUNITY_CREATED](rawActivity: IActivity) {
-    const opportunity = await this.spaceService.getSpaceOrFail(
+    const subsubspace = await this.spaceService.getSpaceOrFail(
       rawActivity.resourceID
     );
     const activityOpportunityCreated: IActivityLogEntryOpportunityCreated = {
       ...this.activityLogEntryBase,
-      opportunity: opportunity,
+      subsubspace: subsubspace,
     };
     return activityOpportunityCreated;
   }

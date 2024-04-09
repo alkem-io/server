@@ -36,7 +36,7 @@ export class SpaceResolverSubscriptions {
         const agentInfo = context.req.user;
         const logMsgPrefix = `[SubspaceCreated subscription] - [${agentInfo.email}] -`;
         this.logger.verbose?.(
-          `${logMsgPrefix} sending out event for created challenge on Space: ${payload.journeyID} `,
+          `${logMsgPrefix} sending out event for created challenge on Space: ${payload.spaceID} `,
           LogContext.SUBSCRIPTIONS
         );
         return payload;
@@ -49,7 +49,7 @@ export class SpaceResolverSubscriptions {
           LogContext.SUBSCRIPTIONS
         );
 
-        const isSameSpace = payload.journeyID === variables.journeyID;
+        const isSameSpace = payload.spaceID === variables.spaceID;
         this.logger.verbose?.(
           `${logMsgPrefix} Filter result is ${isSameSpace}`,
           LogContext.SUBSCRIPTIONS
@@ -67,11 +67,11 @@ export class SpaceResolverSubscriptions {
   ) {
     const logMsgPrefix = '[SubspaceCreated subscription] -';
     this.logger.verbose?.(
-      `${logMsgPrefix} User ${agentInfo.email} subscribed for new subspaced on the following Space: ${args.journeyID}`,
+      `${logMsgPrefix} User ${agentInfo.email} subscribed for new subspaced on the following Space: ${args.spaceID}`,
       LogContext.SUBSCRIPTIONS
     );
     // Validate
-    const space = await this.spaceService.getSpaceOrFail(args.journeyID);
+    const space = await this.spaceService.getSpaceOrFail(args.spaceID);
 
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
