@@ -80,19 +80,13 @@ export class SearchResultService {
         ),
         this.getChallengeSearchResults(
           groupedResults.challenge ?? [],
-          agentInfo,
-          spaceId
+          agentInfo
         ),
         this.getOpportunitySearchResults(
           groupedResults.opportunity ?? [],
-          agentInfo,
-          spaceId
+          agentInfo
         ),
-        this.getUserSearchResults(
-          groupedResults.user ?? [],
-          agentInfo,
-          spaceId
-        ),
+        this.getUserSearchResults(groupedResults.user ?? [], spaceId),
         this.getOrganizationSearchResults(
           groupedResults.organization ?? [],
           agentInfo,
@@ -183,8 +177,7 @@ export class SearchResultService {
 
   public async getChallengeSearchResults(
     rawSearchResults: ISearchResult[],
-    agentInfo: AgentInfo,
-    spaceId?: string
+    agentInfo: AgentInfo
   ): Promise<ISearchResultChallenge[]> {
     if (rawSearchResults.length === 0) {
       return [];
@@ -193,7 +186,7 @@ export class SearchResultService {
     const challengeIds = rawSearchResults.map(hit => hit.result.id);
 
     const challenges = await this.entityManager.find(Challenge, {
-      where: { id: In(challengeIds), space: { id: spaceId } },
+      where: { id: In(challengeIds) },
       relations: { space: true },
       select: { id: true, space: { id: true } },
     });
@@ -254,8 +247,7 @@ export class SearchResultService {
 
   public async getOpportunitySearchResults(
     rawSearchResults: ISearchResult[],
-    agentInfo: AgentInfo,
-    spaceId?: string
+    agentInfo: AgentInfo
   ): Promise<ISearchResultChallenge[]> {
     if (rawSearchResults.length === 0) {
       return [];
@@ -264,7 +256,7 @@ export class SearchResultService {
     const opportunityIds = rawSearchResults.map(hit => hit.result.id);
 
     const opportunities = await this.entityManager.find(Opportunity, {
-      where: { id: In(opportunityIds), challenge: { space: { id: spaceId } } },
+      where: { id: In(opportunityIds) },
       relations: { challenge: { space: true } },
       select: { challenge: { id: true, space: { id: true } } },
     });
@@ -333,7 +325,6 @@ export class SearchResultService {
 
   public async getUserSearchResults(
     rawSearchResults: ISearchResult[],
-    agentInfo: AgentInfo,
     spaceId?: string
   ): Promise<ISearchResultUser[]> {
     if (rawSearchResults.length === 0) {

@@ -1,29 +1,22 @@
 import { intersection } from 'lodash';
-import { EntityManager } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { isUUID } from 'class-validator';
-import { InjectEntityManager } from '@nestjs/typeorm';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Client as ElasticClient } from '@elastic/elasticsearch';
-import {
-  QueryDslFunctionScoreContainer,
-  QueryDslQueryContainer,
-} from '@elastic/elasticsearch/lib/api/types';
 import { SearchInput } from '@services/api/search';
 import { validateSearchParameters } from '@services/api/search/util/validate.search.parameters';
 import { validateSearchTerms } from '@services/api/search/util/validate.search.terms';
 import { ELASTICSEARCH_CLIENT_PROVIDER } from '@common/constants';
 import { ISearchResult } from '@services/api/search/dto/search.result.entry.interface';
 import { IBaseAlkemio } from '@domain/common/entity/base-entity';
-import { Space } from '@domain/challenge/space/space.entity';
-import { EntityNotFoundException } from '@common/exceptions';
 import {
   AlkemioErrorStatus,
   ConfigurationTypes,
   LogContext,
 } from '@common/enums';
 import { BaseException } from '@common/exceptions/base.exception';
+import { functionScoreFunctions } from '@services/api/search2/function.score.functions';
+import { buildSearchQuery } from './build.search.query';
 
 enum SearchEntityTypes {
   USER = 'user',
@@ -77,25 +70,30 @@ const DEFAULT_INDEX_PATTERN = 'alkemio-data-';
 
 @Injectable()
 export class SearchExtractService {
-  private readonly client: ElasticClient;
   private readonly indexPattern: string;
   private readonly maxResults: number;
 
   constructor(
     @Inject(ELASTICSEARCH_CLIENT_PROVIDER)
-    elasticClient: ElasticClient | undefined,
+    private client: ElasticClient | undefined,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService,
-    @InjectEntityManager() private entityManager: EntityManager,
     private configService: ConfigService
   ) {
-    this.client = elasticClient!;
-
     this.indexPattern =
       this.configService.get(ConfigurationTypes.SEARCH)?.index_pattern ??
       DEFAULT_INDEX_PATTERN;
     this.maxResults =
       this.configService.get(ConfigurationTypes.SEARCH)?.max_results ??
       DEFAULT_MAX_RESULTS;
+
+    if (!client) {
+      this.logger.error(
+        'Elasticsearch client not initialized',
+        undefined,
+        LogContext.SEARCH_EXTRACT
+      );
+      return;
+    }
   }
 
   public async search(
@@ -107,88 +105,21 @@ export class SearchExtractService {
     }
     validateSearchParameters(searchData);
     const filteredTerms = validateSearchTerms(searchData.terms);
-    const filterBySpaceId = isUUID(searchData.searchInSpaceFilter)
-      ? searchData.searchInSpaceFilter
-      : await this.entityManager
-          .findOneByOrFail(Space, {
-            nameID: searchData.searchInSpaceFilter,
-          })
-          .then(space => space.id)
-          .catch(() => {
-            throw new EntityNotFoundException(
-              'Space with the given identifier not found',
-              LogContext.SEARCH,
-              {
-                message: `Space with the given identifier not found: ${searchData.searchInSpaceFilter}`,
-              }
-            );
-          });
 
     const terms = filteredTerms.join(' ');
     const indicesToSearchOn = this.getIndices(
       searchData.typesFilter,
       onlyPublicResults
     );
-
-    const query: QueryDslQueryContainer = {
-      bool: {
-        must: [
-          {
-            multi_match: {
-              query: terms,
-              type: 'most_fields',
-              fields: ['*'],
-            },
-          },
-        ],
-        filter: filterBySpaceId
-          ? [{ match: { spaceID: filterBySpaceId } }]
-          : undefined,
-      },
-    };
-    // use with function_score to boost results based on visibility
-    const functions: QueryDslFunctionScoreContainer[] = [
-      {
-        filter: {
-          term: {
-            'license.visibility': 'active',
-          },
-        },
-        weight: 2,
-      },
-      {
-        filter: {
-          term: {
-            'license.visibility': 'demo',
-          },
-        },
-        weight: 1,
-      },
-      {
-        filter: {
-          term: {
-            'license.visibility': 'archived',
-          },
-        },
-        weight: 0,
-      },
-      {
-        filter: {
-          bool: {
-            must_not: {
-              exists: {
-                field: 'license.visibility',
-              },
-            },
-          },
-        },
-        weight: 1,
-      },
-    ];
+    // the main search query built using query DSL
+    const query = buildSearchQuery(terms, searchData.searchInSpaceFilter);
+    // used with function_score to boost results based on visibility
+    const functions = functionScoreFunctions;
 
     try {
       return await this.client
         .search<IBaseAlkemio>({
+          // indices to search on
           index: indicesToSearchOn,
           // there will be a query building in the future to construct different queries
           // the current query is searching in everything, and boosting entities based on their visibility
@@ -207,9 +138,13 @@ export class SearchExtractService {
               boost_mode: 'multiply',
             },
           },
+          // return only the 'id' field of the document
           fields: ['id'],
+          // do not include the source in the result
           _source: false,
+          // offset, starting from 0
           from: 0,
+          // max amount of results
           size: this.maxResults,
         })
         .then(result =>
@@ -221,7 +156,16 @@ export class SearchExtractService {
               this.logger.error(
                 `Search result with no entity id: ${JSON.stringify(hit)}`,
                 undefined,
-                LogContext.SEARCH
+                LogContext.SEARCH_EXTRACT
+              );
+            }
+
+            if (hit._ignored) {
+              const ignored = hit._ignored.join('; ');
+              this.logger.warn(
+                `Some fields were ignored while searching: ${ignored}`,
+                undefined,
+                LogContext.SEARCH_EXTRACT
               );
             }
 
@@ -237,7 +181,7 @@ export class SearchExtractService {
     } catch (e: any) {
       throw new BaseException(
         'Failed to search',
-        LogContext.SEARCH,
+        LogContext.SEARCH_EXTRACT,
         AlkemioErrorStatus.UNSPECIFIED,
         {
           message: e?.message,
