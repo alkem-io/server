@@ -31,6 +31,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UserService } from '@domain/community/user/user.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
+import { EntityNotFoundException } from '@common/exceptions';
 
 export type PostParents = {
   post: IPost;
@@ -498,17 +499,52 @@ export class SearchResultService {
 
     const postParents: PostParents[] = [];
     for (const result of queryResult) {
+      const challengePromise = result.challengeID
+        ? this.entityManager
+            .findOneByOrFail(Challenge, { id: result.challengeID })
+            .then(x => (x === null ? undefined : x))
+            .catch(
+              notFoundParentForPostHandler(
+                result,
+                'Challenge not found for Post while resolving search results.'
+              )
+            )
+        : undefined;
+      const opportunityPromise = result.opportunityID
+        ? this.entityManager
+            .findOneByOrFail(Opportunity, {
+              id: result.opportunityID,
+            })
+            .then(x => (x === null ? undefined : x))
+            .catch(
+              notFoundParentForPostHandler(
+                result,
+                'Opportunity not found for Post while resolving search results.'
+              )
+            )
+        : undefined;
+      const calloutPromise = this.entityManager
+        .findOneByOrFail(Callout, { id: result.calloutID })
+        .catch(
+          notFoundParentForPostHandler(
+            result,
+            'Callout not found for Post while resolving search results.'
+          )
+        );
+      const spacePromise = this.entityManager
+        .findOneByOrFail(Space, { id: result.spaceID })
+        .catch(
+          notFoundParentForPostHandler(
+            result,
+            'Space not found for Post while resolving search results.'
+          )
+        );
+
       const [callout, space, challenge, opportunity] = await Promise.all([
-        this.entityManager.findOneByOrFail(Callout, { id: result.calloutID }),
-        this.entityManager.findOneByOrFail(Space, { id: result.spaceID }),
-        this.entityManager
-          .findOneBy(Challenge, { id: result.challengeID })
-          .then(x => (x === null ? undefined : x)),
-        this.entityManager
-          .findOneBy(Opportunity, {
-            id: result.opportunityID,
-          })
-          .then(x => (x === null ? undefined : x)),
+        calloutPromise,
+        spacePromise,
+        challengePromise,
+        opportunityPromise,
       ]);
       const post = posts.find(post => post.id === result.postID);
 
@@ -582,3 +618,20 @@ export class SearchResultService {
     return orgsInSpace;
   }
 }
+
+const notFoundParentForPostHandler =
+  (result: PostParentIDs, cause: string) => (error: Error) => {
+    throw new EntityNotFoundException(
+      'Error while extracting search results',
+      LogContext.SEARCH_RESULT,
+      {
+        cause,
+        originalException: error,
+        spaceId: result.spaceID,
+        calloutId: result.calloutID,
+        challengeId: result.challengeID,
+        opportunityId: result.opportunityID,
+        postId: result.postID,
+      }
+    );
+  };
