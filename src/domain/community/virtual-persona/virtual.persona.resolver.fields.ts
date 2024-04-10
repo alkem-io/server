@@ -58,13 +58,12 @@ export class VirtualPersonaResolverFields {
     loader: ILoader<IProfile>
   ): Promise<IProfile> {
     const profile = await loader.load(parent.id);
-    //toDo needs proper auth
-    // await this.authorizationService.grantAccessOrFail(
-    //   agentInfo,
-    //   profile.authorization,
-    //   AuthorizationPrivilege.READ,
-    //   `read profile on User: ${profile.displayName}`
-    // );
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      profile.authorization,
+      AuthorizationPrivilege.READ,
+      `read profile on User: ${profile.displayName}`
+    );
     return profile;
   }
 }

@@ -22,6 +22,7 @@ import {
 } from '@common/constants';
 import { VirtualPersona } from './virtual.persona.entity';
 import { IVirtualPersona } from './virtual.persona.interface';
+import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 
 @Injectable()
 export class VirtualPersonaAuthorizationService {
@@ -29,6 +30,7 @@ export class VirtualPersonaAuthorizationService {
     private virtualService: VirtualPersonaService,
     private authorizationPolicy: AuthorizationPolicyService,
     private authorizationPolicyService: AuthorizationPolicyService,
+    private profileAuthorizationService: ProfileAuthorizationService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     @InjectRepository(VirtualPersona)
     private virtualRepository: Repository<VirtualPersona>
@@ -42,6 +44,7 @@ export class VirtualPersonaAuthorizationService {
       {
         relations: {
           authorization: true,
+          profile: true,
         },
       }
     );
@@ -62,6 +65,19 @@ export class VirtualPersonaAuthorizationService {
       virtual.id
     );
 
+    // NOTE: Clone the authorization policy to ensure the changes are local to profile
+    const clonedAnonymousReadAccessAuthorization =
+      this.authorizationPolicyService.cloneAuthorizationPolicy(
+        virtual.authorization
+      );
+    // To ensure that profile + context on a space are always publicly visible, even for private spaces
+    clonedAnonymousReadAccessAuthorization.anonymousReadAccess = true;
+    // cascade
+    virtual.profile =
+      await this.profileAuthorizationService.applyAuthorizationPolicy(
+        virtual.profile,
+        clonedAnonymousReadAccessAuthorization // Key that this is publicly visible
+      );
     return await this.virtualRepository.save(virtual);
   }
 
