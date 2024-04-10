@@ -1,5 +1,8 @@
 import { intersection } from 'lodash';
+import { EntityManager } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { isUUID } from 'class-validator';
+import { InjectEntityManager } from '@nestjs/typeorm';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Client as ElasticClient } from '@elastic/elasticsearch';
@@ -13,6 +16,8 @@ import { validateSearchTerms } from '@services/api/search/util/validate.search.t
 import { ELASTICSEARCH_CLIENT_PROVIDER } from '@common/constants';
 import { ISearchResult } from '@services/api/search/dto/search.result.entry.interface';
 import { IBaseAlkemio } from '@domain/common/entity/base-entity';
+import { Space } from '@domain/challenge/space/space.entity';
+import { EntityNotFoundException } from '@common/exceptions';
 import {
   AlkemioErrorStatus,
   ConfigurationTypes,
@@ -80,6 +85,7 @@ export class SearchExtractService {
     @Inject(ELASTICSEARCH_CLIENT_PROVIDER)
     elasticClient: ElasticClient | undefined,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService,
+    @InjectEntityManager() private entityManager: EntityManager,
     private configService: ConfigService
   ) {
     this.client = elasticClient!;
@@ -106,6 +112,22 @@ export class SearchExtractService {
     }
     validateSearchParameters(searchData);
     const filteredTerms = validateSearchTerms(searchData.terms);
+    const filterBySpaceId = isUUID(searchData.searchInSpaceFilter)
+      ? searchData.searchInSpaceFilter
+      : await this.entityManager
+          .findOneByOrFail(Space, {
+            nameID: searchData.searchInSpaceFilter,
+          })
+          .then(space => space.id)
+          .catch(() => {
+            throw new EntityNotFoundException(
+              'Space with the given identifier not found',
+              LogContext.SEARCH,
+              {
+                message: `Space with the given identifier not found: ${searchData.searchInSpaceFilter}`,
+              }
+            );
+          });
 
     const terms = filteredTerms.join(' ');
     const indicesToSearchOn = this.getIndices(
@@ -124,8 +146,8 @@ export class SearchExtractService {
             },
           },
         ],
-        filter: searchData.searchInSpaceFilter
-          ? [{ match: { spaceID: searchData.searchInSpaceFilter } }]
+        filter: filterBySpaceId
+          ? [{ match: { spaceID: filterBySpaceId } }]
           : undefined,
       },
     };
