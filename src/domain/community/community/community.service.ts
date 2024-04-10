@@ -508,13 +508,15 @@ export class CommunityService {
     triggerNewMemberEvents = false
   ): Promise<IUser> {
     const { user, agent } = await this.userService.getUserAndAgent(userID);
-    const hasMemberRoleInParent = await this.isMemberInParentCommunity(
-      agent,
-      community.id
-    );
+    const { isMember: hasMemberRoleInParent, parentCommunityId } =
+      await this.isMemberInParentCommunity(agent, community.id);
     if (!hasMemberRoleInParent) {
       throw new ValidationException(
-        `Unable to assign Agent (${agent.id}) to community (${community.id}): agent is not a member of parent community`,
+        `Unable to find parent community ${parentCommunityId}`,
+        LogContext.CHALLENGES
+      );
+      throw new ValidationException(
+        `Unable to assign Agent (${agent.id}) to community (${community.id}): agent is not a member of parent community ${parentCommunityId}`,
         LogContext.CHALLENGES
       );
     }
@@ -560,13 +562,16 @@ export class CommunityService {
       await this.virtualContributorService.getVirtualContributorAndAgent(
         virtualContributorID
       );
-    const hasMemberRoleInParent = await this.isMemberInParentCommunity(
-      agent,
-      community.id
-    );
+    const { isMember: hasMemberRoleInParent, parentCommunityId } =
+      await this.isMemberInParentCommunity(agent, community.id);
     if (!hasMemberRoleInParent) {
+      if (!parentCommunityId)
+        throw new ValidationException(
+          `Unable to find parent community ${parentCommunityId}`,
+          LogContext.CHALLENGES
+        );
       throw new ValidationException(
-        `Unable to assign Agent (${agent.id}) to community (${community.id}): agent is not a member of parent community`,
+        `Unable to assign Agent (${agent.id}) to community (${community.id}): agent is not a member of parent community ${parentCommunityId}`,
         LogContext.CHALLENGES
       );
     }
@@ -601,7 +606,7 @@ export class CommunityService {
   private async isMemberInParentCommunity(
     agent: IAgent,
     communityID: string
-  ): Promise<boolean> {
+  ): Promise<{ parentCommunityId: string | undefined; isMember: boolean }> {
     const community = await this.getCommunityOrFail(communityID, {
       relations: { parentCommunity: true },
     });
@@ -612,9 +617,15 @@ export class CommunityService {
         agent,
         community.parentCommunity
       );
-      return isParentMember;
+      return {
+        parentCommunityId: community?.parentCommunity?.id,
+        isMember: isParentMember,
+      };
     }
-    return true;
+    return {
+      parentCommunityId: undefined,
+      isMember: true,
+    };
   }
 
   public getCommunityPolicy(community: ICommunity): ICommunityPolicy {

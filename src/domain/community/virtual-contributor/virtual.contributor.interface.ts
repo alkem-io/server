@@ -8,4 +8,5 @@ export class IVirtualContributor extends IContributor {
     description: 'The virtual persona being used by this virtual contributor',
   })
   virtualPersona!: IVirtualPersona;
+  communicationID!: string;
 }
