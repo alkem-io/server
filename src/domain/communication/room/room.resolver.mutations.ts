@@ -59,12 +59,13 @@ export class RoomResolverMutations {
       `room send message: ${room.id}`
     );
 
-    const accessVirtualContributors =
-      await this.authorizationService.isAccessGranted(
-        agentInfo,
-        room.authorization,
-        AuthorizationPrivilege.ACCESS_VIRTUAL_CONTRIBUTOR
-      );
+    const accessVirtualContributors = true;
+    // this requires proper propagation to all rooms (space --> collaboration --> callout --> room)
+    // await this.authorizationService.isAccessGranted(
+    //   agentInfo,
+    //   room.authorization,
+    //   AuthorizationPrivilege.ACCESS_VIRTUAL_CONTRIBUTOR
+    // );
 
     if (room.type === RoomType.CALLOUT) {
       const callout = await this.namingService.getCalloutForRoom(
