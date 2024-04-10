@@ -4,7 +4,7 @@ import { LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ClientProxyFactory, Transport } from '@nestjs/microservices';
 
-export async function chatGuidanceServiceFactory(
+export async function virtualPersonaEngineCommunityManagerServiceFactory(
   logger: LoggerService,
   configService: ConfigService
 ): Promise<any> {
@@ -16,7 +16,7 @@ export async function chatGuidanceServiceFactory(
   try {
     const options = {
       urls: [connectionString],
-      queue: MessagingQueue.CHAT_GUIDANCE,
+      queue: MessagingQueue.VIRTUAL_PERSONA_ENGINE_COMMUNITY_MANAGER,
       queueOptions: {
         // the queue will survive a broker restart
         durable: false,

@@ -301,7 +301,9 @@ export class OpportunityAuthorizationService {
     opportunity.community =
       await this.communityAuthorizationService.applyAuthorizationPolicy(
         opportunity.community,
-        opportunity.authorization
+        opportunity.authorization,
+        license,
+        communityPolicy
       );
     // Specific extension
     opportunity.community.authorization =

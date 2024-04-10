@@ -4,13 +4,13 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { firstValueFrom } from 'rxjs';
 import { IChatGuidanceQueryResult } from '@services/api/chat-guidance/dto/chat.guidance.query.result.dto';
 import { LogContext } from '@common/enums';
-import { CHAT_GUIDANCE_SERVICE } from '@common/constants';
 import { GuidanceEngineInputBase } from './dto/guidance.engine.dto.base';
 import { GuidanceEngineBaseResponse } from './dto/guidance.engine.dto.base.response';
 import { GuidanceEngineQueryInput } from './dto/guidance.engine.dto.query';
 import { GuidanceEngineQueryResponse } from './dto/guidance.engine.dto.question.response';
 import { Source } from './source.type';
 import { GuidanceReporterService } from '@services/external/elasticsearch/guidance-reporter';
+import { VIRTUAL_PERSONA_ENGINE_CHAT_GUIDANCE } from '@common/constants';
 
 enum GuidanceEngineEventType {
   QUERY = 'query',
@@ -24,7 +24,8 @@ const successfulResetResponse = 'Reset function executed';
 @Injectable()
 export class GuidanceEngineAdapter {
   constructor(
-    @Inject(CHAT_GUIDANCE_SERVICE) private GuidanceEngineClient: ClientProxy,
+    @Inject(VIRTUAL_PERSONA_ENGINE_CHAT_GUIDANCE)
+    private virutalPersonaGuidanceEngineClient: ClientProxy,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private guidanceReporterService: GuidanceReporterService
@@ -36,7 +37,7 @@ export class GuidanceEngineAdapter {
     let responseData: GuidanceEngineQueryResponse | undefined;
 
     try {
-      const response = this.GuidanceEngineClient.send<
+      const response = this.virutalPersonaGuidanceEngineClient.send<
         GuidanceEngineQueryResponse,
         GuidanceEngineQueryInput
       >({ cmd: GuidanceEngineEventType.QUERY }, eventData);
@@ -85,7 +86,7 @@ export class GuidanceEngineAdapter {
   }
 
   public async sendReset(eventData: GuidanceEngineInputBase): Promise<boolean> {
-    const response = this.GuidanceEngineClient.send(
+    const response = this.virutalPersonaGuidanceEngineClient.send(
       { cmd: GuidanceEngineEventType.RESET },
       eventData
     );
@@ -109,7 +110,7 @@ export class GuidanceEngineAdapter {
   public async sendIngest(
     eventData: GuidanceEngineInputBase
   ): Promise<boolean> {
-    const response = this.GuidanceEngineClient.send(
+    const response = this.virutalPersonaGuidanceEngineClient.send(
       { cmd: GuidanceEngineEventType.INGEST },
       eventData
     );

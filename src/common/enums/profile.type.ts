@@ -21,6 +21,8 @@ export enum ProfileType {
   POST_TEMPLATE = 'post-template',
   WHITEBOARD_TEMPLATE = 'whiteboard-template',
   COMMUNITY_GUIDELINES = 'community-guidelines',
+  VIRTUAL_CONTRIBUTOR = 'virtual-contributor',
+  VIRTUAL_PERSONA = 'virtual-persona',
 }
 
 registerEnumType(ProfileType, {
