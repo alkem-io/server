@@ -12,8 +12,8 @@ import { CreateContextInput } from '@domain/context/context/dto/context.dto.crea
 export class CreateSpaceInput extends CreateNameableInput {
   // Override
   @Field(() => NameID, {
-    nullable: false,
-    description: 'A readable identifier, unique within the containing scope.',
+    nullable: true,
+    description: 'A readable identifier, unique within the containing Account.',
   })
   nameID!: string;
 
