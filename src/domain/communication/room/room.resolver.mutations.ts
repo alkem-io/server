@@ -59,6 +59,14 @@ export class RoomResolverMutations {
       `room send message: ${room.id}`
     );
 
+    const accessVirtualContributors = true;
+    // this requires proper propagation to all rooms (space --> collaboration --> callout --> room)
+    // await this.authorizationService.isAccessGranted(
+    //   agentInfo,
+    //   room.authorization,
+    //   AuthorizationPrivilege.ACCESS_VIRTUAL_CONTRIBUTOR
+    // );
+
     if (room.type === RoomType.CALLOUT) {
       const callout = await this.namingService.getCalloutForRoom(
         messageData.roomID
@@ -96,7 +104,7 @@ export class RoomResolverMutations {
           messageData.roomID
         );
 
-        this.roomServiceEvents.processNotificationMentions(
+        const mentionsPost = this.roomServiceEvents.processNotificationMentions(
           post.id,
           post.nameID,
           post.profile,
@@ -104,6 +112,7 @@ export class RoomResolverMutations {
           message,
           agentInfo
         );
+
         if (post.createdBy !== agentInfo.userID) {
           this.roomServiceEvents.processNotificationPostComment(
             post,
@@ -117,6 +126,13 @@ export class RoomResolverMutations {
           room,
           message,
           agentInfo
+        );
+        this.roomServiceEvents.processVirtualContributorMentions(
+          mentionsPost,
+          message,
+          agentInfo,
+          room,
+          accessVirtualContributors
         );
 
         break;
@@ -182,13 +198,21 @@ export class RoomResolverMutations {
         );
 
         // Mentions notificaitons should be sent regardless of callout visibility per client-web#5557
-        this.roomServiceEvents.processNotificationMentions(
+        const mentions = this.roomServiceEvents.processNotificationMentions(
           callout.id,
           callout.nameID,
           callout.framing.profile,
           room,
           message,
           agentInfo
+        );
+
+        this.roomServiceEvents.processVirtualContributorMentions(
+          mentions,
+          message,
+          agentInfo,
+          room,
+          accessVirtualContributors
         );
 
         if (callout.visibility === CalloutVisibility.PUBLISHED) {
@@ -256,6 +280,7 @@ export class RoomResolverMutations {
         message: '',
         reactions: [],
         sender: '',
+        senderType: 'user',
         threadID: '',
         timestamp: -1,
       }
@@ -290,7 +315,8 @@ export class RoomResolverMutations {
     const reply = await this.roomService.sendMessageReply(
       room,
       agentInfo.communicationID,
-      messageData
+      messageData,
+      'user'
     );
 
     this.subscriptionPublishService.publishRoomEvent(

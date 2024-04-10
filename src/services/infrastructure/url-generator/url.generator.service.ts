@@ -24,6 +24,7 @@ export class UrlGeneratorService {
   };
 
   PATH_USER = 'user';
+  PATH_VIRTUAL_CONTRIBUTOR = 'vc';
   PATH_ORGANIZATION = 'organization';
   PATH_INNOVATION_LIBRARY = 'innovation-library';
   PATH_INNOVATION_PACKS = 'innovation-packs';
@@ -184,6 +185,13 @@ export class UrlGeneratorService {
           profile.id
         );
         return `${this.endpoint_cluster}/${this.PATH_USER}/${userEntityInfo.entityNameID}`;
+      case ProfileType.VIRTUAL_CONTRIBUTOR:
+        const vcEntityInfo = await this.getNameableEntityInfoOrFail(
+          'virtual_contributor',
+          this.FIELD_PROFILE_ID,
+          profile.id
+        );
+        return `${this.endpoint_cluster}/${this.PATH_VIRTUAL_CONTRIBUTOR}/${vcEntityInfo.entityNameID}`;
       case ProfileType.ORGANIZATION:
         const organizationEntityInfo = await this.getNameableEntityInfoOrFail(
           'organization',

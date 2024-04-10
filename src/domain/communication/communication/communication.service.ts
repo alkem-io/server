@@ -254,7 +254,7 @@ export class CommunicationService {
     communicationUserID: string
   ): Promise<boolean> {
     const communicationRoomIDs = await this.getRoomsUsed(communication);
-    await this.communicationAdapter.grantUserAccesToRooms(
+    await this.communicationAdapter.grantUserAccessToRooms(
       communicationRoomIDs,
       communicationUserID
     );

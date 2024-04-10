@@ -22,6 +22,8 @@ export class IMessage {
 
   sender!: string;
 
+  senderType!: 'user' | 'virtualContributor';
+
   @Field(() => Number, {
     nullable: false,
     description: 'The server timestamp in UTC',
