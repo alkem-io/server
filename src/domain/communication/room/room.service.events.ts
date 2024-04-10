@@ -32,6 +32,7 @@ import { RoomSendMessageReplyInput } from '@domain/communication/room/dto/room.d
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service/subscription.publish.service';
 import { RoomService } from './room.service';
 import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
+import { NotSupportedException } from '@common/exceptions';
 
 @Injectable()
 export class RoomServiceEvents {
@@ -52,10 +53,19 @@ export class RoomServiceEvents {
     mentions: Mention[],
     question: Pick<IMessage, 'id' | 'message'>,
     agentInfo: AgentInfo,
-    room: IRoom
+    room: IRoom,
+    accessToVirtualContributors: boolean
   ) {
     for (const mention of mentions) {
       if (mention.type === MentionedEntityType.VIRTUAL_CONTRIBUTOR) {
+        // Only throw exception here for the case that there is an actual mention
+        if (!accessToVirtualContributors) {
+          throw new NotSupportedException(
+            `Access to Virtual Contributors is not supported for this room: ${room.id}`,
+            LogContext.COMMUNICATION
+          );
+        }
+
         this.logger.warn(
           `got mention for VC: ${mention.nameId}`,
           LogContext.COMMUNICATION

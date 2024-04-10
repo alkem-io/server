@@ -8,6 +8,8 @@ export const CREDENTIAL_RULE_TYPES_SPACE_COMMUNITY_APPLY_GLOBAL_REGISTERED =
   'credentialRuleTypes-spaceCommunityApplyGlobalRegistered';
 export const CREDENTIAL_RULE_TYPES_SPACE_COMMUNITY_JOIN_GLOBAL_REGISTERED =
   'credentialRuleTypes-spaceCommunityJoinGlobalRegistered';
+export const CREDENTIAL_RULE_TYPES_ASSCESS_VIRTUAL_CONTRIBUTORS =
+  'credentialRuleTypes-accessVirtualContributors';
 export const CREDENTIAL_RULE_TYPES_CALLOUT_SAVE_AS_TEMPLATE =
   'credentialRuleTypes-calloutSaveAsTemplate';
 export const CREDENTIAL_RULE_TYPES_CALLOUT_UPDATE_PUBLISHER_ADMINS =

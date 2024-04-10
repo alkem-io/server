@@ -302,6 +302,7 @@ export class CollaborationAuthorizationService {
       );
       privilegeRules.push(createWhiteboardRtPrivilege);
     }
+
     if (
       this.communityPolicyService.getFlag(
         policy,

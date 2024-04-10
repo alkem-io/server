@@ -59,6 +59,13 @@ export class RoomResolverMutations {
       `room send message: ${room.id}`
     );
 
+    const accessVirtualContributors =
+      await this.authorizationService.isAccessGranted(
+        agentInfo,
+        room.authorization,
+        AuthorizationPrivilege.ACCESS_VIRTUAL_CONTRIBUTOR
+      );
+
     if (room.type === RoomType.CALLOUT) {
       const callout = await this.namingService.getCalloutForRoom(
         messageData.roomID
@@ -123,7 +130,8 @@ export class RoomResolverMutations {
           mentionsPost,
           message,
           agentInfo,
-          room
+          room,
+          accessVirtualContributors
         );
 
         break;
@@ -202,7 +210,8 @@ export class RoomResolverMutations {
           mentions,
           message,
           agentInfo,
-          room
+          room,
+          accessVirtualContributors
         );
 
         if (callout.visibility === CalloutVisibility.PUBLISHED) {
