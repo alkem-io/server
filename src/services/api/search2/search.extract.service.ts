@@ -90,14 +90,9 @@ export class SearchExtractService {
   ) {
     this.client = elasticClient!;
 
-    const pattern =
+    this.indexPattern =
       this.configService.get(ConfigurationTypes.SEARCH)?.index_pattern ??
       DEFAULT_INDEX_PATTERN;
-    const prefix =
-      this.configService.get(ConfigurationTypes.SEARCH)?.index_pattern_prefix ??
-      '';
-
-    this.indexPattern = `${prefix}${prefix ? '-' : ''}${pattern}`;
     this.maxResults =
       this.configService.get(ConfigurationTypes.SEARCH)?.max_results ??
       DEFAULT_MAX_RESULTS;

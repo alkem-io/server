@@ -88,9 +88,6 @@ search:
   # the index pattern used when ingesting data, e.g. alkemio-data-[organization];
   # The dash at the end is MANDATORY
   index_pattern: ${SEARCH_INDEX_PATTERN}:alkemio-data-
-  # add a prefix to the index pattern; useful when you want to ingest data for multiple users, e.g. sve-alkemio-data-organization
-  # !!! a good practice is to add a dash at the END of the prefix
-  index_pattern_prefix: ${SEARCH_INDEX_PATTERN_PREFIX}
 
 ## identity ##
 
