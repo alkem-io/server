@@ -25,6 +25,12 @@ export class communityGuideliness1711636518886 implements MigrationInterface {
           }[] = await queryRunner.query(
             `SELECT id, storageAggregatorId FROM space WHERE communityId = '${community.id}'`
           );
+          if (space === undefined) {
+            console.log(
+              `Community with id:  ${community.id} of type ${community.type}  does not have a parent ${community.type}`
+            );
+            continue;
+          }
           storageAggregatorID = space.storageAggregatorId;
         } else if (community.type === 'challenge') {
           const [challenge]: {
@@ -33,6 +39,12 @@ export class communityGuideliness1711636518886 implements MigrationInterface {
           }[] = await queryRunner.query(
             `SELECT id, storageAggregatorId FROM challenge WHERE communityId = '${community.id}'`
           );
+          if (challenge === undefined) {
+            console.log(
+              `Community with id:  ${community.id} of type ${community.type}  does not have a parent ${community.type}`
+            );
+            continue;
+          }
           storageAggregatorID = challenge.storageAggregatorId;
         } else if (community.type === 'opportunity') {
           const [opportunity]: {
@@ -41,6 +53,12 @@ export class communityGuideliness1711636518886 implements MigrationInterface {
           }[] = await queryRunner.query(
             `SELECT id, storageAggregatorId FROM opportunity WHERE communityId = '${community.id}'`
           );
+          if (opportunity === undefined) {
+            console.log(
+              `Community with id:  ${community.id} of type ${community.type}  does not have a parent ${community.type}`
+            );
+            continue;
+          }
           storageAggregatorID = opportunity.storageAggregatorId;
         } else {
           console.log(`Unknown community type: ${community.type}`);
