@@ -326,7 +326,9 @@ export class SpaceAuthorizationService {
     space.community =
       await this.communityAuthorizationService.applyAuthorizationPolicy(
         space.community,
-        space.authorization
+        space.authorization,
+        license,
+        communityPolicy
       );
 
     space.collaboration =
