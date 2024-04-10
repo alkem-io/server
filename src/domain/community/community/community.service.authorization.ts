@@ -21,7 +21,7 @@ import {
   CREDENTIAL_RULE_TYPES_COMMUNITY_READ_GLOBAL_REGISTERED,
   CREDENTIAL_RULE_COMMUNITY_SELF_REMOVAL,
   POLICY_RULE_COMMUNITY_INVITE,
-  CREDENTIAL_RULE_TYPES_ASSCESS_VIRTUAL_CONTRIBUTORS,
+  CREDENTIAL_RULE_TYPES_ACCESS_VIRTUAL_CONTRIBUTORS,
 } from '@common/constants';
 import { InvitationExternalAuthorizationService } from '../invitation.external/invitation.external.service.authorization';
 import { InvitationAuthorizationService } from '../invitation/invitation.service.authorization';
@@ -222,7 +222,7 @@ export class CommunityAuthorizationService {
         this.authorizationPolicyService.createCredentialRule(
           [AuthorizationPrivilege.ACCESS_VIRTUAL_CONTRIBUTOR],
           criterias,
-          CREDENTIAL_RULE_TYPES_ASSCESS_VIRTUAL_CONTRIBUTORS
+          CREDENTIAL_RULE_TYPES_ACCESS_VIRTUAL_CONTRIBUTORS
         );
       accessVCsRule.cascade = true; // TODO: ideally make this not cascade so it is more specific
       newRules.push(accessVCsRule);
