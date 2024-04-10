@@ -45,7 +45,7 @@ export class MessageResolverFields {
   })
   async sender(
     @Parent() message: IMessage
-  ): Promise<IUser | IVirtualContributor | null> {
+  ): Promise<IUser | IVirtualContributor | null | never> {
     const { sender, senderType } = message;
     if (!sender || !senderType) {
       return null;
