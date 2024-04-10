@@ -27,6 +27,7 @@ import { UpdateVirtualContributorInput as UpdateVirtualContributorInput } from '
 import { DeleteVirtualContributorInput as DeleteVirtualContributorInput } from './dto/virtual.contributor.dto.delete';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { VirtualPersonaService } from '../virtual-persona/virtual.persona.service';
+import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 
 @Injectable()
 export class VirtualContributorService {
@@ -38,6 +39,7 @@ export class VirtualContributorService {
     private virtualPersonaService: VirtualPersonaService,
     @InjectRepository(VirtualContributor)
     private virtualContributorRepository: Repository<VirtualContributor>,
+    private communicationAdapter: CommunicationAdapter,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -55,6 +57,12 @@ export class VirtualContributorService {
       virtualContributorData
     );
     virtualContributor.authorization = new AuthorizationPolicy();
+    const communicationID = await this.communicationAdapter.tryRegisterNewUser(
+      `virtual-contributor-${virtualContributor.nameID}@alkem.io`
+    );
+    if (communicationID) {
+      virtualContributor.communicationID = communicationID;
+    }
     const virtualPersona =
       await this.virtualPersonaService.getVirtualPersonaOrFail(
         virtualContributorData.virtualPersonaID

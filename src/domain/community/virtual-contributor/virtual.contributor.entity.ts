@@ -1,4 +1,4 @@
-import { Entity, JoinColumn, OneToOne } from 'typeorm';
+import { Column, Entity, JoinColumn, OneToOne } from 'typeorm';
 import { IVirtualContributor } from './virtual.contributor.interface';
 import { Contributor } from '../contributor/contributor.entity';
 import { VirtualPersona } from '../virtual-persona';
@@ -15,6 +15,9 @@ export class VirtualContributor
   })
   @JoinColumn()
   virtualPersona!: VirtualPersona;
+
+  @Column()
+  communicationID: string = '';
 
   constructor() {
     super();
