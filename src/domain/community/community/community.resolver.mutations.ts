@@ -194,6 +194,13 @@ export class CommunityResolverMutations {
       requiredPrivilege,
       `assign virtual community role: ${community.id}`
     );
+    // Also require ACCESS_VIRTUAL_CONTRIBUTORS to assign a virtual contributor
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      community.authorization,
+      AuthorizationPrivilege.ACCESS_VIRTUAL_CONTRIBUTOR,
+      `assign virtual community role VC privilege: ${community.id}`
+    );
     await this.communityService.assignVirtualToRole(
       community,
       roleData.virtualContributorID,

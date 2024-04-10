@@ -362,7 +362,9 @@ export class ChallengeAuthorizationService {
     challenge.community =
       await this.communityAuthorizationService.applyAuthorizationPolicy(
         challenge.community,
-        challenge.authorization
+        challenge.authorization,
+        license,
+        communityPolicy
       );
     // Specific extension
     challenge.community.authorization = this.extendCommunityAuthorizationPolicy(
