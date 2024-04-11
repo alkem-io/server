@@ -114,7 +114,9 @@ export class BaseChallengeAuthorizationService {
     challengeBase.community =
       await this.communityAuthorizationService.applyAuthorizationPolicy(
         challengeBase.community,
-        challengeBase.authorization
+        challengeBase.authorization,
+        license,
+        communityPolicy
       );
     // Specific extension
     challengeBase.community.authorization =
