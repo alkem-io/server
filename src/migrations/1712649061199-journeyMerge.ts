@@ -206,9 +206,10 @@ export class journeyMerge1712649061199 implements MigrationInterface {
       );
     }
 
-    await queryRunner.query(
-      `ALTER TABLE \`space\` ADD CONSTRAINT \`FK_ef1ff4ac7f613cc0677e2295b30\` FOREIGN KEY (\`parentSpaceId\`) REFERENCES \`space\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
-    );
+    // Setting foreign key from one column to the primary key in the same table is not allowed in MySQL
+    // await queryRunner.query(
+    //   `ALTER TABLE \`space\` ADD CONSTRAINT \`FK_ef1ff4ac7f613cc0677e2295b30\` FOREIGN KEY (\`parentSpaceId\`) REFERENCES \`space\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
+    // );
     // TODO: subspaces relationship FK to be added
     // TODO: check constraints account to space + space to account
   }
