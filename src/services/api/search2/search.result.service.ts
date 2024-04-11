@@ -1,7 +1,7 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager, In } from 'typeorm';
-import { groupBy, union, orderBy } from 'lodash';
+import { groupBy, intersection, orderBy } from 'lodash';
 import { Space } from '@domain/challenge/space/space.entity';
 import { ISearchResult } from '@services/api/search/dto/search.result.entry.interface';
 import { ISearchResultSpace } from '@services/api/search/dto/search.result.dto.entry.space';
@@ -31,6 +31,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UserService } from '@domain/community/user/user.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
+import { EntityNotFoundException } from '@common/exceptions';
 
 export type PostParents = {
   post: IPost;
@@ -80,19 +81,13 @@ export class SearchResultService {
         ),
         this.getChallengeSearchResults(
           groupedResults.challenge ?? [],
-          agentInfo,
-          spaceId
+          agentInfo
         ),
         this.getOpportunitySearchResults(
           groupedResults.opportunity ?? [],
-          agentInfo,
-          spaceId
+          agentInfo
         ),
-        this.getUserSearchResults(
-          groupedResults.user ?? [],
-          agentInfo,
-          spaceId
-        ),
+        this.getUserSearchResults(groupedResults.user ?? [], spaceId),
         this.getOrganizationSearchResults(
           groupedResults.organization ?? [],
           agentInfo,
@@ -163,15 +158,8 @@ export class SearchResultService {
           return undefined;
         }
 
-        if (
-          !this.authorizationService.isAccessGranted(
-            agentInfo,
-            space.authorization,
-            AuthorizationPrivilege.READ
-          )
-        ) {
-          return undefined;
-        }
+        // no authorization check - all spaces must be visible
+        // context, profile and others are readable by all
 
         return {
           ...rawSearchResult,
@@ -183,8 +171,7 @@ export class SearchResultService {
 
   public async getChallengeSearchResults(
     rawSearchResults: ISearchResult[],
-    agentInfo: AgentInfo,
-    spaceId?: string
+    agentInfo: AgentInfo
   ): Promise<ISearchResultChallenge[]> {
     if (rawSearchResults.length === 0) {
       return [];
@@ -193,7 +180,7 @@ export class SearchResultService {
     const challengeIds = rawSearchResults.map(hit => hit.result.id);
 
     const challenges = await this.entityManager.find(Challenge, {
-      where: { id: In(challengeIds), space: { id: spaceId } },
+      where: { id: In(challengeIds) },
       relations: { space: true },
       select: { id: true, space: { id: true } },
     });
@@ -219,16 +206,6 @@ export class SearchResultService {
           return undefined;
         }
 
-        if (
-          !this.authorizationService.isAccessGranted(
-            agentInfo,
-            challenge.authorization,
-            AuthorizationPrivilege.READ
-          )
-        ) {
-          return undefined;
-        }
-
         if (!challenge.space) {
           const error = new BaseException(
             'Unable to find parent space for challenge while building search results',
@@ -243,6 +220,16 @@ export class SearchResultService {
           return undefined;
         }
 
+        if (
+          !this.authorizationService.isAccessGranted(
+            agentInfo,
+            challenge.authorization,
+            AuthorizationPrivilege.READ
+          )
+        ) {
+          return undefined;
+        }
+
         return {
           ...rawSearchResult,
           challenge: challenge as IChallenge,
@@ -254,8 +241,7 @@ export class SearchResultService {
 
   public async getOpportunitySearchResults(
     rawSearchResults: ISearchResult[],
-    agentInfo: AgentInfo,
-    spaceId?: string
+    agentInfo: AgentInfo
   ): Promise<ISearchResultChallenge[]> {
     if (rawSearchResults.length === 0) {
       return [];
@@ -264,7 +250,7 @@ export class SearchResultService {
     const opportunityIds = rawSearchResults.map(hit => hit.result.id);
 
     const opportunities = await this.entityManager.find(Opportunity, {
-      where: { id: In(opportunityIds), challenge: { space: { id: spaceId } } },
+      where: { id: In(opportunityIds) },
       relations: { challenge: { space: true } },
       select: { challenge: { id: true, space: { id: true } } },
     });
@@ -281,16 +267,6 @@ export class SearchResultService {
             undefined,
             LogContext.SEARCH
           );
-          return undefined;
-        }
-
-        if (
-          !this.authorizationService.isAccessGranted(
-            agentInfo,
-            opportunity.authorization,
-            AuthorizationPrivilege.READ
-          )
-        ) {
           return undefined;
         }
 
@@ -319,6 +295,16 @@ export class SearchResultService {
           );
         }
 
+        if (
+          !this.authorizationService.isAccessGranted(
+            agentInfo,
+            opportunity.authorization,
+            AuthorizationPrivilege.READ
+          )
+        ) {
+          return undefined;
+        }
+
         return {
           ...rawSearchResult,
           opportunity: opportunity as IOpportunity,
@@ -333,7 +319,6 @@ export class SearchResultService {
 
   public async getUserSearchResults(
     rawSearchResults: ISearchResult[],
-    agentInfo: AgentInfo,
     spaceId?: string
   ): Promise<ISearchResultUser[]> {
     if (rawSearchResults.length === 0) {
@@ -342,10 +327,12 @@ export class SearchResultService {
 
     const usersFromSearch = rawSearchResults.map(hit => hit.result.id);
     const usersInSpace = spaceId ? await this.getUsersInSpace(spaceId) : [];
-    const userIdsUnion = union(usersFromSearch, usersInSpace);
+    const userIdsIntersection = spaceId
+      ? intersection(usersFromSearch, usersInSpace)
+      : usersFromSearch;
 
     const users = await this.entityManager.findBy(User, {
-      id: In(userIdsUnion),
+      id: In(userIdsIntersection),
     });
 
     return users
@@ -384,10 +371,12 @@ export class SearchResultService {
     const orgsInSpace = spaceId
       ? await this.getOrganizationsInSpace(spaceId)
       : [];
-    const orgIdsUnion = union(orgsInSearch, orgsInSpace);
+    const orgIdsIntersection = spaceId
+      ? intersection(orgsInSearch, orgsInSpace)
+      : orgsInSearch;
 
     const organizations = await this.entityManager.findBy(Organization, {
-      id: In(orgIdsUnion),
+      id: In(orgIdsIntersection),
     });
 
     return organizations
@@ -436,7 +425,8 @@ export class SearchResultService {
     const posts = await this.entityManager.findBy(Post, {
       id: In(postIds),
     });
-
+    // usually the authorization is last but here it might be more expensive than usual
+    // find the authorized post first, then get the parents, and map the results
     const authorizedPosts = posts.filter(post =>
       this.authorizationService.isAccessGranted(
         agentInfo,
@@ -468,6 +458,7 @@ export class SearchResultService {
           callout: postParent.callout,
           space: postParent.space,
           challenge: postParent.challenge,
+          opportunity: postParent.opportunity,
           post: postParent.post,
         };
       })
@@ -507,17 +498,52 @@ export class SearchResultService {
 
     const postParents: PostParents[] = [];
     for (const result of queryResult) {
+      const challengePromise = result.challengeID
+        ? this.entityManager
+            .findOneByOrFail(Challenge, { id: result.challengeID })
+            .then(x => (x === null ? undefined : x))
+            .catch(
+              notFoundParentForPostHandler(
+                result,
+                'Challenge not found for Post while resolving search results.'
+              )
+            )
+        : undefined;
+      const opportunityPromise = result.opportunityID
+        ? this.entityManager
+            .findOneByOrFail(Opportunity, {
+              id: result.opportunityID,
+            })
+            .then(x => (x === null ? undefined : x))
+            .catch(
+              notFoundParentForPostHandler(
+                result,
+                'Opportunity not found for Post while resolving search results.'
+              )
+            )
+        : undefined;
+      const calloutPromise = this.entityManager
+        .findOneByOrFail(Callout, { id: result.calloutID })
+        .catch(
+          notFoundParentForPostHandler(
+            result,
+            'Callout not found for Post while resolving search results.'
+          )
+        );
+      const spacePromise = this.entityManager
+        .findOneByOrFail(Space, { id: result.spaceID })
+        .catch(
+          notFoundParentForPostHandler(
+            result,
+            'Space not found for Post while resolving search results.'
+          )
+        );
+
       const [callout, space, challenge, opportunity] = await Promise.all([
-        this.entityManager.findOneByOrFail(Callout, { id: result.calloutID }),
-        this.entityManager.findOneByOrFail(Space, { id: result.spaceID }),
-        this.entityManager
-          .findOneBy(Challenge, { id: result.challengeID })
-          .then(x => (x === null ? undefined : x)),
-        this.entityManager
-          .findOneBy(Opportunity, {
-            id: result.opportunityID,
-          })
-          .then(x => (x === null ? undefined : x)),
+        calloutPromise,
+        spacePromise,
+        challengePromise,
+        opportunityPromise,
       ]);
       const post = posts.find(post => post.id === result.postID);
 
@@ -591,3 +617,20 @@ export class SearchResultService {
     return orgsInSpace;
   }
 }
+
+const notFoundParentForPostHandler =
+  (result: PostParentIDs, cause: string) => (error: Error) => {
+    throw new EntityNotFoundException(
+      'Error while extracting search results',
+      LogContext.SEARCH_RESULT,
+      {
+        cause,
+        originalException: error,
+        spaceId: result.spaceID,
+        calloutId: result.calloutID,
+        challengeId: result.challengeID,
+        opportunityId: result.opportunityID,
+        postId: result.postID,
+      }
+    );
+  };
