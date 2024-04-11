@@ -205,6 +205,9 @@ export class spaceSettings1710843986354 implements MigrationInterface {
     }
 
     await queryRunner.query(
+      `DELETE FROM preference WHERE preferenceDefinitionId NOT IN (SELECT id FROM preference_definition);`
+    );
+    await queryRunner.query(
       `ALTER TABLE \`preference\` ADD CONSTRAINT \`FK_650fb4e564a8b4b4ac344270744\` FOREIGN KEY (\`preferenceDefinitionId\`) REFERENCES \`preference_definition\`(\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION`
     );
   }
