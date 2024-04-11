@@ -67,6 +67,7 @@ import { CommunicationAddRectionToMessageInput } from './dto/communication.dto.a
 import { CommunicationRemoveRectionToMessageInput } from './dto/communication.dto.remove.reaction';
 import { CommunicationRoomResult } from '@services/adapters/communication-adapter/dto/communication.dto.room.result';
 import { IMessageReaction } from '@domain/communication/message.reaction/message.reaction.interface';
+import { RoomResult } from '@alkemio/matrix-adapter-lib/dist/types/room';
 
 @Injectable()
 export class CommunicationAdapter {
@@ -116,7 +117,16 @@ export class CommunicationAdapter {
         `...message sent to room: ${sendMessageData.roomID}`,
         LogContext.COMMUNICATION
       );
-      return message;
+      return {
+        ...message,
+        senderType: 'user',
+        reactions: message.reactions.map(reaction => {
+          return {
+            ...reaction,
+            senderType: 'user',
+          };
+        }),
+      };
     } catch (err: any) {
       this.logInteractionError(eventType, err, eventID);
       throw new MatrixEntityNotFoundException(
@@ -127,7 +137,8 @@ export class CommunicationAdapter {
   }
 
   async sendMessageReply(
-    sendMessageData: CommunicationSendMessageReplyInput
+    sendMessageData: CommunicationSendMessageReplyInput,
+    senderType: 'user' | 'virtualContributor'
   ): Promise<IMessage> {
     const eventType = MatrixAdapterEventType.ROOM_SEND_MESSAGE_REPLY;
     const inputPayload: RoomSendMessageReplyPayload = {
@@ -155,7 +166,16 @@ export class CommunicationAdapter {
         `...message sent to room: ${sendMessageData.roomID}`,
         LogContext.COMMUNICATION
       );
-      return message;
+      return {
+        ...message,
+        senderType,
+        reactions: message.reactions.map(reaction => {
+          return {
+            ...reaction,
+            senderType: 'user',
+          };
+        }),
+      };
     } catch (err: any) {
       this.logInteractionError(eventType, err, eventID);
       throw new MatrixEntityNotFoundException(
@@ -193,7 +213,10 @@ export class CommunicationAdapter {
         `...reaction added to message in room: ${sendMessageData.roomID}`,
         LogContext.COMMUNICATION
       );
-      return reaction;
+      return {
+        ...reaction,
+        senderType: 'user', // TODO compute actual senderType
+      };
     } catch (err: any) {
       this.logInteractionError(eventType, err, eventID);
       throw new MatrixEntityNotFoundException(
@@ -262,7 +285,21 @@ export class CommunicationAdapter {
         response
       );
       this.logResponsePayload(eventType, responseData, eventID);
-      return responseData.room;
+      return {
+        ...responseData.room,
+        messages: responseData.room.messages.map(message => {
+          return {
+            ...message,
+            senderType: 'user',
+            reactions: message.reactions.map(reaction => {
+              return {
+                ...reaction,
+                senderType: 'user',
+              };
+            }),
+          };
+        }),
+      };
     } catch (err: any) {
       this.logInteractionError(eventType, err, eventID);
       throw new MatrixEntityNotFoundException(
@@ -454,7 +491,7 @@ export class CommunicationAdapter {
     }
   }
 
-  async grantUserAccesToRooms(
+  async grantUserAccessToRooms(
     roomIDs: string[],
     matrixUserID: string
   ): Promise<boolean> {
@@ -514,7 +551,23 @@ export class CommunicationAdapter {
         response
       );
       this.logResponsePayload(eventType, responseData, eventID);
-      return responseData.rooms;
+      return responseData.rooms.map(room => {
+        return {
+          ...room,
+          messages: room.messages.map(message => {
+            return {
+              ...message,
+              senderType: 'user',
+              reactions: message.reactions.map(reaction => {
+                return {
+                  ...reaction,
+                  senderType: 'user',
+                };
+              }),
+            };
+          }),
+        };
+      });
     } catch (err: any) {
       this.logInteractionError(eventType, err, eventID);
       throw new MatrixEntityNotFoundException(
@@ -546,7 +599,23 @@ export class CommunicationAdapter {
         response
       );
       this.logResponsePayload(eventType, responseData, eventID);
-      return responseData.rooms;
+      return responseData.rooms.map(room => {
+        return {
+          ...room,
+          messages: room.messages.map(message => {
+            return {
+              ...message,
+              senderType: 'user',
+              reactions: message.reactions.map(reaction => {
+                return {
+                  ...reaction,
+                  senderType: 'user',
+                };
+              }),
+            };
+          }),
+        };
+      });
     } catch (err: any) {
       this.logInteractionError(eventType, err, eventID);
       throw new MatrixEntityNotFoundException(
@@ -594,7 +663,7 @@ export class CommunicationAdapter {
     }
   }
 
-  async getAllRooms(): Promise<CommunicationRoomResult[]> {
+  async getAllRooms(): Promise<RoomResult[]> {
     const inputPayload: RoomsPayload = {
       triggeredBy: '',
     };

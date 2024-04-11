@@ -22,6 +22,8 @@ export enum LogContext {
   DATA_MGMT = 'data-mgmt',
   SEARCH = 'search',
   SEARCH_INGEST = 'search-ingest',
+  SEARCH_EXTRACT = 'search-extract',
+  SEARCH_RESULT = 'search-result',
   OPPORTUNITY = 'opportunity',
   IPFS = 'ipfs',
   LIFECYCLE = 'lifecycle',

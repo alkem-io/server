@@ -1,7 +1,7 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager, In } from 'typeorm';
-import { groupBy, union, orderBy } from 'lodash';
+import { groupBy, intersection, orderBy } from 'lodash';
 import { Space } from '@domain/space/space/space.entity';
 import { ISearchResult } from '@services/api/search/dto/search.result.entry.interface';
 import { ISearchResultSpace } from '@services/api/search/dto/search.result.dto.entry.space';
@@ -29,6 +29,7 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { UserService } from '@domain/community/user/user.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
+import { SpaceLevel } from '@common/enums/space.level';
 
 export type PostParents = {
   post: IPost;
@@ -78,19 +79,13 @@ export class SearchResultService {
         ),
         this.getChallengeSearchResults(
           groupedResults.challenge ?? [],
-          agentInfo,
-          spaceId
+          agentInfo
         ),
         this.getOpportunitySearchResults(
           groupedResults.opportunity ?? [],
-          agentInfo,
-          spaceId
+          agentInfo
         ),
-        this.getUserSearchResults(
-          groupedResults.user ?? [],
-          agentInfo,
-          spaceId
-        ),
+        this.getUserSearchResults(groupedResults.user ?? [], spaceId),
         this.getOrganizationSearchResults(
           groupedResults.organization ?? [],
           agentInfo,
@@ -161,15 +156,8 @@ export class SearchResultService {
           return undefined;
         }
 
-        if (
-          !this.authorizationService.isAccessGranted(
-            agentInfo,
-            space.authorization,
-            AuthorizationPrivilege.READ
-          )
-        ) {
-          return undefined;
-        }
+        // no authorization check - all spaces must be visible
+        // context, profile and others are readable by all
 
         return {
           ...rawSearchResult,
@@ -181,8 +169,7 @@ export class SearchResultService {
 
   public async getChallengeSearchResults(
     rawSearchResults: ISearchResult[],
-    agentInfo: AgentInfo,
-    spaceId?: string
+    agentInfo: AgentInfo
   ): Promise<ISearchResultChallenge[]> {
     if (rawSearchResults.length === 0) {
       return [];
@@ -191,7 +178,7 @@ export class SearchResultService {
     const subspaceIds = rawSearchResults.map(hit => hit.result.id);
 
     const subspaces = await this.entityManager.find(Space, {
-      where: { id: In(subspaceIds), parentSpace: { id: spaceId } },
+      where: { id: In(subspaceIds), level: SpaceLevel.CHALLENGE },
       relations: { parentSpace: true },
       select: { id: true, parentSpace: { id: true } },
     });
@@ -241,6 +228,16 @@ export class SearchResultService {
           return undefined;
         }
 
+        if (
+          !this.authorizationService.isAccessGranted(
+            agentInfo,
+            subspace.authorization,
+            AuthorizationPrivilege.READ
+          )
+        ) {
+          return undefined;
+        }
+
         return {
           ...rawSearchResult,
           subspace: subspace as ISpace,
@@ -252,8 +249,7 @@ export class SearchResultService {
 
   public async getOpportunitySearchResults(
     rawSearchResults: ISearchResult[],
-    agentInfo: AgentInfo,
-    spaceId?: string
+    agentInfo: AgentInfo
   ): Promise<ISearchResultChallenge[]> {
     if (rawSearchResults.length === 0) {
       return [];
@@ -264,7 +260,7 @@ export class SearchResultService {
     const subsubspaces = await this.entityManager.find(Space, {
       where: {
         id: In(subsubspaceIds),
-        parentSpace: { parentSpace: { id: spaceId } },
+        level: SpaceLevel.OPPORTUNITY,
       },
       relations: { parentSpace: { parentSpace: true } },
       select: { parentSpace: { id: true, parentSpace: { id: true } } },
@@ -320,6 +316,16 @@ export class SearchResultService {
           );
         }
 
+        if (
+          !this.authorizationService.isAccessGranted(
+            agentInfo,
+            subsubspace.authorization,
+            AuthorizationPrivilege.READ
+          )
+        ) {
+          return undefined;
+        }
+
         return {
           ...rawSearchResult,
           opportunity: subsubspace as ISpace,
@@ -334,7 +340,6 @@ export class SearchResultService {
 
   public async getUserSearchResults(
     rawSearchResults: ISearchResult[],
-    agentInfo: AgentInfo,
     spaceId?: string
   ): Promise<ISearchResultUser[]> {
     if (rawSearchResults.length === 0) {
@@ -343,10 +348,12 @@ export class SearchResultService {
 
     const usersFromSearch = rawSearchResults.map(hit => hit.result.id);
     const usersInSpace = spaceId ? await this.getUsersInSpace(spaceId) : [];
-    const userIdsUnion = union(usersFromSearch, usersInSpace);
+    const userIdsIntersection = spaceId
+      ? intersection(usersFromSearch, usersInSpace)
+      : usersFromSearch;
 
     const users = await this.entityManager.findBy(User, {
-      id: In(userIdsUnion),
+      id: In(userIdsIntersection),
     });
 
     return users
@@ -385,10 +392,12 @@ export class SearchResultService {
     const orgsInSpace = spaceId
       ? await this.getOrganizationsInSpace(spaceId)
       : [];
-    const orgIdsUnion = union(orgsInSearch, orgsInSpace);
+    const orgIdsIntersection = spaceId
+      ? intersection(orgsInSearch, orgsInSpace)
+      : orgsInSearch;
 
     const organizations = await this.entityManager.findBy(Organization, {
-      id: In(orgIdsUnion),
+      id: In(orgIdsIntersection),
     });
 
     return organizations
@@ -437,7 +446,8 @@ export class SearchResultService {
     const posts = await this.entityManager.findBy(Post, {
       id: In(postIds),
     });
-
+    // usually the authorization is last but here it might be more expensive than usual
+    // find the authorized post first, then get the parents, and map the results
     const authorizedPosts = posts.filter(post =>
       this.authorizationService.isAccessGranted(
         agentInfo,

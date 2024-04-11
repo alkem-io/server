@@ -9,7 +9,6 @@ export const spacesQuery = gql`
       }
       community {
         id
-        displayName
       }
       subspaces {
         nameID
@@ -18,7 +17,6 @@ export const spacesQuery = gql`
         }
         community {
           id
-          displayName
         }
         subspaces {
           nameID
@@ -27,7 +25,6 @@ export const spacesQuery = gql`
           }
           community {
             id
-            displayName
           }
         }
       }

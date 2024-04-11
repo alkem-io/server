@@ -21,11 +21,19 @@ import {
   CREDENTIAL_RULE_TYPES_COMMUNITY_READ_GLOBAL_REGISTERED,
   CREDENTIAL_RULE_COMMUNITY_SELF_REMOVAL,
   POLICY_RULE_COMMUNITY_INVITE,
+  CREDENTIAL_RULE_TYPES_ACCESS_VIRTUAL_CONTRIBUTORS,
 } from '@common/constants';
 import { InvitationExternalAuthorizationService } from '../invitation.external/invitation.external.service.authorization';
 import { InvitationAuthorizationService } from '../invitation/invitation.service.authorization';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { CommunityGuidelinesAuthorizationService } from '../community-guidelines/community.guidelines.service.authorization';
+import { LicenseService } from '@domain/license/license/license.service';
+import { ILicense } from '@domain/license/license/license.interface';
+import { LicenseFeatureFlagName } from '@common/enums/license.feature.flag.name';
+import { CommunityPolicyService } from '../community-policy/community.policy.service';
+import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { ICommunityPolicy } from '../community-policy/community.policy.interface';
+import { CommunityRole } from '@common/enums/community.role';
 
 @Injectable()
 export class CommunityAuthorizationService {
@@ -36,6 +44,8 @@ export class CommunityAuthorizationService {
     private communicationAuthorizationService: CommunicationAuthorizationService,
     private applicationAuthorizationService: ApplicationAuthorizationService,
     private invitationAuthorizationService: InvitationAuthorizationService,
+    private licenseService: LicenseService,
+    private communityPolicyService: CommunityPolicyService,
     private invitationExternalAuthorizationService: InvitationExternalAuthorizationService,
     private communityGuidelinesAuthorizationService: CommunityGuidelinesAuthorizationService,
     @InjectRepository(Community)
@@ -44,7 +54,9 @@ export class CommunityAuthorizationService {
 
   async applyAuthorizationPolicy(
     communityInput: ICommunity,
-    parentAuthorization: IAuthorizationPolicy | undefined
+    parentAuthorization: IAuthorizationPolicy | undefined,
+    license: ILicense,
+    communityPolicy: ICommunityPolicy
   ): Promise<ICommunity> {
     const community = await this.communityService.getCommunityOrFail(
       communityInput.id,
@@ -82,9 +94,11 @@ export class CommunityAuthorizationService {
         parentAuthorization
       );
 
-    community.authorization = this.extendAuthorizationPolicy(
+    community.authorization = await this.extendAuthorizationPolicy(
       community.authorization,
-      parentAuthorization?.anonymousReadAccess
+      parentAuthorization?.anonymousReadAccess,
+      license,
+      communityPolicy
     );
     community.authorization = this.appendVerifiedCredentialRules(
       community.authorization
@@ -150,10 +164,12 @@ export class CommunityAuthorizationService {
     return await this.communityRepository.save(community);
   }
 
-  private extendAuthorizationPolicy(
+  private async extendAuthorizationPolicy(
     authorization: IAuthorizationPolicy | undefined,
-    allowGlobalRegisteredReadAccess: boolean | undefined
-  ): IAuthorizationPolicy {
+    allowGlobalRegisteredReadAccess: boolean | undefined,
+    license: ILicense,
+    policy: ICommunityPolicy
+  ): Promise<IAuthorizationPolicy> {
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
     const globalCommunityAdmin =
@@ -183,6 +199,35 @@ export class CommunityAuthorizationService {
           CREDENTIAL_RULE_TYPES_COMMUNITY_READ_GLOBAL_REGISTERED
         );
       newRules.push(globalRegistered);
+    }
+
+    const accessVirtualContributors =
+      await this.licenseService.isFeatureFlagEnabled(
+        license,
+        LicenseFeatureFlagName.VIRTUAL_CONTRIBUTORS
+      );
+    if (accessVirtualContributors) {
+      const criterias: ICredentialDefinition[] =
+        this.communityPolicyService.getAllCredentialsForRole(
+          policy,
+          CommunityRole.ADMIN
+        );
+      criterias.push({
+        type: AuthorizationCredential.GLOBAL_ADMIN,
+        resourceID: '',
+      });
+      criterias.push({
+        type: AuthorizationCredential.GLOBAL_ADMIN_SPACES,
+        resourceID: '',
+      });
+      const accessVCsRule =
+        this.authorizationPolicyService.createCredentialRule(
+          [AuthorizationPrivilege.ACCESS_VIRTUAL_CONTRIBUTOR],
+          criterias,
+          CREDENTIAL_RULE_TYPES_ACCESS_VIRTUAL_CONTRIBUTORS
+        );
+      accessVCsRule.cascade = true; // TODO: ideally make this not cascade so it is more specific
+      newRules.push(accessVCsRule);
     }
 
     //

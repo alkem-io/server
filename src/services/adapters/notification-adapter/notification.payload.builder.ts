@@ -30,6 +30,8 @@ import {
   CommentReplyEventPayload,
   CommunityExternalInvitationCreatedEventPayload,
   BaseEventPayload,
+  ContributorPayload,
+  SpaceBaseEventPayload,
 } from '@alkemio/notifications-lib';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
@@ -46,9 +48,7 @@ import { NotificationInputWhiteboardCreated } from './dto/notification.dto.input
 import { NotificationInputPostCreated } from './dto/notification.dto.input.post.created';
 import { NotificationInputPostComment } from './dto/notification.dto.input.post.comment';
 import { ContributionResolverService } from '@services/infrastructure/entity-resolver/contribution.resolver.service';
-import { SpaceBaseEventPayload } from '@alkemio/notifications-lib';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
-import { ContributorPayload } from '@alkemio/notifications-lib';
 
 @Injectable()
 export class NotificationPayloadBuilder {
