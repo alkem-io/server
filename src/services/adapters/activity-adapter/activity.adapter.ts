@@ -49,23 +49,30 @@ export class ActivityAdapter {
     private entityManager: EntityManager
   ) {}
 
-  public async challengeCreated(
+  public async subspaceCreated(
     eventData: ActivityInputSubspaceCreated,
-    spaceID: string
+    parentSpaceID: string,
+    subspaceLevel: number
   ): Promise<boolean> {
-    const eventType = ActivityEventType.CHALLENGE_CREATED;
+    const eventType =
+      subspaceLevel === 2
+        ? ActivityEventType.OPPORTUNITY_CREATED
+        : ActivityEventType.CHALLENGE_CREATED;
+
     this.logEventTriggered(eventData, eventType);
 
     const subspace = eventData.subspace;
 
-    const collaborationID = await this.getCollaborationIdForSpace(spaceID);
+    const collaborationID = await this.getCollaborationIdForSpace(
+      parentSpaceID
+    );
     const description = subspace.profile.displayName;
 
     const activity = await this.activityService.createActivity({
       collaborationID,
       triggeredBy: eventData.triggeredBy,
       resourceID: subspace.id,
-      parentID: spaceID,
+      parentID: parentSpaceID,
       description,
       type: eventType,
     });
@@ -382,9 +389,7 @@ export class ActivityAdapter {
   private async getCollaborationIdForSpace(spaceID: string): Promise<string> {
     const space = await this.entityManager.findOne(Space, {
       where: {
-        subspaces: {
-          id: spaceID,
-        },
+        id: spaceID,
       },
       relations: {
         collaboration: true,

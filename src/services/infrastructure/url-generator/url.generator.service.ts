@@ -438,7 +438,7 @@ export class UrlGeneratorService {
         LogContext.URL_GENERATOR
       );
     }
-    return `${spaceUrlPath}/challenges/${result.challengeNameId}`;
+    return `${spaceUrlPath}/subspaces/${result.challengeNameId}`;
   }
 
   private async getOpportunityUrlPath(
@@ -466,7 +466,7 @@ export class UrlGeneratorService {
       result.challengeId,
       admin
     );
-    return `${challengeUrlPath}/opportunities/${result.opportunityNameId}`;
+    return `${challengeUrlPath}/subsubspaces/${result.opportunityNameId}`;
   }
 
   private async getInnovationFlowUrlPathOrFail(

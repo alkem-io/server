@@ -248,12 +248,13 @@ export class SpaceResolverMutations {
       space.authorization
     );
 
-    this.activityAdapter.challengeCreated(
+    this.activityAdapter.subspaceCreated(
       {
         triggeredBy: agentInfo.userID,
-        subspace: subspace,
+        subspace,
       },
-      space.id
+      space.id,
+      subspace.level
     );
 
     this.contributionReporter.challengeCreated(

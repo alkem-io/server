@@ -83,6 +83,9 @@ export class SpaceService {
     agentInfo?: AgentInfo
   ): Promise<ISpace> {
     spaceData.type = SpaceType.SPACE;
+    if (spaceData.level === 1) spaceData.type = SpaceType.CHALLENGE;
+    if (spaceData.level === 2) spaceData.type = SpaceType.OPPORTUNITY;
+
     const space: ISpace = Space.create(spaceData);
 
     return await this.initialise(space, spaceData, account, agentInfo);
