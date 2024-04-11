@@ -1,0 +1,14 @@
+mutation assignCommunityRoleToVirtual($roleData: AssignCommunityRoleToVirtualInput!) {
+  assignCommunityRoleToVirtual(roleData: $roleData) {
+    id
+  }
+}
+
+Variables:
+{
+  "roleData": {
+    "virtualID": "uuid",
+    "communityID": "uuid",
+    "role": "MEMBER"
+  }
+}
