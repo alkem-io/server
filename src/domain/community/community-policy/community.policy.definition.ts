@@ -4,5 +4,4 @@ export abstract class ICommunityPolicyDefinition {
   member!: ICommunityRolePolicy;
   lead!: ICommunityRolePolicy;
   admin!: ICommunityRolePolicy;
-  host!: ICommunityRolePolicy;
 }

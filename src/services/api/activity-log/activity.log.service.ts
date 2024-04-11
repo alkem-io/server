@@ -26,9 +26,9 @@ import { CalendarService } from '@domain/timeline/calendar/calendar.service';
 import { CalendarEventService } from '@domain/timeline/event/event.service';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { SpaceService } from '@domain/challenge/space/space.service';
-import { JourneyTypeEnum } from '@common/enums/journey.type';
 import { LinkService } from '@domain/collaboration/link/link.service';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
+import { SpaceType } from '@common/enums/space.type';
 
 export class ActivityLogService {
   constructor(
@@ -209,13 +209,13 @@ export class ActivityLogService {
     return undefined;
   }
 
-  private getJourneyByType(type: JourneyTypeEnum, id: string) {
+  private getJourneyByType(type: SpaceType, id: string) {
     switch (type) {
-      case JourneyTypeEnum.SPACE:
+      case SpaceType.SPACE:
         return this.spaceService.getSpaceOrFail(id);
-      case JourneyTypeEnum.CHALLENGE:
+      case SpaceType.CHALLENGE:
         return this.challengeService.getChallengeOrFail(id);
-      case JourneyTypeEnum.OPPORTUNITY:
+      case SpaceType.OPPORTUNITY:
         return this.opportunityService.getOpportunityOrFail(id);
       default:
         throw new Error(`Invalid journey type: ${type}`);
@@ -227,19 +227,19 @@ const getJourneyType = (ids?: {
   spaceId?: string;
   challengeId?: string;
   opportunityId?: string;
-}): JourneyTypeEnum | undefined => {
+}): SpaceType | undefined => {
   const { spaceId, challengeId, opportunityId } = ids ?? {};
 
   if (spaceId) {
-    return JourneyTypeEnum.SPACE;
+    return SpaceType.SPACE;
   }
 
   if (challengeId) {
-    return JourneyTypeEnum.CHALLENGE;
+    return SpaceType.CHALLENGE;
   }
 
   if (opportunityId) {
-    return JourneyTypeEnum.OPPORTUNITY;
+    return SpaceType.OPPORTUNITY;
   }
 
   return undefined;

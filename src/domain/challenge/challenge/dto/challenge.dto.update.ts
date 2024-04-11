@@ -1,5 +1,5 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { UpdateBaseChallengeInput } from '@domain/challenge/base-challenge/base.challenge.dto.update';
+import { UpdateBaseChallengeInput } from '@domain/challenge/base-challenge/dto/base.challenge.dto.update';
 import { UpdateInnovationFlowInput } from '@domain/collaboration/innovation-flow/dto';
 import { IsOptional, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';

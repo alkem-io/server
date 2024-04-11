@@ -16,15 +16,14 @@ import {
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { AgentInfo } from '@core/authentication';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { ChallengeAuthorizationService } from '@domain/challenge/challenge/challenge.service.authorization';
 import { OpportunityAuthorizationService } from '@domain/challenge/opportunity/opportunity.service.authorization';
 import { IChallenge } from './challenge.interface';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
-import { OpportunityCreatedPayload } from './dto/challenge.opportunity.created.payload';
 import { SubscriptionType } from '@common/enums/subscription.type';
-import { SUBSCRIPTION_OPPORTUNITY_CREATED } from '@common/constants';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { EntityNotInitializedException } from '@common/exceptions';
+import { SUBSCRIPTION_SUBSPACE_CREATED } from '@common/constants/providers';
+import { SubspaceCreatedPayload } from '../space/dto/space.subspace.created.payload';
 
 @Resolver()
 export class ChallengeResolverMutations {
@@ -32,11 +31,10 @@ export class ChallengeResolverMutations {
     private contributionReporter: ContributionReporterService,
     private activityAdapter: ActivityAdapter,
     private opportunityAuthorizationService: OpportunityAuthorizationService,
-    private challengeAuthorizationService: ChallengeAuthorizationService,
     private authorizationService: AuthorizationService,
     private challengeService: ChallengeService,
-    @Inject(SUBSCRIPTION_OPPORTUNITY_CREATED)
-    private opportunityCreatedSubscription: PubSubEngine
+    @Inject(SUBSCRIPTION_SUBSPACE_CREATED)
+    private subspaceCreatedSubscription: PubSubEngine
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -52,20 +50,19 @@ export class ChallengeResolverMutations {
       opportunityData.challengeID,
       {
         relations: {
-          account: true,
           community: {
             policy: true,
           },
-          preferenceSet: {
-            preferences: true,
+          account: {
+            space: true,
           },
         },
       }
     );
     if (
       !challenge.account ||
+      !challenge.account.space ||
       !challenge.community ||
-      !challenge.preferenceSet ||
       !challenge.community.policy
     ) {
       throw new EntityNotInitializedException(
@@ -76,7 +73,7 @@ export class ChallengeResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       challenge.authorization,
-      AuthorizationPrivilege.CREATE_OPPORTUNITY,
+      AuthorizationPrivilege.CREATE_SUBSPACE,
       `opportunityCreate: ${challenge.nameID}`
     );
 
@@ -95,23 +92,22 @@ export class ChallengeResolverMutations {
       agentInfo
     );
 
-    const challengeCommunityPolicy =
-      await this.challengeAuthorizationService.setCommunityPolicyFlags(
-        challenge.preferenceSet,
-        challenge.community.policy
-      );
+    await this.opportunityAuthorizationService.applyAuthorizationPolicy(
+      opportunity,
+      challenge.authorization
+    );
+
     const opportunityWithAuth =
       await this.opportunityAuthorizationService.applyAuthorizationPolicy(
         opportunity,
-        challenge.authorization,
-        challengeCommunityPolicy
+        challenge.authorization
       );
 
     this.contributionReporter.opportunityCreated(
       {
         id: opportunity.id,
         name: opportunity.profile.displayName,
-        space: challenge.account.spaceID,
+        space: challenge.account.space.id,
       },
       {
         id: agentInfo.userID,
@@ -125,13 +121,13 @@ export class ChallengeResolverMutations {
       challengeId: opportunityData.challengeID,
     });
 
-    const opportunityCreatedEvent: OpportunityCreatedPayload = {
+    const opportunityCreatedEvent: SubspaceCreatedPayload = {
       eventID: `opportunity-created-${Math.round(Math.random() * 100)}`,
-      challengeID: challenge.id,
-      opportunity,
+      journeyID: challenge.id,
+      childJourney: opportunity,
     };
-    this.opportunityCreatedSubscription.publish(
-      SubscriptionType.OPPORTUNITY_CREATED,
+    this.subspaceCreatedSubscription.publish(
+      SubscriptionType.SUBSPACE_CREATED,
       opportunityCreatedEvent
     );
 
@@ -149,9 +145,16 @@ export class ChallengeResolverMutations {
   ): Promise<IChallenge> {
     const challenge = await this.challengeService.getChallengeOrFail(
       challengeData.ID,
-      { relations: { profile: true, account: true } }
+      {
+        relations: {
+          profile: true,
+          account: {
+            space: true,
+          },
+        },
+      }
     );
-    if (!challenge.account) {
+    if (!challenge.account || !challenge.account.space) {
       throw new EntityNotInitializedException(
         `account not found on challenge: ${challenge.nameID}`,
         LogContext.CHALLENGES
@@ -163,6 +166,8 @@ export class ChallengeResolverMutations {
       AuthorizationPrivilege.UPDATE,
       `challenge update: ${challenge.nameID}`
     );
+    challengeData.accountID = challenge.account.id;
+
     const updatedChallenge = await this.challengeService.updateChallenge(
       challengeData
     );
@@ -171,7 +176,7 @@ export class ChallengeResolverMutations {
       {
         id: challenge.id,
         name: challenge.profile.displayName,
-        space: challenge.account.spaceID ?? '',
+        space: challenge.account.space.id,
       },
       {
         id: agentInfo.userID,

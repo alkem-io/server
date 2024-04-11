@@ -4,7 +4,7 @@ import { Account } from '@domain/challenge/account/account.entity';
 import { IOrganization } from '@domain/community/organization';
 import { UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
+import { AuthorizationAgentPrivilege } from '@src/common/decorators';
 import { AccountService } from '@domain/challenge/account/account.service';
 import { IAccount } from '@domain/challenge/account/account.interface';
 import { ITemplatesSet } from '@domain/template/templates-set';
@@ -64,8 +64,16 @@ export class AccountResolverFields {
     nullable: true,
     description: 'The Account host.',
   })
-  @Profiling.api
   async host(@Parent() account: Account): Promise<IOrganization | undefined> {
     return await this.accountService.getHost(account);
+  }
+
+  @ResolveField('spaceID', () => String, {
+    nullable: false,
+    description: 'The ID for the root space for the Account .',
+  })
+  async spaceID(@Parent() account: Account): Promise<string> {
+    const space = await this.accountService.getRootSpace(account);
+    return space.id;
   }
 }

@@ -11,9 +11,8 @@ import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { INVP } from '@domain/common/nvp/nvp.interface';
 import { UseGuards } from '@nestjs/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
-import { AuthorizationPrivilege } from '@common/enums';
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { IAgent } from '@domain/agent/agent';
-import { IPreference } from '@domain/common/preference';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
 import { IProfile } from '@domain/common/profile/profile.interface';
@@ -22,15 +21,17 @@ import {
   JourneyCollaborationLoaderCreator,
   JourneyCommunityLoaderCreator,
   JourneyContextLoaderCreator,
-  PreferencesLoaderCreator,
   AgentLoaderCreator,
   ProfileLoaderCreator,
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { ISpaceSettings } from '../space.settings/space.settings.interface';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication/agent-info';
+import { UUID_NAMEID } from '@domain/common/scalars/scalar.uuid.nameid';
+import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { IAccount } from '../account/account.interface';
 
 @Resolver(() => IChallenge)
@@ -147,6 +148,34 @@ export class ChallengeResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
+  @ResolveField('opportunity', () => IOpportunity, {
+    nullable: false,
+    description:
+      'A particular Opportunity, either by its ID or nameID, in the same account as the parent Challenge',
+  })
+  async opportunity(
+    @Args('ID', { type: () => UUID_NAMEID }) id: string,
+    @CurrentUser() agentInfo: AgentInfo,
+    @Parent() challenge: IChallenge
+  ): Promise<IOpportunity> {
+    const opportunity = await this.challengeService.getOpportunityInChallenge(
+      id,
+      challenge
+    );
+    if (!opportunity) {
+      throw new EntityNotFoundException(
+        `Unable to find Opportunity with ID: '${id}'`,
+        LogContext.CHALLENGES,
+        {
+          opportunityId: id,
+          challengeId: challenge.id,
+          userId: agentInfo.userID,
+        }
+      );
+    }
+    return opportunity;
+  }
+
   @ResolveField('account', () => IAccount, {
     nullable: true,
     description: 'The Account for the Challenge.',
@@ -177,20 +206,11 @@ export class ChallengeResolverFields {
     return await this.challengeService.getMetrics(challenge);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
-  @ResolveField('preferences', () => [IPreference], {
+  @ResolveField('settings', () => ISpaceSettings, {
     nullable: false,
-    description: 'The preferences for this Challenge',
+    description: 'The settings for this Space.',
   })
-  async preferences(
-    @Parent() challenge: IChallenge,
-    @Loader(PreferencesLoaderCreator, {
-      parentClassRef: Challenge,
-      getResult: r => r?.preferenceSet?.preferences,
-    })
-    loader: ILoader<IPreference[]>
-  ): Promise<IPreference[]> {
-    return loader.load(challenge.id);
+  states(@Parent() challenge: IChallenge): ISpaceSettings {
+    return this.challengeService.getSettings(challenge);
   }
 }

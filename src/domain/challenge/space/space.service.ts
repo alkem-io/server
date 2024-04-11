@@ -1,9 +1,5 @@
 import { UUID_LENGTH } from '@common/constants';
-import {
-  AuthorizationCredential,
-  LogContext,
-  ProfileType,
-} from '@common/enums';
+import { LogContext } from '@common/enums';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -13,22 +9,11 @@ import {
 } from '@common/exceptions';
 import { IAgent } from '@domain/agent/agent';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
-import {
-  CreateSpaceInput,
-  DeleteSpaceInput,
-  spaceCommunityApplicationForm,
-  spaceCommunityPolicy,
-} from '@domain/challenge/space';
-import { IOpportunity } from '@domain/challenge/opportunity/opportunity.interface';
-import { OpportunityService } from '@domain/challenge/opportunity/opportunity.service';
+import { CreateSpaceInput, DeleteSpaceInput } from '@domain/challenge/space';
 import { INVP, NVP } from '@domain/common/nvp';
-import { IOrganization } from '@domain/community/organization/organization.interface';
 import { ICommunity } from '@domain/community/community';
-import { OrganizationService } from '@domain/community/organization/organization.service';
-import { IUserGroup } from '@domain/community/user-group';
 import { IContext } from '@domain/context/context';
 import { BaseChallengeService } from '@domain/challenge/base-challenge/base.challenge.service';
-import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindManyOptions, FindOneOptions, In, Repository } from 'typeorm';
@@ -36,19 +21,11 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { Space } from './space.entity';
 import { ISpace } from './space.interface';
-import { AgentService } from '@domain/agent/agent/agent.service';
 import { UpdateSpaceInput } from './dto/space.dto.update';
 import { CreateChallengeOnSpaceInput } from './dto/space.dto.create.challenge';
-import { CommunityService } from '@domain/community/community/community.service';
 import { AgentInfo } from '@src/core/authentication/agent-info';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
-import { IPreference } from '@domain/common/preference/preference.interface';
-import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set';
-import { IPreferenceSet } from '@domain/common/preference-set';
-import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
-import { PreferenceType } from '@common/enums/preference.type';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
-import { UpdateSpacePlatformSettingsInput } from './dto/space.dto.update.platform.settings';
 import { SpacesQueryArgs } from './dto/space.args.query.spaces';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { SpaceFilterService } from '@services/infrastructure/space-filter/space.filter.service';
@@ -57,39 +34,24 @@ import { ICommunityPolicy } from '@domain/community/community-policy/community.p
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { InnovationHub, InnovationHubType } from '@domain/innovation-hub/types';
 import { OperationNotAllowedException } from '@common/exceptions/operation.not.allowed.exception';
-import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
-import { CalloutGroupName } from '@common/enums/callout.group.name';
-import { CommunityRole } from '@common/enums/community.role';
-import { spaceDefaultCallouts } from './space.default.callouts';
 import { IPaginatedType } from '@core/pagination/paginated.type';
 import { SpaceFilterInput } from '@services/infrastructure/space-filter/dto/space.filter.dto.input';
 import { PaginationArgs } from '@core/pagination';
 import { getPaginationResults } from '@core/pagination/pagination.fn';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { SpaceMembershipCollaborationInfo } from '@services/api/me/space.membership.type';
-import { AccountService } from '../account/account.service';
-import { ProfileService } from '@domain/common/profile/profile.service';
-import { ContextService } from '@domain/context/context/context.service';
+import { ISpaceSettings } from '../space.settings/space.settings.interface';
+import { UpdateSpaceSettingsOnSpaceInput } from './dto/space.dto.update.settings';
 import { SpaceType } from '@common/enums/space.type';
+import { IAccount } from '../account/account.interface';
+import { UpdateSpacePlatformSettingsInput } from './dto/space.dto.update.platform.settings';
 
 @Injectable()
 export class SpaceService {
   constructor(
-    private agentService: AgentService,
-    private organizationService: OrganizationService,
-    private opportunityService: OpportunityService,
     private baseChallengeService: BaseChallengeService,
-    private namingService: NamingService,
-    private communityService: CommunityService,
     private challengeService: ChallengeService,
-    private preferenceSetService: PreferenceSetService,
     private spacesFilterService: SpaceFilterService,
-    private storageAggregatorService: StorageAggregatorService,
-    private collaborationService: CollaborationService,
-    private accountService: AccountService,
-    private contextService: ContextService,
-    private profileService: ProfileService,
     @InjectRepository(Space)
     private spaceRepository: Repository<Space>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -97,103 +59,19 @@ export class SpaceService {
 
   async createSpace(
     spaceData: CreateSpaceInput,
+    account: IAccount,
     agentInfo?: AgentInfo
   ): Promise<ISpace> {
-    await this.validateSpaceData(spaceData);
+    spaceData.type = SpaceType.SPACE;
     const space: ISpace = Space.create(spaceData);
-    space.type = SpaceType.SPACE;
 
-    ///////////
-    // Create the contextual elements for the space
-
-    space.storageAggregator =
-      await this.storageAggregatorService.createStorageAggregator();
-
-    space.account = await this.accountService.createAccount(
-      space.storageAggregator
-    );
-
-    // remove context before saving as want to control that creation
-    space.context = undefined;
-    await this.spaceRepository.save(space);
-    space.account.spaceID = space.id;
-
-    await this.accountService.setAccountHost(
-      space.account,
-      spaceData.accountData.hostID
-    );
-    await this.baseChallengeService.initialise(
+    return await this.baseChallengeService.initialise(
       space,
+      this.spaceRepository,
       spaceData,
-      space.account,
-      SpaceType.SPACE,
-      spaceCommunityPolicy,
-      spaceCommunityApplicationForm,
-      ProfileType.SPACE,
-      space.storageAggregator
+      account,
+      agentInfo
     );
-
-    if (!space.collaboration || !space.storageAggregator) {
-      throw new EntityNotInitializedException(
-        `Space not fully initialized: ${space.nameID}`,
-        LogContext.CHALLENGES
-      );
-    }
-
-    await this.collaborationService.addCalloutGroupTagsetTemplate(
-      space.collaboration,
-      CalloutGroupName.KNOWLEDGE
-    );
-
-    space.collaboration = await this.collaborationService.addDefaultCallouts(
-      space.collaboration,
-      spaceDefaultCallouts,
-      space.storageAggregator,
-      agentInfo?.userID
-    );
-    await this.save(space);
-
-    // set immediate community parent and  community policy
-    if (space.community) {
-      space.community.parentID = space.id;
-      space.community.policy =
-        await this.communityService.updateCommunityPolicyResourceID(
-          space.community,
-          space.id
-        );
-
-      if (agentInfo) {
-        await this.communityService.assignUserToRole(
-          space.community,
-          agentInfo?.userID,
-          CommunityRole.MEMBER,
-          agentInfo
-        );
-
-        await this.communityService.assignUserToRole(
-          space.community,
-          agentInfo?.userID,
-          CommunityRole.ADMIN,
-          agentInfo
-        );
-      }
-    }
-    space.preferenceSet = await this.preferenceSetService.createPreferenceSet(
-      PreferenceDefinitionSet.SPACE,
-      this.createPreferenceDefaults()
-    );
-
-    // save before assigning host in case that fails
-    return await this.spaceRepository.save(space);
-  }
-
-  createPreferenceDefaults(): Map<PreferenceType, string> {
-    const defaults: Map<PreferenceType, string> = new Map();
-    defaults.set(PreferenceType.MEMBERSHIP_APPLICATIONS_FROM_ANYONE, 'true');
-    defaults.set(PreferenceType.AUTHORIZATION_ANONYMOUS_READ_ACCESS, 'false');
-    defaults.set(PreferenceType.ALLOW_MEMBERS_TO_CREATE_CHALLENGES, 'false');
-
-    return defaults;
   }
 
   async validateSpaceData(spaceData: CreateSpaceInput) {
@@ -209,91 +87,20 @@ export class SpaceService {
   }
 
   async update(spaceData: UpdateSpaceInput): Promise<ISpace> {
-    const space = await this.getSpaceOrFail(spaceData.ID, {
-      relations: { context: true, community: true, profile: true },
-    });
-
-    if (spaceData.context) {
-      if (!space.context)
-        throw new EntityNotInitializedException(
-          `Space not initialised: ${spaceData.ID}`,
-          LogContext.CHALLENGES
-        );
-      space.context = await this.contextService.updateContext(
-        space.context,
-        spaceData.context
-      );
-    }
-    if (spaceData.profileData) {
-      space.profile = await this.profileService.updateProfile(
-        space.profile,
-        spaceData.profileData
-      );
-    }
-
-    return await this.spaceRepository.save(space);
-  }
-
-  public async updateSpacePlatformSettings(
-    updateData: UpdateSpacePlatformSettingsInput
-  ): Promise<ISpace> {
-    const space = await this.getSpaceOrFail(updateData.spaceID, {
-      relations: {
-        account: true,
-      },
-    });
-
-    if (!space.account) {
-      throw new RelationshipNotFoundException(
-        `Unable to load account for space ${space.id} `,
-        LogContext.CHALLENGES
-      );
-    }
-
-    if (updateData.nameID) {
-      if (updateData.nameID !== space.nameID) {
-        // updating the nameID, check new value is allowed
-        const updateAllowed = await this.isNameIdAvailable(updateData.nameID);
-        if (!updateAllowed) {
-          throw new ValidationException(
-            `Unable to update Space nameID: the provided nameID is already taken: ${updateData.nameID}`,
-            LogContext.CHALLENGES
-          );
-        }
-        space.nameID = updateData.nameID;
-      }
-    }
-
-    if (updateData.account) {
-      space.account = await this.accountService.updateAccountPlatformSettings(
-        updateData.account,
-        space.account
-      );
-    }
-
-    return await this.save(space);
+    return await this.baseChallengeService.update(
+      spaceData,
+      this.spaceRepository
+    );
   }
 
   async deleteSpace(deleteData: DeleteSpaceInput): Promise<ISpace> {
     const space = await this.getSpaceOrFail(deleteData.ID, {
       relations: {
         challenges: true,
-        preferenceSet: {
-          preferences: true,
-        },
-        profile: true,
-        storageAggregator: true,
-        account: true,
       },
     });
 
-    if (
-      !space.challenges ||
-      !space.preferenceSet ||
-      !space.account ||
-      !space.profile ||
-      !space.storageAggregator
-    ) {
+    if (!space.challenges) {
       throw new RelationshipNotFoundException(
         `Unable to load all entities for deletion of space ${space.id} `,
         LogContext.CHALLENGES
@@ -311,12 +118,6 @@ export class SpaceService {
       space.id,
       this.spaceRepository
     );
-
-    await this.preferenceSetService.deletePreferenceSet(space.preferenceSet.id);
-
-    await this.accountService.deleteAccount(space.account);
-
-    await this.storageAggregatorService.delete(space.storageAggregator.id);
 
     const result = await this.spaceRepository.remove(space as Space);
     result.id = deleteData.ID;
@@ -367,6 +168,10 @@ export class SpaceService {
       `Unsupported Innovation Hub type: '${type}'`,
       LogContext.INNOVATION_HUB
     );
+  }
+
+  public getSettings(space: ISpace): ISpaceSettings {
+    return this.baseChallengeService.getSettings(space);
   }
 
   /***
@@ -748,6 +553,35 @@ export class SpaceService {
     return space;
   }
 
+  public async updateSpacePlatformSettings(
+    space: ISpace,
+    updateData: UpdateSpacePlatformSettingsInput
+  ): Promise<ISpace> {
+    if (updateData.nameID !== space.nameID) {
+      // updating the nameID, check new value is allowed
+      const updateAllowed = await this.isNameIdAvailable(updateData.nameID);
+      if (!updateAllowed) {
+        throw new ValidationException(
+          `Unable to update Space nameID: the provided nameID is already taken: ${updateData.nameID}`,
+          LogContext.ACCOUNT
+        );
+      }
+      space.nameID = updateData.nameID;
+    }
+    return await this.save(space);
+  }
+
+  public async updateSpaceSettings(
+    space: ISpace,
+    settingsData: UpdateSpaceSettingsOnSpaceInput
+  ): Promise<ISpace> {
+    return await this.baseChallengeService.updateSettings(
+      space,
+      this.spaceRepository,
+      settingsData.settings
+    );
+  }
+
   async getStorageAggregatorOrFail(
     spaceId: string
   ): Promise<IStorageAggregator> {
@@ -755,57 +589,6 @@ export class SpaceService {
       spaceId,
       this.spaceRepository
     );
-  }
-
-  async getPreferenceSetOrFail(spaceId: string): Promise<IPreferenceSet> {
-    const spaceWithPreferences = await this.getSpaceOrFail(spaceId, {
-      relations: {
-        preferenceSet: {
-          preferences: true,
-        },
-      },
-    });
-    const preferenceSet = spaceWithPreferences.preferenceSet;
-
-    if (!preferenceSet) {
-      throw new EntityNotFoundException(
-        `Unable to find preferenceSet for space with nameID: ${spaceWithPreferences.nameID}`,
-        LogContext.COMMUNITY
-      );
-    }
-
-    return preferenceSet;
-  }
-
-  async setSpaceHost(spaceID: string, hostOrgID: string): Promise<ISpace> {
-    const organization = await this.organizationService.getOrganizationOrFail(
-      hostOrgID,
-      { relations: { groups: true, agent: true } }
-    );
-
-    const existingHost = await this.getHost(spaceID);
-
-    if (existingHost) {
-      const agentExisting = await this.organizationService.getAgent(
-        existingHost
-      );
-      organization.agent = await this.agentService.revokeCredential({
-        agentID: agentExisting.id,
-        type: AuthorizationCredential.SPACE_HOST,
-        resourceID: spaceID,
-      });
-    }
-
-    // assign the credential
-    const agent = await this.organizationService.getAgent(organization);
-    organization.agent = await this.agentService.grantCredential({
-      agentID: agent.id,
-      type: AuthorizationCredential.SPACE_HOST,
-      resourceID: spaceID,
-    });
-
-    await this.organizationService.save(organization);
-    return await this.getSpaceOrFail(spaceID);
   }
 
   async isNameIdAvailable(nameID: string): Promise<boolean> {
@@ -871,21 +654,6 @@ export class SpaceService {
     return sortedChallenges;
   }
 
-  async getGroups(space: ISpace): Promise<IUserGroup[]> {
-    const community = await this.getCommunity(space);
-    return await this.communityService.getUserGroups(community);
-  }
-
-  async getOpportunityInAccount(
-    opportunityID: string,
-    space: ISpace
-  ): Promise<IOpportunity | null> {
-    return await this.opportunityService.getOpportunityInAccount(
-      opportunityID,
-      space.account.id
-    );
-  }
-
   async getChallengeInAccount(
     challengeID: string,
     space: ISpace
@@ -941,15 +709,10 @@ export class SpaceService {
     proposedNameID: string,
     accountID: string
   ) {
-    const nameAvailable = await this.namingService.isNameIdAvailableInAccount(
+    await this.baseChallengeService.isNameAvailableInAccountOrFail(
       proposedNameID,
       accountID
     );
-    if (!nameAvailable)
-      throw new ValidationException(
-        `Unable to create Challenge: the provided nameID is already taken: ${proposedNameID}`,
-        LogContext.CHALLENGES
-      );
   }
 
   async createChallengeInSpace(
@@ -960,6 +723,8 @@ export class SpaceService {
       relations: {
         account: true,
         storageAggregator: true,
+        challenges: true,
+        community: true,
       },
     });
     await this.validateChallengeNameIdOrFail(
@@ -975,34 +740,31 @@ export class SpaceService {
 
     // Update the challenge data being passed in to set the storage aggregator to use
     challengeData.storageAggregatorParent = space.storageAggregator;
-    challengeData.spaceID = space.id;
+    challengeData.level = space.level + 1;
     const newChallenge = await this.challengeService.createChallenge(
       challengeData,
       space.account,
       agentInfo
     );
 
-    return await this.addChallengeToSpace(space.id, newChallenge);
+    return await this.addChallengeToSpace(space, newChallenge);
   }
 
   async addChallengeToSpace(
-    spaceID: string,
+    space: ISpace,
     challenge: IChallenge
   ): Promise<IChallenge> {
-    const space = await this.getSpaceOrFail(spaceID, {
-      relations: { challenges: true, community: true },
-    });
-    if (!space.challenges)
+    if (!space.challenges || !space.community)
       throw new ValidationException(
-        `Unable to create Challenge: challenges not initialized: ${spaceID}`,
+        `Unable to add Challenge to space, missing relations: ${space.id}`,
         LogContext.CHALLENGES
       );
 
     space.challenges.push(challenge);
     // Finally set the community relationship
-    challenge.community = await this.communityService.setParentCommunity(
-      challenge.community,
-      space.community
+    await this.baseChallengeService.setCommunityHierarchyForSubspace(
+      space.community,
+      challenge.community
     );
 
     await this.spaceRepository.save(space);
@@ -1017,7 +779,10 @@ export class SpaceService {
   }
 
   async getMetrics(space: ISpace): Promise<INVP[]> {
-    const metrics: INVP[] = [];
+    const metrics = await this.baseChallengeService.getMetrics(
+      space,
+      this.spaceRepository
+    );
 
     if (!space.account) {
       throw new EntityNotInitializedException(
@@ -1032,43 +797,6 @@ export class SpaceService {
     const challengesTopic = new NVP('challenges', challengesCount.toString());
     challengesTopic.id = `challenges-${space.id}`;
     metrics.push(challengesTopic);
-
-    const opportunitiesCount =
-      await this.opportunityService.getOpportunitiesInAccountCount(account.id);
-    const opportunitiesTopic = new NVP(
-      'opportunities',
-      opportunitiesCount.toString()
-    );
-    opportunitiesTopic.id = `opportunities-${space.id}`;
-    metrics.push(opportunitiesTopic);
-
-    // Members
-    const membersCount = await this.getMembersCount(space);
-    const membersTopic = new NVP('members', membersCount.toString());
-    membersTopic.id = `members-${space.id}`;
-    metrics.push(membersTopic);
-
-    // Posts
-    const postsCount = await this.baseChallengeService.getPostsCount(
-      space,
-      this.spaceRepository
-    );
-    const postsTopic = new NVP('posts', postsCount.toString());
-    postsTopic.id = `posts-${space.id}`;
-    metrics.push(postsTopic);
-
-    // Whiteboards
-    const whiteboardsCount =
-      await this.baseChallengeService.getWhiteboardsCount(
-        space,
-        this.spaceRepository
-      );
-    const whiteboardsTopic = new NVP(
-      'whiteboards',
-      whiteboardsCount.toString()
-    );
-    whiteboardsTopic.id = `whiteboards-${space.id}`;
-    metrics.push(whiteboardsTopic);
 
     return metrics;
   }
@@ -1089,38 +817,5 @@ export class SpaceService {
       space,
       this.spaceRepository
     );
-  }
-
-  async getHost(spaceID: string): Promise<IOrganization | undefined> {
-    const organizations =
-      await this.organizationService.organizationsWithCredentials({
-        type: AuthorizationCredential.SPACE_HOST,
-        resourceID: spaceID,
-      });
-    if (organizations.length == 0) {
-      return undefined;
-    }
-    if (organizations.length > 1) {
-      throw new RelationshipNotFoundException(
-        `More than one host for Space ${spaceID} `,
-        LogContext.CHALLENGES
-      );
-    }
-    return organizations[0];
-  }
-
-  async getPreferences(space: ISpace): Promise<IPreference[]> {
-    const preferenceSet = await this.getPreferenceSetOrFail(space.id);
-
-    const preferences = preferenceSet.preferences;
-
-    if (!preferences) {
-      throw new EntityNotInitializedException(
-        `Space preferences not initialized: ${space.id}`,
-        LogContext.CHALLENGES
-      );
-    }
-
-    return preferences;
   }
 }

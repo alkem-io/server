@@ -9,6 +9,11 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
 import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
 import { CommunityPolicyModule } from '@domain/community/community-policy/community.policy.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
+import { SpaceDefaultsModule } from '../space.defaults/space.defaults.module';
+import { SpaceSettingssModule } from '../space.settings/space.settings.module';
+import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
+import { BaseChallengeAuthorizationService } from './base.challenge.service.authorization';
+import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 
 @Module({
   imports: [
@@ -20,9 +25,13 @@ import { ProfileModule } from '@domain/common/profile/profile.module';
     CommunityPolicyModule,
     ProfileModule,
     NamingModule,
+    PlatformAuthorizationPolicyModule,
+    SpaceDefaultsModule,
+    SpaceSettingssModule,
+    StorageAggregatorModule,
     CollaborationModule,
   ],
-  providers: [BaseChallengeService],
-  exports: [BaseChallengeService],
+  providers: [BaseChallengeService, BaseChallengeAuthorizationService],
+  exports: [BaseChallengeService, BaseChallengeAuthorizationService],
 })
 export class BaseChallengeModule {}

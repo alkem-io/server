@@ -31,7 +31,6 @@ import { CommunityRole } from '@common/enums/community.role';
 import { AssignCommunityRoleToUserInput } from './dto/community.dto.role.assign.user';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { NotificationInputCommunityApplication } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.application';
-import { NotificationInputCommunityContextReview } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.context.review';
 import { CommunityAuthorizationService } from './community.service.authorization';
 import { UpdateCommunityApplicationFormInput } from './dto/community.dto.update.application.form';
 import { InvitationAuthorizationService } from '../invitation/invitation.service.authorization';
@@ -112,10 +111,10 @@ export class CommunityResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('roleData') roleData: AssignCommunityRoleToUserInput
   ): Promise<IUser> {
-    this.validateNotHostRole(roleData.role);
     const community = await this.communityService.getCommunityOrFail(
       roleData.communityID
     );
+    const spaceID = await this.communityService.getSpaceID(community);
 
     let requiredPrivilege = AuthorizationPrivilege.GRANT;
     if (roleData.role === CommunityRole.MEMBER) {
@@ -129,6 +128,7 @@ export class CommunityResolverMutations {
       `assign user community role: ${community.id}`
     );
     await this.communityService.assignUserToRole(
+      spaceID,
       community,
       roleData.userID,
       roleData.role,
@@ -151,7 +151,6 @@ export class CommunityResolverMutations {
     @Args('roleData')
     roleData: AssignCommunityRoleToOrganizationInput
   ): Promise<IOrganization> {
-    this.validateNotHostRole(roleData.role);
     const community = await this.communityService.getCommunityOrFail(
       roleData.communityID
     );
@@ -226,7 +225,6 @@ export class CommunityResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('roleData') roleData: RemoveCommunityRoleFromUserInput
   ): Promise<IUser> {
-    this.validateNotHostRole(roleData.role);
     const community = await this.communityService.getCommunityOrFail(
       roleData.communityID
     );
@@ -268,7 +266,6 @@ export class CommunityResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('roleData') roleData: RemoveCommunityRoleFromOrganizationInput
   ): Promise<IOrganization> {
-    this.validateNotHostRole(roleData.role);
     const community = await this.communityService.getCommunityOrFail(
       roleData.communityID
     );
@@ -502,6 +499,7 @@ export class CommunityResolverMutations {
     const community = await this.communityService.getCommunityOrFail(
       joiningData.communityID
     );
+    const spaceID = await this.communityService.getSpaceID(community);
 
     const membershipStatus = await this.communityService.getMembershipStatus(
       agentInfo,
@@ -522,6 +520,7 @@ export class CommunityResolverMutations {
     );
 
     await this.communityService.assignUserToRole(
+      spaceID,
       community,
       agentInfo.userID,
       CommunityRole.MEMBER,
@@ -640,24 +639,6 @@ export class CommunityResolverMutations {
       `creating feedback on community: ${community.id}`
     );
 
-    // Send the notification
-    const notificationInput: NotificationInputCommunityContextReview = {
-      triggeredBy: agentInfo.userID,
-      community: community,
-      questions: feedbackData.questions,
-    };
-    await this.notificationAdapter.communityContextReview(notificationInput);
-
     return true;
-  }
-
-  // For now Host role is only allowed to be assigned via platform level settings
-  private validateNotHostRole(role: CommunityRole) {
-    if (role === CommunityRole.HOST) {
-      throw new CommunityMembershipException(
-        `Unable to assign Role (${role}) in community: setting of Host role requires platform settings`,
-        LogContext.COMMUNITY
-      );
-    }
   }
 }

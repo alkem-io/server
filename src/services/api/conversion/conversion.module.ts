@@ -8,10 +8,12 @@ import { CommunityModule } from '@domain/community/community/community.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { CommunicationModule } from '@domain/communication/communication/communication.module';
 import { OpportunityModule } from '@domain/challenge/opportunity/opportunity.module';
+import { AccountModule } from '@domain/challenge/account/account.module';
 
 @Module({
   imports: [
     AuthorizationModule,
+    AccountModule,
     SpaceModule,
     ChallengeModule,
     OpportunityModule,

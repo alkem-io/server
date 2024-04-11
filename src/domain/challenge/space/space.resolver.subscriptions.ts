@@ -9,47 +9,47 @@ import { PubSubEngine } from 'graphql-subscriptions';
 import { LogContext } from '@common/enums/logging.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { SUBSCRIPTION_CHALLENGE_CREATED } from '@common/constants/providers';
 import { TypedSubscription } from '@common/decorators/typed.subscription/typed.subscription.decorator';
 import { SpaceService } from './space.service';
-import { ChallengeCreatedPayload } from './dto/space.challenge.created.payload';
-import { ChallengeCreatedArgs } from './dto/space.challenge.created.args';
-import { ChallengeCreated } from './dto/space.dto.event.challenge.created';
+import { SubspaceCreatedPayload } from './dto/space.subspace.created.payload';
+import { SubspaceCreatedArgs } from './dto/space.challenge.created.args';
+import { SubspaceCreated as SubspaceCreated } from './dto/space.dto.event.subspace.created';
+import { SUBSCRIPTION_SUBSPACE_CREATED } from '@common/constants/providers';
 
 @Resolver()
 export class SpaceResolverSubscriptions {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    @Inject(SUBSCRIPTION_CHALLENGE_CREATED)
-    private challengeCreatedSubscription: PubSubEngine,
+    @Inject(SUBSCRIPTION_SUBSPACE_CREATED)
+    private subspaceCreatedSubscription: PubSubEngine,
     private spaceService: SpaceService,
     private authorizationService: AuthorizationService
   ) {}
 
   @UseGuards(GraphqlGuard)
-  @TypedSubscription<ChallengeCreatedPayload, ChallengeCreatedArgs>(
-    () => ChallengeCreated,
+  @TypedSubscription<SubspaceCreatedPayload, SubspaceCreatedArgs>(
+    () => SubspaceCreated,
     {
       description: 'Receive new Challenges created on the Space.',
       resolve(this: SpaceResolverSubscriptions, payload, args, context) {
         const agentInfo = context.req.user;
-        const logMsgPrefix = `[ChallengeCreated subscription] - [${agentInfo.email}] -`;
+        const logMsgPrefix = `[SubspaceCreated subscription] - [${agentInfo.email}] -`;
         this.logger.verbose?.(
-          `${logMsgPrefix} sending out event for created challenge on Space: ${payload.spaceID} `,
+          `${logMsgPrefix} sending out event for created challenge on Space: ${payload.journeyID} `,
           LogContext.SUBSCRIPTIONS
         );
         return payload;
       },
       filter(this: SpaceResolverSubscriptions, payload, variables, context) {
         const agentInfo = context.req.user;
-        const logMsgPrefix = `[ChallengeCreated subscription] - [${agentInfo.email}] -`;
+        const logMsgPrefix = `[SubspaceCreated subscription] - [${agentInfo.email}] -`;
         this.logger.verbose?.(
           `${logMsgPrefix} Filtering event '${payload.eventID}'`,
           LogContext.SUBSCRIPTIONS
         );
 
-        const isSameSpace = payload.spaceID === variables.spaceID;
+        const isSameSpace = payload.journeyID === variables.journeyID;
         this.logger.verbose?.(
           `${logMsgPrefix} Filter result is ${isSameSpace}`,
           LogContext.SUBSCRIPTIONS
@@ -58,20 +58,20 @@ export class SpaceResolverSubscriptions {
       },
     }
   )
-  async challengeCreated(
+  async subspaceCreated(
     @CurrentUser() agentInfo: AgentInfo,
     @Args({
       nullable: false,
     })
-    args: ChallengeCreatedArgs
+    args: SubspaceCreatedArgs
   ) {
-    const logMsgPrefix = '[ChallengeCreated subscription] -';
+    const logMsgPrefix = '[SubspaceCreated subscription] -';
     this.logger.verbose?.(
-      `${logMsgPrefix} User ${agentInfo.email} subscribed for new challenges on the following Space: ${args.spaceID}`,
+      `${logMsgPrefix} User ${agentInfo.email} subscribed for new subspaced on the following Space: ${args.journeyID}`,
       LogContext.SUBSCRIPTIONS
     );
     // Validate
-    const space = await this.spaceService.getSpaceOrFail(args.spaceID);
+    const space = await this.spaceService.getSpaceOrFail(args.journeyID);
 
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -80,8 +80,8 @@ export class SpaceResolverSubscriptions {
       `subscription to new Challenges on Space: ${space.id}`
     );
 
-    return this.challengeCreatedSubscription.asyncIterator(
-      SubscriptionType.CHALLENGE_CREATED
+    return this.subspaceCreatedSubscription.asyncIterator(
+      SubscriptionType.SUBSPACE_CREATED
     );
   }
 }

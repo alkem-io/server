@@ -60,8 +60,7 @@ export const getJourneyRolesForContributorQueryResult = (
             challenge.profile.displayName
           );
           challengeResult.userGroups = [];
-          challengeResult.roles =
-            map.get('challenges')?.get(challenge.id) ?? [];
+          challengeResult.roles = map.get('subspaces')?.get(challenge.id) ?? [];
           challengeResults.push(challengeResult);
         }
         spaceResult.challenges = challengeResults;
@@ -85,7 +84,7 @@ export const getJourneyRolesForContributorQueryResult = (
           );
           opportunityResult.userGroups = [];
           opportunityResult.roles =
-            map.get('opportunities')?.get(opportunity.id) ?? [];
+            map.get('subspaces')?.get(opportunity.id) ?? [];
           opportunityResults.push(opportunityResult);
         }
         spaceResult.opportunities = opportunityResults;

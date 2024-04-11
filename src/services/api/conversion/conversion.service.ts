@@ -3,7 +3,6 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AgentInfo } from '@core/authentication/agent-info';
 import { LogContext } from '@common/enums/logging.context';
 import { ConvertChallengeToSpaceInput } from './dto/convert.dto.challenge.to.space.input';
-import { SpaceService } from '@domain/challenge/space/space.service';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
 import { ISpace } from '@domain/challenge/space/space.interface';
 import { CommunityService } from '@domain/community/community/community.service';
@@ -12,7 +11,6 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { CommunityRole } from '@common/enums/community.role';
-import { CreateSpaceInput } from '@domain/challenge/space/dto/space.dto.create';
 import { IOrganization } from '@domain/community/organization/organization.interface';
 import { IUser } from '@domain/community/user/user.interface';
 import { ICommunity } from '@domain/community/community/community.interface';
@@ -24,9 +22,15 @@ import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.a
 import { ICallout } from '@domain/collaboration/callout';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { CalloutGroupName } from '@common/enums/callout.group.name';
+import { CreateChallengeInput } from '@domain/challenge';
+import { SpaceType } from '@common/enums/space.type';
+import { CreateAccountInput } from '@domain/challenge/account/dto';
+import { AccountService } from '@domain/challenge/account/account.service';
+import { SpaceService } from '@domain/challenge/space/space.service';
 
 export class ConversionService {
   constructor(
+    private accountService: AccountService,
     private spaceService: SpaceService,
     private challengeService: ChallengeService,
     private opportunityService: OpportunityService,
@@ -39,10 +43,12 @@ export class ConversionService {
     conversionData: ConvertChallengeToSpaceInput,
     agentInfo: AgentInfo
   ): Promise<ISpace> {
+    // TODO: needs to create a new ACCOUNT etc.
     const challenge = await this.challengeService.getChallengeOrFail(
       conversionData.challengeID,
       {
         relations: {
+          account: true,
           community: true,
           context: true,
           profile: true,
@@ -61,6 +67,7 @@ export class ConversionService {
     );
     if (
       !challenge.community ||
+      !challenge.account ||
       !challenge.context ||
       !challenge.profile ||
       !challenge.collaboration ||
@@ -85,28 +92,40 @@ export class ConversionService {
       );
     }
     const hostOrg = challengeCommunityLeadOrgs[0];
-    const createSpaceInput: CreateSpaceInput = {
-      accountData: {
-        hostID: hostOrg.nameID,
-      },
-      nameID: challenge.nameID,
-      profileData: {
-        displayName: challenge.profile.displayName,
+    const createAccountInput: CreateAccountInput = {
+      hostID: hostOrg.nameID,
+      spaceData: {
+        nameID: challenge.nameID,
+        profileData: {
+          displayName: challenge.profile.displayName,
+        },
+        level: 0,
+        type: SpaceType.SPACE,
       },
     };
-    const emptySpace = await this.spaceService.createSpace(
-      createSpaceInput,
+    const emptyAccount = await this.accountService.createAccount(
+      createAccountInput,
       agentInfo
     );
-    const space = await this.spaceService.getSpaceOrFail(emptySpace.id, {
-      relations: {
-        community: true,
-        context: true,
-        profile: true,
-        collaboration: true,
-        storageAggregator: true,
-      },
-    });
+
+    if (!emptyAccount.space) {
+      throw new EntityNotInitializedException(
+        `Unable to locate space on new Account: ${emptyAccount.id}`,
+        LogContext.CONVERSION
+      );
+    }
+    const space = await this.spaceService.getSpaceOrFail(
+      emptyAccount.space.id,
+      {
+        relations: {
+          community: true,
+          context: true,
+          profile: true,
+          collaboration: true,
+          storageAggregator: true,
+        },
+      }
+    );
     if (
       !space.community ||
       !space.context ||
@@ -187,6 +206,7 @@ export class ConversionService {
 
     // Assign users to roles in new space
     await this.assignContributors(
+      space.id,
       space.community,
       userMembers,
       userLeads,
@@ -271,18 +291,20 @@ export class ConversionService {
     //     );
     //   innovationFlowTemplateID = defaultChallengeLifecycleTemplate.id;
     // }
-    const emptyChallenge = await this.challengeService.createChallenge(
-      {
-        nameID: challengeNameID,
-        collaborationData: {
-          innovationFlowTemplateID: innovationFlowTemplateID,
-        },
-        profileData: {
-          displayName: opportunity.profile.displayName,
-        },
-        storageAggregatorParent: spaceStorageAggregator,
-        spaceID: spaceID,
+    const challengeData: CreateChallengeInput = {
+      nameID: challengeNameID,
+      collaborationData: {
+        innovationFlowTemplateID: innovationFlowTemplateID,
       },
+      profileData: {
+        displayName: opportunity.profile.displayName,
+      },
+      storageAggregatorParent: spaceStorageAggregator,
+      level: 1,
+      type: SpaceType.CHALLENGE,
+    };
+    const emptyChallenge = await this.challengeService.createChallenge(
+      challengeData,
       opportunity.account,
       agentInfo
     );
@@ -399,6 +421,7 @@ export class ConversionService {
 
     // Assign users to roles in new challenge
     await this.assignContributors(
+      spaceID,
       challengeCommunityUpdated,
       userMembers,
       userLeads,
@@ -407,7 +430,13 @@ export class ConversionService {
     );
 
     // Add the new challenge to the space
-    return await this.spaceService.addChallengeToSpace(spaceID, challenge);
+    const space = await this.spaceService.getSpaceOrFail(spaceID, {
+      relations: {
+        challenges: true,
+        community: true,
+      },
+    });
+    return await this.spaceService.addChallengeToSpace(space, challenge);
   }
 
   private updateSpaceCalloutsGroups(callouts: ICallout[] | undefined): void {
@@ -509,7 +538,7 @@ export class ConversionService {
     const tmpCommunication =
       await this.communicationService.createCommunication(
         'temp',
-        parentCommunity.spaceID,
+        '',
         Object.values(DiscussionCategoryCommunity)
       );
     childCommunity.communication = tmpCommunication;
@@ -563,6 +592,7 @@ export class ConversionService {
   }
 
   private async assignContributors(
+    spaceID: string,
     community: ICommunity,
     userMembers: IUser[],
     userLeads: IUser[],
@@ -571,6 +601,7 @@ export class ConversionService {
   ) {
     for (const userMember of userMembers) {
       await this.communityService.assignUserToRole(
+        spaceID,
         community,
         userMember.id,
         CommunityRole.MEMBER
@@ -578,6 +609,7 @@ export class ConversionService {
     }
     for (const userLead of userLeads) {
       await this.communityService.assignUserToRole(
+        spaceID,
         community,
         userLead.id,
         CommunityRole.LEAD

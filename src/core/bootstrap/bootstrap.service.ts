@@ -1,7 +1,6 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Space } from '@domain/challenge/space/space.entity';
 import { SpaceService } from '@domain/challenge/space/space.service';
 import { UserService } from '@domain/community/user/user.service';
 import { Repository } from 'typeorm';
@@ -12,7 +11,6 @@ import { Profiling } from '@common/decorators';
 import { ConfigurationTypes, LogContext } from '@common/enums';
 import { BootstrapException } from '@common/exceptions/bootstrap.exception';
 import { UserAuthorizationService } from '@domain/community/user/user.service.authorization';
-import { SpaceAuthorizationService } from '@domain/challenge/space/space.service.authorization';
 import {
   DEFAULT_HOST_ORG_DISPLAY_NAME,
   DEFAULT_HOST_ORG_NAMEID,
@@ -24,20 +22,25 @@ import { OrganizationAuthorizationService } from '@domain/community/organization
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AdminAuthorizationService } from '@platform/admin/authorization/admin.authorization.service';
 import { PlatformService } from '@platform/platfrom/platform.service';
-import { CreateSpaceInput } from '@domain/challenge/space/dto/space.dto.create';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { PlatformAuthorizationService } from '@platform/platfrom/platform.service.authorization';
 import { NameReporterService } from '@services/external/elasticsearch/name-reporter/name.reporter.service';
+import { AccountService } from '@domain/challenge/account/account.service';
+import { AccountAuthorizationService } from '@domain/challenge/account/account.service.authorization';
+import { Account } from '@domain/challenge/account/account.entity';
+import { SpaceType } from '@common/enums/space.type';
 import { SearchIngestService } from '@services/api/search2/search.ingest/search.ingest.service';
+import { CreateAccountInput } from '@domain/challenge/account/dto/account.dto.create';
 
 @Injectable()
 export class BootstrapService {
   constructor(
+    private accountService: AccountService,
     private agentService: AgentService,
     private spaceService: SpaceService,
     private userService: UserService,
     private userAuthorizationService: UserAuthorizationService,
-    private spaceAuthorizationService: SpaceAuthorizationService,
+    private accountAuthorizationService: AccountAuthorizationService,
     private adminAuthorizationService: AdminAuthorizationService,
     private configService: ConfigService,
     private organizationService: OrganizationService,
@@ -45,8 +48,8 @@ export class BootstrapService {
     private organizationAuthorizationService: OrganizationAuthorizationService,
     private platformAuthorizationService: PlatformAuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
-    @InjectRepository(Space)
-    private spaceRepository: Repository<Space>,
+    @InjectRepository(Account)
+    private accountRepository: Repository<Account>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private nameReporter: NameReporterService,
@@ -253,12 +256,12 @@ export class BootstrapService {
 
   async ensureSpaceSingleton() {
     this.logger.verbose?.(
-      '=== Ensuring at least one space is present ===',
+      '=== Ensuring at least one Account with a space is present ===',
       LogContext.BOOTSTRAP
     );
-    const spaceCount = await this.spaceRepository.count();
-    if (spaceCount == 0) {
-      this.logger.verbose?.('...No space present...', LogContext.BOOTSTRAP);
+    const accountCount = await this.accountRepository.count();
+    if (accountCount == 0) {
+      this.logger.verbose?.('...No account present...', LogContext.BOOTSTRAP);
       this.logger.verbose?.('........creating...', LogContext.BOOTSTRAP);
       // create a default host org
       const hostOrganization = await this.organizationService.getOrganization(
@@ -276,19 +279,21 @@ export class BootstrapService {
         );
       }
 
-      const spaceInput: CreateSpaceInput = {
-        nameID: DEFAULT_SPACE_NAMEID,
-        profileData: {
-          displayName: DEFAULT_SPACE_DISPLAYNAME,
-          tagline: 'An empty space to be populated',
+      const spaceInput: CreateAccountInput = {
+        spaceData: {
+          nameID: DEFAULT_SPACE_NAMEID,
+          profileData: {
+            displayName: DEFAULT_SPACE_DISPLAYNAME,
+            tagline: 'An empty space to be populated',
+          },
+          level: 0,
+          type: SpaceType.SPACE,
         },
-        accountData: {
-          hostID: DEFAULT_HOST_ORG_NAMEID,
-        },
+        hostID: DEFAULT_HOST_ORG_NAMEID,
       };
-      const space = await this.spaceService.createSpace(spaceInput);
-      return await this.spaceAuthorizationService.applyAuthorizationPolicy(
-        space
+      const account = await this.accountService.createAccount(spaceInput);
+      return await this.accountAuthorizationService.applyAuthorizationPolicy(
+        account
       );
     }
   }
