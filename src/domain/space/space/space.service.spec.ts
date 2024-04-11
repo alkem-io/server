@@ -8,7 +8,6 @@ import { repositoryProviderMockFactory } from '@test/utils/repository.provider.m
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { Profile } from '@domain/common/profile';
-import { Opportunity } from '@domain/space/opportunity';
 import { SpaceFilterService } from '@services/infrastructure/space-filter/space.filter.service';
 import { MockFunctionMetadata, ModuleMocker } from 'jest-mock';
 import { InnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.entity';
@@ -81,12 +80,12 @@ const getAuthorizationPolicyMock = (
   ...getEntityMock<AuthorizationPolicy>(),
 });
 
-const getChallengesMock = (
+const getSubspacesMock = (
   spaceId: string,
   count: number,
   opportunityCount: number[]
-): Challenge[] => {
-  const result: Challenge[] = [];
+): Space[] => {
+  const result: Space[] = [];
   for (let i = 0; i < count; i++) {
     result.push({
       id: `${spaceId}.${i}`,
@@ -95,13 +94,10 @@ const getChallengesMock = (
       settingsStr: JSON.stringify({}),
       account: {
         id: `account-${spaceId}.${i}`,
-        space: {
-          id: `${spaceId}`,
-          ...getEntityMock<Space>(),
-        },
         ...getEntityMock<Account>(),
       },
-      type: SpaceType.SPACE,
+      type: SpaceType.CHALLENGE,
+      level: 1,
       collaboration: {
         id: '',
         groupsStr: JSON.stringify([
@@ -178,21 +174,18 @@ const getChallengesMock = (
         type: ProfileType.CHALLENGE,
         ...getEntityMock<Profile>(),
       },
-      opportunities: getOpportunitiesMock(
+      subspaces: getSubsubspacesMock(
         `${spaceId}.${i}`,
         opportunityCount[i] ?? 0
       ),
-      ...getEntityMock<Challenge>(),
+      ...getEntityMock<Space>(),
     });
   }
   return result;
 };
 
-const getOpportunitiesMock = (
-  challengeId: string,
-  count: number
-): Opportunity[] => {
-  const result: Opportunity[] = [];
+const getSubsubspacesMock = (challengeId: string, count: number): Space[] => {
+  const result: Space[] = [];
   for (let i = 0; i < count; i++) {
     result.push({
       id: `${challengeId}.${i}`,
@@ -201,10 +194,10 @@ const getOpportunitiesMock = (
       settingsStr: JSON.stringify({}),
       account: {
         id: `account-${challengeId}.${i}`,
-        spaceID: `account-spaceID-${challengeId}.${i}`,
         ...getEntityMock<Account>(),
       },
       type: SpaceType.OPPORTUNITY,
+      level: 2,
       collaboration: {
         id: '',
         groupsStr: JSON.stringify([
@@ -281,7 +274,7 @@ const getOpportunitiesMock = (
         type: ProfileType.CHALLENGE,
         ...getEntityMock<Profile>(),
       },
-      ...getEntityMock<Challenge>(),
+      ...getEntityMock<Space>(),
     });
   }
   return result;
@@ -314,22 +307,23 @@ const getSpaceMock = ({
       ...getEntityMock<Profile>(),
     },
     type: SpaceType.SPACE,
+    level: 0,
     account: {
       id: `account-${id}`,
-      spaceID: `space-${id}`,
       license: {
         id,
         visibility,
         featureFlags: [],
         ...getEntityMock<License>(),
       },
+
       ...getEntityMock<Account>(),
     },
     authorization: getAuthorizationPolicyMock(
       `auth-${id}`,
       anonymousReadAccess
     ),
-    subspaces: getChallengesMock(id, challengesCount, opportunitiesCounts),
+    subspaces: getSubspacesMock(id, challengesCount, opportunitiesCounts),
     ...getEntityMock<Space>(),
   };
 };

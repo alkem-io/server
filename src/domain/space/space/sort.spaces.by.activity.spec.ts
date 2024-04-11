@@ -34,9 +34,9 @@ const createTestSpace = (id: string): ISpace => {
     },
     account: {
       id: `account${id}`,
-      spaceID: `${id}`,
     },
     type: SpaceType.SPACE,
+    level: 0,
   };
 };
 

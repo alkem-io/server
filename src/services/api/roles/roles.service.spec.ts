@@ -1,7 +1,5 @@
 import { MockApplicationService } from '@test/mocks/application.service.mock';
-import { MockChallengeService } from '@test/mocks/challenge.service.mock';
 import { MockCommunityService } from '@test/mocks/community.service.mock';
-import { MockOpportunityService } from '@test/mocks/opportunity.service.mock';
 import { MockOrganizationService } from '@test/mocks/organization.service.mock';
 import { MockUserService } from '@test/mocks/user.service.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
@@ -37,11 +35,9 @@ describe('RolesService', () => {
     const moduleRef = await Test.createTestingModule({
       providers: [
         MockUserService,
-        MockChallengeService,
         MockApplicationService,
         MockInvitationService,
         MockCommunityService,
-        MockOpportunityService,
         MockSpaceFilterService,
         MockOrganizationService,
         MockCommunityResolverService,

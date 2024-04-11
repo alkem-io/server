@@ -1,4 +1,4 @@
-import { SpaceService } from '@domain/challenge/space/space.service';
+import { SpaceService } from '@domain/space/space/space.service';
 import { ValueProvider } from '@nestjs/common';
 import { PublicPart } from '../utils/public-part';
 
