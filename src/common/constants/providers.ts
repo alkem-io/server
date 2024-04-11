@@ -11,7 +11,11 @@ export const SUBSCRIPTION_SUBSPACE_CREATED =
 export const SUBSCRIPTION_ACTIVITY_CREATED =
   'alkemio-subscriptions-activity-created';
 export const AUTH_RESET_SERVICE = 'alkemio-auth-reset';
-export const CHAT_GUIDANCE_SERVICE = 'alkemio-chat-guidance';
+export const VIRTUAL_PERSONA_ENGINE_CHAT_GUIDANCE = 'alkemio-chat-guidance';
+export const VIRTUAL_PERSONA_ENGINE_COMMUNITY_MANAGER =
+  'virtual-persona-engine-community-manager';
+export const VIRTUAL_PERSONA_ENGINE_ALKEMIO_DIGILEEFOMGEVING =
+  'virtual-persona-engine-alkemio-digileefomgeving';
 export const NOTIFICATIONS_SERVICE = 'alkemio-notifications';
 export const WALLET_MANAGEMENT_SERVICE = 'alkemio-wallet-manager';
 export const REDIS_LOCK_SERVICE = 'redis-lock-service';

@@ -9,10 +9,12 @@ import { Communication } from '@domain/communication/communication/communication
 import { Profile } from '@domain/common/profile/profile.entity';
 import { TimelineResolverService } from './timeline.resolver.service';
 import { ContributionResolverService } from './contribution.resolver.service';
+import { VirtualContributor } from '@domain/community/virtual-contributor';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([User]),
+    TypeOrmModule.forFeature([VirtualContributor]),
     TypeOrmModule.forFeature([Discussion]),
     TypeOrmModule.forFeature([Community]),
     TypeOrmModule.forFeature([Communication]),

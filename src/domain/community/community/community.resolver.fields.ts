@@ -27,6 +27,7 @@ import { IInvitation } from '../invitation';
 import { IInvitationExternal } from '../invitation.external';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { ICommunityGuidelines } from '../community-guidelines/community.guidelines.interface';
+import { IVirtualContributor } from '../virtual-contributor';
 
 @Resolver(() => ICommunity)
 export class CommunityResolverFields {
@@ -160,6 +161,24 @@ export class CommunityResolverFields {
     role: CommunityRole
   ): Promise<IOrganization[]> {
     return await this.communityService.getOrganizationsWithRole(
+      community,
+      role
+    );
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('virtualContributorsInRole', () => [IVirtualContributor], {
+    nullable: true,
+    description: 'All virtuals that have the specified Role in this Community.',
+  })
+  @Profiling.api
+  async virtualsInRole(
+    @Parent() community: Community,
+    @Args('role', { type: () => CommunityRole, nullable: false })
+    role: CommunityRole
+  ) {
+    return await this.communityService.getVirtualContributorsWithRole(
       community,
       role
     );

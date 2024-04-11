@@ -11,7 +11,6 @@ import { IUser } from '@domain/community/user/user.interface';
 import { Application } from '@domain/community/application/application.entity';
 import { PreferenceSet } from '@domain/common/preference-set/preference.set.entity';
 import { Contributor } from '../contributor/contributor.entity';
-import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
 
 @Entity()
 export class User extends Contributor implements IUser {
@@ -58,14 +57,6 @@ export class User extends Contributor implements IUser {
   })
   @JoinColumn()
   preferenceSet?: PreferenceSet;
-
-  @OneToOne(() => StorageAggregator, {
-    eager: false,
-    cascade: true,
-    onDelete: 'SET NULL',
-  })
-  @JoinColumn()
-  storageAggregator?: StorageAggregator;
 
   constructor() {
     super();

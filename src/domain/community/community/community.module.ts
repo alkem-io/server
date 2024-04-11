@@ -28,6 +28,8 @@ import { EntityResolverModule } from '@services/infrastructure/entity-resolver/e
 import { CommunityEventsService } from './community.service.events';
 import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
 import { CommunityGuidelinesModule } from '../community-guidelines/community.guidelines.module';
+import { VirtualContributorModule } from '../virtual-contributor/virtual.contributor.module';
+import { LicenseModule } from '@domain/license/license/license.module';
 
 @Module({
   imports: [
@@ -39,6 +41,7 @@ import { CommunityGuidelinesModule } from '../community-guidelines/community.gui
     UserGroupModule,
     UserModule,
     OrganizationModule,
+    VirtualContributorModule,
     ApplicationModule,
     InvitationModule,
     InvitationExternalModule,
@@ -46,6 +49,7 @@ import { CommunityGuidelinesModule } from '../community-guidelines/community.gui
     CommunityPolicyModule,
     CommunityGuidelinesModule,
     LifecycleModule,
+    LicenseModule,
     AgentModule,
     EntityResolverModule,
     StorageAggregatorResolverModule,

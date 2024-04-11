@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { AgentInfo } from '@core/authentication';
 import { IMessage } from '../message/message.interface';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
@@ -22,6 +22,17 @@ import { ICallout } from '@domain/collaboration/callout';
 import { ActivityInputCalloutDiscussionComment } from '@services/adapters/activity-adapter/dto/activity.dto.input.callout.discussion.comment';
 import { NotificationInputCommentReply } from '@services/adapters/notification-adapter/dto/notification.dto.input.comment.reply';
 import { IProfile } from '@domain/common/profile';
+import { Mention, MentionedEntityType } from '../messaging/mention.interface';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { LogContext } from '@common/enums/logging.context';
+import { VirtualPersonaService } from '@domain/community/virtual-persona/virtual.persona.service';
+import { VirtualPersonaQuestionInput } from '@domain/community/virtual-persona/dto/virtual.persona.question.dto.input';
+import { MutationType } from '@common/enums/subscriptions/mutation.type';
+import { RoomSendMessageReplyInput } from '@domain/communication/room/dto/room.dto.send.message.reply';
+import { SubscriptionPublishService } from '@services/subscriptions/subscription-service/subscription.publish.service';
+import { RoomService } from './room.service';
+import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
+import { NotSupportedException } from '@common/exceptions';
 
 @Injectable()
 export class RoomServiceEvents {
@@ -29,8 +40,89 @@ export class RoomServiceEvents {
     private activityAdapter: ActivityAdapter,
     private contributionReporter: ContributionReporterService,
     private notificationAdapter: NotificationAdapter,
-    private communityResolverService: CommunityResolverService
+    private communityResolverService: CommunityResolverService,
+    private roomService: RoomService,
+    private subscriptionPublishService: SubscriptionPublishService,
+    private virtualPersonaService: VirtualPersonaService,
+    private virtualContributorService: VirtualContributorService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService
   ) {}
+
+  public async processVirtualContributorMentions(
+    mentions: Mention[],
+    question: Pick<IMessage, 'id' | 'message'>,
+    agentInfo: AgentInfo,
+    room: IRoom,
+    accessToVirtualContributors: boolean
+  ) {
+    for (const mention of mentions) {
+      if (mention.type === MentionedEntityType.VIRTUAL_CONTRIBUTOR) {
+        // Only throw exception here for the case that there is an actual mention
+        if (!accessToVirtualContributors) {
+          throw new NotSupportedException(
+            `Access to Virtual Contributors is not supported for this room: ${room.id}`,
+            LogContext.COMMUNICATION
+          );
+        }
+
+        this.logger.warn(
+          `got mention for VC: ${mention.nameId}`,
+          LogContext.COMMUNICATION
+        );
+
+        const virtualContributor =
+          await this.virtualContributorService.getVirtualContributor(
+            mention.nameId,
+            {
+              relations: {
+                virtualPersona: true,
+              },
+            }
+          );
+
+        const virtualPersona = virtualContributor?.virtualPersona;
+
+        if (!virtualPersona) {
+          throw new Error(
+            `VirtualPersona not loaded for VirtualContributor ${virtualContributor?.nameID}`
+          );
+        }
+
+        const chatData: VirtualPersonaQuestionInput = {
+          virtualPersonaID: virtualPersona.id,
+          question: question.message,
+        };
+
+        const result = await this.virtualPersonaService.askQuestion(
+          chatData,
+          agentInfo
+        );
+        const answer = result.answer;
+        this.logger.warn(
+          `got answer for VC: ${answer}`,
+          LogContext.COMMUNICATION
+        );
+        const answerData: RoomSendMessageReplyInput = {
+          message: answer,
+          roomID: room.id,
+          threadID: question.id,
+        };
+        const answerMessage = await this.roomService.sendMessageReply(
+          room,
+          virtualContributor.communicationID,
+          answerData,
+          'virtualContributor'
+        );
+
+        this.subscriptionPublishService.publishRoomEvent(
+          room.id,
+          MutationType.CREATE,
+          answerMessage
+        );
+      }
+    }
+  }
 
   public processNotificationMentions(
     parentEntityId: string,
@@ -39,7 +131,7 @@ export class RoomServiceEvents {
     room: IRoom,
     message: IMessage,
     agentInfo: AgentInfo
-  ) {
+  ): Mention[] {
     const mentions = getMentionsFromText(message.message);
     const entityMentionsNotificationInput: NotificationInputEntityMentions = {
       triggeredBy: agentInfo.userID,
@@ -54,6 +146,7 @@ export class RoomServiceEvents {
       commentType: room.type as RoomType,
     };
     this.notificationAdapter.entityMentions(entityMentionsNotificationInput);
+    return mentions;
   }
 
   public async processNotificationCommentReply(

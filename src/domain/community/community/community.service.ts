@@ -58,6 +58,8 @@ import { CommunityGuidelinesService } from '../community-guidelines/community.gu
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { CreateCommunityInput } from './dto/community.dto.create';
 import { ICommunityGuidelines } from '../community-guidelines/community.guidelines.interface';
+import { IVirtualContributor } from '../virtual-contributor';
+import { VirtualContributorService } from '../virtual-contributor/virtual.contributor.service';
 
 @Injectable()
 export class CommunityService {
@@ -66,6 +68,7 @@ export class CommunityService {
     private agentService: AgentService,
     private userService: UserService,
     private organizationService: OrganizationService,
+    private virtualContributorService: VirtualContributorService,
     private userGroupService: UserGroupService,
     private applicationService: ApplicationService,
     private invitationService: InvitationService,
@@ -449,6 +452,22 @@ export class CommunityService {
     );
   }
 
+  async getVirtualContributorsWithRole(
+    community: ICommunity,
+    role: CommunityRole
+  ): Promise<IVirtualContributor[]> {
+    const membershipCredential = this.getCredentialDefinitionForRole(
+      community,
+      role
+    );
+    return await this.virtualContributorService.virtualContributorsWithCredentials(
+      {
+        type: membershipCredential.type,
+        resourceID: membershipCredential.resourceID,
+      }
+    );
+  }
+
   async getOrganizationsWithRole(
     community: ICommunity,
     role: CommunityRole
@@ -514,13 +533,15 @@ export class CommunityService {
     triggerNewMemberEvents = false
   ): Promise<IUser> {
     const { user, agent } = await this.userService.getUserAndAgent(userID);
-    const hasMemberRoleInParent = await this.isMemberInParentCommunity(
-      agent,
-      community.id
-    );
+    const { isMember: hasMemberRoleInParent, parentCommunityId } =
+      await this.isMemberInParentCommunity(agent, community.id);
     if (!hasMemberRoleInParent) {
       throw new ValidationException(
-        `Unable to assign Agent (${agent.id}) to community (${community.id}): agent is not a member of parent community`,
+        `Unable to find parent community ${parentCommunityId}`,
+        LogContext.CHALLENGES
+      );
+      throw new ValidationException(
+        `Unable to assign Agent (${agent.id}) to community (${community.id}): agent is not a member of parent community ${parentCommunityId}`,
         LogContext.CHALLENGES
       );
     }
@@ -557,6 +578,39 @@ export class CommunityService {
     return user;
   }
 
+  async assignVirtualToRole(
+    community: ICommunity,
+    virtualContributorID: string,
+    role: CommunityRole
+  ): Promise<IVirtualContributor> {
+    const { virtualContributor, agent } =
+      await this.virtualContributorService.getVirtualContributorAndAgent(
+        virtualContributorID
+      );
+    const { isMember: hasMemberRoleInParent, parentCommunityId } =
+      await this.isMemberInParentCommunity(agent, community.id);
+    if (!hasMemberRoleInParent) {
+      if (!parentCommunityId)
+        throw new ValidationException(
+          `Unable to find parent community ${parentCommunityId}`,
+          LogContext.CHALLENGES
+        );
+      throw new ValidationException(
+        `Unable to assign Agent (${agent.id}) to community (${community.id}): agent is not a member of parent community ${parentCommunityId}`,
+        LogContext.CHALLENGES
+      );
+    }
+
+    virtualContributor.agent = await this.assignContributorToRole(
+      community,
+      agent,
+      role,
+      CommunityContributorType.VIRTUAL
+    );
+
+    return virtualContributor;
+  }
+
   private async addMemberToCommunication(
     user: IUser,
     community: ICommunity
@@ -577,7 +631,7 @@ export class CommunityService {
   private async isMemberInParentCommunity(
     agent: IAgent,
     communityID: string
-  ): Promise<boolean> {
+  ): Promise<{ parentCommunityId: string | undefined; isMember: boolean }> {
     const community = await this.getCommunityOrFail(communityID, {
       relations: { parentCommunity: true },
     });
@@ -588,9 +642,15 @@ export class CommunityService {
         agent,
         community.parentCommunity
       );
-      return isParentMember;
+      return {
+        parentCommunityId: community?.parentCommunity?.id,
+        isMember: isParentMember,
+      };
     }
-    return true;
+    return {
+      parentCommunityId: undefined,
+      isMember: true,
+    };
   }
 
   public getCommunityPolicy(community: ICommunity): ICommunityPolicy {
@@ -709,6 +769,28 @@ export class CommunityService {
     );
 
     return organization;
+  }
+
+  async removeVirtualFromRole(
+    community: ICommunity,
+    virtualContributorID: string,
+    role: CommunityRole,
+    validatePolicyLimits = true
+  ): Promise<IVirtualContributor> {
+    const { virtualContributor, agent } =
+      await this.virtualContributorService.getVirtualContributorAndAgent(
+        virtualContributorID
+      );
+
+    virtualContributor.agent = await this.removeContributorFromRole(
+      community,
+      agent,
+      role,
+      CommunityContributorType.VIRTUAL,
+      validatePolicyLimits
+    );
+
+    return virtualContributor;
   }
 
   private async validateUserCommunityPolicy(

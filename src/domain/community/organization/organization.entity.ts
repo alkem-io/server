@@ -12,7 +12,6 @@ import { IOrganization } from './organization.interface';
 import { OrganizationVerification } from '../organization-verification/organization.verification.entity';
 import { PreferenceSet } from '@domain/common/preference-set';
 import { Contributor } from '../contributor/contributor.entity';
-import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
 
 @Entity()
 export class Organization
@@ -58,14 +57,6 @@ export class Organization
   })
   @JoinColumn()
   preferenceSet?: PreferenceSet;
-
-  @OneToOne(() => StorageAggregator, {
-    eager: false,
-    cascade: true,
-    onDelete: 'SET NULL',
-  })
-  @JoinColumn()
-  storageAggregator?: StorageAggregator;
 
   constructor() {
     super();
