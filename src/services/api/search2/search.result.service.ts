@@ -158,15 +158,8 @@ export class SearchResultService {
           return undefined;
         }
 
-        if (
-          !this.authorizationService.isAccessGranted(
-            agentInfo,
-            space.authorization,
-            AuthorizationPrivilege.READ
-          )
-        ) {
-          return undefined;
-        }
+        // no authorization check - all spaces must be visible
+        // context, profile and others are readable by all
 
         return {
           ...rawSearchResult,
@@ -213,16 +206,6 @@ export class SearchResultService {
           return undefined;
         }
 
-        if (
-          !this.authorizationService.isAccessGranted(
-            agentInfo,
-            challenge.authorization,
-            AuthorizationPrivilege.READ
-          )
-        ) {
-          return undefined;
-        }
-
         if (!challenge.space) {
           const error = new BaseException(
             'Unable to find parent space for challenge while building search results',
@@ -234,6 +217,16 @@ export class SearchResultService {
             }
           );
           this.logger.error(error, error.stack, LogContext.SEARCH);
+          return undefined;
+        }
+
+        if (
+          !this.authorizationService.isAccessGranted(
+            agentInfo,
+            challenge.authorization,
+            AuthorizationPrivilege.READ
+          )
+        ) {
           return undefined;
         }
 
@@ -277,16 +270,6 @@ export class SearchResultService {
           return undefined;
         }
 
-        if (
-          !this.authorizationService.isAccessGranted(
-            agentInfo,
-            opportunity.authorization,
-            AuthorizationPrivilege.READ
-          )
-        ) {
-          return undefined;
-        }
-
         if (!opportunity.challenge) {
           throw new BaseException(
             'Unable to find parent challenge for opportunity while building search results',
@@ -310,6 +293,16 @@ export class SearchResultService {
               cause: 'Relation is not loaded. Could be due to broken data',
             }
           );
+        }
+
+        if (
+          !this.authorizationService.isAccessGranted(
+            agentInfo,
+            opportunity.authorization,
+            AuthorizationPrivilege.READ
+          )
+        ) {
+          return undefined;
         }
 
         return {
@@ -432,7 +425,8 @@ export class SearchResultService {
     const posts = await this.entityManager.findBy(Post, {
       id: In(postIds),
     });
-
+    // usually the authorization is last but here it might be more expensive than usual
+    // find the authorized post first, then get the parents, and map the results
     const authorizedPosts = posts.filter(post =>
       this.authorizationService.isAccessGranted(
         agentInfo,
