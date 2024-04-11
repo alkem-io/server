@@ -1,7 +1,7 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager, In } from 'typeorm';
-import { groupBy, union, orderBy } from 'lodash';
+import { groupBy, intersection, orderBy } from 'lodash';
 import { Space } from '@domain/challenge/space/space.entity';
 import { ISearchResult } from '@services/api/search/dto/search.result.entry.interface';
 import { ISearchResultSpace } from '@services/api/search/dto/search.result.dto.entry.space';
@@ -334,10 +334,12 @@ export class SearchResultService {
 
     const usersFromSearch = rawSearchResults.map(hit => hit.result.id);
     const usersInSpace = spaceId ? await this.getUsersInSpace(spaceId) : [];
-    const userIdsUnion = union(usersFromSearch, usersInSpace);
+    const userIdsIntersection = spaceId
+      ? intersection(usersFromSearch, usersInSpace)
+      : usersFromSearch;
 
     const users = await this.entityManager.findBy(User, {
-      id: In(userIdsUnion),
+      id: In(userIdsIntersection),
     });
 
     return users
@@ -376,10 +378,12 @@ export class SearchResultService {
     const orgsInSpace = spaceId
       ? await this.getOrganizationsInSpace(spaceId)
       : [];
-    const orgIdsUnion = union(orgsInSearch, orgsInSpace);
+    const orgIdsIntersection = spaceId
+      ? intersection(orgsInSearch, orgsInSpace)
+      : orgsInSearch;
 
     const organizations = await this.entityManager.findBy(Organization, {
-      id: In(orgIdsUnion),
+      id: In(orgIdsIntersection),
     });
 
     return organizations
@@ -460,6 +464,7 @@ export class SearchResultService {
           callout: postParent.callout,
           space: postParent.space,
           challenge: postParent.challenge,
+          opportunity: postParent.opportunity,
           post: postParent.post,
         };
       })
