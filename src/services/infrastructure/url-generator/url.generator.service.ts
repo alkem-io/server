@@ -599,7 +599,7 @@ export class UrlGeneratorService {
     fieldName: string,
     fieldID: string
   ): Promise<string> {
-    let collaborationJourneyUrlPath = await this.getSpaceUrlPath(
+    let collaborationJourneyUrlPath = await this.getOpportunityUrlPath(
       fieldName,
       fieldID
     );
@@ -610,7 +610,7 @@ export class UrlGeneratorService {
       );
     }
     if (!collaborationJourneyUrlPath) {
-      collaborationJourneyUrlPath = await this.getOpportunityUrlPath(
+      collaborationJourneyUrlPath = await this.getSpaceUrlPath(
         fieldName,
         fieldID
       );
