@@ -5,6 +5,7 @@ import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import { BootstrapService } from './bootstrap.service';
+import { Account } from '@domain/space/account/account.entity';
 
 describe('BootstrapService', () => {
   let service: BootstrapService;
@@ -15,6 +16,7 @@ describe('BootstrapService', () => {
         BootstrapService,
         MockCacheManager,
         MockWinstonProvider,
+        repositoryProviderMockFactory(Account),
         repositoryProviderMockFactory(Space),
       ],
     })
