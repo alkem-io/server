@@ -279,7 +279,7 @@ export class CalloutResolverMutations {
         callout.id
       );
     const spaceID =
-      await this.communityResolverService.getRootSpaceFromCommunityOrFail(
+      await this.communityResolverService.getRootSpaceIDFromCommunityOrFail(
         community
       );
 
@@ -321,7 +321,7 @@ export class CalloutResolverMutations {
         callout.id
       );
     const spaceID =
-      await this.communityResolverService.getRootSpaceFromCommunityOrFail(
+      await this.communityResolverService.getRootSpaceIDFromCommunityOrFail(
         community
       );
 
@@ -364,7 +364,7 @@ export class CalloutResolverMutations {
         callout.id
       );
     const spaceID =
-      await this.communityResolverService.getRootSpaceFromCommunityOrFail(
+      await this.communityResolverService.getRootSpaceIDFromCommunityOrFail(
         community
       );
 

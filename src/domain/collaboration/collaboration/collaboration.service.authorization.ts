@@ -106,7 +106,7 @@ export class CollaborationAuthorizationService {
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load child entities for collaboration authorization:  ${collaboration.id}`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     }
 

@@ -188,7 +188,7 @@ export class LifecycleService {
     if (!lifecycle)
       throw new EntityNotFoundException(
         `Unable to find Lifecycle with ID: ${lifecycleID}`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     return lifecycle;
   }

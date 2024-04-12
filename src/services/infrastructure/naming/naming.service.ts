@@ -1,7 +1,5 @@
-import { EntityManager, Repository } from 'typeorm';
+import { EntityManager, Not, Repository } from 'typeorm';
 import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
-import { Challenge } from '@domain/challenge/challenge/challenge.entity';
-import { Opportunity } from '@domain/challenge/opportunity/opportunity.entity';
 import { NameID, UUID } from '@domain/common/scalars';
 import { Post } from '@domain/collaboration/post/post.entity';
 import { LogContext } from '@common/enums';
@@ -23,15 +21,14 @@ import { IDiscussion } from '@domain/communication/discussion/discussion.interfa
 import { ICallout } from '@domain/collaboration/callout';
 import { NAMEID_LENGTH } from '@common/constants';
 import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
+import { Space } from '@domain/space/space/space.entity';
 
 export class NamingService {
   replaceSpecialCharacters = require('replace-special-characters');
 
   constructor(
-    @InjectRepository(Challenge)
-    private challengeRepository: Repository<Challenge>,
-    @InjectRepository(Opportunity)
-    private opportunityRepository: Repository<Opportunity>,
+    @InjectRepository(Space)
+    private spaceRepository: Repository<Space>,
     @InjectRepository(Callout)
     private calloutRepository: Repository<Callout>,
     @InjectRepository(Collaboration)
@@ -55,20 +52,14 @@ export class NamingService {
   ): Promise<boolean> {
     if (!nameID) return true;
 
-    const challengeCount = await this.challengeRepository.countBy({
+    const spaceCount = await this.spaceRepository.countBy({
       nameID: nameID,
       account: {
         id: accountID,
       },
+      level: Not(0),
     });
-    if (challengeCount > 0) return false;
-    const opportunityCount = await this.opportunityRepository.countBy({
-      nameID: nameID,
-      account: {
-        id: accountID,
-      },
-    });
-    if (opportunityCount > 0) return false;
+    if (spaceCount > 0) return false;
     return true;
   }
 

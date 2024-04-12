@@ -330,7 +330,7 @@ export class ExcalidrawServer {
     const community =
       await this.communityResolver.getCommunityFromWhiteboardOrFail(roomId);
     const spaceID =
-      await this.communityResolver.getRootSpaceFromCommunityOrFail(community);
+      await this.communityResolver.getRootSpaceIDFromCommunityOrFail(community);
     const wb = await this.whiteboardService.getProfile(roomId);
 
     const sockets = await this.wsServer.in(roomId).fetchSockets();

@@ -1,7 +1,7 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { SpaceService } from '@domain/challenge/space/space.service';
+import { SpaceService } from '@domain/space/space/space.service';
 import { UserService } from '@domain/community/user/user.service';
 import { Repository } from 'typeorm';
 import fs from 'fs';
@@ -25,12 +25,12 @@ import { PlatformService } from '@platform/platfrom/platform.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { PlatformAuthorizationService } from '@platform/platfrom/platform.service.authorization';
 import { NameReporterService } from '@services/external/elasticsearch/name-reporter/name.reporter.service';
-import { AccountService } from '@domain/challenge/account/account.service';
-import { AccountAuthorizationService } from '@domain/challenge/account/account.service.authorization';
-import { Account } from '@domain/challenge/account/account.entity';
+import { AccountService } from '@domain/space/account/account.service';
+import { AccountAuthorizationService } from '@domain/space/account/account.service.authorization';
+import { Account } from '@domain/space/account/account.entity';
 import { SpaceType } from '@common/enums/space.type';
 import { SearchIngestService } from '@services/api/search2/search.ingest/search.ingest.service';
-import { CreateAccountInput } from '@domain/challenge/account/dto/account.dto.create';
+import { CreateAccountInput } from '@domain/space/account/dto/account.dto.create';
 
 @Injectable()
 export class BootstrapService {

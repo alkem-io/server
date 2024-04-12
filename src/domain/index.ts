@@ -1,3 +1,3 @@
 export * from './agent';
-export * from './challenge';
+export * from './space';
 export * from './context';

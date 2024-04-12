@@ -1,8 +1,6 @@
 import { UserService } from '@domain/community/user/user.service';
-import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
-import { OpportunityService } from '@domain/challenge/opportunity/opportunity.service';
 import { ISearchResultBuilder } from './search.result.builder.interface';
-import { SpaceService } from '@domain/challenge/space/space.service';
+import { SpaceService } from '@domain/space/space/space.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { ISearchResultBase } from './dto/search.result.dto.entry.base.interface';
 import { SearchResultType } from '@common/enums/search.result.type';
@@ -21,26 +19,19 @@ import {
 import { LogContext } from '@common/enums';
 import { PostService } from '@domain/collaboration/post/post.service';
 import { ISearchResultPost } from './dto/search.result.dto.entry.post';
-import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
-import { ISpace } from '@domain/challenge/space/space.interface';
-import { IOpportunity } from '@domain/challenge/opportunity';
-import { ICallout } from '@domain/collaboration/callout';
+import { ISpace } from '@domain/space/space/space.interface';
+import { Callout, ICallout } from '@domain/collaboration/callout';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { EntityManager } from 'typeorm';
 import { ISearchResultCallout } from './dto/search.result.dto.entry.callout';
+import { Space } from '@domain/space/space/space.entity';
+import { SpaceType } from '@common/enums/space.type';
 
 export type PostParents = {
   callout: ICallout;
   space: ISpace;
-  challenge: IChallenge | undefined;
-  opportunity: IOpportunity | undefined;
-};
-
-export type PostParentIDs = {
-  calloutID: string;
-  spaceID: string;
-  challengeID: string | undefined;
-  opportunityID: string | undefined;
+  subspace: ISpace | undefined;
+  subsubspace: ISpace | undefined;
 };
 
 export default class SearchResultBuilderService
@@ -49,8 +40,6 @@ export default class SearchResultBuilderService
   constructor(
     private readonly searchResultBase: ISearchResultBase,
     private readonly spaceService: SpaceService,
-    private readonly challengeService: ChallengeService,
-    private readonly opportunityService: OpportunityService,
     private readonly userService: UserService,
     private readonly organizationService: OrganizationService,
     private readonly userGroupService: UserGroupService,
@@ -71,7 +60,7 @@ export default class SearchResultBuilderService
   }
 
   async [SearchResultType.CHALLENGE](rawSearchResult: ISearchResult) {
-    const challenge = await this.challengeService.getChallengeOrFail(
+    const subspace = await this.spaceService.getSpaceOrFail(
       rawSearchResult.result.id,
       {
         relations: {
@@ -81,54 +70,54 @@ export default class SearchResultBuilderService
         },
       }
     );
-    if (!challenge.account || !challenge.account.space) {
+    if (!subspace.account || !subspace.account.space) {
       throw new RelationshipNotFoundException(
-        `Unable to find account for ${challenge.nameID}`,
+        `Unable to find account for ${subspace.nameID}`,
         LogContext.SEARCH
       );
     }
-    const space = challenge.account.space;
+    const space = subspace.account.space;
     const searchResultChallenge: ISearchResultChallenge = {
       ...this.searchResultBase,
-      challenge,
+      subspace: subspace,
       space,
     };
     return searchResultChallenge;
   }
 
   async [SearchResultType.OPPORTUNITY](rawSearchResult: ISearchResult) {
-    const opportunity = await this.opportunityService.getOpportunityOrFail(
+    const subsubspace = await this.spaceService.getSpaceOrFail(
       rawSearchResult.result.id,
       {
         relations: {
-          challenge: true,
+          parentSpace: true,
           account: {
             space: true,
           },
         },
       }
     );
-    if (!opportunity.account || !opportunity.account.space) {
+    if (!subsubspace.account || !subsubspace.account.space) {
       throw new RelationshipNotFoundException(
-        `Unable to find account for ${opportunity.nameID}`,
+        `Unable to find account for ${subsubspace.nameID}`,
         LogContext.SEARCH
       );
     }
-    const space = opportunity.account.space;
-    if (!opportunity.challenge) {
+    const space = subsubspace.account.space;
+    if (!subsubspace.parentSpace) {
       throw new RelationshipNotFoundException(
-        `Unable to find challenge for ${opportunity.nameID}`,
+        `Unable to find parent subspace for ${subsubspace.nameID}`,
         LogContext.SEARCH
       );
     }
-    const challenge = await this.challengeService.getChallengeOrFail(
-      opportunity.challenge.id
+    const subspace = await this.spaceService.getSpaceOrFail(
+      subsubspace.parentSpace.id
     );
     const searchResultOpportunity: ISearchResultOpportunity = {
       ...this.searchResultBase,
-      opportunity,
+      subsubspace,
       space,
-      challenge,
+      subspace,
     };
     return searchResultOpportunity;
   }
@@ -167,57 +156,67 @@ export default class SearchResultBuilderService
   }
 
   private async getPostParents(postId: string): Promise<PostParents> {
-    const [queryResult]: PostParentIDs[] =
-      await this.entityManager.connection.query(
-        `
-      SELECT \`space\`.\`id\` as \`spaceID\`, \`challenge\`.\`id\` as \`challengeID\`, null as \'opportunityID\', \`callout\`.\`id\` as \`calloutID\` FROM \`callout\`
-      RIGHT JOIN \`challenge\` on \`challenge\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
-      JOIN \`space\` on \`challenge\`.\`accountId\` = \`space\`.\`accountId\`
-      JOIN \`callout_contribution\` on \`callout\`.\`id\` = \`callout_contribution\`.\`calloutId\`
-      JOIN \`post\` on \`post\`.\`id\` = \`callout_contribution\`.\`postId\`
-      WHERE \`post\`.\`id\` = '${postId}' UNION
+    const callout = await this.entityManager.findOne(Callout, {
+      where: {
+        contributions: {
+          post: {
+            id: postId,
+          },
+        },
+      },
+      relations: {},
+    });
 
-      SELECT \`space\`.\`id\` as \`spaceID\`, null as \'challengeID\', null as \'opportunityID\', \`callout\`.\`id\` as \`calloutID\`  FROM \`callout\`
-      RIGHT JOIN \`space\` on \`space\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
-      JOIN \`callout_contribution\` on \`callout\`.\`id\` = \`callout_contribution\`.\`calloutId\`
-      JOIN \`post\` on \`post\`.\`id\` = \`callout_contribution\`.\`postId\`
-      WHERE \`post\`.\`id\` = '${postId}' UNION
-
-      SELECT  \`space\`.\`id\` as \`spaceID\`, \`challenge\`.\`id\` as \`challengeID\`, \`opportunity\`.\`id\` as \`opportunityID\`, \`callout\`.\`id\` as \`calloutID\` FROM \`callout\`
-      RIGHT JOIN \`opportunity\` on \`opportunity\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
-      JOIN \`challenge\` on \`opportunity\`.\`challengeId\` = \`challenge\`.\`id\`
-      JOIN \`space\` on \`opportunity\`.\`accountId\` = \`space\`.\`accountId\`
-      JOIN \`callout_contribution\` on \`callout\`.\`id\` = \`callout_contribution\`.\`calloutId\`
-      JOIN \`post\` on \`post\`.\`id\` = \`callout_contribution\`.\`postId\`
-      WHERE \`post\`.\`id\` = '${postId}';
-      `
+    if (!callout) {
+      throw new EntityNotFoundException(
+        `Unable to find callout for post with ID: ${postId}`,
+        LogContext.SEARCH
       );
+    }
 
-    let challenge: IChallenge | undefined = undefined;
-    let opportunity: IOpportunity | undefined = undefined;
+    const spaceLoaded = await this.entityManager.findOne(Space, {
+      where: {
+        collaboration: {
+          callouts: {
+            id: callout.id,
+          },
+        },
+      },
+      relations: {
+        parentSpace: true,
+        account: {
+          space: true,
+        },
+        collaboration: {
+          callouts: true,
+        },
+      },
+    });
 
-    if (!queryResult) {
+    if (!spaceLoaded || !spaceLoaded.account || !spaceLoaded.account.space) {
       throw new EntityNotFoundException(
         `Unable to find parents for post with ID: ${postId}`,
         LogContext.SEARCH
       );
     }
 
-    const callout = await this.calloutService.getCalloutOrFail(
-      queryResult.calloutID
-    );
-    const space = await this.spaceService.getSpaceOrFail(queryResult.spaceID);
+    const space = spaceLoaded.account.space;
+    let subspace: ISpace | undefined = undefined;
+    let subsubspace: ISpace | undefined = undefined;
 
-    if (queryResult.challengeID)
-      challenge = await this.challengeService.getChallengeOrFail(
-        queryResult.challengeID
-      );
-    if (queryResult.opportunityID)
-      opportunity = await this.opportunityService.getOpportunityOrFail(
-        queryResult.opportunityID
-      );
+    switch (spaceLoaded?.type) {
+      case SpaceType.CHALLENGE: {
+        subspace = spaceLoaded;
+        break;
+      }
+      case SpaceType.OPPORTUNITY: {
+        subspace = spaceLoaded.parentSpace;
+        subsubspace = spaceLoaded;
+        break;
+      }
+    }
 
-    return { challenge, opportunity, callout, space };
+    return { subspace, subsubspace, callout, space };
   }
 
   async [SearchResultType.POST](rawSearchResult: ISearchResult) {

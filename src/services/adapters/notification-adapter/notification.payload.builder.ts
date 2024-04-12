@@ -690,25 +690,22 @@ export class NotificationPayloadBuilder {
     triggeredBy: string
   ): Promise<SpaceBaseEventPayload> {
     const basePayload = this.buildBaseEventPayload(triggeredBy);
-    const baseChallenge =
-      await this.communityResolverService.getBaseChallengeForCommunityOrFail(
-        community.id,
-        community.type
+    const space =
+      await this.communityResolverService.getSpaceForCommunityOrFail(
+        community.id
       );
     const url = await this.urlGeneratorService.generateUrlForProfile(
-      baseChallenge.profile
+      space.profile
     );
     const communityAdminURL =
-      await this.urlGeneratorService.createJourneyAdminCommunityURL(
-        baseChallenge
-      );
+      await this.urlGeneratorService.createJourneyAdminCommunityURL(space);
     const result: SpaceBaseEventPayload = {
       space: {
-        id: baseChallenge.id,
-        nameID: baseChallenge.nameID,
+        id: space.id,
+        nameID: space.nameID,
         type: community.type,
         profile: {
-          displayName: baseChallenge.profile.displayName,
+          displayName: space.profile.displayName,
           url: url,
         },
         adminURL: communityAdminURL,
@@ -740,7 +737,7 @@ export class NotificationPayloadBuilder {
     if (!community) {
       throw new EntityNotFoundException(
         `Unable to find Community with id: ${communityID}`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     }
     return community;

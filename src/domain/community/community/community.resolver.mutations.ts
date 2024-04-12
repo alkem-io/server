@@ -23,7 +23,6 @@ import { CommunityApplyInput } from './dto/community.dto.apply';
 import { CommunityMemberClaim } from '@services/external/trust-registry/trust.registry.claim/claim.community.member';
 import { AgentBeginVerifiedCredentialOfferOutput } from '@domain/agent/agent/dto/agent.dto.verified.credential.offer.begin.output';
 import { AlkemioUserClaim } from '@services/external/trust-registry/trust.registry.claim/claim.alkemio.user';
-import { CreateFeedbackOnCommunityContextInput } from '@domain/community/community/dto/community.dto.create.feedback.on.context';
 import { CreateUserGroupInput } from '../user-group/dto';
 import { RemoveCommunityRoleFromOrganizationInput } from './dto/community.dto.role.remove.organization';
 import { AssignCommunityRoleToOrganizationInput } from './dto/community.dto.role.assign.organization';
@@ -615,30 +614,5 @@ export class CommunityResolverMutations {
         },
       ]
     );
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => Boolean, {
-    description:
-      'Creates feedback on community context from users having COMMUNITY_CONTEXT_REVIEW privilege',
-  })
-  @Profiling.api
-  async createFeedbackOnCommunityContext(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('feedbackData') feedbackData: CreateFeedbackOnCommunityContextInput
-  ): Promise<boolean> {
-    const community = await this.communityService.getCommunityOrFail(
-      feedbackData.communityID
-    );
-
-    // todo: must check COMMUNITY_CONTEXT_REVIEW on Challenge
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      community.authorization,
-      AuthorizationPrivilege.COMMUNITY_CONTEXT_REVIEW,
-      `creating feedback on community: ${community.id}`
-    );
-
-    return true;
   }
 }

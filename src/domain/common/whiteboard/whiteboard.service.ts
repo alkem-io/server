@@ -24,7 +24,7 @@ import { ProfileDocumentsService } from '@domain/profile-documents/profile.docum
 import { CalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.entity';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { LicenseFeatureFlagName } from '@common/enums/license.feature.flag.name';
-import { Space } from '@domain/challenge/space/space.entity';
+import { Space } from '@domain/space/space/space.entity';
 import { AuthorizationPolicy } from '../authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import { ProfileService } from '../profile/profile.service';
@@ -93,7 +93,7 @@ export class WhiteboardService {
     if (!whiteboard)
       throw new EntityNotFoundException(
         `Not able to locate Whiteboard with the specified ID: ${whiteboardID}`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     return whiteboard;
   }
@@ -109,14 +109,14 @@ export class WhiteboardService {
     if (!whiteboard.profile) {
       throw new RelationshipNotFoundException(
         `Profile not found on whiteboard: '${whiteboard.id}'`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     }
 
     if (!whiteboard.authorization) {
       throw new RelationshipNotFoundException(
         `Authorization not found on whiteboard: '${whiteboard.id}'`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     }
 
@@ -226,7 +226,7 @@ export class WhiteboardService {
         whiteboardId
       );
     const spaceID =
-      await this.communityResolverService.getRootSpaceFromCommunityOrFail(
+      await this.communityResolverService.getRootSpaceIDFromCommunityOrFail(
         community
       );
 

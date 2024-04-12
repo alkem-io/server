@@ -166,7 +166,7 @@ export class CollaborationResolverMutations {
         callout.id
       );
     const spaceID =
-      await this.communityResolverService.getRootSpaceFromCommunityOrFail(
+      await this.communityResolverService.getRootSpaceIDFromCommunityOrFail(
         community
       );
 

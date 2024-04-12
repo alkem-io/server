@@ -13,11 +13,11 @@ import { InjectEntityManager } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { EntityManager } from 'typeorm';
 import { Cache, CachingConfig } from 'cache-manager';
-import { Space } from '@domain/challenge/space/space.entity';
+import { Space } from '@domain/space/space/space.entity';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { CalloutTemplate } from '@domain/template/callout-template/callout.template.entity';
 import { SpaceType } from '@common/enums/space.type';
-import { IBaseChallenge } from '@domain/challenge/base-challenge/base.challenge.interface';
+import { ISpace } from '@domain/space/space/space.interface';
 
 @Injectable()
 export class UrlGeneratorService {
@@ -145,28 +145,24 @@ export class UrlGeneratorService {
     return url;
   }
 
-  async createJourneyAdminCommunityURL(
-    baseChallenge: IBaseChallenge
-  ): Promise<string> {
-    const spaceNameID = baseChallenge.nameID;
+  async createJourneyAdminCommunityURL(space: ISpace): Promise<string> {
+    const spaceNameID = space.nameID;
     const baseURL = `${this.endpoint_cluster}/admin/spaces/${spaceNameID}`;
-    switch (baseChallenge.type) {
+    switch (space.type) {
       case SpaceType.SPACE:
-        const spaceAdminUrl = await this.generateAdminUrlForSpace(
-          baseChallenge.nameID
-        );
+        const spaceAdminUrl = await this.generateAdminUrlForSpace(space.nameID);
         return `${spaceAdminUrl}/community`;
       case SpaceType.CHALLENGE:
         const challengeAdminUrl = await this.getChallengeUrlPath(
           this.FIELD_ID,
-          baseChallenge.id,
+          space.id,
           true
         );
         return `${challengeAdminUrl}/community`;
       case SpaceType.OPPORTUNITY:
         const opportunityAdminURL = await this.getOpportunityUrlPath(
           this.FIELD_ID,
-          baseChallenge.id,
+          space.id,
           true
         );
         return `${opportunityAdminURL}/community`;
@@ -430,8 +426,8 @@ export class UrlGeneratorService {
       spaceId: string;
     }[] = await this.entityManager.connection.query(
       `
-        SELECT challenge.id as challengeId, challenge.nameID as challengeNameId, challenge.spaceID as spaceId FROM challenge
-        WHERE challenge.${fieldName} = '${fieldID}'
+        SELECT space.id as challengeId, space.nameID as challengeNameId, space.parentSpaceId as spaceId FROM space
+        WHERE space.${fieldName} = '${fieldID}'
       `
     );
 
@@ -464,8 +460,8 @@ export class UrlGeneratorService {
       challengeId: string;
     }[] = await this.entityManager.connection.query(
       `
-        SELECT opportunity.id as opportunityId, opportunity.nameID as opportunityNameId, opportunity.challengeId as challengeId FROM opportunity
-        WHERE opportunity.${fieldName} = '${fieldID}'
+        SELECT space.id as opportunityId, space.nameID as opportunityNameId, space.parentSpaceId as challengeId FROM space
+        WHERE space.${fieldName} = '${fieldID}'
       `
     );
 
@@ -603,7 +599,7 @@ export class UrlGeneratorService {
     fieldName: string,
     fieldID: string
   ): Promise<string> {
-    let collaborationJourneyUrlPath = await this.getSpaceUrlPath(
+    let collaborationJourneyUrlPath = await this.getOpportunityUrlPath(
       fieldName,
       fieldID
     );
@@ -614,7 +610,7 @@ export class UrlGeneratorService {
       );
     }
     if (!collaborationJourneyUrlPath) {
-      collaborationJourneyUrlPath = await this.getOpportunityUrlPath(
+      collaborationJourneyUrlPath = await this.getSpaceUrlPath(
         fieldName,
         fieldID
       );

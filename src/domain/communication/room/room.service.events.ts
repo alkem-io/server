@@ -224,7 +224,7 @@ export class RoomServiceEvents {
         room.id
       );
     const spaceID =
-      await this.communityResolverService.getRootSpaceFromCommunityOrFail(
+      await this.communityResolverService.getRootSpaceIDFromCommunityOrFail(
         community
       );
     this.contributionReporter.calloutPostCommentCreated(
@@ -268,7 +268,7 @@ export class RoomServiceEvents {
         room.id
       );
     const spaceID =
-      await this.communityResolverService.getRootSpaceFromCommunityOrFail(
+      await this.communityResolverService.getRootSpaceIDFromCommunityOrFail(
         community
       );
 
@@ -313,7 +313,7 @@ export class RoomServiceEvents {
         callout.id
       );
     const spaceID =
-      await this.communityResolverService.getRootSpaceFromCommunityOrFail(
+      await this.communityResolverService.getRootSpaceIDFromCommunityOrFail(
         community
       );
 

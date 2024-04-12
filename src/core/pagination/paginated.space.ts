@@ -1,7 +1,7 @@
 import { ObjectType } from '@nestjs/graphql';
 import { RelayStylePaginate } from './relay.style.paginated.type';
 import { Paginate } from './paginated.type';
-import { ISpace } from '@domain/challenge/space/space.interface';
+import { ISpace } from '@domain/space/space/space.interface';
 
 @ObjectType()
 class RelayPaginatedSpace extends ISpace {}

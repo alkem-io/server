@@ -13,7 +13,7 @@ import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exc
 import { TimelineResolverService } from '../entity-resolver/timeline.resolver.service';
 import { StorageAggregatorNotFoundException } from '@common/exceptions/storage.aggregator.not.found.exception';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Space } from '@domain/challenge/space/space.entity';
+import { Space } from '@domain/space/space/space.entity';
 import { SpaceType } from '@common/enums/space.type';
 
 @Injectable()
@@ -77,37 +77,29 @@ export class StorageAggregatorResolverService {
     type: SpaceType;
     nameID: string;
   }> {
-    const spaceInfo = await this.getJourneyInfo('space', storageAggregatorID);
-    if (spaceInfo) {
-      return {
-        type: SpaceType.SPACE,
-        ...spaceInfo,
-      };
+    const space = await this.entityManager.findOne(Space, {
+      where: {
+        storageAggregator: {
+          id: storageAggregatorID,
+        },
+      },
+      relations: {
+        profile: true,
+      },
+    });
+    if (!space) {
+      throw new NotImplementedException(
+        `Retrieval of parent entity information for storage aggregator on ${storageAggregatorID} type not yet implemented`,
+        LogContext.STORAGE_AGGREGATOR
+      );
     }
-    const challengeInfo = await this.getJourneyInfo(
-      'challenge',
-      storageAggregatorID
-    );
-    if (challengeInfo) {
-      return {
-        type: SpaceType.CHALLENGE,
-        ...challengeInfo,
-      };
-    }
-    const opportunityInfo = await this.getJourneyInfo(
-      'opportunity',
-      storageAggregatorID
-    );
-    if (opportunityInfo) {
-      return {
-        type: SpaceType.OPPORTUNITY,
-        ...opportunityInfo,
-      };
-    }
-    throw new NotImplementedException(
-      `Retrieval of parent entity information for storage aggregator on ${storageAggregatorID} type not yet implemented`,
-      LogContext.STORAGE_AGGREGATOR
-    );
+
+    return {
+      id: space.id,
+      displayName: space.profile.displayName,
+      nameID: space.nameID,
+      type: space.type,
+    };
   }
 
   public async getStorageAggregatorForTemplatesSet(
@@ -144,29 +136,6 @@ export class StorageAggregatorResolverService {
     );
   }
 
-  public async getJourneyInfo(
-    entityTableName: string,
-    storageAggregatorID: string
-  ): Promise<{ id: string; displayName: string; nameID: string } | null> {
-    // Todo: get the displayName instead of the nameID
-    const [result]: {
-      id: string;
-      displayName: string;
-      nameID: string;
-    }[] = await this.entityManager.connection.query(
-      `
-        SELECT \`${entityTableName}\`.\`id\` as \`id\`, \`profile\`.\`displayName\` as displayName, \`${entityTableName}\`.\`nameID\` as nameID FROM \`${entityTableName}\`
-        LEFT JOIN \`profile\` ON \`profile\`.\`id\` = \`${entityTableName}\`.\`profileId\`
-        WHERE \`${entityTableName}\`.\`storageAggregatorId\` = '${storageAggregatorID}'
-      `
-    );
-
-    if (!result) {
-      return null;
-    }
-    return result;
-  }
-
   public async getStorageAggregatorForCollaboration(
     collaborationID: string
   ): Promise<IStorageAggregator> {
@@ -187,31 +156,23 @@ export class StorageAggregatorResolverService {
   private async getStorageAggregatorIdForCollaboration(
     collaborationID: string
   ): Promise<string> {
-    let query = `SELECT \`storageAggregatorId\` FROM \`challenge\`
-      LEFT JOIN \`collaboration\` ON \`collaboration\`.\`id\` = \`challenge\`.\`collaborationId\`
-      WHERE \`collaboration\`.\`id\`='${collaborationID}'`;
-    let [result]: {
-      storageAggregatorId: string;
-    }[] = await this.entityManager.connection.query(query);
-
-    if (result && result.storageAggregatorId) return result.storageAggregatorId;
-
-    query = `SELECT \`storageAggregatorId\` FROM \`space\`
-      LEFT JOIN \`collaboration\` ON \`collaboration\`.\`id\` = \`space\`.\`collaborationId\`
-       WHERE \`collaboration\`.\`id\`='${collaborationID}'`;
-    [result] = await this.entityManager.connection.query(query);
-    if (result && result.storageAggregatorId) return result.storageAggregatorId;
-
-    query = `SELECT \`storageAggregatorId\` FROM \`opportunity\`
-      LEFT JOIN \`collaboration\` ON \`collaboration\`.\`id\` = \`opportunity\`.\`collaborationId\`
-      WHERE \`collaboration\`.\`id\`='${collaborationID}'`;
-    [result] = await this.entityManager.connection.query(query);
-    if (result && result.storageAggregatorId) return result.storageAggregatorId;
-
-    throw new StorageAggregatorNotFoundException(
-      `Could not find storage aggregator for collaboration with id: ${collaborationID}`,
-      LogContext.STORAGE_AGGREGATOR
-    );
+    const space = await this.entityManager.findOne(Space, {
+      where: {
+        collaboration: {
+          id: collaborationID,
+        },
+      },
+      relations: {
+        storageAggregator: true,
+      },
+    });
+    if (!space || !space.storageAggregator) {
+      throw new NotImplementedException(
+        `Unable to retrieve storage aggregator for collaborationID: ${collaborationID}`,
+        LogContext.STORAGE_AGGREGATOR
+      );
+    }
+    return space.storageAggregator.id;
   }
 
   private async getStorageAggregatorIdForCalendar(
@@ -244,31 +205,23 @@ export class StorageAggregatorResolverService {
   private async getStorageAggregatorIdForCommunity(
     communityID: string
   ): Promise<string> {
-    let query = `SELECT \`storageAggregatorId\` FROM \`challenge\`
-      LEFT JOIN \`community\` ON \`community\`.\`id\` = \`challenge\`.\`communityId\`
-      WHERE \`community\`.\`id\`='${communityID}'`;
-    let [result]: {
-      storageAggregatorId: string;
-    }[] = await this.entityManager.connection.query(query);
-
-    if (result && result.storageAggregatorId) return result.storageAggregatorId;
-
-    query = `SELECT \`storageAggregatorId\` FROM \`space\`
-      LEFT JOIN \`community\` ON \`community\`.\`id\` = \`space\`.\`communityId\`
-      WHERE \`community\`.\`id\`='${communityID}'`;
-    [result] = await this.entityManager.connection.query(query);
-    if (result && result.storageAggregatorId) return result.storageAggregatorId;
-
-    query = `SELECT \`storageAggregatorId\` FROM \`opportunity\`
-      LEFT JOIN \`community\` ON \`community\`.\`id\` = \`opportunity\`.\`communityId\`
-      WHERE \`community\`.\`id\`='${communityID}'`;
-    [result] = await this.entityManager.connection.query(query);
-    if (result && result.storageAggregatorId) return result.storageAggregatorId;
-
-    throw new StorageAggregatorNotFoundException(
-      `Could not find storage aggregator for community with id: ${communityID}`,
-      LogContext.STORAGE_AGGREGATOR
-    );
+    const space = await this.entityManager.findOne(Space, {
+      where: {
+        community: {
+          id: communityID,
+        },
+      },
+      relations: {
+        storageAggregator: true,
+      },
+    });
+    if (!space || !space.storageAggregator) {
+      throw new NotImplementedException(
+        `Unable to retrieve storage aggregator for communityID: ${communityID}`,
+        LogContext.STORAGE_AGGREGATOR
+      );
+    }
+    return space.storageAggregator.id;
   }
 
   private async getStorageAggregatorIdForCommunication(
@@ -314,32 +267,24 @@ export class StorageAggregatorResolverService {
   private async getStorageAggregatorIdForCallout(
     calloutId: string
   ): Promise<string> {
-    let query = `SELECT \`storageAggregatorId\` FROM \`challenge\`
-      LEFT JOIN \`collaboration\` ON \`collaboration\`.\`id\` = \`challenge\`.\`collaborationId\`
-      LEFT JOIN \`callout\` ON \`callout\`.\`collaborationId\` = \`collaboration\`.\`id\`
-      WHERE \`callout\`.\`id\`='${calloutId}'`;
-    let [result]: {
-      storageAggregatorId: string;
-    }[] = await this.entityManager.connection.query(query);
-    if (result && result.storageAggregatorId) return result.storageAggregatorId;
-
-    query = `SELECT \`storageAggregatorId\` FROM \`space\`
-      LEFT JOIN \`collaboration\` ON \`collaboration\`.\`id\` = \`space\`.\`collaborationId\`
-      LEFT JOIN \`callout\` ON \`callout\`.\`collaborationId\` = \`collaboration\`.\`id\`
-      WHERE \`callout\`.\`id\`='${calloutId}'`;
-    [result] = await this.entityManager.connection.query(query);
-    if (result && result.storageAggregatorId) return result.storageAggregatorId;
-
-    query = `SELECT \`storageAggregatorId\` FROM \`opportunity\`
-      LEFT JOIN \`collaboration\` ON \`collaboration\`.\`id\` = \`opportunity\`.\`collaborationId\`
-      LEFT JOIN \`callout\` ON \`callout\`.\`collaborationId\` = \`collaboration\`.\`id\`
-      WHERE \`callout\`.\`id\`='${calloutId}'`;
-    [result] = await this.entityManager.connection.query(query);
-    if (result && result.storageAggregatorId) return result.storageAggregatorId;
-
-    throw new StorageAggregatorNotFoundException(
-      `Could not find storage aggregator for callout with id: ${calloutId}`,
-      LogContext.STORAGE_AGGREGATOR
-    );
+    const space = await this.entityManager.findOne(Space, {
+      where: {
+        collaboration: {
+          callouts: {
+            id: calloutId,
+          },
+        },
+      },
+      relations: {
+        storageAggregator: true,
+      },
+    });
+    if (!space || !space.storageAggregator) {
+      throw new NotImplementedException(
+        `Unable to retrieve storage aggregator for calloutID: ${calloutId} `,
+        LogContext.STORAGE_AGGREGATOR
+      );
+    }
+    return space.storageAggregator.id;
   }
 }

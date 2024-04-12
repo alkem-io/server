@@ -13,24 +13,18 @@ import {
 import { ValidationException } from '@common/exceptions/validation.exception';
 import { Organization } from '@domain/community/organization/organization.entity';
 import { AgentInfo } from '@core/authentication/agent-info';
-import { Opportunity } from '@domain/challenge/opportunity/opportunity.entity';
-import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { Space } from '@domain/challenge/space/space.entity';
+import { Space } from '@domain/space/space/space.entity';
 import { ISearchResult } from './dto/search.result.entry.interface';
 import { SearchResultType } from '@common/enums/search.result.type';
-import { SpaceService } from '@domain/challenge/space/space.service';
-import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
-import { OpportunityService } from '@domain/challenge/opportunity/opportunity.service';
+import { SpaceService } from '@domain/space/space/space.service';
 import { UserService } from '@domain/community/user/user.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
 import SearchResultBuilderService from './search.result.builder.service';
 import { PostService } from '@domain/collaboration/post/post.service';
 import { Post } from '@domain/collaboration/post/post.entity';
-import { ISpace } from '@domain/challenge/space/space.interface';
-import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
-import { IOpportunity } from '@domain/challenge/opportunity';
+import { ISpace } from '@domain/space/space/space.interface';
 import { ISearchResults } from './dto/search.result.dto';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { ISearchResultBuilder } from './search.result.builder.interface';
@@ -40,6 +34,7 @@ import { CalloutContribution } from '@domain/collaboration/callout-contribution/
 import { CalloutType } from '@common/enums/callout.type';
 import { validateSearchParameters } from './util/validate.search.parameters';
 import { validateSearchTerms } from './util/validate.search.terms';
+import { SpaceLevel } from '@common/enums/space.level';
 
 enum SearchEntityTypes {
   USER = 'user',
@@ -59,14 +54,7 @@ class Match {
   key = 0;
   score = 0;
   terms: string[] = [];
-  entity!:
-    | User
-    | UserGroup
-    | Organization
-    | Space
-    | Challenge
-    | Opportunity
-    | Post;
+  entity!: User | UserGroup | Organization | Space | Post;
   type!: SearchResultType;
 }
 
@@ -80,17 +68,11 @@ export class SearchService {
     private organizationRepository: Repository<Organization>,
     @InjectRepository(Space)
     private spaceRepository: Repository<Space>,
-    @InjectRepository(Challenge)
-    private challengeRepository: Repository<Challenge>,
-    @InjectRepository(Opportunity)
-    private opportunityRepository: Repository<Opportunity>,
     @InjectRepository(Post)
     private postRepository: Repository<Post>,
     @InjectRepository(CalloutContribution)
     private contributionRepository: Repository<CalloutContribution>,
     private spaceService: SpaceService,
-    private challengeService: ChallengeService,
-    private opportunityService: OpportunityService,
     private userService: UserService,
     private organizationService: OrganizationService,
     private userGroupService: UserGroupService,
@@ -520,9 +502,9 @@ export class SearchService {
       return;
     }
     for (const term of terms) {
-      const readableChallengeMatches: Challenge[] = [];
+      const readableChallengeMatches: Space[] = [];
       // First part: Retrieve data using TypeORM
-      const challenges = await this.challengeRepository.find({
+      const subspaces = await this.spaceRepository.find({
         where: challengeIDsFilter ? { id: In(challengeIDsFilter) } : undefined,
         relations: {
           context: true,
@@ -531,52 +513,44 @@ export class SearchService {
             location: true,
             tagsets: true,
           },
-          space: {
-            account: {
-              license: true,
-            },
+          account: {
+            license: true,
           },
         },
       });
       const lowerCasedTerm = term.toLowerCase();
       // Second part: Filter the results in TypeScript
-      const filteredChallengeMatches = challenges.filter(challenge => {
+      const filteredChallengeMatches = subspaces.filter(subspace => {
         return (
-          challenge.nameID.toLowerCase().includes(lowerCasedTerm) ||
-          challenge.profile.displayName
-            .toLowerCase()
-            .includes(lowerCasedTerm) ||
-          challenge.profile.tagline.toLowerCase().includes(lowerCasedTerm) ||
-          challenge.profile.description
-            .toLowerCase()
-            .includes(lowerCasedTerm) ||
-          challenge.profile.tagsets?.some(tagset =>
+          subspace.nameID.toLowerCase().includes(lowerCasedTerm) ||
+          subspace.profile.displayName.toLowerCase().includes(lowerCasedTerm) ||
+          subspace.profile.tagline.toLowerCase().includes(lowerCasedTerm) ||
+          subspace.profile.description.toLowerCase().includes(lowerCasedTerm) ||
+          subspace.profile.tagsets?.some(tagset =>
             tagset.tags.map(tag => tag.toLowerCase()).includes(lowerCasedTerm)
           ) ||
-          challenge.context?.impact?.toLowerCase().includes(lowerCasedTerm) ||
-          challenge.context?.vision?.toLowerCase().includes(lowerCasedTerm) ||
-          challenge.context?.who?.toLowerCase().includes(lowerCasedTerm) ||
-          challenge.profile.location?.country
+          subspace.context?.impact?.toLowerCase().includes(lowerCasedTerm) ||
+          subspace.context?.vision?.toLowerCase().includes(lowerCasedTerm) ||
+          subspace.context?.who?.toLowerCase().includes(lowerCasedTerm) ||
+          subspace.profile.location?.country
             .toLowerCase()
             .includes(lowerCasedTerm) ||
-          challenge.profile.location?.city
-            .toLowerCase()
-            .includes(lowerCasedTerm)
+          subspace.profile.location?.city.toLowerCase().includes(lowerCasedTerm)
         );
       });
 
       // Only show challenges that the current user has read access to
-      for (const challenge of filteredChallengeMatches) {
+      for (const filteredSubspace of filteredChallengeMatches) {
         if (
-          challenge.space?.account?.license?.visibility !==
+          filteredSubspace.account?.license?.visibility !==
             SpaceVisibility.ARCHIVED &&
           this.authorizationService.isAccessGranted(
             agentInfo,
-            challenge.authorization,
+            filteredSubspace.authorization,
             AuthorizationPrivilege.READ
           )
         ) {
-          readableChallengeMatches.push(challenge);
+          readableChallengeMatches.push(filteredSubspace);
         }
       }
       // Create results for each match
@@ -601,9 +575,9 @@ export class SearchService {
       return;
     }
     for (const term of terms) {
-      const readableOpportunityMatches: Opportunity[] = [];
+      const readableOpportunityMatches: Space[] = [];
       // First part: Retrieve data using TypeORM
-      const opportunities = await this.opportunityRepository.find({
+      const subsubspaces = await this.spaceRepository.find({
         where: opportunityIDsFilter
           ? { id: In(opportunityIDsFilter) }
           : undefined,
@@ -622,42 +596,42 @@ export class SearchService {
 
       const lowerCasedTerm = term.toLowerCase();
       // Second part: Filter the results in TypeScript
-      const filteredOpportunityMatches = opportunities.filter(opportunity => {
+      const filteredOpportunityMatches = subsubspaces.filter(subsubspace => {
         return (
-          opportunity.nameID.toLowerCase().includes(lowerCasedTerm) ||
-          opportunity.profile.displayName
+          subsubspace.nameID.toLowerCase().includes(lowerCasedTerm) ||
+          subsubspace.profile.displayName
             .toLowerCase()
             .includes(lowerCasedTerm) ||
-          opportunity.profile.tagline.toLowerCase().includes(lowerCasedTerm) ||
-          opportunity.profile.description
+          subsubspace.profile.tagline.toLowerCase().includes(lowerCasedTerm) ||
+          subsubspace.profile.description
             .toLowerCase()
             .includes(lowerCasedTerm) ||
-          opportunity.profile.tagsets?.some(tagset =>
+          subsubspace.profile.tagsets?.some(tagset =>
             tagset.tags.map(tag => tag.toLowerCase()).includes(lowerCasedTerm)
           ) ||
-          opportunity.context?.impact?.toLowerCase().includes(lowerCasedTerm) ||
-          opportunity.context?.vision?.toLowerCase().includes(lowerCasedTerm) ||
-          opportunity.context?.who?.toLowerCase().includes(lowerCasedTerm) ||
-          opportunity.profile.location?.country
+          subsubspace.context?.impact?.toLowerCase().includes(lowerCasedTerm) ||
+          subsubspace.context?.vision?.toLowerCase().includes(lowerCasedTerm) ||
+          subsubspace.context?.who?.toLowerCase().includes(lowerCasedTerm) ||
+          subsubspace.profile.location?.country
             .toLowerCase()
             .includes(lowerCasedTerm) ||
-          opportunity.profile.location?.city
+          subsubspace.profile.location?.city
             .toLowerCase()
             .includes(lowerCasedTerm)
         );
       });
       // Only show challenges that the current user has read access to
-      for (const opportunity of filteredOpportunityMatches) {
+      for (const filteredSubsubspace of filteredOpportunityMatches) {
         if (
-          opportunity.account.license?.visibility !==
+          filteredSubsubspace.account.license?.visibility !==
             SpaceVisibility.ARCHIVED &&
           this.authorizationService.isAccessGranted(
             agentInfo,
-            opportunity.authorization,
+            filteredSubsubspace.authorization,
             AuthorizationPrivilege.READ
           )
         ) {
-          readableOpportunityMatches.push(opportunity);
+          readableOpportunityMatches.push(filteredSubsubspace);
         }
       }
 
@@ -933,8 +907,6 @@ export class SearchService {
         new SearchResultBuilderService(
           searchResultBase,
           this.spaceService,
-          this.challengeService,
-          this.opportunityService,
           this.userService,
           this.organizationService,
           this.userGroupService,
@@ -1002,20 +974,20 @@ export class SearchService {
       spaceIDsFilter = [searchInSpace.id];
       const accountIDsFilter = [searchInSpace.account.id];
 
-      const challengesFilter = await this.getChallengesInAccountFilter(
+      const subspacesFilter = await this.getSubspacesInAccountFilter(
         accountIDsFilter
       );
-      challengeIDsFilter = challengesFilter.map(challenge => challenge.id);
-      const opportunitiesFilter = await this.getOpportunitiesInAccountFilter(
+      challengeIDsFilter = subspacesFilter.map(subspace => subspace.id);
+      const subsubspacesFilter = await this.getSubsubspacesInAccountFilter(
         accountIDsFilter
       );
-      opportunityIDsFilter = opportunitiesFilter.map(opp => opp.id);
+      opportunityIDsFilter = subsubspacesFilter.map(opp => opp.id);
       userIDsFilter = await this.getUsersFilter(searchInSpace);
       organizationIDsFilter = await this.getOrganizationsFilter(searchInSpace);
       postIDsFilter = await this.getPostsFilter(
         searchInSpace,
-        challengesFilter,
-        opportunitiesFilter
+        subspacesFilter,
+        subsubspacesFilter
       );
     }
     return {
@@ -1028,32 +1000,42 @@ export class SearchService {
     };
   }
 
-  private async getChallengesInAccountFilter(
+  private async getSubspacesInAccountFilter(
     accountIDsFilter: string[]
-  ): Promise<IChallenge[]> {
-    const challengesQuery = this.challengeRepository
-      .createQueryBuilder('challenge')
-      .leftJoinAndSelect('challenge.account', 'account')
-      .leftJoinAndSelect('challenge.collaboration', 'collaboration')
-      .where('account.id IN (:accountIDsFilter)', {
-        accountIDsFilter: accountIDsFilter,
-      });
+  ): Promise<ISpace[]> {
+    const subspaces = await this.spaceRepository.find({
+      where: {
+        account: {
+          id: In(accountIDsFilter),
+        },
+        level: SpaceLevel.CHALLENGE,
+      },
+      relations: {
+        collaboration: true,
+        account: true,
+      },
+    });
 
-    return await challengesQuery.getMany();
+    return subspaces;
   }
 
-  private async getOpportunitiesInAccountFilter(
+  private async getSubsubspacesInAccountFilter(
     accountIDsFilter: string[]
-  ): Promise<IOpportunity[]> {
-    const opportunitiesQuery = this.opportunityRepository
-      .createQueryBuilder('opportunity')
-      .leftJoinAndSelect('opportunity.collaboration', 'collaboration')
-      .leftJoinAndSelect('opportunity.account', 'account')
-      .where('account.id IN (:accountIDsFilter)', {
-        accountIDsFilter: accountIDsFilter,
-      });
+  ): Promise<ISpace[]> {
+    const subsubspaces = await this.spaceRepository.find({
+      where: {
+        account: {
+          id: In(accountIDsFilter),
+        },
+        level: SpaceLevel.OPPORTUNITY,
+      },
+      relations: {
+        collaboration: true,
+        account: true,
+      },
+    });
 
-    return await opportunitiesQuery.getMany();
+    return subsubspaces;
   }
 
   private async getUsersFilter(searchInSpace: ISpace): Promise<string[]> {
@@ -1108,15 +1090,13 @@ export class SearchService {
 
   private async getPostsFilter(
     spaceFilter: ISpace,
-    challengesFilter: IChallenge[],
-    opportunitiesFilter: IOpportunity[]
+    subspacesFilter: ISpace[],
+    subsubspacesFilter: ISpace[]
   ): Promise<string[]> {
     // Get all the relevant collaborations
     const collaborationFilter = [spaceFilter.collaboration?.id];
-    challengesFilter.forEach(c =>
-      collaborationFilter.push(c.collaboration?.id)
-    );
-    opportunitiesFilter.forEach(c =>
+    subspacesFilter.forEach(c => collaborationFilter.push(c.collaboration?.id));
+    subsubspacesFilter.forEach(c =>
       collaborationFilter.push(c.collaboration?.id)
     );
 

@@ -29,7 +29,6 @@ export enum AuthorizationPrivilege {
   COMMUNITY_INVITE = 'community-invite',
   COMMUNITY_INVITE_ACCEPT = 'community-invite-accept',
   COMMUNITY_ADD_MEMBER = 'community-add-member', // only for global admins
-  COMMUNITY_CONTEXT_REVIEW = 'community-context-review',
   CREATE_CALLOUT = 'create-callout',
   UPDATE_CALLOUT_PUBLISHER = 'update-callout-publisher',
   CREATE_RELATION = 'create-relation',

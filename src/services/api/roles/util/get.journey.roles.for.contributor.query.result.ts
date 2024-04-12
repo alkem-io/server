@@ -1,6 +1,4 @@
-import { Space } from '@domain/challenge/space/space.entity';
-import { Challenge } from '@domain/challenge/challenge/challenge.entity';
-import { Opportunity } from '@domain/challenge/opportunity';
+import { Space } from '@domain/space/space/space.entity';
 import { RolesResultSpace } from '../dto/roles.dto.result.space';
 import { RolesResultCommunity } from '../dto/roles.dto.result.community';
 import { CredentialMap } from './group.credentials.by.entity';
@@ -12,8 +10,8 @@ import { AuthorizationPrivilege, LogContext } from '@common/enums';
 export const getJourneyRolesForContributorQueryResult = (
   map: CredentialMap,
   spaces: Space[],
-  challenges: Challenge[],
-  opportunities: Opportunity[],
+  subspaces: Space[],
+  subsubspaces: Space[],
   agentInfo: AgentInfo,
   authorizationService: AuthorizationService
 ): RolesResultSpace[] => {
@@ -45,8 +43,8 @@ export const getJourneyRolesForContributorQueryResult = (
         );
       }
       const challengeResults: RolesResultCommunity[] = [];
-      for (const challenge of challenges) {
-        const challengeAccountID = challenge.account?.id;
+      for (const subspace of subspaces) {
+        const challengeAccountID = subspace.account?.id;
         if (!challengeAccountID) {
           throw new RelationshipNotFoundException(
             `Unable to load account on Challenge in roles user: ${space.nameID}`,
@@ -55,21 +53,21 @@ export const getJourneyRolesForContributorQueryResult = (
         }
         if (challengeAccountID === accountID) {
           const challengeResult = new RolesResultCommunity(
-            challenge.nameID,
-            challenge.id,
-            challenge.profile.displayName
+            subspace.nameID,
+            subspace.id,
+            subspace.profile.displayName
           );
           challengeResult.userGroups = [];
-          challengeResult.roles = map.get('subspaces')?.get(challenge.id) ?? [];
+          challengeResult.roles = map.get('subspaces')?.get(subspace.id) ?? [];
           challengeResults.push(challengeResult);
         }
-        spaceResult.challenges = challengeResults;
+        spaceResult.subspaces = challengeResults;
       }
 
-      // TODO: also filter out opportunities in private challenges, for later...
+      // TODO: also filter out subsubspaces in private subspaces, for later...
       const opportunityResults: RolesResultCommunity[] = [];
-      for (const opportunity of opportunities) {
-        const opportunityAccountID = opportunity.account?.id;
+      for (const subsubspace of subsubspaces) {
+        const opportunityAccountID = subsubspace.account?.id;
         if (!opportunityAccountID) {
           throw new RelationshipNotFoundException(
             `Unable to load account on Opportunity in roles user: ${space.nameID}`,
@@ -78,16 +76,16 @@ export const getJourneyRolesForContributorQueryResult = (
         }
         if (opportunityAccountID === accountID) {
           const opportunityResult = new RolesResultCommunity(
-            opportunity.nameID,
-            opportunity.id,
-            opportunity.profile.displayName
+            subsubspace.nameID,
+            subsubspace.id,
+            subsubspace.profile.displayName
           );
           opportunityResult.userGroups = [];
           opportunityResult.roles =
-            map.get('subspaces')?.get(opportunity.id) ?? [];
+            map.get('subspaces')?.get(subsubspace.id) ?? [];
           opportunityResults.push(opportunityResult);
         }
-        spaceResult.opportunities = opportunityResults;
+        spaceResult.subsubspaces = opportunityResults;
       }
     }
     return spaceResult;

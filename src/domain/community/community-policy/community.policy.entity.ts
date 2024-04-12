@@ -1,7 +1,7 @@
 import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
 import { Column, Entity } from 'typeorm';
 import { ICommunityPolicy } from './community.policy.interface';
-import { ISpaceSettings } from '@domain/challenge/space.settings/space.settings.interface';
+import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 
 @Entity()
 export class CommunityPolicy

@@ -2,7 +2,6 @@ import { Field, ObjectType } from '@nestjs/graphql';
 import { IAuthenticationConfig } from './authentication';
 import { IPlatformLocations } from './locations';
 import { ISentryConfig } from './sentry';
-import { Template, ITemplate } from './template';
 import { IApmConfig } from './apm';
 import { IGeoConfig } from './integrations';
 import { IStorageConfig } from './storage';
@@ -15,12 +14,6 @@ export abstract class IConfig {
     description: 'Authentication configuration.',
   })
   authentication?: IAuthenticationConfig;
-
-  @Field(() => Template, {
-    nullable: false,
-    description: 'Alkemio template configuration.',
-  })
-  template?: ITemplate;
 
   @Field(() => IPlatformLocations, {
     nullable: false,

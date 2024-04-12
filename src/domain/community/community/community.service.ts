@@ -537,12 +537,8 @@ export class CommunityService {
       await this.isMemberInParentCommunity(agent, community.id);
     if (!hasMemberRoleInParent) {
       throw new ValidationException(
-        `Unable to find parent community ${parentCommunityId}`,
-        LogContext.CHALLENGES
-      );
-      throw new ValidationException(
         `Unable to assign Agent (${agent.id}) to community (${community.id}): agent is not a member of parent community ${parentCommunityId}`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     }
 
@@ -593,11 +589,11 @@ export class CommunityService {
       if (!parentCommunityId)
         throw new ValidationException(
           `Unable to find parent community ${parentCommunityId}`,
-          LogContext.CHALLENGES
+          LogContext.SPACES
         );
       throw new ValidationException(
         `Unable to assign Agent (${agent.id}) to community (${community.id}): agent is not a member of parent community ${parentCommunityId}`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     }
 
@@ -880,7 +876,7 @@ export class CommunityService {
   }
 
   public async getSpaceID(community: ICommunity): Promise<string> {
-    return await this.communityResolverService.getRootSpaceFromCommunityOrFail(
+    return await this.communityResolverService.getRootSpaceIDFromCommunityOrFail(
       community
     );
   }

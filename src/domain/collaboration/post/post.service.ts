@@ -90,7 +90,7 @@ export class PostService {
     if (!post)
       throw new EntityNotFoundException(
         `Not able to locate post with the specified ID: ${postID}`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     return post;
   }
