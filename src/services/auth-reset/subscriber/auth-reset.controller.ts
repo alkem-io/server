@@ -7,8 +7,7 @@ import {
   Transport,
 } from '@nestjs/microservices';
 import { Channel, Message } from 'amqplib';
-import { SpaceAuthorizationService } from '@domain/challenge/space/space.service.authorization';
-import { SpaceService } from '@domain/challenge/space/space.service';
+import { SpaceService } from '@domain/space/space/space.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext, MessagingQueue } from '@common/enums';
 import { PlatformAuthorizationService } from '@platform/platfrom/platform.service.authorization';
@@ -19,6 +18,7 @@ import { UserAuthorizationService } from '@domain/community/user/user.service.au
 import { AUTH_RESET_EVENT_TYPE } from '../event.type';
 import { TaskService } from '@services/task/task.service';
 import { AuthResetEventPayload } from '../auth-reset.payload.interface';
+import { AccountAuthorizationService } from '@domain/space/account/account.service.authorization';
 
 const MAX_RETRIES = 5;
 const RETRY_HEADER = 'x-retry-count';
@@ -28,7 +28,7 @@ export class AuthResetController {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private spaceService: SpaceService,
-    private spaceAuthorizationService: SpaceAuthorizationService,
+    private accountAuthorizationService: AccountAuthorizationService,
     private platformAuthorizationService: PlatformAuthorizationService,
     private organizationAuthorizationService: OrganizationAuthorizationService,
     private userAuthorizationService: UserAuthorizationService,
@@ -52,8 +52,14 @@ export class AuthResetController {
     const retryCount = originalMsg.properties.headers[RETRY_HEADER] ?? 0;
 
     try {
-      const space = await this.spaceService.getSpaceOrFail(payload.id);
-      await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
+      const space = await this.spaceService.getSpaceOrFail(payload.id, {
+        relations: {
+          account: true,
+        },
+      });
+      await this.accountAuthorizationService.applyAuthorizationPolicy(
+        space.account
+      );
 
       const message = `Finished resetting authorization for space with id ${payload.id}.`;
       this.logger.verbose?.(message, LogContext.AUTH_POLICY);

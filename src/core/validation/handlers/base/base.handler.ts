@@ -2,8 +2,7 @@
 /* eslint-disable @typescript-eslint/ban-types */
 
 import { CreateActorGroupInput } from '@domain/context/actor-group';
-import { UpdateChallengeInput } from '@domain/challenge/challenge';
-import { UpdateSpaceInput } from '@domain/challenge/space/dto/space.dto.update';
+import { UpdateSpaceInput } from '@domain/space/space/dto/space.dto.update';
 import { CreateRelationInput } from '@domain/collaboration/relation/relation.dto.create';
 import { CreateUserInput, UpdateUserInput } from '@domain/community/user/dto';
 import { ValidationException } from '@common/exceptions';
@@ -14,19 +13,15 @@ import {
   CreateOrganizationInput,
   UpdateOrganizationInput,
 } from '@domain/community/organization/dto';
-import {
-  CreateOpportunityInput,
-  UpdateOpportunityInput,
-} from '@domain/challenge/opportunity/dto';
+
 import {
   CreateUserGroupInput,
   UpdateUserGroupInput,
 } from '@domain/community/user-group/dto';
-import { CreateChallengeOnSpaceInput } from '@domain/challenge/space/dto/space.dto.create.challenge';
+import { CreateSubspaceOnSpaceInput } from '@domain/space/space/dto/space.dto.create.subspace';
 import { CreateActorInput, UpdateActorInput } from '@domain/context/actor';
 import { CommunityApplyInput } from '@domain/community/community/dto/community.dto.apply';
 import { CommunicationCreateDiscussionInput } from '@domain/communication/communication/dto/communication.dto.create.discussion';
-import { CreateFeedbackOnCommunityContextInput } from '@domain/community/community/dto/community.dto.create.feedback.on.context';
 import { CreateReferenceOnProfileInput } from '@domain/common/profile/dto/profile.dto.create.reference';
 import {
   CreateTagsetOnProfileInput,
@@ -81,11 +76,14 @@ import {
 import { UpdateUserPlatformSettingsInput } from '@domain/community/user/dto/user.dto.update.platform.settings';
 import { UpdateInnovationFlowStateInput } from '@domain/collaboration/innovation-flow-states/dto/innovation.flow.state.dto.update';
 import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
+import { UpdateSubspaceSettingsInput } from '@domain/space/space/dto/subspace.dto.update.settings';
+import { UpdateSpaceSettingsInput } from '@domain/space/space.settings/dto/space.settings.dto.update';
+import { UpdateSpaceSettingsOnSpaceInput } from '@domain/space/space/dto/space.dto.update.settings';
 import {
   CreateAccountInput,
-  UpdateAccountInput,
-} from '@domain/challenge/account/dto';
-import { UpdateAccountDefaultsInput } from '@domain/challenge/account/dto/account.dto.update.defaults';
+  UpdateAccountPlatformSettingsInput,
+} from '@domain/space/account/dto';
+import { UpdateAccountDefaultsInput } from '@domain/space/account/dto/account.dto.update.defaults';
 import { UpdateCommunityGuidelinesInput } from '@domain/community/community-guidelines/dto/community.guidelines.dto.update';
 
 export class BaseHandler extends AbstractHandler {
@@ -110,21 +108,19 @@ export class BaseHandler extends AbstractHandler {
       CreateCalloutTemplateOnTemplatesSetInput,
       CreatePostTemplateOnTemplatesSetInput,
       CreateWhiteboardTemplateOnTemplatesSetInput,
-      CreateChallengeOnSpaceInput,
+      CreateSubspaceOnSpaceInput,
       CreateLinkInput,
-      CreateOpportunityInput,
       CreateOrganizationInput,
       CreateUserGroupInput,
       CreateRelationInput,
       CreateUserInput,
-      CreateFeedbackOnCommunityContextInput,
       CreateReferenceOnProfileInput,
       CreateTagsetOnProfileInput,
       CreateCalendarEventOnCalendarInput,
       CreateAccountInput,
       DeleteDocumentInput,
       UpdateActorInput,
-      UpdateAccountInput,
+      UpdateAccountPlatformSettingsInput,
       UpdateAccountDefaultsInput,
       UpdatePostInput,
       UpdateDocumentInput,
@@ -136,9 +132,8 @@ export class BaseHandler extends AbstractHandler {
       UpdateCommunityApplicationFormInput,
       UpdateCommunityGuidelinesInput,
       UpdateSpaceInput,
+      UpdateSpaceSettingsInput,
       UpdateOrganizationInput,
-      UpdateOpportunityInput,
-      UpdateChallengeInput,
       UpdateLicenseInput,
       UpdateLinkInput,
       UpdateCalendarEventInput,
@@ -151,6 +146,9 @@ export class BaseHandler extends AbstractHandler {
       UpdateWhiteboardTemplateInput,
       UpdateDiscussionInput,
       UpdateEcosystemModelInput,
+      UpdateSpaceSettingsInput,
+      UpdateSpaceSettingsOnSpaceInput,
+      UpdateSubspaceSettingsInput,
       VisualUploadImageInput,
       CommunityApplyInput,
       CreateInvitationExistingUserOnCommunityInput,

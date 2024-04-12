@@ -4,13 +4,8 @@ import { InjectEntityManager } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { UserService } from '@domain/community/user/user.service';
-import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
-import { LogContext } from '@common/enums';
 import { ICommunity } from '@domain/community/community';
-import { OpportunityService } from '@domain/challenge/opportunity/opportunity.service';
 import { ApplicationService } from '@domain/community/application/application.service';
-import { CommunityService } from '@domain/community/community/community.service';
-import { RelationshipNotFoundException } from '@common/exceptions';
 import { IApplication } from '@domain/community/application';
 import { SpaceFilterService } from '@services/infrastructure/space-filter/space.filter.service';
 import { RolesUserInput } from './dto/roles.dto.input.user';
@@ -27,18 +22,18 @@ import { mapOrganizationCredentialsToRoles } from './util/map.organization.crede
 import { RolesResultSpace } from './dto/roles.dto.result.space';
 import { AgentInfo } from '@core/authentication';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { SpaceService } from '@domain/space/space/space.service';
+import { SpaceType } from '@common/enums/space.type';
 
 export class RolesService {
   constructor(
     @InjectEntityManager() private entityManager: EntityManager,
     private userService: UserService,
-    private challengeService: ChallengeService,
     private applicationService: ApplicationService,
     private invitationService: InvitationService,
-    private communityService: CommunityService,
-    private opportunityService: OpportunityService,
     private spaceFilterService: SpaceFilterService,
     private communityResolverService: CommunityResolverService,
+    private spaceService: SpaceService,
     private authorizationService: AuthorizationService,
     private organizationService: OrganizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -137,46 +132,36 @@ export class RolesService {
         community.id,
         community.type
       );
+    const spaceID =
+      await this.communityResolverService.getRootSpaceIDFromCommunityOrFail(
+        community
+      );
     const applicationResult = new ApplicationForRoleResult(
       community.id,
       communityDisplayName,
       state,
       application.id,
-      community.spaceID,
+      spaceID,
       application.createdDate,
       application.updatedDate
     );
 
-    const isSpaceCommunity = await this.communityService.isSpaceCommunity(
-      community
+    const space = await this.spaceService.getSpaceForCommunityOrFail(
+      community.id
     );
-
-    if (isSpaceCommunity) return applicationResult;
-
-    // For Challenge or an Opportunity, need to dig deeper...
-    const challengeForCommunity =
-      await this.challengeService.getChallengeForCommunity(community.id);
-
-    if (challengeForCommunity) {
-      // the application is issued for a challenge
-      applicationResult.challengeID = challengeForCommunity.id;
-      return applicationResult;
+    switch (space.type) {
+      case SpaceType.SPACE:
+        return applicationResult;
+      case SpaceType.CHALLENGE:
+        // the application is issued for a challenge
+        applicationResult.subspaceID = space.id;
+        return applicationResult;
+      case SpaceType.OPPORTUNITY:
+        // the application is issued for an an opportunity
+        applicationResult.subsubspaceID = space.id;
+        applicationResult.subspaceID = space.parentSpace?.id || '';
+        return applicationResult;
     }
-
-    const opportunityForCommunity =
-      await this.opportunityService.getOpportunityForCommunity(community.id);
-
-    if (!opportunityForCommunity || !opportunityForCommunity.challenge) {
-      throw new RelationshipNotFoundException(
-        `Unable to find Challenge or Opportunity with the community specified: ${community.id}`,
-        LogContext.COMMUNITY
-      );
-    }
-
-    // the application is issued for an an opportunity
-    applicationResult.opportunityID = opportunityForCommunity.id;
-    applicationResult.challengeID = opportunityForCommunity.challenge.id;
-    return applicationResult;
   }
 
   public async getUserInvitations(
@@ -220,12 +205,17 @@ export class RolesService {
         community.id,
         community.type
       );
+    const spaceID =
+      await this.communityResolverService.getRootSpaceIDFromCommunityOrFail(
+        community
+      );
+
     const invitationResult = new InvitationForRoleResult(
       community.id,
       communityDisplayName,
       state,
       invitation.id,
-      community.spaceID,
+      spaceID,
       invitation.createdDate,
       invitation.updatedDate
     );
@@ -233,35 +223,21 @@ export class RolesService {
     invitationResult.createdBy = invitation.createdBy;
     invitationResult.welcomeMessage = invitation.welcomeMessage;
 
-    const isSpaceCommunity = await this.communityService.isSpaceCommunity(
-      community
+    const space = await this.spaceService.getSpaceForCommunityOrFail(
+      community.id
     );
-
-    if (isSpaceCommunity) return invitationResult;
-
-    // For Challenge or an Opportunity, need to dig deeper...
-    const challengeForCommunity =
-      await this.challengeService.getChallengeForCommunity(community.id);
-
-    if (challengeForCommunity) {
-      // the invitation is issued for a challenge
-      invitationResult.challengeID = challengeForCommunity.id;
-      return invitationResult;
+    switch (space.type) {
+      case SpaceType.SPACE:
+        return invitationResult;
+      case SpaceType.CHALLENGE:
+        // the application is issued for a challenge
+        invitationResult.subspaceID = space.id;
+        return invitationResult;
+      case SpaceType.OPPORTUNITY:
+        // the application is issued for an an opportunity
+        invitationResult.subsubspaceID = space.id;
+        invitationResult.subspaceID = space.parentSpace?.id || '';
+        return invitationResult;
     }
-
-    const opportunityForCommunity =
-      await this.opportunityService.getOpportunityForCommunity(community.id);
-
-    if (!opportunityForCommunity || !opportunityForCommunity.challenge) {
-      throw new RelationshipNotFoundException(
-        `Unable to find Challenge or Opportunity with the community specified: ${community.id}`,
-        LogContext.COMMUNITY
-      );
-    }
-
-    // the invitation is issued for an an opportunity
-    invitationResult.opportunityID = opportunityForCommunity.id;
-    invitationResult.challengeID = opportunityForCommunity.challenge.id;
-    return invitationResult;
   }
 }

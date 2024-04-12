@@ -19,7 +19,6 @@ import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { ActivityInputCalloutPublished } from '@services/adapters/activity-adapter/dto/activity.dto.input.callout.published';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
-import { NotificationInputCollaborationInterest } from '@services/adapters/notification-adapter/dto/notification.dto.input.collaboration.interest';
 import { NotificationInputCalloutPublished } from '@services/adapters/notification-adapter/dto/notification.dto.input.callout.published';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
@@ -101,14 +100,6 @@ export class CollaborationResolverMutations {
         relationData
       );
 
-    // Send the notification
-    const notificationInput: NotificationInputCollaborationInterest = {
-      triggeredBy: agentInfo.userID,
-      relation: relation,
-      collaboration: collaboration,
-    };
-    await this.notificationAdapter.collaborationInterest(notificationInput);
-
     return this.relationAuthorizationService.applyAuthorizationPolicy(
       relation,
       collaborationAuthorizationPolicy,
@@ -170,9 +161,13 @@ export class CollaborationResolverMutations {
       this.activityAdapter.calloutPublished(activityLogInput);
     }
 
-    const { spaceID } =
+    const community =
       await this.communityResolverService.getCommunityFromCalloutOrFail(
         callout.id
+      );
+    const spaceID =
+      await this.communityResolverService.getRootSpaceIDFromCommunityOrFail(
+        community
       );
 
     this.contributionReporter.calloutCreated(

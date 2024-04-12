@@ -95,8 +95,7 @@ export class CommunityService {
     community.policy = await this.communityPolicyService.createCommunityPolicy(
       policy.member,
       policy.lead,
-      policy.admin,
-      policy.host
+      policy.admin
     );
 
     community.guidelines =
@@ -104,7 +103,6 @@ export class CommunityService {
         communityData.guidelines,
         storageAggregator
       );
-    community.spaceID = communityData.spaceID;
     community.applicationForm = await this.formService.createForm(
       communityData.applicationForm
     );
@@ -117,7 +115,7 @@ export class CommunityService {
     community.communication =
       await this.communicationService.createCommunication(
         communityData.name,
-        communityData.spaceID,
+        '',
         Object.values(DiscussionCategoryCommunity)
       );
     return await this.communityRepository.save(community);
@@ -125,7 +123,7 @@ export class CommunityService {
 
   async createGroup(groupData: CreateUserGroupInput): Promise<IUserGroup> {
     const communityID = groupData.parentID;
-    const groupName = groupData.profileData.displayName;
+    const groupName = groupData.profile.displayName;
 
     this.logger.verbose?.(
       `Adding userGroup (${groupName}) to Community (${communityID})`,
@@ -144,8 +142,7 @@ export class CommunityService {
     const group = await this.userGroupService.addGroupWithName(
       community,
       groupName,
-      storageAggregator,
-      community.spaceID
+      storageAggregator
     );
     await this.communityRepository.save(community);
 
@@ -164,6 +161,33 @@ export class CommunityService {
       );
     }
     return communityWithGroups.groups;
+  }
+
+  // Loads the group into the Community entity if not already present
+  async getUserGroup(
+    community: ICommunity,
+    groupID: string
+  ): Promise<IUserGroup> {
+    const communityWithGroups = await this.getCommunityOrFail(community.id, {
+      relations: { groups: true },
+    });
+    if (!communityWithGroups.groups) {
+      throw new EntityNotInitializedException(
+        `Community not initialized: ${community.id}`,
+        LogContext.COMMUNITY
+      );
+    }
+    const result = communityWithGroups.groups.find(
+      group => group.id === groupID
+    );
+    if (!result) {
+      throw new EntityNotFoundException(
+        `Unable to find group with ID: '${groupID}'`,
+        LogContext.COMMUNITY,
+        { communityId: community.id, communityType: community.type }
+      );
+    }
+    return result;
   }
 
   async getCommunityOrFail(
@@ -501,6 +525,7 @@ export class CommunityService {
   }
 
   async assignUserToRole(
+    spaceID: string, // TODO: temporary until have spaces merged
     community: ICommunity,
     userID: string,
     role: CommunityRole,
@@ -512,12 +537,8 @@ export class CommunityService {
       await this.isMemberInParentCommunity(agent, community.id);
     if (!hasMemberRoleInParent) {
       throw new ValidationException(
-        `Unable to find parent community ${parentCommunityId}`,
-        LogContext.CHALLENGES
-      );
-      throw new ValidationException(
         `Unable to assign Agent (${agent.id}) to community (${community.id}): agent is not a member of parent community ${parentCommunityId}`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     }
 
@@ -527,7 +548,6 @@ export class CommunityService {
       role,
       CommunityContributorType.USER
     );
-
     if (role === CommunityRole.MEMBER) {
       this.addMemberToCommunication(user, community);
 
@@ -542,6 +562,7 @@ export class CommunityService {
           const displayName = await this.getDisplayName(community);
           await this.communityEventsService.processCommunityNewMemberEvents(
             community,
+            spaceID,
             displayName,
             agentInfo,
             user
@@ -568,11 +589,11 @@ export class CommunityService {
       if (!parentCommunityId)
         throw new ValidationException(
           `Unable to find parent community ${parentCommunityId}`,
-          LogContext.CHALLENGES
+          LogContext.SPACES
         );
       throw new ValidationException(
         `Unable to assign Agent (${agent.id}) to community (${community.id}): agent is not a member of parent community ${parentCommunityId}`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     }
 
@@ -854,6 +875,12 @@ export class CommunityService {
       );
   }
 
+  public async getSpaceID(community: ICommunity): Promise<string> {
+    return await this.communityResolverService.getRootSpaceIDFromCommunityOrFail(
+      community
+    );
+  }
+
   private async assignContributorToRole(
     community: ICommunity,
     agent: IAgent,
@@ -956,13 +983,6 @@ export class CommunityService {
     return validCredential;
   }
 
-  async getCommunities(spaceId: string): Promise<Community[]> {
-    const communites = await this.communityRepository.find({
-      where: { spaceID: spaceId },
-    });
-    return communites || [];
-  }
-
   async createApplication(
     applicationData: CreateApplicationInput
   ): Promise<IApplication> {
@@ -975,15 +995,8 @@ export class CommunityService {
 
     await this.validateApplicationFromUser(user, agent, community);
 
-    const spaceID = community.spaceID;
-    if (!spaceID)
-      throw new EntityNotInitializedException(
-        `Unable to locate containing space: ${community.id}`,
-        LogContext.COMMUNITY
-      );
     const application = await this.applicationService.createApplication(
-      applicationData,
-      spaceID
+      applicationData
     );
     community.applications?.push(application);
     await this.communityRepository.save(community);
@@ -1135,25 +1148,6 @@ export class CommunityService {
         );
       }
     }
-  }
-
-  async getCommunityInAccountOrFail(
-    communityID: string,
-    accountID: string
-  ): Promise<ICommunity> {
-    const community = await this.communityRepository.findOneBy({
-      id: communityID,
-      spaceID: accountID,
-    });
-
-    if (!community) {
-      throw new EntityNotFoundException(
-        `Unable to find Community with ID: ${communityID}`,
-        LogContext.COMMUNITY
-      );
-    }
-
-    return community;
   }
 
   async getApplications(community: ICommunity): Promise<IApplication[]> {

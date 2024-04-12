@@ -16,6 +16,7 @@ import { CreateFeatureFlagInput } from '../feature-flag/dto/feature.flag.dto.cre
 import { FeatureFlagService } from '../feature-flag/feature.flag.service';
 import { FeatureFlag } from '../feature-flag/feature.flag.entity';
 import { matchEnumString } from '@common/utils/match.enum';
+import { CreateLicenseInput } from './dto/license.dto.create';
 
 @Injectable()
 export class LicenseService {
@@ -27,8 +28,12 @@ export class LicenseService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  public async createLicense(): Promise<ILicense> {
+  public async createLicense(
+    licenseInput: CreateLicenseInput
+  ): Promise<ILicense> {
     const license: ILicense = License.create();
+    this.updateLicense(license, licenseInput);
+
     license.authorization = AuthorizationPolicy.create();
     // default to active space
     license.visibility = SpaceVisibility.ACTIVE;

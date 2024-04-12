@@ -2,12 +2,11 @@ import { IOrganization } from '@domain/community/organization/organization.inter
 import { IUserGroup } from '@domain/community/user-group/user-group.interface';
 import { Field, InterfaceType } from '@nestjs/graphql';
 import { ICommunity } from '@domain/community/community/community.interface';
+import { Community } from '@domain/community/community/community.entity';
 
 @InterfaceType('Groupable', {
   resolveType(groupable) {
-    if (groupable.spaceID) {
-      return ICommunity;
-    }
+    if (groupable instanceof Community) return ICommunity;
     return IOrganization;
   },
 })

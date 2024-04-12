@@ -22,8 +22,8 @@ enum SearchEntityTypes {
   USER = 'user',
   ORGANIZATION = 'organization',
   SPACE = 'space',
-  CHALLENGE = 'challenge',
-  OPPORTUNITY = 'opportunity',
+  SUBSPACE = 'subspace',
+  SUBSUBSPACE = 'subsubspace',
   POST = 'post',
 }
 
@@ -36,8 +36,8 @@ const TYPE_TO_INDEX = (
   indexPattern: string
 ): Record<SearchEntityTypes, string> => ({
   [SearchEntityTypes.SPACE]: `${indexPattern}spaces`,
-  [SearchEntityTypes.CHALLENGE]: `${indexPattern}challenges`,
-  [SearchEntityTypes.OPPORTUNITY]: `${indexPattern}opportunities`,
+  [SearchEntityTypes.SUBSPACE]: `${indexPattern}subspace`,
+  [SearchEntityTypes.SUBSUBSPACE]: `${indexPattern}subsubspaces`,
   [SearchEntityTypes.POST]: `${indexPattern}posts`,
   [SearchEntityTypes.USER]: `${indexPattern}users`,
   [SearchEntityTypes.ORGANIZATION]: `${indexPattern}organizations`,
@@ -47,10 +47,10 @@ const INDEX_TO_TYPE = (
 ): Record<string, SearchEntityTypes> => ({
   [TYPE_TO_INDEX(indexPattern)[SearchEntityTypes.SPACE]]:
     SearchEntityTypes.SPACE,
-  [TYPE_TO_INDEX(indexPattern)[SearchEntityTypes.CHALLENGE]]:
-    SearchEntityTypes.CHALLENGE,
-  [TYPE_TO_INDEX(indexPattern)[SearchEntityTypes.OPPORTUNITY]]:
-    SearchEntityTypes.OPPORTUNITY,
+  [TYPE_TO_INDEX(indexPattern)[SearchEntityTypes.SUBSPACE]]:
+    SearchEntityTypes.SUBSPACE,
+  [TYPE_TO_INDEX(indexPattern)[SearchEntityTypes.SUBSUBSPACE]]:
+    SearchEntityTypes.SUBSUBSPACE,
   [TYPE_TO_INDEX(indexPattern)[SearchEntityTypes.POST]]: SearchEntityTypes.POST,
   [TYPE_TO_INDEX(indexPattern)[SearchEntityTypes.USER]]: SearchEntityTypes.USER,
   [TYPE_TO_INDEX(indexPattern)[SearchEntityTypes.ORGANIZATION]]:
@@ -60,8 +60,8 @@ const TYPE_TO_PUBLIC_INDEX = (
   indexPattern: string
 ): Record<SearchEntityTypesPublic, string> => ({
   [SearchEntityTypes.SPACE]: `${indexPattern}spaces`,
-  [SearchEntityTypes.CHALLENGE]: `${indexPattern}challenges`,
-  [SearchEntityTypes.OPPORTUNITY]: `${indexPattern}opportunities`,
+  [SearchEntityTypes.SUBSPACE]: `${indexPattern}subspaces`,
+  [SearchEntityTypes.SUBSUBSPACE]: `${indexPattern}subsubspaces`,
   [SearchEntityTypes.POST]: `${indexPattern}posts`,
 });
 

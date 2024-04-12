@@ -110,10 +110,11 @@ export class CommunityAuthorizationService {
     // always false
     community.authorization.anonymousReadAccess = false;
 
-    await this.communicationAuthorizationService.applyAuthorizationPolicy(
-      community.communication,
-      community.authorization
-    );
+    community.communication =
+      await this.communicationAuthorizationService.applyAuthorizationPolicy(
+        community.communication,
+        community.authorization
+      );
 
     // cascade
     for (const group of community.groups) {
@@ -153,10 +154,11 @@ export class CommunityAuthorizationService {
     }
 
     if (community.guidelines) {
-      await this.communityGuidelinesAuthorizationService.applyAuthorizationPolicy(
-        community.guidelines,
-        community.authorization
-      );
+      community.guidelines =
+        await this.communityGuidelinesAuthorizationService.applyAuthorizationPolicy(
+          community.guidelines,
+          community.authorization
+        );
     }
 
     return await this.communityRepository.save(community);

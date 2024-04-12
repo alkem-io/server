@@ -22,7 +22,7 @@ import { TimelineModule } from '@domain/timeline/timeline/timeline.module';
 import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
 import { LicenseModule } from '@domain/license/license/license.module';
 import { InnovationFlowModule } from '../innovation-flow/innovation.flow.module';
-import { SpaceDefaultsModule } from '@domain/challenge/space.defaults/space.defaults.module';
+import { SpaceDefaultsModule } from '@domain/space/space.defaults/space.defaults.module';
 import { CalloutGroupsModule } from '../callout-groups/callout.group.module';
 
 @Module({

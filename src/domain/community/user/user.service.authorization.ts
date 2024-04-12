@@ -234,9 +234,9 @@ export class UserAuthorizationService {
           type: AuthorizationCredential.SPACE_ADMIN,
           resourceID: credential.resourceID,
         });
-      } else if (credential.type === AuthorizationCredential.CHALLENGE_MEMBER) {
+      } else if (credential.type === AuthorizationCredential.SUBSPACE_MEMBER) {
         readUserPiiCredentials.push({
-          type: AuthorizationCredential.CHALLENGE_ADMIN,
+          type: AuthorizationCredential.SUBSPACE_ADMIN,
           resourceID: credential.resourceID,
         });
       } else if (

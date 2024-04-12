@@ -10,7 +10,7 @@ export const spacesQuery = gql`
       community {
         id
       }
-      challenges {
+      subspaces {
         nameID
         profile {
           displayName
@@ -18,7 +18,7 @@ export const spacesQuery = gql`
         community {
           id
         }
-        opportunities {
+        subspaces {
           nameID
           profile {
             displayName

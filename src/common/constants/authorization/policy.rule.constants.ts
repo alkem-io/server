@@ -1,5 +1,5 @@
-export const POLICY_RULE_SPACE_CREATE_CHALLENGE =
-  'policyRule-spaceCreateChallenge';
+export const POLICY_RULE_SPACE_CREATE_SUBSPACE =
+  'policyRule-spaceCreateSubspace';
 export const POLICY_RULE_WHITEBOARD_CONTENT_UPDATE =
   'policyRule-whiteboardContentUpdate';
 export const POLICY_RULE_VISUAL_UPDATE = 'policyRule-visualUpdate';

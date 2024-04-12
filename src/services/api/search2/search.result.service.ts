@@ -2,14 +2,11 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager, In } from 'typeorm';
 import { groupBy, intersection, orderBy } from 'lodash';
-import { Space } from '@domain/challenge/space/space.entity';
+import { Space } from '@domain/space/space/space.entity';
 import { ISearchResult } from '@services/api/search/dto/search.result.entry.interface';
 import { ISearchResultSpace } from '@services/api/search/dto/search.result.dto.entry.space';
 import { ISearchResultChallenge } from '@services/api/search/dto/search.result.dto.entry.challenge';
-import { Challenge } from '@domain/challenge/challenge/challenge.entity';
-import { ISpace } from '@domain/challenge/space/space.interface';
-import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
-import { IOpportunity, Opportunity } from '@domain/challenge/opportunity';
+import { ISpace } from '@domain/space/space/space.interface';
 import { BaseException } from '@common/exceptions/base.exception';
 import {
   AlkemioErrorStatus,
@@ -31,22 +28,23 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UserService } from '@domain/community/user/user.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
-import { EntityNotFoundException } from '@common/exceptions';
+import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
+import { SpaceLevel } from '@common/enums/space.level';
 
 export type PostParents = {
   post: IPost;
   callout: ICallout;
   space: ISpace;
-  challenge: IChallenge | undefined;
-  opportunity: IOpportunity | undefined;
+  subspace: ISpace | undefined;
+  subsubspace: ISpace | undefined;
 };
 
 export type PostParentIDs = {
   postID: string;
   calloutID: string;
   spaceID: string;
-  challengeID: string | undefined;
-  opportunityID: string | undefined;
+  subspaceID: string | undefined;
+  subsubspaceID: string | undefined;
 };
 
 @Injectable()
@@ -72,7 +70,7 @@ export class SearchResultService {
   ): Promise<ISearchResults> {
     const groupedResults = groupBy(rawSearchResults, 'type');
     // authorize entities with requester and enrich with data
-    const [spaces, challenges, opportunities, users, organizations, posts] =
+    const [spaces, subspaces, subsubspaces, users, organizations, posts] =
       await Promise.all([
         this.getSpaceSearchResults(
           groupedResults.space ?? [],
@@ -103,7 +101,7 @@ export class SearchResultService {
     );
     const contributionResults = orderBy([...posts], 'score', 'desc');
     const journeyResults = orderBy(
-      [...spaces, ...challenges, ...opportunities],
+      [...spaces, ...subspaces, ...subsubspaces],
       'score',
       'desc'
     );
@@ -177,18 +175,18 @@ export class SearchResultService {
       return [];
     }
 
-    const challengeIds = rawSearchResults.map(hit => hit.result.id);
+    const subspaceIds = rawSearchResults.map(hit => hit.result.id);
 
-    const challenges = await this.entityManager.find(Challenge, {
-      where: { id: In(challengeIds) },
-      relations: { space: true },
-      select: { id: true, space: { id: true } },
+    const subspaces = await this.entityManager.find(Space, {
+      where: { id: In(subspaceIds), level: SpaceLevel.CHALLENGE },
+      relations: { parentSpace: true },
+      select: { id: true, parentSpace: { id: true } },
     });
 
-    return challenges
-      .map<ISearchResultChallenge | undefined>(challenge => {
+    return subspaces
+      .map<ISearchResultChallenge | undefined>(subspace => {
         const rawSearchResult = rawSearchResults.find(
-          hit => hit.result.id === challenge.id
+          hit => hit.result.id === subspace.id
         );
 
         if (!rawSearchResult) {
@@ -197,7 +195,7 @@ export class SearchResultService {
             LogContext.SEARCH,
             AlkemioErrorStatus.NOT_FOUND,
             {
-              challengeId: challenge.id,
+              challengeId: subspace.id,
               cause:
                 'Challenge is not found in the return search results. Can not guess the cause',
             }
@@ -206,13 +204,23 @@ export class SearchResultService {
           return undefined;
         }
 
-        if (!challenge.space) {
+        if (
+          !this.authorizationService.isAccessGranted(
+            agentInfo,
+            subspace.authorization,
+            AuthorizationPrivilege.READ
+          )
+        ) {
+          return undefined;
+        }
+
+        if (!subspace.parentSpace) {
           const error = new BaseException(
             'Unable to find parent space for challenge while building search results',
             LogContext.SEARCH,
             AlkemioErrorStatus.ENTITY_NOT_INITIALIZED,
             {
-              challengeId: challenge.id,
+              challengeId: subspace.id,
               cause: 'Relation is not loaded. Could be due to broken data',
             }
           );
@@ -223,7 +231,7 @@ export class SearchResultService {
         if (
           !this.authorizationService.isAccessGranted(
             agentInfo,
-            challenge.authorization,
+            subspace.authorization,
             AuthorizationPrivilege.READ
           )
         ) {
@@ -232,8 +240,8 @@ export class SearchResultService {
 
         return {
           ...rawSearchResult,
-          challenge: challenge as IChallenge,
-          space: challenge.space as ISpace,
+          subspace: subspace as ISpace,
+          space: subspace.parentSpace as ISpace,
         };
       })
       .filter((challenge): challenge is ISearchResultChallenge => !!challenge);
@@ -247,49 +255,62 @@ export class SearchResultService {
       return [];
     }
 
-    const opportunityIds = rawSearchResults.map(hit => hit.result.id);
+    const subsubspaceIds = rawSearchResults.map(hit => hit.result.id);
 
-    const opportunities = await this.entityManager.find(Opportunity, {
-      where: { id: In(opportunityIds) },
-      relations: { challenge: { space: true } },
-      select: { challenge: { id: true, space: { id: true } } },
+    const subsubspaces = await this.entityManager.find(Space, {
+      where: {
+        id: In(subsubspaceIds),
+        level: SpaceLevel.OPPORTUNITY,
+      },
+      relations: { parentSpace: { parentSpace: true } },
+      select: { parentSpace: { id: true, parentSpace: { id: true } } },
     });
 
-    return opportunities
-      .map<ISearchResultChallenge | undefined>(opportunity => {
+    return subsubspaces
+      .map<ISearchResultChallenge | undefined>(subsubspace => {
         const rawSearchResult = rawSearchResults.find(
-          hit => hit.result.id === opportunity.id
+          hit => hit.result.id === subsubspace.id
         );
 
         if (!rawSearchResult) {
           this.logger.error(
-            `Unable to find raw search result for Opportunity: ${opportunity.id}`,
+            `Unable to find raw search result for Opportunity: ${subsubspace.id}`,
             undefined,
             LogContext.SEARCH
           );
           return undefined;
         }
 
-        if (!opportunity.challenge) {
+        if (
+          !this.authorizationService.isAccessGranted(
+            agentInfo,
+            subsubspace.authorization,
+            AuthorizationPrivilege.READ
+          )
+        ) {
+          return undefined;
+        }
+
+        if (!subsubspace.parentSpace) {
           throw new BaseException(
             'Unable to find parent challenge for opportunity while building search results',
             LogContext.SEARCH,
             AlkemioErrorStatus.NOT_FOUND,
             {
-              opportunityId: opportunity.id,
+              opportunityId: subsubspace.id,
               cause: 'Relation is not loaded. Could be due to broken data',
             }
           );
         }
 
-        if (!opportunity.challenge.space) {
+        if (!subsubspace.parentSpace.parentSpace) {
           throw new BaseException(
             'Unable to find parent space for challenge while building search results',
             LogContext.SEARCH,
             AlkemioErrorStatus.NOT_FOUND,
             {
-              challengeId: opportunity.challenge.id,
-              opportunityId: opportunity.id,
+              challengeId: subsubspace.parentSpace.id,
+              opportunityId: subsubspace.id,
               cause: 'Relation is not loaded. Could be due to broken data',
             }
           );
@@ -298,7 +319,7 @@ export class SearchResultService {
         if (
           !this.authorizationService.isAccessGranted(
             agentInfo,
-            opportunity.authorization,
+            subsubspace.authorization,
             AuthorizationPrivilege.READ
           )
         ) {
@@ -307,9 +328,9 @@ export class SearchResultService {
 
         return {
           ...rawSearchResult,
-          opportunity: opportunity as IOpportunity,
-          challenge: opportunity.challenge as IChallenge,
-          space: opportunity.challenge.space as ISpace,
+          opportunity: subsubspace as ISpace,
+          subspace: subsubspace.parentSpace as ISpace,
+          space: subsubspace.parentSpace.parentSpace as ISpace,
         };
       })
       .filter(
@@ -457,8 +478,7 @@ export class SearchResultService {
           ...rawSearchResult,
           callout: postParent.callout,
           space: postParent.space,
-          challenge: postParent.challenge,
-          opportunity: postParent.opportunity,
+          subspace: postParent.subspace,
           post: postParent.post,
         };
       })
@@ -466,97 +486,44 @@ export class SearchResultService {
   }
 
   private async getPostParents(posts: Post[]): Promise<PostParents[]> {
-    if (!posts.length) {
-      return [];
-    }
-
-    const postIdsFormatted = posts.map(({ id }) => `'${id}'`).join(',');
-    const queryResult: PostParentIDs[] = await this.entityManager.connection
-      .query(`
-        SELECT \`post\`.\`id\` as postID, \`space\`.\`id\` as \`spaceID\`, \`challenge\`.\`id\` as \`challengeID\`, null as \'opportunityID\', \`callout\`.\`id\` as \`calloutID\` FROM \`callout\`
-        RIGHT JOIN \`challenge\` on \`challenge\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
-        JOIN \`space\` on \`challenge\`.\`spaceID\` = \`space\`.\`id\`
-        JOIN \`callout_contribution\` on \`callout\`.\`id\` = \`callout_contribution\`.\`calloutId\`
-        JOIN \`post\` on \`post\`.\`id\` = \`callout_contribution\`.\`postId\`
-        WHERE \`post\`.\`id\` in (${postIdsFormatted}) UNION
-
-        SELECT \`post\`.\`id\` as postID, \`space\`.\`id\` as \`spaceID\`, null as \'challengeID\', null as \'opportunityID\', \`callout\`.\`id\` as \`calloutID\`  FROM \`callout\`
-        RIGHT JOIN \`space\` on \`space\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
-        JOIN \`callout_contribution\` on \`callout\`.\`id\` = \`callout_contribution\`.\`calloutId\`
-        JOIN \`post\` on \`post\`.\`id\` = \`callout_contribution\`.\`postId\`
-        WHERE \`post\`.\`id\` in (${postIdsFormatted}) UNION
-
-        SELECT \`post\`.\`id\` as postID, \`space\`.\`id\` as \`spaceID\`, \`challenge\`.\`id\` as \`challengeID\`, \`opportunity\`.\`id\` as \`opportunityID\`, \`callout\`.\`id\` as \`calloutID\` FROM \`callout\`
-        RIGHT JOIN \`opportunity\` on \`opportunity\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
-        JOIN \`challenge\` on \`opportunity\`.\`challengeId\` = \`challenge\`.\`id\`
-        JOIN \`account\` on \`opportunity\`.\`accountId\` = \`account\`.\`id\`
-        JOIN \`space\` on \`account\`.\`id\` = \`space\`.\`accountId\`
-        JOIN \`callout_contribution\` on \`callout\`.\`id\` = \`callout_contribution\`.\`calloutId\`
-        JOIN \`post\` on \`post\`.\`id\` = \`callout_contribution\`.\`postId\`
-        WHERE \`post\`.\`id\` in (${postIdsFormatted});
-      `);
-
     const postParents: PostParents[] = [];
-    for (const result of queryResult) {
-      const challengePromise = result.challengeID
-        ? this.entityManager
-            .findOneByOrFail(Challenge, { id: result.challengeID })
-            .then(x => (x === null ? undefined : x))
-            .catch(
-              notFoundParentForPostHandler(
-                result,
-                'Challenge not found for Post while resolving search results.'
-              )
-            )
-        : undefined;
-      const opportunityPromise = result.opportunityID
-        ? this.entityManager
-            .findOneByOrFail(Opportunity, {
-              id: result.opportunityID,
-            })
-            .then(x => (x === null ? undefined : x))
-            .catch(
-              notFoundParentForPostHandler(
-                result,
-                'Opportunity not found for Post while resolving search results.'
-              )
-            )
-        : undefined;
-      const calloutPromise = this.entityManager
-        .findOneByOrFail(Callout, { id: result.calloutID })
-        .catch(
-          notFoundParentForPostHandler(
-            result,
-            'Callout not found for Post while resolving search results.'
-          )
+    if (!posts.length) {
+      return postParents;
+    }
+    for (const post of posts) {
+      const callout = await this.entityManager.findOne(Callout, {
+        where: {
+          contributions: {
+            post: {
+              id: post.id,
+            },
+          },
+        },
+      });
+      if (!callout) {
+        throw new RelationshipNotFoundException(
+          `Unable to find callout for post: ${post.id}`,
+          LogContext.SEARCH
         );
-      const spacePromise = this.entityManager
-        .findOneByOrFail(Space, { id: result.spaceID })
-        .catch(
-          notFoundParentForPostHandler(
-            result,
-            'Space not found for Post while resolving search results.'
-          )
-        );
-
-      const [callout, space, challenge, opportunity] = await Promise.all([
-        calloutPromise,
-        spacePromise,
-        challengePromise,
-        opportunityPromise,
-      ]);
-      const post = posts.find(post => post.id === result.postID);
-
-      if (!post) {
-        throw new BaseException(
-          'Post not found in Posts array while building search results',
-          LogContext.SEARCH,
-          AlkemioErrorStatus.NOT_FOUND,
-          {
-            postID: result.postID,
-            cause:
-              'Post is not found in the return search results. Cause unknown',
-          }
+      }
+      const space = await this.entityManager.findOne(Space, {
+        where: {
+          collaboration: {
+            callouts: {
+              id: callout.id,
+            },
+          },
+        },
+        relations: {
+          parentSpace: {
+            parentSpace: true,
+          },
+        },
+      });
+      if (!space) {
+        throw new RelationshipNotFoundException(
+          `Unable to find space parents for callout${callout.id}`,
+          LogContext.SEARCH
         );
       }
 
@@ -564,8 +531,8 @@ export class SearchResultService {
         post,
         callout,
         space,
-        challenge,
-        opportunity,
+        subspace: space.parentSpace,
+        subsubspace: space.parentSpace?.parentSpace,
       });
     }
 
@@ -609,7 +576,7 @@ export class SearchResultService {
 
     const leadsInSpace =
       await this.organizationService.organizationsWithCredentials({
-        type: AuthorizationCredential.SPACE_HOST,
+        type: AuthorizationCredential.SPACE_LEAD,
         resourceID: spaceId,
       });
     orgsInSpace.push(...leadsInSpace.map(org => org.id));
@@ -617,20 +584,3 @@ export class SearchResultService {
     return orgsInSpace;
   }
 }
-
-const notFoundParentForPostHandler =
-  (result: PostParentIDs, cause: string) => (error: Error) => {
-    throw new EntityNotFoundException(
-      'Error while extracting search results',
-      LogContext.SEARCH_RESULT,
-      {
-        cause,
-        originalException: error,
-        spaceId: result.spaceID,
-        calloutId: result.calloutID,
-        challengeId: result.challengeID,
-        opportunityId: result.opportunityID,
-        postId: result.postID,
-      }
-    );
-  };

@@ -19,7 +19,6 @@ import { IPreference } from './preference.interface';
 import { getDefaultPreferenceValue, validateValue } from './utils';
 import { CreatePreferenceDefinitionInput } from './dto/preference-definition.dto.create';
 import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set';
-import { SpacePreferenceType } from '@common/enums/space.preference.type';
 import { PreferenceType } from '@common/enums/preference.type';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 
@@ -62,7 +61,7 @@ export class PreferenceService {
   async definitionExists(
     group: string,
     valueType: PreferenceValueType,
-    type: UserPreferenceType | SpacePreferenceType
+    type: UserPreferenceType
   ) {
     const res = await this.definitionRepository.findOneBy({
       group,
@@ -87,7 +86,7 @@ export class PreferenceService {
     if (!reference)
       throw new EntityNotFoundException(
         `Not able to locate preference with the specified ID: ${preferenceID}`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     return reference;
   }
@@ -130,7 +129,7 @@ export class PreferenceService {
     if (preference.preferenceDefinition.definitionSet !== definitionSet) {
       throw new ValidationException(
         `Expected preference to be in the following definition set: ${definitionSet}`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     }
   }

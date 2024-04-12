@@ -327,8 +327,10 @@ export class ExcalidrawServer {
     const windowEnd = Date.now();
     const windowStart = windowEnd - this.contributionWindowMs;
 
-    const { spaceID } =
+    const community =
       await this.communityResolver.getCommunityFromWhiteboardOrFail(roomId);
+    const spaceID =
+      await this.communityResolver.getRootSpaceIDFromCommunityOrFail(community);
     const wb = await this.whiteboardService.getProfile(roomId);
 
     const sockets = await this.wsServer.in(roomId).fetchSockets();

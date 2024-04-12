@@ -7,7 +7,6 @@ export class CreateCommunityInput {
   guidelines!: CreateCommunityGuidelinesInput;
 
   name!: string;
-  spaceID!: string;
   type!: SpaceType;
   policy!: ICommunityPolicyDefinition;
   applicationForm!: CreateFormInput;
