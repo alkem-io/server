@@ -431,7 +431,7 @@ export class UrlGeneratorService {
       `
     );
 
-    if (!result) {
+    if (!result || !result.spaceId) {
       return undefined;
     }
 
@@ -465,7 +465,7 @@ export class UrlGeneratorService {
       `
     );
 
-    if (!result) {
+    if (!result || !result.challengeId) {
       return undefined;
     }
 
