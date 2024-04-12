@@ -13,9 +13,9 @@ export class UpdateInnovationFlowStateInput {
   displayName!: string;
 
   @Field(() => Markdown, {
-    nullable: false,
+    nullable: true,
     description: 'The explation text to clarify the State.',
   })
   @MaxLength(LONG_TEXT_LENGTH)
-  description!: string;
+  description?: string;
 }
