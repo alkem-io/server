@@ -243,10 +243,11 @@ export class SpaceResolverMutations {
       agentInfo
     );
 
-    await this.spaceAuthorizationService.applyAuthorizationPolicy(
-      subspace,
-      space.authorization
-    );
+    const subspaceAuth =
+      await this.spaceAuthorizationService.applyAuthorizationPolicy(
+        subspace,
+        space.authorization
+      );
 
     this.activityAdapter.subspaceCreated(
       {
@@ -269,16 +270,16 @@ export class SpaceResolverMutations {
       }
     );
 
-    const challengeCreatedEvent: SubspaceCreatedPayload = {
+    const subspaceCreatedEvent: SubspaceCreatedPayload = {
       eventID: `space-challenge-created-${Math.round(Math.random() * 100)}`,
       spaceID: space.id,
       subspace: subspace,
     };
     this.subspaceCreatedSubscription.publish(
       SubscriptionType.SUBSPACE_CREATED,
-      challengeCreatedEvent
+      subspaceCreatedEvent
     );
 
-    return subspace;
+    return subspaceAuth;
   }
 }
