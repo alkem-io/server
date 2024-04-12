@@ -19,13 +19,13 @@ import { Context } from '@domain/context/context/context.entity';
 import { Agent } from '@domain/agent/agent/agent.entity';
 @Entity()
 export class Space extends NameableEntity implements ISpace {
-  @OneToMany(() => Space, space => space.subspaces, {
+  @OneToMany(() => Space, space => space.parentSpace, {
     eager: false,
     cascade: false,
   })
   subspaces?: Space[];
 
-  @ManyToOne(() => Space, space => space.parentSpace, {
+  @ManyToOne(() => Space, space => space.subspaces, {
     eager: false,
     cascade: false,
   })

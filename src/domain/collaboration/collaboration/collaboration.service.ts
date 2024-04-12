@@ -248,7 +248,9 @@ export class CollaborationService {
       where: { collaboration: { id: collaborationID } },
       relations: {
         account: true,
-        subspaces: true,
+        subspaces: {
+          collaboration: true,
+        },
       },
     });
     if (!space) {
@@ -294,14 +296,14 @@ export class CollaborationService {
           );
         }
 
-        return subsubspaces?.map(opp => {
-          if (!opp.collaboration) {
+        return subsubspaces?.map(subsubspace => {
+          if (!subsubspace.collaboration) {
             throw new EntityNotInitializedException(
-              `Collaboration not found on subsubspace ${opp.id}`,
+              `Collaboration not found on subsubspace ${subsubspace.id}`,
               LogContext.COLLABORATION
             );
           }
-          return opp.collaboration;
+          return subsubspace.collaboration;
         });
     }
 
