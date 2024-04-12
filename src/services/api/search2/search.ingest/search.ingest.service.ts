@@ -67,11 +67,18 @@ type ErroredDocument = {
   document: unknown;
 };
 
-type IngestBulkReturnType = {
+type IngestBatchResultType = {
   success: boolean;
   message?: string;
+  total: number;
   erroredDocuments?: ErroredDocument[];
 };
+
+type IngestBulkReturnType = {
+  total: number;
+  batches: IngestBatchResultType[];
+};
+
 type IngestReturnType = Record<string, IngestBulkReturnType>;
 
 @Injectable()
@@ -144,12 +151,18 @@ export class SearchIngestService {
     );
   }
 
-  public async ingest() {
+  public async ingest(): Promise<IngestReturnType> {
     if (!this.elasticClient) {
       return {
         'N/A': {
-          success: false,
-          message: 'Elasticsearch client not initialized',
+          total: 0,
+          batches: [
+            {
+              success: false,
+              message: 'Elasticsearch client not initialized',
+              total: 0,
+            },
+          ],
         },
       };
     }
@@ -158,36 +171,46 @@ export class SearchIngestService {
       {
         index: `${this.indexPattern}spaces`,
         fetchFn: this.fetchSpaces.bind(this),
+        batchSize: 100,
       },
       {
         index: `${this.indexPattern}challenges`,
         fetchFn: this.fetchChallenges.bind(this),
+        batchSize: 100,
       },
       {
         index: `${this.indexPattern}opportunities`,
         fetchFn: this.fetchOpportunities.bind(this),
+        batchSize: 100,
       },
       {
         index: `${this.indexPattern}organizations`,
         fetchFn: this.fetchOrganization.bind(this),
+        batchSize: 100,
       },
       {
         index: `${this.indexPattern}users`,
         fetchFn: this.fetchUsers.bind(this),
+        batchSize: 100,
       },
       {
         index: `${this.indexPattern}posts`,
         fetchFn: this.fetchPosts.bind(this),
+        batchSize: 30,
       },
     ];
 
     return asyncReduceSequential(
       params,
-      async (acc, { index, fetchFn }) => {
+      async (acc, { index, fetchFn, batchSize }) => {
         // introduced some delay between the ingestion of different entities
         // to not overwhelm the elasticsearch cluster
         await setTimeout(500, null);
-        acc[index] = await this._ingest(index, fetchFn);
+
+        const batches = await this._ingest(index, fetchFn, batchSize);
+        const total = batches.reduce((acc, val) => acc + (val.total ?? 0), 0);
+        acc[index] = { total, batches };
+
         return acc;
       },
       result
@@ -196,27 +219,47 @@ export class SearchIngestService {
 
   private async _ingest(
     index: string,
-    fetchFn: () => Promise<unknown[]>
-  ): Promise<IngestBulkReturnType> {
-    const fetched = await fetchFn();
-    return this.ingestBulk(fetched, index);
+    fetchFn: (start: number, limit: number) => Promise<unknown[]>,
+    batchSize: number
+  ): Promise<IngestBatchResultType[]> {
+    let start = 0;
+    const results: IngestBatchResultType[] = [];
+
+    while (true) {
+      const fetched = await fetchFn(start, batchSize);
+      // if there are no results fetched, we have reached the end
+      if (!fetched.length) {
+        break;
+      }
+
+      results.push(await this.ingestBulk(fetched, index));
+      // if the fetched data is less than the limit, we have reached the end
+      if (fetched.length < batchSize) {
+        break;
+      }
+
+      start += batchSize;
+    }
+
+    return results;
   }
 
   private async ingestBulk(
     data: unknown[],
     index: string
-  ): Promise<IngestBulkReturnType> {
+  ): Promise<IngestBatchResultType> {
     if (!this.elasticClient) {
       return {
         success: false,
+        total: 0,
         message: 'Elasticsearch client not initialized',
       };
     }
-    // return;
 
     if (!data.length) {
       return {
         success: true,
+        total: 0,
         message: 'No data indexed',
       };
     }
@@ -253,6 +296,7 @@ export class SearchIngestService {
       this.logger.error(message, undefined, LogContext.SEARCH_INGEST);
       return {
         success: false,
+        total: 0,
         message,
         erroredDocuments: erroredDocuments,
       };
@@ -261,12 +305,13 @@ export class SearchIngestService {
       this.logger.verbose?.(message, LogContext.SEARCH_INGEST);
       return {
         success: true,
+        total: data.length,
         message,
       };
     }
   }
   // TODO: validate the loaded data for missing relations - https://github.com/alkem-io/server/issues/3699
-  private fetchSpaces() {
+  private fetchSpaces(start: number, limit: number) {
     return this.entityManager
       .find<Space>(Space, {
         ...journeyFindOptions,
@@ -281,6 +326,8 @@ export class SearchIngestService {
           ...journeyFindOptions.select,
           account: { id: true, license: { visibility: true } },
         },
+        skip: start,
+        take: limit,
       })
       .then(spaces => {
         return spaces.map(space => ({
@@ -296,7 +343,7 @@ export class SearchIngestService {
       });
   }
 
-  private fetchChallenges() {
+  private fetchChallenges(start: number, limit: number) {
     return this.entityManager
       .find<Challenge>(Challenge, {
         ...journeyFindOptions,
@@ -318,6 +365,8 @@ export class SearchIngestService {
             account: { id: true, license: { visibility: true } },
           },
         },
+        skip: start,
+        take: limit,
       })
       .then(challenges => {
         return challenges.map(challenge => ({
@@ -337,7 +386,7 @@ export class SearchIngestService {
       });
   }
 
-  private fetchOpportunities() {
+  private fetchOpportunities(start: number, limit: number) {
     return this.entityManager
       .find<Opportunity>(Opportunity, {
         ...journeyFindOptions,
@@ -368,6 +417,8 @@ export class SearchIngestService {
             },
           },
         },
+        skip: start,
+        take: limit,
       })
       .then(opportunities => {
         return opportunities.map(opportunity => ({
@@ -388,7 +439,7 @@ export class SearchIngestService {
       });
   }
 
-  private fetchOrganization() {
+  private fetchOrganization(start: number, limit: number) {
     return this.entityManager
       .find<Organization>(Organization, {
         loadEagerRelations: false,
@@ -398,6 +449,8 @@ export class SearchIngestService {
         select: {
           profile: profileSelectOptions,
         },
+        skip: start,
+        take: limit,
       })
       .then(organizations => {
         return organizations.map(organization => ({
@@ -411,7 +464,7 @@ export class SearchIngestService {
       });
   }
 
-  private fetchUsers() {
+  private fetchUsers(start: number, limit: number) {
     return this.entityManager
       .find(User, {
         loadEagerRelations: false,
@@ -422,6 +475,8 @@ export class SearchIngestService {
         select: {
           profile: profileSelectOptions,
         },
+        skip: start,
+        take: limit,
       })
       .then(users =>
         users.map(user => ({
@@ -441,7 +496,7 @@ export class SearchIngestService {
       );
   }
 
-  private fetchPosts() {
+  private fetchPosts(start: number, limit: number) {
     return this.entityManager
       .find<Space>(Space, {
         loadEagerRelations: false,
@@ -542,6 +597,8 @@ export class SearchIngestService {
             },
           },
         },
+        skip: start,
+        take: limit,
       })
       .then(spaces => {
         const spacePosts: any[] = [];
