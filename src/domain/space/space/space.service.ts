@@ -57,6 +57,7 @@ import { SpaceSettingsService } from '../space.settings/space.settings.service';
 import { UpdateSpaceSettingsInput } from '../space.settings/dto/space.settings.dto.update';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CommunityRole } from '@common/enums/community.role';
+import { SpaceLevel } from '@common/enums/space.level';
 
 @Injectable()
 export class SpaceService {
@@ -373,6 +374,7 @@ export class SpaceService {
       spaces = await this.spaceRepository.find({
         where: {
           id: In(args.IDs),
+          level: SpaceLevel.SPACE,
           account: {
             license: {
               visibility: In(visibilities),
@@ -526,6 +528,7 @@ export class SpaceService {
       qb.leftJoinAndSelect('account.license', 'license');
       qb.leftJoinAndSelect('space.authorization', 'authorization');
       qb.where({
+        level: SpaceLevel.SPACE,
         account: {
           license: {
             visibility: In(visibilities),
@@ -537,25 +540,22 @@ export class SpaceService {
     return getPaginationResults(qb, paginationArgs);
   }
 
-  public async getAllSpaces(
-    options?: FindManyOptions<ISpace>
-  ): Promise<ISpace[]> {
-    return this.spaceRepository.find(options);
-  }
-
   private async getSpacesWithSortOrderDefault(
     IDs: string[]
   ): Promise<string[]> {
     // Then load data to do the sorting
-    const spacesDataForSorting = await this.spaceRepository
-      .createQueryBuilder('space')
-      .leftJoinAndSelect('space.subspaces', 'subspace')
-      .leftJoinAndSelect('space.account', 'account')
-      .leftJoinAndSelect('account.license', 'license')
-      .leftJoinAndSelect('space.authorization', 'authorization_policy')
-      .leftJoinAndSelect('subspace.subspaces', 'subspaces')
-      .whereInIds(IDs)
-      .getMany();
+    const qb = this.spaceRepository.createQueryBuilder('space');
+
+    qb.leftJoinAndSelect('space.subspaces', 'subspace');
+    qb.leftJoinAndSelect('space.account', 'account');
+    qb.leftJoinAndSelect('account.license', 'license');
+    qb.leftJoinAndSelect('space.authorization', 'authorization_policy');
+    qb.leftJoinAndSelect('subspace.subspaces', 'subspaces');
+    qb.where({
+      level: SpaceLevel.SPACE,
+      id: In(IDs),
+    });
+    const spacesDataForSorting = await qb.getMany();
 
     return this.sortSpacesDefault(spacesDataForSorting);
   }
