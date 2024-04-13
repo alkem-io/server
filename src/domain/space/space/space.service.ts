@@ -695,6 +695,12 @@ export class SpaceService {
     return space;
   }
 
+  public async getAllSpaces(
+    options?: FindManyOptions<ISpace>
+  ): Promise<ISpace[]> {
+    return this.spaceRepository.find(options);
+  }
+
   public async updateSpacePlatformSettings(
     space: ISpace,
     updateData: UpdateSpacePlatformSettingsInput
