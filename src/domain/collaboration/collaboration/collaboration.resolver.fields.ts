@@ -27,7 +27,7 @@ export class CollaborationResolverFields {
 
   @UseGuards(GraphqlGuard)
   @ResolveField('innovationFlow', () => IInnovationFlow, {
-    nullable: true,
+    nullable: false,
     description: 'The InnovationFlow for the Collaboration.',
   })
   @Profiling.api
@@ -46,7 +46,7 @@ export class CollaborationResolverFields {
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('callouts', () => [ICallout], {
-    nullable: true,
+    nullable: false,
     description: 'The list of Callouts for this Collaboration object.',
   })
   @Profiling.api
@@ -64,7 +64,7 @@ export class CollaborationResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('timeline', () => ITimeline, {
-    nullable: true,
+    nullable: false,
     description: 'The timeline with events in use by this Space',
   })
   @UseGuards(GraphqlGuard)

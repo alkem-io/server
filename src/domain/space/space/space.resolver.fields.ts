@@ -42,7 +42,7 @@ export class SpaceResolverFields {
   // Check authorization inside the field resolver directly on the Community
   @UseGuards(GraphqlGuard)
   @ResolveField('community', () => ICommunity, {
-    nullable: true,
+    nullable: false,
     description: 'Get the Community for the Space. ',
   })
   async community(
@@ -64,7 +64,7 @@ export class SpaceResolverFields {
   // Check authorization inside the field resolver directly on the Context
   @UseGuards(GraphqlGuard)
   @ResolveField('context', () => IContext, {
-    nullable: true,
+    nullable: false,
     description: 'The context for the space.',
   })
   async context(
@@ -87,7 +87,7 @@ export class SpaceResolverFields {
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('collaboration', () => ICollaboration, {
-    nullable: true,
+    nullable: false,
     description: 'The collaboration for the Space.',
   })
   async collaboration(
@@ -101,7 +101,7 @@ export class SpaceResolverFields {
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('agent', () => IAgent, {
-    nullable: true,
+    nullable: false,
     description: 'The Agent representing this Space.',
   })
   async agent(
@@ -115,7 +115,7 @@ export class SpaceResolverFields {
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('storageAggregator', () => IStorageAggregator, {
-    nullable: true,
+    nullable: false,
     description: 'The StorageAggregator in use by this Space',
   })
   async storageAggregator(@Parent() space: Space): Promise<IStorageAggregator> {
@@ -125,7 +125,7 @@ export class SpaceResolverFields {
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('subspaces', () => [ISpace], {
-    nullable: true,
+    nullable: false,
     description: 'The subspaces for the space.',
   })
   async subspaces(
