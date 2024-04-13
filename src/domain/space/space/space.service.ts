@@ -19,7 +19,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Space } from './space.entity';
 import { ISpace } from './space.interface';
 import { UpdateSpaceInput } from './dto/space.dto.update';
-import { CreateSubspaceOnSpaceInput } from './dto/space.dto.create.subspace';
+import { CreateSubspaceInput } from './dto/space.dto.create.subspace';
 import { AgentInfo } from '@src/core/authentication/agent-info';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
@@ -791,7 +791,7 @@ export class SpaceService {
   }
 
   async createSubspace(
-    subspaceData: CreateSubspaceOnSpaceInput,
+    subspaceData: CreateSubspaceInput,
     agentInfo?: AgentInfo
   ): Promise<ISpace> {
     const space = await this.getSpaceOrFail(subspaceData.spaceID, {

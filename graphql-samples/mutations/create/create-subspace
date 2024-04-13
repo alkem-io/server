@@ -1,0 +1,27 @@
+mutation createSubspace($subspaceData: CreateSubspaceInput!) {
+  createSubspace(subspaceData: $subspaceData) {
+    id,
+    nameID
+  }
+}
+
+query variables:
+{
+  "subspaceData":
+  {
+    "spaceID": "uuid",
+    "nameID": "balance-grid",
+    "innovationFlowTemplate": "EXTENDED",
+    "profileData": {
+      "displayName": "Balance the grid",
+      "tagline": "How might we incentivize consumers to communicate energy demand and production to allow all stakeholders to balance the grid?",
+      "description": "Our power system is becoming increasingly more decentralized and complex. "
+    },
+    "context": {
+        "vision": "Enable the entire energy sector to transition from an ego-system to an eco-system, .",
+        "impact": "The power grid is one of the most sophisticated infrastructures ever built. By building the energy flexibility .",
+        "who": "Vattenfall is inviting energy specialists throughout the entire sector, from DSOs and TSOs to solar power solution providers, to work with the teams to create the best solutions",
+
+    }
+  }
+}

@@ -9,7 +9,7 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { SpaceAuthorizationService } from './space.service.authorization';
 import { ISpace } from './space.interface';
-import { CreateSubspaceOnSpaceInput } from './dto/space.dto.create.subspace';
+import { CreateSubspaceInput } from './dto/space.dto.create.subspace';
 import { SubspaceCreatedPayload } from './dto/space.subspace.created.payload';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { PubSubEngine } from 'graphql-subscriptions';
@@ -205,7 +205,7 @@ export class SpaceResolverMutations {
   @Profiling.api
   async createSubspace(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('subspaceData') subspaceData: CreateSubspaceOnSpaceInput
+    @Args('subspaceData') subspaceData: CreateSubspaceInput
   ): Promise<ISpace> {
     const space = await this.spaceService.getSpaceOrFail(subspaceData.spaceID, {
       relations: {
