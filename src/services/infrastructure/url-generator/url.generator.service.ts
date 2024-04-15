@@ -474,6 +474,9 @@ export class UrlGeneratorService {
       result.challengeId,
       admin
     );
+
+    if (!challengeUrlPath) return undefined;
+
     return `${challengeUrlPath}/opportunities/${result.opportunityNameId}`;
   }
 
