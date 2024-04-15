@@ -102,28 +102,16 @@ const getSubspacesMock = (
         id: '',
         groupsStr: JSON.stringify([
           {
-            displayName: 'HOME_1',
-            description: 'The left column on the Home page.',
+            displayName: 'HOME',
+            description: 'The Home page.',
           },
           {
-            displayName: 'HOME_2',
-            description: 'The right column on the Home page.',
+            displayName: 'COMMUNITY',
+            description: 'The Community page.',
           },
           {
-            displayName: 'COMMUNITY_1',
-            description: 'The left column on the Community page.',
-          },
-          {
-            displayName: 'COMMUNITY_2',
-            description: 'The right column on the Community page.',
-          },
-          {
-            displayName: 'SUBSPACES_1',
-            description: 'The left column on the Subspaces page.',
-          },
-          {
-            displayName: 'SUBSPACES_2',
-            description: 'The right column on the Subspaces page.',
+            displayName: 'SUBSPACES',
+            description: 'The Subspaces page.',
           },
           {
             displayName: 'KNOWLEDGE',
@@ -202,28 +190,16 @@ const getSubsubspacesMock = (challengeId: string, count: number): Space[] => {
         id: '',
         groupsStr: JSON.stringify([
           {
-            displayName: 'HOME_1',
-            description: 'The left column on the Home page.',
+            displayName: 'HOME',
+            description: 'The Home page.',
           },
           {
-            displayName: 'HOME_2',
-            description: 'The right column on the Home page.',
+            displayName: 'COMMUNITY',
+            description: 'The Community page.',
           },
           {
-            displayName: 'COMMUNITY_1',
-            description: 'The left column on the Community page.',
-          },
-          {
-            displayName: 'COMMUNITY_2',
-            description: 'The right column on the Community page.',
-          },
-          {
-            displayName: 'SUBSPACES_1',
-            description: 'The left column on the Subspaces page.',
-          },
-          {
-            displayName: 'SUBSPACES_2',
-            description: 'The right column on the Subspaces page.',
+            displayName: 'SUBSPACES',
+            description: 'The Subspaces page.',
           },
           {
             displayName: 'KNOWLEDGE',

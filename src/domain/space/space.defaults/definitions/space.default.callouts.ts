@@ -6,17 +6,17 @@ import { EMPTY_WHITEBOARD_CONTENT } from '@domain/common/whiteboard/empty.whiteb
 
 export const spaceDefaultCallouts: CreateCalloutInput[] = [
   {
-    nameID: 'getting-started',
-    type: CalloutType.LINK_COLLECTION,
+    nameID: 'questions',
+    type: CalloutType.POST,
     contributionPolicy: {
-      state: CalloutState.CLOSED,
+      state: CalloutState.OPEN,
     },
-    sortOrder: 1,
-    groupName: CalloutGroupName.HOME_2,
+    sortOrder: 2,
+    groupName: CalloutGroupName.HOME,
     framing: {
       profile: {
-        displayName: 'Getting Started',
-        description: '⬇️ Here are some quick links to help you get started',
+        displayName: 'Any questions or feedback?',
+        description: 'Please share it here :)',
       },
     },
   },
@@ -27,7 +27,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 1,
-    groupName: CalloutGroupName.HOME_1,
+    groupName: CalloutGroupName.HOME,
     framing: {
       profile: {
         displayName: 'General chat 💬',
@@ -36,17 +36,17 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
     },
   },
   {
-    nameID: 'questions',
-    type: CalloutType.POST,
+    nameID: 'getting-started',
+    type: CalloutType.LINK_COLLECTION,
     contributionPolicy: {
-      state: CalloutState.OPEN,
+      state: CalloutState.CLOSED,
     },
-    sortOrder: 2,
-    groupName: CalloutGroupName.HOME_1,
+    sortOrder: 1,
+    groupName: CalloutGroupName.HOME,
     framing: {
       profile: {
-        displayName: 'Any questions or feedback?',
-        description: 'Please share it here :)',
+        displayName: 'Getting Started',
+        description: '⬇️ Here are some quick links to help you get started',
       },
     },
   },
@@ -57,7 +57,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 2,
-    groupName: CalloutGroupName.HOME_2,
+    groupName: CalloutGroupName.HOME,
     framing: {
       profile: {
         displayName: 'What is this Space about?',
@@ -80,7 +80,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 1,
-    groupName: CalloutGroupName.COMMUNITY_1,
+    groupName: CalloutGroupName.COMMUNITY,
     framing: {
       profile: {
         displayName: 'Welcome to the community!',
@@ -96,7 +96,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 1,
-    groupName: CalloutGroupName.COMMUNITY_2,
+    groupName: CalloutGroupName.COMMUNITY,
     framing: {
       profile: {
         displayName: 'Understanding the existing and potential community',
@@ -119,7 +119,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 1,
-    groupName: CalloutGroupName.SUBSPACES_1,
+    groupName: CalloutGroupName.SUBSPACES,
     framing: {
       profile: {
         displayName: '🚩 What Challenges do you care about?',
@@ -134,7 +134,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 1,
-    groupName: CalloutGroupName.SUBSPACES_2,
+    groupName: CalloutGroupName.SUBSPACES,
     framing: {
       profile: {
         displayName: 'Challenge proposals',
