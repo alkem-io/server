@@ -129,8 +129,7 @@ export class RolesService {
   ): Promise<ApplicationForRoleResult> {
     const communityDisplayName =
       await this.communityResolverService.getDisplayNameForCommunityOrFail(
-        community.id,
-        community.type
+        community.id
       );
     const spaceID =
       await this.communityResolverService.getRootSpaceIDFromCommunityOrFail(
@@ -202,8 +201,7 @@ export class RolesService {
   ): Promise<InvitationForRoleResult> {
     const communityDisplayName =
       await this.communityResolverService.getDisplayNameForCommunityOrFail(
-        community.id,
-        community.type
+        community.id
       );
     const spaceID =
       await this.communityResolverService.getRootSpaceIDFromCommunityOrFail(

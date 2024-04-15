@@ -18,7 +18,7 @@ import {
   CreateUserGroupInput,
   UpdateUserGroupInput,
 } from '@domain/community/user-group/dto';
-import { CreateSubspaceOnSpaceInput } from '@domain/space/space/dto/space.dto.create.subspace';
+import { CreateSubspaceInput } from '@domain/space/space/dto/space.dto.create.subspace';
 import { CreateActorInput, UpdateActorInput } from '@domain/context/actor';
 import { CommunityApplyInput } from '@domain/community/community/dto/community.dto.apply';
 import { CommunicationCreateDiscussionInput } from '@domain/communication/communication/dto/communication.dto.create.discussion';
@@ -108,7 +108,7 @@ export class BaseHandler extends AbstractHandler {
       CreateCalloutTemplateOnTemplatesSetInput,
       CreatePostTemplateOnTemplatesSetInput,
       CreateWhiteboardTemplateOnTemplatesSetInput,
-      CreateSubspaceOnSpaceInput,
+      CreateSubspaceInput,
       CreateLinkInput,
       CreateOrganizationInput,
       CreateUserGroupInput,
