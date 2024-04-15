@@ -88,9 +88,12 @@ export class InnovationFlowService {
       VisualType.CARD
     );
 
-    innovationFlow.states = this.innovationFlowStatesService.serializeStates(
-      innovationFlowData.states
-    );
+    const convertedStates =
+      this.innovationFlowStatesService.convertInputsToStates(
+        innovationFlowData.states
+      );
+    innovationFlow.states =
+      this.innovationFlowStatesService.serializeStates(convertedStates);
 
     return await this.innovationFlowRepository.save(innovationFlow);
   }
@@ -126,10 +129,13 @@ export class InnovationFlowService {
       };
       await this.profileService.updateSelectTagsetDefinition(updateData);
 
+      const convertedStates =
+        this.innovationFlowStatesService.convertInputsToStates(
+          innovationFlowData.states
+        );
       // serialize the states
-      innovationFlow.states = this.innovationFlowStatesService.serializeStates(
-        innovationFlowData.states
-      );
+      innovationFlow.states =
+        this.innovationFlowStatesService.serializeStates(convertedStates);
     }
 
     if (innovationFlowData.profileData) {
@@ -250,7 +256,7 @@ export class InnovationFlowService {
     for (const state of states) {
       if (state.displayName === updateData.stateDisplayName) {
         state.displayName = updateData.stateUpdatedData.displayName;
-        state.description = updateData.stateUpdatedData.description;
+        state.description = updateData.stateUpdatedData.description || '';
       }
       newStates.push(state);
     }
