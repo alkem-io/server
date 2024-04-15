@@ -86,6 +86,11 @@ import { VirtualContributorModule } from '@domain/community/virtual-contributor/
         store: redisStore,
         host: configService.get(ConfigurationTypes.STORAGE)?.redis?.host,
         port: configService.get(ConfigurationTypes.STORAGE)?.redis?.port,
+        redisOptions: {
+          connectTimeout:
+            configService.get(ConfigurationTypes.STORAGE)?.redis?.timeout *
+            1000, // Connection timeout in milliseconds
+        },
       }),
       inject: [ConfigService],
     }),

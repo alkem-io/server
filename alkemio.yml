@@ -312,6 +312,8 @@ storage:
     host: ${REDIS_HOST}:localhost
     # Redis port
     port: ${REDIS_PORT}:6379
+    # Redis timeout, in seconds
+    timeout: ${REDIS_TIMEOUT}:60
 
 microservices:
   rabbitmq:
