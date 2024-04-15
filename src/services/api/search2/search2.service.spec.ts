@@ -15,7 +15,9 @@ describe('Search2Service', () => {
         MockSearchExtractService,
         MockSearchResultsService,
       ],
-    }).compile();
+    })
+      .useMocker(defaultMockerFactory)
+      .compile();
 
     service = module.get<Search2Service>(Search2Service);
   });
