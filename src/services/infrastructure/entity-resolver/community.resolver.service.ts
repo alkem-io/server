@@ -6,8 +6,6 @@ import { Community, ICommunity } from '@domain/community/community';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { Communication } from '@domain/communication/communication/communication.entity';
-import { Profile } from '@domain/common/profile/profile.entity';
-import { SpaceType } from '@common/enums/space.type';
 import { Space } from '@domain/space/space/space.entity';
 import { ISpace } from '@domain/space/space/space.interface';
 
@@ -20,8 +18,6 @@ export class CommunityResolverService {
     private discussionRepository: Repository<Discussion>,
     @InjectRepository(Communication)
     private communicationRepository: Repository<Communication>,
-    @InjectRepository(Profile)
-    private profileRepository: Repository<Profile>,
     @InjectEntityManager('default')
     private entityManager: EntityManager
   ) {}
@@ -239,35 +235,10 @@ export class CommunityResolverService {
   }
 
   public async getDisplayNameForCommunityOrFail(
-    communityId: string,
-    spaceType: SpaceType
+    communityId: string
   ): Promise<string> {
-    const [result]: {
-      profileId: string;
-    }[] = await this.entityManager.connection.query(
-      `SELECT profileId from \`${spaceType}\`
-        WHERE \`${spaceType}\`.\`communityId\` = '${communityId}';`
-    );
-
-    const profileId = result.profileId;
-    const profile = await this.profileRepository.findOne({
-      where: { id: profileId },
-    });
-    if (!profile) {
-      throw new EntityNotFoundException(
-        `Unable to find Profile for Community: ${communityId}`,
-        LogContext.NOTIFICATIONS
-      );
-    }
-    return profile.displayName;
-  }
-
-  public async getCommunity(communityID: string) {
-    return await this.communityRepository
-      .createQueryBuilder('community')
-      .where('community.id = :id')
-      .setParameters({ id: communityID })
-      .getOne();
+    const space = await this.getSpaceForCommunityOrFail(communityId);
+    return space.profile.displayName;
   }
 
   public async getCommunityFromPostRoomOrFail(

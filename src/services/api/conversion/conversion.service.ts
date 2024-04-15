@@ -23,7 +23,7 @@ import { SpaceType } from '@common/enums/space.type';
 import { CreateAccountInput } from '@domain/space/account/dto';
 import { AccountService } from '@domain/space/account/account.service';
 import { SpaceService } from '@domain/space/space/space.service';
-import { CreateSubspaceOnSpaceInput } from '@domain/space/space/dto/space.dto.create.subspace';
+import { CreateSubspaceInput } from '@domain/space/space/dto/space.dto.create.subspace';
 
 export class ConversionService {
   constructor(
@@ -280,7 +280,7 @@ export class ConversionService {
     //     );
     //   innovationFlowTemplateID = defaultChallengeLifecycleTemplate.id;
     // }
-    const subspaceData: CreateSubspaceOnSpaceInput = {
+    const subspaceData: CreateSubspaceInput = {
       spaceID: spaceID,
       nameID: subspaceNameID,
       collaborationData: {

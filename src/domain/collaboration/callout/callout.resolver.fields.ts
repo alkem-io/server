@@ -31,7 +31,7 @@ export class CalloutResolverFields {
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('contributions', () => [ICalloutContribution], {
-    nullable: true,
+    nullable: false,
     description: 'The Contributions that have been made to this Callout.',
   })
   @Profiling.api
