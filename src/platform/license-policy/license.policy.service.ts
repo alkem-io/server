@@ -1,11 +1,7 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import {
-  EntityNotFoundException,
-  ForbiddenException,
-  RelationshipNotFoundException,
-} from '@common/exceptions';
+import { EntityNotFoundException } from '@common/exceptions';
 import { ILicensePolicy } from './license.policy.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ILicenseFeatureFlag } from '@domain/license/feature-flag/feature.flag.interface';
@@ -37,17 +33,6 @@ export class LicensePolicyService {
     };
   }
 
-  reset(licensePolicy: ILicensePolicy | undefined): ILicensePolicy {
-    if (!licensePolicy) {
-      throw new RelationshipNotFoundException(
-        'Undefined License Policy supplied',
-        LogContext.LICENSE
-      );
-    }
-    licensePolicy.featureFlagRules = '';
-    return licensePolicy;
-  }
-
   async getLicensePolicyOrFail(
     licensePolicyID: string
   ): Promise<ILicensePolicy> {
@@ -70,25 +55,6 @@ export class LicensePolicyService {
 
   async save(licensePolicy: ILicensePolicy): Promise<ILicensePolicy> {
     return await this.licensePolicyRepository.save(licensePolicy);
-  }
-
-  cloneLicensePolicy(
-    originalLicense: ILicensePolicy | undefined
-  ): ILicensePolicy {
-    this.validateLicense(originalLicense);
-    const clonedLicense: ILicensePolicy = JSON.parse(
-      JSON.stringify(originalLicense)
-    );
-    return clonedLicense;
-  }
-
-  validateLicense(license: ILicensePolicy | undefined): ILicensePolicy {
-    if (!license)
-      throw new ForbiddenException(
-        'License: no definition provided',
-        LogContext.LICENSE
-      );
-    return license;
   }
 
   getFeatureFlagRules(
