@@ -201,10 +201,6 @@ export class SearchIngestService {
     return asyncReduceSequential(
       params,
       async (acc, { index, fetchFn, batchSize }) => {
-        // introduced some delay between the ingestion of different entities
-        // to not overwhelm the elasticsearch cluster
-        await setTimeout(500, null);
-
         const batches = await this.fetchAndIngest(index, fetchFn, batchSize);
         const total = batches.reduce((acc, val) => acc + (val.total ?? 0), 0);
         acc[index] = {
@@ -242,6 +238,8 @@ export class SearchIngestService {
       }
 
       start += batchSize;
+      // delay between batches
+      await setTimeout(1000);
     }
 
     return results;
@@ -266,12 +264,6 @@ export class SearchIngestService {
         message: 'No data indexed',
       };
     }
-
-    // return {
-    //   success: false,
-    //   total: 0,
-    //   message: 'No data indexed',
-    // };
 
     const operations = data.flatMap(doc => [{ index: { _index: index } }, doc]);
 
