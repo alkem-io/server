@@ -20,5 +20,5 @@ export abstract class ISearchResultSpace
     nullable: true,
     description: 'The parent of this Space, if any.',
   })
-  parentSpace!: ISpace;
+  parentSpace?: ISpace;
 }
