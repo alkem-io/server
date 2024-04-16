@@ -323,39 +323,39 @@ services:
   #     rabbitmq:
   #       condition: "service_healthy"
 
-  virtual_contributor:
-    container_name: alkemio_dev_virtual_contributor
-    hostname: virtual-contributor
-    build:
-      context: '../virtual-contributor-service'
-      dockerfile: ../virtual-contributor-service/Dockerfile
-    platform: linux/x86_64
-    restart: always
-    volumes:
-       - /dev/shm:/dev/shm
-       - ~/alkemio/data:${AI_LOCAL_PATH:-/home/alkemio/data}
-    networks:
-      - alkemio_dev_net
-    depends_on:
-      rabbitmq:
-        condition: "service_healthy"
-    environment:
-      - RABBITMQ_HOST
-      - RABBITMQ_USER
-      - RABBITMQ_PASSWORD
-      - RABBITMQ_QUEUE=virtual-persona-engine-alkemio-digileefomgeving
-      - ENVIRONMENT=dev
-      - LOG_LEVEL=DEBUG
-      - EMBEDDINGS_DEPLOYMENT_NAME
-      - AZURE_OPENAI_API_KEY
-      - AZURE_OPENAI_ENDPOINT
-      - OPENAI_API_VERSION
-      - AI_MODEL_TEMPERATURE
-      - AI_LOCAL_PATH
-      - LLM_DEPLOYMENT_NAME
-      - LANGCHAIN_TRACING_V2
-      - LANGCHAIN_ENDPOINT
-      - LANGCHAIN_API_KEY
-      - LANGCHAIN_PROJECT
-
-        # 4b262af068ff4546a69b996bea9e41cb
+#  virtual_contributor:
+#    container_name: alkemio_dev_virtual_contributor
+#    hostname: virtual-contributor
+#    build:
+#      context: '../virtual-contributor-service'
+#      dockerfile: ../virtual-contributor-service/Dockerfile
+#    platform: linux/x86_64
+#    restart: always
+#    volumes:
+#       - /dev/shm:/dev/shm
+#       - ~/alkemio/data:${AI_LOCAL_PATH:-/home/alkemio/data}
+#    networks:
+#      - alkemio_dev_net
+#    depends_on:
+#      rabbitmq:
+#        condition: "service_healthy"
+#    environment:
+#      - RABBITMQ_HOST
+#      - RABBITMQ_USER
+#      - RABBITMQ_PASSWORD
+#      - RABBITMQ_QUEUE=virtual-persona-engine-alkemio-digileefomgeving
+#      - ENVIRONMENT=dev
+#      - LOG_LEVEL=DEBUG
+#      - EMBEDDINGS_DEPLOYMENT_NAME
+#      - AZURE_OPENAI_API_KEY
+#      - AZURE_OPENAI_ENDPOINT
+#      - OPENAI_API_VERSION
+#      - AI_MODEL_TEMPERATURE
+#      - AI_LOCAL_PATH
+#      - LLM_DEPLOYMENT_NAME
+#      - LANGCHAIN_TRACING_V2
+#      - LANGCHAIN_ENDPOINT
+#      - LANGCHAIN_API_KEY
+#      - LANGCHAIN_PROJECT
+#
+#        # 4b262af068ff4546a69b996bea9e41cb
