@@ -308,9 +308,6 @@ services:
     container_name: alkemio_dev_community_manager
     hostname: community-manager
     image: alkemio/virtual-persona-engine:v0.1.3
-    build:
-      context: '../community-manager-engine'
-      dockerfile: ../community-manager-engine/Dockerfile
     platform: linux/x86_64
     restart: always
     volumes:
