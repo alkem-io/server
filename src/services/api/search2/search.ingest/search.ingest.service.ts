@@ -16,9 +16,9 @@ import { Tagset } from '@domain/common/tagset';
 import { LogContext } from '@common/enums';
 import { asyncReduceSequential } from '@common/utils/async.reduce.sequential';
 import { getIndexPattern } from '../get.index.pattern';
-import { SpaceLevel } from '@common/enums/space.level';
 import { asyncMap } from '@common/utils/async.map';
 import { ElasticResponseError } from '@services/external/elasticsearch/types';
+import { SpaceLevel } from '@common/enums/space.level';
 
 const profileRelationOptions = {
   location: true,
@@ -46,7 +46,8 @@ const journeyFindOptions: FindManyOptions<Space> = {
     profile: profileRelationOptions,
   },
   select: {
-    rowId: false,
+    id: true,
+    level: true,
     context: {
       vision: true,
       impact: true,
@@ -113,8 +114,6 @@ export class SearchIngestService {
     }
     const indices = [
       `${this.indexPattern}spaces`,
-      `${this.indexPattern}subspaces`,
-      `${this.indexPattern}subsubspaces`,
       `${this.indexPattern}organizations`,
       `${this.indexPattern}users`,
       `${this.indexPattern}posts`,
@@ -164,20 +163,22 @@ export class SearchIngestService {
         },
       };
     }
+
     const result: IngestReturnType = {};
     const params = [
       {
         index: `${this.indexPattern}spaces`,
-        fetchFn: this.fetchSpaces.bind(this),
+        fetchFn: this.fetchSpacesLevel0.bind(this),
         batchSize: 100,
       },
       {
-        index: `${this.indexPattern}subspaces`,
-        fetchFn: this.fetchSubspaces.bind(this),
+        index: `${this.indexPattern}spaces`,
+        fetchFn: this.fetchSpacesLevel1.bind(this),
+        batchSize: 100,
       },
       {
-        index: `${this.indexPattern}subsubspaces`,
-        fetchFn: this.fetchOpportunities.bind(this),
+        index: `${this.indexPattern}spaces`,
+        fetchFn: this.fetchSpacesLevel2.bind(this),
         batchSize: 100,
       },
       {
@@ -193,7 +194,7 @@ export class SearchIngestService {
       {
         index: `${this.indexPattern}posts`,
         fetchFn: this.fetchPosts.bind(this),
-        batchSize: 30,
+        batchSize: 15,
       },
     ];
 
@@ -204,9 +205,12 @@ export class SearchIngestService {
         // to not overwhelm the elasticsearch cluster
         await setTimeout(500, null);
 
-        const batches = await this._ingest(index, fetchFn, batchSize);
+        const batches = await this.fetchAndIngest(index, fetchFn, batchSize);
         const total = batches.reduce((acc, val) => acc + (val.total ?? 0), 0);
-        acc[index] = { total, batches };
+        acc[index] = {
+          total: total + (acc[index]?.total ?? 0),
+          batches: [...batches, ...(acc[index]?.batches ?? [])],
+        };
 
         return acc;
       },
@@ -214,7 +218,7 @@ export class SearchIngestService {
     );
   }
 
-  private async _ingest(
+  private async fetchAndIngest(
     index: string,
     fetchFn: (start: number, limit: number) => Promise<unknown[]>,
     batchSize: number
@@ -230,8 +234,10 @@ export class SearchIngestService {
       }
 
       results.push(await this.ingestBulk(fetched, index));
-      // if the fetched data is less than the limit, we have reached the end
-      if (fetched.length < batchSize) {
+      // some statement are not directly querying a table, but instead parent entities
+      // so the total count is not predictable; in that case an extra query has to be made
+      // to ensure there is no more data
+      if (!fetched.length) {
         break;
       }
 
@@ -260,6 +266,12 @@ export class SearchIngestService {
         message: 'No data indexed',
       };
     }
+
+    // return {
+    //   success: false,
+    //   total: 0,
+    //   message: 'No data indexed',
+    // };
 
     const operations = data.flatMap(doc => [{ index: { _index: index } }, doc]);
 
@@ -308,12 +320,13 @@ export class SearchIngestService {
     }
   }
   // TODO: validate the loaded data for missing relations - https://github.com/alkem-io/server/issues/3699
-  private fetchSpaces(start: number, limit: number) {
+  private fetchSpacesLevel0(start: number, limit: number) {
     return this.entityManager
       .find<Space>(Space, {
         ...journeyFindOptions,
         where: {
           account: { license: { visibility: Not(SpaceVisibility.ARCHIVED) } },
+          level: SpaceLevel.SPACE,
         },
         relations: {
           ...journeyFindOptions.relations,
@@ -331,6 +344,7 @@ export class SearchIngestService {
           ...space,
           account: undefined,
           license: { visibility: space?.account?.license?.visibility },
+          spaceID: space.id, // spaceID is the same as the space's id
           profile: {
             ...space.profile,
             tags: processTagsets(space.profile.tagsets),
@@ -340,7 +354,7 @@ export class SearchIngestService {
       });
   }
 
-  private fetchSubspaces() {
+  private fetchSpacesLevel1(start: number, limit: number) {
     return this.entityManager
       .find<Space>(Space, {
         ...journeyFindOptions,
@@ -355,69 +369,59 @@ export class SearchIngestService {
         },
         select: {
           ...journeyFindOptions.select,
-          parentSpace: {
-            id: true,
-          },
           account: { id: true, license: { visibility: true } },
+          parentSpace: { id: true },
         },
         skip: start,
         take: limit,
       })
-      .then(subspaces => {
-        return subspaces.map(subspace => ({
-          ...subspace,
-          spaceID: subspace?.parentSpace?.id,
-          space: undefined,
+      .then(spaces => {
+        return spaces.map(space => ({
+          ...space,
           account: undefined,
-          license: {
-            visibility: subspace?.account?.license?.visibility,
-          },
+          parentSpace: undefined,
+          license: { visibility: space?.account?.license?.visibility },
+          spaceID: space.parentSpace?.id ?? EMPTY_VALUE,
           profile: {
-            ...subspace.profile,
-            tags: processTagsets(subspace.profile.tagsets),
+            ...space.profile,
+            tags: processTagsets(space.profile.tagsets),
             tagsets: undefined,
           },
         }));
       });
   }
 
-  private fetchOpportunities(start: number, limit: number) {
+  private fetchSpacesLevel2(start: number, limit: number) {
     return this.entityManager
       .find<Space>(Space, {
         ...journeyFindOptions,
         where: {
-          account: {
-            license: { visibility: Not(SpaceVisibility.ARCHIVED) },
-          },
+          account: { license: { visibility: Not(SpaceVisibility.ARCHIVED) } },
           level: SpaceLevel.OPPORTUNITY,
         },
         relations: {
           ...journeyFindOptions.relations,
-          account: { license: true, space: true },
-          parentSpace: true,
+          account: { license: true },
+          parentSpace: { parentSpace: true },
         },
         select: {
           ...journeyFindOptions.select,
-          parentSpace: {
-            id: true,
-          },
           account: { id: true, license: { visibility: true } },
+          parentSpace: { id: true, parentSpace: { id: true } },
         },
         skip: start,
         take: limit,
       })
-      .then(subsubspaces => {
-        return subsubspaces.map(subsubspace => ({
-          ...subsubspace,
-          spaceID: subsubspace?.account?.space?.id,
-          challengeID: subsubspace?.parentSpace?.id,
-          challenge: undefined,
-          license: {
-            visibility: subsubspace?.account?.license?.visibility,
-          },
+      .then(spaces => {
+        return spaces.map(space => ({
+          ...space,
+          account: undefined,
+          parentSpace: undefined,
+          license: { visibility: space?.account?.license?.visibility },
+          spaceID: space.parentSpace?.parentSpace?.id ?? EMPTY_VALUE,
           profile: {
-            ...subsubspace.profile,
-            tags: processTagsets(subsubspace.profile.tagsets),
+            ...space.profile,
+            tags: processTagsets(space.profile.tagsets),
             tagsets: undefined,
           },
         }));
@@ -586,14 +590,14 @@ export class SearchIngestService {
         take: limit,
       })
       .then(spaces => {
-        const spacePosts: any[] = [];
+        const spaceLevel0Posts: any[] = [];
         spaces.forEach(space =>
           space?.collaboration?.callouts?.forEach(callout =>
             callout?.contributions?.forEach(contribution => {
               if (!contribution.post) {
                 return;
               }
-              spacePosts.push({
+              spaceLevel0Posts.push({
                 ...contribution.post,
                 license: {
                   visibility:
@@ -611,7 +615,7 @@ export class SearchIngestService {
             })
           )
         );
-        const challengePosts: any[] = [];
+        const spaceLevel1Posts: any[] = [];
         spaces.forEach(space =>
           space?.subspaces?.forEach(subspace =>
             subspace?.collaboration?.callouts?.forEach(callout =>
@@ -619,7 +623,7 @@ export class SearchIngestService {
                 if (!contribution.post) {
                   return;
                 }
-                challengePosts.push({
+                spaceLevel1Posts.push({
                   ...contribution.post,
                   license: {
                     visibility:
@@ -639,8 +643,7 @@ export class SearchIngestService {
             )
           )
         );
-
-        const opportunityPosts: any[] = [];
+        const spaceLevel2Posts: any[] = [];
         spaces.forEach(space =>
           space?.subspaces?.forEach(subspace =>
             subspace?.subspaces?.forEach(subsubspace =>
@@ -649,7 +652,7 @@ export class SearchIngestService {
                   if (!contribution.post) {
                     return;
                   }
-                  opportunityPosts.push({
+                  spaceLevel2Posts.push({
                     ...contribution.post,
                     license: {
                       visibility:
@@ -672,7 +675,7 @@ export class SearchIngestService {
           )
         );
 
-        return [...spacePosts, ...challengePosts, ...opportunityPosts];
+        return [...spaceLevel0Posts, ...spaceLevel1Posts, ...spaceLevel2Posts];
       });
   }
 }
