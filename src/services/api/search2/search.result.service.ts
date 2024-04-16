@@ -1,6 +1,7 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager, In } from 'typeorm';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { groupBy, intersection, orderBy } from 'lodash';
 import { Space } from '@domain/space/space/space.entity';
 import { ISearchResult } from '@services/api/search/dto/search.result.entry.interface';
@@ -21,30 +22,20 @@ import { ISearchResultOrganization } from '@services/api/search/dto/search.resul
 import { IOrganization, Organization } from '@domain/community/organization';
 import { ISearchResults } from '@services/api/search/dto/search.result.dto';
 import { ISearchResultPost } from '@services/api/search/dto/search.result.dto.entry.post';
-import { IPost, Post } from '@domain/collaboration/post';
-import { Callout, ICallout } from '@domain/collaboration/callout';
+import { Post } from '@domain/collaboration/post';
+import { Callout } from '@domain/collaboration/callout';
 import { AgentInfo } from '@core/authentication';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UserService } from '@domain/community/user/user.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
-import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { SpaceLevel } from '@common/enums/space.level';
 
-export type PostParents = {
-  post: IPost;
-  callout: ICallout;
-  space: ISpace;
-  subspace: ISpace | undefined;
-  subsubspace: ISpace | undefined;
-};
-
-export type PostParentIDs = {
-  postID: string;
-  calloutID: string;
-  spaceID: string;
-  subspaceID: string | undefined;
-  subsubspaceID: string | undefined;
+type PostParents = {
+  post: Post;
+  callout: Callout;
+  space: Space;
+  subspace: Space | undefined;
+  subsubspace: Space | undefined;
 };
 
 @Injectable()
@@ -486,57 +477,77 @@ export class SearchResultService {
   }
 
   private async getPostParents(posts: Post[]): Promise<PostParents[]> {
-    const postParents: PostParents[] = [];
     if (!posts.length) {
-      return postParents;
-    }
-    for (const post of posts) {
-      const callout = await this.entityManager.findOne(Callout, {
-        where: {
-          contributions: {
-            post: {
-              id: post.id,
-            },
-          },
-        },
-      });
-      if (!callout) {
-        throw new RelationshipNotFoundException(
-          `Unable to find callout for post: ${post.id}`,
-          LogContext.SEARCH
-        );
-      }
-      const space = await this.entityManager.findOne(Space, {
-        where: {
-          collaboration: {
-            callouts: {
-              id: callout.id,
-            },
-          },
-        },
-        relations: {
-          parentSpace: {
-            parentSpace: true,
-          },
-        },
-      });
-      if (!space) {
-        throw new RelationshipNotFoundException(
-          `Unable to find space parents for callout${callout.id}`,
-          LogContext.SEARCH
-        );
-      }
-
-      postParents.push({
-        post,
-        callout,
-        space,
-        subspace: space.parentSpace,
-        subsubspace: space.parentSpace?.parentSpace,
-      });
+      return [];
     }
 
-    return postParents;
+    const postIds = posts.map(post => post.id);
+
+    const callouts = await this.entityManager.findBy(Callout, {
+      contributions: {
+        post: {
+          id: In(postIds),
+        },
+      },
+    });
+    const calloutIds = callouts.map(callout => callout.id);
+
+    const spaces = await this.entityManager.find(Space, {
+      where: {
+        collaboration: {
+          callouts: {
+            id: In(calloutIds),
+          },
+        },
+      },
+      relations: {
+        parentSpace: {
+          parentSpace: true,
+        },
+      },
+    });
+
+    return posts
+      .map(post => {
+        const callout = callouts.find(callout =>
+          callout?.contributions?.some(
+            contribution => contribution?.post?.id === post.id
+          )
+        );
+
+        if (!callout) {
+          this.logger.error(
+            `Unable to find Callout parent for Post: ${post.id}`,
+            undefined,
+            LogContext.SEARCH_EXTRACT
+          );
+          return undefined;
+        }
+
+        const space = spaces.find(space =>
+          space?.collaboration?.callouts?.some(
+            callout => callout.id === callout.id
+          )
+        );
+
+        if (!space) {
+          this.logger.error(
+            `Unable to find Space parent for Post: ${post.id}`,
+            undefined,
+            LogContext.SEARCH_EXTRACT
+          );
+          return undefined;
+        }
+
+        return {
+          post,
+          callout,
+          space,
+          subspace: space.parentSpace,
+          subsubspace: space.parentSpace?.parentSpace,
+        };
+      })
+      .filter((x): x is PostParents => !!x);
   }
 
   private async getUsersInSpace(spaceId: string): Promise<string[]> {
