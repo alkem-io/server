@@ -458,12 +458,6 @@ export class ConversionService {
         case CalloutGroupName.SUBSPACES:
           locationTagset.tags = [CalloutGroupName.SUBSPACES];
           break;
-        case CalloutGroupName.SUBSPACES:
-          locationTagset.tags = [CalloutGroupName.SUBSPACES];
-          break;
-        case CalloutGroupName.CONTRIBUTE:
-          locationTagset.tags = [CalloutGroupName.KNOWLEDGE];
-          break;
         case CalloutGroupName.CONTRIBUTE:
           locationTagset.tags = [CalloutGroupName.KNOWLEDGE];
           break;

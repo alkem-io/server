@@ -11,7 +11,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
     contributionPolicy: {
       state: CalloutState.OPEN,
     },
-    sortOrder: 2,
+    sortOrder: 1,
     groupName: CalloutGroupName.HOME,
     framing: {
       profile: {
@@ -26,7 +26,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
     contributionPolicy: {
       state: CalloutState.OPEN,
     },
-    sortOrder: 1,
+    sortOrder: 2,
     groupName: CalloutGroupName.HOME,
     framing: {
       profile: {
@@ -41,7 +41,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
     contributionPolicy: {
       state: CalloutState.CLOSED,
     },
-    sortOrder: 1,
+    sortOrder: 3,
     groupName: CalloutGroupName.HOME,
     framing: {
       profile: {
@@ -56,7 +56,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
     contributionPolicy: {
       state: CalloutState.OPEN,
     },
-    sortOrder: 2,
+    sortOrder: 4,
     groupName: CalloutGroupName.HOME,
     framing: {
       profile: {
