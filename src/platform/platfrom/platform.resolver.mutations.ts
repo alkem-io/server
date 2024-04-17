@@ -30,7 +30,7 @@ export class PlatformResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       platformPolicy,
-      AuthorizationPrivilege.AUTHORIZATION_RESET,
+      AuthorizationPrivilege.PLATFORM_ADMIN, // TODO: back to authorization reset
       `reset authorization on platform: ${agentInfo.email}`
     );
     return await this.platformAuthorizationService.applyAuthorizationPolicy();
