@@ -42,9 +42,15 @@ export class LicenseService {
       name: LicenseFeatureFlagName.CALLOUT_TO_CALLOUT_TEMPLATE,
       enabled: false,
     };
+    const vcFeatureFlag: CreateFeatureFlagInput = {
+      name: LicenseFeatureFlagName.VIRTUAL_CONTRIBUTORS,
+      enabled: false,
+    };
+
     const featureFlagInputs: ILicenseFeatureFlag[] = [
       whiteboardRtFeatureFlag,
       calloutToCalloutTemplateFeatureFlag,
+      vcFeatureFlag,
     ];
     license.featureFlags = [];
     for (const featureFlagInput of featureFlagInputs) {

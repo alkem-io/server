@@ -98,11 +98,19 @@ export class RoomServiceEvents {
           chatData,
           agentInfo
         );
-        const answer = result.answer;
+
+        let answer = result.answer;
         this.logger.warn(
           `got answer for VC: ${answer}`,
           LogContext.COMMUNICATION
         );
+
+        if (result.sources) {
+          answer = `${answer}\n${result.sources
+            .map(({ title, uri }) => `- [${title}](${uri})`)
+            .join('\n')}`;
+        }
+
         const answerData: RoomSendMessageReplyInput = {
           message: answer,
           roomID: room.id,

@@ -54,3 +54,20 @@ sudo bash ./.scripts/bootstrap_synapse.sh
 ```
 
 It will use the SYNAPSE_XXX from env.docker, create a configuration in /var/lib/docker/volumes/synapse-data/\_data/, copy them to /var/docker_data/matrix and then map the latter to a volume used in docker-compose.
+
+If you want to run a debug version of kratos, run:
+
+```bash
+npm run start:services:kratos:debug
+```
+
+If you want to run a debug version of any AI service (Engine), do the following:
+
+1. Clone the repo in the same root folder as the server
+2. Run the following command:
+
+```bash
+npm run start:services:ai:debug
+```
+
+Note: You may need multiple repositories cloned in order for this command to run. You can search the word `build` in `quickstart-services-ai-debug` and check which contexts are being built. If you need only one service to be built, comment the rest of the services which build the Dockerfile from relative path to the Alkemio Server.
