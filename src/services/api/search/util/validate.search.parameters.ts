@@ -10,8 +10,7 @@ enum SearchEntityTypes {
   GROUP = 'group',
   ORGANIZATION = 'organization',
   SPACE = 'space',
-  CHALLENGE = 'challenge',
-  OPPORTUNITY = 'opportunity',
+  SUBSPACE = 'subspace',
   POST = 'post',
 }
 
@@ -20,8 +19,7 @@ const SEARCH_ENTITIES: string[] = [
   SearchEntityTypes.GROUP,
   SearchEntityTypes.ORGANIZATION,
   SearchEntityTypes.SPACE,
-  SearchEntityTypes.CHALLENGE,
-  SearchEntityTypes.OPPORTUNITY,
+  SearchEntityTypes.SUBSPACE,
   SearchEntityTypes.POST,
 ];
 

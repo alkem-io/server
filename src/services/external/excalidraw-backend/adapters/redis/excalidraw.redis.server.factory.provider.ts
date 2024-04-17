@@ -59,6 +59,12 @@ const factory = async (
     try {
       const pubClient = createClient({ url: `redis://${host}:${port}` });
       const subClient = pubClient.duplicate();
+      pubClient.on('error', (error: Error) =>
+        logger.error(error.message, error.stack, LogContext.EXCALIDRAW_SERVER)
+      );
+      subClient.on('error', (error: Error) =>
+        logger.error(error.message, error.stack, LogContext.EXCALIDRAW_SERVER)
+      );
       return createAdapter(pubClient, subClient);
     } catch (error) {
       throw new BaseException(

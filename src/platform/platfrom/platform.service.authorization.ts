@@ -150,10 +150,11 @@ export class PlatformAuthorizationService {
     const extendedAuthPolicy = await this.appendCredentialRulesCommunication(
       copyPlatformAuthorization
     );
-    await this.communicationAuthorizationService.applyAuthorizationPolicy(
-      platform.communication,
-      extendedAuthPolicy
-    );
+    platform.communication =
+      await this.communicationAuthorizationService.applyAuthorizationPolicy(
+        platform.communication,
+        extendedAuthPolicy
+      );
 
     platform.storageAggregator =
       await this.storageAggregatorAuthorizationService.applyAuthorizationPolicy(
@@ -168,7 +169,6 @@ export class PlatformAuthorizationService {
     const innovationHubs = await this.innovationHubService.getInnovationHubs({
       relations: {},
     });
-
     for (const innovationHub of innovationHubs) {
       this.innovationHubAuthorizationService.applyAuthorizationPolicyAndSave(
         innovationHub
