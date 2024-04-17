@@ -6,7 +6,6 @@ import { groupBy, intersection, orderBy } from 'lodash';
 import { Space } from '@domain/space/space/space.entity';
 import { ISearchResult } from '@services/api/search/dto/search.result.entry.interface';
 import { ISearchResultSpace } from '@services/api/search/dto/search.result.dto.entry.space';
-import { ISearchResultChallenge } from '@services/api/search/dto/search.result.dto.entry.challenge';
 import { ISpace } from '@domain/space/space/space.interface';
 import { BaseException } from '@common/exceptions/base.exception';
 import {
@@ -15,7 +14,6 @@ import {
   AuthorizationPrivilege,
   LogContext,
 } from '@common/enums';
-import { ISearchResultOpportunity } from '@services/api/search/dto/search.result.dto.entry.opportunity';
 import { ISearchResultUser } from '@services/api/search/dto/search.result.dto.entry.user';
 import { IUser, User } from '@domain/community/user';
 import { ISearchResultOrganization } from '@services/api/search/dto/search.result.dto.entry.organization';
@@ -28,14 +26,12 @@ import { AgentInfo } from '@core/authentication';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UserService } from '@domain/community/user/user.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
-import { SpaceLevel } from '@common/enums/space.level';
+import { SpaceType } from '@common/enums/space.type';
 
 type PostParents = {
   post: Post;
   callout: Callout;
   space: Space;
-  subspace: Space | undefined;
-  subsubspace: Space | undefined;
 };
 
 @Injectable()
@@ -61,38 +57,40 @@ export class SearchResultService {
   ): Promise<ISearchResults> {
     const groupedResults = groupBy(rawSearchResults, 'type');
     // authorize entities with requester and enrich with data
-    const [spaces, subspaces, subsubspaces, users, organizations, posts] =
-      await Promise.all([
-        this.getSpaceSearchResults(
-          groupedResults.space ?? [],
-          agentInfo,
-          spaceId
-        ),
-        this.getChallengeSearchResults(
-          groupedResults.challenge ?? [],
-          agentInfo
-        ),
-        this.getOpportunitySearchResults(
-          groupedResults.opportunity ?? [],
-          agentInfo
-        ),
-        this.getUserSearchResults(groupedResults.user ?? [], spaceId),
-        this.getOrganizationSearchResults(
-          groupedResults.organization ?? [],
-          agentInfo,
-          spaceId
-        ),
-        this.getPostSearchResults(groupedResults.post ?? [], agentInfo),
-      ]);
+    const [
+      spacesLevel0,
+      spacesLevel1,
+      spacesLevel2,
+      users,
+      organizations,
+      posts,
+    ] = await Promise.all([
+      this.getSpaceSearchResults(groupedResults.space ?? [], spaceId),
+      this.getSubspaceSearchResults(
+        groupedResults[SpaceType.CHALLENGE] ?? [],
+        agentInfo
+      ),
+      this.getSubspaceSearchResults(
+        groupedResults[SpaceType.OPPORTUNITY] ?? [],
+        agentInfo
+      ),
+      this.getUserSearchResults(groupedResults.user ?? [], spaceId),
+      this.getOrganizationSearchResults(
+        groupedResults.organization ?? [],
+        agentInfo,
+        spaceId
+      ),
+      this.getPostSearchResults(groupedResults.post ?? [], agentInfo),
+    ]);
     // todo: count - https://github.com/alkem-io/server/issues/3700
     const contributorResults = orderBy(
       [...users, ...organizations],
       'score',
       'desc'
     );
-    const contributionResults = orderBy([...posts], 'score', 'desc');
+    const contributionResults = orderBy(posts, 'score', 'desc');
     const journeyResults = orderBy(
-      [...spaces, ...subspaces, ...subsubspaces],
+      [...spacesLevel0, ...spacesLevel1, ...spacesLevel2],
       'score',
       'desc'
     );
@@ -111,7 +109,6 @@ export class SearchResultService {
   // todo: heavy copy-pasting below: must be refactored
   public async getSpaceSearchResults(
     rawSearchResults: ISearchResult[],
-    agentInfo: AgentInfo,
     spaceId?: string
   ): Promise<ISearchResultSpace[]> {
     if (rawSearchResults.length === 0) {
@@ -158,10 +155,10 @@ export class SearchResultService {
       .filter((space): space is ISearchResultSpace => !!space);
   }
 
-  public async getChallengeSearchResults(
+  public async getSubspaceSearchResults(
     rawSearchResults: ISearchResult[],
     agentInfo: AgentInfo
-  ): Promise<ISearchResultChallenge[]> {
+  ): Promise<ISearchResultSpace[]> {
     if (rawSearchResults.length === 0) {
       return [];
     }
@@ -169,29 +166,27 @@ export class SearchResultService {
     const subspaceIds = rawSearchResults.map(hit => hit.result.id);
 
     const subspaces = await this.entityManager.find(Space, {
-      where: { id: In(subspaceIds), level: SpaceLevel.CHALLENGE },
+      where: { id: In(subspaceIds) },
       relations: { parentSpace: true },
-      select: { id: true, parentSpace: { id: true } },
+      select: {
+        id: true,
+        type: true,
+        parentSpace: { id: true, type: true },
+      },
     });
 
     return subspaces
-      .map<ISearchResultChallenge | undefined>(subspace => {
+      .map<ISearchResultSpace | undefined>(subspace => {
         const rawSearchResult = rawSearchResults.find(
           hit => hit.result.id === subspace.id
         );
 
         if (!rawSearchResult) {
-          const error = new BaseException(
-            'Unable to find raw search result for Challenge',
-            LogContext.SEARCH,
-            AlkemioErrorStatus.NOT_FOUND,
-            {
-              challengeId: subspace.id,
-              cause:
-                'Challenge is not found in the return search results. Can not guess the cause',
-            }
+          this.logger.error(
+            `Unable to find raw search result for Subspace: ${subspace.id}`,
+            undefined,
+            LogContext.SEARCH
           );
-          this.logger.error(error, error.stack, LogContext.SEARCH);
           return undefined;
         }
 
@@ -207,126 +202,27 @@ export class SearchResultService {
 
         if (!subspace.parentSpace) {
           const error = new BaseException(
-            'Unable to find parent space for challenge while building search results',
+            'Unable to find parent space for subspace while building search results',
             LogContext.SEARCH,
-            AlkemioErrorStatus.ENTITY_NOT_INITIALIZED,
+            AlkemioErrorStatus.NOT_FOUND,
             {
-              challengeId: subspace.id,
+              subspaceId: subspace.id,
+              level: subspace.level,
               cause: 'Relation is not loaded. Could be due to broken data',
             }
           );
-          this.logger.error(error, error.stack, LogContext.SEARCH);
-          return undefined;
-        }
+          this.logger.error(error, error.stack, LogContext.SEARCH_RESULT);
 
-        if (
-          !this.authorizationService.isAccessGranted(
-            agentInfo,
-            subspace.authorization,
-            AuthorizationPrivilege.READ
-          )
-        ) {
           return undefined;
         }
 
         return {
           ...rawSearchResult,
-          subspace: subspace as ISpace,
-          space: subspace.parentSpace as ISpace,
+          space: subspace as ISpace,
+          parentSpace: subspace.parentSpace as ISpace,
         };
       })
-      .filter((challenge): challenge is ISearchResultChallenge => !!challenge);
-  }
-
-  public async getOpportunitySearchResults(
-    rawSearchResults: ISearchResult[],
-    agentInfo: AgentInfo
-  ): Promise<ISearchResultChallenge[]> {
-    if (rawSearchResults.length === 0) {
-      return [];
-    }
-
-    const subsubspaceIds = rawSearchResults.map(hit => hit.result.id);
-
-    const subsubspaces = await this.entityManager.find(Space, {
-      where: {
-        id: In(subsubspaceIds),
-        level: SpaceLevel.OPPORTUNITY,
-      },
-      relations: { parentSpace: { parentSpace: true } },
-      select: { parentSpace: { id: true, parentSpace: { id: true } } },
-    });
-
-    return subsubspaces
-      .map<ISearchResultChallenge | undefined>(subsubspace => {
-        const rawSearchResult = rawSearchResults.find(
-          hit => hit.result.id === subsubspace.id
-        );
-
-        if (!rawSearchResult) {
-          this.logger.error(
-            `Unable to find raw search result for Opportunity: ${subsubspace.id}`,
-            undefined,
-            LogContext.SEARCH
-          );
-          return undefined;
-        }
-
-        if (
-          !this.authorizationService.isAccessGranted(
-            agentInfo,
-            subsubspace.authorization,
-            AuthorizationPrivilege.READ
-          )
-        ) {
-          return undefined;
-        }
-
-        if (!subsubspace.parentSpace) {
-          throw new BaseException(
-            'Unable to find parent challenge for opportunity while building search results',
-            LogContext.SEARCH,
-            AlkemioErrorStatus.NOT_FOUND,
-            {
-              opportunityId: subsubspace.id,
-              cause: 'Relation is not loaded. Could be due to broken data',
-            }
-          );
-        }
-
-        if (!subsubspace.parentSpace.parentSpace) {
-          throw new BaseException(
-            'Unable to find parent space for challenge while building search results',
-            LogContext.SEARCH,
-            AlkemioErrorStatus.NOT_FOUND,
-            {
-              challengeId: subsubspace.parentSpace.id,
-              opportunityId: subsubspace.id,
-              cause: 'Relation is not loaded. Could be due to broken data',
-            }
-          );
-        }
-
-        if (
-          !this.authorizationService.isAccessGranted(
-            agentInfo,
-            subsubspace.authorization,
-            AuthorizationPrivilege.READ
-          )
-        ) {
-          return undefined;
-        }
-
-        return {
-          ...rawSearchResult,
-          opportunity: subsubspace as ISpace,
-          subspace: subsubspace.parentSpace as ISpace,
-          space: subsubspace.parentSpace.parentSpace as ISpace,
-        };
-      })
-      .filter(
-        (opportunity): opportunity is ISearchResultOpportunity => !!opportunity
-      );
+      .filter((subspace): subspace is ISearchResultSpace => !!subspace);
   }
 
   public async getUserSearchResults(
@@ -469,7 +365,6 @@ export class SearchResultService {
           ...rawSearchResult,
           callout: postParent.callout,
           space: postParent.space,
-          subspace: postParent.subspace,
           post: postParent.post,
         };
       })
@@ -483,10 +378,26 @@ export class SearchResultService {
 
     const postIds = posts.map(post => post.id);
 
-    const callouts = await this.entityManager.findBy(Callout, {
-      contributions: {
-        post: {
-          id: In(postIds),
+    const callouts = await this.entityManager.find(Callout, {
+      where: {
+        contributions: {
+          post: {
+            id: In(postIds),
+          },
+        },
+      },
+      relations: {
+        contributions: {
+          post: true,
+        },
+      },
+      select: {
+        id: true,
+        contributions: {
+          id: true,
+          post: {
+            id: true,
+          },
         },
       },
     });
@@ -501,8 +412,18 @@ export class SearchResultService {
         },
       },
       relations: {
-        parentSpace: {
-          parentSpace: true,
+        collaboration: {
+          callouts: true,
+        },
+      },
+      select: {
+        id: true,
+        type: true,
+        collaboration: {
+          id: true,
+          callouts: {
+            id: true,
+          },
         },
       },
     });
@@ -543,8 +464,6 @@ export class SearchResultService {
           post,
           callout,
           space,
-          subspace: space.parentSpace,
-          subsubspace: space.parentSpace?.parentSpace,
         };
       })
       .filter((x): x is PostParents => !!x);

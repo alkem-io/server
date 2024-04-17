@@ -1,5 +1,5 @@
 import { setTimeout } from 'timers/promises';
-import { EntityManager, Not } from 'typeorm';
+import { EntityManager, Not, FindManyOptions } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -10,15 +10,15 @@ import { ELASTICSEARCH_CLIENT_PROVIDER } from '@common/constants';
 import { Space } from '@domain/space/space/space.entity';
 import { Organization } from '@domain/community/organization';
 import { User } from '@domain/community/user';
-import { FindManyOptions } from 'typeorm/find-options/FindManyOptions';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { Tagset } from '@domain/common/tagset';
 import { LogContext } from '@common/enums';
 import { asyncReduceSequential } from '@common/utils/async.reduce.sequential';
-import { getIndexPattern } from '../get.index.pattern';
 import { asyncMap } from '@common/utils/async.map';
 import { ElasticResponseError } from '@services/external/elasticsearch/types';
 import { SpaceLevel } from '@common/enums/space.level';
+import { SearchEntityTypes } from '../search.entity.types';
+import { getIndexPattern } from '../get.index.pattern';
 
 const profileRelationOptions = {
   location: true,
@@ -48,6 +48,7 @@ const journeyFindOptions: FindManyOptions<Space> = {
   select: {
     id: true,
     level: true,
+    type: true,
     context: {
       vision: true,
       impact: true,
@@ -114,6 +115,7 @@ export class SearchIngestService {
     }
     const indices = [
       `${this.indexPattern}spaces`,
+      `${this.indexPattern}subspaces`,
       `${this.indexPattern}organizations`,
       `${this.indexPattern}users`,
       `${this.indexPattern}posts`,
@@ -172,12 +174,12 @@ export class SearchIngestService {
         batchSize: 100,
       },
       {
-        index: `${this.indexPattern}spaces`,
+        index: `${this.indexPattern}subspaces`,
         fetchFn: this.fetchSpacesLevel1.bind(this),
         batchSize: 100,
       },
       {
-        index: `${this.indexPattern}spaces`,
+        index: `${this.indexPattern}subspaces`,
         fetchFn: this.fetchSpacesLevel2.bind(this),
         batchSize: 100,
       },
@@ -436,6 +438,7 @@ export class SearchIngestService {
       .then(organizations => {
         return organizations.map(organization => ({
           ...organization,
+          type: SearchEntityTypes.ORGANIZATION,
           profile: {
             ...organization.profile,
             tags: processTagsets(organization.profile.tagsets),
@@ -468,6 +471,7 @@ export class SearchIngestService {
           phone: undefined,
           serviceProfile: undefined,
           gender: undefined,
+          type: SearchEntityTypes.USER,
           profile: {
             ...user.profile,
             tags: processTagsets(user.profile.tagsets),
@@ -591,6 +595,7 @@ export class SearchIngestService {
               }
               spaceLevel0Posts.push({
                 ...contribution.post,
+                type: SearchEntityTypes.POST,
                 license: {
                   visibility:
                     space?.account?.license?.visibility ?? EMPTY_VALUE,
@@ -617,6 +622,7 @@ export class SearchIngestService {
                 }
                 spaceLevel1Posts.push({
                   ...contribution.post,
+                  type: SearchEntityTypes.POST,
                   license: {
                     visibility:
                       space?.account?.license?.visibility ?? EMPTY_VALUE,
@@ -646,6 +652,7 @@ export class SearchIngestService {
                   }
                   spaceLevel2Posts.push({
                     ...contribution.post,
+                    type: SearchEntityTypes.POST,
                     license: {
                       visibility:
                         space?.account?.license?.visibility ?? EMPTY_VALUE,
