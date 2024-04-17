@@ -201,7 +201,7 @@ export class SearchIngestService {
     return asyncReduceSequential(
       params,
       async (acc, { index, fetchFn, batchSize }) => {
-        const batches = await this._ingest(index, fetchFn, batchSize);
+        const batches = await this.fetchAndIngest(index, fetchFn, batchSize);
         const total = batches.reduce((acc, val) => acc + (val.total ?? 0), 0);
         acc[index] = {
           total: total + (acc[index]?.total ?? 0),

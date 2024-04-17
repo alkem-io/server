@@ -31,7 +31,6 @@ import {
 } from '@common/constants';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
-import { OrganizationService } from '@domain/community/organization/organization.service';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 
@@ -46,7 +45,6 @@ export class PlatformAuthorizationService {
     private innovationHubService: InnovationHubService,
     private innovationHubAuthorizationService: InnovationHubAuthorizationService,
     private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
-    private organizationService: OrganizationService,
     @InjectRepository(Platform)
     private platformRepository: Repository<Platform>
   ) {}

@@ -15,6 +15,7 @@ import { VirtualPersonaEngineAdapterInputBase } from './dto/virtual.persona.engi
 import { VirtualPersonaEngineAdapterBaseResponse } from './dto/virtual.persona.engine.adapter.dto.base.response';
 import { IVirtualPersonaQuestionResult } from '@domain/community/virtual-persona/dto/virtual.persona.question.dto.result';
 import { VirtualPersonaEngine } from '@common/enums/virtual.persona.engine';
+import { ChatGuidanceInput } from '@services/api/chat-guidance/dto/chat.guidance.dto.input';
 
 enum VirtualPersonaEventType {
   QUERY = 'query',
@@ -65,8 +66,11 @@ export class VirtualPersonaEngineAdapter {
           const responseChatGuidance =
             this.virtualPersonaEngineChatGuidance.send<
               VirtualPersonaEngineAdapterQueryResponse,
-              VirtualPersonaEngineAdapterQueryInput
-            >({ cmd: VirtualPersonaEventType.QUERY }, eventData);
+              ChatGuidanceInput
+            >({ cmd: VirtualPersonaEventType.QUERY }, {
+              ...eventData,
+              language: 'EN',
+            } as ChatGuidanceInput);
           responseData = await firstValueFrom(responseChatGuidance);
           break;
       }
