@@ -37,7 +37,6 @@ import { PaginationArgs } from '@core/pagination';
 import { getPaginationResults } from '@core/pagination/pagination.fn';
 import { SpaceMembershipCollaborationInfo } from '@services/api/me/space.membership.type';
 import { ISpaceSettings } from '../space.settings/space.settings.interface';
-import { UpdateSpaceSettingsOnSpaceInput } from './dto/space.dto.update.settings';
 import { SpaceType } from '@common/enums/space.type';
 import { IAccount } from '../account/account.interface';
 import { UpdateSpacePlatformSettingsInput } from './dto/space.dto.update.platform.settings';
@@ -54,10 +53,11 @@ import { StorageAggregatorService } from '@domain/storage/storage-aggregator/sto
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
 import { SpaceSettingsService } from '../space.settings/space.settings.service';
-import { UpdateSpaceSettingsInput } from '../space.settings/dto/space.settings.dto.update';
+import { UpdateSpaceSettingsEntityInput } from '../space.settings/dto/space.settings.dto.update';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CommunityRole } from '@common/enums/community.role';
 import { SpaceLevel } from '@common/enums/space.level';
+import { UpdateSpaceSettingsInput } from './dto/space.dto.update.settings';
 
 @Injectable()
 export class SpaceService {
@@ -721,7 +721,7 @@ export class SpaceService {
 
   public async updateSpaceSettings(
     space: ISpace,
-    settingsData: UpdateSpaceSettingsOnSpaceInput
+    settingsData: UpdateSpaceSettingsInput
   ): Promise<ISpace> {
     return await this.updateSettings(space, settingsData.settings);
   }
@@ -1106,7 +1106,7 @@ export class SpaceService {
 
   public async updateSettings(
     space: ISpace,
-    settingsData: UpdateSpaceSettingsInput
+    settingsData: UpdateSpaceSettingsEntityInput
   ): Promise<ISpace> {
     const settings = this.spaceSettingsService.getSettings(space.settingsStr);
     const updatedSettings = this.spaceSettingsService.updateSettings(
