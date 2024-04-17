@@ -194,7 +194,7 @@ export class SearchIngestService {
       {
         index: `${this.indexPattern}posts`,
         fetchFn: this.fetchPosts.bind(this),
-        batchSize: 15,
+        batchSize: 10,
       },
     ];
 
