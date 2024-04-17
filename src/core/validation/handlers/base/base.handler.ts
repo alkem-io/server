@@ -76,9 +76,8 @@ import {
 import { UpdateUserPlatformSettingsInput } from '@domain/community/user/dto/user.dto.update.platform.settings';
 import { UpdateInnovationFlowStateInput } from '@domain/collaboration/innovation-flow-states/dto/innovation.flow.state.dto.update';
 import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
-import { UpdateSubspaceSettingsInput } from '@domain/space/space/dto/subspace.dto.update.settings';
-import { UpdateSpaceSettingsInput } from '@domain/space/space.settings/dto/space.settings.dto.update';
-import { UpdateSpaceSettingsOnSpaceInput } from '@domain/space/space/dto/space.dto.update.settings';
+import { UpdateSpaceSettingsEntityInput } from '@domain/space/space.settings/dto/space.settings.dto.update';
+import { UpdateSpaceSettingsInput } from '@domain/space/space/dto/space.dto.update.settings';
 import {
   CreateAccountInput,
   UpdateAccountPlatformSettingsInput,
@@ -132,7 +131,7 @@ export class BaseHandler extends AbstractHandler {
       UpdateCommunityApplicationFormInput,
       UpdateCommunityGuidelinesInput,
       UpdateSpaceInput,
-      UpdateSpaceSettingsInput,
+      UpdateSpaceSettingsEntityInput,
       UpdateOrganizationInput,
       UpdateLicenseInput,
       UpdateLinkInput,
@@ -146,9 +145,8 @@ export class BaseHandler extends AbstractHandler {
       UpdateWhiteboardTemplateInput,
       UpdateDiscussionInput,
       UpdateEcosystemModelInput,
+      UpdateSpaceSettingsEntityInput,
       UpdateSpaceSettingsInput,
-      UpdateSpaceSettingsOnSpaceInput,
-      UpdateSubspaceSettingsInput,
       VisualUploadImageInput,
       CommunityApplyInput,
       CreateInvitationExistingUserOnCommunityInput,
