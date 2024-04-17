@@ -75,8 +75,6 @@ export class PlatformAuthorizationPolicyService {
           AuthorizationPrivilege.UPDATE,
           AuthorizationPrivilege.DELETE,
           AuthorizationPrivilege.GRANT,
-          AuthorizationPrivilege.AUTHORIZATION_RESET,
-          AuthorizationPrivilege.PLATFORM_ADMIN,
         ],
         [
           AuthorizationCredential.GLOBAL_ADMIN,
