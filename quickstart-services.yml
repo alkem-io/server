@@ -340,7 +340,7 @@ services:
   virtual_contributor:
     container_name: alkemio_dev_virtual_contributor
     hostname: virtual-contributor
-    image: alkemio/digitalleefomgeving-engine:v0.1.0
+    image: alkemio/digitalleefomgeving-engine:v0.2.0
     platform: linux/x86_64
     restart: always
     volumes:
