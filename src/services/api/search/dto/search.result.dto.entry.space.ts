@@ -15,4 +15,10 @@ export abstract class ISearchResultSpace
     description: 'The Space that was found.',
   })
   space!: ISpace;
+
+  @Field(() => ISpace, {
+    nullable: true,
+    description: 'The parent of this Space, if any.',
+  })
+  parentSpace?: ISpace;
 }
