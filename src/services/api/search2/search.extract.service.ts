@@ -115,7 +115,7 @@ export class SearchExtractService {
               boost_mode: 'multiply',
             },
           },
-          // return only the 'id' field of the document
+          // return only the 'id' and 'type' fields of the document
           fields: ['id', 'type'],
           // do not include the source in the result
           _source: false,
