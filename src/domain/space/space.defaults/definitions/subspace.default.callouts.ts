@@ -6,32 +6,32 @@ import { EMPTY_WHITEBOARD_CONTENT } from '@domain/common/whiteboard/empty.whiteb
 
 export const subspaceDefaultCallouts: CreateCalloutInput[] = [
   {
-    nameID: 'getting-started',
-    type: CalloutType.LINK_COLLECTION,
-    contributionPolicy: {
-      state: CalloutState.CLOSED,
-    },
-    sortOrder: 1,
-    groupName: CalloutGroupName.HOME_2,
-    framing: {
-      profile: {
-        displayName: 'Getting Started',
-        description: '⬇️ Here are some quick links to help you get started',
-      },
-    },
-  },
-  {
     nameID: 'general-chat',
     type: CalloutType.POST,
     contributionPolicy: {
       state: CalloutState.OPEN,
     },
     sortOrder: 2,
-    groupName: CalloutGroupName.HOME_1,
+    groupName: CalloutGroupName.HOME,
     framing: {
       profile: {
         displayName: 'General chat 💬',
         description: 'Things you would like to discuss with the community.',
+      },
+    },
+  },
+  {
+    nameID: 'getting-started',
+    type: CalloutType.LINK_COLLECTION,
+    contributionPolicy: {
+      state: CalloutState.CLOSED,
+    },
+    sortOrder: 1,
+    groupName: CalloutGroupName.HOME,
+    framing: {
+      profile: {
+        displayName: 'Getting Started',
+        description: '⬇️ Here are some quick links to help you get started',
       },
     },
   },
@@ -42,7 +42,7 @@ export const subspaceDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 2,
-    groupName: CalloutGroupName.HOME_2,
+    groupName: CalloutGroupName.HOME,
     framing: {
       profile: {
         displayName: '👥 This is us!',
@@ -62,7 +62,7 @@ export const subspaceDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 1,
-    groupName: CalloutGroupName.CONTRIBUTE_2,
+    groupName: CalloutGroupName.CONTRIBUTE,
     framing: {
       profile: {
         displayName: 'Relevant news, research or use cases 📰',
@@ -82,7 +82,7 @@ export const subspaceDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 2,
-    groupName: CalloutGroupName.CONTRIBUTE_2,
+    groupName: CalloutGroupName.CONTRIBUTE,
     framing: {
       profile: {
         displayName: 'Who are the stakeholders?',
@@ -105,7 +105,7 @@ export const subspaceDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 3,
-    groupName: CalloutGroupName.CONTRIBUTE_1,
+    groupName: CalloutGroupName.CONTRIBUTE,
     framing: {
       profile: {
         displayName: 'Reference / important documents',
@@ -120,7 +120,7 @@ export const subspaceDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 1,
-    groupName: CalloutGroupName.SUBSPACES_2,
+    groupName: CalloutGroupName.SUBSPACES,
     framing: {
       profile: {
         displayName: 'Proposals',

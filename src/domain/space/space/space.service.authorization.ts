@@ -37,6 +37,7 @@ import {
   CREDENTIAL_RULE_TYPES_SPACE_COMMUNITY_JOIN_GLOBAL_REGISTERED,
   CREDENTIAL_RULE_SPACE_HOST_ASSOCIATES_JOIN,
   CREDENTIAL_RULE_SPACE_ADMIN_DELETE_SUBSPACE,
+  POLICY_RULE_COMMUNITY_INVITE,
 } from '@common/constants';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
 import { EntityNotInitializedException } from '@common/exceptions';
@@ -45,6 +46,7 @@ import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorizat
 import { CredentialsSearchInput } from '@domain/agent';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { SpaceSettingsService } from '../space.settings/space.settings.service';
+import { SpaceLevel } from '@common/enums/space.level';
 
 @Injectable()
 export class SpaceAuthorizationService {
@@ -209,12 +211,22 @@ export class SpaceAuthorizationService {
         license,
         communityPolicy
       );
-    // Specific extension
-    space.community.authorization =
-      this.extendCommunityAuthorizationPolicySubspace(
-        space.community.authorization,
-        communityPolicy
+
+    // Invitations are only supported at root space level, so have different authorizations
+    // depending on the level
+    if (space.level === SpaceLevel.SPACE) {
+      // Only allow invitations for root spaces
+      space.community.authorization = this.extendPrivilegeRulesInviteMember(
+        space.community.authorization
       );
+    } else {
+      // Allow directly adding members at subspace level
+      space.community.authorization =
+        this.extendCommunityAuthorizationPolicySubspace(
+          space.community.authorization,
+          communityPolicy
+        );
+    }
 
     space.collaboration =
       await this.collaborationAuthorizationService.applyAuthorizationPolicy(
@@ -356,6 +368,24 @@ export class SpaceAuthorizationService {
     const communityPolicyWithFlags = spaceInput.community.policy;
     communityPolicyWithFlags.settings = spaceSettings;
     return communityPolicyWithFlags;
+  }
+
+  private extendPrivilegeRulesInviteMember(
+    authorization: IAuthorizationPolicy | undefined
+  ): IAuthorizationPolicy {
+    const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
+
+    const communityInvitePrivilege = new AuthorizationPolicyRulePrivilege(
+      [AuthorizationPrivilege.COMMUNITY_INVITE],
+      AuthorizationPrivilege.GRANT,
+      POLICY_RULE_COMMUNITY_INVITE
+    );
+    privilegeRules.push(communityInvitePrivilege);
+
+    return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
+      authorization,
+      privilegeRules
+    );
   }
 
   private extendCommunityAuthorizationPolicySubspace(

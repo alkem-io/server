@@ -4,7 +4,7 @@ import { UpdateSpaceSettingsMembershipInput } from './space.settings.membership.
 import { UpdateSpaceSettingsCollaborationInput } from './space.settings.collaboration.dto.update';
 
 @InputType()
-export class UpdateSpaceSettingsInput {
+export class UpdateSpaceSettingsEntityInput {
   @Field(() => UpdateSpaceSettingsPrivacyInput, {
     nullable: true,
     description: '',

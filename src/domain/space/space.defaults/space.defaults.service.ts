@@ -147,7 +147,7 @@ export class SpaceDefaultsService {
     switch (spaceType) {
       case SpaceType.CHALLENGE:
       case SpaceType.OPPORTUNITY:
-        return CalloutGroupName.CONTRIBUTE_2;
+        return CalloutGroupName.CONTRIBUTE;
       case SpaceType.SPACE:
         return CalloutGroupName.KNOWLEDGE;
     }
