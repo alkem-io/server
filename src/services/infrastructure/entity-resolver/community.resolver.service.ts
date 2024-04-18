@@ -133,6 +133,7 @@ export class CommunityResolverService {
   public async getCommunityFromWhiteboardOrFail(
     whiteboardId: string
   ): Promise<ICommunity> {
+    // check for whitebaord in contributions
     let space = await this.entityManager.findOne(Space, {
       where: {
         collaboration: {
@@ -149,12 +150,13 @@ export class CommunityResolverService {
         community: true,
       },
     });
+    // check for whiteboard in framing
     if (!space) {
       space = await this.entityManager.findOne(Space, {
         where: {
           collaboration: {
             callouts: {
-              contributions: {
+              framing: {
                 whiteboard: {
                   id: whiteboardId,
                 },
