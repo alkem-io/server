@@ -123,22 +123,9 @@ export class SpaceResolverMutations {
       space,
       settingsData
     );
-    let parentAuthorization = space.account.authorization;
-    if (space.level > 0) {
-      // Update using the authorizatin of the parent space
-      if (!space.parentSpace || !space.parentSpace.authorization) {
-        throw new EntityNotInitializedException(
-          `Unabl to load authorization for parentSpace: ${space.id}`,
-          LogContext.SPACES
-        );
-      }
-      parentAuthorization = space.parentSpace.authorization;
-    }
+
     // As the settings may update the authorization for the Space, the authorization policy will need to be reset
-    await this.spaceAuthorizationService.applyAuthorizationPolicy(
-      updatedSpace,
-      parentAuthorization
-    );
+    await this.spaceAuthorizationService.applyAuthorizationPolicy(updatedSpace);
     return await this.spaceService.getSpaceOrFail(space.id);
   }
 
@@ -211,10 +198,7 @@ export class SpaceResolverMutations {
     );
 
     const subspaceAuth =
-      await this.spaceAuthorizationService.applyAuthorizationPolicy(
-        subspace,
-        space.authorization
-      );
+      await this.spaceAuthorizationService.applyAuthorizationPolicy(subspace);
 
     this.activityAdapter.subspaceCreated(
       {

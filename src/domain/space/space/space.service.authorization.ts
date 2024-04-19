@@ -64,10 +64,7 @@ export class SpaceAuthorizationService {
     private spaceRepository: Repository<Space>
   ) {}
 
-  async applyAuthorizationPolicy(
-    spaceInput: ISpace,
-    parentAuthorization: IAuthorizationPolicy | undefined
-  ): Promise<ISpace> {
+  async applyAuthorizationPolicy(spaceInput: ISpace): Promise<ISpace> {
     let space = await this.spaceService.getSpaceOrFail(spaceInput.id, {
       relations: {
         authorization: true,
@@ -76,6 +73,9 @@ export class SpaceAuthorizationService {
         },
         account: {
           license: true,
+          authorization: true,
+        },
+        parentSpace: {
           authorization: true,
         },
       },
@@ -93,32 +93,63 @@ export class SpaceAuthorizationService {
         LogContext.SPACES
       );
 
+    space.authorization = this.authorizationPolicyService.reset(
+      space.authorization
+    );
     const communityPolicyWithFlags = this.getCommunityPolicyWithSettings(space);
 
     const license = space.account.license;
+    const privateSpace =
+      space.community.policy.settings.privacy.mode === SpacePrivacyMode.PRIVATE;
+    const accountAuthorization = space.account.authorization;
 
-    const inheritedAuthorization =
+    // Choose what authorization to inherit from
+    let parentAuthorization = accountAuthorization;
+    if (space.level === SpaceLevel.SPACE) {
+      parentAuthorization = accountAuthorization;
+    } else if (privateSpace) {
+      parentAuthorization = accountAuthorization;
+    } else {
+      if (!space.parentSpace || !space.parentSpace.authorization) {
+        throw new EntityNotInitializedException(
+          `Parent authorization not found on subspace auth reset: ${space.id} `,
+          LogContext.SPACES
+        );
+      }
+      parentAuthorization = space.parentSpace.authorization;
+    }
+
+    space.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         space.authorization,
         parentAuthorization
       );
 
+    if (privateSpace) {
+      space.authorization.anonymousReadAccess = false;
+    }
+
+    if (!space.authorization) {
+      throw new RelationshipNotFoundException(
+        `Unable authorization not set on Space: ${space.id} `,
+        LogContext.SPACES
+      );
+    }
     // Extend rules depending on the Visibility
     switch (license.visibility) {
       case SpaceVisibility.ACTIVE:
       case SpaceVisibility.DEMO:
-        this.extendAuthorizationPolicyLocal(
-          inheritedAuthorization,
+        space.authorization = this.extendAuthorizationPolicyLocal(
+          space.authorization,
           communityPolicyWithFlags
         );
         break;
       case SpaceVisibility.ARCHIVED:
         // ensure it has visibility privilege set to private
-        inheritedAuthorization.anonymousReadAccess = false;
+        space.authorization.anonymousReadAccess = false;
         break;
     }
 
-    space.authorization = inheritedAuthorization;
     await this.spaceService.save(space);
 
     // Cascade down
@@ -159,6 +190,7 @@ export class SpaceAuthorizationService {
 
     return await this.spaceService.save(space);
   }
+
   public async propagateAuthorizationToChildEntities(
     spaceInput: ISpace,
     license: ILicense
@@ -617,7 +649,7 @@ export class SpaceAuthorizationService {
       resourceID: space.id,
     };
     for (const subspace of space.subspaces) {
-      await this.applyAuthorizationPolicy(subspace, space.authorization);
+      await this.applyAuthorizationPolicy(subspace);
 
       subspace.authorization = this.extendSubSpaceAuthorization(
         subspace.authorization,
