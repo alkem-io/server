@@ -143,6 +143,12 @@ export class SpaceAuthorizationService {
           space.authorization,
           communityPolicyWithFlags
         );
+        if (privateSpace && space.level !== SpaceLevel.SPACE) {
+          space.authorization = this.extendPrivateSubspaceAdmins(
+            space.authorization,
+            communityPolicyWithFlags
+          );
+        }
         break;
       case SpaceVisibility.ARCHIVED:
         // ensure it has visibility privilege set to private
@@ -487,7 +493,7 @@ export class SpaceAuthorizationService {
     return authorization;
   }
 
-  public extendPrivateSubspaceAdmins(
+  private extendPrivateSubspaceAdmins(
     authorization: IAuthorizationPolicy | undefined,
     policy: ICommunityPolicy
   ): IAuthorizationPolicy {
@@ -525,7 +531,7 @@ export class SpaceAuthorizationService {
     return authorization;
   }
 
-  public extendCommunityAuthorizationPolicySpace(
+  private extendCommunityAuthorizationPolicySpace(
     communityAuthorization: IAuthorizationPolicy | undefined,
     policy: ICommunityPolicy
   ): IAuthorizationPolicy {
@@ -629,7 +635,7 @@ export class SpaceAuthorizationService {
     return criteria;
   }
 
-  public async propagateAuthorizationToSubspaces(
+  private async propagateAuthorizationToSubspaces(
     spaceBase: ISpace
   ): Promise<ISpace> {
     const space = await this.spaceService.getSpaceOrFail(spaceBase.id, {
