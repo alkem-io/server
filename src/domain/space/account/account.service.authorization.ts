@@ -88,8 +88,7 @@ export class AccountAuthorizationService {
 
     account.space =
       await this.spaceAuthorizationService.applyAuthorizationPolicy(
-        account.space,
-        account.authorization
+        account.space
       );
 
     // Library and defaults are inherited from the space
