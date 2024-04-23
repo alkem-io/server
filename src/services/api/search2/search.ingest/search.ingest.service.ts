@@ -48,7 +48,6 @@ const journeyFindOptions: FindManyOptions<Space> = {
   select: {
     id: true,
     level: true,
-    type: true,
     context: {
       vision: true,
       impact: true,
@@ -337,6 +336,7 @@ export class SearchIngestService {
         return spaces.map(space => ({
           ...space,
           account: undefined,
+          type: SpaceLevel.SPACE,
           license: { visibility: space?.account?.license?.visibility },
           spaceID: space.id, // spaceID is the same as the space's id
           profile: {
@@ -374,6 +374,7 @@ export class SearchIngestService {
           ...space,
           account: undefined,
           parentSpace: undefined,
+          type: SpaceLevel.SPACE,
           license: { visibility: space?.account?.license?.visibility },
           spaceID: space.parentSpace?.id ?? EMPTY_VALUE,
           profile: {
@@ -411,6 +412,7 @@ export class SearchIngestService {
           ...space,
           account: undefined,
           parentSpace: undefined,
+          type: SpaceLevel.SPACE,
           license: { visibility: space?.account?.license?.visibility },
           spaceID: space.parentSpace?.parentSpace?.id ?? EMPTY_VALUE,
           profile: {
