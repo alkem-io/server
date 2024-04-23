@@ -1,7 +1,7 @@
 import { CreateFormInput } from '@domain/common/form/dto/form.dto.create';
 
 export const subspceCommunityApplicationForm: CreateFormInput = {
-  description: '<strong>Welcome!</strong>\ Thank you for expressing interest in joining our community. We would like to learn more about you and how you can contribute. Please take a moment to complete the following application form.',
+  description: '<strong>Welcome!</strong><br> Thank you for expressing interest in joining our community. We would like to learn more about you and how you can contribute. Please take a moment to complete the following application form.',
 
   questions: [
     {
