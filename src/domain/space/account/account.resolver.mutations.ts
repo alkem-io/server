@@ -98,7 +98,7 @@ export class AccountResolverMutations {
   }
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => ISpace, {
+  @Mutation(() => IAccount, {
     description: 'Reset the Authorization Policy on the specified Space.',
   })
   async authorizationPolicyResetOnAccount(

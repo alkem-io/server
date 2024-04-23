@@ -269,16 +269,18 @@ import { VirtualContributorModule } from '@domain/community/virtual-contributor/
       useClass: InnovationHubInterceptor,
     },
     {
+      // This should be the first filter in the list:
+      // See Catch everything at: https://docs.nestjs.com/exception-filters
+      provide: APP_FILTER,
+      useClass: UnhandledExceptionFilter,
+    },
+    {
       provide: APP_FILTER,
       useClass: GraphqlExceptionFilter,
     },
     {
       provide: APP_FILTER,
       useClass: HttpExceptionFilter,
-    },
-    {
-      provide: APP_FILTER,
-      useClass: UnhandledExceptionFilter,
     },
     {
       provide: APP_PIPE,
