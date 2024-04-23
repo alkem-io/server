@@ -3,7 +3,7 @@ import { Field, ObjectType } from '@nestjs/graphql';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 
 @ObjectType('InvitationExternal')
-export abstract class IInvitationExternal extends IAuthorizable {
+export class IInvitationExternal extends IAuthorizable {
   @Field(() => String, {
     description: 'The email address of the external user being invited',
   })

@@ -4,7 +4,7 @@ import { Field, ObjectType } from '@nestjs/graphql';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 
 @ObjectType('Invitation')
-export abstract class IInvitation extends IAuthorizable {
+export class IInvitation extends IAuthorizable {
   invitedUser!: string;
   createdBy!: string;
 
