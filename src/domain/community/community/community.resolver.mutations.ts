@@ -451,7 +451,7 @@ export class CommunityResolverMutations {
       'Invite an external User to join the specified Community as a member.',
   })
   @Profiling.api
-  async inviteExternalUserForCommunityMembership(
+  async inviteForCommunityMembershipByEmail(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('invitationData')
     invitationData: CreateInvitationExternalUserOnCommunityInput
@@ -460,7 +460,7 @@ export class CommunityResolverMutations {
       invitationData.communityID
     );
 
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       community.authorization,
       AuthorizationPrivilege.COMMUNITY_INVITE,
@@ -470,7 +470,7 @@ export class CommunityResolverMutations {
     const user = await this.userService.getUserByEmail(invitationData.email);
 
     if (user) {
-      return await this.inviteSingleExistingUser({
+      return this.inviteSingleExistingUser({
         community,
         welcomeMessage: invitationData.welcomeMessage,
         agentInfo,
