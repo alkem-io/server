@@ -848,6 +848,6 @@ export class UrlGeneratorService {
       'collaborationId',
       collaborationInfo.entityID
     );
-    return `${journeyUrlPath}/dashboard/${this.PATH_CALENDAR}/${calendarEventInfo.entityNameID}`;
+    return `${journeyUrlPath}/${this.PATH_CALENDAR}/${calendarEventInfo.entityNameID}`;
   }
 }
