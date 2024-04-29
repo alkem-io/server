@@ -80,6 +80,8 @@ export class AccountAuthorizationService {
       account.id
     );
 
+    await this.accountRepository.save(account);
+
     account.license =
       await this.licenseAuthorizationService.applyAuthorizationPolicy(
         account.license,
