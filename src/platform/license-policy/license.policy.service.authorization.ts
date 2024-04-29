@@ -13,7 +13,7 @@ export class LicensePolicyAuthorizationService {
     private licensePolicyService: LicensePolicyService,
     private authorizationPolicyService: AuthorizationPolicyService,
     @InjectRepository(LicensePolicy)
-    private licenseRepository: Repository<LicensePolicy>
+    private licensePolicyRepository: Repository<LicensePolicy>
   ) {}
 
   async applyAuthorizationPolicy(
@@ -31,6 +31,6 @@ export class LicensePolicyAuthorizationService {
         parentAuthorization
       );
 
-    return await this.licenseRepository.save(licensePolicy);
+    return await this.licensePolicyRepository.save(licensePolicy);
   }
 }

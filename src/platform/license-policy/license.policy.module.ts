@@ -5,9 +5,15 @@ import { LicensePolicyResolverFields } from './license.policy.resolver.fields';
 
 import { LicensePolicyService } from './license.policy.service';
 import { LicensePolicyAuthorizationService } from './license.policy.service.authorization';
+import { LicenseEngineModule } from '@core/license-engine/license.engine.module';
+import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([LicensePolicy])],
+  imports: [
+    AuthorizationPolicyModule,
+    LicenseEngineModule,
+    TypeOrmModule.forFeature([LicensePolicy]),
+  ],
   providers: [
     LicensePolicyService,
     LicensePolicyResolverFields,

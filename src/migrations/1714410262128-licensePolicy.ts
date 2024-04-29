@@ -5,23 +5,31 @@ export class licensePolicy1714410262128 implements MigrationInterface {
   name = 'licensePolicy1714410262128';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    // await queryRunner.query(`CREATE TABLE \`license_policy\` (\`id\` char(36) NOT NULL,
-    //                                                             \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
-    //                                                             \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
-    //                                                             \`version\` int NOT NULL,
-    //                                                             \`featureFlagRules\` text NOT NULL,
-    //                                                             \`authorizationId\` char(36) NULL,
-    //                                                             UNIQUE INDEX \`REL_23d4d78ea8db637df031f86f03\` (\`authorizationId\`),
-    //                                                             PRIMARY KEY (\`id\`)) ENGINE=InnoDB`);
+    await queryRunner.query(`CREATE TABLE \`license_policy\` (\`id\` char(36) NOT NULL,
+                                                                \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+                                                                \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+                                                                \`version\` int NOT NULL,
+                                                                \`featureFlagRules\` text NOT NULL,
+                                                                \`authorizationId\` char(36) NULL,
+                                                                UNIQUE INDEX \`REL_23d4d78ea8db637df031f86f03\` (\`authorizationId\`),
+                                                                PRIMARY KEY (\`id\`)) ENGINE=InnoDB`);
 
-    // await queryRunner.query(
-    //   `ALTER TABLE \`license_policy\` ADD CONSTRAINT \`FK_23d4d78ea8db637df031f86f030\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
-    // );
+    await queryRunner.query(
+      `ALTER TABLE \`license_policy\` ADD CONSTRAINT \`FK_23d4d78ea8db637df031f86f030\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    );
 
-    // await queryRunner.query(`ALTER TABLE \`platform\` ADD \`licensePolicyId\` char(36) NULL`);
-    // await queryRunner.query(`CREATE UNIQUE INDEX \`REL_bde2e6ff4a8d800388bcee8057\` ON \`platform\` (\`licensePolicyId\`)`);
-    // await queryRunner.query(`ALTER TABLE \`platform\` ADD UNIQUE INDEX \`IDX_bde2e6ff4a8d800388bcee8057\` (\`licensePolicyId\`)`);
-    // await queryRunner.query(`ALTER TABLE \`platform\` ADD CONSTRAINT \`FK_bde2e6ff4a8d800388bcee8057e\` FOREIGN KEY (\`licensePolicyId\`) REFERENCES \`license_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`);
+    await queryRunner.query(
+      `ALTER TABLE \`platform\` ADD \`licensePolicyId\` char(36) NULL`
+    );
+    await queryRunner.query(
+      `CREATE UNIQUE INDEX \`REL_bde2e6ff4a8d800388bcee8057\` ON \`platform\` (\`licensePolicyId\`)`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`platform\` ADD UNIQUE INDEX \`IDX_bde2e6ff4a8d800388bcee8057\` (\`licensePolicyId\`)`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`platform\` ADD CONSTRAINT \`FK_bde2e6ff4a8d800388bcee8057e\` FOREIGN KEY (\`licensePolicyId\`) REFERENCES \`license_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    );
 
     const licensePolicyID = randomUUID();
     const licensePolicyAuthID = randomUUID();
@@ -37,6 +45,9 @@ export class licensePolicy1714410262128 implements MigrationInterface {
                 1,
                 '${licensePolicyAuthID}',
                 '${JSON.stringify(licenseRules)}')`
+    );
+    await queryRunner.query(
+      `UPDATE platform SET licensePolicyId = '${licensePolicyID}'`
     );
   }
 
