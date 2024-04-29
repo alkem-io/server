@@ -1,10 +1,10 @@
-import { UpdateSpaceSettingsInput } from '@domain/space/space.settings/dto/space.settings.dto.update';
+import { UpdateSpaceSettingsEntityInput } from '@domain/space/space.settings/dto/space.settings.dto.update';
 import { Field, InputType } from '@nestjs/graphql';
 import { Type } from 'class-transformer';
 import { ValidateNested } from 'class-validator';
 
 @InputType()
-export class UpdateSpaceSettingsOnSpaceInput {
+export class UpdateSpaceSettingsInput {
   @Field(() => String, {
     nullable: false,
     description:
@@ -12,11 +12,11 @@ export class UpdateSpaceSettingsOnSpaceInput {
   })
   spaceID!: string;
 
-  @Field(() => UpdateSpaceSettingsInput, {
+  @Field(() => UpdateSpaceSettingsEntityInput, {
     nullable: false,
     description: 'Update the settings for the Space.',
   })
   @ValidateNested()
-  @Type(() => UpdateSpaceSettingsInput)
-  settings!: UpdateSpaceSettingsInput;
+  @Type(() => UpdateSpaceSettingsEntityInput)
+  settings!: UpdateSpaceSettingsEntityInput;
 }

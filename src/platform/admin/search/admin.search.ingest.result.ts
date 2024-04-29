@@ -1,7 +1,7 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType()
-export class IngestBulkResult {
+export class IngestBatchResult {
   @Field(() => Boolean, {
     description: 'Whether the operation was successful.',
   })
@@ -27,10 +27,16 @@ export class IngestResult {
   })
   index!: string;
 
-  @Field(() => IngestBulkResult, {
+  @Field(() => Number, {
+    nullable: true,
+    description: 'Amount of documents indexed.',
+  })
+  total!: number | null;
+
+  @Field(() => [IngestBatchResult], {
     description: 'The result of the operation.',
   })
-  result!: IngestBulkResult;
+  batches!: IngestBatchResult[];
 }
 
 @ObjectType()

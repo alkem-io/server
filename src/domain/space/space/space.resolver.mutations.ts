@@ -18,10 +18,9 @@ import { ContributionReporterService } from '@services/external/elasticsearch/co
 import { NameReporterService } from '@services/external/elasticsearch/name-reporter/name.reporter.service';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { LogContext } from '@common/enums';
-import { UpdateSubspaceSettingsInput } from './dto/subspace.dto.update.settings';
-import { UpdateSpaceSettingsOnSpaceInput } from './dto/space.dto.update.settings';
 import { UpdateSpacePlatformSettingsInput } from './dto/space.dto.update.platform.settings';
 import { SUBSCRIPTION_SUBSPACE_CREATED } from '@common/constants/providers';
+import { UpdateSpaceSettingsInput } from './dto/space.dto.update.settings';
 
 @Resolver()
 export class SpaceResolverMutations {
@@ -94,15 +93,24 @@ export class SpaceResolverMutations {
   @Profiling.api
   async updateSpaceSettings(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('settingsData') settingsData: UpdateSpaceSettingsOnSpaceInput
+    @Args('settingsData') settingsData: UpdateSpaceSettingsInput
   ): Promise<ISpace> {
     const space = await this.spaceService.getSpaceOrFail(settingsData.spaceID, {
       relations: {
         account: {
           authorization: true,
         },
+        parentSpace: {
+          authorization: true,
+        },
       },
     });
+    if (!space.account || !space.account.authorization) {
+      throw new EntityNotInitializedException(
+        `Unabl to load authorization for account when updating settings on space: ${space.id}`,
+        LogContext.SPACES
+      );
+    }
 
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -115,11 +123,9 @@ export class SpaceResolverMutations {
       space,
       settingsData
     );
+
     // As the settings may update the authorization for the Space, the authorization policy will need to be reset
-    await this.spaceAuthorizationService.applyAuthorizationPolicy(
-      updatedSpace,
-      space.account.authorization
-    );
+    await this.spaceAuthorizationService.applyAuthorizationPolicy(updatedSpace);
     return await this.spaceService.getSpaceOrFail(space.id);
   }
 
@@ -144,58 +150,6 @@ export class SpaceResolverMutations {
       space,
       updateData
     );
-  }
-
-  // Mutation is here because authorization policies need to be reset
-  // resetting works only on top level entities
-  // this way we avoid the complexity and circular dependencies introduced
-  // resetting the challenge policies
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => ISpace, {
-    description: 'Updates one of the settings on a Space',
-  })
-  @Profiling.api
-  async updateSubspaceSettings(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('settingsData') settingsData: UpdateSubspaceSettingsInput
-  ): Promise<ISpace> {
-    const subspace = await this.spaceService.getSpaceOrFail(
-      settingsData.subspaceID,
-      {
-        relations: {
-          account: {
-            space: true,
-          },
-        },
-      }
-    );
-    if (!subspace.account || !subspace.account.space) {
-      throw new EntityNotInitializedException(
-        `Unable to find account for ${subspace.nameID}`,
-        LogContext.SPACES
-      );
-    }
-    const spaceID = subspace.account.space.id;
-
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      subspace.authorization,
-      AuthorizationPrivilege.UPDATE,
-      `subspace settings update: ${subspace.id}`
-    );
-
-    const space = await this.spaceService.getSpaceOrFail(spaceID);
-    // TODO: pass through the updated settings to the challenge service
-    const updatedSpace = await this.updateSubspaceSettings(
-      agentInfo,
-      settingsData
-    );
-    // As the settings may update the authorization, the authorization policy will need to be reset
-    await this.spaceAuthorizationService.applyAuthorizationPolicy(
-      updatedSpace,
-      space.authorization
-    );
-    return await this.spaceService.getSpaceOrFail(subspace.id);
   }
 
   @UseGuards(GraphqlGuard)
@@ -244,10 +198,7 @@ export class SpaceResolverMutations {
     );
 
     const subspaceAuth =
-      await this.spaceAuthorizationService.applyAuthorizationPolicy(
-        subspace,
-        space.authorization
-      );
+      await this.spaceAuthorizationService.applyAuthorizationPolicy(subspace);
 
     this.activityAdapter.subspaceCreated(
       {

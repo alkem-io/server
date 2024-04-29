@@ -80,6 +80,8 @@ export class AccountAuthorizationService {
       account.id
     );
 
+    await this.accountRepository.save(account);
+
     account.license =
       await this.licenseAuthorizationService.applyAuthorizationPolicy(
         account.license,
@@ -88,8 +90,7 @@ export class AccountAuthorizationService {
 
     account.space =
       await this.spaceAuthorizationService.applyAuthorizationPolicy(
-        account.space,
-        account.authorization
+        account.space
       );
 
     // Library and defaults are inherited from the space

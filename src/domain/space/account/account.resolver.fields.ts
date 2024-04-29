@@ -4,7 +4,7 @@ import { Account } from '@domain/space/account/account.entity';
 import { IOrganization } from '@domain/community/organization';
 import { UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { AuthorizationAgentPrivilege } from '@src/common/decorators';
+import { CurrentUser, Profiling } from '@src/common/decorators';
 import { AccountService } from '@domain/space/account/account.service';
 import { IAccount } from '@domain/space/account/account.interface';
 import { ITemplatesSet } from '@domain/template/templates-set';
@@ -16,35 +16,63 @@ import {
   AccountDefaultsLoaderCreator,
   AccountLicenseLoaderCreator,
   AccountLibraryLoaderCreator,
+  AuthorizationLoaderCreator,
 } from '@core/dataloader/creators/loader.creators';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { AgentInfo } from '@core/authentication';
 
 @Resolver(() => IAccount)
 export class AccountResolverFields {
-  constructor(private accountService: AccountService) {}
+  constructor(
+    private accountService: AccountService,
+    private authorizationService: AuthorizationService
+  ) {}
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('library', () => ITemplatesSet, {
     nullable: true,
     description: 'The Library in use by this Account',
   })
   @UseGuards(GraphqlGuard)
   async library(
+    @CurrentUser() agentInfo: AgentInfo,
     @Parent() account: Account,
     @Loader(AccountLibraryLoaderCreator) loader: ILoader<ITemplatesSet>
   ): Promise<ITemplatesSet> {
+    const accountWithAuth = await this.accountService.getAccountOrFail(
+      account.id
+    );
+
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      accountWithAuth.authorization,
+      AuthorizationPrivilege.READ,
+      `read defaults on library: ${account.id}`
+    );
+
     return loader.load(account.id);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('defaults', () => ISpaceDefaults, {
     nullable: true,
     description: 'The defaults in use by this Account',
   })
   @UseGuards(GraphqlGuard)
   async defaults(
+    @CurrentUser() agentInfo: AgentInfo,
     @Parent() account: Account,
     @Loader(AccountDefaultsLoaderCreator) loader: ILoader<ISpaceDefaults>
   ): Promise<ISpaceDefaults> {
+    const accountWithAuth = await this.accountService.getAccountOrFail(
+      account.id
+    );
+
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      accountWithAuth.authorization,
+      AuthorizationPrivilege.READ,
+      `read defaults on account: ${account.id}`
+    );
     return loader.load(account.id);
   }
 
@@ -75,5 +103,18 @@ export class AccountResolverFields {
   async spaceID(@Parent() account: Account): Promise<string> {
     const space = await this.accountService.getRootSpace(account);
     return space.id;
+  }
+
+  @ResolveField('authorization', () => IAuthorizationPolicy, {
+    nullable: false,
+    description: 'The Authorization for this Account.',
+  })
+  @Profiling.api
+  async authorization(
+    @Parent() account: Account,
+    @Loader(AuthorizationLoaderCreator, { parentClassRef: Account })
+    loader: ILoader<IAuthorizationPolicy>
+  ) {
+    return loader.load(account.id);
   }
 }

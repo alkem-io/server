@@ -29,18 +29,4 @@ export abstract class ISearchResultPost
     description: 'The Callout of the Post.',
   })
   callout!: ICallout;
-
-  @Field(() => ISpace, {
-    nullable: true,
-    description:
-      'The Challenge of the Post. Applicable for Callouts on Opportunities and Challenges.',
-  })
-  subspace?: ISpace;
-
-  @Field(() => ISpace, {
-    nullable: true,
-    description:
-      'The Opportunity of the Post. Applicable only for Callouts on Opportunities.',
-  })
-  subsubspace?: ISpace;
 }

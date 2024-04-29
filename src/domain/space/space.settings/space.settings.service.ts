@@ -1,7 +1,7 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ISpaceSettings } from './space.settings.interface';
-import { UpdateSpaceSettingsInput } from './dto/space.settings.dto.update';
+import { UpdateSpaceSettingsEntityInput } from './dto/space.settings.dto.update';
 
 @Injectable()
 export class SpaceSettingsService {
@@ -24,7 +24,7 @@ export class SpaceSettingsService {
 
   public updateSettings(
     settings: ISpaceSettings,
-    updateData: UpdateSpaceSettingsInput
+    updateData: UpdateSpaceSettingsEntityInput
   ): ISpaceSettings {
     if (updateData.privacy) {
       settings.privacy = updateData.privacy;

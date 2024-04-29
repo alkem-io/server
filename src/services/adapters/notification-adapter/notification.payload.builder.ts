@@ -484,9 +484,14 @@ export class NotificationPayloadBuilder {
     userId: string
   ): Promise<ContributorPayload> {
     const user = await this.entityManager.findOne(User, {
-      where: {
-        id: userId,
-      },
+      where: [
+        {
+          id: userId,
+        },
+        {
+          nameID: userId,
+        },
+      ],
       relations: {
         profile: true,
       },
@@ -535,9 +540,7 @@ export class NotificationPayloadBuilder {
     orgId: string
   ): Promise<ContributorPayload> {
     const org = await this.entityManager.findOne(Organization, {
-      where: {
-        id: orgId,
-      },
+      where: [{ id: orgId }, { nameID: orgId }],
       relations: {
         profile: true,
       },

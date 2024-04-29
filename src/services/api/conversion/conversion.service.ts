@@ -455,16 +455,10 @@ export class ConversionService {
       }
       const location = locationTagset.tags[0];
       switch (location) {
-        case CalloutGroupName.SUBSPACES_1:
-          locationTagset.tags = [CalloutGroupName.SUBSPACES_2];
+        case CalloutGroupName.SUBSPACES:
+          locationTagset.tags = [CalloutGroupName.SUBSPACES];
           break;
-        case CalloutGroupName.SUBSPACES_1:
-          locationTagset.tags = [CalloutGroupName.SUBSPACES_1];
-          break;
-        case CalloutGroupName.CONTRIBUTE_2:
-          locationTagset.tags = [CalloutGroupName.KNOWLEDGE];
-          break;
-        case CalloutGroupName.CONTRIBUTE_1:
+        case CalloutGroupName.CONTRIBUTE:
           locationTagset.tags = [CalloutGroupName.KNOWLEDGE];
           break;
       }
@@ -501,11 +495,11 @@ export class ConversionService {
       }
       const location = locationTagset.tags[0];
       switch (location) {
-        case CalloutGroupName.CONTRIBUTE_1:
-          locationTagset.tags = [CalloutGroupName.CONTRIBUTE_1];
+        case CalloutGroupName.CONTRIBUTE:
+          locationTagset.tags = [CalloutGroupName.CONTRIBUTE];
           break;
-        case CalloutGroupName.CONTRIBUTE_2:
-          locationTagset.tags = [CalloutGroupName.CONTRIBUTE_2];
+        case CalloutGroupName.CONTRIBUTE:
+          locationTagset.tags = [CalloutGroupName.CONTRIBUTE];
           break;
       }
     }

@@ -1,5 +1,5 @@
 import { Inject, UseGuards } from '@nestjs/common';
-import { Args, Mutation, Resolver } from '@nestjs/graphql';
+import { Args, createUnionType, Mutation, Resolver } from '@nestjs/graphql';
 import { IUserGroup } from '@domain/community/user-group';
 import { CommunityService } from './community.service';
 import { CurrentUser, Profiling } from '@src/common/decorators';
@@ -52,6 +52,17 @@ import { RemoveCommunityRoleFromVirtualInput } from './dto/community.dto.role.re
 import { VirtualContributorAuthorizationService } from '../virtual-contributor/virtual.contributor.service.authorization';
 import { VirtualContributorService } from '../virtual-contributor/virtual.contributor.service';
 import { IVirtualContributor } from '../virtual-contributor';
+
+const IAnyInvitation = createUnionType({
+  name: 'AnyInvitation',
+  types: () => [IInvitation, IInvitationExternal],
+  resolveType(value: IInvitation | IInvitationExternal) {
+    if ('user' in value) {
+      return IInvitation;
+    }
+    return IInvitationExternal;
+  },
+});
 
 @Resolver()
 export class CommunityResolverMutations {
@@ -382,59 +393,90 @@ export class CommunityResolverMutations {
       `create invitation community: ${community.id}`
     );
 
-    const invitations: IInvitation[] = [];
+    return Promise.all(
+      invitationData.invitedUsers.map(async invitedUser => {
+        return await this.inviteSingleExistingUser({
+          community,
+          invitedUser,
+          agentInfo,
+          welcomeMessage: invitationData.welcomeMessage,
+        });
+      })
+    );
+  }
 
-    for (const invitedUser of invitationData.invitedUsers) {
-      const input: CreateInvitationInput = {
-        communityID: community.id,
-        invitedUser: invitedUser,
-        createdBy: agentInfo.userID,
-        welcomeMessage: invitationData.welcomeMessage,
-      };
-      const invitation =
-        await this.communityService.createInvitationExistingUser(input);
+  private async inviteSingleExistingUser({
+    community,
+    invitedUser,
+    agentInfo,
+    welcomeMessage,
+  }: {
+    community: ICommunity;
+    invitedUser: string;
+    agentInfo: AgentInfo;
+    welcomeMessage?: string;
+  }) {
+    const input: CreateInvitationInput = {
+      communityID: community.id,
+      invitedUser: invitedUser,
+      createdBy: agentInfo.userID,
+      welcomeMessage,
+    };
 
-      const savedInvitation =
-        await this.invitationAuthorizationService.applyAuthorizationPolicy(
-          invitation,
-          community.authorization
-        );
+    let invitation = await this.communityService.createInvitationExistingUser(
+      input
+    );
 
-      // Send the notification
-      const notificationInput: NotificationInputCommunityInvitation = {
-        triggeredBy: agentInfo.userID,
-        community: community,
-        invitedUser: invitedUser,
-      };
-      await this.notificationAdapter.invitationCreated(notificationInput);
+    invitation =
+      await this.invitationAuthorizationService.applyAuthorizationPolicy(
+        invitation,
+        community.authorization
+      );
 
-      invitations.push(savedInvitation);
-    }
+    // Send the notification
+    const notificationInput: NotificationInputCommunityInvitation = {
+      triggeredBy: agentInfo.userID,
+      community: community,
+      invitedUser: invitedUser,
+    };
 
-    return invitations;
+    await this.notificationAdapter.invitationCreated(notificationInput);
+
+    return invitation;
   }
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => IInvitationExternal, {
+  @Mutation(() => IAnyInvitation, {
     description:
       'Invite an external User to join the specified Community as a member.',
   })
   @Profiling.api
-  async inviteExternalUserForCommunityMembership(
+  async inviteForCommunityMembershipByEmail(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('invitationData')
     invitationData: CreateInvitationExternalUserOnCommunityInput
-  ): Promise<IInvitationExternal> {
+  ): Promise<IInvitation | IInvitationExternal> {
     const community = await this.communityService.getCommunityOrFail(
       invitationData.communityID
     );
 
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       community.authorization,
       AuthorizationPrivilege.COMMUNITY_INVITE,
       `create invitation external community: ${community.id}`
     );
+
+    const user = await this.userService.getUserByEmail(invitationData.email);
+
+    if (user) {
+      return this.inviteSingleExistingUser({
+        community,
+        welcomeMessage: invitationData.welcomeMessage,
+        agentInfo,
+        invitedUser: user.id,
+      });
+    }
 
     const externalInvitation =
       await this.communityService.createInvitationExternalUser(

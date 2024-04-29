@@ -37,6 +37,7 @@ import {
   CREDENTIAL_RULE_TYPES_SPACE_COMMUNITY_JOIN_GLOBAL_REGISTERED,
   CREDENTIAL_RULE_SPACE_HOST_ASSOCIATES_JOIN,
   CREDENTIAL_RULE_SPACE_ADMIN_DELETE_SUBSPACE,
+  POLICY_RULE_COMMUNITY_INVITE,
 } from '@common/constants';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
 import { EntityNotInitializedException } from '@common/exceptions';
@@ -45,6 +46,7 @@ import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorizat
 import { CredentialsSearchInput } from '@domain/agent';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { SpaceSettingsService } from '../space.settings/space.settings.service';
+import { SpaceLevel } from '@common/enums/space.level';
 
 @Injectable()
 export class SpaceAuthorizationService {
@@ -62,10 +64,7 @@ export class SpaceAuthorizationService {
     private spaceRepository: Repository<Space>
   ) {}
 
-  async applyAuthorizationPolicy(
-    spaceInput: ISpace,
-    parentAuthorization: IAuthorizationPolicy | undefined
-  ): Promise<ISpace> {
+  async applyAuthorizationPolicy(spaceInput: ISpace): Promise<ISpace> {
     let space = await this.spaceService.getSpaceOrFail(spaceInput.id, {
       relations: {
         authorization: true,
@@ -74,6 +73,9 @@ export class SpaceAuthorizationService {
         },
         account: {
           license: true,
+          authorization: true,
+        },
+        parentSpace: {
           authorization: true,
         },
       },
@@ -91,32 +93,69 @@ export class SpaceAuthorizationService {
         LogContext.SPACES
       );
 
+    space.authorization = this.authorizationPolicyService.reset(
+      space.authorization
+    );
     const communityPolicyWithFlags = this.getCommunityPolicyWithSettings(space);
 
     const license = space.account.license;
+    const privateSpace =
+      space.community.policy.settings.privacy.mode === SpacePrivacyMode.PRIVATE;
+    const accountAuthorization = space.account.authorization;
 
-    const inheritedAuthorization =
+    // Choose what authorization to inherit from
+    let parentAuthorization = accountAuthorization;
+    if (space.level === SpaceLevel.SPACE) {
+      parentAuthorization = accountAuthorization;
+    } else if (privateSpace) {
+      parentAuthorization = accountAuthorization;
+    } else {
+      if (!space.parentSpace || !space.parentSpace.authorization) {
+        throw new EntityNotInitializedException(
+          `Parent authorization not found on subspace auth reset: ${space.id} `,
+          LogContext.SPACES
+        );
+      }
+      parentAuthorization = space.parentSpace.authorization;
+    }
+
+    space.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         space.authorization,
         parentAuthorization
       );
 
+    if (privateSpace) {
+      space.authorization.anonymousReadAccess = false;
+    }
+
+    if (!space.authorization) {
+      throw new RelationshipNotFoundException(
+        `Unable authorization not set on Space: ${space.id} `,
+        LogContext.SPACES
+      );
+    }
     // Extend rules depending on the Visibility
     switch (license.visibility) {
       case SpaceVisibility.ACTIVE:
       case SpaceVisibility.DEMO:
-        this.extendAuthorizationPolicyLocal(
-          inheritedAuthorization,
+        space.authorization = this.extendAuthorizationPolicyLocal(
+          space.authorization,
           communityPolicyWithFlags
         );
+        if (privateSpace && space.level !== SpaceLevel.SPACE) {
+          space.authorization = this.extendPrivateSubspaceAdmins(
+            space.authorization,
+            communityPolicyWithFlags
+          );
+        }
         break;
       case SpaceVisibility.ARCHIVED:
         // ensure it has visibility privilege set to private
-        inheritedAuthorization.anonymousReadAccess = false;
+        space.authorization.anonymousReadAccess = false;
         break;
     }
 
-    space.authorization = inheritedAuthorization;
     await this.spaceService.save(space);
 
     // Cascade down
@@ -157,6 +196,7 @@ export class SpaceAuthorizationService {
 
     return await this.spaceService.save(space);
   }
+
   public async propagateAuthorizationToChildEntities(
     spaceInput: ISpace,
     license: ILicense
@@ -209,12 +249,22 @@ export class SpaceAuthorizationService {
         license,
         communityPolicy
       );
-    // Specific extension
-    space.community.authorization =
-      this.extendCommunityAuthorizationPolicySubspace(
-        space.community.authorization,
-        communityPolicy
+
+    // Invitations are only supported at root space level, so have different authorizations
+    // depending on the level
+    if (space.level === SpaceLevel.SPACE) {
+      // Only allow invitations for root spaces
+      space.community.authorization = this.extendPrivilegeRulesInviteMember(
+        space.community.authorization
       );
+    } else {
+      // Allow directly adding members at subspace level
+      space.community.authorization =
+        this.extendCommunityAuthorizationPolicySubspace(
+          space.community.authorization,
+          communityPolicy
+        );
+    }
 
     space.collaboration =
       await this.collaborationAuthorizationService.applyAuthorizationPolicy(
@@ -358,6 +408,24 @@ export class SpaceAuthorizationService {
     return communityPolicyWithFlags;
   }
 
+  private extendPrivilegeRulesInviteMember(
+    authorization: IAuthorizationPolicy | undefined
+  ): IAuthorizationPolicy {
+    const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
+
+    const communityInvitePrivilege = new AuthorizationPolicyRulePrivilege(
+      [AuthorizationPrivilege.COMMUNITY_INVITE],
+      AuthorizationPrivilege.GRANT,
+      POLICY_RULE_COMMUNITY_INVITE
+    );
+    privilegeRules.push(communityInvitePrivilege);
+
+    return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
+      authorization,
+      privilegeRules
+    );
+  }
+
   private extendCommunityAuthorizationPolicySubspace(
     authorization: IAuthorizationPolicy | undefined,
     policy: ICommunityPolicy
@@ -425,7 +493,7 @@ export class SpaceAuthorizationService {
     return authorization;
   }
 
-  public extendPrivateSubspaceAdmins(
+  private extendPrivateSubspaceAdmins(
     authorization: IAuthorizationPolicy | undefined,
     policy: ICommunityPolicy
   ): IAuthorizationPolicy {
@@ -463,7 +531,7 @@ export class SpaceAuthorizationService {
     return authorization;
   }
 
-  public extendCommunityAuthorizationPolicySpace(
+  private extendCommunityAuthorizationPolicySpace(
     communityAuthorization: IAuthorizationPolicy | undefined,
     policy: ICommunityPolicy
   ): IAuthorizationPolicy {
@@ -567,7 +635,7 @@ export class SpaceAuthorizationService {
     return criteria;
   }
 
-  public async propagateAuthorizationToSubspaces(
+  private async propagateAuthorizationToSubspaces(
     spaceBase: ISpace
   ): Promise<ISpace> {
     const space = await this.spaceService.getSpaceOrFail(spaceBase.id, {
@@ -586,14 +654,17 @@ export class SpaceAuthorizationService {
       type: AuthorizationCredential.SPACE_ADMIN,
       resourceID: space.id,
     };
+    const updatedSpaces: ISpace[] = [];
     for (const subspace of space.subspaces) {
-      await this.applyAuthorizationPolicy(subspace, space.authorization);
+      const updatedSubspace = await this.applyAuthorizationPolicy(subspace);
 
-      subspace.authorization = this.extendSubSpaceAuthorization(
+      updatedSubspace.authorization = this.extendSubSpaceAuthorization(
         subspace.authorization,
         spaceAdminCriteria
       );
+      updatedSpaces.push(updatedSubspace);
     }
+    space.subspaces = updatedSpaces;
 
     return await this.spaceRepository.save(space);
   }
