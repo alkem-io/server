@@ -22,6 +22,7 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy/author
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
   CREDENTIAL_RULE_TYPES_ACCOUNT_AUTHORIZATION_RESET,
+  CREDENTIAL_RULE_TYPES_PLATFORM_GLOBAL_ADMINS,
   CREDENTIAL_RULE_TYPES_SPACE_AUTHORIZATION_GLOBAL_ADMIN_GRANT,
   CREDENTIAL_RULE_TYPES_SPACE_GLOBAL_ADMIN_COMMUNITY_READ,
 } from '@common/constants/authorization/credential.rule.types.constants';
@@ -92,7 +93,11 @@ export class AccountAuthorizationService {
       );
 
     // Library and defaults are inherited from the space
-    const spaceAuthorization = account.space.authorization;
+    let spaceAuthorization = account.space.authorization;
+    spaceAuthorization = this.extendSpaceAuthorizationPolicyGlobal(
+      spaceAuthorization,
+      account.space.id
+    );
     account.library =
       await this.templatesSetAuthorizationService.applyAuthorizationPolicy(
         account.library,
@@ -156,6 +161,42 @@ export class AccountAuthorizationService {
         CREDENTIAL_RULE_TYPES_SPACE_AUTHORIZATION_GLOBAL_ADMIN_GRANT
       );
     newRules.push(globalAdmin);
+
+    this.authorizationPolicyService.appendCredentialAuthorizationRules(
+      authorization,
+      newRules
+    );
+
+    return authorization;
+  }
+
+  private extendSpaceAuthorizationPolicyGlobal(
+    authorization: IAuthorizationPolicy | undefined,
+    spaceID: string
+  ): IAuthorizationPolicy {
+    if (!authorization)
+      throw new EntityNotInitializedException(
+        `Authorization definition not found for: ${spaceID}`,
+        LogContext.ACCOUNT
+      );
+    const newRules: IAuthorizationPolicyRuleCredential[] = [];
+
+    const globalAdmins =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [
+          AuthorizationPrivilege.CREATE,
+          AuthorizationPrivilege.READ,
+          AuthorizationPrivilege.UPDATE,
+          AuthorizationPrivilege.DELETE,
+          AuthorizationPrivilege.GRANT,
+        ],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_ADMIN_SPACES,
+        ],
+        CREDENTIAL_RULE_TYPES_PLATFORM_GLOBAL_ADMINS
+      );
+    newRules.push(globalAdmins);
 
     this.authorizationPolicyService.appendCredentialAuthorizationRules(
       authorization,
