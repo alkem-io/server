@@ -1,6 +1,9 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { ForbiddenException } from '@common/exceptions';
+import {
+  EntityNotFoundException,
+  ForbiddenException,
+} from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { LicensePrivilege } from '@common/enums/license.privilege';
 import { ILicensePolicy } from '@platform/license-policy/license.policy.interface';
@@ -8,12 +11,17 @@ import { ILicense } from '@domain/license/license/license.interface';
 import { ForbiddenLicensePolicyException } from '@common/exceptions/forbidden.license.policy.exception';
 import { ILicenseFeatureFlag } from '@domain/license/feature-flag/feature.flag.interface';
 import { ILicensePolicyRuleFeatureFlag } from './license.policy.rule.feature.flag.interface';
+import { EntityManager } from 'typeorm';
+import { InjectEntityManager } from '@nestjs/typeorm';
+import { LicensePolicy } from '@platform/license-policy';
 
 @Injectable()
 export class LicenseEngineService {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService
+    private readonly logger: LoggerService,
+    @InjectEntityManager('default')
+    private entityManager: EntityManager
   ) {}
 
   grantAccessOrFail(
@@ -49,7 +57,7 @@ export class LicenseEngineService {
     );
   }
 
-  isAccessGranted(
+  public isAccessGranted(
     licensePolicy: ILicensePolicy | undefined,
     licenseFeatureFlags: ILicenseFeatureFlag[],
     privilegeRequired: LicensePrivilege
@@ -80,6 +88,20 @@ export class LicenseEngineService {
       }
     }
     return false;
+  }
+
+  // TODO: a work around, need to look at how to make the license policy more readily available
+  // in all contexts
+  public async getDefaultLicensePollicyOrFail(): Promise<ILicensePolicy> {
+    const licensePolicy = await this.entityManager.findOne(LicensePolicy, {});
+    if (licensePolicy) {
+      return licensePolicy;
+    }
+
+    throw new EntityNotFoundException(
+      'Unable to find default License Policy',
+      LogContext.LICENSE
+    );
   }
 
   getGrantedPrivileges(
