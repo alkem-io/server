@@ -1,20 +1,20 @@
 import { ILicensePolicyRuleFeatureFlag } from './license.policy.rule.feature.flag.interface';
-import { ILicenseFeatureFlag } from '@domain/license/feature-flag/feature.flag.interface';
 import { LicensePrivilege } from '@common/enums/license.privilege';
+import { LicenseFeatureFlagName } from '@common/enums/license.feature.flag.name';
 
 export class LicensePolicyRuleFeatureFlag
   implements ILicensePolicyRuleFeatureFlag
 {
-  featureFlag: ILicenseFeatureFlag;
+  featureFlagName: LicenseFeatureFlagName;
   grantedPrivileges: LicensePrivilege[];
   name: string;
 
   constructor(
     grantedPrivileges: LicensePrivilege[],
-    featureFlag: ILicenseFeatureFlag,
+    featureFlag: LicenseFeatureFlagName,
     name: string
   ) {
-    this.featureFlag = featureFlag;
+    this.featureFlagName = featureFlag;
     this.grantedPrivileges = grantedPrivileges;
     this.name = name;
   }

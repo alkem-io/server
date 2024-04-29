@@ -78,7 +78,7 @@ export class licensePolicy1714410262128 implements MigrationInterface {
 }
 
 export type FeatureFlagRule = {
-  featureFlag: LicenseFeatureFlagName;
+  featureFlagName: LicenseFeatureFlagName;
   grantedPrivileges: LicensePrivilege[];
   name: string;
 };
@@ -97,17 +97,17 @@ export enum LicenseFeatureFlagName {
 
 export const licenseRules: FeatureFlagRule[] = [
   {
-    featureFlag: LicenseFeatureFlagName.VIRTUAL_CONTRIBUTORS,
+    featureFlagName: LicenseFeatureFlagName.VIRTUAL_CONTRIBUTORS,
     grantedPrivileges: [LicensePrivilege.VIRTUAL_CONTRIBUTOR_ACCESS],
     name: 'Virtual Contributors',
   },
   {
-    featureFlag: LicenseFeatureFlagName.WHITEBOARD_MULTI_USER,
+    featureFlagName: LicenseFeatureFlagName.WHITEBOARD_MULTI_USER,
     grantedPrivileges: [LicensePrivilege.WHITEBOARD_MULTI_USER],
     name: 'Multi-user whiteboards',
   },
   {
-    featureFlag: LicenseFeatureFlagName.CALLOUT_TO_CALLOUT_TEMPLATE,
+    featureFlagName: LicenseFeatureFlagName.CALLOUT_TO_CALLOUT_TEMPLATE,
     grantedPrivileges: [LicensePrivilege.CALLOUT_SAVE_AS_TEMPLATE],
     name: 'Callout templates',
   },
