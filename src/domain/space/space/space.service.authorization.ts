@@ -654,14 +654,17 @@ export class SpaceAuthorizationService {
       type: AuthorizationCredential.SPACE_ADMIN,
       resourceID: space.id,
     };
+    const updatedSpaces: ISpace[] = [];
     for (const subspace of space.subspaces) {
-      await this.applyAuthorizationPolicy(subspace);
+      const updatedSubspace = await this.applyAuthorizationPolicy(subspace);
 
-      subspace.authorization = this.extendSubSpaceAuthorization(
+      updatedSubspace.authorization = this.extendSubSpaceAuthorization(
         subspace.authorization,
         spaceAdminCriteria
       );
+      updatedSpaces.push(updatedSubspace);
     }
+    space.subspaces = updatedSpaces;
 
     return await this.spaceRepository.save(space);
   }
