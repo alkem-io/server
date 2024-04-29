@@ -66,7 +66,7 @@ export class LicenseEngineService {
     );
     for (const rule of featureFlagRules) {
       for (const featureFlag of licenseFeatureFlags) {
-        if (featureFlag.name === rule.featureFlag.name) {
+        if (featureFlag.name === rule.featureFlagName) {
           if (featureFlag.enabled) {
             if (rule.grantedPrivileges.includes(privilegeRequired)) {
               this.logger.verbose?.(
@@ -94,7 +94,7 @@ export class LicenseEngineService {
     const featureFlags = licenseFeatureFlags;
     for (const rule of featureFlagRules) {
       for (const featureFlag of featureFlags) {
-        if (rule.featureFlag.name === featureFlag.name && featureFlag.enabled) {
+        if (rule.featureFlagName === featureFlag.name && featureFlag.enabled) {
           for (const privilege of rule.grantedPrivileges) {
             grantedPrivileges.push(privilege);
           }

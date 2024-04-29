@@ -10,6 +10,7 @@ import { LicensePolicy } from './license.policy.entity';
 import { LicenseEngineService } from '@core/license-engine/license.engine.service';
 import { LicensePrivilege } from '@common/enums/license.privilege';
 import { LogContext } from '@common/enums/logging.context';
+import { LicenseFeatureFlagName } from '@common/enums/license.feature.flag.name';
 
 @Injectable()
 export class LicensePolicyService {
@@ -26,9 +27,11 @@ export class LicensePolicyService {
     featureFlag: ILicenseFeatureFlag,
     name: string
   ): ILicensePolicyRuleFeatureFlag {
+    const featureFlagName: LicenseFeatureFlagName =
+      featureFlag.name as LicenseFeatureFlagName;
     return {
       grantedPrivileges,
-      featureFlag,
+      featureFlagName,
       name,
     };
   }
