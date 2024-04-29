@@ -160,11 +160,7 @@ export class SpaceAuthorizationService {
 
     // Cascade down
     // propagate authorization rules for child entities
-    const spacePropagated = await this.propagateAuthorizationToChildEntities(
-      space,
-      license
-    );
-    await this.propagateAuthorizationToSubspaces(spacePropagated);
+    await this.recursivelyApplyAuthorizationPolicyToSubspaces(space, license);
 
     // Reload, to get all the saves from save above + with
     // key entities loaded that are needed for next steps
@@ -635,8 +631,20 @@ export class SpaceAuthorizationService {
     return criteria;
   }
 
+  private async recursivelyApplyAuthorizationPolicyToSubspaces(
+    space: ISpace,
+    license: ILicense
+  ) {
+    const spacePropagated = await this.propagateAuthorizationToChildEntities(
+      space,
+      license
+    );
+    await this.propagateAuthorizationToSubspaces(spacePropagated, license);
+  }
+
   private async propagateAuthorizationToSubspaces(
-    spaceBase: ISpace
+    spaceBase: ISpace,
+    license: ILicense
   ): Promise<ISpace> {
     const space = await this.spaceService.getSpaceOrFail(spaceBase.id, {
       relations: {
@@ -660,6 +668,11 @@ export class SpaceAuthorizationService {
       subspace.authorization = this.extendSubSpaceAuthorization(
         subspace.authorization,
         spaceAdminCriteria
+      );
+
+      await this.recursivelyApplyAuthorizationPolicyToSubspaces(
+        subspace,
+        license
       );
     }
 
