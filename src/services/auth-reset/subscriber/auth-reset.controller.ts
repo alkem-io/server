@@ -7,7 +7,7 @@ import {
   Transport,
 } from '@nestjs/microservices';
 import { Channel, Message } from 'amqplib';
-import { SpaceService } from '@domain/space/space/space.service';
+import { SpaceService as AccountService } from '@domain/space/space/space.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext, MessagingQueue } from '@common/enums';
 import { PlatformAuthorizationService } from '@platform/platfrom/platform.service.authorization';
@@ -27,7 +27,7 @@ export class AuthResetController {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    private spaceService: SpaceService,
+    private accountService: AccountService,
     private accountAuthorizationService: AccountAuthorizationService,
     private platformAuthorizationService: PlatformAuthorizationService,
     private organizationAuthorizationService: OrganizationAuthorizationService,
@@ -37,8 +37,8 @@ export class AuthResetController {
     private taskService: TaskService
   ) {}
 
-  @EventPattern(AUTH_RESET_EVENT_TYPE.SPACE, Transport.RMQ)
-  public async authResetSpace(
+  @EventPattern(AUTH_RESET_EVENT_TYPE.ACCOUNT, Transport.RMQ)
+  public async authResetAccount(
     @Payload() payload: AuthResetEventPayload,
     @Ctx() context: RmqContext
   ) {
@@ -52,14 +52,8 @@ export class AuthResetController {
     const retryCount = originalMsg.properties.headers[RETRY_HEADER] ?? 0;
 
     try {
-      const space = await this.spaceService.getSpaceOrFail(payload.id, {
-        relations: {
-          account: true,
-        },
-      });
-      await this.accountAuthorizationService.applyAuthorizationPolicy(
-        space.account
-      );
+      const account = await this.accountService.getAccountOrFail(payload.id);
+      await this.accountAuthorizationService.applyAuthorizationPolicy(account);
 
       const message = `Finished resetting authorization for space with id ${payload.id}.`;
       this.logger.verbose?.(message, LogContext.AUTH_POLICY);
