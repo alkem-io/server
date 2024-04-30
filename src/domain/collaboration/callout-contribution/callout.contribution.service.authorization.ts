@@ -40,7 +40,11 @@ export class CalloutContributionAuthorizationService {
         contributionInput.id,
         {
           relations: {
-            post: true,
+            post: {
+              comments: {
+                authorization: true,
+              },
+            },
             whiteboard: true,
             link: true,
           },
