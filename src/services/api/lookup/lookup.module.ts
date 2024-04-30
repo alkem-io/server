@@ -17,8 +17,6 @@ import { CalendarEventModule } from '@domain/timeline/event/event.module';
 import { CalendarModule } from '@domain/timeline/calendar/calendar.module';
 import { ApplicationModule } from '@domain/community/application/application.module';
 import { InvitationModule } from '@domain/community/invitation/invitation.module';
-import { ChallengeModule } from '@domain/challenge/challenge/challenge.module';
-import { OpportunityModule } from '@domain/challenge/opportunity/opportunity.module';
 import { CalloutTemplateModule } from '@domain/template/callout-template/callout.template.module';
 import { WhiteboardModule } from '@domain/common/whiteboard';
 import { DocumentModule } from '@domain/storage/document/document.module';
@@ -47,8 +45,6 @@ import { UserModule } from '@domain/community/user/user.module';
     RoomModule,
     ApplicationModule,
     InvitationModule,
-    ChallengeModule,
-    OpportunityModule,
     DocumentModule,
     StorageAggregatorModule,
     PlatformAuthorizationPolicyModule,

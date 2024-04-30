@@ -8,8 +8,6 @@ import { CommunityModule } from '@domain/community/community/community.module';
 import { CalloutModule } from '@domain/collaboration/callout/callout.module';
 import { PostModule } from '@domain/collaboration/post/post.module';
 import { WhiteboardModule } from '@domain/common/whiteboard/whiteboard.module';
-import { ChallengeModule } from '@domain/challenge/challenge/challenge.module';
-import { OpportunityModule } from '@domain/challenge/opportunity/opportunity.module';
 import { SubscriptionServiceModule } from '@services/subscriptions/subscription-service';
 import { ActivityLogService } from './activity.log.service';
 import { ActivityLogResolverQueries } from './activity.log.resolver.queries';
@@ -18,7 +16,7 @@ import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platf
 import { RoomModule } from '@domain/communication/room/room.module';
 import { CalendarModule } from '@domain/timeline/calendar/calendar.module';
 import { CalendarEventModule } from '@domain/timeline/event/event.module';
-import { SpaceModule } from '@domain/challenge/space/space.module';
+import { SpaceModule } from '@domain/space/space/space.module';
 import { LinkModule } from '@domain/collaboration/link/link.module';
 import { UrlGeneratorModule } from '@services/infrastructure/url-generator';
 
@@ -35,8 +33,6 @@ import { UrlGeneratorModule } from '@services/infrastructure/url-generator';
     WhiteboardModule,
     RoomModule,
     SpaceModule,
-    ChallengeModule,
-    OpportunityModule,
     LinkModule,
     CalendarModule,
     CalendarEventModule,

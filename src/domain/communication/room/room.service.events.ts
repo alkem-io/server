@@ -231,11 +231,15 @@ export class RoomServiceEvents {
       await this.communityResolverService.getCommunityFromPostRoomOrFail(
         room.id
       );
+    const spaceID =
+      await this.communityResolverService.getRootSpaceIDFromCommunityOrFail(
+        community
+      );
     this.contributionReporter.calloutPostCommentCreated(
       {
         id: post.id,
         name: post.profile.displayName,
-        space: community.spaceID,
+        space: spaceID,
       },
       {
         id: agentInfo.userID,
@@ -267,9 +271,13 @@ export class RoomServiceEvents {
     };
     this.activityAdapter.updateSent(activityLogInput);
 
-    const { spaceID } =
+    const community =
       await this.communityResolverService.getCommunityFromUpdatesOrFail(
         room.id
+      );
+    const spaceID =
+      await this.communityResolverService.getRootSpaceIDFromCommunityOrFail(
+        community
       );
 
     this.contributionReporter.updateCreated(
@@ -308,9 +316,13 @@ export class RoomServiceEvents {
     };
     this.activityAdapter.calloutCommentCreated(activityLogInput);
 
-    const { spaceID } =
+    const community =
       await this.communityResolverService.getCommunityFromCalloutOrFail(
         callout.id
+      );
+    const spaceID =
+      await this.communityResolverService.getRootSpaceIDFromCommunityOrFail(
+        community
       );
 
     this.contributionReporter.calloutCommentCreated(

@@ -13,7 +13,7 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { BootstrapModule } from '@core/bootstrap/bootstrap.module';
 import { RequestLoggerMiddleware } from '@core/middleware/request.logger.middleware';
 import { AgentModule } from '@domain/agent/agent/agent.module';
-import { SpaceModule } from '@domain/challenge/space/space.module';
+import { SpaceModule } from '@domain/space/space/space.module';
 import { ScalarsModule } from '@domain/common/scalars/scalars.module';
 import { CacheModule, MiddlewareConsumer, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -269,16 +269,18 @@ import { VirtualContributorModule } from '@domain/community/virtual-contributor/
       useClass: InnovationHubInterceptor,
     },
     {
+      // This should be the first filter in the list:
+      // See Catch everything at: https://docs.nestjs.com/exception-filters
+      provide: APP_FILTER,
+      useClass: UnhandledExceptionFilter,
+    },
+    {
       provide: APP_FILTER,
       useClass: GraphqlExceptionFilter,
     },
     {
       provide: APP_FILTER,
       useClass: HttpExceptionFilter,
-    },
-    {
-      provide: APP_FILTER,
-      useClass: UnhandledExceptionFilter,
     },
     {
       provide: APP_PIPE,

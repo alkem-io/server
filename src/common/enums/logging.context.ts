@@ -1,8 +1,9 @@
 export enum LogContext {
   USER = 'user',
+  ACCOUNT = 'account',
   CONTRIBUTION_REPORTER = 'contribution-reporter',
   NAME_REPORTER = 'name-reporter',
-  CHALLENGES = 'challenges',
+  SPACES = 'spaces',
   CONTEXT = 'context',
   PROFILE = 'profile',
   COMMUNITY = 'community',

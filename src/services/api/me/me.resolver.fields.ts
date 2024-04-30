@@ -8,13 +8,13 @@ import { MeQueryResults } from '@services/api/me/dto';
 import { IUser } from '@domain/community/user';
 import { AuthenticationException } from '@common/exceptions';
 import { UserService } from '@domain/community/user/user.service';
-import { ISpace } from '@domain/challenge/space/space.interface';
+import { ISpace } from '@domain/space/space/space.interface';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { MeService } from './me.service';
 import { ApplicationForRoleResult } from '../roles/dto/roles.dto.result.application';
 import { InvitationForRoleResult } from '../roles/dto/roles.dto.result.invitation';
 import { LogContext } from '@common/enums';
-import { MyJourneyResults } from './dto/my.journeys.results';
+import { MySpaceResults } from './dto/my.journeys.results';
 
 @Resolver(() => MeQueryResults)
 export class MeResolverFields {
@@ -98,10 +98,10 @@ export class MeResolverFields {
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField(() => [MyJourneyResults], {
-    description: 'The Journeys I am contributing to',
+  @ResolveField(() => [MySpaceResults], {
+    description: 'The Spaces I am contributing to',
   })
-  public myJourneys(
+  public mySpaces(
     @CurrentUser() agentInfo: AgentInfo,
     @Args({
       name: 'limit',
@@ -111,7 +111,7 @@ export class MeResolverFields {
       nullable: true,
     })
     limit: number
-  ): Promise<MyJourneyResults[]> {
-    return this.meService.getMyJourneys(agentInfo, limit);
+  ): Promise<MySpaceResults[]> {
+    return this.meService.getMySpaces(agentInfo, limit);
   }
 }

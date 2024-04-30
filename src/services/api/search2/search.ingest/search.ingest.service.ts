@@ -1,5 +1,5 @@
 import { setTimeout } from 'timers/promises';
-import { EntityManager, Not } from 'typeorm';
+import { EntityManager, Not, FindManyOptions } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -7,20 +7,18 @@ import { InjectEntityManager } from '@nestjs/typeorm';
 import { Client as ElasticClient } from '@elastic/elasticsearch';
 import { ErrorCause } from '@elastic/elasticsearch/lib/api/types';
 import { ELASTICSEARCH_CLIENT_PROVIDER } from '@common/constants';
-import { Space } from '@domain/challenge/space/space.entity';
-import { Challenge } from '@domain/challenge/challenge/challenge.entity';
-import { Opportunity } from '@domain/challenge/opportunity/opportunity.entity';
+import { Space } from '@domain/space/space/space.entity';
 import { Organization } from '@domain/community/organization';
 import { User } from '@domain/community/user';
-import { FindManyOptions } from 'typeorm/find-options/FindManyOptions';
-import { BaseChallenge } from '@domain/challenge/base-challenge/base.challenge.entity';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { Tagset } from '@domain/common/tagset';
 import { LogContext } from '@common/enums';
 import { asyncReduceSequential } from '@common/utils/async.reduce.sequential';
-import { getIndexPattern } from '../get.index.pattern';
 import { asyncMap } from '@common/utils/async.map';
 import { ElasticResponseError } from '@services/external/elasticsearch/types';
+import { SpaceLevel } from '@common/enums/space.level';
+import { SearchEntityTypes } from '../search.entity.types';
+import { getIndexPattern } from '../get.index.pattern';
 
 const profileRelationOptions = {
   location: true,
@@ -41,14 +39,15 @@ const profileSelectOptions = {
   },
 };
 
-const journeyFindOptions: FindManyOptions<BaseChallenge> = {
+const journeyFindOptions: FindManyOptions<Space> = {
   loadEagerRelations: false,
   relations: {
     context: true,
     profile: profileRelationOptions,
   },
   select: {
-    rowId: false,
+    id: true,
+    level: true,
     context: {
       vision: true,
       impact: true,
@@ -115,8 +114,7 @@ export class SearchIngestService {
     }
     const indices = [
       `${this.indexPattern}spaces`,
-      `${this.indexPattern}challenges`,
-      `${this.indexPattern}opportunities`,
+      `${this.indexPattern}subspaces`,
       `${this.indexPattern}organizations`,
       `${this.indexPattern}users`,
       `${this.indexPattern}posts`,
@@ -166,21 +164,22 @@ export class SearchIngestService {
         },
       };
     }
+
     const result: IngestReturnType = {};
     const params = [
       {
         index: `${this.indexPattern}spaces`,
-        fetchFn: this.fetchSpaces.bind(this),
+        fetchFn: this.fetchSpacesLevel0.bind(this),
         batchSize: 100,
       },
       {
-        index: `${this.indexPattern}challenges`,
-        fetchFn: this.fetchChallenges.bind(this),
+        index: `${this.indexPattern}subspaces`,
+        fetchFn: this.fetchSpacesLevel1.bind(this),
         batchSize: 100,
       },
       {
-        index: `${this.indexPattern}opportunities`,
-        fetchFn: this.fetchOpportunities.bind(this),
+        index: `${this.indexPattern}subspaces`,
+        fetchFn: this.fetchSpacesLevel2.bind(this),
         batchSize: 100,
       },
       {
@@ -203,9 +202,12 @@ export class SearchIngestService {
     return asyncReduceSequential(
       params,
       async (acc, { index, fetchFn, batchSize }) => {
-        const batches = await this._ingest(index, fetchFn, batchSize);
+        const batches = await this.fetchAndIngest(index, fetchFn, batchSize);
         const total = batches.reduce((acc, val) => acc + (val.total ?? 0), 0);
-        acc[index] = { total, batches };
+        acc[index] = {
+          total: total + (acc[index]?.total ?? 0),
+          batches: [...batches, ...(acc[index]?.batches ?? [])],
+        };
 
         return acc;
       },
@@ -213,7 +215,7 @@ export class SearchIngestService {
     );
   }
 
-  private async _ingest(
+  private async fetchAndIngest(
     index: string,
     fetchFn: (start: number, limit: number) => Promise<unknown[]>,
     batchSize: number
@@ -229,8 +231,10 @@ export class SearchIngestService {
       }
 
       results.push(await this.ingestBulk(fetched, index));
-      // if the fetched data is less than the limit, we have reached the end
-      if (fetched.length < batchSize) {
+      // some statement are not directly querying a table, but instead parent entities
+      // so the total count is not predictable; in that case an extra query has to be made
+      // to ensure there is no more data
+      if (!fetched.length) {
         break;
       }
 
@@ -309,12 +313,13 @@ export class SearchIngestService {
     }
   }
   // TODO: validate the loaded data for missing relations - https://github.com/alkem-io/server/issues/3699
-  private fetchSpaces(start: number, limit: number) {
+  private fetchSpacesLevel0(start: number, limit: number) {
     return this.entityManager
       .find<Space>(Space, {
         ...journeyFindOptions,
         where: {
           account: { license: { visibility: Not(SpaceVisibility.ARCHIVED) } },
+          level: SpaceLevel.SPACE,
         },
         relations: {
           ...journeyFindOptions.relations,
@@ -331,7 +336,9 @@ export class SearchIngestService {
         return spaces.map(space => ({
           ...space,
           account: undefined,
+          type: SearchEntityTypes.SPACE,
           license: { visibility: space?.account?.license?.visibility },
+          spaceID: space.id, // spaceID is the same as the space's id
           profile: {
             ...space.profile,
             tags: processTagsets(space.profile.tagsets),
@@ -341,96 +348,76 @@ export class SearchIngestService {
       });
   }
 
-  private fetchChallenges(start: number, limit: number) {
+  private fetchSpacesLevel1(start: number, limit: number) {
     return this.entityManager
-      .find<Challenge>(Challenge, {
+      .find<Space>(Space, {
         ...journeyFindOptions,
         where: {
-          space: {
-            account: { license: { visibility: Not(SpaceVisibility.ARCHIVED) } },
-          },
+          account: { license: { visibility: Not(SpaceVisibility.ARCHIVED) } },
+          level: SpaceLevel.CHALLENGE,
         },
         relations: {
           ...journeyFindOptions.relations,
-          space: {
-            account: { license: true },
-          },
+          account: { license: true },
+          parentSpace: true,
         },
         select: {
           ...journeyFindOptions.select,
-          space: {
-            id: true,
-            account: { id: true, license: { visibility: true } },
-          },
+          account: { id: true, license: { visibility: true } },
+          parentSpace: { id: true },
         },
         skip: start,
         take: limit,
       })
-      .then(challenges => {
-        return challenges.map(challenge => ({
-          ...challenge,
-          spaceID: challenge?.space?.id,
-          space: undefined,
+      .then(spaces => {
+        return spaces.map(space => ({
+          ...space,
           account: undefined,
-          license: {
-            visibility: challenge?.space?.account?.license?.visibility,
-          },
+          parentSpace: undefined,
+          type: SearchEntityTypes.SPACE,
+          license: { visibility: space?.account?.license?.visibility },
+          spaceID: space.parentSpace?.id ?? EMPTY_VALUE,
           profile: {
-            ...challenge.profile,
-            tags: processTagsets(challenge.profile.tagsets),
+            ...space.profile,
+            tags: processTagsets(space.profile.tagsets),
             tagsets: undefined,
           },
         }));
       });
   }
 
-  private fetchOpportunities(start: number, limit: number) {
+  private fetchSpacesLevel2(start: number, limit: number) {
     return this.entityManager
-      .find<Opportunity>(Opportunity, {
+      .find<Space>(Space, {
         ...journeyFindOptions,
         where: {
-          challenge: {
-            space: {
-              account: {
-                license: { visibility: Not(SpaceVisibility.ARCHIVED) },
-              },
-            },
-          },
+          account: { license: { visibility: Not(SpaceVisibility.ARCHIVED) } },
+          level: SpaceLevel.OPPORTUNITY,
         },
         relations: {
           ...journeyFindOptions.relations,
-          challenge: {
-            space: {
-              account: { license: true },
-            },
-          },
+          account: { license: true },
+          parentSpace: { parentSpace: true },
         },
         select: {
           ...journeyFindOptions.select,
-          challenge: {
-            id: true,
-            space: {
-              id: true,
-              account: { id: true, license: { visibility: true } },
-            },
-          },
+          account: { id: true, license: { visibility: true } },
+          parentSpace: { id: true, parentSpace: { id: true } },
         },
         skip: start,
         take: limit,
       })
-      .then(opportunities => {
-        return opportunities.map(opportunity => ({
-          ...opportunity,
-          spaceID: opportunity?.challenge?.space?.id,
-          challengeID: opportunity?.challenge?.id,
-          challenge: undefined,
-          license: {
-            visibility:
-              opportunity?.challenge?.space?.account?.license?.visibility,
-          },
+      .then(spaces => {
+        return spaces.map(space => ({
+          ...space,
+          account: undefined,
+          parentSpace: undefined,
+          type: SearchEntityTypes.SPACE,
+          license: { visibility: space?.account?.license?.visibility },
+          spaceID: space.parentSpace?.parentSpace?.id ?? EMPTY_VALUE,
           profile: {
-            ...opportunity.profile,
-            tags: processTagsets(opportunity.profile.tagsets),
+            ...space.profile,
+            tags: processTagsets(space.profile.tagsets),
             tagsets: undefined,
           },
         }));
@@ -453,6 +440,7 @@ export class SearchIngestService {
       .then(organizations => {
         return organizations.map(organization => ({
           ...organization,
+          type: SearchEntityTypes.ORGANIZATION,
           profile: {
             ...organization.profile,
             tags: processTagsets(organization.profile.tagsets),
@@ -485,6 +473,7 @@ export class SearchIngestService {
           phone: undefined,
           serviceProfile: undefined,
           gender: undefined,
+          type: SearchEntityTypes.USER,
           profile: {
             ...user.profile,
             tags: processTagsets(user.profile.tagsets),
@@ -514,7 +503,7 @@ export class SearchIngestService {
               },
             },
           },
-          challenges: {
+          subspaces: {
             collaboration: {
               callouts: {
                 contributions: {
@@ -524,7 +513,7 @@ export class SearchIngestService {
                 },
               },
             },
-            opportunities: {
+            subspaces: {
               collaboration: {
                 callouts: {
                   contributions: {
@@ -556,7 +545,7 @@ export class SearchIngestService {
               },
             },
           },
-          challenges: {
+          subspaces: {
             id: true,
             collaboration: {
               id: true,
@@ -574,7 +563,7 @@ export class SearchIngestService {
                 },
               },
             },
-            opportunities: {
+            subspaces: {
               id: true,
               collaboration: {
                 id: true,
@@ -599,15 +588,16 @@ export class SearchIngestService {
         take: limit,
       })
       .then(spaces => {
-        const spacePosts: any[] = [];
+        const spaceLevel0Posts: any[] = [];
         spaces.forEach(space =>
           space?.collaboration?.callouts?.forEach(callout =>
             callout?.contributions?.forEach(contribution => {
               if (!contribution.post) {
                 return;
               }
-              spacePosts.push({
+              spaceLevel0Posts.push({
                 ...contribution.post,
+                type: SearchEntityTypes.POST,
                 license: {
                   visibility:
                     space?.account?.license?.visibility ?? EMPTY_VALUE,
@@ -624,22 +614,23 @@ export class SearchIngestService {
             })
           )
         );
-        const challengePosts: any[] = [];
+        const spaceLevel1Posts: any[] = [];
         spaces.forEach(space =>
-          space?.challenges?.forEach(challenge =>
-            challenge?.collaboration?.callouts?.forEach(callout =>
+          space?.subspaces?.forEach(subspace =>
+            subspace?.collaboration?.callouts?.forEach(callout =>
               callout?.contributions?.forEach(contribution => {
                 if (!contribution.post) {
                   return;
                 }
-                challengePosts.push({
+                spaceLevel1Posts.push({
                   ...contribution.post,
+                  type: SearchEntityTypes.POST,
                   license: {
                     visibility:
                       space?.account?.license?.visibility ?? EMPTY_VALUE,
                   },
                   spaceID: space.id,
-                  challengeID: challenge.id,
+                  challengeID: subspace.id,
                   calloutID: callout.id,
                   collaborationID: space?.collaboration?.id ?? EMPTY_VALUE,
                   profile: {
@@ -652,25 +643,25 @@ export class SearchIngestService {
             )
           )
         );
-
-        const opportunityPosts: any[] = [];
+        const spaceLevel2Posts: any[] = [];
         spaces.forEach(space =>
-          space?.challenges?.forEach(challenge =>
-            challenge?.opportunities?.forEach(opportunity =>
-              opportunity?.collaboration?.callouts?.forEach(callout =>
+          space?.subspaces?.forEach(subspace =>
+            subspace?.subspaces?.forEach(subsubspace =>
+              subsubspace?.collaboration?.callouts?.forEach(callout =>
                 callout?.contributions?.forEach(contribution => {
                   if (!contribution.post) {
                     return;
                   }
-                  opportunityPosts.push({
+                  spaceLevel2Posts.push({
                     ...contribution.post,
+                    type: SearchEntityTypes.POST,
                     license: {
                       visibility:
                         space?.account?.license?.visibility ?? EMPTY_VALUE,
                     },
                     spaceID: space.id,
-                    challengeID: challenge.id,
-                    opportunityID: opportunity.id,
+                    challengeID: subspace.id,
+                    opportunityID: subsubspace.id,
                     calloutID: callout.id,
                     collaborationID: space?.collaboration?.id ?? EMPTY_VALUE,
                     profile: {
@@ -685,7 +676,7 @@ export class SearchIngestService {
           )
         );
 
-        return [...spacePosts, ...challengePosts, ...opportunityPosts];
+        return [...spaceLevel0Posts, ...spaceLevel1Posts, ...spaceLevel2Posts];
       });
   }
 }

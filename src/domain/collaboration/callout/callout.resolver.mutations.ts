@@ -274,9 +274,13 @@ export class CalloutResolverMutations {
     };
     this.activityAdapter.calloutLinkCreated(activityLogInput);
 
-    const { spaceID } =
+    const community =
       await this.communityResolverService.getCommunityFromCalloutOrFail(
         callout.id
+      );
+    const spaceID =
+      await this.communityResolverService.getRootSpaceIDFromCommunityOrFail(
+        community
       );
 
     this.contributionReporter.calloutLinkCreated(
@@ -312,9 +316,13 @@ export class CalloutResolverMutations {
       callout: callout,
     });
 
-    const { spaceID } =
+    const community =
       await this.communityResolverService.getCommunityFromCalloutOrFail(
         callout.id
+      );
+    const spaceID =
+      await this.communityResolverService.getRootSpaceIDFromCommunityOrFail(
+        community
       );
 
     this.contributionReporter.calloutWhiteboardCreated(
@@ -351,9 +359,13 @@ export class CalloutResolverMutations {
     };
     this.activityAdapter.calloutPostCreated(activityLogInput);
 
-    const { spaceID } =
+    const community =
       await this.communityResolverService.getCommunityFromCalloutOrFail(
         callout.id
+      );
+    const spaceID =
+      await this.communityResolverService.getRootSpaceIDFromCommunityOrFail(
+        community
       );
 
     this.contributionReporter.calloutPostCreated(

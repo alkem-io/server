@@ -83,7 +83,7 @@ export class CommunicationResolverMutations {
     if (!displayNameAvailable)
       throw new ValidationException(
         `Unable to create Discussion: the provided displayName is already taken: ${createData.profile.displayName}`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
 
     const discussion = await this.communicationService.createDiscussion(

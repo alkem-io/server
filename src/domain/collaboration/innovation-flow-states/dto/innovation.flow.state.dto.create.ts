@@ -1,5 +1,5 @@
 export class CreateInnovationFlowStateInput {
   displayName!: string;
 
-  description!: string;
+  description?: string;
 }

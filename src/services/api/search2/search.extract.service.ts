@@ -17,51 +17,27 @@ import {
 import { BaseException } from '@common/exceptions/base.exception';
 import { functionScoreFunctions } from '@services/api/search2/function.score.functions';
 import { buildSearchQuery } from './build.search.query';
+import { SearchEntityTypes } from './search.entity.types';
 
-enum SearchEntityTypes {
-  USER = 'user',
-  ORGANIZATION = 'organization',
-  SPACE = 'space',
-  CHALLENGE = 'challenge',
-  OPPORTUNITY = 'opportunity',
-  POST = 'post',
-}
-
-type SearchEntityTypesPublic = Exclude<
-  SearchEntityTypes,
-  SearchEntityTypes.USER | SearchEntityTypes.ORGANIZATION
->;
+type SearchEntityTypesPublic =
+  | SearchEntityTypes.SPACE
+  | SearchEntityTypes.SUBSPACE
+  | SearchEntityTypes.POST;
 
 const TYPE_TO_INDEX = (
   indexPattern: string
 ): Record<SearchEntityTypes, string> => ({
   [SearchEntityTypes.SPACE]: `${indexPattern}spaces`,
-  [SearchEntityTypes.CHALLENGE]: `${indexPattern}challenges`,
-  [SearchEntityTypes.OPPORTUNITY]: `${indexPattern}opportunities`,
+  [SearchEntityTypes.SUBSPACE]: `${indexPattern}subspaces`,
   [SearchEntityTypes.POST]: `${indexPattern}posts`,
   [SearchEntityTypes.USER]: `${indexPattern}users`,
   [SearchEntityTypes.ORGANIZATION]: `${indexPattern}organizations`,
-});
-const INDEX_TO_TYPE = (
-  indexPattern: string
-): Record<string, SearchEntityTypes> => ({
-  [TYPE_TO_INDEX(indexPattern)[SearchEntityTypes.SPACE]]:
-    SearchEntityTypes.SPACE,
-  [TYPE_TO_INDEX(indexPattern)[SearchEntityTypes.CHALLENGE]]:
-    SearchEntityTypes.CHALLENGE,
-  [TYPE_TO_INDEX(indexPattern)[SearchEntityTypes.OPPORTUNITY]]:
-    SearchEntityTypes.OPPORTUNITY,
-  [TYPE_TO_INDEX(indexPattern)[SearchEntityTypes.POST]]: SearchEntityTypes.POST,
-  [TYPE_TO_INDEX(indexPattern)[SearchEntityTypes.USER]]: SearchEntityTypes.USER,
-  [TYPE_TO_INDEX(indexPattern)[SearchEntityTypes.ORGANIZATION]]:
-    SearchEntityTypes.ORGANIZATION,
 });
 const TYPE_TO_PUBLIC_INDEX = (
   indexPattern: string
 ): Record<SearchEntityTypesPublic, string> => ({
   [SearchEntityTypes.SPACE]: `${indexPattern}spaces`,
-  [SearchEntityTypes.CHALLENGE]: `${indexPattern}challenges`,
-  [SearchEntityTypes.OPPORTUNITY]: `${indexPattern}opportunities`,
+  [SearchEntityTypes.SUBSPACE]: `${indexPattern}subspaces`,
   [SearchEntityTypes.POST]: `${indexPattern}posts`,
 });
 
@@ -103,6 +79,7 @@ export class SearchExtractService {
     if (!this.client) {
       throw new Error('Elasticsearch client not initialized');
     }
+
     validateSearchParameters(searchData);
     const filteredTerms = validateSearchTerms(searchData.terms);
 
@@ -138,8 +115,8 @@ export class SearchExtractService {
               boost_mode: 'multiply',
             },
           },
-          // return only the 'id' field of the document
-          fields: ['id'],
+          // return only the 'id' and 'type' fields of the document
+          fields: ['id', 'type'],
           // do not include the source in the result
           _source: false,
           // offset, starting from 0
@@ -150,7 +127,7 @@ export class SearchExtractService {
         .then(result =>
           result.hits.hits.map<ISearchResult>(hit => {
             const entityId = hit.fields?.id?.[0];
-            const type = INDEX_TO_TYPE(this.indexPattern)[hit._index];
+            const type = hit.fields?.type?.[0];
 
             if (!entityId) {
               this.logger.error(
@@ -200,7 +177,9 @@ export class SearchExtractService {
     );
 
     if (onlyPublicResults) {
-      const publicIndices = Object.values(TYPE_TO_PUBLIC_INDEX);
+      const publicIndices = Object.values(
+        TYPE_TO_PUBLIC_INDEX(this.indexPattern)
+      );
       return intersection(filteredIndices, publicIndices);
     }
 

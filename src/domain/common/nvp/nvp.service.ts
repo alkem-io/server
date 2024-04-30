@@ -19,7 +19,7 @@ export class NVPService {
     if (!NVP)
       throw new EntityNotFoundException(
         `Not able to locate NVP with the specified ID: ${NVPID}`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     return NVP;
   }

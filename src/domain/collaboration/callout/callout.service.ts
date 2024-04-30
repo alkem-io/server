@@ -380,7 +380,7 @@ export class CalloutService {
       if (!nameAvailable)
         throw new ValidationException(
           `Unable to create Post: the provided nameID is already taken: ${postData.nameID}`,
-          LogContext.CHALLENGES
+          LogContext.SPACES
         );
     } else {
       postData.nameID = this.namingService.createNameID(
@@ -448,7 +448,7 @@ export class CalloutService {
       if (!nameAvailable)
         throw new ValidationException(
           `Unable to create Whiteboard: the provided nameID is already taken: ${whiteboardData.nameID}`,
-          LogContext.CHALLENGES
+          LogContext.SPACES
         );
     } else {
       whiteboardData.nameID = this.namingService.createNameID(

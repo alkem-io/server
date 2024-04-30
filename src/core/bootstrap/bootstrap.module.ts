@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Space } from '@domain/challenge/space/space.entity';
-import { SpaceModule } from '@domain/challenge/space/space.module';
+import { SpaceModule } from '@domain/space/space/space.module';
 import { UserModule } from '@domain/community/user/user.module';
 import { OrganizationModule } from '@domain/community/organization/organization.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
@@ -13,6 +12,8 @@ import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platf
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { InnovationHubModule } from '@domain/innovation-hub';
 import { NameReporterModule } from '@services/external/elasticsearch/name-reporter/name.reporter.module';
+import { AccountModule } from '@domain/space/account/account.module';
+import { Account } from '@domain/space/account/account.entity';
 import { SearchIngestModule } from '@services/api/search2/search.ingest/search.ingest.module';
 
 @Module({
@@ -20,13 +21,14 @@ import { SearchIngestModule } from '@services/api/search2/search.ingest/search.i
     AgentModule,
     AuthorizationPolicyModule,
     SpaceModule,
+    AccountModule,
     UserModule,
     AdminAuthorizationModule,
     PlatformModule,
     PlatformAuthorizationPolicyModule,
     CommunicationModule,
     OrganizationModule,
-    TypeOrmModule.forFeature([Space]),
+    TypeOrmModule.forFeature([Account]),
     InnovationHubModule,
     NameReporterModule,
     SearchIngestModule,

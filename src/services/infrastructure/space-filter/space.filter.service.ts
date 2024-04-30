@@ -19,7 +19,7 @@ export class SpaceFilterService {
     }
     this.logger.verbose?.(
       `Loading spaces with visibilities: ${visibilities}`,
-      LogContext.CHALLENGES
+      LogContext.SPACES
     );
     return visibilities;
   }
@@ -31,7 +31,7 @@ export class SpaceFilterService {
     if (!visibility) {
       throw new RelationshipNotFoundException(
         `Space Visibility not provided when searching for ${allowedVisibilities}`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     }
     const result = allowedVisibilities.find(v => v === visibility);

@@ -13,14 +13,12 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy/author
 import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
 import { CommunicationAuthorizationService } from '@domain/communication/communication/communication.service.authorization';
 import { ApplicationAuthorizationService } from '../application/application.service.authorization';
-import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { AuthorizationPolicyRuleVerifiedCredential } from '@core/authorization/authorization.policy.rule.verified.credential';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
   CREDENTIAL_RULE_TYPES_COMMUNITY_GLOBAL_ADMINS,
   CREDENTIAL_RULE_TYPES_COMMUNITY_READ_GLOBAL_REGISTERED,
   CREDENTIAL_RULE_COMMUNITY_SELF_REMOVAL,
-  POLICY_RULE_COMMUNITY_INVITE,
   CREDENTIAL_RULE_TYPES_ACCESS_VIRTUAL_CONTRIBUTORS,
 } from '@common/constants';
 import { InvitationExternalAuthorizationService } from '../invitation.external/invitation.external.service.authorization';
@@ -103,17 +101,15 @@ export class CommunityAuthorizationService {
     community.authorization = this.appendVerifiedCredentialRules(
       community.authorization
     );
-    community.authorization = this.appendPrivilegeRules(
-      community.authorization
-    );
 
     // always false
     community.authorization.anonymousReadAccess = false;
 
-    await this.communicationAuthorizationService.applyAuthorizationPolicy(
-      community.communication,
-      community.authorization
-    );
+    community.communication =
+      await this.communicationAuthorizationService.applyAuthorizationPolicy(
+        community.communication,
+        community.authorization
+      );
 
     // cascade
     for (const group of community.groups) {
@@ -153,10 +149,11 @@ export class CommunityAuthorizationService {
     }
 
     if (community.guidelines) {
-      await this.communityGuidelinesAuthorizationService.applyAuthorizationPolicy(
-        community.guidelines,
-        community.authorization
-      );
+      community.guidelines =
+        await this.communityGuidelinesAuthorizationService.applyAuthorizationPolicy(
+          community.guidelines,
+          community.authorization
+        );
     }
 
     return await this.communityRepository.save(community);
@@ -236,24 +233,6 @@ export class CommunityAuthorizationService {
       );
 
     return updatedAuthorization;
-  }
-
-  private appendPrivilegeRules(
-    authorization: IAuthorizationPolicy
-  ): IAuthorizationPolicy {
-    const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
-
-    const communityInvitePrivilege = new AuthorizationPolicyRulePrivilege(
-      [AuthorizationPrivilege.COMMUNITY_INVITE],
-      AuthorizationPrivilege.GRANT,
-      POLICY_RULE_COMMUNITY_INVITE
-    );
-    privilegeRules.push(communityInvitePrivilege);
-
-    return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
-      authorization,
-      privilegeRules
-    );
   }
 
   private appendVerifiedCredentialRules(

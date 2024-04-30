@@ -1,5 +1,5 @@
 import { Inject, UseGuards } from '@nestjs/common';
-import { Args, Mutation, Resolver } from '@nestjs/graphql';
+import { Args, createUnionType, Mutation, Resolver } from '@nestjs/graphql';
 import { IUserGroup } from '@domain/community/user-group';
 import { CommunityService } from './community.service';
 import { CurrentUser, Profiling } from '@src/common/decorators';
@@ -23,7 +23,6 @@ import { CommunityApplyInput } from './dto/community.dto.apply';
 import { CommunityMemberClaim } from '@services/external/trust-registry/trust.registry.claim/claim.community.member';
 import { AgentBeginVerifiedCredentialOfferOutput } from '@domain/agent/agent/dto/agent.dto.verified.credential.offer.begin.output';
 import { AlkemioUserClaim } from '@services/external/trust-registry/trust.registry.claim/claim.alkemio.user';
-import { CreateFeedbackOnCommunityContextInput } from '@domain/community/community/dto/community.dto.create.feedback.on.context';
 import { CreateUserGroupInput } from '../user-group/dto';
 import { RemoveCommunityRoleFromOrganizationInput } from './dto/community.dto.role.remove.organization';
 import { AssignCommunityRoleToOrganizationInput } from './dto/community.dto.role.assign.organization';
@@ -31,7 +30,6 @@ import { CommunityRole } from '@common/enums/community.role';
 import { AssignCommunityRoleToUserInput } from './dto/community.dto.role.assign.user';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { NotificationInputCommunityApplication } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.application';
-import { NotificationInputCommunityContextReview } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.context.review';
 import { CommunityAuthorizationService } from './community.service.authorization';
 import { UpdateCommunityApplicationFormInput } from './dto/community.dto.update.application.form';
 import { InvitationAuthorizationService } from '../invitation/invitation.service.authorization';
@@ -54,6 +52,17 @@ import { RemoveCommunityRoleFromVirtualInput } from './dto/community.dto.role.re
 import { VirtualContributorAuthorizationService } from '../virtual-contributor/virtual.contributor.service.authorization';
 import { VirtualContributorService } from '../virtual-contributor/virtual.contributor.service';
 import { IVirtualContributor } from '../virtual-contributor';
+
+const IAnyInvitation = createUnionType({
+  name: 'AnyInvitation',
+  types: () => [IInvitation, IInvitationExternal],
+  resolveType(value: IInvitation | IInvitationExternal) {
+    if ('user' in value) {
+      return IInvitation;
+    }
+    return IInvitationExternal;
+  },
+});
 
 @Resolver()
 export class CommunityResolverMutations {
@@ -112,10 +121,10 @@ export class CommunityResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('roleData') roleData: AssignCommunityRoleToUserInput
   ): Promise<IUser> {
-    this.validateNotHostRole(roleData.role);
     const community = await this.communityService.getCommunityOrFail(
       roleData.communityID
     );
+    const spaceID = await this.communityService.getSpaceID(community);
 
     let requiredPrivilege = AuthorizationPrivilege.GRANT;
     if (roleData.role === CommunityRole.MEMBER) {
@@ -129,6 +138,7 @@ export class CommunityResolverMutations {
       `assign user community role: ${community.id}`
     );
     await this.communityService.assignUserToRole(
+      spaceID,
       community,
       roleData.userID,
       roleData.role,
@@ -151,7 +161,6 @@ export class CommunityResolverMutations {
     @Args('roleData')
     roleData: AssignCommunityRoleToOrganizationInput
   ): Promise<IOrganization> {
-    this.validateNotHostRole(roleData.role);
     const community = await this.communityService.getCommunityOrFail(
       roleData.communityID
     );
@@ -226,7 +235,6 @@ export class CommunityResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('roleData') roleData: RemoveCommunityRoleFromUserInput
   ): Promise<IUser> {
-    this.validateNotHostRole(roleData.role);
     const community = await this.communityService.getCommunityOrFail(
       roleData.communityID
     );
@@ -268,7 +276,6 @@ export class CommunityResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('roleData') roleData: RemoveCommunityRoleFromOrganizationInput
   ): Promise<IOrganization> {
-    this.validateNotHostRole(roleData.role);
     const community = await this.communityService.getCommunityOrFail(
       roleData.communityID
     );
@@ -386,59 +393,90 @@ export class CommunityResolverMutations {
       `create invitation community: ${community.id}`
     );
 
-    const invitations: IInvitation[] = [];
+    return Promise.all(
+      invitationData.invitedUsers.map(async invitedUser => {
+        return await this.inviteSingleExistingUser({
+          community,
+          invitedUser,
+          agentInfo,
+          welcomeMessage: invitationData.welcomeMessage,
+        });
+      })
+    );
+  }
 
-    for (const invitedUser of invitationData.invitedUsers) {
-      const input: CreateInvitationInput = {
-        communityID: community.id,
-        invitedUser: invitedUser,
-        createdBy: agentInfo.userID,
-        welcomeMessage: invitationData.welcomeMessage,
-      };
-      const invitation =
-        await this.communityService.createInvitationExistingUser(input);
+  private async inviteSingleExistingUser({
+    community,
+    invitedUser,
+    agentInfo,
+    welcomeMessage,
+  }: {
+    community: ICommunity;
+    invitedUser: string;
+    agentInfo: AgentInfo;
+    welcomeMessage?: string;
+  }) {
+    const input: CreateInvitationInput = {
+      communityID: community.id,
+      invitedUser: invitedUser,
+      createdBy: agentInfo.userID,
+      welcomeMessage,
+    };
 
-      const savedInvitation =
-        await this.invitationAuthorizationService.applyAuthorizationPolicy(
-          invitation,
-          community.authorization
-        );
+    let invitation = await this.communityService.createInvitationExistingUser(
+      input
+    );
 
-      // Send the notification
-      const notificationInput: NotificationInputCommunityInvitation = {
-        triggeredBy: agentInfo.userID,
-        community: community,
-        invitedUser: invitedUser,
-      };
-      await this.notificationAdapter.invitationCreated(notificationInput);
+    invitation =
+      await this.invitationAuthorizationService.applyAuthorizationPolicy(
+        invitation,
+        community.authorization
+      );
 
-      invitations.push(savedInvitation);
-    }
+    // Send the notification
+    const notificationInput: NotificationInputCommunityInvitation = {
+      triggeredBy: agentInfo.userID,
+      community: community,
+      invitedUser: invitedUser,
+    };
 
-    return invitations;
+    await this.notificationAdapter.invitationCreated(notificationInput);
+
+    return invitation;
   }
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => IInvitationExternal, {
+  @Mutation(() => IAnyInvitation, {
     description:
       'Invite an external User to join the specified Community as a member.',
   })
   @Profiling.api
-  async inviteExternalUserForCommunityMembership(
+  async inviteForCommunityMembershipByEmail(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('invitationData')
     invitationData: CreateInvitationExternalUserOnCommunityInput
-  ): Promise<IInvitationExternal> {
+  ): Promise<IInvitation | IInvitationExternal> {
     const community = await this.communityService.getCommunityOrFail(
       invitationData.communityID
     );
 
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       community.authorization,
       AuthorizationPrivilege.COMMUNITY_INVITE,
       `create invitation external community: ${community.id}`
     );
+
+    const user = await this.userService.getUserByEmail(invitationData.email);
+
+    if (user) {
+      return this.inviteSingleExistingUser({
+        community,
+        welcomeMessage: invitationData.welcomeMessage,
+        agentInfo,
+        invitedUser: user.id,
+      });
+    }
 
     const externalInvitation =
       await this.communityService.createInvitationExternalUser(
@@ -502,6 +540,7 @@ export class CommunityResolverMutations {
     const community = await this.communityService.getCommunityOrFail(
       joiningData.communityID
     );
+    const spaceID = await this.communityService.getSpaceID(community);
 
     const membershipStatus = await this.communityService.getMembershipStatus(
       agentInfo,
@@ -522,6 +561,7 @@ export class CommunityResolverMutations {
     );
 
     await this.communityService.assignUserToRole(
+      spaceID,
       community,
       agentInfo.userID,
       CommunityRole.MEMBER,
@@ -616,48 +656,5 @@ export class CommunityResolverMutations {
         },
       ]
     );
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => Boolean, {
-    description:
-      'Creates feedback on community context from users having COMMUNITY_CONTEXT_REVIEW privilege',
-  })
-  @Profiling.api
-  async createFeedbackOnCommunityContext(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('feedbackData') feedbackData: CreateFeedbackOnCommunityContextInput
-  ): Promise<boolean> {
-    const community = await this.communityService.getCommunityOrFail(
-      feedbackData.communityID
-    );
-
-    // todo: must check COMMUNITY_CONTEXT_REVIEW on Challenge
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      community.authorization,
-      AuthorizationPrivilege.COMMUNITY_CONTEXT_REVIEW,
-      `creating feedback on community: ${community.id}`
-    );
-
-    // Send the notification
-    const notificationInput: NotificationInputCommunityContextReview = {
-      triggeredBy: agentInfo.userID,
-      community: community,
-      questions: feedbackData.questions,
-    };
-    await this.notificationAdapter.communityContextReview(notificationInput);
-
-    return true;
-  }
-
-  // For now Host role is only allowed to be assigned via platform level settings
-  private validateNotHostRole(role: CommunityRole) {
-    if (role === CommunityRole.HOST) {
-      throw new CommunityMembershipException(
-        `Unable to assign Role (${role}) in community: setting of Host role requires platform settings`,
-        LogContext.COMMUNITY
-      );
-    }
   }
 }

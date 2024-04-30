@@ -105,7 +105,7 @@ export class InnovationPackService {
         if (!updateAllowed) {
           throw new ValidationException(
             `Unable to update InnovationPack nameID: the provided nameID is already taken: ${innovationPackData.nameID}`,
-            LogContext.CHALLENGES
+            LogContext.SPACES
           );
         }
         innovationPack.nameID = innovationPackData.nameID;
@@ -186,7 +186,7 @@ export class InnovationPackService {
     if (!innovationPack)
       throw new EntityNotFoundException(
         `Unable to find InnovationPack with ID: ${innovationPackID}`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     return innovationPack;
   }
@@ -287,7 +287,7 @@ export class InnovationPackService {
     if (organizations.length > 1) {
       throw new RelationshipNotFoundException(
         `More than one provider for InnovationPack ${innovationPackID} `,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     }
     return organizations[0];
@@ -306,7 +306,7 @@ export class InnovationPackService {
     if (!templatesSetId) {
       throw new EntityNotFoundException(
         `TemplatesSet for InnovationPack ${innovationPackID} not found!`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     }
     return await this.templatesSetService.getTemplatesCount(templatesSetId);

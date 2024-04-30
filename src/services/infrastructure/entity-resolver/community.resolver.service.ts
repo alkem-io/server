@@ -6,8 +6,8 @@ import { Community, ICommunity } from '@domain/community/community';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { Communication } from '@domain/communication/communication/communication.entity';
-import { Profile } from '@domain/common/profile/profile.entity';
-import { SpaceType } from '@common/enums/space.type';
+import { Space } from '@domain/space/space/space.entity';
+import { ISpace } from '@domain/space/space/space.interface';
 
 @Injectable()
 export class CommunityResolverService {
@@ -18,11 +18,34 @@ export class CommunityResolverService {
     private discussionRepository: Repository<Discussion>,
     @InjectRepository(Communication)
     private communicationRepository: Repository<Communication>,
-    @InjectRepository(Profile)
-    private profileRepository: Repository<Profile>,
     @InjectEntityManager('default')
     private entityManager: EntityManager
   ) {}
+
+  public async getRootSpaceIDFromCommunityOrFail(
+    community: ICommunity
+  ): Promise<string> {
+    const space = await this.entityManager.findOne(Space, {
+      where: {
+        community: {
+          id: community.id,
+        },
+      },
+      relations: {
+        account: {
+          space: true,
+        },
+      },
+    });
+    if (space && space.account && space.account.space) {
+      return space.account.space.id;
+    }
+
+    throw new EntityNotFoundException(
+      `Unable to find Space for given community id: ${community.id}`,
+      LogContext.COLLABORATION
+    );
+  }
 
   public async getCommunityFromDiscussionOrFail(
     discussionID: string
@@ -79,32 +102,28 @@ export class CommunityResolverService {
   public async getCommunityFromCalloutOrFail(
     calloutId: string
   ): Promise<ICommunity> {
-    const [result]: {
-      entityId: string;
-      communityId: string;
-      communityType: string;
-    }[] = await this.entityManager.connection.query(
-      `
-        SELECT \`space\`.\`id\` as \`spaceId\`, \`space\`.\`communityId\` as communityId, 'space' as \`entityType\` FROM \`callout\`
-        RIGHT JOIN \`space\` on \`callout\`.\`collaborationId\` = \`space\`.\`collaborationId\`
-        WHERE \`callout\`.\`id\` = '${calloutId}' UNION
-
-        SELECT \`challenge\`.\`id\` as \`entityId\`, \`challenge\`.\`communityId\` as communityId, 'challenge' as \`entityType\` FROM \`callout\`
-        RIGHT JOIN \`challenge\` on \`callout\`.\`collaborationId\` = \`challenge\`.\`collaborationId\`
-        WHERE \`callout\`.\`id\` = '${calloutId}' UNION
-
-        SELECT \`opportunity\`.\`id\`, \`opportunity\`.\`communityId\` as communityId, 'opportunity' as \`entityType\` FROM \`callout\`
-        RIGHT JOIN \`opportunity\` on \`callout\`.\`collaborationId\` = \`opportunity\`.\`collaborationId\`
-        WHERE \`callout\`.\`id\` = '${calloutId}';
-      `
-    );
-
-    const community = await this.communityRepository.findOneBy({
-      id: result.communityId,
+    const space = await this.entityManager.findOne(Space, {
+      where: {
+        collaboration: {
+          callouts: {
+            id: calloutId,
+          },
+        },
+      },
+      relations: {
+        community: true,
+      },
     });
+    if (!space) {
+      throw new EntityNotFoundException(
+        `Unable to find space for whiteboard: ${calloutId}`,
+        LogContext.COMMUNITY
+      );
+    }
+    const community = space.community;
     if (!community) {
       throw new EntityNotFoundException(
-        `Unable to find Community: ${result.communityId} for Callout: ${calloutId}`,
+        `Unable to find community for whiteboard: ${calloutId}`,
         LogContext.COMMUNITY
       );
     }
@@ -114,77 +133,52 @@ export class CommunityResolverService {
   public async getCommunityFromWhiteboardOrFail(
     whiteboardId: string
   ): Promise<ICommunity> {
-    const [result]: {
-      entityId: string;
-      communityId: string;
-      communityType: string;
-    }[] = await this.entityManager.connection.query(
-      `
-        SELECT \`space\`.\`id\` as \`spaceId\`, \`space\`.\`communityId\` as communityId, 'space' as \`entityType\` FROM \`callout\`
-        RIGHT JOIN \`space\` on \`callout\`.\`collaborationId\` = \`space\`.\`collaborationId\`
-        JOIN \`callout_contribution\` on \`callout_contribution\`.calloutId = \`callout\`.\`id\`
-        JOIN \`whiteboard\` on \`callout_contribution\`.whiteboardId = \`whiteboard\`.\`id\`
-        WHERE \`whiteboard\`.\`id\` = '${whiteboardId}' UNION
-
-        SELECT \`challenge\`.\`id\` as \`entityId\`, \`challenge\`.\`communityId\` as communityId, 'challenge' as \`entityType\` FROM \`callout\`
-        RIGHT JOIN \`challenge\` on \`callout\`.\`collaborationId\` = \`challenge\`.\`collaborationId\`
-        JOIN \`callout_contribution\` on \`callout_contribution\`.calloutId = \`callout\`.\`id\`
-        JOIN \`whiteboard\` on \`callout_contribution\`.whiteboardId = \`whiteboard\`.\`id\`
-        WHERE \`whiteboard\`.\`id\` = '${whiteboardId}' UNION
-
-        SELECT \`opportunity\`.\`id\`, \`opportunity\`.\`communityId\` as communityId, 'opportunity' as \`entityType\` FROM \`callout\`
-        RIGHT JOIN \`opportunity\` on \`callout\`.\`collaborationId\` = \`opportunity\`.\`collaborationId\`
-        JOIN \`callout_contribution\` on \`callout_contribution\`.calloutId = \`callout\`.\`id\`
-        JOIN \`whiteboard\` on \`callout_contribution\`.whiteboardId = \`whiteboard\`.\`id\`
-        WHERE \`whiteboard\`.\`id\` = '${whiteboardId}';
-      `
-    );
-
-    if (!result) {
-      const [result]: {
-        entityId: string;
-        communityId: string;
-        communityType: string;
-      }[] = await this.entityManager.connection.query(
-        `
-          SELECT \`space\`.\`id\` as \`spaceId\`, \`space\`.\`communityId\` as communityId, 'space' as \`entityType\` FROM \`callout\`
-          RIGHT JOIN \`space\` on \`callout\`.\`collaborationId\` = \`space\`.\`collaborationId\`
-          JOIN \`callout_framing\` on \`callout_framing\`.id = \`callout\`.\`framingId\`
-          JOIN \`whiteboard\` on \`callout_framing\`.whiteboardId = \`whiteboard\`.\`id\`
-          WHERE \`whiteboard\`.\`id\` = '${whiteboardId}' UNION
-
-          SELECT \`challenge\`.\`id\` as \`entityId\`, \`challenge\`.\`communityId\` as communityId, 'challenge' as \`entityType\` FROM \`callout\`
-          RIGHT JOIN \`challenge\` on \`callout\`.\`collaborationId\` = \`challenge\`.\`collaborationId\`
-          JOIN \`callout_framing\` on \`callout_framing\`.id = \`callout\`.\`framingId\`
-          JOIN \`whiteboard\` on \`callout_framing\`.whiteboardId = \`whiteboard\`.\`id\`
-          WHERE \`whiteboard\`.\`id\` = '${whiteboardId}' UNION
-
-          SELECT \`opportunity\`.\`id\`, \`opportunity\`.\`communityId\` as communityId, 'opportunity' as \`entityType\` FROM \`callout\`
-          RIGHT JOIN \`opportunity\` on \`callout\`.\`collaborationId\` = \`opportunity\`.\`collaborationId\`
-          JOIN \`callout_framing\` on \`callout_framing\`.id = \`callout\`.\`framingId\`
-          JOIN \`whiteboard\` on \`callout_framing\`.whiteboardId = \`whiteboard\`.\`id\`
-          WHERE \`whiteboard\`.\`id\` = '${whiteboardId}';
-        `
-      );
-
-      const community = await this.communityRepository.findOneBy({
-        id: result.communityId,
-      });
-      if (!community) {
-        throw new EntityNotFoundException(
-          `Unable to find Community: ${result.communityId} for Contribution: ${whiteboardId}`,
-          LogContext.COMMUNITY
-        );
-      }
-      return community;
-    }
-
-    const community = await this.communityRepository.findOneBy({
-      id: result.communityId,
+    // check for whitebaord in contributions
+    let space = await this.entityManager.findOne(Space, {
+      where: {
+        collaboration: {
+          callouts: {
+            contributions: {
+              whiteboard: {
+                id: whiteboardId,
+              },
+            },
+          },
+        },
+      },
+      relations: {
+        community: true,
+      },
     });
+    // check for whiteboard in framing
+    if (!space) {
+      space = await this.entityManager.findOne(Space, {
+        where: {
+          collaboration: {
+            callouts: {
+              framing: {
+                whiteboard: {
+                  id: whiteboardId,
+                },
+              },
+            },
+          },
+        },
+        relations: {
+          community: true,
+        },
+      });
+    }
+    if (!space) {
+      throw new EntityNotFoundException(
+        `Unable to find space for whiteboard: ${whiteboardId}`,
+        LogContext.COMMUNITY
+      );
+    }
+    const community = space.community;
     if (!community) {
       throw new EntityNotFoundException(
-        `Unable to find Community: ${result.communityId} for Contribution: ${whiteboardId}`,
+        `Unable to find community for whiteboard: ${whiteboardId}`,
         LogContext.COMMUNITY
       );
     }
@@ -220,106 +214,63 @@ export class CommunityResolverService {
     return community;
   }
 
-  public async getCommunityFromCollaborationOrFail(
-    collaborationID: string
-  ): Promise<ICommunity> {
-    const [result]: {
-      communityId: string;
-    }[] = await this.entityManager.connection.query(
-      `
-        SELECT communityId from \`space\`
-        WHERE \`space\`.\`collaborationId\` = '${collaborationID}' UNION
-        SELECT communityId from \`challenge\`
-        WHERE \`challenge\`.\`collaborationId\` = '${collaborationID}' UNION
-        SELECT communityId from \`opportunity\`
-        WHERE \`opportunity\`.\`collaborationId\` = '${collaborationID}';
-      `
-    );
-
-    const communityId = result.communityId;
-    const community = await this.communityRepository.findOne({
-      where: { id: communityId },
+  public async getSpaceForCommunityOrFail(
+    communityId: string
+  ): Promise<ISpace> {
+    const space = await this.entityManager.findOne(Space, {
+      where: {
+        community: {
+          id: communityId,
+        },
+      },
+      relations: {
+        profile: true,
+      },
     });
-    if (!community) {
+    if (!space) {
       throw new EntityNotFoundException(
-        `Unable to find Community for Collaboration: ${collaborationID}`,
-        LogContext.NOTIFICATIONS
+        `Unable to find space for community: ${communityId}`,
+        LogContext.URL_GENERATOR
       );
     }
-    return community;
+    return space;
   }
 
   public async getDisplayNameForCommunityOrFail(
-    communityId: string,
-    spaceType: SpaceType
+    communityId: string
   ): Promise<string> {
-    const [result]: {
-      profileId: string;
-    }[] = await this.entityManager.connection.query(
-      `SELECT profileId from \`${spaceType}\`
-        WHERE \`${spaceType}\`.\`communityId\` = '${communityId}';`
-    );
-
-    const profileId = result.profileId;
-    const profile = await this.profileRepository.findOne({
-      where: { id: profileId },
-    });
-    if (!profile) {
-      throw new EntityNotFoundException(
-        `Unable to find Profile for Community: ${communityId}`,
-        LogContext.NOTIFICATIONS
-      );
-    }
-    return profile.displayName;
-  }
-
-  public async getCommunity(communityID: string) {
-    return await this.communityRepository
-      .createQueryBuilder('community')
-      .where('community.id = :id')
-      .setParameters({ id: communityID })
-      .getOne();
+    const space = await this.getSpaceForCommunityOrFail(communityId);
+    return space.profile.displayName;
   }
 
   public async getCommunityFromPostRoomOrFail(
     commentsId: string
   ): Promise<ICommunity> {
-    const [queryResult]: {
-      entityId: string;
-      communityId: string;
-      communityType: string;
-    }[] = await this.entityManager.connection.query(
-      `
-      SELECT \`challenge\`.\`id\` as \`entityId\`, \`challenge\`.\`communityId\` as communityId, 'challenge' as \`communityType\` FROM \`callout\`
-      RIGHT JOIN \`challenge\` on \`challenge\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
-      JOIN \`callout_contribution\` on \`callout\`.\`id\` = \`callout_contribution\`.\`calloutId\`
-      JOIN \`post\` on \`callout_contribution\`.\`postId\` = \`post\`.\`id\`
-      WHERE \`post\`.\`commentsId\` = '${commentsId}' UNION
-
-      SELECT \`space\`.\`id\` as \`entityId\`, \`space\`.\`communityId\` as communityId, 'space' as \`communityType\`  FROM \`callout\`
-      RIGHT JOIN \`space\` on \`space\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
-      JOIN \`callout_contribution\` on \`callout\`.\`id\` = \`callout_contribution\`.\`calloutId\`
-      JOIN \`post\` on \`callout_contribution\`.\`postId\` = \`post\`.\`id\`
-      WHERE \`post\`.\`commentsId\` = '${commentsId}' UNION
-
-      SELECT \`opportunity\`.\`id\` as \`entityId\`, \`opportunity\`.\`communityId\` as communityId, 'opportunity' as \`communityType\`  FROM \`callout\`
-      RIGHT JOIN \`opportunity\` on \`opportunity\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
-      JOIN \`callout_contribution\` on \`callout\`.\`id\` = \`callout_contribution\`.\`calloutId\`
-      JOIN \`post\` on \`callout_contribution\`.\`postId\` = \`post\`.\`id\`
-      WHERE \`post\`.\`commentsId\` = '${commentsId}';
-      `
-    );
-
-    const community = await this.communityRepository.findOneBy({
-      id: queryResult.communityId,
+    const space = await this.entityManager.findOne(Space, {
+      where: {
+        collaboration: {
+          callouts: {
+            contributions: {
+              post: {
+                comments: {
+                  id: commentsId,
+                },
+              },
+            },
+          },
+        },
+      },
+      relations: {
+        community: true,
+      },
     });
-    if (!community) {
+    if (!space || !space.community) {
       throw new EntityNotFoundException(
-        `Unable to find Community for Comments: ${commentsId}`,
-        LogContext.NOTIFICATIONS
+        `Unable to find space for commentsId: ${commentsId}`,
+        LogContext.URL_GENERATOR
       );
     }
-    return community;
+    return space.community;
   }
 
   public async getCommunityWithParentOrFail(

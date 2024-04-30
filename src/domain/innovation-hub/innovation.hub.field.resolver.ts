@@ -1,8 +1,8 @@
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
 import { InnovationHubService } from '@domain/innovation-hub/innovation.hub.service';
-import { ISpace } from '@domain/challenge/space/space.interface';
-import { SpaceService } from '@domain/challenge/space/space.service';
+import { ISpace } from '@domain/space/space/space.interface';
+import { SpaceService } from '@domain/space/space/space.service';
 import { IProfile } from '@domain/common/profile';
 import { Profiling } from '@common/decorators';
 import { Loader } from '@core/dataloader/decorators';
