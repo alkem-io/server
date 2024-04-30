@@ -7,7 +7,6 @@ import {
   Transport,
 } from '@nestjs/microservices';
 import { Channel, Message } from 'amqplib';
-import { SpaceService as AccountService } from '@domain/space/space/space.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext, MessagingQueue } from '@common/enums';
 import { PlatformAuthorizationService } from '@platform/platfrom/platform.service.authorization';
@@ -19,6 +18,7 @@ import { AUTH_RESET_EVENT_TYPE } from '../event.type';
 import { TaskService } from '@services/task/task.service';
 import { AuthResetEventPayload } from '../auth-reset.payload.interface';
 import { AccountAuthorizationService } from '@domain/space/account/account.service.authorization';
+import { AccountService } from '@domain/space/account/account.service';
 
 const MAX_RETRIES = 5;
 const RETRY_HEADER = 'x-retry-count';
