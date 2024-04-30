@@ -61,7 +61,7 @@ export class AuthResetController {
       channel.ack(originalMsg);
     } catch (error: any) {
       if (retryCount >= MAX_RETRIES) {
-        const message = `Resetting authorization for space with id ${payload.id} failed! Max retries reached. Rejecting message.`;
+        const message = `Resetting authorization for account with id ${payload.id} failed! Max retries reached. Rejecting message.`;
         this.logger.error(message, error?.stack, LogContext.AUTH);
         this.taskService.updateTaskErrors(payload.task, message);
 
