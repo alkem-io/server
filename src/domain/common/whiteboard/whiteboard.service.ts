@@ -226,17 +226,14 @@ export class WhiteboardService {
       await this.communityResolverService.getCommunityFromWhiteboardOrFail(
         whiteboardId
       );
-    const licenseFeatureFlags =
-      await this.communityResolverService.getLicenseFeatureFlagsFromCommunityOrFail(
+    const license =
+      await this.communityResolverService.getLicenseFromCommunityOrFail(
         community
       );
 
-    const licensePolicy =
-      await this.licenseEngineService.getDefaultLicensePollicyOrFail();
     const enabled = await this.licenseEngineService.isAccessGranted(
-      licensePolicy,
-      licenseFeatureFlags,
-      LicensePrivilege.WHITEBOARD_MULTI_USER
+      LicensePrivilege.WHITEBOARD_MULTI_USER,
+      license
     );
 
     return enabled;

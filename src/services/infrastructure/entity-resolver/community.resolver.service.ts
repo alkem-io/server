@@ -8,7 +8,7 @@ import { LogContext } from '@common/enums';
 import { Communication } from '@domain/communication/communication/communication.entity';
 import { Space } from '@domain/space/space/space.entity';
 import { ISpace } from '@domain/space/space/space.interface';
-import { ILicenseFeatureFlag } from '@domain/license/feature-flag/feature.flag.interface';
+import { ILicense } from '@domain/license/license/license.interface';
 
 @Injectable()
 export class CommunityResolverService {
@@ -48,9 +48,9 @@ export class CommunityResolverService {
     );
   }
 
-  public async getLicenseFeatureFlagsFromCommunityOrFail(
+  public async getLicenseFromCommunityOrFail(
     community: ICommunity
-  ): Promise<ILicenseFeatureFlag[]> {
+  ): Promise<ILicense> {
     const space = await this.entityManager.findOne(Space, {
       where: {
         community: {
@@ -71,7 +71,7 @@ export class CommunityResolverService {
       space.account.license &&
       space.account.license.featureFlags
     ) {
-      return space.account.license.featureFlags;
+      return space.account.license;
     }
 
     throw new EntityNotFoundException(

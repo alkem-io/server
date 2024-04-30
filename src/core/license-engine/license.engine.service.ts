@@ -7,13 +7,14 @@ import {
 import { LogContext } from '@common/enums';
 import { LicensePrivilege } from '@common/enums/license.privilege';
 import { ILicensePolicy } from '@platform/license-policy/license.policy.interface';
-import { ILicense } from '@domain/license/license/license.interface';
 import { ForbiddenLicensePolicyException } from '@common/exceptions/forbidden.license.policy.exception';
 import { ILicenseFeatureFlag } from '@domain/license/feature-flag/feature.flag.interface';
 import { ILicensePolicyRuleFeatureFlag } from './license.policy.rule.feature.flag.interface';
 import { EntityManager } from 'typeorm';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { LicensePolicy } from '@platform/license-policy';
+import { ILicense } from '@domain/license/license/license.interface';
+import { License } from '@domain/license/license/license.entity';
 
 @Injectable()
 export class LicenseEngineService {
@@ -24,56 +25,42 @@ export class LicenseEngineService {
     private entityManager: EntityManager
   ) {}
 
-  grantAccessOrFail(
-    licensePolicy: ILicensePolicy | undefined,
+  public async grantAccessOrFail(
     privilegeRequired: LicensePrivilege,
     license: ILicense,
-    licenseFeatureFlags: ILicenseFeatureFlag[],
-    msg: string
+    msg: string,
+    licensePolicy: ILicensePolicy | undefined
   ) {
-    if (!licensePolicy) {
-      throw new ForbiddenException(
-        'License.engine: no definition provided',
-        LogContext.LICENSE
-      );
-    }
+    const accessGranted = await this.isAccessGranted(
+      privilegeRequired,
+      license,
+      licensePolicy
+    );
+    if (accessGranted) return true;
 
-    if (
-      this.isAccessGranted(
-        licensePolicy,
-        licenseFeatureFlags,
-        privilegeRequired
-      )
-    )
-      return true;
-
-    const errorMsg = `License.engine: unable to grant '${privilegeRequired}' privilege: ${msg} featureFlags: ${license.id}`;
+    const errorMsg = `License.engine: unable to grant '${privilegeRequired}' privilege: ${msg} license: ${license.id}`;
     // If you get to here then no match was found
     throw new ForbiddenLicensePolicyException(
       errorMsg,
       privilegeRequired,
-      licensePolicy.id,
+      licensePolicy?.id || 'no license policy',
       license.id
     );
   }
 
-  public isAccessGranted(
-    licensePolicy: ILicensePolicy | undefined,
-    licenseFeatureFlags: ILicenseFeatureFlag[],
-    privilegeRequired: LicensePrivilege
-  ): boolean {
-    if (!licensePolicy) {
-      throw new ForbiddenException(
-        'License.engine: no definition provided',
-        LogContext.LICENSE
-      );
-    }
+  public async isAccessGranted(
+    privilegeRequired: LicensePrivilege,
+    license: ILicense,
+    licensePolicy?: ILicensePolicy | undefined
+  ): Promise<boolean> {
+    const policy = await this.getLicensePolicyOrFail(licensePolicy);
+    const featureFlags = await this.getLicenseFeatureFlags(license);
 
     const featureFlagRules = this.convertFeatureFlagRulesStr(
-      licensePolicy.featureFlagRules
+      policy.featureFlagRules
     );
     for (const rule of featureFlagRules) {
-      for (const featureFlag of licenseFeatureFlags) {
+      for (const featureFlag of featureFlags) {
         if (featureFlag.name === rule.featureFlagName) {
           if (featureFlag.enabled) {
             if (rule.grantedPrivileges.includes(privilegeRequired)) {
@@ -90,30 +77,28 @@ export class LicenseEngineService {
     return false;
   }
 
-  // TODO: a work around, need to look at how to make the license policy more readily available
-  // in all contexts
-  public async getDefaultLicensePollicyOrFail(): Promise<ILicensePolicy> {
-    const licensePolicy = await this.entityManager.findOne(LicensePolicy, {});
-    if (licensePolicy) {
-      return licensePolicy;
+  private async getLicensePolicyOrFail(
+    licensePolicy?: ILicensePolicy | undefined
+  ): Promise<ILicensePolicy> {
+    let policy = licensePolicy;
+    if (!policy) {
+      policy = await this.getDefaultLicensePollicyOrFail();
     }
-
-    throw new EntityNotFoundException(
-      'Unable to find default License Policy',
-      LogContext.LICENSE
-    );
+    return policy;
   }
 
-  getGrantedPrivileges(
-    licenseFeatureFlags: ILicenseFeatureFlag[],
-    licensePolicy: ILicensePolicy
+  public async getGrantedPrivileges(
+    license: ILicense,
+    licensePolicy?: ILicensePolicy
   ) {
+    const policy = await this.getLicensePolicyOrFail(licensePolicy);
+    const featureFlags = await this.getLicenseFeatureFlags(license);
+
     const grantedPrivileges: LicensePrivilege[] = [];
 
     const featureFlagRules = this.convertFeatureFlagRulesStr(
-      licensePolicy.featureFlagRules
+      policy.featureFlagRules
     );
-    const featureFlags = licenseFeatureFlags;
     for (const rule of featureFlagRules) {
       for (const featureFlag of featureFlags) {
         if (rule.featureFlagName === featureFlag.name && featureFlag.enabled) {
@@ -142,5 +127,46 @@ export class LicenseEngineService {
       this.logger.error(msg, error?.stack, LogContext.AUTH);
       throw new ForbiddenException(msg, LogContext.AUTH);
     }
+  }
+
+  // TODO: a work around, need to look at how to make the license policy more readily available
+  // in all contexts
+  private async getDefaultLicensePollicyOrFail(): Promise<ILicensePolicy> {
+    let licensePolicy: ILicensePolicy | null = null;
+    licensePolicy = (
+      await this.entityManager.find(LicensePolicy, { take: 1 })
+    )?.[0];
+
+    if (!licensePolicy) {
+      throw new EntityNotFoundException(
+        'Unable to find default License Policy',
+        LogContext.LICENSE
+      );
+    }
+    return licensePolicy;
+  }
+
+  private async getLicenseFeatureFlags(
+    licenseInput: ILicense
+  ): Promise<ILicenseFeatureFlag[]> {
+    // If already loaded do nothing
+    if (licenseInput.featureFlags) {
+      return licenseInput?.featureFlags;
+    }
+    let license: ILicense | null = null;
+    license = await this.entityManager.findOne(License, {
+      where: { id: licenseInput.id },
+      relations: {
+        featureFlags: true,
+      },
+    });
+
+    if (!license || !license.featureFlags) {
+      throw new EntityNotFoundException(
+        'Unable to find load features flags on License',
+        LogContext.LICENSE
+      );
+    }
+    return license.featureFlags;
   }
 }
