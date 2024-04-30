@@ -266,8 +266,6 @@ export class SpaceAuthorizationService {
         );
     }
 
-    await this.spaceService.save(space);
-
     space.collaboration =
       await this.collaborationAuthorizationService.applyAuthorizationPolicy(
         space.collaboration,
