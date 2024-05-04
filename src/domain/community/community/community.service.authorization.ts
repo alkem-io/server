@@ -16,7 +16,7 @@ import { ApplicationAuthorizationService } from '../application/application.serv
 import { AuthorizationPolicyRuleVerifiedCredential } from '@core/authorization/authorization.policy.rule.verified.credential';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
-  CREDENTIAL_RULE_TYPES_COMMUNITY_GLOBAL_ADMINS,
+  CREDENTIAL_RULE_TYPES_COMMUNITY_GLOBAL_ADMINS as CREDENTIAL_RULE_TYPES_GLOBAL_ADMINS_ADD_MEMBERS,
   CREDENTIAL_RULE_TYPES_COMMUNITY_READ_GLOBAL_REGISTERED,
   CREDENTIAL_RULE_COMMUNITY_SELF_REMOVAL,
   CREDENTIAL_RULE_TYPES_ACCESS_VIRTUAL_CONTRIBUTORS,
@@ -167,23 +167,13 @@ export class CommunityAuthorizationService {
   ): Promise<IAuthorizationPolicy> {
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
-    const globalCommunityAdmin =
+    const globalAdminAddMembers =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [
-          AuthorizationPrivilege.CREATE,
-          AuthorizationPrivilege.GRANT,
-          AuthorizationPrivilege.READ,
-          AuthorizationPrivilege.UPDATE,
-          AuthorizationPrivilege.DELETE,
-          AuthorizationPrivilege.COMMUNITY_ADD_MEMBER,
-        ],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-        ],
-        CREDENTIAL_RULE_TYPES_COMMUNITY_GLOBAL_ADMINS
+        [AuthorizationPrivilege.COMMUNITY_ADD_MEMBER],
+        [AuthorizationCredential.GLOBAL_ADMIN],
+        CREDENTIAL_RULE_TYPES_GLOBAL_ADMINS_ADD_MEMBERS
       );
-    newRules.push(globalCommunityAdmin);
+    newRules.push(globalAdminAddMembers);
 
     if (allowGlobalRegisteredReadAccess) {
       const globalRegistered =
@@ -208,10 +198,6 @@ export class CommunityAuthorizationService {
         );
       criterias.push({
         type: AuthorizationCredential.GLOBAL_ADMIN,
-        resourceID: '',
-      });
-      criterias.push({
-        type: AuthorizationCredential.GLOBAL_SUPPORT,
         resourceID: '',
       });
       const accessVCsRule =

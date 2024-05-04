@@ -115,10 +115,6 @@ export class PostAuthorizationService {
       type: AuthorizationCredential.GLOBAL_ADMIN,
       resourceID: '',
     });
-    credentials.push({
-      type: AuthorizationCredential.GLOBAL_SUPPORT,
-      resourceID: '',
-    });
     const adminsMovePostRule =
       this.authorizationPolicyService.createCredentialRule(
         [AuthorizationPrivilege.MOVE_POST],
