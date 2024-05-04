@@ -77,7 +77,7 @@ export class AdminAuthorizationService {
     // assign the credential
     await this.agentService.grantCredential({
       agentID: agent.id,
-      type: AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY,
+      type: AuthorizationCredential.GLOBAL_COMMUNITY_READ,
       resourceID: '',
     });
 
@@ -91,7 +91,7 @@ export class AdminAuthorizationService {
 
     await this.agentService.revokeCredential({
       agentID: agent.id,
-      type: AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY,
+      type: AuthorizationCredential.GLOBAL_COMMUNITY_READ,
       resourceID: '',
     });
 
@@ -106,7 +106,7 @@ export class AdminAuthorizationService {
     // assign the credential
     await this.agentService.grantCredential({
       agentID: agent.id,
-      type: AuthorizationCredential.GLOBAL_ADMIN_SPACES,
+      type: AuthorizationCredential.GLOBAL_SUPPORT,
       resourceID: '',
     });
 
@@ -120,7 +120,7 @@ export class AdminAuthorizationService {
 
     await this.agentService.revokeCredential({
       agentID: agent.id,
-      type: AuthorizationCredential.GLOBAL_ADMIN_SPACES,
+      type: AuthorizationCredential.GLOBAL_SUPPORT,
       resourceID: '',
     });
 
@@ -297,7 +297,7 @@ export class AdminAuthorizationService {
         [AuthorizationPrivilege.AUTHORIZATION_RESET],
         [
           AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_ADMIN_SPACES,
+          AuthorizationCredential.GLOBAL_SUPPORT,
         ],
         CREDENTIAL_RULE_TYPES_PLATFORM_GLOBAL_ADMINS
       );

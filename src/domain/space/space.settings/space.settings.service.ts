@@ -27,7 +27,13 @@ export class SpaceSettingsService {
     updateData: UpdateSpaceSettingsEntityInput
   ): ISpaceSettings {
     if (updateData.privacy) {
-      settings.privacy = updateData.privacy;
+      if (updateData.privacy.mode) {
+        settings.privacy.mode = updateData.privacy.mode;
+      }
+      if (updateData.privacy.allowPlatformSupportAsAdmin !== undefined) {
+        settings.privacy.allowPlatformSupportAsAdmin =
+          updateData.privacy.allowPlatformSupportAsAdmin;
+      }
     }
     if (updateData.membership) {
       settings.membership = updateData.membership;

@@ -285,8 +285,8 @@ export class PlatformAuthorizationService {
         [AuthorizationPrivilege.PLATFORM_ADMIN],
         [
           AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_ADMIN_SPACES,
-          AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+          AuthorizationCredential.GLOBAL_COMMUNITY_READ,
         ],
         CREDENTIAL_RULE_TYPES_PLATFORM_ADMINS
       );
@@ -299,7 +299,7 @@ export class PlatformAuthorizationService {
         [AuthorizationPrivilege.AUTHORIZATION_RESET],
         [
           AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_ADMIN_SPACES,
+          AuthorizationCredential.GLOBAL_SUPPORT,
         ],
         CREDENTIAL_RULE_TYPES_PLATFORM_AUTH_RESET
       );
@@ -333,10 +333,9 @@ export class PlatformAuthorizationService {
         [AuthorizationPrivilege.ADMIN],
         [
           AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_ADMIN_SPACES,
-          AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+          AuthorizationCredential.GLOBAL_COMMUNITY_READ,
           AuthorizationCredential.SPACE_ADMIN,
-          AuthorizationCredential.SUBSPACE_ADMIN,
           AuthorizationCredential.SUBSPACE_ADMIN,
           AuthorizationCredential.ORGANIZATION_ADMIN,
         ],

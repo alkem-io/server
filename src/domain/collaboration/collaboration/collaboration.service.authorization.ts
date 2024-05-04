@@ -161,32 +161,25 @@ export class CollaborationAuthorizationService {
     policy: ICommunityPolicy
   ): ICredentialDefinition[] {
     // add challenge members
-    const contributors = [
-      this.communityPolicyService.getCredentialForRole(
+    let contributorCriterias =
+      this.communityPolicyService.getCredentialsForRole(
         policy,
         CommunityRole.MEMBER
-      ),
-    ];
+      );
     // optionally add space members
-    const collaborationSettings = policy.settings.collaboration;
-    if (collaborationSettings.inheritMembershipRights) {
-      const parentCredentials =
-        this.communityPolicyService.getParentCredentialsForRole(
+    if (policy.settings.collaboration.inheritMembershipRights) {
+      contributorCriterias =
+        this.communityPolicyService.getCredentialsForRoleWithParents(
           policy,
           CommunityRole.MEMBER
         );
-      contributors.push(...parentCredentials);
     }
 
-    contributors.push({
+    contributorCriterias.push({
       type: AuthorizationCredential.GLOBAL_ADMIN,
       resourceID: '',
     });
-    contributors.push({
-      type: AuthorizationCredential.GLOBAL_ADMIN_SPACES,
-      resourceID: '',
-    });
-    return contributors;
+    return contributorCriterias;
   }
 
   private async appendCredentialRules(
@@ -224,7 +217,7 @@ export class CollaborationAuthorizationService {
           [AuthorizationPrivilege.SAVE_AS_TEMPLATE],
           [
             AuthorizationCredential.GLOBAL_ADMIN,
-            AuthorizationCredential.GLOBAL_ADMIN_SPACES,
+            AuthorizationCredential.GLOBAL_SUPPORT,
           ],
           CREDENTIAL_RULE_TYPES_CALLOUT_SAVE_AS_TEMPLATE
         );

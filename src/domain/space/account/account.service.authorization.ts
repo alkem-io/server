@@ -132,7 +132,7 @@ export class AccountAuthorizationService {
         ],
         [
           AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_ADMIN_SPACES,
+          AuthorizationCredential.GLOBAL_SUPPORT,
         ],
         CREDENTIAL_RULE_TYPES_ACCOUNT_AUTHORIZATION_RESET
       );
@@ -142,7 +142,7 @@ export class AccountAuthorizationService {
     const communityAdmin =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.READ],
-        [AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY],
+        [AuthorizationCredential.GLOBAL_COMMUNITY_READ],
         CREDENTIAL_RULE_TYPES_SPACE_GLOBAL_ADMIN_COMMUNITY_READ
       );
     newRules.push(communityAdmin);
@@ -153,7 +153,7 @@ export class AccountAuthorizationService {
         [AuthorizationPrivilege.GRANT],
         [
           AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_ADMIN_SPACES,
+          AuthorizationCredential.GLOBAL_SUPPORT,
         ],
         CREDENTIAL_RULE_TYPES_SPACE_AUTHORIZATION_GLOBAL_ADMIN_GRANT
       );

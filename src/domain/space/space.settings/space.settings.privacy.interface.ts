@@ -8,4 +8,10 @@ export abstract class ISpaceSettingsPrivacy {
     description: 'The privacy mode for this Space',
   })
   mode!: SpacePrivacyMode;
+
+  @Field(() => Boolean, {
+    nullable: false,
+    description: 'Flag to control if Platform Support has admin rights.',
+  })
+  allowPlatformSupportAsAdmin!: boolean;
 }

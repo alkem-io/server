@@ -24,8 +24,8 @@ export const CREDENTIAL_RULE_TYPES_COMMUNITY_READ_GLOBAL_REGISTERED =
   'credentialRuleTypes-communityReadGlobalRegistered';
 export const CREDENTIAL_RULE_TYPES_ORGANIZATION_AUTHORIZATION_RESET =
   'credentialRuleTypes-organizationAuthorizationReset';
-export const CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_ADMIN_COMMUNITY =
-  'credentialRuleTypes-organizationGlobalAdminCommunity';
+export const CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_COMMUNITY_READ =
+  'credentialRuleTypes-organizationGlobalCommunityRead';
 export const CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_ADMINS =
   'credentialRuleTypes-organizationGlobalAdmins';
 export const CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_ADMINS_ALL =
@@ -34,8 +34,8 @@ export const CREDENTIAL_RULE_TYPES_USER_AUTHORIZATION_RESET =
   'credentialRuleTypes-userAuthorizationReset';
 export const CREDENTIAL_RULE_TYPES_USER_PLATFORM_ADMIN =
   'credentialRuleTypes-userrPlatformAdmin';
-export const CREDENTIAL_RULE_TYPES_USER_GLOBAL_ADMIN_COMMUNITY =
-  'credentialRuleTypes-userGlobalAdminCommunity';
+export const CREDENTIAL_RULE_TYPES_USER_GLOBAL_COMMUNITY_READ =
+  'credentialRuleTypes-userGlobalCommunityRead';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_GLOBAL_ADMINS =
   'credentialRuleTypes-platformGlobalAdmins';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_GRANT_GLOBAL_ADMINS =

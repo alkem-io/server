@@ -20,7 +20,7 @@ import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authoriz
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import {
   CREDENTIAL_RULE_TYPES_USER_AUTHORIZATION_RESET,
-  CREDENTIAL_RULE_TYPES_USER_GLOBAL_ADMIN_COMMUNITY,
+  CREDENTIAL_RULE_TYPES_USER_GLOBAL_COMMUNITY_READ,
   CREDENTIAL_RULE_USER_SELF_ADMIN,
   CREDENTIAL_RULE_USER_READ_PII,
   CREDENTIAL_RULE_TYPES_USER_PLATFORM_ADMIN,
@@ -133,7 +133,7 @@ export class UserAuthorizationService {
         [AuthorizationPrivilege.AUTHORIZATION_RESET],
         [
           AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_ADMIN_SPACES,
+          AuthorizationCredential.GLOBAL_SUPPORT,
         ],
         CREDENTIAL_RULE_TYPES_USER_AUTHORIZATION_RESET
       );
@@ -152,14 +152,9 @@ export class UserAuthorizationService {
 
     const communityAdmin =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [
-          AuthorizationPrivilege.CREATE,
-          AuthorizationPrivilege.READ,
-          AuthorizationPrivilege.UPDATE,
-          AuthorizationPrivilege.DELETE,
-        ],
-        [AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY],
-        CREDENTIAL_RULE_TYPES_USER_GLOBAL_ADMIN_COMMUNITY
+        [AuthorizationPrivilege.READ],
+        [AuthorizationCredential.GLOBAL_COMMUNITY_READ],
+        CREDENTIAL_RULE_TYPES_USER_GLOBAL_COMMUNITY_READ
       );
 
     newRules.push(communityAdmin);
@@ -218,11 +213,11 @@ export class UserAuthorizationService {
       resourceID: '',
     });
     readUserPiiCredentials.push({
-      type: AuthorizationCredential.GLOBAL_ADMIN_SPACES,
+      type: AuthorizationCredential.GLOBAL_SUPPORT,
       resourceID: '',
     });
     readUserPiiCredentials.push({
-      type: AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY,
+      type: AuthorizationCredential.GLOBAL_COMMUNITY_READ,
       resourceID: '',
     });
 

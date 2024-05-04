@@ -179,8 +179,7 @@ export class CommunityAuthorizationService {
         ],
         [
           AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_ADMIN_SPACES,
-          AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY,
+          AuthorizationCredential.GLOBAL_SUPPORT,
         ],
         CREDENTIAL_RULE_TYPES_COMMUNITY_GLOBAL_ADMINS
       );
@@ -203,7 +202,7 @@ export class CommunityAuthorizationService {
       );
     if (accessVirtualContributors) {
       const criterias: ICredentialDefinition[] =
-        this.communityPolicyService.getAllCredentialsForRole(
+        this.communityPolicyService.getCredentialsForRoleWithParents(
           policy,
           CommunityRole.ADMIN
         );
@@ -212,7 +211,7 @@ export class CommunityAuthorizationService {
         resourceID: '',
       });
       criterias.push({
-        type: AuthorizationCredential.GLOBAL_ADMIN_SPACES,
+        type: AuthorizationCredential.GLOBAL_SUPPORT,
         resourceID: '',
       });
       const accessVCsRule =
