@@ -11,14 +11,14 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AssignGlobalAdminInput } from './dto/authorization.dto.assign.global.admin';
 import { RemoveGlobalAdminInput } from './dto/authorization.dto.remove.global.admin';
-import { AssignGlobalCommunityAdminInput } from './dto/authorization.dto.assign.global.community.admin';
-import { RemoveGlobalCommunityAdminInput } from './dto/authorization.dto.remove.global.community.admin';
+import { AssignGlobalCommunityReadInput } from './dto/authorization.dto.assign.global.community.read';
+import { RemoveGlobalCommunityReadInput } from './dto/authorization.dto.remove.global.community.read';
 import { AdminAuthorizationService } from './admin.authorization.service';
 import { GrantAuthorizationCredentialInput } from './dto/authorization.dto.credential.grant';
 import { RevokeAuthorizationCredentialInput } from './dto/authorization.dto.credential.revoke';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { AssignGlobalSpacesAdminInput } from './dto/authorization.dto.assign.global.spaces.admin';
-import { RemoveGlobalSpacesAdminInput } from './dto/authorization.dto.remove.global.spaces.admin';
+import { AssignGlobalSupportInput } from './dto/authorization.dto.assign.global.support';
+import { RemoveGlobalSupportInput } from './dto/authorization.dto.remove.global.support';
 import { GLOBAL_POLICY_AUTHORIZATION_GRANT_GLOBAL_ADMIN } from '@common/constants/authorization/global.policy.constants';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -174,20 +174,20 @@ export class AdminAuthorizationResolverMutations {
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IUser, {
-    description: 'Assigns a User as a Global Community Admin.',
+    description: 'Assigns a User as a Global Community Read.',
   })
   @Profiling.api
-  async assignUserAsGlobalCommunityAdmin(
+  async assignUserAsGlobalCommunityRead(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('membershipData') membershipData: AssignGlobalCommunityAdminInput
+    @Args('membershipData') membershipData: AssignGlobalCommunityReadInput
   ): Promise<IUser> {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       this.authorizationGlobalAdminPolicy,
       AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
-      `assign user global communityadmin: ${membershipData.userID}`
+      `assign user global community reader: ${membershipData.userID}`
     );
-    return await this.adminAuthorizationService.assignGlobalCommunityAdmin(
+    return await this.adminAuthorizationService.assignGlobalCommunityRead(
       membershipData
     );
   }
@@ -197,9 +197,9 @@ export class AdminAuthorizationResolverMutations {
     description: 'Removes a User from being a Global Community Admin.',
   })
   @Profiling.api
-  async removeUserAsGlobalCommunityAdmin(
+  async removeUserAsGlobalCommunityRead(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('membershipData') membershipData: RemoveGlobalCommunityAdminInput
+    @Args('membershipData') membershipData: RemoveGlobalCommunityReadInput
   ): Promise<IUser> {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -207,7 +207,7 @@ export class AdminAuthorizationResolverMutations {
       AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
       `remove user global community admin: ${membershipData.userID}`
     );
-    return await this.adminAuthorizationService.removeGlobalCommunityAdmin(
+    return await this.adminAuthorizationService.removeGlobalCommunityRead(
       membershipData
     );
   }
@@ -217,37 +217,37 @@ export class AdminAuthorizationResolverMutations {
     description: 'Assigns a User as a Global Spaces Admin.',
   })
   @Profiling.api
-  async assignUserAsGlobalSpacesAdmin(
+  async assignUserAsGlobalSupport(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('membershipData') membershipData: AssignGlobalSpacesAdminInput
+    @Args('membershipData') membershipData: AssignGlobalSupportInput
   ): Promise<IUser> {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       this.authorizationGlobalAdminPolicy,
       AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
-      `assign user global spaces admin: ${membershipData.userID}`
+      `assign user global support: ${membershipData.userID}`
     );
-    return await this.adminAuthorizationService.assignGlobalSpacesAdmin(
+    return await this.adminAuthorizationService.assignGlobalSupport(
       membershipData
     );
   }
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IUser, {
-    description: 'Removes a User from being a Global Spaces Admin.',
+    description: 'Removes a User from being a Global Support.',
   })
   @Profiling.api
-  async removeUserAsGlobalSpacesAdmin(
+  async removeUserAsGlobalSupport(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('membershipData') membershipData: RemoveGlobalSpacesAdminInput
+    @Args('membershipData') membershipData: RemoveGlobalSupportInput
   ): Promise<IUser> {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       this.authorizationGlobalAdminPolicy,
       AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
-      `remove user global spaces admin: ${membershipData.userID}`
+      `remove user global support: ${membershipData.userID}`
     );
-    return await this.adminAuthorizationService.removeGlobalSpacesAdmin(
+    return await this.adminAuthorizationService.removeGlobalSupport(
       membershipData
     );
   }

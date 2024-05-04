@@ -13,16 +13,16 @@ import { AgentService } from '@domain/agent/agent/agent.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AssignGlobalAdminInput } from '@platform/admin/authorization/dto/authorization.dto.assign.global.admin';
 import { RemoveGlobalAdminInput } from '@platform/admin/authorization/dto/authorization.dto.remove.global.admin';
-import { AssignGlobalCommunityAdminInput } from '@platform/admin/authorization/dto/authorization.dto.assign.global.community.admin';
-import { RemoveGlobalCommunityAdminInput } from '@platform/admin/authorization/dto/authorization.dto.remove.global.community.admin';
+import { AssignGlobalCommunityReadInput } from '@platform/admin/authorization/dto/authorization.dto.assign.global.community.read';
+import { RemoveGlobalCommunityReadInput } from '@platform/admin/authorization/dto/authorization.dto.remove.global.community.read';
 import { UserAuthorizationPrivilegesInput } from '@platform/admin/authorization/dto/authorization.dto.user.authorization.privileges';
 import { GrantAuthorizationCredentialInput } from './dto/authorization.dto.credential.grant';
 import { RevokeAuthorizationCredentialInput } from './dto/authorization.dto.credential.revoke';
 import { UsersWithAuthorizationCredentialInput } from './dto/authorization.dto.users.with.credential';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { AgentInfo } from '@core/authentication';
-import { AssignGlobalSpacesAdminInput } from './dto/authorization.dto.assign.global.spaces.admin';
-import { RemoveGlobalSpacesAdminInput } from './dto/authorization.dto.remove.global.spaces.admin';
+import { AssignGlobalSupportInput } from './dto/authorization.dto.assign.global.support';
+import { RemoveGlobalSupportInput } from './dto/authorization.dto.remove.global.support';
 import { IOrganization } from '@domain/community/organization';
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { RevokeOrganizationAuthorizationCredentialInput } from './dto/authorization.dto.credential.revoke.organization';
@@ -69,8 +69,8 @@ export class AdminAuthorizationService {
     return await this.userService.getUserWithAgent(removeData.userID);
   }
 
-  async assignGlobalCommunityAdmin(
-    assignData: AssignGlobalCommunityAdminInput
+  async assignGlobalCommunityRead(
+    assignData: AssignGlobalCommunityReadInput
   ): Promise<IUser> {
     const agent = await this.userService.getAgent(assignData.userID);
 
@@ -84,8 +84,8 @@ export class AdminAuthorizationService {
     return await this.userService.getUserWithAgent(assignData.userID);
   }
 
-  async removeGlobalCommunityAdmin(
-    removeData: RemoveGlobalCommunityAdminInput
+  async removeGlobalCommunityRead(
+    removeData: RemoveGlobalCommunityReadInput
   ): Promise<IUser> {
     const agent = await this.userService.getAgent(removeData.userID);
 
@@ -98,8 +98,8 @@ export class AdminAuthorizationService {
     return await this.userService.getUserWithAgent(removeData.userID);
   }
 
-  async assignGlobalSpacesAdmin(
-    assignData: AssignGlobalSpacesAdminInput
+  async assignGlobalSupport(
+    assignData: AssignGlobalSupportInput
   ): Promise<IUser> {
     const agent = await this.userService.getAgent(assignData.userID);
 
@@ -113,8 +113,8 @@ export class AdminAuthorizationService {
     return await this.userService.getUserWithAgent(assignData.userID);
   }
 
-  async removeGlobalSpacesAdmin(
-    removeData: RemoveGlobalSpacesAdminInput
+  async removeGlobalSupport(
+    removeData: RemoveGlobalSupportInput
   ): Promise<IUser> {
     const agent = await this.userService.getAgent(removeData.userID);
 
