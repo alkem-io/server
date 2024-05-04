@@ -28,6 +28,7 @@ import { NotificationInputForumDiscussionComment } from './dto/notification.dto.
 import { NotificationInputCommunityInvitation } from './dto/notification.dto.input.community.invitation';
 import { NotificationInputCommentReply } from './dto/notification.dto.input.comment.reply';
 import { NotificationInputCommunityInvitationExternal } from './dto/notification.dto.input.community.invitation.external';
+import { NotificationInputPlatformGlobalRoleChange } from './dto/notification.dto.input.platform.global.role.change';
 
 @Injectable()
 export class NotificationAdapter {
@@ -348,6 +349,23 @@ export class NotificationAdapter {
         eventData.community
       );
     this.notificationsClient.emit(event, payload);
+  }
+
+  public async platformGlobalRoleChanged(
+    eventData: NotificationInputPlatformGlobalRoleChange
+  ): Promise<void> {
+    const event = NotificationEventType.PLATFORM_GLOBAL_ROLE_CHANGE;
+    this.logEventTriggered(eventData, event);
+
+    const payload =
+      await this.notificationPayloadBuilder.buildGlobalRoleChangedNotificationPayload(
+        eventData.triggeredBy,
+        eventData.userID,
+        eventData.type,
+        eventData.role
+      );
+
+    this.notificationsClient.emit<number>(event, payload);
   }
 
   public async userRegistered(

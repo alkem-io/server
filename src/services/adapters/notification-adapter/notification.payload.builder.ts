@@ -32,6 +32,8 @@ import {
   BaseEventPayload,
   ContributorPayload,
   SpaceBaseEventPayload,
+  PlatformGlobalRoleChangeEventPayload,
+  RoleChangeType,
 } from '@alkemio/notifications-lib';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
@@ -415,12 +417,34 @@ export class NotificationPayloadBuilder {
     return payload;
   }
 
+  async buildGlobalRoleChangedNotificationPayload(
+    triggeredBy: string,
+    userID: string,
+    type: RoleChangeType,
+    role: string
+  ): Promise<PlatformGlobalRoleChangeEventPayload> {
+    const basePayload = this.buildBaseEventPayload(triggeredBy);
+    const userPayload = await this.getUserContributorPayloadOrFail(userID);
+    const actorPayload = await this.getUserContributorPayloadOrFail(
+      triggeredBy
+    );
+    const result: PlatformGlobalRoleChangeEventPayload = {
+      user: userPayload,
+      actor: actorPayload,
+      type,
+      role,
+      ...basePayload,
+    };
+    return result;
+  }
+
   async buildUserRegisteredNotificationPayload(
     triggeredBy: string,
     userID: string
   ): Promise<PlatformUserRegistrationEventPayload> {
     const basePayload = this.buildBaseEventPayload(triggeredBy);
     const userPayload = await this.getUserContributorPayloadOrFail(userID);
+
     const result: PlatformUserRegistrationEventPayload = {
       user: userPayload,
       ...basePayload,

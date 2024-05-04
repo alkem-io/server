@@ -85,7 +85,7 @@ export class AuthorizationPolicyService {
         case AuthorizationRoleGlobal.GLOBAL_ADMIN:
           credType = AuthorizationCredential.GLOBAL_ADMIN;
           break;
-        case AuthorizationRoleGlobal.GLOBAL_COMMUNITY_VIEWER:
+        case AuthorizationRoleGlobal.GLOBAL_COMMUNITY_READ:
           credType = AuthorizationCredential.GLOBAL_COMMUNITY_READ;
           break;
         case AuthorizationRoleGlobal.GLOBAL_SUPPORT:

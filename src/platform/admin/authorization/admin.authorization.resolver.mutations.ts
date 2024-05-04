@@ -26,6 +26,9 @@ import { AuthResetService } from '@services/auth-reset/publisher/auth-reset.serv
 import { IOrganization } from '@domain/community/organization';
 import { GrantOrganizationAuthorizationCredentialInput } from './dto/authorization.dto.credential.grant.organization';
 import { RevokeOrganizationAuthorizationCredentialInput } from './dto/authorization.dto.credential.revoke.organization';
+import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
+import { NotificationInputPlatformGlobalRoleChange } from '@services/adapters/notification-adapter/dto/notification.dto.input.platform.global.role.change';
+import { RoleChangeType } from '@alkemio/notifications-lib';
 
 @Resolver()
 export class AdminAuthorizationResolverMutations {
@@ -34,6 +37,7 @@ export class AdminAuthorizationResolverMutations {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private platformAuthorizationPolicyService: PlatformAuthorizationPolicyService,
+    private notificationAdapter: NotificationAdapter,
     private authorizationService: AuthorizationService,
     private adminAuthorizationService: AdminAuthorizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -64,9 +68,19 @@ export class AdminAuthorizationResolverMutations {
       AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
       `grant credential: ${agentInfo.email}`
     );
-    return await this.adminAuthorizationService.grantCredentialToUser(
+
+    const user = await this.adminAuthorizationService.grantCredentialToUser(
       grantCredentialData
     );
+
+    // Send the notification
+    this.notifyPlatformGlobalRoleChange(
+      agentInfo.userID,
+      user,
+      RoleChangeType.ADDED,
+      grantCredentialData.type
+    );
+    return user;
   }
 
   @UseGuards(GraphqlGuard)
@@ -85,9 +99,16 @@ export class AdminAuthorizationResolverMutations {
       AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
       `revoke credential: ${agentInfo.email}`
     );
-    return await this.adminAuthorizationService.revokeCredentialFromUser(
+    const user = await this.adminAuthorizationService.revokeCredentialFromUser(
       credentialRemoveData
     );
+    this.notifyPlatformGlobalRoleChange(
+      agentInfo.userID,
+      user,
+      RoleChangeType.REMOVED,
+      credentialRemoveData.type
+    );
+    return user;
   }
 
   @UseGuards(GraphqlGuard)
@@ -147,9 +168,17 @@ export class AdminAuthorizationResolverMutations {
       AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
       `assign user global admin: ${membershipData.userID}`
     );
-    return await this.adminAuthorizationService.assignGlobalAdmin(
+    const user = await this.adminAuthorizationService.assignGlobalAdmin(
       membershipData
     );
+
+    this.notifyPlatformGlobalRoleChange(
+      agentInfo.userID,
+      user,
+      RoleChangeType.ADDED,
+      AuthorizationRoleGlobal.GLOBAL_ADMIN
+    );
+    return user;
   }
 
   @UseGuards(GraphqlGuard)
@@ -167,9 +196,16 @@ export class AdminAuthorizationResolverMutations {
       AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
       `remove user global admin: ${membershipData.userID}`
     );
-    return await this.adminAuthorizationService.removeGlobalAdmin(
+    const user = await this.adminAuthorizationService.removeGlobalAdmin(
       membershipData
     );
+    this.notifyPlatformGlobalRoleChange(
+      agentInfo.userID,
+      user,
+      RoleChangeType.REMOVED,
+      AuthorizationRoleGlobal.GLOBAL_ADMIN
+    );
+    return user;
   }
 
   @UseGuards(GraphqlGuard)
@@ -187,9 +223,17 @@ export class AdminAuthorizationResolverMutations {
       AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
       `assign user global community reader: ${membershipData.userID}`
     );
-    return await this.adminAuthorizationService.assignGlobalCommunityRead(
+    const user = await this.adminAuthorizationService.assignGlobalCommunityRead(
       membershipData
     );
+    this.notifyPlatformGlobalRoleChange(
+      agentInfo.userID,
+      user,
+      RoleChangeType.ADDED,
+      AuthorizationRoleGlobal.GLOBAL_COMMUNITY_READ
+    );
+
+    return user;
   }
 
   @UseGuards(GraphqlGuard)
@@ -207,9 +251,16 @@ export class AdminAuthorizationResolverMutations {
       AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
       `remove user global community admin: ${membershipData.userID}`
     );
-    return await this.adminAuthorizationService.removeGlobalCommunityRead(
+    const user = await this.adminAuthorizationService.removeGlobalCommunityRead(
       membershipData
     );
+    this.notifyPlatformGlobalRoleChange(
+      agentInfo.userID,
+      user,
+      RoleChangeType.REMOVED,
+      AuthorizationRoleGlobal.GLOBAL_COMMUNITY_READ
+    );
+    return user;
   }
 
   @UseGuards(GraphqlGuard)
@@ -227,9 +278,16 @@ export class AdminAuthorizationResolverMutations {
       AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
       `assign user global support: ${membershipData.userID}`
     );
-    return await this.adminAuthorizationService.assignGlobalSupport(
+    const user = await this.adminAuthorizationService.assignGlobalSupport(
       membershipData
     );
+    this.notifyPlatformGlobalRoleChange(
+      agentInfo.userID,
+      user,
+      RoleChangeType.ADDED,
+      AuthorizationRoleGlobal.GLOBAL_SUPPORT
+    );
+    return user;
   }
 
   @UseGuards(GraphqlGuard)
@@ -247,9 +305,16 @@ export class AdminAuthorizationResolverMutations {
       AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
       `remove user global support: ${membershipData.userID}`
     );
-    return await this.adminAuthorizationService.removeGlobalSupport(
+    const user = await this.adminAuthorizationService.removeGlobalSupport(
       membershipData
     );
+    this.notifyPlatformGlobalRoleChange(
+      agentInfo.userID,
+      user,
+      RoleChangeType.REMOVED,
+      AuthorizationRoleGlobal.GLOBAL_SUPPORT
+    );
+    return user;
   }
 
   @UseGuards(GraphqlGuard)
@@ -296,5 +361,20 @@ export class AdminAuthorizationResolverMutations {
     return this.adminAuthorizationService.resetAuthorizationPolicy(
       authorizationID
     );
+  }
+
+  private async notifyPlatformGlobalRoleChange(
+    triggeredBy: string,
+    user: IUser,
+    type: RoleChangeType,
+    role: string
+  ) {
+    const notificationInput: NotificationInputPlatformGlobalRoleChange = {
+      triggeredBy,
+      userID: user.id,
+      type: type,
+      role: role,
+    };
+    await this.notificationAdapter.platformGlobalRoleChanged(notificationInput);
   }
 }
