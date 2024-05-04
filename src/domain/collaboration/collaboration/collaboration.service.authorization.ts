@@ -17,7 +17,6 @@ import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authoriz
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { CommunityPolicyService } from '@domain/community/community-policy/community.policy.service';
 import {
-  CREDENTIAL_RULE_TYPES_COLLABORATION_CREATE_RELATION_REGISTERED,
   CREDENTIAL_RULE_COLLABORATION_CONTRIBUTORS,
   POLICY_RULE_COLLABORATION_CREATE,
   POLICY_RULE_CALLOUT_CONTRIBUTE,
@@ -197,32 +196,29 @@ export class CollaborationAuthorizationService {
 
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
-    const communityMemberNotInherited =
-      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.CREATE_RELATION],
-        [AuthorizationCredential.USER_SELF_MANAGEMENT],
-        CREDENTIAL_RULE_TYPES_COLLABORATION_CREATE_RELATION_REGISTERED
-      );
-    communityMemberNotInherited.cascade = false;
-    newRules.push(communityMemberNotInherited);
-
     const saveAsTemplateEnabled =
       await this.licenseService.isFeatureFlagEnabled(
         license,
         LicenseFeatureFlagName.CALLOUT_TO_CALLOUT_TEMPLATE
       );
     if (saveAsTemplateEnabled) {
-      const saveAsTemplate =
-        this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+      const adminCriterias = this.communityPolicyService.getCredentialsForRole(
+        policy,
+        CommunityRole.ADMIN
+      );
+      adminCriterias.push({
+        type: AuthorizationCredential.GLOBAL_ADMIN,
+        resourceID: '',
+      });
+      const saveAsTemplateRule =
+        this.authorizationPolicyService.createCredentialRule(
           [AuthorizationPrivilege.SAVE_AS_TEMPLATE],
-          [
-            AuthorizationCredential.GLOBAL_ADMIN,
-            AuthorizationCredential.GLOBAL_SUPPORT,
-          ],
+          adminCriterias,
           CREDENTIAL_RULE_TYPES_CALLOUT_SAVE_AS_TEMPLATE
         );
-      saveAsTemplate.cascade = false;
-      newRules.push(saveAsTemplate);
+
+      saveAsTemplateRule.cascade = false;
+      newRules.push(saveAsTemplateRule);
     }
 
     return this.authorizationPolicyService.appendCredentialAuthorizationRules(
@@ -269,10 +265,7 @@ export class CollaborationAuthorizationService {
     const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
 
     const createPrivilege = new AuthorizationPolicyRulePrivilege(
-      [
-        AuthorizationPrivilege.CREATE_CALLOUT,
-        AuthorizationPrivilege.CREATE_RELATION,
-      ],
+      [AuthorizationPrivilege.CREATE_CALLOUT],
       AuthorizationPrivilege.CREATE,
       POLICY_RULE_COLLABORATION_CREATE
     );

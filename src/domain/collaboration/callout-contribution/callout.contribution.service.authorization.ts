@@ -147,10 +147,6 @@ export class CalloutContributionAuthorizationService {
       type: AuthorizationCredential.GLOBAL_ADMIN,
       resourceID: '',
     });
-    credentials.push({
-      type: AuthorizationCredential.GLOBAL_SUPPORT,
-      resourceID: '',
-    });
     const adminsMoveContributionRule =
       this.authorizationPolicyService.createCredentialRule(
         [AuthorizationPrivilege.MOVE_CONTRIBUTION],
