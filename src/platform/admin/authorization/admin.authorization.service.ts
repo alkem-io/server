@@ -11,24 +11,22 @@ import {
 import { ForbiddenException, ValidationException } from '@common/exceptions';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AssignGlobalAdminInput } from '@platform/admin/authorization/dto/authorization.dto.assign.global.admin';
-import { RemoveGlobalAdminInput } from '@platform/admin/authorization/dto/authorization.dto.remove.global.admin';
-import { AssignGlobalCommunityReadInput } from '@platform/admin/authorization/dto/authorization.dto.assign.global.community.read';
-import { RemoveGlobalCommunityReadInput } from '@platform/admin/authorization/dto/authorization.dto.remove.global.community.read';
+import { AssignPlatformRoleToUserInput } from '@platform/admin/authorization/dto/authorization.dto.assign.platform.role.user';
+import { RemovePlatformRoleFromUserInput } from '@platform/admin/authorization/dto/authorization.dto.remove.platform.role.user';
 import { UserAuthorizationPrivilegesInput } from '@platform/admin/authorization/dto/authorization.dto.user.authorization.privileges';
 import { GrantAuthorizationCredentialInput } from './dto/authorization.dto.credential.grant';
 import { RevokeAuthorizationCredentialInput } from './dto/authorization.dto.credential.revoke';
 import { UsersWithAuthorizationCredentialInput } from './dto/authorization.dto.users.with.credential';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { AgentInfo } from '@core/authentication';
-import { AssignGlobalSupportInput } from './dto/authorization.dto.assign.global.support';
-import { RemoveGlobalSupportInput } from './dto/authorization.dto.remove.global.support';
 import { IOrganization } from '@domain/community/organization';
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { RevokeOrganizationAuthorizationCredentialInput } from './dto/authorization.dto.credential.revoke.organization';
 import { GrantOrganizationAuthorizationCredentialInput } from './dto/authorization.dto.credential.grant.organization';
 import { CREDENTIAL_RULE_TYPES_PLATFORM_GLOBAL_ADMINS } from '@common/constants/authorization/credential.rule.types.constants';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
+import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { PlatformRole } from '@common/enums/platform.role';
 
 @Injectable()
 export class AdminAuthorizationService {
@@ -41,90 +39,68 @@ export class AdminAuthorizationService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async assignGlobalAdmin(assignData: AssignGlobalAdminInput): Promise<IUser> {
+  public async assignPlatformRoleToUser(
+    assignData: AssignPlatformRoleToUserInput
+  ): Promise<IUser> {
     const agent = await this.userService.getAgent(assignData.userID);
+
+    const credential = this.getCredentialForRole(assignData.role);
 
     // assign the credential
     await this.agentService.grantCredential({
       agentID: agent.id,
-      type: AuthorizationCredential.GLOBAL_ADMIN,
-      resourceID: '',
+      ...credential,
     });
 
     return await this.userService.getUserWithAgent(assignData.userID);
   }
 
-  async removeGlobalAdmin(removeData: RemoveGlobalAdminInput): Promise<IUser> {
+  public async removePlatformRoleFromUser(
+    removeData: RemovePlatformRoleFromUserInput
+  ): Promise<IUser> {
     const agent = await this.userService.getAgent(removeData.userID);
 
-    // Check not the last global admin
-    await this.removeValidationSingleGlobalAdmin();
+    // Validation logic
+    if (removeData.role === PlatformRole.GLOBAL_ADMIN) {
+      // Check not the last global admin
+      await this.removeValidationSingleGlobalAdmin();
+    }
+
+    const credential = this.getCredentialForRole(removeData.role);
 
     await this.agentService.revokeCredential({
       agentID: agent.id,
-      type: AuthorizationCredential.GLOBAL_ADMIN,
-      resourceID: '',
+      ...credential,
     });
 
     return await this.userService.getUserWithAgent(removeData.userID);
   }
 
-  async assignGlobalCommunityRead(
-    assignData: AssignGlobalCommunityReadInput
-  ): Promise<IUser> {
-    const agent = await this.userService.getAgent(assignData.userID);
-
-    // assign the credential
-    await this.agentService.grantCredential({
-      agentID: agent.id,
-      type: AuthorizationCredential.GLOBAL_COMMUNITY_READ,
+  private getCredentialForRole(role: PlatformRole): ICredentialDefinition {
+    const result: ICredentialDefinition = {
+      type: '',
       resourceID: '',
-    });
-
-    return await this.userService.getUserWithAgent(assignData.userID);
-  }
-
-  async removeGlobalCommunityRead(
-    removeData: RemoveGlobalCommunityReadInput
-  ): Promise<IUser> {
-    const agent = await this.userService.getAgent(removeData.userID);
-
-    await this.agentService.revokeCredential({
-      agentID: agent.id,
-      type: AuthorizationCredential.GLOBAL_COMMUNITY_READ,
-      resourceID: '',
-    });
-
-    return await this.userService.getUserWithAgent(removeData.userID);
-  }
-
-  async assignGlobalSupport(
-    assignData: AssignGlobalSupportInput
-  ): Promise<IUser> {
-    const agent = await this.userService.getAgent(assignData.userID);
-
-    // assign the credential
-    await this.agentService.grantCredential({
-      agentID: agent.id,
-      type: AuthorizationCredential.GLOBAL_SUPPORT,
-      resourceID: '',
-    });
-
-    return await this.userService.getUserWithAgent(assignData.userID);
-  }
-
-  async removeGlobalSupport(
-    removeData: RemoveGlobalSupportInput
-  ): Promise<IUser> {
-    const agent = await this.userService.getAgent(removeData.userID);
-
-    await this.agentService.revokeCredential({
-      agentID: agent.id,
-      type: AuthorizationCredential.GLOBAL_SUPPORT,
-      resourceID: '',
-    });
-
-    return await this.userService.getUserWithAgent(removeData.userID);
+    };
+    switch (role) {
+      case PlatformRole.GLOBAL_ADMIN:
+        result.type = AuthorizationCredential.GLOBAL_ADMIN;
+        break;
+      case PlatformRole.SUPPORT:
+        result.type = AuthorizationCredential.GLOBAL_SUPPORT;
+        break;
+      case PlatformRole.COMMUNITY_READER:
+        result.type = AuthorizationCredential.GLOBAL_COMMUNITY_READ;
+        break;
+      case PlatformRole.BETA_TESTER:
+        result.type = AuthorizationCredential.BETA_TESTER;
+        break;
+      default:
+        throw new ForbiddenException(
+          `Role not supported: ${role}`,
+          LogContext.AUTH
+        );
+    }
+    return result;
   }
 
   async removeValidationSingleGlobalAdmin(): Promise<boolean> {

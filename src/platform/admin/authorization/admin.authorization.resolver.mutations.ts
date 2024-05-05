@@ -9,16 +9,10 @@ import { AgentInfo } from '@core/authentication';
 import { AuthorizationPrivilege, AuthorizationRoleGlobal } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
-import { AssignGlobalAdminInput } from './dto/authorization.dto.assign.global.admin';
-import { RemoveGlobalAdminInput } from './dto/authorization.dto.remove.global.admin';
-import { AssignGlobalCommunityReadInput } from './dto/authorization.dto.assign.global.community.read';
-import { RemoveGlobalCommunityReadInput } from './dto/authorization.dto.remove.global.community.read';
 import { AdminAuthorizationService } from './admin.authorization.service';
 import { GrantAuthorizationCredentialInput } from './dto/authorization.dto.credential.grant';
 import { RevokeAuthorizationCredentialInput } from './dto/authorization.dto.credential.revoke';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { AssignGlobalSupportInput } from './dto/authorization.dto.assign.global.support';
-import { RemoveGlobalSupportInput } from './dto/authorization.dto.remove.global.support';
 import { GLOBAL_POLICY_AUTHORIZATION_GRANT_GLOBAL_ADMIN } from '@common/constants/authorization/global.policy.constants';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -29,6 +23,8 @@ import { RevokeOrganizationAuthorizationCredentialInput } from './dto/authorizat
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { NotificationInputPlatformGlobalRoleChange } from '@services/adapters/notification-adapter/dto/notification.dto.input.platform.global.role.change';
 import { RoleChangeType } from '@alkemio/notifications-lib';
+import { AssignPlatformRoleToUserInput } from './dto/authorization.dto.assign.platform.role.user';
+import { RemovePlatformRoleFromUserInput } from './dto/authorization.dto.remove.platform.role.user';
 
 @Resolver()
 export class AdminAuthorizationResolverMutations {
@@ -155,20 +151,20 @@ export class AdminAuthorizationResolverMutations {
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IUser, {
-    description: 'Assigns a User as a Global Admin.',
+    description: 'Assigns a role to a User.',
   })
   @Profiling.api
-  async assignUserAsGlobalAdmin(
+  async assignPlatformRoleToUser(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('membershipData') membershipData: AssignGlobalAdminInput
+    @Args('membershipData') membershipData: AssignPlatformRoleToUserInput
   ): Promise<IUser> {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       this.authorizationGlobalAdminPolicy,
       AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
-      `assign user global admin: ${membershipData.userID}`
+      `assign user platform role admin: ${membershipData.userID} - ${membershipData.role}`
     );
-    const user = await this.adminAuthorizationService.assignGlobalAdmin(
+    const user = await this.adminAuthorizationService.assignPlatformRoleToUser(
       membershipData
     );
 
@@ -176,143 +172,35 @@ export class AdminAuthorizationResolverMutations {
       agentInfo.userID,
       user,
       RoleChangeType.ADDED,
-      AuthorizationRoleGlobal.GLOBAL_ADMIN
+      membershipData.role
     );
     return user;
   }
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IUser, {
-    description: 'Removes a User from being a Global Admin.',
+    description: 'Removes a User from a platform role.',
   })
   @Profiling.api
-  async removeUserAsGlobalAdmin(
+  async removePlatformRoleFromUser(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('membershipData') membershipData: RemoveGlobalAdminInput
+    @Args('membershipData') membershipData: RemovePlatformRoleFromUserInput
   ): Promise<IUser> {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       this.authorizationGlobalAdminPolicy,
       AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
-      `remove user global admin: ${membershipData.userID}`
+      `remove user platform role: ${membershipData.userID} - ${membershipData.role}`
     );
-    const user = await this.adminAuthorizationService.removeGlobalAdmin(
-      membershipData
-    );
+    const user =
+      await this.adminAuthorizationService.removePlatformRoleFromUser(
+        membershipData
+      );
     this.notifyPlatformGlobalRoleChange(
       agentInfo.userID,
       user,
       RoleChangeType.REMOVED,
-      AuthorizationRoleGlobal.GLOBAL_ADMIN
-    );
-    return user;
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IUser, {
-    description: 'Assigns a User as a Global Community Read.',
-  })
-  @Profiling.api
-  async assignUserAsGlobalCommunityRead(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('membershipData') membershipData: AssignGlobalCommunityReadInput
-  ): Promise<IUser> {
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      this.authorizationGlobalAdminPolicy,
-      AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
-      `assign user global community reader: ${membershipData.userID}`
-    );
-    const user = await this.adminAuthorizationService.assignGlobalCommunityRead(
-      membershipData
-    );
-    this.notifyPlatformGlobalRoleChange(
-      agentInfo.userID,
-      user,
-      RoleChangeType.ADDED,
-      AuthorizationRoleGlobal.GLOBAL_COMMUNITY_READ
-    );
-
-    return user;
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IUser, {
-    description: 'Removes a User from being a Global Community Admin.',
-  })
-  @Profiling.api
-  async removeUserAsGlobalCommunityRead(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('membershipData') membershipData: RemoveGlobalCommunityReadInput
-  ): Promise<IUser> {
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      this.authorizationGlobalAdminPolicy,
-      AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
-      `remove user global community admin: ${membershipData.userID}`
-    );
-    const user = await this.adminAuthorizationService.removeGlobalCommunityRead(
-      membershipData
-    );
-    this.notifyPlatformGlobalRoleChange(
-      agentInfo.userID,
-      user,
-      RoleChangeType.REMOVED,
-      AuthorizationRoleGlobal.GLOBAL_COMMUNITY_READ
-    );
-    return user;
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IUser, {
-    description: 'Assigns a User as a Global Spaces Admin.',
-  })
-  @Profiling.api
-  async assignUserAsGlobalSupport(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('membershipData') membershipData: AssignGlobalSupportInput
-  ): Promise<IUser> {
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      this.authorizationGlobalAdminPolicy,
-      AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
-      `assign user global support: ${membershipData.userID}`
-    );
-    const user = await this.adminAuthorizationService.assignGlobalSupport(
-      membershipData
-    );
-    this.notifyPlatformGlobalRoleChange(
-      agentInfo.userID,
-      user,
-      RoleChangeType.ADDED,
-      AuthorizationRoleGlobal.GLOBAL_SUPPORT
-    );
-    return user;
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IUser, {
-    description: 'Removes a User from being a Global Support.',
-  })
-  @Profiling.api
-  async removeUserAsGlobalSupport(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('membershipData') membershipData: RemoveGlobalSupportInput
-  ): Promise<IUser> {
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      this.authorizationGlobalAdminPolicy,
-      AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
-      `remove user global support: ${membershipData.userID}`
-    );
-    const user = await this.adminAuthorizationService.removeGlobalSupport(
-      membershipData
-    );
-    this.notifyPlatformGlobalRoleChange(
-      agentInfo.userID,
-      user,
-      RoleChangeType.REMOVED,
-      AuthorizationRoleGlobal.GLOBAL_SUPPORT
+      membershipData.role
     );
     return user;
   }
