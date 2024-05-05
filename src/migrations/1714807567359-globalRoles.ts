@@ -30,7 +30,7 @@ export class globalRoles1714807567359 implements MigrationInterface {
       const updatedSettings: SpaceSettingsNew = {
         privacy: {
           mode: settings.privacy.mode,
-          allowPlatformSupportAsAdmin: true,
+          allowPlatformSupportAsAdmin: false,
         },
         membership: {
           policy: settings.membership.policy,

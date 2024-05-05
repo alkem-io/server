@@ -5,7 +5,7 @@ import { ISpaceSettings } from '@domain/space/space.settings/space.settings.inte
 export const subspaceSettingsDefaults: ISpaceSettings = {
   privacy: {
     mode: SpacePrivacyMode.PUBLIC,
-    allowPlatformSupportAsAdmin: true,
+    allowPlatformSupportAsAdmin: false,
   },
   membership: {
     policy: CommunityMembershipPolicy.OPEN,
