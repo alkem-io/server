@@ -144,7 +144,10 @@ export class UserAuthorizationService {
     const globalAdminPlatformAdminNotInherited =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.PLATFORM_ADMIN],
-        [AuthorizationCredential.GLOBAL_ADMIN],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+        ],
         CREDENTIAL_RULE_TYPES_USER_PLATFORM_ADMIN
       );
     globalAdminNotInherited.cascade = false;
