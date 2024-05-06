@@ -10,6 +10,7 @@ export const subspaceSettingsDefaults: ISpaceSettings = {
   membership: {
     policy: CommunityMembershipPolicy.OPEN,
     trustedOrganizations: [], // only allow to be host org for now, not on subspaces
+    allowSubspaceAdminsToInviteMembers: false,
   },
   collaboration: {
     inheritMembershipRights: true,
