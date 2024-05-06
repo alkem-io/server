@@ -19,7 +19,6 @@ import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authoriz
 import { InnovationHubService } from '@domain/innovation-hub';
 import { InnovationHubAuthorizationService } from '@domain/innovation-hub/innovation.hub.service.authorization';
 import {
-  CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_DASHBOARD,
   CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_GUIDANCE,
   CREDENTIAL_RULE_TYPES_PLATFORM_ADMINS,
   CREDENTIAL_RULE_TYPES_PLATFORM_ANY_ADMIN,
@@ -30,7 +29,6 @@ import {
   POLICY_RULE_PLATFORM_CREATE,
 } from '@common/constants';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 
@@ -100,9 +98,6 @@ export class PlatformAuthorizationService {
     const credentialRuleInteractiveGuidance =
       await this.createCredentialRuleInteractiveGuidance();
     credentialRules.push(credentialRuleInteractiveGuidance);
-    const credentialRuleDashbaord =
-      await this.createCredentialRuleDashboardRefresh();
-    credentialRules.push(credentialRuleDashbaord);
 
     return this.authorizationPolicyService.appendCredentialAuthorizationRules(
       authorization,
@@ -248,24 +243,6 @@ export class PlatformAuthorizationService {
     return userGuidanceChatAccessPrivilegeRule;
   }
 
-  private async createCredentialRuleDashboardRefresh(): Promise<IAuthorizationPolicyRuleCredential> {
-    const criterias: ICredentialDefinition[] = [];
-    // Assign all users that are beta tester
-    const betaTesterUser: ICredentialDefinition = {
-      type: AuthorizationCredential.BETA_TESTER,
-      resourceID: '',
-    };
-    criterias.push(betaTesterUser);
-
-    const interactiveGuidanceRule =
-      this.authorizationPolicyService.createCredentialRule(
-        [AuthorizationPrivilege.ACCESS_DASHBOARD_REFRESH],
-        criterias,
-        CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_DASHBOARD
-      );
-    interactiveGuidanceRule.cascade = false;
-    return interactiveGuidanceRule;
-  }
   private createPlatformCredentialRules(): IAuthorizationPolicyRuleCredential[] {
     const credentialRules: IAuthorizationPolicyRuleCredential[] = [];
 
@@ -286,7 +263,6 @@ export class PlatformAuthorizationService {
         [
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_SUPPORT,
-          AuthorizationCredential.GLOBAL_COMMUNITY_READ,
         ],
         CREDENTIAL_RULE_TYPES_PLATFORM_ADMINS
       );

@@ -15,6 +15,7 @@ import { NotificationInputPlatformGlobalRoleChange } from '@services/adapters/no
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { PlatformService } from './platform.service';
 import { AssignPlatformRoleToUserInput } from './dto/platform.dto.assign.role.user';
+import { PlatformRole } from '@common/enums/platform.role';
 
 @Resolver()
 export class PlatformResolverMutations {
@@ -55,10 +56,14 @@ export class PlatformResolverMutations {
   ): Promise<IUser> {
     const platformPolicy =
       await this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();
+    let privilegeRequired = AuthorizationPrivilege.GRANT_GLOBAL_ADMINS;
+    if (membershipData.role === PlatformRole.BETA_TESTER) {
+      privilegeRequired = AuthorizationPrivilege.PLATFORM_ADMIN;
+    }
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       platformPolicy,
-      AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
+      privilegeRequired,
       `assign user platform role admin: ${membershipData.userID} - ${membershipData.role}`
     );
     const user = await this.platformService.assignPlatformRoleToUser(
@@ -85,10 +90,14 @@ export class PlatformResolverMutations {
   ): Promise<IUser> {
     const platformPolicy =
       await this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();
+    let privilegeRequired = AuthorizationPrivilege.GRANT_GLOBAL_ADMINS;
+    if (membershipData.role === PlatformRole.BETA_TESTER) {
+      privilegeRequired = AuthorizationPrivilege.PLATFORM_ADMIN;
+    }
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       platformPolicy,
-      AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
+      privilegeRequired,
       `remove user platform role: ${membershipData.userID} - ${membershipData.role}`
     );
     const user = await this.platformService.removePlatformRoleFromUser(
