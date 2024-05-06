@@ -23,8 +23,6 @@ import { RevokeOrganizationAuthorizationCredentialInput } from './dto/authorizat
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { NotificationInputPlatformGlobalRoleChange } from '@services/adapters/notification-adapter/dto/notification.dto.input.platform.global.role.change';
 import { RoleChangeType } from '@alkemio/notifications-lib';
-import { AssignPlatformRoleToUserInput } from './dto/authorization.dto.assign.platform.role.user';
-import { RemovePlatformRoleFromUserInput } from './dto/authorization.dto.remove.platform.role.user';
 
 @Resolver()
 export class AdminAuthorizationResolverMutations {
@@ -147,62 +145,6 @@ export class AdminAuthorizationResolverMutations {
     return await this.adminAuthorizationService.revokeCredentialFromOrganization(
       credentialRemoveData
     );
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IUser, {
-    description: 'Assigns a role to a User.',
-  })
-  @Profiling.api
-  async assignPlatformRoleToUser(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('membershipData') membershipData: AssignPlatformRoleToUserInput
-  ): Promise<IUser> {
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      this.authorizationGlobalAdminPolicy,
-      AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
-      `assign user platform role admin: ${membershipData.userID} - ${membershipData.role}`
-    );
-    const user = await this.adminAuthorizationService.assignPlatformRoleToUser(
-      membershipData
-    );
-
-    this.notifyPlatformGlobalRoleChange(
-      agentInfo.userID,
-      user,
-      RoleChangeType.ADDED,
-      membershipData.role
-    );
-    return user;
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IUser, {
-    description: 'Removes a User from a platform role.',
-  })
-  @Profiling.api
-  async removePlatformRoleFromUser(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('membershipData') membershipData: RemovePlatformRoleFromUserInput
-  ): Promise<IUser> {
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      this.authorizationGlobalAdminPolicy,
-      AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
-      `remove user platform role: ${membershipData.userID} - ${membershipData.role}`
-    );
-    const user =
-      await this.adminAuthorizationService.removePlatformRoleFromUser(
-        membershipData
-      );
-    this.notifyPlatformGlobalRoleChange(
-      agentInfo.userID,
-      user,
-      RoleChangeType.REMOVED,
-      membershipData.role
-    );
-    return user;
   }
 
   @UseGuards(GraphqlGuard)

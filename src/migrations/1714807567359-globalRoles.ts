@@ -30,11 +30,12 @@ export class globalRoles1714807567359 implements MigrationInterface {
       const updatedSettings: SpaceSettingsNew = {
         privacy: {
           mode: settings.privacy.mode,
-          allowPlatformSupportAsAdmin: false,
+          allowPlatformSupportAsAdmin: true,
         },
         membership: {
           policy: settings.membership.policy,
           trustedOrganizations: settings.membership.trustedOrganizations,
+          allowSubspaceAdminsToInviteMembers: true,
         },
         collaboration: {
           inheritMembershipRights:
@@ -89,6 +90,7 @@ export type SpaceSettingsNew = {
   membership: {
     policy: 'open' | 'applications' | 'invitations';
     trustedOrganizations: string[];
+    allowSubspaceAdminsToInviteMembers: boolean;
   };
   collaboration: {
     inheritMembershipRights: boolean;

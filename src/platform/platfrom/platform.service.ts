@@ -21,10 +21,21 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { DiscussionCategory } from '@common/enums/communication.discussion.category';
 import { Discussion } from '@domain/communication/discussion/discussion.entity';
 import { ReleaseDiscussionOutput } from './dto/release.discussion.dto';
+import { PlatformRole } from '@common/enums/platform.role';
+import { ForbiddenException } from '@common/exceptions/forbidden.exception';
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
+import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { RemovePlatformRoleFromUserInput } from './dto/platform.dto.remove.role.user';
+import { IUser } from '@domain/community/user/user.interface';
+import { UserService } from '@domain/community/user/user.service';
+import { AgentService } from '@domain/agent/agent/agent.service';
+import { AssignPlatformRoleToUserInput } from './dto/platform.dto.assign.role.user';
 
 @Injectable()
 export class PlatformService {
   constructor(
+    private userService: UserService,
+    private agentService: AgentService,
     private communicationService: CommunicationService,
     private entityManager: EntityManager,
     @InjectRepository(Platform)
@@ -149,5 +160,88 @@ export class PlatformService {
     }
 
     return { nameID: latestDiscussion.nameID, id: latestDiscussion.id };
+  }
+
+  public async assignPlatformRoleToUser(
+    assignData: AssignPlatformRoleToUserInput
+  ): Promise<IUser> {
+    const agent = await this.userService.getAgent(assignData.userID);
+
+    const credential = this.getCredentialForRole(assignData.role);
+
+    // assign the credential
+    await this.agentService.grantCredential({
+      agentID: agent.id,
+      ...credential,
+    });
+
+    return await this.userService.getUserWithAgent(assignData.userID);
+  }
+
+  public async removePlatformRoleFromUser(
+    removeData: RemovePlatformRoleFromUserInput
+  ): Promise<IUser> {
+    const agent = await this.userService.getAgent(removeData.userID);
+
+    // Validation logic
+    if (removeData.role === PlatformRole.GLOBAL_ADMIN) {
+      // Check not the last global admin
+      await this.removeValidationSingleGlobalAdmin();
+    }
+
+    const credential = this.getCredentialForRole(removeData.role);
+
+    await this.agentService.revokeCredential({
+      agentID: agent.id,
+      ...credential,
+    });
+
+    return await this.userService.getUserWithAgent(removeData.userID);
+  }
+
+  private async removeValidationSingleGlobalAdmin(): Promise<boolean> {
+    // Check more than one
+    const globalAdmins = await this.userService.usersWithCredentials({
+      type: AuthorizationCredential.GLOBAL_ADMIN,
+    });
+    if (globalAdmins.length < 2)
+      throw new ForbiddenException(
+        `Not allowed to remove ${AuthorizationCredential.GLOBAL_ADMIN}: last global-admin`,
+        LogContext.AUTH
+      );
+
+    return true;
+  }
+  private getCredentialForRole(role: PlatformRole): ICredentialDefinition {
+    const result: ICredentialDefinition = {
+      type: '',
+      resourceID: '',
+    };
+    switch (role) {
+      case PlatformRole.GLOBAL_ADMIN:
+        result.type = AuthorizationCredential.GLOBAL_ADMIN;
+        break;
+      case PlatformRole.SUPPORT:
+        result.type = AuthorizationCredential.GLOBAL_SUPPORT;
+        break;
+      case PlatformRole.LICENSE_MANAGER:
+        result.type = AuthorizationCredential.GLOBAL_LICENSE_MANAGER;
+        break;
+      case PlatformRole.COMMUNITY_READER:
+        result.type = AuthorizationCredential.GLOBAL_COMMUNITY_READ;
+        break;
+      case PlatformRole.SPACES_READER:
+        result.type = AuthorizationCredential.GLOBAL_SPACES_READER;
+        break;
+      case PlatformRole.BETA_TESTER:
+        result.type = AuthorizationCredential.BETA_TESTER;
+        break;
+      default:
+        throw new ForbiddenException(
+          `Role not supported: ${role}`,
+          LogContext.AUTH
+        );
+    }
+    return result;
   }
 }

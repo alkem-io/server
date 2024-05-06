@@ -11,8 +11,6 @@ import {
 import { ForbiddenException, ValidationException } from '@common/exceptions';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AssignPlatformRoleToUserInput } from '@platform/admin/authorization/dto/authorization.dto.assign.platform.role.user';
-import { RemovePlatformRoleFromUserInput } from '@platform/admin/authorization/dto/authorization.dto.remove.platform.role.user';
 import { UserAuthorizationPrivilegesInput } from '@platform/admin/authorization/dto/authorization.dto.user.authorization.privileges';
 import { GrantAuthorizationCredentialInput } from './dto/authorization.dto.credential.grant';
 import { RevokeAuthorizationCredentialInput } from './dto/authorization.dto.credential.revoke';
@@ -25,8 +23,6 @@ import { RevokeOrganizationAuthorizationCredentialInput } from './dto/authorizat
 import { GrantOrganizationAuthorizationCredentialInput } from './dto/authorization.dto.credential.grant.organization';
 import { CREDENTIAL_RULE_TYPES_PLATFORM_GLOBAL_ADMINS } from '@common/constants/authorization/credential.rule.types.constants';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
-import { PlatformRole } from '@common/enums/platform.role';
 
 @Injectable()
 export class AdminAuthorizationService {
@@ -38,84 +34,6 @@ export class AdminAuthorizationService {
     private organizationService: OrganizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
-
-  public async assignPlatformRoleToUser(
-    assignData: AssignPlatformRoleToUserInput
-  ): Promise<IUser> {
-    const agent = await this.userService.getAgent(assignData.userID);
-
-    const credential = this.getCredentialForRole(assignData.role);
-
-    // assign the credential
-    await this.agentService.grantCredential({
-      agentID: agent.id,
-      ...credential,
-    });
-
-    return await this.userService.getUserWithAgent(assignData.userID);
-  }
-
-  public async removePlatformRoleFromUser(
-    removeData: RemovePlatformRoleFromUserInput
-  ): Promise<IUser> {
-    const agent = await this.userService.getAgent(removeData.userID);
-
-    // Validation logic
-    if (removeData.role === PlatformRole.GLOBAL_ADMIN) {
-      // Check not the last global admin
-      await this.removeValidationSingleGlobalAdmin();
-    }
-
-    const credential = this.getCredentialForRole(removeData.role);
-
-    await this.agentService.revokeCredential({
-      agentID: agent.id,
-      ...credential,
-    });
-
-    return await this.userService.getUserWithAgent(removeData.userID);
-  }
-
-  private getCredentialForRole(role: PlatformRole): ICredentialDefinition {
-    const result: ICredentialDefinition = {
-      type: '',
-      resourceID: '',
-    };
-    switch (role) {
-      case PlatformRole.GLOBAL_ADMIN:
-        result.type = AuthorizationCredential.GLOBAL_ADMIN;
-        break;
-      case PlatformRole.SUPPORT:
-        result.type = AuthorizationCredential.GLOBAL_SUPPORT;
-        break;
-      case PlatformRole.COMMUNITY_READER:
-        result.type = AuthorizationCredential.GLOBAL_COMMUNITY_READ;
-        break;
-      case PlatformRole.BETA_TESTER:
-        result.type = AuthorizationCredential.BETA_TESTER;
-        break;
-      default:
-        throw new ForbiddenException(
-          `Role not supported: ${role}`,
-          LogContext.AUTH
-        );
-    }
-    return result;
-  }
-
-  async removeValidationSingleGlobalAdmin(): Promise<boolean> {
-    // Check more than one
-    const globalAdmins = await this.usersWithCredentials({
-      type: AuthorizationCredential.GLOBAL_ADMIN,
-    });
-    if (globalAdmins.length < 2)
-      throw new ForbiddenException(
-        `Not allowed to remove ${AuthorizationCredential.GLOBAL_ADMIN}: last global-admin`,
-        LogContext.AUTH
-      );
-
-    return true;
-  }
 
   async usersWithCredentials(
     credentialCriteria: UsersWithAuthorizationCredentialInput
