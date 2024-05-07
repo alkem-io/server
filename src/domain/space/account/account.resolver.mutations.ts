@@ -21,6 +21,8 @@ import { DeleteSpaceInput } from '../space/dto/space.dto.delete';
 import { SpaceType } from '@common/enums/space.type';
 import { UpdateAccountPlatformSettingsInput } from './dto/account.dto.update.platform.settings';
 import { CreateAccountInput } from './dto';
+import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
+import { LogContext } from '@common/enums/logging.context';
 
 @Resolver()
 export class AccountResolverMutations {
@@ -162,21 +164,27 @@ export class AccountResolverMutations {
       spaceDefaultsData.spaceID,
       {
         relations: {
-          account: true,
+          account: {
+            defaults: {
+              authorization: true,
+            },
+          },
         },
       }
     );
+    const spaceDefaults = space.account.defaults;
+    if (!spaceDefaults) {
+      throw new RelationshipNotFoundException(
+        `Unable to load defaults for space ${spaceDefaultsData.spaceID} `,
+        LogContext.ACCOUNT
+      );
+    }
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      space.authorization,
+      spaceDefaults.authorization,
       AuthorizationPrivilege.UPDATE,
       `update spaceDefaults: ${space.id}`
     );
-
-    const spaceDefaults =
-      await this.spaceDefaultsService.getSpaceDefaultsOrFail(
-        spaceDefaultsData.spaceID
-      );
 
     if (spaceDefaultsData.flowTemplateID) {
       const innovationFlowTemplate =
