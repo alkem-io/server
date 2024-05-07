@@ -17,7 +17,6 @@ export const getJourneyRolesForContributorQueryResult = (
   return spaces.map(space => {
     const spaceResult = new RolesResultSpace(space);
 
-    spaceResult.userGroups = [];
     spaceResult.roles = map.get('spaces')?.get(space.id) ?? [];
 
     // Only return children of spaces that the current user has READ access to
@@ -54,9 +53,9 @@ export const getJourneyRolesForContributorQueryResult = (
           const challengeResult = new RolesResultCommunity(
             subspace.nameID,
             subspace.id,
-            subspace.profile.displayName
+            subspace.profile.displayName,
+            subspace.type
           );
-          challengeResult.userGroups = [];
           challengeResult.roles = map.get('subspaces')?.get(subspace.id) ?? [];
           challengeResults.push(challengeResult);
         }

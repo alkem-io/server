@@ -17,11 +17,6 @@ export class RolesResultSpace extends RolesResultCommunity {
   })
   subspaces: RolesResultCommunity[] = [];
 
-  // @Field(() => [RolesResultCommunity], {
-  //   description: 'Details of the Opportunities the Contributor is a member of',
-  // })
-  // subsubspaces: RolesResultCommunity[] = [];
-
   @Field(() => SpaceVisibility, {
     nullable: false,
     description: 'Visibility of the Space.',
@@ -29,7 +24,7 @@ export class RolesResultSpace extends RolesResultCommunity {
   visibility!: SpaceVisibility;
 
   constructor(space: ISpace) {
-    super(space.nameID, space.id, space.profile.displayName);
+    super(space.nameID, space.id, space.profile.displayName, space.type);
     this.spaceID = space.id;
     this.space = space;
     this.visibility =
