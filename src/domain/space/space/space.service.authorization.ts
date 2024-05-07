@@ -27,7 +27,6 @@ import {
   POLICY_RULE_SPACE_CREATE_SUBSPACE,
   CREDENTIAL_RULE_SPACE_MEMBERS_READ,
   CREDENTIAL_RULE_SPACE_ADMINS,
-  CREDENTIAL_RULE_TYPES_ACCOUNT_AUTHORIZATION_RESET,
   CREDENTIAL_RULE_MEMBER_CREATE_SUBSPACE,
   CREDENTIAL_RULE_CHALLENGE_SPACE_MEMBER_APPLY,
   CREDENTIAL_RULE_CHALLENGE_SPACE_MEMBER_JOIN,
@@ -359,19 +358,6 @@ export class SpaceAuthorizationService {
       CREDENTIAL_RULE_SPACE_ADMINS
     );
     newRules.push(spaceAdmin);
-
-    // Allow global admins to update platform settings
-    const authorizationReset =
-      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.PLATFORM_ADMIN],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-        ],
-        CREDENTIAL_RULE_TYPES_ACCOUNT_AUTHORIZATION_RESET
-      );
-    authorizationReset.cascade = false;
-    newRules.push(authorizationReset);
 
     const collaborationSettings = policy.settings.collaboration;
     if (collaborationSettings.allowMembersToCreateSubspaces) {

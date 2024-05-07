@@ -24,6 +24,7 @@ import {
   CREDENTIAL_RULE_TYPES_ACCOUNT_AUTHORIZATION_RESET,
   CREDENTIAL_RULE_TYPES_SPACE_AUTHORIZATION_GLOBAL_ADMIN_GRANT,
   CREDENTIAL_RULE_TYPES_SPACE_GLOBAL_ADMIN_COMMUNITY_READ,
+  CREDENTIAL_RULE_TYPES_SPACE_READ,
 } from '@common/constants/authorization/credential.rule.types.constants';
 
 @Injectable()
@@ -130,10 +131,7 @@ export class AccountAuthorizationService {
           AuthorizationPrivilege.AUTHORIZATION_RESET,
           AuthorizationPrivilege.PLATFORM_ADMIN,
         ],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-        ],
+        [AuthorizationCredential.GLOBAL_ADMIN],
         CREDENTIAL_RULE_TYPES_ACCOUNT_AUTHORIZATION_RESET
       );
     authorizationReset.cascade = false;
@@ -147,17 +145,23 @@ export class AccountAuthorizationService {
       );
     newRules.push(communityAdmin);
 
-    // Allow Global admins + Global Space Admins to manage access to Spaces + contents
+    // Allow Global admins to manage access to Spaces + contents
     const globalAdmin =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.GRANT],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-        ],
+        [AuthorizationCredential.GLOBAL_ADMIN],
         CREDENTIAL_RULE_TYPES_SPACE_AUTHORIZATION_GLOBAL_ADMIN_GRANT
       );
     newRules.push(globalAdmin);
+
+    // Allow Global Spaces Read to view Spaces + contents
+    const globalSpacesReader =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.READ],
+        [AuthorizationCredential.GLOBAL_SPACES_READER],
+        CREDENTIAL_RULE_TYPES_SPACE_READ
+      );
+    newRules.push(globalSpacesReader);
 
     this.authorizationPolicyService.appendCredentialAuthorizationRules(
       authorization,
