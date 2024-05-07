@@ -109,7 +109,7 @@ export class VirtualPersonaEngineAdapter {
 
       return {
         ...jsonObject,
-        sources: this.extractMetadata(jsonObject.sources),
+        sources: jsonObject.sources,
       };
     } catch (err: any) {
       const errorMessage = `Could not send query to chat guidance adapter! ${err}`;
