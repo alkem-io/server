@@ -12,12 +12,12 @@ export const getJourneyRolesForContributorEntityData = async (
   const fetchData = <T extends Space>(
     ref: EntityTarget<T>,
     ids: string[],
-    type: string,
+    types: string[],
     visibility?: SpaceVisibility[]
   ): Promise<T[]> => {
     let where: any = {
       id: In(ids),
-      type: type,
+      type: In(types),
     };
 
     let relations: any = {
@@ -28,7 +28,7 @@ export const getJourneyRolesForContributorEntityData = async (
     if (visibility) {
       where = {
         id: In(ids),
-        type: type,
+        type: In(types),
         account: {
           license: {
             visibility: In(visibility),
@@ -60,11 +60,10 @@ export const getJourneyRolesForContributorEntityData = async (
     return results;
   };
 
-  const [spaces, subspaces, subsubspaces] = await Promise.all([
-    fetchData(Space, spaceIds, SpaceType.SPACE, spaceAllowedVisibilities),
-    fetchData(Space, subspaceIds, SpaceType.CHALLENGE),
-    fetchData(Space, subspaceIds, SpaceType.OPPORTUNITY),
+  const [spaces, subspaces] = await Promise.all([
+    fetchData(Space, spaceIds, [SpaceType.SPACE], spaceAllowedVisibilities),
+    fetchData(Space, subspaceIds, [SpaceType.CHALLENGE, SpaceType.OPPORTUNITY]),
   ]);
 
-  return { spaces, subspaces, subsubspaces };
+  return { spaces, subspaces };
 };

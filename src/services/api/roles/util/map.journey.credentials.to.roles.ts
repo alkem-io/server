@@ -20,19 +20,17 @@ export const mapJourneyCredentialsToRoles = async (
   const accountIds = Array.from(credentialMap.get('accounts')?.keys() ?? []);
   const subspaceIds = Array.from(credentialMap.get('subspaces')?.keys() ?? []);
 
-  const { spaces, subspaces, subsubspaces } =
-    await getJourneyRolesForContributorEntityData(
-      entityManager,
-      spaceIds.concat(accountIds), // For now merge accounts with spaces
-      allowedVisibilities,
-      subspaceIds
-    );
+  const { spaces, subspaces } = await getJourneyRolesForContributorEntityData(
+    entityManager,
+    spaceIds.concat(accountIds), // For now merge accounts with spaces
+    allowedVisibilities,
+    subspaceIds
+  );
 
   return getJourneyRolesForContributorQueryResult(
     credentialMap,
     spaces,
     subspaces,
-    subsubspaces,
     agentInfo,
     authorizationService
   );
