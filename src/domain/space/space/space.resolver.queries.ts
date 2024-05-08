@@ -16,6 +16,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AgentInfo } from '@core/authentication/agent-info';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { LogContext } from '@common/enums/logging.context';
+import { SpaceLevel } from '@common/enums/space.level';
 
 @Resolver()
 export class SpaceResolverQueries {
@@ -63,7 +64,11 @@ export class SpaceResolverQueries {
     @Args('ID', { type: () => UUID_NAMEID }) ID: string,
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<ISpace> {
-    const space = await this.spaceService.getSpaceOrFail(ID);
+    const space = await this.spaceService.getSpaceOrFail(ID, {
+      where: {
+        level: SpaceLevel.SPACE,
+      },
+    });
     if (!space) {
       throw new EntityNotFoundException(
         `Unable to find Space with ID: '${ID}'`,
