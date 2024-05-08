@@ -184,6 +184,15 @@ export class AccountService {
         LogContext.ACCOUNT
       );
     }
+
+    const host = await this.getHost(account);
+    if (!host) {
+      throw new RelationshipNotFoundException(
+        `Unable to load host for account ${account.id} `,
+        LogContext.ACCOUNT
+      );
+    }
+
     await this.spaceService.deleteSpace({
       ID: account.space.id,
     });
@@ -192,6 +201,14 @@ export class AccountService {
 
     await this.licenseService.delete(account.license.id);
     await this.spaceDefaultsService.deleteSpaceDefaults(account.defaults.id);
+
+    // Remove the account host credential
+    const hostAgent = await this.organizationService.getAgent(host);
+    host.agent = await this.agentService.revokeCredential({
+      agentID: hostAgent.id,
+      type: AuthorizationCredential.ACCOUNT_HOST,
+      resourceID: account.id,
+    });
 
     const result = await this.accountRepository.remove(account as Account);
     result.id = accountID;
@@ -290,12 +307,11 @@ export class AccountService {
     }
     return account.space;
   }
+
   async setAccountHost(
     account: IAccount,
     hostOrgID: string
   ): Promise<IAccount> {
-    const rootSpace = await this.getRootSpace(account);
-    const spaceID = rootSpace.id;
     const organization = await this.organizationService.getOrganizationOrFail(
       hostOrgID,
       { relations: { groups: true, agent: true } }
@@ -310,7 +326,7 @@ export class AccountService {
       organization.agent = await this.agentService.revokeCredential({
         agentID: agentExisting.id,
         type: AuthorizationCredential.ACCOUNT_HOST,
-        resourceID: spaceID,
+        resourceID: account.id,
       });
     }
 
@@ -319,7 +335,7 @@ export class AccountService {
     organization.agent = await this.agentService.grantCredential({
       agentID: agent.id,
       type: AuthorizationCredential.ACCOUNT_HOST,
-      resourceID: spaceID,
+      resourceID: account.id,
     });
 
     await this.organizationService.save(organization);
@@ -327,12 +343,10 @@ export class AccountService {
   }
 
   async getHost(account: IAccount): Promise<IOrganization | undefined> {
-    const rootSpace = await this.getRootSpace(account);
-
     const organizations =
       await this.organizationService.organizationsWithCredentials({
         type: AuthorizationCredential.ACCOUNT_HOST,
-        resourceID: rootSpace.id,
+        resourceID: account.id,
       });
     if (organizations.length == 0) {
       return undefined;
