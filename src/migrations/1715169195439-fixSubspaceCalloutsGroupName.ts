@@ -11,25 +11,27 @@ export class fixSubspaceCalloutsGroupName1715169195439
   public async up(queryRunner: QueryRunner): Promise<void> {
     // 'callout-group' Tagsets from callouts in subspaces
     const tagsets: Tagset[] = await queryRunner.query(`
-      SELECT id, tagsetTemplateId FROM tagset WHERE tagset.profileId IN (
-        SELECT id FROM profile WHERE id IN (
-          SELECT profileId FROM callout_framing WHERE id IN (
-            SELECT framingId FROM callout WHERE collaborationId IN (
-              SELECT collaborationId FROM space WHERE parentSpaceId IS NOT null	-- only subspaces
-            )
-          )
-        )
-      ) and tagset.name = 'callout-group';`);
+      SELECT tagset.id, tagset.tagsetTemplateId FROM space
+        INNER JOIN callout ON callout.collaborationId = space.collaborationId
+          INNER JOIN callout_framing ON callout.framingId = callout_framing.id
+          INNER JOIN tagset ON tagset.profileId = callout_framing.profileId
+          INNER JOIN tagset_template ON tagset.tagsetTemplateId = tagset_template.id
+      WHERE
+        space.parentSpaceId IS NOT NULL       -- only subspaces
+        AND tagset.name = 'callout-group'   -- callout-group tagsets
+        AND (tagset.tags !='HOME' OR tagset_template.allowedValues != 'HOME' OR tagset_template.defaultSelectedValue != 'HOME')
+  `);
 
-    for (const tagset of tagsets) {
-      const { id, tagsetTemplateId } = tagset;
-      await queryRunner.query(
-        `UPDATE tagset SET tags = 'HOME' WHERE id = '${id}';`
-      );
-      await queryRunner.query(
-        `UPDATE tagset_template SET defaultSelectedValue = 'HOME', allowedValues = 'HOME' WHERE id = '${tagsetTemplateId}';`
-      );
-    }
+    const tagsetIds = tagsets.map(tagset => `'${tagset.id}'`).join(',');
+    const tagsetTemplateIds = tagsets
+      .map(tagset => `'${tagset.tagsetTemplateId}'`)
+      .join(',');
+    await queryRunner.query(
+      `UPDATE tagset SET tags = 'HOME' WHERE id IN (${tagsetIds});`
+    );
+    await queryRunner.query(
+      `UPDATE tagset_template SET defaultSelectedValue = 'HOME', allowedValues = 'HOME' WHERE id IN (${tagsetTemplateIds});`
+    );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {}
