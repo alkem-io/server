@@ -18,6 +18,14 @@ import { canUserRead, canUserUpdate, closeConnection } from './util';
 import { checkSession } from './check.session';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 
+const fetchSocketsSafe = async (wsServer: SocketIoServer, roomID: string) => {
+  try {
+    return await wsServer.in(roomID).fetchSockets();
+  } catch (e) {
+    return [];
+  }
+};
+
 export const authorizeWithRoomAndJoinHandler = async (
   roomID: string,
   socket: SocketIoSocket,
@@ -40,7 +48,7 @@ export const authorizeWithRoomAndJoinHandler = async (
     return;
   }
 
-  const collaboratorsInRoom = (await wsServer.in(roomID).fetchSockets()).filter(
+  const collaboratorsInRoom = (await fetchSocketsSafe(wsServer, roomID)).filter(
     socket => socket.data.update
   ).length;
   const isCollaboratorLimitReached =
@@ -98,7 +106,7 @@ const joinRoomHandler = async (
     LogContext.EXCALIDRAW_SERVER
   );
 
-  const sockets = await wsServer.in(roomID).fetchSockets();
+  const sockets = await fetchSocketsSafe(wsServer, roomID);
   if (sockets.length === 1) {
     logger?.verbose?.(
       `User '${agentInfo.userID}' is first in room '${roomID}'`,
@@ -167,7 +175,7 @@ export const disconnectingEventHandler = async (
     LogContext.EXCALIDRAW_SERVER
   );
   for (const roomID of socket.rooms) {
-    const otherClientIds = (await wsServer.in(roomID).fetchSockets())
+    const otherClientIds = (await fetchSocketsSafe(wsServer, roomID))
       .filter(_socket => _socket.id !== socket.id)
       .map(socket => socket.id);
 
