@@ -63,11 +63,11 @@ import {
   minCollaboratorsInRoom,
   resetCollaboratorModeDebounceWait,
 } from './types/defaults';
+import { SaveResponse } from './types/save.reponse';
 
 type SaveMessageOpts = { timeout: number };
 type RoomTimers = Map<string, NodeJS.Timer>;
 type SocketTimers = Map<string, NodeJS.Timer>;
-type SaveResponse = { success: boolean; errors?: string[] };
 
 @Injectable()
 export class ExcalidrawServer {
@@ -120,7 +120,8 @@ export class ExcalidrawServer {
   private async fetchSocketsSafe(roomID: string) {
     try {
       return await this.wsServer.in(roomID).fetchSockets();
-    } catch (e) {
+    } catch (e: any) {
+      this.logger.warn(`fetchSockets error handled: ${e?.message}`);
       return [];
     }
   }
@@ -411,7 +412,8 @@ export class ExcalidrawServer {
     const randomSocketWithUpdateFlag = arrayRandomElement(sockets);
     // sends a save request to the socket and wait for a response
     try {
-      const [response]: SaveResponse[] = await this.wsServer
+      // we are waiting for a single response, so destruct to just the first element
+      const [response] = await this.wsServer
         .to(randomSocketWithUpdateFlag.id)
         .timeout(timeout)
         .emitWithAck(SERVER_SAVE_REQUEST);
