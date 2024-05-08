@@ -62,7 +62,7 @@ export const subspaceDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 1,
-    groupName: CalloutGroupName.CONTRIBUTE,
+    groupName: CalloutGroupName.HOME,
     framing: {
       profile: {
         displayName: 'Relevant news, research or use cases 📰',
@@ -82,7 +82,7 @@ export const subspaceDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 2,
-    groupName: CalloutGroupName.CONTRIBUTE,
+    groupName: CalloutGroupName.HOME,
     framing: {
       profile: {
         displayName: 'Who are the stakeholders?',
@@ -105,7 +105,7 @@ export const subspaceDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 3,
-    groupName: CalloutGroupName.CONTRIBUTE,
+    groupName: CalloutGroupName.HOME,
     framing: {
       profile: {
         displayName: 'Reference / important documents',
@@ -120,7 +120,7 @@ export const subspaceDefaultCallouts: CreateCalloutInput[] = [
       state: CalloutState.OPEN,
     },
     sortOrder: 1,
-    groupName: CalloutGroupName.SUBSPACES,
+    groupName: CalloutGroupName.HOME,
     framing: {
       profile: {
         displayName: 'Proposals',
