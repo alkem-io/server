@@ -203,6 +203,9 @@ export class ExcalidrawServer {
       // delete timers that were left locally
       this.deleteTimersForRoom(roomId);
     });
+    adapter.on('error', async (error: Error) => {
+      this.logger.error(error, error.stack, LogContext.EXCALIDRAW_SERVER);
+    });
 
     // middlewares
     this.wsServer.use(socketDataInitMiddleware);
