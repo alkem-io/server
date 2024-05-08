@@ -117,6 +117,14 @@ export class ExcalidrawServer {
     );
   }
 
+  private async fetchSocketsSafe(roomID: string) {
+    try {
+      return await this.wsServer.in(roomID).fetchSockets();
+    } catch (e) {
+      return [];
+    }
+  }
+
   private async init() {
     const kratosPublicBaseUrl = this.configService.get(
       ConfigurationTypes.IDENTITY
@@ -133,7 +141,7 @@ export class ExcalidrawServer {
       if (!isRoomId(roomId)) {
         return;
       }
-      if ((await this.wsServer.in(roomId).fetchSockets()).length > 0) {
+      if ((await this.fetchSocketsSafe(roomId)).length > 0) {
         // if there are sockets already connected
         // this room already exist on another instance
         return;
@@ -167,9 +175,8 @@ export class ExcalidrawServer {
         return;
       }
 
-      const connectedSocketsToRoomCount = (
-        await this.wsServer.in(roomId).fetchSockets()
-      ).length;
+      const connectedSocketsToRoomCount = (await this.fetchSocketsSafe(roomId))
+        .length;
       if (connectedSocketsToRoomCount > 0) {
         // if there are sockets already connected
         // this room was deleted, but it's still active on the other instances
@@ -195,6 +202,7 @@ export class ExcalidrawServer {
       // delete timers that were left locally
       this.deleteTimersForRoom(roomId);
     });
+
     // middlewares
     this.wsServer.use(socketDataInitMiddleware);
     this.wsServer.use(attachSessionMiddleware(kratosClient));
@@ -333,7 +341,7 @@ export class ExcalidrawServer {
       await this.communityResolver.getRootSpaceIDFromCommunityOrFail(community);
     const wb = await this.whiteboardService.getProfile(roomId);
 
-    const sockets = await this.wsServer.in(roomId).fetchSockets();
+    const sockets = await this.fetchSocketsSafe(roomId);
 
     for (const socket of sockets) {
       const lastContributed = socket.data.lastContributed;
@@ -392,7 +400,7 @@ export class ExcalidrawServer {
   ): Promise<boolean | undefined> {
     const { timeout } = opts;
     // get only sockets which can save
-    const sockets = (await this.wsServer.in(roomId).fetchSockets()).filter(
+    const sockets = (await this.fetchSocketsSafe(roomId)).filter(
       socket => socket.data.update
     );
     // return if no eligible sockets

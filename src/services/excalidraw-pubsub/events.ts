@@ -35,10 +35,18 @@ export class RoomUserChangeEvent extends BaseEvent implements IExcalidrawEvent {
     super(roomID, publisherId, ROOM_USER_CHANGE);
   }
 
+  private async fetchSocketsSafe(wsServer: SocketIoServer, roomID: string) {
+    try {
+      return await wsServer.in(roomID).fetchSockets();
+    } catch (e) {
+      return [];
+    }
+  }
+
   async handleEvent(wsServer: SocketIoServer): Promise<void> {
-    const ownSocketIds = (await wsServer.in(this.roomID).fetchSockets()).map(
-      socket => socket.id
-    );
+    const ownSocketIds = (
+      await this.fetchSocketsSafe(wsServer, this.roomID)
+    ).map(socket => socket.id);
 
     const socketIdsInRoom = new Set([...ownSocketIds, ...this.socketIDs]);
     wsServer
