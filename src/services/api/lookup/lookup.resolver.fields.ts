@@ -48,8 +48,8 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { UserService } from '@domain/community/user/user.service';
-import { SpaceService } from '@domain/space/space/space.service';
 import { ISpace } from '@domain/space/space/space.interface';
+import { SpaceService } from '@domain/space/space/space.service';
 
 @Resolver(() => LookupQueryResults)
 export class LookupResolverFields {
