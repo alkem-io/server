@@ -15,6 +15,7 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy/authori
 import { PostTemplateService } from '../post-template/post.template.service';
 import { WhiteboardTemplateService } from '../whiteboard-template/whiteboard.template.service';
 import { InnovationFlowTemplateService } from '../innovation-flow-template/innovation.flow.template.service';
+import { MemberGuidelinesTemplateService } from '../member-guidelines-template/member.guidelines.template.service';
 import { IPostTemplate } from '../post-template/post.template.interface';
 import { IWhiteboardTemplate } from '../whiteboard-template/whiteboard.template.interface';
 import { IInnovationFlowTemplate } from '../innovation-flow-template/innovation.flow.template.interface';
@@ -27,6 +28,8 @@ import { CalloutTemplateService } from '../callout-template/callout.template.ser
 import { AgentInfo } from '@core/authentication/agent-info';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
+import { IMemberGuidelinesTemplate } from '../member-guidelines-template/member.guidelines.template.interface';
+import { CreateMemberGuidelinesTemplateInput } from '../member-guidelines-template/dto/member.guidelines.template.dto.create';
 
 @Injectable()
 export class TemplatesSetService {
@@ -39,6 +42,7 @@ export class TemplatesSetService {
     private postTemplateService: PostTemplateService,
     private whiteboardTemplateService: WhiteboardTemplateService,
     private innovationFlowTemplateService: InnovationFlowTemplateService,
+    private memberGuidelinesTemplateService: MemberGuidelinesTemplateService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -48,6 +52,7 @@ export class TemplatesSetService {
     templatesSet.postTemplates = [];
     templatesSet.whiteboardTemplates = [];
     templatesSet.innovationFlowTemplates = [];
+    templatesSet.memberGuidelinesTemplates = [];
 
     return await this.templatesSetRepository.save(templatesSet);
   }
@@ -149,6 +154,28 @@ export class TemplatesSetService {
     return templatesSetPopulated.calloutTemplates;
   }
 
+  async getMemberGuidelinesTemplates(
+    templatesSet: ITemplatesSet
+  ): Promise<IMemberGuidelinesTemplate[]> {
+    const templatesSetPopulated = await this.getTemplatesSetOrFail(
+      templatesSet.id,
+      {
+        relations: {
+          memberGuidelinesTemplates: {
+            profile: true,
+          },
+        },
+      }
+    );
+    if (!templatesSetPopulated.memberGuidelinesTemplates) {
+      throw new EntityNotInitializedException(
+        `TemplatesSet not initialized: ${templatesSetPopulated.id}`,
+        LogContext.TEMPLATES
+      );
+    }
+    return templatesSetPopulated.memberGuidelinesTemplates;
+  }
+
   public getPostTemplate(
     templateId: string,
     templatesSetId: string
@@ -177,6 +204,19 @@ export class TemplatesSetService {
     templatesSetId: string
   ): Promise<IInnovationFlowTemplate> {
     return this.innovationFlowTemplateService.getInnovationFlowTemplateOrFail(
+      templateId,
+      {
+        relations: { templatesSet: true, profile: true },
+        where: { templatesSet: { id: templatesSetId } },
+      }
+    );
+  }
+
+  public getMemberGuidelinesTemplate(
+    templateId: string,
+    templatesSetId: string
+  ): Promise<IMemberGuidelinesTemplate> {
+    return this.memberGuidelinesTemplateService.getMemberGuidelinesTemplateOrFail(
       templateId,
       {
         relations: { templatesSet: true, profile: true },
@@ -321,6 +361,24 @@ export class TemplatesSetService {
     return whiteboardTemplate;
   }
 
+  async createMemberGuidelinesTemplate(
+    templatesSet: ITemplatesSet,
+    memberGuidelinesTemplateInput: CreateMemberGuidelinesTemplateInput
+  ): Promise<IMemberGuidelinesTemplate> {
+    templatesSet.memberGuidelinesTemplates =
+      await this.getMemberGuidelinesTemplates(templatesSet);
+
+    const storageAggregator = await this.getStorageAggregator(templatesSet);
+    const memberGuidelinesTemplate =
+      await this.memberGuidelinesTemplateService.createMemberGuidelinesTemplate(
+        memberGuidelinesTemplateInput,
+        storageAggregator
+      );
+    templatesSet.memberGuidelinesTemplates.push(memberGuidelinesTemplate);
+    await this.templatesSetRepository.save(templatesSet);
+    return memberGuidelinesTemplate;
+  }
+
   async getInnovationFlowTemplates(
     templatesSet: ITemplatesSet
   ): Promise<IInnovationFlowTemplate[]> {
@@ -391,7 +449,15 @@ export class TemplatesSetService {
       templatesSetID
     );
 
-    return whiteboardTemplatesCount + postTemplatesCount + innovationFlowsCount;
+    const memberGuidelinesTemplatesCount =
+      await this.getMemberGuidelinesTemplatesCount(templatesSetID);
+
+    return (
+      whiteboardTemplatesCount +
+      postTemplatesCount +
+      innovationFlowsCount +
+      memberGuidelinesTemplatesCount
+    );
   }
 
   getWhiteboardTemplatesCount(templatesSetID: string): Promise<number> {
@@ -406,6 +472,12 @@ export class TemplatesSetService {
 
   getInnovationFlowTemplatesCount(templatesSetID: string): Promise<number> {
     return this.innovationFlowTemplateService.getCountInTemplatesSet(
+      templatesSetID
+    );
+  }
+
+  getMemberGuidelinesTemplatesCount(templatesSetID: string): Promise<number> {
+    return this.memberGuidelinesTemplateService.getCountInTemplatesSet(
       templatesSetID
     );
   }

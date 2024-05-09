@@ -10,6 +10,7 @@ import { TemplatesSet } from './templates.set.entity';
 import { IWhiteboardTemplate } from '../whiteboard-template/whiteboard.template.interface';
 import { IInnovationFlowTemplate } from '../innovation-flow-template/innovation.flow.template.interface';
 import { ICalloutTemplate } from '../callout-template/callout.template.interface';
+import { IMemberGuidelinesTemplate } from '../member-guidelines-template/member.guidelines.template.interface';
 
 @Resolver(() => ITemplatesSet)
 export class TemplatesSetResolverFields {
@@ -160,6 +161,59 @@ export class TemplatesSetResolverFields {
     ID: string
   ): Promise<IInnovationFlowTemplate> {
     return this.templatesSetService.getInnovationFlowTemplate(
+      ID,
+      templatesSet.id
+    );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField(
+    'memberGuidelinesTemplates',
+    () => [IMemberGuidelinesTemplate],
+    {
+      nullable: false,
+      description: 'The MemberGuidelines in this TemplatesSet.',
+    }
+  )
+  @Profiling.api
+  async memberGuidelinesTemplates(
+    @Parent() templatesSet: ITemplatesSet
+  ): Promise<IMemberGuidelinesTemplate[]> {
+    return this.templatesSetService.getMemberGuidelinesTemplates(templatesSet);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField('memberGuidelinesTemplatesCount', () => Float, {
+    nullable: false,
+    description:
+      'The total number of MemberGuidelinesTemplates in this TemplatesSet.',
+  })
+  @Profiling.api
+  async memberGuidelinesTemplatesCount(
+    @Parent() templatesSet: ITemplatesSet
+  ): Promise<number> {
+    return this.templatesSetService.getMemberGuidelinesTemplatesCount(
+      templatesSet.id
+    );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField('memberGuidelinesTemplate', () => IMemberGuidelinesTemplate, {
+    nullable: true,
+    description: 'A single MemberGuidelinesTemplate',
+  })
+  @Profiling.api
+  public memberGuidelinesTemplate(
+    @Parent() templatesSet: TemplatesSet,
+    @Args({
+      name: 'ID',
+      nullable: false,
+      type: () => UUID,
+      description: 'The ID of the Template',
+    })
+    ID: string
+  ): Promise<IMemberGuidelinesTemplate> {
+    return this.templatesSetService.getMemberGuidelinesTemplate(
       ID,
       templatesSet.id
     );

@@ -20,6 +20,9 @@ import { CreatePostTemplateOnTemplatesSetInput } from './dto/post.template.dto.c
 import { ICalloutTemplate } from '../callout-template/callout.template.interface';
 import { CreateCalloutTemplateOnTemplatesSetInput } from './dto/callout.template.dto.create.on.templates.set';
 import { CalloutTemplateAuthorizationService } from '../callout-template/callout.template.service.authorization';
+import { MemberGuidelinesTemplateAuthorizationService } from '../member-guidelines-template/member.guidelines.template.service.authorization';
+import { IMemberGuidelinesTemplate } from '../member-guidelines-template/member.guidelines.template.interface';
+import { CreateMemberGuidelinesTemplateOnTemplatesSetInput } from './dto/member.guidelines.template.dto.create.on.templates.set';
 
 @Resolver()
 export class TemplatesSetResolverMutations {
@@ -31,6 +34,7 @@ export class TemplatesSetResolverMutations {
     private postTemplateAuthorizationService: PostTemplateAuthorizationService,
     private whiteboardTemplateAuthorizationService: WhiteboardTemplateAuthorizationService,
     private innovationFlowTemplateAuthorizationService: InnovationFlowTemplateAuthorizationService,
+    private memberGuidelinesTemplateAuthorizationService: MemberGuidelinesTemplateAuthorizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -168,5 +172,39 @@ export class TemplatesSetResolverMutations {
       templatesSet.authorization
     );
     return innovationFlowTemplate;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IMemberGuidelinesTemplate, {
+    description:
+      'Creates a new MemberGuidelinesTemplate on the specified TemplatesSet.',
+  })
+  async createMemberGuidelinesTemplate(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('memberGuidelinesTemplateInput')
+    memberGuidelinesTemplateInput: CreateMemberGuidelinesTemplateOnTemplatesSetInput
+  ): Promise<IMemberGuidelinesTemplate> {
+    const templatesSet = await this.templatesSetService.getTemplatesSetOrFail(
+      memberGuidelinesTemplateInput.templatesSetID,
+      {
+        relations: { memberGuidelinesTemplates: true },
+      }
+    );
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      templatesSet.authorization,
+      AuthorizationPrivilege.CREATE,
+      `templates set create memberGuidelines template: ${templatesSet.id}`
+    );
+    const memberGuidelinesTemplate =
+      await this.templatesSetService.createMemberGuidelinesTemplate(
+        templatesSet,
+        memberGuidelinesTemplateInput
+      );
+    await this.memberGuidelinesTemplateAuthorizationService.applyAuthorizationPolicy(
+      memberGuidelinesTemplate,
+      templatesSet.authorization
+    );
+    return memberGuidelinesTemplate;
   }
 }
