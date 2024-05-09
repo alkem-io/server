@@ -26,12 +26,15 @@ export class fixSubspaceCalloutsGroupName1715169195439
     const tagsetTemplateIds = tagsets
       .map(tagset => `'${tagset.tagsetTemplateId}'`)
       .join(',');
-    await queryRunner.query(
-      `UPDATE tagset SET tags = 'HOME' WHERE id IN (${tagsetIds});`
-    );
-    await queryRunner.query(
-      `UPDATE tagset_template SET defaultSelectedValue = 'HOME', allowedValues = 'HOME' WHERE id IN (${tagsetTemplateIds});`
-    );
+
+    if (tagsets.length > 0) {
+      await queryRunner.query(
+        `UPDATE tagset SET tags = 'HOME' WHERE id IN (${tagsetIds});`
+      );
+      await queryRunner.query(
+        `UPDATE tagset_template SET defaultSelectedValue = 'HOME', allowedValues = 'HOME' WHERE id IN (${tagsetTemplateIds});`
+      );
+    }
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {}
