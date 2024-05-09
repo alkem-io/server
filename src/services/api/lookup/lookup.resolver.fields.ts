@@ -48,6 +48,8 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { UserService } from '@domain/community/user/user.service';
+import { SpaceService } from '@domain/space/space/space.service';
+import { ISpace } from '@domain/space/space/space.interface';
 
 @Resolver(() => LookupQueryResults)
 export class LookupResolverFields {
@@ -73,8 +75,29 @@ export class LookupResolverFields {
     private documentService: DocumentService,
     private innovationFlowTemplateService: InnovationFlowTemplateService,
     private storageAggregatorService: StorageAggregatorService,
-    private userService: UserService
+    private userService: UserService,
+    private spaceService: SpaceService
   ) {}
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField(() => ISpace, {
+    nullable: true,
+    description: 'Lookup the specified Space',
+  })
+  async space(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('ID', { type: () => UUID }) id: string
+  ): Promise<ISpace> {
+    const space = await this.spaceService.getSpaceOrFail(id);
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      space.authorization,
+      AuthorizationPrivilege.READ,
+      `lookup Space: ${space.id}`
+    );
+
+    return space;
+  }
 
   @UseGuards(GraphqlGuard)
   @ResolveField(() => IDocument, {
