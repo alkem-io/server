@@ -8,10 +8,12 @@ import { LicenseService } from './license.service';
 import { LicenseAuthorizationService } from './license.service.authorization';
 import { FeatureFlagService } from '../feature-flag/feature.flag.service';
 import { FeatureFlag } from '../feature-flag/feature.flag.entity';
+import { LicenseEngineModule } from '@core/license-engine/license.engine.module';
 
 @Module({
   imports: [
     AuthorizationModule,
+    LicenseEngineModule,
     AuthorizationPolicyModule,
     TypeOrmModule.forFeature([License]),
     TypeOrmModule.forFeature([FeatureFlag]),

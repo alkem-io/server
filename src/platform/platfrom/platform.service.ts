@@ -21,6 +21,7 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { DiscussionCategory } from '@common/enums/communication.discussion.category';
 import { Discussion } from '@domain/communication/discussion/discussion.entity';
 import { ReleaseDiscussionOutput } from './dto/release.discussion.dto';
+import { ILicensePolicy } from '@platform/license-policy';
 
 @Injectable()
 export class PlatformService {
@@ -118,6 +119,24 @@ export class PlatformService {
     }
 
     return storageAggregator;
+  }
+
+  async getLicensePolicy(platformInput: IPlatform): Promise<ILicensePolicy> {
+    const platform = await this.getPlatformOrFail({
+      relations: {
+        licensePolicy: true,
+      },
+    });
+    const licensePolicy = platform.licensePolicy;
+
+    if (!licensePolicy) {
+      throw new EntityNotFoundException(
+        `Unable to find licensepolicy for Platform: ${platformInput.id}`,
+        LogContext.PLATFORM
+      );
+    }
+
+    return licensePolicy;
   }
 
   getAuthorizationPolicy(platform: IPlatform): IAuthorizationPolicy {

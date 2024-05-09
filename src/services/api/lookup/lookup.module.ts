@@ -51,6 +51,7 @@ import { SpaceModule } from '@domain/space/space/space.module';
     StorageAggregatorModule,
     PlatformAuthorizationPolicyModule,
     UserModule,
+    SpaceModule,
   ],
   providers: [LookupService, LookupResolverQueries, LookupResolverFields],
   exports: [LookupService],

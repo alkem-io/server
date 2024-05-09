@@ -5,6 +5,7 @@ import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.a
 import { ILibrary } from '@library/library/library.interface';
 import { ObjectType } from '@nestjs/graphql';
 import { IConfig } from '@platform/configuration/config/config.interface';
+import { ILicensePolicy } from '@platform/license-policy';
 import { IMetadata } from '@platform/metadata/metadata.interface';
 
 @ObjectType('Platform')
@@ -15,4 +16,5 @@ export abstract class IPlatform extends IAuthorizable {
   metadata?: IMetadata;
   storageAggregator!: IStorageAggregator;
   innovationHubs?: IInnovationHub[];
+  licensePolicy!: ILicensePolicy;
 }
