@@ -29,19 +29,19 @@ import { CommunityRole } from '@common/enums/community.role';
 import { TimelineAuthorizationService } from '@domain/timeline/timeline/timeline.service.authorization';
 import { ICallout } from '../callout/callout.interface';
 import { ILicense } from '@domain/license/license/license.interface';
-import { LicenseService } from '@domain/license/license/license.service';
-import { LicenseFeatureFlagName } from '@common/enums/license.feature.flag.name';
 import { InnovationFlowAuthorizationService } from '../innovation-flow/innovation.flow.service.authorization';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
+import { LicenseEngineService } from '@core/license-engine/license.engine.service';
+import { LicensePrivilege } from '@common/enums/license.privilege';
 
 @Injectable()
 export class CollaborationAuthorizationService {
   constructor(
+    private licenseEngineService: LicenseEngineService,
     private collaborationService: CollaborationService,
     private communityPolicyService: CommunityPolicyService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private timelineAuthorizationService: TimelineAuthorizationService,
-    private licenseService: LicenseService,
     private calloutAuthorizationService: CalloutAuthorizationService,
     private innovationFlowAuthorizationService: InnovationFlowAuthorizationService,
     @InjectRepository(Collaboration)
@@ -214,9 +214,9 @@ export class CollaborationAuthorizationService {
     newRules.push(communityMemberNotInherited);
 
     const saveAsTemplateEnabled =
-      await this.licenseService.isFeatureFlagEnabled(
-        license,
-        LicenseFeatureFlagName.CALLOUT_TO_CALLOUT_TEMPLATE
+      await this.licenseEngineService.isAccessGranted(
+        LicensePrivilege.CALLOUT_SAVE_AS_TEMPLATE,
+        license
       );
     if (saveAsTemplateEnabled) {
       const saveAsTemplate =
@@ -285,9 +285,9 @@ export class CollaborationAuthorizationService {
     );
     privilegeRules.push(createPrivilege);
 
-    const whiteboardRtEnabled = await this.licenseService.isFeatureFlagEnabled(
-      license,
-      LicenseFeatureFlagName.WHITEBOARD_MULTI_USER
+    const whiteboardRtEnabled = await this.licenseEngineService.isAccessGranted(
+      LicensePrivilege.WHITEBOARD_MULTI_USER,
+      license
     );
     if (whiteboardRtEnabled) {
       const createWhiteboardRtPrivilege = new AuthorizationPolicyRulePrivilege(
