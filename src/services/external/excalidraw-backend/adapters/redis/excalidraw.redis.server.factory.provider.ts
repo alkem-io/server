@@ -65,7 +65,10 @@ const factory = async (
       subClient.on('error', (error: Error) =>
         logger.error(error.message, error.stack, LogContext.EXCALIDRAW_SERVER)
       );
-      return createAdapter(pubClient, subClient);
+      return createAdapter(pubClient, subClient, {
+        requestsTimeout: 10000,
+        key: appId,
+      });
     } catch (error) {
       throw new BaseException(
         'Error while initializing Redis adapter',
