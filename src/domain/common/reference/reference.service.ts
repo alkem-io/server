@@ -67,7 +67,7 @@ export class ReferenceService {
     if (!references)
       throw new EntityNotFoundException(
         'Not able to locate references',
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     if (referencesData) {
       for (const referenceData of referencesData) {
@@ -78,7 +78,7 @@ export class ReferenceService {
         if (!reference)
           throw new EntityNotFoundException(
             `Unable to update reference with supplied ID: ${referenceData.ID} - no reference in parent entity.`,
-            LogContext.CHALLENGES
+            LogContext.SPACES
           );
         this.updateReferenceValues(reference, referenceData);
       }
@@ -97,7 +97,7 @@ export class ReferenceService {
     if (!reference)
       throw new EntityNotFoundException(
         `Not able to locate reference with the specified ID: ${referenceID}`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     return reference;
   }

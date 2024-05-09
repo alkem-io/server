@@ -111,7 +111,7 @@ export class CommunityGuidelinesService {
     if (!communityGuidelines)
       throw new EntityNotFoundException(
         `Unable to find CommunityGuidelines with ID: ${communityGuidelinesID}`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     return communityGuidelines;
   }

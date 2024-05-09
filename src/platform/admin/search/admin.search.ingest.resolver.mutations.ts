@@ -54,8 +54,8 @@ export class AdminSearchIngestResolverMutations {
     const result = await this.searchIngestService.ingest();
     const results = reduce(
       result,
-      (acc, value, key) => {
-        acc.push({ index: key, result: value });
+      (acc, { total, batches }, key) => {
+        acc.push({ index: key, total, batches });
         return acc;
       },
       [] as IngestResult[]

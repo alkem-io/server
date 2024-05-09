@@ -5,7 +5,7 @@ import { IActivity } from '@platform/activity';
 import { ActivityService } from '@platform/activity/activity.service';
 import { ActivityFeedRoles } from '@domain/activity-feed/activity.feed.roles.enum';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
-import { SpaceService } from '@domain/challenge/space/space.service';
+import { SpaceService } from '@domain/space/space/space.service';
 import { ActivityFeed } from '@domain/activity-feed/activity.feed.interface';
 import { EntityNotFoundException } from '@common/exceptions';
 import { ActivityEventType } from '@common/enums/activity.event.type';

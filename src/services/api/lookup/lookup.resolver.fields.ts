@@ -34,12 +34,8 @@ import { ICalendar } from '@domain/timeline/calendar/calendar.interface';
 import { CalendarService } from '@domain/timeline/calendar/calendar.service';
 import { ApplicationService } from '@domain/community/application/application.service';
 import { InvitationService } from '@domain/community/invitation/invitation.service';
-import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
-import { OpportunityService } from '@domain/challenge/opportunity/opportunity.service';
 import { IApplication } from '@domain/community/application';
 import { IInvitation } from '@domain/community/invitation';
-import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
-import { IOpportunity } from '@domain/challenge/opportunity';
 import { CalloutTemplateService } from '@domain/template/callout-template/callout.template.service';
 import { ICalloutTemplate } from '@domain/template/callout-template/callout.template.interface';
 import { WhiteboardService } from '@domain/common/whiteboard';
@@ -62,8 +58,6 @@ export class LookupResolverFields {
     private communityService: CommunityService,
     private applicationService: ApplicationService,
     private invitationService: InvitationService,
-    private challengeService: ChallengeService,
-    private opportunityService: OpportunityService,
     private collaborationService: CollaborationService,
     private contextService: ContextService,
     private whiteboardService: WhiteboardService,
@@ -505,45 +499,5 @@ export class LookupResolverFields {
     );
 
     return innovationFlowTemplate;
-  }
-
-  @UseGuards(GraphqlGuard)
-  @ResolveField(() => IChallenge, {
-    nullable: true,
-    description: 'Lookup the specified Challenge',
-  })
-  async challenge(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('ID', { type: () => UUID }) id: string
-  ): Promise<IChallenge> {
-    const challenge = await this.challengeService.getChallengeOrFail(id);
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      challenge.authorization,
-      AuthorizationPrivilege.READ,
-      `lookup Challenge: ${challenge.id}`
-    );
-
-    return challenge;
-  }
-
-  @UseGuards(GraphqlGuard)
-  @ResolveField(() => IOpportunity, {
-    nullable: true,
-    description: 'Lookup the specified Opportunity',
-  })
-  async opportunity(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('ID', { type: () => UUID }) id: string
-  ): Promise<IOpportunity> {
-    const opportunity = await this.opportunityService.getOpportunityOrFail(id);
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      opportunity.authorization,
-      AuthorizationPrivilege.READ,
-      `lookup Opportunity: ${opportunity.id}`
-    );
-
-    return opportunity;
   }
 }

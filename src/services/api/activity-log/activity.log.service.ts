@@ -1,6 +1,4 @@
 import { Inject, LoggerService } from '@nestjs/common';
-import { InjectEntityManager } from '@nestjs/typeorm';
-import { EntityManager, EntityTarget } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ActivityLogInput } from './dto/activity.log.dto.collaboration.input';
 import { LogContext } from '@common/enums';
@@ -12,23 +10,17 @@ import { CommunityService } from '@domain/community/community/community.service'
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { PostService } from '@domain/collaboration/post/post.service';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
-import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
-import { OpportunityService } from '@domain/challenge/opportunity/opportunity.service';
 import { IActivity } from '@platform/activity/activity.interface';
-import { getJourneyByCollaboration } from '@common/utils';
-import { Space } from '@domain/challenge/space/space.entity';
-import { Challenge } from '@domain/challenge/challenge/challenge.entity';
-import { Opportunity } from '@domain/challenge/opportunity';
 import { RoomService } from '@domain/communication/room/room.service';
 import { IActivityLogBuilder } from './activity.log.builder.interface';
 import ActivityLogBuilderService from './activity.log.builder.service';
 import { CalendarService } from '@domain/timeline/calendar/calendar.service';
 import { CalendarEventService } from '@domain/timeline/event/event.service';
-import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
-import { SpaceService } from '@domain/challenge/space/space.service';
-import { JourneyTypeEnum } from '@common/enums/journey.type';
+import { SpaceService } from '@domain/space/space/space.service';
 import { LinkService } from '@domain/collaboration/link/link.service';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
+import { EntityManager } from 'typeorm/entity-manager/EntityManager';
+import { InjectEntityManager } from '@nestjs/typeorm';
 
 export class ActivityLogService {
   constructor(
@@ -38,19 +30,16 @@ export class ActivityLogService {
     private postService: PostService,
     private whiteboardService: WhiteboardService,
     private spaceService: SpaceService,
-    private challengeService: ChallengeService,
-    private opportunityService: OpportunityService,
     private roomService: RoomService,
     private linkService: LinkService,
     private calendarService: CalendarService,
     private calendarEventService: CalendarEventService,
     private communityService: CommunityService,
-    private collaborationService: CollaborationService,
     private urlGeneratorService: UrlGeneratorService,
+    @InjectEntityManager('default')
+    private entityManager: EntityManager,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService,
-    @InjectEntityManager()
-    private readonly entityManager: EntityManager
+    private readonly logger: LoggerService
   ) {}
 
   public async activityLog(
@@ -120,18 +109,9 @@ export class ActivityLogService {
         );
       }
 
-      const result =
-        await this.collaborationService.getJourneyFromCollaboration(
-          rawActivity.collaborationID
-        );
-
-      const journeyType = getJourneyType(result);
-      const journeyId =
-        result?.spaceId ?? result?.challengeId ?? result?.opportunityId;
-      const journey =
-        journeyType && journeyId
-          ? await this.getJourneyByType(journeyType, journeyId)
-          : undefined;
+      const space = await this.spaceService.getSpaceForCollaborationOrFail(
+        rawActivity.collaborationID
+      );
 
       const activityLogEntryBase: IActivityLogEntry = {
         id: rawActivity.id,
@@ -143,7 +123,7 @@ export class ActivityLogService {
         child: rawActivity.child,
         parentNameID: parentDetails.nameID,
         parentDisplayName: parentDetails.displayName,
-        journey,
+        space,
       };
       const activityBuilder: IActivityLogBuilder =
         new ActivityLogBuilderService(
@@ -153,15 +133,13 @@ export class ActivityLogService {
           this.postService,
           this.whiteboardService,
           this.spaceService,
-          this.challengeService,
-          this.opportunityService,
           this.communityService,
           this.roomService,
           this.linkService,
           this.calendarService,
           this.calendarEventService,
-          this.collaborationService,
-          this.urlGeneratorService
+          this.urlGeneratorService,
+          this.entityManager
         );
       const activityType = rawActivity.type as ActivityEventType;
       return await activityBuilder[activityType](rawActivity);
@@ -177,70 +155,13 @@ export class ActivityLogService {
   private async getParentDetailsByCollaboration(
     collaborationID: string
   ): Promise<{ nameID: string; displayName: string } | undefined> {
-    const { spaceId, challengeId, opportunityId } =
-      await getJourneyByCollaboration(this.entityManager, collaborationID);
+    const space = await this.spaceService.getSpaceForCollaborationOrFail(
+      collaborationID
+    );
 
-    const getDetails = async (
-      entity: EntityTarget<Space | Challenge | Opportunity>,
-      id: string
-    ) => {
-      const result = await this.entityManager.findOneOrFail(entity, {
-        where: { id },
-        relations: { profile: true },
-      });
-      return {
-        displayName: result.profile.displayName,
-        nameID: result.nameID,
-      };
+    return {
+      displayName: space.profile.displayName,
+      nameID: space.nameID,
     };
-
-    if (spaceId) {
-      return getDetails(Space, spaceId);
-    }
-
-    if (challengeId) {
-      return getDetails(Challenge, challengeId);
-    }
-
-    if (opportunityId) {
-      return getDetails(Opportunity, opportunityId);
-    }
-
-    return undefined;
-  }
-
-  private getJourneyByType(type: JourneyTypeEnum, id: string) {
-    switch (type) {
-      case JourneyTypeEnum.SPACE:
-        return this.spaceService.getSpaceOrFail(id);
-      case JourneyTypeEnum.CHALLENGE:
-        return this.challengeService.getChallengeOrFail(id);
-      case JourneyTypeEnum.OPPORTUNITY:
-        return this.opportunityService.getOpportunityOrFail(id);
-      default:
-        throw new Error(`Invalid journey type: ${type}`);
-    }
   }
 }
-
-const getJourneyType = (ids?: {
-  spaceId?: string;
-  challengeId?: string;
-  opportunityId?: string;
-}): JourneyTypeEnum | undefined => {
-  const { spaceId, challengeId, opportunityId } = ids ?? {};
-
-  if (spaceId) {
-    return JourneyTypeEnum.SPACE;
-  }
-
-  if (challengeId) {
-    return JourneyTypeEnum.CHALLENGE;
-  }
-
-  if (opportunityId) {
-    return JourneyTypeEnum.OPPORTUNITY;
-  }
-
-  return undefined;
-};

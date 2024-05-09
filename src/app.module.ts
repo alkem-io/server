@@ -20,7 +20,7 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { BootstrapModule } from '@core/bootstrap/bootstrap.module';
 import { RequestLoggerMiddleware } from '@core/middleware/request.logger.middleware';
 import { AgentModule } from '@domain/agent/agent/agent.module';
-import { SpaceModule } from '@domain/challenge/space/space.module';
+import { SpaceModule } from '@domain/space/space/space.module';
 import { ScalarsModule } from '@domain/common/scalars/scalars.module';
 import { AdminCommunicationModule } from '@platform/admin/communication/admin.communication.module';
 import { AppController } from '@src/app.controller';
@@ -71,6 +71,7 @@ import { ContributionMoveModule } from '@domain/collaboration/callout-contributi
 import { TaskGraphqlModule } from '@domain/task/task.module';
 import { ActivityFeedModule } from '@domain/activity-feed';
 import { AdminSearchIngestModule } from '@platform/admin/search/admin.search.ingest.module';
+import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
 
 @Module({
   imports: [
@@ -86,6 +87,11 @@ import { AdminSearchIngestModule } from '@platform/admin/search/admin.search.ing
         store: redisStore,
         host: configService.get(ConfigurationTypes.STORAGE)?.redis?.host,
         port: configService.get(ConfigurationTypes.STORAGE)?.redis?.port,
+        redisOptions: {
+          connectTimeout:
+            configService.get(ConfigurationTypes.STORAGE)?.redis?.timeout *
+            1000, // Connection timeout in milliseconds
+        },
       }),
       inject: [ConfigService],
     }),
@@ -247,6 +253,7 @@ import { AdminSearchIngestModule } from '@platform/admin/search/admin.search.ing
     MeModule,
     ExcalidrawServerModule,
     ChatGuidanceModule,
+    VirtualContributorModule,
     LookupModule,
     AuthResetSubscriberModule,
     TaskGraphqlModule,
@@ -263,16 +270,18 @@ import { AdminSearchIngestModule } from '@platform/admin/search/admin.search.ing
       useClass: InnovationHubInterceptor,
     },
     {
+      // This should be the first filter in the list:
+      // See Catch everything at: https://docs.nestjs.com/exception-filters
+      provide: APP_FILTER,
+      useClass: UnhandledExceptionFilter,
+    },
+    {
       provide: APP_FILTER,
       useClass: GraphqlExceptionFilter,
     },
     {
       provide: APP_FILTER,
       useClass: HttpExceptionFilter,
-    },
-    {
-      provide: APP_FILTER,
-      useClass: UnhandledExceptionFilter,
     },
     {
       provide: APP_PIPE,

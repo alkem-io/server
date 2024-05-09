@@ -7,8 +7,6 @@ import {
   Transport,
 } from '@nestjs/microservices';
 import { Channel, Message } from 'amqplib';
-import { SpaceAuthorizationService } from '@domain/challenge/space/space.service.authorization';
-import { SpaceService } from '@domain/challenge/space/space.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext, MessagingQueue } from '@common/enums';
 import { PlatformAuthorizationService } from '@platform/platfrom/platform.service.authorization';
@@ -19,6 +17,8 @@ import { UserAuthorizationService } from '@domain/community/user/user.service.au
 import { AUTH_RESET_EVENT_TYPE } from '../event.type';
 import { TaskService } from '@services/task/task.service';
 import { AuthResetEventPayload } from '../auth-reset.payload.interface';
+import { AccountAuthorizationService } from '@domain/space/account/account.service.authorization';
+import { AccountService } from '@domain/space/account/account.service';
 
 const MAX_RETRIES = 5;
 const RETRY_HEADER = 'x-retry-count';
@@ -27,8 +27,8 @@ export class AuthResetController {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    private spaceService: SpaceService,
-    private spaceAuthorizationService: SpaceAuthorizationService,
+    private accountService: AccountService,
+    private accountAuthorizationService: AccountAuthorizationService,
     private platformAuthorizationService: PlatformAuthorizationService,
     private organizationAuthorizationService: OrganizationAuthorizationService,
     private userAuthorizationService: UserAuthorizationService,
@@ -37,8 +37,8 @@ export class AuthResetController {
     private taskService: TaskService
   ) {}
 
-  @EventPattern(AUTH_RESET_EVENT_TYPE.SPACE, Transport.RMQ)
-  public async authResetSpace(
+  @EventPattern(AUTH_RESET_EVENT_TYPE.ACCOUNT, Transport.RMQ)
+  public async authResetAccount(
     @Payload() payload: AuthResetEventPayload,
     @Ctx() context: RmqContext
   ) {
@@ -52,8 +52,8 @@ export class AuthResetController {
     const retryCount = originalMsg.properties.headers[RETRY_HEADER] ?? 0;
 
     try {
-      const space = await this.spaceService.getSpaceOrFail(payload.id);
-      await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
+      const account = await this.accountService.getAccountOrFail(payload.id);
+      await this.accountAuthorizationService.applyAuthorizationPolicy(account);
 
       const message = `Finished resetting authorization for space with id ${payload.id}.`;
       this.logger.verbose?.(message, LogContext.AUTH_POLICY);
@@ -61,7 +61,7 @@ export class AuthResetController {
       channel.ack(originalMsg);
     } catch (error: any) {
       if (retryCount >= MAX_RETRIES) {
-        const message = `Resetting authorization for space with id ${payload.id} failed! Max retries reached. Rejecting message.`;
+        const message = `Resetting authorization for account with id ${payload.id} failed! Max retries reached. Rejecting message.`;
         this.logger.error(message, error?.stack, LogContext.AUTH);
         this.taskService.updateTaskErrors(payload.task, message);
 

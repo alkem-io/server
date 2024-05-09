@@ -1,24 +1,23 @@
 import { EntityManager, EntityTarget, FindManyOptions, In } from 'typeorm';
-import { Space } from '@domain/challenge/space/space.entity';
-import { Challenge } from '@domain/challenge/challenge/challenge.entity';
-import { Opportunity } from '@domain/challenge/opportunity';
+import { Space } from '@domain/space/space/space.entity';
 import { SpaceVisibility } from '@common/enums/space.visibility';
-import { BaseChallenge } from '@domain/challenge/base-challenge/base.challenge.entity';
+import { SpaceType } from '@common/enums/space.type';
 
 export const getJourneyRolesForContributorEntityData = async (
   entityManager: EntityManager,
   spaceIds: string[],
   spaceAllowedVisibilities: SpaceVisibility[],
-  challengeIds: string[],
-  opportunityIds: string[]
+  subspaceIds: string[]
 ) => {
-  const fetchData = <T extends BaseChallenge>(
+  const fetchData = <T extends Space>(
     ref: EntityTarget<T>,
     ids: string[],
+    types: string[],
     visibility?: SpaceVisibility[]
   ): Promise<T[]> => {
     let where: any = {
       id: In(ids),
+      type: In(types),
     };
 
     let relations: any = {
@@ -29,6 +28,7 @@ export const getJourneyRolesForContributorEntityData = async (
     if (visibility) {
       where = {
         id: In(ids),
+        type: In(types),
         account: {
           license: {
             visibility: In(visibility),
@@ -60,11 +60,10 @@ export const getJourneyRolesForContributorEntityData = async (
     return results;
   };
 
-  const [spaces, challenges, opportunities] = await Promise.all([
-    fetchData(Space, spaceIds, spaceAllowedVisibilities),
-    fetchData(Challenge, challengeIds),
-    fetchData(Opportunity, opportunityIds),
+  const [spaces, subspaces] = await Promise.all([
+    fetchData(Space, spaceIds, [SpaceType.SPACE], spaceAllowedVisibilities),
+    fetchData(Space, subspaceIds, [SpaceType.CHALLENGE, SpaceType.OPPORTUNITY]),
   ]);
 
-  return { spaces, challenges, opportunities };
+  return { spaces, subspaces };
 };

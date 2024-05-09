@@ -58,6 +58,8 @@ import { CommunityGuidelinesService } from '../community-guidelines/community.gu
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { CreateCommunityInput } from './dto/community.dto.create';
 import { ICommunityGuidelines } from '../community-guidelines/community.guidelines.interface';
+import { IVirtualContributor } from '../virtual-contributor';
+import { VirtualContributorService } from '../virtual-contributor/virtual.contributor.service';
 
 @Injectable()
 export class CommunityService {
@@ -66,6 +68,7 @@ export class CommunityService {
     private agentService: AgentService,
     private userService: UserService,
     private organizationService: OrganizationService,
+    private virtualContributorService: VirtualContributorService,
     private userGroupService: UserGroupService,
     private applicationService: ApplicationService,
     private invitationService: InvitationService,
@@ -92,8 +95,7 @@ export class CommunityService {
     community.policy = await this.communityPolicyService.createCommunityPolicy(
       policy.member,
       policy.lead,
-      policy.admin,
-      policy.host
+      policy.admin
     );
 
     community.guidelines =
@@ -101,7 +103,6 @@ export class CommunityService {
         communityData.guidelines,
         storageAggregator
       );
-    community.spaceID = communityData.spaceID;
     community.applicationForm = await this.formService.createForm(
       communityData.applicationForm
     );
@@ -114,7 +115,7 @@ export class CommunityService {
     community.communication =
       await this.communicationService.createCommunication(
         communityData.name,
-        communityData.spaceID,
+        '',
         Object.values(DiscussionCategoryCommunity)
       );
     return await this.communityRepository.save(community);
@@ -122,7 +123,7 @@ export class CommunityService {
 
   async createGroup(groupData: CreateUserGroupInput): Promise<IUserGroup> {
     const communityID = groupData.parentID;
-    const groupName = groupData.profileData.displayName;
+    const groupName = groupData.profile.displayName;
 
     this.logger.verbose?.(
       `Adding userGroup (${groupName}) to Community (${communityID})`,
@@ -141,8 +142,7 @@ export class CommunityService {
     const group = await this.userGroupService.addGroupWithName(
       community,
       groupName,
-      storageAggregator,
-      community.spaceID
+      storageAggregator
     );
     await this.communityRepository.save(community);
 
@@ -161,6 +161,33 @@ export class CommunityService {
       );
     }
     return communityWithGroups.groups;
+  }
+
+  // Loads the group into the Community entity if not already present
+  async getUserGroup(
+    community: ICommunity,
+    groupID: string
+  ): Promise<IUserGroup> {
+    const communityWithGroups = await this.getCommunityOrFail(community.id, {
+      relations: { groups: true },
+    });
+    if (!communityWithGroups.groups) {
+      throw new EntityNotInitializedException(
+        `Community not initialized: ${community.id}`,
+        LogContext.COMMUNITY
+      );
+    }
+    const result = communityWithGroups.groups.find(
+      group => group.id === groupID
+    );
+    if (!result) {
+      throw new EntityNotFoundException(
+        `Unable to find group with ID: '${groupID}'`,
+        LogContext.COMMUNITY,
+        { communityId: community.id, communityType: community.type }
+      );
+    }
+    return result;
   }
 
   async getCommunityOrFail(
@@ -425,6 +452,22 @@ export class CommunityService {
     );
   }
 
+  async getVirtualContributorsWithRole(
+    community: ICommunity,
+    role: CommunityRole
+  ): Promise<IVirtualContributor[]> {
+    const membershipCredential = this.getCredentialDefinitionForRole(
+      community,
+      role
+    );
+    return await this.virtualContributorService.virtualContributorsWithCredentials(
+      {
+        type: membershipCredential.type,
+        resourceID: membershipCredential.resourceID,
+      }
+    );
+  }
+
   async getOrganizationsWithRole(
     community: ICommunity,
     role: CommunityRole
@@ -468,8 +511,7 @@ export class CommunityService {
 
   public async getDisplayName(community: ICommunity): Promise<string> {
     return await this.communityResolverService.getDisplayNameForCommunityOrFail(
-      community.id,
-      community.type
+      community.id
     );
   }
 
@@ -482,6 +524,7 @@ export class CommunityService {
   }
 
   async assignUserToRole(
+    spaceID: string, // TODO: temporary until have spaces merged
     community: ICommunity,
     userID: string,
     role: CommunityRole,
@@ -489,14 +532,12 @@ export class CommunityService {
     triggerNewMemberEvents = false
   ): Promise<IUser> {
     const { user, agent } = await this.userService.getUserAndAgent(userID);
-    const hasMemberRoleInParent = await this.isMemberInParentCommunity(
-      agent,
-      community.id
-    );
+    const { isMember: hasMemberRoleInParent, parentCommunityId } =
+      await this.isMemberInParentCommunity(agent, community.id);
     if (!hasMemberRoleInParent) {
       throw new ValidationException(
-        `Unable to assign Agent (${agent.id}) to community (${community.id}): agent is not a member of parent community`,
-        LogContext.CHALLENGES
+        `Unable to assign Agent (${agent.id}) to community (${community.id}): agent is not a member of parent community ${parentCommunityId}`,
+        LogContext.SPACES
       );
     }
 
@@ -506,7 +547,6 @@ export class CommunityService {
       role,
       CommunityContributorType.USER
     );
-
     if (role === CommunityRole.MEMBER) {
       this.addMemberToCommunication(user, community);
 
@@ -521,6 +561,7 @@ export class CommunityService {
           const displayName = await this.getDisplayName(community);
           await this.communityEventsService.processCommunityNewMemberEvents(
             community,
+            spaceID,
             displayName,
             agentInfo,
             user
@@ -530,6 +571,39 @@ export class CommunityService {
     }
 
     return user;
+  }
+
+  async assignVirtualToRole(
+    community: ICommunity,
+    virtualContributorID: string,
+    role: CommunityRole
+  ): Promise<IVirtualContributor> {
+    const { virtualContributor, agent } =
+      await this.virtualContributorService.getVirtualContributorAndAgent(
+        virtualContributorID
+      );
+    const { isMember: hasMemberRoleInParent, parentCommunityId } =
+      await this.isMemberInParentCommunity(agent, community.id);
+    if (!hasMemberRoleInParent) {
+      if (!parentCommunityId)
+        throw new ValidationException(
+          `Unable to find parent community ${parentCommunityId}`,
+          LogContext.SPACES
+        );
+      throw new ValidationException(
+        `Unable to assign Agent (${agent.id}) to community (${community.id}): agent is not a member of parent community ${parentCommunityId}`,
+        LogContext.SPACES
+      );
+    }
+
+    virtualContributor.agent = await this.assignContributorToRole(
+      community,
+      agent,
+      role,
+      CommunityContributorType.VIRTUAL
+    );
+
+    return virtualContributor;
   }
 
   private async addMemberToCommunication(
@@ -552,7 +626,7 @@ export class CommunityService {
   private async isMemberInParentCommunity(
     agent: IAgent,
     communityID: string
-  ): Promise<boolean> {
+  ): Promise<{ parentCommunityId: string | undefined; isMember: boolean }> {
     const community = await this.getCommunityOrFail(communityID, {
       relations: { parentCommunity: true },
     });
@@ -563,9 +637,15 @@ export class CommunityService {
         agent,
         community.parentCommunity
       );
-      return isParentMember;
+      return {
+        parentCommunityId: community?.parentCommunity?.id,
+        isMember: isParentMember,
+      };
     }
-    return true;
+    return {
+      parentCommunityId: undefined,
+      isMember: true,
+    };
   }
 
   public getCommunityPolicy(community: ICommunity): ICommunityPolicy {
@@ -686,6 +766,28 @@ export class CommunityService {
     return organization;
   }
 
+  async removeVirtualFromRole(
+    community: ICommunity,
+    virtualContributorID: string,
+    role: CommunityRole,
+    validatePolicyLimits = true
+  ): Promise<IVirtualContributor> {
+    const { virtualContributor, agent } =
+      await this.virtualContributorService.getVirtualContributorAndAgent(
+        virtualContributorID
+      );
+
+    virtualContributor.agent = await this.removeContributorFromRole(
+      community,
+      agent,
+      role,
+      CommunityContributorType.VIRTUAL,
+      validatePolicyLimits
+    );
+
+    return virtualContributor;
+  }
+
   private async validateUserCommunityPolicy(
     community: ICommunity,
     communityPolicyRole: ICommunityRolePolicy,
@@ -770,6 +872,12 @@ export class CommunityService {
         role,
         action
       );
+  }
+
+  public async getSpaceID(community: ICommunity): Promise<string> {
+    return await this.communityResolverService.getRootSpaceIDFromCommunityOrFail(
+      community
+    );
   }
 
   private async assignContributorToRole(
@@ -874,13 +982,6 @@ export class CommunityService {
     return validCredential;
   }
 
-  async getCommunities(spaceId: string): Promise<Community[]> {
-    const communites = await this.communityRepository.find({
-      where: { spaceID: spaceId },
-    });
-    return communites || [];
-  }
-
   async createApplication(
     applicationData: CreateApplicationInput
   ): Promise<IApplication> {
@@ -893,15 +994,8 @@ export class CommunityService {
 
     await this.validateApplicationFromUser(user, agent, community);
 
-    const spaceID = community.spaceID;
-    if (!spaceID)
-      throw new EntityNotInitializedException(
-        `Unable to locate containing space: ${community.id}`,
-        LogContext.COMMUNITY
-      );
     const application = await this.applicationService.createApplication(
-      applicationData,
-      spaceID
+      applicationData
     );
     community.applications?.push(application);
     await this.communityRepository.save(community);
@@ -1053,25 +1147,6 @@ export class CommunityService {
         );
       }
     }
-  }
-
-  async getCommunityInAccountOrFail(
-    communityID: string,
-    accountID: string
-  ): Promise<ICommunity> {
-    const community = await this.communityRepository.findOneBy({
-      id: communityID,
-      spaceID: accountID,
-    });
-
-    if (!community) {
-      throw new EntityNotFoundException(
-        `Unable to find Community with ID: ${communityID}`,
-        LogContext.COMMUNITY
-      );
-    }
-
-    return community;
   }
 
   async getApplications(community: ICommunity): Promise<IApplication[]> {

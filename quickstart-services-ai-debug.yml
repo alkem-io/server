@@ -1,0 +1,321 @@
+version: '3.7'
+
+volumes:
+  alkemio_dev_mysql:
+  alkemio_dev_postgres:
+  tmpvolume:
+  rabbitmq_data:
+    driver: local
+
+networks:
+  alkemio_dev_net:
+
+services:
+  traefik:
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    container_name: alkemio_dev_traefik
+    image: traefik:v2.9.6
+    restart: always
+    ports:
+      - 8888:8080
+      - 8088:8088
+      - 3000:80
+      - 3306:3306
+      - 5432:5432
+      - 8008:8008
+      - 4436:4436
+      - 4437:4437
+      - 1025:1025
+      - 5672:5672
+      - 15672:15672
+      - 6379:6379
+    networks:
+      - alkemio_dev_net
+    environment:
+      - TZ=Europe/Amsterdam
+    volumes:
+      - type: bind
+        source: ./.build/traefik/
+        target: /etc/traefik/
+
+  mysql:
+    container_name: alkemio_dev_mysql
+    image: mysql:8.3.0
+    networks:
+      - alkemio_dev_net
+    environment:
+      - MYSQL_ROOT_PASSWORD
+      - MYSQL_DATABASE
+    restart: always
+    ports:
+      - 3306
+    volumes:
+      - alkemio_dev_mysql:/var/lib/mysql
+      - ./.scripts/schema.sql:/bootstrap_scripts/1.sql
+      - ./.scripts/migrations/CSVs:/tmp/CSVs
+      - tmpvolume:/tmp
+    command: --init-file /bootstrap_scripts/1.sql
+
+  kratos-migrate:
+    container_name: alkemio_dev_kratos_migrate
+    image: oryd/kratos:v1.1.0
+    depends_on:
+      - mysql
+    environment:
+      - DSN=mysql://root:${MYSQL_ROOT_PASSWORD}@tcp(${DATABASE_HOST}:3306)/kratos?max_conns=20&max_idle_conns=4
+    restart: on-failure
+    networks:
+      - alkemio_dev_net
+    volumes:
+      - type: bind
+        source: ./.build/ory/kratos
+        target: /etc/config/kratos
+    command: -c /etc/config/kratos/kratos.yml migrate sql -e --yes
+
+  kratos:
+    container_name: alkemio_dev_kratos
+    image: oryd/kratos:v1.1.0
+    depends_on:
+      - kratos-migrate
+    ports:
+      - 4433
+      - 4434
+    restart: unless-stopped
+    environment:
+      - DSN=mysql://root:${MYSQL_ROOT_PASSWORD}@tcp(${DATABASE_HOST}:3306)/kratos?max_conns=20&max_idle_conns=4
+      - LOG_LEVEL=trace
+    networks:
+      - alkemio_dev_net
+    volumes:
+      - type: bind
+        source: ./.build/ory/kratos
+        target: /etc/config/kratos
+    command: serve -c /etc/config/kratos/kratos.yml --dev --watch-courier
+
+  oathkeeper:
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    container_name: alkemio_dev_oathkeeper
+    image: oryd/oathkeeper:v0.38.19-beta.1
+    restart: always
+    depends_on:
+      - kratos
+    ports:
+      - 4455
+      - 4456
+    environment:
+      - LOG_LEVEL=debug
+    networks:
+      - alkemio_dev_net
+    volumes:
+      - ./.build/ory/oathkeeper:/etc/config/oathkeeper
+    command: serve proxy -c "/etc/config/oathkeeper/oathkeeper.yml"
+
+  mailslurper:
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    container_name: alkemio_dev_kratos_mailslurper
+    image: oryd/mailslurper:latest-smtps
+    restart: always
+    ports:
+      - 4436
+      - 4437
+      - 1025
+    networks:
+      - alkemio_dev_net
+
+  synapse:
+    container_name: alkemio_dev_synapse
+    image: matrixdotorg/synapse:v1.82.0
+    depends_on:
+      - postgres
+    restart: always
+    environment:
+      - SYNAPSE_NO_TLS=true
+      - SYNAPSE_ENABLE_REGISTRATION=true
+      - SYNAPSE_HOMESERVER_NAME
+      - SYNAPSE_SERVER_URL
+      - SYNAPSE_SERVER_SHARED_SECRET
+    networks:
+      - alkemio_dev_net
+    ports:
+      - 8008
+    volumes:
+      - type: bind
+        source: ./.build/synapse
+        target: /data
+
+  postgres:
+    container_name: alkemio_dev_postgres
+    image: postgres:12
+    networks:
+      - alkemio_dev_net
+    environment:
+      - POSTGRES_DB=synapse
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_INITDB_ARGS=--encoding=UTF8 --lc-collate=C --lc-ctype=C
+    restart: always
+    ports:
+      - 5432
+    volumes:
+      - alkemio_dev_postgres:/var/lib/postgresql/data
+
+  rabbitmq:
+    container_name: alkemio_dev_rabbitmq
+    image: rabbitmq:3.9.13-management
+    restart: always
+    networks:
+      - alkemio_dev_net
+    ports:
+      - 5672
+      - 15672
+    environment:
+      - RABBITMQ_SECURE_PASSWORD=yes
+      - RABBITMQ_DEFAULT_USER=alkemio-admin
+      - RABBITMQ_DEFAULT_PASS=alkemio!
+    healthcheck:
+      test: rabbitmq-diagnostics check_port_connectivity
+      interval: 30s
+      timeout: 30s
+      retries: 10
+    volumes:
+      - ~/.docker-conf/rabbitmq/data/:/var/lib/rabbitmq/mnesia
+      - ~/.docker-conf/rabbitmq/log/:/var/log/rabbitmq
+    command:
+      [
+        'bash',
+        '-c',
+        'chmod 400 /var/lib/rabbitmq/.erlang.cookie; rabbitmq-server --hostname rmq',
+      ]
+
+  matrix-adapter:
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    container_name: alkemio_dev_matrix_adapter
+    hostname: matrix-adapter
+    image: alkemio/matrix-adapter:v0.3.1
+    environment:
+      - RABBITMQ_HOST
+      - RABBITMQ_USER
+      - RABBITMQ_PASSWORD
+      - SYNAPSE_HOMESERVER_NAME
+      - SYNAPSE_SERVER_URL
+      - SYNAPSE_SERVER_SHARED_SECRET
+      - SYNAPSE_SERVER_NAME
+      - LOGGING_CONSOLE_ENABLED
+      - LOGGING_LEVEL_CONSOLE
+      - ENVIRONMENT=dev
+      - WAIT_HOSTS=host.docker.internal:3000
+      - WAIT_HOSTS_TIMEOUT=300
+      - WAIT_SLEEP_INTERVAL=30
+      - WAIT_HOST_CONNECT_TIMEOUT=30
+    restart: always
+    networks:
+      - alkemio_dev_net
+    command: sh -c "/wait && npm run start"
+
+  redis:
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    container_name: alkemio_dev_redis
+    hostname: redis
+    image: redis:7.0.2
+    restart: always
+    networks:
+      - alkemio_dev_net
+    ports:
+      - 6379
+
+  guidance_engine:
+    container_name: alkemio_dev_guidance_engine
+    hostname: guidance-engine
+    build:
+      context: '../guidance-engine'
+      dockerfile: ../guidance-engine/Dockerfile
+    platform: linux/x86_64
+    restart: always
+    volumes:
+       - /dev/shm:/dev/shm
+       - ~/alkemio/data:${AI_LOCAL_PATH:-/home/alkemio/data}
+    networks:
+      - alkemio_dev_net
+    depends_on:
+      rabbitmq:
+        condition: "service_healthy"
+    environment:
+      - RABBITMQ_HOST
+      - RABBITMQ_USER
+      - RABBITMQ_PASSWORD
+      - ENVIRONMENT=dev
+      - EMBEDDINGS_DEPLOYMENT_NAME
+      - AZURE_OPENAI_API_KEY
+      - AZURE_OPENAI_ENDPOINT
+      - OPENAI_API_VERSION
+      - AI_MODEL_TEMPERATURE
+      - AI_SOURCE_WEBSITE
+      - AI_SOURCE_WEBSITE2
+      - AI_WEBSITE_REPO
+      - AI_WEBSITE_REPO2
+      - AI_LOCAL_PATH
+      - AI_GITHUB_USER
+      - AI_GITHUB_PAT
+      - LLM_DEPLOYMENT_NAME
+      - LANGCHAIN_TRACING_V2
+      - LANGCHAIN_ENDPOINT
+      - LANGCHAIN_API_KEY
+      - LANGCHAIN_PROJECT
+  community-manager:
+    container_name: alkemio_dev_community_manager
+    hostname: community-manager
+    build:
+      context: '../community-manager-engine'
+      dockerfile: ../community-manager-engine/Dockerfile
+    platform: linux/x86_64
+    restart: always
+    volumes:
+       - /dev/shm:/dev/shm
+       - ~/alkemio/data:${AI_LOCAL_PATH:-/home/alkemio/data}
+    networks:
+      - alkemio_dev_net
+    depends_on:
+      rabbitmq:
+        condition: "service_healthy"
+
+  virtual_contributor:
+    container_name: alkemio_dev_virtual_contributor
+    hostname: virtual-contributor
+    build:
+      context: '../virtual-contributor-service'
+      dockerfile: ../virtual-contributor-service/Dockerfile
+    platform: linux/x86_64
+    restart: always
+    volumes:
+       - /dev/shm:/dev/shm
+       - ~/alkemio/data:${AI_LOCAL_PATH:-/home/alkemio/data}
+    networks:
+      - alkemio_dev_net
+    depends_on:
+      rabbitmq:
+        condition: "service_healthy"
+    environment:
+      - RABBITMQ_HOST
+      - RABBITMQ_USER
+      - RABBITMQ_PASSWORD
+      - RABBITMQ_QUEUE=virtual-persona-engine-alkemio-digileefomgeving
+      - ENVIRONMENT=dev
+      - LOG_LEVEL=DEBUG
+      - EMBEDDINGS_DEPLOYMENT_NAME
+      - AZURE_OPENAI_API_KEY
+      - AZURE_OPENAI_ENDPOINT
+      - OPENAI_API_VERSION
+      - AI_MODEL_TEMPERATURE
+      - AI_LOCAL_PATH
+      - LLM_DEPLOYMENT_NAME
+      - LANGCHAIN_TRACING_V2
+      - LANGCHAIN_ENDPOINT
+      - LANGCHAIN_API_KEY
+      - LANGCHAIN_PROJECT
+
+        # 4b262af068ff4546a69b996bea9e41cb

@@ -73,8 +73,10 @@ export class CommunityInvitationLifecycleOptionsProvider {
               `Lifecycle not initialized on Application: ${invitation.id}`,
               LogContext.COMMUNITY
             );
+          const spaceID = await this.communityService.getSpaceID(community);
 
           await this.communityService.assignUserToRole(
+            spaceID,
             community,
             userID,
             CommunityRole.MEMBER,

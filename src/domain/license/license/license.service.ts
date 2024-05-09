@@ -16,19 +16,27 @@ import { CreateFeatureFlagInput } from '../feature-flag/dto/feature.flag.dto.cre
 import { FeatureFlagService } from '../feature-flag/feature.flag.service';
 import { FeatureFlag } from '../feature-flag/feature.flag.entity';
 import { matchEnumString } from '@common/utils/match.enum';
+import { CreateLicenseInput } from './dto/license.dto.create';
+import { LicensePrivilege } from '@common/enums/license.privilege';
+import { LicenseEngineService } from '@core/license-engine/license.engine.service';
 
 @Injectable()
 export class LicenseService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private featureFlagService: FeatureFlagService,
+    private licenseEngineService: LicenseEngineService,
     @InjectRepository(License)
     private licenseRepository: Repository<License>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  public async createLicense(): Promise<ILicense> {
+  public async createLicense(
+    licenseInput: CreateLicenseInput
+  ): Promise<ILicense> {
     const license: ILicense = License.create();
+    this.updateLicense(license, licenseInput);
+
     license.authorization = AuthorizationPolicy.create();
     // default to active space
     license.visibility = SpaceVisibility.ACTIVE;
@@ -42,9 +50,15 @@ export class LicenseService {
       name: LicenseFeatureFlagName.CALLOUT_TO_CALLOUT_TEMPLATE,
       enabled: false,
     };
+    const vcFeatureFlag: CreateFeatureFlagInput = {
+      name: LicenseFeatureFlagName.VIRTUAL_CONTRIBUTORS,
+      enabled: false,
+    };
+
     const featureFlagInputs: ILicenseFeatureFlag[] = [
       whiteboardRtFeatureFlag,
       calloutToCalloutTemplateFeatureFlag,
+      vcFeatureFlag,
     ];
     license.featureFlags = [];
     for (const featureFlagInput of featureFlagInputs) {
@@ -138,13 +152,10 @@ export class LicenseService {
     return license.featureFlags;
   }
 
-  public async isFeatureFlagEnabled(
-    license: ILicense,
-    flag: LicenseFeatureFlagName
-  ): Promise<boolean> {
-    const featureFlags = await this.getFeatureFlags(license.id);
-    const requestedFlag = featureFlags.find(f => f.name === flag);
-    if (requestedFlag) return requestedFlag.enabled;
-    return false;
+  async getLicensePrivileges(license: ILicense): Promise<LicensePrivilege[]> {
+    const privileges = await this.licenseEngineService.getGrantedPrivileges(
+      license
+    );
+    return privileges;
   }
 }

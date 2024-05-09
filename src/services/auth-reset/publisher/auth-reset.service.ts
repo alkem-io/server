@@ -2,7 +2,6 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { InjectEntityManager } from '@nestjs/typeorm';
-import { Space } from '@domain/challenge/space/space.entity';
 import { ClientProxy } from '@nestjs/microservices';
 import { User } from '@domain/community/user';
 import { Organization } from '@domain/community/organization';
@@ -12,6 +11,7 @@ import { TaskService } from '@services/task/task.service';
 import { AUTH_RESET_EVENT_TYPE } from '../event.type';
 import { AuthResetEventPayload } from '../auth-reset.payload.interface';
 import { BaseException } from '@common/exceptions/base.exception';
+import { Account } from '@domain/space/account/account.entity';
 
 @Injectable()
 export class AuthResetService {
@@ -28,7 +28,7 @@ export class AuthResetService {
     const task = taskId ? { id: taskId } : await this.taskService.create();
 
     try {
-      await this.publishAllSpaceReset(task.id);
+      await this.publishAllAccountsReset(task.id);
       await this.publishAllOrganizationsReset(task.id);
       await this.publishAllUsersReset(task.id);
       await this.publishPlatformReset();
@@ -43,19 +43,19 @@ export class AuthResetService {
     return task.id;
   }
 
-  public async publishAllSpaceReset(taskId?: string) {
-    const spaces = await this.manager.find(Space, {
+  public async publishAllAccountsReset(taskId?: string) {
+    const accounts = await this.manager.find(Account, {
       select: { id: true },
     });
 
     const task = taskId
       ? { id: taskId }
-      : await this.taskService.create(spaces.length);
+      : await this.taskService.create(accounts.length);
 
-    spaces.forEach(({ id }) =>
+    accounts.forEach(({ id }) =>
       this.authResetQueue.emit<any, AuthResetEventPayload>(
-        AUTH_RESET_EVENT_TYPE.SPACE,
-        { id, type: AUTH_RESET_EVENT_TYPE.SPACE, task: task.id }
+        AUTH_RESET_EVENT_TYPE.ACCOUNT,
+        { id, type: AUTH_RESET_EVENT_TYPE.ACCOUNT, task: task.id }
       )
     );
 

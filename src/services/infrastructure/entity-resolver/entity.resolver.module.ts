@@ -6,17 +6,17 @@ import { IdentityResolverService } from './identity.resolver.service';
 import { CommunityResolverService } from './community.resolver.service';
 import { Community } from '@domain/community/community/community.entity';
 import { Communication } from '@domain/communication/communication/communication.entity';
-import { Profile } from '@domain/common/profile/profile.entity';
 import { TimelineResolverService } from './timeline.resolver.service';
 import { ContributionResolverService } from './contribution.resolver.service';
+import { VirtualContributor } from '@domain/community/virtual-contributor';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([User]),
+    TypeOrmModule.forFeature([VirtualContributor]),
     TypeOrmModule.forFeature([Discussion]),
     TypeOrmModule.forFeature([Community]),
     TypeOrmModule.forFeature([Communication]),
-    TypeOrmModule.forFeature([Profile]),
   ],
   providers: [
     IdentityResolverService,

@@ -23,8 +23,6 @@ import { IProfile } from '@domain/common/profile';
 import { ProfileDocumentsService } from '@domain/profile-documents/profile.documents.service';
 import { CalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.entity';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
-import { LicenseFeatureFlagName } from '@common/enums/license.feature.flag.name';
-import { Space } from '@domain/challenge/space/space.entity';
 import { AuthorizationPolicy } from '../authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import { ProfileService } from '../profile/profile.service';
@@ -35,6 +33,8 @@ import { UpdateWhiteboardInput } from './dto/whiteboard.dto.update';
 import { WhiteboardAuthorizationService } from './whiteboard.service.authorization';
 import { WHITEBOARD_CONTENT_UPDATE } from './events/event.names';
 import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
+import { LicenseEngineService } from '@core/license-engine/license.engine.service';
+import { LicensePrivilege } from '@common/enums/license.privilege';
 
 @Injectable()
 export class WhiteboardService {
@@ -45,10 +45,11 @@ export class WhiteboardService {
     @InjectRepository(Whiteboard)
     private whiteboardRepository: Repository<Whiteboard>,
     private authorizationPolicyService: AuthorizationPolicyService,
+    private licenseEngineService: LicenseEngineService,
     private profileService: ProfileService,
     private profileDocumentsService: ProfileDocumentsService,
     private whiteboardAuthService: WhiteboardAuthorizationService,
-    private communityResolver: CommunityResolverService,
+    private communityResolverService: CommunityResolverService,
     @InjectEntityManager() private entityManager: EntityManager
   ) {}
 
@@ -93,7 +94,7 @@ export class WhiteboardService {
     if (!whiteboard)
       throw new EntityNotFoundException(
         `Not able to locate Whiteboard with the specified ID: ${whiteboardID}`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     return whiteboard;
   }
@@ -109,14 +110,14 @@ export class WhiteboardService {
     if (!whiteboard.profile) {
       throw new RelationshipNotFoundException(
         `Profile not found on whiteboard: '${whiteboard.id}'`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     }
 
     if (!whiteboard.authorization) {
       throw new RelationshipNotFoundException(
         `Authorization not found on whiteboard: '${whiteboard.id}'`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     }
 
@@ -220,51 +221,22 @@ export class WhiteboardService {
     return savedWhiteboard;
   }
 
-  async isMultiUser(whiteboardId: string): Promise<boolean | never> {
+  async isMultiUser(whiteboardId: string): Promise<boolean> {
     const community =
-      await this.communityResolver.getCommunityFromWhiteboardOrFail(
+      await this.communityResolverService.getCommunityFromWhiteboardOrFail(
         whiteboardId
       );
-
-    const space = await this.entityManager.findOneOrFail(Space, {
-      relations: {
-        account: {
-          license: {
-            featureFlags: true,
-          },
-        },
-      },
-      where: { id: community.spaceID },
-    });
-    const license = space.account?.license;
-
-    if (!license) {
-      throw new EntityNotFoundException(
-        'Feature flag not found',
-        LogContext.COLLABORATION,
-        {
-          spaceId: community.spaceID,
-        }
+    const license =
+      await this.communityResolverService.getLicenseFromCommunityOrFail(
+        community
       );
-    }
 
-    const whiteboardMultiUserFeatureFlag = license.featureFlags?.find(
-      x => x.name === LicenseFeatureFlagName.WHITEBOARD_MULTI_USER
+    const enabled = await this.licenseEngineService.isAccessGranted(
+      LicensePrivilege.WHITEBOARD_MULTI_USER,
+      license
     );
 
-    if (!whiteboardMultiUserFeatureFlag) {
-      throw new EntityNotFoundException(
-        'Feature flag not found',
-        LogContext.COLLABORATION,
-        {
-          spaceId: community.spaceID,
-          featureFlagName: LicenseFeatureFlagName.WHITEBOARD_MULTI_USER,
-          licenseId: license.id,
-        }
-      );
-    }
-
-    return whiteboardMultiUserFeatureFlag.enabled;
+    return enabled;
   }
 
   public async getProfile(

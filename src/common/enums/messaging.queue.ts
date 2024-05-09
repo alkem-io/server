@@ -1,5 +1,7 @@
 export enum MessagingQueue {
-  CHAT_GUIDANCE = 'alkemio-chat-guidance',
+  VIRTUAL_PERSONA_ENGINE_CHAT_GUIDANCE = 'alkemio-chat-guidance',
+  VIRTUAL_PERSONA_ENGINE_COMMUNITY_MANAGER = 'virtual-persona-engine-community-manager',
+  VIRTUAL_PERSONA_ENGINE_ALKEMIO_DIGILEEFOMGEVING = 'virtual-persona-engine-alkemio-digileefomgeving',
   WALLET_MANAGER = 'alkemio-wallet-manager',
   NOTIFICATIONS = 'alkemio-notifications',
   MATRIX_ADAPTER = 'alkemio-matrix-adapter',
@@ -9,8 +11,7 @@ export enum MessagingQueue {
   SUBSCRIPTION_PROFILE_VERIFIED_CREDENTIAL = 'alkemio-subscriptions-profile-verified-credential',
   SUBSCRIPTION_CALLOUT_POST_CREATED = 'alkemio-subscriptions-callout-post-created',
   SUBSCRIPTION_DISCUSSION_UPDATED = 'alkemio-subscriptions-discussion-updated',
-  SUBSCRIPTION_OPPORTUNITY_CREATED = 'alkemio-subscriptions-opportunity-created',
-  SUBSCRIPTION_CHALLENGE_CREATED = 'alkemio-subscriptions-challenge-created',
+  SUBSCRIPTION_SUBSPACE_CREATED = 'alkemio-subscriptions-subspace-created',
   SUBSCRIPTION_ACTIVITY_CREATED = 'alkemio-subscriptions-activity-created',
   SUBSCRIPTION_ROOM_EVENT = 'alkemio-subscriptions-room-event',
 }

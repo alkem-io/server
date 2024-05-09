@@ -3,7 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { InnovationHubService } from './innovation.hub.service';
 import { InnovationHub } from './innovation.hub.entity';
 import { InnovationHubFieldResolver } from './innovation.hub.field.resolver';
-import { SpaceModule } from '@domain/challenge/space/space.module';
+import { SpaceModule } from '@domain/space/space/space.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { InnovationHubAuthorizationService } from '@domain/innovation-hub/innovation.hub.service.authorization';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';

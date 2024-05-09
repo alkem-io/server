@@ -2,9 +2,9 @@ import { ICredential } from '@src/domain';
 import { AuthorizationCredential, CredentialRole } from '@common/enums';
 
 export type EntityCredentialType =
+  | 'accounts'
   | 'spaces'
-  | 'challenges'
-  | 'opportunities'
+  | 'subspaces'
   | 'organizations'
   | 'groups';
 
@@ -25,27 +25,20 @@ export type CredentialMap = Map<
  */
 export const groupCredentialsByEntity = (credentials: ICredential[]) => {
   return credentials.reduce<CredentialMap>((map, credential) => {
-    if (
+    if (credential.type === AuthorizationCredential.ACCOUNT_HOST) {
+      return setMap(map, 'accounts', credential);
+    } else if (
       credential.type === AuthorizationCredential.SPACE_ADMIN ||
-      credential.type === AuthorizationCredential.SPACE_HOST ||
       credential.type === AuthorizationCredential.SPACE_LEAD ||
       credential.type === AuthorizationCredential.SPACE_MEMBER
     ) {
       return setMap(map, 'spaces', credential);
     } else if (
-      credential.type === AuthorizationCredential.CHALLENGE_ADMIN ||
-      credential.type === AuthorizationCredential.CHALLENGE_HOST ||
-      credential.type === AuthorizationCredential.CHALLENGE_LEAD ||
-      credential.type === AuthorizationCredential.CHALLENGE_MEMBER
+      credential.type === AuthorizationCredential.SUBSPACE_ADMIN ||
+      credential.type === AuthorizationCredential.SUBSPACE_LEAD ||
+      credential.type === AuthorizationCredential.SUBSPACE_MEMBER
     ) {
-      return setMap(map, 'challenges', credential);
-    } else if (
-      credential.type === AuthorizationCredential.OPPORTUNITY_ADMIN ||
-      credential.type === AuthorizationCredential.OPPORTUNITY_HOST ||
-      credential.type === AuthorizationCredential.OPPORTUNITY_LEAD ||
-      credential.type === AuthorizationCredential.OPPORTUNITY_MEMBER
-    ) {
-      return setMap(map, 'opportunities', credential);
+      return setMap(map, 'subspaces', credential);
     } else if (
       credential.type === AuthorizationCredential.ORGANIZATION_ADMIN ||
       credential.type === AuthorizationCredential.ORGANIZATION_OWNER ||
@@ -89,21 +82,16 @@ const credentialTypeToRole = (
 ): CredentialRole => {
   const roleMap: Partial<Record<AuthorizationCredential, CredentialRole>> = {
     [AuthorizationCredential.SPACE_ADMIN]: CredentialRole.ADMIN,
-    [AuthorizationCredential.CHALLENGE_ADMIN]: CredentialRole.ADMIN,
-    [AuthorizationCredential.OPPORTUNITY_ADMIN]: CredentialRole.ADMIN,
+    [AuthorizationCredential.SUBSPACE_ADMIN]: CredentialRole.ADMIN,
     [AuthorizationCredential.ORGANIZATION_ADMIN]: CredentialRole.ADMIN,
 
-    [AuthorizationCredential.SPACE_HOST]: CredentialRole.HOST,
-    [AuthorizationCredential.CHALLENGE_HOST]: CredentialRole.HOST,
-    [AuthorizationCredential.OPPORTUNITY_HOST]: CredentialRole.HOST,
+    [AuthorizationCredential.ACCOUNT_HOST]: CredentialRole.HOST,
 
     [AuthorizationCredential.SPACE_LEAD]: CredentialRole.LEAD,
-    [AuthorizationCredential.CHALLENGE_LEAD]: CredentialRole.LEAD,
-    [AuthorizationCredential.OPPORTUNITY_LEAD]: CredentialRole.LEAD,
+    [AuthorizationCredential.SUBSPACE_LEAD]: CredentialRole.LEAD,
 
     [AuthorizationCredential.SPACE_MEMBER]: CredentialRole.MEMBER,
-    [AuthorizationCredential.CHALLENGE_MEMBER]: CredentialRole.MEMBER,
-    [AuthorizationCredential.OPPORTUNITY_MEMBER]: CredentialRole.MEMBER,
+    [AuthorizationCredential.SUBSPACE_MEMBER]: CredentialRole.MEMBER,
 
     [AuthorizationCredential.ORGANIZATION_ASSOCIATE]: CredentialRole.ASSOCIATE,
     [AuthorizationCredential.ORGANIZATION_OWNER]: CredentialRole.OWNER,

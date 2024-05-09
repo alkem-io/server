@@ -67,7 +67,7 @@ export class ActorGroupService {
     if (!actorGroup)
       throw new EntityNotFoundException(
         `Not able to locate actorGroup with the specified ID: ${actorGroupID}`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     return actorGroup;
   }
@@ -79,7 +79,7 @@ export class ActorGroupService {
     if (!actorGroup.actors)
       throw new GroupNotInitializedException(
         `Non-initialised ActorGroup: ${actorData.actorGroupID}`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     actorGroup.actors.push(actor);
 

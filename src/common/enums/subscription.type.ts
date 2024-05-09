@@ -4,8 +4,7 @@ export enum SubscriptionType {
   WHITEBOARD_CONTENT_UPDATED = 'whiteboardContentUpdated',
   PROFILE_VERIFIED_CREDENTIAL = 'profileVerifiedCredential',
   CALLOUT_POST_CREATED = 'calloutPostCreated',
-  OPPORTUNITY_CREATED = 'opportunityCreated',
-  CHALLENGE_CREATED = 'challengeCreated',
+  SUBSPACE_CREATED = 'subspaceCreated',
   ACTIVITY_CREATED = 'activityCreated',
   ROOM_EVENTS = 'roomEvents',
 }

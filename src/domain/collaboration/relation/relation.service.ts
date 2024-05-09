@@ -28,7 +28,7 @@ export class RelationService {
     if (!allowedRelationTypes.includes(relationData.type))
       throw new RelationshipNotFoundException(
         `Invalid relation type supplied: ${relationData.type}`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     const relation = Relation.create({ ...relationData });
     relation.authorization = new AuthorizationPolicy();
@@ -65,7 +65,7 @@ export class RelationService {
     if (!relation)
       throw new EntityNotFoundException(
         `Not able to locate relation with the specified ID: ${relationID}`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     return relation;
   }

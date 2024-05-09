@@ -31,9 +31,9 @@ import {
 } from '@common/constants';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
-import { OrganizationService } from '@domain/community/organization/organization.service';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
+import { LicensePolicyAuthorizationService } from '@platform/license-policy/license.policy.service.authorization';
 
 @Injectable()
 export class PlatformAuthorizationService {
@@ -45,8 +45,8 @@ export class PlatformAuthorizationService {
     private platformService: PlatformService,
     private innovationHubService: InnovationHubService,
     private innovationHubAuthorizationService: InnovationHubAuthorizationService,
+    private licensePolicyAuthorizationService: LicensePolicyAuthorizationService,
     private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
-    private organizationService: OrganizationService,
     @InjectRepository(Platform)
     private platformRepository: Repository<Platform>
   ) {}
@@ -55,10 +55,6 @@ export class PlatformAuthorizationService {
     const platform = await this.platformService.getPlatformOrFail({
       relations: {
         authorization: true,
-        library: {
-          innovationPacks: true,
-        },
-        communication: true,
       },
     });
 
@@ -122,13 +118,15 @@ export class PlatformAuthorizationService {
         },
         communication: true,
         storageAggregator: true,
+        licensePolicy: true,
       },
     });
 
     if (
       !platform.library ||
       !platform.communication ||
-      !platform.storageAggregator
+      !platform.storageAggregator ||
+      !platform.licensePolicy
     )
       throw new RelationshipNotFoundException(
         `Unable to load entities for platform: ${platform.id} `,
@@ -150,10 +148,11 @@ export class PlatformAuthorizationService {
     const extendedAuthPolicy = await this.appendCredentialRulesCommunication(
       copyPlatformAuthorization
     );
-    await this.communicationAuthorizationService.applyAuthorizationPolicy(
-      platform.communication,
-      extendedAuthPolicy
-    );
+    platform.communication =
+      await this.communicationAuthorizationService.applyAuthorizationPolicy(
+        platform.communication,
+        extendedAuthPolicy
+      );
 
     platform.storageAggregator =
       await this.storageAggregatorAuthorizationService.applyAuthorizationPolicy(
@@ -168,12 +167,17 @@ export class PlatformAuthorizationService {
     const innovationHubs = await this.innovationHubService.getInnovationHubs({
       relations: {},
     });
-
     for (const innovationHub of innovationHubs) {
       this.innovationHubAuthorizationService.applyAuthorizationPolicyAndSave(
         innovationHub
       );
     }
+
+    platform.licensePolicy =
+      await this.licensePolicyAuthorizationService.applyAuthorizationPolicy(
+        platform.licensePolicy,
+        platform.authorization
+      );
     return platform;
   }
 
@@ -305,7 +309,7 @@ export class PlatformAuthorizationService {
         ],
         CREDENTIAL_RULE_TYPES_PLATFORM_AUTH_RESET
       );
-    platformAdmin.cascade = false;
+    platformResetAuth.cascade = false;
     credentialRules.push(platformResetAuth);
 
     // Allow all registered users to query non-protected user information
@@ -323,7 +327,7 @@ export class PlatformAuthorizationService {
         [AuthorizationPrivilege.CREATE_ORGANIZATION],
         [
           AuthorizationCredential.SPACE_ADMIN,
-          AuthorizationCredential.CHALLENGE_ADMIN,
+          AuthorizationCredential.SUBSPACE_ADMIN,
         ],
         CREDENTIAL_RULE_TYPES_PLATFORM_ANY_ADMIN
       );
@@ -338,8 +342,8 @@ export class PlatformAuthorizationService {
           AuthorizationCredential.GLOBAL_ADMIN_SPACES,
           AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY,
           AuthorizationCredential.SPACE_ADMIN,
-          AuthorizationCredential.OPPORTUNITY_ADMIN,
-          AuthorizationCredential.CHALLENGE_ADMIN,
+          AuthorizationCredential.SUBSPACE_ADMIN,
+          AuthorizationCredential.SUBSPACE_ADMIN,
           AuthorizationCredential.ORGANIZATION_ADMIN,
         ],
         CREDENTIAL_RULE_TYPES_PLATFORM_ANY_ADMIN

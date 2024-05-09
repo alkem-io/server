@@ -1,19 +1,19 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { groupCredentialsByEntity } from '@services/api/roles/util/group.credentials.by.entity';
-import { SpaceService } from '@domain/challenge/space/space.service';
+import { SpaceService } from '@domain/space/space/space.service';
 import { RolesService } from '../roles/roles.service';
 import { ApplicationForRoleResult } from '../roles/dto/roles.dto.result.application';
 import { InvitationForRoleResult } from '../roles/dto/roles.dto.result.invitation';
-import { ISpace } from '@domain/challenge/space/space.interface';
-import { SpacesQueryArgs } from '@domain/challenge/space/dto/space.args.query.spaces';
+import { ISpace } from '@domain/space/space/space.interface';
+import { SpacesQueryArgs } from '@domain/space/space/dto/space.args.query.spaces';
 import { ActivityLogService } from '../activity-log';
 import { AgentInfo } from '@core/authentication';
-import { MyJourneyResults } from './dto/my.journeys.results';
+import { MySpaceResults } from './dto/my.journeys.results';
 import { ActivityService } from '@platform/activity/activity.service';
 import { LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { sortSpacesByActivity } from '@domain/challenge/space/sort.spaces.by.activity';
+import { sortSpacesByActivity } from '@domain/space/space/sort.spaces.by.activity';
 
 @Injectable()
 export class MeService {
@@ -56,7 +56,7 @@ export class MeService {
       },
     };
 
-    // get spaces and their children challenges and opportunities
+    // get spaces and their subspaces
     const spaces = await this.spaceService.getSpacesWithChildJourneys(args);
 
     const spaceMembershipCollaborationInfo =
@@ -71,34 +71,34 @@ export class MeService {
     return sortSpacesByActivity(spaces, latestActivitiesPerSpace);
   }
 
-  public async getMyJourneys(
+  public async getMySpaces(
     agentInfo: AgentInfo,
     limit = 20
-  ): Promise<MyJourneyResults[]> {
-    const rawActivities = await this.activityService.getMyJourneysActivity(
+  ): Promise<MySpaceResults[]> {
+    const rawActivities = await this.activityService.getMySpacesActivity(
       agentInfo.userID,
       limit * 2 //magic number, should not be needed. toDo Fix in https://app.zenhub.com/workspaces/alkemio-development-5ecb98b262ebd9f4aec4194c/issues/gh/alkem-io/server/3626
     );
 
-    const myJourneyResults: MyJourneyResults[] = [];
+    const mySpaceResults: MySpaceResults[] = [];
 
     for (const rawActivity of rawActivities) {
       const activityLog =
         await this.activityLogService.convertRawActivityToResult(rawActivity);
 
-      if (!activityLog?.journey) {
+      if (!activityLog?.space) {
         this.logger.warn(
           `Unable to process activity entry ${rawActivity.id} because it does not have a journey.`,
           LogContext.ACTIVITY
         );
         continue;
       }
-      myJourneyResults.push({
-        journey: activityLog.journey,
+      mySpaceResults.push({
+        space: activityLog.space,
         latestActivity: activityLog,
       });
     }
 
-    return myJourneyResults.slice(0, limit);
+    return mySpaceResults.slice(0, limit);
   }
 }

@@ -12,7 +12,7 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { IInnovationHub, InnovationHub, InnovationHubType } from './types';
 import { CreateInnovationHubInput, UpdateInnovationHubInput } from './dto';
 import { InnovationHubAuthorizationService } from './innovation.hub.service.authorization';
-import { SpaceService } from '@domain/challenge/space/space.service';
+import { SpaceService } from '@domain/space/space/space.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';

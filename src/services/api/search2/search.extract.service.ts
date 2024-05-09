@@ -1,10 +1,8 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { intersection } from 'lodash';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Client as ElasticClient } from '@elastic/elasticsearch';
-import {
-  QueryDslFunctionScoreContainer,
-  QueryDslQueryContainer,
-} from '@elastic/elasticsearch/lib/api/types';
 import { SearchInput } from '@services/api/search';
 import { validateSearchParameters } from '@services/api/search/util/validate.search.parameters';
 import { validateSearchTerms } from '@services/api/search/util/validate.search.terms';
@@ -17,52 +15,29 @@ import {
   LogContext,
 } from '@common/enums';
 import { BaseException } from '@common/exceptions/base.exception';
-import { ConfigService } from '@nestjs/config';
+import { functionScoreFunctions } from '@services/api/search2/function.score.functions';
+import { buildSearchQuery } from './build.search.query';
+import { SearchEntityTypes } from './search.entity.types';
 
-enum SearchEntityTypes {
-  USER = 'user',
-  ORGANIZATION = 'organization',
-  SPACE = 'space',
-  CHALLENGE = 'challenge',
-  OPPORTUNITY = 'opportunity',
-  POST = 'post',
-}
-
-type SearchEntityTypesPublic = Exclude<
-  SearchEntityTypes,
-  SearchEntityTypes.USER | SearchEntityTypes.ORGANIZATION
->;
+type SearchEntityTypesPublic =
+  | SearchEntityTypes.SPACE
+  | SearchEntityTypes.SUBSPACE
+  | SearchEntityTypes.POST;
 
 const TYPE_TO_INDEX = (
   indexPattern: string
 ): Record<SearchEntityTypes, string> => ({
   [SearchEntityTypes.SPACE]: `${indexPattern}spaces`,
-  [SearchEntityTypes.CHALLENGE]: `${indexPattern}challenges`,
-  [SearchEntityTypes.OPPORTUNITY]: `${indexPattern}opportunities`,
+  [SearchEntityTypes.SUBSPACE]: `${indexPattern}subspaces`,
   [SearchEntityTypes.POST]: `${indexPattern}posts`,
   [SearchEntityTypes.USER]: `${indexPattern}users`,
   [SearchEntityTypes.ORGANIZATION]: `${indexPattern}organizations`,
-});
-const INDEX_TO_TYPE = (
-  indexPattern: string
-): Record<string, SearchEntityTypes> => ({
-  [TYPE_TO_INDEX(indexPattern)[SearchEntityTypes.SPACE]]:
-    SearchEntityTypes.SPACE,
-  [TYPE_TO_INDEX(indexPattern)[SearchEntityTypes.CHALLENGE]]:
-    SearchEntityTypes.CHALLENGE,
-  [TYPE_TO_INDEX(indexPattern)[SearchEntityTypes.OPPORTUNITY]]:
-    SearchEntityTypes.OPPORTUNITY,
-  [TYPE_TO_INDEX(indexPattern)[SearchEntityTypes.POST]]: SearchEntityTypes.POST,
-  [TYPE_TO_INDEX(indexPattern)[SearchEntityTypes.USER]]: SearchEntityTypes.USER,
-  [TYPE_TO_INDEX(indexPattern)[SearchEntityTypes.ORGANIZATION]]:
-    SearchEntityTypes.ORGANIZATION,
 });
 const TYPE_TO_PUBLIC_INDEX = (
   indexPattern: string
 ): Record<SearchEntityTypesPublic, string> => ({
   [SearchEntityTypes.SPACE]: `${indexPattern}spaces`,
-  [SearchEntityTypes.CHALLENGE]: `${indexPattern}challenges`,
-  [SearchEntityTypes.OPPORTUNITY]: `${indexPattern}opportunities`,
+  [SearchEntityTypes.SUBSPACE]: `${indexPattern}subspaces`,
   [SearchEntityTypes.POST]: `${indexPattern}posts`,
 });
 
@@ -71,29 +46,30 @@ const DEFAULT_INDEX_PATTERN = 'alkemio-data-';
 
 @Injectable()
 export class SearchExtractService {
-  private readonly client: ElasticClient;
   private readonly indexPattern: string;
   private readonly maxResults: number;
 
   constructor(
     @Inject(ELASTICSEARCH_CLIENT_PROVIDER)
-    elasticClient: ElasticClient | undefined,
+    private client: ElasticClient | undefined,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService,
     private configService: ConfigService
   ) {
-    this.client = elasticClient!;
-
-    const pattern =
+    this.indexPattern =
       this.configService.get(ConfigurationTypes.SEARCH)?.index_pattern ??
       DEFAULT_INDEX_PATTERN;
-    const prefix =
-      this.configService.get(ConfigurationTypes.SEARCH)?.index_pattern_prefix ??
-      '';
-
-    this.indexPattern = `${prefix}${prefix ? '-' : ''}${pattern}`;
     this.maxResults =
       this.configService.get(ConfigurationTypes.SEARCH)?.max_results ??
       DEFAULT_MAX_RESULTS;
+
+    if (!client) {
+      this.logger.error(
+        'Elasticsearch client not initialized',
+        undefined,
+        LogContext.SEARCH_EXTRACT
+      );
+      return;
+    }
   }
 
   public async search(
@@ -103,6 +79,7 @@ export class SearchExtractService {
     if (!this.client) {
       throw new Error('Elasticsearch client not initialized');
     }
+
     validateSearchParameters(searchData);
     const filteredTerms = validateSearchTerms(searchData.terms);
 
@@ -111,66 +88,15 @@ export class SearchExtractService {
       searchData.typesFilter,
       onlyPublicResults
     );
-
-    const query: QueryDslQueryContainer = {
-      bool: {
-        must: [
-          {
-            multi_match: {
-              query: terms,
-              type: 'most_fields',
-              fields: ['*'],
-            },
-          },
-        ],
-        filter: searchData.searchInSpaceFilter
-          ? [{ match: { spaceID: searchData.searchInSpaceFilter } }]
-          : undefined,
-      },
-    };
-    // use with function_score to boost results based on visibility
-    const functions: QueryDslFunctionScoreContainer[] = [
-      {
-        filter: {
-          term: {
-            'license.visibility': 'active',
-          },
-        },
-        weight: 2,
-      },
-      {
-        filter: {
-          term: {
-            'license.visibility': 'demo',
-          },
-        },
-        weight: 1,
-      },
-      {
-        filter: {
-          term: {
-            'license.visibility': 'archived',
-          },
-        },
-        weight: 0,
-      },
-      {
-        filter: {
-          bool: {
-            must_not: {
-              exists: {
-                field: 'license.visibility',
-              },
-            },
-          },
-        },
-        weight: 1,
-      },
-    ];
+    // the main search query built using query DSL
+    const query = buildSearchQuery(terms, searchData.searchInSpaceFilter);
+    // used with function_score to boost results based on visibility
+    const functions = functionScoreFunctions;
 
     try {
       return await this.client
         .search<IBaseAlkemio>({
+          // indices to search on
           index: indicesToSearchOn,
           // there will be a query building in the future to construct different queries
           // the current query is searching in everything, and boosting entities based on their visibility
@@ -189,21 +115,34 @@ export class SearchExtractService {
               boost_mode: 'multiply',
             },
           },
-          fields: ['id'],
+          // return only the 'id' and 'type' fields of the document
+          fields: ['id', 'type'],
+          // do not include the source in the result
           _source: false,
+          // offset, starting from 0
           from: 0,
+          // max amount of results
           size: this.maxResults,
         })
         .then(result =>
           result.hits.hits.map<ISearchResult>(hit => {
             const entityId = hit.fields?.id?.[0];
-            const type = INDEX_TO_TYPE(this.indexPattern)[hit._index];
+            const type = hit.fields?.type?.[0];
 
             if (!entityId) {
               this.logger.error(
                 `Search result with no entity id: ${JSON.stringify(hit)}`,
                 undefined,
-                LogContext.SEARCH
+                LogContext.SEARCH_EXTRACT
+              );
+            }
+
+            if (hit._ignored) {
+              const ignored = hit._ignored.join('; ');
+              this.logger.warn(
+                `Some fields were ignored while searching: ${ignored}`,
+                undefined,
+                LogContext.SEARCH_EXTRACT
               );
             }
 
@@ -219,7 +158,7 @@ export class SearchExtractService {
     } catch (e: any) {
       throw new BaseException(
         'Failed to search',
-        LogContext.SEARCH,
+        LogContext.SEARCH_EXTRACT,
         AlkemioErrorStatus.UNSPECIFIED,
         {
           message: e?.message,
@@ -233,14 +172,21 @@ export class SearchExtractService {
     entityTypesFilter: string[] = [],
     onlyPublicResults: boolean
   ): string[] {
+    const filteredIndices = entityTypesFilter.map(
+      type => TYPE_TO_INDEX(this.indexPattern)[type as SearchEntityTypes]
+    );
+
     if (onlyPublicResults) {
-      return Object.values(TYPE_TO_PUBLIC_INDEX);
-    } else if (!entityTypesFilter.length) {
-      return [`${this.indexPattern}*`]; // return all
-    } else {
-      return Object.values(SearchEntityTypes).map(
-        type => TYPE_TO_INDEX(this.indexPattern)[type]
+      const publicIndices = Object.values(
+        TYPE_TO_PUBLIC_INDEX(this.indexPattern)
       );
+      return intersection(filteredIndices, publicIndices);
     }
+
+    if (!entityTypesFilter.length) {
+      return [`${this.indexPattern}*`]; // return all
+    }
+
+    return filteredIndices;
   }
 }
