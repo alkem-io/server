@@ -1,9 +1,6 @@
 import { Inject, LoggerService, UseGuards } from '@nestjs/common';
 import { Args, Query, Resolver } from '@nestjs/graphql';
-import {
-  CurrentUser,
-  InnovationHub as InnovationHubDecorator,
-} from '@src/common/decorators';
+import { InnovationHub as InnovationHubDecorator } from '@src/common/decorators';
 import { UUID_NAMEID } from '@domain/common/scalars';
 import { SpaceService } from './space.service';
 import { ISpace } from './space.interface';
@@ -13,9 +10,6 @@ import { GraphqlGuard } from '@core/authorization';
 import { PaginatedSpaces, PaginationArgs } from '@core/pagination';
 import { SpaceFilterInput } from '@services/infrastructure/space-filter/dto/space.filter.dto.input';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { AgentInfo } from '@core/authentication/agent-info';
-import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
-import { LogContext } from '@common/enums/logging.context';
 import { SpaceLevel } from '@common/enums/space.level';
 
 @Resolver()
@@ -58,24 +52,16 @@ export class SpaceResolverQueries {
   @Query(() => ISpace, {
     nullable: false,
     description:
-      'An space. If no ID is specified then the first Space is returned.',
+      'Look up a top level Space (i.e. a Space that does not have a parent Space) by the UUID or NameID.',
   })
   async space(
-    @Args('ID', { type: () => UUID_NAMEID }) ID: string,
-    @CurrentUser() agentInfo: AgentInfo
+    @Args('ID', { type: () => UUID_NAMEID }) ID: string
   ): Promise<ISpace> {
     const space = await this.spaceService.getSpaceOrFail(ID, {
       where: {
         level: SpaceLevel.SPACE,
       },
     });
-    if (!space) {
-      throw new EntityNotFoundException(
-        `Unable to find Space with ID: '${ID}'`,
-        LogContext.SPACES,
-        { userId: agentInfo.userID }
-      );
-    }
     return space;
   }
 }
