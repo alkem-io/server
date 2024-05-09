@@ -2,6 +2,7 @@ import { LoggerService } from '@nestjs/common';
 import { WhiteboardService } from '@domain/common/whiteboard';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { LogContext } from '@common/enums';
+import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { CollaboratorModeReasons } from '../types/collaboration.mode.reasons';
 import { SocketIoServer } from '../types/socket.io.server';
 import { SocketIoSocket } from '../types/socket.io.socket';
@@ -16,7 +17,19 @@ import {
 import { minCollaboratorsInRoom } from '../types/defaults';
 import { canUserRead, canUserUpdate, closeConnection } from './util';
 import { checkSession } from './check.session';
-import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
+
+const fetchSocketsSafe = async (
+  wsServer: SocketIoServer,
+  roomID: string,
+  logger: LoggerService
+) => {
+  try {
+    return await wsServer.in(roomID).fetchSockets();
+  } catch (e: any) {
+    logger.warn(`fetchSockets error handled: ${e?.message}`);
+    return [];
+  }
+};
 
 export const authorizeWithRoomAndJoinHandler = async (
   roomID: string,
@@ -40,9 +53,9 @@ export const authorizeWithRoomAndJoinHandler = async (
     return;
   }
 
-  const collaboratorsInRoom = (await wsServer.in(roomID).fetchSockets()).filter(
-    socket => socket.data.update
-  ).length;
+  const collaboratorsInRoom = (
+    await fetchSocketsSafe(wsServer, roomID, logger)
+  ).filter(socket => socket.data.update).length;
   const isCollaboratorLimitReached =
     collaboratorsInRoom >= maxCollaboratorsForThisRoom;
 
@@ -98,7 +111,7 @@ const joinRoomHandler = async (
     LogContext.EXCALIDRAW_SERVER
   );
 
-  const sockets = await wsServer.in(roomID).fetchSockets();
+  const sockets = await fetchSocketsSafe(wsServer, roomID, logger);
   if (sockets.length === 1) {
     logger?.verbose?.(
       `User '${agentInfo.userID}' is first in room '${roomID}'`,
@@ -167,7 +180,7 @@ export const disconnectingEventHandler = async (
     LogContext.EXCALIDRAW_SERVER
   );
   for (const roomID of socket.rooms) {
-    const otherClientIds = (await wsServer.in(roomID).fetchSockets())
+    const otherClientIds = (await fetchSocketsSafe(wsServer, roomID, logger))
       .filter(_socket => _socket.id !== socket.id)
       .map(socket => socket.id);
 

@@ -25,24 +25,24 @@ import { InvitationExternalAuthorizationService } from '../invitation.external/i
 import { InvitationAuthorizationService } from '../invitation/invitation.service.authorization';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { CommunityGuidelinesAuthorizationService } from '../community-guidelines/community.guidelines.service.authorization';
-import { LicenseService } from '@domain/license/license/license.service';
 import { ILicense } from '@domain/license/license/license.interface';
-import { LicenseFeatureFlagName } from '@common/enums/license.feature.flag.name';
 import { CommunityPolicyService } from '../community-policy/community.policy.service';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { ICommunityPolicy } from '../community-policy/community.policy.interface';
 import { CommunityRole } from '@common/enums/community.role';
+import { LicenseEngineService } from '@core/license-engine/license.engine.service';
+import { LicensePrivilege } from '@common/enums/license.privilege';
 
 @Injectable()
 export class CommunityAuthorizationService {
   constructor(
+    private licenseEngineService: LicenseEngineService,
     private communityService: CommunityService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private userGroupAuthorizationService: UserGroupAuthorizationService,
     private communicationAuthorizationService: CommunicationAuthorizationService,
     private applicationAuthorizationService: ApplicationAuthorizationService,
     private invitationAuthorizationService: InvitationAuthorizationService,
-    private licenseService: LicenseService,
     private communityPolicyService: CommunityPolicyService,
     private invitationExternalAuthorizationService: InvitationExternalAuthorizationService,
     private communityGuidelinesAuthorizationService: CommunityGuidelinesAuthorizationService,
@@ -186,9 +186,9 @@ export class CommunityAuthorizationService {
     }
 
     const accessVirtualContributors =
-      await this.licenseService.isFeatureFlagEnabled(
-        license,
-        LicenseFeatureFlagName.VIRTUAL_CONTRIBUTORS
+      await this.licenseEngineService.isAccessGranted(
+        LicensePrivilege.VIRTUAL_CONTRIBUTOR_ACCESS,
+        license
       );
     if (accessVirtualContributors) {
       const criterias: ICredentialDefinition[] =

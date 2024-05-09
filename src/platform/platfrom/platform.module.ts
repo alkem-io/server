@@ -19,6 +19,7 @@ import { OrganizationModule } from '@domain/community/organization/organization.
 import { UserModule } from '@domain/community/user/user.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
+import { LicensePolicyModule } from '@platform/license-policy/license.policy.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { NotificationAdapterModule } from '@services/adapters/notification-adapt
     KonfigModule,
     MetadataModule,
     InnovationHubModule,
+    LicensePolicyModule,
     OrganizationModule,
     UserModule,
     AgentModule,

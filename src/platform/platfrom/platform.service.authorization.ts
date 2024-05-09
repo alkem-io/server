@@ -31,6 +31,7 @@ import {
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
+import { LicensePolicyAuthorizationService } from '@platform/license-policy/license.policy.service.authorization';
 
 @Injectable()
 export class PlatformAuthorizationService {
@@ -42,6 +43,7 @@ export class PlatformAuthorizationService {
     private platformService: PlatformService,
     private innovationHubService: InnovationHubService,
     private innovationHubAuthorizationService: InnovationHubAuthorizationService,
+    private licensePolicyAuthorizationService: LicensePolicyAuthorizationService,
     private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
     @InjectRepository(Platform)
     private platformRepository: Repository<Platform>
@@ -51,10 +53,6 @@ export class PlatformAuthorizationService {
     const platform = await this.platformService.getPlatformOrFail({
       relations: {
         authorization: true,
-        library: {
-          innovationPacks: true,
-        },
-        communication: true,
       },
     });
 
@@ -115,13 +113,15 @@ export class PlatformAuthorizationService {
         },
         communication: true,
         storageAggregator: true,
+        licensePolicy: true,
       },
     });
 
     if (
       !platform.library ||
       !platform.communication ||
-      !platform.storageAggregator
+      !platform.storageAggregator ||
+      !platform.licensePolicy
     )
       throw new RelationshipNotFoundException(
         `Unable to load entities for platform: ${platform.id} `,
@@ -167,6 +167,12 @@ export class PlatformAuthorizationService {
         innovationHub
       );
     }
+
+    platform.licensePolicy =
+      await this.licensePolicyAuthorizationService.applyAuthorizationPolicy(
+        platform.licensePolicy,
+        platform.authorization
+      );
     return platform;
   }
 
@@ -279,7 +285,7 @@ export class PlatformAuthorizationService {
         ],
         CREDENTIAL_RULE_TYPES_PLATFORM_AUTH_RESET
       );
-    platformAdmin.cascade = false;
+    platformResetAuth.cascade = false;
     credentialRules.push(platformResetAuth);
 
     // Allow all registered users to query non-protected user information

@@ -8,6 +8,7 @@ import { LogContext } from '@common/enums';
 import { Communication } from '@domain/communication/communication/communication.entity';
 import { Space } from '@domain/space/space/space.entity';
 import { ISpace } from '@domain/space/space/space.interface';
+import { ILicense } from '@domain/license/license/license.interface';
 
 @Injectable()
 export class CommunityResolverService {
@@ -43,6 +44,38 @@ export class CommunityResolverService {
 
     throw new EntityNotFoundException(
       `Unable to find Space for given community id: ${community.id}`,
+      LogContext.COLLABORATION
+    );
+  }
+
+  public async getLicenseFromCommunityOrFail(
+    community: ICommunity
+  ): Promise<ILicense> {
+    const space = await this.entityManager.findOne(Space, {
+      where: {
+        community: {
+          id: community.id,
+        },
+      },
+      relations: {
+        account: {
+          license: {
+            featureFlags: true,
+          },
+        },
+      },
+    });
+    if (
+      space &&
+      space.account &&
+      space.account.license &&
+      space.account.license.featureFlags
+    ) {
+      return space.account.license;
+    }
+
+    throw new EntityNotFoundException(
+      `Unable to find License feature flags for given community id: ${community.id}`,
       LogContext.COLLABORATION
     );
   }

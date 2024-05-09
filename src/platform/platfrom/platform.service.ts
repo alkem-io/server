@@ -30,6 +30,7 @@ import { IUser } from '@domain/community/user/user.interface';
 import { UserService } from '@domain/community/user/user.service';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AssignPlatformRoleToUserInput } from './dto/platform.dto.assign.role.user';
+import { ILicensePolicy } from '@platform/license-policy/license.policy.interface';
 
 @Injectable()
 export class PlatformService {
@@ -129,6 +130,24 @@ export class PlatformService {
     }
 
     return storageAggregator;
+  }
+
+  async getLicensePolicy(platformInput: IPlatform): Promise<ILicensePolicy> {
+    const platform = await this.getPlatformOrFail({
+      relations: {
+        licensePolicy: true,
+      },
+    });
+    const licensePolicy = platform.licensePolicy;
+
+    if (!licensePolicy) {
+      throw new EntityNotFoundException(
+        `Unable to find licensepolicy for Platform: ${platformInput.id}`,
+        LogContext.PLATFORM
+      );
+    }
+
+    return licensePolicy;
   }
 
   getAuthorizationPolicy(platform: IPlatform): IAuthorizationPolicy {
