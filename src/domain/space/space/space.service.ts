@@ -679,17 +679,18 @@ export class SpaceService {
     options?: FindOneOptions<Space>
   ): Promise<ISpace | null> {
     let space: ISpace | null = null;
+    const { where, ...restOfOptions } = options ?? {};
     if (spaceID.length === UUID_LENGTH) {
       space = await this.spaceRepository.findOne({
-        where: { id: spaceID },
-        ...options,
+        where: where ? { ...where, id: spaceID } : { id: spaceID },
+        ...restOfOptions,
       });
     }
     if (!space) {
       // look up based on nameID
       space = await this.spaceRepository.findOne({
-        where: { nameID: spaceID },
-        ...options,
+        where: where ? { ...where, id: spaceID } : { id: spaceID },
+        ...restOfOptions,
       });
     }
     return space;
