@@ -207,7 +207,7 @@ export class AccountService {
     host.agent = await this.agentService.revokeCredential({
       agentID: hostAgent.id,
       type: AuthorizationCredential.ACCOUNT_HOST,
-      resourceID: account.space.id,
+      resourceID: account.id,
     });
 
     const result = await this.accountRepository.remove(account as Account);
@@ -312,8 +312,6 @@ export class AccountService {
     account: IAccount,
     hostOrgID: string
   ): Promise<IAccount> {
-    const rootSpace = await this.getRootSpace(account);
-    const spaceID = rootSpace.id;
     const organization = await this.organizationService.getOrganizationOrFail(
       hostOrgID,
       { relations: { groups: true, agent: true } }
@@ -328,7 +326,7 @@ export class AccountService {
       organization.agent = await this.agentService.revokeCredential({
         agentID: agentExisting.id,
         type: AuthorizationCredential.ACCOUNT_HOST,
-        resourceID: spaceID,
+        resourceID: account.id,
       });
     }
 
@@ -337,7 +335,7 @@ export class AccountService {
     organization.agent = await this.agentService.grantCredential({
       agentID: agent.id,
       type: AuthorizationCredential.ACCOUNT_HOST,
-      resourceID: spaceID,
+      resourceID: account.id,
     });
 
     await this.organizationService.save(organization);
@@ -345,12 +343,10 @@ export class AccountService {
   }
 
   async getHost(account: IAccount): Promise<IOrganization | undefined> {
-    const rootSpace = await this.getRootSpace(account);
-
     const organizations =
       await this.organizationService.organizationsWithCredentials({
         type: AuthorizationCredential.ACCOUNT_HOST,
-        resourceID: rootSpace.id,
+        resourceID: account.id,
       });
     if (organizations.length == 0) {
       return undefined;

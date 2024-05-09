@@ -240,7 +240,7 @@ export class SearchIngestService {
 
       start += batchSize;
       // delay between batches
-      await setTimeout(1000);
+      await setTimeout(1000, null);
     }
 
     return results;
