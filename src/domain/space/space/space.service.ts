@@ -689,7 +689,7 @@ export class SpaceService {
     if (!space) {
       // look up based on nameID
       space = await this.spaceRepository.findOne({
-        where: where ? { ...where, id: spaceID } : { id: spaceID },
+        where: where ? { ...where, nameID: spaceID } : { id: spaceID },
         ...restOfOptions,
       });
     }
