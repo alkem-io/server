@@ -75,8 +75,8 @@ export class LookupResolverFields {
     private documentService: DocumentService,
     private innovationFlowTemplateService: InnovationFlowTemplateService,
     private storageAggregatorService: StorageAggregatorService,
-    private userService: UserService,
-    private spaceService: SpaceService
+    private spaceService: SpaceService,
+    private userService: UserService
   ) {}
 
   @UseGuards(GraphqlGuard)

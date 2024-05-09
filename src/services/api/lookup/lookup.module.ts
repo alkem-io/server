@@ -47,7 +47,6 @@ import { SpaceModule } from '@domain/space/space/space.module';
     ApplicationModule,
     InvitationModule,
     DocumentModule,
-    SpaceModule,
     StorageAggregatorModule,
     PlatformAuthorizationPolicyModule,
     UserModule,
