@@ -25,8 +25,8 @@ import {
   CREDENTIAL_RULE_SPACE_MEMBERS_READ,
   CREDENTIAL_RULE_SPACE_ADMINS,
   CREDENTIAL_RULE_MEMBER_CREATE_SUBSPACE,
-  CREDENTIAL_RULE_CHALLENGE_SPACE_MEMBER_APPLY,
-  CREDENTIAL_RULE_CHALLENGE_SPACE_MEMBER_JOIN,
+  CREDENTIAL_RULE_SUBSPACE_PARENT_MEMBER_APPLY,
+  CREDENTIAL_RULE_SUBSPACE_PARENT_MEMBER_JOIN,
   CREDENTIAL_RULE_COMMUNITY_ADD_MEMBER,
   CREDENTIAL_RULE_SUBSPACE_ADMINS,
   CREDENTIAL_RULE_TYPES_SPACE_COMMUNITY_APPLY_GLOBAL_REGISTERED,
@@ -449,7 +449,7 @@ export class SpaceAuthorizationService {
             this.authorizationPolicyService.createCredentialRule(
               [AuthorizationPrivilege.COMMUNITY_APPLY],
               [parentCommunityCredential],
-              CREDENTIAL_RULE_CHALLENGE_SPACE_MEMBER_APPLY
+              CREDENTIAL_RULE_SUBSPACE_PARENT_MEMBER_APPLY
             );
           spaceMemberCanApply.cascade = false;
           newRules.push(spaceMemberCanApply);
@@ -459,7 +459,7 @@ export class SpaceAuthorizationService {
             this.authorizationPolicyService.createCredentialRule(
               [AuthorizationPrivilege.COMMUNITY_JOIN],
               [parentCommunityCredential],
-              CREDENTIAL_RULE_CHALLENGE_SPACE_MEMBER_JOIN
+              CREDENTIAL_RULE_SUBSPACE_PARENT_MEMBER_JOIN
             );
           spaceMemberCanJoin.cascade = false;
           newRules.push(spaceMemberCanJoin);
