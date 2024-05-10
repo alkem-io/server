@@ -10,7 +10,7 @@ import { TemplatesSet } from './templates.set.entity';
 import { IWhiteboardTemplate } from '../whiteboard-template/whiteboard.template.interface';
 import { IInnovationFlowTemplate } from '../innovation-flow-template/innovation.flow.template.interface';
 import { ICalloutTemplate } from '../callout-template/callout.template.interface';
-import { IMemberGuidelinesTemplate } from '../member-guidelines-template/member.guidelines.template.interface';
+import { ITemplateBase } from '../template-base/template.base.interface';
 
 @Resolver(() => ITemplatesSet)
 export class TemplatesSetResolverFields {
@@ -167,43 +167,41 @@ export class TemplatesSetResolverFields {
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField(
-    'memberGuidelinesTemplates',
-    () => [IMemberGuidelinesTemplate],
-    {
-      nullable: false,
-      description: 'The MemberGuidelines in this TemplatesSet.',
-    }
-  )
+  @ResolveField('communityGuidelinesTemplates', () => [ITemplateBase], {
+    nullable: false,
+    description: 'The CommunityGuidelines in this TemplatesSet.',
+  })
   @Profiling.api
-  async memberGuidelinesTemplates(
+  async communityGuidelinesTemplates(
     @Parent() templatesSet: ITemplatesSet
-  ): Promise<IMemberGuidelinesTemplate[]> {
-    return this.templatesSetService.getMemberGuidelinesTemplates(templatesSet);
+  ): Promise<ITemplateBase[]> {
+    return this.templatesSetService.getCommunityGuidelinesTemplates(
+      templatesSet
+    );
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField('memberGuidelinesTemplatesCount', () => Float, {
+  @ResolveField('communityGuidelinesTemplatesCount', () => Float, {
     nullable: false,
     description:
-      'The total number of MemberGuidelinesTemplates in this TemplatesSet.',
+      'The total number of CommunityGuidelinesTemplates in this TemplatesSet.',
   })
   @Profiling.api
-  async memberGuidelinesTemplatesCount(
+  async communityGuidelinesTemplatesCount(
     @Parent() templatesSet: ITemplatesSet
   ): Promise<number> {
-    return this.templatesSetService.getMemberGuidelinesTemplatesCount(
+    return this.templatesSetService.getCommunityGuidelinesTemplatesCount(
       templatesSet.id
     );
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField('memberGuidelinesTemplate', () => IMemberGuidelinesTemplate, {
+  @ResolveField('communityGuidelinesTemplate', () => ITemplateBase, {
     nullable: true,
-    description: 'A single MemberGuidelinesTemplate',
+    description: 'A single CommunityGuidelinesTemplate',
   })
   @Profiling.api
-  public memberGuidelinesTemplate(
+  public communityGuidelinesTemplate(
     @Parent() templatesSet: TemplatesSet,
     @Args({
       name: 'ID',
@@ -212,8 +210,8 @@ export class TemplatesSetResolverFields {
       description: 'The ID of the Template',
     })
     ID: string
-  ): Promise<IMemberGuidelinesTemplate> {
-    return this.templatesSetService.getMemberGuidelinesTemplate(
+  ): Promise<ITemplateBase> {
+    return this.templatesSetService.getCommunityGuidelinesTemplate(
       ID,
       templatesSet.id
     );

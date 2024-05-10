@@ -4,7 +4,7 @@ import { IPostTemplate } from '../post-template/post.template.interface';
 import { IWhiteboardTemplate } from '../whiteboard-template/whiteboard.template.interface';
 import { IInnovationFlowTemplate } from '../innovation-flow-template/innovation.flow.template.interface';
 import { ICalloutTemplate } from '../callout-template/callout.template.interface';
-import { IMemberGuidelinesTemplate } from '../member-guidelines-template/member.guidelines.template.interface';
+import { ITemplateBase } from '../template-base/template.base.interface';
 
 @ObjectType('TemplatesSet')
 export abstract class ITemplatesSet extends IAuthorizable {
@@ -16,5 +16,5 @@ export abstract class ITemplatesSet extends IAuthorizable {
 
   innovationFlowTemplates!: IInnovationFlowTemplate[];
 
-  memberGuidelinesTemplates!: IMemberGuidelinesTemplate[];
+  communityGuidelinesTemplates!: ITemplateBase[];
 }

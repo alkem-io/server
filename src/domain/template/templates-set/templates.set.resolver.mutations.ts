@@ -20,9 +20,9 @@ import { CreatePostTemplateOnTemplatesSetInput } from './dto/post.template.dto.c
 import { ICalloutTemplate } from '../callout-template/callout.template.interface';
 import { CreateCalloutTemplateOnTemplatesSetInput } from './dto/callout.template.dto.create.on.templates.set';
 import { CalloutTemplateAuthorizationService } from '../callout-template/callout.template.service.authorization';
-import { MemberGuidelinesTemplateAuthorizationService } from '../member-guidelines-template/member.guidelines.template.service.authorization';
-import { IMemberGuidelinesTemplate } from '../member-guidelines-template/member.guidelines.template.interface';
-import { CreateMemberGuidelinesTemplateOnTemplatesSetInput } from './dto/member.guidelines.template.dto.create.on.templates.set';
+import { CommunityGuidelinesTemplateAuthorizationService } from '../community-guidelines-template/community.guidelines.template.service.authorization';
+import { ITemplateBase } from '../template-base/template.base.interface';
+import { CreateCommunityGuidelinesTemplateOnTemplatesSetInput } from './dto/community.guidelines.template.dto.create.on.templates.set';
 
 @Resolver()
 export class TemplatesSetResolverMutations {
@@ -34,7 +34,7 @@ export class TemplatesSetResolverMutations {
     private postTemplateAuthorizationService: PostTemplateAuthorizationService,
     private whiteboardTemplateAuthorizationService: WhiteboardTemplateAuthorizationService,
     private innovationFlowTemplateAuthorizationService: InnovationFlowTemplateAuthorizationService,
-    private memberGuidelinesTemplateAuthorizationService: MemberGuidelinesTemplateAuthorizationService,
+    private communityGuidelinesTemplateAuthorizationService: CommunityGuidelinesTemplateAuthorizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -175,36 +175,36 @@ export class TemplatesSetResolverMutations {
   }
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => IMemberGuidelinesTemplate, {
+  @Mutation(() => ITemplateBase, {
     description:
-      'Creates a new MemberGuidelinesTemplate on the specified TemplatesSet.',
+      'Creates a new CommunityGuidelinesTemplate on the specified TemplatesSet.',
   })
-  async createMemberGuidelinesTemplate(
+  async createCommunityGuidelinesTemplate(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('memberGuidelinesTemplateInput')
-    memberGuidelinesTemplateInput: CreateMemberGuidelinesTemplateOnTemplatesSetInput
-  ): Promise<IMemberGuidelinesTemplate> {
+    @Args('communityGuidelinesTemplateInput')
+    communityGuidelinesTemplateInput: CreateCommunityGuidelinesTemplateOnTemplatesSetInput
+  ): Promise<ITemplateBase> {
     const templatesSet = await this.templatesSetService.getTemplatesSetOrFail(
-      memberGuidelinesTemplateInput.templatesSetID,
+      communityGuidelinesTemplateInput.templatesSetID,
       {
-        relations: { memberGuidelinesTemplates: true },
+        relations: { communityGuidelinesTemplates: true },
       }
     );
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       templatesSet.authorization,
       AuthorizationPrivilege.CREATE,
-      `templates set create memberGuidelines template: ${templatesSet.id}`
+      `templates set create communityGuidelines template: ${templatesSet.id}`
     );
-    const memberGuidelinesTemplate =
-      await this.templatesSetService.createMemberGuidelinesTemplate(
+    const communityGuidelinesTemplate =
+      await this.templatesSetService.createCommunityGuidelinesTemplate(
         templatesSet,
-        memberGuidelinesTemplateInput
+        communityGuidelinesTemplateInput
       );
-    await this.memberGuidelinesTemplateAuthorizationService.applyAuthorizationPolicy(
-      memberGuidelinesTemplate,
+    await this.communityGuidelinesTemplateAuthorizationService.applyAuthorizationPolicy(
+      communityGuidelinesTemplate,
       templatesSet.authorization
     );
-    return memberGuidelinesTemplate;
+    return communityGuidelinesTemplate;
   }
 }

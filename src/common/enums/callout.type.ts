@@ -6,7 +6,6 @@ export enum CalloutType {
   WHITEBOARD = 'whiteboard',
   WHITEBOARD_COLLECTION = 'whiteboard-collection',
   LINK_COLLECTION = 'link-collection',
-  MEMBER_GUIDELINES = 'member-guidelines',
 }
 
 registerEnumType(CalloutType, {

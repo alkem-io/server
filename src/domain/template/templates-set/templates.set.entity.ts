@@ -5,7 +5,7 @@ import { PostTemplate } from '../post-template/post.template.entity';
 import { WhiteboardTemplate } from '../whiteboard-template/whiteboard.template.entity';
 import { InnovationFlowTemplate } from '../innovation-flow-template/innovation.flow.template.entity';
 import { CalloutTemplate } from '../callout-template/callout.template.entity';
-import { MemberGuidelinesTemplate } from '../member-guidelines-template/member.guidelines.template.entity';
+import { CommunityGuidelinesTemplate } from '../community-guidelines-template/community.guidelines.template.entity';
 
 @Entity()
 export class TemplatesSet extends AuthorizableEntity implements ITemplatesSet {
@@ -46,12 +46,12 @@ export class TemplatesSet extends AuthorizableEntity implements ITemplatesSet {
   innovationFlowTemplates!: InnovationFlowTemplate[];
 
   @OneToMany(
-    () => MemberGuidelinesTemplate,
-    memberGuidelinesTemplate => memberGuidelinesTemplate.templatesSet,
+    () => CommunityGuidelinesTemplate,
+    communityGuidelinesTemplate => communityGuidelinesTemplate.templatesSet,
     {
       eager: false,
       cascade: true,
     }
   )
-  memberGuidelinesTemplates!: MemberGuidelinesTemplate[];
+  communityGuidelinesTemplates!: CommunityGuidelinesTemplate[];
 }

@@ -4,37 +4,37 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
-import { MemberGuidelinesTemplate } from './member.guidelines.template.entity';
-import { IMemberGuidelinesTemplate } from './member.guidelines.template.interface';
+import { ITemplateBase } from '../template-base/template.base.interface';
+import { CommunityGuidelinesTemplate } from './community.guidelines.template.entity';
 
 @Injectable()
-export class MemberGuidelinesTemplateAuthorizationService {
+export class CommunityGuidelinesTemplateAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
-    @InjectRepository(MemberGuidelinesTemplate)
-    private memberGuidelinesTemplateRepository: Repository<MemberGuidelinesTemplate>,
+    @InjectRepository(CommunityGuidelinesTemplate)
+    private communityGuidelinesTemplateRepository: Repository<CommunityGuidelinesTemplate>,
     private profileAuthorizationService: ProfileAuthorizationService
   ) {}
 
   async applyAuthorizationPolicy(
-    memberGuidelinesTemplate: IMemberGuidelinesTemplate,
+    communityGuidelinesTemplate: ITemplateBase,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): Promise<IMemberGuidelinesTemplate> {
+  ): Promise<ITemplateBase> {
     // Inherit from the parent
-    memberGuidelinesTemplate.authorization =
+    communityGuidelinesTemplate.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
-        memberGuidelinesTemplate.authorization,
+        communityGuidelinesTemplate.authorization,
         parentAuthorization
       );
     // Cascade
-    memberGuidelinesTemplate.profile =
+    communityGuidelinesTemplate.profile =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
-        memberGuidelinesTemplate.profile,
-        memberGuidelinesTemplate.authorization
+        communityGuidelinesTemplate.profile,
+        communityGuidelinesTemplate.authorization
       );
 
-    return await this.memberGuidelinesTemplateRepository.save(
-      memberGuidelinesTemplate
+    return await this.communityGuidelinesTemplateRepository.save(
+      communityGuidelinesTemplate
     );
   }
 }

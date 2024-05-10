@@ -1,5 +1,5 @@
-mutation createMemberGuidelineTemplate($memberGuidelineTemplateInput: CreateMemberGuidelinesTemplateOnTemplatesSetInput!) {
-  createMemberGuidelineTemplate(memberGuidelineTemplateInput: $memberGuidelineTemplateInput) {
+mutation createCommunityGuidelineTemplate($communityGuidelineTemplateInput: CreateCommunityGuidelinesTemplateOnTemplatesSetInput!) {
+  createCommunityGuidelineTemplate(communityGuidelineTemplateInput: $communityGuidelineTemplateInput) {
     profile {
       displayName
     }
@@ -8,14 +8,12 @@ mutation createMemberGuidelineTemplate($memberGuidelineTemplateInput: CreateMemb
 
 Variables:
 {
-  "memberGuidelineTemplateInput": {
+  "communityGuidelineTemplateInput": {
       "templatesSetID": "uuid",
       "profile": {
-        "displayName": "wow",
-        "description": "wow this is great",
+        "displayName": "Community Guidelines Example",
+        "description": "Dos and don'ts",
         "tags": ["Tag 1", "Tag 2"]
       },
-      "type": "zoo",
-      "defaultDescription": "this is what users will see"
   }
 }

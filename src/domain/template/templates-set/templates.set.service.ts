@@ -15,7 +15,7 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy/authori
 import { PostTemplateService } from '../post-template/post.template.service';
 import { WhiteboardTemplateService } from '../whiteboard-template/whiteboard.template.service';
 import { InnovationFlowTemplateService } from '../innovation-flow-template/innovation.flow.template.service';
-import { MemberGuidelinesTemplateService } from '../member-guidelines-template/member.guidelines.template.service';
+import { CommunityGuidelinesTemplateService } from '../community-guidelines-template/community.guidelines.template.service';
 import { IPostTemplate } from '../post-template/post.template.interface';
 import { IWhiteboardTemplate } from '../whiteboard-template/whiteboard.template.interface';
 import { IInnovationFlowTemplate } from '../innovation-flow-template/innovation.flow.template.interface';
@@ -28,8 +28,8 @@ import { CalloutTemplateService } from '../callout-template/callout.template.ser
 import { AgentInfo } from '@core/authentication/agent-info';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
-import { IMemberGuidelinesTemplate } from '../member-guidelines-template/member.guidelines.template.interface';
-import { CreateMemberGuidelinesTemplateInput } from '../member-guidelines-template/dto/member.guidelines.template.dto.create';
+import { ITemplateBase } from '../template-base/template.base.interface';
+import { CreateCommunityGuidelinesTemplateInput } from '../community-guidelines-template/dto/community.guidelines.template.dto.create';
 
 @Injectable()
 export class TemplatesSetService {
@@ -42,7 +42,7 @@ export class TemplatesSetService {
     private postTemplateService: PostTemplateService,
     private whiteboardTemplateService: WhiteboardTemplateService,
     private innovationFlowTemplateService: InnovationFlowTemplateService,
-    private memberGuidelinesTemplateService: MemberGuidelinesTemplateService,
+    private communityGuidelinesTemplateService: CommunityGuidelinesTemplateService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -52,7 +52,7 @@ export class TemplatesSetService {
     templatesSet.postTemplates = [];
     templatesSet.whiteboardTemplates = [];
     templatesSet.innovationFlowTemplates = [];
-    templatesSet.memberGuidelinesTemplates = [];
+    templatesSet.communityGuidelinesTemplates = [];
 
     return await this.templatesSetRepository.save(templatesSet);
   }
@@ -80,6 +80,7 @@ export class TemplatesSetService {
         postTemplates: true,
         whiteboardTemplates: true,
         innovationFlowTemplates: true,
+        communityGuidelinesTemplates: true,
       },
     });
 
@@ -102,6 +103,13 @@ export class TemplatesSetService {
       for (const innovationFlowTemplate of templatesSet.innovationFlowTemplates) {
         await this.innovationFlowTemplateService.deleteInnovationFlowTemplate(
           innovationFlowTemplate
+        );
+      }
+    }
+    if (templatesSet.communityGuidelinesTemplates) {
+      for (const communityGuidelinesTemplate of templatesSet.communityGuidelinesTemplates) {
+        await this.communityGuidelinesTemplateService.deleteCommunityGuidelinesTemplate(
+          communityGuidelinesTemplate
         );
       }
     }
@@ -154,26 +162,26 @@ export class TemplatesSetService {
     return templatesSetPopulated.calloutTemplates;
   }
 
-  async getMemberGuidelinesTemplates(
+  async getCommunityGuidelinesTemplates(
     templatesSet: ITemplatesSet
-  ): Promise<IMemberGuidelinesTemplate[]> {
+  ): Promise<ITemplateBase[]> {
     const templatesSetPopulated = await this.getTemplatesSetOrFail(
       templatesSet.id,
       {
         relations: {
-          memberGuidelinesTemplates: {
+          communityGuidelinesTemplates: {
             profile: true,
           },
         },
       }
     );
-    if (!templatesSetPopulated.memberGuidelinesTemplates) {
+    if (!templatesSetPopulated.communityGuidelinesTemplates) {
       throw new EntityNotInitializedException(
         `TemplatesSet not initialized: ${templatesSetPopulated.id}`,
         LogContext.TEMPLATES
       );
     }
-    return templatesSetPopulated.memberGuidelinesTemplates;
+    return templatesSetPopulated.communityGuidelinesTemplates;
   }
 
   public getPostTemplate(
@@ -212,11 +220,11 @@ export class TemplatesSetService {
     );
   }
 
-  public getMemberGuidelinesTemplate(
+  public getCommunityGuidelinesTemplate(
     templateId: string,
     templatesSetId: string
-  ): Promise<IMemberGuidelinesTemplate> {
-    return this.memberGuidelinesTemplateService.getMemberGuidelinesTemplateOrFail(
+  ): Promise<ITemplateBase> {
+    return this.communityGuidelinesTemplateService.getCommunityGuidelinesTemplateOrFail(
       templateId,
       {
         relations: { templatesSet: true, profile: true },
@@ -361,22 +369,22 @@ export class TemplatesSetService {
     return whiteboardTemplate;
   }
 
-  async createMemberGuidelinesTemplate(
+  async createCommunityGuidelinesTemplate(
     templatesSet: ITemplatesSet,
-    memberGuidelinesTemplateInput: CreateMemberGuidelinesTemplateInput
-  ): Promise<IMemberGuidelinesTemplate> {
-    templatesSet.memberGuidelinesTemplates =
-      await this.getMemberGuidelinesTemplates(templatesSet);
+    communityGuidelinesTemplateInput: CreateCommunityGuidelinesTemplateInput
+  ): Promise<ITemplateBase> {
+    templatesSet.communityGuidelinesTemplates =
+      await this.getCommunityGuidelinesTemplates(templatesSet);
 
     const storageAggregator = await this.getStorageAggregator(templatesSet);
-    const memberGuidelinesTemplate =
-      await this.memberGuidelinesTemplateService.createMemberGuidelinesTemplate(
-        memberGuidelinesTemplateInput,
+    const communityGuidelinesTemplate =
+      await this.communityGuidelinesTemplateService.createCommunityGuidelinesTemplate(
+        communityGuidelinesTemplateInput,
         storageAggregator
       );
-    templatesSet.memberGuidelinesTemplates.push(memberGuidelinesTemplate);
+    templatesSet.communityGuidelinesTemplates.push(communityGuidelinesTemplate);
     await this.templatesSetRepository.save(templatesSet);
-    return memberGuidelinesTemplate;
+    return communityGuidelinesTemplate;
   }
 
   async getInnovationFlowTemplates(
@@ -449,14 +457,14 @@ export class TemplatesSetService {
       templatesSetID
     );
 
-    const memberGuidelinesTemplatesCount =
-      await this.getMemberGuidelinesTemplatesCount(templatesSetID);
+    const communityGuidelinesTemplatesCount =
+      await this.getCommunityGuidelinesTemplatesCount(templatesSetID);
 
     return (
       whiteboardTemplatesCount +
       postTemplatesCount +
       innovationFlowsCount +
-      memberGuidelinesTemplatesCount
+      communityGuidelinesTemplatesCount
     );
   }
 
@@ -476,8 +484,10 @@ export class TemplatesSetService {
     );
   }
 
-  getMemberGuidelinesTemplatesCount(templatesSetID: string): Promise<number> {
-    return this.memberGuidelinesTemplateService.getCountInTemplatesSet(
+  getCommunityGuidelinesTemplatesCount(
+    templatesSetID: string
+  ): Promise<number> {
+    return this.communityGuidelinesTemplateService.getCountInTemplatesSet(
       templatesSetID
     );
   }

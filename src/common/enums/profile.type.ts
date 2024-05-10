@@ -20,8 +20,8 @@ export enum ProfileType {
   INNOVATION_FLOW_TEMPLATE = 'innovation-flow-template',
   POST_TEMPLATE = 'post-template',
   WHITEBOARD_TEMPLATE = 'whiteboard-template',
-  MEMBER_GUIDELINES_TEMPLATE = 'member-guidelines-template',
   COMMUNITY_GUIDELINES = 'community-guidelines',
+  COMMUNITY_GUIDELINES_TEMPLATE = 'community-guidelines-template',
   VIRTUAL_CONTRIBUTOR = 'virtual-contributor',
   VIRTUAL_PERSONA = 'virtual-persona',
 }
