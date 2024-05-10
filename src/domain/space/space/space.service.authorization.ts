@@ -1,16 +1,13 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import {
   AuthorizationCredential,
   AuthorizationPrivilege,
   LogContext,
 } from '@common/enums';
-import { Repository } from 'typeorm';
 import { SpaceService } from './space.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ISpace } from './space.interface';
-import { Space } from './space.entity';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { CommunityPolicyService } from '@domain/community/community-policy/community.policy.service';
@@ -37,6 +34,7 @@ import {
   CREDENTIAL_RULE_SPACE_HOST_ASSOCIATES_JOIN,
   CREDENTIAL_RULE_SPACE_ADMIN_DELETE_SUBSPACE,
   POLICY_RULE_COMMUNITY_INVITE,
+  CREDENTIAL_RULE_TYPES_SPACE_PLATFORM_SETTINGS,
 } from '@common/constants';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
 import { EntityNotInitializedException } from '@common/exceptions';
@@ -57,9 +55,7 @@ export class SpaceAuthorizationService {
     private communityAuthorizationService: CommunityAuthorizationService,
     private collaborationAuthorizationService: CollaborationAuthorizationService,
     private spaceService: SpaceService,
-    private spaceSettingsService: SpaceSettingsService,
-    @InjectRepository(Space)
-    private spaceRepository: Repository<Space>
+    private spaceSettingsService: SpaceSettingsService
   ) {}
 
   async applyAuthorizationPolicy(spaceInput: ISpace): Promise<ISpace> {
@@ -371,6 +367,19 @@ export class SpaceAuthorizationService {
       createSubspacePrilegeRule.cascade = false;
       newRules.push(createSubspacePrilegeRule);
     }
+
+    // Allow global admins to manage platform settings
+    const platformSettings =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.PLATFORM_ADMIN],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+        ],
+        CREDENTIAL_RULE_TYPES_SPACE_PLATFORM_SETTINGS
+      );
+    platformSettings.cascade = false;
+    newRules.push(platformSettings);
 
     this.authorizationPolicyService.appendCredentialAuthorizationRules(
       authorization,

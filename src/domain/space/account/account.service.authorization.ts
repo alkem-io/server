@@ -124,14 +124,18 @@ export class AccountAuthorizationService {
     // By default it is world visible
     authorization.anonymousReadAccess = true;
 
-    // Allow global admins to reset authorization
+    // Allow global admins to reset authorization, manage platform settings
     const authorizationReset =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [
           AuthorizationPrivilege.AUTHORIZATION_RESET,
           AuthorizationPrivilege.PLATFORM_ADMIN,
         ],
-        [AuthorizationCredential.GLOBAL_ADMIN],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+        ],
         CREDENTIAL_RULE_TYPES_ACCOUNT_AUTHORIZATION_RESET
       );
     authorizationReset.cascade = false;

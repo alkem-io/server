@@ -2,6 +2,8 @@ export const CREDENTIAL_RULE_TYPES_ACCOUNT_AUTHORIZATION_RESET =
   'credentialRuleTypes-accountAuthorizationReset';
 export const CREDENTIAL_RULE_TYPES_SPACE_GLOBAL_ADMIN_COMMUNITY_READ =
   'credentialRuleTypes-spaceGlobalAdminCommunityRead';
+export const CREDENTIAL_RULE_TYPES_SPACE_PLATFORM_SETTINGS =
+  'credentialRuleTypes-spacePlatformSettings';
 export const CREDENTIAL_RULE_TYPES_SPACE_READ =
   'credentialRuleTypes-spaceGlobalRead';
 export const CREDENTIAL_RULE_TYPES_SPACE_AUTHORIZATION_GLOBAL_ADMIN_GRANT =
