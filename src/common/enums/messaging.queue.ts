@@ -2,11 +2,15 @@ export enum MessagingQueue {
   VIRTUAL_PERSONA_ENGINE_CHAT_GUIDANCE = 'alkemio-chat-guidance',
   VIRTUAL_PERSONA_ENGINE_COMMUNITY_MANAGER = 'virtual-persona-engine-community-manager',
   VIRTUAL_PERSONA_ENGINE_ALKEMIO_DIGILEEFOMGEVING = 'virtual-persona-engine-alkemio-digileefomgeving',
+  //
   WALLET_MANAGER = 'alkemio-wallet-manager',
   NOTIFICATIONS = 'alkemio-notifications',
   MATRIX_ADAPTER = 'alkemio-matrix-adapter',
+  //
   AUTH_RESET = 'alkemio-auth-reset',
+  //
   EXCALIDRAW_EVENTS = 'alkemio-excalidraw-events',
+  //
   SUBSCRIPTION_WHITEBOARD_CONTENT = 'alkemio-subscriptions-whiteboard-content',
   SUBSCRIPTION_PROFILE_VERIFIED_CREDENTIAL = 'alkemio-subscriptions-profile-verified-credential',
   SUBSCRIPTION_CALLOUT_POST_CREATED = 'alkemio-subscriptions-callout-post-created',
@@ -14,4 +18,7 @@ export enum MessagingQueue {
   SUBSCRIPTION_SUBSPACE_CREATED = 'alkemio-subscriptions-subspace-created',
   SUBSCRIPTION_ACTIVITY_CREATED = 'alkemio-subscriptions-activity-created',
   SUBSCRIPTION_ROOM_EVENT = 'alkemio-subscriptions-room-event',
+  //
+  // todo rename
+  AUTH = 'auth',
 }
