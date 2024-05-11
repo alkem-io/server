@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class globalRoles1714807567359 implements MigrationInterface {
-  name = 'globalRoles1714807567359';
+export class globalRoles1715169195500 implements MigrationInterface {
+  name = 'globalRoles1715169195500';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     const credentials: {
