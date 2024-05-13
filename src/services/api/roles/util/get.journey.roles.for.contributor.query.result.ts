@@ -11,14 +11,12 @@ export const getJourneyRolesForContributorQueryResult = (
   map: CredentialMap,
   spaces: Space[],
   subspaces: Space[],
-  subsubspaces: Space[],
   agentInfo: AgentInfo,
   authorizationService: AuthorizationService
 ): RolesResultSpace[] => {
   return spaces.map(space => {
     const spaceResult = new RolesResultSpace(space);
 
-    spaceResult.userGroups = [];
     spaceResult.roles = map.get('spaces')?.get(space.id) ?? [];
 
     // Only return children of spaces that the current user has READ access to
@@ -55,37 +53,13 @@ export const getJourneyRolesForContributorQueryResult = (
           const challengeResult = new RolesResultCommunity(
             subspace.nameID,
             subspace.id,
-            subspace.profile.displayName
+            subspace.profile.displayName,
+            subspace.type
           );
-          challengeResult.userGroups = [];
           challengeResult.roles = map.get('subspaces')?.get(subspace.id) ?? [];
           challengeResults.push(challengeResult);
         }
         spaceResult.subspaces = challengeResults;
-      }
-
-      // TODO: also filter out subsubspaces in private subspaces, for later...
-      const opportunityResults: RolesResultCommunity[] = [];
-      for (const subsubspace of subsubspaces) {
-        const opportunityAccountID = subsubspace.account?.id;
-        if (!opportunityAccountID) {
-          throw new RelationshipNotFoundException(
-            `Unable to load account on Opportunity in roles user: ${space.nameID}`,
-            LogContext.ROLES
-          );
-        }
-        if (opportunityAccountID === accountID) {
-          const opportunityResult = new RolesResultCommunity(
-            subsubspace.nameID,
-            subsubspace.id,
-            subsubspace.profile.displayName
-          );
-          opportunityResult.userGroups = [];
-          opportunityResult.roles =
-            map.get('subspaces')?.get(subsubspace.id) ?? [];
-          opportunityResults.push(opportunityResult);
-        }
-        spaceResult.subsubspaces = opportunityResults;
       }
     }
     return spaceResult;

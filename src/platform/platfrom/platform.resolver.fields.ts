@@ -21,6 +21,7 @@ import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.a
 import { GraphqlGuard } from '@core/authorization';
 import { UseGuards } from '@nestjs/common';
 import { ReleaseDiscussionOutput } from './dto/release.discussion.dto';
+import { ILicensePolicy } from '@platform/license-policy';
 
 @Resolver(() => IPlatform)
 export class PlatformResolverFields {
@@ -67,6 +68,14 @@ export class PlatformResolverFields {
     @Parent() platform: IPlatform
   ): Promise<IStorageAggregator> {
     return this.platformService.getStorageAggregator(platform);
+  }
+
+  @ResolveField('licensePolicy', () => ILicensePolicy, {
+    nullable: false,
+    description: 'The LicensePolicy in use by the platform.',
+  })
+  licensePolicy(@Parent() platform: IPlatform): Promise<ILicensePolicy> {
+    return this.platformService.getLicensePolicy(platform);
   }
 
   @ResolveField(() => [IInnovationHub], {

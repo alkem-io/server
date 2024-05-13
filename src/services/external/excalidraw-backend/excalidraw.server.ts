@@ -63,11 +63,11 @@ import {
   minCollaboratorsInRoom,
   resetCollaboratorModeDebounceWait,
 } from './types/defaults';
+import { SaveResponse } from './types/save.reponse';
 
 type SaveMessageOpts = { timeout: number };
 type RoomTimers = Map<string, NodeJS.Timer>;
 type SocketTimers = Map<string, NodeJS.Timer>;
-type SaveResponse = { success: boolean; errors?: string[] };
 
 @Injectable()
 export class ExcalidrawServer {
@@ -117,6 +117,15 @@ export class ExcalidrawServer {
     );
   }
 
+  private async fetchSocketsSafe(roomID: string) {
+    try {
+      return await this.wsServer.in(roomID).fetchSockets();
+    } catch (e: any) {
+      this.logger.warn(`fetchSockets error handled: ${e?.message}`);
+      return [];
+    }
+  }
+
   private async init() {
     const kratosPublicBaseUrl = this.configService.get(
       ConfigurationTypes.IDENTITY
@@ -133,7 +142,7 @@ export class ExcalidrawServer {
       if (!isRoomId(roomId)) {
         return;
       }
-      if ((await this.wsServer.in(roomId).fetchSockets()).length > 0) {
+      if ((await this.fetchSocketsSafe(roomId)).length > 0) {
         // if there are sockets already connected
         // this room already exist on another instance
         return;
@@ -167,9 +176,8 @@ export class ExcalidrawServer {
         return;
       }
 
-      const connectedSocketsToRoomCount = (
-        await this.wsServer.in(roomId).fetchSockets()
-      ).length;
+      const connectedSocketsToRoomCount = (await this.fetchSocketsSafe(roomId))
+        .length;
       if (connectedSocketsToRoomCount > 0) {
         // if there are sockets already connected
         // this room was deleted, but it's still active on the other instances
@@ -195,6 +203,10 @@ export class ExcalidrawServer {
       // delete timers that were left locally
       this.deleteTimersForRoom(roomId);
     });
+    adapter.on('error', async (error: Error) => {
+      this.logger.error(error, error.stack, LogContext.EXCALIDRAW_SERVER);
+    });
+
     // middlewares
     this.wsServer.use(socketDataInitMiddleware);
     this.wsServer.use(attachSessionMiddleware(kratosClient));
@@ -333,7 +345,7 @@ export class ExcalidrawServer {
       await this.communityResolver.getRootSpaceIDFromCommunityOrFail(community);
     const wb = await this.whiteboardService.getProfile(roomId);
 
-    const sockets = await this.wsServer.in(roomId).fetchSockets();
+    const sockets = await this.fetchSocketsSafe(roomId);
 
     for (const socket of sockets) {
       const lastContributed = socket.data.lastContributed;
@@ -392,7 +404,7 @@ export class ExcalidrawServer {
   ): Promise<boolean | undefined> {
     const { timeout } = opts;
     // get only sockets which can save
-    const sockets = (await this.wsServer.in(roomId).fetchSockets()).filter(
+    const sockets = (await this.fetchSocketsSafe(roomId)).filter(
       socket => socket.data.update
     );
     // return if no eligible sockets
@@ -403,7 +415,8 @@ export class ExcalidrawServer {
     const randomSocketWithUpdateFlag = arrayRandomElement(sockets);
     // sends a save request to the socket and wait for a response
     try {
-      const [response]: SaveResponse[] = await this.wsServer
+      // we are waiting for a single response, so destruct to just the first element
+      const [response] = await this.wsServer
         .to(randomSocketWithUpdateFlag.id)
         .timeout(timeout)
         .emitWithAck(SERVER_SAVE_REQUEST);
