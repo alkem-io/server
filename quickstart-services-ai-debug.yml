@@ -265,14 +265,49 @@ services:
       - LANGCHAIN_TRACING_V2
       - LANGCHAIN_ENDPOINT
       - LANGCHAIN_API_KEY
-      - LANGCHAIN_PROJECT
+      - LANGCHAIN_PROJECT=virtual-contributor-engine-guidance
 
-  virtual-contributor-engine-community-manager:
-    container_name: alkemio_dev_community_manager
-    hostname: virtual-contributor-engine-community-manager
+  # virtual-contributor-engine-community-manager:
+  #   container_name: alkemio_dev_community_manager
+  #   hostname: virtual-contributor-engine-community-manager
+  #   build:
+  #     context: '../virtual-contributor-engine-community-manager'
+  #     dockerfile: ../virtual-contributor-engine-community-manager/Dockerfile
+  #   platform: linux/x86_64
+  #   restart: always
+  #   volumes:
+  #      - /dev/shm:/dev/shm
+  #      - ~/alkemio/data:${AI_LOCAL_PATH:-/home/alkemio/data}
+  #   networks:
+  #     - alkemio_dev_net
+  #   depends_on:
+  #     rabbitmq:
+  #       condition: "service_healthy"
+  #   environment:
+  #     - RABBITMQ_HOST
+  #     - RABBITMQ_USER
+  #     - RABBITMQ_PASSWORD
+  #     - RABBITMQ_QUEUE=virtual-contributor-engine-community-manager
+  #     - ENVIRONMENT=dev
+  #     - LOG_LEVEL=DEBUG
+  #     - EMBEDDINGS_DEPLOYMENT_NAME
+  #     - AZURE_OPENAI_API_KEY
+  #     - AZURE_OPENAI_ENDPOINT
+  #     - OPENAI_API_VERSION
+  #     - AI_MODEL_TEMPERATURE
+  #     - AI_LOCAL_PATH
+  #     - LLM_DEPLOYMENT_NAME
+  #     - LANGCHAIN_TRACING_V2
+  #     - LANGCHAIN_ENDPOINT
+  #     - LANGCHAIN_API_KEY
+  #     - LANGCHAIN_PROJECT=virtual-contributor-engine-community-manager
+
+  virtual_contributor_ingest_space:
+    container_name: alkemio_dev_virtual_contributor_ingest_space
+    hostname: virtual-contributor-ingest-space
     build:
-      context: '../virtual-contributor-engine-community-manager'
-      dockerfile: ../virtual-contributor-engine-community-manager/Dockerfile
+      dockerfile: ../virtual-contributor-ingest-space/Dockerfile
+      context: '../virtual-contributor-ingest-space/'
     platform: linux/x86_64
     restart: always
     volumes:
@@ -283,13 +318,34 @@ services:
     depends_on:
       rabbitmq:
         condition: "service_healthy"
+    environment:
+      - RABBITMQ_HOST
+      - RABBITMQ_USER
+      - RABBITMQ_PASSWORD
+      - RABBITMQ_PORT
+      - RABBITMQ_QUEUE=virtual-contributor-ingest-space
+      - ENVIRONMENT=dev
+      - LOG_LEVEL=DEBUG
+      - EMBEDDINGS_DEPLOYMENT_NAME
+      - AZURE_OPENAI_API_KEY
+      - AZURE_OPENAI_ENDPOINT
+      - OPENAI_API_VERSION
+      - AI_MODEL_TEMPERATURE
+      - AI_LOCAL_PATH
+      - LLM_DEPLOYMENT_NAME
+      - LANGCHAIN_TRACING_V2
+      - LANGCHAIN_ENDPOINT
+      - LANGCHAIN_API_KEY
+      - LANGCHAIN_PROJECT=virtual-contributor-ingest-space
+      - VECTOR_DB_HOST
+      - VECTOR_DB_PORT
 
-  virtual_contributor_ingest_space:
-    container_name: alkemio_dev_virtual_contributor_ingest_space
-    hostname: virtual-contributor-ingest-space
+  virtual_contributor_engine_expert:
+    container_name: alkemio_dev_virtual-contributor-engine-expert
+    hostname: virtual-contributor-engine-expert
     build:
-      dockerfile: ../virtual-contributor-ingest-space/Dockerfile
-      context: '../virtual-contributor-ingest-space/'
+      dockerfile: ../virtual-contributor-engine-expert//Dockerfile
+      context: '../virtual-contributor-engine-expert/'
     platform: linux/x86_64
     restart: always
     volumes:
@@ -304,55 +360,23 @@ services:
       - RABBITMQ_USER
       - RABBITMQ_PASSWORD
       - RABBITMQ_PORT
-      - RABBITMQ_QUEUE=virtual-contributor-ingest-space
+      - RABBITMQ_QUEUE=virtual-contributor-engine-expert
       - API_ENDPOINT_PRIVATE_GRAPHQL=http://host.docker.internal:3000/api/private/non-interactive/graphql
       - AUTH_ORY_KRATOS_PUBLIC_BASE_URL=http://host.docker.internal:3000/ory/kratos/public
       - AUTH_ADMIN_EMAIL
       - AUTH_ADMIN_PASSWORD
-      - LOG_LEVEL=debug
+      - OPENAI_API_VERSION
+      - AI_MODEL_TEMPERATURE
+      - LOG_LEVEL=DEBUG
       - AZURE_OPENAI_ENDPOINT=https://alkemio-gpt.openai.azure.com
       - AZURE_OPENAI_API_KEY
       - LLM_DEPLOYMENT_NAME=deploy-gpt-35-turbo
       - EMBEDDINGS_DEPLOYMENT_NAME=embedding
-      - VECTOR_DB_PORT
-      - VECTOR_DB_HOST
-      - AUTH_ADMIN_EMAIL
-      - AUTH_ADMIN_PASSWORD
-
-  virtual_contributor_engine_expert:
-    container_name: alkemio_dev_virtual-contributor-engine-expert
-    hostname: virtual-contributor-engine-expert
-    build:
-      dockerfile: ../virtual-contributor-engine-expert//Dockerfile
-      context: '../virtual-contributor-engine-expert/'
-    platform: linux/x86_64
-    restart: always
-    volumes:
-       - /dev/shm:/dev/shm
-       - ~/alkemio/data:${AI_LOCAL_PATH:-/home/alkemio/data}
-    networks:
-      - alkemio_dev_net
-    depends_on:
-      rabbitmq:
-        condition: "service_healthy"
-    environment:
-      - RABBITMQ_HOST
-      - RABBITMQ_USER
-      - RABBITMQ_PASSWORD
-      - RABBITMQ_QUEUE=virtual-contributor-engine-expert
-      - ENVIRONMENT=dev
-      - LOG_LEVEL=DEBUG
-      - EMBEDDINGS_DEPLOYMENT_NAME
-      - AZURE_OPENAI_API_KEY
-      - AZURE_OPENAI_ENDPOINT
-      - OPENAI_API_VERSION
-      - AI_MODEL_TEMPERATURE
-      - AI_LOCAL_PATH
-      - LLM_DEPLOYMENT_NAME
       - LANGCHAIN_TRACING_V2
       - LANGCHAIN_ENDPOINT
       - LANGCHAIN_API_KEY
-      - LANGCHAIN_PROJECT
-      - VECTOR_DB_HOST
+      - LANGCHAIN_PROJECT=virtual-contributor-engine-expert
       - VECTOR_DB_PORT
+      - VECTOR_DB_HOST
+      - AI_LOCAL_PATH=./
 
