@@ -387,11 +387,11 @@ services:
       - AUTH_ADMIN_PASSWORD
 
   virtual_contributor:
-    container_name: alkemio_dev_virtual_contributor
-    hostname: virtual-contributor
+    container_name: alkemio_dev_virtual-contributor-engine-expert
+    hostname: irtual-contributor-engine-expert
     build:
-      dockerfile: ../virtual-contributor-service//Dockerfile
-      context: '../virtual-contributor-service/'
+      dockerfile: ../virtual-contributor-engine-expert//Dockerfile
+      context: '../virtual-contributor-engine-expert/'
     platform: linux/x86_64
     restart: always
     volumes:
