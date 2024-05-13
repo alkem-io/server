@@ -16,7 +16,7 @@ export async function virtualPersonaEngineChatGuidanceServiceFactory(
   try {
     const options = {
       urls: [connectionString],
-      queue: MessagingQueue.VIRTUAL_PERSONA_ENGINE_CHAT_GUIDANCE,
+      queue: MessagingQueue.VIRTUAL_CONTRIBUTOR_ENGINE_GUIDANCE,
       queueOptions: {
         // the queue will survive a broker restart
         durable: false,

@@ -16,7 +16,7 @@ export async function virtualPersonaEngineAlkemioDigileefomgevingServiceFactory(
   try {
     const options = {
       urls: [connectionString],
-      queue: MessagingQueue.VIRTUAL_PERSONA_ENGINE_ALKEMIO_DIGILEEFOMGEVING,
+      queue: MessagingQueue.VIRTUAL_CONTRIBUTOR_ENGINE_EXPERT,
       queueOptions: {
         // the queue will survive a broker restart
         durable: false,

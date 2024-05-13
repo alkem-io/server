@@ -16,7 +16,7 @@ export async function virtualPersonaEngineCommunityManagerServiceFactory(
   try {
     const options = {
       urls: [connectionString],
-      queue: MessagingQueue.VIRTUAL_PERSONA_ENGINE_COMMUNITY_MANAGER,
+      queue: MessagingQueue.VIRTUAL_CONTRIBUTOR_ENGINE_COMMUNITY_MANAGER,
       queueOptions: {
         // the queue will survive a broker restart
         durable: false,
