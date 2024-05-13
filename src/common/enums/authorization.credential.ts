@@ -17,10 +17,6 @@ export enum AuthorizationCredential {
   SPACE_MEMBER = 'space-member',
   SPACE_LEAD = 'space-lead',
 
-  SUBSPACE_ADMIN = 'subspace-admin',
-  SUBSPACE_MEMBER = 'subspace-member',
-  SUBSPACE_LEAD = 'subspace-lead',
-
   ORGANIZATION_OWNER = 'organization-owner', // Able to commit an organization
   ORGANIZATION_ADMIN = 'organization-admin', // Able to administer an organization
   ORGANIZATION_ASSOCIATE = 'organization-associate', // Able to be a part of an organization

@@ -303,10 +303,7 @@ export class PlatformAuthorizationService {
     const createOrg =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.CREATE_ORGANIZATION],
-        [
-          AuthorizationCredential.SPACE_ADMIN,
-          AuthorizationCredential.SUBSPACE_ADMIN,
-        ],
+        [AuthorizationCredential.SPACE_ADMIN],
         CREDENTIAL_RULE_TYPES_PLATFORM_ANY_ADMIN
       );
     createOrg.cascade = false;
