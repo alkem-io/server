@@ -406,6 +406,7 @@ services:
       - RABBITMQ_HOST
       - RABBITMQ_USER
       - RABBITMQ_PASSWORD
+      - RABBITMQ_PORT
       - RABBITMQ_QUEUE=virtual-contributor-ingest-space
       - ENVIRONMENT=dev
       - LOG_LEVEL=DEBUG
