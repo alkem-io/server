@@ -9,23 +9,24 @@ import { CreateCommunityGuidelinesTemplateInput } from './dto/community.guidelin
 import { CommunityGuidelinesTemplate } from './community.guidelines.template.entity';
 import { ITemplateBase } from '../template-base/template.base.interface';
 import { ICommunityGuidelinesTemplate } from '@domain/template/community-guidelines-template/community.guidelines.template.interface';
+import { CommunityGuidelinesService } from '@domain/community/community-guidelines/community.guidelines.service';
 
 @Injectable()
 export class CommunityGuidelinesTemplateService {
   constructor(
     @InjectRepository(CommunityGuidelinesTemplate)
     private communityGuidelinesTemplateRepository: Repository<CommunityGuidelinesTemplate>,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService,
-    private templateBaseService: TemplateBaseService
+    private templateBaseService: TemplateBaseService,
+    private communityGuidelinesService: CommunityGuidelinesService
   ) {}
 
   async createCommunityGuidelinesTemplate(
     communityGuidelinesTemplateData: CreateCommunityGuidelinesTemplateInput,
     storageAggregator: IStorageAggregator
-  ): Promise<ITemplateBase> {
-    const communityGuidelinesTemplate: ITemplateBase =
-      CommunityGuidelinesTemplate.create(communityGuidelinesTemplateData);
+  ): Promise<ICommunityGuidelinesTemplate> {
+    const communityGuidelinesTemplate = CommunityGuidelinesTemplate.create(
+      communityGuidelinesTemplateData
+    );
     await this.templateBaseService.initialise(
       communityGuidelinesTemplate,
       communityGuidelinesTemplateData,
@@ -33,7 +34,26 @@ export class CommunityGuidelinesTemplateService {
       storageAggregator
     );
 
-    return await this.communityGuidelinesTemplateRepository.save(
+    if (communityGuidelinesTemplateData.communityGuidelinesID) {
+      const guidelines =
+        await this.communityGuidelinesService.getCommunityGuidelinesOrFail(
+          communityGuidelinesTemplateData.communityGuidelinesID,
+          {
+            relations: { profile: true },
+          }
+        );
+      communityGuidelinesTemplate.guidelines =
+        this.communityGuidelinesService.createCommunityGuidelines({
+          profile: {
+            displayName: guidelines.profile.displayName,
+            description: guidelines.profile.description,
+            tagsets: guidelines.profile.tagsets,
+            avatarURL: guidelines.profile.visuals?.
+          },
+        });
+    }
+
+    return this.communityGuidelinesTemplateRepository.save(
       communityGuidelinesTemplate
     );
   }
