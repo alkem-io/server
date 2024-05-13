@@ -24,25 +24,25 @@ export class subspaceCredentials1715575211966 implements MigrationInterface {
       lead: string;
       admin: string;
     }[] = await queryRunner.query(
-      `SELECT id, member, lead, admin FROM community_policy`
+      `SELECT id, community_policy.member, community_policy.lead, community_policy.admin FROM community_policy`
     );
     for (const policy of communityPolicies) {
       // Update the member
       const updatedMember = this.updateCredentialType(policy.member);
       await queryRunner.query(
-        `UPDATE community_policy SET member = '${updatedMember}' WHERE id = '${policy.id}'`
+        `UPDATE community_policy SET community_policy.member = '${updatedMember}' WHERE id = '${policy.id}'`
       );
 
       // Update the lead
       const updatedLead = this.updateCredentialType(policy.lead);
       await queryRunner.query(
-        `UPDATE community_policy SET lead = '${updatedLead}' WHERE id = '${policy.id}'`
+        `UPDATE community_policy SET community_policy.lead = '${updatedLead}' WHERE id = '${policy.id}'`
       );
 
       // Update the admin
       const updatedAdmin = this.updateCredentialType(policy.admin);
       await queryRunner.query(
-        `UPDATE community_policy SET admin = '${updatedAdmin}' WHERE id = '${policy.id}'`
+        `UPDATE community_policy SET community_policy.admin = '${updatedAdmin}' WHERE id = '${policy.id}'`
       );
     }
   }
