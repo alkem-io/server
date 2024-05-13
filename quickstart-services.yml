@@ -351,12 +351,12 @@ services:
       - LANGCHAIN_API_KEY
       - LANGCHAIN_PROJECT
 
-  space_ingest:
-    container_name: alkemio_dev_space_ingest
-    hostname: space-ingest
+  virtual_contributor_ingest_space:
+    container_name: alkemio_dev_virtual_contributor_ingest_space
+    hostname: virtual-contributor-ingest-space
     build:
-      dockerfile: ../space-ingest/Dockerfile
-      context: '../space-ingest/'
+      dockerfile: ../virtual-contributor-ingest-space/Dockerfile
+      context: '../virtual-contributor-ingest-space/'
     platform: linux/x86_64
     restart: always
     volumes:
@@ -371,7 +371,7 @@ services:
       - RABBITMQ_USER
       - RABBITMQ_PASSWORD
       - RABBITMQ_PORT
-      - RABBITMQ_QUEUE=ingest-space
+      - RABBITMQ_QUEUE=virtual-contributor-ingest-space
       - API_ENDPOINT_PRIVATE_GRAPHQL=http://host.docker.internal:3000/api/private/non-interactive/graphql
       - AUTH_ORY_KRATOS_PUBLIC_BASE_URL=http://host.docker.internal:3000/ory/kratos/public
       - AUTH_ADMIN_EMAIL
@@ -386,9 +386,9 @@ services:
       - AUTH_ADMIN_EMAIL
       - AUTH_ADMIN_PASSWORD
 
-  virtual_contributor:
+  virtual_contributor_engine_expert:
     container_name: alkemio_dev_virtual-contributor-engine-expert
-    hostname: irtual-contributor-engine-expert
+    hostname: virtual-contributor-engine-expert
     build:
       dockerfile: ../virtual-contributor-engine-expert//Dockerfile
       context: '../virtual-contributor-engine-expert/'
@@ -406,7 +406,7 @@ services:
       - RABBITMQ_HOST
       - RABBITMQ_USER
       - RABBITMQ_PASSWORD
-      - RABBITMQ_QUEUE=virtual-persona-engine-alkemio-digileefomgeving
+      - RABBITMQ_QUEUE=virtual-contributor-engine-expert
       - ENVIRONMENT=dev
       - LOG_LEVEL=DEBUG
       - EMBEDDINGS_DEPLOYMENT_NAME

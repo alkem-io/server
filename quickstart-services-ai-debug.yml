@@ -283,12 +283,47 @@ services:
       rabbitmq:
         condition: "service_healthy"
 
-  virtual_contributor:
-    container_name: alkemio_dev_virtual_contributor
-    hostname: virtual-contributor
+  virtual_contributor_ingest_space:
+    container_name: alkemio_dev_virtual_contributor_ingest_space
+    hostname: virtual-contributor-ingest-space
     build:
-      context: '../virtual-contributor-service'
-      dockerfile: ../virtual-contributor-service/Dockerfile
+      dockerfile: ../virtual-contributor-ingest-space/Dockerfile
+      context: '../virtual-contributor-ingest-space/'
+    platform: linux/x86_64
+    restart: always
+    volumes:
+      - /dev/shm:/dev/shm
+    networks:
+      - alkemio_dev_net
+    depends_on:
+      rabbitmq:
+        condition: "service_healthy"
+    environment:
+      - RABBITMQ_HOST
+      - RABBITMQ_USER
+      - RABBITMQ_PASSWORD
+      - RABBITMQ_PORT
+      - RABBITMQ_QUEUE=virtual-contributor-ingest-space
+      - API_ENDPOINT_PRIVATE_GRAPHQL=http://host.docker.internal:3000/api/private/non-interactive/graphql
+      - AUTH_ORY_KRATOS_PUBLIC_BASE_URL=http://host.docker.internal:3000/ory/kratos/public
+      - AUTH_ADMIN_EMAIL
+      - AUTH_ADMIN_PASSWORD
+      - LOG_LEVEL=debug
+      - AZURE_OPENAI_ENDPOINT=https://alkemio-gpt.openai.azure.com
+      - AZURE_OPENAI_API_KEY
+      - LLM_DEPLOYMENT_NAME=deploy-gpt-35-turbo
+      - EMBEDDINGS_DEPLOYMENT_NAME=embedding
+      - VECTOR_DB_PORT
+      - VECTOR_DB_HOST
+      - AUTH_ADMIN_EMAIL
+      - AUTH_ADMIN_PASSWORD
+
+  virtual_contributor_engine_expert:
+    container_name: alkemio_dev_virtual-contributor-engine-expert
+    hostname: virtual-contributor-engine-expert
+    build:
+      dockerfile: ../virtual-contributor-engine-expert//Dockerfile
+      context: '../virtual-contributor-engine-expert/'
     platform: linux/x86_64
     restart: always
     volumes:
@@ -303,7 +338,7 @@ services:
       - RABBITMQ_HOST
       - RABBITMQ_USER
       - RABBITMQ_PASSWORD
-      - RABBITMQ_QUEUE=virtual-persona-engine-alkemio-digileefomgeving
+      - RABBITMQ_QUEUE=virtual-contributor-engine-expert
       - ENVIRONMENT=dev
       - LOG_LEVEL=DEBUG
       - EMBEDDINGS_DEPLOYMENT_NAME
@@ -317,5 +352,6 @@ services:
       - LANGCHAIN_ENDPOINT
       - LANGCHAIN_API_KEY
       - LANGCHAIN_PROJECT
+      - VECTOR_DB_HOST
+      - VECTOR_DB_PORT
 
-        # 4b262af068ff4546a69b996bea9e41cb
