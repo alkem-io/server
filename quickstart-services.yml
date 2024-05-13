@@ -374,6 +374,8 @@ services:
       - AUTH_ORY_KRATOS_PUBLIC_BASE_URL=http://host.docker.internal:3000/ory/kratos/public
       - AUTH_ADMIN_EMAIL
       - AUTH_ADMIN_PASSWORD
+      - OPENAI_API_VERSION
+      - AI_MODEL_TEMPERATURE
       - LOG_LEVEL=DEBUG
       - AZURE_OPENAI_ENDPOINT=https://alkemio-gpt.openai.azure.com
       - AZURE_OPENAI_API_KEY
