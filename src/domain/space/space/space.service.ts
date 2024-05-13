@@ -856,10 +856,6 @@ export class SpaceService {
     );
   }
 
-  async getSubspacesCount(accountID: string): Promise<number> {
-    return await this.getSubspacesInAccountCount(accountID);
-  }
-
   private async assignUserToRoles(
     space: ISpace,
     agentInfo: AgentInfo | undefined
@@ -1241,14 +1237,22 @@ export class SpaceService {
     return await this.collaborationService.getWhiteboardsCount(collaboration);
   }
 
-  async getSubspacesInAccountCount(accountId: string): Promise<number> {
-    const count = await this.spaceRepository.countBy({
-      account: {
-        id: accountId,
+  async getSubspacesInSpaceCount(parentSpaceId: string): Promise<number> {
+    const subspaces = await this.spaceRepository.findBy({
+      parentSpace: {
+        id: parentSpaceId,
       },
       level: Not(0), // At least one parent in the tree
     });
-    return count;
+
+    let children = 0;
+    for await (const subspace of subspaces.map(
+      async subspace => await this.getSubspacesInSpaceCount(subspace.id)
+    )) {
+      children += subspace;
+    }
+
+    return subspaces.length + children;
   }
 
   async getMetrics(space: ISpace): Promise<INVP[]> {
@@ -1260,9 +1264,8 @@ export class SpaceService {
         LogContext.SPACES
       );
     }
-    const account = space.account;
     // Subspaces
-    const subspacesCount = await this.getSubspacesInAccountCount(account.id);
+    const subspacesCount = await this.getSubspacesInSpaceCount(space.id);
     const subspacesTopic = new NVP('subspaces', subspacesCount.toString());
     subspacesTopic.id = `subspaces-${space.id}`;
     metrics.push(subspacesTopic);
