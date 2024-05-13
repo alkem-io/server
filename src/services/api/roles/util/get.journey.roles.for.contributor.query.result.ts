@@ -14,10 +14,11 @@ export const getJourneyRolesForContributorQueryResult = (
   agentInfo: AgentInfo,
   authorizationService: AuthorizationService
 ): RolesResultSpace[] => {
+  const spacesCredentialsMap = map.get('spaces');
   return spaces.map(space => {
     const spaceResult = new RolesResultSpace(space);
 
-    spaceResult.roles = map.get('spaces')?.get(space.id) ?? [];
+    spaceResult.roles = spacesCredentialsMap?.get(space.id) ?? [];
 
     // Only return children of spaces that the current user has READ access to
     if (!space.authorization) {
@@ -40,7 +41,7 @@ export const getJourneyRolesForContributorQueryResult = (
           LogContext.ROLES
         );
       }
-      const challengeResults: RolesResultCommunity[] = [];
+      const subspaceResults: RolesResultCommunity[] = [];
       for (const subspace of subspaces) {
         const challengeAccountID = subspace.account?.id;
         if (!challengeAccountID) {
@@ -50,16 +51,16 @@ export const getJourneyRolesForContributorQueryResult = (
           );
         }
         if (challengeAccountID === accountID) {
-          const challengeResult = new RolesResultCommunity(
+          const subspaceResult = new RolesResultCommunity(
             subspace.nameID,
             subspace.id,
             subspace.profile.displayName,
             subspace.type
           );
-          challengeResult.roles = map.get('subspaces')?.get(subspace.id) ?? [];
-          challengeResults.push(challengeResult);
+          subspaceResult.roles = spacesCredentialsMap?.get(subspace.id) ?? [];
+          subspaceResults.push(subspaceResult);
         }
-        spaceResult.subspaces = challengeResults;
+        spaceResult.subspaces = subspaceResults;
       }
     }
     return spaceResult;
