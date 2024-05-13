@@ -182,7 +182,8 @@ export class VirtualPersonaService {
       prompt: virtualPersona.prompt,
       userId: agentInfo.userID,
       question: personaQuestionInput.question,
-      spaceNameID,
+      kowledgeSpaceNameID: spaceNameID,
+      contextSpaceNameID: spaceNameID,
     };
 
     const response = await this.virtualPersonaEngineAdapter.sendQuery(input);

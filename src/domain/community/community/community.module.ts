@@ -6,7 +6,7 @@ import { CommunicationModule } from '@domain/communication/communication/communi
 import { ApplicationModule } from '@domain/community/application/application.module';
 import { UserGroupModule } from '@domain/community/user-group/user-group.module';
 import { UserModule } from '@domain/community/user/user.module';
-import { Module, OnModuleInit } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
@@ -30,41 +30,10 @@ import { StorageAggregatorResolverModule } from '@services/infrastructure/storag
 import { CommunityGuidelinesModule } from '../community-guidelines/community.guidelines.module';
 import { VirtualContributorModule } from '../virtual-contributor/virtual.contributor.module';
 import { LicenseModule } from '@domain/license/license/license.module';
-import { CqrsModule, EventBus } from '@nestjs/cqrs';
-import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { ConfigurationTypes } from '@common/enums';
-import { Publisher } from './messaging/publisher';
-import { VirtualContributorAdded } from './events/virtual-contributor-added.event';
+import { EventBusModule } from '@services/event-bus/event.bus.module';
 
 @Module({
   imports: [
-    CqrsModule,
-    RabbitMQModule.forRootAsync(RabbitMQModule, {
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService) => {
-        const rbmqConfig = configService.get(ConfigurationTypes.MICROSERVICES)
-          .rabbitmq.connection;
-        return {
-          uri: `amqp://${rbmqConfig.user}:${rbmqConfig.password}@${rbmqConfig.host}:${rbmqConfig.port}`,
-          connectionInitOptions: { wait: false },
-          exchanges: [
-            {
-              name: 'event-bus',
-              type: 'fanout',
-            },
-          ],
-          queues: [
-            {
-              name: 'virtual-contributor-added-to-space',
-              exchange: 'event-bus',
-              routingKey: '',
-            },
-          ],
-        };
-      },
-    }),
     ActivityAdapterModule,
     NotificationAdapterModule,
     AuthorizationModule,
@@ -89,6 +58,7 @@ import { VirtualContributorAdded } from './events/virtual-contributor-added.even
     TypeOrmModule.forFeature([Community]),
     TrustRegistryAdapterModule,
     ContributionReporterModule,
+    EventBusModule,
   ],
   providers: [
     CommunityService,
@@ -98,19 +68,7 @@ import { VirtualContributorAdded } from './events/virtual-contributor-added.even
     CommunityResolverFields,
     CommunityApplicationLifecycleOptionsProvider,
     CommunityInvitationLifecycleOptionsProvider,
-    Publisher,
-    VirtualContributorAdded,
   ],
   exports: [CommunityService, CommunityAuthorizationService],
 })
-export class CommunityModule implements OnModuleInit {
-  constructor(
-    private readonly event$: EventBus,
-    private readonly publisher: Publisher
-  ) {}
-
-  async onModuleInit(): Promise<any> {
-    this.publisher.connect();
-    this.event$.publisher = this.publisher;
-  }
-}
+export class CommunityModule {}

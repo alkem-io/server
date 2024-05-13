@@ -52,8 +52,11 @@ import { RemoveCommunityRoleFromVirtualInput } from './dto/community.dto.role.re
 import { VirtualContributorAuthorizationService } from '../virtual-contributor/virtual.contributor.service.authorization';
 import { VirtualContributorService } from '../virtual-contributor/virtual.contributor.service';
 import { IVirtualContributor } from '../virtual-contributor';
-import { CommandBus, EventBus } from '@nestjs/cqrs';
-import { VirtualContributorAdded } from './events/virtual-contributor-added.event';
+import { EventBus } from '@nestjs/cqrs';
+import {
+  IngestSpace,
+  SpaceIngestionPurpose,
+} from '@services/event-bus/commands';
 
 const IAnyInvitation = createUnionType({
   name: 'AnyInvitation',
@@ -87,7 +90,6 @@ export class CommunityResolverMutations {
     private invitationAuthorizationService: InvitationAuthorizationService,
     private invitationExternalAuthorizationService: InvitationExternalAuthorizationService,
     private communityAuthorizationService: CommunityAuthorizationService,
-    private commandBus: CommandBus,
     private eventBus: EventBus
   ) {}
 
@@ -233,11 +235,13 @@ export class CommunityResolverMutations {
       await this.virtualContributorAuthorizationService.applyAuthorizationPolicy(
         virtual
       );
-
     // publish to EB for space ingestion
     const spaceID = await this.communityService.getSpaceID(community);
+    // we are publising an event instead of executing a command because Nest's CQRS
+    // won't execute a command unless a command handler is defined within the application
+    // we want to have an external handler so for now events will do
     this.eventBus.publish(
-      new VirtualContributorAdded(spaceID, roleData.virtualContributorID)
+      new IngestSpace(spaceID, SpaceIngestionPurpose.Knowledge)
     );
 
     return result;

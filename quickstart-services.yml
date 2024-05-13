@@ -371,7 +371,7 @@ services:
       - RABBITMQ_USER
       - RABBITMQ_PASSWORD
       - RABBITMQ_PORT
-      - RABBITMQ_QUEUE=virtual-contributor-added-to-space
+      - RABBITMQ_QUEUE=ingest-space
       - API_ENDPOINT_PRIVATE_GRAPHQL=http://host.docker.internal:3000/api/private/non-interactive/graphql
       - AUTH_ORY_KRATOS_PUBLIC_BASE_URL=http://host.docker.internal:3000/ory/kratos/public
       - AUTH_ADMIN_EMAIL

@@ -11,6 +11,7 @@ export class Publisher implements IEventPublisher {
   }
 
   publish<T extends object>(event: T): any {
+    // throw new Error(JSON.stringify(event));
     this.amqpConnection.publish(
       'event-bus',
       event.constructor.name,
