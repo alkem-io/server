@@ -5,53 +5,31 @@ export class subspaceCredentials1715575211966 implements MigrationInterface {
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     // All credentials need to be updated to reflect the new type
-    const credentials: {
-      id: string;
-      type: string;
-    }[] = await queryRunner.query(`SELECT id, type FROM credential`);
-    for (const credential of credentials) {
-      // Update the type
-      const updatedType = this.updateCredentialType(credential.type);
-      await queryRunner.query(
-        `UPDATE credential SET type = '${updatedType}' WHERE id = '${credential.id}'`
-      );
-    }
+    await queryRunner.query(`
+      UPDATE credential
+      SET your_field = REPLACE(type, 'subspace-', 'space-')
+      WHERE type LIKE '%subspace-%';
+    `);
 
     // And the community policies
-    const communityPolicies: {
-      id: string;
-      member: string;
-      lead: string;
-      admin: string;
-    }[] = await queryRunner.query(
-      `SELECT id, community_policy.member, community_policy.lead, community_policy.admin FROM community_policy`
-    );
-    for (const policy of communityPolicies) {
-      // Update the member
-      const updatedMember = this.updateCredentialType(policy.member);
-      await queryRunner.query(
-        `UPDATE community_policy SET community_policy.member = '${updatedMember}' WHERE id = '${policy.id}'`
-      );
+    await queryRunner.query(`
+      UPDATE credential
+      SET member = REPLACE(member, 'subspace-', 'space-')
+      WHERE member LIKE '%subspace-%'
+    `);
 
-      // Update the lead
-      const updatedLead = this.updateCredentialType(policy.lead);
-      await queryRunner.query(
-        `UPDATE community_policy SET community_policy.lead = '${updatedLead}' WHERE id = '${policy.id}'`
-      );
+    await queryRunner.query(`
+      UPDATE credential
+      SET lead = REPLACE(lead, 'subspace-', 'space-')
+      WHERE lead LIKE '%subspace-%'
+    `);
 
-      // Update the admin
-      const updatedAdmin = this.updateCredentialType(policy.admin);
-      await queryRunner.query(
-        `UPDATE community_policy SET community_policy.admin = '${updatedAdmin}' WHERE id = '${policy.id}'`
-      );
-    }
+    await queryRunner.query(`
+      UPDATE credential
+      SET admin = REPLACE(admin, 'subspace-', 'space-')
+      WHERE admin LIKE '%subspace-%'
+    `);
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {}
-
-  private updateCredentialType(type: string): string {
-    let result = type;
-    result = result.replace('subspace-', 'space-');
-    return result;
-  }
 }
