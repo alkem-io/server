@@ -40,7 +40,7 @@ export const getJourneyRolesForContributorQueryResult = (
           LogContext.ROLES
         );
       }
-      const challengeResults: RolesResultCommunity[] = [];
+      const subspaceResults: RolesResultCommunity[] = [];
       for (const subspace of subspaces) {
         const challengeAccountID = subspace.account?.id;
         if (!challengeAccountID) {
@@ -50,16 +50,16 @@ export const getJourneyRolesForContributorQueryResult = (
           );
         }
         if (challengeAccountID === accountID) {
-          const challengeResult = new RolesResultCommunity(
+          const subspaceResult = new RolesResultCommunity(
             subspace.nameID,
             subspace.id,
             subspace.profile.displayName,
             subspace.type
           );
-          challengeResult.roles = map.get('subspaces')?.get(subspace.id) ?? [];
-          challengeResults.push(challengeResult);
+          subspaceResult.roles = map.get('spaces')?.get(subspace.id) ?? [];
+          subspaceResults.push(subspaceResult);
         }
-        spaceResult.subspaces = challengeResults;
+        spaceResult.subspaces = subspaceResults;
       }
     }
     return spaceResult;
