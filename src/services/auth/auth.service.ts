@@ -1,11 +1,10 @@
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { AccessGrantedData } from '@services/auth/types';
+import { AccessGrantedInputData } from '@services/auth/types';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication';
 import { WhiteboardService } from '@domain/common/whiteboard';
 import { UserService } from '@domain/community/user/user.service';
-import { AgentService } from '@domain/agent/agent/agent.service';
 import { IVerifiedCredential } from '@domain/agent/verified-credential/verified.credential.interface';
 import { LogContext } from '@common/enums';
 import { EntityNotInitializedException } from '@common/exceptions';
@@ -16,12 +15,11 @@ export class AuthService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService,
     private readonly authService: AuthorizationService,
     private readonly whiteboardService: WhiteboardService,
-    private readonly userService: UserService,
-    private readonly agentService: AgentService
+    private readonly userService: UserService
   ) {}
 
   public async accessGrantedWhiteboard(
-    data: AccessGrantedData
+    data: AccessGrantedInputData
   ): Promise<boolean> {
     try {
       const whiteboard = await this.whiteboardService.getWhiteboardOrFail(

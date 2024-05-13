@@ -19,6 +19,5 @@ export enum MessagingQueue {
   SUBSCRIPTION_ACTIVITY_CREATED = 'alkemio-subscriptions-activity-created',
   SUBSCRIPTION_ROOM_EVENT = 'alkemio-subscriptions-room-event',
   //
-  // todo rename
   AUTH = 'auth',
 }

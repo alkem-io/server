@@ -1,2 +1,1 @@
-export * from './reduced.agent.info';
-export * from './access.granted.data';
+export * from './access.granted.input.data';

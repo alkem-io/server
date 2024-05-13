@@ -7,17 +7,17 @@ import {
   RmqContext,
   Transport,
 } from '@nestjs/microservices';
-import { AccessGrantedData } from './types';
+import { AccessGrantedInputData } from './types';
 import { AuthService } from './auth.service';
+import { AuthMessagePattern } from '@services/auth/types/auth.message.pattern';
 
-// todo extract patterns to constants
 @Controller()
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  @MessagePattern('accessGrantedWhiteboard', Transport.RMQ)
+  @MessagePattern(AuthMessagePattern.ACCESS_GRANTED_WHITEBOARDS, Transport.RMQ)
   public async accessGrantedWhiteboard(
-    @Payload() data: AccessGrantedData,
+    @Payload() data: AccessGrantedInputData,
     @Ctx() context: RmqContext
   ): Promise<boolean> {
     console.log(data);
