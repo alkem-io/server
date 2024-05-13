@@ -228,12 +228,12 @@ services:
     ports:
       - 6379
 
-  guidance_engine:
-    container_name: alkemio_dev_guidance_engine
-    hostname: guidance-engine
+  virtual_contributor_engine_guidance:
+    container_name: alkemio_dev_virtual_contributor_engine_guidance
+    hostname: virtual-contributor-engine-guidance
     build:
-      context: '../guidance-engine'
-      dockerfile: ../guidance-engine/Dockerfile
+      context: '../virtual-contributor-engine-guidance'
+      dockerfile: ../virtual-contributor-engine-guidance/Dockerfile
     platform: linux/x86_64
     restart: always
     volumes:
@@ -266,12 +266,13 @@ services:
       - LANGCHAIN_ENDPOINT
       - LANGCHAIN_API_KEY
       - LANGCHAIN_PROJECT
-  community-manager:
+
+  virtual-contributor-engine-community-manager:
     container_name: alkemio_dev_community_manager
-    hostname: community-manager
+    hostname: virtual-contributor-engine-community-manager
     build:
-      context: '../community-manager-engine'
-      dockerfile: ../community-manager-engine/Dockerfile
+      context: '../virtual-contributor-engine-community-manager'
+      dockerfile: ../virtual-contributor-engine-community-manager/Dockerfile
     platform: linux/x86_64
     restart: always
     volumes:
