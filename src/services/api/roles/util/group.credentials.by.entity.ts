@@ -34,12 +34,6 @@ export const groupCredentialsByEntity = (credentials: ICredential[]) => {
     ) {
       return setMap(map, 'spaces', credential);
     } else if (
-      credential.type === AuthorizationCredential.SUBSPACE_ADMIN ||
-      credential.type === AuthorizationCredential.SUBSPACE_LEAD ||
-      credential.type === AuthorizationCredential.SUBSPACE_MEMBER
-    ) {
-      return setMap(map, 'subspaces', credential);
-    } else if (
       credential.type === AuthorizationCredential.ORGANIZATION_ADMIN ||
       credential.type === AuthorizationCredential.ORGANIZATION_OWNER ||
       credential.type === AuthorizationCredential.ORGANIZATION_ASSOCIATE
@@ -82,16 +76,13 @@ const credentialTypeToRole = (
 ): CredentialRole => {
   const roleMap: Partial<Record<AuthorizationCredential, CredentialRole>> = {
     [AuthorizationCredential.SPACE_ADMIN]: CredentialRole.ADMIN,
-    [AuthorizationCredential.SUBSPACE_ADMIN]: CredentialRole.ADMIN,
     [AuthorizationCredential.ORGANIZATION_ADMIN]: CredentialRole.ADMIN,
 
     [AuthorizationCredential.ACCOUNT_HOST]: CredentialRole.HOST,
 
     [AuthorizationCredential.SPACE_LEAD]: CredentialRole.LEAD,
-    [AuthorizationCredential.SUBSPACE_LEAD]: CredentialRole.LEAD,
 
     [AuthorizationCredential.SPACE_MEMBER]: CredentialRole.MEMBER,
-    [AuthorizationCredential.SUBSPACE_MEMBER]: CredentialRole.MEMBER,
 
     [AuthorizationCredential.ORGANIZATION_ASSOCIATE]: CredentialRole.ASSOCIATE,
     [AuthorizationCredential.ORGANIZATION_OWNER]: CredentialRole.OWNER,
