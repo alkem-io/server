@@ -14,10 +14,17 @@ export const getJourneyRolesForContributorQueryResult = (
   agentInfo: AgentInfo,
   authorizationService: AuthorizationService
 ): RolesResultSpace[] => {
+  const spacesCredentialsMap = map.get('spaces');
+  if (!spacesCredentialsMap) {
+    throw new RelationshipNotFoundException(
+      `Unable to load credentials map for spaces: ${map}`,
+      LogContext.ROLES
+    );
+  }
   return spaces.map(space => {
     const spaceResult = new RolesResultSpace(space);
 
-    spaceResult.roles = map.get('spaces')?.get(space.id) ?? [];
+    spaceResult.roles = spacesCredentialsMap.get(space.id) ?? [];
 
     // Only return children of spaces that the current user has READ access to
     if (!space.authorization) {
@@ -56,7 +63,7 @@ export const getJourneyRolesForContributorQueryResult = (
             subspace.profile.displayName,
             subspace.type
           );
-          subspaceResult.roles = map.get('spaces')?.get(subspace.id) ?? [];
+          subspaceResult.roles = spacesCredentialsMap.get(subspace.id) ?? [];
           subspaceResults.push(subspaceResult);
         }
         spaceResult.subspaces = subspaceResults;
