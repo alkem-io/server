@@ -28,9 +28,9 @@ import { notificationsServiceFactory } from './notifications.service.factory';
 import { walletManagerServiceFactory } from './wallet-manager.service.factory';
 import { matrixAdapterServiceFactory } from './matrix.adapter.service.factory';
 import { authResetServiceFactory } from './auth.reset.service.factory';
-import { virtualPersonaEngineChatGuidanceServiceFactory } from './virtual.persona.engine.chat.guidance.service.factory';
-import { virtualPersonaEngineCommunityManagerServiceFactory } from './virtual.persona.engine.community.manager.service.factory';
-import { virtualPersonaEngineAlkemioDigileefomgevingServiceFactory } from './virtual.persona.engine.alkemio.digileefomgeving.service.factory';
+import { virtualContributorEngineGuidanceServiceFactory } from './virtual.contributor.engine.guidance.service.factory';
+import { virtualContributorEngineCommunityManagerServiceFactory } from './virtual.contributor.engine.community.manager.service.factory';
+import { virtualContributorEngineExpertServiceFactory } from './virtual.contributor.engine.expert.service.factory';
 
 const subscriptionConfig: { provide: string; queueName: MessagingQueue }[] = [
   {
@@ -99,17 +99,17 @@ const excalidrawPubSubFactoryProvider = subscriptionFactoryProvider(
     },
     {
       provide: VIRTUAL_CONTRIBUTOR_ENGINE_GUIDANCE,
-      useFactory: virtualPersonaEngineChatGuidanceServiceFactory,
+      useFactory: virtualContributorEngineGuidanceServiceFactory,
       inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
     },
     {
       provide: VIRTUAL_CONTRIBUTOR_ENGINE_COMMUNITY_MANAGER,
-      useFactory: virtualPersonaEngineCommunityManagerServiceFactory,
+      useFactory: virtualContributorEngineCommunityManagerServiceFactory,
       inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
     },
     {
       provide: VIRTUAL_CONTRIBUTOR_ENGINE_EXPERT,
-      useFactory: virtualPersonaEngineAlkemioDigileefomgevingServiceFactory,
+      useFactory: virtualContributorEngineExpertServiceFactory,
       inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
     },
     {
