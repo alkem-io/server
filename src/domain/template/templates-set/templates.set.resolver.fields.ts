@@ -10,7 +10,7 @@ import { TemplatesSet } from './templates.set.entity';
 import { IWhiteboardTemplate } from '../whiteboard-template/whiteboard.template.interface';
 import { IInnovationFlowTemplate } from '../innovation-flow-template/innovation.flow.template.interface';
 import { ICalloutTemplate } from '../callout-template/callout.template.interface';
-import { ITemplateBase } from '../template-base/template.base.interface';
+import { ICommunityGuidelinesTemplate } from '@domain/template/community-guidelines-template/community.guidelines.template.interface';
 
 @Resolver(() => ITemplatesSet)
 export class TemplatesSetResolverFields {
@@ -167,14 +167,44 @@ export class TemplatesSetResolverFields {
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField('communityGuidelinesTemplates', () => [ITemplateBase], {
-    nullable: false,
-    description: 'The CommunityGuidelines in this TemplatesSet.',
-  })
+  @ResolveField(
+    'communityGuidelinesTemplate',
+    () => ICommunityGuidelinesTemplate,
+    {
+      nullable: true,
+      description: 'A single CommunityGuidelinesTemplate',
+    }
+  )
+  @Profiling.api
+  public communityGuidelinesTemplate(
+    @Parent() templatesSet: TemplatesSet,
+    @Args({
+      name: 'ID',
+      nullable: false,
+      type: () => UUID,
+      description: 'The ID of the Template',
+    })
+    ID: string
+  ): Promise<ICommunityGuidelinesTemplate> {
+    return this.templatesSetService.getCommunityGuidelinesTemplate(
+      ID,
+      templatesSet.id
+    );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField(
+    'communityGuidelinesTemplates',
+    () => [ICommunityGuidelinesTemplate],
+    {
+      nullable: false,
+      description: 'The CommunityGuidelines in this TemplatesSet.',
+    }
+  )
   @Profiling.api
   async communityGuidelinesTemplates(
     @Parent() templatesSet: ITemplatesSet
-  ): Promise<ITemplateBase[]> {
+  ): Promise<ICommunityGuidelinesTemplate[]> {
     return this.templatesSetService.getCommunityGuidelinesTemplates(
       templatesSet
     );
@@ -191,28 +221,6 @@ export class TemplatesSetResolverFields {
     @Parent() templatesSet: ITemplatesSet
   ): Promise<number> {
     return this.templatesSetService.getCommunityGuidelinesTemplatesCount(
-      templatesSet.id
-    );
-  }
-
-  @UseGuards(GraphqlGuard)
-  @ResolveField('communityGuidelinesTemplate', () => ITemplateBase, {
-    nullable: true,
-    description: 'A single CommunityGuidelinesTemplate',
-  })
-  @Profiling.api
-  public communityGuidelinesTemplate(
-    @Parent() templatesSet: TemplatesSet,
-    @Args({
-      name: 'ID',
-      nullable: false,
-      type: () => UUID,
-      description: 'The ID of the Template',
-    })
-    ID: string
-  ): Promise<ITemplateBase> {
-    return this.templatesSetService.getCommunityGuidelinesTemplate(
-      ID,
       templatesSet.id
     );
   }

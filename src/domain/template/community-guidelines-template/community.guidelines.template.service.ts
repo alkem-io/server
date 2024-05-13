@@ -2,13 +2,13 @@ import { FindOneOptions, Repository } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { EntityNotFoundException } from '@common/exceptions';
-import { LogContext, ProfileType } from '@common/enums';
+import { ProfileType } from '@common/enums';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { TemplateBaseService } from '../template-base/template.base.service';
 import { CreateCommunityGuidelinesTemplateInput } from './dto/community.guidelines.template.dto.create';
 import { CommunityGuidelinesTemplate } from './community.guidelines.template.entity';
 import { ITemplateBase } from '../template-base/template.base.interface';
+import { ICommunityGuidelinesTemplate } from '@domain/template/community-guidelines-template/community.guidelines.template.interface';
 
 @Injectable()
 export class CommunityGuidelinesTemplateService {
@@ -41,21 +41,49 @@ export class CommunityGuidelinesTemplateService {
   async getCommunityGuidelinesTemplateOrFail(
     communityGuidelinesTemplateID: string,
     options?: FindOneOptions<CommunityGuidelinesTemplate>
-  ): Promise<ITemplateBase | never> {
-    const communityGuidelinesTemplate =
-      await this.communityGuidelinesTemplateRepository.findOne({
-        ...options,
-        where: {
-          ...options?.where,
-          id: communityGuidelinesTemplateID,
+  ): Promise<ICommunityGuidelinesTemplate | never> {
+    // const communityGuidelinesTemplate =
+    //   await this.communityGuidelinesTemplateRepository.findOne({
+    //     ...options,
+    //     where: {
+    //       ...options?.where,
+    //       id: communityGuidelinesTemplateID,
+    //     },
+    //   });
+    // if (!communityGuidelinesTemplate)
+    //   throw new EntityNotFoundException(
+    //     `Not able to locate CommunityGuidelinesTemplate with the specified ID: ${communityGuidelinesTemplateID}`,
+    //     LogContext.COMMUNICATION
+    //   );
+    // return communityGuidelinesTemplate;
+    return {
+      id: communityGuidelinesTemplateID,
+      authorization: undefined,
+      profile: {
+        id: 'mock-guidelines-profile-id',
+        type: ProfileType.COMMUNITY_GUIDELINES_TEMPLATE,
+        displayName: 'Mock Community Guidelines Template',
+        description: 'Mock Community Guidelines Template Description',
+        // tagsets: [
+        //   { name: 'default', tags: ['mock', 'community', 'guidelines'] },
+        // ],
+      },
+      guidelines: {
+        id: 'mock-guidelines-id',
+        title: 'Mock Community Guidelines',
+        description: 'Mock Community Guidelines Description',
+        content: 'Mock Community Guidelines Content',
+        profile: {
+          displayName: 'Mock Community Guidelines',
+          description: 'Mock Community Guidelines Description',
+          // references: [
+          //   { name: 'ref 1', description: 'ref 1 description', url: 'www.ref1.com' },
+          //   { name: 'ref 2', description: 'ref 2 description', url: 'www.ref2.com' },
+          //   { name: 'ref 3', description: 'ref 3 description', url: 'www.ref3.com' },
+          // ],
         },
-      });
-    if (!communityGuidelinesTemplate)
-      throw new EntityNotFoundException(
-        `Not able to locate CommunityGuidelinesTemplate with the specified ID: ${communityGuidelinesTemplateID}`,
-        LogContext.COMMUNICATION
-      );
-    return communityGuidelinesTemplate;
+      },
+    } as unknown as ICommunityGuidelinesTemplate;
   }
 
   async deleteCommunityGuidelinesTemplate(

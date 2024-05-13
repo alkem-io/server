@@ -21,7 +21,6 @@ import { ICalloutTemplate } from '../callout-template/callout.template.interface
 import { CreateCalloutTemplateOnTemplatesSetInput } from './dto/callout.template.dto.create.on.templates.set';
 import { CalloutTemplateAuthorizationService } from '../callout-template/callout.template.service.authorization';
 import { CommunityGuidelinesTemplateAuthorizationService } from '../community-guidelines-template/community.guidelines.template.service.authorization';
-import { ITemplateBase } from '../template-base/template.base.interface';
 import { CreateCommunityGuidelinesTemplateOnTemplatesSetInput } from './dto/community.guidelines.template.dto.create.on.templates.set';
 
 @Resolver()
@@ -174,7 +173,7 @@ export class TemplatesSetResolverMutations {
     return innovationFlowTemplate;
   }
 
-  @UseGuards(GraphqlGuard)
+  /*@UseGuards(GraphqlGuard)
   @Mutation(() => ITemplateBase, {
     description:
       'Creates a new CommunityGuidelinesTemplate on the specified TemplatesSet.',
@@ -206,5 +205,5 @@ export class TemplatesSetResolverMutations {
       templatesSet.authorization
     );
     return communityGuidelinesTemplate;
-  }
+  }*/
 }

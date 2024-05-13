@@ -1,12 +1,13 @@
-import { Entity, ManyToOne } from 'typeorm';
+import { Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
+import { CommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.entity';
 import { TemplateBase } from '../template-base/template.base.entity';
 import { TemplatesSet } from '../templates-set/templates.set.entity';
-import { ITemplateBase } from '../template-base/template.base.interface';
+import { ICommunityGuidelinesTemplate } from './community.guidelines.template.interface';
 
 @Entity()
 export class CommunityGuidelinesTemplate
   extends TemplateBase
-  implements ITemplateBase
+  implements ICommunityGuidelinesTemplate
 {
   @ManyToOne(
     () => TemplatesSet,
@@ -18,4 +19,12 @@ export class CommunityGuidelinesTemplate
     }
   )
   templatesSet?: TemplatesSet;
+
+  @OneToOne(() => CommunityGuidelines, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  guidelines!: CommunityGuidelines;
 }
