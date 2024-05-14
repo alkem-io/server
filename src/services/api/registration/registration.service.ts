@@ -20,6 +20,7 @@ import { CreateInvitationInput } from '@domain/community/invitation/dto/invitati
 import { DeleteUserInput } from '@domain/community/user/dto/user.dto.delete';
 import { InvitationService } from '@domain/community/invitation/invitation.service';
 import { ApplicationService } from '@domain/community/application/application.service';
+import { OrganizationRole } from '@common/enums/organization.role';
 
 export class RegistrationService {
   constructor(
@@ -96,9 +97,10 @@ export class RegistrationService {
       return false;
     }
 
-    await this.organizationService.assignMember({
+    await this.organizationService.assignOrganizationRoleToUser({
       organizationID: org.id,
       userID: user.id,
+      role: OrganizationRole.ASSOCIATE,
     });
 
     this.logger.verbose?.(
