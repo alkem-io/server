@@ -141,7 +141,7 @@ describe('RolesService', () => {
       const organizationRoles = await rolesService.getOrganizationRolesForUser(
         roles
       );
-      const journeyRoles = await rolesService.getSpaceRolesForContributor(
+      const spaceRoles = await rolesService.getSpaceRolesForContributor(
         roles,
         testData.agentInfo
       );
@@ -154,7 +154,7 @@ describe('RolesService', () => {
         ])
       );
 
-      expect(journeyRoles).toEqual(
+      expect(spaceRoles).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
             spaceID: testData.space.id,

@@ -16,10 +16,11 @@ import { ApplicationAuthorizationService } from '../application/application.serv
 import { AuthorizationPolicyRuleVerifiedCredential } from '@core/authorization/authorization.policy.rule.verified.credential';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
-  CREDENTIAL_RULE_TYPES_COMMUNITY_GLOBAL_ADMINS as CREDENTIAL_RULE_TYPES_GLOBAL_ADMINS_ADD_MEMBERS,
   CREDENTIAL_RULE_TYPES_COMMUNITY_READ_GLOBAL_REGISTERED,
   CREDENTIAL_RULE_COMMUNITY_SELF_REMOVAL,
   CREDENTIAL_RULE_TYPES_ACCESS_VIRTUAL_CONTRIBUTORS,
+  CREDENTIAL_RULE_TYPES_COMMUNITY_ADD_MEMBERS,
+  CREDENTIAL_RULE_TYPES_COMMUNITY_INVITE_MEMBERS,
 } from '@common/constants';
 import { InvitationExternalAuthorizationService } from '../invitation.external/invitation.external.service.authorization';
 import { InvitationAuthorizationService } from '../invitation/invitation.service.authorization';
@@ -171,9 +172,34 @@ export class CommunityAuthorizationService {
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.COMMUNITY_ADD_MEMBER],
         [AuthorizationCredential.GLOBAL_ADMIN],
-        CREDENTIAL_RULE_TYPES_GLOBAL_ADMINS_ADD_MEMBERS
+        CREDENTIAL_RULE_TYPES_COMMUNITY_ADD_MEMBERS
       );
     newRules.push(globalAdminAddMembers);
+
+    const inviteMembersCriterias: ICredentialDefinition[] =
+      this.communityPolicyService.getCredentialsForRoleWithParents(
+        policy,
+        CommunityRole.ADMIN
+      );
+    if (policy.settings.membership.allowSubspaceAdminsToInviteMembers) {
+      // use the member credential to create subspace admin credential
+      const subspaceAdminCredential: ICredentialDefinition =
+        this.communityPolicyService.getCredentialForRole(
+          policy,
+          CommunityRole.MEMBER
+        );
+      subspaceAdminCredential.type =
+        AuthorizationCredential.SPACE_SUBSPACE_ADMIN;
+      inviteMembersCriterias.push(subspaceAdminCredential);
+    }
+    const spaceAdminsInvite =
+      this.authorizationPolicyService.createCredentialRule(
+        [AuthorizationPrivilege.COMMUNITY_INVITE],
+        inviteMembersCriterias,
+        CREDENTIAL_RULE_TYPES_COMMUNITY_INVITE_MEMBERS
+      );
+    spaceAdminsInvite.cascade = false;
+    newRules.push(spaceAdminsInvite);
 
     if (allowGlobalRegisteredReadAccess) {
       const globalRegistered =
