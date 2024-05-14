@@ -24,6 +24,14 @@ import * as getSpaceRolesForContributorEntityData from './util/get.space.roles.f
 import { MockInvitationService } from '@test/mocks/invitation.service.mock';
 import { MockCommunityResolverService } from '@test/mocks/community.resolver.service.mock';
 import { SpaceService } from '@domain/space/space/space.service';
+import { RolesResultSpace } from './dto/roles.dto.result.space';
+import { ProfileType } from '@common/enums/profile.type';
+import { Profile } from '@domain/common/profile/profile.entity';
+import { SpaceType } from '@common/enums/space.type';
+import { SpaceLevel } from '@common/enums/space.level';
+import { Space } from '@domain/space/space/space.entity';
+import { License } from '@domain/license/license/license.entity';
+import { RolesResult } from './dto/roles.dto.result';
 
 describe('RolesService', () => {
   let rolesService: RolesService;
@@ -63,8 +71,26 @@ describe('RolesService', () => {
 
   describe('User Roles', () => {
     beforeEach(() => {
-      const spaceData = [testData.rolesUser.space as any];
-      const subspaceData = testData.rolesUser.subspaces as any;
+      const spaceRolesData = testData.rolesUser.space as any;
+      const spaceRolesMock: RolesResultSpace[] = [
+        getSpaceRoleResultMock({
+          id: spaceRolesData.id,
+          roles: spaceRolesData.roles,
+          displayName: spaceRolesData.displayName,
+        }),
+      ];
+      const subspaceRolesData = spaceRolesData.subspaces;
+      const subspaceRolesMocks: RolesResult[] = [];
+      for (const subspaceRoleData of subspaceRolesData) {
+        const subspaceRolesMock: RolesResult = getSubpaceRoleResultMock({
+          id: subspaceRoleData.id,
+          roles: subspaceRoleData.roles,
+          displayName: subspaceRoleData.displayName,
+          type: subspaceRoleData.type,
+          level: subspaceRoleData.level,
+        });
+        subspaceRolesMocks.push(subspaceRolesMock);
+      }
       jest
         .spyOn(userService, 'getUserWithAgent')
         .mockResolvedValue(testData.user);
@@ -79,8 +105,8 @@ describe('RolesService', () => {
           'getSpaceRolesForContributorEntityData'
         )
         .mockResolvedValue({
-          spaces: [spaceData],
-          subspaces: [subspaceData],
+          spaces: [spaceRolesMock],
+          subspaces: subspaceRolesMocks,
         } as any);
 
       jest
@@ -191,4 +217,96 @@ describe('RolesService', () => {
       );
     });
   });
+});
+
+const getSpaceRoleResultMock = ({
+  id,
+  roles,
+  displayName,
+}: {
+  id: string;
+  roles: string[];
+  displayName: string;
+}): RolesResultSpace => {
+  return {
+    id,
+    displayName,
+    type: SpaceType.SPACE,
+    spaceID: id,
+    nameID: `space-${id}`,
+    visibility: SpaceVisibility.ACTIVE,
+    roles,
+    space: {
+      id,
+      settingsStr: JSON.stringify({}),
+      rowId: parseInt(id),
+      nameID: `space-${id}`,
+      profile: {
+        id: `profile-${id}`,
+        displayName: `Space ${id}`,
+        tagline: '',
+        description: '',
+        type: ProfileType.SPACE,
+        ...getEntityMock<Profile>(),
+      },
+      type: SpaceType.SPACE,
+      level: SpaceLevel.SPACE,
+      account: {
+        id: `account-${id}`,
+        license: {
+          id: `license-${id}`,
+          visibility: SpaceVisibility.ACTIVE,
+          featureFlags: [],
+          ...getEntityMock<License>(),
+        },
+      },
+      ...getEntityMock<Space>(),
+    },
+    subspaces: [],
+  };
+};
+
+const getSubpaceRoleResultMock = ({
+  id,
+  roles,
+  displayName,
+}: {
+  id: string;
+  roles: string[];
+  displayName: string;
+  type: SpaceType;
+  level: SpaceLevel;
+}): RolesResult => {
+  return {
+    id,
+    displayName,
+    nameID: `space-${id}`,
+    roles,
+  };
+};
+
+/**
+ * @returns common properties that all BaseEntity have
+ */
+const getEntityMock = <T>() => ({
+  createdDate: new Date(),
+  updatedDate: new Date(),
+  hasId: function (): boolean {
+    throw new Error('Function not implemented.');
+  },
+  save: function (): Promise<T> {
+    throw new Error('Function not implemented.');
+  },
+  remove: function (): Promise<T> {
+    throw new Error('Function not implemented.');
+  },
+  softRemove: function (): Promise<T> {
+    throw new Error('Function not implemented.');
+  },
+  recover: function (): Promise<T> {
+    throw new Error('Function not implemented.');
+  },
+  reload: function (): Promise<void> {
+    throw new Error('Function not implemented.');
+  },
 });
