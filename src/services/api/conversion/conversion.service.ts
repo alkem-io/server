@@ -581,7 +581,6 @@ export class ConversionService {
   ) {
     for (const userMember of userMembers) {
       await this.communityService.assignUserToRole(
-        spaceID,
         community,
         userMember.id,
         CommunityRole.MEMBER
@@ -589,7 +588,6 @@ export class ConversionService {
     }
     for (const userLead of userLeads) {
       await this.communityService.assignUserToRole(
-        spaceID,
         community,
         userLead.id,
         CommunityRole.LEAD

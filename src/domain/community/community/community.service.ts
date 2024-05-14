@@ -524,19 +524,19 @@ export class CommunityService {
   }
 
   async assignUserToRole(
-    spaceID: string, // TODO: temporary until have spaces merged
     community: ICommunity,
     userID: string,
     role: CommunityRole,
     agentInfo?: AgentInfo,
     triggerNewMemberEvents = false
   ): Promise<IUser> {
+    const spaceID = await this.getSpaceID(community);
     const { user, agent } = await this.userService.getUserAndAgent(userID);
-    const { isMember: hasMemberRoleInParent, parentCommunityId } =
+    const { isMember: hasMemberRoleInParent, parentCommunity } =
       await this.isMemberInParentCommunity(agent, community.id);
     if (!hasMemberRoleInParent) {
       throw new ValidationException(
-        `Unable to assign Agent (${agent.id}) to community (${community.id}): agent is not a member of parent community ${parentCommunityId}`,
+        `Unable to assign Agent (${agent.id}) to community (${community.id}): agent is not a member of parent community ${parentCommunity?.id}`,
         LogContext.SPACES
       );
     }
@@ -547,6 +547,16 @@ export class CommunityService {
       role,
       CommunityContributorType.USER
     );
+    if (role === CommunityRole.ADMIN && parentCommunity) {
+      // also assign as subspace admin in parent community if there is a parent community
+      await this.assignUserToRole(
+        parentCommunity,
+        user.id,
+        CommunityRole.SUBSPACE_ADMIN,
+        agentInfo
+      );
+    }
+
     if (role === CommunityRole.MEMBER) {
       this.addMemberToCommunication(user, community);
 
@@ -582,16 +592,17 @@ export class CommunityService {
       await this.virtualContributorService.getVirtualContributorAndAgent(
         virtualContributorID
       );
-    const { isMember: hasMemberRoleInParent, parentCommunityId } =
+    const { isMember: hasMemberRoleInParent, parentCommunity } =
       await this.isMemberInParentCommunity(agent, community.id);
     if (!hasMemberRoleInParent) {
-      if (!parentCommunityId)
+      if (!parentCommunity) {
         throw new ValidationException(
-          `Unable to find parent community ${parentCommunityId}`,
+          `Unable to find parent community for community ${community.id}`,
           LogContext.SPACES
         );
+      }
       throw new ValidationException(
-        `Unable to assign Agent (${agent.id}) to community (${community.id}): agent is not a member of parent community ${parentCommunityId}`,
+        `Unable to assign Agent (${agent.id}) to community (${community.id}): agent is not a member of parent community ${parentCommunity.id}`,
         LogContext.SPACES
       );
     }
@@ -626,7 +637,7 @@ export class CommunityService {
   private async isMemberInParentCommunity(
     agent: IAgent,
     communityID: string
-  ): Promise<{ parentCommunityId: string | undefined; isMember: boolean }> {
+  ): Promise<{ parentCommunity: ICommunity | undefined; isMember: boolean }> {
     const community = await this.getCommunityOrFail(communityID, {
       relations: { parentCommunity: true },
     });
@@ -638,12 +649,12 @@ export class CommunityService {
         community.parentCommunity
       );
       return {
-        parentCommunityId: community?.parentCommunity?.id,
+        parentCommunity: community?.parentCommunity,
         isMember: isParentMember,
       };
     }
     return {
-      parentCommunityId: undefined,
+      parentCommunity: undefined,
       isMember: true,
     };
   }
@@ -729,6 +740,16 @@ export class CommunityService {
       CommunityContributorType.USER,
       validatePolicyLimits
     );
+
+    const parentCommunity = await this.getParentCommunity(community);
+    if (role === CommunityRole.ADMIN && parentCommunity) {
+      // also remove as subspace admin in parent community if there is a parent community
+      await this.assignUserToRole(
+        parentCommunity,
+        user.id,
+        CommunityRole.SUBSPACE_ADMIN
+      );
+    }
 
     if (role === CommunityRole.MEMBER) {
       const communication = await this.getCommunication(community.id);
@@ -874,7 +895,7 @@ export class CommunityService {
       );
   }
 
-  public async getSpaceID(community: ICommunity): Promise<string> {
+  private async getSpaceID(community: ICommunity): Promise<string> {
     return await this.communityResolverService.getRootSpaceIDFromCommunityOrFail(
       community
     );

@@ -860,28 +860,26 @@ export class SpaceService {
     space: ISpace,
     agentInfo: AgentInfo | undefined
   ) {
-    // TODO: Hack to deal with initialization issues
-    let spaceID = space.id;
-    if (space.community && space.community.type !== 'space') {
-      spaceID = await this.communityService.getSpaceID(space.community);
+    if (!space.community) {
+      throw new EntityNotInitializedException(
+        `Community not initialised on Space: ${space.id}`,
+        LogContext.SPACES
+      );
     }
-    if (agentInfo && space.community) {
+    if (agentInfo) {
       await this.communityService.assignUserToRole(
-        spaceID,
         space.community,
         agentInfo.userID,
         CommunityRole.MEMBER
       );
 
       await this.communityService.assignUserToRole(
-        spaceID,
         space.community,
         agentInfo.userID,
         CommunityRole.LEAD
       );
 
       await this.communityService.assignUserToRole(
-        spaceID,
         space.community,
         agentInfo.userID,
         CommunityRole.ADMIN
@@ -931,7 +929,7 @@ export class SpaceService {
     return await this.save(space);
   }
 
-  public async deleteEntities(spaceID: string) {
+  private async deleteEntities(spaceID: string) {
     const space = await this.getSpaceOrFail(spaceID, {
       relations: {
         collaboration: true,
