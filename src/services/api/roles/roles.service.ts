@@ -23,10 +23,10 @@ import { RolesResultSpace } from './dto/roles.dto.result.space';
 import { AgentInfo } from '@core/authentication';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { SpaceService } from '@domain/space/space/space.service';
-import { SpaceType } from '@common/enums/space.type';
 import { SpaceLevel } from '@common/enums/space.level';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { LogContext } from '@common/enums/logging.context';
+import { EntityNotInitializedException } from '@common/exceptions';
 
 export class RolesService {
   constructor(
@@ -232,18 +232,23 @@ export class RolesService {
     const space = await this.spaceService.getSpaceForCommunityOrFail(
       community.id
     );
-    switch (space.type) {
-      case SpaceType.SPACE:
+    switch (space.level) {
+      case SpaceLevel.SPACE:
         return invitationResult;
-      case SpaceType.CHALLENGE:
+      case SpaceLevel.CHALLENGE:
         // the application is issued for a challenge
         invitationResult.subspaceID = space.id;
         return invitationResult;
-      case SpaceType.OPPORTUNITY:
+      case SpaceLevel.OPPORTUNITY:
         // the application is issued for an an opportunity
         invitationResult.subsubspaceID = space.id;
         invitationResult.subspaceID = space.parentSpace?.id || '';
         return invitationResult;
+      default:
+        throw new EntityNotInitializedException(
+          `Invalid space level: ${space.id}`,
+          LogContext.ROLES
+        );
     }
   }
 }

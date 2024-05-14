@@ -83,9 +83,12 @@ export class SpaceService {
     account: IAccount,
     agentInfo?: AgentInfo
   ): Promise<ISpace> {
+    // Temporary setup that matches 1-1; later the type and level will be separately assigned
     spaceData.type = SpaceType.SPACE;
-    if (spaceData.level === 1) spaceData.type = SpaceType.CHALLENGE;
-    if (spaceData.level === 2) spaceData.type = SpaceType.OPPORTUNITY;
+    if (spaceData.level === SpaceLevel.CHALLENGE)
+      spaceData.type = SpaceType.CHALLENGE;
+    if (spaceData.level === SpaceLevel.OPPORTUNITY)
+      spaceData.type = SpaceType.OPPORTUNITY;
 
     const space: ISpace = Space.create(spaceData);
 
@@ -114,7 +117,7 @@ export class SpaceService {
     space.authorization = new AuthorizationPolicy();
     space.account = account;
     space.settingsStr = this.spaceSettingsService.serializeSettings(
-      this.spaceDefaultsService.getDefaultSpaceSettings(spaceData.type)
+      this.spaceDefaultsService.getDefaultSpaceSettings(spaceData.level)
     );
     await this.isNameAvailableInAccountOrFail(spaceData.nameID, account.id);
 
@@ -126,10 +129,10 @@ export class SpaceService {
     space.storageAggregator = storageAggregator;
 
     const communityPolicy = this.spaceDefaultsService.getCommunityPolicy(
-      space.type
+      space.level
     );
     const applicationFormData =
-      this.spaceDefaultsService.getCommunityApplicationForm(space.type);
+      this.spaceDefaultsService.getCommunityApplicationForm(space.level);
 
     const communityData: CreateCommunityInput = {
       name: spaceData.profileData.displayName,
@@ -155,7 +158,7 @@ export class SpaceService {
     }
     space.context = await this.contextService.createContext(spaceData.context);
 
-    const profileType = this.spaceDefaultsService.getProfileType(space.type);
+    const profileType = this.spaceDefaultsService.getProfileType(space.level);
     space.profile = await this.profileService.createProfile(
       spaceData.profileData,
       profileType,
@@ -203,7 +206,7 @@ export class SpaceService {
         spaceData.collaborationData?.collaborationTemplateID
       );
     const defaultCallouts = this.spaceDefaultsService.getDefaultCallouts(
-      space.type
+      space.level
     );
     const calloutInputs =
       await this.spaceDefaultsService.getCreateCalloutInputs(
