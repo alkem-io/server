@@ -16,7 +16,7 @@
       "lastName": "admin",
       "credentials": [
         {
-          "type": "community-reader"
+          "type": "global-community-read"
         }
       ]
     }
