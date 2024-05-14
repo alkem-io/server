@@ -242,8 +242,8 @@ export class UserResolverFields {
       // todo: remove later, this is code to track down a particular race condition: https://github.com/alkem-io/notifications/issues/283
       const hasGlobalAdminCredential = agentInfo.credentials.some(
         credential =>
-          credential.type === AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY ||
-          credential.type === AuthorizationCredential.GLOBAL_ADMIN_SPACES
+          credential.type === AuthorizationCredential.GLOBAL_COMMUNITY_READ ||
+          credential.type === AuthorizationCredential.GLOBAL_SUPPORT
       );
       if (hasGlobalAdminCredential) {
         this.logger.error(

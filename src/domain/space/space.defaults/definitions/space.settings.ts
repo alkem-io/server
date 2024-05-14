@@ -5,10 +5,12 @@ import { ISpaceSettings } from '@domain/space/space.settings/space.settings.inte
 export const spaceSettingsDefaults: ISpaceSettings = {
   privacy: {
     mode: SpacePrivacyMode.PUBLIC,
+    allowPlatformSupportAsAdmin: false,
   },
   membership: {
     policy: CommunityMembershipPolicy.APPLICATIONS,
     trustedOrganizations: [], // only allow to be host org for now, not on subspaces
+    allowSubspaceAdminsToInviteMembers: true,
   },
   collaboration: {
     inheritMembershipRights: false,
