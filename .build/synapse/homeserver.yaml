@@ -26,10 +26,12 @@
 # lowercase and may contain an explicit port.
 # Examples: matrix.org, localhost:8080
 #
-server_name: "matrix-acc.alkem.io"
+server_name: "alkemio.matrix.host"
+
 # When running as a daemon, the file to store the pid in
 #
 pid_file: /data/homeserver.pid
+
 # The absolute URL to the web client which /_matrix/client will redirect
 # to if 'webclient' is configured under the 'listeners' configuration.
 #
@@ -77,6 +79,7 @@ presence:
   #
   #config:
   #  example_option: 'something'
+
 # Whether to require authentication to retrieve profile data (avatars,
 # display names) of other users through the client API. Defaults to
 # 'false'. Note that profile data is also available via the federation
@@ -271,21 +274,24 @@ listeners:
     tls: false
     type: http
     x_forwarded: true
+
     resources:
       - names: [client, federation]
         compress: false
-        # example additional_resources:
-        #
-        #additional_resources:
-        #  "/_matrix/my/custom/endpoint":
-        #    module: my_module.CustomRequestHandler
-        #    config: {}
-# Turn on the twisted ssh manhole service on localhost on the given
-# port.
-#
-#- port: 9000
-#  bind_addresses: ['::1', '127.0.0.1']
-#  type: manhole
+
+    # example additional_resources:
+    #
+    #additional_resources:
+    #  "/_matrix/my/custom/endpoint":
+    #    module: my_module.CustomRequestHandler
+    #    config: {}
+
+  # Turn on the twisted ssh manhole service on localhost on the given
+  # port.
+  #
+  #- port: 9000
+  #  bind_addresses: ['::1', '127.0.0.1']
+  #  type: manhole
 
 # Forward extremities can build up in a room due to networking delays between
 # homeservers. Once this happens in a large room, calculation of the state of
@@ -298,6 +304,7 @@ listeners:
 # room) at which dummy events are sent. The default value is 10.
 #
 #dummy_events_threshold: 5
+
 
 ## Homeserver blocking ##
 
@@ -502,6 +509,7 @@ retention:
 #
 #next_link_domain_whitelist: ["matrix.org"]
 
+
 ## TLS ##
 
 # PEM-encoded X509 certificate for TLS.
@@ -596,6 +604,7 @@ acme:
   # tls_certificate_path and tls_private_key_path above to enable it.
   #
   enabled: false
+
   # Endpoint to use to request certificates. If you only want to test,
   # use Let's Encrypt's staging url:
   #     https://acme-staging.api.letsencrypt.org/directory
@@ -606,14 +615,17 @@ acme:
   # you are forwarding connections through Apache/Nginx/etc.
   #
   port: 80
+
   # Local addresses to listen on for incoming connections.
   # Again, you may want to change this if you are forwarding connections
   # through Apache/Nginx/etc.
   #
   bind_addresses: ['::', '0.0.0.0']
+
   # How many days remaining on a certificate before it is renewed.
   #
   reprovision_threshold: 30
+
   # The domain that the certificate should be for. Normally this
   # should be the same as your Matrix domain (i.e., 'server_name'), but,
   # by putting a file at 'https://<server_name>/.well-known/matrix/server',
@@ -627,12 +639,14 @@ acme:
   # If not set, defaults to your 'server_name'.
   #
   domain: matrix.example.com
+
   # file to use for the account key. This will be generated if it doesn't
   # exist.
   #
   # If unspecified, we will use CONFDIR/client.key.
   #
   account_key_file: /data/acme_account.key
+
 # List of allowed TLS fingerprints for this server to publish along
 # with the signing keys for this server. Other matrix servers that
 # make HTTPS requests to this server will check that the TLS
@@ -659,6 +673,7 @@ acme:
 # or by checking matrix.org/federationtester/api/report?server_name=$host
 #
 #tls_fingerprints: [{"sha256": "<base64_encoded_sha256_fingerprint>"}]
+
 
 ## Federation ##
 
@@ -690,6 +705,7 @@ acme:
 #
 #allow_profile_lookup_over_federation: false
 
+
 ## Caching ##
 
 # Caching can be configured through the following options.
@@ -702,6 +718,7 @@ acme:
 # caches.global_factor.
 #
 #event_cache_size: 10K
+
 caches:
   # Controls the global cache factor, which is the default cache factor
   # for all caches if a specific factor for that cache is not otherwise
@@ -732,6 +749,8 @@ caches:
   #
   per_cache_factors:
   #get_users_who_share_room_with_user: 2.0
+
+
 ## Database ##
 
 # The 'database' setting defines the database that synapse uses to store all of
@@ -779,12 +798,16 @@ database:
     host: postgres
     cp_min: 5
     cp_max: 10
+
+
 ## Logging ##
 
 # A yaml python logging config file as described by
 # https://docs.python.org/3.7/library/logging.config.html#configuration-dictionary-schema
 #
 log_config: "/data/alkemio.matrix.host.log.config"
+
+
 ## Ratelimiting ##
 
 # Ratelimiting settings for client actions (registration, login, messaging).
@@ -860,6 +883,7 @@ rc_invites:
   per_user:
     per_second: 5
     burst_count: 5
+
 # Ratelimiting settings for incoming federation
 #
 # The rc_federation configuration is made up of the following settings:
@@ -890,6 +914,8 @@ rc_invites:
 #
 #federation_rr_transactions_per_room_per_second: 50
 
+
+
 ## Media Store ##
 
 # Enable the media store service in the Synapse master. Uncomment the
@@ -900,6 +926,7 @@ rc_invites:
 # Directory where uploaded images and attachments are stored.
 #
 media_store_path: "/data/media_store"
+
 # Media storage providers allow media to be stored in different
 # locations.
 #
@@ -1063,6 +1090,7 @@ media_store_path: "/data/media_store"
 url_preview_accept_language:
 #   - en
 
+
 ## Captcha ##
 # See docs/CAPTCHA_SETUP.md for full details of configuring this.
 
@@ -1086,6 +1114,7 @@ url_preview_accept_language:
 # Defaults to "https://www.recaptcha.net/recaptcha/api/siteverify".
 #
 #recaptcha_siteverify_api: "https://my.recaptcha.site"
+
 
 ## TURN ##
 
@@ -1115,6 +1144,7 @@ url_preview_accept_language:
 #
 #turn_allow_guests: true
 
+
 ## Registration ##
 #
 # Registration can be rate-limited using the parameters in the "Ratelimiting"
@@ -1123,8 +1153,10 @@ url_preview_accept_language:
 # Enable registration for new users.
 #
 enable_registration: true
+
 # TODO: dangerous for when exposing outside of cluster
 enable_registration_without_verification: true
+
 # Optional account validity configuration. This allows for accounts to be denied
 # any request after a given period.
 #
@@ -1229,6 +1261,7 @@ account_validity:
 # has the shared secret, even if registration is otherwise disabled.
 #
 registration_shared_secret: n#P.uIl8IDOYPR-fiLzDoFw9ZPvTIlYg7*F9*~eaDZFK#;.KRg
+
 # Set the number of bcrypt rounds used to generate password hash.
 # Larger numbers increase the work factor needed to generate the hash.
 # The default number is 12 (which equates to 2^12 rounds).
@@ -1380,6 +1413,7 @@ account_threepid_delegates:
 #
 #auto_join_rooms_for_guests: false
 
+
 ## Metrics ###
 
 # Enable collection and rendering of performance metrics
@@ -1409,10 +1443,12 @@ metrics_flags:
 # Whether or not to report anonymized homeserver usage statistics.
 #
 report_stats: true
+
 # The endpoint to report the anonymized homeserver usage statistics to.
 # Defaults to https://matrix.org/report-usage-stats/push
 #
 #report_stats_endpoint: https://example.com/report-usage-stats/push
+
 
 ## API Configuration ##
 
@@ -1442,6 +1478,7 @@ room_prejoin_state:
 #additional_event_types:
 #  - org.example.custom.event.type
 
+
 # A list of application service config files to use
 #
 #app_service_config_files:
@@ -1453,21 +1490,25 @@ room_prejoin_state:
 #
 #track_appservice_user_ips: true
 
+
 # a secret which is used to sign access tokens. If none is specified,
 # the registration_shared_secret is used, if one is given; otherwise,
 # a secret key is derived from the signing key.
 #
 macaroon_secret_key: "k2c^k8IJLHh6dXIZHGlyJQwf_9M7oOp+Wa15QEE3SNR3Q.0a7+"
+
 # a secret which is used to calculate HMACs for form values, to stop
 # falsification of values. Must be specified for the User Consent
 # forms to work.
 #
 form_secret: "^mN_eRHO,lGLp29CoF*YU0#Pktx:@BveG:I-CP1u=wp;lIGKCW"
+
 ## Signing Keys ##
 
 # Path to the signing key to sign messages with
 #
 signing_key_path: "/data/alkemio.matrix.host.signing.key"
+
 # The keys that the server used to sign messages with but won't use
 # to sign new messages.
 #
@@ -1531,6 +1572,7 @@ old_signing_keys:
 #
 trusted_key_servers:
   - server_name: "matrix.org"
+
 # Uncomment the following to disable the warning that is emitted when the
 # trusted_key_servers include 'matrix.org'. See above.
 #
@@ -1542,6 +1584,7 @@ trusted_key_servers:
 # Can contain multiple keys, one per line.
 #
 #key_server_signing_keys_path: "key_server_signing_keys.key"
+
 
 ## Single sign-on integration ##
 
@@ -1688,6 +1731,7 @@ saml2_config:
     # value will be used instead.
     #
     #mxid_mapping: dotreplace
+
   # In previous versions of synapse, the mapping from SAML attribute to
   # MXID was always calculated dynamically rather than stored in a
   # table. For backwards- compatibility, we will look for user_ids
@@ -1719,6 +1763,8 @@ saml2_config:
   # option.
   #
   #idp_entityid: 'https://our_idp/entityid'
+
+
 # List of OpenID Connect (OIDC) / OAuth 2.0 identity providers, for registration
 # and login.
 #
@@ -1902,6 +1948,7 @@ oidc_providers:
 #    - attribute: userGroup
 #      value: "synapseUsers"
 
+
 # Enable Central Authentication Service (CAS) for registration and login.
 #
 cas_config:
@@ -1929,6 +1976,7 @@ cas_config:
 #required_attributes:
 #  userGroup: "staff"
 #  department: None
+
 
 # Additional settings to use with single-sign on systems such as OpenID Connect,
 # SAML2 and CAS.
@@ -2117,6 +2165,7 @@ sso:
 #
 #template_dir: "res/templates"
 
+
 # JSON web token integration. The following settings can be used to make
 # Synapse JSON web tokens for authentication, instead of its internal
 # password database.
@@ -2171,6 +2220,8 @@ sso:
 #
 #audiences:
 #    - "provided-by-your-issuer"
+
+
 password_config:
   # Uncomment to disable password login
   #
@@ -2221,6 +2272,7 @@ password_config:
   # Defaults to 'false'.
   #
   #require_uppercase: true
+
 ui_auth:
 # The amount of time to allow a user-interactive authentication session
 # to be active.
@@ -2235,6 +2287,7 @@ ui_auth:
 # seconds.
 #
 #session_timeout: "15s"
+
 
 # Configuration for sending emails from Synapse.
 #
@@ -2416,6 +2469,7 @@ email:
 # ownership.
 #email_validation: "[%(server_name)s] Validate your email"
 
+
 # Password providers allow homeserver administrators to integrate
 # their Synapse installation with existing authentication methods
 # ex. LDAP, external tokens, etc.
@@ -2443,7 +2497,10 @@ password_providers:
 #        #bind_password:
 #        #filter: "(objectClass=posixAccount)"
 
+
+
 ## Push ##
+
 push:
 # Clients requesting push notifications can either have the body of
 # the message sent in the notification poke along with other details
@@ -2472,6 +2529,7 @@ push:
 #
 #group_unread_count_by_room: false
 
+
 # Spam checkers are third-party modules that can block specific actions
 # of local users, such as creating rooms and registering undesirable
 # usernames, as well as remote users by redacting incoming events.
@@ -2483,6 +2541,7 @@ spam_checker:
 #- module: "some_other_project.BadEventStopper"
 #  config:
 #    example_stop_events_from: ['@bad:example.com']
+
 
 ## Rooms ##
 
@@ -2503,6 +2562,7 @@ spam_checker:
 #
 #encryption_enabled_by_default_for_room_type: invite
 
+
 # Uncomment to allow non-server-admin users to create groups on this server
 #
 #enable_group_creation: true
@@ -2511,6 +2571,8 @@ spam_checker:
 # starting with this prefix
 #
 #group_creation_prefix: "unofficial_"
+
+
 
 # User Directory configuration
 #
@@ -2543,6 +2605,7 @@ user_directory:
 # results.
 #
 #prefer_local_users: true
+
 
 # User Consent configuration
 #
@@ -2594,6 +2657,8 @@ user_directory:
 #  policy_name: Privacy Policy
 #
 
+
+
 # Settings for local room and user statistics collection. See
 # docs/room_and_user_statistics.md.
 #
@@ -2608,6 +2673,7 @@ stats:
 # user_stats_historical tables, as a time period. Defaults to "1d".
 #
 #bucket_size: 1h
+
 
 # Server Notices room configuration
 #
@@ -2627,6 +2693,8 @@ stats:
 #  system_mxid_display_name: "Server Notices"
 #  system_mxid_avatar_url: "mxc://server.com/oumMVlgDnLYFaPVkExemNVVZ"
 #  room_name: "Server Notices"
+
+
 
 # Uncomment to disable searching the public room list. When disabled
 # blocks searching local and remote room lists for local and remote
@@ -2691,6 +2759,7 @@ stats:
 #    room_id: "*"
 #    action: allow
 
+
 # Server admins can define a Python module that implements extra rules for
 # allowing or denying incoming events. In order to work, this module needs to
 # override the methods defined in synapse/events/third_party_rules.py.
@@ -2702,6 +2771,7 @@ stats:
 #  module: "my_custom_project.SuperRulesSet"
 #  config:
 #    example_option: 'things'
+
 
 ## Opentracing ##
 
@@ -2741,6 +2811,7 @@ opentracing:
 #
 #  logging:
 #    false
+
 
 ## Workers ##
 
@@ -2788,6 +2859,7 @@ opentracing:
 #
 #worker_replication_secret: ""
 
+
 # Configuration for Redis when using workers. This *must* be enabled when
 # using workers (unless using old style direct TCP configuration).
 #
@@ -2805,5 +2877,6 @@ redis:
 # Optional password if configured on the Redis instance
 #
 #password: <secret_password>
+
 
 # vim:ft=yaml
