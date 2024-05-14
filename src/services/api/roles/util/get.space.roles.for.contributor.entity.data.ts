@@ -3,7 +3,7 @@ import { Space } from '@domain/space/space/space.entity';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { SpaceLevel } from '@common/enums/space.level';
 
-export const getJourneyRolesForContributorEntityData = async (
+export const getSpaceRolesForContributorEntityData = async (
   entityManager: EntityManager,
   spaceIds: string[],
   spaceAllowedVisibilities: SpaceVisibility[]

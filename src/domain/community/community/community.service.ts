@@ -60,6 +60,8 @@ import { CreateCommunityInput } from './dto/community.dto.create';
 import { ICommunityGuidelines } from '../community-guidelines/community.guidelines.interface';
 import { IVirtualContributor } from '../virtual-contributor';
 import { VirtualContributorService } from '../virtual-contributor/virtual.contributor.service';
+import { CommunityRoleImplicit } from '@common/enums/community.role.implicit';
+import { AuthorizationCredential } from '@common/enums';
 
 @Injectable()
 export class CommunityService {
@@ -530,7 +532,6 @@ export class CommunityService {
     agentInfo?: AgentInfo,
     triggerNewMemberEvents = false
   ): Promise<IUser> {
-    const spaceID = await this.getSpaceID(community);
     const { user, agent } = await this.userService.getUserAndAgent(userID);
     const { isMember: hasMemberRoleInParent, parentCommunity } =
       await this.isMemberInParentCommunity(agent, community.id);
@@ -549,11 +550,10 @@ export class CommunityService {
     );
     if (role === CommunityRole.ADMIN && parentCommunity) {
       // also assign as subspace admin in parent community if there is a parent community
-      await this.assignUserToRole(
+      await this.assignContributorToImplicitRole(
         parentCommunity,
-        user.id,
-        CommunityRole.SUBSPACE_ADMIN,
-        agentInfo
+        agent,
+        CommunityRoleImplicit.SUBSPACE_ADMIN
       );
     }
 
@@ -568,10 +568,11 @@ export class CommunityService {
         );
 
         if (triggerNewMemberEvents) {
+          const rootSpaceID = await this.getRootSpaceID(community);
           const displayName = await this.getDisplayName(community);
           await this.communityEventsService.processCommunityNewMemberEvents(
             community,
-            spaceID,
+            rootSpaceID,
             displayName,
             agentInfo,
             user
@@ -743,11 +744,10 @@ export class CommunityService {
 
     const parentCommunity = await this.getParentCommunity(community);
     if (role === CommunityRole.ADMIN && parentCommunity) {
-      // also remove as subspace admin in parent community if there is a parent community
-      await this.assignUserToRole(
+      await this.removeContributorToImplicitRole(
         parentCommunity,
-        user.id,
-        CommunityRole.SUBSPACE_ADMIN
+        agent,
+        CommunityRoleImplicit.SUBSPACE_ADMIN
       );
     }
 
@@ -895,7 +895,7 @@ export class CommunityService {
       );
   }
 
-  private async getSpaceID(community: ICommunity): Promise<string> {
+  private async getRootSpaceID(community: ICommunity): Promise<string> {
     return await this.communityResolverService.getRootSpaceIDFromCommunityOrFail(
       community
     );
@@ -921,6 +921,59 @@ export class CommunityService {
       type: communityPolicyRole.credential.type,
       resourceID: communityPolicyRole.credential.resourceID,
     });
+  }
+
+  private async assignContributorToImplicitRole(
+    community: ICommunity,
+    agent: IAgent,
+    role: CommunityRoleImplicit
+  ): Promise<IAgent> {
+    const credential = this.getCredentialForImplicitRole(community, role);
+
+    return await this.agentService.grantCredential({
+      agentID: agent.id,
+      type: credential.type,
+      resourceID: credential.resourceID,
+    });
+  }
+
+  private async removeContributorToImplicitRole(
+    community: ICommunity,
+    agent: IAgent,
+    role: CommunityRoleImplicit
+  ): Promise<IAgent> {
+    const credential = this.getCredentialForImplicitRole(community, role);
+
+    return await this.agentService.revokeCredential({
+      agentID: agent.id,
+      type: credential.type,
+      resourceID: credential.resourceID,
+    });
+  }
+
+  private getCredentialForImplicitRole(
+    community: ICommunity,
+    role: CommunityRoleImplicit
+  ): CredentialDefinition {
+    // Use the admin credential to get the resourceID
+    const adminCredential = this.getCredentialDefinitionForRole(
+      community,
+      CommunityRole.ADMIN
+    );
+    const resourceID = adminCredential.resourceID;
+    switch (role) {
+      case CommunityRoleImplicit.SUBSPACE_ADMIN:
+        return {
+          type: AuthorizationCredential.SPACE_SUBSPACE_ADMIN,
+          resourceID,
+        };
+      default: {
+        throw new CommunityMembershipException(
+          `Invalid implicit role: ${role}`,
+          LogContext.COMMUNITY
+        );
+      }
+    }
   }
 
   private async removeContributorFromRole(

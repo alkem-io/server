@@ -121,7 +121,6 @@ export class CommunityResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('roleData') roleData: AssignCommunityRoleToUserInput
   ): Promise<IUser> {
-    this.validateCommunityRoleMutationAllowedOrFail(roleData.role);
     const community = await this.communityService.getCommunityOrFail(
       roleData.communityID
     );
@@ -160,7 +159,6 @@ export class CommunityResolverMutations {
     @Args('roleData')
     roleData: AssignCommunityRoleToOrganizationInput
   ): Promise<IOrganization> {
-    this.validateCommunityRoleMutationAllowedOrFail(roleData.role);
     const community = await this.communityService.getCommunityOrFail(
       roleData.communityID
     );
@@ -188,7 +186,6 @@ export class CommunityResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('roleData') roleData: AssignCommunityRoleToVirtualInput
   ): Promise<IVirtualContributor> {
-    this.validateCommunityRoleMutationAllowedOrFail(roleData.role);
     const community = await this.communityService.getCommunityOrFail(
       roleData.communityID
     );
@@ -236,7 +233,6 @@ export class CommunityResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('roleData') roleData: RemoveCommunityRoleFromUserInput
   ): Promise<IUser> {
-    this.validateCommunityRoleMutationAllowedOrFail(roleData.role);
     const community = await this.communityService.getCommunityOrFail(
       roleData.communityID
     );
@@ -278,7 +274,6 @@ export class CommunityResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('roleData') roleData: RemoveCommunityRoleFromOrganizationInput
   ): Promise<IOrganization> {
-    this.validateCommunityRoleMutationAllowedOrFail(roleData.role);
     const community = await this.communityService.getCommunityOrFail(
       roleData.communityID
     );
@@ -305,7 +300,6 @@ export class CommunityResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('roleData') roleData: RemoveCommunityRoleFromVirtualInput
   ): Promise<IVirtualContributor> {
-    this.validateCommunityRoleMutationAllowedOrFail(roleData.role);
     const community = await this.communityService.getCommunityOrFail(
       roleData.communityID
     );
@@ -657,13 +651,5 @@ export class CommunityResolverMutations {
         },
       ]
     );
-  }
-  private validateCommunityRoleMutationAllowedOrFail(role: CommunityRole) {
-    if (role === CommunityRole.SUBSPACE_ADMIN) {
-      throw new CommunityMembershipException(
-        'Cannot update the SUBSPACE_ADMIN role on a contributor via mutations',
-        LogContext.COMMUNITY
-      );
-    }
   }
 }

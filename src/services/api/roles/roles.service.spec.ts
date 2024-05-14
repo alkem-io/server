@@ -19,7 +19,7 @@ import { SpaceFilterService } from '@services/infrastructure/space-filter/space.
 import { asyncToThrow, testData } from '@test/utils';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { SpaceVisibility } from '@common/enums/space.visibility';
-import * as getJourneyRolesForContributorEntityData from './util/get.journey.roles.for.contributor.entity.data';
+import * as getJourneyRolesForContributorEntityData from './util/get.space.roles.for.contributor.entity.data';
 import * as getOrganizationRolesForUserEntityData from './util/get.organization.roles.for.user.entity.data';
 import { MockInvitationService } from '@test/mocks/invitation.service.mock';
 import { MockCommunityResolverService } from '@test/mocks/community.resolver.service.mock';

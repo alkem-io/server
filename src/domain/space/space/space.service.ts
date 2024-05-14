@@ -235,9 +235,7 @@ export class SpaceService {
         space.id
       );
 
-    const savedSpace = await this.save(space);
-    await this.assignUserToRoles(savedSpace, agentInfo);
-    return savedSpace;
+    return await this.save(space);
   }
 
   async save(space: ISpace): Promise<ISpace> {
@@ -828,7 +826,9 @@ export class SpaceService {
       agentInfo
     );
 
-    return await this.addSubspaceToSpace(space, subspace);
+    const savedSubspace = await this.addSubspaceToSpace(space, subspace);
+    await this.assignUserToRoles(subspace, agentInfo);
+    return savedSubspace;
   }
 
   async addSubspaceToSpace(space: ISpace, subspace: ISpace): Promise<ISpace> {
@@ -856,7 +856,7 @@ export class SpaceService {
     );
   }
 
-  private async assignUserToRoles(
+  public async assignUserToRoles(
     space: ISpace,
     agentInfo: AgentInfo | undefined
   ) {
@@ -870,19 +870,22 @@ export class SpaceService {
       await this.communityService.assignUserToRole(
         space.community,
         agentInfo.userID,
-        CommunityRole.MEMBER
+        CommunityRole.MEMBER,
+        agentInfo
       );
 
       await this.communityService.assignUserToRole(
         space.community,
         agentInfo.userID,
-        CommunityRole.LEAD
+        CommunityRole.LEAD,
+        agentInfo
       );
 
       await this.communityService.assignUserToRole(
         space.community,
         agentInfo.userID,
-        CommunityRole.ADMIN
+        CommunityRole.ADMIN,
+        agentInfo
       );
     }
   }

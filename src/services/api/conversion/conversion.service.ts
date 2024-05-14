@@ -200,7 +200,6 @@ export class ConversionService {
 
     // Assign users to roles in new space
     await this.assignContributors(
-      space.id,
       space.community,
       userMembers,
       userLeads,
@@ -407,7 +406,6 @@ export class ConversionService {
 
     // Assign users to roles in new challenge
     await this.assignContributors(
-      spaceID,
       challengeCommunityUpdated,
       userMembers,
       userLeads,
@@ -572,7 +570,6 @@ export class ConversionService {
   }
 
   private async assignContributors(
-    spaceID: string,
     community: ICommunity,
     userMembers: IUser[],
     userLeads: IUser[],

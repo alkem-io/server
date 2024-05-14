@@ -12,7 +12,7 @@ import { RolesUserInput } from './dto/roles.dto.input.user';
 import { ContributorRoles } from './dto/roles.dto.result.contributor';
 import { ApplicationForRoleResult } from './dto/roles.dto.result.application';
 import { RolesOrganizationInput } from './dto/roles.dto.input.organization';
-import { mapJourneyCredentialsToRoles } from './util/map.journey.credentials.to.roles';
+import { mapJourneyCredentialsToRoles } from './util/map.space.credentials.to.roles';
 import { InvitationForRoleResult } from './dto/roles.dto.result.invitation';
 import { InvitationService } from '@domain/community/invitation/invitation.service';
 import { IInvitation } from '@domain/community/invitation';
