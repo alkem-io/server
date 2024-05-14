@@ -80,7 +80,7 @@ export class RolesService {
     );
   }
 
-  public async getJourneyRolesForContributor(
+  public async getSpaceRolesForContributor(
     roles: ContributorRoles,
     agentInfo: AgentInfo
   ): Promise<RolesResultSpace[]> {

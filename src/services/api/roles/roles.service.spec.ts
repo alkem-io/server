@@ -20,7 +20,7 @@ import { asyncToThrow, testData } from '@test/utils';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import * as getOrganizationRolesForUserEntityData from './util/get.organization.roles.for.user.entity.data';
-import * as getSpaceRolesForContributorEntityData from './util/get.space.roles.for.contributor.entity.data';
+import * as getSpaceRolesForContributorQueryResult from './util/get.space.roles.for.contributor.query.result';
 import { MockInvitationService } from '@test/mocks/invitation.service.mock';
 import { MockCommunityResolverService } from '@test/mocks/community.resolver.service.mock';
 import { SpaceService } from '@domain/space/space/space.service';
@@ -31,7 +31,7 @@ import { SpaceType } from '@common/enums/space.type';
 import { SpaceLevel } from '@common/enums/space.level';
 import { Space } from '@domain/space/space/space.entity';
 import { License } from '@domain/license/license/license.entity';
-import { RolesResult } from './dto/roles.dto.result';
+import { RolesResultCommunity } from './dto/roles.dto.result.community';
 
 describe('RolesService', () => {
   let rolesService: RolesService;
@@ -72,25 +72,26 @@ describe('RolesService', () => {
   describe('User Roles', () => {
     beforeEach(() => {
       const spaceRolesData = testData.rolesUser.space as any;
-      const spaceRolesMock: RolesResultSpace[] = [
-        getSpaceRoleResultMock({
-          id: spaceRolesData.id,
-          roles: spaceRolesData.roles,
-          displayName: spaceRolesData.displayName,
-        }),
-      ];
+      const spaceRolesMock: RolesResultSpace = getSpaceRoleResultMock({
+        id: spaceRolesData.id,
+        roles: spaceRolesData.roles,
+        displayName: spaceRolesData.displayName,
+      });
       const subspaceRolesData = spaceRolesData.subspaces;
-      const subspaceRolesMocks: RolesResult[] = [];
+      const subspaceRolesMocks: RolesResultCommunity[] = [];
       for (const subspaceRoleData of subspaceRolesData) {
-        const subspaceRolesMock: RolesResult = getSubpaceRoleResultMock({
-          id: subspaceRoleData.id,
-          roles: subspaceRoleData.roles,
-          displayName: subspaceRoleData.displayName,
-          type: subspaceRoleData.type,
-          level: subspaceRoleData.level,
-        });
+        const subspaceRolesMock: RolesResultCommunity =
+          getSubpaceRoleResultMock({
+            id: subspaceRoleData.id,
+            roles: subspaceRoleData.roles,
+            displayName: subspaceRoleData.displayName,
+            type: subspaceRoleData.type,
+            level: subspaceRoleData.level,
+          });
         subspaceRolesMocks.push(subspaceRolesMock);
       }
+      spaceRolesMock.subspaces = subspaceRolesMocks;
+      const spacesRolesMock: RolesResultSpace[] = [spaceRolesMock];
       jest
         .spyOn(userService, 'getUserWithAgent')
         .mockResolvedValue(testData.user);
@@ -101,13 +102,10 @@ describe('RolesService', () => {
 
       jest
         .spyOn(
-          getSpaceRolesForContributorEntityData,
-          'getSpaceRolesForContributorEntityData'
+          getSpaceRolesForContributorQueryResult,
+          'getSpaceRolesForContributorQueryResult'
         )
-        .mockResolvedValue({
-          spaces: [spaceRolesMock],
-          subspaces: subspaceRolesMocks,
-        } as any);
+        .mockReturnValue(spacesRolesMock);
 
       jest
         .spyOn(
@@ -143,7 +141,7 @@ describe('RolesService', () => {
       const organizationRoles = await rolesService.getOrganizationRolesForUser(
         roles
       );
-      const journeyRoles = await rolesService.getJourneyRolesForContributor(
+      const journeyRoles = await rolesService.getSpaceRolesForContributor(
         roles,
         testData.agentInfo
       );
@@ -203,7 +201,7 @@ describe('RolesService', () => {
         organizationID: testData.organization.id,
       });
 
-      const spaces = await rolesService.getJourneyRolesForContributor(
+      const spaces = await rolesService.getSpaceRolesForContributor(
         roles,
         testData.agentInfo
       );
@@ -270,18 +268,20 @@ const getSubpaceRoleResultMock = ({
   id,
   roles,
   displayName,
+  type,
 }: {
   id: string;
   roles: string[];
   displayName: string;
   type: SpaceType;
   level: SpaceLevel;
-}): RolesResult => {
+}): RolesResultCommunity => {
   return {
     id,
     displayName,
-    nameID: `space-${id}`,
+    nameID: `subspace-${id}`,
     roles,
+    type,
   };
 };
 
