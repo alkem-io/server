@@ -7,7 +7,7 @@ import { getSpaceRolesForContributorQueryResult } from './get.space.roles.for.co
 import { AgentInfo } from '@core/authentication/agent-info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 
-export const mapJourneyCredentialsToRoles = async (
+export const mapSpaceCredentialsToRoles = async (
   entityManager: EntityManager,
   credentials: ICredential[],
   allowedVisibilities: SpaceVisibility[],

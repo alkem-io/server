@@ -19,8 +19,8 @@ import { SpaceFilterService } from '@services/infrastructure/space-filter/space.
 import { asyncToThrow, testData } from '@test/utils';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { SpaceVisibility } from '@common/enums/space.visibility';
-import * as getJourneyRolesForContributorEntityData from './util/get.space.roles.for.contributor.entity.data';
 import * as getOrganizationRolesForUserEntityData from './util/get.organization.roles.for.user.entity.data';
+import * as getSpaceRolesForContributorEntityData from './util/get.space.roles.for.contributor.entity.data';
 import { MockInvitationService } from '@test/mocks/invitation.service.mock';
 import { MockCommunityResolverService } from '@test/mocks/community.resolver.service.mock';
 import { SpaceService } from '@domain/space/space/space.service';
@@ -63,6 +63,8 @@ describe('RolesService', () => {
 
   describe('User Roles', () => {
     beforeEach(() => {
+      const spaceData = [testData.rolesUser.space as any];
+      const subspaceData = testData.rolesUser.subspaces as any;
       jest
         .spyOn(userService, 'getUserWithAgent')
         .mockResolvedValue(testData.user);
@@ -73,13 +75,13 @@ describe('RolesService', () => {
 
       jest
         .spyOn(
-          getJourneyRolesForContributorEntityData,
-          'getJourneyRolesForContributorEntityData'
+          getSpaceRolesForContributorEntityData,
+          'getSpaceRolesForContributorEntityData'
         )
         .mockResolvedValue({
-          spaces: [testData.space as any],
-          subspaces: [testData.challenge as any, testData.opportunity as any],
-        });
+          spaces: [spaceData],
+          subspaces: [subspaceData],
+        } as any);
 
       jest
         .spyOn(
