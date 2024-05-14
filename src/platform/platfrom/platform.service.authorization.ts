@@ -317,7 +317,6 @@ export class PlatformAuthorizationService {
           AuthorizationCredential.GLOBAL_SUPPORT,
           AuthorizationCredential.GLOBAL_COMMUNITY_READ,
           AuthorizationCredential.SPACE_ADMIN,
-          AuthorizationCredential.SUBSPACE_ADMIN,
           AuthorizationCredential.ORGANIZATION_ADMIN,
         ],
         CREDENTIAL_RULE_TYPES_PLATFORM_ANY_ADMIN
