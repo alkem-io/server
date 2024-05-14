@@ -20,8 +20,8 @@ export class subspaceCredentials1715575211966 implements MigrationInterface {
 
     await queryRunner.query(`
       UPDATE community_policy
-      SET lead = REPLACE(lead, 'subspace-', 'space-')
-      WHERE lead LIKE '%subspace-%'
+      SET \`lead\` = REPLACE(\`lead\`, 'subspace-', 'space-')
+      WHERE \`lead\` LIKE '%subspace-%'
     `);
 
     await queryRunner.query(`
