@@ -14,9 +14,10 @@ export class subspaceAdmin1715661558908 implements MigrationInterface {
     );
     for (const spaceAdminCredential of spaceAdminCredentials) {
       // try to look up the account
-      const [space]: { id: string; level: number }[] = await queryRunner.query(
-        `SELECT id, level FROM space WHERE id = '${spaceAdminCredential.resourceID}'`
-      );
+      const [space]: { id: string; level: number; parentSpaceId: string }[] =
+        await queryRunner.query(
+          `SELECT id, level, parentSpaceId FROM space WHERE id = '${spaceAdminCredential.resourceID}'`
+        );
       if (!space) {
         console.log(
           `Unable to find space for space admin credential ${spaceAdminCredential.id}`
@@ -26,8 +27,9 @@ export class subspaceAdmin1715661558908 implements MigrationInterface {
         continue;
       }
       const subspaceAdminCredID = randomUUID();
+      const resourceID = space.parentSpaceId; // assigning the credential to the parent space
       await queryRunner.query(
-        `INSERT INTO credential (id, version, resourceID, type) VALUES ('${subspaceAdminCredID}', 1, '${space.id}', 'subspace-admin')`
+        `INSERT INTO credential (id, version, resourceID, type) VALUES ('${subspaceAdminCredID}', 1, '${resourceID}', 'subspace-admin')`
       );
     }
   }
