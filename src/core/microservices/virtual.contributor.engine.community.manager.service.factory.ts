@@ -4,7 +4,7 @@ import { LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ClientProxyFactory, Transport } from '@nestjs/microservices';
 
-export async function virtualPersonaEngineAlkemioDigileefomgevingServiceFactory(
+export async function virtualContributorEngineCommunityManagerServiceFactory(
   logger: LoggerService,
   configService: ConfigService
 ): Promise<any> {
@@ -16,7 +16,7 @@ export async function virtualPersonaEngineAlkemioDigileefomgevingServiceFactory(
   try {
     const options = {
       urls: [connectionString],
-      queue: MessagingQueue.VIRTUAL_PERSONA_ENGINE_ALKEMIO_DIGILEEFOMGEVING,
+      queue: MessagingQueue.VIRTUAL_CONTRIBUTOR_ENGINE_COMMUNITY_MANAGER,
       queueOptions: {
         // the queue will survive a broker restart
         durable: false,

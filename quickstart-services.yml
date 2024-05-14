@@ -201,34 +201,34 @@ services:
         'chmod 400 /var/lib/rabbitmq/.erlang.cookie; rabbitmq-server --hostname rmq',
       ]
 
-  # notification:
-  #   extra_hosts:
-  #     - 'host.docker.internal:host-gateway'
-  #   container_name: alkemio_dev_notifications
-  #   hostname: notifications
-  #   image: alkemio/notifications:v0.14.3
-  #   environment:
-  #     - RABBITMQ_HOST
-  #     - RABBITMQ_USER
-  #     - RABBITMQ_PASSWORD
-  #     - LOGGING_CONSOLE_ENABLED
-  #     - LOGGING_LEVEL_CONSOLE
-  #     - EMAIL_SMTP_HOST
-  #     - EMAIL_MULTI_PROVIDER_STRATEGY
-  #     - ENVIRONMENT=dev
-  #     - ALKEMIO_SERVER_ENDPOINT
-  #     - ALKEMIO_WEBCLIENT_ENDPOINT
-  #     - KRATOS_API_PUBLIC_ENDPOINT
-  #     - SERVICE_ACCOUNT_USERNAME
-  #     - SERVICE_ACCOUNT_PASSWORD
-  #     - WAIT_HOSTS=host.docker.internal:3000
-  #     - WAIT_HOSTS_TIMEOUT=300
-  #     - WAIT_SLEEP_INTERVAL=30
-  #     - WAIT_HOST_CONNECT_TIMEOUT=30
-  #   restart: always
-  #   networks:
-  #     - alkemio_dev_net
-  #   command: sh -c "/wait && npm run start"
+  notification:
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    container_name: alkemio_dev_notifications
+    hostname: notifications
+    image: alkemio/notifications:v0.14.3
+    environment:
+      - RABBITMQ_HOST
+      - RABBITMQ_USER
+      - RABBITMQ_PASSWORD
+      - LOGGING_CONSOLE_ENABLED
+      - LOGGING_LEVEL_CONSOLE
+      - EMAIL_SMTP_HOST
+      - EMAIL_MULTI_PROVIDER_STRATEGY
+      - ENVIRONMENT=dev
+      - ALKEMIO_SERVER_ENDPOINT
+      - ALKEMIO_WEBCLIENT_ENDPOINT
+      - KRATOS_API_PUBLIC_ENDPOINT
+      - SERVICE_ACCOUNT_USERNAME
+      - SERVICE_ACCOUNT_PASSWORD
+      - WAIT_HOSTS=host.docker.internal:3000
+      - WAIT_HOSTS_TIMEOUT=300
+      - WAIT_SLEEP_INTERVAL=30
+      - WAIT_HOST_CONNECT_TIMEOUT=30
+    restart: always
+    networks:
+      - alkemio_dev_net
+    command: sh -c "/wait && npm run start"
 
   matrix-adapter:
     extra_hosts:
@@ -279,11 +279,11 @@ services:
     networks:
       - alkemio_dev_net
     ports:
-      - 8000:8000
+      - 8000
 
-  guidance_engine:
-    container_name: alkemio_dev_guidance_engine
-    hostname: guidance-engine
+  virtual_contributor_engine_guidance:
+    container_name: alkemio_dev_virtual_contributor_engine_guidance
+    hostname: virtual-contributor-engine-guidance
     image: alkemio/guidance-engine:v0.6.1
     platform: linux/x86_64
     restart: always
@@ -316,11 +316,11 @@ services:
       - LANGCHAIN_TRACING_V2
       - LANGCHAIN_ENDPOINT
       - LANGCHAIN_API_KEY
-      - LANGCHAIN_PROJECT
+      - LANGCHAIN_PROJECT=virtual-contributor-engine-guidance
 
-  community-manager:
-    container_name: alkemio_dev_community_manager
-    hostname: community-manager
+  virtual-contributor-engine-community-manager:
+    container_name: alkemio_dev_virtual_contributor_engine_community_manager
+    hostname: virtual-contributor-engine-community-manager
     image: alkemio/virtual-persona-engine:v0.1.3
     platform: linux/x86_64
     restart: always
@@ -336,7 +336,7 @@ services:
       - RABBITMQ_HOST
       - RABBITMQ_USER
       - RABBITMQ_PASSWORD
-      - RABBITMQ_QUEUE=virtual-persona-engine-community-manager
+      - RABBITMQ_QUEUE=virtual-contributor-engine-community-manager
       - ENVIRONMENT=dev
       - LOG_LEVEL=DEBUG
       - EMBEDDINGS_DEPLOYMENT_NAME
@@ -349,14 +349,12 @@ services:
       - LANGCHAIN_TRACING_V2
       - LANGCHAIN_ENDPOINT
       - LANGCHAIN_API_KEY
-      - LANGCHAIN_PROJECT
+      - LANGCHAIN_PROJECT=virtual-contributor-engine-community-manager
 
-  space_ingest:
-    container_name: alkemio_dev_space_ingest
-    hostname: space-ingest
-    build:
-      dockerfile: ../space-ingest/Dockerfile
-      context: '../space-ingest/'
+  virtual_contributor_engine_expert:
+    container_name: alkemio_dev_virtual_contributor_engine_expert
+    hostname: virtual-contributor-engine-expert
+    image: alkemio/virtual-contributor-engine-expert:v0.3.0
     platform: linux/x86_64
     restart: always
     volumes:
@@ -371,27 +369,29 @@ services:
       - RABBITMQ_USER
       - RABBITMQ_PASSWORD
       - RABBITMQ_PORT
-      - RABBITMQ_QUEUE=ingest-space
+      - RABBITMQ_QUEUE=virtual-contributor-engine-expert
       - API_ENDPOINT_PRIVATE_GRAPHQL=http://host.docker.internal:3000/api/private/non-interactive/graphql
       - AUTH_ORY_KRATOS_PUBLIC_BASE_URL=http://host.docker.internal:3000/ory/kratos/public
       - AUTH_ADMIN_EMAIL
       - AUTH_ADMIN_PASSWORD
-      - LOG_LEVEL=debug
+      - OPENAI_API_VERSION
+      - AI_MODEL_TEMPERATURE
+      - LOG_LEVEL=DEBUG
       - AZURE_OPENAI_ENDPOINT=https://alkemio-gpt.openai.azure.com
       - AZURE_OPENAI_API_KEY
       - LLM_DEPLOYMENT_NAME=deploy-gpt-35-turbo
       - EMBEDDINGS_DEPLOYMENT_NAME=embedding
+      - LANGCHAIN_TRACING_V2
+      - LANGCHAIN_ENDPOINT
+      - LANGCHAIN_API_KEY
+      - LANGCHAIN_PROJECT=virtual-contributor-engine-expert
       - VECTOR_DB_PORT
       - VECTOR_DB_HOST
-      - AUTH_ADMIN_EMAIL
-      - AUTH_ADMIN_PASSWORD
 
-  virtual_contributor:
-    container_name: alkemio_dev_virtual-contributor-engine-expert
-    hostname: irtual-contributor-engine-expert
-    build:
-      dockerfile: ../virtual-contributor-engine-expert//Dockerfile
-      context: '../virtual-contributor-engine-expert/'
+  virtual_contributor_ingest_space:
+    container_name: alkemio_dev_virtual-contributor-ingest-space
+    hostname: virtual-contributor-ingest-space
+    image: alkemio/virtual-contributor-ingest-space:v0.0.1
     platform: linux/x86_64
     restart: always
     volumes:
@@ -406,7 +406,8 @@ services:
       - RABBITMQ_HOST
       - RABBITMQ_USER
       - RABBITMQ_PASSWORD
-      - RABBITMQ_QUEUE=virtual-persona-engine-alkemio-digileefomgeving
+      - RABBITMQ_PORT
+      - RABBITMQ_QUEUE=virtual-contributor-ingest-space
       - ENVIRONMENT=dev
       - LOG_LEVEL=DEBUG
       - EMBEDDINGS_DEPLOYMENT_NAME
@@ -419,6 +420,6 @@ services:
       - LANGCHAIN_TRACING_V2
       - LANGCHAIN_ENDPOINT
       - LANGCHAIN_API_KEY
-      - LANGCHAIN_PROJECT
+      - LANGCHAIN_PROJECT=virtual-contributor-ingest-space
       - VECTOR_DB_HOST
       - VECTOR_DB_PORT

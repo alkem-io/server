@@ -3,9 +3,9 @@ import { ClientProxy } from '@nestjs/microservices';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { firstValueFrom } from 'rxjs';
 import {
-  VIRTUAL_PERSONA_ENGINE_ALKEMIO_DIGILEEFOMGEVING,
-  VIRTUAL_PERSONA_ENGINE_CHAT_GUIDANCE,
-  VIRTUAL_PERSONA_ENGINE_COMMUNITY_MANAGER,
+  VIRTUAL_CONTRIBUTOR_ENGINE_EXPERT,
+  VIRTUAL_CONTRIBUTOR_ENGINE_GUIDANCE,
+  VIRTUAL_CONTRIBUTOR_ENGINE_COMMUNITY_MANAGER,
 } from '@common/constants';
 import { Source } from '../chat-guidance-adapter/source.type';
 import { VirtualPersonaEngineAdapterQueryInput } from './dto/virtual.persona.engine.adapter.dto.question.input';
@@ -29,11 +29,11 @@ const successfulResetResponse = 'Reset function executed';
 @Injectable()
 export class VirtualPersonaEngineAdapter {
   constructor(
-    @Inject(VIRTUAL_PERSONA_ENGINE_COMMUNITY_MANAGER)
+    @Inject(VIRTUAL_CONTRIBUTOR_ENGINE_COMMUNITY_MANAGER)
     private virtualPersonaEngineCommunityManager: ClientProxy,
-    @Inject(VIRTUAL_PERSONA_ENGINE_ALKEMIO_DIGILEEFOMGEVING)
+    @Inject(VIRTUAL_CONTRIBUTOR_ENGINE_EXPERT)
     private virtualPersonaEngineAlkemioDigileefomgeving: ClientProxy,
-    @Inject(VIRTUAL_PERSONA_ENGINE_CHAT_GUIDANCE)
+    @Inject(VIRTUAL_CONTRIBUTOR_ENGINE_GUIDANCE)
     private virtualPersonaEngineChatGuidance: ClientProxy,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService

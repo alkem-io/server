@@ -26,7 +26,7 @@ import { IngestSpace } from './commands';
           ],
           queues: [
             {
-              name: 'ingest-space',
+              name: 'virtual-contributor-ingest-space',
               exchange: 'event-bus',
               routingKey: '',
             },

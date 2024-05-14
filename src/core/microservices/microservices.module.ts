@@ -14,9 +14,9 @@ import {
   AUTH_RESET_SERVICE,
   EXCALIDRAW_PUBSUB_PROVIDER,
   SUBSCRIPTION_SUBSPACE_CREATED,
-  VIRTUAL_PERSONA_ENGINE_COMMUNITY_MANAGER,
-  VIRTUAL_PERSONA_ENGINE_ALKEMIO_DIGILEEFOMGEVING,
-  VIRTUAL_PERSONA_ENGINE_CHAT_GUIDANCE,
+  VIRTUAL_CONTRIBUTOR_ENGINE_COMMUNITY_MANAGER,
+  VIRTUAL_CONTRIBUTOR_ENGINE_EXPERT,
+  VIRTUAL_CONTRIBUTOR_ENGINE_GUIDANCE,
 } from '@common/constants/providers';
 import { MessagingQueue } from '@common/enums/messaging.queue';
 import {
@@ -28,9 +28,9 @@ import { notificationsServiceFactory } from './notifications.service.factory';
 import { walletManagerServiceFactory } from './wallet-manager.service.factory';
 import { matrixAdapterServiceFactory } from './matrix.adapter.service.factory';
 import { authResetServiceFactory } from './auth.reset.service.factory';
-import { virtualPersonaEngineChatGuidanceServiceFactory } from './virtual.persona.engine.chat.guidance.service.factory';
-import { virtualPersonaEngineCommunityManagerServiceFactory } from './virtual.persona.engine.community.manager.service.factory';
-import { virtualPersonaEngineAlkemioDigileefomgevingServiceFactory } from './virtual.persona.engine.alkemio.digileefomgeving.service.factory';
+import { virtualContributorEngineGuidanceServiceFactory } from './virtual.contributor.engine.guidance.service.factory';
+import { virtualContributorEngineCommunityManagerServiceFactory } from './virtual.contributor.engine.community.manager.service.factory';
+import { virtualContributorEngineExpertServiceFactory } from './virtual.contributor.engine.expert.service.factory';
 
 const subscriptionConfig: { provide: string; queueName: MessagingQueue }[] = [
   {
@@ -98,18 +98,18 @@ const excalidrawPubSubFactoryProvider = subscriptionFactoryProvider(
       inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
     },
     {
-      provide: VIRTUAL_PERSONA_ENGINE_CHAT_GUIDANCE,
-      useFactory: virtualPersonaEngineChatGuidanceServiceFactory,
+      provide: VIRTUAL_CONTRIBUTOR_ENGINE_GUIDANCE,
+      useFactory: virtualContributorEngineGuidanceServiceFactory,
       inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
     },
     {
-      provide: VIRTUAL_PERSONA_ENGINE_COMMUNITY_MANAGER,
-      useFactory: virtualPersonaEngineCommunityManagerServiceFactory,
+      provide: VIRTUAL_CONTRIBUTOR_ENGINE_COMMUNITY_MANAGER,
+      useFactory: virtualContributorEngineCommunityManagerServiceFactory,
       inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
     },
     {
-      provide: VIRTUAL_PERSONA_ENGINE_ALKEMIO_DIGILEEFOMGEVING,
-      useFactory: virtualPersonaEngineAlkemioDigileefomgevingServiceFactory,
+      provide: VIRTUAL_CONTRIBUTOR_ENGINE_EXPERT,
+      useFactory: virtualContributorEngineExpertServiceFactory,
       inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
     },
     {
@@ -124,9 +124,9 @@ const excalidrawPubSubFactoryProvider = subscriptionFactoryProvider(
     NOTIFICATIONS_SERVICE,
     WALLET_MANAGEMENT_SERVICE,
     MATRIX_ADAPTER_SERVICE,
-    VIRTUAL_PERSONA_ENGINE_COMMUNITY_MANAGER,
-    VIRTUAL_PERSONA_ENGINE_ALKEMIO_DIGILEEFOMGEVING,
-    VIRTUAL_PERSONA_ENGINE_CHAT_GUIDANCE,
+    VIRTUAL_CONTRIBUTOR_ENGINE_COMMUNITY_MANAGER,
+    VIRTUAL_CONTRIBUTOR_ENGINE_EXPERT,
+    VIRTUAL_CONTRIBUTOR_ENGINE_GUIDANCE,
     AUTH_RESET_SERVICE,
     EXCALIDRAW_PUBSUB_PROVIDER,
   ],
