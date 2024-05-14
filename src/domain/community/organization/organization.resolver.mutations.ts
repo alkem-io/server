@@ -15,12 +15,6 @@ import { AgentInfo } from '@core/authentication/agent-info';
 import { IUser } from '@domain/community/user/user.interface';
 import { OrganizationAuthorizationResetInput } from './dto/organization.dto.reset.authorization';
 import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
-import { AssignOrganizationAssociateInput } from './dto/organization.dto.assign.associate';
-import { RemoveOrganizationAssociateInput } from './dto/organization.dto.remove.associate';
-import { RemoveOrganizationAdminInput } from './dto/organization.dto.remove.admin';
-import { AssignOrganizationAdminInput } from './dto/organization.dto.assign.admin';
-import { AssignOrganizationOwnerInput } from './dto/organization.dto.assign.owner';
-import { RemoveOrganizationOwnerInput } from './dto/organization.dto.remove.owner';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IPreference, PreferenceService } from '@domain/common/preference';
 import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set';
@@ -29,6 +23,9 @@ import { PreferenceSetService } from '@domain/common/preference-set/preference.s
 import { CreateUserGroupInput } from '../user-group/dto';
 import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
 import { IOrganization } from './organization.interface';
+import { RemoveOrganizationRoleFromUserInput } from './dto/organization.dto.remove.role.from.user';
+import { AssignOrganizationRoleToUserInput } from './dto/organization.dto.assign.role.to.user';
+import { OrganizationRole } from '@common/enums/organization.role';
 
 @Resolver(() => IOrganization)
 export class OrganizationResolverMutations {
@@ -171,148 +168,59 @@ export class OrganizationResolverMutations {
   }
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => IOrganization, {
-    description:
-      'Assigns a User as an associate of the specified Organization.',
-  })
-  @Profiling.api
-  async assignUserToOrganization(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('membershipData') membershipData: AssignOrganizationAssociateInput
-  ): Promise<IOrganization> {
-    const organization = await this.organizationService.getOrganizationOrFail(
-      membershipData.organizationID
-    );
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      organization.authorization,
-      AuthorizationPrivilege.GRANT,
-      `assign user organization: ${organization.nameID}`
-    );
-    return await this.organizationService.assignMember(membershipData);
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IOrganization, {
-    description: 'Removes a User as a member of the specified Organization.',
-  })
-  @Profiling.api
-  async removeUserFromOrganization(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('membershipData') membershipData: RemoveOrganizationAssociateInput
-  ): Promise<IOrganization> {
-    const organization = await this.organizationService.getOrganizationOrFail(
-      membershipData.organizationID
-    );
-
-    // Extend the authorization policy with a credential rule to assign the GRANT privilege
-    // to the user specified in the incoming mutation. Then if it is the same user as is logged
-    // in then the user will have the GRANT privilege + so can carry out the mutation
-    const extendedAuthorization =
-      this.organizationAuthorizationService.extendAuthorizationPolicyForSelfRemoval(
-        organization,
-        membershipData.userID
-      );
-
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      extendedAuthorization,
-      AuthorizationPrivilege.GRANT,
-      `remove user from organization: ${organization.nameID}`
-    );
-    return await this.organizationService.removeAssociate(membershipData);
-  }
-
-  @UseGuards(GraphqlGuard)
   @Mutation(() => IUser, {
-    description: 'Assigns a User as an Organization Admin.',
+    description: 'Assigns an Organization Role to user.',
   })
   @Profiling.api
-  async assignUserAsOrganizationAdmin(
+  async assignOrganizationRoleToUser(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('membershipData') membershipData: AssignOrganizationAdminInput
+    @Args('membershipData') membershipData: AssignOrganizationRoleToUserInput
   ): Promise<IUser> {
     const organization = await this.organizationService.getOrganizationOrFail(
       membershipData.organizationID
     );
+
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       organization.authorization,
       AuthorizationPrivilege.GRANT,
-      `assign user organization admin: ${organization.nameID}`
+      `assign organization role to user: ${organization.nameID} - ${membershipData.role}`
     );
-    return await this.organizationService.assignOrganizationAdmin(
+    return await this.organizationService.assignOrganizationRoleToUser(
       membershipData
     );
   }
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IUser, {
-    description: 'Removes a User from being an Organization Admin.',
+    description: 'Removes Organization Role from user.',
   })
   @Profiling.api
-  async removeUserAsOrganizationAdmin(
+  async removeOrganizationRoleFromUser(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('membershipData') membershipData: RemoveOrganizationAdminInput
+    @Args('membershipData') membershipData: RemoveOrganizationRoleFromUserInput
   ): Promise<IUser> {
     const organization = await this.organizationService.getOrganizationOrFail(
       membershipData.organizationID
     );
+    let authorization = organization.authorization;
+    if (membershipData.role === OrganizationRole.ASSOCIATE) {
+      // Extend the authorization policy with a credential rule to assign the GRANT privilege
+      // to the user specified in the incoming mutation. Then if it is the same user as is logged
+      // in then the user will have the GRANT privilege + so can carry out the mutation
+      authorization =
+        this.organizationAuthorizationService.extendAuthorizationPolicyForSelfRemoval(
+          organization,
+          membershipData.userID
+        );
+    }
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      organization.authorization,
+      authorization,
       AuthorizationPrivilege.GRANT,
-      `remove user organization admin: ${organization.nameID}`
+      `remove user organization role from user: ${organization.nameID} - ${membershipData.role}`
     );
-    return await this.organizationService.removeOrganizationAdmin(
-      membershipData
-    );
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IUser, {
-    description: 'Assigns a User as an Organization Owner.',
-  })
-  @Profiling.api
-  async assignUserAsOrganizationOwner(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('membershipData') membershipData: AssignOrganizationOwnerInput
-  ): Promise<IUser> {
-    const organization = await this.organizationService.getOrganizationOrFail(
-      membershipData.organizationID
-    );
-    // todo: what additional logic check do we want on the granting of org owner?
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      organization.authorization,
-      AuthorizationPrivilege.GRANT,
-      `assign user organization owner: ${organization.nameID}`
-    );
-    return await this.organizationService.assignOrganizationOwner(
-      membershipData
-    );
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IUser, {
-    description: 'Removes a User from being an Organization Owner.',
-  })
-  @Profiling.api
-  async removeUserAsOrganizationOwner(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('membershipData') membershipData: RemoveOrganizationOwnerInput
-  ): Promise<IUser> {
-    const organization = await this.organizationService.getOrganizationOrFail(
-      membershipData.organizationID
-    );
-    // todo: what additional logic check do we want on the granting of org owner?
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      organization.authorization,
-      AuthorizationPrivilege.GRANT,
-      `remove user organization admin: ${organization.nameID}`
-    );
-    return await this.organizationService.removeOrganizationOwner(
+    return await this.organizationService.removeOrganizationRoleFromUser(
       membershipData
     );
   }

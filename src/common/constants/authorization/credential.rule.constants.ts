@@ -1,10 +1,10 @@
 export const CREDENTIAL_RULE_SUBSPACE_ADMINS = 'credentialRule-SubspaceAdmins';
 export const CREDENTIAL_RULE_MEMBER_CREATE_SUBSPACE =
   'credentialRule-memberCreateSubspace';
-export const CREDENTIAL_RULE_CHALLENGE_SPACE_MEMBER_JOIN =
-  'credentialRule-challengeSpaceMemberJoin';
-export const CREDENTIAL_RULE_CHALLENGE_SPACE_MEMBER_APPLY =
-  'credentialRule-challengeSpaceMemberApply';
+export const CREDENTIAL_RULE_SUBSPACE_PARENT_MEMBER_JOIN =
+  'credentialRule-subspaceParentMemberJoin';
+export const CREDENTIAL_RULE_SUBSPACE_PARENT_MEMBER_APPLY =
+  'credentialRule-subspaceParentMemberApply';
 export const CREDENTIAL_RULE_SPACE_ADMIN_DELETE_SUBSPACE =
   'credentialRule-SpaceAdminDeleteSubspace';
 export const CREDENTIAL_RULE_SPACE_ADMINS = 'credentialRule-spaceAdmins';

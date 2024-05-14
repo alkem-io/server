@@ -16,4 +16,11 @@ export class UpdateSpaceSettingsMembershipInput {
       'The organizations that are trusted to Join as members for this Space',
   })
   trustedOrganizations!: UUID[];
+
+  @Field(() => Boolean, {
+    nullable: false,
+    description:
+      'Flag to control if Subspace admins can invite for this Space.',
+  })
+  allowSubspaceAdminsToInviteMembers!: boolean;
 }

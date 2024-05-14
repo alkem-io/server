@@ -18,13 +18,11 @@ export const mapJourneyCredentialsToRoles = async (
 
   const spaceIds = Array.from(credentialMap.get('spaces')?.keys() ?? []);
   const accountIds = Array.from(credentialMap.get('accounts')?.keys() ?? []);
-  const subspaceIds = Array.from(credentialMap.get('subspaces')?.keys() ?? []);
 
   const { spaces, subspaces } = await getJourneyRolesForContributorEntityData(
     entityManager,
     spaceIds.concat(accountIds), // For now merge accounts with spaces
-    allowedVisibilities,
-    subspaceIds
+    allowedVisibilities
   );
 
   return getJourneyRolesForContributorQueryResult(

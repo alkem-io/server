@@ -4,8 +4,14 @@ import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 @InputType()
 export class UpdateSpaceSettingsPrivacyInput {
   @Field(() => SpacePrivacyMode, {
-    nullable: false,
+    nullable: true,
     description: '',
   })
-  mode!: SpacePrivacyMode;
+  mode?: SpacePrivacyMode;
+
+  @Field(() => Boolean, {
+    nullable: true,
+    description: 'Flag to control if Platform Support has admin rights.',
+  })
+  allowPlatformSupportAsAdmin!: boolean;
 }

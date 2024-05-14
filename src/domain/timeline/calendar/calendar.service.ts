@@ -147,7 +147,7 @@ export class CalendarService {
   public async getCommunityPolicy(
     collaborationID: string
   ): Promise<ICommunityPolicy> {
-    return await this.namingService.getCommunityPolicyForCollaboration(
+    return await this.namingService.getCommunityPolicyWithSettingsForCollaboration(
       collaborationID
     );
   }

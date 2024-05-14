@@ -11,18 +11,12 @@ import {
 import { ForbiddenException, ValidationException } from '@common/exceptions';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AssignGlobalAdminInput } from '@platform/admin/authorization/dto/authorization.dto.assign.global.admin';
-import { RemoveGlobalAdminInput } from '@platform/admin/authorization/dto/authorization.dto.remove.global.admin';
-import { AssignGlobalCommunityAdminInput } from '@platform/admin/authorization/dto/authorization.dto.assign.global.community.admin';
-import { RemoveGlobalCommunityAdminInput } from '@platform/admin/authorization/dto/authorization.dto.remove.global.community.admin';
 import { UserAuthorizationPrivilegesInput } from '@platform/admin/authorization/dto/authorization.dto.user.authorization.privileges';
 import { GrantAuthorizationCredentialInput } from './dto/authorization.dto.credential.grant';
 import { RevokeAuthorizationCredentialInput } from './dto/authorization.dto.credential.revoke';
 import { UsersWithAuthorizationCredentialInput } from './dto/authorization.dto.users.with.credential';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { AgentInfo } from '@core/authentication';
-import { AssignGlobalSpacesAdminInput } from './dto/authorization.dto.assign.global.spaces.admin';
-import { RemoveGlobalSpacesAdminInput } from './dto/authorization.dto.remove.global.spaces.admin';
 import { IOrganization } from '@domain/community/organization';
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { RevokeOrganizationAuthorizationCredentialInput } from './dto/authorization.dto.credential.revoke.organization';
@@ -40,106 +34,6 @@ export class AdminAuthorizationService {
     private organizationService: OrganizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
-
-  async assignGlobalAdmin(assignData: AssignGlobalAdminInput): Promise<IUser> {
-    const agent = await this.userService.getAgent(assignData.userID);
-
-    // assign the credential
-    await this.agentService.grantCredential({
-      agentID: agent.id,
-      type: AuthorizationCredential.GLOBAL_ADMIN,
-      resourceID: '',
-    });
-
-    return await this.userService.getUserWithAgent(assignData.userID);
-  }
-
-  async removeGlobalAdmin(removeData: RemoveGlobalAdminInput): Promise<IUser> {
-    const agent = await this.userService.getAgent(removeData.userID);
-
-    // Check not the last global admin
-    await this.removeValidationSingleGlobalAdmin();
-
-    await this.agentService.revokeCredential({
-      agentID: agent.id,
-      type: AuthorizationCredential.GLOBAL_ADMIN,
-      resourceID: '',
-    });
-
-    return await this.userService.getUserWithAgent(removeData.userID);
-  }
-
-  async assignGlobalCommunityAdmin(
-    assignData: AssignGlobalCommunityAdminInput
-  ): Promise<IUser> {
-    const agent = await this.userService.getAgent(assignData.userID);
-
-    // assign the credential
-    await this.agentService.grantCredential({
-      agentID: agent.id,
-      type: AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY,
-      resourceID: '',
-    });
-
-    return await this.userService.getUserWithAgent(assignData.userID);
-  }
-
-  async removeGlobalCommunityAdmin(
-    removeData: RemoveGlobalCommunityAdminInput
-  ): Promise<IUser> {
-    const agent = await this.userService.getAgent(removeData.userID);
-
-    await this.agentService.revokeCredential({
-      agentID: agent.id,
-      type: AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY,
-      resourceID: '',
-    });
-
-    return await this.userService.getUserWithAgent(removeData.userID);
-  }
-
-  async assignGlobalSpacesAdmin(
-    assignData: AssignGlobalSpacesAdminInput
-  ): Promise<IUser> {
-    const agent = await this.userService.getAgent(assignData.userID);
-
-    // assign the credential
-    await this.agentService.grantCredential({
-      agentID: agent.id,
-      type: AuthorizationCredential.GLOBAL_ADMIN_SPACES,
-      resourceID: '',
-    });
-
-    return await this.userService.getUserWithAgent(assignData.userID);
-  }
-
-  async removeGlobalSpacesAdmin(
-    removeData: RemoveGlobalSpacesAdminInput
-  ): Promise<IUser> {
-    const agent = await this.userService.getAgent(removeData.userID);
-
-    await this.agentService.revokeCredential({
-      agentID: agent.id,
-      type: AuthorizationCredential.GLOBAL_ADMIN_SPACES,
-      resourceID: '',
-    });
-
-    return await this.userService.getUserWithAgent(removeData.userID);
-  }
-
-  async removeValidationSingleGlobalAdmin(): Promise<boolean> {
-    // Check more than one
-    const globalAdmins = await this.usersWithCredentials({
-      type: AuthorizationCredential.GLOBAL_ADMIN,
-    });
-    if (globalAdmins.length < 2)
-      throw new ForbiddenException(
-        `Not allowed to remove ${AuthorizationCredential.GLOBAL_ADMIN}: last global-admin`,
-        LogContext.AUTH
-      );
-
-    return true;
-  }
 
   async usersWithCredentials(
     credentialCriteria: UsersWithAuthorizationCredentialInput
@@ -297,7 +191,7 @@ export class AdminAuthorizationService {
         [AuthorizationPrivilege.AUTHORIZATION_RESET],
         [
           AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_ADMIN_SPACES,
+          AuthorizationCredential.GLOBAL_SUPPORT,
         ],
         CREDENTIAL_RULE_TYPES_PLATFORM_GLOBAL_ADMINS
       );

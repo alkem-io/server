@@ -10,6 +10,7 @@ import { AdminAuthorizationService } from './admin.authorization.service';
 import { PlatformAuthorizationPolicyModule } from '@src/platform/authorization/platform.authorization.policy.module';
 import { AuthResetModule } from '@services/auth-reset/publisher/auth-reset.module';
 import { OrganizationModule } from '@domain/community/organization/organization.module';
+import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { OrganizationModule } from '@domain/community/organization/organization.
     OrganizationModule,
     CredentialModule,
     PlatformAuthorizationPolicyModule,
+    NotificationAdapterModule,
     AuthResetModule,
   ],
   providers: [
