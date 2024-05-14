@@ -2,7 +2,10 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ICredential } from '@domain/agent/credential/credential.interface';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { ForbiddenException } from '@common/exceptions';
+import {
+  EntityNotInitializedException,
+  ForbiddenException,
+} from '@common/exceptions';
 import { AgentInfo } from '@core/authentication';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { LogContext } from '@common/enums';
@@ -99,7 +102,7 @@ export class AuthorizationService {
     privilegeRequired: AuthorizationPrivilege
   ): boolean {
     if (!authorization) {
-      throw new ForbiddenException(
+      throw new EntityNotInitializedException(
         'Authorization: no definition provided',
         LogContext.AUTH_POLICY
       );

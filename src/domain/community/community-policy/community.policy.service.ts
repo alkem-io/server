@@ -9,6 +9,7 @@ import { Repository } from 'typeorm';
 import { CommunityPolicy } from './community.policy.entity';
 import { ICommunityPolicy } from './community.policy.interface';
 import { ICommunityRolePolicy } from './community.policy.role.interface';
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
 
 @Injectable()
 export class CommunityPolicyService {
@@ -82,15 +83,29 @@ export class CommunityPolicyService {
     return rolePolicy.parentCredentials;
   }
 
-  getAllCredentialsForRole(
+  public getCredentialsForRoleWithParents(
     policy: ICommunityPolicy,
     role: CommunityRole
   ): ICredentialDefinition[] {
-    const rolePolicy = this.getCommunityRolePolicy(policy, role);
-    return [rolePolicy.credential, ...rolePolicy.parentCredentials];
+    const result = this.getCredentialsForRole(policy, role);
+    return result.concat(this.getParentCredentialsForRole(policy, role));
   }
 
-  getCredentialForRole(
+  public getCredentialsForRole(
+    policy: ICommunityPolicy,
+    role: CommunityRole
+  ): ICredentialDefinition[] {
+    const result = [this.getCredentialForRole(policy, role)];
+    if (policy.settings.privacy.allowPlatformSupportAsAdmin) {
+      result.push({
+        type: AuthorizationCredential.GLOBAL_SUPPORT,
+        resourceID: '',
+      });
+    }
+    return result;
+  }
+
+  private getCredentialForRole(
     policy: ICommunityPolicy,
     role: CommunityRole
   ): ICredentialDefinition {

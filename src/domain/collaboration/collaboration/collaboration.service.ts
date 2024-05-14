@@ -728,21 +728,10 @@ export class CollaborationService {
     return result.whiteboardsCount;
   }
 
-  public async getRelationsCount(
-    collaboration: ICollaboration
-  ): Promise<number> {
-    const postsCount =
-      await this.relationService.getRelationsInCollaborationCount(
-        collaboration.id
-      );
-
-    return postsCount;
-  }
-
   public async getCommunityPolicy(
     collaborationID: string
   ): Promise<ICommunityPolicy> {
-    return await this.namingService.getCommunityPolicyForCollaboration(
+    return await this.namingService.getCommunityPolicyWithSettingsForCollaboration(
       collaborationID
     );
   }

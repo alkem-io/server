@@ -4,7 +4,6 @@ import { NameID, UUID } from '@domain/common/scalars';
 import { Post } from '@domain/collaboration/post/post.entity';
 import { LogContext } from '@common/enums';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
-import { Community } from '@domain/community/community';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -12,7 +11,6 @@ import {
 import { IPost } from '@domain/collaboration/post/post.interface';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { CalendarEvent, ICalendarEvent } from '@domain/timeline/event';
-import { Collaboration } from '@domain/collaboration/collaboration';
 import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Discussion } from '@domain/communication/discussion/discussion.entity';
@@ -22,6 +20,7 @@ import { ICallout } from '@domain/collaboration/callout';
 import { NAMEID_LENGTH } from '@common/constants';
 import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
 import { Space } from '@domain/space/space/space.entity';
+import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 
 export class NamingService {
   replaceSpecialCharacters = require('replace-special-characters');
@@ -31,14 +30,10 @@ export class NamingService {
     private spaceRepository: Repository<Space>,
     @InjectRepository(Callout)
     private calloutRepository: Repository<Callout>,
-    @InjectRepository(Collaboration)
-    private collaborationRepository: Repository<Collaboration>,
     @InjectRepository(Discussion)
     private discussionRepository: Repository<Discussion>,
     @InjectRepository(InnovationHub)
     private innovationHubRepository: Repository<InnovationHub>,
-    @InjectRepository(Community)
-    private communityRepository: Repository<Community>,
     @InjectRepository(CalloutContribution)
     private contributionRepository: Repository<CalloutContribution>,
     @InjectEntityManager('default')
@@ -142,24 +137,6 @@ export class NamingService {
     return true;
   }
 
-  private async getCollaborationIdForCallout(
-    calloutID: string
-  ): Promise<string> {
-    const collaboration = await this.collaborationRepository
-      .createQueryBuilder('collaboration')
-      .innerJoinAndSelect('collaboration.callouts', 'callout')
-      .where('callout.id = :id')
-      .setParameters({ id: `${calloutID}` })
-      .getOne();
-    if (!collaboration) {
-      throw new EntityNotFoundException(
-        `Unable to identify Collaboration for Callout with ID: ${calloutID}`,
-        LogContext.ACTIVITY
-      );
-    }
-    return collaboration.id;
-  }
-
   async isDiscussionDisplayNameAvailableInCommunication(
     displayName: string,
     communicationID: string
@@ -208,24 +185,6 @@ export class NamingService {
     return UUID.REGEX.test(uuid);
   }
 
-  async getCommunityIdFromCollaborationId(collaborationID: string) {
-    const [result]: {
-      communityId: string;
-    }[] = await this.entityManager.connection.query(
-      `
-        SELECT communityId from \`space\`
-        WHERE \`space\`.\`collaborationId\` = '${collaborationID}' UNION
-
-        SELECT communityId from \`challenge\`
-        WHERE \`challenge\`.\`collaborationId\` = '${collaborationID}' UNION
-
-        SELECT communityId from \`opportunity\`
-        WHERE \`opportunity\`.\`collaborationId\` = '${collaborationID}';
-      `
-    );
-    return result.communityId;
-  }
-
   createNameID(base: string, useRandomSuffix = true): string {
     const NAMEID_SUFFIX_LENGTH = 5;
     const nameIDExcludedCharacters = /[^a-zA-Z0-9-]/g;
@@ -249,51 +208,64 @@ export class NamingService {
       .slice(0, NAMEID_LENGTH);
   }
 
-  async getCommunityPolicyForCollaboration(
+  async getCommunityPolicyWithSettingsForCollaboration(
     collaborationID: string
   ): Promise<ICommunityPolicy> {
-    const communityID = await this.getCommunityIdFromCollaborationId(
-      collaborationID
-    );
-
-    const community = await this.communityRepository
-      .createQueryBuilder('community')
-      .leftJoinAndSelect('community.policy', 'policy')
-      .where('community.id = :id')
-      .setParameters({ id: `${communityID}` })
-      .getOne();
-
-    if (!community || !community.policy)
+    const space = await this.entityManager.findOne(Space, {
+      where: {
+        collaboration: {
+          id: collaborationID,
+        },
+      },
+      relations: {
+        community: {
+          policy: true,
+        },
+      },
+    });
+    if (!space || !space.community || !space.community.policy) {
       throw new EntityNotInitializedException(
-        `Unable to load policy for community ${communityID} not initialized!`,
+        `Unable to load all entities for space with collaboration ${collaborationID}`,
         LogContext.COMMUNITY
       );
-
-    return community.policy;
+    }
+    // Directly parse the settings string to avoid the need to load the settings service
+    const policy = space.community.policy;
+    const settings: ISpaceSettings = JSON.parse(space.settingsStr);
+    policy.settings = settings;
+    return policy;
   }
 
-  async getCommunityPolicyForCallout(
+  async getCommunityPolicyWithSettingsForCallout(
     calloutID: string
   ): Promise<ICommunityPolicy> {
-    const collaborationID = await this.getCollaborationIdForCallout(calloutID);
-    const communityID = await this.getCommunityIdFromCollaborationId(
-      collaborationID
-    );
-
-    const community = await this.communityRepository
-      .createQueryBuilder('community')
-      .leftJoinAndSelect('community.policy', 'policy')
-      .where('community.id = :id')
-      .setParameters({ id: `${communityID}` })
-      .getOne();
-
-    if (!community || !community.policy)
+    const space = await this.entityManager.findOne(Space, {
+      where: {
+        collaboration: {
+          callouts: {
+            id: calloutID,
+          },
+        },
+      },
+      relations: {
+        community: {
+          policy: true,
+        },
+      },
+    });
+    if (!space || !space.community || !space.community.policy) {
       throw new EntityNotInitializedException(
-        `Unable to load policy for community ${communityID} not initialized!`,
+        `Unable to load all entities for space with callout ${calloutID}`,
         LogContext.COMMUNITY
       );
+    }
 
-    return community.policy;
+    // Directly parse the settings string to avoid the need to load the settings service
+    const policy = space.community.policy;
+    const settings: ISpaceSettings = JSON.parse(space.settingsStr);
+    policy.settings = settings;
+
+    return policy;
   }
 
   async getPostForRoom(roomID: string): Promise<IPost> {
