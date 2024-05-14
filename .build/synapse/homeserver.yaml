@@ -70,15 +70,15 @@ presence:
   # to where presence updates from users are routed.
   #
   presence_router:
-  # The custom module's class. Uncomment to use a custom presence router module.
-  #
-  #module: "my_custom_router.PresenceRouter"
+    # The custom module's class. Uncomment to use a custom presence router module.
+    #
+    #module: "my_custom_router.PresenceRouter"
 
-  # Configuration options of the custom module. Refer to your module's
-  # documentation for available options.
-  #
-  #config:
-  #  example_option: 'something'
+    # Configuration options of the custom module. Refer to your module's
+    # documentation for available options.
+    #
+    #config:
+    #  example_option: 'something'
 
 # Whether to require authentication to retrieve profile data (avatars,
 # display names) of other users through the client API. Defaults to
@@ -372,21 +372,21 @@ listeners:
 # users in the room.
 #
 limit_remote_rooms:
-# Uncomment to enable room complexity checking.
-#
-#enabled: true
+  # Uncomment to enable room complexity checking.
+  #
+  #enabled: true
 
-# the limit above which rooms cannot be joined. The default is 1.0.
-#
-#complexity: 0.5
+  # the limit above which rooms cannot be joined. The default is 1.0.
+  #
+  #complexity: 0.5
 
-# override the error which is returned when the room is too complex.
-#
-#complexity_error: "This room is too complex."
+  # override the error which is returned when the room is too complex.
+  #
+  #complexity_error: "This room is too complex."
 
-# allow server admins to join complex rooms. Default is false.
-#
-#admins_can_join: true
+  # allow server admins to join complex rooms. Default is false.
+  #
+  #admins_can_join: true
 
 # Whether to require a user to be in the room to add an alias to it.
 # Defaults to 'true'.
@@ -424,62 +424,62 @@ limit_remote_rooms:
 # purged are ignored and not stored again.
 #
 retention:
-# The message retention policies feature is disabled by default. Uncomment the
-# following line to enable it.
-#
-#enabled: true
+  # The message retention policies feature is disabled by default. Uncomment the
+  # following line to enable it.
+  #
+  #enabled: true
 
-# Default retention policy. If set, Synapse will apply it to rooms that lack the
-# 'm.room.retention' state event. Currently, the value of 'min_lifetime' doesn't
-# matter much because Synapse doesn't take it into account yet.
-#
-#default_policy:
-#  min_lifetime: 1d
-#  max_lifetime: 1y
+  # Default retention policy. If set, Synapse will apply it to rooms that lack the
+  # 'm.room.retention' state event. Currently, the value of 'min_lifetime' doesn't
+  # matter much because Synapse doesn't take it into account yet.
+  #
+  #default_policy:
+  #  min_lifetime: 1d
+  #  max_lifetime: 1y
 
-# Retention policy limits. If set, and the state of a room contains a
-# 'm.room.retention' event in its state which contains a 'min_lifetime' or a
-# 'max_lifetime' that's out of these bounds, Synapse will cap the room's policy
-# to these limits when running purge jobs.
-#
-#allowed_lifetime_min: 1d
-#allowed_lifetime_max: 1y
+  # Retention policy limits. If set, and the state of a room contains a
+  # 'm.room.retention' event in its state which contains a 'min_lifetime' or a
+  # 'max_lifetime' that's out of these bounds, Synapse will cap the room's policy
+  # to these limits when running purge jobs.
+  #
+  #allowed_lifetime_min: 1d
+  #allowed_lifetime_max: 1y
 
-# Server admins can define the settings of the background jobs purging the
-# events which lifetime has expired under the 'purge_jobs' section.
-#
-# If no configuration is provided, a single job will be set up to delete expired
-# events in every room daily.
-#
-# Each job's configuration defines which range of message lifetimes the job
-# takes care of. For example, if 'shortest_max_lifetime' is '2d' and
-# 'longest_max_lifetime' is '3d', the job will handle purging expired events in
-# rooms whose state defines a 'max_lifetime' that's both higher than 2 days, and
-# lower than or equal to 3 days. Both the minimum and the maximum value of a
-# range are optional, e.g. a job with no 'shortest_max_lifetime' and a
-# 'longest_max_lifetime' of '3d' will handle every room with a retention policy
-# which 'max_lifetime' is lower than or equal to three days.
-#
-# The rationale for this per-job configuration is that some rooms might have a
-# retention policy with a low 'max_lifetime', where history needs to be purged
-# of outdated messages on a more frequent basis than for the rest of the rooms
-# (e.g. every 12h), but not want that purge to be performed by a job that's
-# iterating over every room it knows, which could be heavy on the server.
-#
-# If any purge job is configured, it is strongly recommended to have at least
-# a single job with neither 'shortest_max_lifetime' nor 'longest_max_lifetime'
-# set, or one job without 'shortest_max_lifetime' and one job without
-# 'longest_max_lifetime' set. Otherwise some rooms might be ignored, even if
-# 'allowed_lifetime_min' and 'allowed_lifetime_max' are set, because capping a
-# room's policy to these values is done after the policies are retrieved from
-# Synapse's database (which is done using the range specified in a purge job's
-# configuration).
-#
-#purge_jobs:
-#  - longest_max_lifetime: 3d
-#    interval: 12h
-#  - shortest_max_lifetime: 3d
-#    interval: 1d
+  # Server admins can define the settings of the background jobs purging the
+  # events which lifetime has expired under the 'purge_jobs' section.
+  #
+  # If no configuration is provided, a single job will be set up to delete expired
+  # events in every room daily.
+  #
+  # Each job's configuration defines which range of message lifetimes the job
+  # takes care of. For example, if 'shortest_max_lifetime' is '2d' and
+  # 'longest_max_lifetime' is '3d', the job will handle purging expired events in
+  # rooms whose state defines a 'max_lifetime' that's both higher than 2 days, and
+  # lower than or equal to 3 days. Both the minimum and the maximum value of a
+  # range are optional, e.g. a job with no 'shortest_max_lifetime' and a
+  # 'longest_max_lifetime' of '3d' will handle every room with a retention policy
+  # which 'max_lifetime' is lower than or equal to three days.
+  #
+  # The rationale for this per-job configuration is that some rooms might have a
+  # retention policy with a low 'max_lifetime', where history needs to be purged
+  # of outdated messages on a more frequent basis than for the rest of the rooms
+  # (e.g. every 12h), but not want that purge to be performed by a job that's
+  # iterating over every room it knows, which could be heavy on the server.
+  #
+  # If any purge job is configured, it is strongly recommended to have at least
+  # a single job with neither 'shortest_max_lifetime' nor 'longest_max_lifetime'
+  # set, or one job without 'shortest_max_lifetime' and one job without
+  # 'longest_max_lifetime' set. Otherwise some rooms might be ignored, even if
+  # 'allowed_lifetime_min' and 'allowed_lifetime_max' are set, because capping a
+  # room's policy to these values is done after the policies are retrieved from
+  # Synapse's database (which is done using the range specified in a purge job's
+  # configuration).
+  #
+  #purge_jobs:
+  #  - longest_max_lifetime: 3d
+  #    interval: 12h
+  #  - shortest_max_lifetime: 3d
+  #    interval: 1d
 
 # Inhibits the /requestToken endpoints from returning an error that might leak
 # information about whether an e-mail address is in use or not on this
@@ -600,52 +600,52 @@ retention:
 #    permission to listen on port 80.
 #
 acme:
-  # ACME support is disabled by default. Set this to `true` and uncomment
-  # tls_certificate_path and tls_private_key_path above to enable it.
-  #
-  enabled: false
+    # ACME support is disabled by default. Set this to `true` and uncomment
+    # tls_certificate_path and tls_private_key_path above to enable it.
+    #
+    enabled: false
 
-  # Endpoint to use to request certificates. If you only want to test,
-  # use Let's Encrypt's staging url:
-  #     https://acme-staging.api.letsencrypt.org/directory
-  #
-  #url: https://acme-v01.api.letsencrypt.org/directory
+    # Endpoint to use to request certificates. If you only want to test,
+    # use Let's Encrypt's staging url:
+    #     https://acme-staging.api.letsencrypt.org/directory
+    #
+    #url: https://acme-v01.api.letsencrypt.org/directory
 
-  # Port number to listen on for the HTTP-01 challenge. Change this if
-  # you are forwarding connections through Apache/Nginx/etc.
-  #
-  port: 80
+    # Port number to listen on for the HTTP-01 challenge. Change this if
+    # you are forwarding connections through Apache/Nginx/etc.
+    #
+    port: 80
 
-  # Local addresses to listen on for incoming connections.
-  # Again, you may want to change this if you are forwarding connections
-  # through Apache/Nginx/etc.
-  #
-  bind_addresses: ['::', '0.0.0.0']
+    # Local addresses to listen on for incoming connections.
+    # Again, you may want to change this if you are forwarding connections
+    # through Apache/Nginx/etc.
+    #
+    bind_addresses: ['::', '0.0.0.0']
 
-  # How many days remaining on a certificate before it is renewed.
-  #
-  reprovision_threshold: 30
+    # How many days remaining on a certificate before it is renewed.
+    #
+    reprovision_threshold: 30
 
-  # The domain that the certificate should be for. Normally this
-  # should be the same as your Matrix domain (i.e., 'server_name'), but,
-  # by putting a file at 'https://<server_name>/.well-known/matrix/server',
-  # you can delegate incoming traffic to another server. If you do that,
-  # you should give the target of the delegation here.
-  #
-  # For example: if your 'server_name' is 'example.com', but
-  # 'https://example.com/.well-known/matrix/server' delegates to
-  # 'matrix.example.com', you should put 'matrix.example.com' here.
-  #
-  # If not set, defaults to your 'server_name'.
-  #
-  domain: matrix.example.com
+    # The domain that the certificate should be for. Normally this
+    # should be the same as your Matrix domain (i.e., 'server_name'), but,
+    # by putting a file at 'https://<server_name>/.well-known/matrix/server',
+    # you can delegate incoming traffic to another server. If you do that,
+    # you should give the target of the delegation here.
+    #
+    # For example: if your 'server_name' is 'example.com', but
+    # 'https://example.com/.well-known/matrix/server' delegates to
+    # 'matrix.example.com', you should put 'matrix.example.com' here.
+    #
+    # If not set, defaults to your 'server_name'.
+    #
+    domain: matrix.example.com
 
-  # file to use for the account key. This will be generated if it doesn't
-  # exist.
-  #
-  # If unspecified, we will use CONFDIR/client.key.
-  #
-  account_key_file: /data/acme_account.key
+    # file to use for the account key. This will be generated if it doesn't
+    # exist.
+    #
+    # If unspecified, we will use CONFDIR/client.key.
+    #
+    account_key_file: /data/acme_account.key
 
 # List of allowed TLS fingerprints for this server to publish along
 # with the signing keys for this server. Other matrix servers that
@@ -720,35 +720,35 @@ acme:
 #event_cache_size: 10K
 
 caches:
-  # Controls the global cache factor, which is the default cache factor
-  # for all caches if a specific factor for that cache is not otherwise
-  # set.
-  #
-  # This can also be set by the "SYNAPSE_CACHE_FACTOR" environment
-  # variable. Setting by environment variable takes priority over
-  # setting through the config file.
-  #
-  # Defaults to 0.5, which will half the size of all caches.
-  #
-  #global_factor: 1.0
+   # Controls the global cache factor, which is the default cache factor
+   # for all caches if a specific factor for that cache is not otherwise
+   # set.
+   #
+   # This can also be set by the "SYNAPSE_CACHE_FACTOR" environment
+   # variable. Setting by environment variable takes priority over
+   # setting through the config file.
+   #
+   # Defaults to 0.5, which will half the size of all caches.
+   #
+   #global_factor: 1.0
 
-  # A dictionary of cache name to cache factor for that individual
-  # cache. Overrides the global cache factor for a given cache.
-  #
-  # These can also be set through environment variables comprised
-  # of "SYNAPSE_CACHE_FACTOR_" + the name of the cache in capital
-  # letters and underscores. Setting by environment variable
-  # takes priority over setting through the config file.
-  # Ex. SYNAPSE_CACHE_FACTOR_GET_USERS_WHO_SHARE_ROOM_WITH_USER=2.0
-  #
-  # Some caches have '*' and other characters that are not
-  # alphanumeric or underscores. These caches can be named with or
-  # without the special characters stripped. For example, to specify
-  # the cache factor for `*stateGroupCache*` via an environment
-  # variable would be `SYNAPSE_CACHE_FACTOR_STATEGROUPCACHE=2.0`.
-  #
-  per_cache_factors:
-  #get_users_who_share_room_with_user: 2.0
+   # A dictionary of cache name to cache factor for that individual
+   # cache. Overrides the global cache factor for a given cache.
+   #
+   # These can also be set through environment variables comprised
+   # of "SYNAPSE_CACHE_FACTOR_" + the name of the cache in capital
+   # letters and underscores. Setting by environment variable
+   # takes priority over setting through the config file.
+   # Ex. SYNAPSE_CACHE_FACTOR_GET_USERS_WHO_SHARE_ROOM_WITH_USER=2.0
+   #
+   # Some caches have '*' and other characters that are not
+   # alphanumeric or underscores. These caches can be named with or
+   # without the special characters stripped. For example, to specify
+   # the cache factor for `*stateGroupCache*` via an environment
+   # variable would be `SYNAPSE_CACHE_FACTOR_STATEGROUPCACHE=2.0`.
+   #
+   per_cache_factors:
+     #get_users_who_share_room_with_user: 2.0
 
 
 ## Database ##
@@ -1171,54 +1171,54 @@ enable_registration_without_verification: true
 # where d is equal to 10% of the validity period.
 #
 account_validity:
-# The account validity feature is disabled by default. Uncomment the
-# following line to enable it.
-#
-#enabled: true
+  # The account validity feature is disabled by default. Uncomment the
+  # following line to enable it.
+  #
+  #enabled: true
 
-# The period after which an account is valid after its registration. When
-# renewing the account, its validity period will be extended by this amount
-# of time. This parameter is required when using the account validity
-# feature.
-#
-#period: 6w
+  # The period after which an account is valid after its registration. When
+  # renewing the account, its validity period will be extended by this amount
+  # of time. This parameter is required when using the account validity
+  # feature.
+  #
+  #period: 6w
 
-# The amount of time before an account's expiry date at which Synapse will
-# send an email to the account's email address with a renewal link. By
-# default, no such emails are sent.
-#
-# If you enable this setting, you will also need to fill out the 'email' and
-# 'public_baseurl' configuration sections.
-#
-#renew_at: 1w
+  # The amount of time before an account's expiry date at which Synapse will
+  # send an email to the account's email address with a renewal link. By
+  # default, no such emails are sent.
+  #
+  # If you enable this setting, you will also need to fill out the 'email' and
+  # 'public_baseurl' configuration sections.
+  #
+  #renew_at: 1w
 
-# The subject of the email sent out with the renewal link. '%(app)s' can be
-# used as a placeholder for the 'app_name' parameter from the 'email'
-# section.
-#
-# Note that the placeholder must be written '%(app)s', including the
-# trailing 's'.
-#
-# If this is not set, a default value is used.
-#
-#renew_email_subject: "Renew your %(app)s account"
+  # The subject of the email sent out with the renewal link. '%(app)s' can be
+  # used as a placeholder for the 'app_name' parameter from the 'email'
+  # section.
+  #
+  # Note that the placeholder must be written '%(app)s', including the
+  # trailing 's'.
+  #
+  # If this is not set, a default value is used.
+  #
+  #renew_email_subject: "Renew your %(app)s account"
 
-# Directory in which Synapse will try to find templates for the HTML files to
-# serve to the user when trying to renew an account. If not set, default
-# templates from within the Synapse package will be used.
-#
-#template_dir: "res/templates"
+  # Directory in which Synapse will try to find templates for the HTML files to
+  # serve to the user when trying to renew an account. If not set, default
+  # templates from within the Synapse package will be used.
+  #
+  #template_dir: "res/templates"
 
-# File within 'template_dir' giving the HTML to be displayed to the user after
-# they successfully renewed their account. If not set, default text is used.
-#
-#account_renewed_html_path: "account_renewed.html"
+  # File within 'template_dir' giving the HTML to be displayed to the user after
+  # they successfully renewed their account. If not set, default text is used.
+  #
+  #account_renewed_html_path: "account_renewed.html"
 
-# File within 'template_dir' giving the HTML to be displayed when the user
-# tries to renew an account with an invalid renewal token. If not set,
-# default text is used.
-#
-#invalid_token_html_path: "invalid_token.html"
+  # File within 'template_dir' giving the HTML to be displayed when the user
+  # tries to renew an account with an invalid renewal token. If not set,
+  # default text is used.
+  #
+  #invalid_token_html_path: "invalid_token.html"
 
 # Time that a user's session remains valid for, after they log in.
 #
@@ -1308,8 +1308,8 @@ registration_shared_secret: n#P.uIl8IDOYPR-fiLzDoFw9ZPvTIlYg7*F9*~eaDZFK#;.KRg
 # If a delegate is specified, the config option public_baseurl must also be filled out.
 #
 account_threepid_delegates:
-#email: https://example.com     # Delegate email sending to example.com
-#msisdn: http://localhost:8090  # Delegate SMS sending to this local process
+    #email: https://example.com     # Delegate email sending to example.com
+    #msisdn: http://localhost:8090  # Delegate SMS sending to this local process
 
 # Whether users are allowed to change their displayname after it has
 # been initially set. Useful when provisioning users based on the
@@ -1434,11 +1434,11 @@ account_threepid_delegates:
 # enabled by default, either for performance reasons or limited use.
 #
 metrics_flags:
-# Publish synapse_federation_known_servers, a gauge of the number of
-# servers this homeserver knows about, including itself. May cause
-# performance problems on large homeservers.
-#
-#known_servers: true
+    # Publish synapse_federation_known_servers, a gauge of the number of
+    # servers this homeserver knows about, including itself. May cause
+    # performance problems on large homeservers.
+    #
+    #known_servers: true
 
 # Whether or not to report anonymized homeserver usage statistics.
 #
@@ -1456,27 +1456,27 @@ report_stats: true
 # to a room
 #
 room_prejoin_state:
-# By default, the following state event types are shared with users who
-# receive invites to the room:
-#
-# - m.room.join_rules
-# - m.room.canonical_alias
-# - m.room.avatar
-# - m.room.encryption
-# - m.room.name
-#
-# Uncomment the following to disable these defaults (so that only the event
-# types listed in 'additional_event_types' are shared). Defaults to 'false'.
-#
-#disable_default_event_types: true
+   # By default, the following state event types are shared with users who
+   # receive invites to the room:
+   #
+   # - m.room.join_rules
+   # - m.room.canonical_alias
+   # - m.room.avatar
+   # - m.room.encryption
+   # - m.room.name
+   #
+   # Uncomment the following to disable these defaults (so that only the event
+   # types listed in 'additional_event_types' are shared). Defaults to 'false'.
+   #
+   #disable_default_event_types: true
 
-# Additional state event types to share with users when they are invited
-# to a room.
-#
-# By default, this list is empty (so only the default event types are shared).
-#
-#additional_event_types:
-#  - org.example.custom.event.type
+   # Additional state event types to share with users when they are invited
+   # to a room.
+   #
+   # By default, this list is empty (so only the default event types are shared).
+   #
+   #additional_event_types:
+   #  - org.example.custom.event.type
 
 
 # A list of application service config files to use
@@ -1513,16 +1513,16 @@ signing_key_path: "/data/alkemio.matrix.host.signing.key"
 # to sign new messages.
 #
 old_signing_keys:
-# For each key, `key` should be the base64-encoded public key, and
-# `expired_ts`should be the time (in milliseconds since the unix epoch) that
-# it was last used.
-#
-# It is possible to build an entry from an old signing.key file using the
-# `export_signing_key` script which is provided with synapse.
-#
-# For example:
-#
-#"ed25519:id": { key: "base64string", expired_ts: 123456789123 }
+  # For each key, `key` should be the base64-encoded public key, and
+  # `expired_ts`should be the time (in milliseconds since the unix epoch) that
+  # it was last used.
+  #
+  # It is possible to build an entry from an old signing.key file using the
+  # `export_signing_key` script which is provided with synapse.
+  #
+  # For example:
+  #
+  #"ed25519:id": { key: "base64string", expired_ts: 123456789123 }
 
 # How long key response published by this server is valid for.
 # Used to set the valid_until_ts in /key/v2 APIs.
@@ -1619,69 +1619,69 @@ saml2_config:
   # override them.
   #
   sp_config:
-  # Point this to the IdP's metadata. You must provide either a local
-  # file via the `local` attribute or (preferably) a URL via the
-  # `remote` attribute.
-  #
-  #metadata:
-  #  local: ["saml2/idp.xml"]
-  #  remote:
-  #    - url: https://our_idp/metadata.xml
+    # Point this to the IdP's metadata. You must provide either a local
+    # file via the `local` attribute or (preferably) a URL via the
+    # `remote` attribute.
+    #
+    #metadata:
+    #  local: ["saml2/idp.xml"]
+    #  remote:
+    #    - url: https://our_idp/metadata.xml
 
-  # Allowed clock difference in seconds between the homeserver and IdP.
-  #
-  # Uncomment the below to increase the accepted time difference from 0 to 3 seconds.
-  #
-  #accepted_time_diff: 3
+    # Allowed clock difference in seconds between the homeserver and IdP.
+    #
+    # Uncomment the below to increase the accepted time difference from 0 to 3 seconds.
+    #
+    #accepted_time_diff: 3
 
-  # By default, the user has to go to our login page first. If you'd like
-  # to allow IdP-initiated login, set 'allow_unsolicited: true' in a
-  # 'service.sp' section:
-  #
-  #service:
-  #  sp:
-  #    allow_unsolicited: true
+    # By default, the user has to go to our login page first. If you'd like
+    # to allow IdP-initiated login, set 'allow_unsolicited: true' in a
+    # 'service.sp' section:
+    #
+    #service:
+    #  sp:
+    #    allow_unsolicited: true
 
-  # The examples below are just used to generate our metadata xml, and you
-  # may well not need them, depending on your setup. Alternatively you
-  # may need a whole lot more detail - see the pysaml2 docs!
+    # The examples below are just used to generate our metadata xml, and you
+    # may well not need them, depending on your setup. Alternatively you
+    # may need a whole lot more detail - see the pysaml2 docs!
 
-  #description: ["My awesome SP", "en"]
-  #name: ["Test SP", "en"]
+    #description: ["My awesome SP", "en"]
+    #name: ["Test SP", "en"]
 
-  #ui_info:
-  #  display_name:
-  #    - lang: en
-  #      text: "Display Name is the descriptive name of your service."
-  #  description:
-  #    - lang: en
-  #      text: "Description should be a short paragraph explaining the purpose of the service."
-  #  information_url:
-  #    - lang: en
-  #      text: "https://example.com/terms-of-service"
-  #  privacy_statement_url:
-  #    - lang: en
-  #      text: "https://example.com/privacy-policy"
-  #  keywords:
-  #    - lang: en
-  #      text: ["Matrix", "Element"]
-  #  logo:
-  #    - lang: en
-  #      text: "https://example.com/logo.svg"
-  #      width: "200"
-  #      height: "80"
+    #ui_info:
+    #  display_name:
+    #    - lang: en
+    #      text: "Display Name is the descriptive name of your service."
+    #  description:
+    #    - lang: en
+    #      text: "Description should be a short paragraph explaining the purpose of the service."
+    #  information_url:
+    #    - lang: en
+    #      text: "https://example.com/terms-of-service"
+    #  privacy_statement_url:
+    #    - lang: en
+    #      text: "https://example.com/privacy-policy"
+    #  keywords:
+    #    - lang: en
+    #      text: ["Matrix", "Element"]
+    #  logo:
+    #    - lang: en
+    #      text: "https://example.com/logo.svg"
+    #      width: "200"
+    #      height: "80"
 
-  #organization:
-  #  name: Example com
-  #  display_name:
-  #    - ["Example co", "en"]
-  #  url: "http://example.com"
+    #organization:
+    #  name: Example com
+    #  display_name:
+    #    - ["Example co", "en"]
+    #  url: "http://example.com"
 
-  #contact_person:
-  #  - given_name: Bob
-  #    sur_name: "the Sysadmin"
-  #    email_address": ["admin@example.com"]
-  #    contact_type": technical
+    #contact_person:
+    #  - given_name: Bob
+    #    sur_name: "the Sysadmin"
+    #    email_address": ["admin@example.com"]
+    #    contact_type": technical
 
   # Instead of putting the config inline as above, you can specify a
   # separate pysaml2 configuration file:
@@ -1708,29 +1708,29 @@ saml2_config:
     # dictionary to the module's `parse_config` method.
     #
     config:
-    # The SAML attribute (after mapping via the attribute maps) to use
-    # to derive the Matrix ID from. 'uid' by default.
-    #
-    # Note: This used to be configured by the
-    # saml2_config.mxid_source_attribute option. If that is still
-    # defined, its value will be used instead.
-    #
-    #mxid_source_attribute: displayName
+      # The SAML attribute (after mapping via the attribute maps) to use
+      # to derive the Matrix ID from. 'uid' by default.
+      #
+      # Note: This used to be configured by the
+      # saml2_config.mxid_source_attribute option. If that is still
+      # defined, its value will be used instead.
+      #
+      #mxid_source_attribute: displayName
 
-    # The mapping system to use for mapping the saml attribute onto a
-    # matrix ID.
-    #
-    # Options include:
-    #  * 'hexencode' (which maps unpermitted characters to '=xx')
-    #  * 'dotreplace' (which replaces unpermitted characters with
-    #     '.').
-    # The default is 'hexencode'.
-    #
-    # Note: This used to be configured by the
-    # saml2_config.mxid_mapping option. If that is still defined, its
-    # value will be used instead.
-    #
-    #mxid_mapping: dotreplace
+      # The mapping system to use for mapping the saml attribute onto a
+      # matrix ID.
+      #
+      # Options include:
+      #  * 'hexencode' (which maps unpermitted characters to '=xx')
+      #  * 'dotreplace' (which replaces unpermitted characters with
+      #     '.').
+      # The default is 'hexencode'.
+      #
+      # Note: This used to be configured by the
+      # saml2_config.mxid_mapping option. If that is still defined, its
+      # value will be used instead.
+      #
+      #mxid_mapping: dotreplace
 
   # In previous versions of synapse, the mapping from SAML attribute to
   # MXID was always calculated dynamically rather than stored in a
@@ -1922,248 +1922,248 @@ saml2_config:
 # recognised.)
 #
 oidc_providers:
-# Generic example
-#
-#- idp_id: my_idp
-#  idp_name: "My OpenID provider"
-#  idp_icon: "mxc://example.com/mediaid"
-#  discover: false
-#  issuer: "https://accounts.example.com/"
-#  client_id: "provided-by-your-issuer"
-#  client_secret: "provided-by-your-issuer"
-#  client_auth_method: client_secret_post
-#  scopes: ["openid", "profile"]
-#  authorization_endpoint: "https://accounts.example.com/oauth2/auth"
-#  token_endpoint: "https://accounts.example.com/oauth2/token"
-#  userinfo_endpoint: "https://accounts.example.com/userinfo"
-#  jwks_uri: "https://accounts.example.com/.well-known/jwks.json"
-#  skip_verification: true
-#  user_mapping_provider:
-#    config:
-#      subject_claim: "id"
-#      localpart_template: "{{ user.login }}"
-#      display_name_template: "{{ user.name }}"
-#      email_template: "{{ user.email }}"
-#  attribute_requirements:
-#    - attribute: userGroup
-#      value: "synapseUsers"
+  # Generic example
+  #
+  #- idp_id: my_idp
+  #  idp_name: "My OpenID provider"
+  #  idp_icon: "mxc://example.com/mediaid"
+  #  discover: false
+  #  issuer: "https://accounts.example.com/"
+  #  client_id: "provided-by-your-issuer"
+  #  client_secret: "provided-by-your-issuer"
+  #  client_auth_method: client_secret_post
+  #  scopes: ["openid", "profile"]
+  #  authorization_endpoint: "https://accounts.example.com/oauth2/auth"
+  #  token_endpoint: "https://accounts.example.com/oauth2/token"
+  #  userinfo_endpoint: "https://accounts.example.com/userinfo"
+  #  jwks_uri: "https://accounts.example.com/.well-known/jwks.json"
+  #  skip_verification: true
+  #  user_mapping_provider:
+  #    config:
+  #      subject_claim: "id"
+  #      localpart_template: "{{ user.login }}"
+  #      display_name_template: "{{ user.name }}"
+  #      email_template: "{{ user.email }}"
+  #  attribute_requirements:
+  #    - attribute: userGroup
+  #      value: "synapseUsers"
 
 
 # Enable Central Authentication Service (CAS) for registration and login.
 #
 cas_config:
-# Uncomment the following to enable authorization against a CAS server.
-# Defaults to false.
-#
-#enabled: true
+  # Uncomment the following to enable authorization against a CAS server.
+  # Defaults to false.
+  #
+  #enabled: true
 
-# The URL of the CAS authorization endpoint.
-#
-#server_url: "https://cas-server.com"
+  # The URL of the CAS authorization endpoint.
+  #
+  #server_url: "https://cas-server.com"
 
-# The attribute of the CAS response to use as the display name.
-#
-# If unset, no displayname will be set.
-#
-#displayname_attribute: name
+  # The attribute of the CAS response to use as the display name.
+  #
+  # If unset, no displayname will be set.
+  #
+  #displayname_attribute: name
 
-# It is possible to configure Synapse to only allow logins if CAS attributes
-# match particular values. All of the keys in the mapping below must exist
-# and the values must match the given value. Alternately if the given value
-# is None then any value is allowed (the attribute just must exist).
-# All of the listed attributes must match for the login to be permitted.
-#
-#required_attributes:
-#  userGroup: "staff"
-#  department: None
+  # It is possible to configure Synapse to only allow logins if CAS attributes
+  # match particular values. All of the keys in the mapping below must exist
+  # and the values must match the given value. Alternately if the given value
+  # is None then any value is allowed (the attribute just must exist).
+  # All of the listed attributes must match for the login to be permitted.
+  #
+  #required_attributes:
+  #  userGroup: "staff"
+  #  department: None
 
 
 # Additional settings to use with single-sign on systems such as OpenID Connect,
 # SAML2 and CAS.
 #
 sso:
-# A list of client URLs which are whitelisted so that the user does not
-# have to confirm giving access to their account to the URL. Any client
-# whose URL starts with an entry in the following list will not be subject
-# to an additional confirmation step after the SSO login is completed.
-#
-# WARNING: An entry such as "https://my.client" is insecure, because it
-# will also match "https://my.client.evil.site", exposing your users to
-# phishing attacks from evil.site. To avoid this, include a slash after the
-# hostname: "https://my.client/".
-#
-# If public_baseurl is set, then the login fallback page (used by clients
-# that don't natively support the required login flows) is whitelisted in
-# addition to any URLs in this list.
-#
-# By default, this list is empty.
-#
-#client_whitelist:
-#  - https://riot.im/develop
-#  - https://my.custom.client/
+    # A list of client URLs which are whitelisted so that the user does not
+    # have to confirm giving access to their account to the URL. Any client
+    # whose URL starts with an entry in the following list will not be subject
+    # to an additional confirmation step after the SSO login is completed.
+    #
+    # WARNING: An entry such as "https://my.client" is insecure, because it
+    # will also match "https://my.client.evil.site", exposing your users to
+    # phishing attacks from evil.site. To avoid this, include a slash after the
+    # hostname: "https://my.client/".
+    #
+    # If public_baseurl is set, then the login fallback page (used by clients
+    # that don't natively support the required login flows) is whitelisted in
+    # addition to any URLs in this list.
+    #
+    # By default, this list is empty.
+    #
+    #client_whitelist:
+    #  - https://riot.im/develop
+    #  - https://my.custom.client/
 
-# Directory in which Synapse will try to find the template files below.
-# If not set, or the files named below are not found within the template
-# directory, default templates from within the Synapse package will be used.
-#
-# Synapse will look for the following templates in this directory:
-#
-# * HTML page to prompt the user to choose an Identity Provider during
-#   login: 'sso_login_idp_picker.html'.
-#
-#   This is only used if multiple SSO Identity Providers are configured.
-#
-#   When rendering, this template is given the following variables:
-#     * redirect_url: the URL that the user will be redirected to after
-#       login.
-#
-#     * server_name: the homeserver's name.
-#
-#     * providers: a list of available Identity Providers. Each element is
-#       an object with the following attributes:
-#
-#         * idp_id: unique identifier for the IdP
-#         * idp_name: user-facing name for the IdP
-#         * idp_icon: if specified in the IdP config, an MXC URI for an icon
-#              for the IdP
-#         * idp_brand: if specified in the IdP config, a textual identifier
-#              for the brand of the IdP
-#
-#   The rendered HTML page should contain a form which submits its results
-#   back as a GET request, with the following query parameters:
-#
-#     * redirectUrl: the client redirect URI (ie, the `redirect_url` passed
-#       to the template)
-#
-#     * idp: the 'idp_id' of the chosen IDP.
-#
-# * HTML page to prompt new users to enter a userid and confirm other
-#   details: 'sso_auth_account_details.html'. This is only shown if the
-#   SSO implementation (with any user_mapping_provider) does not return
-#   a localpart.
-#
-#   When rendering, this template is given the following variables:
-#
-#     * server_name: the homeserver's name.
-#
-#     * idp: details of the SSO Identity Provider that the user logged in
-#       with: an object with the following attributes:
-#
-#         * idp_id: unique identifier for the IdP
-#         * idp_name: user-facing name for the IdP
-#         * idp_icon: if specified in the IdP config, an MXC URI for an icon
-#              for the IdP
-#         * idp_brand: if specified in the IdP config, a textual identifier
-#              for the brand of the IdP
-#
-#     * user_attributes: an object containing details about the user that
-#       we received from the IdP. May have the following attributes:
-#
-#         * display_name: the user's display_name
-#         * emails: a list of email addresses
-#
-#   The template should render a form which submits the following fields:
-#
-#     * username: the localpart of the user's chosen user id
-#
-# * HTML page allowing the user to consent to the server's terms and
-#   conditions. This is only shown for new users, and only if
-#   `user_consent.require_at_registration` is set.
-#
-#   When rendering, this template is given the following variables:
-#
-#     * server_name: the homeserver's name.
-#
-#     * user_id: the user's matrix proposed ID.
-#
-#     * user_profile.display_name: the user's proposed display name, if any.
-#
-#     * consent_version: the version of the terms that the user will be
-#       shown
-#
-#     * terms_url: a link to the page showing the terms.
-#
-#   The template should render a form which submits the following fields:
-#
-#     * accepted_version: the version of the terms accepted by the user
-#       (ie, 'consent_version' from the input variables).
-#
-# * HTML page for a confirmation step before redirecting back to the client
-#   with the login token: 'sso_redirect_confirm.html'.
-#
-#   When rendering, this template is given the following variables:
-#
-#     * redirect_url: the URL the user is about to be redirected to.
-#
-#     * display_url: the same as `redirect_url`, but with the query
-#                    parameters stripped. The intention is to have a
-#                    human-readable URL to show to users, not to use it as
-#                    the final address to redirect to.
-#
-#     * server_name: the homeserver's name.
-#
-#     * new_user: a boolean indicating whether this is the user's first time
-#          logging in.
-#
-#     * user_id: the user's matrix ID.
-#
-#     * user_profile.avatar_url: an MXC URI for the user's avatar, if any.
-#           None if the user has not set an avatar.
-#
-#     * user_profile.display_name: the user's display name. None if the user
-#           has not set a display name.
-#
-# * HTML page which notifies the user that they are authenticating to confirm
-#   an operation on their account during the user interactive authentication
-#   process: 'sso_auth_confirm.html'.
-#
-#   When rendering, this template is given the following variables:
-#     * redirect_url: the URL the user is about to be redirected to.
-#
-#     * description: the operation which the user is being asked to confirm
-#
-#     * idp: details of the Identity Provider that we will use to confirm
-#       the user's identity: an object with the following attributes:
-#
-#         * idp_id: unique identifier for the IdP
-#         * idp_name: user-facing name for the IdP
-#         * idp_icon: if specified in the IdP config, an MXC URI for an icon
-#              for the IdP
-#         * idp_brand: if specified in the IdP config, a textual identifier
-#              for the brand of the IdP
-#
-# * HTML page shown after a successful user interactive authentication session:
-#   'sso_auth_success.html'.
-#
-#   Note that this page must include the JavaScript which notifies of a successful authentication
-#   (see https://matrix.org/docs/spec/client_server/r0.6.0#fallback).
-#
-#   This template has no additional variables.
-#
-# * HTML page shown after a user-interactive authentication session which
-#   does not map correctly onto the expected user: 'sso_auth_bad_user.html'.
-#
-#   When rendering, this template is given the following variables:
-#     * server_name: the homeserver's name.
-#     * user_id_to_verify: the MXID of the user that we are trying to
-#       validate.
-#
-# * HTML page shown during single sign-on if a deactivated user (according to Synapse's database)
-#   attempts to login: 'sso_account_deactivated.html'.
-#
-#   This template has no additional variables.
-#
-# * HTML page to display to users if something goes wrong during the
-#   OpenID Connect authentication process: 'sso_error.html'.
-#
-#   When rendering, this template is given two variables:
-#     * error: the technical name of the error
-#     * error_description: a human-readable message for the error
-#
-# You can see the default templates at:
-# https://github.com/matrix-org/synapse/tree/master/synapse/res/templates
-#
-#template_dir: "res/templates"
+    # Directory in which Synapse will try to find the template files below.
+    # If not set, or the files named below are not found within the template
+    # directory, default templates from within the Synapse package will be used.
+    #
+    # Synapse will look for the following templates in this directory:
+    #
+    # * HTML page to prompt the user to choose an Identity Provider during
+    #   login: 'sso_login_idp_picker.html'.
+    #
+    #   This is only used if multiple SSO Identity Providers are configured.
+    #
+    #   When rendering, this template is given the following variables:
+    #     * redirect_url: the URL that the user will be redirected to after
+    #       login.
+    #
+    #     * server_name: the homeserver's name.
+    #
+    #     * providers: a list of available Identity Providers. Each element is
+    #       an object with the following attributes:
+    #
+    #         * idp_id: unique identifier for the IdP
+    #         * idp_name: user-facing name for the IdP
+    #         * idp_icon: if specified in the IdP config, an MXC URI for an icon
+    #              for the IdP
+    #         * idp_brand: if specified in the IdP config, a textual identifier
+    #              for the brand of the IdP
+    #
+    #   The rendered HTML page should contain a form which submits its results
+    #   back as a GET request, with the following query parameters:
+    #
+    #     * redirectUrl: the client redirect URI (ie, the `redirect_url` passed
+    #       to the template)
+    #
+    #     * idp: the 'idp_id' of the chosen IDP.
+    #
+    # * HTML page to prompt new users to enter a userid and confirm other
+    #   details: 'sso_auth_account_details.html'. This is only shown if the
+    #   SSO implementation (with any user_mapping_provider) does not return
+    #   a localpart.
+    #
+    #   When rendering, this template is given the following variables:
+    #
+    #     * server_name: the homeserver's name.
+    #
+    #     * idp: details of the SSO Identity Provider that the user logged in
+    #       with: an object with the following attributes:
+    #
+    #         * idp_id: unique identifier for the IdP
+    #         * idp_name: user-facing name for the IdP
+    #         * idp_icon: if specified in the IdP config, an MXC URI for an icon
+    #              for the IdP
+    #         * idp_brand: if specified in the IdP config, a textual identifier
+    #              for the brand of the IdP
+    #
+    #     * user_attributes: an object containing details about the user that
+    #       we received from the IdP. May have the following attributes:
+    #
+    #         * display_name: the user's display_name
+    #         * emails: a list of email addresses
+    #
+    #   The template should render a form which submits the following fields:
+    #
+    #     * username: the localpart of the user's chosen user id
+    #
+    # * HTML page allowing the user to consent to the server's terms and
+    #   conditions. This is only shown for new users, and only if
+    #   `user_consent.require_at_registration` is set.
+    #
+    #   When rendering, this template is given the following variables:
+    #
+    #     * server_name: the homeserver's name.
+    #
+    #     * user_id: the user's matrix proposed ID.
+    #
+    #     * user_profile.display_name: the user's proposed display name, if any.
+    #
+    #     * consent_version: the version of the terms that the user will be
+    #       shown
+    #
+    #     * terms_url: a link to the page showing the terms.
+    #
+    #   The template should render a form which submits the following fields:
+    #
+    #     * accepted_version: the version of the terms accepted by the user
+    #       (ie, 'consent_version' from the input variables).
+    #
+    # * HTML page for a confirmation step before redirecting back to the client
+    #   with the login token: 'sso_redirect_confirm.html'.
+    #
+    #   When rendering, this template is given the following variables:
+    #
+    #     * redirect_url: the URL the user is about to be redirected to.
+    #
+    #     * display_url: the same as `redirect_url`, but with the query
+    #                    parameters stripped. The intention is to have a
+    #                    human-readable URL to show to users, not to use it as
+    #                    the final address to redirect to.
+    #
+    #     * server_name: the homeserver's name.
+    #
+    #     * new_user: a boolean indicating whether this is the user's first time
+    #          logging in.
+    #
+    #     * user_id: the user's matrix ID.
+    #
+    #     * user_profile.avatar_url: an MXC URI for the user's avatar, if any.
+    #           None if the user has not set an avatar.
+    #
+    #     * user_profile.display_name: the user's display name. None if the user
+    #           has not set a display name.
+    #
+    # * HTML page which notifies the user that they are authenticating to confirm
+    #   an operation on their account during the user interactive authentication
+    #   process: 'sso_auth_confirm.html'.
+    #
+    #   When rendering, this template is given the following variables:
+    #     * redirect_url: the URL the user is about to be redirected to.
+    #
+    #     * description: the operation which the user is being asked to confirm
+    #
+    #     * idp: details of the Identity Provider that we will use to confirm
+    #       the user's identity: an object with the following attributes:
+    #
+    #         * idp_id: unique identifier for the IdP
+    #         * idp_name: user-facing name for the IdP
+    #         * idp_icon: if specified in the IdP config, an MXC URI for an icon
+    #              for the IdP
+    #         * idp_brand: if specified in the IdP config, a textual identifier
+    #              for the brand of the IdP
+    #
+    # * HTML page shown after a successful user interactive authentication session:
+    #   'sso_auth_success.html'.
+    #
+    #   Note that this page must include the JavaScript which notifies of a successful authentication
+    #   (see https://matrix.org/docs/spec/client_server/r0.6.0#fallback).
+    #
+    #   This template has no additional variables.
+    #
+    # * HTML page shown after a user-interactive authentication session which
+    #   does not map correctly onto the expected user: 'sso_auth_bad_user.html'.
+    #
+    #   When rendering, this template is given the following variables:
+    #     * server_name: the homeserver's name.
+    #     * user_id_to_verify: the MXID of the user that we are trying to
+    #       validate.
+    #
+    # * HTML page shown during single sign-on if a deactivated user (according to Synapse's database)
+    #   attempts to login: 'sso_account_deactivated.html'.
+    #
+    #   This template has no additional variables.
+    #
+    # * HTML page to display to users if something goes wrong during the
+    #   OpenID Connect authentication process: 'sso_error.html'.
+    #
+    #   When rendering, this template is given two variables:
+    #     * error: the technical name of the error
+    #     * error_description: a human-readable message for the error
+    #
+    # You can see the default templates at:
+    # https://github.com/matrix-org/synapse/tree/master/synapse/res/templates
+    #
+    #template_dir: "res/templates"
 
 
 # JSON web token integration. The following settings can be used to make
@@ -2182,292 +2182,292 @@ sso:
 # See https://github.com/matrix-org/synapse/blob/master/docs/jwt.md.
 #
 #jwt_config:
-# Uncomment the following to enable authorization using JSON web
-# tokens. Defaults to false.
-#
-#enabled: true
+    # Uncomment the following to enable authorization using JSON web
+    # tokens. Defaults to false.
+    #
+    #enabled: true
 
-# This is either the private shared secret or the public key used to
-# decode the contents of the JSON web token.
-#
-# Required if 'enabled' is true.
-#
-#secret: "provided-by-your-issuer"
+    # This is either the private shared secret or the public key used to
+    # decode the contents of the JSON web token.
+    #
+    # Required if 'enabled' is true.
+    #
+    #secret: "provided-by-your-issuer"
 
-# The algorithm used to sign the JSON web token.
-#
-# Supported algorithms are listed at
-# https://pyjwt.readthedocs.io/en/latest/algorithms.html
-#
-# Required if 'enabled' is true.
-#
-#algorithm: "provided-by-your-issuer"
+    # The algorithm used to sign the JSON web token.
+    #
+    # Supported algorithms are listed at
+    # https://pyjwt.readthedocs.io/en/latest/algorithms.html
+    #
+    # Required if 'enabled' is true.
+    #
+    #algorithm: "provided-by-your-issuer"
 
-# The issuer to validate the "iss" claim against.
-#
-# Optional, if provided the "iss" claim will be required and
-# validated for all JSON web tokens.
-#
-#issuer: "provided-by-your-issuer"
+    # The issuer to validate the "iss" claim against.
+    #
+    # Optional, if provided the "iss" claim will be required and
+    # validated for all JSON web tokens.
+    #
+    #issuer: "provided-by-your-issuer"
 
-# A list of audiences to validate the "aud" claim against.
-#
-# Optional, if provided the "aud" claim will be required and
-# validated for all JSON web tokens.
-#
-# Note that if the "aud" claim is included in a JSON web token then
-# validation will fail without configuring audiences.
-#
-#audiences:
-#    - "provided-by-your-issuer"
+    # A list of audiences to validate the "aud" claim against.
+    #
+    # Optional, if provided the "aud" claim will be required and
+    # validated for all JSON web tokens.
+    #
+    # Note that if the "aud" claim is included in a JSON web token then
+    # validation will fail without configuring audiences.
+    #
+    #audiences:
+    #    - "provided-by-your-issuer"
 
 
 password_config:
-  # Uncomment to disable password login
-  #
-  #enabled: false
+   # Uncomment to disable password login
+   #
+   #enabled: false
 
-  # Uncomment to disable authentication against the local password
-  # database. This is ignored if `enabled` is false, and is only useful
-  # if you have other password_providers.
-  #
-  #localdb_enabled: false
+   # Uncomment to disable authentication against the local password
+   # database. This is ignored if `enabled` is false, and is only useful
+   # if you have other password_providers.
+   #
+   #localdb_enabled: false
 
-  # Uncomment and change to a secret random string for extra security.
-  # DO NOT CHANGE THIS AFTER INITIAL SETUP!
-  #
-  #pepper: "EVEN_MORE_SECRET"
+   # Uncomment and change to a secret random string for extra security.
+   # DO NOT CHANGE THIS AFTER INITIAL SETUP!
+   #
+   #pepper: "EVEN_MORE_SECRET"
 
-  # Define and enforce a password policy. Each parameter is optional.
-  # This is an implementation of MSC2000.
-  #
-  policy:
-  # Whether to enforce the password policy.
-  # Defaults to 'false'.
-  #
-  #enabled: true
+   # Define and enforce a password policy. Each parameter is optional.
+   # This is an implementation of MSC2000.
+   #
+   policy:
+      # Whether to enforce the password policy.
+      # Defaults to 'false'.
+      #
+      #enabled: true
 
-  # Minimum accepted length for a password.
-  # Defaults to 0.
-  #
-  #minimum_length: 15
+      # Minimum accepted length for a password.
+      # Defaults to 0.
+      #
+      #minimum_length: 15
 
-  # Whether a password must contain at least one digit.
-  # Defaults to 'false'.
-  #
-  #require_digit: true
+      # Whether a password must contain at least one digit.
+      # Defaults to 'false'.
+      #
+      #require_digit: true
 
-  # Whether a password must contain at least one symbol.
-  # A symbol is any character that's not a number or a letter.
-  # Defaults to 'false'.
-  #
-  #require_symbol: true
+      # Whether a password must contain at least one symbol.
+      # A symbol is any character that's not a number or a letter.
+      # Defaults to 'false'.
+      #
+      #require_symbol: true
 
-  # Whether a password must contain at least one lowercase letter.
-  # Defaults to 'false'.
-  #
-  #require_lowercase: true
+      # Whether a password must contain at least one lowercase letter.
+      # Defaults to 'false'.
+      #
+      #require_lowercase: true
 
-  # Whether a password must contain at least one lowercase letter.
-  # Defaults to 'false'.
-  #
-  #require_uppercase: true
+      # Whether a password must contain at least one lowercase letter.
+      # Defaults to 'false'.
+      #
+      #require_uppercase: true
 
 ui_auth:
-# The amount of time to allow a user-interactive authentication session
-# to be active.
-#
-# This defaults to 0, meaning the user is queried for their credentials
-# before every action, but this can be overridden to allow a single
-# validation to be re-used.  This weakens the protections afforded by
-# the user-interactive authentication process, by allowing for multiple
-# (and potentially different) operations to use the same validation session.
-#
-# Uncomment below to allow for credential validation to last for 15
-# seconds.
-#
-#session_timeout: "15s"
+    # The amount of time to allow a user-interactive authentication session
+    # to be active.
+    #
+    # This defaults to 0, meaning the user is queried for their credentials
+    # before every action, but this can be overridden to allow a single
+    # validation to be re-used.  This weakens the protections afforded by
+    # the user-interactive authentication process, by allowing for multiple
+    # (and potentially different) operations to use the same validation session.
+    #
+    # Uncomment below to allow for credential validation to last for 15
+    # seconds.
+    #
+    #session_timeout: "15s"
 
 
 # Configuration for sending emails from Synapse.
 #
 email:
-# The hostname of the outgoing SMTP server to use. Defaults to 'localhost'.
-#
-#smtp_host: mail.server
+  # The hostname of the outgoing SMTP server to use. Defaults to 'localhost'.
+  #
+  #smtp_host: mail.server
 
-# The port on the mail server for outgoing SMTP. Defaults to 25.
-#
-#smtp_port: 587
+  # The port on the mail server for outgoing SMTP. Defaults to 25.
+  #
+  #smtp_port: 587
 
-# Username/password for authentication to the SMTP server. By default, no
-# authentication is attempted.
-#
-#smtp_user: "exampleusername"
-#smtp_pass: "examplepassword"
+  # Username/password for authentication to the SMTP server. By default, no
+  # authentication is attempted.
+  #
+  #smtp_user: "exampleusername"
+  #smtp_pass: "examplepassword"
 
-# Uncomment the following to require TLS transport security for SMTP.
-# By default, Synapse will connect over plain text, and will then switch to
-# TLS via STARTTLS *if the SMTP server supports it*. If this option is set,
-# Synapse will refuse to connect unless the server supports STARTTLS.
-#
-#require_transport_security: true
+  # Uncomment the following to require TLS transport security for SMTP.
+  # By default, Synapse will connect over plain text, and will then switch to
+  # TLS via STARTTLS *if the SMTP server supports it*. If this option is set,
+  # Synapse will refuse to connect unless the server supports STARTTLS.
+  #
+  #require_transport_security: true
 
-# notif_from defines the "From" address to use when sending emails.
-# It must be set if email sending is enabled.
-#
-# The placeholder '%(app)s' will be replaced by the application name,
-# which is normally 'app_name' (below), but may be overridden by the
-# Matrix client application.
-#
-# Note that the placeholder must be written '%(app)s', including the
-# trailing 's'.
-#
-#notif_from: "Your Friendly %(app)s homeserver <noreply@example.com>"
+  # notif_from defines the "From" address to use when sending emails.
+  # It must be set if email sending is enabled.
+  #
+  # The placeholder '%(app)s' will be replaced by the application name,
+  # which is normally 'app_name' (below), but may be overridden by the
+  # Matrix client application.
+  #
+  # Note that the placeholder must be written '%(app)s', including the
+  # trailing 's'.
+  #
+  #notif_from: "Your Friendly %(app)s homeserver <noreply@example.com>"
 
-# app_name defines the default value for '%(app)s' in notif_from and email
-# subjects. It defaults to 'Matrix'.
-#
-#app_name: my_branded_matrix_server
+  # app_name defines the default value for '%(app)s' in notif_from and email
+  # subjects. It defaults to 'Matrix'.
+  #
+  #app_name: my_branded_matrix_server
 
-# Uncomment the following to enable sending emails for messages that the user
-# has missed. Disabled by default.
-#
-#enable_notifs: true
+  # Uncomment the following to enable sending emails for messages that the user
+  # has missed. Disabled by default.
+  #
+  #enable_notifs: true
 
-# Uncomment the following to disable automatic subscription to email
-# notifications for new users. Enabled by default.
-#
-#notif_for_new_users: false
+  # Uncomment the following to disable automatic subscription to email
+  # notifications for new users. Enabled by default.
+  #
+  #notif_for_new_users: false
 
-# Custom URL for client links within the email notifications. By default
-# links will be based on "https://matrix.to".
-#
-# (This setting used to be called riot_base_url; the old name is still
-# supported for backwards-compatibility but is now deprecated.)
-#
-#client_base_url: "http://localhost/riot"
+  # Custom URL for client links within the email notifications. By default
+  # links will be based on "https://matrix.to".
+  #
+  # (This setting used to be called riot_base_url; the old name is still
+  # supported for backwards-compatibility but is now deprecated.)
+  #
+  #client_base_url: "http://localhost/riot"
 
-# Configure the time that a validation email will expire after sending.
-# Defaults to 1h.
-#
-#validation_token_lifetime: 15m
+  # Configure the time that a validation email will expire after sending.
+  # Defaults to 1h.
+  #
+  #validation_token_lifetime: 15m
 
-# The web client location to direct users to during an invite. This is passed
-# to the identity server as the org.matrix.web_client_location key. Defaults
-# to unset, giving no guidance to the identity server.
-#
-#invite_client_location: https://app.element.io
+  # The web client location to direct users to during an invite. This is passed
+  # to the identity server as the org.matrix.web_client_location key. Defaults
+  # to unset, giving no guidance to the identity server.
+  #
+  #invite_client_location: https://app.element.io
 
-# Directory in which Synapse will try to find the template files below.
-# If not set, or the files named below are not found within the template
-# directory, default templates from within the Synapse package will be used.
-#
-# Synapse will look for the following templates in this directory:
-#
-# * The contents of email notifications of missed events: 'notif_mail.html' and
-#   'notif_mail.txt'.
-#
-# * The contents of account expiry notice emails: 'notice_expiry.html' and
-#   'notice_expiry.txt'.
-#
-# * The contents of password reset emails sent by the homeserver:
-#   'password_reset.html' and 'password_reset.txt'
-#
-# * An HTML page that a user will see when they follow the link in the password
-#   reset email. The user will be asked to confirm the action before their
-#   password is reset: 'password_reset_confirmation.html'
-#
-# * HTML pages for success and failure that a user will see when they confirm
-#   the password reset flow using the page above: 'password_reset_success.html'
-#   and 'password_reset_failure.html'
-#
-# * The contents of address verification emails sent during registration:
-#   'registration.html' and 'registration.txt'
-#
-# * HTML pages for success and failure that a user will see when they follow
-#   the link in an address verification email sent during registration:
-#   'registration_success.html' and 'registration_failure.html'
-#
-# * The contents of address verification emails sent when an address is added
-#   to a Matrix account: 'add_threepid.html' and 'add_threepid.txt'
-#
-# * HTML pages for success and failure that a user will see when they follow
-#   the link in an address verification email sent when an address is added
-#   to a Matrix account: 'add_threepid_success.html' and
-#   'add_threepid_failure.html'
-#
-# You can see the default templates at:
-# https://github.com/matrix-org/synapse/tree/master/synapse/res/templates
-#
-#template_dir: "res/templates"
+  # Directory in which Synapse will try to find the template files below.
+  # If not set, or the files named below are not found within the template
+  # directory, default templates from within the Synapse package will be used.
+  #
+  # Synapse will look for the following templates in this directory:
+  #
+  # * The contents of email notifications of missed events: 'notif_mail.html' and
+  #   'notif_mail.txt'.
+  #
+  # * The contents of account expiry notice emails: 'notice_expiry.html' and
+  #   'notice_expiry.txt'.
+  #
+  # * The contents of password reset emails sent by the homeserver:
+  #   'password_reset.html' and 'password_reset.txt'
+  #
+  # * An HTML page that a user will see when they follow the link in the password
+  #   reset email. The user will be asked to confirm the action before their
+  #   password is reset: 'password_reset_confirmation.html'
+  #
+  # * HTML pages for success and failure that a user will see when they confirm
+  #   the password reset flow using the page above: 'password_reset_success.html'
+  #   and 'password_reset_failure.html'
+  #
+  # * The contents of address verification emails sent during registration:
+  #   'registration.html' and 'registration.txt'
+  #
+  # * HTML pages for success and failure that a user will see when they follow
+  #   the link in an address verification email sent during registration:
+  #   'registration_success.html' and 'registration_failure.html'
+  #
+  # * The contents of address verification emails sent when an address is added
+  #   to a Matrix account: 'add_threepid.html' and 'add_threepid.txt'
+  #
+  # * HTML pages for success and failure that a user will see when they follow
+  #   the link in an address verification email sent when an address is added
+  #   to a Matrix account: 'add_threepid_success.html' and
+  #   'add_threepid_failure.html'
+  #
+  # You can see the default templates at:
+  # https://github.com/matrix-org/synapse/tree/master/synapse/res/templates
+  #
+  #template_dir: "res/templates"
 
-# Subjects to use when sending emails from Synapse.
-#
-# The placeholder '%(app)s' will be replaced with the value of the 'app_name'
-# setting above, or by a value dictated by the Matrix client application.
-#
-# If a subject isn't overridden in this configuration file, the value used as
-# its example will be used.
-#
-#subjects:
+  # Subjects to use when sending emails from Synapse.
+  #
+  # The placeholder '%(app)s' will be replaced with the value of the 'app_name'
+  # setting above, or by a value dictated by the Matrix client application.
+  #
+  # If a subject isn't overridden in this configuration file, the value used as
+  # its example will be used.
+  #
+  #subjects:
 
-# Subjects for notification emails.
-#
-# On top of the '%(app)s' placeholder, these can use the following
-# placeholders:
-#
-#   * '%(person)s', which will be replaced by the display name of the user(s)
-#      that sent the message(s), e.g. "Alice and Bob".
-#   * '%(room)s', which will be replaced by the name of the room the
-#      message(s) have been sent to, e.g. "My super room".
-#
-# See the example provided for each setting to see which placeholder can be
-# used and how to use them.
-#
-# Subject to use to notify about one message from one or more user(s) in a
-# room which has a name.
-#message_from_person_in_room: "[%(app)s] You have a message on %(app)s from %(person)s in the %(room)s room..."
-#
-# Subject to use to notify about one message from one or more user(s) in a
-# room which doesn't have a name.
-#message_from_person: "[%(app)s] You have a message on %(app)s from %(person)s..."
-#
-# Subject to use to notify about multiple messages from one or more users in
-# a room which doesn't have a name.
-#messages_from_person: "[%(app)s] You have messages on %(app)s from %(person)s..."
-#
-# Subject to use to notify about multiple messages in a room which has a
-# name.
-#messages_in_room: "[%(app)s] You have messages on %(app)s in the %(room)s room..."
-#
-# Subject to use to notify about multiple messages in multiple rooms.
-#messages_in_room_and_others: "[%(app)s] You have messages on %(app)s in the %(room)s room and others..."
-#
-# Subject to use to notify about multiple messages from multiple persons in
-# multiple rooms. This is similar to the setting above except it's used when
-# the room in which the notification was triggered has no name.
-#messages_from_person_and_others: "[%(app)s] You have messages on %(app)s from %(person)s and others..."
-#
-# Subject to use to notify about an invite to a room which has a name.
-#invite_from_person_to_room: "[%(app)s] %(person)s has invited you to join the %(room)s room on %(app)s..."
-#
-# Subject to use to notify about an invite to a room which doesn't have a
-# name.
-#invite_from_person: "[%(app)s] %(person)s has invited you to chat on %(app)s..."
+    # Subjects for notification emails.
+    #
+    # On top of the '%(app)s' placeholder, these can use the following
+    # placeholders:
+    #
+    #   * '%(person)s', which will be replaced by the display name of the user(s)
+    #      that sent the message(s), e.g. "Alice and Bob".
+    #   * '%(room)s', which will be replaced by the name of the room the
+    #      message(s) have been sent to, e.g. "My super room".
+    #
+    # See the example provided for each setting to see which placeholder can be
+    # used and how to use them.
+    #
+    # Subject to use to notify about one message from one or more user(s) in a
+    # room which has a name.
+    #message_from_person_in_room: "[%(app)s] You have a message on %(app)s from %(person)s in the %(room)s room..."
+    #
+    # Subject to use to notify about one message from one or more user(s) in a
+    # room which doesn't have a name.
+    #message_from_person: "[%(app)s] You have a message on %(app)s from %(person)s..."
+    #
+    # Subject to use to notify about multiple messages from one or more users in
+    # a room which doesn't have a name.
+    #messages_from_person: "[%(app)s] You have messages on %(app)s from %(person)s..."
+    #
+    # Subject to use to notify about multiple messages in a room which has a
+    # name.
+    #messages_in_room: "[%(app)s] You have messages on %(app)s in the %(room)s room..."
+    #
+    # Subject to use to notify about multiple messages in multiple rooms.
+    #messages_in_room_and_others: "[%(app)s] You have messages on %(app)s in the %(room)s room and others..."
+    #
+    # Subject to use to notify about multiple messages from multiple persons in
+    # multiple rooms. This is similar to the setting above except it's used when
+    # the room in which the notification was triggered has no name.
+    #messages_from_person_and_others: "[%(app)s] You have messages on %(app)s from %(person)s and others..."
+    #
+    # Subject to use to notify about an invite to a room which has a name.
+    #invite_from_person_to_room: "[%(app)s] %(person)s has invited you to join the %(room)s room on %(app)s..."
+    #
+    # Subject to use to notify about an invite to a room which doesn't have a
+    # name.
+    #invite_from_person: "[%(app)s] %(person)s has invited you to chat on %(app)s..."
 
-# Subject for emails related to account administration.
-#
-# On top of the '%(app)s' placeholder, these one can use the
-# '%(server_name)s' placeholder, which will be replaced by the value of the
-# 'server_name' setting in your Synapse configuration.
-#
-# Subject to use when sending a password reset email.
-#password_reset: "[%(server_name)s] Password reset"
-#
-# Subject to use when sending a verification email to assert an address's
-# ownership.
-#email_validation: "[%(server_name)s] Validate your email"
+    # Subject for emails related to account administration.
+    #
+    # On top of the '%(app)s' placeholder, these one can use the
+    # '%(server_name)s' placeholder, which will be replaced by the value of the
+    # 'server_name' setting in your Synapse configuration.
+    #
+    # Subject to use when sending a password reset email.
+    #password_reset: "[%(server_name)s] Password reset"
+    #
+    # Subject to use when sending a verification email to assert an address's
+    # ownership.
+    #email_validation: "[%(server_name)s] Validate your email"
 
 
 # Password providers allow homeserver administrators to integrate
@@ -2502,32 +2502,32 @@ password_providers:
 ## Push ##
 
 push:
-# Clients requesting push notifications can either have the body of
-# the message sent in the notification poke along with other details
-# like the sender, or just the event ID and room ID (`event_id_only`).
-# If clients choose the former, this option controls whether the
-# notification request includes the content of the event (other details
-# like the sender are still included). For `event_id_only` push, it
-# has no effect.
-#
-# For modern android devices the notification content will still appear
-# because it is loaded by the app. iPhone, however will send a
-# notification saying only that a message arrived and who it came from.
-#
-# The default value is "true" to include message details. Uncomment to only
-# include the event ID and room ID in push notification payloads.
-#
-#include_content: false
+  # Clients requesting push notifications can either have the body of
+  # the message sent in the notification poke along with other details
+  # like the sender, or just the event ID and room ID (`event_id_only`).
+  # If clients choose the former, this option controls whether the
+  # notification request includes the content of the event (other details
+  # like the sender are still included). For `event_id_only` push, it
+  # has no effect.
+  #
+  # For modern android devices the notification content will still appear
+  # because it is loaded by the app. iPhone, however will send a
+  # notification saying only that a message arrived and who it came from.
+  #
+  # The default value is "true" to include message details. Uncomment to only
+  # include the event ID and room ID in push notification payloads.
+  #
+  #include_content: false
 
-# When a push notification is received, an unread count is also sent.
-# This number can either be calculated as the number of unread messages
-# for the user, or the number of *rooms* the user has unread messages in.
-#
-# The default value is "true", meaning push clients will see the number of
-# rooms with unread messages in them. Uncomment to instead send the number
-# of unread messages.
-#
-#group_unread_count_by_room: false
+  # When a push notification is received, an unread count is also sent.
+  # This number can either be calculated as the number of unread messages
+  # for the user, or the number of *rooms* the user has unread messages in.
+  #
+  # The default value is "true", meaning push clients will see the number of
+  # rooms with unread messages in them. Uncomment to instead send the number
+  # of unread messages.
+  #
+  #group_unread_count_by_room: false
 
 
 # Spam checkers are third-party modules that can block specific actions
@@ -2535,12 +2535,12 @@ push:
 # usernames, as well as remote users by redacting incoming events.
 #
 spam_checker:
-#- module: "my_custom_project.SuperSpamChecker"
-#  config:
-#    example_option: 'things'
-#- module: "some_other_project.BadEventStopper"
-#  config:
-#    example_stop_events_from: ['@bad:example.com']
+   #- module: "my_custom_project.SuperSpamChecker"
+   #  config:
+   #    example_option: 'things'
+   #- module: "some_other_project.BadEventStopper"
+   #  config:
+   #    example_stop_events_from: ['@bad:example.com']
 
 
 ## Rooms ##
@@ -2577,34 +2577,34 @@ spam_checker:
 # User Directory configuration
 #
 user_directory:
-# Defines whether users can search the user directory. If false then
-# empty responses are returned to all queries. Defaults to true.
-#
-# Uncomment to disable the user directory.
-#
-#enabled: false
+    # Defines whether users can search the user directory. If false then
+    # empty responses are returned to all queries. Defaults to true.
+    #
+    # Uncomment to disable the user directory.
+    #
+    #enabled: false
 
-# Defines whether to search all users visible to your HS when searching
-# the user directory, rather than limiting to users visible in public
-# rooms. Defaults to false.
-#
-# If you set it true, you'll have to rebuild the user_directory search
-# indexes, see:
-# https://github.com/matrix-org/synapse/blob/master/docs/user_directory.md
-#
-# Uncomment to return search results containing all known users, even if that
-# user does not share a room with the requester.
-#
-#search_all_users: true
+    # Defines whether to search all users visible to your HS when searching
+    # the user directory, rather than limiting to users visible in public
+    # rooms. Defaults to false.
+    #
+    # If you set it true, you'll have to rebuild the user_directory search
+    # indexes, see:
+    # https://github.com/matrix-org/synapse/blob/master/docs/user_directory.md
+    #
+    # Uncomment to return search results containing all known users, even if that
+    # user does not share a room with the requester.
+    #
+    #search_all_users: true
 
-# Defines whether to prefer local users in search query results.
-# If True, local users are more likely to appear above remote users
-# when searching the user directory. Defaults to false.
-#
-# Uncomment to prefer local over remote users in user directory search
-# results.
-#
-#prefer_local_users: true
+    # Defines whether to prefer local users in search query results.
+    # If True, local users are more likely to appear above remote users
+    # when searching the user directory. Defaults to false.
+    #
+    # Uncomment to prefer local over remote users in user directory search
+    # results.
+    #
+    #prefer_local_users: true
 
 
 # User Consent configuration
@@ -2663,16 +2663,16 @@ user_directory:
 # docs/room_and_user_statistics.md.
 #
 stats:
-# Uncomment the following to disable room and user statistics. Note that doing
-# so may cause certain features (such as the room directory) not to work
-# correctly.
-#
-#enabled: false
+  # Uncomment the following to disable room and user statistics. Note that doing
+  # so may cause certain features (such as the room directory) not to work
+  # correctly.
+  #
+  #enabled: false
 
-# The size of each timeslice in the room_stats_historical and
-# user_stats_historical tables, as a time period. Defaults to "1d".
-#
-#bucket_size: 1h
+  # The size of each timeslice in the room_stats_historical and
+  # user_stats_historical tables, as a time period. Defaults to "1d".
+  #
+  #bucket_size: 1h
 
 
 # Server Notices room configuration
@@ -2782,35 +2782,35 @@ stats:
 # (specifically those implemented with Jaeger).
 #
 opentracing:
-# tracing is disabled by default. Uncomment the following line to enable it.
-#
-#enabled: true
+    # tracing is disabled by default. Uncomment the following line to enable it.
+    #
+    #enabled: true
 
-# The list of homeservers we wish to send and receive span contexts and span baggage.
-# See docs/opentracing.rst
-# This is a list of regexes which are matched against the server_name of the
-# homeserver.
-#
-# By default, it is empty, so no servers are matched.
-#
-#homeserver_whitelist:
-#  - ".*"
+    # The list of homeservers we wish to send and receive span contexts and span baggage.
+    # See docs/opentracing.rst
+    # This is a list of regexes which are matched against the server_name of the
+    # homeserver.
+    #
+    # By default, it is empty, so no servers are matched.
+    #
+    #homeserver_whitelist:
+    #  - ".*"
 
-# Jaeger can be configured to sample traces at different rates.
-# All configuration options provided by Jaeger can be set here.
-# Jaeger's configuration mostly related to trace sampling which
-# is documented here:
-# https://www.jaegertracing.io/docs/1.13/sampling/.
-#
-#jaeger_config:
-#  sampler:
-#    type: const
-#    param: 1
+    # Jaeger can be configured to sample traces at different rates.
+    # All configuration options provided by Jaeger can be set here.
+    # Jaeger's configuration mostly related to trace sampling which
+    # is documented here:
+    # https://www.jaegertracing.io/docs/1.13/sampling/.
+    #
+    #jaeger_config:
+    #  sampler:
+    #    type: const
+    #    param: 1
 
-#  Logging whether spans were started and reported
-#
-#  logging:
-#    false
+    #  Logging whether spans were started and reported
+    #
+    #  logging:
+    #    false
 
 
 ## Workers ##
@@ -2864,19 +2864,19 @@ opentracing:
 # using workers (unless using old style direct TCP configuration).
 #
 redis:
-# Uncomment the below to enable Redis support.
-#
-#enabled: true
+  # Uncomment the below to enable Redis support.
+  #
+  #enabled: true
 
-# Optional host and port to use to connect to redis. Defaults to
-# localhost and 6379
-#
-#host: localhost
-#port: 6379
+  # Optional host and port to use to connect to redis. Defaults to
+  # localhost and 6379
+  #
+  #host: localhost
+  #port: 6379
 
-# Optional password if configured on the Redis instance
-#
-#password: <secret_password>
+  # Optional password if configured on the Redis instance
+  #
+  #password: <secret_password>
 
 
 # vim:ft=yaml
