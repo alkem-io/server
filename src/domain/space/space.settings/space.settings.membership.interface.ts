@@ -16,4 +16,10 @@ export abstract class ISpaceSettingsMembership {
       'The organizations that are trusted to Join as members for this Space',
   })
   trustedOrganizations!: UUID[];
+
+  @Field(() => Boolean, {
+    nullable: false,
+    description: 'Allow subspace admins to invite to this Space.',
+  })
+  allowSubspaceAdminsToInviteMembers!: boolean;
 }

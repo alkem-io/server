@@ -24,6 +24,7 @@ import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/stor
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { UserModule } from '@domain/community/user/user.module';
+import { SpaceModule } from '@domain/space/space/space.module';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { UserModule } from '@domain/community/user/user.module';
     StorageAggregatorModule,
     PlatformAuthorizationPolicyModule,
     UserModule,
+    SpaceModule,
   ],
   providers: [LookupService, LookupResolverQueries, LookupResolverFields],
   exports: [LookupService],

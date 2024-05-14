@@ -16,6 +16,9 @@ import { KonfigModule } from '@platform/configuration/config/config.module';
 import { MetadataModule } from '@platform/metadata/metadata.module';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
 import { OrganizationModule } from '@domain/community/organization/organization.module';
+import { UserModule } from '@domain/community/user/user.module';
+import { AgentModule } from '@domain/agent/agent/agent.module';
+import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
 import { LicensePolicyModule } from '@platform/license-policy/license.policy.module';
 
 @Module({
@@ -31,6 +34,9 @@ import { LicensePolicyModule } from '@platform/license-policy/license.policy.mod
     InnovationHubModule,
     LicensePolicyModule,
     OrganizationModule,
+    UserModule,
+    AgentModule,
+    NotificationAdapterModule,
     TypeOrmModule.forFeature([Platform]),
   ],
   providers: [

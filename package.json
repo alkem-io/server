@@ -52,7 +52,7 @@
   "dependencies": {
     "@alkemio/matrix-adapter-lib": "^0.3.6",
     "@apollo/server": "^4.10.2",
-    "@alkemio/notifications-lib": "^0.7.1",
+    "@alkemio/notifications-lib": "^0.8.2",
     "@elastic/elasticsearch": "^8.4.0",
     "@nestjs/apollo": "^12.1.0",
     "@nestjs/axios": "^3.0.2",
