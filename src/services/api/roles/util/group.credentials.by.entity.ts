@@ -1,10 +1,19 @@
 import { ICredential } from '@src/domain';
-import { AuthorizationCredential, CredentialRole } from '@common/enums';
+import { AuthorizationCredential } from '@common/enums';
+import { AccountRole } from '@common/enums/account.role';
+import { OrganizationRole } from '@common/enums/organization.role';
+import { CommunityRole } from '@common/enums/community.role';
+import { CommunityRoleImplicit } from '@common/enums/community.role.implicit';
+
+export type CredentialRole =
+  | AccountRole
+  | OrganizationRole
+  | CommunityRole
+  | CommunityRoleImplicit;
 
 export type EntityCredentialType =
   | 'accounts'
   | 'spaces'
-  | 'subspaces'
   | 'organizations'
   | 'groups';
 
@@ -30,15 +39,10 @@ export const groupCredentialsByEntity = (credentials: ICredential[]) => {
     } else if (
       credential.type === AuthorizationCredential.SPACE_ADMIN ||
       credential.type === AuthorizationCredential.SPACE_LEAD ||
-      credential.type === AuthorizationCredential.SPACE_MEMBER
+      credential.type === AuthorizationCredential.SPACE_MEMBER ||
+      credential.type === AuthorizationCredential.SPACE_SUBSPACE_ADMIN
     ) {
       return setMap(map, 'spaces', credential);
-    } else if (
-      credential.type === AuthorizationCredential.SUBSPACE_ADMIN ||
-      credential.type === AuthorizationCredential.SUBSPACE_LEAD ||
-      credential.type === AuthorizationCredential.SUBSPACE_MEMBER
-    ) {
-      return setMap(map, 'subspaces', credential);
     } else if (
       credential.type === AuthorizationCredential.ORGANIZATION_ADMIN ||
       credential.type === AuthorizationCredential.ORGANIZATION_OWNER ||
@@ -81,22 +85,19 @@ const credentialTypeToRole = (
   type: AuthorizationCredential
 ): CredentialRole => {
   const roleMap: Partial<Record<AuthorizationCredential, CredentialRole>> = {
-    [AuthorizationCredential.SPACE_ADMIN]: CredentialRole.ADMIN,
-    [AuthorizationCredential.SUBSPACE_ADMIN]: CredentialRole.ADMIN,
-    [AuthorizationCredential.ORGANIZATION_ADMIN]: CredentialRole.ADMIN,
+    [AuthorizationCredential.ACCOUNT_HOST]: AccountRole.HOST,
+    [AuthorizationCredential.SPACE_ADMIN]: CommunityRole.ADMIN,
+    [AuthorizationCredential.SPACE_LEAD]: CommunityRole.LEAD,
+    [AuthorizationCredential.SPACE_MEMBER]: CommunityRole.MEMBER,
+    [AuthorizationCredential.SPACE_SUBSPACE_ADMIN]:
+      CommunityRoleImplicit.SUBSPACE_ADMIN,
 
-    [AuthorizationCredential.ACCOUNT_HOST]: CredentialRole.HOST,
+    [AuthorizationCredential.ORGANIZATION_ADMIN]: OrganizationRole.ADMIN,
+    [AuthorizationCredential.ORGANIZATION_ASSOCIATE]:
+      OrganizationRole.ASSOCIATE,
+    [AuthorizationCredential.ORGANIZATION_OWNER]: OrganizationRole.OWNER,
 
-    [AuthorizationCredential.SPACE_LEAD]: CredentialRole.LEAD,
-    [AuthorizationCredential.SUBSPACE_LEAD]: CredentialRole.LEAD,
-
-    [AuthorizationCredential.SPACE_MEMBER]: CredentialRole.MEMBER,
-    [AuthorizationCredential.SUBSPACE_MEMBER]: CredentialRole.MEMBER,
-
-    [AuthorizationCredential.ORGANIZATION_ASSOCIATE]: CredentialRole.ASSOCIATE,
-    [AuthorizationCredential.ORGANIZATION_OWNER]: CredentialRole.OWNER,
-
-    [AuthorizationCredential.USER_GROUP_MEMBER]: CredentialRole.MEMBER,
+    [AuthorizationCredential.USER_GROUP_MEMBER]: CommunityRole.MEMBER, // hack for now; not used
   };
 
   const role = roleMap[type];

@@ -18,11 +18,12 @@ import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
 import { UpdateSpaceDefaultsInput } from '../space/dto/space.dto.update.defaults';
 import { ISpaceDefaults } from '../space.defaults/space.defaults.interface';
 import { DeleteSpaceInput } from '../space/dto/space.dto.delete';
-import { SpaceType } from '@common/enums/space.type';
 import { UpdateAccountPlatformSettingsInput } from './dto/account.dto.update.platform.settings';
 import { CreateAccountInput } from './dto';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { LogContext } from '@common/enums/logging.context';
+import { SpaceLevel } from '@common/enums/space.level';
+import { EntityNotInitializedException } from '@common/exceptions';
 
 @Resolver()
 export class AccountResolverMutations {
@@ -88,14 +89,19 @@ export class AccountResolverMutations {
       AuthorizationPrivilege.DELETE,
       `deleteSpace: ${space.nameID}`
     );
-    switch (space.type) {
-      case SpaceType.SPACE:
+    switch (space.level) {
+      case SpaceLevel.SPACE:
         // delete via the account
         await this.accountService.deleteAccount(space.account);
         return space;
-      case SpaceType.CHALLENGE:
-      case SpaceType.OPPORTUNITY:
+      case SpaceLevel.CHALLENGE:
+      case SpaceLevel.OPPORTUNITY:
         return await this.spaceService.deleteSpace(deleteData);
+      default:
+        throw new EntityNotInitializedException(
+          `Invalid space level: ${space.id}`,
+          LogContext.ACCOUNT
+        );
     }
   }
 

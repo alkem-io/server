@@ -3,9 +3,11 @@ import { registerEnumType } from '@nestjs/graphql';
 // Credentials to be added later:
 export enum AuthorizationCredential {
   GLOBAL_ADMIN = 'global-admin', // able to do everything, god mode
-  GLOBAL_ADMIN_COMMUNITY = 'global-admin-community', // able to manage the top level community, including assigning credentials
-  GLOBAL_ADMIN_SPACES = 'global-admin-spaces', // able to manage the top level spaces, including assigning credentials except global admin ones
+  GLOBAL_SUPPORT = 'global-support', // able to manage platform level information, can per space have admin rights
+  GLOBAL_LICENSE_MANAGER = 'global-license-manager', // able to manage platform level information, can per space have admin rights
   GLOBAL_REGISTERED = 'global-registered', // credential issued to all registered users
+  GLOBAL_COMMUNITY_READ = 'global-community-read', // able to view all details of the top level community
+  GLOBAL_SPACES_READER = 'global-spaces-read', // able to view all details of the top level community
 
   USER_SELF_MANAGEMENT = 'user-self', // able to update a user
 
@@ -14,10 +16,7 @@ export enum AuthorizationCredential {
   SPACE_ADMIN = 'space-admin',
   SPACE_MEMBER = 'space-member',
   SPACE_LEAD = 'space-lead',
-
-  SUBSPACE_ADMIN = 'subspace-admin',
-  SUBSPACE_MEMBER = 'subspace-member',
-  SUBSPACE_LEAD = 'subspace-lead',
+  SPACE_SUBSPACE_ADMIN = 'space-subspace-admin', // assigned to admins of a subspace for a space
 
   ORGANIZATION_OWNER = 'organization-owner', // Able to commit an organization
   ORGANIZATION_ADMIN = 'organization-admin', // Able to administer an organization

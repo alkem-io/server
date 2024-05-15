@@ -138,16 +138,13 @@ export class CalloutContributionAuthorizationService {
     }
 
     // Allow space admins to move post
-    const credentials = this.communityPolicyService.getAllCredentialsForRole(
-      communityPolicy,
-      CommunityRole.ADMIN
-    );
+    const credentials =
+      this.communityPolicyService.getCredentialsForRoleWithParents(
+        communityPolicy,
+        CommunityRole.ADMIN
+      );
     credentials.push({
       type: AuthorizationCredential.GLOBAL_ADMIN,
-      resourceID: '',
-    });
-    credentials.push({
-      type: AuthorizationCredential.GLOBAL_ADMIN_SPACES,
       resourceID: '',
     });
     const adminsMoveContributionRule =

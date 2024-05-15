@@ -12,6 +12,7 @@ import { ConfigurationTypes, MessagingQueue } from '@common/enums';
 import { json } from 'body-parser';
 import cookieParser from 'cookie-parser';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
+import { INestApplication } from '@nestjs/common';
 
 const bootstrap = async () => {
   const app = await NestFactory.create(AppModule, {
@@ -71,21 +72,28 @@ const bootstrap = async () => {
   const connectionOptions = configService.get(ConfigurationTypes.MICROSERVICES)
     ?.rabbitmq?.connection;
 
-  const amqpEndpoint = `amqp://${connectionOptions.user}:${connectionOptions.password}@${connectionOptions.host}:${connectionOptions.port}?heartbeat=30`;
+  const heartbeat = process.env.NODE_ENV === 'production' ? 30 : 120;
+  const amqpEndpoint = `amqp://${connectionOptions.user}:${connectionOptions.password}@${connectionOptions.host}:${connectionOptions.port}?heartbeat=${heartbeat}`;
+  connectMicroservice(app, amqpEndpoint, MessagingQueue.AUTH_RESET);
+  connectMicroservice(app, amqpEndpoint, MessagingQueue.AUTH);
+  await app.startAllMicroservices();
+};
 
+const connectMicroservice = (
+  app: INestApplication,
+  amqpEndpoint: string,
+  queue: MessagingQueue
+) => {
   app.connectMicroservice<MicroserviceOptions>({
     transport: Transport.RMQ,
     options: {
       urls: [amqpEndpoint],
-      queue: MessagingQueue.AUTH_RESET,
-      queueOptions: {
-        durable: true,
-      },
+      queue,
+      queueOptions: { durable: true },
       //be careful with this flag, if set to true, message acknowledgment will be automatic. Double acknowledgment throws an error and disconnects the queue.
       noAck: false,
     },
   });
-  await app.startAllMicroservices();
 };
 
 bootstrap();

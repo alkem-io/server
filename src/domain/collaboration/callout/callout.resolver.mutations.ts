@@ -209,7 +209,10 @@ export class CalloutResolverMutations {
     );
 
     const communityPolicy =
-      await this.namingService.getCommunityPolicyForCallout(callout.id);
+      await this.namingService.getCommunityPolicyWithSettingsForCallout(
+        callout.id
+      );
+    // Ensure settings are available
     contribution =
       await this.contributionAuthorizationService.applyAuthorizationPolicy(
         contribution,

@@ -31,6 +31,7 @@ import { Account } from '@domain/space/account/account.entity';
 import { SpaceType } from '@common/enums/space.type';
 import { SearchIngestService } from '@services/api/search2/search.ingest/search.ingest.service';
 import { CreateAccountInput } from '@domain/space/account/dto/account.dto.create';
+import { SpaceLevel } from '@common/enums/space.level';
 
 @Injectable()
 export class BootstrapService {
@@ -287,7 +288,7 @@ export class BootstrapService {
             displayName: DEFAULT_SPACE_DISPLAYNAME,
             tagline: 'An empty space to be populated',
           },
-          level: 0,
+          level: SpaceLevel.SPACE,
           type: SpaceType.SPACE,
         },
         hostID: DEFAULT_HOST_ORG_NAMEID,

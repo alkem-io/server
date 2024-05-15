@@ -83,7 +83,7 @@ const getAuthorizationPolicyMock = (
 const getSubspacesMock = (
   spaceId: string,
   count: number,
-  opportunityCount: number[]
+  subsubspaceCount: number[]
 ): Space[] => {
   const result: Space[] = [];
   for (let i = 0; i < count; i++) {
@@ -164,7 +164,7 @@ const getSubspacesMock = (
       },
       subspaces: getSubsubspacesMock(
         `${spaceId}.${i}`,
-        opportunityCount[i] ?? 0
+        subsubspaceCount[i] ?? 0
       ),
       ...getEntityMock<Space>(),
     });
@@ -172,16 +172,16 @@ const getSubspacesMock = (
   return result;
 };
 
-const getSubsubspacesMock = (challengeId: string, count: number): Space[] => {
+const getSubsubspacesMock = (subsubspaceId: string, count: number): Space[] => {
   const result: Space[] = [];
   for (let i = 0; i < count; i++) {
     result.push({
-      id: `${challengeId}.${i}`,
+      id: `${subsubspaceId}.${i}`,
       rowId: i,
-      nameID: `opportunity-${challengeId}.${i}`,
+      nameID: `subsubspace-${subsubspaceId}.${i}`,
       settingsStr: JSON.stringify({}),
       account: {
-        id: `account-${challengeId}.${i}`,
+        id: `account-${subsubspaceId}.${i}`,
         ...getEntityMock<Account>(),
       },
       type: SpaceType.OPPORTUNITY,
@@ -232,7 +232,7 @@ const getSubsubspacesMock = (challengeId: string, count: number): Space[] => {
           ]),
           profile: {
             id: '',
-            displayName: `opportunity-${challengeId}.${i}`,
+            displayName: `subsubspace-${subsubspaceId}.${i}`,
             tagline: '',
             description: '',
             type: ProfileType.OPPORTUNITY,
@@ -243,8 +243,8 @@ const getSubsubspacesMock = (challengeId: string, count: number): Space[] => {
         ...getEntityMock<Collaboration>(),
       },
       profile: {
-        id: `profile-challenge-${challengeId}.${i}`,
-        displayName: `Challenge ${challengeId}.${i}`,
+        id: `profile-challenge-${subsubspaceId}.${i}`,
+        displayName: `Challenge ${subsubspaceId}.${i}`,
         tagline: '',
         description: '',
         type: ProfileType.CHALLENGE,
