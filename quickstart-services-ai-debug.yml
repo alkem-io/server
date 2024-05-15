@@ -339,6 +339,10 @@ services:
       - LANGCHAIN_PROJECT=virtual-contributor-ingest-space
       - VECTOR_DB_HOST
       - VECTOR_DB_PORT
+      - AUTH_ADMIN_EMAIL
+      - AUTH_ADMIN_PASSWORD
+      - API_ENDPOINT_PRIVATE_GRAPHQL=http://host.docker.internal:3000/api/private/non-interactive/graphql
+      - AUTH_ORY_KRATOS_PUBLIC_BASE_URL=http://host.docker.internal:3000/ory/kratos/public
 
   virtual_contributor_engine_expert:
     container_name: alkemio_dev_virtual-contributor-engine-expert

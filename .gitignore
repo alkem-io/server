@@ -61,5 +61,3 @@ subscriptions.log
 .scripts/
 .build/
 .storage/
-
-.env.docker
