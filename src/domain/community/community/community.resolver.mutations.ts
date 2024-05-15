@@ -234,7 +234,7 @@ export class CommunityResolverMutations {
         virtual
       );
     // publish to EB for space ingestion
-    const spaceID = await this.communityService.getSpaceID(community);
+    const spaceID = await this.communityService.getRootSpaceID(community);
     // we are publising an event instead of executing a command because Nest's CQRS
     // won't execute a command unless a command handler is defined within the application
     // we want to have an external handler so for now events will do
