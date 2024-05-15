@@ -83,9 +83,12 @@ export class SpaceService {
     account: IAccount,
     agentInfo?: AgentInfo
   ): Promise<ISpace> {
+    // Temporary setup that matches 1-1; later the type and level will be separately assigned
     spaceData.type = SpaceType.SPACE;
-    if (spaceData.level === 1) spaceData.type = SpaceType.CHALLENGE;
-    if (spaceData.level === 2) spaceData.type = SpaceType.OPPORTUNITY;
+    if (spaceData.level === SpaceLevel.CHALLENGE)
+      spaceData.type = SpaceType.CHALLENGE;
+    if (spaceData.level === SpaceLevel.OPPORTUNITY)
+      spaceData.type = SpaceType.OPPORTUNITY;
 
     const space: ISpace = Space.create(spaceData);
 
@@ -114,7 +117,7 @@ export class SpaceService {
     space.authorization = new AuthorizationPolicy();
     space.account = account;
     space.settingsStr = this.spaceSettingsService.serializeSettings(
-      this.spaceDefaultsService.getDefaultSpaceSettings(spaceData.type)
+      this.spaceDefaultsService.getDefaultSpaceSettings(spaceData.level)
     );
     await this.isNameAvailableInAccountOrFail(spaceData.nameID, account.id);
 
@@ -126,10 +129,10 @@ export class SpaceService {
     space.storageAggregator = storageAggregator;
 
     const communityPolicy = this.spaceDefaultsService.getCommunityPolicy(
-      space.type
+      space.level
     );
     const applicationFormData =
-      this.spaceDefaultsService.getCommunityApplicationForm(space.type);
+      this.spaceDefaultsService.getCommunityApplicationForm(space.level);
 
     const communityData: CreateCommunityInput = {
       name: spaceData.profileData.displayName,
@@ -155,7 +158,7 @@ export class SpaceService {
     }
     space.context = await this.contextService.createContext(spaceData.context);
 
-    const profileType = this.spaceDefaultsService.getProfileType(space.type);
+    const profileType = this.spaceDefaultsService.getProfileType(space.level);
     space.profile = await this.profileService.createProfile(
       spaceData.profileData,
       profileType,
@@ -203,7 +206,7 @@ export class SpaceService {
         spaceData.collaborationData?.collaborationTemplateID
       );
     const defaultCallouts = this.spaceDefaultsService.getDefaultCallouts(
-      space.type
+      space.level
     );
     const calloutInputs =
       await this.spaceDefaultsService.getCreateCalloutInputs(
@@ -235,9 +238,7 @@ export class SpaceService {
         space.id
       );
 
-    const savedSpace = await this.save(space);
-    await this.assignUserToRoles(savedSpace, agentInfo);
-    return savedSpace;
+    return await this.save(space);
   }
 
   async save(space: ISpace): Promise<ISpace> {
@@ -828,7 +829,9 @@ export class SpaceService {
       agentInfo
     );
 
-    return await this.addSubspaceToSpace(space, subspace);
+    const savedSubspace = await this.addSubspaceToSpace(space, subspace);
+    await this.assignUserToRoles(subspace, agentInfo);
+    return savedSubspace;
   }
 
   async addSubspaceToSpace(space: ISpace, subspace: ISpace): Promise<ISpace> {
@@ -856,35 +859,36 @@ export class SpaceService {
     );
   }
 
-  private async assignUserToRoles(
+  public async assignUserToRoles(
     space: ISpace,
     agentInfo: AgentInfo | undefined
   ) {
-    // TODO: Hack to deal with initialization issues
-    let spaceID = space.id;
-    if (space.community && space.community.type !== 'space') {
-      spaceID = await this.communityService.getSpaceID(space.community);
+    if (!space.community) {
+      throw new EntityNotInitializedException(
+        `Community not initialised on Space: ${space.id}`,
+        LogContext.SPACES
+      );
     }
-    if (agentInfo && space.community) {
+    if (agentInfo) {
       await this.communityService.assignUserToRole(
-        spaceID,
         space.community,
         agentInfo.userID,
-        CommunityRole.MEMBER
+        CommunityRole.MEMBER,
+        agentInfo
       );
 
       await this.communityService.assignUserToRole(
-        spaceID,
         space.community,
         agentInfo.userID,
-        CommunityRole.LEAD
+        CommunityRole.LEAD,
+        agentInfo
       );
 
       await this.communityService.assignUserToRole(
-        spaceID,
         space.community,
         agentInfo.userID,
-        CommunityRole.ADMIN
+        CommunityRole.ADMIN,
+        agentInfo
       );
     }
   }
@@ -931,7 +935,7 @@ export class SpaceService {
     return await this.save(space);
   }
 
-  public async deleteEntities(spaceID: string) {
+  private async deleteEntities(spaceID: string) {
     const space = await this.getSpaceOrFail(spaceID, {
       relations: {
         collaboration: true,

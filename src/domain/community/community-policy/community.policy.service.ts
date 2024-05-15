@@ -74,7 +74,7 @@ export class CommunityPolicyService {
     return parentCommunityCredential;
   }
 
-  getParentCredentialsForRole(
+  public getParentCredentialsForRole(
     policy: ICommunityPolicy,
     role: CommunityRole
   ): ICredentialDefinition[] {
@@ -105,7 +105,7 @@ export class CommunityPolicyService {
     return result;
   }
 
-  private getCredentialForRole(
+  public getCredentialForRole(
     policy: ICommunityPolicy,
     role: CommunityRole
   ): ICredentialDefinition {

@@ -25,7 +25,7 @@ import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { EntityManager } from 'typeorm';
 import { ISearchResultCallout } from './dto/search.result.dto.entry.callout';
 import { Space } from '@domain/space/space/space.entity';
-import { SpaceType } from '@common/enums/space.type';
+import { SpaceLevel } from '@common/enums/space.level';
 
 export type PostParents = {
   callout: ICallout;
@@ -204,12 +204,12 @@ export default class SearchResultBuilderService
     let subspace: ISpace | undefined = undefined;
     let subsubspace: ISpace | undefined = undefined;
 
-    switch (spaceLoaded?.type) {
-      case SpaceType.CHALLENGE: {
+    switch (spaceLoaded?.level) {
+      case SpaceLevel.CHALLENGE: {
         subspace = spaceLoaded;
         break;
       }
-      case SpaceType.OPPORTUNITY: {
+      case SpaceLevel.OPPORTUNITY: {
         subspace = spaceLoaded.parentSpace;
         subsubspace = spaceLoaded;
         break;
