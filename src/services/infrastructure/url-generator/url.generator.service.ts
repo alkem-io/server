@@ -126,7 +126,7 @@ export class UrlGeneratorService {
   }
 
   private generateAdminUrlForSpace(spaceNameID: string): string {
-    return `${this.endpoint_cluster}/admin/spaces/${spaceNameID}`;
+    return `${this.endpoint_cluster}/${spaceNameID}/settings`;
   }
 
   async generateUrlForProfile(profile: IProfile): Promise<string> {
@@ -379,7 +379,7 @@ export class UrlGeneratorService {
 
     if (space) {
       // TODO: this later should link fully to the actual template by nameID when the client properly picks that up
-      return `${this.endpoint_cluster}/admin/spaces/${space.nameID}/templates`;
+      return `${this.endpoint_cluster}/${space.nameID}/settings/templates`;
     }
     const innovationPackInfo = await this.getNameableEntityInfoOrFail(
       'innovation_pack',
