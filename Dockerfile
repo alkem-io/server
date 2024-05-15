@@ -1,4 +1,4 @@
-FROM node:16.15.0-alpine
+FROM node:20.9.0-alpine
 
 
 # Create app directory
@@ -13,7 +13,7 @@ ARG ENV_ARG=production
 # where available (npm@5+)
 COPY package*.json ./
 
-RUN npm i -g npm@8.5.5
+RUN npm i -g npm@10.1.0
 RUN npm install
 
 # If you are building your code for production
