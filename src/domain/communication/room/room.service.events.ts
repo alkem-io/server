@@ -56,6 +56,16 @@ export class RoomServiceEvents {
     room: IRoom,
     accessToVirtualContributors: boolean
   ) {
+    const community = await this.communityResolverService.getCommunityFromRoom(
+      room.id,
+      room.type as RoomType
+    );
+
+    const spaceNameID =
+      await this.communityResolverService.getRootSpaceNameIDFromCommunityOrFail(
+        community
+      );
+
     for (const mention of mentions) {
       if (mention.type === MentionedEntityType.VIRTUAL_CONTRIBUTOR) {
         // Only throw exception here for the case that there is an actual mention
@@ -96,7 +106,8 @@ export class RoomServiceEvents {
 
         const result = await this.virtualPersonaService.askQuestion(
           chatData,
-          agentInfo
+          agentInfo,
+          spaceNameID
         );
 
         let answer = result.answer;

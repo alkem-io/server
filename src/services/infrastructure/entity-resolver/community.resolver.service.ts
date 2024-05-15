@@ -8,6 +8,7 @@ import { LogContext } from '@common/enums';
 import { Communication } from '@domain/communication/communication/communication.entity';
 import { Space } from '@domain/space/space/space.entity';
 import { ISpace } from '@domain/space/space/space.interface';
+import { RoomType } from '@common/enums/room.type';
 import { ILicense } from '@domain/license/license/license.interface';
 
 @Injectable()
@@ -23,10 +24,8 @@ export class CommunityResolverService {
     private entityManager: EntityManager
   ) {}
 
-  public async getRootSpaceIDFromCommunityOrFail(
-    community: ICommunity
-  ): Promise<string> {
-    const space = await this.entityManager.findOne(Space, {
+  private async getRootSpaceFromCommunity(community: ICommunity) {
+    return this.entityManager.findOne(Space, {
       where: {
         community: {
           id: community.id,
@@ -38,6 +37,27 @@ export class CommunityResolverService {
         },
       },
     });
+  }
+
+  public async getRootSpaceNameIDFromCommunityOrFail(
+    community: ICommunity
+  ): Promise<string> {
+    const space = await this.getRootSpaceFromCommunity(community);
+    if (space && space.account && space.account.space) {
+      return space.account.space.nameID;
+    }
+
+    throw new EntityNotFoundException(
+      `Unable to find Space for given community id: ${community.id}`,
+      LogContext.COLLABORATION
+    );
+  }
+
+  public async getRootSpaceIDFromCommunityOrFail(
+    community: ICommunity
+  ): Promise<string> {
+    const space = await this.getRootSpaceFromCommunity(community);
+
     if (space && space.account && space.account.space) {
       return space.account.space.id;
     }
@@ -276,6 +296,32 @@ export class CommunityResolverService {
     return space.profile.displayName;
   }
 
+  public async getCommunityFromCalloutRoomOrFail(
+    commentsId: string
+  ): Promise<ICommunity> {
+    const space = await this.entityManager.findOne(Space, {
+      where: {
+        collaboration: {
+          callouts: {
+            comments: {
+              id: commentsId,
+            },
+          },
+        },
+      },
+      relations: {
+        community: true,
+      },
+    });
+    if (!space || !space.community) {
+      throw new EntityNotFoundException(
+        `Unable to find space for commentsId trough callout: ${commentsId}`,
+        LogContext.URL_GENERATOR
+      );
+    }
+    return space.community;
+  }
+
   public async getCommunityFromPostRoomOrFail(
     commentsId: string
   ): Promise<ICommunity> {
@@ -299,11 +345,22 @@ export class CommunityResolverService {
     });
     if (!space || !space.community) {
       throw new EntityNotFoundException(
-        `Unable to find space for commentsId: ${commentsId}`,
+        `Unable to find space for commentsId trough post: ${commentsId}`,
         LogContext.URL_GENERATOR
       );
     }
     return space.community;
+  }
+
+  public async getCommunityFromRoom(
+    id: string,
+    roomType: RoomType
+  ): Promise<ICommunity> {
+    if (roomType === RoomType.CALLOUT) {
+      return this.getCommunityFromCalloutRoomOrFail(id);
+    } else {
+      return this.getCommunityFromPostRoomOrFail(id);
+    }
   }
 
   public async getCommunityWithParentOrFail(

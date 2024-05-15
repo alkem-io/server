@@ -4,7 +4,7 @@ import { LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ClientProxyFactory, Transport } from '@nestjs/microservices';
 
-export async function virtualPersonaEngineChatGuidanceServiceFactory(
+export async function virtualContributorEngineGuidanceServiceFactory(
   logger: LoggerService,
   configService: ConfigService
 ): Promise<any> {
@@ -16,12 +16,12 @@ export async function virtualPersonaEngineChatGuidanceServiceFactory(
   try {
     const options = {
       urls: [connectionString],
-      queue: MessagingQueue.VIRTUAL_PERSONA_ENGINE_CHAT_GUIDANCE,
+      queue: MessagingQueue.VIRTUAL_CONTRIBUTOR_ENGINE_GUIDANCE,
       queueOptions: {
         // the queue will survive a broker restart
         durable: false,
       },
-      noAck: true,
+      noAck: false,
     };
     return ClientProxyFactory.create({ transport: Transport.RMQ, options });
   } catch (err) {

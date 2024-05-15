@@ -66,6 +66,8 @@
     "@nestjs/passport": "^10.0.3",
     "@nestjs/platform-express": "^10.3.7",
     "@nestjs/typeorm": "10.0.2",
+    "@golevelup/nestjs-rabbitmq": "^5.3.0",
+    "@nestjs/cqrs": "^10.2.7",
     "@ory/kratos-client": "^0.11.1",
     "@socket.io/redis-adapter": "^8.3.0",
     "@types/lodash": "^4.14.197",

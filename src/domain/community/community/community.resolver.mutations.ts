@@ -52,6 +52,11 @@ import { RemoveCommunityRoleFromVirtualInput } from './dto/community.dto.role.re
 import { VirtualContributorAuthorizationService } from '../virtual-contributor/virtual.contributor.service.authorization';
 import { VirtualContributorService } from '../virtual-contributor/virtual.contributor.service';
 import { IVirtualContributor } from '../virtual-contributor';
+import { EventBus } from '@nestjs/cqrs';
+import {
+  IngestSpace,
+  SpaceIngestionPurpose,
+} from '@services/infrastructure/event-bus/commands';
 
 const IAnyInvitation = createUnionType({
   name: 'AnyInvitation',
@@ -84,7 +89,8 @@ export class CommunityResolverMutations {
     private invitationService: InvitationService,
     private invitationAuthorizationService: InvitationAuthorizationService,
     private invitationExternalAuthorizationService: InvitationExternalAuthorizationService,
-    private communityAuthorizationService: CommunityAuthorizationService
+    private communityAuthorizationService: CommunityAuthorizationService,
+    private eventBus: EventBus
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -130,12 +136,13 @@ export class CommunityResolverMutations {
       requiredPrivilege = AuthorizationPrivilege.COMMUNITY_ADD_MEMBER;
     }
 
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       community.authorization,
       requiredPrivilege,
       `assign user community role: ${community.id}`
     );
+
     await this.communityService.assignUserToRole(
       community,
       roleData.userID,
@@ -163,7 +170,7 @@ export class CommunityResolverMutations {
       roleData.communityID
     );
 
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       community.authorization,
       AuthorizationPrivilege.GRANT,
@@ -195,19 +202,21 @@ export class CommunityResolverMutations {
       requiredPrivilege = AuthorizationPrivilege.COMMUNITY_ADD_MEMBER;
     }
 
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       community.authorization,
       requiredPrivilege,
       `assign virtual community role: ${community.id}`
     );
+
     // Also require ACCESS_VIRTUAL_CONTRIBUTORS to assign a virtual contributor
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       community.authorization,
       AuthorizationPrivilege.ACCESS_VIRTUAL_CONTRIBUTOR,
       `assign virtual community role VC privilege: ${community.id}`
     );
+
     await this.communityService.assignVirtualToRole(
       community,
       roleData.virtualContributorID,
@@ -219,9 +228,21 @@ export class CommunityResolverMutations {
       await this.virtualContributorService.getVirtualContributorOrFail(
         roleData.virtualContributorID
       );
-    return await this.virtualContributorAuthorizationService.applyAuthorizationPolicy(
-      virtual
+
+    const result =
+      await this.virtualContributorAuthorizationService.applyAuthorizationPolicy(
+        virtual
+      );
+    // publish to EB for space ingestion
+    const spaceID = await this.communityService.getRootSpaceID(community);
+    // we are publising an event instead of executing a command because Nest's CQRS
+    // won't execute a command unless a command handler is defined within the application
+    // we want to have an external handler so for now events will do
+    this.eventBus.publish(
+      new IngestSpace(spaceID, SpaceIngestionPurpose.Knowledge)
     );
+
+    return result;
   }
 
   @UseGuards(GraphqlGuard)
