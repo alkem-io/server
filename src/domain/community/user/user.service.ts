@@ -28,12 +28,8 @@ import {
   UpdateUserInput,
   User,
 } from '@domain/community/user';
-import {
-  CACHE_MANAGER,
-  Inject,
-  Injectable,
-  LoggerService,
-} from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { Cache, CachingConfig } from 'cache-manager';

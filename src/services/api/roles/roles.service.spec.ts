@@ -19,11 +19,19 @@ import { SpaceFilterService } from '@services/infrastructure/space-filter/space.
 import { asyncToThrow, testData } from '@test/utils';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { SpaceVisibility } from '@common/enums/space.visibility';
-import * as getJourneyRolesForContributorEntityData from './util/get.journey.roles.for.contributor.entity.data';
 import * as getOrganizationRolesForUserEntityData from './util/get.organization.roles.for.user.entity.data';
+import * as getSpaceRolesForContributorQueryResult from './util/get.space.roles.for.contributor.query.result';
 import { MockInvitationService } from '@test/mocks/invitation.service.mock';
 import { MockCommunityResolverService } from '@test/mocks/community.resolver.service.mock';
 import { SpaceService } from '@domain/space/space/space.service';
+import { RolesResultSpace } from './dto/roles.dto.result.space';
+import { ProfileType } from '@common/enums/profile.type';
+import { Profile } from '@domain/common/profile/profile.entity';
+import { SpaceType } from '@common/enums/space.type';
+import { SpaceLevel } from '@common/enums/space.level';
+import { Space } from '@domain/space/space/space.entity';
+import { License } from '@domain/license/license/license.entity';
+import { RolesResultCommunity } from './dto/roles.dto.result.community';
 
 describe('RolesService', () => {
   let rolesService: RolesService;
@@ -63,6 +71,27 @@ describe('RolesService', () => {
 
   describe('User Roles', () => {
     beforeEach(() => {
+      const spaceRolesData = testData.rolesUser.space as any;
+      const spaceRolesMock: RolesResultSpace = getSpaceRoleResultMock({
+        id: spaceRolesData.id,
+        roles: spaceRolesData.roles,
+        displayName: spaceRolesData.displayName,
+      });
+      const subspaceRolesData = spaceRolesData.subspaces;
+      const subspaceRolesMocks: RolesResultCommunity[] = [];
+      for (const subspaceRoleData of subspaceRolesData) {
+        const subspaceRolesMock: RolesResultCommunity =
+          getSubpaceRoleResultMock({
+            id: subspaceRoleData.id,
+            roles: subspaceRoleData.roles,
+            displayName: subspaceRoleData.displayName,
+            type: subspaceRoleData.type,
+            level: subspaceRoleData.level,
+          });
+        subspaceRolesMocks.push(subspaceRolesMock);
+      }
+      spaceRolesMock.subspaces = subspaceRolesMocks;
+      const spacesRolesMock: RolesResultSpace[] = [spaceRolesMock];
       jest
         .spyOn(userService, 'getUserWithAgent')
         .mockResolvedValue(testData.user);
@@ -73,13 +102,10 @@ describe('RolesService', () => {
 
       jest
         .spyOn(
-          getJourneyRolesForContributorEntityData,
-          'getJourneyRolesForContributorEntityData'
+          getSpaceRolesForContributorQueryResult,
+          'getSpaceRolesForContributorQueryResult'
         )
-        .mockResolvedValue({
-          spaces: [testData.space as any],
-          subspaces: [testData.challenge as any, testData.opportunity as any],
-        });
+        .mockReturnValue(spacesRolesMock);
 
       jest
         .spyOn(
@@ -115,7 +141,7 @@ describe('RolesService', () => {
       const organizationRoles = await rolesService.getOrganizationRolesForUser(
         roles
       );
-      const journeyRoles = await rolesService.getJourneyRolesForContributor(
+      const spaceRoles = await rolesService.getSpaceRolesForContributor(
         roles,
         testData.agentInfo
       );
@@ -128,7 +154,7 @@ describe('RolesService', () => {
         ])
       );
 
-      expect(journeyRoles).toEqual(
+      expect(spaceRoles).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
             spaceID: testData.space.id,
@@ -175,7 +201,7 @@ describe('RolesService', () => {
         organizationID: testData.organization.id,
       });
 
-      const spaces = await rolesService.getJourneyRolesForContributor(
+      const spaces = await rolesService.getSpaceRolesForContributor(
         roles,
         testData.agentInfo
       );
@@ -189,4 +215,98 @@ describe('RolesService', () => {
       );
     });
   });
+});
+
+const getSpaceRoleResultMock = ({
+  id,
+  roles,
+  displayName,
+}: {
+  id: string;
+  roles: string[];
+  displayName: string;
+}): RolesResultSpace => {
+  return {
+    id,
+    displayName,
+    type: SpaceType.SPACE,
+    spaceID: id,
+    nameID: `space-${id}`,
+    visibility: SpaceVisibility.ACTIVE,
+    roles,
+    space: {
+      id,
+      settingsStr: JSON.stringify({}),
+      rowId: parseInt(id),
+      nameID: `space-${id}`,
+      profile: {
+        id: `profile-${id}`,
+        displayName: `Space ${id}`,
+        tagline: '',
+        description: '',
+        type: ProfileType.SPACE,
+        ...getEntityMock<Profile>(),
+      },
+      type: SpaceType.SPACE,
+      level: SpaceLevel.SPACE,
+      account: {
+        id: `account-${id}`,
+        license: {
+          id: `license-${id}`,
+          visibility: SpaceVisibility.ACTIVE,
+          featureFlags: [],
+          ...getEntityMock<License>(),
+        },
+      },
+      ...getEntityMock<Space>(),
+    },
+    subspaces: [],
+  };
+};
+
+const getSubpaceRoleResultMock = ({
+  id,
+  roles,
+  displayName,
+  type,
+}: {
+  id: string;
+  roles: string[];
+  displayName: string;
+  type: SpaceType;
+  level: SpaceLevel;
+}): RolesResultCommunity => {
+  return {
+    id,
+    displayName,
+    nameID: `subspace-${id}`,
+    roles,
+    type,
+  };
+};
+
+/**
+ * @returns common properties that all BaseEntity have
+ */
+const getEntityMock = <T>() => ({
+  createdDate: new Date(),
+  updatedDate: new Date(),
+  hasId: function (): boolean {
+    throw new Error('Function not implemented.');
+  },
+  save: function (): Promise<T> {
+    throw new Error('Function not implemented.');
+  },
+  remove: function (): Promise<T> {
+    throw new Error('Function not implemented.');
+  },
+  softRemove: function (): Promise<T> {
+    throw new Error('Function not implemented.');
+  },
+  recover: function (): Promise<T> {
+    throw new Error('Function not implemented.');
+  },
+  reload: function (): Promise<void> {
+    throw new Error('Function not implemented.');
+  },
 });

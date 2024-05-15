@@ -4,4 +4,6 @@ export interface VirtualPersonaEngineAdapterQueryInput
   extends VirtualPersonaEngineAdapterInputBase {
   question: string;
   prompt: string;
+  kowledgeSpaceNameID: string;
+  contextSpaceNameID: string;
 }
