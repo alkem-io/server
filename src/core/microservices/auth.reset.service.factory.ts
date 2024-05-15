@@ -21,7 +21,7 @@ export async function authResetServiceFactory(
         // the queue will survive a broker restart
         durable: true,
       },
-      noAck: false,
+      noAck: true,
     };
     return ClientProxyFactory.create({ transport: Transport.RMQ, options });
   } catch (err) {

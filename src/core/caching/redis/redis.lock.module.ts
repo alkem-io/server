@@ -1,5 +1,6 @@
 import { REDIS_LOCK_SERVICE } from '@common/constants';
-import { CACHE_MANAGER, Global, Module } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { redisLockServiceFactory } from './redis.lock.service.factory';
 
 @Global()
