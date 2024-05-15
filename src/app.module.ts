@@ -1,3 +1,10 @@
+import { MiddlewareConsumer, Module } from '@nestjs/common';
+import { CacheModule } from '@nestjs/cache-manager';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { APP_FILTER, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
+import { GraphQLModule } from '@nestjs/graphql';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { CloseCode } from 'graphql-ws';
 import { ConfigurationTypes } from '@common/enums';
 import { ValidationPipe } from '@common/pipes/validation.pipe';
@@ -15,12 +22,6 @@ import { RequestLoggerMiddleware } from '@core/middleware/request.logger.middlew
 import { AgentModule } from '@domain/agent/agent/agent.module';
 import { SpaceModule } from '@domain/space/space/space.module';
 import { ScalarsModule } from '@domain/common/scalars/scalars.module';
-import { CacheModule, MiddlewareConsumer, Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { APP_FILTER, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
-import { GraphQLModule } from '@nestjs/graphql';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { AdminCommunicationModule } from '@platform/admin/communication/admin.communication.module';
 import { AppController } from '@src/app.controller';
 import { WinstonConfigService } from '@src/config/winston.config';
@@ -71,6 +72,7 @@ import { TaskGraphqlModule } from '@domain/task/task.module';
 import { ActivityFeedModule } from '@domain/activity-feed';
 import { AdminSearchIngestModule } from '@platform/admin/search/admin.search.ingest.module';
 import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
+import { AuthModule } from '@services/auth/auth.module';
 
 @Module({
   imports: [
@@ -257,6 +259,7 @@ import { VirtualContributorModule } from '@domain/community/virtual-contributor/
     AuthResetSubscriberModule,
     TaskGraphqlModule,
     ActivityFeedModule,
+    AuthModule,
   ],
   controllers: [AppController, SsiCredentialFlowController],
   providers: [

@@ -31,7 +31,6 @@ export enum AuthorizationPrivilege {
   COMMUNITY_ADD_MEMBER = 'community-add-member', // only for global admins
   CREATE_CALLOUT = 'create-callout',
   UPDATE_CALLOUT_PUBLISHER = 'update-callout-publisher',
-  CREATE_RELATION = 'create-relation',
   READ_USERS = 'read-users',
   READ_USER_PII = 'read-user-pii',
   MOVE_POST = 'move-post',

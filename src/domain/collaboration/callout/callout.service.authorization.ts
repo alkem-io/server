@@ -152,7 +152,7 @@ export class CalloutAuthorizationService {
         [AuthorizationPrivilege.UPDATE_CALLOUT_PUBLISHER],
         [
           AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_ADMIN_SPACES,
+          AuthorizationCredential.GLOBAL_SUPPORT,
         ],
         CREDENTIAL_RULE_TYPES_CALLOUT_UPDATE_PUBLISHER_ADMINS
       );

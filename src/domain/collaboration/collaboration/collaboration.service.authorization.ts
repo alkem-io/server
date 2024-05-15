@@ -17,7 +17,6 @@ import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authoriz
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { CommunityPolicyService } from '@domain/community/community-policy/community.policy.service';
 import {
-  CREDENTIAL_RULE_TYPES_COLLABORATION_CREATE_RELATION_REGISTERED,
   CREDENTIAL_RULE_COLLABORATION_CONTRIBUTORS,
   POLICY_RULE_COLLABORATION_CREATE,
   POLICY_RULE_CALLOUT_CONTRIBUTE,
@@ -29,19 +28,19 @@ import { CommunityRole } from '@common/enums/community.role';
 import { TimelineAuthorizationService } from '@domain/timeline/timeline/timeline.service.authorization';
 import { ICallout } from '../callout/callout.interface';
 import { ILicense } from '@domain/license/license/license.interface';
-import { LicenseService } from '@domain/license/license/license.service';
-import { LicenseFeatureFlagName } from '@common/enums/license.feature.flag.name';
 import { InnovationFlowAuthorizationService } from '../innovation-flow/innovation.flow.service.authorization';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
+import { LicenseEngineService } from '@core/license-engine/license.engine.service';
+import { LicensePrivilege } from '@common/enums/license.privilege';
 
 @Injectable()
 export class CollaborationAuthorizationService {
   constructor(
+    private licenseEngineService: LicenseEngineService,
     private collaborationService: CollaborationService,
     private communityPolicyService: CommunityPolicyService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private timelineAuthorizationService: TimelineAuthorizationService,
-    private licenseService: LicenseService,
     private calloutAuthorizationService: CalloutAuthorizationService,
     private innovationFlowAuthorizationService: InnovationFlowAuthorizationService,
     @InjectRepository(Collaboration)
@@ -161,32 +160,25 @@ export class CollaborationAuthorizationService {
     policy: ICommunityPolicy
   ): ICredentialDefinition[] {
     // add challenge members
-    const contributors = [
-      this.communityPolicyService.getCredentialForRole(
+    let contributorCriterias =
+      this.communityPolicyService.getCredentialsForRole(
         policy,
         CommunityRole.MEMBER
-      ),
-    ];
+      );
     // optionally add space members
-    const collaborationSettings = policy.settings.collaboration;
-    if (collaborationSettings.inheritMembershipRights) {
-      const parentCredentials =
-        this.communityPolicyService.getParentCredentialsForRole(
+    if (policy.settings.collaboration.inheritMembershipRights) {
+      contributorCriterias =
+        this.communityPolicyService.getCredentialsForRoleWithParents(
           policy,
           CommunityRole.MEMBER
         );
-      contributors.push(...parentCredentials);
     }
 
-    contributors.push({
+    contributorCriterias.push({
       type: AuthorizationCredential.GLOBAL_ADMIN,
       resourceID: '',
     });
-    contributors.push({
-      type: AuthorizationCredential.GLOBAL_ADMIN_SPACES,
-      resourceID: '',
-    });
-    return contributors;
+    return contributorCriterias;
   }
 
   private async appendCredentialRules(
@@ -204,32 +196,29 @@ export class CollaborationAuthorizationService {
 
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
-    const communityMemberNotInherited =
-      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.CREATE_RELATION],
-        [AuthorizationCredential.USER_SELF_MANAGEMENT],
-        CREDENTIAL_RULE_TYPES_COLLABORATION_CREATE_RELATION_REGISTERED
-      );
-    communityMemberNotInherited.cascade = false;
-    newRules.push(communityMemberNotInherited);
-
     const saveAsTemplateEnabled =
-      await this.licenseService.isFeatureFlagEnabled(
-        license,
-        LicenseFeatureFlagName.CALLOUT_TO_CALLOUT_TEMPLATE
+      await this.licenseEngineService.isAccessGranted(
+        LicensePrivilege.CALLOUT_SAVE_AS_TEMPLATE,
+        license
       );
     if (saveAsTemplateEnabled) {
-      const saveAsTemplate =
-        this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+      const adminCriterias = this.communityPolicyService.getCredentialsForRole(
+        policy,
+        CommunityRole.ADMIN
+      );
+      adminCriterias.push({
+        type: AuthorizationCredential.GLOBAL_ADMIN,
+        resourceID: '',
+      });
+      const saveAsTemplateRule =
+        this.authorizationPolicyService.createCredentialRule(
           [AuthorizationPrivilege.SAVE_AS_TEMPLATE],
-          [
-            AuthorizationCredential.GLOBAL_ADMIN,
-            AuthorizationCredential.GLOBAL_ADMIN_SPACES,
-          ],
+          adminCriterias,
           CREDENTIAL_RULE_TYPES_CALLOUT_SAVE_AS_TEMPLATE
         );
-      saveAsTemplate.cascade = false;
-      newRules.push(saveAsTemplate);
+
+      saveAsTemplateRule.cascade = false;
+      newRules.push(saveAsTemplateRule);
     }
 
     return this.authorizationPolicyService.appendCredentialAuthorizationRules(
@@ -276,18 +265,15 @@ export class CollaborationAuthorizationService {
     const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
 
     const createPrivilege = new AuthorizationPolicyRulePrivilege(
-      [
-        AuthorizationPrivilege.CREATE_CALLOUT,
-        AuthorizationPrivilege.CREATE_RELATION,
-      ],
+      [AuthorizationPrivilege.CREATE_CALLOUT],
       AuthorizationPrivilege.CREATE,
       POLICY_RULE_COLLABORATION_CREATE
     );
     privilegeRules.push(createPrivilege);
 
-    const whiteboardRtEnabled = await this.licenseService.isFeatureFlagEnabled(
-      license,
-      LicenseFeatureFlagName.WHITEBOARD_MULTI_USER
+    const whiteboardRtEnabled = await this.licenseEngineService.isAccessGranted(
+      LicensePrivilege.WHITEBOARD_MULTI_USER,
+      license
     );
     if (whiteboardRtEnabled) {
       const createWhiteboardRtPrivilege = new AuthorizationPolicyRulePrivilege(

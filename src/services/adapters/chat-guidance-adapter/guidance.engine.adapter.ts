@@ -10,7 +10,7 @@ import { GuidanceEngineQueryInput } from './dto/guidance.engine.dto.query';
 import { GuidanceEngineQueryResponse } from './dto/guidance.engine.dto.question.response';
 import { Source } from './source.type';
 import { GuidanceReporterService } from '@services/external/elasticsearch/guidance-reporter';
-import { VIRTUAL_PERSONA_ENGINE_CHAT_GUIDANCE } from '@common/constants';
+import { VIRTUAL_CONTRIBUTOR_ENGINE_GUIDANCE } from '@common/constants';
 
 enum GuidanceEngineEventType {
   QUERY = 'query',
@@ -24,7 +24,7 @@ const successfulResetResponse = 'Reset function executed';
 @Injectable()
 export class GuidanceEngineAdapter {
   constructor(
-    @Inject(VIRTUAL_PERSONA_ENGINE_CHAT_GUIDANCE)
+    @Inject(VIRTUAL_CONTRIBUTOR_ENGINE_GUIDANCE)
     private virutalPersonaGuidanceEngineClient: ClientProxy,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,

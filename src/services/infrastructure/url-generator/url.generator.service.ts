@@ -2,12 +2,8 @@ import { LogContext, ProfileType } from '@common/enums';
 import { ConfigurationTypes } from '@common/enums/configuration.type';
 import { EntityNotFoundException } from '@common/exceptions';
 import { IProfile } from '@domain/common/profile/profile.interface';
-import {
-  CACHE_MANAGER,
-  Inject,
-  Injectable,
-  LoggerService,
-} from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { ConfigService } from '@nestjs/config';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -16,8 +12,8 @@ import { Cache, CachingConfig } from 'cache-manager';
 import { Space } from '@domain/space/space/space.entity';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { CalloutTemplate } from '@domain/template/callout-template/callout.template.entity';
-import { SpaceType } from '@common/enums/space.type';
 import { ISpace } from '@domain/space/space/space.interface';
+import { SpaceLevel } from '@common/enums/space.level';
 
 @Injectable()
 export class UrlGeneratorService {
@@ -87,42 +83,42 @@ export class UrlGeneratorService {
     return url;
   }
 
-  async generateUrlForOpportunity(opportunityID: string): Promise<string> {
-    const cachedUrl = await this.getUrlFromCache(opportunityID);
+  async generateUrlForSubsubspace(subsubspaceID: string): Promise<string> {
+    const cachedUrl = await this.getUrlFromCache(subsubspaceID);
     if (cachedUrl) {
       return cachedUrl;
     }
-    const opportunityUrlPath = await this.getOpportunityUrlPath(
+    const subsubspaceUrlPath = await this.getSubsubspaceUrlPath(
       this.FIELD_ID,
-      opportunityID
+      subsubspaceID
     );
-    if (!opportunityUrlPath) {
+    if (!subsubspaceUrlPath) {
       throw new EntityNotFoundException(
-        `Unable to find opportunity for ID: ${opportunityID}`,
+        `Unable to find subsubspace for ID: ${subsubspaceID}`,
         LogContext.URL_GENERATOR
       );
     }
-    await this.setUrlCache(opportunityID, opportunityUrlPath);
-    return opportunityUrlPath;
+    await this.setUrlCache(subsubspaceID, subsubspaceUrlPath);
+    return subsubspaceUrlPath;
   }
 
-  async generateUrlForChallenge(challengeID: string): Promise<string> {
-    const cachedUrl = await this.getUrlFromCache(challengeID);
+  async generateUrlForSubspace(subspaceID: string): Promise<string> {
+    const cachedUrl = await this.getUrlFromCache(subspaceID);
     if (cachedUrl) {
       return cachedUrl;
     }
-    const challengeUrlPath = await this.getChallengeUrlPath(
+    const subspaceUrlPath = await this.getSubspaceUrlPath(
       this.FIELD_ID,
-      challengeID
+      subspaceID
     );
-    if (!challengeUrlPath) {
+    if (!subspaceUrlPath) {
       throw new EntityNotFoundException(
-        `Unable to find challenge for ID: ${challengeID}`,
+        `Unable to find subspace for ID: ${subspaceID}`,
         LogContext.URL_GENERATOR
       );
     }
-    await this.setUrlCache(challengeID, challengeUrlPath);
-    return challengeUrlPath;
+    await this.setUrlCache(subspaceID, subspaceUrlPath);
+    return subspaceUrlPath;
   }
 
   public generateUrlForSpace(spaceNameID: string): string {
@@ -130,7 +126,7 @@ export class UrlGeneratorService {
   }
 
   private generateAdminUrlForSpace(spaceNameID: string): string {
-    return `${this.endpoint_cluster}/admin/spaces/${spaceNameID}`;
+    return `${this.endpoint_cluster}/${spaceNameID}/settings`;
   }
 
   async generateUrlForProfile(profile: IProfile): Promise<string> {
@@ -148,24 +144,24 @@ export class UrlGeneratorService {
   async createJourneyAdminCommunityURL(space: ISpace): Promise<string> {
     const spaceNameID = space.nameID;
     const baseURL = `${this.endpoint_cluster}/admin/spaces/${spaceNameID}`;
-    switch (space.type) {
-      case SpaceType.SPACE:
+    switch (space.level) {
+      case SpaceLevel.SPACE:
         const spaceAdminUrl = await this.generateAdminUrlForSpace(space.nameID);
         return `${spaceAdminUrl}/community`;
-      case SpaceType.CHALLENGE:
-        const challengeAdminUrl = await this.getChallengeUrlPath(
+      case SpaceLevel.CHALLENGE:
+        const subspaceAdminUrl = await this.getSubspaceUrlPath(
           this.FIELD_ID,
           space.id,
           true
         );
-        return `${challengeAdminUrl}/community`;
-      case SpaceType.OPPORTUNITY:
-        const opportunityAdminURL = await this.getOpportunityUrlPath(
+        return `${subspaceAdminUrl}/community`;
+      case SpaceLevel.OPPORTUNITY:
+        const subsubspaceAdminURL = await this.getSubsubspaceUrlPath(
           this.FIELD_ID,
           space.id,
           true
         );
-        return `${opportunityAdminURL}/community`;
+        return `${subsubspaceAdminURL}/community`;
     }
 
     return baseURL;
@@ -187,29 +183,29 @@ export class UrlGeneratorService {
         );
         return this.generateUrlForSpace(spaceEntityInfo.entityNameID);
       case ProfileType.CHALLENGE:
-        const challengeUrlPath = await this.getChallengeUrlPath(
+        const subspaceUrlPath = await this.getSubspaceUrlPath(
           this.FIELD_PROFILE_ID,
           profile.id
         );
-        if (!challengeUrlPath) {
+        if (!subspaceUrlPath) {
           throw new EntityNotFoundException(
-            `Unable to find challenge for profileId: ${profile.id}`,
+            `Unable to find subspace for profileId: ${profile.id}`,
             LogContext.URL_GENERATOR
           );
         }
-        return challengeUrlPath;
+        return subspaceUrlPath;
       case ProfileType.OPPORTUNITY:
-        const opportunityUrlPath = await this.getOpportunityUrlPath(
+        const subsubspaceUrlPath = await this.getSubsubspaceUrlPath(
           this.FIELD_PROFILE_ID,
           profile.id
         );
-        if (!opportunityUrlPath) {
+        if (!subsubspaceUrlPath) {
           throw new EntityNotFoundException(
-            `Unable to find opportunity for profileId: ${profile.id}`,
+            `Unable to find subsubspace for profileId: ${profile.id}`,
             LogContext.URL_GENERATOR
           );
         }
-        return opportunityUrlPath;
+        return subsubspaceUrlPath;
       case ProfileType.USER:
         const userEntityInfo = await this.getNameableEntityInfoOrFail(
           'user',
@@ -383,7 +379,7 @@ export class UrlGeneratorService {
 
     if (space) {
       // TODO: this later should link fully to the actual template by nameID when the client properly picks that up
-      return `${this.endpoint_cluster}/admin/spaces/${space.nameID}/templates`;
+      return `${this.endpoint_cluster}/${space.nameID}/settings/templates`;
     }
     const innovationPackInfo = await this.getNameableEntityInfoOrFail(
       'innovation_pack',
@@ -415,18 +411,18 @@ export class UrlGeneratorService {
     }
   }
 
-  private async getChallengeUrlPath(
+  private async getSubspaceUrlPath(
     fieldName: string,
     fieldID: string,
     admin = false
   ): Promise<string | undefined> {
     const [result]: {
-      challengeId: string;
-      challengeNameId: string;
+      subspaceId: string;
+      subspaceNameId: string;
       spaceId: string;
     }[] = await this.entityManager.connection.query(
       `
-        SELECT space.id as challengeId, space.nameID as challengeNameId, space.parentSpaceId as spaceId FROM space
+        SELECT space.id as subspaceId, space.nameID as subspaceNameId, space.parentSpaceId as spaceId FROM space
         WHERE space.${fieldName} = '${fieldID}'
       `
     );
@@ -446,38 +442,38 @@ export class UrlGeneratorService {
         LogContext.URL_GENERATOR
       );
     }
-    return `${spaceUrlPath}/challenges/${result.challengeNameId}`;
+    return `${spaceUrlPath}/challenges/${result.subspaceNameId}`;
   }
 
-  private async getOpportunityUrlPath(
+  private async getSubsubspaceUrlPath(
     fieldName: string,
     fieldID: string,
     admin = false
   ): Promise<string | undefined> {
     const [result]: {
-      opportunityId: string;
-      opportunityNameId: string;
-      challengeId: string;
+      subsubspaceId: string;
+      subsubspaceNameId: string;
+      subspaceId: string;
     }[] = await this.entityManager.connection.query(
       `
-        SELECT space.id as opportunityId, space.nameID as opportunityNameId, space.parentSpaceId as challengeId FROM space
+        SELECT space.id as subsubspaceId, space.nameID as subsubspaceNameId, space.parentSpaceId as subspaceId FROM space
         WHERE space.${fieldName} = '${fieldID}'
       `
     );
 
-    if (!result || !result.challengeId) {
+    if (!result || !result.subspaceId) {
       return undefined;
     }
 
-    const challengeUrlPath = await this.getChallengeUrlPath(
+    const subspaceUrlPath = await this.getSubspaceUrlPath(
       this.FIELD_ID,
-      result.challengeId,
+      result.subspaceId,
       admin
     );
 
-    if (!challengeUrlPath) return undefined;
+    if (!subspaceUrlPath) return undefined;
 
-    return `${challengeUrlPath}/opportunities/${result.opportunityNameId}`;
+    return `${subspaceUrlPath}/opportunities/${result.subsubspaceNameId}`;
   }
 
   private async getInnovationFlowUrlPathOrFail(
@@ -602,12 +598,12 @@ export class UrlGeneratorService {
     fieldName: string,
     fieldID: string
   ): Promise<string> {
-    let collaborationJourneyUrlPath = await this.getOpportunityUrlPath(
+    let collaborationJourneyUrlPath = await this.getSubsubspaceUrlPath(
       fieldName,
       fieldID
     );
     if (!collaborationJourneyUrlPath) {
-      collaborationJourneyUrlPath = await this.getChallengeUrlPath(
+      collaborationJourneyUrlPath = await this.getSubspaceUrlPath(
         fieldName,
         fieldID
       );

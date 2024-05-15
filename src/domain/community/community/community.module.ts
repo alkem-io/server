@@ -29,7 +29,8 @@ import { CommunityEventsService } from './community.service.events';
 import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
 import { CommunityGuidelinesModule } from '../community-guidelines/community.guidelines.module';
 import { VirtualContributorModule } from '../virtual-contributor/virtual.contributor.module';
-import { LicenseModule } from '@domain/license/license/license.module';
+import { LicenseEngineModule } from '@core/license-engine/license.engine.module';
+import { EventBusModule } from '@services/infrastructure/event-bus/event.bus.module';
 
 @Module({
   imports: [
@@ -49,7 +50,7 @@ import { LicenseModule } from '@domain/license/license/license.module';
     CommunityPolicyModule,
     CommunityGuidelinesModule,
     LifecycleModule,
-    LicenseModule,
+    LicenseEngineModule,
     AgentModule,
     EntityResolverModule,
     StorageAggregatorResolverModule,
@@ -57,6 +58,7 @@ import { LicenseModule } from '@domain/license/license/license.module';
     TypeOrmModule.forFeature([Community]),
     TrustRegistryAdapterModule,
     ContributionReporterModule,
+    EventBusModule,
   ],
   providers: [
     CommunityService,
