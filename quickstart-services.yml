@@ -163,15 +163,15 @@ services:
     volumes:
       - alkemio_dev_postgres:/var/lib/postgresql/data
 
-  # synapse-admin:
-  #   container_name: alkemio_dev_synapse_admin
-  #   hostname: synapse-admin
-  #   image: awesometechnologies/synapse-admin:0.8.1
-  #   restart: always
-  #   networks:
-  #     - alkemio_dev_net
-  #   ports:
-  #     - 80
+  synapse-admin:
+    container_name: alkemio_dev_synapse_admin
+    hostname: synapse-admin
+    image: awesometechnologies/synapse-admin:0.8.1
+    restart: always
+    networks:
+      - alkemio_dev_net
+    ports:
+      - 80
 
   rabbitmq:
     container_name: alkemio_dev_rabbitmq
@@ -285,7 +285,6 @@ services:
     container_name: alkemio_dev_virtual_contributor_engine_guidance
     hostname: virtual-contributor-engine-guidance
     image: alkemio/guidance-engine:v0.6.1
-    platform: linux/x86_64
     restart: always
     volumes:
        - /dev/shm:/dev/shm
