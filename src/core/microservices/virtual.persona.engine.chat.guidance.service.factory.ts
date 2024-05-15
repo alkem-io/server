@@ -21,7 +21,7 @@ export async function virtualPersonaEngineChatGuidanceServiceFactory(
         // the queue will survive a broker restart
         durable: false,
       },
-      noAck: false,
+      noAck: true,
     };
     return ClientProxyFactory.create({ transport: Transport.RMQ, options });
   } catch (err) {

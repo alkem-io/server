@@ -21,7 +21,11 @@ export async function notificationsServiceFactory(
         // the queue will survive a broker restart
         durable: true,
       },
-      noAck: false,
+      // https://github.com/nestjs/nest/issues/11966#issuecomment-1619622486
+      // In v9 there was a bug causing noAck: false to always be ignored & set to true (since we used || instead of ??).
+      // If you want your app to keep working as it was in v9,
+      // set noAck to true (or just remove this option whatsoever as true is the default).
+      noAck: true,
     };
     return ClientProxyFactory.create({ transport: Transport.RMQ, options });
   } catch (err) {
