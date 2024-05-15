@@ -56,7 +56,7 @@ import { EventBus } from '@nestjs/cqrs';
 import {
   IngestSpace,
   SpaceIngestionPurpose,
-} from '@services/event-bus/commands';
+} from '@services/infrastructure/event-bus/commands';
 
 const IAnyInvitation = createUnionType({
   name: 'AnyInvitation',

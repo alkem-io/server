@@ -29,8 +29,8 @@ import { CommunityEventsService } from './community.service.events';
 import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
 import { CommunityGuidelinesModule } from '../community-guidelines/community.guidelines.module';
 import { VirtualContributorModule } from '../virtual-contributor/virtual.contributor.module';
-import { EventBusModule } from '@services/event-bus/event.bus.module';
 import { LicenseEngineModule } from '@core/license-engine/license.engine.module';
+import { EventBusModule } from '@services/infrastructure/event-bus/event.bus.module';
 
 @Module({
   imports: [
