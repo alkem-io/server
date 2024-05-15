@@ -1,7 +1,7 @@
 export enum MessagingQueue {
-  VIRTUAL_PERSONA_ENGINE_CHAT_GUIDANCE = 'alkemio-chat-guidance',
-  VIRTUAL_PERSONA_ENGINE_COMMUNITY_MANAGER = 'virtual-persona-engine-community-manager',
-  VIRTUAL_PERSONA_ENGINE_ALKEMIO_DIGILEEFOMGEVING = 'virtual-persona-engine-alkemio-digileefomgeving',
+  VIRTUAL_CONTRIBUTOR_ENGINE_GUIDANCE = 'virtual-contributor-engine-guidance',
+  VIRTUAL_CONTRIBUTOR_ENGINE_COMMUNITY_MANAGER = 'virtual-contributor-engine-community-manager',
+  VIRTUAL_CONTRIBUTOR_ENGINE_EXPERT = 'virtual-contributor-engine-expert',
   //
   WALLET_MANAGER = 'alkemio-wallet-manager',
   NOTIFICATIONS = 'alkemio-notifications',

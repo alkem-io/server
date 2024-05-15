@@ -2,12 +2,8 @@
 import { ConfigurationTypes } from '@common/enums/configuration.type';
 import { LogContext } from '@common/enums/logging.context';
 import { AgentInfo } from '@core/authentication';
-import {
-  CACHE_MANAGER,
-  Inject,
-  Injectable,
-  LoggerService,
-} from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { ConfigService } from '@nestjs/config';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { Cache } from 'cache-manager';

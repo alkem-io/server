@@ -1,8 +1,7 @@
 import { FindOneOptions, Repository } from 'typeorm';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { ProfileType } from '@common/enums';
+import { LogContext, ProfileType } from '@common/enums';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { TemplateBaseService } from '../template-base/template.base.service';
 import { CreateCommunityGuidelinesTemplateInput } from './dto/community.guidelines.template.dto.create';
@@ -10,6 +9,8 @@ import { CommunityGuidelinesTemplate } from './community.guidelines.template.ent
 import { ITemplateBase } from '../template-base/template.base.interface';
 import { ICommunityGuidelinesTemplate } from '@domain/template/community-guidelines-template/community.guidelines.template.interface';
 import { CommunityGuidelinesService } from '@domain/community/community-guidelines/community.guidelines.service';
+import { CreateCommunityGuidelinesInput } from '@domain/community/community-guidelines';
+import { EntityNotFoundException } from '@common/exceptions';
 
 @Injectable()
 export class CommunityGuidelinesTemplateService {
@@ -24,9 +25,9 @@ export class CommunityGuidelinesTemplateService {
     communityGuidelinesTemplateData: CreateCommunityGuidelinesTemplateInput,
     storageAggregator: IStorageAggregator
   ): Promise<ICommunityGuidelinesTemplate> {
-    const communityGuidelinesTemplate = CommunityGuidelinesTemplate.create(
-      communityGuidelinesTemplateData
-    );
+    const communityGuidelinesTemplate: ICommunityGuidelinesTemplate =
+      CommunityGuidelinesTemplate.create(communityGuidelinesTemplateData);
+
     await this.templateBaseService.initialise(
       communityGuidelinesTemplate,
       communityGuidelinesTemplateData,
@@ -34,7 +35,10 @@ export class CommunityGuidelinesTemplateService {
       storageAggregator
     );
 
+    let guidelinesInput: CreateCommunityGuidelinesInput;
+
     if (communityGuidelinesTemplateData.communityGuidelinesID) {
+      // get the data from the existing guidelines
       const guidelines =
         await this.communityGuidelinesService.getCommunityGuidelinesOrFail(
           communityGuidelinesTemplateData.communityGuidelinesID,
@@ -42,16 +46,31 @@ export class CommunityGuidelinesTemplateService {
             relations: { profile: true },
           }
         );
-      communityGuidelinesTemplate.guidelines =
-        this.communityGuidelinesService.createCommunityGuidelines({
-          profile: {
-            displayName: guidelines.profile.displayName,
-            description: guidelines.profile.description,
-            tagsets: guidelines.profile.tagsets,
-            avatarURL: guidelines.profile.visuals?.
-          },
-        });
+      guidelinesInput = {
+        profile: {
+          displayName: guidelines.profile.displayName,
+          description: guidelines.profile.description,
+          tagsets: guidelines.profile.tagsets,
+        },
+      };
+    } else {
+      // get the data from the input
+      const guidelinesFromInput =
+        communityGuidelinesTemplateData.communityGuidelines!;
+      guidelinesInput = {
+        profile: {
+          displayName: guidelinesFromInput.profile.displayName,
+          description: guidelinesFromInput.profile.description,
+          tagsets: guidelinesFromInput.profile.tagsets,
+        },
+      };
     }
+
+    communityGuidelinesTemplate.guidelines =
+      await this.communityGuidelinesService.createCommunityGuidelines(
+        guidelinesInput,
+        storageAggregator
+      );
 
     return this.communityGuidelinesTemplateRepository.save(
       communityGuidelinesTemplate
@@ -62,48 +81,20 @@ export class CommunityGuidelinesTemplateService {
     communityGuidelinesTemplateID: string,
     options?: FindOneOptions<CommunityGuidelinesTemplate>
   ): Promise<ICommunityGuidelinesTemplate | never> {
-    // const communityGuidelinesTemplate =
-    //   await this.communityGuidelinesTemplateRepository.findOne({
-    //     ...options,
-    //     where: {
-    //       ...options?.where,
-    //       id: communityGuidelinesTemplateID,
-    //     },
-    //   });
-    // if (!communityGuidelinesTemplate)
-    //   throw new EntityNotFoundException(
-    //     `Not able to locate CommunityGuidelinesTemplate with the specified ID: ${communityGuidelinesTemplateID}`,
-    //     LogContext.COMMUNICATION
-    //   );
-    // return communityGuidelinesTemplate;
-    return {
-      id: communityGuidelinesTemplateID,
-      authorization: undefined,
-      profile: {
-        id: 'mock-guidelines-profile-id',
-        type: ProfileType.COMMUNITY_GUIDELINES_TEMPLATE,
-        displayName: 'Mock Community Guidelines Template',
-        description: 'Mock Community Guidelines Template Description',
-        // tagsets: [
-        //   { name: 'default', tags: ['mock', 'community', 'guidelines'] },
-        // ],
-      },
-      guidelines: {
-        id: 'mock-guidelines-id',
-        title: 'Mock Community Guidelines',
-        description: 'Mock Community Guidelines Description',
-        content: 'Mock Community Guidelines Content',
-        profile: {
-          displayName: 'Mock Community Guidelines',
-          description: 'Mock Community Guidelines Description',
-          // references: [
-          //   { name: 'ref 1', description: 'ref 1 description', url: 'www.ref1.com' },
-          //   { name: 'ref 2', description: 'ref 2 description', url: 'www.ref2.com' },
-          //   { name: 'ref 3', description: 'ref 3 description', url: 'www.ref3.com' },
-          // ],
+    const communityGuidelinesTemplate =
+      await this.communityGuidelinesTemplateRepository.findOne({
+        ...options,
+        where: {
+          ...options?.where,
+          id: communityGuidelinesTemplateID,
         },
-      },
-    } as unknown as ICommunityGuidelinesTemplate;
+      });
+    if (!communityGuidelinesTemplate)
+      throw new EntityNotFoundException(
+        `Not able to locate CommunityGuidelinesTemplate with the specified ID: ${communityGuidelinesTemplateID}`,
+        LogContext.COMMUNICATION
+      );
+    return communityGuidelinesTemplate;
   }
 
   async deleteCommunityGuidelinesTemplate(

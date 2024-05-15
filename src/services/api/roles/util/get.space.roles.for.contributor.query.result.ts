@@ -7,7 +7,7 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 
-export const getJourneyRolesForContributorQueryResult = (
+export const getSpaceRolesForContributorQueryResult = (
   map: CredentialMap,
   spaces: Space[],
   subspaces: Space[],

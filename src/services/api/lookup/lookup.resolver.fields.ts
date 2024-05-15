@@ -565,12 +565,12 @@ export class LookupResolverFields {
       await this.guidelineTemplateService.getCommunityGuidelinesTemplateOrFail(
         id
       );
-    /*this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       guidelinesTemplate.authorization,
       AuthorizationPrivilege.READ,
       `lookup Community guidelines Template: ${guidelinesTemplate.id}`
-    );*/
+    );
 
     return guidelinesTemplate;
   }

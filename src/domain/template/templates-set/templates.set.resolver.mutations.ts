@@ -11,7 +11,6 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { IWhiteboardTemplate } from '../whiteboard-template/whiteboard.template.interface';
 import { PostTemplateAuthorizationService } from '../post-template/post.template.service.authorization';
 import { WhiteboardTemplateAuthorizationService } from '../whiteboard-template/whiteboard.template.service.authorization';
-import { InnovationFlowTemplateService } from '../innovation-flow-template/innovation.flow.template.service';
 import { InnovationFlowTemplateAuthorizationService } from '../innovation-flow-template/innovation.flow.template.service.authorization';
 import { CreateWhiteboardTemplateOnTemplatesSetInput } from './dto/whiteboard.template.dto.create.on.templates.set';
 import { IInnovationFlowTemplate } from '../innovation-flow-template/innovation.flow.template.interface';
@@ -22,13 +21,13 @@ import { CreateCalloutTemplateOnTemplatesSetInput } from './dto/callout.template
 import { CalloutTemplateAuthorizationService } from '../callout-template/callout.template.service.authorization';
 import { CommunityGuidelinesTemplateAuthorizationService } from '../community-guidelines-template/community.guidelines.template.service.authorization';
 import { CreateCommunityGuidelinesTemplateOnTemplatesSetInput } from './dto/community.guidelines.template.dto.create.on.templates.set';
+import { ICommunityGuidelinesTemplate } from '@domain/template/community-guidelines-template/community.guidelines.template.interface';
 
 @Resolver()
 export class TemplatesSetResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
     private templatesSetService: TemplatesSetService,
-    private innovationFlowTemplateService: InnovationFlowTemplateService,
     private calloutTemplateAuthorizationService: CalloutTemplateAuthorizationService,
     private postTemplateAuthorizationService: PostTemplateAuthorizationService,
     private whiteboardTemplateAuthorizationService: WhiteboardTemplateAuthorizationService,
@@ -54,7 +53,7 @@ export class TemplatesSetResolverMutations {
         },
       }
     );
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       templatesSet.authorization,
       AuthorizationPrivilege.CREATE,
@@ -88,7 +87,7 @@ export class TemplatesSetResolverMutations {
         relations: { postTemplates: true },
       }
     );
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       templatesSet.authorization,
       AuthorizationPrivilege.CREATE,
@@ -121,7 +120,7 @@ export class TemplatesSetResolverMutations {
         relations: { whiteboardTemplates: true },
       }
     );
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       templatesSet.authorization,
       AuthorizationPrivilege.CREATE,
@@ -155,7 +154,7 @@ export class TemplatesSetResolverMutations {
         relations: { innovationFlowTemplates: true },
       }
     );
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       templatesSet.authorization,
       AuthorizationPrivilege.CREATE,
@@ -173,8 +172,8 @@ export class TemplatesSetResolverMutations {
     return innovationFlowTemplate;
   }
 
-  /*@UseGuards(GraphqlGuard)
-  @Mutation(() => ITemplateBase, {
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => ICommunityGuidelinesTemplate, {
     description:
       'Creates a new CommunityGuidelinesTemplate on the specified TemplatesSet.',
   })
@@ -182,12 +181,9 @@ export class TemplatesSetResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('communityGuidelinesTemplateInput')
     communityGuidelinesTemplateInput: CreateCommunityGuidelinesTemplateOnTemplatesSetInput
-  ): Promise<ITemplateBase> {
+  ): Promise<ICommunityGuidelinesTemplate> {
     const templatesSet = await this.templatesSetService.getTemplatesSetOrFail(
-      communityGuidelinesTemplateInput.templatesSetID,
-      {
-        relations: { communityGuidelinesTemplates: true },
-      }
+      communityGuidelinesTemplateInput.templatesSetID
     );
     this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -205,5 +201,5 @@ export class TemplatesSetResolverMutations {
       templatesSet.authorization
     );
     return communityGuidelinesTemplate;
-  }*/
+  }
 }

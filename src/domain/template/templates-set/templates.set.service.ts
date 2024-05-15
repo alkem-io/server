@@ -7,11 +7,16 @@ import {
   EntityNotInitializedException,
   ValidationException,
 } from '@common/exceptions';
-import { LogContext, ProfileType } from '@common/enums';
+import { LogContext } from '@common/enums';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { AgentInfo } from '@core/authentication/agent-info';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
+import { ICommunityGuidelinesTemplate } from '@domain/template/community-guidelines-template/community.guidelines.template.interface';
+import { CreateCommunityGuidelinesTemplateInput } from '@domain/template/community-guidelines-template/dto/community.guidelines.template.dto.create';
 import { TemplatesSet } from './templates.set.entity';
 import { ITemplatesSet } from './templates.set.interface';
-import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { PostTemplateService } from '../post-template/post.template.service';
 import { WhiteboardTemplateService } from '../whiteboard-template/whiteboard.template.service';
 import { InnovationFlowTemplateService } from '../innovation-flow-template/innovation.flow.template.service';
@@ -25,10 +30,6 @@ import { CreateInnovationFlowTemplateInput } from '../innovation-flow-template/d
 import { ICalloutTemplate } from '../callout-template/callout.template.interface';
 import { CreateCalloutTemplateInput } from '../callout-template/dto/callout.template.dto.create';
 import { CalloutTemplateService } from '../callout-template/callout.template.service';
-import { AgentInfo } from '@core/authentication/agent-info';
-import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
-import { ICommunityGuidelinesTemplate } from '@domain/template/community-guidelines-template/community.guidelines.template.interface';
 
 @Injectable()
 export class TemplatesSetService {
@@ -176,53 +177,23 @@ export class TemplatesSetService {
   async getCommunityGuidelinesTemplates(
     templatesSet: ITemplatesSet
   ): Promise<ICommunityGuidelinesTemplate[]> {
-    // const templatesSetPopulated = await this.getTemplatesSetOrFail(
-    //   templatesSet.id,
-    //   {
-    //     relations: {
-    //       communityGuidelinesTemplates: {
-    //         profile: true,
-    //       },
-    //     },
-    //   }
-    // );
-    // if (!templatesSetPopulated.communityGuidelinesTemplates) {
-    //   throw new EntityNotInitializedException(
-    //     `TemplatesSet not initialized: ${templatesSetPopulated.id}`,
-    //     LogContext.TEMPLATES
-    //   );
-    // }
-    // return templatesSetPopulated.communityGuidelinesTemplates;
-    return [
+    const templatesSetPopulated = await this.getTemplatesSetOrFail(
+      templatesSet.id,
       {
-        id: 'communityGuidelinesTemplateID',
-        authorization: undefined,
-        profile: {
-          id: 'mock-guidelines-profile-id',
-          type: ProfileType.COMMUNITY_GUIDELINES_TEMPLATE,
-          displayName: 'Mock Community Guidelines Template',
-          description: 'Mock Community Guidelines Template Description',
-          // tagsets: [
-          //   { name: 'default', tags: ['mock', 'community', 'guidelines'] },
-          // ],
-        },
-        guidelines: {
-          id: 'mock-guidelines-id',
-          title: 'Mock Community Guidelines',
-          description: 'Mock Community Guidelines Description',
-          content: 'Mock Community Guidelines Content',
-          profile: {
-            displayName: 'Mock Community Guidelines',
-            description: 'Mock Community Guidelines Description',
-            // references: [
-            //   { name: 'ref 1', description: 'ref 1 description', url: 'www.ref1.com' },
-            //   { name: 'ref 2', description: 'ref 2 description', url: 'www.ref2.com' },
-            //   { name: 'ref 3', description: 'ref 3 description', url: 'www.ref3.com' },
-            // ],
+        relations: {
+          communityGuidelinesTemplates: {
+            profile: true,
           },
         },
       }
-    ] as any;
+    );
+    if (!templatesSetPopulated.communityGuidelinesTemplates) {
+      throw new EntityNotInitializedException(
+        `TemplatesSet not initialized: ${templatesSetPopulated.id}`,
+        LogContext.TEMPLATES
+      );
+    }
+    return templatesSetPopulated.communityGuidelinesTemplates;
   }
 
   public getPostTemplate(
@@ -397,10 +368,20 @@ export class TemplatesSetService {
     return whiteboardTemplate;
   }
 
-  /*async createCommunityGuidelinesTemplate(
+  async createCommunityGuidelinesTemplate(
     templatesSet: ITemplatesSet,
     communityGuidelinesTemplateInput: CreateCommunityGuidelinesTemplateInput
-  ): Promise<ITemplateBase> {
+  ): Promise<ICommunityGuidelinesTemplate> {
+    if (
+      !communityGuidelinesTemplateInput.communityGuidelinesID &&
+      !communityGuidelinesTemplateInput.communityGuidelines
+    ) {
+      throw new ValidationException(
+        'A Community Guidelines ID or a Community Guidelines input must be provided',
+        LogContext.CONTEXT
+      );
+    }
+
     templatesSet.communityGuidelinesTemplates =
       await this.getCommunityGuidelinesTemplates(templatesSet);
 
@@ -413,7 +394,7 @@ export class TemplatesSetService {
     templatesSet.communityGuidelinesTemplates.push(communityGuidelinesTemplate);
     await this.templatesSetRepository.save(templatesSet);
     return communityGuidelinesTemplate;
-  }*/
+  }
 
   async getInnovationFlowTemplates(
     templatesSet: ITemplatesSet

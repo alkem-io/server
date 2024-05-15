@@ -84,7 +84,9 @@ export class AccountService {
         account.library.innovationFlowTemplates[0];
     }
 
-    return await this.accountRepository.save(account);
+    const savedAccount = await this.accountRepository.save(account);
+    await this.spaceService.assignUserToRoles(account.space, agentInfo);
+    return savedAccount;
   }
 
   async save(account: IAccount): Promise<IAccount> {

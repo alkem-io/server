@@ -2,6 +2,13 @@ mutation createCommunityGuidelineTemplate($communityGuidelineTemplateInput: Crea
   createCommunityGuidelineTemplate(communityGuidelineTemplateInput: $communityGuidelineTemplateInput) {
     profile {
       displayName
+      description
+    }
+    guidelines {
+      profile {
+        description
+        displayName
+      }
     }
   }
 }
@@ -11,9 +18,14 @@ Variables:
   "communityGuidelineTemplateInput": {
       "templatesSetID": "uuid",
       "profile": {
-        "displayName": "Community Guidelines Example",
-        "description": "Dos and don'ts",
-        "tags": ["Tag 1", "Tag 2"]
+        "displayName": "Community Guidelines template Example",
+        "description": "Template description"
       },
+      communityGuidelines:{
+        profile:{
+          displayName:"Guidelines name",
+          description:"do not be rude"
+        }
+      }
   }
 }

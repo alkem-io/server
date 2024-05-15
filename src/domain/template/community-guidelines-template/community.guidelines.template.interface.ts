@@ -1,5 +1,4 @@
 import { Field, ObjectType } from '@nestjs/graphql';
-import { CommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.entity';
 import { ICommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.interface';
 import { ITemplateBase } from '../template-base/template.base.interface';
 
@@ -9,5 +8,5 @@ export abstract class ICommunityGuidelinesTemplate extends ITemplateBase {
     nullable: false,
     description: 'The community guidelines.',
   })
-  guidelines!: CommunityGuidelines;
+  guidelines!: ICommunityGuidelines;
 }
