@@ -219,12 +219,12 @@ export class StorageAggregatorService {
     let url = '';
     switch (journeyInfo.type) {
       case SpaceType.OPPORTUNITY:
-        url = await this.urlGeneratorService.generateUrlForOpportunity(
+        url = await this.urlGeneratorService.generateUrlForSubsubspace(
           journeyInfo.id
         );
         break;
       case SpaceType.CHALLENGE:
-        url = await this.urlGeneratorService.generateUrlForChallenge(
+        url = await this.urlGeneratorService.generateUrlForSubspace(
           journeyInfo.id
         );
         break;

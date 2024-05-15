@@ -41,7 +41,7 @@ export class RolesResolverFields {
     @CurrentUser() agentInfo: AgentInfo,
     @Parent() roles: ContributorRoles
   ): Promise<RolesResultSpace[]> {
-    return await this.rolesService.getJourneyRolesForContributor(
+    return await this.rolesService.getSpaceRolesForContributor(
       roles,
       agentInfo
     );

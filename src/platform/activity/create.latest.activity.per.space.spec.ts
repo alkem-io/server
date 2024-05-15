@@ -142,7 +142,7 @@ describe('Test createLatestActivityPerSpaceMap function', () => {
     expect(
       latestActivitiesPerSpace.get('space1')?.otherUsersLatestActivity
     ).toEqual(Activity3);
-    console.log(latestActivitiesPerSpace.get('space1')?.mylatestActivity);
+    //console.log(latestActivitiesPerSpace.get('space1')?.mylatestActivity);
     expect(latestActivitiesPerSpace.get('space1')?.mylatestActivity).toEqual(
       Activity6
     );

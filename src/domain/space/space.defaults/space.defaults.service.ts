@@ -22,7 +22,6 @@ import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dt
 import { ISpaceSettings } from '../space.settings/space.settings.interface';
 import { spaceSettingsDefaults } from './definitions/space.settings';
 import { ICalloutGroup } from '@domain/collaboration/callout-groups/callout.group.interface';
-import { SpaceType } from '@common/enums/space.type';
 import { spaceCalloutGroups } from './definitions/space.callout.group';
 import { subspaceCalloutGroups } from './definitions/subspace.callout.group';
 import { Account } from '../account/account.entity';
@@ -37,6 +36,9 @@ import { spaceCommunityApplicationForm } from './definitions/space.community.app
 import { ProfileType } from '@common/enums';
 import { CalloutGroupName } from '@common/enums/callout.group.name';
 import { subspaceSettingsDefaults } from './definitions/subspace.settings';
+import { SpaceLevel } from '@common/enums/space.level';
+import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
+import { SpaceType } from '@common/enums/space.type';
 
 @Injectable()
 export class SpaceDefaultsService {
@@ -111,7 +113,7 @@ export class SpaceDefaultsService {
     return spaceDefaults;
   }
 
-  public async getDefaultsForAccountOrFail(
+  private async getDefaultsForAccountOrFail(
     accountID: string
   ): Promise<ISpaceDefaults | never> {
     let spaceDefaults: ISpaceDefaults | undefined = undefined;
@@ -140,6 +142,11 @@ export class SpaceDefaultsService {
         return subspaceCalloutGroups;
       case SpaceType.SPACE:
         return spaceCalloutGroups;
+      default:
+        throw new EntityNotInitializedException(
+          `Invalid space type: ${spaceType}`,
+          LogContext.ROLES
+        );
     }
   }
 
@@ -153,43 +160,50 @@ export class SpaceDefaultsService {
     }
   }
 
-  public getCommunityPolicy(spaceType: SpaceType): ICommunityPolicyDefinition {
-    switch (spaceType) {
-      case SpaceType.CHALLENGE:
-      case SpaceType.OPPORTUNITY:
+  public getCommunityPolicy(
+    spaceLevel: SpaceLevel
+  ): ICommunityPolicyDefinition {
+    switch (spaceLevel) {
+      case SpaceLevel.CHALLENGE:
+      case SpaceLevel.OPPORTUNITY:
         return subspaceCommunityPolicy;
-      case SpaceType.SPACE:
+      case SpaceLevel.SPACE:
         return spaceCommunityPolicy;
+      default:
+        throw new EntityNotInitializedException(
+          `Invalid space level: ${spaceLevel}`,
+          LogContext.ROLES
+        );
     }
   }
 
-  public getProfileType(spaceType: SpaceType): ProfileType {
-    switch (spaceType) {
-      case SpaceType.CHALLENGE:
+  public getProfileType(spaceLevel: SpaceLevel): ProfileType {
+    switch (spaceLevel) {
+      case SpaceLevel.CHALLENGE:
         return ProfileType.CHALLENGE;
-      case SpaceType.OPPORTUNITY:
+      case SpaceLevel.OPPORTUNITY:
         return ProfileType.OPPORTUNITY;
-      case SpaceType.SPACE:
+      case SpaceLevel.SPACE:
         return ProfileType.SPACE;
     }
   }
 
-  public getCommunityApplicationForm(spaceType: SpaceType): CreateFormInput {
-    switch (spaceType) {
-      case SpaceType.CHALLENGE:
-      case SpaceType.OPPORTUNITY:
+  public getCommunityApplicationForm(spaceLevel: SpaceLevel): CreateFormInput {
+    switch (spaceLevel) {
+      case SpaceLevel.CHALLENGE:
+      case SpaceLevel.OPPORTUNITY:
         return subspceCommunityApplicationForm;
-      case SpaceType.SPACE:
+      case SpaceLevel.SPACE:
         return spaceCommunityApplicationForm;
     }
   }
 
-  public getDefaultCallouts(spaceType: SpaceType): CreateCalloutInput[] {
-    switch (spaceType) {
-      case SpaceType.CHALLENGE:
-      case SpaceType.OPPORTUNITY:
+  public getDefaultCallouts(spaceLevel: SpaceLevel): CreateCalloutInput[] {
+    switch (spaceLevel) {
+      case SpaceLevel.CHALLENGE:
+      case SpaceLevel.OPPORTUNITY:
         return subspaceDefaultCallouts;
-      case SpaceType.SPACE:
+      case SpaceLevel.SPACE:
         return spaceDefaultCallouts;
     }
   }
@@ -200,12 +214,12 @@ export class SpaceDefaultsService {
     return spaceDefaults.innovationFlowTemplate;
   }
 
-  public getDefaultSpaceSettings(spaceType: SpaceType): ISpaceSettings {
-    switch (spaceType) {
-      case SpaceType.CHALLENGE:
-      case SpaceType.OPPORTUNITY:
+  public getDefaultSpaceSettings(spaceLevel: SpaceLevel): ISpaceSettings {
+    switch (spaceLevel) {
+      case SpaceLevel.CHALLENGE:
+      case SpaceLevel.OPPORTUNITY:
         return subspaceSettingsDefaults;
-      case SpaceType.SPACE:
+      case SpaceLevel.SPACE:
         return spaceSettingsDefaults;
     }
   }
