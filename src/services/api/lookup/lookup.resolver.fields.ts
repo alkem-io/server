@@ -84,17 +84,8 @@ export class LookupResolverFields {
     nullable: true,
     description: 'Lookup the specified Space',
   })
-  async space(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('ID', { type: () => UUID }) id: string
-  ): Promise<ISpace> {
+  async space(@Args('ID', { type: () => UUID }) id: string): Promise<ISpace> {
     const space = await this.spaceService.getSpaceOrFail(id);
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      space.authorization,
-      AuthorizationPrivilege.READ,
-      `lookup Space: ${space.id}`
-    );
 
     return space;
   }
