@@ -21,7 +21,7 @@ import { ProfileService } from '@domain/common/profile/profile.service';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { VisualType } from '@common/enums/visual.type';
 import { ProfileType } from '@common/enums/profile.type';
-import { VirtualPersonaEngine } from '@common/enums/virtual.persona.engine';
+import { VirtualContributorEngine } from '@common/enums/virtual.persona.engine';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 
 @Injectable()
@@ -193,14 +193,14 @@ export class VirtualPersonaService {
 
   public async resetUserHistory(agentInfo: AgentInfo): Promise<boolean> {
     return this.virtualPersonaEngineAdapter.sendReset({
-      engine: VirtualPersonaEngine.ALKEMIO_DIGILEEFOMGEVING,
+      engine: VirtualContributorEngine.EXPERT,
       userId: agentInfo.userID,
     });
   }
 
   public async ingest(agentInfo: AgentInfo): Promise<boolean> {
     return this.virtualPersonaEngineAdapter.sendIngest({
-      engine: VirtualPersonaEngine.ALKEMIO_DIGILEEFOMGEVING,
+      engine: VirtualContributorEngine.EXPERT,
       userId: agentInfo.userID,
     });
   }
