@@ -110,8 +110,14 @@ export class MeResolverFields {
         'The number of Journeys to return; if omitted return latest 20 active Journeys.',
       nullable: true,
     })
-    limit: number
+    limit: number,
+    @Args('showOnlyMyCreatedSpaces', { type: () => Boolean, nullable: true })
+    showOnlyMyCreatedSpaces: boolean
   ): Promise<MySpaceResults[]> {
-    return this.meService.getMySpaces(agentInfo, limit);
+    return this.meService.getMySpaces(
+      agentInfo,
+      limit,
+      showOnlyMyCreatedSpaces
+    );
   }
 }
