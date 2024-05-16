@@ -8,6 +8,7 @@ import { TemplateBaseModule } from '../template-base/template.base.module';
 import { CommunityGuidelinesTemplate } from './community.guidelines.template.entity';
 import { CommunityGuidelinesTemplateService } from './community.guidelines.template.service';
 import { CommunityGuidelinesTemplateAuthorizationService } from './community.guidelines.template.service.authorization';
+import { CommunityGuidelinesTemplateResolverFields } from '@domain/template/community-guidelines-template/community.guidelines.template.resolver.fields';
 
 @Module({
   imports: [
@@ -21,10 +22,12 @@ import { CommunityGuidelinesTemplateAuthorizationService } from './community.gui
   providers: [
     CommunityGuidelinesTemplateService,
     CommunityGuidelinesTemplateAuthorizationService,
+    CommunityGuidelinesTemplateResolverFields,
   ],
   exports: [
     CommunityGuidelinesTemplateService,
     CommunityGuidelinesTemplateAuthorizationService,
+    CommunityGuidelinesTemplateResolverFields,
   ],
 })
 export class CommunityGuidelinesTemplateModule {}
