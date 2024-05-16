@@ -814,7 +814,7 @@ export class SpaceService {
       subspaceData.nameID,
       space.account.id
     );
-    if (!space.storageAggregator || !space.account) {
+    if (!space.storageAggregator || !space.account || !space.community) {
       throw new EntityNotFoundException(
         `Unable to retrieve entities on space for creating subspace: ${space.id}`,
         LogContext.SPACES
@@ -831,7 +831,19 @@ export class SpaceService {
     );
 
     const savedSubspace = await this.addSubspaceToSpace(space, subspace);
-    await this.assignUserToRoles(subspace, agentInfo);
+
+    // Before assigning roles in the subspace check that the user is a member
+    if (agentInfo) {
+      const agent = await this.agentService.getAgentOrFail(agentInfo?.agentID);
+      const isMember = await this.communityService.isMember(
+        agent,
+        space.community
+      );
+      if (isMember) {
+        await this.assignUserToRoles(subspace, agentInfo);
+      }
+    }
+
     return savedSubspace;
   }
 
