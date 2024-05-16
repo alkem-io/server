@@ -843,6 +843,7 @@ export class SpaceService {
         await this.assignUserToRoles(subspace, agentInfo);
       }
     }
+
     return savedSubspace;
   }
 
