@@ -63,17 +63,37 @@ export class CommunityInvitationLifecycleOptionsProvider {
           const invitation = await this.invitationService.getInvitationOrFail(
             event.parentID,
             {
-              relations: { community: true },
+              relations: {
+                community: {
+                  parentCommunity: true,
+                },
+              },
             }
           );
           const userID = invitation.invitedUser;
           const community = invitation.community;
-          if (!userID || !community)
+          if (!userID || !community) {
             throw new EntityNotInitializedException(
-              `Lifecycle not initialized on Application: ${invitation.id}`,
+              `Lifecycle not initialized on Invitation: ${invitation.id}`,
               LogContext.COMMUNITY
             );
+          }
 
+          if (invitation.invitedToParent) {
+            if (!community.parentCommunity) {
+              throw new EntityNotInitializedException(
+                `Unable to load parent community when flag to add is set: ${invitation.id}`,
+                LogContext.COMMUNITY
+              );
+            }
+            await this.communityService.assignUserToRole(
+              community.parentCommunity,
+              userID,
+              CommunityRole.MEMBER,
+              event.agentInfo,
+              true
+            );
+          }
           await this.communityService.assignUserToRole(
             community,
             userID,

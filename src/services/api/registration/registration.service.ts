@@ -129,11 +129,13 @@ export class RegistrationService {
         invitedUser: user.id,
         communityID: community.id,
         createdBy: externalInvitation.createdBy,
+        invitedToParent: externalInvitation.invitedToParent,
       };
       const invitation =
         await this.communityService.createInvitationExistingUser(
           invitationInput
         );
+      invitation.invitedToParent = externalInvitation.invitedToParent;
       await this.invitationAuthorizationService.applyAuthorizationPolicy(
         invitation,
         community.authorization

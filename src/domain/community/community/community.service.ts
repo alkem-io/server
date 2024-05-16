@@ -45,7 +45,7 @@ import { UpdateFormInput } from '@domain/common/form/dto/form.dto.update';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 import { InvitationService } from '../invitation/invitation.service';
 import { IInvitation } from '../invitation/invitation.interface';
-import { CreateInvitationExternalUserOnCommunityInput } from './dto/community.dto.invite.external.user';
+import { CreateInvitationUserByEmailOnCommunityInput } from './dto/community.dto.invite.external.user';
 import { IInvitationExternal } from '../invitation.external';
 import { InvitationExternalService } from '../invitation.external/invitation.external.service';
 import { CreateInvitationExternalInput } from '../invitation.external/dto/invitation.external.dto.create';
@@ -1102,7 +1102,7 @@ export class CommunityService {
   }
 
   async createInvitationExternalUser(
-    invitationData: CreateInvitationExternalUserOnCommunityInput,
+    invitationData: CreateInvitationUserByEmailOnCommunityInput,
     agentInfo: AgentInfo
   ): Promise<IInvitationExternal> {
     await this.validateInvitationToExternalUser(
