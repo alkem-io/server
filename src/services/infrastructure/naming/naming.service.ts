@@ -23,6 +23,8 @@ import { Collaboration } from '@domain/collaboration/collaboration';
 import { SpaceLevel } from '@common/enums/space.level';
 import { User } from '@domain/community/user/user.entity';
 import { Communication } from '@domain/communication/communication/communication.entity';
+import { Calendar } from '@domain/timeline/calendar/calendar.entity';
+import { Library } from '@library/library/library.entity';
 
 export class NamingService {
   replaceSpecialCharacters = require('replace-special-characters');
@@ -89,6 +91,56 @@ export class NamingService {
     });
     const nameIDs =
       collaboration?.callouts?.map(callout => callout.nameID) || [];
+    return nameIDs;
+  }
+
+  public async getReservedNameIDsInCalendar(
+    calendarID: string
+  ): Promise<string[]> {
+    const calendar = await this.entityManager.findOne(Calendar, {
+      where: {
+        id: calendarID,
+      },
+      relations: {
+        events: true,
+      },
+      select: {
+        events: {
+          nameID: true,
+        },
+      },
+    });
+    const nameIDs = calendar?.events?.map(event => event.nameID) || [];
+    return nameIDs;
+  }
+
+  public async getReservedNameIDsInLibrary(
+    libraryID: string
+  ): Promise<string[]> {
+    const library = await this.entityManager.findOne(Library, {
+      where: {
+        id: libraryID,
+      },
+      relations: {
+        innovationPacks: true,
+      },
+      select: {
+        innovationPacks: {
+          nameID: true,
+        },
+      },
+    });
+    const nameIDs = library?.innovationPacks?.map(pack => pack.nameID) || [];
+    return nameIDs;
+  }
+
+  public async getReservedNameIDsInHubs(): Promise<string[]> {
+    const hubs = await this.entityManager.find(InnovationHub, {
+      select: {
+        nameID: true,
+      },
+    });
+    const nameIDs = hubs.map(hub => hub.nameID);
     return nameIDs;
   }
 
@@ -193,27 +245,12 @@ export class NamingService {
     return true;
   }
 
-  async isInnovationHubNameIdAvailable(nameID: string): Promise<boolean> {
-    const innovationHubsCount = await this.innovationHubRepository.countBy({
-      nameID: nameID,
-    });
-    if (innovationHubsCount > 0) return false;
-    return true;
-  }
-
-  public createNameID(base: string, useRandomSuffix = true): string {
-    const NAMEID_SUFFIX_LENGTH = 5;
+  public createNameID(base: string): string {
     const nameIDExcludedCharacters = /[^a-zA-Z0-9-]/g;
-    let randomSuffix = '';
-    if (useRandomSuffix) {
-      const randomNumber = Math.floor(
-        Math.random() * Math.pow(10, NAMEID_SUFFIX_LENGTH - 1)
-      ).toString();
-      randomSuffix = `-${randomNumber}`;
-    }
-    const baseMaxLength = base.slice(0, NAMEID_LENGTH - NAMEID_SUFFIX_LENGTH);
+
+    const baseMaxLength = base.slice(0, NAMEID_LENGTH);
     // replace spaces + trim to NAMEID_LENGTH characters
-    const nameID = `${baseMaxLength}${randomSuffix}`.replace(/\s/g, '');
+    const nameID = `${baseMaxLength}`.replace(/\s/g, '');
     // replace characters with umlouts etc to normal characters
     const nameIDNoSpecialCharacters: string =
       this.replaceSpecialCharacters(nameID);
@@ -228,11 +265,11 @@ export class NamingService {
     base: string,
     reservedNameIDs: string[]
   ): string {
-    let result = this.createNameID(base, false);
+    let result = this.createNameID(base);
     let count = 1;
     while (reservedNameIDs.includes(result)) {
       // If the nameID is already reserved, try again with a new random suffix starting from 1 but with two digits
-      result = this.createNameID(`${base}-${count.toString()}`, false);
+      result = this.createNameID(`${base}-${count.toString()}`);
       count++;
     }
     return result;

@@ -777,13 +777,6 @@ export class SpaceService {
     return sortedSubspaces;
   }
 
-  async validateSubspaceNameIdOrFail(
-    proposedNameID: string,
-    accountID: string
-  ) {
-    await this.isNameAvailableInAccountOrFail(proposedNameID, accountID);
-  }
-
   async createSubspace(
     subspaceData: CreateSubspaceInput,
     agentInfo?: AgentInfo
@@ -796,20 +789,27 @@ export class SpaceService {
         community: true,
       },
     });
-    if (!subspaceData.nameID) {
-      subspaceData.nameID = this.namingService.createNameID(
-        subspaceData.profileData.displayName
-      );
-    }
-    await this.validateSubspaceNameIdOrFail(
-      subspaceData.nameID,
-      space.account.id
-    );
-    if (!space.storageAggregator || !space.account || !space.community) {
+    if (!space.account || !space.storageAggregator || !space.community) {
       throw new EntityNotFoundException(
         `Unable to retrieve entities on space for creating subspace: ${space.id}`,
         LogContext.SPACES
       );
+    }
+    const reservedNameIDs =
+      await this.namingService.getReservedNameIDsInAccount(space.account.id);
+    if (!subspaceData.nameID) {
+      subspaceData.nameID =
+        this.namingService.createNameIdAvoidingReservedNameIDs(
+          subspaceData.profileData.displayName,
+          reservedNameIDs
+        );
+    } else {
+      if (reservedNameIDs.includes(subspaceData.nameID)) {
+        throw new ValidationException(
+          `Unable to create entity: the provided nameID is already taken: ${subspaceData.nameID}`,
+          LogContext.SPACES
+        );
+      }
     }
 
     // Update the subspace data being passed in to set the storage aggregator to use
@@ -963,20 +963,6 @@ export class SpaceService {
     await this.authorizationPolicyService.delete(space.authorization);
 
     await this.storageAggregatorService.delete(space.storageAggregator.id);
-  }
-
-  public async isNameAvailableInAccountOrFail(
-    nameID: string,
-    accountID: string
-  ) {
-    const reservedNameIDs =
-      await this.namingService.getReservedNameIDsInAccount(accountID);
-    if (reservedNameIDs.includes(nameID)) {
-      throw new ValidationException(
-        `Unable to create entity: the provided nameID is already taken: ${nameID}`,
-        LogContext.SPACES
-      );
-    }
   }
 
   async getSubspaceInAccount(
