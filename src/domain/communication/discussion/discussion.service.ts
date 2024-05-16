@@ -1,5 +1,6 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext, ProfileType } from '@common/enums';
@@ -10,9 +11,7 @@ import { DeleteDiscussionInput } from './dto/discussion.dto.delete';
 import { RoomService } from '../room/room.service';
 import { CommunicationCreateDiscussionInput } from '../communication/dto/communication.dto.create.discussion';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ProfileService } from '@domain/common/profile/profile.service';
-import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 import { IRoom } from '../room/room.interface';
 import { RoomType } from '@common/enums/room.type';
@@ -27,7 +26,6 @@ export class DiscussionService {
     private discussionRepository: Repository<Discussion>,
     private profileService: ProfileService,
     private roomService: RoomService,
-    private namingService: NamingService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -38,14 +36,7 @@ export class DiscussionService {
     roomType: RoomType,
     storageAggregator: IStorageAggregator
   ): Promise<IDiscussion> {
-    const discussionNameID = this.namingService.createNameID(
-      `${discussionData.profile.displayName}`
-    );
-    const discussionCreationData = {
-      ...discussionData,
-      nameID: discussionNameID,
-    };
-    const discussion: IDiscussion = Discussion.create(discussionCreationData);
+    const discussion: IDiscussion = Discussion.create(discussionData);
     discussion.profile = await this.profileService.createProfile(
       discussionData.profile,
       ProfileType.DISCUSSION,

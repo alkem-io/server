@@ -95,31 +95,17 @@ export class SpaceService {
     return await this.initialise(space, spaceData, account, agentInfo);
   }
 
-  async validateSpaceData(spaceData: CreateSpaceInput) {
-    if (!(await this.isNameIdAvailable(spaceData.nameID)))
-      throw new ValidationException(
-        `Unable to create Space: the provided nameID is already taken: ${spaceData.nameID}`,
-        LogContext.SPACES
-      );
-  }
-
   public async initialise(
     space: ISpace,
     spaceData: CreateSpaceInput,
     account: IAccount,
     agentInfo: AgentInfo | undefined
   ): Promise<ISpace> {
-    if (!space.nameID) {
-      space.nameID = this.namingService.createNameID(
-        spaceData.profileData.displayName
-      );
-    }
     space.authorization = new AuthorizationPolicy();
     space.account = account;
     space.settingsStr = this.spaceSettingsService.serializeSettings(
       this.spaceDefaultsService.getDefaultSpaceSettings(spaceData.level)
     );
-    await this.isNameAvailableInAccountOrFail(spaceData.nameID, account.id);
 
     const parentStorageAggregator = spaceData.storageAggregatorParent;
     const storageAggregator =
@@ -810,6 +796,11 @@ export class SpaceService {
         community: true,
       },
     });
+    if (!subspaceData.nameID) {
+      subspaceData.nameID = this.namingService.createNameID(
+        subspaceData.profileData.displayName
+      );
+    }
     await this.validateSubspaceNameIdOrFail(
       subspaceData.nameID,
       space.account.id
@@ -916,17 +907,6 @@ export class SpaceService {
       },
     });
 
-    if (spaceData.nameID) {
-      if (spaceData.nameID !== space.nameID) {
-        // updating the nameID, check new value is allowed
-        await this.isNameAvailableInAccountOrFail(
-          spaceData.nameID,
-          space.account.id
-        );
-        space.nameID = spaceData.nameID;
-      }
-    }
-
     if (spaceData.context) {
       if (!space.context)
         throw new EntityNotInitializedException(
@@ -989,13 +969,14 @@ export class SpaceService {
     nameID: string,
     accountID: string
   ) {
-    if (
-      !(await this.namingService.isNameIdAvailableInAccount(nameID, accountID))
-    )
+    const reservedNameIDs =
+      await this.namingService.getReservedNameIDsInAccount(accountID);
+    if (reservedNameIDs.includes(nameID)) {
       throw new ValidationException(
         `Unable to create entity: the provided nameID is already taken: ${nameID}`,
         LogContext.SPACES
       );
+    }
   }
 
   async getSubspaceInAccount(

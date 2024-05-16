@@ -1,6 +1,6 @@
 import { EntityManager, Not, Repository } from 'typeorm';
 import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
-import { NameID, UUID } from '@domain/common/scalars';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Post } from '@domain/collaboration/post/post.entity';
 import { LogContext } from '@common/enums';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
@@ -12,103 +12,132 @@ import { IPost } from '@domain/collaboration/post/post.interface';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { CalendarEvent, ICalendarEvent } from '@domain/timeline/event';
 import { Inject, LoggerService } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Discussion } from '@domain/communication/discussion/discussion.entity';
 import { InnovationHub } from '@domain/innovation-hub/innovation.hub.entity';
 import { IDiscussion } from '@domain/communication/discussion/discussion.interface';
 import { ICallout } from '@domain/collaboration/callout';
 import { NAMEID_LENGTH } from '@common/constants';
-import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
 import { Space } from '@domain/space/space/space.entity';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
+import { Collaboration } from '@domain/collaboration/collaboration';
+import { SpaceLevel } from '@common/enums/space.level';
+import { User } from '@domain/community/user/user.entity';
+import { Communication } from '@domain/communication/communication/communication.entity';
 
 export class NamingService {
   replaceSpecialCharacters = require('replace-special-characters');
 
   constructor(
-    @InjectRepository(Space)
-    private spaceRepository: Repository<Space>,
     @InjectRepository(Callout)
     private calloutRepository: Repository<Callout>,
     @InjectRepository(Discussion)
     private discussionRepository: Repository<Discussion>,
     @InjectRepository(InnovationHub)
     private innovationHubRepository: Repository<InnovationHub>,
-    @InjectRepository(CalloutContribution)
-    private contributionRepository: Repository<CalloutContribution>,
     @InjectEntityManager('default')
     private entityManager: EntityManager,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async isNameIdAvailableInAccount(
-    nameID: string,
+  public async getReservedNameIDsInAccount(
     accountID: string
-  ): Promise<boolean> {
-    if (!nameID) return true;
-
-    const spaceCount = await this.spaceRepository.countBy({
-      nameID: nameID,
-      account: {
-        id: accountID,
+  ): Promise<string[]> {
+    const subspaces = await this.entityManager.find(Space, {
+      where: {
+        account: {
+          id: accountID,
+        },
+        level: Not(SpaceLevel.SPACE),
       },
-      level: Not(0),
+      select: {
+        nameID: true,
+      },
     });
-    if (spaceCount > 0) return false;
-    return true;
+    const nameIDs = subspaces.map(space => space.nameID);
+    return nameIDs;
   }
 
-  async isPostNameIdAvailableInCallout(
-    nameID: string,
-    calloutID: string
-  ): Promise<boolean> {
-    const query = this.contributionRepository
-      .createQueryBuilder('callout_contribution')
-      .leftJoinAndSelect('callout_contribution.callout', 'callout')
-      .leftJoinAndSelect('callout_contribution.post', 'post')
-      .where('callout.id = :id')
-      .andWhere('post.nameID= :nameID')
-      .setParameters({ id: `${calloutID}`, nameID: `${nameID}` });
-    const postWithNameID = await query.getOne();
-    if (postWithNameID) {
-      return false;
-    }
-
-    return true;
-  }
-
-  async isWhiteboardNameIdAvailableInCallout(
-    nameID: string,
-    calloutID: string
-  ): Promise<boolean> {
-    const query = this.contributionRepository
-      .createQueryBuilder('callout_contribution')
-      .leftJoinAndSelect('callout_contribution.whiteboard', 'whiteboard')
-      .leftJoinAndSelect('callout_contribution.callout', 'callout')
-      .where('callout.id = :id')
-      .andWhere('whiteboard.nameID= :nameID')
-      .setParameters({ id: `${calloutID}`, nameID: `${nameID}` });
-    const whiteboardWithNameID = await query.getOne();
-    if (whiteboardWithNameID) {
-      return false;
-    }
-
-    return true;
+  public async getReservedNameIDsInCommunication(
+    communicationID: string
+  ): Promise<string[]> {
+    const communication = await this.entityManager.findOne(Communication, {
+      where: {
+        id: communicationID,
+      },
+      select: {
+        discussions: {
+          nameID: true,
+        },
+      },
+    });
+    const nameIDs =
+      communication?.discussions?.map(discussion => discussion.nameID) || [];
+    return nameIDs;
   }
 
   public async getReservedNameIDsInCollaboration(
     collaborationID: string
   ): Promise<string[]> {
-    const callouts = await this.entityManager.find(Callout, {
+    const collaboration = await this.entityManager.findOne(Collaboration, {
       where: {
-        collaboration: {
-          id: collaborationID,
+        id: collaborationID,
+      },
+      relations: {
+        callouts: true,
+      },
+      select: ['callouts'],
+    });
+    const nameIDs =
+      collaboration?.callouts?.map(callout => callout.nameID) || [];
+    return nameIDs;
+  }
+
+  public async getReservedNameIDsInUsers(): Promise<string[]> {
+    const users = await this.entityManager.find(User, {
+      select: {
+        nameID: true,
+      },
+    });
+    const nameIDs = users.map(user => user.nameID);
+    return nameIDs;
+  }
+
+  public async getReservedNameIDsInCalloutContributions(
+    calloutID: string
+  ): Promise<string[]> {
+    const callout = await this.entityManager.findOne(Callout, {
+      where: {
+        id: calloutID,
+      },
+      relations: {
+        contributions: {
+          whiteboard: true,
+          post: true,
+          link: true,
         },
       },
-      select: ['nameID'],
+      select: {
+        contributions: {
+          whiteboard: {
+            nameID: true,
+          },
+          post: {
+            nameID: true,
+          },
+        },
+      },
     });
-    const nameIDs = callouts.map(callout => callout.nameID);
-    return nameIDs;
+    const contributions = callout?.contributions || [];
+    const reservedNameIDs: string[] = [];
+    for (const contribution of contributions) {
+      if (contribution.whiteboard) {
+        reservedNameIDs.push(contribution.whiteboard.nameID);
+      }
+      if (contribution.post) {
+        reservedNameIDs.push(contribution.post.nameID);
+      }
+    }
+    return reservedNameIDs;
   }
 
   async isCalloutDisplayNameAvailableInCollaboration(
@@ -172,17 +201,7 @@ export class NamingService {
     return true;
   }
 
-  isValidNameID(nameID: string): boolean {
-    if (nameID.length > NameID.MAX_LENGTH) return false;
-    return NameID.REGEX.test(nameID);
-  }
-
-  isValidUUID(uuid: string): boolean {
-    if (uuid.length != UUID.LENGTH) return false;
-    return UUID.REGEX.test(uuid);
-  }
-
-  createNameID(base: string, useRandomSuffix = true): string {
+  public createNameID(base: string, useRandomSuffix = true): string {
     const NAMEID_SUFFIX_LENGTH = 5;
     const nameIDExcludedCharacters = /[^a-zA-Z0-9-]/g;
     let randomSuffix = '';
@@ -205,7 +224,7 @@ export class NamingService {
       .slice(0, NAMEID_LENGTH);
   }
 
-  createNameIdAvoidingReservedNameIDs(
+  public createNameIdAvoidingReservedNameIDs(
     base: string,
     reservedNameIDs: string[]
   ): string {
