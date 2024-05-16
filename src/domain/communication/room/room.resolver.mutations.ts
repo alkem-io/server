@@ -52,7 +52,8 @@ export class RoomResolverMutations {
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<IMessage> {
     const room = await this.roomService.getRoomOrFail(messageData.roomID);
-    await this.authorizationService.grantAccessOrFail(
+
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       room.authorization,
       AuthorizationPrivilege.CREATE_MESSAGE,

@@ -2,12 +2,8 @@ import { LogContext, ProfileType } from '@common/enums';
 import { ConfigurationTypes } from '@common/enums/configuration.type';
 import { EntityNotFoundException } from '@common/exceptions';
 import { IProfile } from '@domain/common/profile/profile.interface';
-import {
-  CACHE_MANAGER,
-  Inject,
-  Injectable,
-  LoggerService,
-} from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { ConfigService } from '@nestjs/config';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -130,7 +126,7 @@ export class UrlGeneratorService {
   }
 
   private generateAdminUrlForSpace(spaceNameID: string): string {
-    return `${this.endpoint_cluster}/admin/spaces/${spaceNameID}`;
+    return `${this.endpoint_cluster}/${spaceNameID}/settings`;
   }
 
   async generateUrlForProfile(profile: IProfile): Promise<string> {
@@ -383,7 +379,7 @@ export class UrlGeneratorService {
 
     if (space) {
       // TODO: this later should link fully to the actual template by nameID when the client properly picks that up
-      return `${this.endpoint_cluster}/admin/spaces/${space.nameID}/templates`;
+      return `${this.endpoint_cluster}/${space.nameID}/settings/templates`;
     }
     const innovationPackInfo = await this.getNameableEntityInfoOrFail(
       'innovation_pack',

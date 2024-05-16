@@ -8,7 +8,7 @@ import {
   MockHttpService,
   MockWinstonProvider,
 } from '@test/mocks';
-import { CACHE_MANAGER } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { asyncToThrow } from '@test/utils';
 import {
   GeoServiceErrorException,

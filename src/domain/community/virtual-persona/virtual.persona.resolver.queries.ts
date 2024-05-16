@@ -42,6 +42,6 @@ export class VirtualPersonaResolverQueries {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('chatData') chatData: VirtualPersonaQuestionInput
   ): Promise<IVirtualPersonaQuestionResult> {
-    return this.virtualPersonaService.askQuestion(chatData, agentInfo);
+    return this.virtualPersonaService.askQuestion(chatData, agentInfo, '');
   }
 }

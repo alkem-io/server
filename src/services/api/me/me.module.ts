@@ -10,6 +10,7 @@ import { SpaceModule } from '@domain/space/space/space.module';
 import { RolesModule } from '../roles/roles.module';
 import { ActivityLogModule } from '../activity-log/activity.log.module';
 import { ActivityModule } from '@platform/activity/activity.module';
+import { CommunityModule } from '@domain/community/community/community.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { ActivityModule } from '@platform/activity/activity.module';
     RolesModule,
     ActivityLogModule,
     ActivityModule,
+    CommunityModule,
   ],
   providers: [MeService, MeResolverQueries, MeResolverFields],
   exports: [MeService],
