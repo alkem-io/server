@@ -11,6 +11,7 @@ import { ICommunityGuidelinesTemplate } from '@domain/template/community-guideli
 import { CommunityGuidelinesService } from '@domain/community/community-guidelines/community.guidelines.service';
 import { CreateCommunityGuidelinesInput } from '@domain/community/community-guidelines';
 import { EntityNotFoundException } from '@common/exceptions';
+import { ICommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.interface';
 
 @Injectable()
 export class CommunityGuidelinesTemplateService {
@@ -114,6 +115,29 @@ export class CommunityGuidelinesTemplateService {
     );
     result.id = templateId;
     return result;
+  }
+
+  public async getCommunityGuidelines(
+    templateID: string
+  ): Promise<ICommunityGuidelines> {
+    const template =
+      await this.communityGuidelinesTemplateRepository.findOneOrFail({
+        where: { id: templateID },
+        relations: { guidelines: true },
+      });
+
+    if (!template?.guidelines) {
+      throw new EntityNotFoundException(
+        'Community Guidelines not found',
+        LogContext.TEMPLATES,
+        {
+          cause: 'Community Guidelines relation not found',
+          templateId: template.id,
+        }
+      );
+    }
+
+    return template.guidelines;
   }
 
   async getCountInTemplatesSet(templatesSetID: string): Promise<number> {
