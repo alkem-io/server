@@ -96,22 +96,19 @@ export class NamingService {
     return true;
   }
 
-  async isCalloutNameIdAvailableInCollaboration(
-    nameID: string,
+  public async getReservedNameIDsInCollaboration(
     collaborationID: string
-  ): Promise<boolean> {
-    const query = this.calloutRepository
-      .createQueryBuilder('callout')
-      .leftJoinAndSelect('callout.collaboration', 'collaboration')
-      .where('collaboration.id = :id')
-      .andWhere('callout.nameID= :nameID')
-      .setParameters({ id: `${collaborationID}`, nameID: `${nameID}` });
-    const calloutsWithNameID = await query.getOne();
-    if (calloutsWithNameID) {
-      return false;
-    }
-
-    return true;
+  ): Promise<string[]> {
+    const callouts = await this.entityManager.find(Callout, {
+      where: {
+        collaboration: {
+          id: collaborationID,
+        },
+      },
+      select: ['nameID'],
+    });
+    const nameIDs = callouts.map(callout => callout.nameID);
+    return nameIDs;
   }
 
   async isCalloutDisplayNameAvailableInCollaboration(
@@ -206,6 +203,20 @@ export class NamingService {
       .replace(nameIDExcludedCharacters, '')
       .toLowerCase()
       .slice(0, NAMEID_LENGTH);
+  }
+
+  createNameIdAvoidingReservedNameIDs(
+    base: string,
+    reservedNameIDs: string[]
+  ): string {
+    let result = this.createNameID(base, false);
+    let count = 1;
+    while (reservedNameIDs.includes(result)) {
+      // If the nameID is already reserved, try again with a new random suffix starting from 1 but with two digits
+      result = this.createNameID(`${base}-${count.toString()}`, false);
+      count++;
+    }
+    return result;
   }
 
   async getCommunityPolicyWithSettingsForCollaboration(
