@@ -1084,7 +1084,8 @@ export class SpaceService {
   }
 
   public async getSpaceForCollaborationOrFail(
-    collaborationID: string
+    collaborationID: string,
+    options?: FindOneOptions<Space>
   ): Promise<ISpace> {
     const space = await this.spaceRepository.findOne({
       where: {
@@ -1093,6 +1094,7 @@ export class SpaceService {
         },
       },
       relations: {
+        ...options?.relations,
         profile: true,
       },
     });
