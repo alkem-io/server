@@ -14,6 +14,8 @@ import { ActivityService } from '@platform/activity/activity.service';
 import { LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { sortSpacesByActivity } from '@domain/space/space/sort.spaces.by.activity';
+import { CommunityRole } from '@common/enums/community.role';
+import { CommunityService } from '@domain/community/community/community.service';
 
 @Injectable()
 export class MeService {
@@ -22,6 +24,7 @@ export class MeService {
     private rolesService: RolesService,
     private activityLogService: ActivityLogService,
     private activityService: ActivityService,
+    private communityService: CommunityService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -73,7 +76,8 @@ export class MeService {
 
   public async getMySpaces(
     agentInfo: AgentInfo,
-    limit = 20
+    limit = 20,
+    showOnlyMyCreatedSpaces = false
   ): Promise<MySpaceResults[]> {
     const rawActivities = await this.activityService.getMySpacesActivity(
       agentInfo.userID,
@@ -93,10 +97,35 @@ export class MeService {
         );
         continue;
       }
-      mySpaceResults.push({
-        space: activityLog.space,
-        latestActivity: activityLog,
-      });
+      if (!showOnlyMyCreatedSpaces) {
+        mySpaceResults.push({
+          space: activityLog.space,
+          latestActivity: activityLog,
+        });
+      } else {
+        if (activityLog?.space) {
+          if (!activityLog?.space.community) {
+            this.logger.warn(
+              `Unable to process space entry ${activityLog?.space.id} because it does not have a community.`,
+              LogContext.ACTIVITY
+            );
+            continue;
+          }
+          const myRoles = await this.communityService.getCommunityRoles(
+            agentInfo,
+            activityLog.space.community
+          );
+          if (
+            myRoles.includes(CommunityRole.ADMIN) &&
+            activityLog.space.level === 0
+          ) {
+            mySpaceResults.push({
+              space: activityLog.space,
+              latestActivity: activityLog,
+            });
+          }
+        }
+      }
     }
 
     return mySpaceResults.slice(0, limit);
