@@ -1,6 +1,6 @@
 import { ConfigService } from '@nestjs/config';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { Configuration, IdentityApi, Session } from '@ory/kratos-client';
+import { Configuration, FrontendApi, IdentityApi, Session } from '@ory/kratos-client';
 import { ConfigurationTypes, LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { UserService } from '@domain/community/user/user.service';
@@ -12,14 +12,16 @@ import { getBearerToken } from './get.bearer.token';
 import { SessionExtendException } from '@common/exceptions/auth';
 
 import { AgentCacheService } from '@domain/agent/agent/agent.cache.service';
+import { getSession } from '@common/utils';
+
 @Injectable()
 export class AuthenticationService {
   private readonly kratosPublicUrlServer: string;
-  private readonly kratosAdminUrlServer: string;
   private readonly adminPasswordIdentifier: string;
   private readonly adminPassword: string;
   private readonly extendAfter: number;
-  private readonly kratosClient: IdentityApi;
+  private readonly kratosIdentityClient: IdentityApi;
+  private readonly kratosFrontEndClient: FrontendApi;
 
   constructor(
     private agentCacheService: AgentCacheService,
@@ -31,7 +33,7 @@ export class AuthenticationService {
     this.kratosPublicUrlServer = this.configService.get(
       ConfigurationTypes.IDENTITY
     ).authentication.providers.ory.kratos_public_base_url_server;
-    this.kratosAdminUrlServer = this.configService.get(
+    const kratosAdminUrlServer = this.configService.get(
       ConfigurationTypes.IDENTITY
     ).authentication.providers.ory.kratos_admin_base_url_server;
 
@@ -51,11 +53,36 @@ export class AuthenticationService {
       60 *
       1000;
 
-    this.kratosClient = new IdentityApi(
+    this.kratosIdentityClient = new IdentityApi(
       new Configuration({
-        basePath: this.kratosAdminUrlServer,
+        basePath: kratosAdminUrlServer,
       })
     );
+
+    this.kratosFrontEndClient = new FrontendApi(
+      new Configuration({
+        basePath: this.kratosPublicUrlServer,
+      })
+    );
+  }
+
+  async getAgentInfo(opts: {
+    cookie?: string;
+    authorization?: string;
+    token?: string;
+  }) {
+    try {
+      const session = await getSession(this.kratosFrontEndClient, opts);
+
+      if (!session.identity) {
+        return new AgentInfo();
+      }
+
+      const oryIdentity = session.identity as OryDefaultIdentitySchema;
+      return this.createAgentInfo(oryIdentity);
+    } catch (e: any) {
+      throw new Error(e?.message);
+    }
   }
 
   async createAgentInfo(
@@ -166,7 +193,7 @@ export class AuthenticationService {
     let newSession: Session;
 
     try {
-      const { data } = await this.kratosClient.extendSession(
+      const { data } = await this.kratosIdentityClient.extendSession(
         { id: sessionToBeExtended.id },
         { headers: { authorization: `Bearer ${bearerToken}` } }
       );

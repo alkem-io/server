@@ -1,6 +1,5 @@
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { AccessGrantedInputData } from '@services/auth/types';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication';
 import { WhiteboardService } from '@domain/common/whiteboard';
@@ -8,12 +7,15 @@ import { UserService } from '@domain/community/user/user.service';
 import { IVerifiedCredential } from '@domain/agent/verified-credential/verified.credential.interface';
 import { LogContext } from '@common/enums';
 import { EntityNotInitializedException } from '@common/exceptions';
+import { AuthenticationService } from '@core/authentication/authentication.service';
+import { AccessGrantedInputData, WhoInputData } from './types';
 
 @Injectable()
 export class AuthService {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService,
-    private readonly authService: AuthorizationService,
+    private readonly authorizationService: AuthorizationService,
+    private readonly authenticationService: AuthenticationService,
     private readonly whiteboardService: WhiteboardService,
     private readonly userService: UserService
   ) {}
@@ -48,7 +50,7 @@ export class AuthService {
         verifiedCredentials,
       } as AgentInfo;
 
-      return this.authService.isAccessGranted(
+      return this.authorizationService.isAccessGranted(
         agentInfo,
         whiteboard.authorization,
         data.privilege
@@ -57,5 +59,9 @@ export class AuthService {
       this.logger.error(e?.message, e?.stack, LogContext.AUTH);
       return false;
     }
+  }
+
+  public async who(data: WhoInputData): Promise<AgentInfo> {
+    return this.authenticationService.getAgentInfo(data);
   }
 }
