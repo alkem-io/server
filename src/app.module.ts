@@ -72,6 +72,7 @@ import { TaskGraphqlModule } from '@domain/task/task.module';
 import { ActivityFeedModule } from '@domain/activity-feed';
 import { AdminSearchIngestModule } from '@platform/admin/search/admin.search.ingest.module';
 import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
+import { WhiteboardIntegrationModule } from '@services/whiteboard-integration/whiteboard.integration.module';
 
 @Module({
   imports: [
@@ -258,6 +259,7 @@ import { VirtualContributorModule } from '@domain/community/virtual-contributor/
     AuthResetSubscriberModule,
     TaskGraphqlModule,
     ActivityFeedModule,
+    WhiteboardIntegrationModule,
   ],
   controllers: [AppController, SsiCredentialFlowController],
   providers: [
