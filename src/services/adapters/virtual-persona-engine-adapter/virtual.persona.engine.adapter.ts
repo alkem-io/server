@@ -14,7 +14,7 @@ import { LogContext } from '@common/enums/logging.context';
 import { VirtualPersonaEngineAdapterInputBase } from './dto/virtual.persona.engine.adapter.dto.base';
 import { VirtualPersonaEngineAdapterBaseResponse } from './dto/virtual.persona.engine.adapter.dto.base.response';
 import { IVirtualPersonaQuestionResult } from '@domain/community/virtual-persona/dto/virtual.persona.question.dto.result';
-import { VirtualPersonaEngine } from '@common/enums/virtual.persona.engine';
+import { VirtualContributorEngine } from '@common/enums/virtual.persona.engine';
 import { ChatGuidanceInput } from '@services/api/chat-guidance/dto/chat.guidance.dto.input';
 
 enum VirtualPersonaEventType {
@@ -46,7 +46,7 @@ export class VirtualPersonaEngineAdapter {
 
     try {
       switch (eventData.engine) {
-        case VirtualPersonaEngine.COMMUNITY_MANAGER:
+        case VirtualContributorEngine.COMMUNITY_MANAGER:
           const responseCommunityManager =
             this.virtualPersonaEngineCommunityManager.send<
               VirtualPersonaEngineAdapterQueryResponse,
@@ -54,7 +54,7 @@ export class VirtualPersonaEngineAdapter {
             >({ cmd: VirtualPersonaEventType.QUERY }, eventData);
           responseData = await firstValueFrom(responseCommunityManager);
           break;
-        case VirtualPersonaEngine.ALKEMIO_DIGILEEFOMGEVING:
+        case VirtualContributorEngine.EXPERT:
           const responseAlkemioDigileefomgeving =
             this.virtualPersonaEngineAlkemioDigileefomgeving.send<
               VirtualPersonaEngineAdapterQueryResponse,
@@ -62,7 +62,7 @@ export class VirtualPersonaEngineAdapter {
             >({ cmd: VirtualPersonaEventType.QUERY }, eventData);
           responseData = await firstValueFrom(responseAlkemioDigileefomgeving);
           break;
-        case VirtualPersonaEngine.GUIDANCE:
+        case VirtualContributorEngine.GUIDANCE:
           const responseChatGuidance =
             this.virtualPersonaEngineChatGuidance.send<
               VirtualPersonaEngineAdapterQueryResponse,

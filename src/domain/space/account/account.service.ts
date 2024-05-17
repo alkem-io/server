@@ -3,6 +3,7 @@ import {
   EntityNotFoundException,
   NotSupportedException,
   RelationshipNotFoundException,
+  ValidationException,
 } from '@common/exceptions';
 import { IOrganization } from '@domain/community/organization/organization.interface';
 import { OrganizationService } from '@domain/community/organization/organization.service';
@@ -27,6 +28,8 @@ import { UpdateAccountPlatformSettingsInput } from './dto/account.dto.update.pla
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { CreateAccountInput } from './dto/account.dto.create';
+import { NamingService } from '@services/infrastructure/naming/naming.service';
+import { CreateSpaceInput } from '../space/dto/space.dto.create';
 
 @Injectable()
 export class AccountService {
@@ -37,6 +40,7 @@ export class AccountService {
     private templatesSetService: TemplatesSetService,
     private spaceDefaultsService: SpaceDefaultsService,
     private licenseService: LicenseService,
+    private namingService: NamingService,
     @InjectRepository(Account)
     private accountRepository: Repository<Account>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -48,7 +52,7 @@ export class AccountService {
   ): Promise<IAccount> {
     // Before doing any creation check the space data!
     const spaceData = accountData.spaceData;
-    await this.spaceService.validateSpaceData(spaceData);
+    await this.validateSpaceData(spaceData);
 
     const account: IAccount = new Account();
     account.authorization = new AuthorizationPolicy();
@@ -89,6 +93,13 @@ export class AccountService {
     return savedAccount;
   }
 
+  async validateSpaceData(spaceData: CreateSpaceInput) {
+    if (!(await this.spaceService.isNameIdAvailable(spaceData.nameID)))
+      throw new ValidationException(
+        `Unable to create Space: the provided nameID is already taken: ${spaceData.nameID}`,
+        LogContext.SPACES
+      );
+  }
   async save(account: IAccount): Promise<IAccount> {
     return await this.accountRepository.save(account);
   }

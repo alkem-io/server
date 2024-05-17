@@ -3,7 +3,7 @@ import { MaxLength } from 'class-validator';
 import { LONG_TEXT_LENGTH, SMALL_TEXT_LENGTH } from '@src/common/constants';
 import JSON from 'graphql-type-json';
 import { CreateNameableInput } from '@domain/common/entity/nameable-entity';
-import { VirtualPersonaEngine } from '@common/enums/virtual.persona.engine';
+import { VirtualContributorEngine } from '@common/enums/virtual.persona.engine';
 
 @InputType()
 export class CreateVirtualPersonaInput extends CreateNameableInput {
@@ -11,7 +11,7 @@ export class CreateVirtualPersonaInput extends CreateNameableInput {
   @MaxLength(LONG_TEXT_LENGTH)
   prompt!: string;
 
-  @Field(() => VirtualPersonaEngine, { nullable: false })
+  @Field(() => VirtualContributorEngine, { nullable: false })
   @MaxLength(SMALL_TEXT_LENGTH)
-  engine!: VirtualPersonaEngine;
+  engine!: VirtualContributorEngine;
 }
