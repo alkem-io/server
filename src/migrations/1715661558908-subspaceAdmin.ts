@@ -22,6 +22,7 @@ export class subspaceAdmin1715661558908 implements MigrationInterface {
         console.log(
           `Unable to find space for space admin credential ${spaceAdminCredential.id}`
         );
+        continue;
       }
       if (space.level === 0) {
         continue;
