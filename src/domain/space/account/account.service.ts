@@ -21,7 +21,7 @@ import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
 import { UpdateAccountDefaultsInput } from './dto/account.dto.update.defaults';
 import { ISpaceDefaults } from '../space.defaults/space.defaults.interface';
 import { SpaceService } from '../space/space.service';
-import { AgentInfo } from '@core/authentication/agent-info';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { ISpace } from '../space/space.interface';
 import { UpdateAccountPlatformSettingsInput } from './dto/account.dto.update.platform.settings';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';

@@ -10,7 +10,7 @@ import {
 } from '@src/common/decorators';
 import { Args, Parent, ResolveField } from '@nestjs/graphql';
 import { IDocument } from '../document/document.interface';
-import { AgentInfo } from '@core/authentication/agent-info';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { UUID_NAMEID } from '@domain/common/scalars';
 import { StorageBucketArgsDocuments } from './dto/storage.bucket.args.documents';
 import { IStorageBucketParent } from './dto/storage.bucket.dto.parent';

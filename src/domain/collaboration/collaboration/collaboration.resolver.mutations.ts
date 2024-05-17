@@ -4,7 +4,7 @@ import { CurrentUser, Profiling } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { RelationAuthorizationService } from '@domain/collaboration/relation/relation.service.authorization';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';

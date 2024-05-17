@@ -45,16 +45,18 @@ export class AccountAuthorizationService {
       accountInput.id,
       {
         relations: {
-          license: true,
-          library: true,
-          defaults: true,
+          agent: true,
           space: {
             profile: true,
           },
+          license: true,
+          library: true,
+          defaults: true,
         },
       }
     );
     if (
+      !account.agent ||
       !account.library ||
       !account.license ||
       !account.defaults ||

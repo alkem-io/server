@@ -9,7 +9,7 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { FormatNotSupportedException } from '@common/exceptions/format.not.supported.exception';
-import { AgentInfo } from '@core/authentication/agent-info';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IAgent } from '@domain/agent/agent';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import {
@@ -50,7 +50,7 @@ import { getPaginationResults } from '@core/pagination/pagination.fn';
 import { IPaginatedType } from '@core/pagination/paginated.type';
 import { CreateProfileInput } from '@domain/common/profile/dto/profile.dto.create';
 import { validateEmail } from '@common/utils';
-import { AgentInfoMetadata } from '@core/authentication/agent-info-metadata';
+import { AgentInfoMetadata } from '@core/authentication.agent.info/agent.info.metadata';
 import { CommunityCredentials } from './dto/user.dto.community.credentials';
 import { CommunityMemberCredentials } from './dto/user.dto.community.member.credentials';
 import { VisualType } from '@common/enums/visual.type';

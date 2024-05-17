@@ -1,5 +1,6 @@
 import { AuthorizationCredential } from '@common/enums';
 import { IBaseAlkemio } from '@domain/common/entity/base-entity';
+import { UUID } from '@domain/common/scalars';
 import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType('Credential')
@@ -9,4 +10,16 @@ export abstract class ICredential extends IBaseAlkemio {
 
   @Field(() => AuthorizationCredential)
   type!: string;
+
+  @Field(() => UUID, {
+    nullable: true,
+    description: 'The User issuing the credential',
+  })
+  issuer?: string;
+
+  @Field(() => String, {
+    nullable: true,
+    description: 'The time at which the credential is no longer valid',
+  })
+  expires?: Date;
 }

@@ -4,7 +4,7 @@ import { CurrentUser } from '@src/common/decorators';
 import { IApplication } from '@domain/community/application';
 import { ApplicationService } from '@domain/community/application/application.service';
 import { GraphqlGuard } from '@core/authorization';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { DeleteApplicationInput } from './dto/application.dto.delete';

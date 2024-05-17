@@ -4,7 +4,7 @@ import {
   Profiling,
 } from '@common/decorators';
 import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { GraphqlGuard } from '@core/authorization';
 import { IAgent } from '@domain/agent/agent';
 import { IUser, User } from '@domain/community/user';

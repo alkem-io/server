@@ -20,7 +20,7 @@ import {
 } from '@core/dataloader/creators/loader.creators';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 
 @Resolver(() => IAccount)
 export class AccountResolverFields {

@@ -13,7 +13,7 @@ import { DeleteVirtualPersonaInput as DeleteVirtualPersonaInput } from './dto/vi
 import { UpdateVirtualPersonaInput } from './dto/virtual.persona.dto.update';
 import { IVirtualPersonaQuestionResult } from './dto/virtual.persona.question.dto.result';
 import { VirtualPersonaQuestionInput } from './dto/virtual.persona.question.dto.input';
-import { AgentInfo } from '@core/authentication/agent-info';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { LogContext } from '@common/enums/logging.context';
 import { VirtualPersonaEngineAdapterQueryInput } from '@services/adapters/virtual-persona-engine-adapter/dto/virtual.persona.engine.adapter.dto.question.input';
 import { VirtualPersonaEngineAdapter } from '@services/adapters/virtual-persona-engine-adapter/virtual.persona.engine.adapter';

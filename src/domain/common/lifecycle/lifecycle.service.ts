@@ -11,7 +11,7 @@ import { Lifecycle } from './lifecycle.entity';
 import { ILifecycle } from './lifecycle.interface';
 import { LifecycleEventInput } from './dto/lifecycle.dto.event';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { ILifecycleDefinition } from '@interfaces/lifecycle.definition.interface';
 

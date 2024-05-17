@@ -4,7 +4,7 @@ import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exc
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { ValidationException } from '@common/exceptions/validation.exception';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
-import { AgentInfo } from '@core/authentication/agent-info';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
