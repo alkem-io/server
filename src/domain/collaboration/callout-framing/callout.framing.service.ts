@@ -74,24 +74,12 @@ export class CalloutFramingService {
     );
 
     if (whiteboard) {
-      whiteboard.nameID = this.namingService.createNameID(
-        `${whiteboard.profileData.displayName}`
-      );
-      calloutFraming.whiteboard = await this.whiteboardService.createWhiteboard(
-        whiteboard,
-        storageAggregator,
-        userID
-      );
-      await this.profileService.addVisualOnProfile(
-        calloutFraming.whiteboard.profile,
-        VisualType.BANNER
-      );
-    }
-
-    if (whiteboard) {
-      whiteboard.nameID = this.namingService.createNameID(
-        `${whiteboard.profileData.displayName}`
-      );
+      const reservedNameIDs: string[] = []; // no reserved nameIDs for framing
+      whiteboard.nameID =
+        this.namingService.createNameIdAvoidingReservedNameIDs(
+          `${whiteboard.profileData.displayName}`,
+          reservedNameIDs
+        );
       calloutFraming.whiteboard = await this.whiteboardService.createWhiteboard(
         whiteboard,
         storageAggregator,

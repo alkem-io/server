@@ -23,7 +23,7 @@ export class subspaceAdmin1715661558908 implements MigrationInterface {
           `Unable to find space for space admin credential ${spaceAdminCredential.id}`
         );
       }
-      if (space.level === 0) {
+      if (!space || !space.level || space.level === 0) {
         continue;
       }
       const subspaceAdminCredID = randomUUID();

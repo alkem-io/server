@@ -24,6 +24,7 @@ import {
   CREDENTIAL_RULE_USER_SELF_ADMIN,
   CREDENTIAL_RULE_USER_READ_PII,
   CREDENTIAL_RULE_TYPES_USER_PLATFORM_ADMIN,
+  CREDENTIAL_RULE_USER_READ,
 } from '@common/constants';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 
@@ -201,6 +202,32 @@ export class UserAuthorizationService {
       CREDENTIAL_RULE_USER_SELF_ADMIN
     );
     newRules.push(userSelfAdmin);
+
+    const communityReader =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.READ],
+        [
+          AuthorizationCredential.GLOBAL_COMMUNITY_READ,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+        ],
+        CREDENTIAL_RULE_USER_READ
+      );
+    communityReader.cascade = true;
+    newRules.push(communityReader);
+
+    // TODO: Currently the UPDATE privilege is used to protect the user's preferences
+    // This rule can be removed once the privilege protecting user preferences is updated.
+    const communityReaderUpdate =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.UPDATE],
+        [
+          AuthorizationCredential.GLOBAL_COMMUNITY_READ,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+        ],
+        CREDENTIAL_RULE_USER_READ
+      );
+    communityReader.cascade = false;
+    newRules.push(communityReaderUpdate);
 
     // Determine who is able to see the PII designated fields for a User
     const { credentials } = await this.userService.getUserAndCredentials(
