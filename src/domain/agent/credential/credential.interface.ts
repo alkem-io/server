@@ -17,9 +17,5 @@ export abstract class ICredential extends IBaseAlkemio {
   })
   issuer?: string;
 
-  @Field(() => String, {
-    nullable: true,
-    description: 'The time at which the credential is no longer valid',
-  })
   expires?: Date;
 }

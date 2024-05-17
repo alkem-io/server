@@ -22,7 +22,7 @@ export class agentAccount1715957704292 implements MigrationInterface {
       `ALTER TABLE \`credential\` ADD \`issuer\` char(36) NULL`
     );
     await queryRunner.query(
-      `ALTER TABLE \`credential\` ADD \`expires\` datetime NOT NULL`
+      `ALTER TABLE \`credential\` ADD \`expires\` datetime(6) NULL`
     );
 
     // Create the agent on each account
