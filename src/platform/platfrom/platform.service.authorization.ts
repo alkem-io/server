@@ -276,6 +276,24 @@ export class PlatformAuthorizationService {
     platformAdmin.cascade = false;
     credentialRules.push(platformAdmin);
 
+    const platformAdmin2 =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [
+          AuthorizationPrivilege.READ,
+          AuthorizationPrivilege.UPDATE,
+          AuthorizationPrivilege.CREATE,
+          AuthorizationPrivilege.DELETE,
+        ],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
+        ],
+        CREDENTIAL_RULE_TYPES_PLATFORM_ADMINS
+      );
+    platformAdmin2.cascade = true;
+    credentialRules.push(platformAdmin2);
+
     // Allow global admin Spaces to reset auth
     const platformResetAuth =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
