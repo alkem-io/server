@@ -383,21 +383,23 @@ export class CollaborationService {
         );
     }
 
+    const reservedNameIDs =
+      await this.namingService.getReservedNameIDsInCollaboration(
+        collaboration.id
+      );
     if (calloutData.nameID && calloutData.nameID.length > 0) {
-      const nameAvailable =
-        await this.namingService.isCalloutNameIdAvailableInCollaboration(
-          calloutData.nameID,
-          collaboration.id
-        );
-      if (!nameAvailable)
+      const nameIdAlreadyTaken = reservedNameIDs.includes(calloutData.nameID);
+      if (nameIdAlreadyTaken)
         throw new ValidationException(
           `Unable to create Callout: the provided nameID is already taken: ${calloutData.nameID}`,
           LogContext.SPACES
         );
     } else {
-      calloutData.nameID = this.namingService.createNameID(
-        `${calloutData.framing.profile.displayName}`
-      );
+      calloutData.nameID =
+        this.namingService.createNameIdAvoidingReservedNameIDs(
+          `${calloutData.framing.profile.displayName}`,
+          reservedNameIDs
+        );
     }
 
     const displayNameAvailable =

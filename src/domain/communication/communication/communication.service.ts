@@ -27,6 +27,7 @@ import { COMMUNICATION_PLATFORM_SPACEID } from '@common/constants';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { DiscussionsOrderBy } from '@common/enums/discussions.orderBy';
 import { Discussion } from '../discussion/discussion.entity';
+import { NamingService } from '@services/infrastructure/naming/naming.service';
 
 @Injectable()
 export class CommunicationService {
@@ -35,6 +36,7 @@ export class CommunicationService {
     private roomService: RoomService,
     private communicationAdapter: CommunicationAdapter,
     private storageAggregatorResolverService: StorageAggregatorResolverService,
+    private namingService: NamingService,
     @InjectRepository(Communication)
     private communicationRepository: Repository<Communication>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -100,6 +102,15 @@ export class CommunicationService {
     const storageAggregator =
       await this.storageAggregatorResolverService.getStorageAggregatorForCommunication(
         communication.id
+      );
+    const reservedNameIDs =
+      await this.namingService.getReservedNameIDsInCommunication(
+        communication.id
+      );
+    discussionData.nameID =
+      this.namingService.createNameIdAvoidingReservedNameIDs(
+        `${discussionData.profile.displayName}`,
+        reservedNameIDs
       );
     const discussion = await this.discussionService.createDiscussion(
       discussionData,

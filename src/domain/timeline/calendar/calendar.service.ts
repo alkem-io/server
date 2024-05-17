@@ -113,20 +113,21 @@ export class CalendarService {
         `Calendar (${calendar}) not initialised`,
         LogContext.CALENDAR
       );
-
+    const reservedNameIDs =
+      await this.namingService.getReservedNameIDsInCalendar(calendar.id);
     if (calendarEventData.nameID && calendarEventData.nameID.length > 0) {
-      const eventWithNameID = calendar.events.find(
-        e => e.nameID === calendarEventData.nameID
-      );
-      if (eventWithNameID)
+      const nameTaken = reservedNameIDs.includes(calendarEventData.nameID);
+      if (nameTaken)
         throw new ValidationException(
           `Unable to create CalendarEvent: the provided nameID is already taken: ${calendarEventData.nameID}`,
           LogContext.CALENDAR
         );
     } else {
-      calendarEventData.nameID = this.namingService.createNameID(
-        `${calendarEventData.profileData?.displayName}`
-      );
+      calendarEventData.nameID =
+        this.namingService.createNameIdAvoidingReservedNameIDs(
+          `${calendarEventData.profileData?.displayName}`,
+          reservedNameIDs
+        );
     }
 
     const storageAggregator =

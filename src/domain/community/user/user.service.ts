@@ -301,8 +301,12 @@ export class UserService {
       agentInfo.avatarURL
     );
 
+    const nameID = await this.createUserNameID(
+      agentInfo.firstName,
+      agentInfo.lastName
+    );
     let user = await this.createUser({
-      nameID: this.createUserNameID(agentInfo.firstName, agentInfo.lastName),
+      nameID,
       email: email,
       firstName: agentInfo.firstName,
       lastName: agentInfo.lastName,
@@ -921,13 +925,17 @@ export class UserService {
     return directRooms;
   }
 
-  createUserNameID(
+  public async createUserNameID(
     firstName: string,
-    lastName: string,
-    useRandomSuffix = true
-  ): string {
+    lastName: string
+  ): Promise<string> {
     const base = `${firstName}-${lastName}`;
-    return this.namingService.createNameID(base, useRandomSuffix);
+    const reservedNameIDs =
+      await this.namingService.getReservedNameIDsInUsers(); // This will need to be smarter later
+    return this.namingService.createNameIdAvoidingReservedNameIDs(
+      base,
+      reservedNameIDs
+    );
   }
 
   async findProfilesByBatch(userIds: string[]): Promise<(IProfile | Error)[]> {
