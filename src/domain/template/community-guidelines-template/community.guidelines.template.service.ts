@@ -52,6 +52,7 @@ export class CommunityGuidelinesTemplateService {
           displayName: guidelines.profile.displayName,
           description: guidelines.profile.description,
           tagsets: guidelines.profile.tagsets,
+          referencesData: guidelines.profile.references,
         },
       };
     } else {
@@ -63,6 +64,7 @@ export class CommunityGuidelinesTemplateService {
           displayName: guidelinesFromInput.profile.displayName,
           description: guidelinesFromInput.profile.description,
           tagsets: guidelinesFromInput.profile.tagsets,
+          referencesData: guidelinesFromInput.profile.referencesData,
         },
       };
     }
