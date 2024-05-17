@@ -17,6 +17,7 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
+import { AccountService } from '@domain/space/account/account.service';
 
 @Injectable()
 export class InnovationHubService {
@@ -28,6 +29,7 @@ export class InnovationHubService {
     private readonly authorizationPolicyService: AuthorizationPolicyService,
     private storageAggregatorResolverService: StorageAggregatorResolverService,
     private readonly spaceService: SpaceService,
+    private readonly accountService: AccountService,
     private namingService: NamingService
   ) {}
 
@@ -70,7 +72,8 @@ export class InnovationHubService {
       );
     }
 
-    const hub: IInnovationHub = InnovationHub.create(createData);
+    const { accountID, ...createDataProps } = createData;
+    const hub: IInnovationHub = InnovationHub.create(createDataProps);
     hub.authorization = new AuthorizationPolicy();
 
     const storageAggregator =
@@ -92,6 +95,9 @@ export class InnovationHubService {
       VisualType.BANNER_WIDE
     );
 
+    const account = await this.accountService.getAccountOrFail(accountID);
+    hub.account = account;
+
     await this.innovationHubRepository.save(hub);
 
     return this.authService.applyAuthorizationPolicyAndSave(hub);
@@ -104,7 +110,7 @@ export class InnovationHubService {
       {
         idOrNameId: input.ID,
       },
-      { relations: { profile: true } }
+      { relations: { profile: true, account: true } }
     );
 
     if (input.nameID) {
@@ -155,6 +161,9 @@ export class InnovationHubService {
         input.profileData
       );
     }
+
+    const account = await this.accountService.getAccountOrFail(input.accountID);
+    innovationHub.account = account;
 
     return await this.innovationHubRepository.save(innovationHub);
   }

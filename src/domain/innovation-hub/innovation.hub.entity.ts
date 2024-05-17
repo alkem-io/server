@@ -39,5 +39,5 @@ export class InnovationHub extends NameableEntity implements IInnovationHub {
     onDelete: 'SET NULL',
   })
   @JoinColumn()
-  account?: Account;
+  account!: Account;
 }
