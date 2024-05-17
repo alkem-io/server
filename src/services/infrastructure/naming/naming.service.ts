@@ -19,12 +19,9 @@ import { ICallout } from '@domain/collaboration/callout';
 import { NAMEID_LENGTH } from '@common/constants';
 import { Space } from '@domain/space/space/space.entity';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
-import { Collaboration } from '@domain/collaboration/collaboration';
 import { SpaceLevel } from '@common/enums/space.level';
 import { User } from '@domain/community/user/user.entity';
-import { Communication } from '@domain/communication/communication/communication.entity';
-import { Calendar } from '@domain/timeline/calendar/calendar.entity';
-import { Library } from '@library/library/library.entity';
+import { InnovationPack } from '@library/innovation-pack/innovation.pack.entity';
 
 export class NamingService {
   replaceSpecialCharacters = require('replace-special-characters');
@@ -62,75 +59,68 @@ export class NamingService {
   public async getReservedNameIDsInCommunication(
     communicationID: string
   ): Promise<string[]> {
-    const communication = await this.entityManager.findOne(Communication, {
+    const discussions = await this.entityManager.find(Discussion, {
       where: {
-        id: communicationID,
-      },
-      select: {
-        discussions: {
-          nameID: true,
+        communication: {
+          id: communicationID,
         },
       },
+      select: {
+        nameID: true,
+      },
     });
-    const nameIDs =
-      communication?.discussions?.map(discussion => discussion.nameID) || [];
+    const nameIDs = discussions?.map(discussion => discussion.nameID) || [];
     return nameIDs;
   }
 
   public async getReservedNameIDsInCollaboration(
     collaborationID: string
   ): Promise<string[]> {
-    const collaboration = await this.entityManager.findOne(Collaboration, {
+    const callouts = await this.entityManager.find(Callout, {
       where: {
-        id: collaborationID,
+        collaboration: {
+          id: collaborationID,
+        },
       },
-      relations: {
-        callouts: true,
+      select: {
+        nameID: true,
       },
-      select: ['callouts'],
     });
-    const nameIDs =
-      collaboration?.callouts?.map(callout => callout.nameID) || [];
+    const nameIDs = callouts?.map(callout => callout.nameID) || [];
     return nameIDs;
   }
 
   public async getReservedNameIDsInCalendar(
     calendarID: string
   ): Promise<string[]> {
-    const calendar = await this.entityManager.findOne(Calendar, {
+    const events = await this.entityManager.find(CalendarEvent, {
       where: {
-        id: calendarID,
-      },
-      relations: {
-        events: true,
-      },
-      select: {
-        events: {
-          nameID: true,
+        calendar: {
+          id: calendarID,
         },
       },
+      select: {
+        nameID: true,
+      },
     });
-    const nameIDs = calendar?.events?.map(event => event.nameID) || [];
+    const nameIDs = events?.map(event => event.nameID) || [];
     return nameIDs;
   }
 
   public async getReservedNameIDsInLibrary(
     libraryID: string
   ): Promise<string[]> {
-    const library = await this.entityManager.findOne(Library, {
+    const innovationPacks = await this.entityManager.find(InnovationPack, {
       where: {
-        id: libraryID,
-      },
-      relations: {
-        innovationPacks: true,
-      },
-      select: {
-        innovationPacks: {
-          nameID: true,
+        library: {
+          id: libraryID,
         },
       },
+      select: {
+        nameID: true,
+      },
     });
-    const nameIDs = library?.innovationPacks?.map(pack => pack.nameID) || [];
+    const nameIDs = innovationPacks?.map(pack => pack.nameID) || [];
     return nameIDs;
   }
 
@@ -165,19 +155,9 @@ export class NamingService {
         contributions: {
           whiteboard: true,
           post: true,
-          link: true,
         },
       },
-      select: {
-        contributions: {
-          whiteboard: {
-            nameID: true,
-          },
-          post: {
-            nameID: true,
-          },
-        },
-      },
+      select: ['contributions'],
     });
     const contributions = callout?.contributions || [];
     const reservedNameIDs: string[] = [];
@@ -265,11 +245,12 @@ export class NamingService {
     base: string,
     reservedNameIDs: string[]
   ): string {
-    let result = this.createNameID(base);
+    const guess = this.createNameID(base);
+    let result = guess;
     let count = 1;
     while (reservedNameIDs.includes(result)) {
       // If the nameID is already reserved, try again with a new random suffix starting from 1 but with two digits
-      result = this.createNameID(`${base}-${count.toString()}`);
+      result = `${guess}-${count.toString()}`;
       count++;
     }
     return result;
