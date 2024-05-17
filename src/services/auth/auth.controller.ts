@@ -7,9 +7,13 @@ import {
   RmqContext,
   Transport,
 } from '@nestjs/microservices';
-import { AccessGrantedInputData } from './types';
+import {
+  AccessGrantedInputData,
+  WhoInputData,
+  UserInfo,
+  AuthMessagePattern,
+} from './types';
 import { AuthService } from './auth.service';
-import { AuthMessagePattern } from '@services/auth/types/auth.message.pattern';
 
 @Controller()
 export class AuthController {
@@ -23,6 +27,15 @@ export class AuthController {
     console.log(data);
     ack(context);
     return this.authService.accessGrantedWhiteboard(data);
+  }
+
+  @MessagePattern(AuthMessagePattern.WHO, Transport.RMQ)
+  public async who(
+    @Payload() data: WhoInputData,
+    @Ctx() context: RmqContext
+  ): Promise<UserInfo> {
+    ack(context);
+    return this.authService.who(data).then(({ userID }) => ({ id: userID }));
   }
 }
 
