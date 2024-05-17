@@ -110,7 +110,12 @@ export class ActivityLogService {
       }
 
       const space = await this.spaceService.getSpaceForCollaborationOrFail(
-        rawActivity.collaborationID
+        rawActivity.collaborationID,
+        {
+          relations: {
+            community: true,
+          },
+        }
       );
 
       const activityLogEntryBase: IActivityLogEntry = {
