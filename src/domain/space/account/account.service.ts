@@ -67,6 +67,10 @@ export class AccountService {
     );
     await this.setAccountHost(account, accountData.hostID);
 
+    account.agent = await this.agentService.createAgent({
+      parentDisplayID: `account-${account.space.nameID}`,
+    });
+
     const storageAggregator =
       await this.spaceService.getStorageAggregatorOrFail(account.space.id);
     // And set the defaults
@@ -167,6 +171,7 @@ export class AccountService {
     const accountID = accountInput.id;
     const account = await this.getAccountOrFail(accountID, {
       relations: {
+        agent: true,
         space: true,
         library: true,
         license: { featureFlags: true },
@@ -175,6 +180,7 @@ export class AccountService {
     });
 
     if (
+      !account.agent ||
       !account.space ||
       !account.license ||
       !account.license?.featureFlags ||
@@ -198,6 +204,8 @@ export class AccountService {
     await this.spaceService.deleteSpace({
       ID: account.space.id,
     });
+
+    await this.agentService.deleteAgent(account.agent.id);
 
     await this.templatesSetService.deleteTemplatesSet(account.library.id);
 

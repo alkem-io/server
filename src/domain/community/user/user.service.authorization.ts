@@ -27,11 +27,13 @@ import {
   CREDENTIAL_RULE_USER_READ,
 } from '@common/constants';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
+import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
 
 @Injectable()
 export class UserAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
+    private agentAuthorizationService: AgentAuthorizationService,
     private profileAuthorizationService: ProfileAuthorizationService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private preferenceSetAuthorizationService: PreferenceSetAuthorizationService,
@@ -87,11 +89,10 @@ export class UserAuthorizationService {
         clonedAnonymousReadAccessAuthorization // Key that this is publicly visible
       );
 
-    user.agent.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
-        user.agent.authorization,
-        user.authorization
-      );
+    user.agent = await this.agentAuthorizationService.applyAuthorizationPolicy(
+      user.agent,
+      user.authorization
+    );
 
     user.preferenceSet =
       await this.preferenceSetAuthorizationService.applyAuthorizationPolicy(
