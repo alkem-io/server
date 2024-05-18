@@ -54,6 +54,7 @@ export const CREDENTIAL_RULE_ORGANIZATION_SELF_REMOVAL =
 export const CREDENTIAL_RULE_USER_GROUP_READ = 'credentialRule-userGroupRead';
 export const CREDENTIAL_RULE_USER_SELF_ADMIN = 'credentialRule-userSelfAdmin';
 export const CREDENTIAL_RULE_USER_READ_PII = 'credentialRule-userReadPii';
+export const CREDENTIAL_RULE_USER_READ = 'credentialRule-userRead';
 export const CREDENTIAL_RULE_CALENDAR_EVENT_CREATED_BY =
   'credentialRule-calendarEventCreatedBy';
 export const CREDENTIAL_RULE_DOCUMENT_CREATED_BY =

@@ -56,20 +56,20 @@ export class InnovationHubService {
         LogContext.INNOVATION_HUB
       );
 
+    const reservedNameIDs = await this.namingService.getReservedNameIDsInHubs();
     if (createData.nameID && createData.nameID.length > 0) {
-      const nameAvailable =
-        await this.namingService.isInnovationHubNameIdAvailable(
-          createData.nameID
-        );
-      if (!nameAvailable)
+      const nameTaken = reservedNameIDs.includes(createData.nameID);
+      if (nameTaken)
         throw new ValidationException(
           `Unable to create Innovation Hub: the provided nameID is already taken: ${createData.nameID}`,
           LogContext.INNOVATION_HUB
         );
     } else {
-      createData.nameID = this.namingService.createNameID(
-        `${createData.profileData.displayName}`
-      );
+      createData.nameID =
+        this.namingService.createNameIdAvoidingReservedNameIDs(
+          `${createData.profileData.displayName}`,
+          reservedNameIDs
+        );
     }
 
     const { accountID, ...createDataProps } = createData;
@@ -115,9 +115,10 @@ export class InnovationHubService {
 
     if (input.nameID) {
       if (input.nameID !== innovationHub.nameID) {
-        const updateAllowed =
-          await this.namingService.isInnovationHubNameIdAvailable(input.nameID);
-        if (!updateAllowed) {
+        const reservedNameIDs =
+          await this.namingService.getReservedNameIDsInHubs();
+        const nameTaken = reservedNameIDs.includes(input.nameID);
+        if (nameTaken) {
           throw new ValidationException(
             `Unable to update Innovation Hub nameID: the provided nameID '${input.nameID}' is already taken`,
             LogContext.INNOVATION_HUB

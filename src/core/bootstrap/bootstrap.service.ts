@@ -178,10 +178,9 @@ export class BootstrapService {
           userData.email
         );
         if (!userExists) {
-          const nameID = this.userService.createUserNameID(
+          const nameID = await this.userService.createUserNameID(
             userData.firstName,
-            userData.lastName,
-            false
+            userData.lastName
           );
           let user = await this.userService.createUser({
             nameID: nameID,

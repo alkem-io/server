@@ -68,15 +68,8 @@ export class CalloutService {
     if (!calloutData.sortOrder) {
       calloutData.sortOrder = 10;
     }
-    const calloutNameID = this.namingService.createNameID(
-      `${calloutData.framing.profile.displayName}`
-    );
-    const calloutCreationData = {
-      ...calloutData,
-      nameID: calloutData.nameID ?? calloutNameID,
-    };
 
-    const callout: ICallout = Callout.create(calloutCreationData);
+    const callout: ICallout = Callout.create(calloutData);
     callout.authorization = new AuthorizationPolicy();
     callout.createdBy = userID ?? undefined;
     callout.visibility = calloutData.visibility ?? CalloutVisibility.DRAFT;
@@ -369,22 +362,20 @@ export class CalloutService {
 
   private async setNameIdOnPostData(
     postData: CreatePostInput,
+    reservedNameIDs: string[],
     callout: ICallout
   ) {
     if (postData.nameID && postData.nameID.length > 0) {
-      const nameAvailable =
-        await this.namingService.isPostNameIdAvailableInCallout(
-          postData.nameID,
-          callout.id
-        );
-      if (!nameAvailable)
+      const nameTaken = reservedNameIDs.includes(postData.nameID);
+      if (nameTaken)
         throw new ValidationException(
           `Unable to create Post: the provided nameID is already taken: ${postData.nameID}`,
           LogContext.SPACES
         );
     } else {
-      postData.nameID = this.namingService.createNameID(
-        postData.profileData.displayName
+      postData.nameID = this.namingService.createNameIdAvoidingReservedNameIDs(
+        postData.profileData.displayName,
+        reservedNameIDs
       );
     }
 
@@ -437,23 +428,21 @@ export class CalloutService {
 
   private async setNameIdOnWhiteboardData(
     whiteboardData: CreateWhiteboardInput,
-    callout: ICallout
+    reservedNameIDs: string[]
   ) {
     if (whiteboardData.nameID && whiteboardData.nameID.length > 0) {
-      const nameAvailable =
-        await this.namingService.isWhiteboardNameIdAvailableInCallout(
-          whiteboardData.nameID,
-          callout.id
-        );
-      if (!nameAvailable)
+      const nameIdTaken = reservedNameIDs.includes(whiteboardData.nameID);
+      if (nameIdTaken)
         throw new ValidationException(
           `Unable to create Whiteboard: the provided nameID is already taken: ${whiteboardData.nameID}`,
           LogContext.SPACES
         );
     } else {
-      whiteboardData.nameID = this.namingService.createNameID(
-        `${whiteboardData.profileData.displayName}`
-      );
+      whiteboardData.nameID =
+        this.namingService.createNameIdAvoidingReservedNameIDs(
+          `${whiteboardData.profileData.displayName}`,
+          reservedNameIDs
+        );
     }
   }
 
@@ -471,14 +460,22 @@ export class CalloutService {
         LogContext.COLLABORATION
       );
 
+    const reservedNameIDs =
+      await this.namingService.getReservedNameIDsInCalloutContributions(
+        calloutID
+      );
     if (contributionData.whiteboard) {
       await this.setNameIdOnWhiteboardData(
         contributionData.whiteboard,
-        callout
+        reservedNameIDs
       );
     }
     if (contributionData.post) {
-      await this.setNameIdOnPostData(contributionData.post, callout);
+      await this.setNameIdOnPostData(
+        contributionData.post,
+        reservedNameIDs,
+        callout
+      );
     }
 
     const storageAggregator = await this.getStorageAggregator(callout);
