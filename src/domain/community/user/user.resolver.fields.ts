@@ -97,7 +97,6 @@ export class UserResolverFields {
     nullable: false,
     description: 'The preferences for this user',
   })
-  @Profiling.api
   async preferences(
     @Parent() user: User,
     @CurrentUser() agentInfo: AgentInfo

@@ -28,6 +28,7 @@ import { IInvitationExternal } from '../invitation.external';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { ICommunityGuidelines } from '../community-guidelines/community.guidelines.interface';
 import { IVirtualContributor } from '../virtual-contributor';
+import { CommunityRoleImplicit } from '@common/enums/community.role.implicit';
 
 @Resolver(() => ICommunity)
 export class CommunityResolverFields {
@@ -314,6 +315,22 @@ export class CommunityResolverFields {
     @Parent() community: ICommunity
   ): Promise<CommunityRole[]> {
     return this.communityService.getCommunityRoles(agentInfo, community);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField('myRolesImplicit', () => [CommunityRoleImplicit], {
+    nullable: false,
+    description:
+      'The implicit roles on this community for the currently logged in user.',
+  })
+  async myRolesImplicit(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Parent() community: ICommunity
+  ): Promise<CommunityRoleImplicit[]> {
+    return this.communityService.getCommunityImplicitRoles(
+      agentInfo,
+      community
+    );
   }
 
   @UseGuards(GraphqlGuard)

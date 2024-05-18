@@ -395,6 +395,26 @@ export class CommunityService {
         result.push(role);
       }
     }
+
+    return result;
+  }
+
+  async getCommunityImplicitRoles(
+    agentInfo: AgentInfo,
+    community: ICommunity
+  ): Promise<CommunityRoleImplicit[]> {
+    const result: CommunityRoleImplicit[] = [];
+    const agent = await this.agentService.getAgentOrFail(agentInfo.agentID);
+
+    const rolesImplicit: CommunityRoleImplicit[] = Object.values(
+      CommunityRoleImplicit
+    ) as CommunityRoleImplicit[];
+    for (const role of rolesImplicit) {
+      const hasAgentRole = await this.isInRoleImplicit(agent, community, role);
+      if (hasAgentRole) {
+        result.push(role);
+      }
+    }
     return result;
   }
 
@@ -550,11 +570,19 @@ export class CommunityService {
     );
     if (role === CommunityRole.ADMIN && parentCommunity) {
       // also assign as subspace admin in parent community if there is a parent community
-      await this.assignContributorToImplicitRole(
+      const credential = this.getCredentialForImplicitRole(
         parentCommunity,
-        agent,
         CommunityRoleImplicit.SUBSPACE_ADMIN
       );
+      const alreadyHasSubspaceAdmin =
+        await this.agentService.hasValidCredential(agent.id, credential);
+      if (!alreadyHasSubspaceAdmin) {
+        await this.assignContributorToImplicitRole(
+          parentCommunity,
+          agent,
+          CommunityRoleImplicit.SUBSPACE_ADMIN
+        );
+      }
     }
 
     if (role === CommunityRole.MEMBER) {
@@ -744,11 +772,22 @@ export class CommunityService {
 
     const parentCommunity = await this.getParentCommunity(community);
     if (role === CommunityRole.ADMIN && parentCommunity) {
-      await this.removeContributorToImplicitRole(
+      // Check if an admin anywhere else in the community
+      const peerCommunities = await this.getPeerCommunites(
         parentCommunity,
-        agent,
-        CommunityRoleImplicit.SUBSPACE_ADMIN
+        community
       );
+      const hasAnotherAdminRole = peerCommunities.some(pc =>
+        this.isInRole(agent, pc, CommunityRole.ADMIN)
+      );
+
+      if (!hasAnotherAdminRole) {
+        await this.removeContributorToImplicitRole(
+          parentCommunity,
+          agent,
+          CommunityRoleImplicit.SUBSPACE_ADMIN
+        );
+      }
     }
 
     if (role === CommunityRole.MEMBER) {
@@ -765,6 +804,22 @@ export class CommunityService {
     }
 
     return user;
+  }
+
+  private async getPeerCommunites(
+    parentCommunity: ICommunity,
+    childCommunity: ICommunity
+  ): Promise<ICommunity[]> {
+    const peerCommunities = await this.communityRepository.find({
+      where: {
+        parentCommunity: {
+          id: parentCommunity.id,
+        },
+      },
+    });
+    return peerCommunities.filter(
+      community => community.id !== childCommunity.id
+    );
   }
 
   async removeOrganizationFromRole(
@@ -1042,6 +1097,26 @@ export class CommunityService {
     role: CommunityRole
   ): Promise<boolean> {
     const membershipCredential = this.getCredentialDefinitionForRole(
+      community,
+      role
+    );
+
+    const validCredential = await this.agentService.hasValidCredential(
+      agent.id,
+      {
+        type: membershipCredential.type,
+        resourceID: membershipCredential.resourceID,
+      }
+    );
+    return validCredential;
+  }
+
+  async isInRoleImplicit(
+    agent: IAgent,
+    community: ICommunity,
+    role: CommunityRoleImplicit
+  ): Promise<boolean> {
+    const membershipCredential = this.getCredentialForImplicitRole(
       community,
       role
     );

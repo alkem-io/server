@@ -1,12 +1,12 @@
 import { registerEnumType } from '@nestjs/graphql';
 
-export enum VirtualPersonaEngine {
+export enum VirtualContributorEngine {
   GUIDANCE = 'guidance',
   COMMUNITY_MANAGER = 'community-manager',
-  ALKEMIO_DIGILEEFOMGEVING = 'alkemio-digileefomgeving',
+  EXPERT = 'expert',
   ALKEMIO_WELCOME = 'alkemio-welcome',
 }
 
-registerEnumType(VirtualPersonaEngine, {
-  name: 'VirtualPersonaEngine',
+registerEnumType(VirtualContributorEngine, {
+  name: 'VirtualContributorEngine',
 });

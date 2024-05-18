@@ -225,6 +225,10 @@ export class OrganizationAuthorizationService {
           type: AuthorizationCredential.GLOBAL_REGISTERED,
           resourceID: '',
         },
+        {
+          type: AuthorizationCredential.GLOBAL_COMMUNITY_READ,
+          resourceID: '',
+        },
       ],
       CREDENTIAL_RULE_ORGANIZATION_READ
     );

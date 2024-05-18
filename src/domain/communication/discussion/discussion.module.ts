@@ -4,7 +4,6 @@ import { ProfileModule } from '@domain/common/profile/profile.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CommunicationAdapterModule } from '@services/adapters/communication-adapter/communication-adapter.module';
-import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { RoomModule } from '../room/room.module';
 import { Discussion } from './discussion.entity';
 import { DiscussionResolverFields } from './discussion.resolver.fields';
@@ -21,7 +20,6 @@ import { NotificationAdapterModule } from '@services/adapters/notification-adapt
     AuthorizationModule,
     AuthorizationPolicyModule,
     ProfileModule,
-    NamingModule,
     NotificationAdapterModule,
   ],
   providers: [
