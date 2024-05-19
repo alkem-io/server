@@ -15,13 +15,12 @@ import { IConfig } from '@platform/configuration/config/config.interface';
 import { KonfigService } from '@platform/configuration/config/config.service';
 import { IMetadata } from '@platform/metadata/metadata.interface';
 import { MetadataService } from '@platform/metadata/metadata.service';
-import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { GraphqlGuard } from '@core/authorization';
 import { UseGuards } from '@nestjs/common';
 import { ReleaseDiscussionOutput } from './dto/release.discussion.dto';
-import { ILicensePolicy } from '@platform/license-policy';
+import { ILicenseManager } from '@platform/license-manager/license.manager.interface';
 
 @Resolver(() => IPlatform)
 export class PlatformResolverFields {
@@ -29,8 +28,7 @@ export class PlatformResolverFields {
     private platformService: PlatformService,
     private configService: KonfigService,
     private metadataService: MetadataService,
-    private innovationHubService: InnovationHubService,
-    private platformAuthorizationPolicyService: PlatformAuthorizationPolicyService
+    private innovationHubService: InnovationHubService
   ) {}
 
   @ResolveField('authorization', () => IAuthorizationPolicy, {
@@ -70,12 +68,12 @@ export class PlatformResolverFields {
     return this.platformService.getStorageAggregator(platform);
   }
 
-  @ResolveField('licensePolicy', () => ILicensePolicy, {
+  @ResolveField('licenseManager', () => ILicenseManager, {
     nullable: false,
-    description: 'The LicensePolicy in use by the platform.',
+    description: 'The LicenseManager in use by the platform.',
   })
-  licensePolicy(@Parent() platform: IPlatform): Promise<ILicensePolicy> {
-    return this.platformService.getLicensePolicy(platform);
+  licenseManager(@Parent() platform: IPlatform): Promise<ILicenseManager> {
+    return this.platformService.getLicenseManager(platform);
   }
 
   @ResolveField(() => [IInnovationHub], {

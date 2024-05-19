@@ -31,7 +31,7 @@ import {
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
-import { LicensePolicyAuthorizationService } from '@platform/license-policy/license.policy.service.authorization';
+import { LicenseManagerAuthorizationService } from '@platform/license-manager/license.manager.service.authorization';
 
 @Injectable()
 export class PlatformAuthorizationService {
@@ -43,8 +43,8 @@ export class PlatformAuthorizationService {
     private platformService: PlatformService,
     private innovationHubService: InnovationHubService,
     private innovationHubAuthorizationService: InnovationHubAuthorizationService,
-    private licensePolicyAuthorizationService: LicensePolicyAuthorizationService,
     private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
+    private licenseManagerAuthorizationService: LicenseManagerAuthorizationService,
     @InjectRepository(Platform)
     private platformRepository: Repository<Platform>
   ) {}
@@ -113,7 +113,7 @@ export class PlatformAuthorizationService {
         },
         communication: true,
         storageAggregator: true,
-        licensePolicy: true,
+        licenseManager: true,
       },
     });
 
@@ -121,10 +121,10 @@ export class PlatformAuthorizationService {
       !platform.library ||
       !platform.communication ||
       !platform.storageAggregator ||
-      !platform.licensePolicy
+      !platform.licenseManager
     )
       throw new RelationshipNotFoundException(
-        `Unable to load entities for platform: ${platform.id} `,
+        `Unable to load entities for platform auth: ${platform.id} `,
         LogContext.PLATFORM
       );
 
@@ -168,9 +168,9 @@ export class PlatformAuthorizationService {
       );
     }
 
-    platform.licensePolicy =
-      await this.licensePolicyAuthorizationService.applyAuthorizationPolicy(
-        platform.licensePolicy,
+    platform.licenseManager =
+      await this.licenseManagerAuthorizationService.applyAuthorizationPolicy(
+        platform.licenseManager,
         platform.authorization
       );
     return platform;
