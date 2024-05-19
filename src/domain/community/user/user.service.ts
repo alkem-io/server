@@ -305,7 +305,7 @@ export class UserService {
       agentInfo.firstName,
       agentInfo.lastName
     );
-    let user = await this.createUser({
+    const user = await this.createUser({
       nameID,
       email: email,
       firstName: agentInfo.firstName,
@@ -317,31 +317,34 @@ export class UserService {
       },
     });
 
-    if (!isAlkemioDocumentURL) {
-      if (!user.profile?.storageBucket?.id) {
-        throw new EntityNotInitializedException(
-          `User profile storage bucket not initialized for user with id: ${user.id}`,
-          LogContext.COMMUNITY
-        );
-      }
+    // Used for creating an avatar from a linkedin profile picture
+    // BUG: https://github.com/alkem-io/server/issues/3944
 
-      if (!user.profile.visuals) {
-        throw new EntityNotInitializedException(
-          `Visuals not initialized for profile with id: ${user.profile.id}`,
-          LogContext.COMMUNITY
-        );
-      }
+    // if (!isAlkemioDocumentURL) {
+    //   if (!user.profile?.storageBucket?.id) {
+    //     throw new EntityNotInitializedException(
+    //       `User profile storage bucket not initialized for user with id: ${user.id}`,
+    //       LogContext.COMMUNITY
+    //     );
+    //   }
 
-      const { visual, document } = await this.avatarService.createAvatarFromURL(
-        user.profile?.storageBucket?.id,
-        user.id,
-        agentInfo.avatarURL ?? user.profile.visuals[0].uri
-      );
+    //   if (!user.profile.visuals) {
+    //     throw new EntityNotInitializedException(
+    //       `Visuals not initialized for profile with id: ${user.profile.id}`,
+    //       LogContext.COMMUNITY
+    //     );
+    //   }
 
-      user.profile.visuals = [visual];
-      user.profile.storageBucket.documents = [document];
-      user = await this.save(user);
-    }
+    //   const { visual, document } = await this.avatarService.createAvatarFromURL(
+    //     user.profile?.storageBucket?.id,
+    //     user.id,
+    //     agentInfo.avatarURL ?? user.profile.visuals[0].uri
+    //   );
+
+    //   user.profile.visuals = [visual];
+    //   user.profile.storageBucket.documents = [document];
+    //   user = await this.save(user);
+    // }
 
     return user;
   }
