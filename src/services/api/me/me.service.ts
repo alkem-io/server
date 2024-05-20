@@ -8,7 +8,7 @@ import { InvitationForRoleResult } from '../roles/dto/roles.dto.result.invitatio
 import { ISpace } from '@domain/space/space/space.interface';
 import { SpacesQueryArgs } from '@domain/space/space/dto/space.args.query.spaces';
 import { ActivityLogService } from '../activity-log';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { MySpaceResults } from './dto/my.journeys.results';
 import { ActivityService } from '@platform/activity/activity.service';
 import { LogContext } from '@common/enums';

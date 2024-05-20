@@ -5,7 +5,7 @@ import { CurrentUser, Profiling } from '@src/common/decorators';
 
 import { IUser } from '@domain/community/user';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationPrivilege, AuthorizationRoleGlobal } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';

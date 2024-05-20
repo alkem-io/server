@@ -1,7 +1,7 @@
 // import { REDIS_LOCK_SERVICE } from '@common/constants';
 import { ConfigurationTypes } from '@common/enums/configuration.type';
 import { LogContext } from '@common/enums/logging.context';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from './agent.info';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { ConfigService } from '@nestjs/config';
@@ -10,9 +10,9 @@ import { Cache } from 'cache-manager';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 // import Redlock, { RedlockAbortSignal } from 'redlock';
 import { EntityManager } from 'typeorm';
-import { IAgent, ICredential } from '..';
+import { IAgent, ICredential } from '../../domain/agent';
 @Injectable()
-export class AgentCacheService {
+export class AgentInfoCacheService {
   private readonly cache_ttl: number;
 
   constructor(

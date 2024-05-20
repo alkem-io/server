@@ -18,6 +18,12 @@ export class Credential extends BaseAlkemioEntity implements ICredential {
   })
   agent?: Agent;
 
+  @Column('char', { length: 36, nullable: true })
+  issuer!: string;
+
+  @Column('datetime')
+  expires?: Date;
+
   constructor() {
     super();
   }

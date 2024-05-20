@@ -22,7 +22,7 @@ import { UserFilterInput } from '@core/filtering';
 import { ICommunityPolicy } from '../community-policy/community.policy.interface';
 import { IForm } from '@domain/common/form/form.interface';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IInvitation } from '../invitation';
 import { IInvitationExternal } from '../invitation.external';
 import { UUID } from '@domain/common/scalars/scalar.uuid';

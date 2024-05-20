@@ -2,7 +2,7 @@ import { Space } from '@domain/space/space/space.entity';
 import { RolesResultSpace } from '../dto/roles.dto.result.space';
 import { RolesResultCommunity } from '../dto/roles.dto.result.community';
 import { CredentialMap } from './group.credentials.by.entity';
-import { AgentInfo } from '@core/authentication/agent-info';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
