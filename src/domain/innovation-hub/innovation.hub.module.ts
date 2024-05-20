@@ -12,6 +12,7 @@ import { InnovationHubResolverMutations } from './innovation.hub.resolver.mutati
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
+import { AccountModule } from '@domain/space/account/account.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { StorageAggregatorResolverModule } from '@services/infrastructure/storag
     AuthorizationModule,
     NamingModule,
     StorageAggregatorResolverModule,
+    AccountModule,
   ],
   providers: [
     InnovationHubService,
