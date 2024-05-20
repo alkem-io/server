@@ -50,8 +50,8 @@ import {
   UpdateDocumentInput,
 } from '@domain/storage/document';
 import { VisualUploadImageInput } from '@domain/common/visual/dto/visual.dto.upload.image';
-import { CreateInvitationExistingUserOnCommunityInput } from '@domain/community/community/dto/community.dto.invite.existing.user';
-import { CreateInvitationExternalUserOnCommunityInput } from '@domain/community/community/dto/community.dto.invite.external.user';
+import { CreateInvitationForUsersOnCommunityInput } from '@domain/community/community/dto/community.dto.invite.existing.user';
+import { CreateInvitationUserByEmailOnCommunityInput } from '@domain/community/community/dto/community.dto.invite.external.user';
 import { UpdateInnovationFlowInput } from '@domain/collaboration/innovation-flow/dto';
 import {
   CreateCalloutFramingInput,
@@ -149,8 +149,8 @@ export class BaseHandler extends AbstractHandler {
       UpdateSpaceSettingsInput,
       VisualUploadImageInput,
       CommunityApplyInput,
-      CreateInvitationExistingUserOnCommunityInput,
-      CreateInvitationExternalUserOnCommunityInput,
+      CreateInvitationForUsersOnCommunityInput,
+      CreateInvitationUserByEmailOnCommunityInput,
       CommunicationCreateDiscussionInput,
       SendMessageOnCalloutInput,
       CreateCalloutOnCollaborationInput,
