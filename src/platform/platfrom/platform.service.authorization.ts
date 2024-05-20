@@ -25,6 +25,7 @@ import {
   CREDENTIAL_RULE_TYPES_PLATFORM_AUTH_RESET,
   CREDENTIAL_RULE_TYPES_PLATFORM_FILE_UPLOAD_ANY_USER,
   CREDENTIAL_RULE_TYPES_PLATFORM_GRANT_GLOBAL_ADMINS,
+  CREDENTIAL_RULE_TYPES_PLATFORM_MGMT,
   CREDENTIAL_RULE_TYPES_PLATFORM_READ_REGISTERED,
   POLICY_RULE_PLATFORM_CREATE,
 } from '@common/constants';
@@ -276,7 +277,7 @@ export class PlatformAuthorizationService {
     platformAdmin.cascade = false;
     credentialRules.push(platformAdmin);
 
-    const platformAdmin2 =
+    const globalSupportPlatformAdmin =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [
           AuthorizationPrivilege.CREATE,
@@ -284,14 +285,11 @@ export class PlatformAuthorizationService {
           AuthorizationPrivilege.UPDATE,
           AuthorizationPrivilege.DELETE,
         ],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-        ],
-        CREDENTIAL_RULE_TYPES_PLATFORM_ADMINS
+        [AuthorizationCredential.GLOBAL_SUPPORT],
+        CREDENTIAL_RULE_TYPES_PLATFORM_MGMT
       );
-    platformAdmin2.cascade = true;
-    credentialRules.push(platformAdmin2);
+    globalSupportPlatformAdmin.cascade = true;
+    credentialRules.push(globalSupportPlatformAdmin);
 
     // Allow global support to reset auth
     const platformResetAuth =

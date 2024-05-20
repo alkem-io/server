@@ -15,6 +15,6 @@ export class LicensePlan extends BaseAlkemioEntity implements ILicensePlan {
   @Column('text', { nullable: false })
   name!: string;
 
-  @Column('boolean', { nullable: false })
+  @Column('boolean', { nullable: false, default: true })
   enabled!: boolean;
 }

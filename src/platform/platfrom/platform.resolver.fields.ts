@@ -68,7 +68,7 @@ export class PlatformResolverFields {
     return this.platformService.getStorageAggregator(platform);
   }
 
-  @ResolveField('licening', () => ILicensing, {
+  @ResolveField('licensing', () => ILicensing, {
     nullable: false,
     description: 'The Licensing in use by the platform.',
   })

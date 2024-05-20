@@ -19,7 +19,7 @@ export class licensing1716108478921 implements MigrationInterface {
                                                                 \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
                                                                 \`version\` int NOT NULL,
                                                                 \`name\` text NOT NULL,
-                                                                \`enabled\` tinyint NOT NULL,
+                                                                \`enabled\` tinyint NOT NULL DEFAULT '1',
                                                                 \`licensingId\` char(36) NULL,
                                                                 PRIMARY KEY (\`id\`)) ENGINE=InnoDB`);
     // Drop constraints platform ==> license policy
