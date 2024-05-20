@@ -72,7 +72,6 @@ import { TaskGraphqlModule } from '@domain/task/task.module';
 import { ActivityFeedModule } from '@domain/activity-feed';
 import { AdminSearchIngestModule } from '@platform/admin/search/admin.search.ingest.module';
 import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
-import { AuthModule } from '@services/auth/auth.module';
 
 @Module({
   imports: [
@@ -259,7 +258,6 @@ import { AuthModule } from '@services/auth/auth.module';
     AuthResetSubscriberModule,
     TaskGraphqlModule,
     ActivityFeedModule,
-    AuthModule,
   ],
   controllers: [AppController, SsiCredentialFlowController],
   providers: [

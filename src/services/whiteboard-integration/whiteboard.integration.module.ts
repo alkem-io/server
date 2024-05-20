@@ -3,8 +3,8 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { WhiteboardModule } from '@domain/common/whiteboard';
 import { UserModule } from '@domain/community/user/user.module';
 import { AuthenticationModule } from '@core/authentication/authentication.module';
-import { AuthService } from './auth.service';
-import { AuthController } from './auth.controller';
+import { WhiteboardIntegrationService } from './whiteboard.integration.service';
+import { WhiteboardIntegrationController } from './whiteboard.integration.controller';
 
 @Module({
   imports: [
@@ -13,7 +13,7 @@ import { AuthController } from './auth.controller';
     UserModule,
     AuthenticationModule,
   ],
-  providers: [AuthService],
-  controllers: [AuthController],
+  providers: [WhiteboardIntegrationService],
+  controllers: [WhiteboardIntegrationController],
 })
-export class AuthModule {}
+export class WhiteboardIntegrationModule {}

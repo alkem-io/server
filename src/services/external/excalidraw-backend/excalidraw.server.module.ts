@@ -8,6 +8,7 @@ import { EntityResolverModule } from '@services/infrastructure/entity-resolver/e
 import { ExcalidrawRedisServerFactoryProvider } from './adapters/redis';
 import { ExcalidrawServer } from './excalidraw.server';
 import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
+import { WhiteboardIntegrationModule } from '@services/whiteboard-integration/whiteboard.integration.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activ
     ContributionReporterModule,
     EntityResolverModule,
     ActivityAdapterModule,
+    WhiteboardIntegrationModule,
   ],
   providers: [
     ExcalidrawRedisServerFactoryProvider,
