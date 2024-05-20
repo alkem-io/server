@@ -95,31 +95,17 @@ export class SpaceService {
     return await this.initialise(space, spaceData, account, agentInfo);
   }
 
-  async validateSpaceData(spaceData: CreateSpaceInput) {
-    if (!(await this.isNameIdAvailable(spaceData.nameID)))
-      throw new ValidationException(
-        `Unable to create Space: the provided nameID is already taken: ${spaceData.nameID}`,
-        LogContext.SPACES
-      );
-  }
-
   public async initialise(
     space: ISpace,
     spaceData: CreateSpaceInput,
     account: IAccount,
     agentInfo: AgentInfo | undefined
   ): Promise<ISpace> {
-    if (!space.nameID) {
-      space.nameID = this.namingService.createNameID(
-        spaceData.profileData.displayName
-      );
-    }
     space.authorization = new AuthorizationPolicy();
     space.account = account;
     space.settingsStr = this.spaceSettingsService.serializeSettings(
       this.spaceDefaultsService.getDefaultSpaceSettings(spaceData.level)
     );
-    await this.isNameAvailableInAccountOrFail(spaceData.nameID, account.id);
 
     const parentStorageAggregator = spaceData.storageAggregatorParent;
     const storageAggregator =
@@ -791,13 +777,6 @@ export class SpaceService {
     return sortedSubspaces;
   }
 
-  async validateSubspaceNameIdOrFail(
-    proposedNameID: string,
-    accountID: string
-  ) {
-    await this.isNameAvailableInAccountOrFail(proposedNameID, accountID);
-  }
-
   async createSubspace(
     subspaceData: CreateSubspaceInput,
     agentInfo?: AgentInfo
@@ -810,15 +789,27 @@ export class SpaceService {
         community: true,
       },
     });
-    await this.validateSubspaceNameIdOrFail(
-      subspaceData.nameID,
-      space.account.id
-    );
-    if (!space.storageAggregator || !space.account || !space.community) {
+    if (!space.account || !space.storageAggregator || !space.community) {
       throw new EntityNotFoundException(
         `Unable to retrieve entities on space for creating subspace: ${space.id}`,
         LogContext.SPACES
       );
+    }
+    const reservedNameIDs =
+      await this.namingService.getReservedNameIDsInAccount(space.account.id);
+    if (!subspaceData.nameID) {
+      subspaceData.nameID =
+        this.namingService.createNameIdAvoidingReservedNameIDs(
+          subspaceData.profileData.displayName,
+          reservedNameIDs
+        );
+    } else {
+      if (reservedNameIDs.includes(subspaceData.nameID)) {
+        throw new ValidationException(
+          `Unable to create entity: the provided nameID is already taken: ${subspaceData.nameID}`,
+          LogContext.SPACES
+        );
+      }
     }
 
     // Update the subspace data being passed in to set the storage aggregator to use
@@ -916,17 +907,6 @@ export class SpaceService {
       },
     });
 
-    if (spaceData.nameID) {
-      if (spaceData.nameID !== space.nameID) {
-        // updating the nameID, check new value is allowed
-        await this.isNameAvailableInAccountOrFail(
-          spaceData.nameID,
-          space.account.id
-        );
-        space.nameID = spaceData.nameID;
-      }
-    }
-
     if (spaceData.context) {
       if (!space.context)
         throw new EntityNotInitializedException(
@@ -983,19 +963,6 @@ export class SpaceService {
     await this.authorizationPolicyService.delete(space.authorization);
 
     await this.storageAggregatorService.delete(space.storageAggregator.id);
-  }
-
-  public async isNameAvailableInAccountOrFail(
-    nameID: string,
-    accountID: string
-  ) {
-    if (
-      !(await this.namingService.isNameIdAvailableInAccount(nameID, accountID))
-    )
-      throw new ValidationException(
-        `Unable to create entity: the provided nameID is already taken: ${nameID}`,
-        LogContext.SPACES
-      );
   }
 
   async getSubspaceInAccount(

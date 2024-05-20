@@ -7,6 +7,7 @@ import { CommunityModule } from '@domain/community/community/community.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { CommunicationModule } from '@domain/communication/communication/communication.module';
 import { AccountModule } from '@domain/space/account/account.module';
+import { NamingModule } from '@services/infrastructure/naming/naming.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { AccountModule } from '@domain/space/account/account.module';
     CommunityModule,
     AuthorizationModule,
     AuthorizationPolicyModule,
+    NamingModule,
     CommunicationModule,
   ],
   providers: [ConversionService, ConversionResolverMutations],
