@@ -466,6 +466,10 @@ export class TemplatesSetService {
       templatesSetID
     );
 
+    const calloutTemplatesCount = await this.getCalloutTemplatesCount(
+      templatesSetID
+    );
+
     const communityGuidelinesTemplatesCount =
       await this.getCommunityGuidelinesTemplatesCount(templatesSetID);
 
@@ -473,6 +477,7 @@ export class TemplatesSetService {
       whiteboardTemplatesCount +
       postTemplatesCount +
       innovationFlowsCount +
+      calloutTemplatesCount +
       communityGuidelinesTemplatesCount
     );
   }
@@ -491,6 +496,10 @@ export class TemplatesSetService {
     return this.innovationFlowTemplateService.getCountInTemplatesSet(
       templatesSetID
     );
+  }
+
+  getCalloutTemplatesCount(templatesSetID: string): Promise<number> {
+    return this.calloutTemplateService.getCountInTemplatesSet(templatesSetID);
   }
 
   getCommunityGuidelinesTemplatesCount(

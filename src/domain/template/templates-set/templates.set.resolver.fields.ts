@@ -29,6 +29,18 @@ export class TemplatesSetResolverFields {
   }
 
   @UseGuards(GraphqlGuard)
+  @ResolveField('calloutTemplatesCount', () => Float, {
+    nullable: false,
+    description: 'The total number of CalloutTemplates in this TemplatesSet.',
+  })
+  @Profiling.api
+  async calloutTemplatesCount(
+    @Parent() templatesSet: ITemplatesSet
+  ): Promise<number> {
+    return this.templatesSetService.getCalloutTemplatesCount(templatesSet.id);
+  }
+
+  @UseGuards(GraphqlGuard)
   @ResolveField('postTemplates', () => [IPostTemplate], {
     nullable: false,
     description: 'The PostTemplates in this TemplatesSet.',
