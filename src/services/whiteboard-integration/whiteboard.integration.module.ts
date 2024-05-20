@@ -5,6 +5,9 @@ import { UserModule } from '@domain/community/user/user.module';
 import { AuthenticationModule } from '@core/authentication/authentication.module';
 import { WhiteboardIntegrationService } from './whiteboard.integration.service';
 import { WhiteboardIntegrationController } from './whiteboard.integration.controller';
+import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
+import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
+import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
 
 @Module({
   imports: [
@@ -12,6 +15,9 @@ import { WhiteboardIntegrationController } from './whiteboard.integration.contro
     WhiteboardModule,
     UserModule,
     AuthenticationModule,
+    ContributionReporterModule,
+    EntityResolverModule,
+    ActivityAdapterModule,
   ],
   providers: [WhiteboardIntegrationService],
   controllers: [WhiteboardIntegrationController],
