@@ -5,7 +5,7 @@ import { PlatformAuthorizationPolicyService } from '@platform/authorization/plat
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { ISpace } from '../space/space.interface';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
-import { AgentInfo } from '@core/authentication/agent-info';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { NameReporterService } from '@services/external/elasticsearch/name-reporter/name.reporter.service';
 import { AccountAuthorizationResetInput } from './dto/account.dto.reset.authorization';

@@ -20,7 +20,7 @@ import { Space } from './space.entity';
 import { ISpace } from './space.interface';
 import { UpdateSpaceInput } from './dto/space.dto.update';
 import { CreateSubspaceInput } from './dto/space.dto.create.subspace';
-import { AgentInfo } from '@src/core/authentication/agent-info';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { SpacesQueryArgs } from './dto/space.args.query.spaces';

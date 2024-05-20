@@ -10,7 +10,7 @@ import { ActivityFeed } from '@domain/activity-feed/activity.feed.interface';
 import { EntityNotFoundException } from '@common/exceptions';
 import { ActivityEventType } from '@common/enums/activity.event.type';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { PaginationArgs } from '@core/pagination';
 import { IActivityLogEntry } from '@services/api/activity-log/dto/activity.log.entry.interface';

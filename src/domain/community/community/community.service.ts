@@ -35,7 +35,7 @@ import { CommunityContributorsUpdateType } from '@common/enums/community.contrib
 import { CommunityContributorType } from '@common/enums/community.contributor.type';
 import { ICommunityRolePolicy } from '../community-policy/community.policy.role.interface';
 import { ICommunityPolicy } from '../community-policy/community.policy.interface';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { CommunityPolicyService } from '../community-policy/community.policy.service';
 import { ICommunityPolicyDefinition } from '../community-policy/community.policy.definition';
 import { DiscussionCategoryCommunity } from '@common/enums/communication.discussion.category.community';

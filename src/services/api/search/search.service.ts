@@ -12,7 +12,7 @@ import {
 } from '@common/enums';
 import { ValidationException } from '@common/exceptions/validation.exception';
 import { Organization } from '@domain/community/organization/organization.entity';
-import { AgentInfo } from '@core/authentication/agent-info';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { Space } from '@domain/space/space/space.entity';
 import { ISearchResult } from './dto/search.result.entry.interface';

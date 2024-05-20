@@ -3,7 +3,7 @@ import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { DeleteUserInput, IUser } from '@domain/community/user';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { UserAuthorizationService } from '@domain/community/user/user.service.authorization';
 import { RegistrationService } from './registration.service';

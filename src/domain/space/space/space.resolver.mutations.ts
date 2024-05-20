@@ -4,7 +4,7 @@ import { CurrentUser, Profiling } from '@src/common/decorators';
 import { SpaceService } from './space.service';
 import { UpdateSpaceInput } from '@domain/space/space';
 import { GraphqlGuard } from '@core/authorization';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { SpaceAuthorizationService } from './space.service.authorization';
