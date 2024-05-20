@@ -301,7 +301,6 @@ export class UserService {
       agentInfo.avatarURL
     );
 
-
     const nameID = await this.createUserNameID(
       agentInfo.firstName,
       agentInfo.lastName
