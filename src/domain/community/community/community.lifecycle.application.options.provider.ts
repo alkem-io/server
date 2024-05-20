@@ -10,7 +10,7 @@ import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { ApplicationService } from '@domain/community/application/application.service';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { CommunityService } from './community.service';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { CommunityRole } from '@common/enums/community.role';

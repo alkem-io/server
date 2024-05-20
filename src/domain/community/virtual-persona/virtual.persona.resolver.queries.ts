@@ -5,7 +5,7 @@ import { IVirtualPersona } from './virtual.persona.interface';
 import { VirtualPersonaService } from './virtual.persona.service';
 import { UseGuards } from '@nestjs/common';
 import { GraphqlGuard } from '@core/authorization';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IVirtualPersonaQuestionResult } from './dto/virtual.persona.question.dto.result';
 import { VirtualPersonaQuestionInput } from './dto/virtual.persona.question.dto.input';
 

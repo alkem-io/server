@@ -3,7 +3,7 @@ import { Args, Resolver, Query } from '@nestjs/graphql';
 import { CurrentUser } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { RolesOrganizationInput } from './dto/roles.dto.input.organization';
 import { RolesService } from './roles.service';

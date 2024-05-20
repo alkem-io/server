@@ -26,11 +26,13 @@ import {
   CREDENTIAL_RULE_ORGANIZATION_SELF_REMOVAL,
 } from '@common/constants';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
+import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
 
 @Injectable()
 export class OrganizationAuthorizationService {
   constructor(
     private organizationService: OrganizationService,
+    private agentAuthorizationService: AgentAuthorizationService,
     private authorizationPolicy: AuthorizationPolicyService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private userGroupAuthorizationService: UserGroupAuthorizationService,
@@ -102,9 +104,9 @@ export class OrganizationAuthorizationService {
         organization.authorization
       );
 
-    organization.agent.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
-        organization.agent.authorization,
+    organization.agent =
+      await this.agentAuthorizationService.applyAuthorizationPolicy(
+        organization.agent,
         organization.authorization
       );
 

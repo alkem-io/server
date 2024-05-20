@@ -1,6 +1,6 @@
 import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { AgentInfo } from '@core/authentication/agent-info';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { LogContext } from '@common/enums/logging.context';
 import { ConvertSubspaceToSpaceInput } from './dto/convert.dto.subspace.to.space.input';
 import { ISpace } from '@domain/space/space/space.interface';
@@ -24,11 +24,13 @@ import { CreateAccountInput } from '@domain/space/account/dto';
 import { AccountService } from '@domain/space/account/account.service';
 import { SpaceService } from '@domain/space/space/space.service';
 import { CreateSubspaceInput } from '@domain/space/space/dto/space.dto.create.subspace';
+import { NamingService } from '@services/infrastructure/naming/naming.service';
 
 export class ConversionService {
   constructor(
     private accountService: AccountService,
     private spaceService: SpaceService,
+    private namingService: NamingService,
     private communityService: CommunityService,
     private communicationService: CommunicationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -263,11 +265,15 @@ export class ConversionService {
       );
     }
 
-    const subspaceNameID = `${subsubspace.nameID}c`;
-    await this.spaceService.validateSubspaceNameIdOrFail(
-      subspaceNameID,
-      spaceID
-    );
+    const reservedNameIDs =
+      await this.namingService.getReservedNameIDsInAccount(
+        subsubspace.account.id
+      );
+    const subspaceNameID =
+      this.namingService.createNameIdAvoidingReservedNameIDs(
+        `${subsubspace.nameID}`,
+        reservedNameIDs
+      );
 
     // TODO: need to check if the space has a default innovation flow template
     const innovationFlowTemplateID = innovationFlowTemplateIdInput;

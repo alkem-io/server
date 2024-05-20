@@ -10,7 +10,7 @@ import {
 } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { RestGuard } from '@core/authorization/rest.guard';
 import { DocumentService } from '@domain/storage/document/document.service';

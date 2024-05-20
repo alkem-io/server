@@ -8,7 +8,7 @@ import { CurrentUser, Profiling } from '@common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { StorageBucketUploadFileOnLinkInput } from '@domain/storage/storage-bucket/dto/storage.bucket.dto.upload.file.on.link';
 import { FileUpload, GraphQLUpload } from 'graphql-upload';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';

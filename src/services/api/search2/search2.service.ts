@@ -2,7 +2,7 @@ import { EntityManager } from 'typeorm';
 import { isUUID } from 'class-validator';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { Space } from '@domain/space/space/space.entity';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';

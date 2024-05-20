@@ -18,6 +18,7 @@ export * from './visual.loader.creator';
 export * from './account/account.library.loader.creator';
 export * from './account/account.defaults.loader.creator';
 export * from './account/account.license.loader.creator';
+export * from './account/account.loader.creator';
 export * from './collaboration/collaboration.timeline.loader.creator';
 
 export * from './journey/journey.collaboration.loader.creator';

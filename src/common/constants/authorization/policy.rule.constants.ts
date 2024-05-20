@@ -26,3 +26,5 @@ export const POLICY_RULE_STORAGE_BUCKET_CONTRIBUTOR_FILE_UPLOAD =
   'policyRule-storageBucketContributorFileUpload';
 export const PRIVILEGE_RULE_TYPES_INNOVATION_FLOW_UPDATE =
   'privilegeRuleTypes-innovationFlowUpdate';
+export const PRIVILEGE_RULE_READ_USER_SETTINGS =
+  'privilegeRule-readUserSettings';

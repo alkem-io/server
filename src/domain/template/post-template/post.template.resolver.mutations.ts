@@ -6,7 +6,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { IPostTemplate } from './post.template.interface';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
-import { AgentInfo } from '@core/authentication/agent-info';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { UpdatePostTemplateInput } from './dto/post.template.dto.update';
 import { DeletePostTemplateInput } from './dto/post.template.dto.delete';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';

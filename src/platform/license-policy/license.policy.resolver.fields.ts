@@ -1,5 +1,4 @@
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { Profiling } from '@src/common/decorators';
 import { ILicensePolicy } from './license.policy.interface';
 import { LicensePolicyService } from './license.policy.service';
 import { ILicensePolicyRuleFeatureFlag } from '@core/license-engine/license.policy.rule.feature.flag.interface';
@@ -13,7 +12,6 @@ export class LicensePolicyResolverFields {
     description:
       'The set of credential rules that are contained by this License Policy.',
   })
-  @Profiling.api
   featureFlagRules(
     @Parent() license: ILicensePolicy
   ): ILicensePolicyRuleFeatureFlag[] {

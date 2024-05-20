@@ -3,6 +3,7 @@ import {
   EntityNotFoundException,
   NotSupportedException,
   RelationshipNotFoundException,
+  ValidationException,
 } from '@common/exceptions';
 import { IOrganization } from '@domain/community/organization/organization.interface';
 import { OrganizationService } from '@domain/community/organization/organization.service';
@@ -21,12 +22,14 @@ import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
 import { UpdateAccountDefaultsInput } from './dto/account.dto.update.defaults';
 import { ISpaceDefaults } from '../space.defaults/space.defaults.interface';
 import { SpaceService } from '../space/space.service';
-import { AgentInfo } from '@core/authentication/agent-info';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { ISpace } from '../space/space.interface';
 import { UpdateAccountPlatformSettingsInput } from './dto/account.dto.update.platform.settings';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { CreateAccountInput } from './dto/account.dto.create';
+import { NamingService } from '@services/infrastructure/naming/naming.service';
+import { CreateSpaceInput } from '../space/dto/space.dto.create';
 
 @Injectable()
 export class AccountService {
@@ -37,6 +40,7 @@ export class AccountService {
     private templatesSetService: TemplatesSetService,
     private spaceDefaultsService: SpaceDefaultsService,
     private licenseService: LicenseService,
+    private namingService: NamingService,
     @InjectRepository(Account)
     private accountRepository: Repository<Account>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -48,7 +52,7 @@ export class AccountService {
   ): Promise<IAccount> {
     // Before doing any creation check the space data!
     const spaceData = accountData.spaceData;
-    await this.spaceService.validateSpaceData(spaceData);
+    await this.validateSpaceData(spaceData);
 
     const account: IAccount = new Account();
     account.authorization = new AuthorizationPolicy();
@@ -66,6 +70,10 @@ export class AccountService {
       agentInfo
     );
     await this.setAccountHost(account, accountData.hostID);
+
+    account.agent = await this.agentService.createAgent({
+      parentDisplayID: `account-${account.space.nameID}`,
+    });
 
     const storageAggregator =
       await this.spaceService.getStorageAggregatorOrFail(account.space.id);
@@ -89,6 +97,13 @@ export class AccountService {
     return savedAccount;
   }
 
+  async validateSpaceData(spaceData: CreateSpaceInput) {
+    if (!(await this.spaceService.isNameIdAvailable(spaceData.nameID)))
+      throw new ValidationException(
+        `Unable to create Space: the provided nameID is already taken: ${spaceData.nameID}`,
+        LogContext.SPACES
+      );
+  }
   async save(account: IAccount): Promise<IAccount> {
     return await this.accountRepository.save(account);
   }
@@ -167,6 +182,7 @@ export class AccountService {
     const accountID = accountInput.id;
     const account = await this.getAccountOrFail(accountID, {
       relations: {
+        agent: true,
         space: true,
         library: true,
         license: { featureFlags: true },
@@ -175,6 +191,7 @@ export class AccountService {
     });
 
     if (
+      !account.agent ||
       !account.space ||
       !account.license ||
       !account.license?.featureFlags ||
@@ -198,6 +215,8 @@ export class AccountService {
     await this.spaceService.deleteSpace({
       ID: account.space.id,
     });
+
+    await this.agentService.deleteAgent(account.agent.id);
 
     await this.templatesSetService.deleteTemplatesSet(account.library.id);
 
