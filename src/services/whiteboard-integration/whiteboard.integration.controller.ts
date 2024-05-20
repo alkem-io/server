@@ -13,18 +13,17 @@ import {
   UserInfo,
   AuthMessagePattern,
 } from './types';
-import { AuthService } from './auth.service';
+import { WhiteboardIntegrationService } from './whiteboard.integration.service';
 
 @Controller()
-export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+export class WhiteboardIntegrationController {
+  constructor(private readonly authService: WhiteboardIntegrationService) {}
 
   @MessagePattern(AuthMessagePattern.ACCESS_GRANTED_WHITEBOARDS, Transport.RMQ)
   public async accessGrantedWhiteboard(
     @Payload() data: AccessGrantedInputData,
     @Ctx() context: RmqContext
   ): Promise<boolean> {
-    console.log(data);
     ack(context);
     return this.authService.accessGrantedWhiteboard(data);
   }

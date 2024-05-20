@@ -11,7 +11,7 @@ import { AuthenticationService } from '@core/authentication/authentication.servi
 import { AccessGrantedInputData, WhoInputData } from './types';
 
 @Injectable()
-export class AuthService {
+export class WhiteboardIntegrationService {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService,
     private readonly authorizationService: AuthorizationService,
