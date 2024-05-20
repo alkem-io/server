@@ -1,7 +1,7 @@
 import { IsOptional } from 'class-validator';
 import { Field, InputType } from '@nestjs/graphql';
 import { SpaceVisibility } from '@common/enums/space.visibility';
-import { UUID, UUID_NAMEID } from '@domain/common/scalars';
+import { UUID_NAMEID } from '@domain/common/scalars';
 import { UpdateNameableInput } from '@domain/common/entity/nameable-entity';
 import { InnovationHubType } from '../types';
 
@@ -20,10 +20,4 @@ export class UpdateInnovationHubInput extends UpdateNameableInput {
     description: `Spaces with which visibility this Innovation Hub will display. Only valid when type '${InnovationHubType.VISIBILITY}' is used.`,
   })
   spaceVisibilityFilter?: SpaceVisibility;
-
-  @Field(() => UUID, {
-    nullable: false,
-    description: 'An Account ID associated with the InnovationHub',
-  })
-  accountID!: string;
 }

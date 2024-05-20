@@ -18,6 +18,7 @@ import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { AccountService } from '@domain/space/account/account.service';
+import { UpdateInnovationHubPlatformSettingsInput } from './dto/innovation.hub.dto.update.settings';
 
 @Injectable()
 export class InnovationHubService {
@@ -110,7 +111,7 @@ export class InnovationHubService {
       {
         idOrNameId: input.ID,
       },
-      { relations: { profile: true, account: true } }
+      { relations: { profile: true } }
     );
 
     if (input.nameID) {
@@ -162,6 +163,25 @@ export class InnovationHubService {
         input.profileData
       );
     }
+
+    return await this.innovationHubRepository.save(innovationHub);
+  }
+
+  public async updatePlatformSettingsOrFail(
+    input: UpdateInnovationHubPlatformSettingsInput
+  ): Promise<IInnovationHub | never> {
+    const innovationHub: IInnovationHub = await this.getInnovationHubOrFail(
+      {
+        idOrNameId: input.ID,
+      },
+      { relations: { account: true } }
+    );
+
+    if (!innovationHub.account)
+      throw new EntityNotFoundException(
+        `Account for innovation hub ${innovationHub.id} not found!`,
+        LogContext.PLATFORM
+      );
 
     const account = await this.accountService.getAccountOrFail(input.accountID);
     innovationHub.account = account;
