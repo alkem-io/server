@@ -3,14 +3,14 @@ import { GraphqlGuard } from '@core/authorization';
 import { UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { AuthorizationAgentPrivilege } from '@src/common/decorators';
-import { ILicenseManager } from './license.manager.interface';
-import { LicenseManagerService } from './license.manager.service';
+import { ILicensing } from './licensing.interface';
+import { LicensingService } from './licensing.service';
 import { ILicensePlan } from '@platform/license-plan/license.plan.interface';
 import { ILicensePolicy } from '@platform/license-policy';
 
-@Resolver(() => ILicenseManager)
-export class LicenseManagerResolverFields {
-  constructor(private licenseManagerService: LicenseManagerService) {}
+@Resolver(() => ILicensing)
+export class LicensingResolverFields {
+  constructor(private licensingService: LicensingService) {}
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('plans', () => [ILicensePlan], {
@@ -18,17 +18,15 @@ export class LicenseManagerResolverFields {
     description: 'The License Plans in use on the platform.',
   })
   @UseGuards(GraphqlGuard)
-  async plans(
-    @Parent() licenseManager: ILicenseManager
-  ): Promise<ILicensePlan[]> {
-    return await this.licenseManagerService.getLicensePlans(licenseManager.id);
+  async plans(@Parent() licensing: ILicensing): Promise<ILicensePlan[]> {
+    return await this.licensingService.getLicensePlans(licensing.id);
   }
 
   @ResolveField('policy', () => ILicensePolicy, {
     nullable: false,
     description: 'The LicensePolicy in use by the License Manager.',
   })
-  policy(@Parent() licenseManager: ILicenseManager): Promise<ILicensePolicy> {
-    return this.licenseManagerService.getLicensePolicy(licenseManager.id);
+  policy(@Parent() licensing: ILicensing): Promise<ILicensePolicy> {
+    return this.licensingService.getLicensePolicy(licensing.id);
   }
 }

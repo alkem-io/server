@@ -3,7 +3,7 @@ import { Field, InputType } from '@nestjs/graphql';
 import { DeleteLicensePlanInput } from '@platform/license-plan';
 
 @InputType()
-export class DeleteLicensePlanOnLicenseManagerInput extends DeleteLicensePlanInput {
+export class DeleteLicensePlanOnLicensingInput extends DeleteLicensePlanInput {
   @Field(() => UUID, { nullable: false })
-  licenseManagerID!: string;
+  licensingID!: string;
 }

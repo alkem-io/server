@@ -31,7 +31,7 @@ import {
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
-import { LicenseManagerAuthorizationService } from '@platform/license-manager/license.manager.service.authorization';
+import { LicensingAuthorizationService } from '@platform/licensing/licensing.service.authorization';
 
 @Injectable()
 export class PlatformAuthorizationService {
@@ -44,7 +44,7 @@ export class PlatformAuthorizationService {
     private innovationHubService: InnovationHubService,
     private innovationHubAuthorizationService: InnovationHubAuthorizationService,
     private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
-    private licenseManagerAuthorizationService: LicenseManagerAuthorizationService,
+    private licensingAuthorizationService: LicensingAuthorizationService,
     @InjectRepository(Platform)
     private platformRepository: Repository<Platform>
   ) {}
@@ -113,7 +113,7 @@ export class PlatformAuthorizationService {
         },
         communication: true,
         storageAggregator: true,
-        licenseManager: true,
+        licensing: true,
       },
     });
 
@@ -121,7 +121,7 @@ export class PlatformAuthorizationService {
       !platform.library ||
       !platform.communication ||
       !platform.storageAggregator ||
-      !platform.licenseManager
+      !platform.licensing
     )
       throw new RelationshipNotFoundException(
         `Unable to load entities for platform auth: ${platform.id} `,
@@ -168,9 +168,9 @@ export class PlatformAuthorizationService {
       );
     }
 
-    platform.licenseManager =
-      await this.licenseManagerAuthorizationService.applyAuthorizationPolicy(
-        platform.licenseManager,
+    platform.licensing =
+      await this.licensingAuthorizationService.applyAuthorizationPolicy(
+        platform.licensing,
         platform.authorization
       );
     return platform;
@@ -262,7 +262,7 @@ export class PlatformAuthorizationService {
     globalAdminNotInherited.cascade = false;
     credentialRules.push(globalAdminNotInherited);
 
-    // Allow global admin Spaces to access Platform mgmt
+    // Allow global supportto access Platform mgmt
     const platformAdmin =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.PLATFORM_ADMIN],
@@ -279,29 +279,27 @@ export class PlatformAuthorizationService {
     const platformAdmin2 =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [
+          AuthorizationPrivilege.CREATE,
           AuthorizationPrivilege.READ,
           AuthorizationPrivilege.UPDATE,
-          AuthorizationPrivilege.CREATE,
           AuthorizationPrivilege.DELETE,
         ],
         [
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_SUPPORT,
-          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
         ],
         CREDENTIAL_RULE_TYPES_PLATFORM_ADMINS
       );
     platformAdmin2.cascade = true;
     credentialRules.push(platformAdmin2);
 
-    // Allow global admin Spaces to reset auth
+    // Allow global support to reset auth
     const platformResetAuth =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.AUTHORIZATION_RESET],
         [
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_SUPPORT,
-          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
         ],
         CREDENTIAL_RULE_TYPES_PLATFORM_AUTH_RESET
       );

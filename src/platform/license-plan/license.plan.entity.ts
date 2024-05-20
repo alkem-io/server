@@ -1,16 +1,16 @@
 import { Column, Entity, ManyToOne } from 'typeorm';
 import { ILicensePlan } from './license.plan.interface';
-import { LicenseManager } from '@platform/license-manager/license.manager.entity';
 import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
+import { Licensing } from '@platform/licensing/licensing.entity';
 
 @Entity()
 export class LicensePlan extends BaseAlkemioEntity implements ILicensePlan {
-  @ManyToOne(() => LicenseManager, licenseManager => licenseManager.plans, {
+  @ManyToOne(() => Licensing, licensing => licensing.plans, {
     eager: false,
     cascade: false,
     onDelete: 'CASCADE',
   })
-  licenseManager?: LicenseManager;
+  licensing?: Licensing;
 
   @Column('text', { nullable: false })
   name!: string;

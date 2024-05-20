@@ -1,11 +1,11 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 import { randomUUID } from 'crypto';
 
-export class licenseManager1716108478921 implements MigrationInterface {
-  name = 'licenseManager1716108478921';
+export class licensing1716108478921 implements MigrationInterface {
+  name = 'licensing1716108478921';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`CREATE TABLE \`license_manager\` (\`id\` char(36) NOT NULL,
+    await queryRunner.query(`CREATE TABLE \`licensing\` (\`id\` char(36) NOT NULL,
                                                                  \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
                                                                  \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
                                                                  \`version\` int NOT NULL,
@@ -20,7 +20,7 @@ export class licenseManager1716108478921 implements MigrationInterface {
                                                                 \`version\` int NOT NULL,
                                                                 \`name\` text NOT NULL,
                                                                 \`enabled\` tinyint NOT NULL,
-                                                                \`licenseManagerId\` char(36) NULL,
+                                                                \`licensingId\` char(36) NULL,
                                                                 PRIMARY KEY (\`id\`)) ENGINE=InnoDB`);
     // Drop constraints platform ==> license policy
     await queryRunner.query(
@@ -33,48 +33,48 @@ export class licenseManager1716108478921 implements MigrationInterface {
       `ALTER TABLE \`platform\` DROP INDEX \`IDX_bde2e6ff4a8d800388bcee8057\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`platform\` ADD \`licenseManagerId\` char(36) NULL`
+      `ALTER TABLE \`platform\` ADD \`licensingId\` char(36) NULL`
     );
     await queryRunner.query(
-      `ALTER TABLE \`platform\` ADD UNIQUE INDEX \`IDX_1282e7fa19848d4b4bc3a4829d\` (\`licenseManagerId\`)`
+      `ALTER TABLE \`platform\` ADD UNIQUE INDEX \`IDX_1282e7fa19848d4b4bc3a4829d\` (\`licensingId\`)`
     );
     await queryRunner.query(
-      `CREATE UNIQUE INDEX \`REL_1282e7fa19848d4b4bc3a4829d\` ON \`platform\` (\`licenseManagerId\`)`
+      `CREATE UNIQUE INDEX \`REL_1282e7fa19848d4b4bc3a4829d\` ON \`platform\` (\`licensingId\`)`
     );
     await queryRunner.query(
-      `ALTER TABLE \`license_manager\` ADD CONSTRAINT \`FK_1ddac8984c93ca18a23edb30fc9\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+      `ALTER TABLE \`licensing\` ADD CONSTRAINT \`FK_1ddac8984c93ca18a23edb30fc9\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
     await queryRunner.query(
-      `ALTER TABLE \`license_manager\` ADD CONSTRAINT \`FK_65ca04c85acdd5dad63f5576094\` FOREIGN KEY (\`licensePolicyId\`) REFERENCES \`license_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+      `ALTER TABLE \`licensing\` ADD CONSTRAINT \`FK_65ca04c85acdd5dad63f5576094\` FOREIGN KEY (\`licensePolicyId\`) REFERENCES \`license_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
     await queryRunner.query(
-      `ALTER TABLE \`license_plan\` ADD CONSTRAINT \`FK_42becb5fd6dc563f51ecb71abcc\` FOREIGN KEY (\`licenseManagerId\`) REFERENCES \`license_manager\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
+      `ALTER TABLE \`license_plan\` ADD CONSTRAINT \`FK_42becb5fd6dc563f51ecb71abcc\` FOREIGN KEY (\`licenseManagerId\`) REFERENCES \`licensing\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
     );
 
     await queryRunner.query(
-      `ALTER TABLE \`platform\` ADD CONSTRAINT \`FK_1282e7fa19848d4b4bc3a4829db\` FOREIGN KEY (\`licenseManagerId\`) REFERENCES \`license_manager\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+      `ALTER TABLE \`platform\` ADD CONSTRAINT \`FK_1282e7fa19848d4b4bc3a4829db\` FOREIGN KEY (\`licenseManagerId\`) REFERENCES \`licensing\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
 
     // Create the agent on each account
     const [platform]: { id: string; licensePolicyId: string }[] =
       await queryRunner.query(`SELECT id, licensePolicyId FROM platform `);
-    const licenseManagerID = randomUUID();
-    const licenseManagerAuthID = randomUUID();
+    const licensingID = randomUUID();
+    const licensingAuthID = randomUUID();
 
     await queryRunner.query(
       `INSERT INTO authorization_policy (id, version, credentialRules, verifiedCredentialRules, anonymousReadAccess, privilegeRules) VALUES
-                    ('${licenseManagerAuthID}',
+                    ('${licensingAuthID}',
                     1, '', '', 0, '')`
     );
     await queryRunner.query(
-      `INSERT INTO license_manager (id, version, authorizationId, licensePolicyId) VALUES
-                ('${licenseManagerID}',
+      `INSERT INTO licensing (id, version, authorizationId, licensePolicyId) VALUES
+                ('${licensingID}',
                 1,
-                '${licenseManagerAuthID}',
+                '${licensingAuthID}',
                 '${platform.licensePolicyId}')`
     );
     await queryRunner.query(
-      `UPDATE platform SET licenseManagerId = '${licenseManagerID}' WHERE id = '${platform.id}'`
+      `UPDATE platform SET licensingId = '${licensingID}' WHERE id = '${platform.id}'`
     );
 
     await queryRunner.query(

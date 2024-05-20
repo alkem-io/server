@@ -4,7 +4,7 @@ import { Library } from '@library/library/library.entity';
 import { Entity, JoinColumn, OneToOne } from 'typeorm';
 import { IPlatform } from './platform.interface';
 import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
-import { LicenseManager } from '@platform/license-manager/license.manager.entity';
+import { Licensing } from '@platform/licensing/licensing.entity';
 
 @Entity()
 export class Platform extends AuthorizableEntity implements IPlatform {
@@ -32,11 +32,11 @@ export class Platform extends AuthorizableEntity implements IPlatform {
   @JoinColumn()
   storageAggregator!: StorageAggregator;
 
-  @OneToOne(() => LicenseManager, {
+  @OneToOne(() => Licensing, {
     eager: false,
     cascade: true,
     onDelete: 'SET NULL',
   })
   @JoinColumn()
-  licenseManager?: LicenseManager;
+  licensing?: Licensing;
 }
