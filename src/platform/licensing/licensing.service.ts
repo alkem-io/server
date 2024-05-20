@@ -32,7 +32,7 @@ export class LicensingService {
 
     if (!licensing) {
       throw new EntityNotFoundException(
-        'No License Manager found!',
+        `Unable to retrieve the Licensing for the platform, licensingID: ${licensingID}`,
         LogContext.LICENSE
       );
     }
@@ -72,7 +72,7 @@ export class LicensingService {
     if (!licensing.plans)
       throw new EntityNotInitializedException(
         `Licensing (${licensing}) not initialised`,
-        LogContext.LIBRARY
+        LogContext.LICENSE
       );
 
     const licensePlan = await this.licensePlanService.createLicensePlan(

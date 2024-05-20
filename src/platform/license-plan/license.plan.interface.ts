@@ -4,7 +4,7 @@ import { ILicensing } from '@platform/licensing/licensing.interface';
 
 @ObjectType('LicensePlan')
 export abstract class ILicensePlan extends IBaseAlkemio {
-  licenseManager?: ILicensing;
+  licensing?: ILicensing;
 
   @Field(() => String, {
     description: 'The name of the License Plan',

@@ -24,7 +24,7 @@ export class LicensingResolverFields {
 
   @ResolveField('policy', () => ILicensePolicy, {
     nullable: false,
-    description: 'The LicensePolicy in use by the License Manager.',
+    description: 'The LicensePolicy in use by the Licensing setup.',
   })
   policy(@Parent() licensing: ILicensing): Promise<ILicensePolicy> {
     return this.licensingService.getLicensePolicy(licensing.id);

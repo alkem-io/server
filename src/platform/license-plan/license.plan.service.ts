@@ -61,7 +61,7 @@ export class LicensePlanService {
     if (!licensePlan) {
       throw new EntityNotFoundException(
         `Unable to find LicensePlan with ID: ${licensePlanID}`,
-        LogContext.SPACES
+        LogContext.LICENSE
       );
     }
     return licensePlan;
