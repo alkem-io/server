@@ -48,11 +48,11 @@ export class licensing1716108478921 implements MigrationInterface {
       `ALTER TABLE \`licensing\` ADD CONSTRAINT \`FK_65ca04c85acdd5dad63f5576094\` FOREIGN KEY (\`licensePolicyId\`) REFERENCES \`license_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
     await queryRunner.query(
-      `ALTER TABLE \`license_plan\` ADD CONSTRAINT \`FK_42becb5fd6dc563f51ecb71abcc\` FOREIGN KEY (\`licenseManagerId\`) REFERENCES \`licensing\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
+      `ALTER TABLE \`license_plan\` ADD CONSTRAINT \`FK_42becb5fd6dc563f51ecb71abcc\` FOREIGN KEY (\`licensingId\`) REFERENCES \`licensing\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
     );
 
     await queryRunner.query(
-      `ALTER TABLE \`platform\` ADD CONSTRAINT \`FK_1282e7fa19848d4b4bc3a4829db\` FOREIGN KEY (\`licenseManagerId\`) REFERENCES \`licensing\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+      `ALTER TABLE \`platform\` ADD CONSTRAINT \`FK_1282e7fa19848d4b4bc3a4829db\` FOREIGN KEY (\`licensingId\`) REFERENCES \`licensing\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
 
     // Create the agent on each account
