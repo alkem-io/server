@@ -1,0 +1,8 @@
+mutation {
+  createLicensePlan(planData: {
+    licensingID: "9f4de137-7d92-49b7-89b3-30963039bb83",
+    name: "FREE"
+  }) {
+    id
+  }
+}

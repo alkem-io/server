@@ -25,13 +25,14 @@ import {
   CREDENTIAL_RULE_TYPES_PLATFORM_AUTH_RESET,
   CREDENTIAL_RULE_TYPES_PLATFORM_FILE_UPLOAD_ANY_USER,
   CREDENTIAL_RULE_TYPES_PLATFORM_GRANT_GLOBAL_ADMINS,
+  CREDENTIAL_RULE_TYPES_PLATFORM_MGMT,
   CREDENTIAL_RULE_TYPES_PLATFORM_READ_REGISTERED,
   POLICY_RULE_PLATFORM_CREATE,
 } from '@common/constants';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
-import { LicensePolicyAuthorizationService } from '@platform/license-policy/license.policy.service.authorization';
+import { LicensingAuthorizationService } from '@platform/licensing/licensing.service.authorization';
 
 @Injectable()
 export class PlatformAuthorizationService {
@@ -43,8 +44,8 @@ export class PlatformAuthorizationService {
     private platformService: PlatformService,
     private innovationHubService: InnovationHubService,
     private innovationHubAuthorizationService: InnovationHubAuthorizationService,
-    private licensePolicyAuthorizationService: LicensePolicyAuthorizationService,
     private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
+    private licensingAuthorizationService: LicensingAuthorizationService,
     @InjectRepository(Platform)
     private platformRepository: Repository<Platform>
   ) {}
@@ -113,7 +114,7 @@ export class PlatformAuthorizationService {
         },
         communication: true,
         storageAggregator: true,
-        licensePolicy: true,
+        licensing: true,
       },
     });
 
@@ -121,10 +122,10 @@ export class PlatformAuthorizationService {
       !platform.library ||
       !platform.communication ||
       !platform.storageAggregator ||
-      !platform.licensePolicy
+      !platform.licensing
     )
       throw new RelationshipNotFoundException(
-        `Unable to load entities for platform: ${platform.id} `,
+        `Unable to load entities for platform auth: ${platform.id} `,
         LogContext.PLATFORM
       );
 
@@ -168,9 +169,9 @@ export class PlatformAuthorizationService {
       );
     }
 
-    platform.licensePolicy =
-      await this.licensePolicyAuthorizationService.applyAuthorizationPolicy(
-        platform.licensePolicy,
+    platform.licensing =
+      await this.licensingAuthorizationService.applyAuthorizationPolicy(
+        platform.licensing,
         platform.authorization
       );
     return platform;
@@ -262,7 +263,7 @@ export class PlatformAuthorizationService {
     globalAdminNotInherited.cascade = false;
     credentialRules.push(globalAdminNotInherited);
 
-    // Allow global admin Spaces to access Platform mgmt
+    // Allow global supportto access Platform mgmt
     const platformAdmin =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.PLATFORM_ADMIN],
@@ -276,32 +277,27 @@ export class PlatformAuthorizationService {
     platformAdmin.cascade = false;
     credentialRules.push(platformAdmin);
 
-    const platformAdmin2 =
+    const globalSupportPlatformAdmin =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [
+          AuthorizationPrivilege.CREATE,
           AuthorizationPrivilege.READ,
           AuthorizationPrivilege.UPDATE,
-          AuthorizationPrivilege.CREATE,
           AuthorizationPrivilege.DELETE,
         ],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
-        ],
-        CREDENTIAL_RULE_TYPES_PLATFORM_ADMINS
+        [AuthorizationCredential.GLOBAL_SUPPORT],
+        CREDENTIAL_RULE_TYPES_PLATFORM_MGMT
       );
-    platformAdmin2.cascade = true;
-    credentialRules.push(platformAdmin2);
+    globalSupportPlatformAdmin.cascade = true;
+    credentialRules.push(globalSupportPlatformAdmin);
 
-    // Allow global admin Spaces to reset auth
+    // Allow global support to reset auth
     const platformResetAuth =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.AUTHORIZATION_RESET],
         [
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_SUPPORT,
-          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
         ],
         CREDENTIAL_RULE_TYPES_PLATFORM_AUTH_RESET
       );
