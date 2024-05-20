@@ -4,7 +4,7 @@ import { CurrentUser } from '@src/common/decorators';
 import { UUID_NAMEID } from '@domain/common/scalars';
 import { GraphqlGuard } from '@core/authorization';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { AgentInfo } from '@core/authentication/agent-info';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { LogContext } from '@common/enums/logging.context';
 import { AccountService } from './account.service';

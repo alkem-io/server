@@ -4,7 +4,7 @@ import { AuthorizationPrivilege } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
 import { Inject, UseGuards } from '@nestjs/common/decorators';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { CalloutService } from './callout.service';
 import { IPost } from '@domain/collaboration/post/post.interface';
 import {

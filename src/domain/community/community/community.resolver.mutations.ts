@@ -8,7 +8,7 @@ import { ApplicationService } from '@domain/community/application/application.se
 import { ICommunity } from '@domain/community/community/community.interface';
 import { CommunityApplicationLifecycleOptionsProvider } from './community.lifecycle.application.options.provider';
 import { GraphqlGuard } from '@core/authorization';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UserService } from '@domain/community/user/user.service';

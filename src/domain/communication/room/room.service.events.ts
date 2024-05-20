@@ -1,5 +1,5 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IMessage } from '../message/message.interface';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { ActivityInputCalloutPostComment } from '@services/adapters/activity-adapter/dto/activity.dto.input.callout.post.comment';

@@ -5,7 +5,7 @@ import { CurrentUser, Profiling } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege } from '@common/enums';
 import { VirtualContributorAuthorizationService } from './virtual.contributor.service.authorization';
-import { AgentInfo } from '@core/authentication/agent-info';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { VirtualContributorAuthorizationResetInput } from './dto/virtual.contributor.dto.reset.authorization';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
