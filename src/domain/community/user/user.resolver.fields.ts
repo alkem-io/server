@@ -66,7 +66,7 @@ export class UserResolverFields {
   }
 
   @ResolveField('agent', () => IAgent, {
-    nullable: true,
+    nullable: false,
     description: 'The Agent representing this User.',
   })
   @Profiling.api

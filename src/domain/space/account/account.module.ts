@@ -18,6 +18,7 @@ import { NameReporterModule } from '@services/external/elasticsearch/name-report
 import { InnovationFlowTemplateModule } from '@domain/template/innovation-flow-template/innovation.flow.template.module';
 import { AccountResolverQueries } from './account.resolver.queries';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
+import { UserModule } from '@domain/community/user/user.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { NamingModule } from '@services/infrastructure/naming/naming.module';
     AuthorizationModule,
     AuthorizationPolicyModule,
     OrganizationModule,
+    UserModule,
     TemplatesSetModule,
     SpaceModule,
     SpaceDefaultsModule,

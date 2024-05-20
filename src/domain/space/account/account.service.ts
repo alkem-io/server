@@ -5,7 +5,6 @@ import {
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
-import { IOrganization } from '@domain/community/organization/organization.interface';
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -28,8 +27,9 @@ import { UpdateAccountPlatformSettingsInput } from './dto/account.dto.update.pla
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { CreateAccountInput } from './dto/account.dto.create';
-import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { CreateSpaceInput } from '../space/dto/space.dto.create';
+import { IContributor } from '@domain/community/contributor/contributor.interface';
+import { UserService } from '@domain/community/user/user.service';
 
 @Injectable()
 export class AccountService {
@@ -40,7 +40,7 @@ export class AccountService {
     private templatesSetService: TemplatesSetService,
     private spaceDefaultsService: SpaceDefaultsService,
     private licenseService: LicenseService,
-    private namingService: NamingService,
+    private userService: UserService,
     @InjectRepository(Account)
     private accountRepository: Repository<Account>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -224,9 +224,8 @@ export class AccountService {
     await this.spaceDefaultsService.deleteSpaceDefaults(account.defaults.id);
 
     // Remove the account host credential
-    const hostAgent = await this.organizationService.getAgent(host);
     host.agent = await this.agentService.revokeCredential({
-      agentID: hostAgent.id,
+      agentID: host.agent.id,
       type: AuthorizationCredential.ACCOUNT_HOST,
       resourceID: account.id,
     });
@@ -341,11 +340,8 @@ export class AccountService {
     const existingHost = await this.getHost(account);
 
     if (existingHost) {
-      const agentExisting = await this.organizationService.getAgent(
-        existingHost
-      );
       organization.agent = await this.agentService.revokeCredential({
-        agentID: agentExisting.id,
+        agentID: existingHost.agent.id,
         type: AuthorizationCredential.ACCOUNT_HOST,
         resourceID: account.id,
       });
@@ -363,21 +359,27 @@ export class AccountService {
     return account;
   }
 
-  async getHost(account: IAccount): Promise<IOrganization | undefined> {
+  async getHost(account: IAccount): Promise<IContributor> {
     const organizations =
       await this.organizationService.organizationsWithCredentials({
         type: AuthorizationCredential.ACCOUNT_HOST,
         resourceID: account.id,
       });
-    if (organizations.length == 0) {
-      return undefined;
+    if (organizations.length === 0) {
+      return organizations[0];
     }
-    if (organizations.length > 1) {
-      throw new RelationshipNotFoundException(
-        `More than one host for Account ${account.id} `,
-        LogContext.ACCOUNT
-      );
+
+    const users = await this.userService.usersWithCredentials({
+      type: AuthorizationCredential.ACCOUNT_HOST,
+      resourceID: account.id,
+    });
+    if (users.length === 0) {
+      return users[0];
     }
-    return organizations[0];
+
+    throw new RelationshipNotFoundException(
+      `Unable to identify a single Organization or User as account host ${account.id}: ${organizations.length} orgs, ${users.length} users`,
+      LogContext.ACCOUNT
+    );
   }
 }

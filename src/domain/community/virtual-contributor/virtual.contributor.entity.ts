@@ -1,11 +1,11 @@
 import { Column, Entity, JoinColumn, OneToOne } from 'typeorm';
 import { IVirtualContributor } from './virtual.contributor.interface';
-import { Contributor } from '../contributor/contributor.entity';
+import { ContributorBase } from '../contributor/contributor.base.entity';
 import { VirtualPersona } from '../virtual-persona';
 
 @Entity()
 export class VirtualContributor
-  extends Contributor
+  extends ContributorBase
   implements IVirtualContributor
 {
   @OneToOne(() => VirtualPersona, {

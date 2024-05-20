@@ -3,12 +3,13 @@ import { Field, ObjectType } from '@nestjs/graphql';
 import { IGroupable } from '@domain/common/interfaces/groupable.interface';
 import { IOrganizationVerification } from '../organization-verification/organization.verification.interface';
 import { IPreferenceSet } from '@domain/common/preference-set';
+import { IContributorBase } from '../contributor/contributor.base.interface';
 import { IContributor } from '../contributor/contributor.interface';
 
 @ObjectType('Organization', {
-  implements: () => [IGroupable],
+  implements: () => [IGroupable, IContributor],
 })
-export class IOrganization extends IContributor {
+export class IOrganization extends IContributorBase implements IContributor {
   rowId!: number;
 
   groups?: IUserGroup[];
