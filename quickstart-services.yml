@@ -269,7 +269,7 @@ services:
       - 6379
 
   chromadb:
-    image: chromadb/chroma
+    image: chromadb/chroma:0.5.0
     extra_hosts:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_chromadb
@@ -279,12 +279,12 @@ services:
     networks:
       - alkemio_dev_net
     ports:
-      - 8000
+      - 8005:8000
 
   virtual_contributor_engine_guidance:
     container_name: alkemio_dev_virtual_contributor_engine_guidance
     hostname: virtual-contributor-engine-guidance
-    image: alkemio/virtual-contributor-engine-guidance:v0.7.0
+    image: alkemio/virtual-contributor-engine-guidance:v0.7.1
     restart: always
     volumes:
        - /dev/shm:/dev/shm
@@ -298,6 +298,7 @@ services:
       - RABBITMQ_HOST
       - RABBITMQ_USER
       - RABBITMQ_PASSWORD
+      - RABBITMQ_QUEUE=virtual-contributor-engine-guidance
       - ENVIRONMENT=dev
       - EMBEDDINGS_DEPLOYMENT_NAME
       - AZURE_OPENAI_API_KEY
