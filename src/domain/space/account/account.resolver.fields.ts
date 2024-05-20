@@ -4,7 +4,11 @@ import { Account } from '@domain/space/account/account.entity';
 import { IOrganization } from '@domain/community/organization';
 import { UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { CurrentUser, Profiling } from '@src/common/decorators';
+import {
+  AuthorizationAgentPrivilege,
+  CurrentUser,
+  Profiling,
+} from '@src/common/decorators';
 import { AccountService } from '@domain/space/account/account.service';
 import { IAccount } from '@domain/space/account/account.interface';
 import { ITemplatesSet } from '@domain/template/templates-set';
@@ -17,10 +21,12 @@ import {
   AccountLicenseLoaderCreator,
   AccountLibraryLoaderCreator,
   AuthorizationLoaderCreator,
+  AgentLoaderCreator,
 } from '@core/dataloader/creators/loader.creators';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { IAgent } from '@domain/agent/agent/agent.interface';
 
 @Resolver(() => IAccount)
 export class AccountResolverFields {
@@ -50,6 +56,20 @@ export class AccountResolverFields {
       `read defaults on library: ${account.id}`
     );
 
+    return loader.load(account.id);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('agent', () => IAgent, {
+    nullable: false,
+    description: 'The Agent representing this Account.',
+  })
+  async agent(
+    @Parent() account: Account,
+    @Loader(AgentLoaderCreator, { parentClassRef: Account })
+    loader: ILoader<IAgent>
+  ): Promise<IAgent> {
     return loader.load(account.id);
   }
 

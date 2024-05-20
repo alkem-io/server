@@ -22,7 +22,7 @@ import { ISearchResults } from '@services/api/search/dto/search.result.dto';
 import { ISearchResultPost } from '@services/api/search/dto/search.result.dto.entry.post';
 import { Post } from '@domain/collaboration/post';
 import { Callout } from '@domain/collaboration/callout';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UserService } from '@domain/community/user/user.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';

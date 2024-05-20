@@ -8,7 +8,7 @@ import { base64ToBuffer } from '@common/utils';
 import { ExcalidrawContent } from '@common/interfaces';
 import { Whiteboard } from '@domain/common/whiteboard/types';
 import { WhiteboardTemplate } from '@domain/template/whiteboard-template/whiteboard.template.entity';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { DocumentAuthorizationService } from '@domain/storage/document/document.service.authorization';
 
 @Injectable()
