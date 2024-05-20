@@ -25,9 +25,11 @@ import {
   CREDENTIAL_RULE_USER_READ_PII,
   CREDENTIAL_RULE_TYPES_USER_PLATFORM_ADMIN,
   CREDENTIAL_RULE_USER_READ,
+  PRIVILEGE_RULE_READ_USER_SETTINGS,
 } from '@common/constants';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
+import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 
 @Injectable()
 export class UserAuthorizationService {
@@ -74,6 +76,9 @@ export class UserAuthorizationService {
       user.authorization,
       user
     );
+
+    user.authorization = this.appendPrivilegeRules(user.authorization);
+
     // NOTE: Clone the authorization policy to ensure the changes are local to profile
     const clonedAnonymousReadAccessAuthorization =
       this.authorizationPolicyService.cloneAuthorizationPolicy(
@@ -206,7 +211,10 @@ export class UserAuthorizationService {
 
     const communityReader =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.READ],
+        [
+          AuthorizationPrivilege.READ,
+          AuthorizationPrivilege.READ_USER_SETTINGS,
+        ],
         [
           AuthorizationCredential.GLOBAL_COMMUNITY_READ,
           AuthorizationCredential.GLOBAL_SUPPORT,
@@ -215,20 +223,6 @@ export class UserAuthorizationService {
       );
     communityReader.cascade = true;
     newRules.push(communityReader);
-
-    // TODO: Currently the UPDATE privilege is used to protect the user's preferences
-    // This rule can be removed once the privilege protecting user preferences is updated.
-    const communityReaderUpdate =
-      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.UPDATE],
-        [
-          AuthorizationCredential.GLOBAL_COMMUNITY_READ,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-        ],
-        CREDENTIAL_RULE_USER_READ
-      );
-    communityReader.cascade = false;
-    newRules.push(communityReaderUpdate);
 
     // Determine who is able to see the PII designated fields for a User
     const { credentials } = await this.userService.getUserAndCredentials(
@@ -285,5 +279,23 @@ export class UserAuthorizationService {
     );
 
     return authorization;
+  }
+
+  private appendPrivilegeRules(
+    authorization: IAuthorizationPolicy
+  ): IAuthorizationPolicy {
+    const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
+
+    const readSettingsPrivilege = new AuthorizationPolicyRulePrivilege(
+      [AuthorizationPrivilege.READ_USER_SETTINGS],
+      AuthorizationPrivilege.UPDATE,
+      PRIVILEGE_RULE_READ_USER_SETTINGS
+    );
+    privilegeRules.push(readSettingsPrivilege);
+
+    return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
+      authorization,
+      privilegeRules
+    );
   }
 }

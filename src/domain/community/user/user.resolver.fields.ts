@@ -106,7 +106,7 @@ export class UserResolverFields {
       !(await this.isAccessGranted(
         user,
         agentInfo,
-        AuthorizationPrivilege.UPDATE
+        AuthorizationPrivilege.READ_USER_SETTINGS
       ))
     ) {
       return [];
