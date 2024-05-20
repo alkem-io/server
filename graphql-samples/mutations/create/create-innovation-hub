@@ -26,6 +26,7 @@ query variables:
     "profileData": {
       "displayName": "test space"
     },
-    "spaceListFilter": ["889ed0cf-4cd9-41d6-8ce0-d27b65cb149e"]
+    "spaceListFilter": ["889ed0cf-4cd9-41d6-8ce0-d27b65cb149e"],
+    "accountID": "589ed0cf-8cd9-41d6-8ce0-d27b65cb149d"
   }
 }

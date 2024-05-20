@@ -26,11 +26,13 @@ import {
   CREDENTIAL_RULE_TYPES_SPACE_GLOBAL_ADMIN_COMMUNITY_READ,
   CREDENTIAL_RULE_TYPES_SPACE_READ,
 } from '@common/constants/authorization/credential.rule.types.constants';
+import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
 
 @Injectable()
 export class AccountAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
+    private agentAuthorizationService: AgentAuthorizationService,
     private templatesSetAuthorizationService: TemplatesSetAuthorizationService,
     private licenseAuthorizationService: LicenseAuthorizationService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
@@ -45,16 +47,18 @@ export class AccountAuthorizationService {
       accountInput.id,
       {
         relations: {
-          license: true,
-          library: true,
-          defaults: true,
+          agent: true,
           space: {
             profile: true,
           },
+          license: true,
+          library: true,
+          defaults: true,
         },
       }
     );
     if (
+      !account.agent ||
       !account.library ||
       !account.license ||
       !account.defaults ||
@@ -82,6 +86,12 @@ export class AccountAuthorizationService {
     );
 
     await this.accountRepository.save(account);
+
+    account.agent =
+      await this.agentAuthorizationService.applyAuthorizationPolicy(
+        account.agent,
+        account.authorization
+      );
 
     account.license =
       await this.licenseAuthorizationService.applyAuthorizationPolicy(

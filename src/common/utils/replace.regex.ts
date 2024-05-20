@@ -1,4 +1,4 @@
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { IpfsService } from '@services/adapters/storage/ipfs/ipfs.service';

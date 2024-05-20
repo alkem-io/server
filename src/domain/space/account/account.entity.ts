@@ -5,8 +5,13 @@ import { License } from '@domain/license/license/license.entity';
 import { SpaceDefaults } from '../space.defaults/space.defaults.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { Space } from '../space/space.entity';
+import { Agent } from '@domain/agent/agent/agent.entity';
 @Entity()
 export class Account extends AuthorizableEntity implements IAccount {
+  @OneToOne(() => Agent, { eager: false, cascade: true, onDelete: 'SET NULL' })
+  @JoinColumn()
+  agent?: Agent;
+
   @OneToOne(() => Space, {
     eager: false,
     cascade: true,

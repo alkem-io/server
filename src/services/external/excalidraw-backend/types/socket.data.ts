@@ -1,5 +1,5 @@
 import { Session } from '@ory/kratos-client';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 
 export type SocketData = {
   /***

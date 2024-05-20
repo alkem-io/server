@@ -33,6 +33,7 @@ export enum AuthorizationPrivilege {
   UPDATE_CALLOUT_PUBLISHER = 'update-callout-publisher',
   READ_USERS = 'read-users',
   READ_USER_PII = 'read-user-pii',
+  READ_USER_SETTINGS = 'read-user-settings',
   MOVE_POST = 'move-post',
   MOVE_CONTRIBUTION = 'move-contribution',
   ACCESS_INTERACTIVE_GUIDANCE = 'access-interactive-guidance',

@@ -43,11 +43,13 @@ import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorizat
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { SpaceSettingsService } from '../space.settings/space.settings.service';
 import { SpaceLevel } from '@common/enums/space.level';
+import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
 
 @Injectable()
 export class SpaceAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
+    private agentAuthorizationService: AgentAuthorizationService,
     private communityPolicyService: CommunityPolicyService,
     private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
     private profileAuthorizationService: ProfileAuthorizationService,
@@ -271,11 +273,10 @@ export class SpaceAuthorizationService {
         license
       );
 
-    space.agent.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
-        space.agent.authorization,
-        space.authorization
-      );
+    space.agent = await this.agentAuthorizationService.applyAuthorizationPolicy(
+      space.agent,
+      space.authorization
+    );
 
     space.profile =
       await this.profileAuthorizationService.applyAuthorizationPolicy(

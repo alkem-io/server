@@ -4,7 +4,7 @@ import { SpaceVisibility } from '@common/enums/space.visibility';
 import { groupCredentialsByEntity } from './group.credentials.by.entity';
 import { getSpaceRolesForContributorEntityData } from './get.space.roles.for.contributor.entity.data';
 import { getSpaceRolesForContributorQueryResult } from './get.space.roles.for.contributor.query.result';
-import { AgentInfo } from '@core/authentication/agent-info';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 
 export const mapSpaceCredentialsToRoles = async (

@@ -3,7 +3,7 @@ import { Args, Resolver, Query } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { SearchInput } from './dto/search.dto.input';
 import { GraphqlGuard } from '@core/authorization';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { ISearchResults } from './dto/search.result.dto';
 import { SearchService } from './search.service';
 import { Search2Service } from '../search2/search2.service';

@@ -3,7 +3,7 @@ import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { IInnovationHub } from './innovation.hub.interface';
-import { AgentInfo } from '@core/authentication/agent-info';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { DeleteInnovationHubInput } from './dto/innovation.hub.dto.delete';
 import { InnovationHubService } from './innovation.hub.service';
@@ -11,6 +11,7 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { CreateInnovationHubInput } from './dto/innovation.hub.dto.create';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { UpdateInnovationHubInput } from './dto/innovation.hub.dto.update';
+import { UpdateInnovationHubPlatformSettingsInput } from './dto/innovation.hub.dto.update.settings';
 
 @Resolver()
 export class InnovationHubResolverMutations {
@@ -55,11 +56,34 @@ export class InnovationHubResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       authorizationPolicy,
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      AuthorizationPrivilege.UPDATE,
       'update innovation space'
     );
 
     return await this.innovationHubService.updateOrFail(updateData);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IInnovationHub, {
+    description: 'Update Innovation Hub Settings.',
+  })
+  @Profiling.api
+  async updateInnovationHubPlatformSettings(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('updateData') updateData: UpdateInnovationHubPlatformSettingsInput
+  ): Promise<IInnovationHub> {
+    const authorizationPolicy =
+      await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      authorizationPolicy,
+      AuthorizationPrivilege.PLATFORM_ADMIN,
+      'update innovation space'
+    );
+
+    return await this.innovationHubService.updatePlatformSettingsOrFail(
+      updateData
+    );
   }
 
   @UseGuards(GraphqlGuard)
