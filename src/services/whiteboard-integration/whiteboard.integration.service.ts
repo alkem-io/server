@@ -98,7 +98,7 @@ export class WhiteboardIntegrationService {
     const update = await this.accessGranted({
       userId,
       whiteboardId,
-      privilege: AuthorizationPrivilege.UPDATE,
+      privilege: AuthorizationPrivilege.UPDATE_CONTENT,
     });
 
     const maxCollaborators = (await this.whiteboardService.isMultiUser(
@@ -126,14 +126,14 @@ export class WhiteboardIntegrationService {
       await this.communityResolver.getRootSpaceIDFromCommunityOrFail(community);
     const wb = await this.whiteboardService.getProfile(whiteboardId);
 
-    users.forEach(({ userId, email }) => {
+    users.forEach(({ id, email }) => {
       this.contributionReporter.whiteboardContribution(
         {
           id: whiteboardId,
           name: wb.displayName,
           space: spaceID,
         },
-        { id: userId, email }
+        { id, email }
       );
     });
   }
