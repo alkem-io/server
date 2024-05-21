@@ -1,4 +1,4 @@
-import { Module, OnModuleInit } from '@nestjs/common';
+import { Global, Module, OnModuleInit } from '@nestjs/common';
 import { CqrsModule, EventBus } from '@nestjs/cqrs';
 import { Publisher } from './publisher';
 import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
@@ -6,6 +6,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ConfigurationTypes } from '@common/enums';
 import { IngestSpace } from './commands';
 
+@Global()
 @Module({
   imports: [
     CqrsModule,

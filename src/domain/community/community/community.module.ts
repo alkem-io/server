@@ -30,7 +30,6 @@ import { StorageAggregatorResolverModule } from '@services/infrastructure/storag
 import { CommunityGuidelinesModule } from '../community-guidelines/community.guidelines.module';
 import { VirtualContributorModule } from '../virtual-contributor/virtual.contributor.module';
 import { LicenseEngineModule } from '@core/license-engine/license.engine.module';
-import { EventBusModule } from '@services/infrastructure/event-bus/event.bus.module';
 
 @Module({
   imports: [
@@ -58,7 +57,6 @@ import { EventBusModule } from '@services/infrastructure/event-bus/event.bus.mod
     TypeOrmModule.forFeature([Community]),
     TrustRegistryAdapterModule,
     ContributionReporterModule,
-    EventBusModule,
   ],
   providers: [
     CommunityService,
