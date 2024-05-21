@@ -31,7 +31,9 @@ export class CalloutFramingAuthorizationService {
         calloutFramingInput.id,
         {
           relations: {
-            whiteboard: true,
+            whiteboard: {
+              profile: true,
+            },
             profile: true,
           },
         }

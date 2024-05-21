@@ -21,15 +21,10 @@ export class LinkAuthorizationService {
   ) {}
 
   public async applyAuthorizationPolicy(
-    linkInput: ILink,
+    link: ILink,
     parentAuthorization: IAuthorizationPolicy | undefined,
     createdByID?: string
   ): Promise<ILink> {
-    const link = await this.linkService.getLinkOrFail(linkInput.id, {
-      relations: {
-        profile: true,
-      },
-    });
     if (!link.profile)
       throw new RelationshipNotFoundException(
         `Unable to load entities on link:  ${link.id} `,
@@ -47,7 +42,7 @@ export class LinkAuthorizationService {
         link.authorization
       );
 
-    return this.linkService.save(link);
+    return link;
   }
 
   private appendCredentialRules(

@@ -52,7 +52,12 @@ export class CalloutAuthorizationService {
           contributions: true,
           contributionDefaults: true,
           contributionPolicy: true,
-          framing: true,
+          framing: {
+            profile: true,
+            whiteboard: {
+              profile: true,
+            },
+          },
         },
       }
     );

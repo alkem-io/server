@@ -19,6 +19,7 @@ import {
 } from '@common/constants';
 import { ProfileAuthorizationService } from '../profile/profile.service.authorization';
 import { IWhiteboard } from './whiteboard.interface';
+import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 
 @Injectable()
 export class WhiteboardAuthorizationService {
@@ -33,6 +34,12 @@ export class WhiteboardAuthorizationService {
     whiteboard: IWhiteboard,
     parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<IWhiteboard> {
+    if (!whiteboard.profile) {
+      throw new RelationshipNotFoundException(
+        `Unable to load entities on whiteboard reset auth:  ${whiteboard.id} `,
+        LogContext.COLLABORATION
+      );
+    }
     whiteboard.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         whiteboard.authorization,
@@ -45,28 +52,13 @@ export class WhiteboardAuthorizationService {
       whiteboard
     );
 
-    const profile = (
-      await this.whiteboardRepository.findOne({
-        where: { id: whiteboard.id },
-        relations: { profile: true },
-      })
-    )?.profile;
-
-    if (!profile) {
-      throw new EntityNotInitializedException(
-        `Profile not found for Whiteboard: ${whiteboard.id}`,
-        LogContext.COLLABORATION
-      );
-    }
-
-    whiteboard.profile = profile;
     whiteboard.profile =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
         whiteboard.profile,
         whiteboard.authorization
       );
 
-    return this.whiteboardRepository.save(whiteboard);
+    return whiteboard;
   }
 
   private appendCredentialRules(whiteboard: IWhiteboard): IAuthorizationPolicy {

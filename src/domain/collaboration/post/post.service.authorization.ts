@@ -1,17 +1,13 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { IPost } from './post.interface';
-import { Post } from './post.entity';
 import {
   AuthorizationCredential,
   AuthorizationPrivilege,
   LogContext,
 } from '@common/enums';
-import { PostService } from './post.service';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { CommunityPolicyService } from '@domain/community/community-policy/community.policy.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
@@ -22,17 +18,15 @@ import {
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 import { RoomAuthorizationService } from '@domain/communication/room/room.service.authorization';
 import { CommunityRole } from '@common/enums/community.role';
+import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 
 @Injectable()
 export class PostAuthorizationService {
   constructor(
-    private postService: PostService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private roomAuthorizationService: RoomAuthorizationService,
     private communityPolicyService: CommunityPolicyService,
-    private profileAuthorizationService: ProfileAuthorizationService,
-    @InjectRepository(Post)
-    private postRepository: Repository<Post>
+    private profileAuthorizationService: ProfileAuthorizationService
   ) {}
 
   async applyAuthorizationPolicy(
@@ -40,6 +34,12 @@ export class PostAuthorizationService {
     parentAuthorization: IAuthorizationPolicy | undefined,
     communityPolicy: ICommunityPolicy
   ): Promise<IPost> {
+    if (!post.profile) {
+      throw new RelationshipNotFoundException(
+        `Unable to load entities on post reset auth:  ${post.id} `,
+        LogContext.COLLABORATION
+      );
+    }
     post.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         post.authorization,
@@ -69,14 +69,13 @@ export class PostAuthorizationService {
     post.authorization = this.appendCredentialRules(post, communityPolicy);
 
     // cascade
-    post.profile = await this.postService.getProfile(post);
     post.profile =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
         post.profile,
         post.authorization
       );
 
-    return await this.postRepository.save(post);
+    return post;
   }
 
   private appendCredentialRules(
