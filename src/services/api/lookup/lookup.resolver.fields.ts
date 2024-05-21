@@ -81,8 +81,8 @@ export class LookupResolverFields {
     private storageAggregatorService: StorageAggregatorService,
     private spaceService: SpaceService,
     private userService: UserService,
-    private guidelineService: CommunityGuidelinesService,
-    private guidelineTemplateService: CommunityGuidelinesTemplateService
+    private guidelinesService: CommunityGuidelinesService,
+    private guidelinesTemplateService: CommunityGuidelinesTemplateService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -535,13 +535,12 @@ export class LookupResolverFields {
     nullable: true,
     description: 'Lookup the specified Community guidelines',
   })
-  async communityGuideline(
+  async communityGuidelines(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<ICommunityGuidelines> {
-    const guidelines = await this.guidelineService.getCommunityGuidelinesOrFail(
-      id
-    );
+    const guidelines =
+      await this.guidelinesService.getCommunityGuidelinesOrFail(id);
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       guidelines.authorization,
@@ -557,12 +556,12 @@ export class LookupResolverFields {
     nullable: true,
     description: 'Lookup the specified InnovationFlow Template',
   })
-  async communityGuidelineTemplate(
+  async communityGuidelinesTemplate(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<ICommunityGuidelinesTemplate> {
     const guidelinesTemplate =
-      await this.guidelineTemplateService.getCommunityGuidelinesTemplateOrFail(
+      await this.guidelinesTemplateService.getCommunityGuidelinesTemplateOrFail(
         id
       );
     this.authorizationService.grantAccessOrFail(
