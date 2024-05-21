@@ -127,17 +127,6 @@ export class VirtualPersonaResolverMutations {
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => Boolean, {
-    description: 'Resets the interaction with the chat engine.',
-  })
-  @Profiling.api
-  async resetVirtualContributor(
-    @CurrentUser() agentInfo: AgentInfo
-  ): Promise<boolean> {
-    return this.virtualPersonaService.resetUserHistory(agentInfo);
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => Boolean, {
     description: 'Ingest the virtual contributor data / embeddings.',
   })
   @Profiling.api

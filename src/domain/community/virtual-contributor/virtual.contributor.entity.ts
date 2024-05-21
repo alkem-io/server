@@ -1,25 +1,35 @@
-import { Column, Entity, JoinColumn, OneToOne } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
 import { IVirtualContributor } from './virtual.contributor.interface';
 import { Contributor } from '../contributor/contributor.entity';
 import { VirtualPersona } from '../virtual-persona';
+import { Account } from '@domain/space/account/account.entity';
+import { BodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
 
 @Entity()
 export class VirtualContributor
   extends Contributor
   implements IVirtualContributor
 {
-  @OneToOne(() => VirtualPersona, {
+  @ManyToOne(() => VirtualPersona, {
     eager: true,
     cascade: true,
-    onDelete: 'SET NULL',
   })
   @JoinColumn()
   virtualPersona!: VirtualPersona;
 
-  @Column()
-  communicationID: string = '';
+  @ManyToOne(() => Account, account => account.virtualContributors, {
+    eager: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  account!: Account;
 
-  constructor() {
-    super();
-  }
+  @Column({ length: 256 })
+  communicationID!: string;
+
+  @Column({ length: 64 })
+  bodyOfKnowledgeType!: BodyOfKnowledgeType;
+
+  @Column({ length: 256 })
+  bodyOfKnowledgeID!: string;
 }

@@ -46,14 +46,6 @@ export class VirtualPersonaEngineAdapter {
 
     try {
       switch (eventData.engine) {
-        case VirtualContributorEngine.COMMUNITY_MANAGER:
-          const responseCommunityManager =
-            this.virtualPersonaEngineCommunityManager.send<
-              VirtualPersonaEngineAdapterQueryResponse,
-              VirtualPersonaEngineAdapterQueryInput
-            >({ cmd: VirtualPersonaEventType.QUERY }, eventData);
-          responseData = await firstValueFrom(responseCommunityManager);
-          break;
         case VirtualContributorEngine.EXPERT:
           const responseAlkemioDigileefomgeving =
             this.virtualPersonaEngineAlkemioDigileefomgeving.send<

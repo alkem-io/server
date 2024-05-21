@@ -18,9 +18,9 @@ import { LogContext } from '@common/enums/logging.context';
 import { VirtualPersonaEngineAdapterQueryInput } from '@services/adapters/virtual-persona-engine-adapter/dto/virtual.persona.engine.adapter.dto.question.input';
 import { VirtualPersonaEngineAdapter } from '@services/adapters/virtual-persona-engine-adapter/virtual.persona.engine.adapter';
 import { ProfileService } from '@domain/common/profile/profile.service';
-import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { VisualType } from '@common/enums/visual.type';
-import { ProfileType } from '@common/enums/profile.type';
+// import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+// import { VisualType } from '@common/enums/visual.type';
+// import { ProfileType } from '@common/enums/profile.type';
 import { VirtualContributorEngine } from '@common/enums/virtual.persona.engine';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 
@@ -41,47 +41,49 @@ export class VirtualPersonaService {
   ): Promise<IVirtualPersona> {
     const virtual: IVirtualPersona = VirtualPersona.create(virtualPersonaData);
     virtual.authorization = new AuthorizationPolicy();
-
-    // TODO: for now just create a new storage aggregator, to be looked at later where to manage
-    // and store the personas (and engine definitions)
-    const storageAggregator =
-      await this.storageAggregatorService.createStorageAggregator();
-
-    virtual.profile = await this.profileService.createProfile(
-      virtualPersonaData.profileData,
-      ProfileType.VIRTUAL_PERSONA,
-      storageAggregator
-    );
-    await this.profileService.addTagsetOnProfile(virtual.profile, {
-      name: TagsetReservedName.KEYWORDS,
-      tags: [],
-    });
-    await this.profileService.addTagsetOnProfile(virtual.profile, {
-      name: TagsetReservedName.CAPABILITIES,
-      tags: [],
-    });
-    // Set the visuals
-    let avatarURL = virtualPersonaData.profileData?.avatarURL;
-    if (!avatarURL) {
-      avatarURL = this.profileService.generateRandomAvatar(
-        virtual.profile.displayName,
-        ''
-      );
-    }
-    await this.profileService.addVisualOnProfile(
-      virtual.profile,
-      VisualType.AVATAR,
-      avatarURL
-    );
-
-    const savedVC = await this.virtualPersonaRepository.save(virtual);
-    this.logger.verbose?.(
-      `Created new virtual persona with id ${virtual.id}`,
-      LogContext.COMMUNITY
-    );
-
-    return savedVC;
+    return virtual;
   }
+
+  //   // TODO: for now just create a new storage aggregator, to be looked at later where to manage
+  //   // and store the personas (and engine definitions)
+  //   const storageAggregator =
+  //     await this.storageAggregatorService.createStorageAggregator();
+
+  //   virtual.profile = await this.profileService.createProfile(
+  //     virtualPersonaData.profileData,
+  //     ProfileType.VIRTUAL_PERSONA,
+  //     storageAggregator
+  //   );
+  //   await this.profileService.addTagsetOnProfile(virtual.profile, {
+  //     name: TagsetReservedName.KEYWORDS,
+  //     tags: [],
+  //   });
+  //   await this.profileService.addTagsetOnProfile(virtual.profile, {
+  //     name: TagsetReservedName.CAPABILITIES,
+  //     tags: [],
+  //   });
+  //   // Set the visuals
+  //   let avatarURL = virtualPersonaData.profileData?.avatarURL;
+  //   if (!avatarURL) {
+  //     avatarURL = this.profileService.generateRandomAvatar(
+  //       virtual.profile.displayName,
+  //       ''
+  //     );
+  //   }
+  //   await this.profileService.addVisualOnProfile(
+  //     virtual.profile,
+  //     VisualType.AVATAR,
+  //     avatarURL
+  //   );
+
+  //   const savedVC = await this.virtualPersonaRepository.save(virtual);
+  //   this.logger.verbose?.(
+  //     `Created new virtual persona with id ${virtual.id}`,
+  //     LogContext.COMMUNITY
+  //   );
+
+  //   return savedVC;
+  // }
 
   async updateVirtualPersona(
     virtualPersonaData: UpdateVirtualPersonaInput
@@ -91,39 +93,45 @@ export class VirtualPersonaService {
       {}
     );
 
-    if (virtualPersonaData.prompt !== undefined) {
-      virtualPersona.prompt = virtualPersonaData.prompt;
-    }
-
-    if (virtualPersonaData.engine !== undefined) {
-      virtualPersona.engine = virtualPersonaData.engine;
-    }
-
-    return await this.virtualPersonaRepository.save(virtualPersona);
+    return virtualPersona;
   }
+
+  //   if (virtualPersonaData.prompt !== undefined) {
+  //     virtualPersona.prompt = virtualPersonaData.prompt;
+  //   }
+
+  //   if (virtualPersonaData.engine !== undefined) {
+  //     virtualPersona.engine = virtualPersonaData.engine;
+  //   }
+
+  //   return await this.virtualPersonaRepository.save(virtualPersona);
+  // }
 
   async deleteVirtualPersona(
     deleteData: DeleteVirtualPersonaInput
   ): Promise<IVirtualPersona> {
     const personaID = deleteData.ID;
+
     const virtualPersona = await this.getVirtualPersonaOrFail(personaID, {
       relations: {
         authorization: true,
       },
     });
-
-    if (virtualPersona.authorization) {
-      await this.authorizationPolicyService.delete(
-        virtualPersona.authorization
-      );
-    }
-
-    const result = await this.virtualPersonaRepository.remove(
-      virtualPersona as VirtualPersona
-    );
-    result.id = personaID;
-    return result;
+    return virtualPersona;
   }
+
+  //   if (virtualPersona.authorization) {
+  //     await this.authorizationPolicyService.delete(
+  //       virtualPersona.authorization
+  //     );
+  //   }
+
+  //   const result = await this.virtualPersonaRepository.remove(
+  //     virtualPersona as VirtualPersona
+  //   );
+  //   result.id = personaID;
+  //   return result;
+  // }
 
   async getVirtualPersona(
     virtualPersonaID: string,
@@ -158,9 +166,9 @@ export class VirtualPersonaService {
     return virtualPersona;
   }
 
-  async save(virtualPersona: IVirtualPersona): Promise<IVirtualPersona> {
-    return await this.virtualPersonaRepository.save(virtualPersona);
-  }
+  // async save(virtualPersona: IVirtualPersona): Promise<IVirtualPersona> {
+  //   return await this.virtualPersonaRepository.save(virtualPersona);
+  // }
 
   async getVirtualPersonas(): Promise<IVirtualPersona[]> {
     const virtualContributors: IVirtualPersona[] =
@@ -179,7 +187,7 @@ export class VirtualPersonaService {
 
     const input: VirtualPersonaEngineAdapterQueryInput = {
       engine: virtualPersona.engine,
-      prompt: virtualPersona.prompt,
+      prompt: '',
       userId: agentInfo.userID,
       question: personaQuestionInput.question,
       kowledgeSpaceNameID: spaceNameID,
@@ -189,13 +197,6 @@ export class VirtualPersonaService {
     const response = await this.virtualPersonaEngineAdapter.sendQuery(input);
 
     return response;
-  }
-
-  public async resetUserHistory(agentInfo: AgentInfo): Promise<boolean> {
-    return this.virtualPersonaEngineAdapter.sendReset({
-      engine: VirtualContributorEngine.EXPERT,
-      userId: agentInfo.userID,
-    });
   }
 
   public async ingest(agentInfo: AgentInfo): Promise<boolean> {
