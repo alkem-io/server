@@ -5,7 +5,6 @@ import {
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
-import { OrganizationService } from '@domain/community/organization/organization.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindManyOptions, FindOneOptions, Repository } from 'typeorm';
@@ -29,18 +28,17 @@ import { SpaceVisibility } from '@common/enums/space.visibility';
 import { CreateAccountInput } from './dto/account.dto.create';
 import { CreateSpaceInput } from '../space/dto/space.dto.create';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
-import { UserService } from '@domain/community/user/user.service';
+import { ContributorService } from '@domain/community/contributor/contributor.service';
 
 @Injectable()
 export class AccountService {
   constructor(
     private spaceService: SpaceService,
     private agentService: AgentService,
-    private organizationService: OrganizationService,
     private templatesSetService: TemplatesSetService,
     private spaceDefaultsService: SpaceDefaultsService,
     private licenseService: LicenseService,
-    private userService: UserService,
+    private contributorService: ContributorService,
     @InjectRepository(Account)
     private accountRepository: Repository<Account>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -330,17 +328,21 @@ export class AccountService {
 
   async setAccountHost(
     account: IAccount,
-    hostOrgID: string
+    hostContributorID: string
   ): Promise<IAccount> {
-    const organization = await this.organizationService.getOrganizationOrFail(
-      hostOrgID,
-      { relations: { groups: true, agent: true } }
+    const contributor = await this.contributorService.getContributorOrFail(
+      hostContributorID,
+      {
+        relations: {
+          agent: true,
+        },
+      }
     );
 
     const existingHost = await this.getHost(account);
 
     if (existingHost) {
-      organization.agent = await this.agentService.revokeCredential({
+      contributor.agent = await this.agentService.revokeCredential({
         agentID: existingHost.agent.id,
         type: AuthorizationCredential.ACCOUNT_HOST,
         resourceID: account.id,
@@ -348,38 +350,35 @@ export class AccountService {
     }
 
     // assign the credential
-    const agent = await this.organizationService.getAgent(organization);
-    organization.agent = await this.agentService.grantCredential({
-      agentID: agent.id,
+    contributor.agent = await this.agentService.grantCredential({
+      agentID: contributor.agent.id,
       type: AuthorizationCredential.ACCOUNT_HOST,
       resourceID: account.id,
     });
 
-    await this.organizationService.save(organization);
     return account;
   }
 
-  async getHost(account: IAccount): Promise<IContributor> {
-    const organizations =
-      await this.organizationService.organizationsWithCredentials({
+  async getHost(account: IAccount): Promise<IContributor | null> {
+    const contributors =
+      await this.contributorService.contributorsWithCredentials({
         type: AuthorizationCredential.ACCOUNT_HOST,
         resourceID: account.id,
       });
-    if (organizations.length === 0) {
-      return organizations[0];
+    if (contributors.length === 1) {
+      return contributors[0];
     }
 
-    const users = await this.userService.usersWithCredentials({
-      type: AuthorizationCredential.ACCOUNT_HOST,
-      resourceID: account.id,
-    });
-    if (users.length === 0) {
-      return users[0];
-    }
+    return null;
+  }
 
-    throw new RelationshipNotFoundException(
-      `Unable to identify a single Organization or User as account host ${account.id}: ${organizations.length} orgs, ${users.length} users`,
-      LogContext.ACCOUNT
-    );
+  async getHostOrFail(account: IAccount): Promise<IContributor> {
+    const host = await this.getHost(account);
+    if (!host)
+      throw new EntityNotFoundException(
+        `Unable to find Host for account with ID: ${account.id}`,
+        LogContext.COMMUNITY
+      );
+    return host;
   }
 }

@@ -113,7 +113,7 @@ export class AccountResolverFields {
     description: 'The Account host.',
   })
   async host(@Parent() account: Account): Promise<IContributor> {
-    return await this.accountService.getHost(account);
+    return await this.accountService.getHostOrFail(account);
   }
 
   @ResolveField('spaceID', () => String, {
