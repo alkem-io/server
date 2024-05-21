@@ -49,7 +49,7 @@ export class CalendarEventAuthorizationService {
     // have rights to delete comments
     if (calendarEvent.comments) {
       calendarEvent.comments =
-        await this.roomAuthorizationService.applyAuthorizationPolicy(
+        this.roomAuthorizationService.applyAuthorizationPolicy(
           calendarEvent.comments,
           calendarEvent.authorization
         );

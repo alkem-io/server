@@ -105,11 +105,10 @@ export class CalloutAuthorizationService {
       );
 
     if (callout.comments) {
-      callout.comments =
-        await this.roomAuthorizationService.applyAuthorizationPolicy(
-          callout.comments,
-          callout.authorization
-        );
+      callout.comments = this.roomAuthorizationService.applyAuthorizationPolicy(
+        callout.comments,
+        callout.authorization
+      );
       callout.comments.authorization =
         this.roomAuthorizationService.allowContributorsToCreateMessages(
           callout.comments.authorization

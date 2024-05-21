@@ -66,7 +66,7 @@ export class CommunicationAuthorizationService {
     }
 
     communication.updates =
-      await this.roomAuthorizationService.applyAuthorizationPolicy(
+      this.roomAuthorizationService.applyAuthorizationPolicy(
         communication.updates,
         communication.authorization
       );

@@ -49,11 +49,10 @@ export class PostAuthorizationService {
     // Inherit for comments before extending so that the creating user does not
     // have rights to delete comments
     if (post.comments) {
-      post.comments =
-        await this.roomAuthorizationService.applyAuthorizationPolicy(
-          post.comments,
-          post.authorization
-        );
+      post.comments = this.roomAuthorizationService.applyAuthorizationPolicy(
+        post.comments,
+        post.authorization
+      );
 
       post.comments.authorization =
         this.roomAuthorizationService.allowContributorsToCreateMessages(

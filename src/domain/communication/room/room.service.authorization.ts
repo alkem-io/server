@@ -20,10 +20,10 @@ export class RoomAuthorizationService {
     private roomService: RoomService
   ) {}
 
-  async applyAuthorizationPolicy(
+  applyAuthorizationPolicy(
     room: IRoom,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): Promise<IRoom> {
+  ): IRoom {
     room.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         room.authorization,
@@ -32,7 +32,7 @@ export class RoomAuthorizationService {
 
     room.authorization = this.allowAdminsToComment(room.authorization);
 
-    return await this.roomService.save(room);
+    return room;
   }
 
   public allowContributorsToCreateMessages(

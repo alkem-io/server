@@ -92,11 +92,10 @@ export class AccountAuthorizationService {
       account.authorization
     );
 
-    account.license =
-      await this.licenseAuthorizationService.applyAuthorizationPolicy(
-        account.license,
-        account.authorization
-      );
+    account.license = this.licenseAuthorizationService.applyAuthorizationPolicy(
+      account.license,
+      account.authorization
+    );
 
     account.space =
       await this.spaceAuthorizationService.applyAuthorizationPolicy(
