@@ -77,7 +77,8 @@ export class VirtualContributorService {
       virtualContributor.communicationID = communicationID;
     }
 
-    // virtualContributor.accountId = virtualContributorData.accountId;
+    // maybe even base it on the space?
+    // virtualContributor.account = await this.accountService.getAccountOrFail(virtualContributorData.accountId);
 
     const virtualPersona =
       await this.virtualPersonaService.getVirtualPersonaOrFail(
