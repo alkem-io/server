@@ -7,9 +7,9 @@ import { ProfileService } from './profile.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { VisualAuthorizationService } from '../visual/visual.service.authorization';
 import { StorageBucketAuthorizationService } from '@domain/storage/storage-bucket/storage.bucket.service.authorization';
-import { IVisual } from '../visual/visual.interface';
 import { LogContext } from '@common/enums/logging.context';
 import { RelationshipNotFoundException } from '@common/exceptions';
+import { Profiling } from '@common/decorators';
 
 @Injectable()
 export class ProfileAuthorizationService {
@@ -22,6 +22,7 @@ export class ProfileAuthorizationService {
     private profileRepository: Repository<Profile>
   ) {}
 
+  @Profiling.api
   async applyAuthorizationPolicy(
     profileInput: IProfile,
     parentAuthorization: IAuthorizationPolicy | undefined
@@ -34,7 +35,11 @@ export class ProfileAuthorizationService {
           tagsets: true,
           authorization: true,
           visuals: true,
-          storageBucket: true,
+          storageBucket: {
+            documents: {
+              tagset: true,
+            },
+          },
         },
       }
     );
@@ -74,19 +79,15 @@ export class ProfileAuthorizationService {
         );
     }
 
-    const updatedVisuals: IVisual[] = [];
     for (const visual of profile.visuals) {
-      const visualWithAuth =
-        this.visualAuthorizationService.applyAuthorizationPolicy(
-          visual,
-          profile.authorization
-        );
-      updatedVisuals.push(visualWithAuth);
+      this.visualAuthorizationService.applyAuthorizationPolicy(
+        visual,
+        profile.authorization
+      );
     }
-    profile.visuals = updatedVisuals;
 
     profile.storageBucket =
-      await this.storageBucketAuthorizationService.applyAuthorizationPolicy(
+      this.storageBucketAuthorizationService.applyAuthorizationPolicy(
         profile.storageBucket,
         profile.authorization
       );

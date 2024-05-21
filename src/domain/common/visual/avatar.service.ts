@@ -44,9 +44,13 @@ export class AvatarService {
         relations: { documents: true },
       });
     const url = this.documentService.getPubliclyAccessibleURL(document);
-    await this.documentAuthorizationsService.applyAuthorizationPolicy(
-      document,
-      storageBucket.authorization
+    const documentAuthorized =
+      this.documentAuthorizationsService.applyAuthorizationPolicy(
+        document,
+        storageBucket.authorization
+      );
+    const documentSaved = await this.documentService.saveDocument(
+      documentAuthorized
     );
 
     const visual = await this.visualService.createVisual(
@@ -60,6 +64,6 @@ export class AvatarService {
       },
       url
     );
-    return { visual, document };
+    return { visual, document: documentSaved };
   }
 }

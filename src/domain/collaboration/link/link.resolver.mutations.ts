@@ -120,14 +120,17 @@ export class LinkResolverMutations {
     );
 
     const documentAuthorized =
-      await this.documentAuthorizationService.applyAuthorizationPolicy(
+      this.documentAuthorizationService.applyAuthorizationPolicy(
         document,
         storageBucket.authorization
       );
+    const documentSaved = await this.documentService.saveDocument(
+      documentAuthorized
+    );
 
     const updateData: UpdateLinkInput = {
       ID: link.id,
-      uri: this.documentService.getPubliclyAccessibleURL(documentAuthorized),
+      uri: this.documentService.getPubliclyAccessibleURL(documentSaved),
     };
     return await this.linkService.updateLink(updateData);
   }

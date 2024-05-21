@@ -24,7 +24,11 @@ export class StorageAggregatorAuthorizationService {
         storageAggregatorInput.id,
         {
           relations: {
-            directStorage: true,
+            directStorage: {
+              documents: {
+                tagset: true,
+              },
+            },
             authorization: true,
           },
         }
@@ -45,7 +49,7 @@ export class StorageAggregatorAuthorizationService {
       );
 
     storageAggregator.directStorage =
-      await this.storageBucketAuthorizationService.applyAuthorizationPolicy(
+      this.storageBucketAuthorizationService.applyAuthorizationPolicy(
         storageAggregator.directStorage,
         storageAggregator.authorization
       );
