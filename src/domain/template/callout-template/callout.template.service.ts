@@ -1,4 +1,4 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
@@ -21,7 +21,6 @@ export class CalloutTemplateService {
     @InjectRepository(CalloutTemplate)
     private calloutTemplateRepository: Repository<CalloutTemplate>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService,
     private templateBaseService: TemplateBaseService,
     private calloutFramingService: CalloutFramingService,
     private calloutContributionDefaultsService: CalloutContributionDefaultsService,
@@ -156,5 +155,13 @@ export class CalloutTemplateService {
     );
     result.id = templateId;
     return result;
+  }
+
+  async getCountInTemplatesSet(templatesSetID: string): Promise<number> {
+    return await this.calloutTemplateRepository.countBy({
+      templatesSet: {
+        id: templatesSetID,
+      },
+    });
   }
 }
