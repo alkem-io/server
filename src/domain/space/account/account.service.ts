@@ -367,6 +367,11 @@ export class AccountService {
       });
     if (contributors.length === 1) {
       return contributors[0];
+    } else if (contributors.length > 1) {
+      this.logger.error(
+        `Account with ID: ${account.id} has multiple hosts. This should not happen.`,
+        LogContext.ACCOUNT
+      );
     }
 
     return null;
