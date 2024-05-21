@@ -9,6 +9,8 @@ import { Loader } from '@core/dataloader/decorators';
 import { ProfileLoaderCreator } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { InnovationHub } from '@domain/innovation-hub/innovation.hub.entity';
+import { IAccount } from '@domain/space/account/account.interface';
+import { AccountLoaderCreator } from '@core/dataloader/creators/loader.creators/account/account.loader.creator';
 
 @Resolver(() => IInnovationHub)
 export class InnovationHubFieldResolver {
@@ -46,10 +48,23 @@ export class InnovationHubFieldResolver {
   })
   @Profiling.api
   async profile(
-    @Parent() space: InnovationHub,
+    @Parent() innovationHub: InnovationHub,
     @Loader(ProfileLoaderCreator, { parentClassRef: InnovationHub })
     loader: ILoader<IProfile>
   ) {
-    return loader.load(space.id);
+    return loader.load(innovationHub.id);
+  }
+
+  @ResolveField('account', () => IAccount, {
+    nullable: false,
+    description: 'The Innovation Hub account.',
+  })
+  @Profiling.api
+  async account(
+    @Parent() innovationHub: InnovationHub,
+    @Loader(AccountLoaderCreator, { parentClassRef: InnovationHub })
+    loader: ILoader<IAccount>
+  ) {
+    return loader.load(innovationHub.id);
   }
 }

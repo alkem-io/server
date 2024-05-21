@@ -5,7 +5,7 @@ import { MachineOptions } from 'xstate';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { CommunityService } from './community.service';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { CommunityRole } from '@common/enums/community.role';
@@ -63,17 +63,37 @@ export class CommunityInvitationLifecycleOptionsProvider {
           const invitation = await this.invitationService.getInvitationOrFail(
             event.parentID,
             {
-              relations: { community: true },
+              relations: {
+                community: {
+                  parentCommunity: true,
+                },
+              },
             }
           );
           const userID = invitation.invitedUser;
           const community = invitation.community;
-          if (!userID || !community)
+          if (!userID || !community) {
             throw new EntityNotInitializedException(
-              `Lifecycle not initialized on Application: ${invitation.id}`,
+              `Lifecycle not initialized on Invitation: ${invitation.id}`,
               LogContext.COMMUNITY
             );
+          }
 
+          if (invitation.invitedToParent) {
+            if (!community.parentCommunity) {
+              throw new EntityNotInitializedException(
+                `Unable to load parent community when flag to add is set: ${invitation.id}`,
+                LogContext.COMMUNITY
+              );
+            }
+            await this.communityService.assignUserToRole(
+              community.parentCommunity,
+              userID,
+              CommunityRole.MEMBER,
+              event.agentInfo,
+              true
+            );
+          }
           await this.communityService.assignUserToRole(
             community,
             userID,

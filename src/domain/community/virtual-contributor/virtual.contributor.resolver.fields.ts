@@ -12,7 +12,7 @@ import {
   Profiling,
 } from '@common/decorators';
 import { IAgent } from '@domain/agent/agent';
-import { AgentInfo } from '@src/core/authentication/agent-info';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { Loader } from '@core/dataloader/decorators';

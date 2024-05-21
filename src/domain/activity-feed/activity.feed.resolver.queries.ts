@@ -2,7 +2,7 @@ import { Args, Query, Resolver } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
 import { CurrentUser, Profiling } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';

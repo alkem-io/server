@@ -8,7 +8,7 @@ import { ApplicationService } from '@domain/community/application/application.se
 import { ICommunity } from '@domain/community/community/community.interface';
 import { CommunityApplicationLifecycleOptionsProvider } from './community.lifecycle.application.options.provider';
 import { GraphqlGuard } from '@core/authorization';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UserService } from '@domain/community/user/user.service';
@@ -38,10 +38,10 @@ import { NotificationInputCommunityInvitation } from '@services/adapters/notific
 import { InvitationEventInput } from '../invitation/dto/invitation.dto.event';
 import { CommunityInvitationLifecycleOptionsProvider } from './community.lifecycle.invitation.options.provider';
 import { CreateInvitationInput, IInvitation } from '../invitation';
-import { CreateInvitationExistingUserOnCommunityInput } from './dto/community.dto.invite.existing.user';
+import { CreateInvitationForUsersOnCommunityInput } from './dto/community.dto.invite.existing.user';
 import { IOrganization } from '../organization';
 import { IUser } from '../user/user.interface';
-import { CreateInvitationExternalUserOnCommunityInput } from './dto/community.dto.invite.external.user';
+import { CreateInvitationUserByEmailOnCommunityInput } from './dto/community.dto.invite.external.user';
 import { InvitationExternalAuthorizationService } from '../invitation.external/invitation.external.service.authorization';
 import { IInvitationExternal } from '../invitation.external';
 import { NotificationInputCommunityInvitationExternal } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.invitation.external';
@@ -52,6 +52,8 @@ import { RemoveCommunityRoleFromVirtualInput } from './dto/community.dto.role.re
 import { VirtualContributorAuthorizationService } from '../virtual-contributor/virtual.contributor.service.authorization';
 import { VirtualContributorService } from '../virtual-contributor/virtual.contributor.service';
 import { IVirtualContributor } from '../virtual-contributor';
+import { EntityNotInitializedException } from '@common/exceptions';
+import { CommunityInvitationException } from '@common/exceptions/community.invitation.exception';
 import { EventBus } from '@nestjs/cqrs';
 import {
   IngestSpace,
@@ -399,10 +401,17 @@ export class CommunityResolverMutations {
   async inviteExistingUserForCommunityMembership(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('invitationData')
-    invitationData: CreateInvitationExistingUserOnCommunityInput
+    invitationData: CreateInvitationForUsersOnCommunityInput
   ): Promise<IInvitation[]> {
     const community = await this.communityService.getCommunityOrFail(
-      invitationData.communityID
+      invitationData.communityID,
+      {
+        relations: {
+          parentCommunity: {
+            authorization: true,
+          },
+        },
+      }
     );
 
     await this.authorizationService.grantAccessOrFail(
@@ -412,33 +421,77 @@ export class CommunityResolverMutations {
       `create invitation community: ${community.id}`
     );
 
+    const users: IUser[] = [];
+    for (const userID of invitationData.invitedUsers) {
+      const user = await this.userService.getUserOrFail(userID, {
+        relations: {
+          agent: true,
+        },
+      });
+      users.push(user);
+    }
+
+    // Logic is that the ability to invite to a subspace requires the ability to invite to the
+    // parent community if the user is not a member there
+    if (community.parentCommunity) {
+      const parentCommunityAuthorization =
+        community.parentCommunity.authorization;
+      const canInviteToParent = this.authorizationService.isAccessGranted(
+        agentInfo,
+        parentCommunityAuthorization,
+        AuthorizationPrivilege.COMMUNITY_INVITE
+      );
+
+      // Need to see if also can invite to the parent community if any of the users are not members there
+      for (const user of users) {
+        if (!user.agent) {
+          throw new EntityNotInitializedException(
+            `Unable to load agent on user: ${user.id}`,
+            LogContext.COMMUNITY
+          );
+        }
+        const isMember = await this.communityService.isMember(
+          user.agent,
+          community.parentCommunity
+        );
+        if (!isMember && !canInviteToParent) {
+          throw new CommunityInvitationException(
+            `User is not a member of the parent community (${community.parentCommunity.id}) and the current user does not have the privilege to invite to the parent community`,
+            LogContext.COMMUNITY
+          );
+        } else {
+          invitationData.invitedToParent = true;
+        }
+      }
+    } else {
+      invitationData.invitedToParent = false;
+    }
+
     return Promise.all(
-      invitationData.invitedUsers.map(async invitedUser => {
-        return await this.inviteSingleExistingUser({
+      users.map(async invitedUser => {
+        return await this.inviteSingleExistingUser(
           community,
           invitedUser,
           agentInfo,
-          welcomeMessage: invitationData.welcomeMessage,
-        });
+          invitationData.invitedToParent,
+          invitationData.welcomeMessage
+        );
       })
     );
   }
 
-  private async inviteSingleExistingUser({
-    community,
-    invitedUser,
-    agentInfo,
-    welcomeMessage,
-  }: {
-    community: ICommunity;
-    invitedUser: string;
-    agentInfo: AgentInfo;
-    welcomeMessage?: string;
-  }) {
+  private async inviteSingleExistingUser(
+    community: ICommunity,
+    invitedUser: IUser,
+    agentInfo: AgentInfo,
+    invitedToParent: boolean,
+    welcomeMessage?: string
+  ): Promise<IInvitation> {
     const input: CreateInvitationInput = {
       communityID: community.id,
-      invitedUser: invitedUser,
+      invitedUser: invitedUser.id,
       createdBy: agentInfo.userID,
+      invitedToParent,
       welcomeMessage,
     };
 
@@ -456,7 +509,7 @@ export class CommunityResolverMutations {
     const notificationInput: NotificationInputCommunityInvitation = {
       triggeredBy: agentInfo.userID,
       community: community,
-      invitedUser: invitedUser,
+      invitedUser: invitedUser.id,
     };
 
     await this.notificationAdapter.invitationCreated(notificationInput);
@@ -473,10 +526,17 @@ export class CommunityResolverMutations {
   async inviteForCommunityMembershipByEmail(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('invitationData')
-    invitationData: CreateInvitationExternalUserOnCommunityInput
+    invitationData: CreateInvitationUserByEmailOnCommunityInput
   ): Promise<IInvitation | IInvitationExternal> {
     const community = await this.communityService.getCommunityOrFail(
-      invitationData.communityID
+      invitationData.communityID,
+      {
+        relations: {
+          parentCommunity: {
+            authorization: true,
+          },
+        },
+      }
     );
 
     this.authorizationService.grantAccessOrFail(
@@ -486,15 +546,62 @@ export class CommunityResolverMutations {
       `create invitation external community: ${community.id}`
     );
 
-    const user = await this.userService.getUserByEmail(invitationData.email);
+    const existingUser = await this.userService.getUserByEmail(
+      invitationData.email,
+      {
+        relations: {
+          agent: true,
+        },
+      }
+    );
 
-    if (user) {
-      return this.inviteSingleExistingUser({
-        community,
-        welcomeMessage: invitationData.welcomeMessage,
+    // Logic is that the ability to invite to a subspace requires the ability to invite to the
+    // parent community if the user is not a member there
+    if (community.parentCommunity) {
+      const parentCommunityAuthorization =
+        community.parentCommunity.authorization;
+      const canInviteToParent = this.authorizationService.isAccessGranted(
         agentInfo,
-        invitedUser: user.id,
-      });
+        parentCommunityAuthorization,
+        AuthorizationPrivilege.COMMUNITY_INVITE
+      );
+      if (existingUser !== null) {
+        // Need to see if also can invite to the parent community if any of the users are not members there
+        if (!existingUser.agent) {
+          throw new EntityNotInitializedException(
+            `Unable to load agent on user: ${existingUser.id}`,
+            LogContext.COMMUNITY
+          );
+        }
+        const isMember = await this.communityService.isMember(
+          existingUser.agent,
+          community.parentCommunity
+        );
+        if (!isMember && !canInviteToParent) {
+          throw new CommunityInvitationException(
+            `User is not a member of the parent community (${community.parentCommunity.id}) and the current user does not have the privilege to invite to the parent community`,
+            LogContext.COMMUNITY
+          );
+        } else {
+        }
+      } else {
+        if (!canInviteToParent) {
+          throw new CommunityInvitationException(
+            `New external user (${invitationData.email}) and the current user (${agentInfo.email}) does not have the privilege to invite to the parent community: ${community.parentCommunity.id}`,
+            LogContext.COMMUNITY
+          );
+        }
+      }
+    }
+
+    if (existingUser) {
+      return this.inviteSingleExistingUser(
+        community,
+        existingUser,
+        agentInfo,
+        invitationData.invitedToParent,
+        invitationData.welcomeMessage
+      );
     }
 
     const externalInvitation =

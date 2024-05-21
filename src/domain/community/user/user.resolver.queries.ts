@@ -9,7 +9,7 @@ import { UUID_NAMEID_EMAIL } from '@domain/common/scalars';
 import { UseGuards } from '@nestjs/common';
 import { Args, Query, Resolver } from '@nestjs/graphql';
 import { Profiling } from '@src/common/decorators';
-import { AgentInfo } from '@src/core/authentication/agent-info';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { PaginatedUsers, PaginationArgs } from '@core/pagination';
 import { UserService } from './user.service';
 import { IUser } from './';

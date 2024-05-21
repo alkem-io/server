@@ -13,7 +13,7 @@ import { CalloutFramingService } from '@domain/collaboration/callout-framing/cal
 import { CalloutContributionDefaultsService } from '@domain/collaboration/callout-contribution-defaults/callout.contribution.defaults.service';
 import { CalloutContributionPolicyService } from '@domain/collaboration/callout-contribution-policy/callout.contribution.policy.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 
 @Injectable()
 export class CalloutTemplateService {

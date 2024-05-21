@@ -2,7 +2,7 @@ import { Inject, LoggerService, UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { RoomService } from './room.service';
 import { RoomSendMessageInput } from './dto/room.dto.send.message';

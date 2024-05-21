@@ -12,7 +12,7 @@ import {
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 @Resolver()
 export class UserGroupResolverMutations {
   constructor(

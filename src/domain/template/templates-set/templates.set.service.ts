@@ -10,9 +10,6 @@ import {
 import { LogContext } from '@common/enums';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { AgentInfo } from '@core/authentication/agent-info';
-import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { ICommunityGuidelinesTemplate } from '@domain/template/community-guidelines-template/community.guidelines.template.interface';
 import { CreateCommunityGuidelinesTemplateInput } from '@domain/template/community-guidelines-template/dto/community.guidelines.template.dto.create';
 import { TemplatesSet } from './templates.set.entity';
@@ -30,6 +27,9 @@ import { CreateInnovationFlowTemplateInput } from '../innovation-flow-template/d
 import { ICalloutTemplate } from '../callout-template/callout.template.interface';
 import { CreateCalloutTemplateInput } from '../callout-template/dto/callout.template.dto.create';
 import { CalloutTemplateService } from '../callout-template/callout.template.service';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 
 @Injectable()
 export class TemplatesSetService {

@@ -20,7 +20,7 @@ import { CommunityResolverService } from '@services/infrastructure/entity-resolv
 import { RolesResultOrganization } from './dto/roles.dto.result.organization';
 import { mapOrganizationCredentialsToRoles } from './util/map.organization.credentials.to.roles';
 import { RolesResultSpace } from './dto/roles.dto.result.space';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { SpaceService } from '@domain/space/space/space.service';
 import { SpaceLevel } from '@common/enums/space.level';

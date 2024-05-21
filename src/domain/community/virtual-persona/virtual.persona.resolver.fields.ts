@@ -9,7 +9,7 @@ import { CurrentUser, Profiling } from '@common/decorators';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { IVirtualPersona } from './virtual.persona.interface';
-import { AgentInfo } from '@core/authentication/agent-info';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { ProfileLoaderCreator } from '@core/dataloader/creators';
 import { Loader } from '@core/dataloader/decorators';
 import { ILoader } from '@core/dataloader/loader.interface';

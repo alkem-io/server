@@ -30,7 +30,7 @@ import { IUser } from '@domain/community/user/user.interface';
 import { UserService } from '@domain/community/user/user.service';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AssignPlatformRoleToUserInput } from './dto/platform.dto.assign.role.user';
-import { ILicensePolicy } from '@platform/license-policy/license.policy.interface';
+import { ILicensing } from '@platform/licensing/licensing.interface';
 
 @Injectable()
 export class PlatformService {
@@ -52,11 +52,12 @@ export class PlatformService {
       await this.platformRepository.find({ take: 1, ...options })
     )?.[0];
 
-    if (!platform)
+    if (!platform) {
       throw new EntityNotFoundException(
         'No Platform found!',
         LogContext.PLATFORM
       );
+    }
     return platform;
   }
 
@@ -132,22 +133,22 @@ export class PlatformService {
     return storageAggregator;
   }
 
-  async getLicensePolicy(platformInput: IPlatform): Promise<ILicensePolicy> {
+  async getLicensing(platformInput: IPlatform): Promise<ILicensing> {
     const platform = await this.getPlatformOrFail({
       relations: {
-        licensePolicy: true,
+        licensing: true,
       },
     });
-    const licensePolicy = platform.licensePolicy;
+    const licensing = platform.licensing;
 
-    if (!licensePolicy) {
+    if (!licensing) {
       throw new EntityNotFoundException(
-        `Unable to find licensepolicy for Platform: ${platformInput.id}`,
+        `Unable to find Licensing for Platform: ${platformInput.id}`,
         LogContext.PLATFORM
       );
     }
 
-    return licensePolicy;
+    return licensing;
   }
 
   getAuthorizationPolicy(platform: IPlatform): IAuthorizationPolicy {

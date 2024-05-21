@@ -28,4 +28,7 @@ export class Invitation extends AuthorizableEntity implements IInvitation {
 
   @Column('varchar', { length: 512, nullable: true })
   welcomeMessage?: string;
+
+  @Column('boolean', { default: false })
+  invitedToParent!: boolean;
 }
