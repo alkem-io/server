@@ -4,20 +4,16 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { POLICY_RULE_VISUAL_UPDATE } from '@common/constants';
-import { VisualService } from './visual.service';
 import { IVisual } from './visual.interface';
 
 @Injectable()
 export class VisualAuthorizationService {
-  constructor(
-    private authorizationPolicyService: AuthorizationPolicyService,
-    private visualService: VisualService
-  ) {}
+  constructor(private authorizationPolicyService: AuthorizationPolicyService) {}
 
-  async applyAuthorizationPolicy(
+  applyAuthorizationPolicy(
     visual: IVisual,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): Promise<IVisual> {
+  ): IVisual {
     visual.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         visual.authorization,
@@ -26,7 +22,7 @@ export class VisualAuthorizationService {
 
     visual.authorization = this.appendPrivilegeRules(visual.authorization);
 
-    return await this.visualService.saveVisual(visual);
+    return visual;
   }
 
   private appendPrivilegeRules(
