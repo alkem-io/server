@@ -273,7 +273,7 @@ export class SpaceAuthorizationService {
         license
       );
 
-    space.agent = await this.agentAuthorizationService.applyAuthorizationPolicy(
+    space.agent = this.agentAuthorizationService.applyAuthorizationPolicy(
       space.agent,
       space.authorization
     );

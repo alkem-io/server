@@ -1,32 +1,24 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { PreferenceSetService } from './preference.set.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
-import { PreferenceSet } from './preference.set.entity';
 import { IPreferenceSet } from '.';
+import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
+import { LogContext } from '@common/enums/logging.context';
 
 @Injectable()
 export class PreferenceSetAuthorizationService {
-  constructor(
-    private authorizationPolicyService: AuthorizationPolicyService,
-    private preferenceSetService: PreferenceSetService,
-    @InjectRepository(PreferenceSet)
-    private preferenceSetRepository: Repository<PreferenceSet>
-  ) {}
+  constructor(private authorizationPolicyService: AuthorizationPolicyService) {}
 
-  async applyAuthorizationPolicy(
-    preferenceSetInput: IPreferenceSet,
+  applyAuthorizationPolicy(
+    preferenceSet: IPreferenceSet,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): Promise<IPreferenceSet> {
-    const preferenceSet =
-      await this.preferenceSetService.getPreferenceSetOrFail(
-        preferenceSetInput.id,
-        {
-          relations: {},
-        }
+  ): IPreferenceSet {
+    if (!preferenceSet.preferences) {
+      throw new RelationshipNotFoundException(
+        `Unable to load child entities for preference set authorization: ${preferenceSet.id} `,
+        LogContext.COMMUNITY
       );
+    }
 
     // Inherit from the parent
     preferenceSet.authorization =
@@ -45,6 +37,6 @@ export class PreferenceSetAuthorizationService {
       }
     }
 
-    return await this.preferenceSetRepository.save(preferenceSet);
+    return preferenceSet;
   }
 }

@@ -87,11 +87,10 @@ export class AccountAuthorizationService {
 
     await this.accountRepository.save(account);
 
-    account.agent =
-      await this.agentAuthorizationService.applyAuthorizationPolicy(
-        account.agent,
-        account.authorization
-      );
+    account.agent = this.agentAuthorizationService.applyAuthorizationPolicy(
+      account.agent,
+      account.authorization
+    );
 
     account.license =
       await this.licenseAuthorizationService.applyAuthorizationPolicy(

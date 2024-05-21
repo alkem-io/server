@@ -57,7 +57,9 @@ export class OrganizationAuthorizationService {
           agent: true,
           groups: true,
           verification: true,
-          preferenceSet: true,
+          preferenceSet: {
+            preferences: true,
+          },
         },
       }
     );
@@ -67,7 +69,8 @@ export class OrganizationAuthorizationService {
       !organization.agent ||
       !organization.groups ||
       !organization.verification ||
-      !organization.preferenceSet
+      !organization.preferenceSet ||
+      !organization.preferenceSet.preferences
     )
       throw new RelationshipNotFoundException(
         `Unable to load entities for organization: ${organization.id} `,
@@ -105,7 +108,7 @@ export class OrganizationAuthorizationService {
       );
 
     organization.agent =
-      await this.agentAuthorizationService.applyAuthorizationPolicy(
+      this.agentAuthorizationService.applyAuthorizationPolicy(
         organization.agent,
         organization.authorization
       );
@@ -126,7 +129,7 @@ export class OrganizationAuthorizationService {
       );
 
     organization.preferenceSet =
-      await this.preferenceSetAuthorizationService.applyAuthorizationPolicy(
+      this.preferenceSetAuthorizationService.applyAuthorizationPolicy(
         organization.preferenceSet,
         organization.authorization
       );
