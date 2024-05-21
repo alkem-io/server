@@ -93,7 +93,7 @@ export class CalloutContributionAuthorizationService {
         );
     }
 
-    return this.contributionService.save(contribution);
+    return contribution;
   }
 
   private appendCredentialRules(

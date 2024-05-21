@@ -130,10 +130,11 @@ export class PlatformAuthorizationService {
       );
 
     platform.authorization = authorization;
-    await this.libraryAuthorizationService.applyAuthorizationPolicy(
-      platform.library,
-      platform.authorization
-    );
+    platform.library =
+      await this.libraryAuthorizationService.applyAuthorizationPolicy(
+        platform.library,
+        platform.authorization
+      );
 
     const copyPlatformAuthorization: IAuthorizationPolicy =
       this.authorizationPolicyService.cloneAuthorizationPolicy(

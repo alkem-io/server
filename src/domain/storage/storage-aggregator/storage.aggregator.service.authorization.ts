@@ -54,6 +54,6 @@ export class StorageAggregatorAuthorizationService {
         storageAggregator.authorization
       );
 
-    return await this.storageAggregatorService.save(storageAggregator);
+    return storageAggregator;
   }
 }

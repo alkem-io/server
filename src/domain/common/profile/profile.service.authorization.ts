@@ -92,6 +92,6 @@ export class ProfileAuthorizationService {
         profile.authorization
       );
 
-    return await this.profileRepository.save(profile);
+    return profile;
   }
 }
