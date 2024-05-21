@@ -157,8 +157,8 @@ export class CalloutTemplateService {
     return result;
   }
 
-  async getCountInTemplatesSet(templatesSetID: string): Promise<number> {
-    return await this.calloutTemplateRepository.countBy({
+  getCountInTemplatesSet(templatesSetID: string): Promise<number> {
+    return this.calloutTemplateRepository.countBy({
       templatesSet: {
         id: templatesSetID,
       },

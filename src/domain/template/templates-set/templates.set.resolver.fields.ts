@@ -34,7 +34,7 @@ export class TemplatesSetResolverFields {
     description: 'The total number of CalloutTemplates in this TemplatesSet.',
   })
   @Profiling.api
-  async calloutTemplatesCount(
+  calloutTemplatesCount(
     @Parent() templatesSet: ITemplatesSet
   ): Promise<number> {
     return this.templatesSetService.getCalloutTemplatesCount(templatesSet.id);
