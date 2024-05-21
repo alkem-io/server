@@ -342,7 +342,7 @@ export class AccountService {
     const existingHost = await this.getHost(account);
 
     if (existingHost) {
-      contributor.agent = await this.agentService.revokeCredential({
+      await this.agentService.revokeCredential({
         agentID: existingHost.agent.id,
         type: AuthorizationCredential.ACCOUNT_HOST,
         resourceID: account.id,
@@ -350,7 +350,7 @@ export class AccountService {
     }
 
     // assign the credential
-    contributor.agent = await this.agentService.grantCredential({
+    await this.agentService.grantCredential({
       agentID: contributor.agent.id,
       type: AuthorizationCredential.ACCOUNT_HOST,
       resourceID: account.id,
