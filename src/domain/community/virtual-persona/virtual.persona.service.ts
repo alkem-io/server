@@ -179,7 +179,8 @@ export class VirtualPersonaService {
   public async askQuestion(
     personaQuestionInput: VirtualPersonaQuestionInput,
     agentInfo: AgentInfo,
-    spaceNameID: string
+    knowledgeSpaceNameID: string,
+    contextSpaceNameID: string
   ): Promise<IVirtualPersonaQuestionResult> {
     const virtualPersona = await this.getVirtualPersonaOrFail(
       personaQuestionInput.virtualPersonaID
@@ -190,10 +191,11 @@ export class VirtualPersonaService {
       prompt: '',
       userId: agentInfo.userID,
       question: personaQuestionInput.question,
-      kowledgeSpaceNameID: spaceNameID,
-      contextSpaceNameID: spaceNameID,
+      knowledgeSpaceNameID,
+      contextSpaceNameID,
     };
 
+    this.logger.error(input);
     const response = await this.virtualPersonaEngineAdapter.sendQuery(input);
 
     return response;

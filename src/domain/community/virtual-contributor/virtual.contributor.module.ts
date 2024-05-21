@@ -18,6 +18,7 @@ import { CommunicationAdapterModule } from '@services/adapters/communication-ada
 
 @Module({
   imports: [
+    // AccountModule,
     AgentModule,
     AuthorizationPolicyModule,
     AuthorizationModule,

@@ -241,7 +241,7 @@ export class CommunityResolverMutations {
     // won't execute a command unless a command handler is defined within the application
     // we want to have an external handler so for now events will do
     this.eventBus.publish(
-      new IngestSpace(spaceID, SpaceIngestionPurpose.Knowledge)
+      new IngestSpace(spaceID, SpaceIngestionPurpose.Context)
     );
 
     return result;

@@ -28,10 +28,20 @@ import { DeleteVirtualContributorInput as DeleteVirtualContributorInput } from '
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { VirtualPersonaService } from '../virtual-persona/virtual.persona.service';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
+import { EventBus } from '@nestjs/cqrs';
+import {
+  IngestSpace,
+  SpaceIngestionPurpose,
+} from '@services/infrastructure/event-bus/commands';
 
 @Injectable()
 export class VirtualContributorService {
   constructor(
+    // this results in a circular dependency I can't resolve
+    // same goes for the space service
+    // so right now the account is not properly set but that that won't affect
+    // the functionality of the VC
+    // private accountService: AccountService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private agentService: AgentService,
     private profileService: ProfileService,
@@ -40,7 +50,9 @@ export class VirtualContributorService {
     @InjectRepository(VirtualContributor)
     private virtualContributorRepository: Repository<VirtualContributor>,
     private communicationAdapter: CommunicationAdapter,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
+    private eventBus: EventBus,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService
   ) {}
 
   async createVirtualContributor(
@@ -56,6 +68,7 @@ export class VirtualContributorService {
     const virtualContributor: IVirtualContributor = VirtualContributor.create(
       virtualContributorData
     );
+
     virtualContributor.authorization = new AuthorizationPolicy();
     const communicationID = await this.communicationAdapter.tryRegisterNewUser(
       `virtual-contributor-${virtualContributor.nameID}@alkem.io`
@@ -63,6 +76,9 @@ export class VirtualContributorService {
     if (communicationID) {
       virtualContributor.communicationID = communicationID;
     }
+
+    // virtualContributor.accountId = virtualContributorData.accountId;
+
     const virtualPersona =
       await this.virtualPersonaService.getVirtualPersonaOrFail(
         virtualContributorData.virtualPersonaID
@@ -108,6 +124,13 @@ export class VirtualContributorService {
     this.logger.verbose?.(
       `Created new virtual with id ${virtualContributor.id}`,
       LogContext.COMMUNITY
+    );
+
+    this.eventBus.publish(
+      new IngestSpace(
+        virtualContributorData.bodyOfKnowledgeID,
+        SpaceIngestionPurpose.Knowledge
+      )
     );
 
     return savedVC;
