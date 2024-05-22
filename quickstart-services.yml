@@ -271,7 +271,7 @@ services:
   whiteboard-collaboration:
     container_name: alkemio_dev_whiteboard_collaboration
     hostname: whiteboard-collaboration
-    image: svetoslavpetkov23/whiteboard-backend:v0.1.7
+    image: alkemio/whiteboard-collaboration-service:v0.1.0
     environment:
       - RABBITMQ_HOST
       - RABBITMQ_USER
