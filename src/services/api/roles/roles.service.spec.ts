@@ -251,6 +251,7 @@ const getSpaceRoleResultMock = ({
       level: SpaceLevel.SPACE,
       account: {
         id: `account-${id}`,
+        virtualContributors: [],
         license: {
           id: `license-${id}`,
           visibility: SpaceVisibility.ACTIVE,
