@@ -29,6 +29,9 @@ import { CreateAccountInput } from './dto/account.dto.create';
 import { CreateSpaceInput } from '../space/dto/space.dto.create';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { ContributorService } from '@domain/community/contributor/contributor.service';
+import { CreateVirtualContributorOnAccountInput } from './dto/account.dto.create.virtual.contributor';
+import { IVirtualContributor } from '@domain/community/virtual-contributor';
+import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
 
 @Injectable()
 export class AccountService {
@@ -39,6 +42,7 @@ export class AccountService {
     private spaceDefaultsService: SpaceDefaultsService,
     private licenseService: LicenseService,
     private contributorService: ContributorService,
+    private virtualContributorService: VirtualContributorService,
     @InjectRepository(Account)
     private accountRepository: Repository<Account>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -185,6 +189,7 @@ export class AccountService {
         library: true,
         license: { featureFlags: true },
         defaults: true,
+        virtualContributors: true,
       },
     });
 
@@ -194,7 +199,8 @@ export class AccountService {
       !account.license ||
       !account.license?.featureFlags ||
       !account.defaults ||
-      !account.library
+      !account.library ||
+      !account.virtualContributors
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load all entities for deletion of account ${account.id} `,
@@ -227,6 +233,9 @@ export class AccountService {
       type: AuthorizationCredential.ACCOUNT_HOST,
       resourceID: account.id,
     });
+    for (const vc of account.virtualContributors) {
+      await this.virtualContributorService.deleteVirtualContributor(vc.id);
+    }
 
     const result = await this.accountRepository.remove(account as Account);
     result.id = accountID;
@@ -385,5 +394,29 @@ export class AccountService {
         LogContext.COMMUNITY
       );
     return host;
+  }
+
+  public async createVirtualContributorOnAccount(
+    vcData: CreateVirtualContributorOnAccountInput
+  ): Promise<IVirtualContributor> {
+    const accountID = vcData.accountID;
+    const account = await this.getAccountOrFail(accountID, {
+      relations: { virtualContributors: true },
+    });
+
+    if (!account.virtualContributors) {
+      throw new RelationshipNotFoundException(
+        `Unable to load Account with required entities for creating VC: ${account.id} `,
+        LogContext.ACCOUNT
+      );
+    }
+
+    const vc = await this.virtualContributorService.createVirtualContributor(
+      vcData
+    );
+    account.virtualContributors.push(vc);
+    await this.save(account);
+
+    return vc;
   }
 }

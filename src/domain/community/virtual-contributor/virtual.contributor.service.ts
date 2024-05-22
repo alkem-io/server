@@ -22,9 +22,8 @@ import { VisualType } from '@common/enums/visual.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
-import { CreateVirtualContributorInput as CreateVirtualContributorInput } from './dto/virtual.contributor.dto.create';
-import { UpdateVirtualContributorInput as UpdateVirtualContributorInput } from './dto/virtual.contributor.dto.update';
-import { DeleteVirtualContributorInput as DeleteVirtualContributorInput } from './dto/virtual.contributor.dto.delete';
+import { CreateVirtualContributorInput } from './dto/virtual.contributor.dto.create';
+import { UpdateVirtualContributorInput } from './dto/virtual.contributor.dto.update';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { EventBus } from '@nestjs/cqrs';
@@ -37,20 +36,15 @@ import { VirtualPersonaService } from '@platform/virtual-persona/virtual.persona
 @Injectable()
 export class VirtualContributorService {
   constructor(
-    // this results in a circular dependency I can't resolve
-    // same goes for the space service
-    // so right now the account is not properly set but that that won't affect
-    // the functionality of the VC
-    // private accountService: AccountService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private agentService: AgentService,
     private profileService: ProfileService,
     private storageAggregatorService: StorageAggregatorService,
     private virtualPersonaService: VirtualPersonaService,
-    @InjectRepository(VirtualContributor)
-    private virtualContributorRepository: Repository<VirtualContributor>,
     private communicationAdapter: CommunicationAdapter,
     private eventBus: EventBus,
+    @InjectRepository(VirtualContributor)
+    private virtualContributorRepository: Repository<VirtualContributor>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -76,9 +70,6 @@ export class VirtualContributorService {
     if (communicationID) {
       virtualContributor.communicationID = communicationID;
     }
-
-    // maybe even base it on the space?
-    // virtualContributor.account = await this.accountService.getAccountOrFail(virtualContributorData.accountId);
 
     const virtualPersona =
       await this.virtualPersonaService.getVirtualPersonaOrFail(
@@ -212,16 +203,18 @@ export class VirtualContributorService {
   }
 
   async deleteVirtualContributor(
-    deleteData: DeleteVirtualContributorInput
+    virtualContributorID: string
   ): Promise<IVirtualContributor> {
-    const orgID = deleteData.ID;
-    const virtualContributor = await this.getVirtualContributorOrFail(orgID, {
-      relations: {
-        profile: true,
-        agent: true,
-        storageAggregator: true,
-      },
-    });
+    const virtualContributor = await this.getVirtualContributorOrFail(
+      virtualContributorID,
+      {
+        relations: {
+          profile: true,
+          agent: true,
+          storageAggregator: true,
+        },
+      }
+    );
 
     if (virtualContributor.profile) {
       await this.profileService.deleteProfile(virtualContributor.profile.id);
@@ -246,7 +239,7 @@ export class VirtualContributorService {
     const result = await this.virtualContributorRepository.remove(
       virtualContributor as VirtualContributor
     );
-    result.id = orgID;
+    result.id = virtualContributorID;
     return result;
   }
 

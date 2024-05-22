@@ -226,15 +226,23 @@ export class CommunityResolverMutations {
     );
 
     // reset the user authorization policy so that their profile is visible to other community members
-    const virtual =
+    let virtual =
       await this.virtualContributorService.getVirtualContributorOrFail(
-        roleData.virtualContributorID
+        roleData.virtualContributorID,
+        {
+          relations: {
+            account: true,
+          },
+        }
       );
 
-    const result =
+    virtual =
       await this.virtualContributorAuthorizationService.applyAuthorizationPolicy(
-        virtual
+        virtual,
+        virtual.account.authorization
       );
+    await this.virtualContributorService.save(virtual);
+
     // publish to EB for space ingestion
     const spaceID = await this.communityService.getRootSpaceID(community);
     // we are publising an event instead of executing a command because Nest's CQRS
@@ -244,7 +252,7 @@ export class CommunityResolverMutations {
       new IngestSpace(spaceID, SpaceIngestionPurpose.Context)
     );
 
-    return result;
+    return virtual;
   }
 
   @UseGuards(GraphqlGuard)
@@ -341,13 +349,21 @@ export class CommunityResolverMutations {
     );
     // reset the user authorization policy so that their profile is not visible
     // to other community members
-    const virtual =
+    let virtual =
       await this.virtualContributorService.getVirtualContributorOrFail(
-        roleData.virtualContributorID
+        roleData.virtualContributorID,
+        {
+          relations: {
+            account: true,
+          },
+        }
       );
-    return await this.virtualContributorAuthorizationService.applyAuthorizationPolicy(
-      virtual
-    );
+    virtual =
+      await this.virtualContributorAuthorizationService.applyAuthorizationPolicy(
+        virtual,
+        virtual.account.authorization
+      );
+    return await this.virtualContributorService.save(virtual);
   }
 
   @UseGuards(GraphqlGuard)

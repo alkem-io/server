@@ -27,6 +27,8 @@ import {
   CREDENTIAL_RULE_TYPES_SPACE_READ,
 } from '@common/constants/authorization/credential.rule.types.constants';
 import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
+import { IVirtualContributor } from '@domain/community/virtual-contributor';
+import { VirtualContributorAuthorizationService } from '@domain/community/virtual-contributor/virtual.contributor.service.authorization';
 
 @Injectable()
 export class AccountAuthorizationService {
@@ -37,6 +39,7 @@ export class AccountAuthorizationService {
     private licenseAuthorizationService: LicenseAuthorizationService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private spaceAuthorizationService: SpaceAuthorizationService,
+    private virtualContributorAuthorizationService: VirtualContributorAuthorizationService,
     private accountService: AccountService,
     @InjectRepository(Account)
     private accountRepository: Repository<Account>
@@ -54,6 +57,7 @@ export class AccountAuthorizationService {
           license: true,
           library: true,
           defaults: true,
+          virtualContributors: true,
         },
       }
     );
@@ -63,7 +67,8 @@ export class AccountAuthorizationService {
       !account.license ||
       !account.defaults ||
       !account.space ||
-      !account.space.profile
+      !account.space.profile ||
+      !account.virtualContributors
     )
       throw new RelationshipNotFoundException(
         `Unable to load Account with entities at start of auth reset: ${account.id} `,
@@ -117,6 +122,17 @@ export class AccountAuthorizationService {
         account.defaults.authorization,
         spaceAuthorization
       );
+
+    const updatedVCs: IVirtualContributor[] = [];
+    for (const vc of account.virtualContributors) {
+      const udpatedVC =
+        await this.virtualContributorAuthorizationService.applyAuthorizationPolicy(
+          vc,
+          account.authorization
+        );
+      updatedVCs.push(udpatedVC);
+    }
+    account.virtualContributors = updatedVCs;
 
     return await this.accountRepository.save(account);
   }

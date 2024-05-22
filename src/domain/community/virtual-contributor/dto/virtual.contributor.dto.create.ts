@@ -8,9 +8,6 @@ export class CreateVirtualContributorInput extends CreateContributorInput {
   @Field(() => UUID, { nullable: false })
   virtualPersonaID!: string;
 
-  @Field(() => UUID, { nullable: false })
-  accountId!: string;
-
   @Field(() => BodyOfKnowledgeType, { nullable: false })
   bodyOfKnowledgeType!: BodyOfKnowledgeType;
 

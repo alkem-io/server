@@ -24,6 +24,10 @@ import { RelationshipNotFoundException } from '@common/exceptions/relationship.n
 import { LogContext } from '@common/enums/logging.context';
 import { SpaceLevel } from '@common/enums/space.level';
 import { EntityNotInitializedException } from '@common/exceptions';
+import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
+import { CreateVirtualContributorOnAccountInput } from './dto/account.dto.create.virtual.contributor';
+import { VirtualContributorAuthorizationService } from '@domain/community/virtual-contributor/virtual.contributor.service.authorization';
+import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
 
 @Resolver()
 export class AccountResolverMutations {
@@ -33,6 +37,8 @@ export class AccountResolverMutations {
     private authorizationService: AuthorizationService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private innovationFlowTemplateService: InnovationFlowTemplateService,
+    private virtualContributorService: VirtualContributorService,
+    private virtualContributorAuthorizationService: VirtualContributorAuthorizationService,
     private spaceDefaultsService: SpaceDefaultsService,
     private namingReporter: NameReporterService,
     private spaceService: SpaceService
@@ -203,5 +209,36 @@ export class AccountResolverMutations {
       );
     }
     return spaceDefaults;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IVirtualContributor, {
+    description: 'Creates a new VirtualContributor on an Account.',
+  })
+  async createVirtualContributor(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('virtualContributorData')
+    virtualContributorData: CreateVirtualContributorOnAccountInput
+  ): Promise<IVirtualContributor> {
+    const account = await this.accountService.getAccountOrFail(
+      virtualContributorData.accountID
+    );
+
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      account.authorization,
+      AuthorizationPrivilege.CREATE_VIRTUAL_CONTRIBUTOR,
+      `create Virtual contributor: ${virtualContributorData.nameID}`
+    );
+    let virtual = await this.accountService.createVirtualContributorOnAccount(
+      virtualContributorData
+    );
+
+    virtual =
+      await this.virtualContributorAuthorizationService.applyAuthorizationPolicy(
+        virtual,
+        account.authorization
+      );
+    return await this.virtualContributorService.save(virtual);
   }
 }

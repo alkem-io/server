@@ -1,7 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { AuthorizationCredential, LogContext } from '@common/enums';
-import { Repository } from 'typeorm';
 import { AuthorizationPrivilege } from '@common/enums';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
@@ -11,10 +9,8 @@ import {
   RelationshipNotFoundException,
 } from '@common/exceptions';
 import { VirtualContributorService } from './virtual.contributor.service';
-import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
-  CREDENTIAL_RULE_TYPES_ORGANIZATION_AUTHORIZATION_RESET,
   CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_COMMUNITY_READ,
   CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_ADMINS,
   CREDENTIAL_RULE_ORGANIZATION_ADMIN,
@@ -22,7 +18,6 @@ import {
   CREDENTIAL_RULE_ORGANIZATION_SELF_REMOVAL,
 } from '@common/constants';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
-import { VirtualContributor } from './virtual.contributor.entity';
 import { IVirtualContributor } from './virtual.contributor.interface';
 import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
 
@@ -33,15 +28,13 @@ export class VirtualContributorAuthorizationService {
     private agentAuthorizationService: AgentAuthorizationService,
     private authorizationPolicy: AuthorizationPolicyService,
     private authorizationPolicyService: AuthorizationPolicyService,
-    private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private profileAuthorizationService: ProfileAuthorizationService,
-    private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
-    @InjectRepository(VirtualContributor)
-    private virtualRepository: Repository<VirtualContributor>
+    private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService
   ) {}
 
   async applyAuthorizationPolicy(
-    virtualInput: IVirtualContributor
+    virtualInput: IVirtualContributor,
+    parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<IVirtualContributor> {
     const virtual = await this.virtualService.getVirtualContributorOrFail(
       virtualInput.id,
@@ -62,8 +55,9 @@ export class VirtualContributorAuthorizationService {
       virtual.authorization
     );
     virtual.authorization =
-      this.platformAuthorizationService.inheritRootAuthorizationPolicy(
-        virtual.authorization
+      this.authorizationPolicyService.inheritParentAuthorization(
+        virtual.authorization,
+        parentAuthorization
       );
     virtual.authorization = this.appendCredentialRules(
       virtual.authorization,
@@ -95,33 +89,20 @@ export class VirtualContributorAuthorizationService {
         virtual.authorization
       );
 
-    return await this.virtualRepository.save(virtual);
+    return virtual;
   }
 
   private appendCredentialRules(
     authorization: IAuthorizationPolicy | undefined,
-    virtualID: string
+    accountID: string
   ): IAuthorizationPolicy {
     if (!authorization)
       throw new EntityNotInitializedException(
-        `Authorization definition not found for virtual: ${virtualID}`,
+        `Authorization definition not found for virtual: ${accountID}`,
         LogContext.COMMUNITY
       );
 
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
-
-    // Allow global admins to reset authorization
-    const globalAdminNotInherited =
-      this.authorizationPolicy.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.AUTHORIZATION_RESET],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-        ],
-        CREDENTIAL_RULE_TYPES_ORGANIZATION_AUTHORIZATION_RESET
-      );
-    globalAdminNotInherited.cascade = false;
-    newRules.push(globalAdminNotInherited);
 
     const communityAdmin =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
@@ -158,12 +139,12 @@ export class VirtualContributorAuthorizationService {
       ],
       [
         {
-          type: AuthorizationCredential.ORGANIZATION_ADMIN,
-          resourceID: virtualID,
+          type: AuthorizationCredential.ACCOUNT_HOST,
+          resourceID: accountID,
         },
         {
           type: AuthorizationCredential.ORGANIZATION_OWNER,
-          resourceID: virtualID,
+          resourceID: accountID,
         },
       ],
       CREDENTIAL_RULE_ORGANIZATION_ADMIN
@@ -174,18 +155,6 @@ export class VirtualContributorAuthorizationService {
     const readPrivilege = this.authorizationPolicyService.createCredentialRule(
       [AuthorizationPrivilege.READ],
       [
-        {
-          type: AuthorizationCredential.ORGANIZATION_ASSOCIATE,
-          resourceID: virtualID,
-        },
-        {
-          type: AuthorizationCredential.ORGANIZATION_ADMIN,
-          resourceID: virtualID,
-        },
-        {
-          type: AuthorizationCredential.ORGANIZATION_OWNER,
-          resourceID: virtualID,
-        },
         {
           type: AuthorizationCredential.GLOBAL_REGISTERED,
           resourceID: '',
