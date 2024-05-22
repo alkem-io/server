@@ -59,6 +59,7 @@ import {
   IngestSpace,
   SpaceIngestionPurpose,
 } from '@services/infrastructure/event-bus/commands';
+import { InvitationExternalService } from '../invitation.external/invitation.external.service';
 
 const IAnyInvitation = createUnionType({
   name: 'AnyInvitation',
@@ -90,6 +91,7 @@ export class CommunityResolverMutations {
     private applicationAuthorizationService: ApplicationAuthorizationService,
     private invitationService: InvitationService,
     private invitationAuthorizationService: InvitationAuthorizationService,
+    private invitationExternalService: InvitationExternalService,
     private invitationExternalAuthorizationService: InvitationExternalAuthorizationService,
     private communityAuthorizationService: CommunityAuthorizationService,
     private eventBus: EventBus
@@ -154,8 +156,9 @@ export class CommunityResolverMutations {
     );
 
     // reset the user authorization policy so that their profile is visible to other community members
-    const user = await this.userService.getUserOrFail(roleData.userID);
-    return await this.userAuthorizationService.applyAuthorizationPolicy(user);
+    let user = await this.userService.getUserOrFail(roleData.userID);
+    user = await this.userAuthorizationService.applyAuthorizationPolicy(user);
+    return await this.userService.save(user);
   }
 
   @UseGuards(GraphqlGuard)
@@ -226,15 +229,17 @@ export class CommunityResolverMutations {
     );
 
     // reset the user authorization policy so that their profile is visible to other community members
-    const virtual =
+    let virtual =
       await this.virtualContributorService.getVirtualContributorOrFail(
         roleData.virtualContributorID
       );
 
-    const result =
+    virtual =
       await this.virtualContributorAuthorizationService.applyAuthorizationPolicy(
         virtual
       );
+    virtual = await this.virtualContributorService.save(virtual);
+
     // publish to EB for space ingestion
     const spaceID = await this.communityService.getRootSpaceID(community);
     // we are publising an event instead of executing a command because Nest's CQRS
@@ -244,7 +249,7 @@ export class CommunityResolverMutations {
       new IngestSpace(spaceID, SpaceIngestionPurpose.Knowledge)
     );
 
-    return result;
+    return virtual;
   }
 
   @UseGuards(GraphqlGuard)
@@ -283,8 +288,9 @@ export class CommunityResolverMutations {
     );
     // reset the user authorization policy so that their profile is not visible
     // to other community members
-    const user = await this.userService.getUserOrFail(roleData.userID);
-    return await this.userAuthorizationService.applyAuthorizationPolicy(user);
+    let user = await this.userService.getUserOrFail(roleData.userID);
+    user = await this.userAuthorizationService.applyAuthorizationPolicy(user);
+    return await this.userService.save(user);
   }
 
   @UseGuards(GraphqlGuard)
@@ -341,13 +347,15 @@ export class CommunityResolverMutations {
     );
     // reset the user authorization policy so that their profile is not visible
     // to other community members
-    const virtual =
+    let virtual =
       await this.virtualContributorService.getVirtualContributorOrFail(
         roleData.virtualContributorID
       );
-    return await this.virtualContributorAuthorizationService.applyAuthorizationPolicy(
-      virtual
-    );
+    virtual =
+      await this.virtualContributorAuthorizationService.applyAuthorizationPolicy(
+        virtual
+      );
+    return await this.virtualContributorService.save(virtual);
   }
 
   @UseGuards(GraphqlGuard)
@@ -370,17 +378,18 @@ export class CommunityResolverMutations {
       `create application community: ${community.id}`
     );
 
-    const application = await this.communityService.createApplication({
+    let application = await this.communityService.createApplication({
       parentID: community.id,
       questions: applicationData.questions,
       userID: agentInfo.userID,
     });
 
-    const savedApplication =
+    application =
       await this.applicationAuthorizationService.applyAuthorizationPolicy(
         application,
         community.authorization
       );
+    application = await this.applicationService.save(application);
 
     // Send the notification
     const notificationInput: NotificationInputCommunityApplication = {
@@ -389,7 +398,7 @@ export class CommunityResolverMutations {
     };
     await this.notificationAdapter.applicationCreated(notificationInput);
 
-    return savedApplication;
+    return application;
   }
 
   @UseGuards(GraphqlGuard)
@@ -504,6 +513,7 @@ export class CommunityResolverMutations {
         invitation,
         community.authorization
       );
+    invitation = await this.invitationService.save(invitation);
 
     // Send the notification
     const notificationInput: NotificationInputCommunityInvitation = {
@@ -604,13 +614,13 @@ export class CommunityResolverMutations {
       );
     }
 
-    const externalInvitation =
+    let externalInvitation =
       await this.communityService.createInvitationExternalUser(
         invitationData,
         agentInfo
       );
 
-    const savedInvitation =
+    externalInvitation =
       await this.invitationExternalAuthorizationService.applyAuthorizationPolicy(
         externalInvitation,
         community.authorization
@@ -623,7 +633,7 @@ export class CommunityResolverMutations {
       welcomeMessage: invitationData.welcomeMessage,
     };
     await this.notificationAdapter.externalInvitationCreated(notificationInput);
-    return savedInvitation;
+    return await this.invitationExternalService.save(externalInvitation);
   }
 
   @UseGuards(GraphqlGuard)

@@ -156,25 +156,10 @@ export class SpaceAuthorizationService {
 
     // Cascade down
     // propagate authorization rules for child entities
-    const spacePropagated = await this.propagateAuthorizationToChildEntities(
-      space,
-      license
-    );
-    space.subspaces = await this.propagateAuthorizationToSubspaces(
-      spacePropagated,
-      communityPolicyWithFlags
-    );
-
-    // Reload, to get all the saves from save above + with
-    // key entities loaded that are needed for next steps
-    space = await this.spaceService.getSpaceOrFail(spaceInput.id, {
-      relations: {
-        community: true,
-      },
-    });
+    space = await this.propagateAuthorizationToChildEntities(space, license);
     if (!space.community)
       throw new RelationshipNotFoundException(
-        `Unable to load Space after first save: ${space.id} `,
+        `Unable to load Community on space after child entities propagation: ${space.id} `,
         LogContext.SPACES
       );
 
@@ -213,6 +198,7 @@ export class SpaceAuthorizationService {
         context: true,
         profile: true,
         storageAggregator: true,
+        subspaces: true,
       },
     });
     if (
@@ -224,7 +210,8 @@ export class SpaceAuthorizationService {
       !space.community.policy ||
       !space.context ||
       !space.profile ||
-      !space.storageAggregator
+      !space.storageAggregator ||
+      !space.subspaces
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load entities on auth reset for space base ${space.id} `,
@@ -295,6 +282,24 @@ export class SpaceAuthorizationService {
         space.storageAggregator,
         space.authorization
       );
+
+    const spaceAdminCriteria =
+      this.communityPolicyService.getCredentialsForRole(
+        communityPolicy,
+        CommunityRole.ADMIN
+      );
+    const updatedSpaces: ISpace[] = [];
+    for (const subspace of space.subspaces) {
+      const updatedSubspace = await this.applyAuthorizationPolicy(subspace);
+
+      updatedSubspace.authorization = this.extendSubSpaceAuthorization(
+        subspace.authorization,
+        spaceAdminCriteria
+      );
+      updatedSpaces.push(updatedSubspace);
+    }
+    space.subspaces = updatedSpaces;
+
     return await this.spaceService.save(space);
   }
 
@@ -629,39 +634,5 @@ export class SpaceAuthorizationService {
       if (parentCredential) memberCriteria.push(parentCredential);
     }
     return memberCriteria;
-  }
-
-  private async propagateAuthorizationToSubspaces(
-    spaceBase: ISpace,
-    communityPolicy: ICommunityPolicy
-  ): Promise<ISpace[]> {
-    const space = await this.spaceService.getSpaceOrFail(spaceBase.id, {
-      relations: {
-        subspaces: true,
-      },
-    });
-
-    if (!space.subspaces)
-      throw new RelationshipNotFoundException(
-        `Unable to load subspaces for space ${space.id} `,
-        LogContext.SPACES
-      );
-
-    const spaceAdminCriteria =
-      await this.communityPolicyService.getCredentialsForRole(
-        communityPolicy,
-        CommunityRole.ADMIN
-      );
-    const updatedSpaces: ISpace[] = [];
-    for (const subspace of space.subspaces) {
-      const updatedSubspace = await this.applyAuthorizationPolicy(subspace);
-
-      updatedSubspace.authorization = this.extendSubSpaceAuthorization(
-        subspace.authorization,
-        spaceAdminCriteria
-      );
-      updatedSpaces.push(updatedSubspace);
-    }
-    return updatedSpaces;
   }
 }

@@ -1,13 +1,10 @@
-import { Repository } from 'typeorm';
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import {
   AuthorizationCredential,
   AuthorizationPrivilege,
   LogContext,
 } from '@common/enums';
 import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
-import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
@@ -25,8 +22,6 @@ import { RelationshipNotFoundException } from '@common/exceptions/relationship.n
 export class WhiteboardAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
-    @InjectRepository(Whiteboard)
-    private whiteboardRepository: Repository<Whiteboard>,
     private profileAuthorizationService: ProfileAuthorizationService
   ) {}
 

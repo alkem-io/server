@@ -1,11 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 import { CalloutFramingService } from './callout.framing.service';
-import { CalloutFraming } from './callout.framing.entity';
 import { ICalloutFraming } from './callout.framing.interface';
 import { WhiteboardAuthorizationService } from '@domain/common/whiteboard';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
@@ -17,9 +14,7 @@ export class CalloutFramingAuthorizationService {
     private calloutFramingService: CalloutFramingService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private profileAuthorizationService: ProfileAuthorizationService,
-    private whiteboardAuthorizationService: WhiteboardAuthorizationService,
-    @InjectRepository(CalloutFraming)
-    private calloutFramingRepository: Repository<CalloutFraming>
+    private whiteboardAuthorizationService: WhiteboardAuthorizationService
   ) {}
 
   public async applyAuthorizationPolicy(
@@ -66,6 +61,6 @@ export class CalloutFramingAuthorizationService {
         );
     }
 
-    return this.calloutFramingRepository.save(calloutFraming);
+    return calloutFraming;
   }
 }

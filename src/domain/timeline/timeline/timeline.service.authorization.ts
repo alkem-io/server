@@ -1,21 +1,18 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { ITimeline } from './timeline.interface';
-import { Timeline } from './timeline.entity';
 import { TimelineService } from './timeline.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CalendarAuthorizationService } from '../calendar/calendar.service.authorization';
+import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
+import { LogContext } from '@common/enums/logging.context';
 
 @Injectable()
 export class TimelineAuthorizationService {
   constructor(
     private calendarAuthorizationService: CalendarAuthorizationService,
     private timelineService: TimelineService,
-    private authorizationPolicyService: AuthorizationPolicyService,
-    @InjectRepository(Timeline)
-    private timelineRepository: Repository<Timeline>
+    private authorizationPolicyService: AuthorizationPolicyService
   ) {}
 
   async applyAuthorizationPolicy(
@@ -28,6 +25,12 @@ export class TimelineAuthorizationService {
         relations: { calendar: true },
       }
     );
+    if (!timeline.calendar) {
+      throw new RelationshipNotFoundException(
+        `Unable to load entities on auth reset for timeline ${timeline.id} `,
+        LogContext.CALENDAR
+      );
+    }
 
     timeline.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
@@ -36,22 +39,11 @@ export class TimelineAuthorizationService {
       );
 
     // Cascade down
-    const timelinePropagated = await this.propagateAuthorizationToChildEntities(
-      timeline
-    );
-
-    return await this.timelineRepository.save(timelinePropagated);
-  }
-
-  private async propagateAuthorizationToChildEntities(
-    timeline: ITimeline
-  ): Promise<ITimeline> {
-    if (timeline.calendar) {
+    timeline.calendar =
       await this.calendarAuthorizationService.applyAuthorizationPolicy(
         timeline.calendar,
         timeline.authorization
       );
-    }
 
     return timeline;
   }

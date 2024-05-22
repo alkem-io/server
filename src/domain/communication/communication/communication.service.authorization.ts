@@ -76,7 +76,7 @@ export class CommunicationAuthorizationService {
         communication.updates.authorization
       );
 
-    return await this.communicationService.save(communication);
+    return communication;
   }
 
   private appendPrivilegeRules(

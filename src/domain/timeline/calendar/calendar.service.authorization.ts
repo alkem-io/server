@@ -1,21 +1,17 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { Calendar } from './calendar.entity';
 import { CalendarService } from './calendar.service';
 import { ICalendar } from './calendar.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { CalendarEventAuthorizationService } from '../event/event.service.authorization';
+import { ICalendarEvent } from '../event/event.interface';
 
 @Injectable()
 export class CalendarAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private calendarEventAuthorizationService: CalendarEventAuthorizationService,
-    private calendar: CalendarService,
-    @InjectRepository(Calendar)
-    private calendarRepository: Repository<Calendar>
+    private calendarService: CalendarService
   ) {}
 
   async applyAuthorizationPolicy(
@@ -37,19 +33,23 @@ export class CalendarAuthorizationService {
       calendar
     );
 
-    return await this.calendarRepository.save(calendarPropagated);
+    return calendarPropagated;
   }
 
   private async propagateAuthorizationToChildEntities(
     calendar: ICalendar
   ): Promise<ICalendar> {
-    calendar.events = await this.calendar.getCalendarEvents(calendar);
+    calendar.events = await this.calendarService.getCalendarEvents(calendar);
+    const updatedEvents: ICalendarEvent[] = [];
     for (const event of calendar.events) {
-      await this.calendarEventAuthorizationService.applyAuthorizationPolicy(
-        event,
-        calendar.authorization
-      );
+      const updatedEvent =
+        await this.calendarEventAuthorizationService.applyAuthorizationPolicy(
+          event,
+          calendar.authorization
+        );
+      updatedEvents.push(updatedEvent);
     }
+    calendar.events = updatedEvents;
 
     return calendar;
   }

@@ -1,11 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { ICalendarEvent } from './event.interface';
-import { CalendarEvent } from './event.entity';
 import {
   AuthorizationCredential,
   AuthorizationPrivilege,
@@ -16,6 +13,7 @@ import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authoriz
 import { CREDENTIAL_RULE_CALENDAR_EVENT_CREATED_BY } from '@common/constants/authorization/credential.rule.constants';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 import { RoomAuthorizationService } from '@domain/communication/room/room.service.authorization';
+import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 
 @Injectable()
 export class CalendarEventAuthorizationService {
@@ -23,9 +21,7 @@ export class CalendarEventAuthorizationService {
     private calendarEventService: CalendarEventService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private roomAuthorizationService: RoomAuthorizationService,
-    private profileAuthorizationService: ProfileAuthorizationService,
-    @InjectRepository(CalendarEvent)
-    private calendarEventRepository: Repository<CalendarEvent>
+    private profileAuthorizationService: ProfileAuthorizationService
   ) {}
 
   async applyAuthorizationPolicy(
@@ -39,6 +35,12 @@ export class CalendarEventAuthorizationService {
           relations: { comments: true, profile: true },
         }
       );
+    if (calendarEvent.profile) {
+      throw new RelationshipNotFoundException(
+        `Unable to load entities on auth reset for calendar event ${calendarEvent.id} `,
+        LogContext.CALENDAR
+      );
+    }
     calendarEvent.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         calendarEvent.authorization,
@@ -66,15 +68,13 @@ export class CalendarEventAuthorizationService {
     // Extend to give the user creating the calendarEvent more rights
     calendarEvent.authorization = this.appendCredentialRules(calendarEvent);
 
-    if (calendarEvent.profile) {
-      calendarEvent.profile =
-        await this.profileAuthorizationService.applyAuthorizationPolicy(
-          calendarEvent.profile,
-          calendarEvent.authorization
-        );
-    }
+    calendarEvent.profile =
+      await this.profileAuthorizationService.applyAuthorizationPolicy(
+        calendarEvent.profile,
+        calendarEvent.authorization
+      );
 
-    return await this.calendarEventRepository.save(calendarEvent);
+    return calendarEvent;
   }
 
   private appendCredentialRules(
