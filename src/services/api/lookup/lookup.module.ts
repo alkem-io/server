@@ -25,6 +25,8 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { UserModule } from '@domain/community/user/user.module';
 import { SpaceModule } from '@domain/space/space/space.module';
+import { CommunityGuidelinesModule } from '@domain/community/community-guidelines/community.guidelines.module';
+import { CommunityGuidelinesTemplateModule } from '@domain/template/community-guidelines-template/community.guidelines.template.module';
 
 @Module({
   imports: [
@@ -51,6 +53,8 @@ import { SpaceModule } from '@domain/space/space/space.module';
     PlatformAuthorizationPolicyModule,
     UserModule,
     SpaceModule,
+    CommunityGuidelinesModule,
+    CommunityGuidelinesTemplateModule,
   ],
   providers: [LookupService, LookupResolverQueries, LookupResolverFields],
   exports: [LookupService],

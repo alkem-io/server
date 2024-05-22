@@ -4,7 +4,10 @@ import { Type } from 'class-transformer';
 import { CreateProfileInput } from '@domain/common/profile/dto/profile.dto.create';
 @InputType()
 export class CreateTemplateBaseInput {
-  @Field(() => CreateProfileInput, { nullable: false })
+  @Field(() => CreateProfileInput, {
+    nullable: false,
+    description: 'The profile of the template.',
+  })
   @ValidateNested({ each: true })
   @Type(() => CreateProfileInput)
   profile!: CreateProfileInput;
