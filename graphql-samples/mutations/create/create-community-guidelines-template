@@ -1,0 +1,31 @@
+mutation createCommunityGuidelinesTemplate($communityGuidelinesTemplateInput: CreateCommunityGuidelinesTemplateOnTemplatesSetInput!) {
+  createCommunityGuidelinesTemplate(communityGuidelinesTemplateInput: $communityGuidelinesTemplateInput) {
+    profile {
+      displayName
+      description
+    }
+    guidelines {
+      profile {
+        description
+        displayName
+      }
+    }
+  }
+}
+
+Variables:
+{
+  "communityGuidelinesTemplateInput": {
+      "templatesSetID": "uuid",
+      "profile": {
+        "displayName": "Community Guidelines template Example",
+        "description": "Template description"
+      },
+      communityGuidelines:{
+        profile:{
+          displayName:"Guidelines name",
+          description:"do not be rude"
+        }
+      }
+  }
+}

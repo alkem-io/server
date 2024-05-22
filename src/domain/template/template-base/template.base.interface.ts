@@ -2,7 +2,7 @@ import { IAuthorizable } from '@domain/common/entity/authorizable-entity/authori
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 
-@ObjectType('ITemplateBase')
+@ObjectType('ITemplateBase', { isAbstract: true })
 export abstract class ITemplateBase extends IAuthorizable {
   @Field(() => IProfile, {
     nullable: false,

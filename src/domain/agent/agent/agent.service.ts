@@ -233,7 +233,7 @@ export class AgentService {
     await this.agentInfoCacheService.updateAgentInfoCache(agent);
     await this.setAgentCache(agent);
 
-    return agent;
+    return await this.saveAgent(agent);
   }
 
   async hasValidCredential(

@@ -19,18 +19,17 @@ import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authoriz
 import { InnovationHubService } from '@domain/innovation-hub';
 import { InnovationHubAuthorizationService } from '@domain/innovation-hub/innovation.hub.service.authorization';
 import {
+  CREDENTIAL_RULE_PLATFORM_CREATE_ORGANIZATION,
+  CREDENTIAL_RULE_PLATFORM_CREATE_SPACE,
   CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_GUIDANCE,
   CREDENTIAL_RULE_TYPES_PLATFORM_ADMINS,
-  CREDENTIAL_RULE_TYPES_PLATFORM_ANY_ADMIN,
   CREDENTIAL_RULE_TYPES_PLATFORM_AUTH_RESET,
   CREDENTIAL_RULE_TYPES_PLATFORM_FILE_UPLOAD_ANY_USER,
   CREDENTIAL_RULE_TYPES_PLATFORM_GRANT_GLOBAL_ADMINS,
   CREDENTIAL_RULE_TYPES_PLATFORM_MGMT,
   CREDENTIAL_RULE_TYPES_PLATFORM_READ_REGISTERED,
-  POLICY_RULE_PLATFORM_CREATE,
 } from '@common/constants';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
-import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { LicensingAuthorizationService } from '@platform/licensing/licensing.service.authorization';
 
@@ -75,12 +74,12 @@ export class PlatformAuthorizationService {
       platform.authorization
     );
 
-    const privilegeRules = this.createPlatformPrivilegeRules();
-    platform.authorization =
-      this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
-        platform.authorization,
-        privilegeRules
-      );
+    // const privilegeRules = this.createPlatformPrivilegeRules();
+    // platform.authorization =
+    //   this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
+    //     platform.authorization,
+    //     privilegeRules
+    //   );
 
     // Cascade down
     const platformPropagated = await this.propagateAuthorizationToChildEntities(
@@ -315,46 +314,48 @@ export class PlatformAuthorizationService {
     userNotInherited.cascade = false;
     credentialRules.push(userNotInherited);
 
+    const createSpace =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.CREATE_SPACE],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+          AuthorizationCredential.BETA_TESTER,
+        ],
+        CREDENTIAL_RULE_PLATFORM_CREATE_SPACE
+      );
+    createSpace.cascade = false;
+    credentialRules.push(createSpace);
+
     const createOrg =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.CREATE_ORGANIZATION],
-        [AuthorizationCredential.SPACE_ADMIN],
-        CREDENTIAL_RULE_TYPES_PLATFORM_ANY_ADMIN
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+          AuthorizationCredential.SPACE_ADMIN,
+        ],
+        CREDENTIAL_RULE_PLATFORM_CREATE_ORGANIZATION
       );
     createOrg.cascade = false;
     credentialRules.push(createOrg);
 
-    const admin =
-      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.ADMIN],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-          AuthorizationCredential.GLOBAL_COMMUNITY_READ,
-          AuthorizationCredential.SPACE_ADMIN,
-          AuthorizationCredential.ORGANIZATION_ADMIN,
-        ],
-        CREDENTIAL_RULE_TYPES_PLATFORM_ANY_ADMIN
-      );
-    admin.cascade = false;
-    credentialRules.push(admin);
+    // // TODO: not needed any more?
+    // const admin =
+    //   this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+    //     [AuthorizationPrivilege.ADMIN],
+    //     [
+    //       AuthorizationCredential.GLOBAL_ADMIN,
+    //       AuthorizationCredential.GLOBAL_SUPPORT,
+    //       AuthorizationCredential.GLOBAL_COMMUNITY_READ,
+    //       AuthorizationCredential.SPACE_ADMIN,
+    //       AuthorizationCredential.ORGANIZATION_ADMIN,
+    //     ],
+    //     CREDENTIAL_RULE_TYPES_PLATFORM_ANY_ADMIN
+    //   );
+    // admin.cascade = false;
+    // credentialRules.push(admin);
 
     return credentialRules;
-  }
-
-  private createPlatformPrivilegeRules(): AuthorizationPolicyRulePrivilege[] {
-    const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
-
-    const createPrivilege = new AuthorizationPolicyRulePrivilege(
-      [
-        AuthorizationPrivilege.CREATE_SPACE,
-        AuthorizationPrivilege.CREATE_ORGANIZATION,
-      ],
-      AuthorizationPrivilege.CREATE,
-      POLICY_RULE_PLATFORM_CREATE
-    );
-    privilegeRules.push(createPrivilege);
-
-    return privilegeRules;
   }
 }

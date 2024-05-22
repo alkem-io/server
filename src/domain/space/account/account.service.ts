@@ -5,8 +5,6 @@ import {
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
-import { IOrganization } from '@domain/community/organization/organization.interface';
-import { OrganizationService } from '@domain/community/organization/organization.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindManyOptions, FindOneOptions, Repository } from 'typeorm';
@@ -28,19 +26,19 @@ import { UpdateAccountPlatformSettingsInput } from './dto/account.dto.update.pla
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { CreateAccountInput } from './dto/account.dto.create';
-import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { CreateSpaceInput } from '../space/dto/space.dto.create';
+import { IContributor } from '@domain/community/contributor/contributor.interface';
+import { ContributorService } from '@domain/community/contributor/contributor.service';
 
 @Injectable()
 export class AccountService {
   constructor(
     private spaceService: SpaceService,
     private agentService: AgentService,
-    private organizationService: OrganizationService,
     private templatesSetService: TemplatesSetService,
     private spaceDefaultsService: SpaceDefaultsService,
     private licenseService: LicenseService,
-    private namingService: NamingService,
+    private contributorService: ContributorService,
     @InjectRepository(Account)
     private accountRepository: Repository<Account>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -224,9 +222,8 @@ export class AccountService {
     await this.spaceDefaultsService.deleteSpaceDefaults(account.defaults.id);
 
     // Remove the account host credential
-    const hostAgent = await this.organizationService.getAgent(host);
     host.agent = await this.agentService.revokeCredential({
-      agentID: hostAgent.id,
+      agentID: host.agent.id,
       type: AuthorizationCredential.ACCOUNT_HOST,
       resourceID: account.id,
     });
@@ -331,53 +328,62 @@ export class AccountService {
 
   async setAccountHost(
     account: IAccount,
-    hostOrgID: string
+    hostContributorID: string
   ): Promise<IAccount> {
-    const organization = await this.organizationService.getOrganizationOrFail(
-      hostOrgID,
-      { relations: { groups: true, agent: true } }
+    const contributor = await this.contributorService.getContributorOrFail(
+      hostContributorID,
+      {
+        relations: {
+          agent: true,
+        },
+      }
     );
 
     const existingHost = await this.getHost(account);
 
     if (existingHost) {
-      const agentExisting = await this.organizationService.getAgent(
-        existingHost
-      );
-      organization.agent = await this.agentService.revokeCredential({
-        agentID: agentExisting.id,
+      await this.agentService.revokeCredential({
+        agentID: existingHost.agent.id,
         type: AuthorizationCredential.ACCOUNT_HOST,
         resourceID: account.id,
       });
     }
 
     // assign the credential
-    const agent = await this.organizationService.getAgent(organization);
-    organization.agent = await this.agentService.grantCredential({
-      agentID: agent.id,
+    await this.agentService.grantCredential({
+      agentID: contributor.agent.id,
       type: AuthorizationCredential.ACCOUNT_HOST,
       resourceID: account.id,
     });
 
-    await this.organizationService.save(organization);
     return account;
   }
 
-  async getHost(account: IAccount): Promise<IOrganization | undefined> {
-    const organizations =
-      await this.organizationService.organizationsWithCredentials({
+  async getHost(account: IAccount): Promise<IContributor | null> {
+    const contributors =
+      await this.contributorService.contributorsWithCredentials({
         type: AuthorizationCredential.ACCOUNT_HOST,
         resourceID: account.id,
       });
-    if (organizations.length == 0) {
-      return undefined;
-    }
-    if (organizations.length > 1) {
-      throw new RelationshipNotFoundException(
-        `More than one host for Account ${account.id} `,
+    if (contributors.length === 1) {
+      return contributors[0];
+    } else if (contributors.length > 1) {
+      this.logger.error(
+        `Account with ID: ${account.id} has multiple hosts. This should not happen.`,
         LogContext.ACCOUNT
       );
     }
-    return organizations[0];
+
+    return null;
+  }
+
+  async getHostOrFail(account: IAccount): Promise<IContributor> {
+    const host = await this.getHost(account);
+    if (!host)
+      throw new EntityNotFoundException(
+        `Unable to find Host for account with ID: ${account.id}`,
+        LogContext.COMMUNITY
+      );
+    return host;
   }
 }
