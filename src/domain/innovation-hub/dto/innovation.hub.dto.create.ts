@@ -44,4 +44,10 @@ export class CreateInnovationHubInput extends CreateNameableInput {
     description: 'A readable identifier, unique within the containing scope.',
   })
   nameID!: string;
+
+  @Field(() => UUID, {
+    nullable: false,
+    description: 'Account ID, associated with the Innovation Hub.',
+  })
+  accountID!: string;
 }

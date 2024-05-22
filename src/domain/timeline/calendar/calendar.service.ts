@@ -4,7 +4,7 @@ import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exc
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { ValidationException } from '@common/exceptions/validation.exception';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
-import { AgentInfo } from '@core/authentication/agent-info';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -113,20 +113,21 @@ export class CalendarService {
         `Calendar (${calendar}) not initialised`,
         LogContext.CALENDAR
       );
-
+    const reservedNameIDs =
+      await this.namingService.getReservedNameIDsInCalendar(calendar.id);
     if (calendarEventData.nameID && calendarEventData.nameID.length > 0) {
-      const eventWithNameID = calendar.events.find(
-        e => e.nameID === calendarEventData.nameID
-      );
-      if (eventWithNameID)
+      const nameTaken = reservedNameIDs.includes(calendarEventData.nameID);
+      if (nameTaken)
         throw new ValidationException(
           `Unable to create CalendarEvent: the provided nameID is already taken: ${calendarEventData.nameID}`,
           LogContext.CALENDAR
         );
     } else {
-      calendarEventData.nameID = this.namingService.createNameID(
-        `${calendarEventData.profileData?.displayName}`
-      );
+      calendarEventData.nameID =
+        this.namingService.createNameIdAvoidingReservedNameIDs(
+          `${calendarEventData.profileData?.displayName}`,
+          reservedNameIDs
+        );
     }
 
     const storageAggregator =

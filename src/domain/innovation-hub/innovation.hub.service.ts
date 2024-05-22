@@ -17,6 +17,8 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
+import { AccountService } from '@domain/space/account/account.service';
+import { UpdateInnovationHubPlatformSettingsInput } from './dto/innovation.hub.dto.update.settings';
 
 @Injectable()
 export class InnovationHubService {
@@ -28,6 +30,7 @@ export class InnovationHubService {
     private readonly authorizationPolicyService: AuthorizationPolicyService,
     private storageAggregatorResolverService: StorageAggregatorResolverService,
     private readonly spaceService: SpaceService,
+    private readonly accountService: AccountService,
     private namingService: NamingService
   ) {}
 
@@ -54,23 +57,24 @@ export class InnovationHubService {
         LogContext.INNOVATION_HUB
       );
 
+    const reservedNameIDs = await this.namingService.getReservedNameIDsInHubs();
     if (createData.nameID && createData.nameID.length > 0) {
-      const nameAvailable =
-        await this.namingService.isInnovationHubNameIdAvailable(
-          createData.nameID
-        );
-      if (!nameAvailable)
+      const nameTaken = reservedNameIDs.includes(createData.nameID);
+      if (nameTaken)
         throw new ValidationException(
           `Unable to create Innovation Hub: the provided nameID is already taken: ${createData.nameID}`,
           LogContext.INNOVATION_HUB
         );
     } else {
-      createData.nameID = this.namingService.createNameID(
-        `${createData.profileData.displayName}`
-      );
+      createData.nameID =
+        this.namingService.createNameIdAvoidingReservedNameIDs(
+          `${createData.profileData.displayName}`,
+          reservedNameIDs
+        );
     }
 
-    const hub: IInnovationHub = InnovationHub.create(createData);
+    const { accountID, ...createDataProps } = createData;
+    const hub: IInnovationHub = InnovationHub.create(createDataProps);
     hub.authorization = new AuthorizationPolicy();
 
     const storageAggregator =
@@ -92,6 +96,9 @@ export class InnovationHubService {
       VisualType.BANNER_WIDE
     );
 
+    const account = await this.accountService.getAccountOrFail(accountID);
+    hub.account = account;
+
     await this.innovationHubRepository.save(hub);
 
     return this.authService.applyAuthorizationPolicyAndSave(hub);
@@ -109,9 +116,10 @@ export class InnovationHubService {
 
     if (input.nameID) {
       if (input.nameID !== innovationHub.nameID) {
-        const updateAllowed =
-          await this.namingService.isInnovationHubNameIdAvailable(input.nameID);
-        if (!updateAllowed) {
+        const reservedNameIDs =
+          await this.namingService.getReservedNameIDsInHubs();
+        const nameTaken = reservedNameIDs.includes(input.nameID);
+        if (nameTaken) {
           throw new ValidationException(
             `Unable to update Innovation Hub nameID: the provided nameID '${input.nameID}' is already taken`,
             LogContext.INNOVATION_HUB
@@ -155,6 +163,28 @@ export class InnovationHubService {
         input.profileData
       );
     }
+
+    return await this.innovationHubRepository.save(innovationHub);
+  }
+
+  public async updatePlatformSettingsOrFail(
+    input: UpdateInnovationHubPlatformSettingsInput
+  ): Promise<IInnovationHub | never> {
+    const innovationHub: IInnovationHub = await this.getInnovationHubOrFail(
+      {
+        idOrNameId: input.ID,
+      },
+      { relations: { account: true } }
+    );
+
+    if (!innovationHub.account)
+      throw new EntityNotFoundException(
+        `Account for innovation hub ${innovationHub.id} not found!`,
+        LogContext.PLATFORM
+      );
+
+    const account = await this.accountService.getAccountOrFail(input.accountID);
+    innovationHub.account = account;
 
     return await this.innovationHubRepository.save(innovationHub);
   }

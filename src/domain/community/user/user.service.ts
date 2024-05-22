@@ -9,7 +9,7 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { FormatNotSupportedException } from '@common/exceptions/format.not.supported.exception';
-import { AgentInfo } from '@core/authentication/agent-info';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IAgent } from '@domain/agent/agent';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import {
@@ -50,7 +50,7 @@ import { getPaginationResults } from '@core/pagination/pagination.fn';
 import { IPaginatedType } from '@core/pagination/paginated.type';
 import { CreateProfileInput } from '@domain/common/profile/dto/profile.dto.create';
 import { validateEmail } from '@common/utils';
-import { AgentInfoMetadata } from '@core/authentication/agent-info-metadata';
+import { AgentInfoMetadata } from '@core/authentication.agent.info/agent.info.metadata';
 import { CommunityCredentials } from './dto/user.dto.community.credentials';
 import { CommunityMemberCredentials } from './dto/user.dto.community.member.credentials';
 import { VisualType } from '@common/enums/visual.type';
@@ -301,8 +301,12 @@ export class UserService {
       agentInfo.avatarURL
     );
 
+    const nameID = await this.createUserNameID(
+      agentInfo.firstName,
+      agentInfo.lastName
+    );
     const user = await this.createUser({
-      nameID: this.createUserNameID(agentInfo.firstName, agentInfo.lastName),
+      nameID,
       email: email,
       firstName: agentInfo.firstName,
       lastName: agentInfo.lastName,
@@ -924,13 +928,17 @@ export class UserService {
     return directRooms;
   }
 
-  createUserNameID(
+  public async createUserNameID(
     firstName: string,
-    lastName: string,
-    useRandomSuffix = true
-  ): string {
+    lastName: string
+  ): Promise<string> {
     const base = `${firstName}-${lastName}`;
-    return this.namingService.createNameID(base, useRandomSuffix);
+    const reservedNameIDs =
+      await this.namingService.getReservedNameIDsInUsers(); // This will need to be smarter later
+    return this.namingService.createNameIdAvoidingReservedNameIDs(
+      base,
+      reservedNameIDs
+    );
   }
 
   async findProfilesByBatch(userIds: string[]): Promise<(IProfile | Error)[]> {

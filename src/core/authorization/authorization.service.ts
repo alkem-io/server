@@ -6,7 +6,7 @@ import {
   EntityNotInitializedException,
   ForbiddenException,
 } from '@common/exceptions';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { LogContext } from '@common/enums';
 import { IVerifiedCredential } from '@domain/agent/verified-credential/verified.credential.interface';

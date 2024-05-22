@@ -35,7 +35,7 @@ import { CommunityContributorsUpdateType } from '@common/enums/community.contrib
 import { CommunityContributorType } from '@common/enums/community.contributor.type';
 import { ICommunityRolePolicy } from '../community-policy/community.policy.role.interface';
 import { ICommunityPolicy } from '../community-policy/community.policy.interface';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { CommunityPolicyService } from '../community-policy/community.policy.service';
 import { ICommunityPolicyDefinition } from '../community-policy/community.policy.definition';
 import { DiscussionCategoryCommunity } from '@common/enums/communication.discussion.category.community';
@@ -45,7 +45,7 @@ import { UpdateFormInput } from '@domain/common/form/dto/form.dto.update';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 import { InvitationService } from '../invitation/invitation.service';
 import { IInvitation } from '../invitation/invitation.interface';
-import { CreateInvitationExternalUserOnCommunityInput } from './dto/community.dto.invite.external.user';
+import { CreateInvitationUserByEmailOnCommunityInput } from './dto/community.dto.invite.external.user';
 import { IInvitationExternal } from '../invitation.external';
 import { InvitationExternalService } from '../invitation.external/invitation.external.service';
 import { CreateInvitationExternalInput } from '../invitation.external/dto/invitation.external.dto.create';
@@ -1177,7 +1177,7 @@ export class CommunityService {
   }
 
   async createInvitationExternalUser(
-    invitationData: CreateInvitationExternalUserOnCommunityInput,
+    invitationData: CreateInvitationUserByEmailOnCommunityInput,
     agentInfo: AgentInfo
   ): Promise<IInvitationExternal> {
     await this.validateInvitationToExternalUser(

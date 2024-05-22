@@ -21,4 +21,11 @@ export class IInvitation extends IAuthorizable {
 
   @Field(() => String, { nullable: true })
   welcomeMessage?: string;
+
+  @Field(() => Boolean, {
+    nullable: false,
+    description:
+      'Whether to also add the invited user to the parent community.',
+  })
+  invitedToParent!: boolean;
 }

@@ -4,7 +4,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { MachineOptions } from 'xstate';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { EntityNotInitializedException } from '@common/exceptions';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { OrganizationVerificationEventInput } from './dto/organization.verification.dto.event';

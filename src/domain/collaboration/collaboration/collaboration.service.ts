@@ -25,7 +25,7 @@ import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { CollaborationArgsCallouts } from './dto/collaboration.args.callouts';
-import { AgentInfo } from '@core/authentication/agent-info';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UpdateCollaborationCalloutsSortOrderInput } from './dto/collaboration.dto.update.callouts.sort.order';
 import { TagsetTemplateSetService } from '@domain/common/tagset-template-set/tagset.template.set.service';
@@ -383,21 +383,23 @@ export class CollaborationService {
         );
     }
 
+    const reservedNameIDs =
+      await this.namingService.getReservedNameIDsInCollaboration(
+        collaboration.id
+      );
     if (calloutData.nameID && calloutData.nameID.length > 0) {
-      const nameAvailable =
-        await this.namingService.isCalloutNameIdAvailableInCollaboration(
-          calloutData.nameID,
-          collaboration.id
-        );
-      if (!nameAvailable)
+      const nameIdAlreadyTaken = reservedNameIDs.includes(calloutData.nameID);
+      if (nameIdAlreadyTaken)
         throw new ValidationException(
           `Unable to create Callout: the provided nameID is already taken: ${calloutData.nameID}`,
           LogContext.SPACES
         );
     } else {
-      calloutData.nameID = this.namingService.createNameID(
-        `${calloutData.framing.profile.displayName}`
-      );
+      calloutData.nameID =
+        this.namingService.createNameIdAvoidingReservedNameIDs(
+          `${calloutData.framing.profile.displayName}`,
+          reservedNameIDs
+        );
     }
 
     const displayNameAvailable =

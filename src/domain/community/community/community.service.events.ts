@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { NotificationInputCommunityNewMember } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.new.member';

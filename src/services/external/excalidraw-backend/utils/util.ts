@@ -1,6 +1,6 @@
 import { FrontendApi } from '@ory/kratos-client';
 import { LoggerService } from '@nestjs/common';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { getSession } from '@common/utils';
 import { AuthenticationService } from '@core/authentication/authentication.service';

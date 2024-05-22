@@ -21,4 +21,5 @@ export class CreateInvitationInput {
   createdBy!: string;
 
   communityID!: string;
+  invitedToParent!: boolean;
 }

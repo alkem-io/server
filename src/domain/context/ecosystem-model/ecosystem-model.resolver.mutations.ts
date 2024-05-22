@@ -9,7 +9,7 @@ import {
 } from '@domain/context/actor-group';
 import { AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { ActorGroupAuthorizationService } from '@domain/context/actor-group/actor-group.service.authorization';
 import { IEcosystemModel } from './ecosystem-model.interface';
 import { UpdateEcosystemModelInput } from './dto/ecosystem-model.dto.update';

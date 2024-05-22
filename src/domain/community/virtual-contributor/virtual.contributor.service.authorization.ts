@@ -24,11 +24,13 @@ import {
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 import { VirtualContributor } from './virtual.contributor.entity';
 import { IVirtualContributor } from './virtual.contributor.interface';
+import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
 
 @Injectable()
 export class VirtualContributorAuthorizationService {
   constructor(
     private virtualService: VirtualContributorService,
+    private agentAuthorizationService: AgentAuthorizationService,
     private authorizationPolicy: AuthorizationPolicyService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
@@ -87,9 +89,9 @@ export class VirtualContributorAuthorizationService {
         virtual.authorization
       );
 
-    virtual.agent.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
-        virtual.agent.authorization,
+    virtual.agent =
+      await this.agentAuthorizationService.applyAuthorizationPolicy(
+        virtual.agent,
         virtual.authorization
       );
 
