@@ -1,33 +1,14 @@
-import {
-  createUnionType,
-  Parent,
-  ResolveField,
-  Resolver,
-} from '@nestjs/graphql';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { IMessage } from './message.interface';
 import { LogContext } from '@common/enums/logging.context';
-import { IUser } from '@domain/community/user';
 import { EntityNotFoundException } from '@common/exceptions';
 import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { UserLookupService } from '@services/infrastructure/user-lookup/user.lookup.service';
-import {
-  IVirtualContributor,
-  VirtualContributor,
-} from '@domain/community/virtual-contributor';
+import { VirtualContributor } from '@domain/community/virtual-contributor';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-
-const ISenderUnionType = createUnionType({
-  name: 'MessageSender',
-  types: () => [IUser, IVirtualContributor],
-  resolveType(value) {
-    if ('email' in value) {
-      return IUser;
-    }
-    return IVirtualContributor;
-  },
-});
+import { IContributor } from '@domain/community/contributor/contributor.interface';
 
 @Resolver(() => IMessage)
 export class MessageResolverFields {
@@ -39,34 +20,43 @@ export class MessageResolverFields {
     private virtualContributorRepository: Repository<VirtualContributor>
   ) {}
 
-  @ResolveField('sender', () => ISenderUnionType, {
+  @ResolveField('sender', () => IContributor, {
     nullable: true,
     description: 'The User or Virtual Contributor that created this Message',
   })
   async sender(
     @Parent() message: IMessage
-  ): Promise<IUser | IVirtualContributor | null | never> {
-    const { sender, senderType } = message;
-    if (!sender || !senderType) {
+  ): Promise<IContributor | null | never> {
+    const senderID = message.sender;
+    if (!senderID) {
       return null;
     }
 
+    const contributorOptions = {
+      where: {
+        id: senderID,
+      },
+      relations: {
+        profile: true,
+      },
+    };
     try {
-      if (senderType === 'virtualContributor') {
-        return await this.virtualContributorRepository.findOne({
-          where: {
-            id: sender,
-          },
-          relations: {
-            profile: true,
-          },
-        });
+      let sender: IContributor | null =
+        await this.userLookupService.getUserByUUID(
+          senderID,
+          contributorOptions
+        );
+      if (!sender) {
+        sender = await this.virtualContributorRepository.findOne(
+          contributorOptions
+        );
       }
-      return await this.userLookupService.getUserByUUID(sender);
+
+      return sender;
     } catch (e: unknown) {
       if (e instanceof EntityNotFoundException) {
         this.logger?.warn(
-          `sender '${sender}' unable to be resolved when resolving message '${message.id}'`,
+          `sender '${senderID}' unable to be resolved when resolving message '${message.id}'`,
           LogContext.COMMUNICATION
         );
         return null;
