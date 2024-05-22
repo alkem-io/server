@@ -55,6 +55,11 @@ http:
         servers:
           - url: 'http://synapse-admin:80/'
 
+    whiteboard-collaboration:
+      loadBalancer:
+        servers:
+          - url: 'http://whiteboard-collaboration:4002/'
+
   middlewares:
     strip-api-private-non-interactive-prefix:
       stripPrefix:
@@ -156,6 +161,14 @@ http:
     api-private-ws-socket.io:
       rule: 'PathPrefix(`/api/private/ws`)'
       service: 'oathkeeper-proxy'
+      middlewares:
+        - strip-api-private-prefix-socket-io
+      entryPoints:
+        - 'web'
+
+    whiteboard-collaboration:
+      rule: 'PathPrefix(`/api/private/ws`)'
+      service: 'whiteboard-collaboration'
       middlewares:
         - strip-api-private-prefix-socket-io
       entryPoints:
