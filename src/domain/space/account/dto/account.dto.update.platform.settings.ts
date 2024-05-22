@@ -16,7 +16,7 @@ export class UpdateAccountPlatformSettingsInput {
 
   @Field(() => UUID_NAMEID, {
     nullable: true,
-    description: 'Update the host Organization for the Account.',
+    description: 'Update the host Organization or User for the Account.',
   })
   @IsOptional()
   hostID?: string;
