@@ -360,7 +360,12 @@ export class CommunityResolverMutations {
     @Args('applicationData') applicationData: CommunityApplyInput
   ): Promise<IApplication> {
     const community = await this.communityService.getCommunityOrFail(
-      applicationData.communityID
+      applicationData.communityID,
+      {
+        relations: {
+          parentCommunity: true,
+        },
+      }
     );
 
     await this.authorizationService.grantAccessOrFail(
@@ -369,6 +374,23 @@ export class CommunityResolverMutations {
       AuthorizationPrivilege.COMMUNITY_APPLY,
       `create application community: ${community.id}`
     );
+
+    if (community.parentCommunity) {
+      const { agent } = await this.userService.getUserAndAgent(
+        agentInfo.userID
+      );
+      const userIsMemberInParent = await this.communityService.isInRole(
+        agent,
+        community.parentCommunity,
+        CommunityRole.MEMBER
+      );
+      if (!userIsMemberInParent) {
+        throw new CommunityMembershipException(
+          `Unable to apply for Community (${community.id}): user is not a member of the parent Community`,
+          LogContext.COMMUNITY
+        );
+      }
+    }
 
     const application = await this.communityService.createApplication({
       parentID: community.id,
@@ -577,19 +599,25 @@ export class CommunityResolverMutations {
           existingUser.agent,
           community.parentCommunity
         );
-        if (!isMember && !canInviteToParent) {
-          throw new CommunityInvitationException(
-            `User is not a member of the parent community (${community.parentCommunity.id}) and the current user does not have the privilege to invite to the parent community`,
-            LogContext.COMMUNITY
-          );
-        } else {
+        if (!isMember) {
+          if (!canInviteToParent) {
+            throw new CommunityInvitationException(
+              `User is not a member of the parent community (${community.parentCommunity.id}) and the current user does not have the privilege to invite to the parent community`,
+              LogContext.COMMUNITY
+            );
+          } else {
+            invitationData.invitedToParent = true;
+          }
         }
       } else {
+        // Not an existing user
         if (!canInviteToParent) {
           throw new CommunityInvitationException(
             `New external user (${invitationData.email}) and the current user (${agentInfo.email}) does not have the privilege to invite to the parent community: ${community.parentCommunity.id}`,
             LogContext.COMMUNITY
           );
+        } else {
+          invitationData.invitedToParent = true;
         }
       }
     }
@@ -604,13 +632,13 @@ export class CommunityResolverMutations {
       );
     }
 
-    const externalInvitation =
+    let externalInvitation =
       await this.communityService.createInvitationExternalUser(
         invitationData,
         agentInfo
       );
 
-    const savedInvitation =
+    externalInvitation =
       await this.invitationExternalAuthorizationService.applyAuthorizationPolicy(
         externalInvitation,
         community.authorization
@@ -623,7 +651,7 @@ export class CommunityResolverMutations {
       welcomeMessage: invitationData.welcomeMessage,
     };
     await this.notificationAdapter.externalInvitationCreated(notificationInput);
-    return savedInvitation;
+    return externalInvitation;
   }
 
   @UseGuards(GraphqlGuard)
