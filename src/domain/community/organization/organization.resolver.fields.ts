@@ -239,10 +239,9 @@ export class OrganizationResolverFields {
   }
 
   @ResolveField('agent', () => IAgent, {
-    nullable: true,
+    nullable: false,
     description: 'The Agent representing this User.',
   })
-  @Profiling.api
   async agent(
     @Parent() organization: Organization,
     @Loader(AgentLoaderCreator, { parentClassRef: Organization })

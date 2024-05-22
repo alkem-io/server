@@ -16,7 +16,7 @@ export class CreateAccountInput {
 
   @Field(() => UUID_NAMEID, {
     nullable: false,
-    description: 'The host Organization for the account',
+    description: 'The host Organization or User for the account',
   })
   hostID!: string;
 }

@@ -1,13 +1,13 @@
 import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
 import { IVirtualContributor } from './virtual.contributor.interface';
-import { Contributor } from '../contributor/contributor.entity';
+import { ContributorBase } from '../contributor/contributor.base.entity';
 import { VirtualPersona } from '../virtual-persona';
 import { Account } from '@domain/space/account/account.entity';
 import { BodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
 
 @Entity()
 export class VirtualContributor
-  extends Contributor
+  extends ContributorBase
   implements IVirtualContributor
 {
   @ManyToOne(() => VirtualPersona, {
