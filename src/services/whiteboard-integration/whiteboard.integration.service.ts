@@ -1,7 +1,7 @@
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { WhiteboardService } from '@domain/common/whiteboard';
 import { UserService } from '@domain/community/user/user.service';
 import { IVerifiedCredential } from '@domain/agent/verified-credential/verified.credential.interface';
