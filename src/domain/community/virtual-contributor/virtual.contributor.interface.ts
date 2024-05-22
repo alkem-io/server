@@ -1,9 +1,9 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IContributorBase } from '../contributor/contributor.base.interface';
-import { IVirtualPersona } from '../virtual-persona';
 import { IAccount } from '@domain/space/account/account.interface';
 import { BodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
 import { IContributor } from '../contributor/contributor.interface';
+import { IVirtualPersona } from '@platform/virtual-persona/virtual.persona.interface';
 
 @ObjectType('VirtualContributor', {
   implements: () => [IContributor],

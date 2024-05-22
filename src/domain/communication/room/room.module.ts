@@ -17,8 +17,8 @@ import { Room } from './room.entity';
 import { RoomServiceEvents } from './room.service.events';
 import { RoomEventResolverSubscription } from './room.event.resolver.subscription';
 import { SubscriptionServiceModule } from '@services/subscriptions/subscription-service';
-import { VirtualPersonaModule } from '@domain/community/virtual-persona/virtual.persona.module';
 import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
+import { VirtualPersonaModule } from '@platform/virtual-persona/virtual.persona.module';
 
 @Module({
   imports: [

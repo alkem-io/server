@@ -13,8 +13,8 @@ import { VirtualStorageAggregatorLoaderCreator } from '@core/dataloader/creators
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
 import { VirtualContributor } from './virtual.contributor.entity';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
-import { VirtualPersonaModule } from '../virtual-persona/virtual.persona.module';
 import { CommunicationAdapterModule } from '@services/adapters/communication-adapter/communication-adapter.module';
+import { VirtualPersonaModule } from '@platform/virtual-persona/virtual.persona.module';
 
 @Module({
   imports: [

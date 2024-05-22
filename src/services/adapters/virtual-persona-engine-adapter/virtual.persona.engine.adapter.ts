@@ -13,9 +13,9 @@ import { VirtualPersonaEngineAdapterQueryResponse } from './dto/virtual.persona.
 import { LogContext } from '@common/enums/logging.context';
 import { VirtualPersonaEngineAdapterInputBase } from './dto/virtual.persona.engine.adapter.dto.base';
 import { VirtualPersonaEngineAdapterBaseResponse } from './dto/virtual.persona.engine.adapter.dto.base.response';
-import { IVirtualPersonaQuestionResult } from '@domain/community/virtual-persona/dto/virtual.persona.question.dto.result';
 import { VirtualContributorEngine } from '@common/enums/virtual.persona.engine';
 import { ChatGuidanceInput } from '@services/api/chat-guidance/dto/chat.guidance.dto.input';
+import { IVirtualPersonaQuestionResult } from '@platform/virtual-persona/dto/virtual.persona.question.dto.result';
 
 enum VirtualPersonaEventType {
   QUERY = 'query',

@@ -25,8 +25,6 @@ import { IProfile } from '@domain/common/profile';
 import { Mention, MentionedEntityType } from '../messaging/mention.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums/logging.context';
-import { VirtualPersonaService } from '@domain/community/virtual-persona/virtual.persona.service';
-import { VirtualPersonaQuestionInput } from '@domain/community/virtual-persona/dto/virtual.persona.question.dto.input';
 import { MutationType } from '@common/enums/subscriptions/mutation.type';
 import { RoomSendMessageReplyInput } from '@domain/communication/room/dto/room.dto.send.message.reply';
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service/subscription.publish.service';
@@ -36,6 +34,8 @@ import { NotSupportedException } from '@common/exceptions';
 import { EntityManager } from 'typeorm';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { Space } from '@domain/space/space/space.entity';
+import { VirtualPersonaService } from '@platform/virtual-persona/virtual.persona.service';
+import { VirtualPersonaQuestionInput } from '@platform/virtual-persona/dto/virtual.persona.question.dto.input';
 
 @Injectable()
 export class RoomServiceEvents {

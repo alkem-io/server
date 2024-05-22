@@ -26,13 +26,13 @@ import { CreateVirtualContributorInput as CreateVirtualContributorInput } from '
 import { UpdateVirtualContributorInput as UpdateVirtualContributorInput } from './dto/virtual.contributor.dto.update';
 import { DeleteVirtualContributorInput as DeleteVirtualContributorInput } from './dto/virtual.contributor.dto.delete';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
-import { VirtualPersonaService } from '../virtual-persona/virtual.persona.service';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { EventBus } from '@nestjs/cqrs';
 import {
   IngestSpace,
   SpaceIngestionPurpose,
 } from '@services/infrastructure/event-bus/commands';
+import { VirtualPersonaService } from '@platform/virtual-persona/virtual.persona.service';
 
 @Injectable()
 export class VirtualContributorService {
