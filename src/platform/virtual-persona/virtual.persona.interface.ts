@@ -1,10 +1,10 @@
 import { Field, ObjectType } from '@nestjs/graphql';
-import { INameable } from '@domain/common/entity/nameable-entity';
 import { VirtualContributorEngine } from '@common/enums/virtual.persona.engine';
 import { VirtualPersonaAccessMode } from '@common/enums/virtual.persona.access.mode';
+import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 
 @ObjectType('VirtualPersona')
-export class IVirtualPersona extends INameable {
+export class IVirtualPersona extends IAuthorizable {
   @Field(() => VirtualContributorEngine, {
     nullable: false,
     description:

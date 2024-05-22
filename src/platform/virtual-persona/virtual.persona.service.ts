@@ -3,9 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
-import { UUID_LENGTH } from '@common/constants';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { VirtualPersona } from './virtual.persona.entity';
 import { IVirtualPersona } from './virtual.persona.interface';
 import { CreateVirtualPersonaInput as CreateVirtualPersonaInput } from './dto/virtual.persona.dto.create';
@@ -17,20 +15,14 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { LogContext } from '@common/enums/logging.context';
 import { VirtualPersonaEngineAdapterQueryInput } from '@services/adapters/virtual-persona-engine-adapter/dto/virtual.persona.engine.adapter.dto.question.input';
 import { VirtualPersonaEngineAdapter } from '@services/adapters/virtual-persona-engine-adapter/virtual.persona.engine.adapter';
-import { ProfileService } from '@domain/common/profile/profile.service';
-// import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-// import { VisualType } from '@common/enums/visual.type';
-// import { ProfileType } from '@common/enums/profile.type';
 import { VirtualContributorEngine } from '@common/enums/virtual.persona.engine';
-import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
 @Injectable()
 export class VirtualPersonaService {
   constructor(
-    private authorizationPolicyService: AuthorizationPolicyService,
-    private profileService: ProfileService,
     private virtualPersonaEngineAdapter: VirtualPersonaEngineAdapter,
-    private storageAggregatorService: StorageAggregatorService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     @InjectRepository(VirtualPersona)
     private virtualPersonaRepository: Repository<VirtualPersona>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -44,47 +36,6 @@ export class VirtualPersonaService {
     return virtual;
   }
 
-  //   // TODO: for now just create a new storage aggregator, to be looked at later where to manage
-  //   // and store the personas (and engine definitions)
-  //   const storageAggregator =
-  //     await this.storageAggregatorService.createStorageAggregator();
-
-  //   virtual.profile = await this.profileService.createProfile(
-  //     virtualPersonaData.profileData,
-  //     ProfileType.VIRTUAL_PERSONA,
-  //     storageAggregator
-  //   );
-  //   await this.profileService.addTagsetOnProfile(virtual.profile, {
-  //     name: TagsetReservedName.KEYWORDS,
-  //     tags: [],
-  //   });
-  //   await this.profileService.addTagsetOnProfile(virtual.profile, {
-  //     name: TagsetReservedName.CAPABILITIES,
-  //     tags: [],
-  //   });
-  //   // Set the visuals
-  //   let avatarURL = virtualPersonaData.profileData?.avatarURL;
-  //   if (!avatarURL) {
-  //     avatarURL = this.profileService.generateRandomAvatar(
-  //       virtual.profile.displayName,
-  //       ''
-  //     );
-  //   }
-  //   await this.profileService.addVisualOnProfile(
-  //     virtual.profile,
-  //     VisualType.AVATAR,
-  //     avatarURL
-  //   );
-
-  //   const savedVC = await this.virtualPersonaRepository.save(virtual);
-  //   this.logger.verbose?.(
-  //     `Created new virtual persona with id ${virtual.id}`,
-  //     LogContext.COMMUNITY
-  //   );
-
-  //   return savedVC;
-  // }
-
   async updateVirtualPersona(
     virtualPersonaData: UpdateVirtualPersonaInput
   ): Promise<IVirtualPersona> {
@@ -96,17 +47,6 @@ export class VirtualPersonaService {
     return virtualPersona;
   }
 
-  //   if (virtualPersonaData.prompt !== undefined) {
-  //     virtualPersona.prompt = virtualPersonaData.prompt;
-  //   }
-
-  //   if (virtualPersonaData.engine !== undefined) {
-  //     virtualPersona.engine = virtualPersonaData.engine;
-  //   }
-
-  //   return await this.virtualPersonaRepository.save(virtualPersona);
-  // }
-
   async deleteVirtualPersona(
     deleteData: DeleteVirtualPersonaInput
   ): Promise<IVirtualPersona> {
@@ -117,39 +57,29 @@ export class VirtualPersonaService {
         authorization: true,
       },
     });
-    return virtualPersona;
+    if (!virtualPersona.authorization) {
+      throw new EntityNotFoundException(
+        `Unable to find all fields on Virtual Persona with ID: ${deleteData.ID}`,
+        LogContext.COMMUNITY
+      );
+    }
+    await this.authorizationPolicyService.delete(virtualPersona.authorization);
+    const result = await this.virtualPersonaRepository.remove(
+      virtualPersona as VirtualPersona
+    );
+    result.id = personaID;
+    return result;
   }
-
-  //   if (virtualPersona.authorization) {
-  //     await this.authorizationPolicyService.delete(
-  //       virtualPersona.authorization
-  //     );
-  //   }
-
-  //   const result = await this.virtualPersonaRepository.remove(
-  //     virtualPersona as VirtualPersona
-  //   );
-  //   result.id = personaID;
-  //   return result;
-  // }
 
   async getVirtualPersona(
     virtualPersonaID: string,
     options?: FindOneOptions<VirtualPersona>
   ): Promise<IVirtualPersona | null> {
-    let virtualPersona: IVirtualPersona | null = null;
-    if (virtualPersonaID.length === UUID_LENGTH) {
-      virtualPersona = await this.virtualPersonaRepository.findOne({
-        ...options,
-        where: { ...options?.where, id: virtualPersonaID },
-      });
-    } else {
-      // look up based on nameID
-      virtualPersona = await this.virtualPersonaRepository.findOne({
-        ...options,
-        where: { ...options?.where, nameID: virtualPersonaID },
-      });
-    }
+    const virtualPersona = await this.virtualPersonaRepository.findOne({
+      ...options,
+      where: { ...options?.where, id: virtualPersonaID },
+    });
+
     return virtualPersona;
   }
 
@@ -166,9 +96,9 @@ export class VirtualPersonaService {
     return virtualPersona;
   }
 
-  // async save(virtualPersona: IVirtualPersona): Promise<IVirtualPersona> {
-  //   return await this.virtualPersonaRepository.save(virtualPersona);
-  // }
+  async save(virtualPersona: IVirtualPersona): Promise<IVirtualPersona> {
+    return await this.virtualPersonaRepository.save(virtualPersona);
+  }
 
   async getVirtualPersonas(): Promise<IVirtualPersona[]> {
     const virtualContributors: IVirtualPersona[] =
