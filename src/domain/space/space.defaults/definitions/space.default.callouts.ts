@@ -6,7 +6,7 @@ import { EMPTY_WHITEBOARD_CONTENT } from '@domain/common/whiteboard/empty.whiteb
 
 export const spaceDefaultCallouts: CreateCalloutInput[] = [
   {
-    nameID: 'questions',
+    nameID: 'welcome',
     type: CalloutType.POST,
     contributionPolicy: {
       state: CalloutState.OPEN,
@@ -15,13 +15,13 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
     groupName: CalloutGroupName.HOME,
     framing: {
       profile: {
-        displayName: 'Any questions or feedback?',
-        description: 'Please share it here :)',
+        displayName: '👋 Welcome to your space!',
+        description: 'Take an interactive tour below to discover how our spaces are thoughtfully designed. Alternatively, explore the other tutorials available on this page and beyond. We are excited to have you here! \n<div style='position: relative; padding-bottom: calc(40% + 41px); height: 0; width: 100%;'><iframe src='https://demo.arcade.software/zVYe3x4PkZjUkMEMP9Kg?embed&show_copy_link=true' title='👋 Welcome to your space' frameborder='0' loading='lazy' webkitallowfullscreen mozallowfullscreen allowfullscreen allow='clipboard-write' style='position: absolute; top: 0; left: 0; width: 100%; height: 100%;color-scheme: light;'></iframe></div>\n',
       },
     },
   },
   {
-    nameID: 'general-chat',
+    nameID: 'space-setup',
     type: CalloutType.POST,
     contributionPolicy: {
       state: CalloutState.OPEN,
@@ -30,51 +30,13 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
     groupName: CalloutGroupName.HOME,
     framing: {
       profile: {
-        displayName: 'General chat 💬',
-        description: 'Things you would like to discuss with the community?',
+        displayName: '⚙️ Set it up your way!',
+        description: 'In this concise guide, you will discover how to customize your Space to suit your needs. Learn whether your Space should be visible to everyone or just its members, how people can join (directly or by applying), and what essential information to include on the about page. \n<div style='position: relative; padding-bottom: calc(40% + 41px); height: 0; width: 100%;'><iframe src='https://demo.arcade.software/Rbwhpk4zro3Uer61iQKL?embed&show_copy_link=true' title='⚙️ Set it up your way!' frameborder='0' loading='lazy' webkitallowfullscreen mozallowfullscreen allowfullscreen allow='clipboard-write' style='position: absolute; top: 0; left: 0; width: 100%; height: 100%;color-scheme: light;'></iframe></div>\n',
       },
     },
   },
   {
-    nameID: 'getting-started',
-    type: CalloutType.LINK_COLLECTION,
-    contributionPolicy: {
-      state: CalloutState.CLOSED,
-    },
-    sortOrder: 3,
-    groupName: CalloutGroupName.HOME,
-    framing: {
-      profile: {
-        displayName: 'Getting Started',
-        description: '⬇️ Here are some quick links to help you get started',
-      },
-    },
-  },
-  {
-    nameID: 'vision',
-    type: CalloutType.WHITEBOARD,
-    contributionPolicy: {
-      state: CalloutState.OPEN,
-    },
-    sortOrder: 4,
-    groupName: CalloutGroupName.HOME,
-    framing: {
-      profile: {
-        displayName: 'What is this Space about?',
-        description:
-          'We can use this whiteboard to further define our mission and vision, who we want to involve, and what impact we want to make!',
-      },
-      whiteboard: {
-        content: EMPTY_WHITEBOARD_CONTENT,
-        nameID: 'vision',
-        profileData: {
-          displayName: 'Vision',
-        },
-      },
-    },
-  },
-  {
-    nameID: 'space-welcome',
+    nameID: 'community-setup',
     type: CalloutType.POST,
     contributionPolicy: {
       state: CalloutState.OPEN,
@@ -83,37 +45,13 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
     groupName: CalloutGroupName.COMMUNITY,
     framing: {
       profile: {
-        displayName: 'Welcome to the community!',
-        description:
-          '👋 Do you have any suggestions or ideas to grow the community and our impact? Please share!',
+        displayName: '🤝 Set up your Community',
+        description: 'In this tour, you will discover how to configure your community, define permissions, create guidelines, set up an application process, and send out invitations. Enjoy! \n<div style='position: relative; padding-bottom: calc(40% + 41px); height: 0; width: 100%;'><iframe src='https://demo.arcade.software/guBQToL8DWsnjCE7GLve?embed&show_copy_link=true'title='🏘️ Set up your Community' frameborder='0' loading='lazy' webkitallowfullscreen mozallowfullscreen allowfullscreen allow='clipboard-write' style='position: absolute; top: 0; left: 0; width: 100%; height: 100%;color-scheme: light;'></iframe></div>',
       },
     },
   },
   {
-    nameID: 'ecosystem',
-    type: CalloutType.WHITEBOARD,
-    contributionPolicy: {
-      state: CalloutState.OPEN,
-    },
-    sortOrder: 1,
-    groupName: CalloutGroupName.COMMUNITY,
-    framing: {
-      profile: {
-        displayName: 'Understanding the existing and potential community',
-        description:
-          'Choose one of the templates from the library to map our your ecosystem or stakeholders here!',
-      },
-      whiteboard: {
-        content: EMPTY_WHITEBOARD_CONTENT,
-        nameID: 'ecosystem',
-        profileData: {
-          displayName: 'Ecosystem Value Map',
-        },
-      },
-    },
-  },
-  {
-    nameID: 'challenge-ideas',
+    nameID: 'about-subspaces',
     type: CalloutType.POST,
     contributionPolicy: {
       state: CalloutState.OPEN,
@@ -122,34 +60,14 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
     groupName: CalloutGroupName.SUBSPACES,
     framing: {
       profile: {
-        displayName: '🚩 What Challenges do you care about?',
-        description: 'Please share any relevant Challenges that you encounter.',
+        displayName: '↪️ Subspaces',
+        description: 'Below, we will explore the concept of Subspaces. You will learn more about what to use these Subspaces for, what functionality is available, and how you can guide the process using an Innovation Flow. \n<div style='position: relative; padding-bottom: calc(40% + 41px); height: 0; width: 100%;'><iframe src='https://demo.arcade.software/gekGPsfEADYWHGaB0QKW?embed&show_copy_link=true' title='Subspaces' frameborder='0' loading='lazy' webkitallowfullscreen mozallowfullscreen allowfullscreen allow='clipboard-write' style='position: absolute; top: 0; left: 0; width: 100%; height: 100%;color-scheme: light;'></iframe></div>\n',
       },
     },
   },
   {
-    nameID: 'proposals',
-    type: CalloutType.POST_COLLECTION,
-    contributionPolicy: {
-      state: CalloutState.OPEN,
-    },
-    sortOrder: 1,
-    groupName: CalloutGroupName.SUBSPACES,
-    framing: {
-      profile: {
-        displayName: 'Challenge proposals',
-        description:
-          'What are the 🚩Challenges that you think we should be working on? Please add them below and use the template provided.',
-      },
-    },
-    contributionDefaults: {
-      postDescription:
-        'Title: <p> Description: <p> Who to involve: <p> Why is this important:',
-    },
-  },
-  {
-    nameID: 'news',
-    type: CalloutType.POST_COLLECTION,
+    nameID: 'about-knowledge-base',
+    type: CalloutType.POST,
     contributionPolicy: {
       state: CalloutState.OPEN,
     },
@@ -157,48 +75,9 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
     groupName: CalloutGroupName.KNOWLEDGE,
     framing: {
       profile: {
-        displayName: 'Relevant news, research or use cases 📰',
-        description:
-          'Please share any relevant insights to help us better understand the context. You can describe why it is relevant and add a link or upload a document with the article. You can also comment on the insights already submitted by other community members!',
+        displayName: '📚 The Knowledge Base',
+        description: 'Welcome to your knowledge base! This page serves as a central repository for valuable information and references. In the tour below, you will discover how to maximize the utility of this resource. \n<div style='position: relative; padding-bottom: calc(40% + 41px); height: 0; width: 100%;'><iframe src='https://demo.arcade.software/pSXpCpds3Mcdibk8LhBE?embed&show_copy_link=true' title='Knowledge Base' frameborder='0' loading='lazy' webkitallowfullscreen mozallowfullscreen allowfullscreen allow='clipboard-write' style='position: absolute; top: 0; left: 0; width: 100%; height: 100%;color-scheme: light;'></iframe></div>\n',
       },
-    },
-    contributionDefaults: {
-      postDescription:
-        '✍️ Please share your contribution. The more details the better!',
-    },
-  },
-  {
-    nameID: 'documents',
-    type: CalloutType.LINK_COLLECTION,
-    contributionPolicy: {
-      state: CalloutState.OPEN,
-    },
-    sortOrder: 2,
-    groupName: CalloutGroupName.KNOWLEDGE,
-    framing: {
-      profile: {
-        displayName: 'Reference / important documents',
-        description: 'Please add links to documents with reference material.💥',
-      },
-    },
-  },
-  {
-    nameID: 'faq',
-    type: CalloutType.POST_COLLECTION,
-    contributionPolicy: {
-      state: CalloutState.OPEN,
-    },
-    sortOrder: 3,
-    groupName: CalloutGroupName.KNOWLEDGE,
-    framing: {
-      profile: {
-        displayName: '❓ FAQ',
-        description:
-          'Below you will find various questions and answers on this topic. Please feel invited to join in and share your answers as well!',
-      },
-    },
-    contributionDefaults: {
-      postDescription: 'Please share your question!',
     },
   },
 ];
