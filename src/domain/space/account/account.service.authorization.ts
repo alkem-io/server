@@ -21,6 +21,7 @@ import { SpaceAuthorizationService } from '../space/space.service.authorization'
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
+  CREDENTIAL_RULE_ACCOUNT_CREATE_VIRTUAL_CONTRIBUTOR,
   CREDENTIAL_RULE_TYPES_ACCOUNT_AUTHORIZATION_RESET,
   CREDENTIAL_RULE_TYPES_SPACE_AUTHORIZATION_GLOBAL_ADMIN_GRANT,
   CREDENTIAL_RULE_TYPES_SPACE_GLOBAL_ADMIN_COMMUNITY_READ,
@@ -85,7 +86,7 @@ export class AccountAuthorizationService {
         account.authorization
       );
     // Extend for global roles
-    account.authorization = this.extendAuthorizationPolicyGlobal(
+    account.authorization = this.extendAuthorizationPolicy(
       account.authorization,
       account.id
     );
@@ -137,7 +138,7 @@ export class AccountAuthorizationService {
     return await this.accountRepository.save(account);
   }
 
-  private extendAuthorizationPolicyGlobal(
+  private extendAuthorizationPolicy(
     authorization: IAuthorizationPolicy | undefined,
     accountID: string
   ): IAuthorizationPolicy {
@@ -192,6 +193,18 @@ export class AccountAuthorizationService {
         CREDENTIAL_RULE_TYPES_SPACE_READ
       );
     newRules.push(globalSpacesReader);
+
+    const createVC =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.CREATE_VIRTUAL_CONTRIBUTOR],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+        ],
+        CREDENTIAL_RULE_ACCOUNT_CREATE_VIRTUAL_CONTRIBUTOR
+      );
+    createVC.cascade = false;
+    newRules.push(createVC);
 
     this.authorizationPolicyService.appendCredentialAuthorizationRules(
       authorization,

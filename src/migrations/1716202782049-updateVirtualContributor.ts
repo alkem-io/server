@@ -11,10 +11,19 @@ export class updateVirtualContributor1716202782049
       `DROP INDEX \`REL_5c6f158a128406aafb9808b3a8\` ON \`virtual_contributor\``
     );
     await queryRunner.query(
+      `ALTER TABLE \`virtual_contributor\` DROP FOREIGN KEY \`FK_7b8b29a41564c268b864bc85ff2\``
+    );
+    await queryRunner.query(
       `DROP INDEX \`REL_7b8b29a41564c268b864bc85ff\` ON \`virtual_contributor\``
     );
     await queryRunner.query(
+      `ALTER TABLE \`virtual_contributor\` DROP FOREIGN KEY \`FK_a1a11662383fefcb81416116a6c\``
+    );
+    await queryRunner.query(
       `DROP INDEX \`REL_a1a11662383fefcb81416116a6\` ON \`virtual_contributor\``
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`virtual_contributor\` DROP FOREIGN KEY \`FK_c947646f184a6f7aeee68be9998\``
     );
     await queryRunner.query(
       `DROP INDEX \`REL_c947646f184a6f7aeee68be999\` ON \`virtual_contributor\``

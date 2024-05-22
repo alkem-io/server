@@ -21,7 +21,6 @@ import { InnovationHubAuthorizationService } from '@domain/innovation-hub/innova
 import {
   CREDENTIAL_RULE_PLATFORM_CREATE_ORGANIZATION,
   CREDENTIAL_RULE_PLATFORM_CREATE_SPACE,
-  CREDENTIAL_RULE_PLATFORM_CREATE_VIRTUAL_CONTRIBUTOR,
   CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_GUIDANCE,
   CREDENTIAL_RULE_TYPES_PLATFORM_ADMINS,
   CREDENTIAL_RULE_TYPES_PLATFORM_AUTH_RESET,
@@ -339,35 +338,6 @@ export class PlatformAuthorizationService {
       );
     createOrg.cascade = false;
     credentialRules.push(createOrg);
-
-    const createVC =
-      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.CREATE_VIRTUAL_CONTRIBUTOR],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-          AuthorizationCredential.SPACE_ADMIN,
-        ],
-        CREDENTIAL_RULE_PLATFORM_CREATE_VIRTUAL_CONTRIBUTOR
-      );
-    createVC.cascade = false;
-    credentialRules.push(createVC);
-
-    // // TODO: not needed any more?
-    // const admin =
-    //   this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-    //     [AuthorizationPrivilege.ADMIN],
-    //     [
-    //       AuthorizationCredential.GLOBAL_ADMIN,
-    //       AuthorizationCredential.GLOBAL_SUPPORT,
-    //       AuthorizationCredential.GLOBAL_COMMUNITY_READ,
-    //       AuthorizationCredential.SPACE_ADMIN,
-    //       AuthorizationCredential.ORGANIZATION_ADMIN,
-    //     ],
-    //     CREDENTIAL_RULE_TYPES_PLATFORM_ANY_ADMIN
-    //   );
-    // admin.cascade = false;
-    // credentialRules.push(admin);
 
     return credentialRules;
   }
