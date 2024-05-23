@@ -17,4 +17,22 @@ export class LicensePlan extends BaseAlkemioEntity implements ILicensePlan {
 
   @Column('boolean', { nullable: false, default: true })
   enabled!: boolean;
+
+  @Column('int', { nullable: false })
+  sortOrder!: number;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  pricePerMonth!: number;
+
+  @Column('boolean', { nullable: false, default: false })
+  isFree!: boolean;
+
+  @Column('boolean', { nullable: false, default: false })
+  trialEnabled!: boolean;
+
+  @Column('boolean', { nullable: false, default: false })
+  requiresPaymentMethod!: boolean;
+
+  @Column('boolean', { nullable: false, default: false })
+  requiresContactSupport!: boolean;
 }
