@@ -30,11 +30,11 @@ for table in $tables; do
     filename="${table}.csv"
 
     # Check if the file exists and remove it to ensure the new file can be created
-    docker exec -i $container bash -c "[[ -f '/tmp/CSVs/${filename}' ]] && rm '/tmp/CSVs/${filename}'"
+    docker exec -i $container bash -c "[[ -f '/var/lib/mysql-files/CSVs/${filename}' ]] && rm '/var/lib/mysql-files/CSVs/${filename}'"
 
     echo "Exporting ${table} to ${filename}"
     docker exec -i $container mysql -u $user -p$password -e \
-    "SELECT $columns INTO OUTFILE '/tmp/CSVs/${filename}' FIELDS TERMINATED BY ',' ENCLOSED BY '\"' LINES TERMINATED BY '\n' FROM ${table};" $database
+    "SELECT $columns INTO OUTFILE '/var/lib/mysql-files/CSVs/${filename}' FIELDS TERMINATED BY ',' ENCLOSED BY '\"' LINES TERMINATED BY '\n' FROM ${table};" $database
 done
 
 echo "All tables exported successfully!"
