@@ -16,7 +16,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
     framing: {
       profile: {
         displayName: '👋 Welcome to your space!',
-        description: 'Take an interactive tour below to discover how our spaces are thoughtfully designed. Alternatively, explore the other tutorials available on this page and beyond. We are excited to have you here! \n<div style='position: relative; padding-bottom: calc(40% + 41px); height: 0; width: 100%;'><iframe src='https://demo.arcade.software/zVYe3x4PkZjUkMEMP9Kg?embed&show_copy_link=true' title='👋 Welcome to your space' frameborder='0' loading='lazy' webkitallowfullscreen mozallowfullscreen allowfullscreen allow='clipboard-write' style='position: absolute; top: 0; left: 0; width: 100%; height: 100%;color-scheme: light;'></iframe></div>\n',
+        description: 'Take an interactive tour below to discover how our spaces are thoughtfully designed. Alternatively, explore the other tutorials available on this page and beyond. We\'re excited to have you here! \n<div style=\'position: relative; padding-bottom: calc(40% + 41px); height: 0; width: 100%;\'><iframe src=\'https://demo.arcade.software/zVYe3x4PkZjUkMEMP9Kg?embed&show_copy_link=true\' title=\'👋 Welcome to your space\' frameborder=\'0\' loading=\'lazy\' webkitallowfullscreen mozallowfullscreen allowfullscreen allow=\'clipboard-write\' style=\'position: absolute; top: 0; left: 0; width: 100%; height: 100%;color-scheme: light;\'></iframe></div>\n',
       },
     },
   },
