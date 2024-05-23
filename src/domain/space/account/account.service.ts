@@ -359,7 +359,7 @@ export class AccountService {
     return account;
   }
 
-  async getHost(account: IAccount): Promise<IContributor | null> {
+  async getHost(account: IAccount): Promise<IContributor | null | never> {
     const contributors =
       await this.contributorService.contributorsWithCredentials({
         type: AuthorizationCredential.ACCOUNT_HOST,
@@ -377,7 +377,17 @@ export class AccountService {
     return null;
   }
 
-  async getHostOrFail(account: IAccount): Promise<IContributor> {
+  async getHosts(account: IAccount): Promise<IContributor[]> {
+    const contributors =
+      await this.contributorService.contributorsWithCredentials({
+        type: AuthorizationCredential.ACCOUNT_HOST,
+        resourceID: account.id,
+      });
+
+    return contributors;
+  }
+
+  async getHostOrFail(account: IAccount): Promise<IContributor | never> {
     const host = await this.getHost(account);
     if (!host)
       throw new EntityNotFoundException(
@@ -385,5 +395,15 @@ export class AccountService {
         LogContext.COMMUNITY
       );
     return host;
+  }
+
+  async getHostsOrFail(account: IAccount): Promise<IContributor[] | never> {
+    const hosts = await this.getHosts(account);
+    if (!hosts)
+      throw new EntityNotFoundException(
+        `Unable to find Hosts for account with ID: ${account.id}`,
+        LogContext.COMMUNITY
+      );
+    return hosts;
   }
 }

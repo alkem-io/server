@@ -7,6 +7,7 @@ import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dt
 import { IsOptional, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { CreateContextInput } from '@domain/context/context/dto/context.dto.create';
+import { UUID } from '@domain/common/scalars';
 
 @InputType()
 export class CreateSpaceInput extends CreateNameableInput {
@@ -32,6 +33,12 @@ export class CreateSpaceInput extends CreateNameableInput {
   @ValidateNested()
   @Type(() => CreateCollaborationInput)
   collaborationData?: CreateCollaborationInput;
+
+  @Field(() => UUID, { nullable: true })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => UUID)
+  licensePlanID?: UUID;
 
   // For passing on the hierarchy of storage aggregators
   storageAggregatorParent?: IStorageAggregator;
