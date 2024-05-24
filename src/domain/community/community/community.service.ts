@@ -562,6 +562,11 @@ export class CommunityService {
       );
     }
 
+    const userAlreadyHasRole = await this.isInRole(agent, community, role);
+    if (userAlreadyHasRole) {
+      return user;
+    }
+
     user.agent = await this.assignContributorToRole(
       community,
       agent,
