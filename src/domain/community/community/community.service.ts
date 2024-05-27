@@ -375,7 +375,13 @@ export class CommunityService {
       agentInfo.userID,
       community.id
     );
-    if (openInvitation) return CommunityMembershipStatus.INVITATION_PENDING;
+
+    if (
+      openInvitation &&
+      (await this.invitationService.canInvitationBeAccepted(openInvitation.id))
+    ) {
+      return CommunityMembershipStatus.INVITATION_PENDING;
+    }
 
     return CommunityMembershipStatus.NOT_MEMBER;
   }
