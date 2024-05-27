@@ -31,6 +31,8 @@ import { IContributor } from '@domain/community/contributor/contributor.interfac
 import { ContributorService } from '@domain/community/contributor/contributor.service';
 import { LicensingService } from '@platform/licensing/licensing.service';
 import { ILicensePlan } from '@platform/license-plan/license.plan.interface';
+import { IAccountSubscription } from './account.license.subscription.interface';
+import { LicenseCredential } from '@common/enums/license.credential';
 
 @Injectable()
 export class AccountService {
@@ -365,6 +367,38 @@ export class AccountService {
       );
     }
     return account.space;
+  }
+
+  async getSubscriptions(
+    accountInput: IAccount
+  ): Promise<IAccountSubscription[]> {
+    const account = await this.getAccountOrFail(accountInput.id, {
+      relations: {
+        agent: {
+          credentials: true,
+        },
+      },
+    });
+    if (!account.agent || !account.agent.credentials) {
+      throw new EntityNotFoundException(
+        `Unable to find agent with credentials for account: ${accountInput.id}`,
+        LogContext.ACCOUNT
+      );
+    }
+    const subscriptions: IAccountSubscription[] = [];
+    for (const credential of account.agent.credentials) {
+      if (
+        Object.values(LicenseCredential).includes(
+          credential.type as LicenseCredential
+        )
+      ) {
+        subscriptions.push({
+          name: credential.type,
+          expires: credential.expires,
+        });
+      }
+    }
+    return subscriptions;
   }
 
   async setAccountHost(
