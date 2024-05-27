@@ -22,6 +22,7 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy/author
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
   CREDENTIAL_RULE_TYPES_ACCOUNT_AUTHORIZATION_RESET,
+  CREDENTIAL_RULE_TYPES_ACCOUNT_DELETE,
   CREDENTIAL_RULE_TYPES_SPACE_AUTHORIZATION_GLOBAL_ADMIN_GRANT,
   CREDENTIAL_RULE_TYPES_SPACE_GLOBAL_ADMIN_COMMUNITY_READ,
   CREDENTIAL_RULE_TYPES_SPACE_READ,
@@ -80,7 +81,7 @@ export class AccountAuthorizationService {
         account.authorization
       );
     // Extend for global roles
-    account.authorization = this.extendAuthorizationPolicyGlobal(
+    account.authorization = this.extendAuthorizationPolicy(
       account.authorization,
       account.id
     );
@@ -121,7 +122,7 @@ export class AccountAuthorizationService {
     return await this.accountRepository.save(account);
   }
 
-  private extendAuthorizationPolicyGlobal(
+  private extendAuthorizationPolicy(
     authorization: IAuthorizationPolicy | undefined,
     accountID: string
   ): IAuthorizationPolicy {
@@ -176,6 +177,20 @@ export class AccountAuthorizationService {
         CREDENTIAL_RULE_TYPES_SPACE_READ
       );
     newRules.push(globalSpacesReader);
+
+    // Allow User hosts to also Delete the Account. Note this does not for example allow
+    const userHostsRule = this.authorizationPolicyService.createCredentialRule(
+      [AuthorizationPrivilege.DELETE],
+      [
+        {
+          type: AuthorizationCredential.ACCOUNT_HOST,
+          resourceID: accountID,
+        },
+      ],
+      CREDENTIAL_RULE_TYPES_ACCOUNT_DELETE
+    );
+    userHostsRule.cascade = false;
+    newRules.push(userHostsRule);
 
     this.authorizationPolicyService.appendCredentialAuthorizationRules(
       authorization,
