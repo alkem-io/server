@@ -3,6 +3,7 @@ import { UUID_NAMEID } from '@domain/common/scalars/scalar.uuid.nameid';
 import { ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { CreateSpaceInput } from '@domain/space/space/dto/space.dto.create';
+import { UUID } from '@domain/common/scalars';
 
 @InputType()
 export class CreateAccountInput {
@@ -19,4 +20,10 @@ export class CreateAccountInput {
     description: 'The host Organization or User for the account',
   })
   hostID!: string;
+
+  @Field(() => UUID, {
+    nullable: true,
+    description: 'The plan selected for the account',
+  })
+  planID?: string;
 }
