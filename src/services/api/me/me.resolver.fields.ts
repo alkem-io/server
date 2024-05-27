@@ -120,4 +120,14 @@ export class MeResolverFields {
       showOnlyMyCreatedSpaces
     );
   }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField(() => Boolean, {
+    description: 'Can I create a free space?',
+  })
+  public canCreateFreeSpace(
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<boolean> {
+    return this.meService.canCreateFreeSpace(agentInfo);
+  }
 }

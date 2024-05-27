@@ -11,7 +11,7 @@ import { ActivityLogService } from '../activity-log';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { MySpaceResults } from './dto/my.journeys.results';
 import { ActivityService } from '@platform/activity/activity.service';
-import { LogContext } from '@common/enums';
+import { AuthorizationCredential, LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { sortSpacesByActivity } from '@domain/space/space/sort.spaces.by.activity';
 import { CommunityRole } from '@common/enums/community.role';
@@ -129,5 +129,12 @@ export class MeService {
     }
 
     return mySpaceResults.slice(0, limit);
+  }
+
+  public async canCreateFreeSpace(agentInfo: AgentInfo): Promise<boolean> {
+    const credentials = agentInfo.credentials;
+    return !credentials.some(
+      credential => credential.type === AuthorizationCredential.ACCOUNT_HOST
+    );
   }
 }

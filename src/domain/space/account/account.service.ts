@@ -396,14 +396,4 @@ export class AccountService {
       );
     return host;
   }
-
-  async getHostsOrFail(account: IAccount): Promise<IContributor[] | never> {
-    const hosts = await this.getHosts(account);
-    if (!hosts)
-      throw new EntityNotFoundException(
-        `Unable to find Hosts for account with ID: ${account.id}`,
-        LogContext.COMMUNITY
-      );
-    return hosts;
-  }
 }
