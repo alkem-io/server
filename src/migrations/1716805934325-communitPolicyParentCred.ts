@@ -20,20 +20,20 @@ export class communitPolicyParentCred1716805934325
             `SELECT id FROM space where id = '${parentCredential.resourceID}'`
           );
           if (space) {
-            const newParentCredential: CredentialDefinition = {
-              type: 'space-lead',
-              resourceID: space.id,
-            };
-            newParentCredentials.push(newParentCredential);
+            parentCredential.type = 'space-lead';
+            newParentCredentials.push(parentCredential);
           }
+        } else {
+          newParentCredentials.push(parentCredential);
         }
-        policyLead.parentCredentials = newParentCredentials;
-        await queryRunner.query(
-          `UPDATE community_policy SET lead = '${JSON.stringify(
-            policyLead
-          )}' WHERE id = '${policy.id}'`
-        );
       }
+      policyLead.parentCredentials = newParentCredentials;
+
+      await queryRunner.query(
+        `UPDATE community_policy SET lead = '${JSON.stringify(
+          policyLead
+        )}' WHERE id = '${policy.id}'`
+      );
     }
   }
 
