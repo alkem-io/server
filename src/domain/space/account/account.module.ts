@@ -1,4 +1,3 @@
-import { OrganizationModule } from '@domain/community/organization/organization.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Account } from '@domain/space/account/account.entity';
@@ -17,21 +16,20 @@ import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platf
 import { NameReporterModule } from '@services/external/elasticsearch/name-reporter/name.reporter.module';
 import { InnovationFlowTemplateModule } from '@domain/template/innovation-flow-template/innovation.flow.template.module';
 import { AccountResolverQueries } from './account.resolver.queries';
-import { NamingModule } from '@services/infrastructure/naming/naming.module';
+import { ContributorModule } from '@domain/community/contributor/contributor.module';
 
 @Module({
   imports: [
     AgentModule,
     AuthorizationModule,
     AuthorizationPolicyModule,
-    OrganizationModule,
+    ContributorModule,
     TemplatesSetModule,
     SpaceModule,
     SpaceDefaultsModule,
     PlatformAuthorizationPolicyModule,
     InnovationFlowTemplateModule,
     LicenseModule,
-    NamingModule,
     NameReporterModule,
     TypeOrmModule.forFeature([Account]),
   ],

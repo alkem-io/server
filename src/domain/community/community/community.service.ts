@@ -375,7 +375,13 @@ export class CommunityService {
       agentInfo.userID,
       community.id
     );
-    if (openInvitation) return CommunityMembershipStatus.INVITATION_PENDING;
+
+    if (
+      openInvitation &&
+      (await this.invitationService.canInvitationBeAccepted(openInvitation.id))
+    ) {
+      return CommunityMembershipStatus.INVITATION_PENDING;
+    }
 
     return CommunityMembershipStatus.NOT_MEMBER;
   }
@@ -560,6 +566,11 @@ export class CommunityService {
         `Unable to assign Agent (${agent.id}) to community (${community.id}): agent is not a member of parent community ${parentCommunity?.id}`,
         LogContext.SPACES
       );
+    }
+
+    const userAlreadyHasRole = await this.isInRole(agent, community, role);
+    if (userAlreadyHasRole) {
+      return user;
     }
 
     user.agent = await this.assignContributorToRole(

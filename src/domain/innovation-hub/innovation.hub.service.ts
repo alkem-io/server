@@ -96,8 +96,10 @@ export class InnovationHubService {
       VisualType.BANNER_WIDE
     );
 
-    const account = await this.accountService.getAccountOrFail(accountID);
-    hub.account = account;
+    if (accountID) {
+      const account = await this.accountService.getAccountOrFail(accountID);
+      hub.account = account;
+    }
 
     await this.innovationHubRepository.save(hub);
 

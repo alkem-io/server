@@ -1,10 +1,6 @@
-import { UUID_LENGTH } from '@common/constants';
-import { LogContext, ProfileType } from '@common/enums';
-import { EntityNotFoundException } from '@common/exceptions';
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { CommunityGuidelines } from './community.guidelines.entity';
 import { ICommunityGuidelines } from './community.guidelines.interface';
 import { UpdateCommunityGuidelinesInput } from './dto/community.guidelines.dto.update';
@@ -14,6 +10,9 @@ import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { VisualType } from '@common/enums/visual.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { UUID_LENGTH } from '@common/constants';
+import { LogContext, ProfileType } from '@common/enums';
+import { EntityNotFoundException } from '@common/exceptions';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { TagsetType } from '@common/enums/tagset.type';
 import { CreateTagsetInput } from '@domain/common/tagset/dto/tagset.dto.create';
@@ -23,8 +22,7 @@ export class CommunityGuidelinesService {
   constructor(
     private profileService: ProfileService,
     @InjectRepository(CommunityGuidelines)
-    private communityGuidelinesRepository: Repository<CommunityGuidelines>,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
+    private communityGuidelinesRepository: Repository<CommunityGuidelines>
   ) {}
 
   async createCommunityGuidelines(

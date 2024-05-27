@@ -49,7 +49,9 @@ export class UserAuthorizationService {
       relations: {
         agent: true,
         profile: true,
-        preferenceSet: true,
+        preferenceSet: {
+          preferences: true,
+        },
         storageAggregator: true,
       },
     });
@@ -57,6 +59,7 @@ export class UserAuthorizationService {
       !user.agent ||
       !user.profile ||
       !user.preferenceSet ||
+      !user.preferenceSet.preferences ||
       !user.storageAggregator
     )
       throw new RelationshipNotFoundException(
@@ -94,13 +97,13 @@ export class UserAuthorizationService {
         clonedAnonymousReadAccessAuthorization // Key that this is publicly visible
       );
 
-    user.agent = await this.agentAuthorizationService.applyAuthorizationPolicy(
+    user.agent = this.agentAuthorizationService.applyAuthorizationPolicy(
       user.agent,
       user.authorization
     );
 
     user.preferenceSet =
-      await this.preferenceSetAuthorizationService.applyAuthorizationPolicy(
+      this.preferenceSetAuthorizationService.applyAuthorizationPolicy(
         user.preferenceSet,
         user.authorization
       );

@@ -30,7 +30,12 @@ export class CalloutTemplateAuthorizationService {
         {
           relations: {
             profile: true,
-            framing: true,
+            framing: {
+              profile: true,
+              whiteboard: {
+                profile: true,
+              },
+            },
             contributionPolicy: true,
             contributionDefaults: true,
           },

@@ -1,9 +1,12 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IPreferenceSet } from '@domain/common/preference-set';
+import { IContributorBase } from '../contributor/contributor.base.interface';
 import { IContributor } from '../contributor/contributor.interface';
 
-@ObjectType('User')
-export class IUser extends IContributor {
+@ObjectType('User', {
+  implements: () => [IContributor],
+})
+export class IUser extends IContributorBase implements IContributor {
   rowId!: number;
 
   @Field(() => String, {

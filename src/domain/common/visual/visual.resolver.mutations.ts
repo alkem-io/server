@@ -102,10 +102,12 @@ export class VisualResolverMutations {
     );
 
     // Ensure authorization is updated
-    await this.documentAuthorizationService.applyAuthorizationPolicy(
-      visualDocument,
-      storageBucket.authorization
-    );
+    const documentAuthorized =
+      this.documentAuthorizationService.applyAuthorizationPolicy(
+        visualDocument,
+        storageBucket.authorization
+      );
+    await this.documentService.saveDocument(documentAuthorized);
     const updateData: UpdateVisualInput = {
       visualID: visual.id,
       uri: this.documentService.getPubliclyAccessibleURL(visualDocument),

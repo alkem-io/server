@@ -131,15 +131,17 @@ export class RegistrationService {
         createdBy: externalInvitation.createdBy,
         invitedToParent: externalInvitation.invitedToParent,
       };
-      const invitation =
-        await this.communityService.createInvitationExistingUser(
-          invitationInput
-        );
-      invitation.invitedToParent = externalInvitation.invitedToParent;
-      await this.invitationAuthorizationService.applyAuthorizationPolicy(
-        invitation,
-        community.authorization
+      let invitation = await this.communityService.createInvitationExistingUser(
+        invitationInput
       );
+      invitation.invitedToParent = externalInvitation.invitedToParent;
+      invitation =
+        await this.invitationAuthorizationService.applyAuthorizationPolicy(
+          invitation,
+          community.authorization
+        );
+      invitation = await this.invitationService.save(invitation);
+
       invitations.push(invitation);
       await this.invitationExternalService.recordProfileCreated(
         externalInvitation

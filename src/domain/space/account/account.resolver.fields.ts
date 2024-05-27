@@ -1,7 +1,6 @@
 import { AuthorizationPrivilege } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
 import { Account } from '@domain/space/account/account.entity';
-import { IOrganization } from '@domain/community/organization';
 import { UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import {
@@ -27,6 +26,7 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IAgent } from '@domain/agent/agent/agent.interface';
+import { IContributor } from '@domain/community/contributor/contributor.interface';
 
 @Resolver(() => IAccount)
 export class AccountResolverFields {
@@ -108,12 +108,12 @@ export class AccountResolverFields {
     return loader.load(account.id);
   }
 
-  @ResolveField('host', () => IOrganization, {
+  @ResolveField('host', () => IContributor, {
     nullable: true,
     description: 'The Account host.',
   })
-  async host(@Parent() account: Account): Promise<IOrganization | undefined> {
-    return await this.accountService.getHost(account);
+  async host(@Parent() account: Account): Promise<IContributor> {
+    return await this.accountService.getHostOrFail(account);
   }
 
   @ResolveField('spaceID', () => String, {
