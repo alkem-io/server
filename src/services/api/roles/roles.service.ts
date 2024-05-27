@@ -23,10 +23,6 @@ import { RolesResultSpace } from './dto/roles.dto.result.space';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { SpaceService } from '@domain/space/space/space.service';
-import { SpaceLevel } from '@common/enums/space.level';
-import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
-import { LogContext } from '@common/enums/logging.context';
-import { EntityNotInitializedException } from '@common/exceptions';
 
 export class RolesService {
   constructor(
@@ -134,41 +130,23 @@ export class RolesService {
       await this.communityResolverService.getDisplayNameForCommunityOrFail(
         community.id
       );
-    const spaceID =
-      await this.communityResolverService.getRootSpaceIDFromCommunityOrFail(
-        community
-      );
+
+    const space = await this.spaceService.getSpaceForCommunityOrFail(
+      community.id
+    );
+
     const applicationResult = new ApplicationForRoleResult(
       community.id,
       communityDisplayName,
       state,
       application.id,
-      spaceID,
+      space.id,
+      space.level,
       application.createdDate,
       application.updatedDate
     );
 
-    const space = await this.spaceService.getSpaceForCommunityOrFail(
-      community.id
-    );
-    switch (space.level) {
-      case SpaceLevel.SPACE:
-        return applicationResult;
-      case SpaceLevel.CHALLENGE:
-        // the application is issued for a subspace
-        applicationResult.subspaceID = space.id;
-        return applicationResult;
-      case SpaceLevel.OPPORTUNITY:
-        // the application is issued for an an subsubspace
-        applicationResult.subsubspaceID = space.id;
-        applicationResult.subspaceID = space.parentSpace?.id || '';
-        return applicationResult;
-      default:
-        throw new EntityNotFoundException(
-          `Unable to match level on space: ${space.id}`,
-          LogContext.ROLES
-        );
-    }
+    return applicationResult;
   }
 
   public async getUserInvitations(
@@ -211,17 +189,18 @@ export class RolesService {
       await this.communityResolverService.getDisplayNameForCommunityOrFail(
         community.id
       );
-    const spaceID =
-      await this.communityResolverService.getRootSpaceIDFromCommunityOrFail(
-        community
-      );
+
+    const space = await this.spaceService.getSpaceForCommunityOrFail(
+      community.id
+    );
 
     const invitationResult = new InvitationForRoleResult(
       community.id,
       communityDisplayName,
       state,
       invitation.id,
-      spaceID,
+      space.id,
+      space.level,
       invitation.createdDate,
       invitation.updatedDate
     );
@@ -229,26 +208,6 @@ export class RolesService {
     invitationResult.createdBy = invitation.createdBy;
     invitationResult.welcomeMessage = invitation.welcomeMessage;
 
-    const space = await this.spaceService.getSpaceForCommunityOrFail(
-      community.id
-    );
-    switch (space.level) {
-      case SpaceLevel.SPACE:
-        return invitationResult;
-      case SpaceLevel.CHALLENGE:
-        // the application is issued for a challenge
-        invitationResult.subspaceID = space.id;
-        return invitationResult;
-      case SpaceLevel.OPPORTUNITY:
-        // the application is issued for an an opportunity
-        invitationResult.subsubspaceID = space.id;
-        invitationResult.subspaceID = space.parentSpace?.id || '';
-        return invitationResult;
-      default:
-        throw new EntityNotInitializedException(
-          `Invalid space level: ${space.id}`,
-          LogContext.ROLES
-        );
-    }
+    return invitationResult;
   }
 }

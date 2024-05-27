@@ -131,14 +131,17 @@ export class ReferenceResolverMutations {
     );
 
     const documentAuthorized =
-      await this.documentAuthorizationService.applyAuthorizationPolicy(
+      this.documentAuthorizationService.applyAuthorizationPolicy(
         document,
         storageBucket.authorization
       );
+    const documentSaved = await this.documentService.saveDocument(
+      documentAuthorized
+    );
 
     const updateData: UpdateReferenceInput = {
       ID: reference.id,
-      uri: this.documentService.getPubliclyAccessibleURL(documentAuthorized),
+      uri: this.documentService.getPubliclyAccessibleURL(documentSaved),
     };
     return await this.referenceService.updateReference(updateData);
   }

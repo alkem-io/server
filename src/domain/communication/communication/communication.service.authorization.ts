@@ -66,7 +66,7 @@ export class CommunicationAuthorizationService {
     }
 
     communication.updates =
-      await this.roomAuthorizationService.applyAuthorizationPolicy(
+      this.roomAuthorizationService.applyAuthorizationPolicy(
         communication.updates,
         communication.authorization
       );
@@ -76,7 +76,7 @@ export class CommunicationAuthorizationService {
         communication.updates.authorization
       );
 
-    return await this.communicationService.save(communication);
+    return communication;
   }
 
   private appendPrivilegeRules(

@@ -176,4 +176,19 @@ export class InvitationService {
     }
     return await this.lifecycleService.isFinalState(lifecycle);
   }
+
+  async canInvitationBeAccepted(invitationID: string): Promise<boolean> {
+    const invitation = await this.getInvitationOrFail(invitationID);
+    const lifecycle = invitation.lifecycle;
+    if (!lifecycle) {
+      throw new RelationshipNotFoundException(
+        `Unable to load Lifecycle for Invitation ${invitation.id} `,
+        LogContext.COMMUNITY
+      );
+    }
+    const canAccept = this.lifecycleService
+      .getNextEvents(lifecycle)
+      .includes('ACCEPT');
+    return canAccept;
+  }
 }

@@ -86,22 +86,32 @@ export class AccountResolverMutations {
   ): Promise<ISpace> {
     const space = await this.spaceService.getSpaceOrFail(deleteData.ID, {
       relations: {
-        account: true,
+        account: {
+          authorization: true,
+        },
       },
     });
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      space.authorization,
-      AuthorizationPrivilege.DELETE,
-      `deleteSpace: ${space.nameID}`
-    );
+
     switch (space.level) {
       case SpaceLevel.SPACE:
-        // delete via the account
-        await this.accountService.deleteAccount(space.account);
+        // delete the account
+        const account = space.account;
+        this.authorizationService.grantAccessOrFail(
+          agentInfo,
+          account.authorization,
+          AuthorizationPrivilege.DELETE,
+          `deleteSpace + account: ${space.nameID}`
+        );
+        await this.accountService.deleteAccount(account);
         return space;
       case SpaceLevel.CHALLENGE:
       case SpaceLevel.OPPORTUNITY:
+        this.authorizationService.grantAccessOrFail(
+          agentInfo,
+          space.authorization,
+          AuthorizationPrivilege.DELETE,
+          `deleteSpace: ${space.nameID}`
+        );
         return await this.spaceService.deleteSpace(deleteData);
       default:
         throw new EntityNotInitializedException(

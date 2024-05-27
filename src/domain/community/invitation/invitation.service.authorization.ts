@@ -1,11 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { InvitationService } from './invitation.service';
 import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
-import { Invitation } from './invitation.entity';
 import { IInvitation } from './invitation.interface';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { CREDENTIAL_RULE_COMMUNITY_USER_INVITATION } from '@common/constants/authorization/credential.rule.constants';
@@ -14,9 +11,7 @@ import { CREDENTIAL_RULE_COMMUNITY_USER_INVITATION } from '@common/constants/aut
 export class InvitationAuthorizationService {
   constructor(
     private invitationService: InvitationService,
-    private authorizationPolicyService: AuthorizationPolicyService,
-    @InjectRepository(Invitation)
-    private invitationRepository: Repository<Invitation>
+    private authorizationPolicyService: AuthorizationPolicyService
   ) {}
 
   async applyAuthorizationPolicy(
@@ -31,7 +26,7 @@ export class InvitationAuthorizationService {
 
     invitation.authorization = await this.extendAuthorizationPolicy(invitation);
 
-    return await this.invitationRepository.save(invitation);
+    return invitation;
   }
 
   private async extendAuthorizationPolicy(

@@ -95,12 +95,6 @@ export class LookupResolverFields {
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<ISpace> {
     const space = await this.spaceService.getSpaceOrFail(id);
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      space.authorization,
-      AuthorizationPrivilege.READ,
-      `lookup Space: ${space.id}`
-    );
 
     return space;
   }

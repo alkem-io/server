@@ -54,8 +54,8 @@ services:
     volumes:
       - alkemio_dev_mysql:/var/lib/mysql
       - ./.scripts/schema.sql:/bootstrap_scripts/1.sql
-      - ./.scripts/migrations/CSVs:/tmp/CSVs
-      - tmpvolume:/tmp
+      - ./.scripts/migrations/CSVs:/var/lib/mysql-files/CSVs
+      - tmpvolume:/var/lib/mysql-files
     command: --init-file /bootstrap_scripts/1.sql
 
   kratos-migrate:
