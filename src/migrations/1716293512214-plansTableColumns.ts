@@ -58,7 +58,7 @@ export class plansTableColumns1716293512214 implements MigrationInterface {
         sortOrder: 30,
         pricePerMonth: 749,
         isFree: false,
-        trialEnabled: true,
+        trialEnabled: false,
         requiresPaymentMethod: false,
         requiresContactSupport: false,
       },
