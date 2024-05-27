@@ -43,64 +43,92 @@ export class CommunityInvitationLifecycleOptionsProvider {
       `Event ${invitationEventData.eventName} triggered on invitation: ${invitation.id} using lifecycle ${invitation.lifecycle.id}`,
       LogContext.COMMUNITY
     );
+
+    const { options, ready } = this.getInvitationLifecycleMachineOptions();
+
     await this.lifecycleService.event(
       {
         ID: invitation.lifecycle.id,
         eventName: invitationEventData.eventName,
       },
-      this.invitationLifecycleMachineOptions,
+      options,
       agentInfo,
       invitation.authorization
     );
 
+    await ready();
+
     return await this.invitationService.getInvitationOrFail(invitationID);
   }
 
-  private invitationLifecycleMachineOptions: Partial<MachineOptions<any, any>> =
-    {
+  private getInvitationLifecycleMachineOptions(): {
+    options: Partial<MachineOptions<any, any>>;
+    ready: () => Promise<void>;
+  } {
+    let resolve: (value: void) => void;
+
+    const readyPromise = new Promise<void>(r => {
+      resolve = r;
+    });
+
+    let readyState = true;
+
+    const getReadiness = () => {
+      if (readyState) {
+        return Promise.resolve();
+      }
+      return readyPromise;
+    };
+
+    const options: Partial<MachineOptions<any, any>> = {
       actions: {
         communityAddMember: async (_, event: any) => {
-          const invitation = await this.invitationService.getInvitationOrFail(
-            event.parentID,
-            {
-              relations: {
-                community: {
-                  parentCommunity: true,
+          readyState = false;
+          try {
+            const invitation = await this.invitationService.getInvitationOrFail(
+              event.parentID,
+              {
+                relations: {
+                  community: {
+                    parentCommunity: true,
+                  },
                 },
-              },
-            }
-          );
-          const userID = invitation.invitedUser;
-          const community = invitation.community;
-          if (!userID || !community) {
-            throw new EntityNotInitializedException(
-              `Lifecycle not initialized on Invitation: ${invitation.id}`,
-              LogContext.COMMUNITY
+              }
             );
-          }
-
-          if (invitation.invitedToParent) {
-            if (!community.parentCommunity) {
+            const userID = invitation.invitedUser;
+            const community = invitation.community;
+            if (!userID || !community) {
               throw new EntityNotInitializedException(
-                `Unable to load parent community when flag to add is set: ${invitation.id}`,
+                `Lifecycle not initialized on Invitation: ${invitation.id}`,
                 LogContext.COMMUNITY
               );
             }
+
+            if (invitation.invitedToParent) {
+              if (!community.parentCommunity) {
+                throw new EntityNotInitializedException(
+                  `Unable to load parent community when flag to add is set: ${invitation.id}`,
+                  LogContext.COMMUNITY
+                );
+              }
+              await this.communityService.assignUserToRole(
+                community.parentCommunity,
+                userID,
+                CommunityRole.MEMBER,
+                event.agentInfo,
+                true
+              );
+            }
             await this.communityService.assignUserToRole(
-              community.parentCommunity,
+              community,
               userID,
               CommunityRole.MEMBER,
               event.agentInfo,
               true
             );
+          } finally {
+            resolve();
           }
-          await this.communityService.assignUserToRole(
-            community,
-            userID,
-            CommunityRole.MEMBER,
-            event.agentInfo,
-            true
-          );
         },
       },
       guards: {
@@ -124,4 +152,10 @@ export class CommunityInvitationLifecycleOptionsProvider {
         },
       },
     };
+
+    return {
+      options,
+      ready: getReadiness,
+    };
+  }
 }
