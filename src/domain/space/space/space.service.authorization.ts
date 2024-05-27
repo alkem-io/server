@@ -137,7 +137,8 @@ export class SpaceAuthorizationService {
       case SpaceVisibility.DEMO:
         space.authorization = this.extendAuthorizationPolicyLocal(
           space.authorization,
-          communityPolicyWithFlags
+          communityPolicyWithFlags,
+          space
         );
         if (privateSpace && space.level !== SpaceLevel.SPACE) {
           space.authorization = this.extendPrivateSubspaceAdmins(
@@ -322,7 +323,8 @@ export class SpaceAuthorizationService {
 
   public extendAuthorizationPolicyLocal(
     authorization: IAuthorizationPolicy,
-    policy: ICommunityPolicy
+    policy: ICommunityPolicy,
+    space: ISpace
   ): IAuthorizationPolicy {
     this.extendPrivilegeRuleCreateSubspace(authorization);
 
@@ -348,6 +350,13 @@ export class SpaceAuthorizationService {
         policy,
         CommunityRole.ADMIN
       );
+    // Note: this only works for User account hosts
+    if (space.level === SpaceLevel.SPACE) {
+      spaceAdminCriterias.push({
+        type: AuthorizationCredential.ACCOUNT_HOST,
+        resourceID: space.account.id,
+      });
+    }
     const spaceAdmin = this.authorizationPolicyService.createCredentialRule(
       [
         AuthorizationPrivilege.CREATE,
