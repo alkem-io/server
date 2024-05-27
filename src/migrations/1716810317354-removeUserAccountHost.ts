@@ -12,6 +12,10 @@ export class removeUserAccountHost1716810317354 implements MigrationInterface {
       WHERE credential.type = 'account-host';`
     );
 
+    if (credentialsToDelete.length === 0) {
+      console.log('No credentials to delete');
+      return;
+    }
     await queryRunner.query(
       `DELETE FROM alkemio.credential WHERE id IN (${credentialsToDelete
         .map(c => `'${c.id}'`)
