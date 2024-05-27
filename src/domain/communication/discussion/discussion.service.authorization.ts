@@ -50,7 +50,7 @@ export class DiscussionAuthorizationService {
       discussion.id
     );
     discussion.comments =
-      await this.roomAuthorizationService.applyAuthorizationPolicy(
+      this.roomAuthorizationService.applyAuthorizationPolicy(
         discussion.comments,
         discussion.authorization
       );

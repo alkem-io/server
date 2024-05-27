@@ -23,6 +23,7 @@ import { NotificationInputCalloutPublished } from '@services/adapters/notificati
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { UpdateCollaborationCalloutsSortOrderInput } from './dto/collaboration.dto.update.callouts.sort.order';
+import { CalloutService } from '../callout/callout.service';
 
 @Resolver()
 export class CollaborationResolverMutations {
@@ -35,7 +36,8 @@ export class CollaborationResolverMutations {
     private authorizationService: AuthorizationService,
     private collaborationService: CollaborationService,
     private activityAdapter: ActivityAdapter,
-    private notificationAdapter: NotificationAdapter
+    private notificationAdapter: NotificationAdapter,
+    private calloutService: CalloutService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -128,24 +130,23 @@ export class CollaborationResolverMutations {
       `create callout on collaboration: ${collaboration.id}`
     );
 
-    const callout =
-      await this.collaborationService.createCalloutOnCollaboration(
-        calloutData,
-        agentInfo.userID
-      );
+    let callout = await this.collaborationService.createCalloutOnCollaboration(
+      calloutData,
+      agentInfo.userID
+    );
 
     const communityPolicy = await this.collaborationService.getCommunityPolicy(
       collaboration.id
     );
 
-    const calloutAuthorized =
-      await this.calloutAuthorizationService.applyAuthorizationPolicy(
-        callout,
-        collaboration.authorization,
-        communityPolicy
-      );
+    callout = await this.calloutAuthorizationService.applyAuthorizationPolicy(
+      callout,
+      collaboration.authorization,
+      communityPolicy
+    );
+    callout = await this.calloutService.save(callout);
 
-    if (calloutAuthorized.visibility === CalloutVisibility.PUBLISHED) {
+    if (callout.visibility === CalloutVisibility.PUBLISHED) {
       if (calloutData.sendNotification) {
         const notificationInput: NotificationInputCalloutPublished = {
           triggeredBy: agentInfo.userID,
@@ -182,7 +183,7 @@ export class CollaborationResolverMutations {
       }
     );
 
-    return calloutAuthorized;
+    return callout;
   }
 
   @UseGuards(GraphqlGuard)

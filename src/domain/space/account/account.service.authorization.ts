@@ -1,11 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import {
   AuthorizationCredential,
   AuthorizationPrivilege,
   LogContext,
 } from '@common/enums';
-import { Repository } from 'typeorm';
 import { AccountService } from './account.service';
 import {
   EntityNotInitializedException,
@@ -13,7 +11,6 @@ import {
 } from '@common/exceptions';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IAccount } from './account.interface';
-import { Account } from './account.entity';
 import { TemplatesSetAuthorizationService } from '@domain/template/templates-set/templates.set.service.authorization';
 import { LicenseAuthorizationService } from '@domain/license/license/license.service.authorization';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
@@ -38,9 +35,7 @@ export class AccountAuthorizationService {
     private licenseAuthorizationService: LicenseAuthorizationService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private spaceAuthorizationService: SpaceAuthorizationService,
-    private accountService: AccountService,
-    @InjectRepository(Account)
-    private accountRepository: Repository<Account>
+    private accountService: AccountService
   ) {}
 
   async applyAuthorizationPolicy(accountInput: IAccount): Promise<IAccount> {
@@ -86,19 +81,17 @@ export class AccountAuthorizationService {
       account.id
     );
 
-    await this.accountRepository.save(account);
+    await this.accountService.save(account);
 
-    account.agent =
-      await this.agentAuthorizationService.applyAuthorizationPolicy(
-        account.agent,
-        account.authorization
-      );
+    account.agent = this.agentAuthorizationService.applyAuthorizationPolicy(
+      account.agent,
+      account.authorization
+    );
 
-    account.license =
-      await this.licenseAuthorizationService.applyAuthorizationPolicy(
-        account.license,
-        account.authorization
-      );
+    account.license = this.licenseAuthorizationService.applyAuthorizationPolicy(
+      account.license,
+      account.authorization
+    );
 
     account.space =
       await this.spaceAuthorizationService.applyAuthorizationPolicy(
@@ -119,7 +112,7 @@ export class AccountAuthorizationService {
         spaceAuthorization
       );
 
-    return await this.accountRepository.save(account);
+    return await this.accountService.save(account);
   }
 
   private extendAuthorizationPolicy(
