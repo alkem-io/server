@@ -42,17 +42,17 @@ export class LicensingService {
   async getDefaultLicensingOrFail(
     options?: FindOneOptions<Licensing>
   ): Promise<ILicensing> {
-    const licensing = await this.licensingRepository.findOne({
+    const licensingFrameworks = await this.licensingRepository.find({
       ...options,
     });
 
-    if (!licensing) {
+    if (licensingFrameworks.length !== 1) {
       throw new EntityNotFoundException(
         'Unable to retrieve the Default Licensing for the platform',
         LogContext.LICENSE
       );
     }
-    return licensing;
+    return licensingFrameworks[0];
   }
 
   public async getBasePlan(licensingID: string): Promise<ILicensePlan> {

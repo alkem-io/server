@@ -27,7 +27,6 @@ import { WalletManagerCommand } from '@common/enums/wallet.manager.command';
 import { CredentialMetadataOutput } from '../verified-credential/dto/verified.credential.dto.metadata';
 import { IClaim } from '@services/external/trust-registry/trust.registry.claim/claim.interface';
 import { TrustRegistryAdapter } from '@services/external/trust-registry/trust.registry.adapter/trust.registry.adapter';
-import { GrantCredentialInput } from './dto/agent.dto.credential.grant';
 import { RevokeCredentialInput } from './dto/agent.dto.credential.revoke';
 import { AgentBeginVerifiedCredentialRequestOutput } from './dto/agent.dto.verified.credential.request.begin.output';
 import { AgentBeginVerifiedCredentialOfferOutput } from './dto/agent.dto.verified.credential.offer.begin.output';
@@ -45,6 +44,7 @@ import { AgentInteractionVerifiedCredentialRequestSovrhd } from './dto/agent.dto
 import { SsiSovrhdRegisterCallbackCredential } from '@services/adapters/ssi-sovrhd/dto/ssi.sovrhd.dto.register.callback.credential';
 import { getRandomId } from '@src/common/utils';
 import { AgentInfoCacheService } from '../../../core/authentication.agent.info/agent.info.cache.service';
+import { GrantCredentialToAgentInput } from './dto/agent.dto.credential.grant';
 
 @Injectable()
 export class AgentService {
@@ -176,7 +176,7 @@ export class AgentService {
   }
 
   async grantCredential(
-    grantCredentialData: GrantCredentialInput
+    grantCredentialData: GrantCredentialToAgentInput
   ): Promise<IAgent> {
     const { agent, credentials } = await this.getAgentCredentials(
       grantCredentialData.agentID
@@ -197,10 +197,9 @@ export class AgentService {
       }
     }
 
-    const credential = await this.credentialService.createCredential({
-      type: grantCredentialData.type,
-      resourceID: grantCredentialData.resourceID,
-    });
+    const credential = await this.credentialService.createCredential(
+      grantCredentialData
+    );
 
     agent.credentials?.push(credential);
     await this.agentInfoCacheService.updateAgentInfoCache(agent);

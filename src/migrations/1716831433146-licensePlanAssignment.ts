@@ -38,10 +38,10 @@ export class licensePlanAssignment1716831433146 implements MigrationInterface {
 }
 
 export enum LicenseCredential {
-  SPACE_FREE = 'space-free',
-  SPACE_PLUS = 'space-plus',
-  SPACE_PREMIUM = 'space-premium',
-  SPACE_ENTERPRISE = 'space-enterprise',
+  SPACE_FREE = 'license-space-free',
+  SPACE_PLUS = 'license-space-plus',
+  SPACE_PREMIUM = 'license-space-premium',
+  SPACE_ENTERPRISE = 'license-space-enterprise',
 }
 
 export const planDefinitions = [

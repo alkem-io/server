@@ -95,10 +95,19 @@ export class AccountService {
     });
 
     for (const licensePlan of licensePlansToAssign) {
-      await this.agentService.grantCredential({
+      let expires: Date | undefined = undefined;
+      if (licensePlan.trialEnabled) {
+        const now = new Date();
+        const oneMonthFromNow = new Date(now);
+        oneMonthFromNow.setMonth(now.getMonth() + 1);
+        expires = oneMonthFromNow;
+        expires = undefined; // TODO: remove this line when get time typing working!
+      }
+      account.agent = await this.agentService.grantCredential({
         agentID: account.agent.id,
         type: licensePlan.licenseCredential,
         resourceID: account.id,
+        expires: expires,
       });
     }
 
