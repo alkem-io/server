@@ -57,13 +57,9 @@ export class ApplicationAuthorizationService {
       );
     newRules.push(userApplicationRule);
 
-    //
-    const updatedAuthorization =
-      this.authorizationPolicyService.appendCredentialAuthorizationRules(
-        application.authorization,
-        newRules
-      );
-
-    return updatedAuthorization;
+    return this.authorizationPolicyService.appendCredentialAuthorizationRules(
+      application.authorization,
+      newRules
+    );
   }
 }

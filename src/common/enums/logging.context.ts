@@ -15,7 +15,7 @@ export enum LogContext {
   ACTIVITY = 'activity',
   ACTIVITY_FEED = 'activity-feed',
   API = 'api',
-  AUTH = 'whiteboard-auth',
+  AUTH = 'auth',
   AUTH_POLICY = 'auth_policy',
   AUTH_TOKEN = 'auth_token',
   BOOTSTRAP = 'bootstrap',

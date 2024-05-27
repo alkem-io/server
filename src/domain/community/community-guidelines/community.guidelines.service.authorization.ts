@@ -35,6 +35,7 @@ export class CommunityGuidelinesAuthorizationService {
         communityGuidelines.authorization
       );
 
-    return await this.communityGuidelinesService.save(communityGuidelines);
+    return communityGuidelines;
+    // return await this.communityGuidelinesService.save(communityGuidelines);
   }
 }
