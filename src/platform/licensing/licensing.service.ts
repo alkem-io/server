@@ -39,6 +39,40 @@ export class LicensingService {
     return licensing;
   }
 
+  async getDefaultLicensingOrFail(
+    options?: FindOneOptions<Licensing>
+  ): Promise<ILicensing> {
+    const licensing = await this.licensingRepository.findOne({
+      ...options,
+    });
+
+    if (!licensing) {
+      throw new EntityNotFoundException(
+        'Unable to retrieve the Default Licensing for the platform',
+        LogContext.LICENSE
+      );
+    }
+    return licensing;
+  }
+
+  public async getBasePlan(licensingID: string): Promise<ILicensePlan> {
+    const licensing = await this.getLicensingOrFail(licensingID, {
+      relations: {
+        basePlan: true,
+      },
+    });
+    const basePlan = licensing.basePlan;
+
+    if (!basePlan) {
+      throw new EntityNotFoundException(
+        `Unable to find base plan: ${licensing.id}`,
+        LogContext.LICENSE
+      );
+    }
+
+    return basePlan;
+  }
+
   public async save(licensing: ILicensing): Promise<ILicensing> {
     return this.licensingRepository.save(licensing);
   }
@@ -56,6 +90,22 @@ export class LicensingService {
       );
 
     return licensing.plans;
+  }
+
+  public async getLicensePlanOrFail(
+    licensingID: string,
+    planID: string
+  ): Promise<ILicensePlan> {
+    const licensePlans = await this.getLicensePlans(licensingID);
+    const plan = licensePlans.find(plan => plan.id === planID);
+    if (!plan) {
+      throw new EntityNotFoundException(
+        `Unable to load License Plan of the provided ID: ${planID}`,
+        LogContext.LICENSE
+      );
+    }
+
+    return plan;
   }
 
   public async createLicensePlan(

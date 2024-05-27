@@ -7,7 +7,7 @@ import { UpdateFeatureFlagInput } from '@domain/license/feature-flag/dto/feature
 export class CreateLicenseInput {
   @Field(() => [UpdateFeatureFlagInput], {
     nullable: true,
-    description: 'Update the feature flags for the License.',
+    description: 'The feature flags for the License.',
   })
   @IsOptional()
   featureFlags?: UpdateFeatureFlagInput[];

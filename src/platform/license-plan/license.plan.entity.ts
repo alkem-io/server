@@ -35,4 +35,7 @@ export class LicensePlan extends BaseAlkemioEntity implements ILicensePlan {
 
   @Column('boolean', { nullable: false, default: false })
   requiresContactSupport!: boolean;
+
+  @Column('text', { nullable: false })
+  licenseCredential!: string;
 }

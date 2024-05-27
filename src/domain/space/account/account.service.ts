@@ -29,6 +29,8 @@ import { CreateAccountInput } from './dto/account.dto.create';
 import { CreateSpaceInput } from '../space/dto/space.dto.create';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { ContributorService } from '@domain/community/contributor/contributor.service';
+import { LicensingService } from '@platform/licensing/licensing.service';
+import { ILicensePlan } from '@platform/license-plan/license.plan.interface';
 
 @Injectable()
 export class AccountService {
@@ -39,6 +41,7 @@ export class AccountService {
     private spaceDefaultsService: SpaceDefaultsService,
     private licenseService: LicenseService,
     private contributorService: ContributorService,
+    private licensingService: LicensingService,
     @InjectRepository(Account)
     private accountRepository: Repository<Account>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -52,6 +55,23 @@ export class AccountService {
     const spaceData = accountData.spaceData;
     await this.validateSpaceData(spaceData);
 
+    const licensingFramework =
+      await this.licensingService.getDefaultLicensingOrFail();
+
+    const licensePlansToAssign: ILicensePlan[] = [];
+    const basePlan = await this.licensingService.getBasePlan(
+      licensingFramework.id
+    );
+    licensePlansToAssign.push(basePlan);
+    if (accountData.licensePlanID) {
+      licensePlansToAssign.push(
+        await this.licensingService.getLicensePlanOrFail(
+          licensingFramework.id,
+          accountData.licensePlanID
+        )
+      );
+    }
+
     const account: IAccount = new Account();
     account.authorization = new AuthorizationPolicy();
     account.library = await this.templatesSetService.createTemplatesSet();
@@ -59,6 +79,7 @@ export class AccountService {
     account.license = await this.licenseService.createLicense({
       visibility: SpaceVisibility.ACTIVE,
     });
+
     await this.save(account);
 
     spaceData.level = 0;
@@ -72,6 +93,14 @@ export class AccountService {
     account.agent = await this.agentService.createAgent({
       parentDisplayID: `account-${account.space.nameID}`,
     });
+
+    for (const licensePlan of licensePlansToAssign) {
+      await this.agentService.grantCredential({
+        agentID: account.agent.id,
+        type: licensePlan.licenseCredential,
+        resourceID: account.id,
+      });
+    }
 
     const storageAggregator =
       await this.spaceService.getStorageAggregatorOrFail(account.space.id);

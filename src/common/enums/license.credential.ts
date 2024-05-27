@@ -4,6 +4,8 @@ import { registerEnumType } from '@nestjs/graphql';
 export enum LicenseCredential {
   SPACE_FREE = 'space-free',
   SPACE_PLUS = 'space-plus',
+  SPACE_PREMIUM = 'space-premium',
+  SPACE_ENTERPRISE = 'space-enterprise',
 }
 
 registerEnumType(LicenseCredential, {
