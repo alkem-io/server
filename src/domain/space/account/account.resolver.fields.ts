@@ -116,6 +116,14 @@ export class AccountResolverFields {
     return await this.accountService.getHostOrFail(account);
   }
 
+  @ResolveField('hosts', () => [IContributor], {
+    nullable: true,
+    description: 'The Account hosts.',
+  })
+  async hosts(@Parent() account: Account): Promise<IContributor[]> {
+    return await this.accountService.getHosts(account);
+  }
+
   @ResolveField('spaceID', () => String, {
     nullable: false,
     description: 'The ID for the root space for the Account .',

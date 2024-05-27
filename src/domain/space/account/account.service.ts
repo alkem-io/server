@@ -359,6 +359,15 @@ export class AccountService {
     return account;
   }
 
+  async getHosts(account: IAccount): Promise<IContributor[]> {
+    const contributors =
+      await this.contributorService.contributorsWithCredentials({
+        type: AuthorizationCredential.ACCOUNT_HOST,
+        resourceID: account.id,
+      });
+    return contributors;
+  }
+
   async getHost(account: IAccount): Promise<IContributor | null> {
     const contributors =
       await this.contributorService.contributorsWithCredentials({
