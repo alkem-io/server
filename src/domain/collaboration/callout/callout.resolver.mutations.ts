@@ -219,6 +219,7 @@ export class CalloutResolverMutations {
         callout.authorization,
         communityPolicy
       );
+    contribution = await this.calloutContributionService.save(contribution);
 
     if (contributionData.post && contribution.post) {
       const postCreatedEvent: CalloutPostCreatedPayload = {

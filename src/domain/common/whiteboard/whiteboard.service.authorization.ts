@@ -1,13 +1,10 @@
-import { Repository } from 'typeorm';
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import {
   AuthorizationCredential,
   AuthorizationPrivilege,
   LogContext,
 } from '@common/enums';
 import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
-import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
@@ -19,13 +16,12 @@ import {
 } from '@common/constants';
 import { ProfileAuthorizationService } from '../profile/profile.service.authorization';
 import { IWhiteboard } from './whiteboard.interface';
+import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 
 @Injectable()
 export class WhiteboardAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
-    @InjectRepository(Whiteboard)
-    private whiteboardRepository: Repository<Whiteboard>,
     private profileAuthorizationService: ProfileAuthorizationService
   ) {}
 
@@ -33,6 +29,12 @@ export class WhiteboardAuthorizationService {
     whiteboard: IWhiteboard,
     parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<IWhiteboard> {
+    if (!whiteboard.profile) {
+      throw new RelationshipNotFoundException(
+        `Unable to load entities on whiteboard reset auth:  ${whiteboard.id} `,
+        LogContext.COLLABORATION
+      );
+    }
     whiteboard.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         whiteboard.authorization,
@@ -45,28 +47,13 @@ export class WhiteboardAuthorizationService {
       whiteboard
     );
 
-    const profile = (
-      await this.whiteboardRepository.findOne({
-        where: { id: whiteboard.id },
-        relations: { profile: true },
-      })
-    )?.profile;
-
-    if (!profile) {
-      throw new EntityNotInitializedException(
-        `Profile not found for Whiteboard: ${whiteboard.id}`,
-        LogContext.COLLABORATION
-      );
-    }
-
-    whiteboard.profile = profile;
     whiteboard.profile =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
         whiteboard.profile,
         whiteboard.authorization
       );
 
-    return this.whiteboardRepository.save(whiteboard);
+    return whiteboard;
   }
 
   private appendCredentialRules(whiteboard: IWhiteboard): IAuthorizationPolicy {
