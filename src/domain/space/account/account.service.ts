@@ -63,7 +63,10 @@ export class AccountService {
       licensingFramework.id
     );
     licensePlansToAssign.push(basePlan);
-    if (accountData.licensePlanID) {
+    if (
+      accountData.licensePlanID &&
+      accountData.licensePlanID !== basePlan.id
+    ) {
       licensePlansToAssign.push(
         await this.licensingService.getLicensePlanOrFail(
           licensingFramework.id,
