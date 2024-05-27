@@ -60,7 +60,7 @@ export class plansTableColumns1716293512214 implements MigrationInterface {
         isFree: false,
         trialEnabled: false,
         requiresPaymentMethod: false,
-        requiresContactSupport: false,
+        requiresContactSupport: true,
       },
       {
         name: 'ENTERPRISE',
