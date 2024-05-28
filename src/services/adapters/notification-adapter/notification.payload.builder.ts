@@ -92,7 +92,8 @@ export class NotificationPayloadBuilder {
   async buildInvitationCreatedNotificationPayload(
     invitationCreatorID: string,
     invitedUserID: string,
-    community: ICommunity
+    community: ICommunity,
+    welcomeMessage?: string
   ): Promise<CommunityInvitationCreatedEventPayload> {
     const spacePayload = await this.buildSpacePayload(
       community,
@@ -103,6 +104,7 @@ export class NotificationPayloadBuilder {
     );
     const payload: CommunityInvitationCreatedEventPayload = {
       invitee: inviteePayload,
+      welcomeMessage,
       ...spacePayload,
     };
 
