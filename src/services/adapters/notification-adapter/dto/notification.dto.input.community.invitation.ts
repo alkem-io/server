@@ -5,4 +5,5 @@ export interface NotificationInputCommunityInvitation
   extends NotificationInputBase {
   community: ICommunity;
   invitedUser: string;
+  welcomeMessage?: string;
 }

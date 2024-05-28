@@ -35,7 +35,7 @@ export class CalendarEventAuthorizationService {
           relations: { comments: true, profile: true },
         }
       );
-    if (calendarEvent.profile) {
+    if (!calendarEvent.profile) {
       throw new RelationshipNotFoundException(
         `Unable to load entities on auth reset for calendar event ${calendarEvent.id} `,
         LogContext.CALENDAR

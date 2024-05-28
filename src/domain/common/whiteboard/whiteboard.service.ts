@@ -137,7 +137,7 @@ export class WhiteboardService {
   ): Promise<IWhiteboard> {
     const whiteboard = await this.getWhiteboardOrFail(whiteboardInput.id, {
       relations: {
-        profile: !!updateWhiteboardData.profileData,
+        profile: true,
       },
     });
 
