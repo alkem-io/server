@@ -1,9 +1,8 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext, ProfileType } from '@common/enums';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { CalloutTemplate } from './callout.template.entity';
 import { ICalloutTemplate } from './callout.template.interface';
 import { TemplateBaseService } from '../template-base/template.base.service';
@@ -20,7 +19,6 @@ export class CalloutTemplateService {
   constructor(
     @InjectRepository(CalloutTemplate)
     private calloutTemplateRepository: Repository<CalloutTemplate>,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private templateBaseService: TemplateBaseService,
     private calloutFramingService: CalloutFramingService,
     private calloutContributionDefaultsService: CalloutContributionDefaultsService,
