@@ -53,7 +53,11 @@ export class CalendarEventService {
       RoomType.CALENDAR_EVENT
     );
 
-    return await this.calendarEventRepository.save(calendarEvent);
+    return await this.save(calendarEvent);
+  }
+
+  public async save(calendarEvent: ICalendarEvent): Promise<CalendarEvent> {
+    return this.calendarEventRepository.save(calendarEvent);
   }
 
   public async deleteCalendarEvent(

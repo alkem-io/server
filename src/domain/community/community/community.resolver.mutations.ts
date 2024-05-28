@@ -554,6 +554,7 @@ export class CommunityResolverMutations {
       triggeredBy: agentInfo.userID,
       community: community,
       invitedUser: invitedUser.id,
+      welcomeMessage,
     };
 
     await this.notificationAdapter.invitationCreated(notificationInput);
