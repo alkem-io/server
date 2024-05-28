@@ -17,6 +17,7 @@ import { NameReporterModule } from '@services/external/elasticsearch/name-report
 import { InnovationFlowTemplateModule } from '@domain/template/innovation-flow-template/innovation.flow.template.module';
 import { AccountResolverQueries } from './account.resolver.queries';
 import { ContributorModule } from '@domain/community/contributor/contributor.module';
+import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { ContributorModule } from '@domain/community/contributor/contributor.mod
     AuthorizationModule,
     AuthorizationPolicyModule,
     ContributorModule,
+    VirtualContributorModule,
     TemplatesSetModule,
     SpaceModule,
     SpaceDefaultsModule,

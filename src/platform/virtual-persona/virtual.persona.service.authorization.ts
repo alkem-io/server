@@ -1,7 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { AuthorizationCredential, LogContext } from '@common/enums';
-import { Repository } from 'typeorm';
 import { AuthorizationPrivilege } from '@common/enums';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -10,7 +8,6 @@ import {
   RelationshipNotFoundException,
 } from '@common/exceptions';
 import { VirtualPersonaService } from './virtual.persona.service';
-import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
   CREDENTIAL_RULE_TYPES_ORGANIZATION_AUTHORIZATION_RESET,
@@ -20,65 +17,49 @@ import {
   CREDENTIAL_RULE_ORGANIZATION_READ,
   CREDENTIAL_RULE_ORGANIZATION_SELF_REMOVAL,
 } from '@common/constants';
-import { VirtualPersona } from './virtual.persona.entity';
 import { IVirtualPersona } from './virtual.persona.interface';
-import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 
 @Injectable()
 export class VirtualPersonaAuthorizationService {
   constructor(
-    private virtualService: VirtualPersonaService,
+    private virtualPersonaService: VirtualPersonaService,
     private authorizationPolicy: AuthorizationPolicyService,
-    private authorizationPolicyService: AuthorizationPolicyService,
-    private profileAuthorizationService: ProfileAuthorizationService,
-    private platformAuthorizationService: PlatformAuthorizationPolicyService,
-    @InjectRepository(VirtualPersona)
-    private virtualRepository: Repository<VirtualPersona>
+    private authorizationPolicyService: AuthorizationPolicyService
   ) {}
 
   async applyAuthorizationPolicy(
-    virtualInput: IVirtualPersona
+    virtualPersonaInput: IVirtualPersona,
+    parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<IVirtualPersona> {
-    const virtual = await this.virtualService.getVirtualPersonaOrFail(
-      virtualInput.id,
-      {
-        relations: {
-          authorization: true,
-          profile: true,
-        },
-      }
-    );
-    if (!virtual.authorization)
+    const virtualPersona =
+      await this.virtualPersonaService.getVirtualPersonaOrFail(
+        virtualPersonaInput.id,
+        {
+          relations: {
+            authorization: true,
+          },
+        }
+      );
+    if (!virtualPersona.authorization)
       throw new RelationshipNotFoundException(
-        `Unable to load entities for virtual persona: ${virtual.id} `,
+        `Unable to load entities for virtual persona: ${virtualPersona.id} `,
         LogContext.COMMUNITY
       );
-    virtual.authorization = await this.authorizationPolicyService.reset(
-      virtual.authorization
-    );
-    virtual.authorization =
-      this.platformAuthorizationService.inheritRootAuthorizationPolicy(
-        virtual.authorization
-      );
-    virtual.authorization = this.appendCredentialRules(
-      virtual.authorization,
-      virtual.id
+    virtualPersona.authorization = await this.authorizationPolicyService.reset(
+      virtualPersona.authorization
     );
 
-    // NOTE: Clone the authorization policy to ensure the changes are local to profile
-    const clonedAnonymousReadAccessAuthorization =
-      this.authorizationPolicyService.cloneAuthorizationPolicy(
-        virtual.authorization
+    virtualPersona.authorization =
+      this.authorizationPolicyService.inheritParentAuthorization(
+        virtualPersona.authorization,
+        parentAuthorization
       );
-    // To ensure that profile + context on a space are always publicly visible, even for private spaces
-    clonedAnonymousReadAccessAuthorization.anonymousReadAccess = true;
-    // cascade
-    virtual.profile =
-      await this.profileAuthorizationService.applyAuthorizationPolicy(
-        virtual.profile,
-        clonedAnonymousReadAccessAuthorization // Key that this is publicly visible
-      );
-    return await this.virtualRepository.save(virtual);
+    virtualPersona.authorization = this.appendCredentialRules(
+      virtualPersona.authorization,
+      virtualPersona.id
+    );
+
+    return virtualPersona;
   }
 
   private appendCredentialRules(

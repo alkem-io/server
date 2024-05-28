@@ -20,6 +20,7 @@ import { UserModule } from '@domain/community/user/user.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
 import { LicensingModule } from '@platform/licensing/licensing.module';
+import { VirtualPersonaModule } from '@platform/virtual-persona/virtual.persona.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { LicensingModule } from '@platform/licensing/licensing.module';
     UserModule,
     AgentModule,
     NotificationAdapterModule,
+    VirtualPersonaModule,
     TypeOrmModule.forFeature([Platform]),
   ],
   providers: [
