@@ -10,6 +10,10 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { IVirtualPersona } from './virtual.persona.interface';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ProfileLoaderCreator } from '@core/dataloader/creators';
+import { Loader } from '@core/dataloader/decorators';
+import { ILoader } from '@core/dataloader/loader.interface';
+import { IProfile } from '@domain/common/profile';
 
 @Resolver(() => IVirtualPersona)
 export class VirtualPersonaResolverFields {
@@ -40,5 +44,28 @@ export class VirtualPersonaResolverFields {
     );
 
     return virtualPersona.authorization;
+  }
+
+  // Check authorization inside the field resolver
+  @UseGuards(GraphqlGuard)
+  @ResolveField('profile', () => IProfile, {
+    nullable: false,
+    description: 'The Profile for the VirtualPersona.',
+  })
+  async profile(
+    @Parent() virtualPersona: VirtualPersona,
+    @CurrentUser() agentInfo: AgentInfo,
+    @Loader(ProfileLoaderCreator, { parentClassRef: VirtualPersona })
+    loader: ILoader<IProfile>
+  ): Promise<IProfile> {
+    const profile = await loader.load(virtualPersona.id);
+    // Check if the user can read the profile entity, not the space
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      profile.authorization,
+      AuthorizationPrivilege.READ,
+      `read profile on space: ${profile.displayName}`
+    );
+    return profile;
   }
 }
