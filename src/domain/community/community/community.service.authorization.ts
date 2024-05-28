@@ -156,7 +156,6 @@ export class CommunityAuthorizationService {
     }
 
     return community;
-    // return await this.communityService.save(community);
   }
 
   private async extendAuthorizationPolicy(

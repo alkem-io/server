@@ -228,9 +228,7 @@ export class SpaceService {
   }
 
   async save(space: ISpace): Promise<ISpace> {
-    return await this.spaceRepository.save(space, {
-      chunk: 10,
-    });
+    return await this.spaceRepository.save(space);
   }
 
   async deleteSpace(deleteData: DeleteSpaceInput): Promise<ISpace> {
