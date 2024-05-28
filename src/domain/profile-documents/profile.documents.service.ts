@@ -88,10 +88,12 @@ export class ProfileDocumentsService {
         storageBucketToCheck.id,
         newDoc
       );
-      await this.documentAuthorizationService.applyAuthorizationPolicy(
-        newDoc,
-        storageBucketToCheck.authorization
-      );
+      const docAuth =
+        this.documentAuthorizationService.applyAuthorizationPolicy(
+          newDoc,
+          storageBucketToCheck.authorization
+        );
+      await this.documentService.saveDocument(docAuth);
       return this.documentService.getPubliclyAccessibleURL(newDoc);
     }
 

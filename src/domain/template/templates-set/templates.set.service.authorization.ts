@@ -9,6 +9,7 @@ import { ITemplatesSet } from '.';
 import { InnovationFlowTemplateAuthorizationService } from '../innovation-flow-template/innovation.flow.template.service.authorization';
 import { WhiteboardTemplateAuthorizationService } from '../whiteboard-template/whiteboard.template.service.authorization';
 import { PostTemplateAuthorizationService } from '../post-template/post.template.service.authorization';
+import { CommunityGuidelinesTemplateAuthorizationService } from '../community-guidelines-template/community.guidelines.template.service.authorization';
 
 @Injectable()
 export class TemplatesSetAuthorizationService {
@@ -19,7 +20,8 @@ export class TemplatesSetAuthorizationService {
     private templatesSetRepository: Repository<TemplatesSet>,
     private postTemplateAuthorizationService: PostTemplateAuthorizationService,
     private whiteboardTemplateAuthorizationService: WhiteboardTemplateAuthorizationService,
-    private innovationFlowTemplateAuthorizationService: InnovationFlowTemplateAuthorizationService
+    private innovationFlowTemplateAuthorizationService: InnovationFlowTemplateAuthorizationService,
+    private communityGuidelinesTemplateAuthorizationService: CommunityGuidelinesTemplateAuthorizationService
   ) {}
 
   async applyAuthorizationPolicy(
@@ -33,6 +35,7 @@ export class TemplatesSetAuthorizationService {
           postTemplates: true,
           whiteboardTemplates: true,
           innovationFlowTemplates: true,
+          communityGuidelinesTemplates: true,
         },
       }
     );
@@ -66,6 +69,15 @@ export class TemplatesSetAuthorizationService {
       for (const innovationFlowTemplate of templatesSet.innovationFlowTemplates) {
         await this.innovationFlowTemplateAuthorizationService.applyAuthorizationPolicy(
           innovationFlowTemplate,
+          parentAuthorization
+        );
+      }
+    }
+
+    if (templatesSet.communityGuidelinesTemplates) {
+      for (const communityGuidelinesTemplate of templatesSet.communityGuidelinesTemplates) {
+        await this.communityGuidelinesTemplateAuthorizationService.applyAuthorizationPolicy(
+          communityGuidelinesTemplate,
           parentAuthorization
         );
       }

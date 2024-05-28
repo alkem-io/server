@@ -8,10 +8,10 @@ import { IAgent } from './agent.interface';
 export class AgentAuthorizationService {
   constructor(private authorizationPolicyService: AuthorizationPolicyService) {}
 
-  async applyAuthorizationPolicy(
+  applyAuthorizationPolicy(
     agent: IAgent,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): Promise<IAgent> {
+  ): IAgent {
     agent.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         agent.authorization,

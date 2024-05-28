@@ -41,12 +41,17 @@ export class CalloutContributionAuthorizationService {
         {
           relations: {
             post: {
+              profile: true,
               comments: {
                 authorization: true,
               },
             },
-            whiteboard: true,
-            link: true,
+            whiteboard: {
+              profile: true,
+            },
+            link: {
+              profile: true,
+            },
           },
         }
       );
@@ -88,7 +93,7 @@ export class CalloutContributionAuthorizationService {
         );
     }
 
-    return this.contributionService.save(contribution);
+    return contribution;
   }
 
   private appendCredentialRules(

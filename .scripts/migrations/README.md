@@ -23,14 +23,14 @@ Run `./export_to_csv.sh`.
 The script will:
 
 - Enumerate all tables in the `alkemio` database
-- Export them to `csv` files with names the names of the tables into a `/tmp` folder in the `alkemio_dev_mariadb` container.
+- Export them to `csv` files with names the names of the tables into a `/tmp` folder in the `alkemio_dev_mysql` container.
 
 ### Import from CSV
 
 Run `./import_from_csv.sh`.
 The script will:
 
-- Lookup all files in a local `/tmp` folder in the `alkemio_dev_mariadb` container.
+- Lookup all files in a local `/tmp` folder in the `alkemio_dev_mysql` container.
 - Import the files into matching tables to the filenames.
 
 ### Compare SQL tables

@@ -10,10 +10,10 @@ import {
 import { IUser } from '@domain/community/user/user.interface';
 import { Application } from '@domain/community/application/application.entity';
 import { PreferenceSet } from '@domain/common/preference-set/preference.set.entity';
-import { Contributor } from '../contributor/contributor.entity';
+import { ContributorBase } from '../contributor/contributor.base.entity';
 
 @Entity()
-export class User extends Contributor implements IUser {
+export class User extends ContributorBase implements IUser {
   @Column({
     unique: true,
   })

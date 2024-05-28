@@ -7,47 +7,62 @@ export const getSession = async (
   opts: {
     authorization?: string;
     cookie?: string;
+    token?: string;
   }
 ): Promise<Session | never> => {
-  const { cookie, authorization } = opts;
+  const { cookie, authorization, token } = opts;
 
   if (cookie) {
-    return getFromCookie(kratosClient, cookie);
+    return getSessionFromCookie(kratosClient, cookie);
   }
 
   if (authorization) {
-    return getFromAuthorizationHeader(authorization);
+    return getSessionFromAuthorizationHeader(authorization);
+  }
+
+  if (token) {
+    return getSessionFromToken(token);
   }
 
   throw new Error('Authorization header or cookie not provided');
 };
 
-const getFromCookie = async (kratosClient: FrontendApi, cookie: string) => {
+const getSessionFromCookie = async (
+  kratosClient: FrontendApi,
+  cookie: string
+) => {
   try {
-    const { data } = await kratosClient.toSession({
-      cookie,
-    });
-    return data;
+    return (
+      await kratosClient.toSession({
+        cookie,
+      })
+    ).data;
   } catch (e: any) {
     throw new Error(e?.message);
   }
 };
-const getFromAuthorizationHeader = (authorizationHeader: string) => {
+const getSessionFromAuthorizationHeader = (authorizationHeader: string) => {
   const [, token] = authorizationHeader.split(' ');
 
   if (!token) {
-    throw new Error('Token not found');
+    throw new Error('Token not provided in Authorization header');
   }
 
-  let jwt;
+  return getSessionFromToken(token);
+};
+
+const getSessionFromToken = (token: string): Session | never => {
+  if (!token) {
+    throw new Error('Token is not a valid JWT token!');
+  }
+
+  let session: Session | null;
 
   try {
-    jwt = jwt_decode<KratosPayload>(token);
-  } catch (error) {
-    throw new Error('Bearer token is not a valid JWT token!');
+    session = jwt_decode<KratosPayload>(token).session;
+  } catch (error: any) {
+    throw new Error(error?.message ?? 'Token is not a valid JWT token!');
   }
-
-  const session = jwt.session;
 
   if (!session) {
     throw new Error('Kratos session not found in token');

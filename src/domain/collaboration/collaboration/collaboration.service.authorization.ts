@@ -1,6 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
@@ -8,7 +6,6 @@ import { EntityNotInitializedException } from '@common/exceptions/entity.not.ini
 import { LogContext } from '@common/enums/logging.context';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
-import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { CalloutAuthorizationService } from '@domain/collaboration/callout/callout.service.authorization';
 import { AuthorizationCredential } from '@common/enums';
@@ -42,17 +39,40 @@ export class CollaborationAuthorizationService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private timelineAuthorizationService: TimelineAuthorizationService,
     private calloutAuthorizationService: CalloutAuthorizationService,
-    private innovationFlowAuthorizationService: InnovationFlowAuthorizationService,
-    @InjectRepository(Collaboration)
-    private collaborationRepository: Repository<Collaboration>
+    private innovationFlowAuthorizationService: InnovationFlowAuthorizationService
   ) {}
 
   public async applyAuthorizationPolicy(
-    collaboration: ICollaboration,
+    collaborationInput: ICollaboration,
     parentAuthorization: IAuthorizationPolicy | undefined,
     communityPolicy: ICommunityPolicy,
     license: ILicense
   ): Promise<ICollaboration> {
+    const collaboration =
+      await this.collaborationService.getCollaborationOrFail(
+        collaborationInput.id,
+        {
+          relations: {
+            callouts: true,
+            innovationFlow: {
+              profile: true,
+            },
+            timeline: true,
+            relations: true,
+          },
+        }
+      );
+    if (
+      !collaboration.callouts ||
+      !collaboration.innovationFlow ||
+      !collaboration.timeline ||
+      !collaboration.relations
+    ) {
+      throw new RelationshipNotFoundException(
+        `Unable to load child entities for collaboration authorization:  ${collaboration.id}`,
+        LogContext.SPACES
+      );
+    }
     collaboration.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         collaboration.authorization,
@@ -74,37 +94,27 @@ export class CollaborationAuthorizationService {
       communityPolicy,
       license
     );
-    await this.collaborationRepository.save(collaboration);
-    return await this.propagateAuthorizationToChildEntities(
-      collaboration,
-      communityPolicy
-    );
+    const collaborationPropagated =
+      await this.propagateAuthorizationToChildEntities(
+        collaboration,
+        communityPolicy
+      );
+    return collaborationPropagated;
   }
 
-  public async propagateAuthorizationToChildEntities(
-    collaborationInput: ICollaboration,
+  private async propagateAuthorizationToChildEntities(
+    collaboration: ICollaboration,
     communityPolicy: ICommunityPolicy
   ): Promise<ICollaboration> {
-    const collaboration =
-      await this.collaborationService.getCollaborationOrFail(
-        collaborationInput.id,
-        {
-          relations: {
-            callouts: true,
-            innovationFlow: true,
-            timeline: true,
-            relations: true,
-          },
-        }
-      );
     if (
       !collaboration.callouts ||
       !collaboration.innovationFlow ||
+      !collaboration.innovationFlow.profile ||
       !collaboration.timeline ||
       !collaboration.relations
     ) {
       throw new RelationshipNotFoundException(
-        `Unable to load child entities for collaboration authorization:  ${collaboration.id}`,
+        `Unable to load child entities for collaboration authorization children:  ${collaboration.id}`,
         LogContext.SPACES
       );
     }
@@ -153,7 +163,7 @@ export class CollaborationAuthorizationService {
         collaboration.authorization
       );
 
-    return await this.collaborationService.save(collaboration);
+    return collaboration;
   }
 
   private getContributorCredentials(

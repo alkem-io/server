@@ -11,11 +11,11 @@ import { UserGroup } from '@domain/community/user-group/user-group.entity';
 import { IOrganization } from './organization.interface';
 import { OrganizationVerification } from '../organization-verification/organization.verification.entity';
 import { PreferenceSet } from '@domain/common/preference-set';
-import { Contributor } from '../contributor/contributor.entity';
+import { ContributorBase } from '../contributor/contributor.base.entity';
 
 @Entity()
 export class Organization
-  extends Contributor
+  extends ContributorBase
   implements IOrganization, IGroupable
 {
   @Column({

@@ -90,6 +90,8 @@ export class KonfigService {
           ?.innovationLibrary,
         foundation: this.configService.get(ConfigurationTypes.PLATFORM)
           ?.foundation,
+        contactsupport: this.configService.get(ConfigurationTypes.PLATFORM)
+          ?.contactsupport,
         opensource: this.configService.get(ConfigurationTypes.PLATFORM)
           ?.opensource,
         releases: this.configService.get(ConfigurationTypes.PLATFORM)?.releases,

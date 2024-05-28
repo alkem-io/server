@@ -1,5 +1,7 @@
 export const CREDENTIAL_RULE_TYPES_ACCOUNT_AUTHORIZATION_RESET =
   'credentialRuleTypes-accountAuthorizationReset';
+export const CREDENTIAL_RULE_TYPES_ACCOUNT_DELETE =
+  'credentialRuleTypes-accountDelete';
 export const CREDENTIAL_RULE_TYPES_SPACE_GLOBAL_ADMIN_COMMUNITY_READ =
   'credentialRuleTypes-spaceGlobalAdminCommunityRead';
 export const CREDENTIAL_RULE_TYPES_SPACE_PLATFORM_SETTINGS =
@@ -54,6 +56,10 @@ export const CREDENTIAL_RULE_TYPES_PLATFORM_CREATE_ORG_FILE_UPLOAD =
   'credentialRuleTypes-platformCreateOrgFileUpload';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_ANY_ADMIN =
   'credentialRuleTypes-platformAnyAdmin';
+export const CREDENTIAL_RULE_PLATFORM_CREATE_ORGANIZATION =
+  'credentialRuleTypes-platformCreateOrganization';
+export const CREDENTIAL_RULE_PLATFORM_CREATE_SPACE =
+  'credentialRuleTypes-platformCreateSpace';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_GUIDANCE =
   'credentialRuleTypes-platformAccessGuidance';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_DASHBOARD =

@@ -89,11 +89,10 @@ export class VirtualContributorAuthorizationService {
         virtual.authorization
       );
 
-    virtual.agent =
-      await this.agentAuthorizationService.applyAuthorizationPolicy(
-        virtual.agent,
-        virtual.authorization
-      );
+    virtual.agent = this.agentAuthorizationService.applyAuthorizationPolicy(
+      virtual.agent,
+      virtual.authorization
+    );
 
     return await this.virtualRepository.save(virtual);
   }

@@ -1,8 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { CommunityService } from './community.service';
-import { Community, ICommunity } from '@domain/community/community';
+import { ICommunity } from '@domain/community/community';
 import {
   AuthorizationCredential,
   AuthorizationPrivilege,
@@ -46,9 +44,7 @@ export class CommunityAuthorizationService {
     private invitationAuthorizationService: InvitationAuthorizationService,
     private communityPolicyService: CommunityPolicyService,
     private invitationExternalAuthorizationService: InvitationExternalAuthorizationService,
-    private communityGuidelinesAuthorizationService: CommunityGuidelinesAuthorizationService,
-    @InjectRepository(Community)
-    private communityRepository: Repository<Community>
+    private communityGuidelinesAuthorizationService: CommunityGuidelinesAuthorizationService
   ) {}
 
   async applyAuthorizationPolicy(
@@ -69,7 +65,9 @@ export class CommunityAuthorizationService {
           applications: true,
           invitations: true,
           externalInvitations: true,
-          guidelines: true,
+          guidelines: {
+            profile: true,
+          },
         },
       }
     );
@@ -157,7 +155,7 @@ export class CommunityAuthorizationService {
         );
     }
 
-    return await this.communityRepository.save(community);
+    return await this.communityService.save(community);
   }
 
   private async extendAuthorizationPolicy(

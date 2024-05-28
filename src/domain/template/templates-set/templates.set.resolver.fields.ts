@@ -10,6 +10,7 @@ import { TemplatesSet } from './templates.set.entity';
 import { IWhiteboardTemplate } from '../whiteboard-template/whiteboard.template.interface';
 import { IInnovationFlowTemplate } from '../innovation-flow-template/innovation.flow.template.interface';
 import { ICalloutTemplate } from '../callout-template/callout.template.interface';
+import { ICommunityGuidelinesTemplate } from '@domain/template/community-guidelines-template/community.guidelines.template.interface';
 
 @Resolver(() => ITemplatesSet)
 export class TemplatesSetResolverFields {
@@ -25,6 +26,18 @@ export class TemplatesSetResolverFields {
     @Parent() templatesSet: ITemplatesSet
   ): Promise<ICalloutTemplate[]> {
     return this.templatesSetService.getCalloutTemplates(templatesSet);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField('calloutTemplatesCount', () => Float, {
+    nullable: false,
+    description: 'The total number of CalloutTemplates in this TemplatesSet.',
+  })
+  @Profiling.api
+  calloutTemplatesCount(
+    @Parent() templatesSet: ITemplatesSet
+  ): Promise<number> {
+    return this.templatesSetService.getCalloutTemplatesCount(templatesSet.id);
   }
 
   @UseGuards(GraphqlGuard)
@@ -161,6 +174,65 @@ export class TemplatesSetResolverFields {
   ): Promise<IInnovationFlowTemplate> {
     return this.templatesSetService.getInnovationFlowTemplate(
       ID,
+      templatesSet.id
+    );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField(
+    'communityGuidelinesTemplate',
+    () => ICommunityGuidelinesTemplate,
+    {
+      nullable: true,
+      description: 'A single CommunityGuidelinesTemplate',
+    }
+  )
+  @Profiling.api
+  public communityGuidelinesTemplate(
+    @Parent() templatesSet: TemplatesSet,
+    @Args({
+      name: 'ID',
+      nullable: false,
+      type: () => UUID,
+      description: 'The ID of the Template',
+    })
+    ID: string
+  ): Promise<ICommunityGuidelinesTemplate> {
+    return this.templatesSetService.getCommunityGuidelinesTemplate(
+      ID,
+      templatesSet.id
+    );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField(
+    'communityGuidelinesTemplates',
+    () => [ICommunityGuidelinesTemplate],
+    {
+      nullable: false,
+      description: 'The CommunityGuidelines in this TemplatesSet.',
+    }
+  )
+  @Profiling.api
+  async communityGuidelinesTemplates(
+    @Parent() templatesSet: ITemplatesSet
+  ): Promise<ICommunityGuidelinesTemplate[]> {
+    return this.templatesSetService.getCommunityGuidelinesTemplates(
+      templatesSet
+    );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField('communityGuidelinesTemplatesCount', () => Float, {
+    nullable: false,
+    description:
+      'The total number of CommunityGuidelinesTemplates in this TemplatesSet.',
+  })
+  @Profiling.api
+  async communityGuidelinesTemplatesCount(
+    @Parent() templatesSet: ITemplatesSet
+  ): Promise<number> {
+    return this.templatesSetService.getCommunityGuidelinesTemplatesCount(
       templatesSet.id
     );
   }

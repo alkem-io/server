@@ -60,7 +60,7 @@ export class StorageBucketResolverMutations {
         document,
         storageBucket.authorization
       );
-
+    await this.documentService.saveDocument(documentAuthorized);
     return this.documentService.getPubliclyAccessibleURL(documentAuthorized);
   }
 
