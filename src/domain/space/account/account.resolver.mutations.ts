@@ -59,8 +59,9 @@ export class AccountResolverMutations {
       agentInfo
     );
 
-    const accountUpdated =
-      await this.accountAuthorizationService.applyAuthorizationPolicy(account);
+    const accountUpdated = await this.accountAuthorizationService
+      .applyAuthorizationPolicy(account)
+      .then(account => this.accountService.save(account));
     const space = await this.accountService.getRootSpace(accountUpdated);
 
     await this.namingReporter.createOrUpdateName(
@@ -127,15 +128,15 @@ export class AccountResolverMutations {
     const account = await this.accountService.getAccountOrFail(
       authorizationResetData.accountID
     );
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       account.authorization,
       AuthorizationPrivilege.UPDATE, // todo: replace with AUTHORIZATION_RESET once that has been granted
       `reset authorization definition on Space: ${agentInfo.email}`
     );
-    return await this.accountAuthorizationService.applyAuthorizationPolicy(
-      account
-    );
+    return this.accountAuthorizationService
+      .applyAuthorizationPolicy(account)
+      .then(account => this.accountService.save(account));
   }
 
   @UseGuards(GraphqlGuard)

@@ -112,7 +112,7 @@ export class AccountAuthorizationService {
         spaceAuthorization
       );
 
-    return await this.accountService.save(account);
+    return account;
   }
 
   private extendAuthorizationPolicy(
