@@ -1,5 +1,7 @@
 export const CREDENTIAL_RULE_TYPES_ACCOUNT_AUTHORIZATION_RESET =
   'credentialRuleTypes-accountAuthorizationReset';
+export const CREDENTIAL_RULE_TYPES_ACCOUNT_DELETE =
+  'credentialRuleTypes-accountDelete';
 export const CREDENTIAL_RULE_TYPES_SPACE_GLOBAL_ADMIN_COMMUNITY_READ =
   'credentialRuleTypes-spaceGlobalAdminCommunityRead';
 export const CREDENTIAL_RULE_TYPES_SPACE_PLATFORM_SETTINGS =

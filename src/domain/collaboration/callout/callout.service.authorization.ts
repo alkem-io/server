@@ -1,10 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CalloutService } from './callout.service';
-import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import {
   LogContext,
@@ -34,9 +31,7 @@ export class CalloutAuthorizationService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private contributionAuthorizationService: CalloutContributionAuthorizationService,
     private calloutFramingAuthorizationService: CalloutFramingAuthorizationService,
-    private roomAuthorizationService: RoomAuthorizationService,
-    @InjectRepository(Callout)
-    private calloutRepository: Repository<Callout>
+    private roomAuthorizationService: RoomAuthorizationService
   ) {}
 
   public async applyAuthorizationPolicy(
@@ -52,7 +47,12 @@ export class CalloutAuthorizationService {
           contributions: true,
           contributionDefaults: true,
           contributionPolicy: true,
-          framing: true,
+          framing: {
+            profile: true,
+            whiteboard: {
+              profile: true,
+            },
+          },
         },
       }
     );
@@ -60,10 +60,11 @@ export class CalloutAuthorizationService {
     if (
       !callout.contributions ||
       !callout.contributionDefaults ||
-      !callout.contributionPolicy
+      !callout.contributionPolicy ||
+      !callout.framing
     ) {
       throw new EntityNotInitializedException(
-        `authorization: Unable to load callout: ${callout.id}`,
+        `authorization: Unable to load callout entities for auth reset: ${callout.id}`,
         LogContext.COLLABORATION
       );
     }
@@ -100,11 +101,10 @@ export class CalloutAuthorizationService {
       );
 
     if (callout.comments) {
-      callout.comments =
-        await this.roomAuthorizationService.applyAuthorizationPolicy(
-          callout.comments,
-          callout.authorization
-        );
+      callout.comments = this.roomAuthorizationService.applyAuthorizationPolicy(
+        callout.comments,
+        callout.authorization
+      );
       callout.comments.authorization =
         this.roomAuthorizationService.allowContributorsToCreateMessages(
           callout.comments.authorization
@@ -115,7 +115,7 @@ export class CalloutAuthorizationService {
         );
     }
 
-    return await this.calloutRepository.save(callout);
+    return callout;
   }
 
   private appendCredentialRules(callout: ICallout): IAuthorizationPolicy {

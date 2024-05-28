@@ -313,7 +313,8 @@ export class NotificationAdapter {
       await this.notificationPayloadBuilder.buildInvitationCreatedNotificationPayload(
         eventData.triggeredBy,
         eventData.invitedUser,
-        eventData.community
+        eventData.community,
+        eventData.welcomeMessage
       );
 
     this.notificationsClient.emit<number>(event, payload);

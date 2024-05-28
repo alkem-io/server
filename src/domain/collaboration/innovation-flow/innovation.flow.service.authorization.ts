@@ -10,6 +10,7 @@ import { EntityNotInitializedException } from '@common/exceptions/entity.not.ini
 import { IAuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege.interface';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { PRIVILEGE_RULE_TYPES_INNOVATION_FLOW_UPDATE } from '@common/constants/authorization/policy.rule.constants';
+import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 
 @Injectable()
 export class InnovationFlowAuthorizationService {
@@ -23,6 +24,12 @@ export class InnovationFlowAuthorizationService {
     innovationFlow: IInnovationFlow,
     parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<IInnovationFlow> {
+    if (!innovationFlow.profile) {
+      throw new RelationshipNotFoundException(
+        `Unable to load entities on auth reset for innovationFlow ${innovationFlow.id} `,
+        LogContext.INNOVATION_FLOW
+      );
+    }
     // Ensure always applying from a clean state
     innovationFlow.authorization = this.authorizationPolicyService.reset(
       innovationFlow.authorization
@@ -43,7 +50,7 @@ export class InnovationFlowAuthorizationService {
     const innovationFlowPropagated =
       await this.propagateAuthorizationToChildEntities(innovationFlow);
 
-    return await this.innovationFlowService.save(innovationFlowPropagated);
+    return innovationFlowPropagated;
   }
 
   private appendCredentialRules(
@@ -95,9 +102,6 @@ export class InnovationFlowAuthorizationService {
   private async propagateAuthorizationToChildEntities(
     innovationFlow: IInnovationFlow
   ): Promise<IInnovationFlow> {
-    innovationFlow.profile = await this.innovationFlowService.getProfile(
-      innovationFlow
-    );
     innovationFlow.profile =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
         innovationFlow.profile,

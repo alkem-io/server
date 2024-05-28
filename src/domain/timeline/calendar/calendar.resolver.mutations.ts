@@ -9,12 +9,14 @@ import { CalendarService } from './calendar.service';
 import { ICalendarEvent } from '../event/event.interface';
 import { CalendarEventAuthorizationService } from '../event/event.service.authorization';
 import { CreateCalendarEventOnCalendarInput } from './dto/calendar.dto.create.event';
+import { CalendarEventService } from '../event/event.service';
 
 @Resolver()
 export class CalendarResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
     private calendarService: CalendarService,
+    private calendarEventService: CalendarEventService,
     private calendarEventAuthorizationService: CalendarEventAuthorizationService
   ) {}
 
@@ -49,6 +51,7 @@ export class CalendarResolverMutations {
         calendar.authorization
       );
 
+    await this.calendarEventService.save(calendarEventAuthorized);
     await this.calendarService.processActivityCalendarEventCreated(
       calendar,
       calendarEventAuthorized,

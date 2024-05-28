@@ -1,9 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { StorageBucket } from './storage.bucket.entity';
-import { StorageBucketService } from './storage.bucket.service';
 import { IStorageBucket } from './storage.bucket.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { DocumentAuthorizationService } from '../document/document.service.authorization';
@@ -21,27 +17,13 @@ import { RelationshipNotFoundException } from '@common/exceptions/relationship.n
 export class StorageBucketAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
-    private documentAuthorizationService: DocumentAuthorizationService,
-    private storageBucketService: StorageBucketService,
-    @InjectRepository(StorageBucket)
-    private storageRepository: Repository<StorageBucket>
+    private documentAuthorizationService: DocumentAuthorizationService
   ) {}
 
-  async applyAuthorizationPolicy(
-    storageBucketInput: IStorageBucket,
+  applyAuthorizationPolicy(
+    storageBucket: IStorageBucket,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): Promise<IStorageBucket> {
-    const storageBucket =
-      await this.storageBucketService.getStorageBucketOrFail(
-        storageBucketInput.id,
-        {
-          relations: {
-            documents: {
-              tagset: true,
-            },
-          },
-        }
-      );
+  ): IStorageBucket {
     if (!storageBucket.documents) {
       throw new RelationshipNotFoundException(
         `Unable to load entities to reset auth for StorageBucket ${storageBucket.id} `,
@@ -65,17 +47,16 @@ export class StorageBucketAuthorizationService {
     // Cascade down
     const updatedDocuments: IDocument[] = [];
     for (const document of storageBucket.documents) {
-      document.authorization = (
-        await this.documentAuthorizationService.applyAuthorizationPolicy(
+      document.authorization =
+        this.documentAuthorizationService.applyAuthorizationPolicy(
           document,
           storageBucket.authorization
-        )
-      ).authorization;
+        ).authorization;
       updatedDocuments.push(document);
     }
     storageBucket.documents = updatedDocuments;
 
-    return await this.storageRepository.save(storageBucket);
+    return storageBucket;
   }
 
   private appendPrivilegeRules(
