@@ -1,4 +1,4 @@
-import { Entity, JoinColumn, OneToOne } from 'typeorm';
+import { Entity, JoinColumn, OneToMany, OneToOne } from 'typeorm';
 import { IAccount } from '@domain/space/account/account.interface';
 import { TemplatesSet } from '@domain/template/templates-set/templates.set.entity';
 import { License } from '@domain/license/license/license.entity';
@@ -6,6 +6,7 @@ import { SpaceDefaults } from '../space.defaults/space.defaults.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { Space } from '../space/space.entity';
 import { Agent } from '@domain/agent/agent/agent.entity';
+import { VirtualContributor } from '@domain/community/virtual-contributor';
 @Entity()
 export class Account extends AuthorizableEntity implements IAccount {
   @OneToOne(() => Agent, { eager: false, cascade: true, onDelete: 'SET NULL' })
@@ -43,4 +44,10 @@ export class Account extends AuthorizableEntity implements IAccount {
   })
   @JoinColumn()
   defaults?: SpaceDefaults;
+
+  @OneToMany(() => VirtualContributor, contributor => contributor.account, {
+    eager: false,
+    cascade: true,
+  })
+  virtualContributors!: VirtualContributor[];
 }

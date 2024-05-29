@@ -18,6 +18,7 @@ import { InnovationFlowTemplateModule } from '@domain/template/innovation-flow-t
 import { AccountResolverQueries } from './account.resolver.queries';
 import { ContributorModule } from '@domain/community/contributor/contributor.module';
 import { LicensingModule } from '@platform/licensing/licensing.module';
+import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { LicensingModule } from '@platform/licensing/licensing.module';
     AuthorizationModule,
     AuthorizationPolicyModule,
     ContributorModule,
+    VirtualContributorModule,
     TemplatesSetModule,
     SpaceModule,
     SpaceDefaultsModule,
