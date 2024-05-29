@@ -12,16 +12,16 @@ export const getSession = async (
 ): Promise<Session | never> => {
   const { cookie, authorization, token } = opts;
 
-  if (cookie) {
-    return getSessionFromCookie(kratosClient, cookie);
+  if (token) {
+    return getSessionFromToken(token);
   }
 
   if (authorization) {
     return getSessionFromAuthorizationHeader(authorization);
   }
 
-  if (token) {
-    return getSessionFromToken(token);
+  if (cookie) {
+    return getSessionFromCookie(kratosClient, cookie);
   }
 
   throw new Error('Authorization header or cookie not provided');
@@ -53,7 +53,7 @@ const getSessionFromAuthorizationHeader = (authorizationHeader: string) => {
 
 const getSessionFromToken = (token: string): Session | never => {
   if (!token) {
-    throw new Error('Token is not a valid JWT token!');
+    throw new Error('Token an empty string!');
   }
 
   let session: Session | null;

@@ -74,6 +74,7 @@ import { AdminSearchIngestModule } from '@platform/admin/search/admin.search.ing
 import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
 import { EventBusModule } from '@services/infrastructure/event-bus/event.bus.module';
 import { WhiteboardIntegrationModule } from '@services/whiteboard-integration/whiteboard.integration.module';
+import { FileIntegrationModule } from '@services/file-integration';
 
 @Module({
   imports: [
@@ -262,6 +263,7 @@ import { WhiteboardIntegrationModule } from '@services/whiteboard-integration/wh
     ActivityFeedModule,
     EventBusModule,
     WhiteboardIntegrationModule,
+    FileIntegrationModule,
   ],
   controllers: [AppController, SsiCredentialFlowController],
   providers: [
