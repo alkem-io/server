@@ -1,4 +1,5 @@
 import { Credential } from '@domain/agent';
+import { randomUUID } from 'crypto';
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
 export class licensePlanAssignment1716831433146 implements MigrationInterface {
@@ -32,6 +33,35 @@ export class licensePlanAssignment1716831433146 implements MigrationInterface {
     await queryRunner.query(
       `UPDATE licensing SET basePlanId = '${basePlan.id}'`
     );
+
+    // Create a free plan credential for every existing space
+    const accounts: {
+      id: string;
+      agentId: string;
+    }[] = await queryRunner.query(
+      `SELECT \`id\`, \`agentId\` FROM \`account\``
+    );
+
+    for (const { id: accountId, agentId } of accounts) {
+      await queryRunner.query(
+        `INSERT INTO \`credential\`
+        (\`id\`, \`createdDate\`, \`updatedDate\`, \`version\`, \`resourceID\`, \`type\`, \`agentId\`, \`issuer\`, \`expires\`)
+        VALUES
+        (?, ?, ?, ?, ?, ?, ?, ?, ?);
+      `,
+        [
+          randomUUID(), // id
+          new Date(), // createdDate
+          new Date(), // updatedDate
+          1, // version
+          accountId, // resourceID
+          LicenseCredential.SPACE_FREE, // type
+          agentId, // agentId
+          null, // issuer
+          null, // expires
+        ]
+      );
+    }
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {}
