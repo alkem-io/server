@@ -1,6 +1,6 @@
 import { UUID } from '@domain/common/scalars';
 import { Args, Query, Resolver } from '@nestjs/graphql';
-import { CurrentUser, Profiling } from '@src/common/decorators';
+import { CurrentUser } from '@src/common/decorators';
 import { IVirtualPersona } from './virtual.persona.interface';
 import { VirtualPersonaService } from './virtual.persona.service';
 import { UseGuards } from '@nestjs/common';
@@ -17,7 +17,6 @@ export class VirtualPersonaResolverQueries {
     nullable: false,
     description: 'The VirtualPersonas on this platform',
   })
-  @Profiling.api
   async virtualPersonas(): Promise<IVirtualPersona[]> {
     return await this.virtualPersonaService.getVirtualPersonas();
   }
@@ -26,7 +25,6 @@ export class VirtualPersonaResolverQueries {
     nullable: false,
     description: 'A particular VirtualPersona',
   })
-  @Profiling.api
   async virtualPersona(
     @Args('ID', { type: () => UUID, nullable: false }) id: string
   ): Promise<IVirtualPersona> {
@@ -42,6 +40,6 @@ export class VirtualPersonaResolverQueries {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('chatData') chatData: VirtualPersonaQuestionInput
   ): Promise<IVirtualPersonaQuestionResult> {
-    return this.virtualPersonaService.askQuestion(chatData, agentInfo, '');
+    return this.virtualPersonaService.askQuestion(chatData, agentInfo, '', '');
   }
 }

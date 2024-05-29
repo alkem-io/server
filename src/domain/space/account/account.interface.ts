@@ -5,6 +5,7 @@ import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { ISpaceDefaults } from '../space.defaults/space.defaults.interface';
 import { ISpace } from '../space/space.interface';
 import { IAgent } from '@domain/agent/agent/agent.interface';
+import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 
 @ObjectType('Account')
 export class IAccount extends IAuthorizable {
@@ -13,4 +14,5 @@ export class IAccount extends IAuthorizable {
   library?: ITemplatesSet;
   defaults?: ISpaceDefaults;
   license?: ILicense;
+  virtualContributors!: IVirtualContributor[];
 }

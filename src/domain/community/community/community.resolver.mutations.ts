@@ -231,12 +231,18 @@ export class CommunityResolverMutations {
     // reset the user authorization policy so that their profile is visible to other community members
     let virtual =
       await this.virtualContributorService.getVirtualContributorOrFail(
-        roleData.virtualContributorID
+        roleData.virtualContributorID,
+        {
+          relations: {
+            account: true,
+          },
+        }
       );
 
     virtual =
       await this.virtualContributorAuthorizationService.applyAuthorizationPolicy(
-        virtual
+        virtual,
+        virtual.account.authorization
       );
     virtual = await this.virtualContributorService.save(virtual);
 
@@ -246,7 +252,7 @@ export class CommunityResolverMutations {
     // won't execute a command unless a command handler is defined within the application
     // we want to have an external handler so for now events will do
     this.eventBus.publish(
-      new IngestSpace(spaceID, SpaceIngestionPurpose.Knowledge)
+      new IngestSpace(spaceID, SpaceIngestionPurpose.Context)
     );
 
     return virtual;
@@ -349,11 +355,17 @@ export class CommunityResolverMutations {
     // to other community members
     let virtual =
       await this.virtualContributorService.getVirtualContributorOrFail(
-        roleData.virtualContributorID
+        roleData.virtualContributorID,
+        {
+          relations: {
+            account: true,
+          },
+        }
       );
     virtual =
       await this.virtualContributorAuthorizationService.applyAuthorizationPolicy(
-        virtual
+        virtual,
+        virtual.account.authorization
       );
     return await this.virtualContributorService.save(virtual);
   }
@@ -542,6 +554,7 @@ export class CommunityResolverMutations {
       triggeredBy: agentInfo.userID,
       community: community,
       invitedUser: invitedUser.id,
+      welcomeMessage,
     };
 
     await this.notificationAdapter.invitationCreated(notificationInput);

@@ -18,6 +18,7 @@ import { SpaceAuthorizationService } from '../space/space.service.authorization'
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
+  CREDENTIAL_RULE_ACCOUNT_CREATE_VIRTUAL_CONTRIBUTOR,
   CREDENTIAL_RULE_TYPES_ACCOUNT_AUTHORIZATION_RESET,
   CREDENTIAL_RULE_TYPES_ACCOUNT_DELETE,
   CREDENTIAL_RULE_TYPES_SPACE_AUTHORIZATION_GLOBAL_ADMIN_GRANT,
@@ -25,6 +26,8 @@ import {
   CREDENTIAL_RULE_TYPES_SPACE_READ,
 } from '@common/constants/authorization/credential.rule.types.constants';
 import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
+import { IVirtualContributor } from '@domain/community/virtual-contributor';
+import { VirtualContributorAuthorizationService } from '@domain/community/virtual-contributor/virtual.contributor.service.authorization';
 
 @Injectable()
 export class AccountAuthorizationService {
@@ -35,6 +38,7 @@ export class AccountAuthorizationService {
     private licenseAuthorizationService: LicenseAuthorizationService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private spaceAuthorizationService: SpaceAuthorizationService,
+    private virtualContributorAuthorizationService: VirtualContributorAuthorizationService,
     private accountService: AccountService
   ) {}
 
@@ -50,6 +54,7 @@ export class AccountAuthorizationService {
           license: true,
           library: true,
           defaults: true,
+          virtualContributors: true,
         },
       }
     );
@@ -59,7 +64,8 @@ export class AccountAuthorizationService {
       !account.license ||
       !account.defaults ||
       !account.space ||
-      !account.space.profile
+      !account.space.profile ||
+      !account.virtualContributors
     )
       throw new RelationshipNotFoundException(
         `Unable to load Account with entities at start of auth reset: ${account.id} `,
@@ -111,6 +117,17 @@ export class AccountAuthorizationService {
         account.defaults.authorization,
         spaceAuthorization
       );
+
+    const updatedVCs: IVirtualContributor[] = [];
+    for (const vc of account.virtualContributors) {
+      const udpatedVC =
+        await this.virtualContributorAuthorizationService.applyAuthorizationPolicy(
+          vc,
+          account.authorization
+        );
+      updatedVCs.push(udpatedVC);
+    }
+    account.virtualContributors = updatedVCs;
 
     return account;
   }
@@ -170,6 +187,18 @@ export class AccountAuthorizationService {
         CREDENTIAL_RULE_TYPES_SPACE_READ
       );
     newRules.push(globalSpacesReader);
+
+    const createVC =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.CREATE_VIRTUAL_CONTRIBUTOR],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+        ],
+        CREDENTIAL_RULE_ACCOUNT_CREATE_VIRTUAL_CONTRIBUTOR
+      );
+    createVC.cascade = false;
+    newRules.push(createVC);
 
     // Allow User hosts to also Delete the Account. Note this does not for example allow
     const userHostsRule = this.authorizationPolicyService.createCredentialRule(
