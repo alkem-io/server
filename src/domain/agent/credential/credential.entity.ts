@@ -21,7 +21,7 @@ export class Credential extends BaseAlkemioEntity implements ICredential {
   @Column('char', { length: 36, nullable: true })
   issuer!: string;
 
-  @Column({ type: 'time' })
+  @Column({ type: 'datetime' })
   expires?: Date;
 
   constructor() {

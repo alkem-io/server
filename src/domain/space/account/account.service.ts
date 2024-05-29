@@ -103,10 +103,15 @@ export class AccountService {
       let expires: Date | undefined = undefined;
       if (licensePlan.trialEnabled) {
         const now = new Date();
-        const oneMonthFromNow = new Date(now);
-        oneMonthFromNow.setMonth(now.getMonth() + 1);
+        const oneMonthFromNow = new Date(
+          now.getFullYear(),
+          now.getMonth() + 1,
+          now.getDate(),
+          0,
+          0,
+          0
+        );
         expires = oneMonthFromNow;
-        expires = undefined; // TODO: remove this line when get time typing working!
       }
       account.agent = await this.agentService.grantCredential({
         agentID: account.agent.id,
