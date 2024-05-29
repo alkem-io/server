@@ -39,7 +39,7 @@ export class LicenseService {
 
     license.authorization = AuthorizationPolicy.create();
     // default to active space
-    license.visibility = SpaceVisibility.ACTIVE;
+    license.visibility = licenseInput.visibility || SpaceVisibility.ACTIVE;
 
     // Set the feature flags
     const whiteboardRtFeatureFlag: CreateFeatureFlagInput = {

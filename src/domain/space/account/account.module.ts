@@ -17,6 +17,7 @@ import { NameReporterModule } from '@services/external/elasticsearch/name-report
 import { InnovationFlowTemplateModule } from '@domain/template/innovation-flow-template/innovation.flow.template.module';
 import { AccountResolverQueries } from './account.resolver.queries';
 import { ContributorModule } from '@domain/community/contributor/contributor.module';
+import { LicensingModule } from '@platform/licensing/licensing.module';
 import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
 
 @Module({
@@ -32,6 +33,7 @@ import { VirtualContributorModule } from '@domain/community/virtual-contributor/
     PlatformAuthorizationPolicyModule,
     InnovationFlowTemplateModule,
     LicenseModule,
+    LicensingModule,
     NameReporterModule,
     TypeOrmModule.forFeature([Account]),
   ],

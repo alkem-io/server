@@ -1,4 +1,4 @@
-import { AuthorizationCredential } from '@common/enums';
+import { CredentialType } from '@common/enums/credential.type';
 import { IBaseAlkemio } from '@domain/common/entity/base-entity';
 import { UUID } from '@domain/common/scalars';
 import { Field, ObjectType } from '@nestjs/graphql';
@@ -8,7 +8,7 @@ export abstract class ICredential extends IBaseAlkemio {
   @Field(() => String)
   resourceID!: string;
 
-  @Field(() => AuthorizationCredential)
+  @Field(() => CredentialType)
   type!: string;
 
   @Field(() => UUID, {

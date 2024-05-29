@@ -6,7 +6,6 @@ import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import {
   AuthorizationAgentPrivilege,
   CurrentUser,
-  Profiling,
 } from '@src/common/decorators';
 import { AccountService } from '@domain/space/account/account.service';
 import { IAccount } from '@domain/space/account/account.interface';
@@ -27,6 +26,7 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IAgent } from '@domain/agent/agent/agent.interface';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
+import { IAccountSubscription } from './account.license.subscription.interface';
 
 @Resolver(() => IAccount)
 export class AccountResolverFields {
@@ -129,12 +129,19 @@ export class AccountResolverFields {
     nullable: false,
     description: 'The Authorization for this Account.',
   })
-  @Profiling.api
   async authorization(
     @Parent() account: Account,
     @Loader(AuthorizationLoaderCreator, { parentClassRef: Account })
     loader: ILoader<IAuthorizationPolicy>
   ) {
     return loader.load(account.id);
+  }
+
+  @ResolveField('subscriptions', () => [IAccountSubscription], {
+    nullable: false,
+    description: 'The subscriptions active for this Account.',
+  })
+  async subscriptions(@Parent() account: Account) {
+    return await this.accountService.getSubscriptions(account);
   }
 }
