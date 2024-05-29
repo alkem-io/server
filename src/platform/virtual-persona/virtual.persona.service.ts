@@ -17,12 +17,19 @@ import { VirtualPersonaEngineAdapterQueryInput } from '@services/adapters/virtua
 import { VirtualPersonaEngineAdapter } from '@services/adapters/virtual-persona-engine-adapter/virtual.persona.engine.adapter';
 import { VirtualContributorEngine } from '@common/enums/virtual.persona.engine';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { ProfileType } from '@common/enums';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { VisualType } from '@common/enums/visual.type';
+import { ProfileService } from '@domain/common/profile/profile.service';
+import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 
 @Injectable()
 export class VirtualPersonaService {
   constructor(
     private virtualPersonaEngineAdapter: VirtualPersonaEngineAdapter,
     private authorizationPolicyService: AuthorizationPolicyService,
+    private profileService: ProfileService,
+    private storageAggregatorService: StorageAggregatorService,
     @InjectRepository(VirtualPersona)
     private virtualPersonaRepository: Repository<VirtualPersona>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -33,7 +40,46 @@ export class VirtualPersonaService {
   ): Promise<IVirtualPersona> {
     const virtual: IVirtualPersona = VirtualPersona.create(virtualPersonaData);
     virtual.authorization = new AuthorizationPolicy();
-    return virtual;
+
+    // TODO: for now just create a new storage aggregator, to be looked at later where to manage
+    // and store the personas (and engine definitions)
+    const storageAggregator =
+      await this.storageAggregatorService.createStorageAggregator();
+
+    virtual.profile = await this.profileService.createProfile(
+      virtualPersonaData.profileData,
+      ProfileType.VIRTUAL_PERSONA,
+      storageAggregator
+    );
+    await this.profileService.addTagsetOnProfile(virtual.profile, {
+      name: TagsetReservedName.KEYWORDS,
+      tags: [],
+    });
+    await this.profileService.addTagsetOnProfile(virtual.profile, {
+      name: TagsetReservedName.CAPABILITIES,
+      tags: [],
+    });
+    // Set the visuals
+    let avatarURL = virtualPersonaData.profileData?.avatarURL;
+    if (!avatarURL) {
+      avatarURL = this.profileService.generateRandomAvatar(
+        virtual.profile.displayName,
+        ''
+      );
+    }
+    await this.profileService.addVisualOnProfile(
+      virtual.profile,
+      VisualType.AVATAR,
+      avatarURL
+    );
+
+    const savedVC = await this.virtualPersonaRepository.save(virtual);
+    this.logger.verbose?.(
+      `Created new virtual persona with id ${virtual.id}`,
+      LogContext.COMMUNITY
+    );
+
+    return savedVC;
   }
 
   async updateVirtualPersona(
