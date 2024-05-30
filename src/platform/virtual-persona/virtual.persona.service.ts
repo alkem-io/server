@@ -77,7 +77,7 @@ export class VirtualPersonaService {
     const savedVP = await this.virtualPersonaRepository.save(virtual);
     this.logger.verbose?.(
       `Created new virtual persona with id ${virtual.id}`,
-      LogContext.COMMUNITY
+      LogContext.PLATFORM
     );
 
     return savedVP;
@@ -122,7 +122,7 @@ export class VirtualPersonaService {
     if (!virtualPersona.authorization) {
       throw new EntityNotFoundException(
         `Unable to find all fields on Virtual Persona with ID: ${deleteData.ID}`,
-        LogContext.COMMUNITY
+        LogContext.PLATFORM
       );
     }
     await this.authorizationPolicyService.delete(virtualPersona.authorization);
@@ -153,7 +153,7 @@ export class VirtualPersonaService {
     if (!virtualPersona)
       throw new EntityNotFoundException(
         `Unable to find Virtual Persona with ID: ${virtualID}`,
-        LogContext.COMMUNITY
+        LogContext.PLATFORM
       );
     return virtualPersona;
   }
@@ -165,12 +165,12 @@ export class VirtualPersonaService {
     const virtualPersona = await this.virtualPersonaRepository.findOne({
       ...options,
       where: { ...options?.where, engine },
-      order: { createdDate: 'DESC' },
+      order: { createdDate: 'ASC' },
     });
     if (!virtualPersona)
       throw new EntityNotFoundException(
         `Unable to find Virtual Persona with engine: ${engine}`,
-        LogContext.COMMUNITY
+        LogContext.PLATFORM
       );
     return virtualPersona;
   }
