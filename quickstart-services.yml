@@ -271,7 +271,7 @@ services:
   whiteboard-collaboration:
     container_name: alkemio_dev_whiteboard_collaboration
     hostname: whiteboard-collaboration
-    image: alkemio/whiteboard-collaboration-service:v0.1.0
+    image: alkemio/whiteboard-collaboration-service:v0.2.1
     environment:
       - RABBITMQ_HOST
       - RABBITMQ_USER
@@ -284,6 +284,25 @@ services:
       - alkemio_dev_net
     ports:
       - 4002
+
+  file-service:
+    container_name: alkemio_dev_file_service
+    hostname: file-service
+    image: svetoslavpetkov23/file-service:0.0.4
+    environment:
+      - RABBITMQ_HOST
+      - RABBITMQ_USER
+      - RABBITMQ_PASSWORD
+      - LOGGING_CONSOLE_ENABLED
+      - LOGGING_LEVEL_CONSOLE
+      - ENVIRONMENT=dev
+    restart: always
+    volumes:
+      - ../server/.storage:/usr/src/app/.storage
+    networks:
+      - alkemio_dev_net
+    ports:
+      - 4003
 
   chromadb:
     image: chromadb/chroma:0.5.0
