@@ -116,15 +116,16 @@ export class RoomServiceEvents {
           question: question.message,
         };
 
-        const knowledgeSpaceId = await this.getSpaceNameId(
-          virtualContributor.bodyOfKnowledgeID
-        );
+        //toDo should not be needed, fix in https://app.zenhub.com/workspaces/alkemio-development-5ecb98b262ebd9f4aec4194c/issues/gh/alkem-io/virtual-contributor-ingest-space/5
+        // const knowledgeSpaceId = await this.getSpaceNameId(
+        //   virtualContributor.bodyOfKnowledgeID
+        // );
 
         const result = await this.virtualPersonaService.askQuestion(
           chatData,
           agentInfo,
-          knowledgeSpaceId,
-          spaceNameID
+          spaceNameID,
+          virtualContributor.bodyOfKnowledgeID
         );
 
         let answer = result.answer;

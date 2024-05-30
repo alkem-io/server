@@ -20,6 +20,7 @@ import {
   AccountLibraryLoaderCreator,
   AuthorizationLoaderCreator,
   AgentLoaderCreator,
+  AccountVirtualContributorsLoaderCreator,
 } from '@core/dataloader/creators/loader.creators';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -27,6 +28,10 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IAgent } from '@domain/agent/agent/agent.interface';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { IAccountSubscription } from './account.license.subscription.interface';
+import {
+  IVirtualContributor,
+  VirtualContributor,
+} from '@domain/community/virtual-contributor';
 
 @Resolver(() => IAccount)
 export class AccountResolverFields {
@@ -143,5 +148,19 @@ export class AccountResolverFields {
   })
   async subscriptions(@Parent() account: Account) {
     return await this.accountService.getSubscriptions(account);
+  }
+
+  @ResolveField('virtualContributors', () => [IVirtualContributor], {
+    nullable: false,
+    description: 'The virtual contributors for this Account.',
+  })
+  async virtualContributors(
+    @Parent() account: Account,
+    @Loader(AccountVirtualContributorsLoaderCreator, {
+      parentClassRef: Account,
+    })
+    loader: ILoader<VirtualContributor>
+  ) {
+    return loader.load(account.id);
   }
 }
