@@ -87,7 +87,7 @@ export class VirtualPersonaService {
   ): Promise<IVirtualPersona> {
     const virtualPersona = await this.getVirtualPersonaOrFail(
       virtualPersonaData.ID,
-      {}
+      { relations: { profile: true } }
     );
 
     if (virtualPersonaData.prompt !== undefined) {
@@ -96,6 +96,13 @@ export class VirtualPersonaService {
 
     if (virtualPersonaData.engine !== undefined) {
       virtualPersona.engine = virtualPersonaData.engine;
+    }
+
+    if (virtualPersonaData.profileData) {
+      virtualPersona.profile = await this.profileService.updateProfile(
+        virtualPersona.profile,
+        virtualPersonaData.profileData
+      );
     }
 
     return await this.virtualPersonaRepository.save(virtualPersona);
