@@ -1,6 +1,6 @@
 import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
 import { IVirtualPersona } from './virtual.persona.interface';
-import { VirtualContributorEngine } from '@common/enums/virtual.persona.engine';
+import { VirtualContributorEngine } from '@common/enums/virtual.contributor.engine';
 import { Platform } from '@platform/platfrom/platform.entity';
 import { VirtualPersonaAccessMode } from '@common/enums/virtual.persona.access.mode';
 import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
