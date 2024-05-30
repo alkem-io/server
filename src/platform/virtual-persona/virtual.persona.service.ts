@@ -74,13 +74,13 @@ export class VirtualPersonaService {
       avatarURL
     );
 
-    const savedVC = await this.virtualPersonaRepository.save(virtual);
+    const savedVP = await this.virtualPersonaRepository.save(virtual);
     this.logger.verbose?.(
       `Created new virtual persona with id ${virtual.id}`,
       LogContext.COMMUNITY
     );
 
-    return savedVC;
+    return savedVP;
   }
 
   async updateVirtualPersona(
