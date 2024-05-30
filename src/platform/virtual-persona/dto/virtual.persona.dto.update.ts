@@ -11,7 +11,7 @@ export class UpdateVirtualPersonaInput extends UpdateNameableInput {
   @MaxLength(SMALL_TEXT_LENGTH)
   engine!: VirtualContributorEngine;
 
-  @Field(() => JSON, { nullable: false })
+  @Field(() => JSON, { nullable: true })
   @MaxLength(LONG_TEXT_LENGTH)
   prompt!: string;
 }

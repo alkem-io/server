@@ -38,6 +38,7 @@ export class VirtualPersonaService {
   async createVirtualPersona(
     virtualPersonaData: CreateVirtualPersonaInput
   ): Promise<IVirtualPersona> {
+    if (virtualPersonaData.prompt === undefined) virtualPersonaData.prompt = '';
     const virtual: IVirtualPersona = VirtualPersona.create(virtualPersonaData);
     virtual.authorization = new AuthorizationPolicy();
 
