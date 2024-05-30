@@ -79,6 +79,7 @@ export class VirtualContributorService {
         virtualContributorData.virtualPersonaID
       );
     } else {
+      //toDo fix this: https://app.zenhub.com/workspaces/alkemio-development-5ecb98b262ebd9f4aec4194c/issues/gh/alkem-io/server/4010
       virtualPersona =
         await this.virtualPersonaService.getVirtualPersonaByEngineOrFail(
           VirtualContributorEngine.EXPERT
