@@ -20,6 +20,7 @@ export class IVirtualContributor
 
   communicationID!: string;
   @Field(() => IAccount, {
+    nullable: true,
     description: 'The account under which the virtual contributor was created',
   })
   account!: IAccount;
