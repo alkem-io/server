@@ -132,7 +132,7 @@ export class VirtualPersonaService {
     return result;
   }
 
-  async getVirtualPersona(
+  public async getVirtualPersona(
     virtualPersonaID: string,
     options?: FindOneOptions<VirtualPersona>
   ): Promise<IVirtualPersona | null> {
@@ -144,7 +144,7 @@ export class VirtualPersonaService {
     return virtualPersona;
   }
 
-  async getVirtualPersonaOrFail(
+  public async getVirtualPersonaOrFail(
     virtualID: string,
     options?: FindOneOptions<VirtualPersona>
   ): Promise<IVirtualPersona | never> {
@@ -152,6 +152,23 @@ export class VirtualPersonaService {
     if (!virtualPersona)
       throw new EntityNotFoundException(
         `Unable to find Virtual Persona with ID: ${virtualID}`,
+        LogContext.COMMUNITY
+      );
+    return virtualPersona;
+  }
+
+  public async getVirtualPersonaByEngineOrFail(
+    engine: VirtualContributorEngine,
+    options?: FindOneOptions<VirtualPersona>
+  ): Promise<IVirtualPersona | never> {
+    const virtualPersona = await this.virtualPersonaRepository.findOne({
+      ...options,
+      where: { ...options?.where, engine },
+      order: { createdDate: 'DESC' },
+    });
+    if (!virtualPersona)
+      throw new EntityNotFoundException(
+        `Unable to find Virtual Persona with engine: ${engine}`,
         LogContext.COMMUNITY
       );
     return virtualPersona;

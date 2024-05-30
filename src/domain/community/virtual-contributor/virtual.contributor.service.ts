@@ -32,6 +32,8 @@ import {
   SpaceIngestionPurpose,
 } from '@services/infrastructure/event-bus/commands';
 import { VirtualPersonaService } from '@platform/virtual-persona/virtual.persona.service';
+import { IVirtualPersona } from '@platform/virtual-persona';
+import { VirtualContributorEngine } from '@common/enums/virtual.contributor.engine';
 
 @Injectable()
 export class VirtualContributorService {
@@ -71,10 +73,18 @@ export class VirtualContributorService {
       virtualContributor.communicationID = communicationID;
     }
 
-    const virtualPersona =
-      await this.virtualPersonaService.getVirtualPersonaOrFail(
+    let virtualPersona: IVirtualPersona;
+    if (virtualContributorData.virtualPersonaID) {
+      virtualPersona = await this.virtualPersonaService.getVirtualPersonaOrFail(
         virtualContributorData.virtualPersonaID
       );
+    } else {
+      virtualPersona =
+        await this.virtualPersonaService.getVirtualPersonaByEngineOrFail(
+          VirtualContributorEngine.EXPERT
+        );
+    }
+
     virtualContributor.virtualPersona = virtualPersona;
 
     virtualContributor.storageAggregator =
