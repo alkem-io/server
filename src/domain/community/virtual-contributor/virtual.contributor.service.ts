@@ -32,6 +32,8 @@ import {
   SpaceIngestionPurpose,
 } from '@services/infrastructure/event-bus/commands';
 import { VirtualPersonaService } from '@platform/virtual-persona/virtual.persona.service';
+import { IVirtualPersona } from '@platform/virtual-persona';
+import { VirtualContributorEngine } from '@common/enums/virtual.contributor.engine';
 
 @Injectable()
 export class VirtualContributorService {
@@ -71,10 +73,19 @@ export class VirtualContributorService {
       virtualContributor.communicationID = communicationID;
     }
 
-    const virtualPersona =
-      await this.virtualPersonaService.getVirtualPersonaOrFail(
+    let virtualPersona: IVirtualPersona;
+    if (virtualContributorData.virtualPersonaID) {
+      virtualPersona = await this.virtualPersonaService.getVirtualPersonaOrFail(
         virtualContributorData.virtualPersonaID
       );
+    } else {
+      //toDo fix this: https://app.zenhub.com/workspaces/alkemio-development-5ecb98b262ebd9f4aec4194c/issues/gh/alkem-io/server/4010
+      virtualPersona =
+        await this.virtualPersonaService.getVirtualPersonaByEngineOrFail(
+          VirtualContributorEngine.EXPERT
+        );
+    }
+
     virtualContributor.virtualPersona = virtualPersona;
 
     virtualContributor.storageAggregator =
