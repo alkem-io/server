@@ -12,6 +12,12 @@ export class IVirtualPersona extends INameable {
   })
   engine!: VirtualContributorEngine;
 
+  @Field(() => String, {
+    nullable: false,
+    description: 'The prompt used by this Virtual Persona',
+  })
+  prompt!: string;
+
   @Field(() => VirtualPersonaAccessMode, {
     nullable: false,
     description: 'The required data access by the Virtual Persona',

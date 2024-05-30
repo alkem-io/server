@@ -11,9 +11,6 @@ export class updateVirtualPersona11716199897459 implements MigrationInterface {
       `DROP INDEX \`REL_a6a9c0a62d17b6737eeb90b790\` ON \`virtual_persona\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`virtual_persona\` DROP COLUMN \`prompt\``
-    );
-    await queryRunner.query(
       `ALTER TABLE \`virtual_persona\` DROP COLUMN \`storageAggregatorId\``
     );
     await queryRunner.query(
@@ -50,9 +47,6 @@ export class updateVirtualPersona11716199897459 implements MigrationInterface {
     );
     await queryRunner.query(
       `ALTER TABLE \`virtual_persona\` ADD \`storageAggregatorId\` char(36) NULL`
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`virtual_persona\` ADD \`prompt\` text NOT NULL`
     );
     await queryRunner.query(
       `CREATE UNIQUE INDEX \`REL_a6a9c0a62d17b6737eeb90b790\` ON \`virtual_persona\` (\`storageAggregatorId\`)`

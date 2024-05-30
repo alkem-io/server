@@ -90,7 +90,15 @@ export class VirtualPersonaService {
       {}
     );
 
-    return virtualPersona;
+    if (virtualPersonaData.prompt !== undefined) {
+      virtualPersona.prompt = virtualPersonaData.prompt;
+    }
+
+    if (virtualPersonaData.engine !== undefined) {
+      virtualPersona.engine = virtualPersonaData.engine;
+    }
+
+    return await this.virtualPersonaRepository.save(virtualPersona);
   }
 
   async deleteVirtualPersona(
@@ -164,7 +172,7 @@ export class VirtualPersonaService {
 
     const input: VirtualPersonaEngineAdapterQueryInput = {
       engine: virtualPersona.engine,
-      prompt: '',
+      prompt: virtualPersona.prompt,
       userId: agentInfo.userID,
       question: personaQuestionInput.question,
       knowledgeSpaceNameID,

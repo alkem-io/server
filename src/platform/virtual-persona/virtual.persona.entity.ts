@@ -16,6 +16,9 @@ export class VirtualPersona extends NameableEntity implements IVirtualPersona {
   @Column({ length: 128, nullable: false })
   engine!: VirtualContributorEngine;
 
+  @Column('text', { nullable: false })
+  prompt!: string;
+
   @Column({
     length: 64,
     nullable: false,
