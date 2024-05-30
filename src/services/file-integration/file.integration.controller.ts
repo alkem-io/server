@@ -8,20 +8,20 @@ import {
 } from '@nestjs/microservices';
 import { FileIntegrationService } from './file.integration.service';
 import { FileMessagePatternEnum } from './types/message.pattern';
-import { CanReadInputData } from './inputs';
-import { CanReadOutputData } from './outputs';
+import { FileInfoInputData } from './inputs';
+import { FileInfoOutputData } from './outputs';
 import { ack } from '../util';
 
 @Controller()
 export class FileIntegrationController {
   constructor(private readonly integrationService: FileIntegrationService) {}
 
-  @MessagePattern(FileMessagePatternEnum.CAN_READ, Transport.RMQ)
-  public canRead(
-    @Payload() data: CanReadInputData,
+  @MessagePattern(FileMessagePatternEnum.FILE_INFO, Transport.RMQ)
+  public fileInfo(
+    @Payload() data: FileInfoInputData,
     @Ctx() context: RmqContext
-  ): Promise<CanReadOutputData> {
+  ): Promise<FileInfoOutputData> {
     ack(context);
-    return this.integrationService.canRead(data);
+    return this.integrationService.fileInfo(data);
   }
 }

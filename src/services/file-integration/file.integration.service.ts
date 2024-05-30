@@ -6,8 +6,8 @@ import { STORAGE_SERVICE } from '@common/constants';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { IDocument } from '@domain/storage/document';
 import { AuthorizationPrivilege } from '@common/enums';
-import { CanReadInputData } from './inputs';
-import { CanReadOutputData, ReadOutputErrorCode } from './outputs';
+import { FileInfoInputData } from './inputs';
+import { FileInfoOutputData, ReadOutputErrorCode } from './outputs';
 
 @Injectable()
 export class FileIntegrationService {
@@ -18,25 +18,23 @@ export class FileIntegrationService {
     @Inject(STORAGE_SERVICE) private readonly storageService: StorageService
   ) {}
 
-  public async canRead(data: CanReadInputData): Promise<CanReadOutputData> {
+  public async fileInfo(data: FileInfoInputData): Promise<FileInfoOutputData> {
     const { docId, auth } = data;
 
     if (!docId) {
-      return new CanReadOutputData(
-        false,
-        undefined,
-        ReadOutputErrorCode.FILE_NOT_FOUND,
-        'Not document id provided'
-      );
+      return new FileInfoOutputData({
+        read: false,
+        errorCode: ReadOutputErrorCode.FILE_NOT_FOUND,
+        error: 'Not document id provided',
+      });
     }
 
     if (!auth.cookie && !auth.token) {
-      return new CanReadOutputData(
-        false,
-        undefined,
-        ReadOutputErrorCode.NO_AUTH_PROVIDED,
-        'No authentication data provided'
-      );
+      return new FileInfoOutputData({
+        read: false,
+        errorCode: ReadOutputErrorCode.NO_AUTH_PROVIDED,
+        error: 'No authentication data provided',
+      });
     }
 
     const requesterAgentInfo = await this.authenticationService.getAgentInfo(
@@ -44,12 +42,11 @@ export class FileIntegrationService {
     );
 
     if (!requesterAgentInfo.userID) {
-      return new CanReadOutputData(
-        false,
-        undefined,
-        ReadOutputErrorCode.USER_NOT_IDENTIFIED,
-        'User not identified'
-      );
+      return new FileInfoOutputData({
+        read: false,
+        errorCode: ReadOutputErrorCode.USER_NOT_IDENTIFIED,
+        error: 'User not identified',
+      });
     }
 
     let document: IDocument | undefined;
@@ -60,21 +57,20 @@ export class FileIntegrationService {
     }
 
     if (!document) {
-      return new CanReadOutputData(
-        false,
-        undefined,
-        ReadOutputErrorCode.DOCUMENT_NOT_FOUND,
-        'Document not found'
-      );
+      return new FileInfoOutputData({
+        read: false,
+        errorCode: ReadOutputErrorCode.DOCUMENT_NOT_FOUND,
+        error: 'Document not found',
+      });
     }
 
     if (!this.storageService.exists(document.externalID)) {
-      return new CanReadOutputData(
-        false,
-        undefined,
-        ReadOutputErrorCode.FILE_NOT_FOUND,
-        'The document has been found, but the associated file was not found'
-      );
+      return new FileInfoOutputData({
+        read: false,
+        errorCode: ReadOutputErrorCode.FILE_NOT_FOUND,
+        error:
+          'The document has been found, but the associated file was not found',
+      });
     }
 
     const canRequesterReadDocument = this.authorizationService.isAccessGranted(
@@ -84,14 +80,17 @@ export class FileIntegrationService {
     );
 
     if (!canRequesterReadDocument) {
-      return new CanReadOutputData(
-        false,
-        undefined,
-        ReadOutputErrorCode.NO_READ_ACCESS,
-        'Insufficient privileges to read the document'
-      );
+      return new FileInfoOutputData({
+        read: false,
+        errorCode: ReadOutputErrorCode.NO_READ_ACCESS,
+        error: 'Insufficient privileges to read the document',
+      });
     }
 
-    return new CanReadOutputData(true, document.externalID);
+    return new FileInfoOutputData({
+      read: canRequesterReadDocument,
+      fileName: document.externalID,
+      mimeType: document.mimeType,
+    });
   }
 }

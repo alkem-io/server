@@ -1,3 +1,3 @@
 export enum FileMessagePatternEnum {
-  CAN_READ = 'can-read',
+  FILE_INFO = 'file-info',
 }

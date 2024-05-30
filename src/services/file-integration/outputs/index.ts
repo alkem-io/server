@@ -1,1 +1,1 @@
-export * from './can.read.output.data';
+export * from './file.info.output.data';
