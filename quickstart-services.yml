@@ -296,9 +296,10 @@ services:
       - LOGGING_CONSOLE_ENABLED
       - LOGGING_LEVEL_CONSOLE
       - ENVIRONMENT=dev
+      - LOCAL_STORAGE_PATH=storage
     restart: always
     volumes:
-      - ../server/.storage:/usr/src/app/.storage
+      - ../server/.storage:/usr/src/app/storage
     networks:
       - alkemio_dev_net
     ports:
