@@ -1,4 +1,4 @@
-import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { AuthorizationPrivilege } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
 import { Account } from '@domain/space/account/account.entity';
 import { UseGuards } from '@nestjs/common';
@@ -28,7 +28,6 @@ import { IAgent } from '@domain/agent/agent/agent.interface';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { IAccountSubscription } from './account.license.subscription.interface';
 import { LicensingService } from '@platform/licensing/licensing.service';
-import { EntityNotFoundException } from '@common/exceptions';
 
 @Resolver(() => IAccount)
 export class AccountResolverFields {
@@ -153,9 +152,7 @@ export class AccountResolverFields {
       licensingFramework.id
     );
 
-    const activeSubscriptions = (
-      await this.accountService.getSubscriptions(account)
-    )
+    return (await this.accountService.getSubscriptions(account))
       .filter(
         subscription => !subscription.expires || subscription.expires > today
       )
@@ -168,15 +165,7 @@ export class AccountResolverFields {
         };
       })
       .filter(item => item.plan)
-      .sort((a, b) => b.plan!.sortOrder - a.plan!.sortOrder);
-
-    if (!activeSubscriptions[0]?.subscription) {
-      throw new EntityNotFoundException(
-        `Unable to find a subscription for account: ${account.id}`,
-        LogContext.ACCOUNT
-      );
-    }
-    return activeSubscriptions[0].subscription;
+      .sort((a, b) => b.plan!.sortOrder - a.plan!.sortOrder)?.[0].subscription;
   }
 
   @ResolveField('subscriptions', () => [IAccountSubscription], {
