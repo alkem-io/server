@@ -1,23 +1,21 @@
 import { FrontendApi, Session } from '@ory/kratos-client';
-import jwt_decode from 'jwt-decode';
-import { KratosPayload } from '@core/authentication/kratos.payload';
 
 export const getSession = async (
   kratosClient: FrontendApi,
   opts: {
     authorization?: string;
     cookie?: string;
-    token?: string;
+    apiToken?: string;
   }
 ): Promise<Session | never> => {
-  const { cookie, authorization, token } = opts;
+  const { cookie, authorization, apiToken } = opts;
 
-  if (token) {
-    return getSessionFromToken(token);
+  if (apiToken) {
+    return getSessionFromApiToken(kratosClient, apiToken);
   }
 
   if (authorization) {
-    return getSessionFromAuthorizationHeader(authorization);
+    return getSessionFromAuthorizationHeader(kratosClient, authorization);
   }
 
   if (cookie) {
@@ -41,31 +39,43 @@ const getSessionFromCookie = async (
     throw new Error(e?.message);
   }
 };
-const getSessionFromAuthorizationHeader = (authorizationHeader: string) => {
+const getSessionFromAuthorizationHeader = (
+  kratosClient: FrontendApi,
+  authorizationHeader: string
+) => {
   const [, token] = authorizationHeader.split(' ');
 
   if (!token) {
     throw new Error('Token not provided in Authorization header');
   }
 
-  return getSessionFromToken(token);
+  return getSessionFromApiToken(kratosClient, token);
 };
 
-const getSessionFromToken = (token: string): Session | never => {
-  if (!token) {
-    throw new Error('Token an empty string!');
+const getSessionFromApiToken = async (
+  kratosClient: FrontendApi,
+  apiToken: string
+): Promise<Session | never> => {
+  if (!apiToken) {
+    throw new Error('Token is an empty string');
   }
 
   let session: Session | null;
 
   try {
-    session = jwt_decode<KratosPayload>(token).session;
+    session = (
+      await kratosClient.toSession({
+        xSessionToken: apiToken,
+      })
+    ).data;
   } catch (error: any) {
-    throw new Error(error?.message ?? 'Token is not a valid JWT token!');
+    throw new Error(
+      error?.message ?? 'Could not extract session from api token'
+    );
   }
 
   if (!session) {
-    throw new Error('Kratos session not found in token');
+    throw new Error('Kratos session not found for api token');
   }
 
   return session;
