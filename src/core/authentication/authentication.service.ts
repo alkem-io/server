@@ -73,7 +73,7 @@ export class AuthenticationService {
   async getAgentInfo(opts: {
     cookie?: string;
     authorization?: string;
-    token?: string;
+    apiToken?: string;
   }) {
     try {
       const session = await getSession(this.kratosFrontEndClient, opts);

@@ -75,6 +75,7 @@ import { VirtualContributorModule } from '@domain/community/virtual-contributor/
 import { EventBusModule } from '@services/infrastructure/event-bus/event.bus.module';
 import { WhiteboardIntegrationModule } from '@services/whiteboard-integration/whiteboard.integration.module';
 import { PlatformSettingsModule } from '@platform/settings/platform.settings.module';
+import { FileIntegrationModule } from '@services/file-integration';
 
 @Module({
   imports: [
@@ -263,6 +264,7 @@ import { PlatformSettingsModule } from '@platform/settings/platform.settings.mod
     ActivityFeedModule,
     EventBusModule,
     WhiteboardIntegrationModule,
+    FileIntegrationModule,
     PlatformSettingsModule,
   ],
   controllers: [AppController, SsiCredentialFlowController],

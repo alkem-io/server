@@ -20,4 +20,5 @@ export enum MessagingQueue {
   SUBSCRIPTION_ROOM_EVENT = 'alkemio-subscriptions-room-event',
   //
   AUTH = 'auth',
+  FILES = 'alkemio-files',
 }

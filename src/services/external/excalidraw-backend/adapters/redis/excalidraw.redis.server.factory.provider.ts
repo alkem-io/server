@@ -57,7 +57,14 @@ const factory = async (
 
   const redisAdapterFactory = (() => {
     try {
-      const pubClient = createClient({ url: `redis://${host}:${port}` });
+      const pubClient = createClient({
+        url: `redis://${host}:${port}`,
+        max_attempts: 25,
+        socket_keepalive: true,
+        disable_resubscribing: false,
+        enable_offline_queue: true,
+        retry_unfulfilled_commands: true,
+      });
       const subClient = pubClient.duplicate();
       pubClient.on('error', (error: Error) =>
         logger.error(error.message, error.stack, LogContext.EXCALIDRAW_SERVER)

@@ -61,4 +61,5 @@ export enum LogContext {
   LICENSE = 'license',
   LOCAL_STORAGE = 'local-storage',
   INNOVATION_FLOW = 'innovation-flow',
+  FILE_INTEGRATION = 'file-integration',
 }
