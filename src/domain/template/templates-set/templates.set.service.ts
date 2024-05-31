@@ -81,6 +81,7 @@ export class TemplatesSetService {
         whiteboardTemplates: true,
         innovationFlowTemplates: true,
         communityGuidelinesTemplates: true,
+        calloutTemplates: true,
       },
     });
 
