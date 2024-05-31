@@ -15,14 +15,21 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { LogContext } from '@common/enums/logging.context';
 import { VirtualPersonaEngineAdapterQueryInput } from '@services/adapters/virtual-persona-engine-adapter/dto/virtual.persona.engine.adapter.dto.question.input';
 import { VirtualPersonaEngineAdapter } from '@services/adapters/virtual-persona-engine-adapter/virtual.persona.engine.adapter';
-import { VirtualContributorEngine } from '@common/enums/virtual.persona.engine';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { ProfileType } from '@common/enums';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { VisualType } from '@common/enums/visual.type';
+import { ProfileService } from '@domain/common/profile/profile.service';
+import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
+import { VirtualContributorEngine } from '@common/enums/virtual.contributor.engine';
 
 @Injectable()
 export class VirtualPersonaService {
   constructor(
     private virtualPersonaEngineAdapter: VirtualPersonaEngineAdapter,
     private authorizationPolicyService: AuthorizationPolicyService,
+    private profileService: ProfileService,
+    private storageAggregatorService: StorageAggregatorService,
     @InjectRepository(VirtualPersona)
     private virtualPersonaRepository: Repository<VirtualPersona>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -31,9 +38,49 @@ export class VirtualPersonaService {
   async createVirtualPersona(
     virtualPersonaData: CreateVirtualPersonaInput
   ): Promise<IVirtualPersona> {
+    if (virtualPersonaData.prompt === undefined) virtualPersonaData.prompt = '';
     const virtual: IVirtualPersona = VirtualPersona.create(virtualPersonaData);
     virtual.authorization = new AuthorizationPolicy();
-    return virtual;
+
+    // TODO: for now just create a new storage aggregator, to be looked at later where to manage
+    // and store the personas (and engine definitions)
+    const storageAggregator =
+      await this.storageAggregatorService.createStorageAggregator();
+
+    virtual.profile = await this.profileService.createProfile(
+      virtualPersonaData.profileData,
+      ProfileType.VIRTUAL_PERSONA,
+      storageAggregator
+    );
+    await this.profileService.addTagsetOnProfile(virtual.profile, {
+      name: TagsetReservedName.KEYWORDS,
+      tags: [],
+    });
+    await this.profileService.addTagsetOnProfile(virtual.profile, {
+      name: TagsetReservedName.CAPABILITIES,
+      tags: [],
+    });
+    // Set the visuals
+    let avatarURL = virtualPersonaData.profileData?.avatarURL;
+    if (!avatarURL) {
+      avatarURL = this.profileService.generateRandomAvatar(
+        virtual.profile.displayName,
+        ''
+      );
+    }
+    await this.profileService.addVisualOnProfile(
+      virtual.profile,
+      VisualType.AVATAR,
+      avatarURL
+    );
+
+    const savedVP = await this.virtualPersonaRepository.save(virtual);
+    this.logger.verbose?.(
+      `Created new virtual persona with id ${virtual.id}`,
+      LogContext.PLATFORM
+    );
+
+    return savedVP;
   }
 
   async updateVirtualPersona(
@@ -41,10 +88,25 @@ export class VirtualPersonaService {
   ): Promise<IVirtualPersona> {
     const virtualPersona = await this.getVirtualPersonaOrFail(
       virtualPersonaData.ID,
-      {}
+      { relations: { profile: true } }
     );
 
-    return virtualPersona;
+    if (virtualPersonaData.prompt !== undefined) {
+      virtualPersona.prompt = virtualPersonaData.prompt;
+    }
+
+    if (virtualPersonaData.engine !== undefined) {
+      virtualPersona.engine = virtualPersonaData.engine;
+    }
+
+    if (virtualPersonaData.profileData) {
+      virtualPersona.profile = await this.profileService.updateProfile(
+        virtualPersona.profile,
+        virtualPersonaData.profileData
+      );
+    }
+
+    return await this.virtualPersonaRepository.save(virtualPersona);
   }
 
   async deleteVirtualPersona(
@@ -60,7 +122,7 @@ export class VirtualPersonaService {
     if (!virtualPersona.authorization) {
       throw new EntityNotFoundException(
         `Unable to find all fields on Virtual Persona with ID: ${deleteData.ID}`,
-        LogContext.COMMUNITY
+        LogContext.PLATFORM
       );
     }
     await this.authorizationPolicyService.delete(virtualPersona.authorization);
@@ -71,7 +133,7 @@ export class VirtualPersonaService {
     return result;
   }
 
-  async getVirtualPersona(
+  public async getVirtualPersona(
     virtualPersonaID: string,
     options?: FindOneOptions<VirtualPersona>
   ): Promise<IVirtualPersona | null> {
@@ -83,7 +145,7 @@ export class VirtualPersonaService {
     return virtualPersona;
   }
 
-  async getVirtualPersonaOrFail(
+  public async getVirtualPersonaOrFail(
     virtualID: string,
     options?: FindOneOptions<VirtualPersona>
   ): Promise<IVirtualPersona | never> {
@@ -91,7 +153,24 @@ export class VirtualPersonaService {
     if (!virtualPersona)
       throw new EntityNotFoundException(
         `Unable to find Virtual Persona with ID: ${virtualID}`,
-        LogContext.COMMUNITY
+        LogContext.PLATFORM
+      );
+    return virtualPersona;
+  }
+
+  public async getVirtualPersonaByEngineOrFail(
+    engine: VirtualContributorEngine,
+    options?: FindOneOptions<VirtualPersona>
+  ): Promise<IVirtualPersona | never> {
+    const virtualPersona = await this.virtualPersonaRepository.findOne({
+      ...options,
+      where: { ...options?.where, engine },
+      order: { createdDate: 'ASC' },
+    });
+    if (!virtualPersona)
+      throw new EntityNotFoundException(
+        `Unable to find Virtual Persona with engine: ${engine}`,
+        LogContext.PLATFORM
       );
     return virtualPersona;
   }
@@ -118,7 +197,7 @@ export class VirtualPersonaService {
 
     const input: VirtualPersonaEngineAdapterQueryInput = {
       engine: virtualPersona.engine,
-      prompt: '',
+      prompt: virtualPersona.prompt,
       userId: agentInfo.userID,
       question: personaQuestionInput.question,
       knowledgeSpaceNameID,

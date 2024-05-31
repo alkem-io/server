@@ -9,12 +9,16 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
 import { VirtualPersona } from './virtual.persona.entity';
 import { VirtualPersonaResolverFields } from './virtual.persona.resolver.fields';
 import { VirtualPersonaEngineAdapterModule } from '@services/adapters/virtual-persona-engine-adapter/virtual.persona.engine.adapter.module';
+import { ProfileModule } from '@domain/common/profile/profile.module';
+import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
 
 @Module({
   imports: [
     AuthorizationPolicyModule,
     AuthorizationModule,
     VirtualPersonaEngineAdapterModule,
+    ProfileModule,
+    StorageAggregatorModule,
     TypeOrmModule.forFeature([VirtualPersona]),
   ],
   providers: [

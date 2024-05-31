@@ -140,10 +140,15 @@ export class PlatformResolverMutations {
       virtualPersonaData
     );
 
-    return await this.virtualPersonaAuthorizationService.applyAuthorizationPolicy(
-      virtual,
-      platformPolicy
-    );
+    const virtualWithAuth =
+      await this.virtualPersonaAuthorizationService.applyAuthorizationPolicy(
+        virtual,
+        platformPolicy
+      );
+
+    await this.virtualPersonaService.save(virtualWithAuth);
+
+    return virtualWithAuth;
   }
 
   private async notifyPlatformGlobalRoleChange(

@@ -4,6 +4,7 @@ import { IAccount } from '@domain/space/account/account.interface';
 import { BodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
 import { IContributor } from '../contributor/contributor.interface';
 import { IVirtualPersona } from '@platform/virtual-persona/virtual.persona.interface';
+import { UUID } from '@domain/common/scalars';
 
 @ObjectType('VirtualContributor', {
   implements: () => [IContributor],
@@ -19,6 +20,7 @@ export class IVirtualContributor
 
   communicationID!: string;
   @Field(() => IAccount, {
+    nullable: true,
     description: 'The account under which the virtual contributor was created',
   })
   account!: IAccount;
@@ -28,5 +30,10 @@ export class IVirtualContributor
     description: 'The body of knowledge type used for the Virtual Contributor',
   })
   bodyOfKnowledgeType!: BodyOfKnowledgeType;
+
+  @Field(() => UUID, {
+    nullable: false,
+    description: 'The body of knowledge ID used for the Virtual Contributor',
+  })
   bodyOfKnowledgeID!: string;
 }

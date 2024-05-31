@@ -407,7 +407,7 @@ export class AccountService {
         )
       ) {
         subscriptions.push({
-          name: credential.type,
+          name: credential.type as LicenseCredential,
           expires: credential.expires,
         });
       }

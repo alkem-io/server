@@ -18,13 +18,15 @@ import {
   CREDENTIAL_RULE_ORGANIZATION_SELF_REMOVAL,
 } from '@common/constants';
 import { IVirtualPersona } from './virtual.persona.interface';
+import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 
 @Injectable()
 export class VirtualPersonaAuthorizationService {
   constructor(
     private virtualPersonaService: VirtualPersonaService,
     private authorizationPolicy: AuthorizationPolicyService,
-    private authorizationPolicyService: AuthorizationPolicyService
+    private authorizationPolicyService: AuthorizationPolicyService,
+    private profileAuthorizationService: ProfileAuthorizationService
   ) {}
 
   async applyAuthorizationPolicy(
@@ -37,6 +39,7 @@ export class VirtualPersonaAuthorizationService {
         {
           relations: {
             authorization: true,
+            profile: true,
           },
         }
       );
@@ -58,6 +61,20 @@ export class VirtualPersonaAuthorizationService {
       virtualPersona.authorization,
       virtualPersona.id
     );
+
+    // NOTE: Clone the authorization policy to ensure the changes are local to profile
+    const clonedAnonymousReadAccessAuthorization =
+      this.authorizationPolicyService.cloneAuthorizationPolicy(
+        virtualPersona.authorization
+      );
+    // To ensure that profile + context on a space are always publicly visible, even for private spaces
+    clonedAnonymousReadAccessAuthorization.anonymousReadAccess = true;
+    // cascade
+    virtualPersona.profile =
+      await this.profileAuthorizationService.applyAuthorizationPolicy(
+        virtualPersona.profile,
+        clonedAnonymousReadAccessAuthorization // Key that this is publicly visible
+      );
 
     return virtualPersona;
   }
