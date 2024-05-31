@@ -4,7 +4,6 @@ import { VirtualContributorService } from './virtual.contributor.service';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege } from '@common/enums';
-import { VirtualContributorAuthorizationService } from './virtual.contributor.service.authorization';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IVirtualContributor } from './virtual.contributor.interface';
@@ -16,8 +15,7 @@ import {
 @Resolver(() => IVirtualContributor)
 export class VirtualContributorResolverMutations {
   constructor(
-    private virtualAuthorizationService: VirtualContributorAuthorizationService,
-    private virtualService: VirtualContributorService,
+    private virtualContributorService: VirtualContributorService,
     private authorizationService: AuthorizationService
   ) {}
 
@@ -31,9 +29,10 @@ export class VirtualContributorResolverMutations {
     @Args('virtualContributorData')
     virtualContributorData: UpdateVirtualContributorInput
   ): Promise<IVirtualContributor> {
-    const virtual = await this.virtualService.getVirtualContributorOrFail(
-      virtualContributorData.ID
-    );
+    const virtual =
+      await this.virtualContributorService.getVirtualContributorOrFail(
+        virtualContributorData.ID
+      );
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       virtual.authorization,
@@ -41,7 +40,7 @@ export class VirtualContributorResolverMutations {
       `orgUpdate: ${virtual.nameID}`
     );
 
-    return await this.virtualService.updateVirtualContributor(
+    return await this.virtualContributorService.updateVirtualContributor(
       virtualContributorData
     );
   }
@@ -54,15 +53,18 @@ export class VirtualContributorResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('deleteData') deleteData: DeleteVirtualContributorInput
   ): Promise<IVirtualContributor> {
-    const virtual = await this.virtualService.getVirtualContributorOrFail(
-      deleteData.ID
-    );
+    const virtual =
+      await this.virtualContributorService.getVirtualContributorOrFail(
+        deleteData.ID
+      );
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       virtual.authorization,
       AuthorizationPrivilege.DELETE,
       `deleteOrg: ${virtual.nameID}`
     );
-    return await this.virtualService.deleteVirtualContributor(deleteData.ID);
+    return await this.virtualContributorService.deleteVirtualContributor(
+      deleteData.ID
+    );
   }
 }
