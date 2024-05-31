@@ -288,7 +288,7 @@ services:
   file-service:
     container_name: alkemio_dev_file_service
     hostname: file-service
-    image: svetoslavpetkov23/file-service:0.0.4
+    image: alkemio/file-service:v0.0.1
     environment:
       - RABBITMQ_HOST
       - RABBITMQ_USER
