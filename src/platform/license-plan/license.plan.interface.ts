@@ -59,5 +59,5 @@ export abstract class ILicensePlan extends IBaseAlkemio {
     description: 'The credential to represent this plan',
     nullable: false,
   })
-  licenseCredential!: string;
+  licenseCredential!: LicenseCredential;
 }
