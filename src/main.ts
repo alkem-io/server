@@ -76,6 +76,7 @@ const bootstrap = async () => {
   const amqpEndpoint = `amqp://${connectionOptions.user}:${connectionOptions.password}@${connectionOptions.host}:${connectionOptions.port}?heartbeat=${heartbeat}`;
   connectMicroservice(app, amqpEndpoint, MessagingQueue.AUTH_RESET);
   connectMicroservice(app, amqpEndpoint, MessagingQueue.AUTH);
+  connectMicroservice(app, amqpEndpoint, MessagingQueue.FILES);
   await app.startAllMicroservices();
 };
 
@@ -90,6 +91,10 @@ const connectMicroservice = (
       urls: [amqpEndpoint],
       queue,
       queueOptions: { durable: true },
+      socketOptions: {
+        reconnectTimeInSeconds: 5,
+        heartbeatIntervalInSeconds: 30,
+      },
       //be careful with this flag, if set to true, message acknowledgment will be automatic. Double acknowledgment throws an error and disconnects the queue.
       noAck: false,
     },

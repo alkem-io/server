@@ -26,14 +26,14 @@ export class IVirtualContributor
   account!: IAccount;
 
   @Field(() => BodyOfKnowledgeType, {
-    nullable: false,
+    nullable: true,
     description: 'The body of knowledge type used for the Virtual Contributor',
   })
-  bodyOfKnowledgeType!: BodyOfKnowledgeType;
+  bodyOfKnowledgeType?: BodyOfKnowledgeType;
 
   @Field(() => UUID, {
-    nullable: false,
+    nullable: true,
     description: 'The body of knowledge ID used for the Virtual Contributor',
   })
-  bodyOfKnowledgeID!: string;
+  bodyOfKnowledgeID?: string;
 }

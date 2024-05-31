@@ -1,4 +1,3 @@
-import { Channel, Message } from 'amqplib';
 import { Controller } from '@nestjs/common';
 import {
   Ctx,
@@ -10,14 +9,15 @@ import {
 } from '@nestjs/microservices';
 import { UserInfo, WhiteboardIntegrationMessagePattern } from './types';
 import { WhiteboardIntegrationService } from './whiteboard.integration.service';
-import { WhiteboardIntegrationEventPattern } from '@services/whiteboard-integration/types/event.pattern';
+import { WhiteboardIntegrationEventPattern } from './types/event.pattern';
 import {
   ContentModifiedInputData,
   ContributionInputData,
   InfoInputData,
   WhoInputData,
 } from './inputs';
-import { InfoOutputData } from '@services/whiteboard-integration/outputs/info.output.data';
+import { InfoOutputData } from './outputs/info.output.data';
+import { ack } from '../util';
 
 /**
  * Controller exposing the Whiteboard Integration service via message queue.
@@ -70,9 +70,3 @@ export class WhiteboardIntegrationController {
     this.integrationService.contentModified(data);
   }
 }
-
-const ack = (context: RmqContext) => {
-  const channel: Channel = context.getChannelRef();
-  const originalMsg = context.getMessage() as Message;
-  channel.ack(originalMsg);
-};

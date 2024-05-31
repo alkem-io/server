@@ -34,6 +34,7 @@ import {
 import { VirtualPersonaService } from '@platform/virtual-persona/virtual.persona.service';
 import { IVirtualPersona } from '@platform/virtual-persona';
 import { VirtualContributorEngine } from '@common/enums/virtual.contributor.engine';
+import { BodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
 
 @Injectable()
 export class VirtualContributorService {
@@ -86,6 +87,10 @@ export class VirtualContributorService {
         );
     }
 
+    if (virtualContributorData.bodyOfKnowledgeType === undefined) {
+      virtualContributor.bodyOfKnowledgeType = BodyOfKnowledgeType.OTHER;
+    }
+
     virtualContributor.virtualPersona = virtualPersona;
 
     virtualContributor.storageAggregator =
@@ -129,12 +134,13 @@ export class VirtualContributorService {
       LogContext.COMMUNITY
     );
 
-    this.eventBus.publish(
-      new IngestSpace(
-        virtualContributorData.bodyOfKnowledgeID,
-        SpaceIngestionPurpose.Knowledge
-      )
-    );
+    if (virtualContributorData.bodyOfKnowledgeID)
+      this.eventBus.publish(
+        new IngestSpace(
+          virtualContributorData.bodyOfKnowledgeID,
+          SpaceIngestionPurpose.Knowledge
+        )
+      );
 
     return savedVC;
   }
