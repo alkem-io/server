@@ -27,11 +27,13 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IAgent } from '@domain/agent/agent/agent.interface';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { IAccountSubscription } from './account.license.subscription.interface';
+import { LicensingService } from '@platform/licensing/licensing.service';
 
 @Resolver(() => IAccount)
 export class AccountResolverFields {
   constructor(
     private accountService: AccountService,
+    private licensingService: LicensingService,
     private authorizationService: AuthorizationService
   ) {}
 
@@ -135,6 +137,35 @@ export class AccountResolverFields {
     loader: ILoader<IAuthorizationPolicy>
   ) {
     return loader.load(account.id);
+  }
+
+  @ResolveField('activeSubscription', () => IAccountSubscription, {
+    nullable: true,
+    description: 'The "highest" subscription active for this Account.',
+  })
+  async activeSubscription(@Parent() account: Account) {
+    const licensingFramework =
+      await this.licensingService.getDefaultLicensingOrFail();
+
+    const today = new Date();
+    const plans = await this.licensingService.getLicensePlans(
+      licensingFramework.id
+    );
+
+    return (await this.accountService.getSubscriptions(account))
+      .filter(
+        subscription => !subscription.expires || subscription.expires > today
+      )
+      .map(subscription => {
+        return {
+          subscription,
+          plan: plans.find(
+            plan => plan.licenseCredential === subscription.name
+          ),
+        };
+      })
+      .filter(item => item.plan)
+      .sort((a, b) => b.plan!.sortOrder - a.plan!.sortOrder)?.[0].subscription;
   }
 
   @ResolveField('subscriptions', () => [IAccountSubscription], {
