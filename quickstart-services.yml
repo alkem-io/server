@@ -339,7 +339,7 @@ services:
   virtual-contributor-engine-community-manager:
     container_name: alkemio_dev_virtual_contributor_engine_community_manager
     hostname: virtual-contributor-engine-community-manager
-    image: alkemio/virtual-persona-engine:v0.1.3
+    image: alkemio/virtual-contributor-engine-community-manager:v0.1.4
     platform: linux/x86_64
     restart: always
     volumes:
@@ -374,7 +374,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_virtual_contributor_engine_expert
     hostname: virtual-contributor-engine-expert
-    image: alkemio/virtual-contributor-engine-expert:v0.3.0
+    image: alkemio/virtual-contributor-engine-expert:v0.3.3
     platform: linux/x86_64
     restart: always
     volumes:
@@ -413,7 +413,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_virtual-contributor-ingest-space
     hostname: virtual-contributor-ingest-space
-    image: alkemio/virtual-contributor-ingest-space:v0.2.0
+    image: alkemio/virtual-contributor-ingest-space:v0.3.0
     platform: linux/x86_64
     restart: always
     volumes:

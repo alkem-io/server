@@ -2,6 +2,7 @@ import { Field, ObjectType } from '@nestjs/graphql';
 import { VirtualContributorEngine } from '@common/enums/virtual.contributor.engine';
 import { VirtualPersonaAccessMode } from '@common/enums/virtual.persona.access.mode';
 import { INameable } from '@domain/common/entity/nameable-entity';
+import { IPlatform } from '@platform/platfrom/platform.interface';
 
 @ObjectType('VirtualPersona')
 export class IVirtualPersona extends INameable {
@@ -23,4 +24,6 @@ export class IVirtualPersona extends INameable {
     description: 'The required data access by the Virtual Persona',
   })
   dataAccessMode!: VirtualPersonaAccessMode;
+
+  platform!: IPlatform;
 }

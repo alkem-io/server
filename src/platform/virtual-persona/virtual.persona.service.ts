@@ -188,8 +188,8 @@ export class VirtualPersonaService {
   public async askQuestion(
     personaQuestionInput: VirtualPersonaQuestionInput,
     agentInfo: AgentInfo,
-    knowledgeSpaceNameID: string,
-    contextSpaceNameID: string
+    contextSpaceNameID: string,
+    knowledgeSpaceNameID?: string
   ): Promise<IVirtualPersonaQuestionResult> {
     const virtualPersona = await this.getVirtualPersonaOrFail(
       personaQuestionInput.virtualPersonaID
