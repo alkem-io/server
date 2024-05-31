@@ -26,6 +26,7 @@ export class optionalBodyOfKnowledge1717079559696
           name: 'bodyOfKnowledgeType',
           type: bokTypeColum.type,
           isNullable: true,
+          length: '64',
         })
       );
     }
@@ -54,6 +55,7 @@ export class optionalBodyOfKnowledge1717079559696
           name: 'bodyOfKnowledgeType',
           type: bokTypeColum.type,
           isNullable: false,
+          length: '255',
         })
       );
     }

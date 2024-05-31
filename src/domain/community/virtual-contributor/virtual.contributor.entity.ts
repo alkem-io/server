@@ -25,12 +25,12 @@ export class VirtualContributor
   @JoinColumn()
   account!: Account;
 
-  @Column({ length: 256 })
+  @Column({ length: 255 })
   communicationID!: string;
 
   @Column({ length: 64 })
   bodyOfKnowledgeType!: BodyOfKnowledgeType;
 
-  @Column({ length: 256 })
+  @Column({ length: 255 })
   bodyOfKnowledgeID!: string;
 }
