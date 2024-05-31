@@ -5,7 +5,7 @@ export class FileInfoInputData extends BaseInputData {
     public docId: string,
     public auth: {
       cookie?: string;
-      token?: string;
+      apiToken?: string;
     }
   ) {
     super('file-info-input');
