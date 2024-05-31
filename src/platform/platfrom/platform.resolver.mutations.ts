@@ -146,6 +146,9 @@ export class PlatformResolverMutations {
         platformPolicy
       );
 
+    const platform = await this.platformService.getPlatformOrFail();
+    virtualWithAuth.platform = platform;
+
     await this.virtualPersonaService.save(virtualWithAuth);
 
     return virtualWithAuth;
