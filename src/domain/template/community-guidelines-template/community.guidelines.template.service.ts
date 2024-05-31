@@ -10,8 +10,10 @@ import { ITemplateBase } from '../template-base/template.base.interface';
 import { ICommunityGuidelinesTemplate } from '@domain/template/community-guidelines-template/community.guidelines.template.interface';
 import { CommunityGuidelinesService } from '@domain/community/community-guidelines/community.guidelines.service';
 import { CreateCommunityGuidelinesInput } from '@domain/community/community-guidelines';
+import { UpdateCommunityGuidelinesTemplateInput } from './dto/community.guidelines.template.dto.update';
 import { EntityNotFoundException } from '@common/exceptions';
 import { ICommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.interface';
+import { ProfileService } from '@domain/common/profile/profile.service';
 
 @Injectable()
 export class CommunityGuidelinesTemplateService {
@@ -19,7 +21,8 @@ export class CommunityGuidelinesTemplateService {
     @InjectRepository(CommunityGuidelinesTemplate)
     private communityGuidelinesTemplateRepository: Repository<CommunityGuidelinesTemplate>,
     private templateBaseService: TemplateBaseService,
-    private communityGuidelinesService: CommunityGuidelinesService
+    private communityGuidelinesService: CommunityGuidelinesService,
+    private profileService: ProfileService
   ) {}
 
   async createCommunityGuidelinesTemplate(
@@ -100,12 +103,50 @@ export class CommunityGuidelinesTemplateService {
     return communityGuidelinesTemplate;
   }
 
-  async deleteCommunityGuidelinesTemplate(
-    communityGuidelinesTemplateInput: ITemplateBase
-  ): Promise<ITemplateBase> {
+  async updateCommunityGuidelinesTemplate(
+    communityGuidelinesTemplateOriginalId: string,
+    communityGuidelinesTemplateNewData: UpdateCommunityGuidelinesTemplateInput
+  ): Promise<ICommunityGuidelinesTemplate> {
     const communityGuidelinesTemplate =
       await this.getCommunityGuidelinesTemplateOrFail(
-        communityGuidelinesTemplateInput.id,
+        communityGuidelinesTemplateOriginalId,
+        {
+          relations: { profile: true, guidelines: true },
+        }
+      );
+    await this.templateBaseService.updateTemplateBase(
+      communityGuidelinesTemplate,
+      communityGuidelinesTemplateNewData
+    );
+    if (communityGuidelinesTemplateNewData.profile) {
+      communityGuidelinesTemplate.profile =
+        await this.profileService.updateProfile(
+          communityGuidelinesTemplate.profile,
+          communityGuidelinesTemplateNewData.profile
+        );
+    }
+    if (communityGuidelinesTemplateNewData.communityGuidelines) {
+      communityGuidelinesTemplate.guidelines =
+        await this.communityGuidelinesService.update(
+          communityGuidelinesTemplate.guidelines,
+          // The id is required in UpdateCommunityGuidelinesTemplateInput
+          {
+            ...communityGuidelinesTemplateNewData.communityGuidelines,
+            communityGuidelinesID: communityGuidelinesTemplate.guidelines.id,
+          }
+        );
+    }
+    return await this.communityGuidelinesTemplateRepository.save(
+      communityGuidelinesTemplate
+    );
+  }
+
+  async deleteCommunityGuidelinesTemplate(
+    communityGuidelinesTemplateOriginal: ITemplateBase
+  ): Promise<ICommunityGuidelinesTemplate> {
+    const communityGuidelinesTemplate =
+      await this.getCommunityGuidelinesTemplateOrFail(
+        communityGuidelinesTemplateOriginal.id,
         {
           relations: { profile: true },
         }

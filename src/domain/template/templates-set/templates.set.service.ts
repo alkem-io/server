@@ -106,6 +106,13 @@ export class TemplatesSetService {
         );
       }
     }
+    if (templatesSet.calloutTemplates) {
+      for (const calloutTemplate of templatesSet.calloutTemplates) {
+        await this.calloutTemplateService.deleteCalloutTemplate(
+          calloutTemplate
+        );
+      }
+    }
     if (templatesSet.communityGuidelinesTemplates) {
       for (const communityGuidelinesTemplate of templatesSet.communityGuidelinesTemplates) {
         await this.communityGuidelinesTemplateService.deleteCommunityGuidelinesTemplate(
