@@ -1,12 +1,9 @@
 import { Profiling, CurrentUser } from '@common/decorators';
-import { AuthorizationPrivilege } from '@common/enums';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { GraphqlGuard } from '@core/authorization';
-import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
 import { UseGuards } from '@nestjs/common';
 import { Resolver, Mutation, Args } from '@nestjs/graphql';
-import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { PlatformSettingsService } from './platform.settings.service';
 import { IVirtualContributor } from '@domain/community/virtual-contributor';
 import { UpdateInnovationHubPlatformSettingsInput } from './dto/innovation.hub.dto.update.settings';
@@ -15,9 +12,7 @@ import { UpdateVirtualContributorPlatformSettingsInput } from './dto/virtual.con
 @Resolver()
 export class PlatformSettingsResolverMutations {
   constructor(
-    private authorizationService: AuthorizationService,
-    private platformSettingsService: PlatformSettingsService,
-    private platformAuthorizationService: PlatformAuthorizationPolicyService
+    private readonly platformSettingsService: PlatformSettingsService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -29,13 +24,9 @@ export class PlatformSettingsResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('updateData') updateData: UpdateInnovationHubPlatformSettingsInput
   ): Promise<IInnovationHub> {
-    const authorizationPolicy =
-      await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
-    this.authorizationService.grantAccessOrFail(
+    this.platformSettingsService.checkAuthorizationOrFail(
       agentInfo,
-      authorizationPolicy,
-      AuthorizationPrivilege.PLATFORM_ADMIN,
-      'update innovation space'
+      'update innovation hub'
     );
 
     return await this.platformSettingsService.updateInnovationHubPlatformSettingsOrFail(
@@ -52,12 +43,8 @@ export class PlatformSettingsResolverMutations {
     @Args('updateData')
     updateData: UpdateVirtualContributorPlatformSettingsInput
   ): Promise<IVirtualContributor> {
-    const authorizationPolicy =
-      await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
-    this.authorizationService.grantAccessOrFail(
+    this.platformSettingsService.checkAuthorizationOrFail(
       agentInfo,
-      authorizationPolicy,
-      AuthorizationPrivilege.PLATFORM_ADMIN,
       'update virtual contributor'
     );
 
