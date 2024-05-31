@@ -91,6 +91,13 @@ export abstract class IPlatformLocations {
   @Field(() => String, {
     nullable: false,
     description:
+      'URL for the link Contact in the HomePage to switch between plans',
+  })
+  switchplan!: string;
+
+  @Field(() => String, {
+    nullable: false,
+    description:
       'URL for the link Opensource in the HomePage of the application',
   })
   opensource!: string;

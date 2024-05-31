@@ -420,6 +420,9 @@ platform:
   # Home page - Contact Support
   contactsupport: ${PLATFORM_CONTACTSUPPORT}:https://welcome.alkem.io/contact/
 
+  # Home page - Switch Plan
+  switchplan: ${PLATFORM_SWITCHPLAN}:https://welcome.alkem.io/switch-subscription-plan/
+
   # Home page - Opensource
   opensource: ${PLATFORM_OPENSOURCE}:https://github.com/alkem-io
 

@@ -92,6 +92,8 @@ export class KonfigService {
           ?.foundation,
         contactsupport: this.configService.get(ConfigurationTypes.PLATFORM)
           ?.contactsupport,
+        switchplan: this.configService.get(ConfigurationTypes.PLATFORM)
+          ?.switchplan,
         opensource: this.configService.get(ConfigurationTypes.PLATFORM)
           ?.opensource,
         releases: this.configService.get(ConfigurationTypes.PLATFORM)?.releases,
