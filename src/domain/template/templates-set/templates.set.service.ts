@@ -81,6 +81,7 @@ export class TemplatesSetService {
         whiteboardTemplates: true,
         innovationFlowTemplates: true,
         communityGuidelinesTemplates: true,
+        calloutTemplates: true,
       },
     });
 
@@ -103,6 +104,13 @@ export class TemplatesSetService {
       for (const innovationFlowTemplate of templatesSet.innovationFlowTemplates) {
         await this.innovationFlowTemplateService.deleteInnovationFlowTemplate(
           innovationFlowTemplate
+        );
+      }
+    }
+    if (templatesSet.calloutTemplates) {
+      for (const calloutTemplate of templatesSet.calloutTemplates) {
+        await this.calloutTemplateService.deleteCalloutTemplate(
+          calloutTemplate
         );
       }
     }

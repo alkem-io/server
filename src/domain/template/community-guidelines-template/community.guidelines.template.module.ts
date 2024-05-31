@@ -9,6 +9,7 @@ import { CommunityGuidelinesTemplate } from './community.guidelines.template.ent
 import { CommunityGuidelinesTemplateService } from './community.guidelines.template.service';
 import { CommunityGuidelinesTemplateAuthorizationService } from './community.guidelines.template.service.authorization';
 import { CommunityGuidelinesTemplateResolverFields } from '@domain/template/community-guidelines-template/community.guidelines.template.resolver.fields';
+import { CommunityGuidelinesTemplateResolverMutations } from './community.guidelines.template.resolver.mutations';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { CommunityGuidelinesTemplateResolverFields } from '@domain/template/comm
     CommunityGuidelinesTemplateService,
     CommunityGuidelinesTemplateAuthorizationService,
     CommunityGuidelinesTemplateResolverFields,
+    CommunityGuidelinesTemplateResolverMutations,
   ],
   exports: [
     CommunityGuidelinesTemplateService,
