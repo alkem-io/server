@@ -30,7 +30,7 @@ import { RoomSendMessageReplyInput } from '@domain/communication/room/dto/room.d
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service/subscription.publish.service';
 import { RoomService } from './room.service';
 import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
-import { NotSupportedException } from '@common/exceptions';
+import { NotSupportedException, ValidationException } from '@common/exceptions';
 import { EntityManager } from 'typeorm';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { Space } from '@domain/space/space/space.entity';
@@ -116,13 +116,12 @@ export class RoomServiceEvents {
           question: question.message,
         };
 
-        let knowledgeSpaceId = undefined;
-        if (virtualContributor.bodyOfKnowledgeID) {
-          //toDo should not be needed, fix in https://app.zenhub.com/workspaces/alkemio-development-5ecb98b262ebd9f4aec4194c/issues/gh/alkem-io/virtual-contributor-ingest-space/5
-          knowledgeSpaceId = await this.getSpaceNameId(
-            virtualContributor.bodyOfKnowledgeID
-          );
-        }
+        if (!virtualContributor.bodyOfKnowledgeID)
+          throw new ValidationException('ERROR!', LogContext.COMMUNICATION);
+        //toDo should not be needed, fix in https://app.zenhub.com/workspaces/alkemio-development-5ecb98b262ebd9f4aec4194c/issues/gh/alkem-io/virtual-contributor-ingest-space/5
+        const knowledgeSpaceId = await this.getSpaceNameId(
+          virtualContributor.bodyOfKnowledgeID
+        );
 
         const result = await this.virtualPersonaService.askQuestion(
           chatData,
