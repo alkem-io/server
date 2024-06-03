@@ -28,6 +28,12 @@ import { IVirtualContributor } from '@domain/community/virtual-contributor/virtu
 import { CreateVirtualContributorOnAccountInput } from './dto/account.dto.create.virtual.contributor';
 import { VirtualContributorAuthorizationService } from '@domain/community/virtual-contributor/virtual.contributor.service.authorization';
 import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
+import { IngestSpaceInput } from '../space/dto/space.dto.ingest';
+import { EventBus } from '@nestjs/cqrs';
+import {
+  IngestSpace,
+  SpaceIngestionPurpose,
+} from '@services/infrastructure/event-bus/commands';
 
 @Resolver()
 export class AccountResolverMutations {
@@ -41,7 +47,8 @@ export class AccountResolverMutations {
     private virtualContributorAuthorizationService: VirtualContributorAuthorizationService,
     private spaceDefaultsService: SpaceDefaultsService,
     private namingReporter: NameReporterService,
-    private spaceService: SpaceService
+    private spaceService: SpaceService,
+    private eventBus: EventBus
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -234,12 +241,13 @@ export class AccountResolverMutations {
       virtualContributorData.accountID
     );
 
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       account.authorization,
       AuthorizationPrivilege.CREATE_VIRTUAL_CONTRIBUTOR,
       `create Virtual contributor: ${virtualContributorData.nameID}`
     );
+
     let virtual = await this.accountService.createVirtualContributorOnAccount(
       virtualContributorData
     );
@@ -249,6 +257,42 @@ export class AccountResolverMutations {
         virtual,
         account.authorization
       );
+
     return await this.virtualContributorService.save(virtual);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => ISpace, {
+    description: 'Triggers space ingestion.',
+  })
+  async ingestSpace(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('ingestSpaceData')
+    ingestSpaceData: IngestSpaceInput
+  ): Promise<ISpace> {
+    const space = await this.spaceService.getSpaceOrFail(
+      ingestSpaceData.spaceID,
+      {
+        relations: {
+          account: {
+            defaults: {
+              authorization: true,
+            },
+          },
+        },
+      }
+    );
+
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      space.account.authorization,
+      AuthorizationPrivilege.CREATE_VIRTUAL_CONTRIBUTOR,
+      `ingest space: ${space.nameID}(${space.id})`
+    );
+
+    this.eventBus.publish(
+      new IngestSpace(space.id, SpaceIngestionPurpose.Knowledge)
+    );
+    return space;
   }
 }

@@ -21,7 +21,7 @@ import { CommunicationRoomResult } from '@services/adapters/communication-adapte
 
 interface MessageSender {
   id: string;
-  type: 'user' | 'virtualContributor';
+  type: 'user' | 'virtualContributor' | 'unknown';
 }
 
 @Injectable()
@@ -151,10 +151,20 @@ export class RoomService {
     const knownSendersMap = new Map<string, MessageSender>();
     for (const message of messages) {
       const matrixUserID = message.sender;
-      const messageSender = await this.identitySender(
-        knownSendersMap,
-        matrixUserID
-      );
+      let messageSender: MessageSender = { id: 'unknown', type: 'unknown' };
+      try {
+        messageSender = await this.identitySender(
+          knownSendersMap,
+          matrixUserID
+        );
+      } catch (error) {
+        this.logger.error(
+          `Unable to identify sender for message with id ${message.id}`,
+          error,
+          LogContext.COMMUNICATION
+        );
+      }
+
       message.sender = messageSender.id;
       message.senderType = messageSender.type;
       if (message.reactions) {
@@ -176,11 +186,16 @@ export class RoomService {
   ): Promise<IMessageReaction[]> {
     for (const reaction of reactions) {
       const matrixUserID = reaction.sender;
-      const reactionSender = await this.identitySender(
-        knownSendersMap,
-        matrixUserID
-      );
-      reaction.sender = reactionSender.id;
+      try {
+        const reactionSender = await this.identitySender(
+          knownSendersMap,
+          matrixUserID
+        );
+
+        reaction.sender = reactionSender.id;
+      } catch (error) {
+        reaction.sender = 'unknown';
+      }
     }
 
     return reactions;
