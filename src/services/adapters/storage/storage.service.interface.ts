@@ -5,4 +5,5 @@ export interface StorageService {
   save(data: Buffer): Promise<string> | never;
   read(fileName: string): Promise<Buffer> | never;
   delete(fileName: string): Promise<void> | never;
+  exists(fileName: string): boolean | Promise<boolean>;
 }

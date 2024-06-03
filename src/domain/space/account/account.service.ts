@@ -29,6 +29,13 @@ import { CreateAccountInput } from './dto/account.dto.create';
 import { CreateSpaceInput } from '../space/dto/space.dto.create';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { ContributorService } from '@domain/community/contributor/contributor.service';
+import { LicensingService } from '@platform/licensing/licensing.service';
+import { ILicensePlan } from '@platform/license-plan/license.plan.interface';
+import { IAccountSubscription } from './account.license.subscription.interface';
+import { LicenseCredential } from '@common/enums/license.credential';
+import { CreateVirtualContributorOnAccountInput } from './dto/account.dto.create.virtual.contributor';
+import { IVirtualContributor } from '@domain/community/virtual-contributor';
+import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
 
 @Injectable()
 export class AccountService {
@@ -39,6 +46,8 @@ export class AccountService {
     private spaceDefaultsService: SpaceDefaultsService,
     private licenseService: LicenseService,
     private contributorService: ContributorService,
+    private licensingService: LicensingService,
+    private virtualContributorService: VirtualContributorService,
     @InjectRepository(Account)
     private accountRepository: Repository<Account>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -52,6 +61,26 @@ export class AccountService {
     const spaceData = accountData.spaceData;
     await this.validateSpaceData(spaceData);
 
+    const licensingFramework =
+      await this.licensingService.getDefaultLicensingOrFail();
+
+    const licensePlansToAssign: ILicensePlan[] = [];
+    const basePlan = await this.licensingService.getBasePlan(
+      licensingFramework.id
+    );
+    licensePlansToAssign.push(basePlan);
+    if (
+      accountData.licensePlanID &&
+      accountData.licensePlanID !== basePlan.id
+    ) {
+      licensePlansToAssign.push(
+        await this.licensingService.getLicensePlanOrFail(
+          licensingFramework.id,
+          accountData.licensePlanID
+        )
+      );
+    }
+
     const account: IAccount = new Account();
     account.authorization = new AuthorizationPolicy();
     account.library = await this.templatesSetService.createTemplatesSet();
@@ -59,6 +88,7 @@ export class AccountService {
     account.license = await this.licenseService.createLicense({
       visibility: SpaceVisibility.ACTIVE,
     });
+
     await this.save(account);
 
     spaceData.level = 0;
@@ -72,6 +102,28 @@ export class AccountService {
     account.agent = await this.agentService.createAgent({
       parentDisplayID: `account-${account.space.nameID}`,
     });
+
+    for (const licensePlan of licensePlansToAssign) {
+      let expires: Date | undefined = undefined;
+      if (licensePlan.trialEnabled) {
+        const now = new Date();
+        const oneMonthFromNow = new Date(
+          now.getFullYear(),
+          now.getMonth() + 1,
+          now.getDate(),
+          0,
+          0,
+          0
+        );
+        expires = oneMonthFromNow;
+      }
+      account.agent = await this.agentService.grantCredential({
+        agentID: account.agent.id,
+        type: licensePlan.licenseCredential,
+        resourceID: account.id,
+        expires: expires,
+      });
+    }
 
     const storageAggregator =
       await this.spaceService.getStorageAggregatorOrFail(account.space.id);
@@ -185,6 +237,7 @@ export class AccountService {
         library: true,
         license: { featureFlags: true },
         defaults: true,
+        virtualContributors: true,
       },
     });
 
@@ -194,7 +247,8 @@ export class AccountService {
       !account.license ||
       !account.license?.featureFlags ||
       !account.defaults ||
-      !account.library
+      !account.library ||
+      !account.virtualContributors
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load all entities for deletion of account ${account.id} `,
@@ -227,6 +281,9 @@ export class AccountService {
       type: AuthorizationCredential.ACCOUNT_HOST,
       resourceID: account.id,
     });
+    for (const vc of account.virtualContributors) {
+      await this.virtualContributorService.deleteVirtualContributor(vc.id);
+    }
 
     const result = await this.accountRepository.remove(account as Account);
     result.id = accountID;
@@ -326,6 +383,38 @@ export class AccountService {
     return account.space;
   }
 
+  async getSubscriptions(
+    accountInput: IAccount
+  ): Promise<IAccountSubscription[]> {
+    const account = await this.getAccountOrFail(accountInput.id, {
+      relations: {
+        agent: {
+          credentials: true,
+        },
+      },
+    });
+    if (!account.agent || !account.agent.credentials) {
+      throw new EntityNotFoundException(
+        `Unable to find agent with credentials for account: ${accountInput.id}`,
+        LogContext.ACCOUNT
+      );
+    }
+    const subscriptions: IAccountSubscription[] = [];
+    for (const credential of account.agent.credentials) {
+      if (
+        Object.values(LicenseCredential).includes(
+          credential.type as LicenseCredential
+        )
+      ) {
+        subscriptions.push({
+          name: credential.type as LicenseCredential,
+          expires: credential.expires,
+        });
+      }
+    }
+    return subscriptions;
+  }
+
   async setAccountHost(
     account: IAccount,
     hostContributorID: string
@@ -394,5 +483,29 @@ export class AccountService {
         LogContext.COMMUNITY
       );
     return host;
+  }
+
+  public async createVirtualContributorOnAccount(
+    vcData: CreateVirtualContributorOnAccountInput
+  ): Promise<IVirtualContributor> {
+    const accountID = vcData.accountID;
+    const account = await this.getAccountOrFail(accountID, {
+      relations: { virtualContributors: true },
+    });
+
+    if (!account.virtualContributors) {
+      throw new RelationshipNotFoundException(
+        `Unable to load Account with required entities for creating VC: ${account.id} `,
+        LogContext.ACCOUNT
+      );
+    }
+
+    const vc = await this.virtualContributorService.createVirtualContributor(
+      vcData
+    );
+    account.virtualContributors.push(vc);
+    await this.save(account);
+
+    return vc;
   }
 }

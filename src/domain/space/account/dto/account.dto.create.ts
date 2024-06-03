@@ -23,7 +23,7 @@ export class CreateAccountInput {
 
   @Field(() => UUID, {
     nullable: true,
-    description: 'The plan selected for the account',
+    description: 'The license plan selected for the account',
   })
-  planID?: string;
+  licensePlanID?: string;
 }

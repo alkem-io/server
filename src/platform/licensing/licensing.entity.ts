@@ -10,7 +10,14 @@ export class Licensing extends AuthorizableEntity implements ILicensing {
     eager: true,
     cascade: true,
   })
-  plans?: LicensePlan[];
+  plans!: LicensePlan[];
+
+  @OneToOne(() => LicensePlan, {
+    eager: true,
+    cascade: false,
+  })
+  @JoinColumn()
+  basePlan?: LicensePlan;
 
   @OneToOne(() => LicensePolicy, {
     eager: false,
