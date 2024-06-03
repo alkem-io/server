@@ -1,12 +1,13 @@
 import { Field, ObjectType } from '@nestjs/graphql';
+import { VirtualContributorEngine } from '@common/enums/virtual.contributor.engine';
+import { VirtualPersonaAccessMode } from '@common/enums/virtual.persona.access.mode';
 import { INameable } from '@domain/common/entity/nameable-entity';
-import { VirtualContributorEngine } from '@common/enums/virtual.persona.engine';
-import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { IPlatform } from '@platform/platfrom/platform.interface';
 
 @ObjectType('VirtualPersona')
 export class IVirtualPersona extends INameable {
   @Field(() => VirtualContributorEngine, {
-    nullable: true,
+    nullable: false,
     description:
       'The Virtual Persona Engine being used by this virtual persona.',
   })
@@ -18,5 +19,11 @@ export class IVirtualPersona extends INameable {
   })
   prompt!: string;
 
-  storageAggregator?: IStorageAggregator;
+  @Field(() => VirtualPersonaAccessMode, {
+    nullable: false,
+    description: 'The required data access by the Virtual Persona',
+  })
+  dataAccessMode!: VirtualPersonaAccessMode;
+
+  platform!: IPlatform;
 }

@@ -20,6 +20,7 @@ export enum AuthorizationPrivilege {
   CONTRIBUTE = 'contribute',
   CREATE_SPACE = 'create-space',
   CREATE_ORGANIZATION = 'create-organization',
+  CREATE_VIRTUAL_CONTRIBUTOR = 'create-virtual-contributor',
   FILE_UPLOAD = 'file-upload',
   FILE_DELETE = 'file-delete',
   UPDATE_WHITEBOARD = 'update-whiteboard',

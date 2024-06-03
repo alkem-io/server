@@ -17,6 +17,7 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { Loader } from '@core/dataloader/decorators';
 import {
+  AccountLoaderCreator,
   AgentLoaderCreator,
   ProfileLoaderCreator,
 } from '@core/dataloader/creators';
@@ -24,6 +25,7 @@ import { ILoader } from '@core/dataloader/loader.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { IVirtualContributor } from './virtual.contributor.interface';
 import { VirtualStorageAggregatorLoaderCreator } from '@core/dataloader/creators/loader.creators/community/virtual.storage.aggregator.loader.creator';
+import { IAccount } from '@domain/space/account/account.interface';
 
 @Resolver(() => IVirtualContributor)
 export class VirtualContributorResolverFields {
@@ -106,5 +108,26 @@ export class VirtualContributorResolverFields {
     loader: ILoader<IStorageAggregator>
   ): Promise<IStorageAggregator> {
     return loader.load(virtualContributor.id);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @ResolveField('account', () => IAccount, {
+    nullable: true,
+    description: 'The Account of the Virtual Contributor.',
+  })
+  @Profiling.api
+  @UseGuards(GraphqlGuard)
+  async account(
+    @Parent() virtualContributor: VirtualContributor,
+    @Loader(AccountLoaderCreator, { parentClassRef: VirtualContributor })
+    loader: ILoader<IAccount>
+  ): Promise<IAccount | null> {
+    let account: IAccount | never;
+    try {
+      account = await loader.load(virtualContributor.id);
+    } catch (error) {
+      return null;
+    }
+    return account;
   }
 }

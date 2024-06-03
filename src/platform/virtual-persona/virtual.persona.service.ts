@@ -3,9 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
-import { UUID_LENGTH } from '@common/constants';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { VirtualPersona } from './virtual.persona.entity';
 import { IVirtualPersona } from './virtual.persona.interface';
 import { CreateVirtualPersonaInput as CreateVirtualPersonaInput } from './dto/virtual.persona.dto.create';
@@ -17,19 +15,20 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { LogContext } from '@common/enums/logging.context';
 import { VirtualPersonaEngineAdapterQueryInput } from '@services/adapters/virtual-persona-engine-adapter/dto/virtual.persona.engine.adapter.dto.question.input';
 import { VirtualPersonaEngineAdapter } from '@services/adapters/virtual-persona-engine-adapter/virtual.persona.engine.adapter';
-import { ProfileService } from '@domain/common/profile/profile.service';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { ProfileType } from '@common/enums';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { VisualType } from '@common/enums/visual.type';
-import { ProfileType } from '@common/enums/profile.type';
-import { VirtualContributorEngine } from '@common/enums/virtual.persona.engine';
+import { ProfileService } from '@domain/common/profile/profile.service';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
+import { VirtualContributorEngine } from '@common/enums/virtual.contributor.engine';
 
 @Injectable()
 export class VirtualPersonaService {
   constructor(
+    private virtualPersonaEngineAdapter: VirtualPersonaEngineAdapter,
     private authorizationPolicyService: AuthorizationPolicyService,
     private profileService: ProfileService,
-    private virtualPersonaEngineAdapter: VirtualPersonaEngineAdapter,
     private storageAggregatorService: StorageAggregatorService,
     @InjectRepository(VirtualPersona)
     private virtualPersonaRepository: Repository<VirtualPersona>,
@@ -39,6 +38,7 @@ export class VirtualPersonaService {
   async createVirtualPersona(
     virtualPersonaData: CreateVirtualPersonaInput
   ): Promise<IVirtualPersona> {
+    if (virtualPersonaData.prompt === undefined) virtualPersonaData.prompt = '';
     const virtual: IVirtualPersona = VirtualPersona.create(virtualPersonaData);
     virtual.authorization = new AuthorizationPolicy();
 
@@ -74,13 +74,13 @@ export class VirtualPersonaService {
       avatarURL
     );
 
-    const savedVC = await this.virtualPersonaRepository.save(virtual);
+    const savedVP = await this.virtualPersonaRepository.save(virtual);
     this.logger.verbose?.(
       `Created new virtual persona with id ${virtual.id}`,
-      LogContext.COMMUNITY
+      LogContext.PLATFORM
     );
 
-    return savedVC;
+    return savedVP;
   }
 
   async updateVirtualPersona(
@@ -88,7 +88,7 @@ export class VirtualPersonaService {
   ): Promise<IVirtualPersona> {
     const virtualPersona = await this.getVirtualPersonaOrFail(
       virtualPersonaData.ID,
-      {}
+      { relations: { profile: true } }
     );
 
     if (virtualPersonaData.prompt !== undefined) {
@@ -99,6 +99,13 @@ export class VirtualPersonaService {
       virtualPersona.engine = virtualPersonaData.engine;
     }
 
+    if (virtualPersonaData.profileData) {
+      virtualPersona.profile = await this.profileService.updateProfile(
+        virtualPersona.profile,
+        virtualPersonaData.profileData
+      );
+    }
+
     return await this.virtualPersonaRepository.save(virtualPersona);
   }
 
@@ -106,18 +113,19 @@ export class VirtualPersonaService {
     deleteData: DeleteVirtualPersonaInput
   ): Promise<IVirtualPersona> {
     const personaID = deleteData.ID;
+
     const virtualPersona = await this.getVirtualPersonaOrFail(personaID, {
       relations: {
         authorization: true,
       },
     });
-
-    if (virtualPersona.authorization) {
-      await this.authorizationPolicyService.delete(
-        virtualPersona.authorization
+    if (!virtualPersona.authorization) {
+      throw new EntityNotFoundException(
+        `Unable to find all fields on Virtual Persona with ID: ${deleteData.ID}`,
+        LogContext.PLATFORM
       );
     }
-
+    await this.authorizationPolicyService.delete(virtualPersona.authorization);
     const result = await this.virtualPersonaRepository.remove(
       virtualPersona as VirtualPersona
     );
@@ -125,27 +133,19 @@ export class VirtualPersonaService {
     return result;
   }
 
-  async getVirtualPersona(
+  public async getVirtualPersona(
     virtualPersonaID: string,
     options?: FindOneOptions<VirtualPersona>
   ): Promise<IVirtualPersona | null> {
-    let virtualPersona: IVirtualPersona | null = null;
-    if (virtualPersonaID.length === UUID_LENGTH) {
-      virtualPersona = await this.virtualPersonaRepository.findOne({
-        ...options,
-        where: { ...options?.where, id: virtualPersonaID },
-      });
-    } else {
-      // look up based on nameID
-      virtualPersona = await this.virtualPersonaRepository.findOne({
-        ...options,
-        where: { ...options?.where, nameID: virtualPersonaID },
-      });
-    }
+    const virtualPersona = await this.virtualPersonaRepository.findOne({
+      ...options,
+      where: { ...options?.where, id: virtualPersonaID },
+    });
+
     return virtualPersona;
   }
 
-  async getVirtualPersonaOrFail(
+  public async getVirtualPersonaOrFail(
     virtualID: string,
     options?: FindOneOptions<VirtualPersona>
   ): Promise<IVirtualPersona | never> {
@@ -153,7 +153,24 @@ export class VirtualPersonaService {
     if (!virtualPersona)
       throw new EntityNotFoundException(
         `Unable to find Virtual Persona with ID: ${virtualID}`,
-        LogContext.COMMUNITY
+        LogContext.PLATFORM
+      );
+    return virtualPersona;
+  }
+
+  public async getVirtualPersonaByEngineOrFail(
+    engine: VirtualContributorEngine,
+    options?: FindOneOptions<VirtualPersona>
+  ): Promise<IVirtualPersona | never> {
+    const virtualPersona = await this.virtualPersonaRepository.findOne({
+      ...options,
+      where: { ...options?.where, engine },
+      order: { createdDate: 'ASC' },
+    });
+    if (!virtualPersona)
+      throw new EntityNotFoundException(
+        `Unable to find Virtual Persona with engine: ${engine}`,
+        LogContext.PLATFORM
       );
     return virtualPersona;
   }
@@ -171,7 +188,8 @@ export class VirtualPersonaService {
   public async askQuestion(
     personaQuestionInput: VirtualPersonaQuestionInput,
     agentInfo: AgentInfo,
-    spaceNameID: string
+    contextSpaceNameID: string,
+    knowledgeSpaceNameID?: string
   ): Promise<IVirtualPersonaQuestionResult> {
     const virtualPersona = await this.getVirtualPersonaOrFail(
       personaQuestionInput.virtualPersonaID
@@ -182,20 +200,14 @@ export class VirtualPersonaService {
       prompt: virtualPersona.prompt,
       userId: agentInfo.userID,
       question: personaQuestionInput.question,
-      kowledgeSpaceNameID: spaceNameID,
-      contextSpaceNameID: spaceNameID,
+      knowledgeSpaceNameID,
+      contextSpaceNameID,
     };
 
+    this.logger.error(input);
     const response = await this.virtualPersonaEngineAdapter.sendQuery(input);
 
     return response;
-  }
-
-  public async resetUserHistory(agentInfo: AgentInfo): Promise<boolean> {
-    return this.virtualPersonaEngineAdapter.sendReset({
-      engine: VirtualContributorEngine.EXPERT,
-      userId: agentInfo.userID,
-    });
   }
 
   public async ingest(agentInfo: AgentInfo): Promise<boolean> {

@@ -3,7 +3,7 @@ import { VirtualPersonaEngineAdapterInputBase } from './virtual.persona.engine.a
 export interface VirtualPersonaEngineAdapterQueryInput
   extends VirtualPersonaEngineAdapterInputBase {
   question: string;
-  prompt: string;
-  kowledgeSpaceNameID: string;
-  contextSpaceNameID: string;
+  prompt?: string;
+  knowledgeSpaceNameID?: string;
+  contextSpaceNameID?: string;
 }

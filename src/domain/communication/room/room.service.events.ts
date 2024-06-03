@@ -25,14 +25,17 @@ import { IProfile } from '@domain/common/profile';
 import { Mention, MentionedEntityType } from '../messaging/mention.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums/logging.context';
-import { VirtualPersonaService } from '@domain/community/virtual-persona/virtual.persona.service';
-import { VirtualPersonaQuestionInput } from '@domain/community/virtual-persona/dto/virtual.persona.question.dto.input';
 import { MutationType } from '@common/enums/subscriptions/mutation.type';
 import { RoomSendMessageReplyInput } from '@domain/communication/room/dto/room.dto.send.message.reply';
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service/subscription.publish.service';
 import { RoomService } from './room.service';
 import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
 import { NotSupportedException } from '@common/exceptions';
+import { EntityManager } from 'typeorm';
+import { InjectEntityManager } from '@nestjs/typeorm';
+import { Space } from '@domain/space/space/space.entity';
+import { VirtualPersonaService } from '@platform/virtual-persona/virtual.persona.service';
+import { VirtualPersonaQuestionInput } from '@platform/virtual-persona/dto/virtual.persona.question.dto.input';
 
 @Injectable()
 export class RoomServiceEvents {
@@ -45,9 +48,18 @@ export class RoomServiceEvents {
     private subscriptionPublishService: SubscriptionPublishService,
     private virtualPersonaService: VirtualPersonaService,
     private virtualContributorService: VirtualContributorService,
+    // this should use the space service but still the same circular dependency issue :(
+    @InjectEntityManager('default')
+    private entityManager: EntityManager,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
+
+  // should this use Space Service?
+  private async getSpaceNameId(id: string) {
+    const space = await this.entityManager.findOneByOrFail(Space, { id });
+    return space.nameID;
+  }
 
   public async processVirtualContributorMentions(
     mentions: Mention[],
@@ -104,10 +116,16 @@ export class RoomServiceEvents {
           question: question.message,
         };
 
+        //toDo should not be needed, fix in https://app.zenhub.com/workspaces/alkemio-development-5ecb98b262ebd9f4aec4194c/issues/gh/alkem-io/virtual-contributor-ingest-space/5
+        // const knowledgeSpaceId = await this.getSpaceNameId(
+        //   virtualContributor.bodyOfKnowledgeID
+        // );
+
         const result = await this.virtualPersonaService.askQuestion(
           chatData,
           agentInfo,
-          spaceNameID
+          spaceNameID,
+          virtualContributor.bodyOfKnowledgeID
         );
 
         let answer = result.answer;

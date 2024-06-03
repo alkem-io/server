@@ -6,7 +6,6 @@ import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import {
   AuthorizationAgentPrivilege,
   CurrentUser,
-  Profiling,
 } from '@src/common/decorators';
 import { AccountService } from '@domain/space/account/account.service';
 import { IAccount } from '@domain/space/account/account.interface';
@@ -21,17 +20,25 @@ import {
   AccountLibraryLoaderCreator,
   AuthorizationLoaderCreator,
   AgentLoaderCreator,
+  AccountVirtualContributorsLoaderCreator,
 } from '@core/dataloader/creators/loader.creators';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IAgent } from '@domain/agent/agent/agent.interface';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
+import { IAccountSubscription } from './account.license.subscription.interface';
+import { LicensingService } from '@platform/licensing/licensing.service';
+import {
+  IVirtualContributor,
+  VirtualContributor,
+} from '@domain/community/virtual-contributor';
 
 @Resolver(() => IAccount)
 export class AccountResolverFields {
   constructor(
     private accountService: AccountService,
+    private licensingService: LicensingService,
     private authorizationService: AuthorizationService
   ) {}
 
@@ -129,11 +136,61 @@ export class AccountResolverFields {
     nullable: false,
     description: 'The Authorization for this Account.',
   })
-  @Profiling.api
   async authorization(
     @Parent() account: Account,
     @Loader(AuthorizationLoaderCreator, { parentClassRef: Account })
     loader: ILoader<IAuthorizationPolicy>
+  ) {
+    return loader.load(account.id);
+  }
+
+  @ResolveField('activeSubscription', () => IAccountSubscription, {
+    nullable: true,
+    description: 'The "highest" subscription active for this Account.',
+  })
+  async activeSubscription(@Parent() account: Account) {
+    const licensingFramework =
+      await this.licensingService.getDefaultLicensingOrFail();
+
+    const today = new Date();
+    const plans = await this.licensingService.getLicensePlans(
+      licensingFramework.id
+    );
+
+    return (await this.accountService.getSubscriptions(account))
+      .filter(
+        subscription => !subscription.expires || subscription.expires > today
+      )
+      .map(subscription => {
+        return {
+          subscription,
+          plan: plans.find(
+            plan => plan.licenseCredential === subscription.name
+          ),
+        };
+      })
+      .filter(item => item.plan)
+      .sort((a, b) => b.plan!.sortOrder - a.plan!.sortOrder)?.[0].subscription;
+  }
+
+  @ResolveField('subscriptions', () => [IAccountSubscription], {
+    nullable: false,
+    description: 'The subscriptions active for this Account.',
+  })
+  async subscriptions(@Parent() account: Account) {
+    return await this.accountService.getSubscriptions(account);
+  }
+
+  @ResolveField('virtualContributors', () => [IVirtualContributor], {
+    nullable: false,
+    description: 'The virtual contributors for this Account.',
+  })
+  async virtualContributors(
+    @Parent() account: Account,
+    @Loader(AccountVirtualContributorsLoaderCreator, {
+      parentClassRef: Account,
+    })
+    loader: ILoader<VirtualContributor>
   ) {
     return loader.load(account.id);
   }

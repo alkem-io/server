@@ -73,6 +73,11 @@ export class LocalStorageAdapter implements StorageService {
     }
   }
 
+  public exists(fileName: string): boolean {
+    const filePath = this.getFilePath(fileName);
+    return existsSync(filePath);
+  }
+
   private async saveFromBuffer(buffer: Buffer): Promise<string> | never {
     const fileName = this.getFileName(buffer);
     const filePath = this.getFilePath(fileName);

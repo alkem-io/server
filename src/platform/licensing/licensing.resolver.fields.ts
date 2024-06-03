@@ -22,6 +22,17 @@ export class LicensingResolverFields {
     return await this.licensingService.getLicensePlans(licensing.id);
   }
 
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @ResolveField('basePlan', () => ILicensePlan, {
+    nullable: false,
+    description:
+      'The base License Plan assigned to all Accounts in use on the platform.',
+  })
+  @UseGuards(GraphqlGuard)
+  async basePlan(@Parent() licensing: ILicensing): Promise<ILicensePlan> {
+    return await this.licensingService.getBasePlan(licensing.id);
+  }
+
   @ResolveField('policy', () => ILicensePolicy, {
     nullable: false,
     description: 'The LicensePolicy in use by the Licensing setup.',

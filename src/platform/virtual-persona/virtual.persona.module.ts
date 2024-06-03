@@ -8,7 +8,6 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { VirtualPersona } from './virtual.persona.entity';
 import { VirtualPersonaResolverFields } from './virtual.persona.resolver.fields';
-import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { VirtualPersonaEngineAdapterModule } from '@services/adapters/virtual-persona-engine-adapter/virtual.persona.engine.adapter.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
@@ -17,10 +16,9 @@ import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/stor
   imports: [
     AuthorizationPolicyModule,
     AuthorizationModule,
-    PlatformAuthorizationPolicyModule,
-    StorageAggregatorModule,
-    ProfileModule,
     VirtualPersonaEngineAdapterModule,
+    ProfileModule,
+    StorageAggregatorModule,
     TypeOrmModule.forFeature([VirtualPersona]),
   ],
   providers: [

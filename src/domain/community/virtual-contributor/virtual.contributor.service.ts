@@ -22,12 +22,19 @@ import { VisualType } from '@common/enums/visual.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
-import { CreateVirtualContributorInput as CreateVirtualContributorInput } from './dto/virtual.contributor.dto.create';
-import { UpdateVirtualContributorInput as UpdateVirtualContributorInput } from './dto/virtual.contributor.dto.update';
-import { DeleteVirtualContributorInput as DeleteVirtualContributorInput } from './dto/virtual.contributor.dto.delete';
+import { CreateVirtualContributorInput } from './dto/virtual.contributor.dto.create';
+import { UpdateVirtualContributorInput } from './dto/virtual.contributor.dto.update';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
-import { VirtualPersonaService } from '../virtual-persona/virtual.persona.service';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
+import { EventBus } from '@nestjs/cqrs';
+import {
+  IngestSpace,
+  SpaceIngestionPurpose,
+} from '@services/infrastructure/event-bus/commands';
+import { VirtualPersonaService } from '@platform/virtual-persona/virtual.persona.service';
+import { IVirtualPersona } from '@platform/virtual-persona';
+import { VirtualContributorEngine } from '@common/enums/virtual.contributor.engine';
+import { BodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
 
 @Injectable()
 export class VirtualContributorService {
@@ -37,10 +44,12 @@ export class VirtualContributorService {
     private profileService: ProfileService,
     private storageAggregatorService: StorageAggregatorService,
     private virtualPersonaService: VirtualPersonaService,
+    private communicationAdapter: CommunicationAdapter,
+    private eventBus: EventBus,
     @InjectRepository(VirtualContributor)
     private virtualContributorRepository: Repository<VirtualContributor>,
-    private communicationAdapter: CommunicationAdapter,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService
   ) {}
 
   async createVirtualContributor(
@@ -56,6 +65,7 @@ export class VirtualContributorService {
     const virtualContributor: IVirtualContributor = VirtualContributor.create(
       virtualContributorData
     );
+
     virtualContributor.authorization = new AuthorizationPolicy();
     const communicationID = await this.communicationAdapter.tryRegisterNewUser(
       `virtual-contributor-${virtualContributor.nameID}@alkem.io`
@@ -63,10 +73,24 @@ export class VirtualContributorService {
     if (communicationID) {
       virtualContributor.communicationID = communicationID;
     }
-    const virtualPersona =
-      await this.virtualPersonaService.getVirtualPersonaOrFail(
+
+    let virtualPersona: IVirtualPersona;
+    if (virtualContributorData.virtualPersonaID) {
+      virtualPersona = await this.virtualPersonaService.getVirtualPersonaOrFail(
         virtualContributorData.virtualPersonaID
       );
+    } else {
+      //toDo fix this: https://app.zenhub.com/workspaces/alkemio-development-5ecb98b262ebd9f4aec4194c/issues/gh/alkem-io/server/4010
+      virtualPersona =
+        await this.virtualPersonaService.getVirtualPersonaByEngineOrFail(
+          VirtualContributorEngine.EXPERT
+        );
+    }
+
+    if (virtualContributorData.bodyOfKnowledgeType === undefined) {
+      virtualContributor.bodyOfKnowledgeType = BodyOfKnowledgeType.OTHER;
+    }
+
     virtualContributor.virtualPersona = virtualPersona;
 
     virtualContributor.storageAggregator =
@@ -109,6 +133,14 @@ export class VirtualContributorService {
       `Created new virtual with id ${virtualContributor.id}`,
       LogContext.COMMUNITY
     );
+
+    if (virtualContributorData.bodyOfKnowledgeID)
+      this.eventBus.publish(
+        new IngestSpace(
+          virtualContributorData.bodyOfKnowledgeID,
+          SpaceIngestionPurpose.Knowledge
+        )
+      );
 
     return savedVC;
   }
@@ -188,16 +220,18 @@ export class VirtualContributorService {
   }
 
   async deleteVirtualContributor(
-    deleteData: DeleteVirtualContributorInput
+    virtualContributorID: string
   ): Promise<IVirtualContributor> {
-    const orgID = deleteData.ID;
-    const virtualContributor = await this.getVirtualContributorOrFail(orgID, {
-      relations: {
-        profile: true,
-        agent: true,
-        storageAggregator: true,
-      },
-    });
+    const virtualContributor = await this.getVirtualContributorOrFail(
+      virtualContributorID,
+      {
+        relations: {
+          profile: true,
+          agent: true,
+          storageAggregator: true,
+        },
+      }
+    );
 
     if (virtualContributor.profile) {
       await this.profileService.deleteProfile(virtualContributor.profile.id);
@@ -222,7 +256,7 @@ export class VirtualContributorService {
     const result = await this.virtualContributorRepository.remove(
       virtualContributor as VirtualContributor
     );
-    result.id = orgID;
+    result.id = virtualContributorID;
     return result;
   }
 

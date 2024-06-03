@@ -72,7 +72,10 @@ import { TaskGraphqlModule } from '@domain/task/task.module';
 import { ActivityFeedModule } from '@domain/activity-feed';
 import { AdminSearchIngestModule } from '@platform/admin/search/admin.search.ingest.module';
 import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
+import { EventBusModule } from '@services/infrastructure/event-bus/event.bus.module';
 import { WhiteboardIntegrationModule } from '@services/whiteboard-integration/whiteboard.integration.module';
+import { PlatformSettingsModule } from '@platform/settings/platform.settings.module';
+import { FileIntegrationModule } from '@services/file-integration';
 
 @Module({
   imports: [
@@ -259,7 +262,10 @@ import { WhiteboardIntegrationModule } from '@services/whiteboard-integration/wh
     AuthResetSubscriberModule,
     TaskGraphqlModule,
     ActivityFeedModule,
+    EventBusModule,
     WhiteboardIntegrationModule,
+    FileIntegrationModule,
+    PlatformSettingsModule,
   ],
   controllers: [AppController, SsiCredentialFlowController],
   providers: [
