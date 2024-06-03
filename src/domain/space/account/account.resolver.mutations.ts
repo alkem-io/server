@@ -34,6 +34,8 @@ import {
   IngestSpace,
   SpaceIngestionPurpose,
 } from '@services/infrastructure/event-bus/commands';
+import { CommunityContributorType } from '@common/enums/community.contributor.type';
+import { CommunityRole } from '@common/enums/community.role';
 
 @Resolver()
 export class AccountResolverMutations {
@@ -258,7 +260,21 @@ export class AccountResolverMutations {
         account.authorization
       );
 
-    return await this.virtualContributorService.save(virtual);
+    virtual = await this.virtualContributorService.save(virtual);
+
+    // VC is created, now assign the contributor to the Member role on root space
+    const rootSpace = await this.accountService.getRootSpace(account);
+    await this.spaceService.assignContributorToRole(
+      rootSpace,
+      virtual,
+      CommunityRole.MEMBER,
+      CommunityContributorType.VIRTUAL
+    );
+
+    // Reload to ensure the new member credential is loaded
+    return await this.virtualContributorService.getVirtualContributorOrFail(
+      virtual.id
+    );
   }
 
   @UseGuards(GraphqlGuard)
