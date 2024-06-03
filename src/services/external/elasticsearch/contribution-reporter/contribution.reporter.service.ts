@@ -247,7 +247,7 @@ export class ContributionReporterService {
   ): void {
     this.createDocument(
       {
-        type: 'WHITEBOARD_RT_CONTRIBUTION',
+        type: 'WHITEBOARD_CONTRIBUTION',
         id: contribution.id,
         name: contribution.name,
         author: details.id,
