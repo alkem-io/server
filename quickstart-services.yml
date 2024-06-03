@@ -316,7 +316,7 @@ services:
     networks:
       - alkemio_dev_net
     ports:
-      - 8000
+      - 8009:8000
 
   virtual_contributor_engine_guidance:
     container_name: alkemio_dev_virtual_contributor_engine_guidance
