@@ -22,7 +22,7 @@ export class IMessage {
 
   sender!: string;
 
-  senderType!: 'user' | 'virtualContributor';
+  senderType!: 'user' | 'virtualContributor' | 'unknown';
 
   @Field(() => Number, {
     nullable: false,
