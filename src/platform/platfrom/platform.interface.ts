@@ -19,4 +19,5 @@ export abstract class IPlatform extends IAuthorizable {
   innovationHubs?: IInnovationHub[];
   licensing?: ILicensing;
   virtualPersonas?: IVirtualPersona[];
+  defaultVirtualPersona?: IVirtualPersona;
 }

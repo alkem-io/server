@@ -1,7 +1,5 @@
-import { UUID } from '@domain/common/scalars';
 import { Args, Query, Resolver } from '@nestjs/graphql';
 import { CurrentUser } from '@src/common/decorators';
-import { IVirtualPersona } from './virtual.persona.interface';
 import { VirtualPersonaService } from './virtual.persona.service';
 import { UseGuards } from '@nestjs/common';
 import { GraphqlGuard } from '@core/authorization';
@@ -12,24 +10,6 @@ import { VirtualPersonaQuestionInput } from './dto/virtual.persona.question.dto.
 @Resolver()
 export class VirtualPersonaResolverQueries {
   constructor(private virtualPersonaService: VirtualPersonaService) {}
-
-  @Query(() => [IVirtualPersona], {
-    nullable: false,
-    description: 'The VirtualPersonas on this platform',
-  })
-  async virtualPersonas(): Promise<IVirtualPersona[]> {
-    return await this.virtualPersonaService.getVirtualPersonas();
-  }
-
-  @Query(() => IVirtualPersona, {
-    nullable: false,
-    description: 'A particular VirtualPersona',
-  })
-  async virtualPersona(
-    @Args('ID', { type: () => UUID, nullable: false }) id: string
-  ): Promise<IVirtualPersona> {
-    return await this.virtualPersonaService.getVirtualPersonaOrFail(id);
-  }
 
   @UseGuards(GraphqlGuard)
   @Query(() => IVirtualPersonaQuestionResult, {

@@ -158,31 +158,8 @@ export class VirtualPersonaService {
     return virtualPersona;
   }
 
-  public async getVirtualPersonaByEngineOrFail(
-    engine: VirtualContributorEngine,
-    options?: FindOneOptions<VirtualPersona>
-  ): Promise<IVirtualPersona | never> {
-    const virtualPersona = await this.virtualPersonaRepository.findOne({
-      ...options,
-      where: { ...options?.where, engine },
-      order: { createdDate: 'ASC' },
-    });
-    if (!virtualPersona)
-      throw new EntityNotFoundException(
-        `Unable to find Virtual Persona with engine: ${engine}`,
-        LogContext.PLATFORM
-      );
-    return virtualPersona;
-  }
-
   async save(virtualPersona: IVirtualPersona): Promise<IVirtualPersona> {
     return await this.virtualPersonaRepository.save(virtualPersona);
-  }
-
-  async getVirtualPersonas(): Promise<IVirtualPersona[]> {
-    const virtualContributors: IVirtualPersona[] =
-      await this.virtualPersonaRepository.find();
-    return virtualContributors;
   }
 
   public async askQuestion(

@@ -46,4 +46,11 @@ export class Platform extends AuthorizableEntity implements IPlatform {
     cascade: true,
   })
   virtualPersonas!: VirtualPersona[];
+
+  @OneToOne(() => VirtualPersona, {
+    eager: false,
+    cascade: false,
+  })
+  @JoinColumn()
+  defaultVirtualPersona?: VirtualPersona;
 }
