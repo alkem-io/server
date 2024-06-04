@@ -6,6 +6,7 @@ import {
 } from '@common/enums';
 import { AccountService } from './account.service';
 import {
+  AccountException,
   EntityNotInitializedException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
@@ -76,7 +77,7 @@ export class AccountAuthorizationService {
         LogContext.ACCOUNT
       );
     }
-    const host = await this.accountService.getHost(account);
+    const host = await this.accountService.getHostOrFail(account);
 
     // Ensure always applying from a clean state
     account.authorization = this.authorizationPolicyService.reset(
@@ -142,13 +143,14 @@ export class AccountAuthorizationService {
   private extendAuthorizationPolicy(
     authorization: IAuthorizationPolicy | undefined,
     accountID: string,
-    host: IContributor | null
+    host: IContributor
   ): IAuthorizationPolicy {
-    if (!authorization)
+    if (!authorization) {
       throw new EntityNotInitializedException(
         `Authorization definition not found for: ${accountID}`,
         LogContext.ACCOUNT
       );
+    }
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
     // By default it is world visible
     authorization.anonymousReadAccess = true;
@@ -206,18 +208,21 @@ export class AccountAuthorizationService {
       type: AuthorizationCredential.GLOBAL_SUPPORT,
       resourceID: '',
     });
-    if (host) {
-      if (host instanceof IUser) {
-        createVCsCriterias.push({
-          type: AuthorizationCredential.USER_SELF_MANAGEMENT,
-          resourceID: host.id,
-        });
-      } else if (host instanceof IOrganization) {
-        createVCsCriterias.push({
-          type: AuthorizationCredential.ORGANIZATION_ADMIN,
-          resourceID: host.id,
-        });
-      }
+    if (host instanceof IUser) {
+      createVCsCriterias.push({
+        type: AuthorizationCredential.USER_SELF_MANAGEMENT,
+        resourceID: host.id,
+      });
+    } else if (host instanceof IOrganization) {
+      createVCsCriterias.push({
+        type: AuthorizationCredential.ORGANIZATION_ADMIN,
+        resourceID: host.id,
+      });
+    } else {
+      throw new AccountException(
+        `Unable to determine host type for: ${host.id}, of type '${host.constructor.name}'`,
+        LogContext.ACCOUNT
+      );
     }
 
     const createVC = this.authorizationPolicyService.createCredentialRule(
