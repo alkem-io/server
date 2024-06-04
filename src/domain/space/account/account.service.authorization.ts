@@ -28,6 +28,10 @@ import {
 import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
 import { IVirtualContributor } from '@domain/community/virtual-contributor';
 import { VirtualContributorAuthorizationService } from '@domain/community/virtual-contributor/virtual.contributor.service.authorization';
+import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { IContributor } from '@domain/community/contributor/contributor.interface';
+import { IUser } from '@domain/community/user/user.interface';
+import { IOrganization } from '@domain/community/organization';
 
 @Injectable()
 export class AccountAuthorizationService {
@@ -66,11 +70,13 @@ export class AccountAuthorizationService {
       !account.space ||
       !account.space.profile ||
       !account.virtualContributors
-    )
+    ) {
       throw new RelationshipNotFoundException(
         `Unable to load Account with entities at start of auth reset: ${account.id} `,
         LogContext.ACCOUNT
       );
+    }
+    const host = await this.accountService.getHost(account);
 
     // Ensure always applying from a clean state
     account.authorization = this.authorizationPolicyService.reset(
@@ -84,7 +90,8 @@ export class AccountAuthorizationService {
     // Extend for global roles
     account.authorization = this.extendAuthorizationPolicy(
       account.authorization,
-      account.id
+      account.id,
+      host
     );
 
     await this.accountService.save(account);
@@ -134,7 +141,8 @@ export class AccountAuthorizationService {
 
   private extendAuthorizationPolicy(
     authorization: IAuthorizationPolicy | undefined,
-    accountID: string
+    accountID: string,
+    host: IContributor | null
   ): IAuthorizationPolicy {
     if (!authorization)
       throw new EntityNotInitializedException(
@@ -188,15 +196,35 @@ export class AccountAuthorizationService {
       );
     newRules.push(globalSpacesReader);
 
-    const createVC =
-      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.CREATE_VIRTUAL_CONTRIBUTOR],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-        ],
-        CREDENTIAL_RULE_ACCOUNT_CREATE_VIRTUAL_CONTRIBUTOR
-      );
+    // Create the criterias for who can create a VC
+    const createVCsCriterias: ICredentialDefinition[] = [];
+    createVCsCriterias.push({
+      type: AuthorizationCredential.GLOBAL_ADMIN,
+      resourceID: '',
+    });
+    createVCsCriterias.push({
+      type: AuthorizationCredential.GLOBAL_SUPPORT,
+      resourceID: '',
+    });
+    if (host) {
+      if (host instanceof IUser) {
+        createVCsCriterias.push({
+          type: AuthorizationCredential.USER_SELF_MANAGEMENT,
+          resourceID: host.id,
+        });
+      } else if (host instanceof IOrganization) {
+        createVCsCriterias.push({
+          type: AuthorizationCredential.ORGANIZATION_ADMIN,
+          resourceID: host.id,
+        });
+      }
+    }
+
+    const createVC = this.authorizationPolicyService.createCredentialRule(
+      [AuthorizationPrivilege.CREATE_VIRTUAL_CONTRIBUTOR],
+      createVCsCriterias,
+      CREDENTIAL_RULE_ACCOUNT_CREATE_VIRTUAL_CONTRIBUTOR
+    );
     createVC.cascade = false;
     newRules.push(createVC);
 
