@@ -1,5 +1,3 @@
-version: '3.7'
-
 volumes:
   alkemio_dev_mysql:
   alkemio_dev_postgres:
@@ -288,7 +286,7 @@ services:
   file-service:
     container_name: alkemio_dev_file_service
     hostname: file-service
-    image: alkemio/file-service:v0.0.3
+    image: alkemio/file-service:v0.0.4
     environment:
       - RABBITMQ_HOST
       - RABBITMQ_USER

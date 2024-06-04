@@ -1,18 +1,15 @@
+import { KratosPayload } from '@core/authentication/kratos.payload';
 import { FrontendApi, Session } from '@ory/kratos-client';
+import jwt_decode from 'jwt-decode';
 
 export const getSession = async (
   kratosClient: FrontendApi,
   opts: {
     authorization?: string;
     cookie?: string;
-    apiToken?: string;
   }
 ): Promise<Session | never> => {
-  const { cookie, authorization, apiToken } = opts;
-
-  if (apiToken) {
-    return getSessionFromApiToken(kratosClient, apiToken);
-  }
+  const { cookie, authorization } = opts;
 
   if (authorization) {
     return getSessionFromAuthorizationHeader(kratosClient, authorization);
@@ -49,9 +46,18 @@ const getSessionFromAuthorizationHeader = (
     throw new Error('Token not provided in Authorization header');
   }
 
-  return getSessionFromApiToken(kratosClient, token);
+  try {
+    return getSessionFromJwt(token);
+  } catch (e) {
+    return getSessionFromApiToken(kratosClient, token);
+  }
 };
 
+/**
+ * @param kratosClient
+ * @param apiToken
+ * @throws {Error}
+ */
 const getSessionFromApiToken = async (
   kratosClient: FrontendApi,
   apiToken: string
@@ -76,6 +82,26 @@ const getSessionFromApiToken = async (
 
   if (!session) {
     throw new Error('Kratos session not found for api token');
+  }
+
+  return session;
+};
+
+const getSessionFromJwt = (token: string): Session | never => {
+  if (!token) {
+    throw new Error('Token is empty!');
+  }
+
+  let session: Session | null;
+
+  try {
+    session = jwt_decode<KratosPayload>(token).session;
+  } catch (error: any) {
+    throw new Error(error?.message ?? 'Token is not a valid JWT token!');
+  }
+
+  if (!session) {
+    throw new Error('Kratos session not found in token');
   }
 
   return session;
