@@ -31,8 +31,8 @@ import { IVirtualContributor } from '@domain/community/virtual-contributor';
 import { VirtualContributorAuthorizationService } from '@domain/community/virtual-contributor/virtual.contributor.service.authorization';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
-import { IUser } from '@domain/community/user/user.interface';
-import { IOrganization } from '@domain/community/organization';
+import { Organization } from '@domain/community/organization';
+import { User } from '@domain/community/user/user.entity';
 
 @Injectable()
 export class AccountAuthorizationService {
@@ -208,12 +208,12 @@ export class AccountAuthorizationService {
       type: AuthorizationCredential.GLOBAL_SUPPORT,
       resourceID: '',
     });
-    if (host instanceof IUser) {
+    if (host instanceof User) {
       createVCsCriterias.push({
         type: AuthorizationCredential.USER_SELF_MANAGEMENT,
         resourceID: host.id,
       });
-    } else if (host instanceof IOrganization) {
+    } else if (host instanceof Organization) {
       createVCsCriterias.push({
         type: AuthorizationCredential.ORGANIZATION_ADMIN,
         resourceID: host.id,
