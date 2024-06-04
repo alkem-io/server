@@ -240,8 +240,21 @@ export class AccountResolverMutations {
     virtualContributorData: CreateVirtualContributorOnAccountInput
   ): Promise<IVirtualContributor> {
     const account = await this.accountService.getAccountOrFail(
-      virtualContributorData.accountID
+      virtualContributorData.accountID,
+      {
+        relations: {
+          space: {
+            community: true,
+          },
+        },
+      }
     );
+    if (!account.space || !account.space.community) {
+      throw new EntityNotInitializedException(
+        `Account space or community is not initialized: ${account.id}`,
+        LogContext.ACCOUNT
+      );
+    }
 
     this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -263,9 +276,8 @@ export class AccountResolverMutations {
     virtual = await this.virtualContributorService.save(virtual);
 
     // VC is created, now assign the contributor to the Member role on root space
-    const rootSpace = await this.accountService.getRootSpace(account);
     await this.spaceService.assignContributorToRole(
-      rootSpace,
+      account.space,
       virtual,
       CommunityRole.MEMBER,
       CommunityContributorType.VIRTUAL
