@@ -132,7 +132,7 @@ export class AccountResolverMutations {
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IAccount, {
-    description: 'Reset the Authorization Policy on the specified Space.',
+    description: 'Reset the Authorization Policy on the specified Account.',
   })
   async authorizationPolicyResetOnAccount(
     @CurrentUser() agentInfo: AgentInfo,
@@ -145,7 +145,7 @@ export class AccountResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       account.authorization,
-      AuthorizationPrivilege.UPDATE, // todo: replace with AUTHORIZATION_RESET once that has been granted
+      AuthorizationPrivilege.AUTHORIZATION_RESET,
       `reset authorization definition on Space: ${agentInfo.email}`
     );
     return await this.accountAuthorizationService.applyAuthorizationPolicy(
