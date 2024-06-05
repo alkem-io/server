@@ -33,6 +33,7 @@ import { ICredentialDefinition } from '@domain/agent/credential/credential.defin
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { Organization } from '@domain/community/organization';
 import { User } from '@domain/community/user/user.entity';
+import { ISpace } from '../space/space.interface';
 
 @Injectable()
 export class AccountAuthorizationService {
@@ -92,7 +93,8 @@ export class AccountAuthorizationService {
     account.authorization = this.extendAuthorizationPolicy(
       account.authorization,
       account.id,
-      host
+      host,
+      account.space
     );
 
     account.agent = this.agentAuthorizationService.applyAuthorizationPolicy(
@@ -141,7 +143,8 @@ export class AccountAuthorizationService {
   private extendAuthorizationPolicy(
     authorization: IAuthorizationPolicy | undefined,
     accountID: string,
-    host: IContributor
+    host: IContributor,
+    rootSpace: ISpace
   ): IAuthorizationPolicy {
     if (!authorization) {
       throw new EntityNotInitializedException(
@@ -207,6 +210,10 @@ export class AccountAuthorizationService {
       resourceID: '',
     });
     const accountHostCred = this.createCredentialCriteriaForHost(host);
+    createVCsCriterias.push({
+      type: AuthorizationCredential.SPACE_ADMIN,
+      resourceID: rootSpace.id,
+    });
     createVCsCriterias.push(accountHostCred);
 
     const createVC = this.authorizationPolicyService.createCredentialRule(
