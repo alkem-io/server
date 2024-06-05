@@ -206,7 +206,8 @@ export class AccountAuthorizationService {
       type: AuthorizationCredential.GLOBAL_SUPPORT,
       resourceID: '',
     });
-    createVCsCriterias.push(this.createCredentialCriteriaForHost(host));
+    const accountHostCred = this.createCredentialCriteriaForHost(host);
+    createVCsCriterias.push(accountHostCred);
 
     const createVC = this.authorizationPolicyService.createCredentialRule(
       [AuthorizationPrivilege.CREATE_VIRTUAL_CONTRIBUTOR],
@@ -216,15 +217,10 @@ export class AccountAuthorizationService {
     createVC.cascade = false;
     newRules.push(createVC);
 
-    // Allow User hosts to also Delete the Account. Note this does not for example allow
+    // Allow hosts (users = self mgmt, org = org admin) to delete their own account
     const userHostsRule = this.authorizationPolicyService.createCredentialRule(
       [AuthorizationPrivilege.DELETE],
-      [
-        {
-          type: AuthorizationCredential.ACCOUNT_HOST,
-          resourceID: accountID,
-        },
-      ],
+      [accountHostCred],
       CREDENTIAL_RULE_TYPES_ACCOUNT_DELETE
     );
     userHostsRule.cascade = false;
