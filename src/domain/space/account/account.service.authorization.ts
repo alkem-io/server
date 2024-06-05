@@ -95,8 +95,6 @@ export class AccountAuthorizationService {
       host
     );
 
-    await this.accountService.save(account);
-
     account.agent = this.agentAuthorizationService.applyAuthorizationPolicy(
       account.agent,
       account.authorization
@@ -131,7 +129,7 @@ export class AccountAuthorizationService {
       const udpatedVC =
         await this.virtualContributorAuthorizationService.applyAuthorizationPolicy(
           vc,
-          account.authorization
+          spaceAuthorization
         );
       updatedVCs.push(udpatedVC);
     }
@@ -208,22 +206,7 @@ export class AccountAuthorizationService {
       type: AuthorizationCredential.GLOBAL_SUPPORT,
       resourceID: '',
     });
-    if (host instanceof User) {
-      createVCsCriterias.push({
-        type: AuthorizationCredential.USER_SELF_MANAGEMENT,
-        resourceID: host.id,
-      });
-    } else if (host instanceof Organization) {
-      createVCsCriterias.push({
-        type: AuthorizationCredential.ORGANIZATION_ADMIN,
-        resourceID: host.id,
-      });
-    } else {
-      throw new AccountException(
-        `Unable to determine host type for: ${host.id}, of type '${host.constructor.name}'`,
-        LogContext.ACCOUNT
-      );
-    }
+    createVCsCriterias.push(this.createCredentialCriteriaForHost(host));
 
     const createVC = this.authorizationPolicyService.createCredentialRule(
       [AuthorizationPrivilege.CREATE_VIRTUAL_CONTRIBUTOR],
@@ -253,5 +236,26 @@ export class AccountAuthorizationService {
     );
 
     return authorization;
+  }
+
+  private createCredentialCriteriaForHost(
+    host: IContributor
+  ): ICredentialDefinition {
+    if (host instanceof User) {
+      return {
+        type: AuthorizationCredential.USER_SELF_MANAGEMENT,
+        resourceID: host.id,
+      };
+    } else if (host instanceof Organization) {
+      return {
+        type: AuthorizationCredential.ORGANIZATION_ADMIN,
+        resourceID: host.id,
+      };
+    } else {
+      throw new AccountException(
+        `Unable to determine host type for: ${host.id}, of type '${host.constructor.name}'`,
+        LogContext.ACCOUNT
+      );
+    }
   }
 }
