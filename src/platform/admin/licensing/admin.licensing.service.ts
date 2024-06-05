@@ -2,16 +2,18 @@ import { LogContext } from '@common/enums/logging.context';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { ILicensePlan } from '@platform/license-plan/license.plan.interface';
 import { AssignLicensePlanToAccount } from './dto/admin.licensing.dto.assign.license.plan.to.account';
 import { AccountService } from '@domain/space/account/account.service';
-import { LicenseNotFoundException } from '@common/exceptions/license.not.found.exception';
 import { LicensingService } from '@platform/licensing/licensing.service';
+import { LicenseIssuerService } from '@platform/license-issuer/license.issuer.service';
+import { IAccount } from '@domain/space/account/account.interface';
+import { RevokeLicensePlanFromAccount } from './dto/admin.licensing.dto.revoke.license.plan.from.account';
 
 @Injectable()
 export class AdminLicensingService {
   constructor(
     private licensingService: LicensingService,
+    private licenseIssuerService: LicenseIssuerService,
     private accountService: AccountService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -19,41 +21,66 @@ export class AdminLicensingService {
   public async assignLicensePlanToAccount(
     licensePlanData: AssignLicensePlanToAccount,
     licensingID: string
-  ): Promise<ILicensePlan> {
-    const licensing = await this.licensingService.getLicensingOrFail(
+  ): Promise<IAccount> {
+    const licensePlan = await this.licensingService.getLicensePlanOrFail(
       licensingID,
-      {
-        relations: {
-          plans: true,
-        },
-      }
+      licensePlanData.licensePlanID
     );
-    if (!licensing.plans) {
-      throw new EntityNotInitializedException(
-        `Licensing (${licensing}) not initialised`,
-        LogContext.LICENSE
-      );
-    }
-
-    const licensePlan = licensing.plans.find(
-      plan => plan.id === licensePlanData.licensePlanID
-    );
-    if (!licensePlan) {
-      throw new LicenseNotFoundException(
-        `Licensing (${licensing}) does not contain the requested plan: ${licensePlanData.licensePlanID}`,
-        LogContext.LICENSE
-      );
-    }
 
     // Todo: assign the actual credential for the license plan
     const account = await this.accountService.getAccountOrFail(
-      licensePlanData.accountID
+      licensePlanData.accountID,
+      {
+        relations: {
+          agent: true,
+        },
+      }
     );
-    this.logger.verbose?.(
-      `Assigning license plan ${licensePlan.id} to account ${account.id}`,
-      LogContext.LICENSE
+    if (!account.agent) {
+      throw new EntityNotInitializedException(
+        `Account (${account}) does not have an agent`,
+        LogContext.LICENSE
+      );
+    }
+    account.agent = await this.licenseIssuerService.assignLicensePlan(
+      account.agent,
+      licensePlan,
+      account.id
     );
 
-    return licensePlan;
+    return account;
+  }
+
+  public async revokeLicensePlanFromAccount(
+    licensePlanData: RevokeLicensePlanFromAccount,
+    licensingID: string
+  ): Promise<IAccount> {
+    const licensePlan = await this.licensingService.getLicensePlanOrFail(
+      licensingID,
+      licensePlanData.licensePlanID
+    );
+
+    // Todo: assign the actual credential for the license plan
+    const account = await this.accountService.getAccountOrFail(
+      licensePlanData.accountID,
+      {
+        relations: {
+          agent: true,
+        },
+      }
+    );
+    if (!account.agent) {
+      throw new EntityNotInitializedException(
+        `Account (${account}) does not have an agent`,
+        LogContext.LICENSE
+      );
+    }
+    account.agent = await this.licenseIssuerService.revokeLicensePlan(
+      account.agent,
+      licensePlan,
+      account.id
+    );
+
+    return account;
   }
 }
