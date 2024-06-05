@@ -967,7 +967,7 @@ export class CommunityService {
     );
   }
 
-  private async assignContributorToRole(
+  public async assignContributorToRole(
     community: ICommunity,
     agent: IAgent,
     role: CommunityRole,
