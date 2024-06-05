@@ -2,6 +2,11 @@ import { KratosPayload } from '@core/authentication/kratos.payload';
 import { FrontendApi, Session } from '@ory/kratos-client';
 import jwt_decode from 'jwt-decode';
 
+/**
+ * @param kratosClient
+ * @param opts
+ * @throws {Error}
+ */
 export const getSession = async (
   kratosClient: FrontendApi,
   opts: {
@@ -22,6 +27,11 @@ export const getSession = async (
   throw new Error('Authorization header or cookie not provided');
 };
 
+/**
+ * @param kratosClient
+ * @param cookie
+ * @throws {Error}
+ */
 const getSessionFromCookie = async (
   kratosClient: FrontendApi,
   cookie: string
@@ -36,6 +46,11 @@ const getSessionFromCookie = async (
     throw new Error(e?.message);
   }
 };
+/**
+ * @param kratosClient
+ * @param authorizationHeader
+ * @throws {Error}
+ */
 const getSessionFromAuthorizationHeader = (
   kratosClient: FrontendApi,
   authorizationHeader: string
@@ -43,14 +58,22 @@ const getSessionFromAuthorizationHeader = (
   const [, token] = authorizationHeader.split(' ');
 
   if (!token) {
-    throw new Error('Token not provided in Authorization header');
+    throw new Error('Token not provided in the Authorization header');
   }
 
   try {
     return getSessionFromJwt(token);
   } catch (e) {
-    return getSessionFromApiToken(kratosClient, token);
+    // ...
   }
+
+  try {
+    return getSessionFromApiToken(kratosClient, token);
+  } catch (e) {
+    // ...
+  }
+
+  throw new Error('Not a valid token provided in the Authorization header');
 };
 
 /**
@@ -87,6 +110,10 @@ const getSessionFromApiToken = async (
   return session;
 };
 
+/**
+ * @param token
+ * @throws {Error}
+ */
 const getSessionFromJwt = (token: string): Session | never => {
   if (!token) {
     throw new Error('Token is empty!');

@@ -1,4 +1,6 @@
 export type WhoInputData = {
-  cookie?: string;
-  token?: string;
+  auth: {
+    cookie?: string;
+    authorization?: string;
+  };
 };

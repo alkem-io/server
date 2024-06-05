@@ -157,7 +157,7 @@ http:
 
     whiteboard-collaboration:
       rule: 'PathPrefix(`/api/private/ws`)'
-      service: 'whiteboard-collaboration'
+      service: 'oathkeeper-proxy'
       middlewares:
         - strip-api-private-prefix-socket-io
       entryPoints:

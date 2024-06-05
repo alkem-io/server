@@ -44,7 +44,7 @@
 - id: 'alkemio:api:private:ws:socket-io'
   upstream:
     preserve_host: true
-    url: 'http://host.docker.internal:4001'
+    url: 'http://whiteboard-collaboration:4002'
   match:
     url: 'http://localhost:3000/socket.io/<**>'
     methods:

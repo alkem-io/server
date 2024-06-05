@@ -70,14 +70,15 @@ export class AuthenticationService {
     );
   }
 
-  /**
-   * @param opts
-   * @throws {Error}
-   */
   async getAgentInfo(opts: { cookie?: string; authorization?: string }) {
-    const session = await getSession(this.kratosFrontEndClient, opts);
+    let session: Session | undefined;
+    try {
+      session = await getSession(this.kratosFrontEndClient, opts);
+    } catch (e) {
+      return new AgentInfo();
+    }
 
-    if (!session.identity) {
+    if (!session?.identity) {
       return new AgentInfo();
     }
 
