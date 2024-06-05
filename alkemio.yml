@@ -379,7 +379,7 @@ collaboration:
 ## Configuration of the legal / usability aspects of the platform
 platform:
   # Terms of usage that all users comply with
-  terms: ${PLATFORM_TERMS}:https://alkemio.org/legal/hub/#tc
+  terms: ${PLATFORM_TERMS}:https://welcome.alkem.io/legal/#tc
 
   # Privacy policy for the platform
   privacy: ${PLATFORM_PRIVACY}:https://alkemio.org/privacy/
@@ -388,7 +388,7 @@ platform:
   security: ${PLATFORM_SECURITY}:https://alkemio.org/security/
 
   # Link for support requests
-  support: ${PLATFORM_SUPPORT}:https://alkemio.org/support/
+  support: ${PLATFORM_SUPPORT}:https://welcome.alkem.io/contact/
 
   # Link for latest platform release notification
   forumreleases: ${PLATFORM_FORUM_RELEASES}:https://alkem.io/forum/releases/latest
@@ -421,7 +421,7 @@ platform:
   contactsupport: ${PLATFORM_CONTACTSUPPORT}:https://welcome.alkem.io/contact/
 
   # Home page - Switch Plan
-  switchplan: ${PLATFORM_SWITCHPLAN}:https://welcome.alkem.io/switch-subscription-plan/
+  switchplan: ${PLATFORM_SWITCHPLAN}:https://welcome.alkem.io/pricing-own-space/
 
   # Home page - Opensource
   opensource: ${PLATFORM_OPENSOURCE}:https://github.com/alkem-io
