@@ -314,7 +314,7 @@ export class AccountResolverMutations {
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       space.account.authorization,
-      AuthorizationPrivilege.CREATE_VIRTUAL_CONTRIBUTOR,
+      AuthorizationPrivilege.PLATFORM_ADMIN,
       `ingest space: ${space.nameID}(${space.id})`
     );
 
