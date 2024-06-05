@@ -4,4 +4,5 @@ export enum SearchEntityTypes {
   SPACE = 'space',
   SUBSPACE = 'subspace',
   POST = 'post',
+  CALLOUT = 'callout',
 }

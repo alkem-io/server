@@ -32,6 +32,7 @@ const TYPE_TO_INDEX = (
   [SearchEntityTypes.POST]: `${indexPattern}posts`,
   [SearchEntityTypes.USER]: `${indexPattern}users`,
   [SearchEntityTypes.ORGANIZATION]: `${indexPattern}organizations`,
+  [SearchEntityTypes.CALLOUT]: `${indexPattern}callouts`,
 });
 const TYPE_TO_PUBLIC_INDEX = (
   indexPattern: string

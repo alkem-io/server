@@ -167,36 +167,41 @@ export class SearchIngestService {
 
     const result: IngestReturnType = {};
     const params = [
+      // {
+      //   index: `${this.indexPattern}spaces`,
+      //   fetchFn: this.fetchSpacesLevel0.bind(this),
+      //   batchSize: 100,
+      // },
+      // {
+      //   index: `${this.indexPattern}subspaces`,
+      //   fetchFn: this.fetchSpacesLevel1.bind(this),
+      //   batchSize: 100,
+      // },
+      // {
+      //   index: `${this.indexPattern}subspaces`,
+      //   fetchFn: this.fetchSpacesLevel2.bind(this),
+      //   batchSize: 100,
+      // },
+      // {
+      //   index: `${this.indexPattern}organizations`,
+      //   fetchFn: this.fetchOrganization.bind(this),
+      //   batchSize: 100,
+      // },
+      // {
+      //   index: `${this.indexPattern}users`,
+      //   fetchFn: this.fetchUsers.bind(this),
+      //   batchSize: 100,
+      // },
       {
-        index: `${this.indexPattern}spaces`,
-        fetchFn: this.fetchSpacesLevel0.bind(this),
-        batchSize: 100,
-      },
-      {
-        index: `${this.indexPattern}subspaces`,
-        fetchFn: this.fetchSpacesLevel1.bind(this),
-        batchSize: 100,
-      },
-      {
-        index: `${this.indexPattern}subspaces`,
-        fetchFn: this.fetchSpacesLevel2.bind(this),
-        batchSize: 100,
-      },
-      {
-        index: `${this.indexPattern}organizations`,
-        fetchFn: this.fetchOrganization.bind(this),
-        batchSize: 100,
-      },
-      {
-        index: `${this.indexPattern}users`,
-        fetchFn: this.fetchUsers.bind(this),
-        batchSize: 100,
-      },
-      {
-        index: `${this.indexPattern}posts`,
-        fetchFn: this.fetchPosts.bind(this),
+        index: `${this.indexPattern}callouts`,
+        fetchFn: this.fetchCallout.bind(this),
         batchSize: 10,
       },
+      // {
+      //   index: `${this.indexPattern}posts`,
+      //   fetchFn: this.fetchPosts.bind(this),
+      //   batchSize: 10,
+      // },
     ];
 
     return asyncReduceSequential(
@@ -480,6 +485,63 @@ export class SearchIngestService {
             tagsets: undefined,
           },
         }))
+      );
+  }
+
+  private fetchCallout(start: number, limit: number) {
+    return this.entityManager
+      .find<Space>(Space, {
+        loadEagerRelations: false,
+        where: {
+          account: {
+            license: { visibility: Not(SpaceVisibility.ARCHIVED) },
+          },
+        },
+        relations: {
+          account: { license: true },
+          collaboration: {
+            callouts: {
+              framing: {
+                profile: profileRelationOptions,
+              },
+            },
+          },
+        },
+        select: {
+          id: true,
+          account: { id: true, license: { visibility: true } },
+          collaboration: {
+            id: true,
+            callouts: {
+              id: true,
+              framing: {
+                id: true,
+                profile: profileSelectOptions,
+              },
+            },
+          },
+        },
+        skip: start,
+        take: limit,
+      })
+      .then(spaces =>
+        spaces.flatMap(space =>
+          space.collaboration?.callouts?.map(callout => ({
+            ...callout,
+            framing: undefined,
+            type: SearchEntityTypes.CALLOUT,
+            license: {
+              visibility: space?.account?.license?.visibility ?? EMPTY_VALUE,
+            },
+            spaceID: space.id,
+            collaborationID: space?.collaboration?.id ?? EMPTY_VALUE,
+            profile: {
+              ...callout.framing.profile,
+              tags: processTagsets(callout.framing?.profile?.tagsets),
+              tagsets: undefined,
+            },
+          }))
+        )
       );
   }
 
