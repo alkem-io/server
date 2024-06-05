@@ -271,14 +271,7 @@ export class AccountService {
       );
     }
 
-    const host = await this.getHost(account);
-    if (!host) {
-      throw new RelationshipNotFoundException(
-        `Unable to load host for account ${account.id} `,
-        LogContext.ACCOUNT
-      );
-    }
-
+    const host = await this.getHostOrFail(account);
     await this.spaceService.deleteSpace({
       ID: account.space.id,
     });
