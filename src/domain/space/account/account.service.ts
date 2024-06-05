@@ -36,6 +36,8 @@ import { LicenseCredential } from '@common/enums/license.credential';
 import { CreateVirtualContributorOnAccountInput } from './dto/account.dto.create.virtual.contributor';
 import { IVirtualContributor } from '@domain/community/virtual-contributor';
 import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
+import { User } from '@domain/community/user';
+import { LicenseFeatureFlagName } from '@common/enums/license.feature.flag.name';
 
 @Injectable()
 export class AccountService {
@@ -97,7 +99,20 @@ export class AccountService {
       account,
       agentInfo
     );
-    await this.setAccountHost(account, accountData.hostID);
+    const host = await this.setAccountHost(account, accountData.hostID);
+    if (host instanceof User) {
+      account.license = await this.licenseService.updateLicense(
+        account.license,
+        {
+          featureFlags: [
+            {
+              name: LicenseFeatureFlagName.VIRTUAL_CONTRIBUTORS,
+              enabled: true,
+            },
+          ],
+        }
+      );
+    }
 
     account.agent = await this.agentService.createAgent({
       parentDisplayID: `account-${account.space.nameID}`,
@@ -256,14 +271,7 @@ export class AccountService {
       );
     }
 
-    const host = await this.getHost(account);
-    if (!host) {
-      throw new RelationshipNotFoundException(
-        `Unable to load host for account ${account.id} `,
-        LogContext.ACCOUNT
-      );
-    }
-
+    const host = await this.getHostOrFail(account);
     await this.spaceService.deleteSpace({
       ID: account.space.id,
     });
@@ -418,7 +426,7 @@ export class AccountService {
   async setAccountHost(
     account: IAccount,
     hostContributorID: string
-  ): Promise<IAccount> {
+  ): Promise<IContributor> {
     const contributor = await this.contributorService.getContributorOrFail(
       hostContributorID,
       {
@@ -439,13 +447,13 @@ export class AccountService {
     }
 
     // assign the credential
-    await this.agentService.grantCredential({
+    contributor.agent = await this.agentService.grantCredential({
       agentID: contributor.agent.id,
       type: AuthorizationCredential.ACCOUNT_HOST,
       resourceID: account.id,
     });
 
-    return account;
+    return contributor;
   }
 
   async getHosts(account: IAccount): Promise<IContributor[]> {
