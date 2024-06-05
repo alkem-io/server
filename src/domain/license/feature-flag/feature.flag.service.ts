@@ -49,12 +49,12 @@ export class FeatureFlagService {
     return featureFlag;
   }
 
-  public updateFeatureFlag(
+  public async updateFeatureFlag(
     featureFlag: ILicenseFeatureFlag,
     licenseUpdateData: UpdateFeatureFlagInput
-  ): ILicenseFeatureFlag {
+  ): Promise<ILicenseFeatureFlag> {
     featureFlag.enabled = licenseUpdateData.enabled;
-    return featureFlag;
+    return await this.save(featureFlag);
   }
 
   async save(featureFlag: ILicenseFeatureFlag): Promise<ILicenseFeatureFlag> {

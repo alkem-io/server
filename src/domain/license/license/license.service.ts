@@ -125,7 +125,7 @@ export class LicenseService {
         );
         if (featureFlagInput) {
           const { enabled } = featureFlagInput;
-          const updatedFF = this.featureFlagService.updateFeatureFlag(
+          const updatedFF = await this.featureFlagService.updateFeatureFlag(
             featureFlag,
             {
               name,
@@ -139,7 +139,7 @@ export class LicenseService {
       }
       license.featureFlags = updatedFeatureFlags;
     }
-    return license;
+    return await this.save(license);
   }
 
   async save(license: ILicense): Promise<ILicense> {
