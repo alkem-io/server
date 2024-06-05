@@ -34,6 +34,8 @@ import {
   IngestSpace,
   SpaceIngestionPurpose,
 } from '@services/infrastructure/event-bus/commands';
+import { CommunityContributorType } from '@common/enums/community.contributor.type';
+import { CommunityRole } from '@common/enums/community.role';
 
 @Resolver()
 export class AccountResolverMutations {
@@ -238,8 +240,21 @@ export class AccountResolverMutations {
     virtualContributorData: CreateVirtualContributorOnAccountInput
   ): Promise<IVirtualContributor> {
     const account = await this.accountService.getAccountOrFail(
-      virtualContributorData.accountID
+      virtualContributorData.accountID,
+      {
+        relations: {
+          space: {
+            community: true,
+          },
+        },
+      }
     );
+    if (!account.space || !account.space.community) {
+      throw new EntityNotInitializedException(
+        `Account space or community is not initialized: ${account.id}`,
+        LogContext.ACCOUNT
+      );
+    }
 
     this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -258,7 +273,20 @@ export class AccountResolverMutations {
         account.authorization
       );
 
-    return await this.virtualContributorService.save(virtual);
+    virtual = await this.virtualContributorService.save(virtual);
+
+    // VC is created, now assign the contributor to the Member role on root space
+    await this.spaceService.assignContributorToRole(
+      account.space,
+      virtual,
+      CommunityRole.MEMBER,
+      CommunityContributorType.VIRTUAL
+    );
+
+    // Reload to ensure the new member credential is loaded
+    return await this.virtualContributorService.getVirtualContributorOrFail(
+      virtual.id
+    );
   }
 
   @UseGuards(GraphqlGuard)
