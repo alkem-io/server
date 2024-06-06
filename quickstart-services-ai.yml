@@ -271,7 +271,7 @@ services:
   whiteboard-collaboration:
     container_name: alkemio_dev_whiteboard_collaboration
     hostname: whiteboard-collaboration
-    image: alkemio/whiteboard-collaboration-service:v0.2.1
+    image: alkemio/whiteboard-collaboration-service:v0.3.0
     platform: linux/x86_64
     environment:
       - RABBITMQ_HOST
@@ -289,7 +289,7 @@ services:
   file-service:
     container_name: alkemio_dev_file_service
     hostname: file-service
-    image: alkemio/file-service:v0.0.3
+    image: alkemio/file-service:v0.1.0
     platform: linux/x86_64
     environment:
       - RABBITMQ_HOST
@@ -396,7 +396,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_virtual_contributor_engine_expert
     hostname: virtual-contributor-engine-expert
-    image: alkemio/virtual-contributor-engine-expert:v0.3.3
+    image: alkemio/virtual-contributor-engine-expert:v0.3.4
     platform: linux/x86_64
     restart: always
     volumes:
