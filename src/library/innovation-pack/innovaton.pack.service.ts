@@ -268,9 +268,7 @@ export class InnovationPackService {
     const innovationPackCount = await this.innovationPackRepository.countBy({
       nameID: nameID,
     });
-    if (innovationPackCount != 0) return false;
-
-    return true;
+    return innovationPackCount == 0;
   }
 
   async getProvider(

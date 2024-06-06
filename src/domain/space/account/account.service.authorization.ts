@@ -139,7 +139,7 @@ export class AccountAuthorizationService {
     }
     account.virtualContributors = updatedVCs;
 
-    return await this.accountService.save(account);
+    return account;
   }
 
   private extendAuthorizationPolicy(
