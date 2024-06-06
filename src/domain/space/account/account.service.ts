@@ -38,6 +38,7 @@ import { IVirtualContributor } from '@domain/community/virtual-contributor';
 import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
 import { User } from '@domain/community/user';
 import { LicenseFeatureFlagName } from '@common/enums/license.feature.flag.name';
+import { LicenseIssuerService } from '@platform/license-issuer/license.issuer.service';
 
 @Injectable()
 export class AccountService {
@@ -49,6 +50,7 @@ export class AccountService {
     private licenseService: LicenseService,
     private contributorService: ContributorService,
     private licensingService: LicensingService,
+    private licenseIssuerService: LicenseIssuerService,
     private virtualContributorService: VirtualContributorService,
     @InjectRepository(Account)
     private accountRepository: Repository<Account>,
@@ -119,25 +121,11 @@ export class AccountService {
     });
 
     for (const licensePlan of licensePlansToAssign) {
-      let expires: Date | undefined = undefined;
-      if (licensePlan.trialEnabled) {
-        const now = new Date();
-        const oneMonthFromNow = new Date(
-          now.getFullYear(),
-          now.getMonth() + 1,
-          now.getDate(),
-          0,
-          0,
-          0
-        );
-        expires = oneMonthFromNow;
-      }
-      account.agent = await this.agentService.grantCredential({
-        agentID: account.agent.id,
-        type: licensePlan.licenseCredential,
-        resourceID: account.id,
-        expires: expires,
-      });
+      account.agent = await this.licenseIssuerService.assignLicensePlan(
+        account.agent,
+        licensePlan,
+        account.id
+      );
     }
 
     const storageAggregator =

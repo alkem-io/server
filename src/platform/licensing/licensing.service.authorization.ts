@@ -61,7 +61,7 @@ export class LicensingAuthorizationService {
 
     // Cascade down
     licensing.licensePolicy =
-      await this.licensePolicyAuthorizationService.applyAuthorizationPolicy(
+      this.licensePolicyAuthorizationService.applyAuthorizationPolicy(
         licensing.licensePolicy,
         licensing.authorization
       );
@@ -87,6 +87,7 @@ export class LicensingAuthorizationService {
           AuthorizationPrivilege.READ,
           AuthorizationPrivilege.UPDATE,
           AuthorizationPrivilege.DELETE,
+          AuthorizationPrivilege.GRANT,
         ],
         [AuthorizationCredential.GLOBAL_LICENSE_MANAGER],
         CREDENTIAL_RULE_LICENSE_MANAGER
