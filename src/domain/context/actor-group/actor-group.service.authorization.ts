@@ -27,12 +27,13 @@ export class ActorGroupAuthorizationService {
     // cascade
     for (const actor of this.actorGroupService.getActors(actorGroup)) {
       actor.authorization =
-        await this.authorizationPolicyService.inheritParentAuthorization(
+        this.authorizationPolicyService.inheritParentAuthorization(
           actor.authorization,
           actorGroup.authorization
         );
     }
 
-    return await this.actorGroupRepository.save(actorGroup);
+    return actorGroup;
+    // return await this.actorGroupRepository.save(actorGroup);
   }
 }

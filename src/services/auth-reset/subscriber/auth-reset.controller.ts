@@ -53,7 +53,9 @@ export class AuthResetController {
 
     try {
       const account = await this.accountService.getAccountOrFail(payload.id);
-      await this.accountAuthorizationService.applyAuthorizationPolicy(account);
+      await this.accountAuthorizationService
+        .applyAuthorizationPolicy(account)
+        .then(account => this.accountService.save(account));
 
       const message = `Finished resetting authorization for space with id ${payload.id}.`;
       this.logger.verbose?.(message, LogContext.AUTH_POLICY);

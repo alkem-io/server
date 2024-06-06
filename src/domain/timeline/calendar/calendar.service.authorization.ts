@@ -27,13 +27,8 @@ export class CalendarAuthorizationService {
         calendar.authorization,
         parentAuthorization
       );
-
     // Cascade down
-    const calendarPropagated = await this.propagateAuthorizationToChildEntities(
-      calendar
-    );
-
-    return calendarPropagated;
+    return this.propagateAuthorizationToChildEntities(calendar);
   }
 
   private async propagateAuthorizationToChildEntities(

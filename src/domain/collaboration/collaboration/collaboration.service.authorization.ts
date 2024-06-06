@@ -94,12 +94,11 @@ export class CollaborationAuthorizationService {
       communityPolicy,
       license
     );
-    const collaborationPropagated =
-      await this.propagateAuthorizationToChildEntities(
-        collaboration,
-        communityPolicy
-      );
-    return collaborationPropagated;
+
+    return this.propagateAuthorizationToChildEntities(
+      collaboration,
+      communityPolicy
+    );
   }
 
   private async propagateAuthorizationToChildEntities(
@@ -143,6 +142,12 @@ export class CollaborationAuthorizationService {
         communityPolicy
       );
 
+    collaboration.innovationFlow =
+      await this.innovationFlowAuthorizationService.applyAuthorizationPolicy(
+        collaboration.innovationFlow,
+        collaboration.authorization
+      );
+
     collaboration.timeline =
       await this.timelineAuthorizationService.applyAuthorizationPolicy(
         collaboration.timeline,
@@ -156,12 +161,6 @@ export class CollaborationAuthorizationService {
           collaboration.authorization
         );
     }
-
-    collaboration.innovationFlow =
-      await this.innovationFlowAuthorizationService.applyAuthorizationPolicy(
-        collaboration.innovationFlow,
-        collaboration.authorization
-      );
 
     return collaboration;
   }
