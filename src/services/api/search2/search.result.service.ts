@@ -103,6 +103,7 @@ export class SearchResultService {
       journeyResultsCount: -1,
       groupResults: [],
       calloutResults: [],
+      calloutResultsCount: -1,
     };
   }
 

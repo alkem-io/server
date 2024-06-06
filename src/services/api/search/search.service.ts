@@ -186,6 +186,7 @@ export class SearchService {
       groupResults: [],
       // calloutResults: calloutResultsMock,
       calloutResults: [],
+      calloutResultsCount: -1,
     };
 
     results.contributorResults.push(

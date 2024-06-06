@@ -167,41 +167,41 @@ export class SearchIngestService {
 
     const result: IngestReturnType = {};
     const params = [
-      // {
-      //   index: `${this.indexPattern}spaces`,
-      //   fetchFn: this.fetchSpacesLevel0.bind(this),
-      //   batchSize: 100,
-      // },
-      // {
-      //   index: `${this.indexPattern}subspaces`,
-      //   fetchFn: this.fetchSpacesLevel1.bind(this),
-      //   batchSize: 100,
-      // },
-      // {
-      //   index: `${this.indexPattern}subspaces`,
-      //   fetchFn: this.fetchSpacesLevel2.bind(this),
-      //   batchSize: 100,
-      // },
-      // {
-      //   index: `${this.indexPattern}organizations`,
-      //   fetchFn: this.fetchOrganization.bind(this),
-      //   batchSize: 100,
-      // },
-      // {
-      //   index: `${this.indexPattern}users`,
-      //   fetchFn: this.fetchUsers.bind(this),
-      //   batchSize: 100,
-      // },
+      {
+        index: `${this.indexPattern}spaces`,
+        fetchFn: this.fetchSpacesLevel0.bind(this),
+        batchSize: 100,
+      },
+      {
+        index: `${this.indexPattern}subspaces`,
+        fetchFn: this.fetchSpacesLevel1.bind(this),
+        batchSize: 100,
+      },
+      {
+        index: `${this.indexPattern}subspaces`,
+        fetchFn: this.fetchSpacesLevel2.bind(this),
+        batchSize: 100,
+      },
+      {
+        index: `${this.indexPattern}organizations`,
+        fetchFn: this.fetchOrganization.bind(this),
+        batchSize: 100,
+      },
+      {
+        index: `${this.indexPattern}users`,
+        fetchFn: this.fetchUsers.bind(this),
+        batchSize: 100,
+      },
+      {
+        index: `${this.indexPattern}posts`,
+        fetchFn: this.fetchPosts.bind(this),
+        batchSize: 20,
+      },
       {
         index: `${this.indexPattern}callouts`,
         fetchFn: this.fetchCallout.bind(this),
-        batchSize: 10,
+        batchSize: 20,
       },
-      // {
-      //   index: `${this.indexPattern}posts`,
-      //   fetchFn: this.fetchPosts.bind(this),
-      //   batchSize: 10,
-      // },
     ];
 
     return asyncReduceSequential(
@@ -514,6 +514,9 @@ export class SearchIngestService {
             id: true,
             callouts: {
               id: true,
+              createdBy: true,
+              createdDate: true,
+              nameID: true,
               framing: {
                 id: true,
                 profile: profileSelectOptions,
