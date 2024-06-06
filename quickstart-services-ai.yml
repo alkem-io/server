@@ -318,7 +318,7 @@ services:
     networks:
       - alkemio_dev_net
     ports:
-      - 8000
+      - 8765:8000
 
   virtual_contributor_engine_guidance:
     container_name: alkemio_dev_virtual_contributor_engine_guidance
@@ -431,6 +431,10 @@ services:
       - VECTOR_DB_HOST
 
   virtual_contributor_ingest_space:
+    # the space-ingest service needs to download files from the server running on the host
+    # for that to work the container needs to run in network_mode: host and refer to other
+    # services trough localhost
+    network_mode: host
     extra_hosts:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_virtual-contributor-ingest-space
@@ -439,21 +443,19 @@ services:
     platform: linux/x86_64
     restart: always
     volumes:
-      - /dev/shm:/dev/shm
-      - ~/alkemio/data:${AI_LOCAL_PATH:-/home/alkemio/data}
-    networks:
-      - alkemio_dev_net
+       - /dev/shm:/dev/shm
+       - ~/alkemio/data:${AI_LOCAL_PATH:-/home/alkemio/data}
     depends_on:
       rabbitmq:
         condition: "service_healthy"
     environment:
-      - RABBITMQ_HOST
+      - RABBITMQ_HOST=localhost
       - RABBITMQ_USER
       - RABBITMQ_PASSWORD
       - RABBITMQ_PORT
       - RABBITMQ_QUEUE=virtual-contributor-ingest-space
       - ENVIRONMENT=dev
-      - LOG_LEVEL=DEBUG
+      - LOG_LEVEL=debug
       - EMBEDDINGS_DEPLOYMENT_NAME
       - AZURE_OPENAI_API_KEY
       - AZURE_OPENAI_ENDPOINT
@@ -465,11 +467,11 @@ services:
       - LANGCHAIN_ENDPOINT
       - LANGCHAIN_API_KEY
       - LANGCHAIN_PROJECT=virtual-contributor-ingest-space
-      - VECTOR_DB_HOST
-      - VECTOR_DB_PORT
+      - VECTOR_DB_HOST=localhost
+      - VECTOR_DB_PORT=8765
       - AUTH_ADMIN_EMAIL
       - AUTH_ADMIN_PASSWORD
-      - API_ENDPOINT_PRIVATE_GRAPHQL=http://host.docker.internal:3000/api/private/non-interactive/graphql
-      - AUTH_ORY_KRATOS_PUBLIC_BASE_URL=http://host.docker.internal:3000/ory/kratos/public
+      - API_ENDPOINT_PRIVATE_GRAPHQL=http://localhost:3000/api/private/non-interactive/graphql
+      - AUTH_ORY_KRATOS_PUBLIC_BASE_URL=http://localhost:3000/ory/kratos/public
       - CHUNK_SIZE=1000
       - CHUNK_OVERLAP=100
