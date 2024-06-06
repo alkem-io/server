@@ -13,11 +13,12 @@ import { VirtualPersonaEngineAdapterQueryResponse } from './dto/virtual.persona.
 import { LogContext } from '@common/enums/logging.context';
 import { VirtualPersonaEngineAdapterInputBase } from './dto/virtual.persona.engine.adapter.dto.base';
 import { VirtualPersonaEngineAdapterBaseResponse } from './dto/virtual.persona.engine.adapter.dto.base.response';
-import { VirtualContributorEngine } from '@common/enums/virtual.persona.engine';
 import { ChatGuidanceInput } from '@services/api/chat-guidance/dto/chat.guidance.dto.input';
 import { IVirtualPersonaQuestionResult } from '@platform/virtual-persona/dto/virtual.persona.question.dto.result';
+import { VirtualContributorEngine } from '@common/enums/virtual.contributor.engine';
+import { ValidationException } from '@common/exceptions';
 
-enum VirtualPersonaEventType {
+enum VirtualContributorEngineEventType {
   QUERY = 'query',
   INGEST = 'ingest',
   RESET = 'reset',
@@ -30,11 +31,11 @@ const successfulResetResponse = 'Reset function executed';
 export class VirtualPersonaEngineAdapter {
   constructor(
     @Inject(VIRTUAL_CONTRIBUTOR_ENGINE_COMMUNITY_MANAGER)
-    private virtualPersonaEngineCommunityManager: ClientProxy,
+    private virtualContributorEngineCommunityManager: ClientProxy,
     @Inject(VIRTUAL_CONTRIBUTOR_ENGINE_EXPERT)
-    private virtualPersonaEngineAlkemioDigileefomgeving: ClientProxy,
+    private virtualContributorEngineExpert: ClientProxy,
     @Inject(VIRTUAL_CONTRIBUTOR_ENGINE_GUIDANCE)
-    private virtualPersonaEngineChatGuidance: ClientProxy,
+    private virtualContributorEngineGuidance: ClientProxy,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -46,29 +47,49 @@ export class VirtualPersonaEngineAdapter {
 
     try {
       switch (eventData.engine) {
-        case VirtualContributorEngine.EXPERT:
-          const responseAlkemioDigileefomgeving =
-            this.virtualPersonaEngineAlkemioDigileefomgeving.send<
+        case VirtualContributorEngine.COMMUNITY_MANAGER:
+          if (!eventData.prompt)
+            throw new ValidationException(
+              'Prompt property is required for community manager engine!',
+              LogContext.VIRTUAL_CONTRIBUTOR_ENGINE
+            );
+          const responseCommunityManager =
+            this.virtualContributorEngineCommunityManager.send<
               VirtualPersonaEngineAdapterQueryResponse,
               VirtualPersonaEngineAdapterQueryInput
-            >({ cmd: VirtualPersonaEventType.QUERY }, eventData);
-          responseData = await firstValueFrom(responseAlkemioDigileefomgeving);
+            >({ cmd: VirtualContributorEngineEventType.QUERY }, eventData);
+          responseData = await firstValueFrom(responseCommunityManager);
+          break;
+        case VirtualContributorEngine.EXPERT:
+          if (!eventData.contextSpaceNameID || !eventData.knowledgeSpaceNameID)
+            throw new ValidationException(
+              'ContextSpaceNameID and knowledgeSpaceNameID properties are required for expert engine!',
+              LogContext.VIRTUAL_CONTRIBUTOR_ENGINE
+            );
+          const responseExpert = this.virtualContributorEngineExpert.send<
+            VirtualPersonaEngineAdapterQueryResponse,
+            VirtualPersonaEngineAdapterQueryInput
+          >({ cmd: VirtualContributorEngineEventType.QUERY }, eventData);
+          responseData = await firstValueFrom(responseExpert);
           break;
         case VirtualContributorEngine.GUIDANCE:
-          const responseChatGuidance =
-            this.virtualPersonaEngineChatGuidance.send<
-              VirtualPersonaEngineAdapterQueryResponse,
-              ChatGuidanceInput
-            >({ cmd: VirtualPersonaEventType.QUERY }, {
-              ...eventData,
-              language: 'EN',
-            } as ChatGuidanceInput);
-          responseData = await firstValueFrom(responseChatGuidance);
+          const responseGuidance = this.virtualContributorEngineGuidance.send<
+            VirtualPersonaEngineAdapterQueryResponse,
+            ChatGuidanceInput
+          >({ cmd: VirtualContributorEngineEventType.QUERY }, {
+            ...eventData,
+            language: 'EN',
+          } as ChatGuidanceInput);
+          responseData = await firstValueFrom(responseGuidance);
           break;
       }
     } catch (e) {
       const errorMessage = `Error received from guidance chat server! ${e}`;
-      this.logger.error(errorMessage, undefined, LogContext.CHAT_GUIDANCE);
+      this.logger.error(
+        errorMessage,
+        undefined,
+        LogContext.VIRTUAL_CONTRIBUTOR_ENGINE
+      );
       // not a real answer; just return an error
       return {
         answer: errorMessage,
@@ -78,7 +99,11 @@ export class VirtualPersonaEngineAdapter {
 
     if (!responseData) {
       const errorMessage = `Unable to get a response from virtual persona engine ('${eventData.engine}') server!`;
-      this.logger.error(errorMessage, undefined, LogContext.CHAT_GUIDANCE);
+      this.logger.error(
+        errorMessage,
+        undefined,
+        LogContext.VIRTUAL_CONTRIBUTOR_ENGINE
+      );
       // not a real answer; just return an error
       return {
         answer: errorMessage,
@@ -105,7 +130,11 @@ export class VirtualPersonaEngineAdapter {
       };
     } catch (err: any) {
       const errorMessage = `Could not send query to chat guidance adapter! ${err}`;
-      this.logger.error(errorMessage, err?.stack, LogContext.CHAT_GUIDANCE);
+      this.logger.error(
+        errorMessage,
+        err?.stack,
+        LogContext.VIRTUAL_CONTRIBUTOR_ENGINE
+      );
       // not a real answer; just return an error
       return {
         answer: errorMessage,
@@ -117,8 +146,8 @@ export class VirtualPersonaEngineAdapter {
   public async sendReset(
     eventData: VirtualPersonaEngineAdapterInputBase
   ): Promise<boolean> {
-    const response = this.virtualPersonaEngineCommunityManager.send(
-      { cmd: VirtualPersonaEventType.RESET },
+    const response = this.virtualContributorEngineCommunityManager.send(
+      { cmd: VirtualContributorEngineEventType.RESET },
       eventData
     );
 
@@ -131,7 +160,7 @@ export class VirtualPersonaEngineAdapter {
       this.logger.error(
         `Could not send reset to chat guidance adapter! ${err}`,
         err?.stack,
-        LogContext.CHAT_GUIDANCE
+        LogContext.VIRTUAL_CONTRIBUTOR_ENGINE
       );
       return false;
     }
@@ -140,8 +169,8 @@ export class VirtualPersonaEngineAdapter {
   public async sendIngest(
     eventData: VirtualPersonaEngineAdapterInputBase
   ): Promise<boolean> {
-    const response = this.virtualPersonaEngineCommunityManager.send(
-      { cmd: VirtualPersonaEventType.INGEST },
+    const response = this.virtualContributorEngineCommunityManager.send(
+      { cmd: VirtualContributorEngineEventType.INGEST },
       eventData
     );
 
@@ -153,7 +182,7 @@ export class VirtualPersonaEngineAdapter {
       this.logger.error(
         `Could not send ingest to chat guidance adapter! ${err}`,
         err?.stack,
-        LogContext.CHAT_GUIDANCE
+        LogContext.VIRTUAL_CONTRIBUTOR_ENGINE
       );
       return false;
     }

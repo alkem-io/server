@@ -32,6 +32,10 @@ import {
   SpaceIngestionPurpose,
 } from '@services/infrastructure/event-bus/commands';
 import { VirtualPersonaService } from '@platform/virtual-persona/virtual.persona.service';
+import { IVirtualPersona } from '@platform/virtual-persona';
+import { VirtualContributorEngine } from '@common/enums/virtual.contributor.engine';
+import { BodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
+import { NamingService } from '@services/infrastructure/naming/naming.service';
 
 @Injectable()
 export class VirtualContributorService {
@@ -42,6 +46,7 @@ export class VirtualContributorService {
     private storageAggregatorService: StorageAggregatorService,
     private virtualPersonaService: VirtualPersonaService,
     private communicationAdapter: CommunicationAdapter,
+    private namingService: NamingService,
     private eventBus: EventBus,
     @InjectRepository(VirtualContributor)
     private virtualContributorRepository: Repository<VirtualContributor>,
@@ -52,9 +57,16 @@ export class VirtualContributorService {
   async createVirtualContributor(
     virtualContributorData: CreateVirtualContributorInput
   ): Promise<IVirtualContributor> {
-    // Convert nameID to lower case
-    virtualContributorData.nameID = virtualContributorData.nameID.toLowerCase();
-    await this.checkNameIdOrFail(virtualContributorData.nameID);
+    if (virtualContributorData.nameID) {
+      // Convert nameID to lower case
+      virtualContributorData.nameID =
+        virtualContributorData.nameID.toLowerCase();
+      await this.checkNameIdOrFail(virtualContributorData.nameID);
+    } else {
+      virtualContributorData.nameID = await this.createVirtualContributorNameID(
+        virtualContributorData.profileData?.displayName || ''
+      );
+    }
     await this.checkDisplayNameOrFail(
       virtualContributorData.profileData?.displayName
     );
@@ -71,10 +83,23 @@ export class VirtualContributorService {
       virtualContributor.communicationID = communicationID;
     }
 
-    const virtualPersona =
-      await this.virtualPersonaService.getVirtualPersonaOrFail(
+    let virtualPersona: IVirtualPersona;
+    if (virtualContributorData.virtualPersonaID) {
+      virtualPersona = await this.virtualPersonaService.getVirtualPersonaOrFail(
         virtualContributorData.virtualPersonaID
       );
+    } else {
+      //toDo fix this: https://app.zenhub.com/workspaces/alkemio-development-5ecb98b262ebd9f4aec4194c/issues/gh/alkem-io/server/4010
+      virtualPersona =
+        await this.virtualPersonaService.getVirtualPersonaByEngineOrFail(
+          VirtualContributorEngine.EXPERT
+        );
+    }
+
+    if (virtualContributorData.bodyOfKnowledgeType === undefined) {
+      virtualContributor.bodyOfKnowledgeType = BodyOfKnowledgeType.OTHER;
+    }
+
     virtualContributor.virtualPersona = virtualPersona;
 
     virtualContributor.storageAggregator =
@@ -118,12 +143,13 @@ export class VirtualContributorService {
       LogContext.COMMUNITY
     );
 
-    this.eventBus.publish(
-      new IngestSpace(
-        virtualContributorData.bodyOfKnowledgeID,
-        SpaceIngestionPurpose.Knowledge
-      )
-    );
+    if (virtualContributorData.bodyOfKnowledgeID)
+      this.eventBus.publish(
+        new IngestSpace(
+          virtualContributorData.bodyOfKnowledgeID,
+          SpaceIngestionPurpose.Knowledge
+        )
+      );
 
     return savedVC;
   }
@@ -397,6 +423,18 @@ export class VirtualContributorService {
       results.push(loadedVirtual);
     }
     return results;
+  }
+
+  public async createVirtualContributorNameID(
+    displayName: string
+  ): Promise<string> {
+    const base = `${displayName}`;
+    const reservedNameIDs =
+      await this.namingService.getReservedNameIDsInVirtualContributors(); // This will need to be smarter later
+    return this.namingService.createNameIdAvoidingReservedNameIDs(
+      base,
+      reservedNameIDs
+    );
   }
 
   async countVirtualContributorsWithCredentials(

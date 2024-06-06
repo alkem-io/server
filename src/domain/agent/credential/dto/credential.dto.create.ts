@@ -13,4 +13,12 @@ export class CreateCredentialInput {
     description: 'The resource to which access is being delegated.',
   })
   resourceID?: string;
+
+  @Field(() => Date, {
+    nullable: true,
+    description: 'The timestamp for the expiry of this credential.',
+  })
+  expires?: Date;
+
+  issuer?: string;
 }

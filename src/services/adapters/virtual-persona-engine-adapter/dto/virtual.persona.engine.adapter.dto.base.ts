@@ -1,4 +1,4 @@
-import { VirtualContributorEngine } from '@common/enums/virtual.persona.engine';
+import { VirtualContributorEngine } from '@common/enums/virtual.contributor.engine';
 
 export interface VirtualPersonaEngineAdapterInputBase {
   userId: string;

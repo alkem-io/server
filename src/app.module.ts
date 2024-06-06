@@ -74,6 +74,9 @@ import { AdminSearchIngestModule } from '@platform/admin/search/admin.search.ing
 import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
 import { EventBusModule } from '@services/infrastructure/event-bus/event.bus.module';
 import { WhiteboardIntegrationModule } from '@services/whiteboard-integration/whiteboard.integration.module';
+import { PlatformSettingsModule } from '@platform/settings/platform.settings.module';
+import { FileIntegrationModule } from '@services/file-integration';
+import { AdminLicensingModule } from '@platform/admin/licensing/admin.licensing.module';
 
 @Module({
   imports: [
@@ -237,6 +240,7 @@ import { WhiteboardIntegrationModule } from '@services/whiteboard-integration/wh
     KonfigModule,
     AdminCommunicationModule,
     AdminSearchIngestModule,
+    AdminLicensingModule,
     AgentModule,
     MessageModule,
     MessageReactionModule,
@@ -262,6 +266,8 @@ import { WhiteboardIntegrationModule } from '@services/whiteboard-integration/wh
     ActivityFeedModule,
     EventBusModule,
     WhiteboardIntegrationModule,
+    FileIntegrationModule,
+    PlatformSettingsModule,
   ],
   controllers: [AppController, SsiCredentialFlowController],
   providers: [

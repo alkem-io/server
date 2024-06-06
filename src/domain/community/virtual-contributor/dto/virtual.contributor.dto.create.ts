@@ -5,12 +5,12 @@ import { BodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.k
 
 @InputType()
 export class CreateVirtualContributorInput extends CreateContributorInput {
-  @Field(() => UUID, { nullable: false })
-  virtualPersonaID!: string;
+  @Field(() => UUID, { nullable: true })
+  virtualPersonaID?: string;
 
-  @Field(() => BodyOfKnowledgeType, { nullable: false })
-  bodyOfKnowledgeType!: BodyOfKnowledgeType;
+  @Field(() => BodyOfKnowledgeType, { nullable: true })
+  bodyOfKnowledgeType?: BodyOfKnowledgeType;
 
-  @Field(() => UUID, { nullable: false })
-  bodyOfKnowledgeID!: string;
+  @Field(() => UUID, { nullable: true })
+  bodyOfKnowledgeID?: string;
 }

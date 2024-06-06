@@ -70,13 +70,13 @@ export class ContributionReporterService {
     );
   }
   // ===================
-  public challengeCreated(
+  public subspaceCreated(
     contribution: ContributionDetails,
     details: AuthorDetails
   ): void {
     this.createDocument(
       {
-        type: 'CHALLENGE_CREATED',
+        type: 'SUBSPACE_CREATED',
         id: contribution.id,
         name: contribution.name,
         author: details.id,
@@ -85,13 +85,13 @@ export class ContributionReporterService {
       details
     );
   }
-  public challengeContentEdited(
+  public subspaceContentEdited(
     contribution: ContributionDetails,
     details: AuthorDetails
   ): void {
     this.createDocument(
       {
-        type: 'CHALLENGE_CONTENT_EDITED',
+        type: 'SUBSPACE_CONTENT_EDITED',
         id: contribution.id,
         name: contribution.name,
         author: details.id,
@@ -100,59 +100,13 @@ export class ContributionReporterService {
       details
     );
   }
-  public challengeJoined(
+  public subspaceJoined(
     contribution: ContributionDetails,
     details: AuthorDetails
   ): void {
     this.createDocument(
       {
-        type: 'CHALLENGE_JOINED',
-        id: contribution.id,
-        name: contribution.name,
-        author: details.id,
-        space: contribution.space,
-      },
-      details
-    );
-  }
-  // ===================
-  public opportunityJoined(
-    contribution: ContributionDetails,
-    details: AuthorDetails
-  ): void {
-    this.createDocument(
-      {
-        type: 'OPPORTUNITY_JOINED',
-        id: contribution.id,
-        name: contribution.name,
-        author: details.id,
-        space: contribution.space,
-      },
-      details
-    );
-  }
-  public opportunityCreated(
-    contribution: ContributionDetails,
-    details: AuthorDetails
-  ): void {
-    this.createDocument(
-      {
-        type: 'OPPORTUNITY_CREATED',
-        id: contribution.id,
-        name: contribution.name,
-        author: details.id,
-        space: contribution.space,
-      },
-      details
-    );
-  }
-  public opportunityContentEdited(
-    contribution: ContributionDetails,
-    details: AuthorDetails
-  ): void {
-    this.createDocument(
-      {
-        type: 'OPPORTUNITY_CONTENT_EDITED',
+        type: 'SUBSPACE_JOINED',
         id: contribution.id,
         name: contribution.name,
         author: details.id,
@@ -293,7 +247,7 @@ export class ContributionReporterService {
   ): void {
     this.createDocument(
       {
-        type: 'WHITEBOARD_RT_CONTRIBUTION',
+        type: 'WHITEBOARD_CONTRIBUTION',
         id: contribution.id,
         name: contribution.name,
         author: details.id,

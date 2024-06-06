@@ -39,7 +39,7 @@ export class LicenseService {
 
     license.authorization = AuthorizationPolicy.create();
     // default to active space
-    license.visibility = SpaceVisibility.ACTIVE;
+    license.visibility = licenseInput.visibility || SpaceVisibility.ACTIVE;
 
     // Set the feature flags
     const whiteboardRtFeatureFlag: CreateFeatureFlagInput = {
@@ -115,23 +115,31 @@ export class LicenseService {
     }
     if (licenseUpdateData.featureFlags) {
       const featureFlags = await this.getFeatureFlags(license.id);
+      const updatedFeatureFlags: ILicenseFeatureFlag[] = [];
       for (const featureFlag of featureFlags) {
         const { name } = featureFlag;
         const matchResult = matchEnumString(LicenseFeatureFlagName, name);
 
         const featureFlagInput = licenseUpdateData.featureFlags.find(
-          f => f.name === matchResult?.key
+          f => f.name === matchResult?.key || f.name === name
         );
         if (featureFlagInput) {
           const { enabled } = featureFlagInput;
-          await this.featureFlagService.updateFeatureFlag(
-            (featureFlag as FeatureFlag).id,
-            { name, enabled }
+          const updatedFF = await this.featureFlagService.updateFeatureFlag(
+            featureFlag,
+            {
+              name,
+              enabled,
+            }
           );
+          updatedFeatureFlags.push(updatedFF);
+        } else {
+          updatedFeatureFlags.push(featureFlag);
         }
       }
+      license.featureFlags = updatedFeatureFlags;
     }
-    return license;
+    return await this.save(license);
   }
 
   async save(license: ILicense): Promise<ILicense> {

@@ -2,6 +2,7 @@ import { Column, Entity, ManyToOne } from 'typeorm';
 import { ILicensePlan } from './license.plan.interface';
 import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
 import { Licensing } from '@platform/licensing/licensing.entity';
+import { LicenseCredential } from '@common/enums/license.credential';
 
 @Entity()
 export class LicensePlan extends BaseAlkemioEntity implements ILicensePlan {
@@ -35,4 +36,7 @@ export class LicensePlan extends BaseAlkemioEntity implements ILicensePlan {
 
   @Column('boolean', { nullable: false, default: false })
   requiresContactSupport!: boolean;
+
+  @Column('text', { nullable: false })
+  licenseCredential!: LicenseCredential;
 }
