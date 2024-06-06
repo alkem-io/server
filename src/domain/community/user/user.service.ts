@@ -105,6 +105,19 @@ export class UserService {
 
   async createUser(userData: CreateUserInput): Promise<IUser> {
     await this.validateUserProfileCreationRequest(userData);
+    if (!userData.nameID) {
+      if (userData.firstName && userData.lastName) {
+        userData.nameID = await this.createUserNameID(
+          userData.firstName || '',
+          userData.lastName
+        );
+      } else {
+        throw new ValidationException(
+          `User creation: NameID not provided and first/last name not available: ${userData.email}`,
+          LogContext.COMMUNITY
+        );
+      }
+    }
 
     const user: IUser = User.create(userData);
     user.authorization = new AuthorizationPolicy();
@@ -866,16 +879,6 @@ export class UserService {
       .getCount();
 
     return userMatchesCount;
-  }
-
-  private getAgentOrFail(user: IUser): IAgent {
-    const agent = user.agent;
-    if (!agent)
-      throw new EntityNotInitializedException(
-        `Unable to find agent for user: ${user.id}`,
-        LogContext.AUTH
-      );
-    return agent;
   }
 
   async getStorageAggregatorOrFail(

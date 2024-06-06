@@ -29,7 +29,7 @@ export class FileIntegrationService {
       });
     }
 
-    if (!auth.cookie && !auth.apiToken) {
+    if (!auth.cookie && !auth.authorization) {
       return new FileInfoOutputData({
         read: false,
         errorCode: ReadOutputErrorCode.NO_AUTH_PROVIDED,
