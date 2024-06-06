@@ -3,11 +3,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Client as ElasticClient } from '@elastic/elasticsearch';
-import { SearchInput } from '@services/api/search';
-import { validateSearchParameters } from '@services/api/search/util/validate.search.parameters';
-import { validateSearchTerms } from '@services/api/search/util/validate.search.terms';
-import { ELASTICSEARCH_CLIENT_PROVIDER } from '@common/constants';
-import { ISearchResult } from '@services/api/search/dto/search.result.entry.interface';
+import { ELASTICSEARCH_CLIENT_PROVIDER } from '@constants/index';
 import { IBaseAlkemio } from '@domain/common/entity/base-entity';
 import {
   AlkemioErrorStatus,
@@ -15,9 +11,11 @@ import {
   LogContext,
 } from '@common/enums';
 import { BaseException } from '@common/exceptions/base.exception';
-import { functionScoreFunctions } from '@services/api/search2/function.score.functions';
+import { ISearchResult, SearchInput } from '../../dto';
+import { validateSearchTerms, validateSearchParameters } from '../../util';
+import { functionScoreFunctions } from './function.score.functions';
 import { buildSearchQuery } from './build.search.query';
-import { SearchEntityTypes } from './search.entity.types';
+import { SearchEntityTypes } from '../../search.entity.types';
 
 type SearchEntityTypesPublic =
   | SearchEntityTypes.SPACE
@@ -33,6 +31,7 @@ const TYPE_TO_INDEX = (
   [SearchEntityTypes.USER]: `${indexPattern}users`,
   [SearchEntityTypes.ORGANIZATION]: `${indexPattern}organizations`,
   [SearchEntityTypes.CALLOUT]: `${indexPattern}callouts`,
+  [SearchEntityTypes.GROUP]: '',
 });
 const TYPE_TO_PUBLIC_INDEX = (
   indexPattern: string

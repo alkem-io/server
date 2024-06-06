@@ -29,7 +29,7 @@ import { AccountService } from '@domain/space/account/account.service';
 import { AccountAuthorizationService } from '@domain/space/account/account.service.authorization';
 import { Account } from '@domain/space/account/account.entity';
 import { SpaceType } from '@common/enums/space.type';
-import { SearchIngestService } from '@services/api/search2/search.ingest/search.ingest.service';
+import { SearchIngestService } from '@services/api/search/v2/ingest/search.ingest.service';
 import { CreateAccountInput } from '@domain/space/account/dto/account.dto.create';
 import { SpaceLevel } from '@common/enums/space.level';
 

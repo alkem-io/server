@@ -15,7 +15,7 @@ import {
   AdminSearchIngestResult,
   IngestResult,
 } from '@platform/admin/search/admin.search.ingest.result';
-import { SearchIngestService } from '@services/api/search2/search.ingest/search.ingest.service';
+import { SearchIngestService } from '@services/api/search/v2/ingest/search.ingest.service';
 import { BaseException } from '@common/exceptions/base.exception';
 
 @Resolver()

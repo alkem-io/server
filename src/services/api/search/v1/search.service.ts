@@ -1,6 +1,6 @@
 import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { SearchInput } from './dto/search.dto.input';
+import { SearchInput } from '@services/api/search/dto/search.dto.input';
 import { Brackets, EntityManager, In, Repository } from 'typeorm';
 import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
 import { UserGroup } from '@domain/community/user-group/user-group.entity';
@@ -15,7 +15,7 @@ import { Organization } from '@domain/community/organization/organization.entity
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { Space } from '@domain/space/space/space.entity';
-import { ISearchResult } from './dto/search.result.entry.interface';
+import { ISearchResult } from '@services/api/search/dto/search.result.entry.interface';
 import { SearchResultType } from '@common/enums/search.result.type';
 import { SpaceService } from '@domain/space/space/space.service';
 import { UserService } from '@domain/community/user/user.service';
@@ -25,27 +25,17 @@ import SearchResultBuilderService from './search.result.builder.service';
 import { PostService } from '@domain/collaboration/post/post.service';
 import { Post } from '@domain/collaboration/post/post.entity';
 import { ISpace } from '@domain/space/space/space.interface';
-import { ISearchResults } from './dto/search.result.dto';
+import { ISearchResults } from '@services/api/search/dto/search.result.dto';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { ISearchResultBuilder } from './search.result.builder.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
 import { CalloutType } from '@common/enums/callout.type';
-import { validateSearchParameters } from './util/validate.search.parameters';
-import { validateSearchTerms } from './util/validate.search.terms';
+import { validateSearchParameters } from '@services/api/search/util/validate.search.parameters';
+import { validateSearchTerms } from '@services/api/search/util/validate.search.terms';
 import { SpaceLevel } from '@common/enums/space.level';
-
-enum SearchEntityTypes {
-  USER = 'user',
-  GROUP = 'group',
-  ORGANIZATION = 'organization',
-  SPACE = 'space',
-  CHALLENGE = 'challenge',
-  OPPORTUNITY = 'opportunity',
-  POST = 'post',
-  CALLOUT = 'callout',
-}
+import { SearchEntityTypes } from '../search.entity.types';
 
 const SCORE_INCREMENT = 10;
 const RESULTS_LIMIT = 8;
@@ -237,15 +227,12 @@ export class SearchService {
     agentInfo: AgentInfo,
     entityTypesFilter?: string[],
     spaceIDsFilter?: string[] | undefined
-  ): Promise<
-    [boolean, boolean, boolean, boolean, boolean, boolean, boolean, boolean]
-  > {
+  ): Promise<[boolean, boolean, boolean, boolean, boolean, boolean, boolean]> {
     let searchUsers = true;
     let searchGroups = true;
     let searchOrganizations = true;
     let searchSpaces = true;
-    let searchChallenges = true;
-    let searchOpportunities = true;
+    let searchSubspaces = true;
     let searchPosts = true;
     let searchCallouts = true;
 
@@ -258,10 +245,8 @@ export class SearchService {
         searchOrganizations = false;
       if (!entityTypesFilter.includes(SearchEntityTypes.SPACE))
         searchSpaces = false;
-      if (!entityTypesFilter.includes(SearchEntityTypes.CHALLENGE))
-        searchChallenges = false;
-      if (!entityTypesFilter.includes(SearchEntityTypes.OPPORTUNITY))
-        searchOpportunities = false;
+      if (!entityTypesFilter.includes(SearchEntityTypes.SUBSPACE))
+        searchSubspaces = false;
       if (!entityTypesFilter.includes(SearchEntityTypes.POST))
         searchPosts = false;
       if (!entityTypesFilter.includes(SearchEntityTypes.CALLOUT))
@@ -281,8 +266,7 @@ export class SearchService {
       searchGroups,
       searchOrganizations,
       searchSpaces,
-      searchChallenges,
-      searchOpportunities,
+      searchSubspaces,
       searchPosts,
       searchCallouts,
     ];

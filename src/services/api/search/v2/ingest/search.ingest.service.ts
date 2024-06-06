@@ -17,8 +17,8 @@ import { asyncReduceSequential } from '@common/utils/async.reduce.sequential';
 import { asyncMap } from '@common/utils/async.map';
 import { ElasticResponseError } from '@services/external/elasticsearch/types';
 import { SpaceLevel } from '@common/enums/space.level';
-import { SearchEntityTypes } from '../search.entity.types';
-import { getIndexPattern } from '../get.index.pattern';
+import { getIndexPattern } from './get.index.pattern';
+import { SearchEntityTypes } from '../../search.entity.types';
 
 const profileRelationOptions = {
   location: true,

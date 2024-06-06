@@ -1,6 +1,6 @@
 import { ValueProvider } from '@nestjs/common';
 import { PublicPart } from '@test/utils';
-import { SearchResultService } from '@services/api/search2/search.result.service';
+import { SearchResultService } from '@services/api/v2/search.result.service';
 
 export const MockSearchResultsService: ValueProvider<
   PublicPart<SearchResultService>

@@ -1,27 +1,10 @@
 import { ValidationException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { SearchInput } from '@services/api/search';
+import { SearchInput } from '@services/api/search/v1';
+import { SearchEntityTypes } from '../search.entity.types';
 
 const SEARCH_TERM_LIMIT = 10;
 const TAGSET_NAMES_LIMIT = 2;
-// todo deduplicate with search.service.ts
-enum SearchEntityTypes {
-  USER = 'user',
-  GROUP = 'group',
-  ORGANIZATION = 'organization',
-  SPACE = 'space',
-  SUBSPACE = 'subspace',
-  POST = 'post',
-}
-
-const SEARCH_ENTITIES: string[] = [
-  SearchEntityTypes.USER,
-  SearchEntityTypes.GROUP,
-  SearchEntityTypes.ORGANIZATION,
-  SearchEntityTypes.SPACE,
-  SearchEntityTypes.SUBSPACE,
-  SearchEntityTypes.POST,
-];
 
 export const validateSearchParameters = (searchData: SearchInput) => {
   if (searchData.terms.length > SEARCH_TERM_LIMIT)
@@ -40,11 +23,16 @@ export const validateSearchParameters = (searchData: SearchInput) => {
   const entityTypes = searchData.typesFilter;
   if (entityTypes) {
     entityTypes.forEach(entityType => {
-      if (!SEARCH_ENTITIES.includes(entityType))
+      if (
+        !Object.values(SearchEntityTypes).includes(
+          entityType as SearchEntityTypes
+        )
+      ) {
         throw new ValidationException(
           `Not allowed typeFilter encountered: ${entityType}`,
           LogContext.SEARCH
         );
+      }
     });
   }
 };

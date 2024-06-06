@@ -4,8 +4,8 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { UserModule } from '@domain/community/user/user.module';
 import { OrganizationModule } from '@domain/community/organization/organization.module';
 import { Search2Service } from './search2.service';
-import { SearchExtractService } from './search.extract.service';
-import { SearchResultService } from './search.result.service';
+import { SearchExtractService } from './extract/search.extract.service';
+import { SearchResultService } from './result/search.result.service';
 
 @Module({
   providers: [

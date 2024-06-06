@@ -4,8 +4,7 @@ import { EntityManager, In } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { groupBy, intersection, orderBy } from 'lodash';
 import { Space } from '@domain/space/space/space.entity';
-import { ISearchResult } from '@services/api/search/dto/search.result.entry.interface';
-import { ISearchResultSpace } from '@services/api/search/dto/search.result.dto.entry.space';
+import { ISearchResult, ISearchResultSpace } from '../../dto';
 import { ISpace } from '@domain/space/space/space.interface';
 import { BaseException } from '@common/exceptions/base.exception';
 import {
@@ -14,12 +13,8 @@ import {
   AuthorizationPrivilege,
   LogContext,
 } from '@common/enums';
-import { ISearchResultUser } from '@services/api/search/dto/search.result.dto.entry.user';
 import { IUser, User } from '@domain/community/user';
-import { ISearchResultOrganization } from '@services/api/search/dto/search.result.dto.entry.organization';
 import { IOrganization, Organization } from '@domain/community/organization';
-import { ISearchResults } from '@services/api/search/dto/search.result.dto';
-import { ISearchResultPost } from '@services/api/search/dto/search.result.dto.entry.post';
 import { Post } from '@domain/collaboration/post';
 import { Callout } from '@domain/collaboration/callout';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
@@ -27,6 +22,12 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { UserService } from '@domain/community/user/user.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { SpaceType } from '@common/enums/space.type';
+import {
+  ISearchResults,
+  ISearchResultOrganization,
+  ISearchResultUser,
+  ISearchResultPost,
+} from '../../dto';
 
 type PostParents = {
   post: Post;
