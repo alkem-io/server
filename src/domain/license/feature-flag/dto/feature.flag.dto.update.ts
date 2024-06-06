@@ -1,5 +1,20 @@
-import { InputType } from '@nestjs/graphql';
-import { CreateFeatureFlagInput } from './feature.flag.dto.create';
+import { SMALL_TEXT_LENGTH } from '@common/constants/entity.field.length.constants';
+import { Field, InputType } from '@nestjs/graphql';
+import { IsBoolean, MaxLength } from 'class-validator';
 
 @InputType()
-export abstract class UpdateFeatureFlagInput extends CreateFeatureFlagInput {}
+export abstract class UpdateFeatureFlagInput {
+  @Field(() => String, {
+    description: 'The name of the feature flag',
+    nullable: false,
+  })
+  @MaxLength(SMALL_TEXT_LENGTH)
+  name!: string;
+
+  @Field(() => Boolean, {
+    description: 'Is this feature flag enabled?',
+    nullable: false,
+  })
+  @IsBoolean()
+  enabled!: boolean;
+}

@@ -1,5 +1,3 @@
-version: '3.7'
-
 volumes:
   alkemio_dev_mysql:
   alkemio_dev_postgres:
@@ -273,7 +271,7 @@ services:
   whiteboard-collaboration:
     container_name: alkemio_dev_whiteboard_collaboration
     hostname: whiteboard-collaboration
-    image: alkemio/whiteboard-collaboration-service:v0.2.1
+    image: alkemio/whiteboard-collaboration-service:v0.3.0
     platform: linux/x86_64
     environment:
       - RABBITMQ_HOST
@@ -291,7 +289,7 @@ services:
   file-service:
     container_name: alkemio_dev_file_service
     hostname: file-service
-    image: alkemio/file-service:v0.0.3
+    image: alkemio/file-service:v0.1.0
     platform: linux/x86_64
     environment:
       - RABBITMQ_HOST
@@ -300,10 +298,10 @@ services:
       - LOGGING_CONSOLE_ENABLED
       - LOGGING_LEVEL_CONSOLE
       - ENVIRONMENT=dev
-      - LOCAL_STORAGE_PATH=storage
+      - LOCAL_STORAGE_PATH
     restart: always
     volumes:
-      - ../server/.storage:/usr/src/app/storage
+      - ../server/.storage:${LOCAL_STORAGE_PATH}
     networks:
       - alkemio_dev_net
     ports:

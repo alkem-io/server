@@ -1,5 +1,3 @@
-version: '3.7'
-
 volumes:
   alkemio_dev_mysql:
   alkemio_dev_postgres:
@@ -316,7 +314,7 @@ services:
     container_name: alkemio_dev_chromadb
     hostname: chromadb
     volumes:
-         - chroma-data:/chroma/chroma
+      - chroma-data:/chroma/chroma
     networks:
       - alkemio_dev_net
     ports:
@@ -329,8 +327,8 @@ services:
     platform: linux/x86_64
     restart: always
     volumes:
-       - /dev/shm:/dev/shm
-       - ~/alkemio/data:${AI_LOCAL_PATH:-/home/alkemio/data}
+      - /dev/shm:/dev/shm
+      - ~/alkemio/data:${AI_LOCAL_PATH:-/home/alkemio/data}
     networks:
       - alkemio_dev_net
     depends_on:
@@ -367,8 +365,8 @@ services:
     platform: linux/x86_64
     restart: always
     volumes:
-       - /dev/shm:/dev/shm
-       - ~/alkemio/data:${AI_LOCAL_PATH:-/home/alkemio/data}
+      - /dev/shm:/dev/shm
+      - ~/alkemio/data:${AI_LOCAL_PATH:-/home/alkemio/data}
     networks:
       - alkemio_dev_net
     depends_on:
@@ -437,16 +435,12 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_virtual-contributor-ingest-space
     hostname: virtual-contributor-ingest-space
-    # image: alkemio/virtual-contributor-ingest-space:v0.3.0
-    build:
-      dockerfile: ../virtual-contributor-ingest-space/Dockerfile
-      context: ../virtual-contributor-ingest-space/
-
+    image: alkemio/virtual-contributor-ingest-space:v0.4.2
     platform: linux/x86_64
     restart: always
     volumes:
-       - /dev/shm:/dev/shm
-       - ~/alkemio/data:${AI_LOCAL_PATH:-/home/alkemio/data}
+      - /dev/shm:/dev/shm
+      - ~/alkemio/data:${AI_LOCAL_PATH:-/home/alkemio/data}
     networks:
       - alkemio_dev_net
     depends_on:
