@@ -209,7 +209,7 @@ export class SpaceResolverMutations {
       subspace.level
     );
 
-    this.contributionReporter.challengeCreated(
+    this.contributionReporter.subspaceCreated(
       {
         id: subspace.id,
         name: subspace.profile.displayName,
