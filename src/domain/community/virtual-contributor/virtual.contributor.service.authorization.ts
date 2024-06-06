@@ -5,6 +5,7 @@ import { ProfileAuthorizationService } from '@domain/common/profile/profile.serv
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import {
+  AccountException,
   EntityNotInitializedException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
@@ -15,11 +16,15 @@ import {
   CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_ADMINS,
   CREDENTIAL_RULE_ORGANIZATION_ADMIN,
   CREDENTIAL_RULE_ORGANIZATION_READ,
-  CREDENTIAL_RULE_ORGANIZATION_SELF_REMOVAL,
+  CREDENTIAL_RULE_VIRTUAL_CONTRIBUTOR_CREATED_BY,
 } from '@common/constants';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 import { IVirtualContributor } from './virtual.contributor.interface';
 import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
+import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { IContributor } from '../contributor/contributor.interface';
+import { Organization } from '../organization';
+import { User } from '../user';
 
 @Injectable()
 export class VirtualContributorAuthorizationService {
@@ -34,6 +39,7 @@ export class VirtualContributorAuthorizationService {
 
   async applyAuthorizationPolicy(
     virtualInput: IVirtualContributor,
+    host: IContributor,
     parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<IVirtualContributor> {
     const virtual = await this.virtualService.getVirtualContributorOrFail(
@@ -86,6 +92,11 @@ export class VirtualContributorAuthorizationService {
     virtual.agent = this.agentAuthorizationService.applyAuthorizationPolicy(
       virtual.agent,
       virtual.authorization
+    );
+
+    virtual.authorization = this.extendAuthorizationPolicy(
+      virtual.authorization,
+      host
     );
 
     return virtual;
@@ -172,36 +183,62 @@ export class VirtualContributorAuthorizationService {
     return updatedAuthorization;
   }
 
-  public extendAuthorizationPolicyForSelfRemoval(
-    virtual: IVirtualContributor,
-    userToBeRemovedID: string
+  private extendAuthorizationPolicy(
+    authorization: IAuthorizationPolicy | undefined,
+    host: IContributor
   ): IAuthorizationPolicy {
+    if (!authorization) {
+      throw new EntityNotInitializedException(
+        `Authorization definition not found for: contributor ${host.id}`,
+        LogContext.ACCOUNT
+      );
+    }
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
-    const userSelfRemovalRule =
-      this.authorizationPolicyService.createCredentialRule(
-        [AuthorizationPrivilege.GRANT],
-        [
-          {
-            type: AuthorizationCredential.USER_SELF_MANAGEMENT,
-            resourceID: userToBeRemovedID,
-          },
-        ],
-        CREDENTIAL_RULE_ORGANIZATION_SELF_REMOVAL
-      );
-    newRules.push(userSelfRemovalRule);
+    // Create the criterias for who can create a VC
+    const hostSelfManagementCriterias: ICredentialDefinition[] = [];
+    const accountHostCred = this.createCredentialCriteriaForHost(host);
 
-    const clonedVirtualAuthorization =
-      this.authorizationPolicyService.cloneAuthorizationPolicy(
-        virtual.authorization
-      );
+    hostSelfManagementCriterias.push(accountHostCred);
 
-    const updatedAuthorization =
-      this.authorizationPolicyService.appendCredentialAuthorizationRules(
-        clonedVirtualAuthorization,
-        newRules
-      );
+    const selfManageVC = this.authorizationPolicyService.createCredentialRule(
+      [
+        AuthorizationPrivilege.READ,
+        AuthorizationPrivilege.UPDATE,
+        AuthorizationPrivilege.DELETE,
+      ],
+      hostSelfManagementCriterias,
+      CREDENTIAL_RULE_VIRTUAL_CONTRIBUTOR_CREATED_BY
+    );
+    selfManageVC.cascade = false;
+    newRules.push(selfManageVC);
 
-    return updatedAuthorization;
+    this.authorizationPolicyService.appendCredentialAuthorizationRules(
+      authorization,
+      newRules
+    );
+
+    return authorization;
+  }
+
+  private createCredentialCriteriaForHost(
+    host: IContributor
+  ): ICredentialDefinition {
+    if (host instanceof User) {
+      return {
+        type: AuthorizationCredential.USER_SELF_MANAGEMENT,
+        resourceID: host.id,
+      };
+    } else if (host instanceof Organization) {
+      return {
+        type: AuthorizationCredential.ORGANIZATION_ADMIN,
+        resourceID: host.id,
+      };
+    } else {
+      throw new AccountException(
+        `Unable to determine host type for: ${host.id}, of type '${host.constructor.name}'`,
+        LogContext.ACCOUNT
+      );
+    }
   }
 }
