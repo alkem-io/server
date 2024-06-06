@@ -14,6 +14,7 @@ import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/stor
 import { VirtualContributor } from './virtual.contributor.entity';
 import { CommunicationAdapterModule } from '@services/adapters/communication-adapter/communication-adapter.module';
 import { VirtualPersonaModule } from '@platform/virtual-persona/virtual.persona.module';
+import { NamingModule } from '@services/infrastructure/naming/naming.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { VirtualPersonaModule } from '@platform/virtual-persona/virtual.persona.
     AuthorizationPolicyModule,
     AuthorizationModule,
     ProfileModule,
+    NamingModule,
     StorageAggregatorModule,
     VirtualPersonaModule,
     CommunicationAdapterModule,

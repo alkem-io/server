@@ -116,16 +116,19 @@ export class RoomServiceEvents {
           question: question.message,
         };
 
-        //toDo should not be needed, fix in https://app.zenhub.com/workspaces/alkemio-development-5ecb98b262ebd9f4aec4194c/issues/gh/alkem-io/virtual-contributor-ingest-space/5
-        // const knowledgeSpaceId = await this.getSpaceNameId(
-        //   virtualContributor.bodyOfKnowledgeID
-        // );
+        let knowledgeSpaceId = undefined;
+        if (virtualContributor.bodyOfKnowledgeID) {
+          //toDo should not be needed, fix in https://app.zenhub.com/workspaces/alkemio-development-5ecb98b262ebd9f4aec4194c/issues/gh/alkem-io/virtual-contributor-ingest-space/5
+          knowledgeSpaceId = await this.getSpaceNameId(
+            virtualContributor.bodyOfKnowledgeID
+          );
+        }
 
         const result = await this.virtualPersonaService.askQuestion(
           chatData,
           agentInfo,
           spaceNameID,
-          virtualContributor.bodyOfKnowledgeID
+          knowledgeSpaceId
         );
 
         let answer = result.answer;
