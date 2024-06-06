@@ -19,6 +19,8 @@ import { ElasticResponseError } from '@services/external/elasticsearch/types';
 import { SpaceLevel } from '@common/enums/space.level';
 import { getIndexPattern } from './get.index.pattern';
 import { SearchEntityTypes } from '../../search.entity.types';
+import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
+import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
 
 const profileRelationOptions = {
   location: true,
@@ -86,6 +88,8 @@ const getIndices = (indexPattern: string) => [
   `${indexPattern}organizations`,
   `${indexPattern}users`,
   `${indexPattern}posts`,
+  `${indexPattern}callouts`,
+  `${indexPattern}whiteboards`,
 ];
 
 @Injectable()
@@ -161,6 +165,7 @@ export class SearchIngestService {
     const indices = getIndices(this.indexPattern);
 
     const results = await asyncMap(indices, async index => {
+      // if does not exist exit early, no need to delete
       if (!(await this.elasticClient!.indices.exists({ index }))) {
         return { acknowledged: true };
       }
@@ -207,39 +212,44 @@ export class SearchIngestService {
 
     const result: IngestReturnType = {};
     const params = [
+      // {
+      //   index: `${this.indexPattern}spaces`,
+      //   fetchFn: this.fetchSpacesLevel0.bind(this),
+      //   batchSize: 100,
+      // },
+      // {
+      //   index: `${this.indexPattern}subspaces`,
+      //   fetchFn: this.fetchSpacesLevel1.bind(this),
+      //   batchSize: 100,
+      // },
+      // {
+      //   index: `${this.indexPattern}subspaces`,
+      //   fetchFn: this.fetchSpacesLevel2.bind(this),
+      //   batchSize: 100,
+      // },
+      // {
+      //   index: `${this.indexPattern}organizations`,
+      //   fetchFn: this.fetchOrganization.bind(this),
+      //   batchSize: 100,
+      // },
+      // {
+      //   index: `${this.indexPattern}users`,
+      //   fetchFn: this.fetchUsers.bind(this),
+      //   batchSize: 100,
+      // },
+      // {
+      //   index: `${this.indexPattern}posts`,
+      //   fetchFn: this.fetchPosts.bind(this),
+      //   batchSize: 20,
+      // },
+      // {
+      //   index: `${this.indexPattern}callouts`,
+      //   fetchFn: this.fetchCallout.bind(this),
+      //   batchSize: 20,
+      // },
       {
-        index: `${this.indexPattern}spaces`,
-        fetchFn: this.fetchSpacesLevel0.bind(this),
-        batchSize: 100,
-      },
-      {
-        index: `${this.indexPattern}subspaces`,
-        fetchFn: this.fetchSpacesLevel1.bind(this),
-        batchSize: 100,
-      },
-      {
-        index: `${this.indexPattern}subspaces`,
-        fetchFn: this.fetchSpacesLevel2.bind(this),
-        batchSize: 100,
-      },
-      {
-        index: `${this.indexPattern}organizations`,
-        fetchFn: this.fetchOrganization.bind(this),
-        batchSize: 100,
-      },
-      {
-        index: `${this.indexPattern}users`,
-        fetchFn: this.fetchUsers.bind(this),
-        batchSize: 100,
-      },
-      {
-        index: `${this.indexPattern}posts`,
-        fetchFn: this.fetchPosts.bind(this),
-        batchSize: 20,
-      },
-      {
-        index: `${this.indexPattern}callouts`,
-        fetchFn: this.fetchCallout.bind(this),
+        index: `${this.indexPattern}whiteboards`,
+        fetchFn: this.fetchWhiteboard.bind(this),
         batchSize: 20,
       },
     ];
@@ -419,7 +429,7 @@ export class SearchIngestService {
           ...space,
           account: undefined,
           parentSpace: undefined,
-          type: SearchEntityTypes.SPACE,
+          type: SearchEntityTypes.SUBSPACE,
           license: { visibility: space?.account?.license?.visibility },
           spaceID: space.parentSpace?.id ?? EMPTY_VALUE,
           profile: {
@@ -457,7 +467,7 @@ export class SearchIngestService {
           ...space,
           account: undefined,
           parentSpace: undefined,
-          type: SearchEntityTypes.SPACE,
+          type: SearchEntityTypes.SUBSPACE,
           license: { visibility: space?.account?.license?.visibility },
           spaceID: space.parentSpace?.parentSpace?.id ?? EMPTY_VALUE,
           profile: {
@@ -584,6 +594,124 @@ export class SearchIngestService {
               tagsets: undefined,
             },
           }))
+        )
+      );
+  }
+
+  private fetchWhiteboard(start: number, limit: number) {
+    return this.entityManager
+      .find<Space>(Space, {
+        loadEagerRelations: false,
+        where: {
+          account: {
+            license: { visibility: Not(SpaceVisibility.ARCHIVED) },
+          },
+        },
+        relations: {
+          account: { license: true },
+          collaboration: {
+            callouts: {
+              framing: {
+                whiteboard: {
+                  profile: profileRelationOptions,
+                },
+              },
+              contributions: {
+                whiteboard: {
+                  profile: profileRelationOptions,
+                },
+              },
+            },
+          },
+        },
+        select: {
+          id: true,
+          account: { id: true, license: { visibility: true } },
+          collaboration: {
+            id: true,
+            callouts: {
+              id: true,
+              createdBy: true,
+              createdDate: true,
+              nameID: true,
+              framing: {
+                id: true,
+                whiteboard: {
+                  id: true,
+                  content: true,
+                  profile: profileSelectOptions,
+                },
+              },
+              contributions: {
+                id: true,
+                whiteboard: {
+                  id: true,
+                  content: true,
+                  profile: profileSelectOptions,
+                },
+              },
+            },
+          },
+        },
+        skip: start,
+        take: limit,
+      })
+      .then(spaces =>
+        spaces.flatMap(space =>
+          space.collaboration?.callouts?.map(callout => {
+            // a callout can have whiteboard in the framing
+            // and whiteboards in the contributions
+            const wbs = [];
+            if (callout.framing.whiteboard) {
+              wbs.push({
+                ...callout.framing.whiteboard,
+                content: undefined, // todo
+                type: SearchEntityTypes.WHITEBOARD,
+                license: {
+                  visibility:
+                    space?.account?.license?.visibility ?? EMPTY_VALUE,
+                },
+                spaceID: space.id,
+                calloutID: callout.id,
+                collaborationID: space?.collaboration?.id ?? EMPTY_VALUE,
+                profile: {
+                  ...callout.framing.whiteboard.profile,
+                  tags: processTagsets(
+                    callout.framing.whiteboard?.profile?.tagsets
+                  ),
+                  tagsets: undefined,
+                },
+              });
+            }
+
+            callout?.contributions?.forEach(contribution => {
+              if (!contribution?.whiteboard) {
+                return;
+              }
+
+              wbs.push({
+                ...contribution.whiteboard,
+                content: undefined, // todo
+                type: SearchEntityTypes.WHITEBOARD,
+                license: {
+                  visibility:
+                    space?.account?.license?.visibility ?? EMPTY_VALUE,
+                },
+                spaceID: space.id,
+                calloutID: callout.id,
+                collaborationID: space?.collaboration?.id ?? EMPTY_VALUE,
+                profile: {
+                  ...contribution.whiteboard.profile,
+                  tags: processTagsets(
+                    contribution.whiteboard?.profile?.tagsets
+                  ),
+                  tagsets: undefined,
+                },
+              });
+            });
+
+            return wbs;
+          })
         )
       );
   }

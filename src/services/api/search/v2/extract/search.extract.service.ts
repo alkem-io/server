@@ -32,6 +32,7 @@ const TYPE_TO_INDEX = (
   [SearchEntityTypes.ORGANIZATION]: `${indexPattern}organizations`,
   [SearchEntityTypes.CALLOUT]: `${indexPattern}callouts`,
   [SearchEntityTypes.GROUP]: '',
+  [SearchEntityTypes.WHITEBOARD]: `${indexPattern}whiteboards`,
 });
 const TYPE_TO_PUBLIC_INDEX = (
   indexPattern: string

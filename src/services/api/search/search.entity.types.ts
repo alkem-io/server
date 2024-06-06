@@ -6,4 +6,5 @@ export enum SearchEntityTypes {
   SUBSPACE = 'subspace',
   POST = 'post',
   CALLOUT = 'callout',
+  WHITEBOARD = 'whiteboard',
 }
