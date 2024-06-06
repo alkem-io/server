@@ -50,6 +50,17 @@ export class AdminSearchIngestResolverMutations {
         AlkemioErrorStatus.UNSPECIFIED
       );
     }
+
+    const createResults = await this.searchIngestService.ensureIndicesExist();
+
+    if (!createResults.acknowledged) {
+      throw new BaseException(
+        createResults.message ?? 'Failed to create indices',
+        LogContext.SEARCH_INGEST,
+        AlkemioErrorStatus.UNSPECIFIED
+      );
+    }
+
     // small workaround until the return type is defined
     const result = await this.searchIngestService.ingest();
     const results = reduce(

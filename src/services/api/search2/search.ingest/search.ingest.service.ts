@@ -80,6 +80,14 @@ type IngestBulkReturnType = {
 
 type IngestReturnType = Record<string, IngestBulkReturnType>;
 
+const getIndices = (indexPattern: string) => [
+  `${indexPattern}spaces`,
+  `${indexPattern}subspaces`,
+  `${indexPattern}organizations`,
+  `${indexPattern}users`,
+  `${indexPattern}posts`,
+];
+
 @Injectable()
 export class SearchIngestService {
   private readonly indexPattern: string;
@@ -102,6 +110,44 @@ export class SearchIngestService {
     }
   }
 
+  public async ensureIndicesExist(): Promise<{
+    acknowledged: boolean;
+    message?: string;
+  }> {
+    if (!this.elasticClient) {
+      return {
+        acknowledged: false,
+        message: 'Elasticsearch client not initialized',
+      };
+    }
+
+    const indices = getIndices(this.indexPattern);
+
+    const results = await asyncMap(indices, async index => {
+      try {
+        const ack = await this.elasticClient!.indices.create({ index });
+        return { acknowledged: ack.acknowledged };
+      } catch (error) {
+        const err = error as ElasticResponseError;
+        return {
+          acknowledged: false,
+          message: err.meta.body.error.reason,
+        };
+      }
+    });
+
+    return results.reduce(
+      (acc, val) => {
+        if (!val.acknowledged) {
+          acc.acknowledged = false;
+          acc.message = val.message;
+        }
+        return acc;
+      },
+      { acknowledged: true }
+    );
+  }
+
   public async removeIndices(): Promise<{
     acknowledged: boolean;
     message?: string;
@@ -112,13 +158,7 @@ export class SearchIngestService {
         message: 'Elasticsearch client not initialized',
       };
     }
-    const indices = [
-      `${this.indexPattern}spaces`,
-      `${this.indexPattern}subspaces`,
-      `${this.indexPattern}organizations`,
-      `${this.indexPattern}users`,
-      `${this.indexPattern}posts`,
-    ];
+    const indices = getIndices(this.indexPattern);
 
     const results = await asyncMap(indices, async index => {
       if (!(await this.elasticClient!.indices.exists({ index }))) {
