@@ -57,6 +57,7 @@ import { applyOrganizationFilter } from '@core/filtering/filters/organizationFil
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { AssignOrganizationRoleToUserInput } from './dto/organization.dto.assign.role.to.user';
 import { RemoveOrganizationRoleFromUserInput } from './dto/organization.dto.remove.role.from.user';
+import { NamingService } from '@services/infrastructure/naming/naming.service';
 
 @Injectable()
 export class OrganizationService {
@@ -67,6 +68,7 @@ export class OrganizationService {
     private agentService: AgentService,
     private userGroupService: UserGroupService,
     private profileService: ProfileService,
+    private namingService: NamingService,
     private preferenceSetService: PreferenceSetService,
     private storageAggregatorService: StorageAggregatorService,
     @InjectRepository(Organization)
@@ -78,9 +80,15 @@ export class OrganizationService {
     organizationData: CreateOrganizationInput,
     agentInfo?: AgentInfo
   ): Promise<IOrganization> {
-    // Convert nameID to lower case
-    organizationData.nameID = organizationData.nameID.toLowerCase();
-    await this.checkNameIdOrFail(organizationData.nameID);
+    if (organizationData.nameID) {
+      // Convert nameID to lower case
+      organizationData.nameID = organizationData.nameID.toLowerCase();
+      await this.checkNameIdOrFail(organizationData.nameID);
+    } else {
+      organizationData.nameID = await this.createOrganizationNameID(
+        organizationData.profileData?.displayName
+      );
+    }
     await this.checkDisplayNameOrFail(
       organizationData.profileData?.displayName
     );
@@ -791,5 +799,15 @@ export class OrganizationService {
   async getOrganizationByDomain(domain: string): Promise<IOrganization | null> {
     const org = await this.organizationRepository.findOneBy({ domain: domain });
     return org;
+  }
+
+  public async createOrganizationNameID(displayName: string): Promise<string> {
+    const base = `${displayName}`;
+    const reservedNameIDs =
+      await this.namingService.getReservedNameIDsInVirtualContributors(); // This will need to be smarter later
+    return this.namingService.createNameIdAvoidingReservedNameIDs(
+      base,
+      reservedNameIDs
+    );
   }
 }
