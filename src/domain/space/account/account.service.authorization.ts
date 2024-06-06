@@ -89,6 +89,7 @@ export class AccountAuthorizationService {
       this.platformAuthorizationService.inheritRootAuthorizationPolicy(
         account.authorization
       );
+
     // Extend for global roles
     account.authorization = this.extendAuthorizationPolicy(
       account.authorization,
@@ -97,6 +98,7 @@ export class AccountAuthorizationService {
       account.space
     );
 
+    await this.accountService.save(account);
     account.agent = this.agentAuthorizationService.applyAuthorizationPolicy(
       account.agent,
       account.authorization
