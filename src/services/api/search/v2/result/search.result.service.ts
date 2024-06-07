@@ -70,19 +70,30 @@ export class SearchResultService {
       ISearchResult[]
     >;
     // authorize entities with requester and enrich with data
-    const [spaces, subspaces, users, organizations, posts, callouts] =
-      await Promise.all([
-        this.getSpaceSearchResults(groupedResults.space ?? [], spaceId),
-        this.getSubspaceSearchResults(groupedResults.subspace ?? [], agentInfo),
-        this.getUserSearchResults(groupedResults.user ?? [], spaceId),
-        this.getOrganizationSearchResults(
-          groupedResults.organization ?? [],
-          agentInfo,
-          spaceId
-        ),
-        this.getPostSearchResults(groupedResults.post ?? [], agentInfo),
-        this.getCalloutSearchResult(groupedResults.callout ?? [], agentInfo),
-      ]);
+    const [
+      spaces,
+      subspaces,
+      users,
+      organizations,
+      posts,
+      callouts,
+      calloutsOfWhiteboards,
+    ] = await Promise.all([
+      this.getSpaceSearchResults(groupedResults.space ?? [], spaceId),
+      this.getSubspaceSearchResults(groupedResults.subspace ?? [], agentInfo),
+      this.getUserSearchResults(groupedResults.user ?? [], spaceId),
+      this.getOrganizationSearchResults(
+        groupedResults.organization ?? [],
+        agentInfo,
+        spaceId
+      ),
+      this.getPostSearchResults(groupedResults.post ?? [], agentInfo),
+      this.getCalloutSearchResult(groupedResults.callout ?? [], agentInfo),
+      this.getWhiteboardSearchResult(
+        groupedResults.whiteboard ?? [],
+        agentInfo
+      ),
+    ]);
     // todo: count - https://github.com/alkem-io/server/issues/3700
     const contributorResults = orderBy(
       [...users, ...organizations],
@@ -91,7 +102,11 @@ export class SearchResultService {
     );
     const contributionResults = orderBy(posts, 'score', 'desc');
     const journeyResults = orderBy([...spaces, ...subspaces], 'score', 'desc');
-    const calloutResults = orderBy(callouts, 'score', 'desc');
+    const calloutResults = orderBy(
+      [...callouts, ...calloutsOfWhiteboards],
+      'score',
+      'desc'
+    );
     return {
       contributorResults,
       contributorResultsCount: -1,
@@ -369,6 +384,55 @@ export class SearchResultService {
       })
       .filter((post): post is ISearchResultPost => !!post);
   }
+  // the method returns Callouts until the proper search result is returned
+  private async getWhiteboardSearchResult(
+    rawSearchResults: ISearchResult[],
+    agentInfo: AgentInfo
+  ): Promise<ISearchResultCallout[]> {
+    if (rawSearchResults.length === 0) {
+      return [];
+    }
+
+    const whiteboardIds = rawSearchResults.map(hit => hit.result.id);
+
+    const callouts = await this.entityManager.findBy(Callout, {
+      id: In(whiteboardIds),
+    });
+    // usually the authorization is last but here it might be more expensive than usual
+    // find the authorized post first, then get the parents, and map the results
+    const authorizedCallouts = callouts.filter(callout =>
+      this.authorizationService.isAccessGranted(
+        agentInfo,
+        callout.authorization,
+        AuthorizationPrivilege.READ
+      )
+    );
+
+    const parents = await this.getCalloutParents(authorizedCallouts);
+
+    return parents
+      .map<ISearchResultCallout | undefined>(parent => {
+        const rawSearchResult = rawSearchResults.find(
+          hit => hit.result.id === parent.callout.id
+        );
+
+        if (!rawSearchResult) {
+          this.logger.error(
+            `Unable to find raw search result for Callout: ${parent.callout.id}`,
+            undefined,
+            LogContext.SEARCH
+          );
+          return undefined;
+        }
+
+        return {
+          ...rawSearchResult,
+          callout: parent.callout,
+          space: parent.space,
+        };
+      })
+      .filter((callout): callout is ISearchResultCallout => !!callout);
+  }
 
   private async getCalloutSearchResult(
     rawSearchResults: ISearchResult[],
@@ -438,8 +502,6 @@ export class SearchResultService {
         },
       },
       select: {
-        id: true,
-        type: true,
         collaboration: {
           id: true,
           callouts: {

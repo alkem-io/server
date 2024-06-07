@@ -50,11 +50,33 @@ export class AdminSearchIngestResolverMutations {
 
     this.logger.verbose?.('Starting search ingest from scratch');
 
+    const task = await this.taskService.create();
+    // todo: add error handling
     this.searchIngestService
       .removeIndices()
-      .then(() => this.searchIngestService.ensureIndicesExist())
-      .then(() => this.searchIngestService.removeIndices())
-      .then(() => this.searchIngestService.ingest());
+      .then(res => {
+        if (!res.acknowledged) {
+          throw new Error(res.message);
+        }
+        return this.searchIngestService.ensureIndicesExist();
+      })
+      .then(res => {
+        if (!res.acknowledged) {
+          throw new Error(res.message);
+        }
+        return this.searchIngestService.removeIndices();
+      })
+      .then(res => {
+        if (!res.acknowledged) {
+          throw new Error(res.message);
+        }
+        return this.searchIngestService.ingest(task);
+      })
+      .then(() => this.taskService.complete(task.id))
+      .catch(() => {
+        this.taskService.updateTaskErrors(task.id, 'Failed to ingest data');
+        this.taskService.complete(task.id);
+      });
     // const deleteResult = await this.searchIngestService.removeIndices();
     //
     // if (!deleteResult.acknowledged) {
@@ -88,6 +110,6 @@ export class AdminSearchIngestResolverMutations {
     // return {
     //   results,
     // };
-    return 'started';
+    return task.id;
   }
 }

@@ -21,6 +21,7 @@ import { getIndexPattern } from './get.index.pattern';
 import { SearchEntityTypes } from '../../search.entity.types';
 import { ExcalidrawContent, isExcalidrawTextElement } from '@common/interfaces';
 import { TaskService } from '@services/task';
+import { Task } from '@services/task/task.interface';
 
 const profileRelationOptions = {
   location: true,
@@ -167,8 +168,13 @@ export class SearchIngestService {
 
     const results = await asyncMap(indices, async index => {
       // if does not exist exit early, no need to delete
-      if (!(await this.elasticClient!.indices.exists({ index }))) {
-        return { acknowledged: true };
+
+      try {
+        if (!(await this.elasticClient!.indices.exists({ index }))) {
+          return { acknowledged: true };
+        }
+      } catch (e: any) {
+        return { acknowledged: false, message: e?.message };
       }
 
       try {
@@ -195,7 +201,7 @@ export class SearchIngestService {
     );
   }
 
-  public async ingest(): Promise<IngestReturnType> {
+  public async ingest(task: Task): Promise<IngestReturnType> {
     if (!this.elasticClient) {
       return {
         'N/A': {
@@ -258,7 +264,12 @@ export class SearchIngestService {
     return asyncReduceSequential(
       params,
       async (acc, { index, fetchFn, batchSize }) => {
-        const batches = await this.fetchAndIngest(index, fetchFn, batchSize);
+        const batches = await this.fetchAndIngest(
+          index,
+          fetchFn,
+          batchSize,
+          task
+        );
         const total = batches.reduce((acc, val) => acc + (val.total ?? 0), 0);
         acc[index] = {
           total: total + (acc[index]?.total ?? 0),
@@ -274,7 +285,8 @@ export class SearchIngestService {
   private async fetchAndIngest(
     index: string,
     fetchFn: (start: number, limit: number) => Promise<unknown[]>,
-    batchSize: number
+    batchSize: number,
+    task: Task
   ): Promise<IngestBatchResultType[]> {
     let start = 0;
     const results: IngestBatchResultType[] = [];
@@ -286,7 +298,7 @@ export class SearchIngestService {
         break;
       }
 
-      const result = await this.ingestBulk(fetched, index);
+      const result = await this.ingestBulk(fetched, index, task);
       results.push(result);
       // some statement are not directly querying a table, but instead parent entities
       // so the total count is not predictable; in that case an extra query has to be made
@@ -305,7 +317,8 @@ export class SearchIngestService {
 
   private async ingestBulk(
     data: unknown[],
-    index: string
+    index: string,
+    task: Task
   ): Promise<IngestBatchResultType> {
     if (!this.elasticClient) {
       return {
@@ -355,6 +368,7 @@ export class SearchIngestService {
         data.length - erroredDocuments.length
       } documents indexed.`;
       this.logger.error(message, undefined, LogContext.SEARCH_INGEST);
+      this.taskService.updateTaskErrors(task.id, message);
       return {
         success: false,
         total: 0,
@@ -364,6 +378,7 @@ export class SearchIngestService {
     } else {
       const message = `[${index}] - ${data.length} documents indexed`;
       this.logger.verbose?.(message, LogContext.SEARCH_INGEST);
+      this.taskService.updateTaskResults(task.id, message);
       return {
         success: true,
         total: data.length,
@@ -433,7 +448,7 @@ export class SearchIngestService {
           ...space,
           account: undefined,
           parentSpace: undefined,
-          type: SearchEntityTypes.SUBSPACE,
+          type: SearchEntityTypes.SPACE,
           license: { visibility: space?.account?.license?.visibility },
           spaceID: space.parentSpace?.id ?? EMPTY_VALUE,
           profile: {
@@ -471,7 +486,7 @@ export class SearchIngestService {
           ...space,
           account: undefined,
           parentSpace: undefined,
-          type: SearchEntityTypes.SUBSPACE,
+          type: SearchEntityTypes.SPACE,
           license: { visibility: space?.account?.license?.visibility },
           spaceID: space.parentSpace?.parentSpace?.id ?? EMPTY_VALUE,
           profile: {
