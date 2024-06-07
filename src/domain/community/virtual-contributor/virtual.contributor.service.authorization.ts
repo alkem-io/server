@@ -70,6 +70,11 @@ export class VirtualContributorAuthorizationService {
       virtual.id
     );
 
+    virtual.authorization = this.extendAuthorizationPolicy(
+      virtual.authorization,
+      host
+    );
+
     // NOTE: Clone the authorization policy to ensure the changes are local to profile
     const clonedVirtualAuthorizationAnonymousAccess =
       this.authorizationPolicyService.cloneAuthorizationPolicy(
@@ -92,11 +97,6 @@ export class VirtualContributorAuthorizationService {
     virtual.agent = this.agentAuthorizationService.applyAuthorizationPolicy(
       virtual.agent,
       virtual.authorization
-    );
-
-    virtual.authorization = this.extendAuthorizationPolicy(
-      virtual.authorization,
-      host
     );
 
     return virtual;
@@ -210,7 +210,7 @@ export class VirtualContributorAuthorizationService {
       hostSelfManagementCriterias,
       CREDENTIAL_RULE_VIRTUAL_CONTRIBUTOR_CREATED_BY
     );
-    selfManageVC.cascade = false;
+    selfManageVC.cascade = true;
     newRules.push(selfManageVC);
 
     this.authorizationPolicyService.appendCredentialAuthorizationRules(
