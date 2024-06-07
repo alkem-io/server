@@ -34,6 +34,7 @@ import { IContributor } from '@domain/community/contributor/contributor.interfac
 import { Organization } from '@domain/community/organization';
 import { User } from '@domain/community/user/user.entity';
 import { ISpace } from '../space/space.interface';
+import { AccountHostService } from './account.host.service';
 
 @Injectable()
 export class AccountAuthorizationService {
@@ -45,7 +46,8 @@ export class AccountAuthorizationService {
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private spaceAuthorizationService: SpaceAuthorizationService,
     private virtualContributorAuthorizationService: VirtualContributorAuthorizationService,
-    private accountService: AccountService
+    private accountService: AccountService,
+    private accountHostService: AccountHostService
   ) {}
 
   async applyAuthorizationPolicy(accountInput: IAccount): Promise<IAccount> {
@@ -78,7 +80,7 @@ export class AccountAuthorizationService {
         LogContext.ACCOUNT
       );
     }
-    const host = await this.accountService.getHostOrFail(account);
+    const host = await this.accountHostService.getHostOrFail(account);
 
     // Ensure always applying from a clean state
     account.authorization = this.authorizationPolicyService.reset(
@@ -133,6 +135,7 @@ export class AccountAuthorizationService {
       const udpatedVC =
         await this.virtualContributorAuthorizationService.applyAuthorizationPolicy(
           vc,
+          host,
           spaceAuthorization
         );
       updatedVCs.push(udpatedVC);
