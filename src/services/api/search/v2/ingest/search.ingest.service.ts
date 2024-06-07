@@ -19,8 +19,8 @@ import { ElasticResponseError } from '@services/external/elasticsearch/types';
 import { SpaceLevel } from '@common/enums/space.level';
 import { getIndexPattern } from './get.index.pattern';
 import { SearchEntityTypes } from '../../search.entity.types';
-import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
-import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
+import { ExcalidrawContent, isExcalidrawTextElement } from '@common/interfaces';
+import { TaskService } from '@services/task';
 
 const profileRelationOptions = {
   location: true,
@@ -100,7 +100,8 @@ export class SearchIngestService {
     private elasticClient: ElasticClient | undefined,
     @InjectEntityManager() private entityManager: EntityManager,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService,
-    private configService: ConfigService
+    private configService: ConfigService,
+    private taskService: TaskService
   ) {
     this.indexPattern = getIndexPattern(this.configService);
 
@@ -212,45 +213,45 @@ export class SearchIngestService {
 
     const result: IngestReturnType = {};
     const params = [
-      // {
-      //   index: `${this.indexPattern}spaces`,
-      //   fetchFn: this.fetchSpacesLevel0.bind(this),
-      //   batchSize: 100,
-      // },
-      // {
-      //   index: `${this.indexPattern}subspaces`,
-      //   fetchFn: this.fetchSpacesLevel1.bind(this),
-      //   batchSize: 100,
-      // },
-      // {
-      //   index: `${this.indexPattern}subspaces`,
-      //   fetchFn: this.fetchSpacesLevel2.bind(this),
-      //   batchSize: 100,
-      // },
-      // {
-      //   index: `${this.indexPattern}organizations`,
-      //   fetchFn: this.fetchOrganization.bind(this),
-      //   batchSize: 100,
-      // },
-      // {
-      //   index: `${this.indexPattern}users`,
-      //   fetchFn: this.fetchUsers.bind(this),
-      //   batchSize: 100,
-      // },
-      // {
-      //   index: `${this.indexPattern}posts`,
-      //   fetchFn: this.fetchPosts.bind(this),
-      //   batchSize: 20,
-      // },
-      // {
-      //   index: `${this.indexPattern}callouts`,
-      //   fetchFn: this.fetchCallout.bind(this),
-      //   batchSize: 20,
-      // },
+      {
+        index: `${this.indexPattern}spaces`,
+        fetchFn: this.fetchSpacesLevel0.bind(this),
+        batchSize: 100,
+      },
+      {
+        index: `${this.indexPattern}subspaces`,
+        fetchFn: this.fetchSpacesLevel1.bind(this),
+        batchSize: 100,
+      },
+      {
+        index: `${this.indexPattern}subspaces`,
+        fetchFn: this.fetchSpacesLevel2.bind(this),
+        batchSize: 100,
+      },
+      {
+        index: `${this.indexPattern}organizations`,
+        fetchFn: this.fetchOrganization.bind(this),
+        batchSize: 100,
+      },
+      {
+        index: `${this.indexPattern}users`,
+        fetchFn: this.fetchUsers.bind(this),
+        batchSize: 100,
+      },
+      {
+        index: `${this.indexPattern}posts`,
+        fetchFn: this.fetchPosts.bind(this),
+        batchSize: 20,
+      },
+      {
+        index: `${this.indexPattern}callouts`,
+        fetchFn: this.fetchCallout.bind(this),
+        batchSize: 20,
+      },
       {
         index: `${this.indexPattern}whiteboards`,
         fetchFn: this.fetchWhiteboard.bind(this),
-        batchSize: 20,
+        batchSize: 10,
       },
     ];
 
@@ -285,7 +286,8 @@ export class SearchIngestService {
         break;
       }
 
-      results.push(await this.ingestBulk(fetched, index));
+      const result = await this.ingestBulk(fetched, index);
+      results.push(result);
       // some statement are not directly querying a table, but instead parent entities
       // so the total count is not predictable; in that case an extra query has to be made
       // to ensure there is no more data
@@ -347,7 +349,9 @@ export class SearchIngestService {
           });
         }
       });
-      const message = `${erroredDocuments.length} documents errored. ${
+      const message = `[${index}] - ${
+        erroredDocuments.length
+      } documents errored. ${
         data.length - erroredDocuments.length
       } documents indexed.`;
       this.logger.error(message, undefined, LogContext.SEARCH_INGEST);
@@ -358,7 +362,7 @@ export class SearchIngestService {
         erroredDocuments: erroredDocuments,
       };
     } else {
-      const message = `${data.length} documents indexed`;
+      const message = `[${index}] - ${data.length} documents indexed`;
       this.logger.verbose?.(message, LogContext.SEARCH_INGEST);
       return {
         success: true,
@@ -656,64 +660,84 @@ export class SearchIngestService {
         skip: start,
         take: limit,
       })
-      .then(spaces =>
-        spaces.flatMap(space =>
-          space.collaboration?.callouts?.map(callout => {
-            // a callout can have whiteboard in the framing
-            // and whiteboards in the contributions
-            const wbs = [];
-            if (callout.framing.whiteboard) {
-              wbs.push({
-                ...callout.framing.whiteboard,
-                content: undefined, // todo
-                type: SearchEntityTypes.WHITEBOARD,
-                license: {
-                  visibility:
-                    space?.account?.license?.visibility ?? EMPTY_VALUE,
-                },
-                spaceID: space.id,
-                calloutID: callout.id,
-                collaborationID: space?.collaboration?.id ?? EMPTY_VALUE,
-                profile: {
-                  ...callout.framing.whiteboard.profile,
-                  tags: processTagsets(
-                    callout.framing.whiteboard?.profile?.tagsets
-                  ),
-                  tagsets: undefined,
-                },
-              });
-            }
+      .then(spaces => {
+        return spaces.flatMap(space => {
+          return space.collaboration?.callouts
+            ?.flatMap(callout => {
+              // a callout can have whiteboard in the framing
+              // AND whiteboards in the contributions
+              const wbs = [];
+              if (callout.framing.whiteboard) {
+                const content = extractTextFromWhiteboardContent(
+                  callout.framing.whiteboard.content
+                );
+                // only whiteboards with content are ingested
+                if (!content) {
+                  return;
+                }
 
-            callout?.contributions?.forEach(contribution => {
-              if (!contribution?.whiteboard) {
-                return;
+                wbs.push({
+                  ...callout.framing.whiteboard,
+                  content,
+                  type: SearchEntityTypes.WHITEBOARD,
+                  license: {
+                    visibility:
+                      space?.account?.license?.visibility ?? EMPTY_VALUE,
+                  },
+                  spaceID: space.id,
+                  calloutID: callout.id,
+                  collaborationID: space?.collaboration?.id ?? EMPTY_VALUE,
+                  profile: {
+                    ...callout.framing.whiteboard.profile,
+                    tags: processTagsets(
+                      callout.framing.whiteboard?.profile?.tagsets
+                    ),
+                    tagsets: undefined,
+                  },
+                });
               }
 
-              wbs.push({
-                ...contribution.whiteboard,
-                content: undefined, // todo
-                type: SearchEntityTypes.WHITEBOARD,
-                license: {
-                  visibility:
-                    space?.account?.license?.visibility ?? EMPTY_VALUE,
-                },
-                spaceID: space.id,
-                calloutID: callout.id,
-                collaborationID: space?.collaboration?.id ?? EMPTY_VALUE,
-                profile: {
-                  ...contribution.whiteboard.profile,
-                  tags: processTagsets(
-                    contribution.whiteboard?.profile?.tagsets
-                  ),
-                  tagsets: undefined,
-                },
-              });
-            });
+              callout?.contributions?.forEach(contribution => {
+                if (!contribution?.whiteboard) {
+                  return;
+                }
 
-            return wbs;
-          })
-        )
-      );
+                const content = extractTextFromWhiteboardContent(
+                  contribution.whiteboard.content
+                );
+                // only whiteboards with content are ingested
+                if (!content) {
+                  return;
+                }
+
+                wbs.push({
+                  ...contribution.whiteboard,
+                  content: extractTextFromWhiteboardContent(
+                    contribution.whiteboard.content
+                  ),
+                  type: SearchEntityTypes.WHITEBOARD,
+                  license: {
+                    visibility:
+                      space?.account?.license?.visibility ?? EMPTY_VALUE,
+                  },
+                  spaceID: space.id,
+                  calloutID: callout.id,
+                  collaborationID: space?.collaboration?.id ?? EMPTY_VALUE,
+                  profile: {
+                    ...contribution.whiteboard.profile,
+                    tags: processTagsets(
+                      contribution.whiteboard?.profile?.tagsets
+                    ),
+                    tagsets: undefined,
+                  },
+                });
+              });
+
+              return wbs;
+            })
+            .filter(Boolean);
+        });
+      });
   }
 
   private fetchPosts(start: number, limit: number) {
@@ -916,4 +940,20 @@ export class SearchIngestService {
 
 const processTagsets = (tagsets: Tagset[] | undefined) => {
   return tagsets?.flatMap(tagset => tagset.tags).join(' ');
+};
+// todo: maybe look for text in the shapes also
+const extractTextFromWhiteboardContent = (content: string): string => {
+  if (!content) {
+    return '';
+  }
+
+  try {
+    const { elements }: ExcalidrawContent = JSON.parse(content);
+    return elements
+      .filter(isExcalidrawTextElement)
+      .map(x => x.originalText)
+      .join(' ');
+  } catch (e) {
+    return '';
+  }
 };

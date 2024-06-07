@@ -134,6 +134,19 @@ export class TaskService {
     });
   }
 
+  public async completeTask(
+    id: string,
+    status: TaskStatus.COMPLETED | TaskStatus.ERRORED
+  ) {
+    const task = await this.getOrFail(id);
+
+    task.status = status;
+
+    await this.cacheManager.set(task.id, task, {
+      ttl: 1000,
+    });
+  }
+
   private async addTaskToList(task: Task) {
     const list = await this.getTaskList();
 
