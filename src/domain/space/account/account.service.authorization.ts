@@ -6,6 +6,7 @@ import {
 } from '@common/enums';
 import { AccountService } from './account.service';
 import {
+  AccountException,
   EntityNotInitializedException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
@@ -28,6 +29,11 @@ import {
 import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
 import { IVirtualContributor } from '@domain/community/virtual-contributor';
 import { VirtualContributorAuthorizationService } from '@domain/community/virtual-contributor/virtual.contributor.service.authorization';
+import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { IContributor } from '@domain/community/contributor/contributor.interface';
+import { Organization } from '@domain/community/organization';
+import { User } from '@domain/community/user/user.entity';
+import { ISpace } from '../space/space.interface';
 
 @Injectable()
 export class AccountAuthorizationService {
@@ -66,11 +72,13 @@ export class AccountAuthorizationService {
       !account.space ||
       !account.space.profile ||
       !account.virtualContributors
-    )
+    ) {
       throw new RelationshipNotFoundException(
         `Unable to load Account with entities at start of auth reset: ${account.id} `,
         LogContext.ACCOUNT
       );
+    }
+    const host = await this.accountService.getHostOrFail(account);
 
     // Ensure always applying from a clean state
     account.authorization = this.authorizationPolicyService.reset(
@@ -81,14 +89,16 @@ export class AccountAuthorizationService {
       this.platformAuthorizationService.inheritRootAuthorizationPolicy(
         account.authorization
       );
+
     // Extend for global roles
     account.authorization = this.extendAuthorizationPolicy(
       account.authorization,
-      account.id
+      account.id,
+      host,
+      account.space
     );
 
     await this.accountService.save(account);
-
     account.agent = this.agentAuthorizationService.applyAuthorizationPolicy(
       account.agent,
       account.authorization
@@ -123,24 +133,27 @@ export class AccountAuthorizationService {
       const udpatedVC =
         await this.virtualContributorAuthorizationService.applyAuthorizationPolicy(
           vc,
-          account.authorization
+          spaceAuthorization
         );
       updatedVCs.push(udpatedVC);
     }
     account.virtualContributors = updatedVCs;
 
-    return await this.accountService.save(account);
+    return account;
   }
 
   private extendAuthorizationPolicy(
     authorization: IAuthorizationPolicy | undefined,
-    accountID: string
+    accountID: string,
+    host: IContributor,
+    rootSpace: ISpace
   ): IAuthorizationPolicy {
-    if (!authorization)
+    if (!authorization) {
       throw new EntityNotInitializedException(
         `Authorization definition not found for: ${accountID}`,
         LogContext.ACCOUNT
       );
+    }
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
     // By default it is world visible
     authorization.anonymousReadAccess = true;
@@ -188,27 +201,35 @@ export class AccountAuthorizationService {
       );
     newRules.push(globalSpacesReader);
 
-    const createVC =
-      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.CREATE_VIRTUAL_CONTRIBUTOR],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-        ],
-        CREDENTIAL_RULE_ACCOUNT_CREATE_VIRTUAL_CONTRIBUTOR
-      );
+    // Create the criterias for who can create a VC
+    const createVCsCriterias: ICredentialDefinition[] = [];
+    createVCsCriterias.push({
+      type: AuthorizationCredential.GLOBAL_ADMIN,
+      resourceID: '',
+    });
+    createVCsCriterias.push({
+      type: AuthorizationCredential.GLOBAL_SUPPORT,
+      resourceID: '',
+    });
+    const accountHostCred = this.createCredentialCriteriaForHost(host);
+    createVCsCriterias.push({
+      type: AuthorizationCredential.SPACE_ADMIN,
+      resourceID: rootSpace.id,
+    });
+    createVCsCriterias.push(accountHostCred);
+
+    const createVC = this.authorizationPolicyService.createCredentialRule(
+      [AuthorizationPrivilege.CREATE_VIRTUAL_CONTRIBUTOR],
+      createVCsCriterias,
+      CREDENTIAL_RULE_ACCOUNT_CREATE_VIRTUAL_CONTRIBUTOR
+    );
     createVC.cascade = false;
     newRules.push(createVC);
 
-    // Allow User hosts to also Delete the Account. Note this does not for example allow
+    // Allow hosts (users = self mgmt, org = org admin) to delete their own account
     const userHostsRule = this.authorizationPolicyService.createCredentialRule(
       [AuthorizationPrivilege.DELETE],
-      [
-        {
-          type: AuthorizationCredential.ACCOUNT_HOST,
-          resourceID: accountID,
-        },
-      ],
+      [accountHostCred],
       CREDENTIAL_RULE_TYPES_ACCOUNT_DELETE
     );
     userHostsRule.cascade = false;
@@ -220,5 +241,26 @@ export class AccountAuthorizationService {
     );
 
     return authorization;
+  }
+
+  private createCredentialCriteriaForHost(
+    host: IContributor
+  ): ICredentialDefinition {
+    if (host instanceof User) {
+      return {
+        type: AuthorizationCredential.USER_SELF_MANAGEMENT,
+        resourceID: host.id,
+      };
+    } else if (host instanceof Organization) {
+      return {
+        type: AuthorizationCredential.ORGANIZATION_ADMIN,
+        resourceID: host.id,
+      };
+    } else {
+      throw new AccountException(
+        `Unable to determine host type for: ${host.id}, of type '${host.constructor.name}'`,
+        LogContext.ACCOUNT
+      );
+    }
   }
 }

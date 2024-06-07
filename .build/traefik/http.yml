@@ -147,14 +147,6 @@ http:
       entryPoints:
         - 'web'
 
-    api-private-rest:
-      rule: 'PathPrefix(`/api/private/rest`)'
-      service: 'oathkeeper-proxy'
-      middlewares:
-        - strip-api-private-prefix
-      entryPoints:
-        - 'web'
-
     api-private-non-interactive-rest:
       rule: 'PathPrefix(`/api/private/non-interactive/rest`)'
       service: 'alkemio-server'
@@ -165,7 +157,7 @@ http:
 
     whiteboard-collaboration:
       rule: 'PathPrefix(`/api/private/ws`)'
-      service: 'whiteboard-collaboration'
+      service: 'oathkeeper-proxy'
       middlewares:
         - strip-api-private-prefix-socket-io
       entryPoints:
@@ -173,7 +165,7 @@ http:
     # more specific than 'api-private-rest'
     file-service:
       rule: 'PathPrefix(`/api/private/rest/storage`)'
-      service: 'file-service'
+      service: 'oathkeeper-proxy'
       middlewares:
         - strip-api-private-prefix
       entryPoints:

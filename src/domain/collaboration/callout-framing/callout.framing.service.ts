@@ -119,6 +119,14 @@ export class CalloutFramingService {
       );
     }
 
+    if (calloutFraming.whiteboard && calloutFramingData.whiteboardContent) {
+      calloutFraming.whiteboard =
+        await this.whiteboardService.updateWhiteboardContent(
+          calloutFraming.whiteboard,
+          calloutFramingData.whiteboardContent
+        );
+    }
+
     return calloutFraming;
   }
 

@@ -19,6 +19,7 @@ import { AccountResolverQueries } from './account.resolver.queries';
 import { ContributorModule } from '@domain/community/contributor/contributor.module';
 import { LicensingModule } from '@platform/licensing/licensing.module';
 import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
+import { LicenseIssuerModule } from '@platform/license-issuer/license.issuer.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { VirtualContributorModule } from '@domain/community/virtual-contributor/
     InnovationFlowTemplateModule,
     LicenseModule,
     LicensingModule,
+    LicenseIssuerModule,
     NameReporterModule,
     TypeOrmModule.forFeature([Account]),
   ],
