@@ -31,7 +31,7 @@ import { StorageUploadFailedException } from '@common/exceptions/storage/storage
 
 @Injectable()
 export class StorageBucketService {
-  DEFAULT_MAX_ALLOWED_FILE_SIZE = 5242880;
+  DEFAULT_MAX_ALLOWED_FILE_SIZE = 15728640;
 
   DEFAULT_VISUAL_ALLOWED_MIME_TYPES: MimeFileType[] = [
     MimeFileType.JPG,

@@ -22,6 +22,8 @@ import { ISpaceSettings } from '@domain/space/space.settings/space.settings.inte
 import { SpaceLevel } from '@common/enums/space.level';
 import { User } from '@domain/community/user/user.entity';
 import { InnovationPack } from '@library/innovation-pack/innovation.pack.entity';
+import { VirtualContributor } from '@domain/community/virtual-contributor';
+import { Organization } from '@domain/community/organization';
 
 export class NamingService {
   replaceSpecialCharacters = require('replace-special-characters');
@@ -141,6 +143,26 @@ export class NamingService {
       },
     });
     const nameIDs = users.map(user => user.nameID);
+    return nameIDs;
+  }
+
+  public async getReservedNameIDsInVirtualContributors(): Promise<string[]> {
+    const vcs = await this.entityManager.find(VirtualContributor, {
+      select: {
+        nameID: true,
+      },
+    });
+    const nameIDs = vcs.map(vc => vc.nameID);
+    return nameIDs;
+  }
+
+  public async getReservedNameIDsInOrganizations(): Promise<string[]> {
+    const organizations = await this.entityManager.find(Organization, {
+      select: {
+        nameID: true,
+      },
+    });
+    const nameIDs = organizations.map(organization => organization.nameID);
     return nameIDs;
   }
 

@@ -34,6 +34,8 @@ import {
   IngestSpace,
   SpaceIngestionPurpose,
 } from '@services/infrastructure/event-bus/commands';
+import { CommunityContributorType } from '@common/enums/community.contributor.type';
+import { CommunityRole } from '@common/enums/community.role';
 
 @Resolver()
 export class AccountResolverMutations {
@@ -72,8 +74,9 @@ export class AccountResolverMutations {
       agentInfo
     );
 
-    const accountUpdated =
-      await this.accountAuthorizationService.applyAuthorizationPolicy(account);
+    const accountUpdated = await this.accountAuthorizationService
+      .applyAuthorizationPolicy(account)
+      .then(account => this.accountService.save(account));
     const space = await this.accountService.getRootSpace(accountUpdated);
 
     await this.namingReporter.createOrUpdateName(
@@ -130,7 +133,7 @@ export class AccountResolverMutations {
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IAccount, {
-    description: 'Reset the Authorization Policy on the specified Space.',
+    description: 'Reset the Authorization Policy on the specified Account.',
   })
   async authorizationPolicyResetOnAccount(
     @CurrentUser() agentInfo: AgentInfo,
@@ -140,15 +143,15 @@ export class AccountResolverMutations {
     const account = await this.accountService.getAccountOrFail(
       authorizationResetData.accountID
     );
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       account.authorization,
-      AuthorizationPrivilege.UPDATE, // todo: replace with AUTHORIZATION_RESET once that has been granted
+      AuthorizationPrivilege.AUTHORIZATION_RESET,
       `reset authorization definition on Space: ${agentInfo.email}`
     );
-    return await this.accountAuthorizationService.applyAuthorizationPolicy(
-      account
-    );
+    return this.accountAuthorizationService
+      .applyAuthorizationPolicy(account)
+      .then(account => this.accountService.save(account));
   }
 
   @UseGuards(GraphqlGuard)
@@ -238,8 +241,21 @@ export class AccountResolverMutations {
     virtualContributorData: CreateVirtualContributorOnAccountInput
   ): Promise<IVirtualContributor> {
     const account = await this.accountService.getAccountOrFail(
-      virtualContributorData.accountID
+      virtualContributorData.accountID,
+      {
+        relations: {
+          space: {
+            community: true,
+          },
+        },
+      }
     );
+    if (!account.space || !account.space.community) {
+      throw new EntityNotInitializedException(
+        `Account space or community is not initialized: ${account.id}`,
+        LogContext.ACCOUNT
+      );
+    }
 
     this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -258,7 +274,20 @@ export class AccountResolverMutations {
         account.authorization
       );
 
-    return await this.virtualContributorService.save(virtual);
+    virtual = await this.virtualContributorService.save(virtual);
+
+    // VC is created, now assign the contributor to the Member role on root space
+    await this.spaceService.assignContributorToRole(
+      account.space,
+      virtual,
+      CommunityRole.MEMBER,
+      CommunityContributorType.VIRTUAL
+    );
+
+    // Reload to ensure the new member credential is loaded
+    return await this.virtualContributorService.getVirtualContributorOrFail(
+      virtual.id
+    );
   }
 
   @UseGuards(GraphqlGuard)
@@ -286,7 +315,7 @@ export class AccountResolverMutations {
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       space.account.authorization,
-      AuthorizationPrivilege.CREATE_VIRTUAL_CONTRIBUTOR,
+      AuthorizationPrivilege.PLATFORM_ADMIN,
       `ingest space: ${space.nameID}(${space.id})`
     );
 

@@ -26,7 +26,7 @@ export class EcosystemModelAuthorizationService {
       ecosystemModel
     )) {
       actorGroup.authorization =
-        await this.authorizationPolicyService.inheritParentAuthorization(
+        this.authorizationPolicyService.inheritParentAuthorization(
           actorGroup.authorization,
           ecosystemModel.authorization
         );
@@ -36,6 +36,7 @@ export class EcosystemModelAuthorizationService {
       );
     }
 
-    return await this.ecosystemModelRepository.save(ecosystemModel);
+    return ecosystemModel;
+    // return await this.ecosystemModelRepository.save(ecosystemModel);
   }
 }

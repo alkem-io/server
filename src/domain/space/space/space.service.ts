@@ -58,6 +58,8 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { CommunityRole } from '@common/enums/community.role';
 import { SpaceLevel } from '@common/enums/space.level';
 import { UpdateSpaceSettingsInput } from './dto/space.dto.update.settings';
+import { IContributor } from '@domain/community/contributor/contributor.interface';
+import { CommunityContributorType } from '@common/enums/community.contributor.type';
 
 @Injectable()
 export class SpaceService {
@@ -860,6 +862,33 @@ export class SpaceService {
     return await this.getSubspaceInAccountScopeOrFail(
       subspaceID,
       space.account.id
+    );
+  }
+
+  public async assignContributorToRole(
+    space: ISpace,
+    contributor: IContributor,
+    role: CommunityRole,
+    type: CommunityContributorType
+  ) {
+    if (!space.community) {
+      throw new EntityNotInitializedException(
+        `Community not initialised on Space for assigning contributor to role: ${space.id}`,
+        LogContext.SPACES
+      );
+    }
+    if (!contributor.agent) {
+      throw new EntityNotInitializedException(
+        `Agent not specified on contributor: ${contributor.id}`,
+        LogContext.SPACES
+      );
+    }
+
+    await this.communityService.assignContributorToRole(
+      space.community,
+      contributor.agent,
+      role,
+      type
     );
   }
 

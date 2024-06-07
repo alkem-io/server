@@ -34,6 +34,7 @@ import {
 import { VirtualPersonaService } from '@platform/virtual-persona/virtual.persona.service';
 import { IVirtualPersona } from '@platform/virtual-persona';
 import { BodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
+import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { Platform } from '@platform/platfrom/platform.entity';
 import { IPlatform } from '@platform/platfrom/platform.interface';
 
@@ -48,6 +49,7 @@ export class VirtualContributorService {
     private communicationAdapter: CommunicationAdapter,
     @InjectEntityManager('default')
     private entityManager: EntityManager,
+    private namingService: NamingService,
     private eventBus: EventBus,
     @InjectRepository(VirtualContributor)
     private virtualContributorRepository: Repository<VirtualContributor>,
@@ -58,9 +60,16 @@ export class VirtualContributorService {
   async createVirtualContributor(
     virtualContributorData: CreateVirtualContributorInput
   ): Promise<IVirtualContributor> {
-    // Convert nameID to lower case
-    virtualContributorData.nameID = virtualContributorData.nameID.toLowerCase();
-    await this.checkNameIdOrFail(virtualContributorData.nameID);
+    if (virtualContributorData.nameID) {
+      // Convert nameID to lower case
+      virtualContributorData.nameID =
+        virtualContributorData.nameID.toLowerCase();
+      await this.checkNameIdOrFail(virtualContributorData.nameID);
+    } else {
+      virtualContributorData.nameID = await this.createVirtualContributorNameID(
+        virtualContributorData.profileData?.displayName || ''
+      );
+    }
     await this.checkDisplayNameOrFail(
       virtualContributorData.profileData?.displayName
     );
@@ -433,6 +442,18 @@ export class VirtualContributorService {
       results.push(loadedVirtual);
     }
     return results;
+  }
+
+  public async createVirtualContributorNameID(
+    displayName: string
+  ): Promise<string> {
+    const base = `${displayName}`;
+    const reservedNameIDs =
+      await this.namingService.getReservedNameIDsInVirtualContributors(); // This will need to be smarter later
+    return this.namingService.createNameIdAvoidingReservedNameIDs(
+      base,
+      reservedNameIDs
+    );
   }
 
   async countVirtualContributorsWithCredentials(

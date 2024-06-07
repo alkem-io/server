@@ -3,6 +3,7 @@ import { Type } from 'class-transformer';
 import { IsOptional, ValidateNested } from 'class-validator';
 import { UpdateProfileInput } from '@domain/common/profile/dto/profile.dto.update';
 import { UpdateWhiteboardInput } from '@domain/common/whiteboard/dto/whiteboard.dto.update';
+import { UpdateWhiteboardContentInput } from '@domain/common/whiteboard/dto/whiteboard.dto.update.content';
 
 @InputType()
 export class UpdateCalloutFramingInput {
@@ -18,4 +19,8 @@ export class UpdateCalloutFramingInput {
   @Field(() => UpdateWhiteboardInput, { nullable: true })
   @IsOptional()
   whiteboard?: UpdateWhiteboardInput;
+
+  @Field(() => UpdateWhiteboardContentInput, { nullable: true })
+  @IsOptional()
+  whiteboardContent?: UpdateWhiteboardContentInput;
 }

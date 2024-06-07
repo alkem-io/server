@@ -33,6 +33,7 @@ import { ICredentialDefinition } from '@domain/agent/credential/credential.defin
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { Organization } from '@domain/community/organization';
 import { User } from '@domain/community/user/user.entity';
+import { ISpace } from '../space/space.interface';
 
 @Injectable()
 export class AccountAuthorizationService {
@@ -88,15 +89,16 @@ export class AccountAuthorizationService {
       this.platformAuthorizationService.inheritRootAuthorizationPolicy(
         account.authorization
       );
+
     // Extend for global roles
     account.authorization = this.extendAuthorizationPolicy(
       account.authorization,
       account.id,
-      host
+      host,
+      account.space
     );
 
     await this.accountService.save(account);
-
     account.agent = this.agentAuthorizationService.applyAuthorizationPolicy(
       account.agent,
       account.authorization
@@ -131,19 +133,20 @@ export class AccountAuthorizationService {
       const udpatedVC =
         await this.virtualContributorAuthorizationService.applyAuthorizationPolicy(
           vc,
-          account.authorization
+          spaceAuthorization
         );
       updatedVCs.push(udpatedVC);
     }
     account.virtualContributors = updatedVCs;
 
-    return await this.accountService.save(account);
+    return account;
   }
 
   private extendAuthorizationPolicy(
     authorization: IAuthorizationPolicy | undefined,
     accountID: string,
-    host: IContributor
+    host: IContributor,
+    rootSpace: ISpace
   ): IAuthorizationPolicy {
     if (!authorization) {
       throw new EntityNotInitializedException(
@@ -208,22 +211,12 @@ export class AccountAuthorizationService {
       type: AuthorizationCredential.GLOBAL_SUPPORT,
       resourceID: '',
     });
-    if (host instanceof User) {
-      createVCsCriterias.push({
-        type: AuthorizationCredential.USER_SELF_MANAGEMENT,
-        resourceID: host.id,
-      });
-    } else if (host instanceof Organization) {
-      createVCsCriterias.push({
-        type: AuthorizationCredential.ORGANIZATION_ADMIN,
-        resourceID: host.id,
-      });
-    } else {
-      throw new AccountException(
-        `Unable to determine host type for: ${host.id}, of type '${host.constructor.name}'`,
-        LogContext.ACCOUNT
-      );
-    }
+    const accountHostCred = this.createCredentialCriteriaForHost(host);
+    createVCsCriterias.push({
+      type: AuthorizationCredential.SPACE_ADMIN,
+      resourceID: rootSpace.id,
+    });
+    createVCsCriterias.push(accountHostCred);
 
     const createVC = this.authorizationPolicyService.createCredentialRule(
       [AuthorizationPrivilege.CREATE_VIRTUAL_CONTRIBUTOR],
@@ -233,15 +226,10 @@ export class AccountAuthorizationService {
     createVC.cascade = false;
     newRules.push(createVC);
 
-    // Allow User hosts to also Delete the Account. Note this does not for example allow
+    // Allow hosts (users = self mgmt, org = org admin) to delete their own account
     const userHostsRule = this.authorizationPolicyService.createCredentialRule(
       [AuthorizationPrivilege.DELETE],
-      [
-        {
-          type: AuthorizationCredential.ACCOUNT_HOST,
-          resourceID: accountID,
-        },
-      ],
+      [accountHostCred],
       CREDENTIAL_RULE_TYPES_ACCOUNT_DELETE
     );
     userHostsRule.cascade = false;
@@ -253,5 +241,26 @@ export class AccountAuthorizationService {
     );
 
     return authorization;
+  }
+
+  private createCredentialCriteriaForHost(
+    host: IContributor
+  ): ICredentialDefinition {
+    if (host instanceof User) {
+      return {
+        type: AuthorizationCredential.USER_SELF_MANAGEMENT,
+        resourceID: host.id,
+      };
+    } else if (host instanceof Organization) {
+      return {
+        type: AuthorizationCredential.ORGANIZATION_ADMIN,
+        resourceID: host.id,
+      };
+    } else {
+      throw new AccountException(
+        `Unable to determine host type for: ${host.id}, of type '${host.constructor.name}'`,
+        LogContext.ACCOUNT
+      );
+    }
   }
 }

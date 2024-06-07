@@ -76,6 +76,7 @@ import { EventBusModule } from '@services/infrastructure/event-bus/event.bus.mod
 import { WhiteboardIntegrationModule } from '@services/whiteboard-integration/whiteboard.integration.module';
 import { PlatformSettingsModule } from '@platform/settings/platform.settings.module';
 import { FileIntegrationModule } from '@services/file-integration';
+import { AdminLicensingModule } from '@platform/admin/licensing/admin.licensing.module';
 
 @Module({
   imports: [
@@ -239,6 +240,7 @@ import { FileIntegrationModule } from '@services/file-integration';
     KonfigModule,
     AdminCommunicationModule,
     AdminSearchIngestModule,
+    AdminLicensingModule,
     AgentModule,
     MessageModule,
     MessageReactionModule,
