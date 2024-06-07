@@ -10,7 +10,9 @@ export class communitPolicyParentCred1716805934325
     const communityPolicies: {
       id: string;
       lead: string;
-    }[] = await queryRunner.query(`SELECT id, lead FROM community_policy`);
+    }[] = await queryRunner.query(
+      `SELECT \`id\`, \`lead\` FROM \`community_policy\``
+    );
     for (const policy of communityPolicies) {
       const policyLead: CommunityPolicyRole = JSON.parse(policy.lead);
       const newParentCredentials: CredentialDefinition[] = [];
@@ -22,22 +24,24 @@ export class communitPolicyParentCred1716805934325
           if (space) {
             parentCredential.type = 'space-lead';
             newParentCredentials.push(parentCredential);
+            policyLead.parentCredentials = newParentCredentials;
+
+            await queryRunner.query(
+              `UPDATE \`community_policy\` SET \`lead\` = '${JSON.stringify(
+                policyLead
+              )}' WHERE id = '${policy.id}'`
+            );
           }
-        } else {
-          newParentCredentials.push(parentCredential);
         }
       }
-      policyLead.parentCredentials = newParentCredentials;
-
-      await queryRunner.query(
-        `UPDATE community_policy SET lead = '${JSON.stringify(
-          policyLead
-        )}' WHERE id = '${policy.id}'`
-      );
     }
   }
 
-  public async down(queryRunner: QueryRunner): Promise<void> {}
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    console.log(
+      'No down migration possible for communitPolicyParentCred1716805934325 migration!'
+    );
+  }
 }
 
 export type CredentialDefinition = {
