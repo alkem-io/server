@@ -20,6 +20,7 @@ import { BaseException } from '@common/exceptions/base.exception';
 import { TaskService } from '@services/task';
 import { Task } from '@services/task/types';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { TaskStatus } from '@domain/task/dto';
 
 @Resolver()
 export class AdminSearchIngestResolverMutations {
@@ -56,26 +57,24 @@ export class AdminSearchIngestResolverMutations {
       .removeIndices()
       .then(res => {
         if (!res.acknowledged) {
-          throw new Error(res.message);
+          throw new Error(
+            res.message ? res.message : 'Failed to delete indices'
+          );
         }
         return this.searchIngestService.ensureIndicesExist();
       })
       .then(res => {
         if (!res.acknowledged) {
-          throw new Error(res.message);
-        }
-        return this.searchIngestService.removeIndices();
-      })
-      .then(res => {
-        if (!res.acknowledged) {
-          throw new Error(res.message);
+          throw new Error(
+            res.message ? res.message : 'Failed to create indices'
+          );
         }
         return this.searchIngestService.ingest(task);
       })
       .then(() => this.taskService.complete(task.id))
-      .catch(() => {
-        this.taskService.updateTaskErrors(task.id, 'Failed to ingest data');
-        this.taskService.complete(task.id);
+      .catch(async e => {
+        await this.taskService.updateTaskErrors(task.id, e?.message);
+        return this.taskService.complete(task.id, TaskStatus.ERRORED);
       });
     // const deleteResult = await this.searchIngestService.removeIndices();
     //

@@ -515,7 +515,7 @@ export class SearchResultService {
       .map(callout => {
         const space = parentSpaces.find(space =>
           space?.collaboration?.callouts?.some(
-            callout => callout.id === callout.id
+            spaceCallout => spaceCallout.id === callout.id
           )
         );
 
