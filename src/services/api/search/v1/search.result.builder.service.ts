@@ -241,6 +241,7 @@ export default class SearchResultBuilderService
     const searchResultCallout: ISearchResultCallout = {
       ...this.searchResultBase,
       callout,
+      space: {} as ISpace,
     };
     return searchResultCallout;
   }

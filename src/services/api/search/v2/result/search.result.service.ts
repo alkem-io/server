@@ -25,7 +25,6 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UserService } from '@domain/community/user/user.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
-import { SpaceType } from '@common/enums/space.type';
 import {
   ISearchResults,
   ISearchResultOrganization,
@@ -36,6 +35,11 @@ import { SearchEntityTypes } from '@services/api/search/search.entity.types';
 
 type PostParents = {
   post: Post;
+  callout: Callout;
+  space: Space;
+};
+
+type CalloutParents = {
   callout: Callout;
   space: Space;
 };
@@ -389,15 +393,17 @@ export class SearchResultService {
       )
     );
 
-    return authorizedCallouts
-      .map<ISearchResultCallout | undefined>(callout => {
+    const parents = await this.getCalloutParents(authorizedCallouts);
+
+    return parents
+      .map<ISearchResultCallout | undefined>(parent => {
         const rawSearchResult = rawSearchResults.find(
-          hit => hit.result.id === callout.id
+          hit => hit.result.id === parent.callout.id
         );
 
         if (!rawSearchResult) {
           this.logger.error(
-            `Unable to find raw search result for Callout: ${callout.id}`,
+            `Unable to find raw search result for Callout: ${parent.callout.id}`,
             undefined,
             LogContext.SEARCH
           );
@@ -406,10 +412,66 @@ export class SearchResultService {
 
         return {
           ...rawSearchResult,
-          callout,
+          callout: parent.callout,
+          space: parent.space,
         };
       })
       .filter((callout): callout is ISearchResultCallout => !!callout);
+  }
+
+  private async getCalloutParents(
+    callouts: Callout[]
+  ): Promise<CalloutParents[]> {
+    const calloutIds = callouts.map(callout => callout.id);
+
+    const parentSpaces = await this.entityManager.find(Space, {
+      where: {
+        collaboration: {
+          callouts: {
+            id: In(calloutIds),
+          },
+        },
+      },
+      relations: {
+        collaboration: {
+          callouts: true,
+        },
+      },
+      select: {
+        id: true,
+        type: true,
+        collaboration: {
+          id: true,
+          callouts: {
+            id: true,
+          },
+        },
+      },
+    });
+
+    return callouts
+      .map(callout => {
+        const space = parentSpaces.find(space =>
+          space?.collaboration?.callouts?.some(
+            callout => callout.id === callout.id
+          )
+        );
+
+        if (!space) {
+          this.logger.error(
+            `Unable to find Space parent for Callout: ${callout.id}`,
+            undefined,
+            LogContext.SEARCH_EXTRACT
+          );
+          return undefined;
+        }
+
+        return {
+          callout,
+          space,
+        };
+      })
+      .filter((x): x is CalloutParents => !!x);
   }
 
   private async getPostParents(posts: Post[]): Promise<PostParents[]> {
