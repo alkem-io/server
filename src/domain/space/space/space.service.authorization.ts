@@ -33,7 +33,7 @@ import {
   CREDENTIAL_RULE_TYPES_SPACE_COMMUNITY_JOIN_GLOBAL_REGISTERED,
   CREDENTIAL_RULE_SPACE_HOST_ASSOCIATES_JOIN,
   CREDENTIAL_RULE_SPACE_ADMIN_DELETE_SUBSPACE,
-  POLICY_RULE_COMMUNITY_INVITE,
+  POLICY_RULE_COMMUNITY,
   CREDENTIAL_RULE_TYPES_SPACE_PLATFORM_SETTINGS,
 } from '@common/constants';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
@@ -427,9 +427,12 @@ export class SpaceAuthorizationService {
     const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
 
     const communityInvitePrivilege = new AuthorizationPolicyRulePrivilege(
-      [AuthorizationPrivilege.COMMUNITY_INVITE],
+      [
+        AuthorizationPrivilege.COMMUNITY_INVITE,
+        AuthorizationPrivilege.COMMUNITY_ADD_MEMBER,
+      ],
       AuthorizationPrivilege.GRANT,
-      POLICY_RULE_COMMUNITY_INVITE
+      POLICY_RULE_COMMUNITY
     );
     privilegeRules.push(communityInvitePrivilege);
 
