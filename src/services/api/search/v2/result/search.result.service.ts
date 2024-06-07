@@ -612,7 +612,7 @@ export class SearchResultService {
 
         const space = spaces.find(space =>
           space?.collaboration?.callouts?.some(
-            callout => callout.id === callout.id
+            spaceCallout => spaceCallout.id === callout.id
           )
         );
 
