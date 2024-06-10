@@ -4,8 +4,11 @@ import { EntityManager, In } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { groupBy, intersection, orderBy } from 'lodash';
 import { Space } from '@domain/space/space/space.entity';
-import { ISearchResult } from '@services/api/search/dto/search.result.entry.interface';
-import { ISearchResultSpace } from '@services/api/search/dto/search.result.dto.entry.space';
+import {
+  ISearchResult,
+  ISearchResultCallout,
+  ISearchResultSpace,
+} from '../../dto';
 import { ISpace } from '@domain/space/space/space.interface';
 import { BaseException } from '@common/exceptions/base.exception';
 import {
@@ -14,22 +17,29 @@ import {
   AuthorizationPrivilege,
   LogContext,
 } from '@common/enums';
-import { ISearchResultUser } from '@services/api/search/dto/search.result.dto.entry.user';
 import { IUser, User } from '@domain/community/user';
-import { ISearchResultOrganization } from '@services/api/search/dto/search.result.dto.entry.organization';
 import { IOrganization, Organization } from '@domain/community/organization';
-import { ISearchResults } from '@services/api/search/dto/search.result.dto';
-import { ISearchResultPost } from '@services/api/search/dto/search.result.dto.entry.post';
 import { Post } from '@domain/collaboration/post';
 import { Callout } from '@domain/collaboration/callout';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UserService } from '@domain/community/user/user.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
-import { SpaceType } from '@common/enums/space.type';
+import {
+  ISearchResults,
+  ISearchResultOrganization,
+  ISearchResultUser,
+  ISearchResultPost,
+} from '../../dto';
+import { SearchEntityTypes } from '@services/api/search/search.entity.types';
 
 type PostParents = {
   post: Post;
+  callout: Callout;
+  space: Space;
+};
+
+type CalloutParents = {
   callout: Callout;
   space: Space;
 };
@@ -55,25 +65,22 @@ export class SearchResultService {
     agentInfo: AgentInfo,
     spaceId?: string
   ): Promise<ISearchResults> {
-    const groupedResults = groupBy(rawSearchResults, 'type');
+    const groupedResults = groupBy(rawSearchResults, 'type') as Record<
+      Partial<SearchEntityTypes>,
+      ISearchResult[]
+    >;
     // authorize entities with requester and enrich with data
     const [
-      spacesLevel0,
-      spacesLevel1,
-      spacesLevel2,
+      spaces,
+      subspaces,
       users,
       organizations,
       posts,
+      callouts,
+      calloutsOfWhiteboards,
     ] = await Promise.all([
       this.getSpaceSearchResults(groupedResults.space ?? [], spaceId),
-      this.getSubspaceSearchResults(
-        groupedResults[SpaceType.CHALLENGE] ?? [],
-        agentInfo
-      ),
-      this.getSubspaceSearchResults(
-        groupedResults[SpaceType.OPPORTUNITY] ?? [],
-        agentInfo
-      ),
+      this.getSubspaceSearchResults(groupedResults.subspace ?? [], agentInfo),
       this.getUserSearchResults(groupedResults.user ?? [], spaceId),
       this.getOrganizationSearchResults(
         groupedResults.organization ?? [],
@@ -81,6 +88,11 @@ export class SearchResultService {
         spaceId
       ),
       this.getPostSearchResults(groupedResults.post ?? [], agentInfo),
+      this.getCalloutSearchResult(groupedResults.callout ?? [], agentInfo),
+      this.getWhiteboardSearchResult(
+        groupedResults.whiteboard ?? [],
+        agentInfo
+      ),
     ]);
     // todo: count - https://github.com/alkem-io/server/issues/3700
     const contributorResults = orderBy(
@@ -89,8 +101,9 @@ export class SearchResultService {
       'desc'
     );
     const contributionResults = orderBy(posts, 'score', 'desc');
-    const journeyResults = orderBy(
-      [...spacesLevel0, ...spacesLevel1, ...spacesLevel2],
+    const journeyResults = orderBy([...spaces, ...subspaces], 'score', 'desc');
+    const calloutResults = orderBy(
+      [...callouts, ...calloutsOfWhiteboards],
       'score',
       'desc'
     );
@@ -102,7 +115,8 @@ export class SearchResultService {
       journeyResults,
       journeyResultsCount: -1,
       groupResults: [],
-      calloutResults: [],
+      calloutResults,
+      calloutResultsCount: -1,
     };
   }
 
@@ -370,6 +384,157 @@ export class SearchResultService {
       })
       .filter((post): post is ISearchResultPost => !!post);
   }
+  // the method returns Callouts until the proper search result is returned
+  private async getWhiteboardSearchResult(
+    rawSearchResults: ISearchResult[],
+    agentInfo: AgentInfo
+  ): Promise<ISearchResultCallout[]> {
+    if (rawSearchResults.length === 0) {
+      return [];
+    }
+
+    const whiteboardIds = rawSearchResults.map(hit => hit.result.id);
+
+    const callouts = await this.entityManager.findBy(Callout, {
+      id: In(whiteboardIds),
+    });
+    // usually the authorization is last but here it might be more expensive than usual
+    // find the authorized post first, then get the parents, and map the results
+    const authorizedCallouts = callouts.filter(callout =>
+      this.authorizationService.isAccessGranted(
+        agentInfo,
+        callout.authorization,
+        AuthorizationPrivilege.READ
+      )
+    );
+
+    const parents = await this.getCalloutParents(authorizedCallouts);
+
+    return parents
+      .map<ISearchResultCallout | undefined>(parent => {
+        const rawSearchResult = rawSearchResults.find(
+          hit => hit.result.id === parent.callout.id
+        );
+
+        if (!rawSearchResult) {
+          this.logger.error(
+            `Unable to find raw search result for Callout: ${parent.callout.id}`,
+            undefined,
+            LogContext.SEARCH
+          );
+          return undefined;
+        }
+
+        return {
+          ...rawSearchResult,
+          callout: parent.callout,
+          space: parent.space,
+        };
+      })
+      .filter((callout): callout is ISearchResultCallout => !!callout);
+  }
+
+  private async getCalloutSearchResult(
+    rawSearchResults: ISearchResult[],
+    agentInfo: AgentInfo
+  ): Promise<ISearchResultCallout[]> {
+    if (rawSearchResults.length === 0) {
+      return [];
+    }
+
+    const calloutIds = rawSearchResults.map(hit => hit.result.id);
+
+    const callouts = await this.entityManager.findBy(Callout, {
+      id: In(calloutIds),
+    });
+    // usually the authorization is last but here it might be more expensive than usual
+    // find the authorized post first, then get the parents, and map the results
+    const authorizedCallouts = callouts.filter(callout =>
+      this.authorizationService.isAccessGranted(
+        agentInfo,
+        callout.authorization,
+        AuthorizationPrivilege.READ
+      )
+    );
+
+    const parents = await this.getCalloutParents(authorizedCallouts);
+
+    return parents
+      .map<ISearchResultCallout | undefined>(parent => {
+        const rawSearchResult = rawSearchResults.find(
+          hit => hit.result.id === parent.callout.id
+        );
+
+        if (!rawSearchResult) {
+          this.logger.error(
+            `Unable to find raw search result for Callout: ${parent.callout.id}`,
+            undefined,
+            LogContext.SEARCH
+          );
+          return undefined;
+        }
+
+        return {
+          ...rawSearchResult,
+          callout: parent.callout,
+          space: parent.space,
+        };
+      })
+      .filter((callout): callout is ISearchResultCallout => !!callout);
+  }
+
+  private async getCalloutParents(
+    callouts: Callout[]
+  ): Promise<CalloutParents[]> {
+    const calloutIds = callouts.map(callout => callout.id);
+
+    const parentSpaces = await this.entityManager.find(Space, {
+      where: {
+        collaboration: {
+          callouts: {
+            id: In(calloutIds),
+          },
+        },
+      },
+      relations: {
+        collaboration: {
+          callouts: true,
+        },
+      },
+      select: {
+        collaboration: {
+          id: true,
+          callouts: {
+            id: true,
+          },
+        },
+      },
+    });
+
+    return callouts
+      .map(callout => {
+        const space = parentSpaces.find(space =>
+          space?.collaboration?.callouts?.some(
+            spaceCallout => spaceCallout.id === callout.id
+          )
+        );
+
+        if (!space) {
+          this.logger.error(
+            `Unable to find Space parent for Callout: ${callout.id}`,
+            undefined,
+            LogContext.SEARCH_EXTRACT
+          );
+          return undefined;
+        }
+
+        return {
+          callout,
+          space,
+        };
+      })
+      .filter((x): x is CalloutParents => !!x);
+  }
 
   private async getPostParents(posts: Post[]): Promise<PostParents[]> {
     if (!posts.length) {
@@ -447,7 +612,7 @@ export class SearchResultService {
 
         const space = spaces.find(space =>
           space?.collaboration?.callouts?.some(
-            callout => callout.id === callout.id
+            spaceCallout => spaceCallout.id === callout.id
           )
         );
 

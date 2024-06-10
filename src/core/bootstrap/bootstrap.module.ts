@@ -14,7 +14,7 @@ import { InnovationHubModule } from '@domain/innovation-hub';
 import { NameReporterModule } from '@services/external/elasticsearch/name-reporter/name.reporter.module';
 import { AccountModule } from '@domain/space/account/account.module';
 import { Account } from '@domain/space/account/account.entity';
-import { SearchIngestModule } from '@services/api/search2/search.ingest/search.ingest.module';
+import { SearchIngestModule } from '@services/api/search/v2/ingest';
 
 @Module({
   imports: [

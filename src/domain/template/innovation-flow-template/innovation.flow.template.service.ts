@@ -21,7 +21,7 @@ export class InnovationFlowTemplateService {
     private templateBaseService: TemplateBaseService
   ) {}
 
-  async createInnovationFLowTemplate(
+  async createInnovationFlowTemplate(
     innovationFlowTemplateData: CreateInnovationFlowTemplateInput,
     storageAggregator: IStorageAggregator
   ): Promise<IInnovationFlowTemplate> {

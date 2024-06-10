@@ -32,14 +32,13 @@ export abstract class ISearchResults {
 
   @Field(() => [ISearchResult], {
     nullable: false,
-    description: 'The search results for Spaces / Challenges / Opportunities.',
+    description: 'The search results for Spaces / Subspaces.',
   })
   journeyResults!: ISearchResult[];
 
   @Field(() => Number, {
     nullable: false,
-    description:
-      'The total number of results for Spaces / Challenges / Opportunities.',
+    description: 'The total number of results for Spaces / Subspaces.',
   })
   journeyResultsCount!: number;
 
@@ -48,6 +47,12 @@ export abstract class ISearchResults {
     description: 'The search results for Callouts.',
   })
   calloutResults!: ISearchResult[];
+
+  @Field(() => Number, {
+    nullable: false,
+    description: 'The total number of results for Callouts.',
+  })
+  calloutResultsCount!: number;
 
   @Field(() => [ISearchResult], {
     nullable: false,
