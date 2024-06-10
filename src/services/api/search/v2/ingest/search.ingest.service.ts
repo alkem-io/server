@@ -17,8 +17,11 @@ import { asyncReduceSequential } from '@common/utils/async.reduce.sequential';
 import { asyncMap } from '@common/utils/async.map';
 import { ElasticResponseError } from '@services/external/elasticsearch/types';
 import { SpaceLevel } from '@common/enums/space.level';
-import { SearchEntityTypes } from '../search.entity.types';
-import { getIndexPattern } from '../get.index.pattern';
+import { getIndexPattern } from './get.index.pattern';
+import { SearchEntityTypes } from '../../search.entity.types';
+import { ExcalidrawContent, isExcalidrawTextElement } from '@common/interfaces';
+import { TaskService } from '@services/task';
+import { Task } from '@services/task/task.interface';
 
 const profileRelationOptions = {
   location: true,
@@ -80,6 +83,16 @@ type IngestBulkReturnType = {
 
 type IngestReturnType = Record<string, IngestBulkReturnType>;
 
+const getIndices = (indexPattern: string) => [
+  `${indexPattern}spaces`,
+  `${indexPattern}subspaces`,
+  `${indexPattern}organizations`,
+  `${indexPattern}users`,
+  `${indexPattern}posts`,
+  `${indexPattern}callouts`,
+  `${indexPattern}whiteboards`,
+];
+
 @Injectable()
 export class SearchIngestService {
   private readonly indexPattern: string;
@@ -88,7 +101,8 @@ export class SearchIngestService {
     private elasticClient: ElasticClient | undefined,
     @InjectEntityManager() private entityManager: EntityManager,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService,
-    private configService: ConfigService
+    private configService: ConfigService,
+    private taskService: TaskService
   ) {
     this.indexPattern = getIndexPattern(this.configService);
 
@@ -102,6 +116,44 @@ export class SearchIngestService {
     }
   }
 
+  public async ensureIndicesExist(): Promise<{
+    acknowledged: boolean;
+    message?: string;
+  }> {
+    if (!this.elasticClient) {
+      return {
+        acknowledged: false,
+        message: 'Elasticsearch client not initialized',
+      };
+    }
+
+    const indices = getIndices(this.indexPattern);
+
+    const results = await asyncMap(indices, async index => {
+      try {
+        const ack = await this.elasticClient!.indices.create({ index });
+        return { acknowledged: ack.acknowledged };
+      } catch (error) {
+        const err = error as ElasticResponseError;
+        return {
+          acknowledged: false,
+          message: err.meta.body.error.reason,
+        };
+      }
+    });
+
+    return results.reduce(
+      (acc, val) => {
+        if (!val.acknowledged) {
+          acc.acknowledged = false;
+          acc.message = val.message;
+        }
+        return acc;
+      },
+      { acknowledged: true }
+    );
+  }
+
   public async removeIndices(): Promise<{
     acknowledged: boolean;
     message?: string;
@@ -112,17 +164,17 @@ export class SearchIngestService {
         message: 'Elasticsearch client not initialized',
       };
     }
-    const indices = [
-      `${this.indexPattern}spaces`,
-      `${this.indexPattern}subspaces`,
-      `${this.indexPattern}organizations`,
-      `${this.indexPattern}users`,
-      `${this.indexPattern}posts`,
-    ];
+    const indices = getIndices(this.indexPattern);
 
     const results = await asyncMap(indices, async index => {
-      if (!(await this.elasticClient!.indices.exists({ index }))) {
-        return { acknowledged: true };
+      // if does not exist exit early, no need to delete
+
+      try {
+        if (!(await this.elasticClient!.indices.exists({ index }))) {
+          return { acknowledged: true };
+        }
+      } catch (e: any) {
+        return { acknowledged: false, message: e?.message };
       }
 
       try {
@@ -149,7 +201,7 @@ export class SearchIngestService {
     );
   }
 
-  public async ingest(): Promise<IngestReturnType> {
+  public async ingest(task: Task): Promise<IngestReturnType> {
     if (!this.elasticClient) {
       return {
         'N/A': {
@@ -195,6 +247,16 @@ export class SearchIngestService {
       {
         index: `${this.indexPattern}posts`,
         fetchFn: this.fetchPosts.bind(this),
+        batchSize: 20,
+      },
+      {
+        index: `${this.indexPattern}callouts`,
+        fetchFn: this.fetchCallout.bind(this),
+        batchSize: 20,
+      },
+      {
+        index: `${this.indexPattern}whiteboards`,
+        fetchFn: this.fetchWhiteboard.bind(this),
         batchSize: 10,
       },
     ];
@@ -202,7 +264,12 @@ export class SearchIngestService {
     return asyncReduceSequential(
       params,
       async (acc, { index, fetchFn, batchSize }) => {
-        const batches = await this.fetchAndIngest(index, fetchFn, batchSize);
+        const batches = await this.fetchAndIngest(
+          index,
+          fetchFn,
+          batchSize,
+          task
+        );
         const total = batches.reduce((acc, val) => acc + (val.total ?? 0), 0);
         acc[index] = {
           total: total + (acc[index]?.total ?? 0),
@@ -218,7 +285,8 @@ export class SearchIngestService {
   private async fetchAndIngest(
     index: string,
     fetchFn: (start: number, limit: number) => Promise<unknown[]>,
-    batchSize: number
+    batchSize: number,
+    task: Task
   ): Promise<IngestBatchResultType[]> {
     let start = 0;
     const results: IngestBatchResultType[] = [];
@@ -230,7 +298,8 @@ export class SearchIngestService {
         break;
       }
 
-      results.push(await this.ingestBulk(fetched, index));
+      const result = await this.ingestBulk(fetched, index, task);
+      results.push(result);
       // some statement are not directly querying a table, but instead parent entities
       // so the total count is not predictable; in that case an extra query has to be made
       // to ensure there is no more data
@@ -248,7 +317,8 @@ export class SearchIngestService {
 
   private async ingestBulk(
     data: unknown[],
-    index: string
+    index: string,
+    task: Task
   ): Promise<IngestBatchResultType> {
     if (!this.elasticClient) {
       return {
@@ -292,10 +362,13 @@ export class SearchIngestService {
           });
         }
       });
-      const message = `${erroredDocuments.length} documents errored. ${
+      const message = `[${index}] - ${
+        erroredDocuments.length
+      } documents errored. ${
         data.length - erroredDocuments.length
       } documents indexed.`;
       this.logger.error(message, undefined, LogContext.SEARCH_INGEST);
+      this.taskService.updateTaskErrors(task.id, message);
       return {
         success: false,
         total: 0,
@@ -303,8 +376,9 @@ export class SearchIngestService {
         erroredDocuments: erroredDocuments,
       };
     } else {
-      const message = `${data.length} documents indexed`;
+      const message = `[${index}] - ${data.length} documents indexed`;
       this.logger.verbose?.(message, LogContext.SEARCH_INGEST);
+      this.taskService.updateTaskResults(task.id, message);
       return {
         success: true,
         total: data.length,
@@ -481,6 +555,204 @@ export class SearchIngestService {
           },
         }))
       );
+  }
+
+  private fetchCallout(start: number, limit: number) {
+    return this.entityManager
+      .find<Space>(Space, {
+        loadEagerRelations: false,
+        where: {
+          account: {
+            license: { visibility: Not(SpaceVisibility.ARCHIVED) },
+          },
+        },
+        relations: {
+          account: { license: true },
+          collaboration: {
+            callouts: {
+              framing: {
+                profile: profileRelationOptions,
+              },
+            },
+          },
+        },
+        select: {
+          id: true,
+          account: { id: true, license: { visibility: true } },
+          collaboration: {
+            id: true,
+            callouts: {
+              id: true,
+              createdBy: true,
+              createdDate: true,
+              nameID: true,
+              framing: {
+                id: true,
+                profile: profileSelectOptions,
+              },
+            },
+          },
+        },
+        skip: start,
+        take: limit,
+      })
+      .then(spaces =>
+        spaces.flatMap(space =>
+          space.collaboration?.callouts?.map(callout => ({
+            ...callout,
+            framing: undefined,
+            type: SearchEntityTypes.CALLOUT,
+            license: {
+              visibility: space?.account?.license?.visibility ?? EMPTY_VALUE,
+            },
+            spaceID: space.id,
+            collaborationID: space?.collaboration?.id ?? EMPTY_VALUE,
+            profile: {
+              ...callout.framing.profile,
+              tags: processTagsets(callout.framing?.profile?.tagsets),
+              tagsets: undefined,
+            },
+          }))
+        )
+      );
+  }
+
+  private fetchWhiteboard(start: number, limit: number) {
+    return this.entityManager
+      .find<Space>(Space, {
+        loadEagerRelations: false,
+        where: {
+          account: {
+            license: { visibility: Not(SpaceVisibility.ARCHIVED) },
+          },
+        },
+        relations: {
+          account: { license: true },
+          collaboration: {
+            callouts: {
+              framing: {
+                whiteboard: {
+                  profile: profileRelationOptions,
+                },
+              },
+              contributions: {
+                whiteboard: {
+                  profile: profileRelationOptions,
+                },
+              },
+            },
+          },
+        },
+        select: {
+          id: true,
+          account: { id: true, license: { visibility: true } },
+          collaboration: {
+            id: true,
+            callouts: {
+              id: true,
+              createdBy: true,
+              createdDate: true,
+              nameID: true,
+              framing: {
+                id: true,
+                whiteboard: {
+                  id: true,
+                  content: true,
+                  profile: profileSelectOptions,
+                },
+              },
+              contributions: {
+                id: true,
+                whiteboard: {
+                  id: true,
+                  content: true,
+                  profile: profileSelectOptions,
+                },
+              },
+            },
+          },
+        },
+        skip: start,
+        take: limit,
+      })
+      .then(spaces => {
+        return spaces.flatMap(space => {
+          return space.collaboration?.callouts
+            ?.flatMap(callout => {
+              // a callout can have whiteboard in the framing
+              // AND whiteboards in the contributions
+              const wbs = [];
+              if (callout.framing.whiteboard) {
+                const content = extractTextFromWhiteboardContent(
+                  callout.framing.whiteboard.content
+                );
+                // only whiteboards with content are ingested
+                if (!content) {
+                  return;
+                }
+
+                wbs.push({
+                  ...callout.framing.whiteboard,
+                  content,
+                  type: SearchEntityTypes.WHITEBOARD,
+                  license: {
+                    visibility:
+                      space?.account?.license?.visibility ?? EMPTY_VALUE,
+                  },
+                  spaceID: space.id,
+                  calloutID: callout.id,
+                  collaborationID: space?.collaboration?.id ?? EMPTY_VALUE,
+                  profile: {
+                    ...callout.framing.whiteboard.profile,
+                    tags: processTagsets(
+                      callout.framing.whiteboard?.profile?.tagsets
+                    ),
+                    tagsets: undefined,
+                  },
+                });
+              }
+
+              callout?.contributions?.forEach(contribution => {
+                if (!contribution?.whiteboard) {
+                  return;
+                }
+
+                const content = extractTextFromWhiteboardContent(
+                  contribution.whiteboard.content
+                );
+                // only whiteboards with content are ingested
+                if (!content) {
+                  return;
+                }
+
+                wbs.push({
+                  ...contribution.whiteboard,
+                  content: extractTextFromWhiteboardContent(
+                    contribution.whiteboard.content
+                  ),
+                  type: SearchEntityTypes.WHITEBOARD,
+                  license: {
+                    visibility:
+                      space?.account?.license?.visibility ?? EMPTY_VALUE,
+                  },
+                  spaceID: space.id,
+                  calloutID: callout.id,
+                  collaborationID: space?.collaboration?.id ?? EMPTY_VALUE,
+                  profile: {
+                    ...contribution.whiteboard.profile,
+                    tags: processTagsets(
+                      contribution.whiteboard?.profile?.tagsets
+                    ),
+                    tagsets: undefined,
+                  },
+                });
+              });
+
+              return wbs;
+            })
+            .filter(Boolean);
+        });
+      });
   }
 
   private fetchPosts(start: number, limit: number) {
@@ -683,4 +955,20 @@ export class SearchIngestService {
 
 const processTagsets = (tagsets: Tagset[] | undefined) => {
   return tagsets?.flatMap(tagset => tagset.tags).join(' ');
+};
+// todo: maybe look for text in the shapes also
+const extractTextFromWhiteboardContent = (content: string): string => {
+  if (!content) {
+    return '';
+  }
+
+  try {
+    const { elements }: ExcalidrawContent = JSON.parse(content);
+    return elements
+      .filter(isExcalidrawTextElement)
+      .map(x => x.originalText)
+      .join(' ');
+  } catch (e) {
+    return '';
+  }
 };

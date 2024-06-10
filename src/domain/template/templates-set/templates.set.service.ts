@@ -282,7 +282,7 @@ export class TemplatesSetService {
 
     for (const innovationFlowTemplateDefault of innovationFlowTemplateInputs) {
       const innovationFlowTemplate =
-        await this.innovationFlowTemplateService.createInnovationFLowTemplate(
+        await this.innovationFlowTemplateService.createInnovationFlowTemplate(
           innovationFlowTemplateDefault,
           storageAggregator
         );
@@ -453,7 +453,7 @@ export class TemplatesSetService {
     }
     const storageAggregator = await this.getStorageAggregator(templatesSet);
     const innovationFlowTemplate =
-      await this.innovationFlowTemplateService.createInnovationFLowTemplate(
+      await this.innovationFlowTemplateService.createInnovationFlowTemplate(
         innovationFlowTemplateInput,
         storageAggregator
       );
