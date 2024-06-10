@@ -26,6 +26,7 @@ import { IOrganization } from './organization.interface';
 import { RemoveOrganizationRoleFromUserInput } from './dto/organization.dto.remove.role.from.user';
 import { AssignOrganizationRoleToUserInput } from './dto/organization.dto.assign.role.to.user';
 import { OrganizationRole } from '@common/enums/organization.role';
+import { UpdateOrganizationPlatformSettingsInput } from './dto/organization.dto.update.platform.settings';
 
 @Resolver(() => IOrganization)
 export class OrganizationResolverMutations {
@@ -113,6 +114,32 @@ export class OrganizationResolverMutations {
     );
 
     return await this.organizationService.updateOrganization(organizationData);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IOrganization, {
+    description: 'Updates the specified Organization platform settings.',
+  })
+  @Profiling.api
+  async updateOrganizationPlatformSettings(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('organizationData')
+    organizationData: UpdateOrganizationPlatformSettingsInput
+  ): Promise<IOrganization> {
+    const organization = await this.organizationService.getOrganizationOrFail(
+      organizationData.organizationID
+    );
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      organization.authorization,
+      AuthorizationPrivilege.PLATFORM_ADMIN,
+      `orgUpdate: ${organization.nameID}`
+    );
+
+    return await this.organizationService.updateOrganizationPlatformSettings(
+      organization,
+      organizationData
+    );
   }
 
   @UseGuards(GraphqlGuard)
