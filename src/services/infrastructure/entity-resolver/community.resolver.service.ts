@@ -53,11 +53,6 @@ export class CommunityResolverService {
       relations: {
         account: true,
       },
-      select: {
-        account: {
-          id: true,
-        },
-      },
     });
 
     if (!space || !space.account) {
@@ -75,11 +70,6 @@ export class CommunityResolverService {
         },
         relations: {
           account: true,
-        },
-        select: {
-          account: {
-            id: true,
-          },
         },
       }
     );
