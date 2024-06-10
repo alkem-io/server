@@ -133,7 +133,7 @@ export class OrganizationResolverMutations {
       agentInfo,
       organization.authorization,
       AuthorizationPrivilege.PLATFORM_ADMIN,
-      `orgUpdate: ${organization.nameID}`
+      `organization update platform settings: ${organization.nameID}`
     );
 
     return await this.organizationService.updateOrganizationPlatformSettings(
