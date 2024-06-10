@@ -15,19 +15,13 @@ import { TemplatesSetService } from '@domain/template/templates-set/templates.se
 import { IInnovationFlowTemplate } from '@domain/template/innovation-flow-template/innovation.flow.template.interface';
 import { CreateInnovationFlowInput } from '@domain/collaboration/innovation-flow/dto';
 import { templatesSetDefaults } from './definitions/space.defaults.templates';
-import { innovationFlowStatesDefault } from './definitions/space.defaults.innovation.flow';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
 import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
 import { ISpaceSettings } from '../space.settings/space.settings.interface';
-import { spaceSettingsDefaults } from './definitions/space.settings';
 import { ICalloutGroup } from '@domain/collaboration/callout-groups/callout.group.interface';
-import { spaceCalloutGroups } from './definitions/space.callout.group';
-import { subspaceCalloutGroups } from './definitions/subspace.callout.group';
 import { Account } from '../account/account.entity';
-import { subspaceDefaultCallouts } from './definitions/subspace.default.callouts';
 import { subspaceCommunityPolicy } from './definitions/subspace.community.policy';
-import { spaceDefaultCallouts } from './definitions/space.default.callouts';
 import { spaceCommunityPolicy } from './definitions/space.community.policy';
 import { ICommunityPolicyDefinition } from '@domain/community/community-policy/community.policy.definition';
 import { CreateFormInput } from '@domain/common/form/dto/form.dto.create';
@@ -35,7 +29,6 @@ import { subspceCommunityApplicationForm } from './definitions/subspace.communit
 import { spaceCommunityApplicationForm } from './definitions/space.community.application.form';
 import { ProfileType } from '@common/enums';
 import { CalloutGroupName } from '@common/enums/callout.group.name';
-import { subspaceSettingsDefaults } from './definitions/subspace.settings';
 import { SpaceLevel } from '@common/enums/space.level';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { SpaceType } from '@common/enums/space.type';

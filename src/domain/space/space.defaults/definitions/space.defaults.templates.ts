@@ -1,4 +1,4 @@
-import { innovationFlowStatesDefault } from './space.defaults.innovation.flow';
+import { innovationFlowStatesDefault } from './challenge/space.defaults.innovation.flow.challenge';
 
 export const templatesSetDefaults: any = {
   posts: [

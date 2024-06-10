@@ -4,7 +4,7 @@ import { CalloutType } from '@common/enums/callout.type';
 import { CalloutGroupName } from '@common/enums/callout.group.name';
 import { CreateCalloutInput } from '@domain/collaboration/callout';
 
-export const spaceDefaultCallouts: CreateCalloutInput[] = [
+export const spaceDefaultsCalloutsRootSpace: CreateCalloutInput[] = [
   {
     nameID: 'welcome',
     type: CalloutType.POST,

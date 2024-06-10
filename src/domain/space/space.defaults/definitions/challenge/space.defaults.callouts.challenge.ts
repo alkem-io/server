@@ -4,7 +4,7 @@ import { CalloutType } from '@common/enums/callout.type';
 import { CreateCalloutInput } from '@domain/collaboration/callout';
 import { EMPTY_WHITEBOARD_CONTENT } from '@domain/common/whiteboard/empty.whiteboard.content';
 
-export const subspaceDefaultCallouts: CreateCalloutInput[] = [
+export const spaceDefaultsCalloutsChallenge: CreateCalloutInput[] = [
   {
     nameID: 'general-chat',
     type: CalloutType.POST,
