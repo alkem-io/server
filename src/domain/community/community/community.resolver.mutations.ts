@@ -204,7 +204,17 @@ export class CommunityResolverMutations {
 
     let requiredPrivilege = AuthorizationPrivilege.GRANT;
     if (roleData.role === CommunityRole.MEMBER) {
-      requiredPrivilege = AuthorizationPrivilege.COMMUNITY_ADD_MEMBER;
+      const sameAccount =
+        await this.communityService.isCommunityAccountMatchingVcAccount(
+          community.id,
+          roleData.virtualContributorID
+        );
+      if (sameAccount) {
+        requiredPrivilege =
+          AuthorizationPrivilege.COMMUNITY_ADD_MEMBER_VC_FROM_ACCOUNT;
+      } else {
+        requiredPrivilege = AuthorizationPrivilege.COMMUNITY_ADD_MEMBER;
+      }
     }
 
     this.authorizationService.grantAccessOrFail(
