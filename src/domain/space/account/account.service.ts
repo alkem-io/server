@@ -39,10 +39,12 @@ import { VirtualContributorService } from '@domain/community/virtual-contributor
 import { User } from '@domain/community/user';
 import { LicenseFeatureFlagName } from '@common/enums/license.feature.flag.name';
 import { LicenseIssuerService } from '@platform/license-issuer/license.issuer.service';
+import { AccountHostService } from './account.host.service';
 
 @Injectable()
 export class AccountService {
   constructor(
+    private accountHostService: AccountHostService,
     private spaceService: SpaceService,
     private agentService: AgentService,
     private templatesSetService: TemplatesSetService,
@@ -259,7 +261,7 @@ export class AccountService {
       );
     }
 
-    const host = await this.getHostOrFail(account);
+    const host = await this.accountHostService.getHostOrFail(account);
     await this.spaceService.deleteSpace({
       ID: account.space.id,
     });
@@ -424,7 +426,7 @@ export class AccountService {
       }
     );
 
-    const existingHost = await this.getHost(account);
+    const existingHost = await this.accountHostService.getHost(account);
 
     if (existingHost) {
       await this.agentService.revokeCredential({
@@ -442,43 +444,6 @@ export class AccountService {
     });
 
     return contributor;
-  }
-
-  async getHosts(account: IAccount): Promise<IContributor[]> {
-    const contributors =
-      await this.contributorService.contributorsWithCredentials({
-        type: AuthorizationCredential.ACCOUNT_HOST,
-        resourceID: account.id,
-      });
-    return contributors;
-  }
-
-  async getHost(account: IAccount): Promise<IContributor | null> {
-    const contributors =
-      await this.contributorService.contributorsWithCredentials({
-        type: AuthorizationCredential.ACCOUNT_HOST,
-        resourceID: account.id,
-      });
-    if (contributors.length === 1) {
-      return contributors[0];
-    } else if (contributors.length > 1) {
-      this.logger.error(
-        `Account with ID: ${account.id} has multiple hosts. This should not happen.`,
-        LogContext.ACCOUNT
-      );
-    }
-
-    return null;
-  }
-
-  async getHostOrFail(account: IAccount): Promise<IContributor> {
-    const host = await this.getHost(account);
-    if (!host)
-      throw new EntityNotFoundException(
-        `Unable to find Host for account with ID: ${account.id}`,
-        LogContext.COMMUNITY
-      );
-    return host;
   }
 
   public async createVirtualContributorOnAccount(

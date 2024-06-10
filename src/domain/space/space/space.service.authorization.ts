@@ -33,7 +33,6 @@ import {
   CREDENTIAL_RULE_TYPES_SPACE_COMMUNITY_JOIN_GLOBAL_REGISTERED,
   CREDENTIAL_RULE_SPACE_HOST_ASSOCIATES_JOIN,
   CREDENTIAL_RULE_SPACE_ADMIN_DELETE_SUBSPACE,
-  POLICY_RULE_COMMUNITY_INVITE,
   CREDENTIAL_RULE_TYPES_SPACE_PLATFORM_SETTINGS,
 } from '@common/constants';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
@@ -237,14 +236,8 @@ export class SpaceAuthorizationService {
         communityPolicy
       );
 
-    // Invitations are only supported at root space level, so have different authorizations
-    // depending on the level
-    if (space.level === SpaceLevel.SPACE) {
-      // Only allow invitations for root spaces
-      space.community.authorization = this.extendPrivilegeRulesInviteMember(
-        space.community.authorization
-      );
-    } else {
+    // Subspaces to allow some membership options based on the parent space recential
+    if (space.level !== SpaceLevel.SPACE) {
       // Allow directly adding members at subspace level
       space.community.authorization =
         this.extendCommunityAuthorizationPolicySubspace(
@@ -417,24 +410,6 @@ export class SpaceAuthorizationService {
     const communityPolicyWithFlags = spaceInput.community.policy;
     communityPolicyWithFlags.settings = spaceSettings;
     return communityPolicyWithFlags;
-  }
-
-  private extendPrivilegeRulesInviteMember(
-    authorization: IAuthorizationPolicy | undefined
-  ): IAuthorizationPolicy {
-    const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
-
-    const communityInvitePrivilege = new AuthorizationPolicyRulePrivilege(
-      [AuthorizationPrivilege.COMMUNITY_INVITE],
-      AuthorizationPrivilege.GRANT,
-      POLICY_RULE_COMMUNITY_INVITE
-    );
-    privilegeRules.push(communityInvitePrivilege);
-
-    return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
-      authorization,
-      privilegeRules
-    );
   }
 
   private extendCommunityAuthorizationPolicySubspace(

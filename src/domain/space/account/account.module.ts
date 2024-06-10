@@ -20,9 +20,11 @@ import { ContributorModule } from '@domain/community/contributor/contributor.mod
 import { LicensingModule } from '@platform/licensing/licensing.module';
 import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
 import { LicenseIssuerModule } from '@platform/license-issuer/license.issuer.module';
+import { AccountHostModule } from './account.host.module';
 
 @Module({
   imports: [
+    AccountHostModule,
     AgentModule,
     AuthorizationModule,
     AuthorizationPolicyModule,
