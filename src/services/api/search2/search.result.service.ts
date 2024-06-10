@@ -26,7 +26,7 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UserService } from '@domain/community/user/user.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
-import { SpaceType } from '@common/enums/space.type';
+import { SpaceLevel } from '@common/enums/space.level';
 
 type PostParents = {
   post: Post;
@@ -55,7 +55,7 @@ export class SearchResultService {
     agentInfo: AgentInfo,
     spaceId?: string
   ): Promise<ISearchResults> {
-    const groupedResults = groupBy(rawSearchResults, 'type');
+    const groupedResults = groupBy(rawSearchResults, 'level');
     // authorize entities with requester and enrich with data
     const [
       spacesLevel0,
@@ -67,11 +67,11 @@ export class SearchResultService {
     ] = await Promise.all([
       this.getSpaceSearchResults(groupedResults.space ?? [], spaceId),
       this.getSubspaceSearchResults(
-        groupedResults[SpaceType.CHALLENGE] ?? [],
+        groupedResults[SpaceLevel.CHALLENGE] ?? [],
         agentInfo
       ),
       this.getSubspaceSearchResults(
-        groupedResults[SpaceType.OPPORTUNITY] ?? [],
+        groupedResults[SpaceLevel.OPPORTUNITY] ?? [],
         agentInfo
       ),
       this.getUserSearchResults(groupedResults.user ?? [], spaceId),
