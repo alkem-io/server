@@ -164,17 +164,24 @@ export class OrganizationAuthorizationService {
 
     const communityAdmin =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.READ],
+        [AuthorizationCredential.GLOBAL_COMMUNITY_READ],
+        CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_COMMUNITY_READ
+      );
+    newRules.push(communityAdmin);
+
+    const communityAdmin2 =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [
-          AuthorizationPrivilege.GRANT,
           AuthorizationPrivilege.CREATE,
           AuthorizationPrivilege.READ,
           AuthorizationPrivilege.UPDATE,
           AuthorizationPrivilege.DELETE,
         ],
-        [AuthorizationCredential.GLOBAL_COMMUNITY_READ],
+        [AuthorizationCredential.GLOBAL_SUPPORT],
         CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_COMMUNITY_READ
       );
-    newRules.push(communityAdmin);
+    newRules.push(communityAdmin2);
 
     // Allow Global admins + Global Space Admins to manage access to Spaces + contents
     const globalAdmin =
