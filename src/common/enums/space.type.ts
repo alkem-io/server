@@ -4,7 +4,7 @@ export enum SpaceType {
   SPACE = 'space',
   CHALLENGE = 'challenge',
   OPPORTUNITY = 'opportunity',
-  VIRTUAL_CONTRIBUTOR = 'virtual-contributor',
+  VIRTUAL_CONTRIBUTOR = 'vc',
 }
 
 registerEnumType(SpaceType, {
