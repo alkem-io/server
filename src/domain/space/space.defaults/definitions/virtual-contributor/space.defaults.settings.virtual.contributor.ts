@@ -4,16 +4,16 @@ import { ISpaceSettings } from '@domain/space/space.settings/space.settings.inte
 
 export const spaceDefaultsSettingsVirtualContributor: ISpaceSettings = {
   privacy: {
-    mode: SpacePrivacyMode.PUBLIC,
+    mode: SpacePrivacyMode.PRIVATE,
     allowPlatformSupportAsAdmin: false,
   },
   membership: {
-    policy: CommunityMembershipPolicy.OPEN,
+    policy: CommunityMembershipPolicy.APPLICATIONS,
     trustedOrganizations: [], // only allow to be host org for now, not on subspaces
     allowSubspaceAdminsToInviteMembers: false,
   },
   collaboration: {
-    inheritMembershipRights: true,
+    inheritMembershipRights: false,
     allowMembersToCreateSubspaces: true,
     allowMembersToCreateCallouts: true,
   },
