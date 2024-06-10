@@ -85,12 +85,23 @@ export class SpaceService {
     account: IAccount,
     agentInfo?: AgentInfo
   ): Promise<ISpace> {
-    // Temporary setup that matches 1-1; later the type and level will be separately assigned
-    spaceData.type = SpaceType.SPACE;
-    if (spaceData.level === SpaceLevel.CHALLENGE)
-      spaceData.type = SpaceType.CHALLENGE;
-    if (spaceData.level === SpaceLevel.OPPORTUNITY)
-      spaceData.type = SpaceType.OPPORTUNITY;
+    if (!spaceData.type) {
+      // default to match the level
+      switch (spaceData.level) {
+        case SpaceLevel.SPACE:
+          spaceData.type = SpaceType.SPACE;
+          break;
+        case SpaceLevel.CHALLENGE:
+          spaceData.type = SpaceType.CHALLENGE;
+          break;
+        case SpaceLevel.OPPORTUNITY:
+          spaceData.type = SpaceType.OPPORTUNITY;
+          break;
+        default:
+          spaceData.type = SpaceType.CHALLENGE;
+          break;
+      }
+    }
 
     const space: ISpace = Space.create(spaceData);
 
