@@ -61,20 +61,8 @@ export class CommunityEventsService {
         );
         break;
       case SpaceType.CHALLENGE:
-        this.contributionReporter.challengeJoined(
-          {
-            id: community.parentID,
-            name: displayName,
-            space: spaceID,
-          },
-          {
-            id: agentInfo.userID,
-            email: agentInfo.email,
-          }
-        );
-        break;
       case SpaceType.OPPORTUNITY:
-        this.contributionReporter.opportunityJoined(
+        this.contributionReporter.subspaceJoined(
           {
             id: community.parentID,
             name: displayName,

@@ -70,23 +70,20 @@ export class AuthenticationService {
     );
   }
 
-  async getAgentInfo(opts: {
-    cookie?: string;
-    authorization?: string;
-    apiToken?: string;
-  }) {
+  async getAgentInfo(opts: { cookie?: string; authorization?: string }) {
+    let session: Session | undefined;
     try {
-      const session = await getSession(this.kratosFrontEndClient, opts);
-
-      if (!session.identity) {
-        return new AgentInfo();
-      }
-
-      const oryIdentity = session.identity as OryDefaultIdentitySchema;
-      return this.createAgentInfo(oryIdentity);
-    } catch (e: any) {
-      throw new Error(e?.message);
+      session = await getSession(this.kratosFrontEndClient, opts);
+    } catch (e) {
+      return new AgentInfo();
     }
+
+    if (!session?.identity) {
+      return new AgentInfo();
+    }
+
+    const oryIdentity = session.identity as OryDefaultIdentitySchema;
+    return this.createAgentInfo(oryIdentity);
   }
 
   async createAgentInfo(

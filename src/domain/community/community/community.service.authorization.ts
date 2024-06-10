@@ -127,30 +127,30 @@ export class CommunityAuthorizationService {
     }
 
     for (const application of community.applications) {
-      const applicationSaved =
+      const applicationAuthReset =
         await this.applicationAuthorizationService.applyAuthorizationPolicy(
           application,
           community.authorization
         );
-      application.authorization = applicationSaved.authorization;
+      application.authorization = applicationAuthReset.authorization;
     }
 
     for (const invitation of community.invitations) {
-      const invitationSaved =
+      const invitationReset =
         await this.invitationAuthorizationService.applyAuthorizationPolicy(
           invitation,
           community.authorization
         );
-      invitation.authorization = invitationSaved.authorization;
+      invitation.authorization = invitationReset.authorization;
     }
 
     for (const externalInvitation of community.externalInvitations) {
-      const invitationSaved =
+      const invitationReset =
         await this.invitationExternalAuthorizationService.applyAuthorizationPolicy(
           externalInvitation,
           community.authorization
         );
-      externalInvitation.authorization = invitationSaved.authorization;
+      externalInvitation.authorization = invitationReset.authorization;
     }
 
     if (community.guidelines) {
@@ -161,7 +161,7 @@ export class CommunityAuthorizationService {
         );
     }
 
-    return await this.communityService.save(community);
+    return community;
   }
 
   private async extendAuthorizationPolicy(

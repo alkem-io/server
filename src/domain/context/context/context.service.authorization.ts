@@ -31,7 +31,7 @@ export class ContextAuthorizationService {
       context
     );
     context.ecosystemModel.authorization =
-      await this.authorizationPolicyService.inheritParentAuthorization(
+      this.authorizationPolicyService.inheritParentAuthorization(
         context.ecosystemModel.authorization,
         context.authorization
       );
@@ -40,6 +40,7 @@ export class ContextAuthorizationService {
         context.ecosystemModel
       );
 
-    return await this.contextRepository.save(context);
+    return context;
+    // return await this.contextRepository.save(context);
   }
 }
