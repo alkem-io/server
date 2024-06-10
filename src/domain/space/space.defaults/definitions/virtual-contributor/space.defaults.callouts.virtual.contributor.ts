@@ -6,131 +6,166 @@ import { EMPTY_WHITEBOARD_CONTENT } from '@domain/common/whiteboard/empty.whiteb
 
 export const spaceDefaultsCalloutsVirtualContributor: CreateCalloutInput[] = [
   {
-    nameID: 'general-chat',
+    nameID: 'summary',
     type: CalloutType.POST,
-    contributionPolicy: {
-      state: CalloutState.OPEN,
-    },
-    sortOrder: 2,
-    groupName: CalloutGroupName.HOME,
-    framing: {
-      profile: {
-        displayName: 'General chat 💬',
-        description: 'Things you would like to discuss with the community.',
-      },
-    },
-  },
-  {
-    nameID: 'getting-started',
-    type: CalloutType.LINK_COLLECTION,
     contributionPolicy: {
       state: CalloutState.CLOSED,
     },
     sortOrder: 1,
     groupName: CalloutGroupName.HOME,
+    state:'Introduction',
     framing: {
       profile: {
-        displayName: 'Getting Started',
-        description: '⬇️ Here are some quick links to help you get started',
+        displayName: 'No Time? A quick summary ⬇️',
+        description: "*   <strong>Virtual Contributors</strong> are dynamic entities that engage with you based on a curated body of knowledge.\n*   This knowledge repository consists of texts and documents that you collect within a designated <strong>Subspace</strong> of your Space.\n*   To activate a Virtual Contributor, navigate to your <strong>Space Settings</strong> and select the <strong>Account</strong> tab.\n*   Once activated, anyone in your Space can interact with the Virtual Contributor by mentioning it in a comment to a post using the format <strong>@name-of-virtual-contributor</strong>.\n',
       },
     },
   },
   {
-    nameID: 'contributor-profiles',
-    type: CalloutType.POST_COLLECTION,
+    nameID: 'introduction',
+    type: CalloutType.POST,
     contributionPolicy: {
-      state: CalloutState.OPEN,
+      state: CalloutState.CLOSED,
     },
     sortOrder: 2,
     groupName: CalloutGroupName.HOME,
+    state:'Introduction',
     framing: {
       profile: {
-        displayName: '👥 This is us!',
-        description:
-          'Here you will find the profiles of all contributors to this Space. Are you joining us? 👋 Nice to meet you! Please also provide your details below.',
+        displayName: 'The Virtual Contributor',
+        description: "# 🤖 What is a Virtual Contributor?\n\nThink of it as a dynamic repository of knowledge with which you can interact. Powered by generative AI, these bots provide answers based on the documents and texts they were trained on. Unlike generic chatbots, the Virtual Contributor responds only to questions it can confidently answer.\n\n# 🛠️ How to make your own:\n\n1.  Learn More in this <strong>Introduction</strong>: Discover additional details about the Virtual Contributor and how you can interact with it.\n2.  Build Your <strong>Knowledge Base</strong>: Click the next step in the flow to create the body of knowledge you want to train your Virtual Contributor on.\n3.  Read how to Publish Your VC in <strong>Going Live</strong>: Once you’ve crafted your Virtual Contributor, publish it so anyone in your Space can interact with it!\n\n# ❗Keep in mind:\n\nAlkemio is currently in Public Preview. We invite you to join us in shaping a better future with safe technology and responsible AI usage. The Virtual Contributor is available to Spaces with a Plus subscription. Even if your subscription (or the free trial) ends, your Virtual Contributor will remain accessible, although it won’t answer new questions.\n",
       },
-    },
-    contributionDefaults: {
-      postDescription:
-        'Hi! I am... <p> In daily life I... <p> And I also like to... <p> You can contact me for anything related to... <p> My wish for this Space is.. <p> <i>And of course feel invited to insert a nice picture!</i>',
     },
   },
   {
-    nameID: 'news',
-    type: CalloutType.POST_COLLECTION,
+    nameID: 'interacting-with-vc',
+    type: CalloutType.POST,
     contributionPolicy: {
-      state: CalloutState.OPEN,
+      state: CalloutState.CLOSED,
     },
-    sortOrder: 1,
+    sortOrder: 3,
     groupName: CalloutGroupName.HOME,
+    state:'Introduction',
     framing: {
       profile: {
-        displayName: 'Relevant news, research or use cases 📰',
+        displayName: 'Interacting with a Virtual Contributor',
         description:
-          'Please share any relevant insights to help us better understand the Space. You can describe why it is relevant and add a link or upload a document with the article. You can also comment on the insights already submitted by other community members!',
+          "Once you’ve published your <strong>Virtual Contributor (VC)</strong>, everyone in your Space can engage with it. The process is straightforward: simply mention or tag the VC in a comment (@name-of-your-vc), just as you would with any other contributor. The VC will then respond in a comment below. Be patient—it might take a few seconds; after all, even our VC needs a moment to think! 😉\n\nIf you’d like your VC to interact in a different Space, feel free to [contact our support team here](https://welcome.alkem.io/contact/)—they’ll be happy to assist you.\n\nRemember that you can ask your VC questions anywhere within your Space. Admins of Subspaces in your Space can also add them there (Subspace Settings > Community). However, please keep the posts in this Subspace (Virtual Contributor)<span> </span><strong>closed for interaction with the VC</strong> since it could clutter your knowledge base.\n",
       },
-    },
-    contributionDefaults: {
-      postDescription:
-        '✍️ Please share your contribution. The more details the better!',
     },
   },
   {
-    nameID: 'stakeholder-map',
-    type: CalloutType.WHITEBOARD,
+    nameID: 'vc-profile',
+    type: CalloutType.POST,
     contributionPolicy: {
-      state: CalloutState.OPEN,
+      state: CalloutState.CLOSED,
     },
-    sortOrder: 2,
+    sortOrder: 4,
     groupName: CalloutGroupName.HOME,
+    state:'Introduction',
+    framing: {
+      profile: {
+        displayName: 'The Profile of your Virtual Contributor',
+        description:
+          "Similar to users and organizations, your Virtual Contributor (VC) will have a <strong>profile</strong> that others can view by clicking on its name or avatar. When the VC is linked to your account, you will also notice a ⚙️ icon on the profile page next to the VC’s name. Click there to edit the profile and enhance it with a nice description, perhaps including instructions for people on what questions to ask.\n",
+      },
+    },
+  },
+  {
+    nameID: 'content-types',
+    type: CalloutType.POST,
+    contributionPolicy: {
+      state: CalloutState.CLOSED,
+    },
+    sortOrder: 5,
+    groupName: CalloutGroupName.HOME,
+    state:'Introduction',
     framing: {
       profile: {
         displayName: 'Who are the stakeholders?',
         description:
-          'Choose one of the templates from the library to map your stakeholders here!',
-      },
-      whiteboard: {
-        content: EMPTY_WHITEBOARD_CONTENT,
-        nameID: 'stakeholders',
-        profileData: {
-          displayName: 'stakeholder map',
-        },
+          "Currently, the Virtual Contributor can read:\n\n*   Text written anywhere in this Subspace\n*   PDF files uploaded in Collections of Links and Documents\n*   PDF files added as a reference to a post or other collaboration tool\n*   Website texts pointed to through a link in a post or other collaboration tool\n",
       },
     },
   },
   {
-    nameID: 'documents',
+    nameID: 'terms-conditions',
+    type: CalloutType.POST,
+    contributionPolicy: {
+      state: CalloutState.CLOSED,
+    },
+    sortOrder: 6,
+    groupName: CalloutGroupName.HOME,
+    state:'Introduction',
+    framing: {
+      profile: {
+        displayName: 'Terms & Conditions',
+        description: "As a host of a Space, and thus of the Body of Knowledge this Virtual Contributor is based upon, you are responsible for the content in there. To read all Terms and Conditions, [click here](https://welcome.alkem.io/legal).\n",
+      },
+    },
+  },
+  {
+    nameID: 'body-of-knowledge-ex1',
+    type: CalloutType.POST,
+    contributionPolicy: {
+      state: CalloutState.CLOSED,
+    },
+    sortOrder: 7,
+    groupName: CalloutGroupName.HOME,
+    state:'Body of Knowledge',
+    framing: {
+      profile: {
+        displayName: 'Example 1: Background information',
+        description: "Click on the ⚙️ at the top right of this post, click EDIT and then update this text with the background information or something else you want your Virtual Contributor to know about.\n",
+      },
+    },
+  },
+  {
+    nameID: 'body-of-knowledge-ex2',
+    type: CalloutType.POST,
+    contributionPolicy: {
+      state: CalloutState.CLOSED,
+    },
+    sortOrder: 8,
+    groupName: CalloutGroupName.HOME,
+    state:'Body of Knowledge',
+    framing: {
+      profile: {
+        displayName: 'Example 2: Random facts and figures',
+        description: "Use this post to add facts, figures, insights, etc, that you cannot group in a more structure place, like for instance:\n\n*   Alkemio was launched in 2021\n*   <strong>New Zealand Features the World’s Longest Mountain Name.</strong> The name holds the Guinness World Record and consists of 85 characters. The name of this mountain is Taumatawhakatangihangakoauauotamateapokaiwhenuakitanatahu. When translated into English, the word means “the place where Tmatea, the man with the big knees, who slid, climbed, and swallowed mountains, known as – landeater – played his nose flute to his loved one”. Source: <https://mystart.com/blog/8-amazing-facts-about-mountains/>\n*   Etc.\n\nClick on the ⚙️ at the top right of this post, click EDIT and then update this text with the facts and figures you want your Virtual Contributor to know about.\n",
+      },
+    },
+  },  
+  {
+    nameID: 'body-of-knowledge-ex3',
     type: CalloutType.LINK_COLLECTION,
     contributionPolicy: {
-      state: CalloutState.OPEN,
+      state: CalloutState.CLOSED,
     },
-    sortOrder: 3,
+    sortOrder: 9,
     groupName: CalloutGroupName.HOME,
+    state:'Body of Knowledge',
     framing: {
       profile: {
-        displayName: 'Reference / important documents',
-        description: 'Please add links to documents with reference material.💥',
+        displayName: 'Example 3: Links and Documents',
+        description: "Aside from inserting text, you can also upload documents and add links to expand the Body of Knowledge. Click on the plus below to add a link or (PDF) document or click on the ⚙️ at the top right of this post, and click EDIT to update this text.\n",
       },
     },
-  },
+  }, 
   {
-    nameID: 'proposals',
-    type: CalloutType.POST_COLLECTION,
+    nameID: 'activate',
+    type: CalloutType.POST,
     contributionPolicy: {
-      state: CalloutState.OPEN,
+      state: CalloutState.CLOSED,
     },
-    sortOrder: 1,
+    sortOrder: 10,
     groupName: CalloutGroupName.HOME,
+    state:'Going Live',
     framing: {
       profile: {
-        displayName: 'Proposals',
-        description:
-          'What are the 💡 Opportunities that you think we should be working on? Please add them below and use the template provided.',
+        displayName: 'Ready? Go!',
+        description: "To activate your Virtual Contributor,\n\n1.  Click here to go to the <strong>Account tab</strong> of your <strong>Space Settings</strong> (this link will be opened in a new tab).\n2.  Scroll down a little bit and click on CREATE VIRTUAL CONTRIBUTOR.\n3.  Give your VC a name and select this Subspace (Your Virtual Contributor) to use as a Body of Knowledge. That's it!\n\nAnd then of course the interesting part comes along.. Interact with your VC! It is added to the Space automatically, so add a post in your Knowledge base and ask your VC for it's thoughts 👍😊 Not sure how? Read the post about interacting with your VC in the Introduction phase of this flow.\n",
       },
     },
-    contributionDefaults: {
-      postDescription:
-        '💡 Title <p> 💬 Description <p> 🗣️ Who to involve <p> 🌟 Why this has great potential',
-    },
-  },
+  },    
 ];
