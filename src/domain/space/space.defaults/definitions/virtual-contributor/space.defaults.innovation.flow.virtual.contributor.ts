@@ -3,18 +3,18 @@ import { IInnovationFlowState } from '@domain/collaboration/innovation-flow-stat
 export const spaceDefaultsInnovationFlowStatesVirtualContributor: IInnovationFlowState[] =
   [
     {
-      displayName: 'Explore',
+      displayName: 'Introduction',
       description:
-        '🔍 A journey of discovery! Gather insights through research and observation.',
+        'Scroll down to read more about how to get started. Ready to add some knowledge to your Virtual Contributor? Click on Body of Knowledge ⬆️',
     },
     {
-      displayName: 'Data',
+      displayName: 'Body of Knowledge',
       description:
-        '🎯 Sharpen your focus. Define the challenge with precision and set a clear direction.',
+        'Here you can share all relevant information for the Virtual Contributor to know about. To get started, three posts have already been added. Click on the ➕ Collaboration Tool to add more.',
     },
     {
-      displayName: 'Evaluate',
+      displayName: 'Going Live',
       description:
-        '✅ Assess impact, feasibility, and alignment to make informed choices.',
+        '',
     },
   ];
