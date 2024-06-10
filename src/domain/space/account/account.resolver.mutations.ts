@@ -36,11 +36,13 @@ import {
 } from '@services/infrastructure/event-bus/commands';
 import { CommunityContributorType } from '@common/enums/community.contributor.type';
 import { CommunityRole } from '@common/enums/community.role';
+import { AccountHostService } from './account.host.service';
 
 @Resolver()
 export class AccountResolverMutations {
   constructor(
     private accountService: AccountService,
+    private accountHostService: AccountHostService,
     private accountAuthorizationService: AccountAuthorizationService,
     private authorizationService: AuthorizationService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
@@ -268,9 +270,11 @@ export class AccountResolverMutations {
       virtualContributorData
     );
 
+    const host = await this.accountHostService.getHostOrFail(account);
     virtual =
       await this.virtualContributorAuthorizationService.applyAuthorizationPolicy(
         virtual,
+        host,
         account.authorization
       );
 

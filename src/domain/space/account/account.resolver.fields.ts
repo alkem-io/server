@@ -33,11 +33,13 @@ import {
   IVirtualContributor,
   VirtualContributor,
 } from '@domain/community/virtual-contributor';
+import { AccountHostService } from './account.host.service';
 
 @Resolver(() => IAccount)
 export class AccountResolverFields {
   constructor(
     private accountService: AccountService,
+    private accountHostService: AccountHostService,
     private licensingService: LicensingService,
     private authorizationService: AuthorizationService
   ) {}
@@ -120,7 +122,7 @@ export class AccountResolverFields {
     description: 'The Account host.',
   })
   async host(@Parent() account: Account): Promise<IContributor> {
-    return await this.accountService.getHostOrFail(account);
+    return await this.accountHostService.getHostOrFail(account);
   }
 
   @ResolveField('spaceID', () => String, {
