@@ -11,7 +11,7 @@ export class UpdateOrganizationPlatformSettingsInput {
 
   @Field(() => NameID, {
     nullable: false,
-    description: 'Upate the URL path for the User.',
+    description: 'Upate the URL path for the Organization.',
   })
   nameID!: string;
 }
