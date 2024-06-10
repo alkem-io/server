@@ -300,28 +300,34 @@ export class SpaceDefaultsService {
     }
 
     // If no argument is provided, then use the default template for the space, if set
-    const spaceDefaults = await this.getDefaultsForAccountOrFail(accountID);
-    if (spaceDefaults.innovationFlowTemplate) {
-      const template =
-        await this.innovationFlowTemplateService.getInnovationFlowTemplateOrFail(
-          spaceDefaults.innovationFlowTemplate.id,
-          {
-            relations: { profile: true },
-          }
-        );
-      spaceDefaults.innovationFlowTemplate;
-      // Note: no profile currently present, so use the one from the template for now
-      const result: CreateInnovationFlowInput = {
-        profile: {
-          displayName: template.profile.displayName,
-          description: template.profile.description,
-        },
-        states: this.innovationFlowStatesService.getStates(template.states),
-      };
-      return result;
+    // for spaces of type challenge or opportunity
+    if (
+      spaceType === SpaceType.CHALLENGE ||
+      spaceType === SpaceType.OPPORTUNITY
+    ) {
+      const spaceDefaults = await this.getDefaultsForAccountOrFail(accountID);
+      if (spaceDefaults.innovationFlowTemplate) {
+        const template =
+          await this.innovationFlowTemplateService.getInnovationFlowTemplateOrFail(
+            spaceDefaults.innovationFlowTemplate.id,
+            {
+              relations: { profile: true },
+            }
+          );
+        spaceDefaults.innovationFlowTemplate;
+        // Note: no profile currently present, so use the one from the template for now
+        const result: CreateInnovationFlowInput = {
+          profile: {
+            displayName: template.profile.displayName,
+            description: template.profile.description,
+          },
+          states: this.innovationFlowStatesService.getStates(template.states),
+        };
+        return result;
+      }
     }
 
-    // If no default template is set, then make up one
+    // If no default template is set, then pick up the default based on the specified type
     const innovationFlowStatesDefault =
       this.getDefaultInnovationFlowStates(spaceType);
     const result: CreateInnovationFlowInput = {
