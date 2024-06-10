@@ -1,24 +1,13 @@
-import { reduce } from 'lodash';
 import { Inject, LoggerService, UseGuards } from '@nestjs/common';
 import { Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
-import {
-  AlkemioErrorStatus,
-  AuthorizationPrivilege,
-  LogContext,
-} from '@common/enums';
+import { AuthorizationPrivilege } from '@common/enums';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import {
-  AdminSearchIngestResult,
-  IngestResult,
-} from '@platform/admin/search/admin.search.ingest.result';
 import { SearchIngestService } from '@services/api/search/v2/ingest/search.ingest.service';
-import { BaseException } from '@common/exceptions/base.exception';
 import { TaskService } from '@services/task';
-import { Task } from '@services/task/types';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { TaskStatus } from '@domain/task/dto';
 
@@ -33,7 +22,6 @@ export class AdminSearchIngestResolverMutations {
   ) {}
 
   @UseGuards(GraphqlGuard)
-  // @Mutation(() => AdminSearchIngestResult, {
   @Mutation(() => String, {
     description:
       'Ingests new data into Elasticsearch from scratch. This will delete all existing data and ingest new data from the source. This is an admin only operation.',
@@ -52,7 +40,7 @@ export class AdminSearchIngestResolverMutations {
     this.logger.verbose?.('Starting search ingest from scratch');
 
     const task = await this.taskService.create();
-    // todo: add error handling
+
     this.searchIngestService
       .removeIndices()
       .then(res => {
@@ -61,6 +49,7 @@ export class AdminSearchIngestResolverMutations {
             res.message ? res.message : 'Failed to delete indices'
           );
         }
+        this.taskService.updateTaskResults(task.id, 'Indices removed');
         return this.searchIngestService.ensureIndicesExist();
       })
       .then(res => {
@@ -69,6 +58,7 @@ export class AdminSearchIngestResolverMutations {
             res.message ? res.message : 'Failed to create indices'
           );
         }
+        this.taskService.updateTaskResults(task.id, 'Indices recreated');
         return this.searchIngestService.ingest(task);
       })
       .then(() => this.taskService.complete(task.id))
@@ -76,39 +66,7 @@ export class AdminSearchIngestResolverMutations {
         await this.taskService.updateTaskErrors(task.id, e?.message);
         return this.taskService.complete(task.id, TaskStatus.ERRORED);
       });
-    // const deleteResult = await this.searchIngestService.removeIndices();
-    //
-    // if (!deleteResult.acknowledged) {
-    //   throw new BaseException(
-    //     deleteResult.message ?? 'Failed to delete indices',
-    //     LogContext.SEARCH_INGEST,
-    //     AlkemioErrorStatus.UNSPECIFIED
-    //   );
-    // }
 
-    // const createResults = await this.searchIngestService.ensureIndicesExist();
-    //
-    // if (!createResults.acknowledged) {
-    //   throw new BaseException(
-    //     createResults.message ?? 'Failed to create indices',
-    //     LogContext.SEARCH_INGEST,
-    //     AlkemioErrorStatus.UNSPECIFIED
-    //   );
-    // }
-
-    // small workaround until the return type is defined
-    // const result = await this.searchIngestService.ingest();
-    // const results = reduce(
-    //   result,
-    //   (acc, { total, batches }, key) => {
-    //     acc.push({ index: key, total, batches });
-    //     return acc;
-    //   },
-    //   [] as IngestResult[]
-    // );
-    // return {
-    //   results,
-    // };
     return task.id;
   }
 }

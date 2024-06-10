@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { AdminSearchIngestResult } from './admin.search.ingest.result';
 import { SearchIngestModule } from '@services/api/search/v2/ingest';
 import { AdminSearchIngestResolverMutations } from '@platform/admin/search/admin.search.ingest.resolver.mutations';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
@@ -13,7 +12,7 @@ import { TaskModule } from '@services/task';
     PlatformAuthorizationPolicyModule,
     TaskModule,
   ],
-  providers: [AdminSearchIngestResult, AdminSearchIngestResolverMutations],
+  providers: [AdminSearchIngestResolverMutations],
   exports: [],
 })
 export class AdminSearchIngestModule {}
