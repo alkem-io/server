@@ -875,6 +875,16 @@ export class CommunityService {
     return virtualContributor;
   }
 
+  public async isCommunityAccountMatchingVcAccount(
+    communityID: string,
+    virtualContributorID: string
+  ): Promise<boolean> {
+    return await this.communityResolverService.isCommunityAccountMatchingVcAccount(
+      communityID,
+      virtualContributorID
+    );
+  }
+
   private async validateUserCommunityPolicy(
     community: ICommunity,
     communityPolicyRole: ICommunityRolePolicy,

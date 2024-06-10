@@ -192,7 +192,10 @@ export class CommunityAuthorizationService {
     }
     const spaceAdminsInvite =
       this.authorizationPolicyService.createCredentialRule(
-        [AuthorizationPrivilege.COMMUNITY_INVITE],
+        [
+          AuthorizationPrivilege.COMMUNITY_INVITE,
+          AuthorizationPrivilege.COMMUNITY_ADD_MEMBER_VC_FROM_ACCOUNT,
+        ],
         inviteMembersCriterias,
         CREDENTIAL_RULE_TYPES_COMMUNITY_INVITE_MEMBERS
       );

@@ -10,6 +10,7 @@ import { Space } from '@domain/space/space/space.entity';
 import { ISpace } from '@domain/space/space/space.interface';
 import { RoomType } from '@common/enums/room.type';
 import { ILicense } from '@domain/license/license/license.interface';
+import { VirtualContributor } from '@domain/community/virtual-contributor';
 
 @Injectable()
 export class CommunityResolverService {
@@ -37,6 +38,49 @@ export class CommunityResolverService {
         },
       },
     });
+  }
+
+  public async isCommunityAccountMatchingVcAccount(
+    communityID: string,
+    virtualContributorID: string
+  ): Promise<boolean> {
+    const space = await this.entityManager.findOne(Space, {
+      where: {
+        community: {
+          id: communityID,
+        },
+      },
+      relations: {
+        account: true,
+      },
+    });
+
+    if (!space || !space.account) {
+      throw new EntityNotFoundException(
+        `Unable to find Space for given community id: ${communityID}`,
+        LogContext.COMMUNITY
+      );
+    }
+    const accountID = space.account.id;
+    const virtualContributor = await this.entityManager.findOne(
+      VirtualContributor,
+      {
+        where: {
+          id: virtualContributorID,
+        },
+        relations: {
+          account: true,
+        },
+      }
+    );
+
+    if (!virtualContributor || !virtualContributor.account) {
+      throw new EntityNotFoundException(
+        `Unable to find VirtualContributor for given id: ${virtualContributorID}`,
+        LogContext.COMMUNITY
+      );
+    }
+    return virtualContributor.account.id === accountID;
   }
 
   public async getRootSpaceNameIDFromCommunityOrFail(
