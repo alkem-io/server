@@ -97,6 +97,7 @@ export class CollaborationService {
     const innovationFlowInput =
       await this.spaceDefaultsService.getCreateInnovationFlowInput(
         account.id,
+        spaceType,
         collaborationData.innovationFlowTemplateID
       );
     const allowedStates = innovationFlowInput.states.map(

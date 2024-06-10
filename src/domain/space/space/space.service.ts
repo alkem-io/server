@@ -106,7 +106,7 @@ export class SpaceService {
     space.authorization = new AuthorizationPolicy();
     space.account = account;
     space.settingsStr = this.spaceSettingsService.serializeSettings(
-      this.spaceDefaultsService.getDefaultSpaceSettings(spaceData.level)
+      this.spaceDefaultsService.getDefaultSpaceSettings(spaceData.type)
     );
 
     const parentStorageAggregator = spaceData.storageAggregatorParent;
@@ -194,7 +194,7 @@ export class SpaceService {
         spaceData.collaborationData?.collaborationTemplateID
       );
     const defaultCallouts = this.spaceDefaultsService.getDefaultCallouts(
-      space.level
+      space.type
     );
     const calloutInputs =
       await this.spaceDefaultsService.getCreateCalloutInputs(
