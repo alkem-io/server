@@ -19,6 +19,7 @@ import {
   CREDENTIAL_RULE_TYPES_ACCESS_VIRTUAL_CONTRIBUTORS,
   CREDENTIAL_RULE_TYPES_COMMUNITY_ADD_MEMBERS,
   CREDENTIAL_RULE_TYPES_COMMUNITY_INVITE_MEMBERS,
+  POLICY_RULE_VC_ADD_TO_COMMUNITY,
 } from '@common/constants';
 import { InvitationExternalAuthorizationService } from '../invitation.external/invitation.external.service.authorization';
 import { InvitationAuthorizationService } from '../invitation/invitation.service.authorization';
@@ -31,6 +32,7 @@ import { ICommunityPolicy } from '../community-policy/community.policy.interface
 import { CommunityRole } from '@common/enums/community.role';
 import { LicenseEngineService } from '@core/license-engine/license.engine.service';
 import { LicensePrivilege } from '@common/enums/license.privilege';
+import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 
 @Injectable()
 export class CommunityAuthorizationService {
@@ -90,6 +92,10 @@ export class CommunityAuthorizationService {
         community.authorization,
         parentAuthorization
       );
+
+    community.authorization = this.appendPrivilegeRules(
+      community.authorization
+    );
 
     community.authorization = await this.extendAuthorizationPolicy(
       community.authorization,
@@ -290,5 +296,20 @@ export class CommunityAuthorizationService {
       );
 
     return updatedAuthorization;
+  }
+
+  private appendPrivilegeRules(
+    authorization: IAuthorizationPolicy
+  ): IAuthorizationPolicy {
+    const createVCPrivilege = new AuthorizationPolicyRulePrivilege(
+      [AuthorizationPrivilege.COMMUNITY_ADD_MEMBER_VC_FROM_ACCOUNT],
+      AuthorizationPrivilege.GRANT,
+      POLICY_RULE_VC_ADD_TO_COMMUNITY
+    );
+
+    return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
+      authorization,
+      [createVCPrivilege]
+    );
   }
 }
