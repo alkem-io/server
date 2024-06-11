@@ -216,21 +216,6 @@ export class OrganizationService {
       );
     }
 
-    if (organizationData.nameID) {
-      this.logger.verbose?.(
-        `${organizationData.nameID} - ${organization.nameID}`,
-        LogContext.COMMUNICATION
-      );
-      if (
-        organizationData.nameID.toLowerCase() !==
-        organization.nameID.toLowerCase()
-      ) {
-        // updating the nameID, check new value is allowed
-        await this.checkNameIdOrFail(organizationData.nameID);
-        organization.nameID = organizationData.nameID;
-      }
-    }
-
     if (organizationData.legalEntityName !== undefined) {
       organization.legalEntityName = organizationData.legalEntityName;
     }
