@@ -18,7 +18,6 @@ export const POLICY_RULE_COLLABORATION_WHITEBOARD_CREATE =
   'policyRule-collaborationWhiteboardCreate';
 export const POLICY_RULE_COLLABORATION_WHITEBOARD_CONTRIBUTORS_CREATE =
   'policyRule-collaborationWhiteboardContributorsCreate';
-export const POLICY_RULE_COMMUNITY_INVITE = 'policyRule-communityInvite';
 export const POLICY_RULE_STORAGE_BUCKET_UPDATER_FILE_UPLOAD =
   'policyRule-storageBucketUpdaterFileUpload';
 export const POLICY_RULE_STORAGE_BUCKET_CONTRIBUTOR_FILE_UPLOAD =

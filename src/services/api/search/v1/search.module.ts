@@ -17,7 +17,7 @@ import { Post } from '@domain/collaboration/post/post.entity';
 import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
 import { CalloutModule } from '@domain/collaboration/callout/callout.module';
 import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
-import { Search2Module } from '@services/api/search2/search2.module';
+import { Search2Module } from '@services/api/search/v2/search2.module';
 
 @Module({
   imports: [

@@ -2,28 +2,28 @@ import { UserService } from '@domain/community/user/user.service';
 import { ISearchResultBuilder } from './search.result.builder.interface';
 import { SpaceService } from '@domain/space/space/space.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
-import { ISearchResultBase } from './dto/search.result.dto.entry.base.interface';
+import { ISearchResultBase } from '@services/api/search/dto/search.result.dto.entry.base.interface';
 import { SearchResultType } from '@common/enums/search.result.type';
-import { ISearchResultSpace } from './dto/search.result.dto.entry.space';
-import { ISearchResultChallenge } from './dto/search.result.dto.entry.challenge';
-import { ISearchResultOpportunity } from './dto/search.result.dto.entry.opportunity';
-import { ISearchResultUser } from './dto/search.result.dto.entry.user';
-import { ISearchResultOrganization } from './dto/search.result.dto.entry.organization';
-import { ISearchResult } from './dto/search.result.entry.interface';
+import { ISearchResultSpace } from '@services/api/search/dto/search.result.dto.entry.space';
+import { ISearchResultChallenge } from '@services/api/search/dto/search.result.dto.entry.challenge';
+import { ISearchResultOpportunity } from '@services/api/search/dto/search.result.dto.entry.opportunity';
+import { ISearchResultUser } from '@services/api/search/dto/search.result.dto.entry.user';
+import { ISearchResultOrganization } from '@services/api/search/dto/search.result.dto.entry.organization';
+import { ISearchResult } from '@services/api/search/dto/search.result.entry.interface';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
-import { ISearchResultUserGroup } from './dto/search.result.dto.entry.user.group';
+import { ISearchResultUserGroup } from '@services/api/search/dto/search.result.dto.entry.user.group';
 import {
   EntityNotFoundException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { PostService } from '@domain/collaboration/post/post.service';
-import { ISearchResultPost } from './dto/search.result.dto.entry.post';
+import { ISearchResultPost } from '@services/api/search/dto/search.result.dto.entry.post';
 import { ISpace } from '@domain/space/space/space.interface';
 import { Callout, ICallout } from '@domain/collaboration/callout';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { EntityManager } from 'typeorm';
-import { ISearchResultCallout } from './dto/search.result.dto.entry.callout';
+import { ISearchResultCallout } from '@services/api/search/dto/search.result.dto.entry.callout';
 import { Space } from '@domain/space/space/space.entity';
 import { SpaceLevel } from '@common/enums/space.level';
 
@@ -241,6 +241,7 @@ export default class SearchResultBuilderService
     const searchResultCallout: ISearchResultCallout = {
       ...this.searchResultBase,
       callout,
+      space: {} as ISpace,
     };
     return searchResultCallout;
   }

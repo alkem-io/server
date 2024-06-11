@@ -35,7 +35,13 @@ export class TemplatesSetAuthorizationService {
           postTemplates: true,
           whiteboardTemplates: true,
           innovationFlowTemplates: true,
-          communityGuidelinesTemplates: true,
+          communityGuidelinesTemplates: {
+            guidelines: {
+              profile: {
+                authorization: true,
+              },
+            },
+          },
         },
       }
     );
