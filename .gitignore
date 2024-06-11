@@ -62,3 +62,4 @@ subscriptions.log
 .scripts/
 .build/
 .storage/
+.build/synapse/homeserver.yaml
