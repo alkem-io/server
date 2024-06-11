@@ -58,7 +58,6 @@ import { ICredentialDefinition } from '@domain/agent/credential/credential.defin
 import { AssignOrganizationRoleToUserInput } from './dto/organization.dto.assign.role.to.user';
 import { RemoveOrganizationRoleFromUserInput } from './dto/organization.dto.remove.role.from.user';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
-import { UpdateOrganizationPlatformSettingsInput } from './dto/organization.dto.update.platform.settings';
 
 @Injectable()
 export class OrganizationService {
@@ -231,22 +230,6 @@ export class OrganizationService {
 
     if (organizationData.contactEmail !== undefined) {
       organization.contactEmail = organizationData.contactEmail;
-    }
-
-    return await this.organizationRepository.save(organization);
-  }
-
-  async updateOrganizationPlatformSettings(
-    organization: IOrganization,
-    organizationData: UpdateOrganizationPlatformSettingsInput
-  ): Promise<IOrganization> {
-    if (
-      organizationData.nameID.toLowerCase() !==
-      organization.nameID.toLowerCase()
-    ) {
-      // updating the nameID, check new value is allowed
-      await this.checkNameIdOrFail(organizationData.nameID);
-      organization.nameID = organizationData.nameID;
     }
 
     return await this.organizationRepository.save(organization);
