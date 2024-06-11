@@ -1,5 +1,13 @@
 import { IInnovationFlowState } from '@domain/collaboration/innovation-flow-states/innovation.flow.state.interface';
 
+export enum FlowState {
+  EXPLORE = 'Explore',
+  DEFINE = 'Define',
+  BRAINSTORM = 'Brainstorm',
+  VALIDATE = 'Validate',
+  EVALUATE = 'Evaluate',
+}
+
 export const spaceDefaultsInnovationFlowStatesOpportunity: IInnovationFlowState[] =
   [
     {

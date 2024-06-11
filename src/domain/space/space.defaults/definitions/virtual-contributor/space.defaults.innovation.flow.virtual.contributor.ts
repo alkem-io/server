@@ -4,7 +4,6 @@ export enum FlowStates {
   GOING_LIVE = 'Going Live',
   INTRODUCTION = 'Introduction',
   BODY_OF_KNOWLEDGE = 'Body of Knowledge',
-  LICENSE_SPACE_ENTERPRISE = 'license-space-enterprise',
 }
 
 export const spaceDefaultsInnovationFlowStatesVirtualContributor: IInnovationFlowState[] =
