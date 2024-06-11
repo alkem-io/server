@@ -24,6 +24,7 @@ import {
   CREDENTIAL_RULE_ORGANIZATION_ADMIN,
   CREDENTIAL_RULE_ORGANIZATION_READ,
   CREDENTIAL_RULE_ORGANIZATION_SELF_REMOVAL,
+  CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_SUPPORT_MANAGE,
 } from '@common/constants';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
@@ -162,15 +163,15 @@ export class OrganizationAuthorizationService {
     globalAdminNotInherited.cascade = false;
     newRules.push(globalAdminNotInherited);
 
-    const communityAdmin =
+    const globalCommunityRead =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.READ],
         [AuthorizationCredential.GLOBAL_COMMUNITY_READ],
         CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_COMMUNITY_READ
       );
-    newRules.push(communityAdmin);
+    newRules.push(globalCommunityRead);
 
-    const communityAdmin2 =
+    const globalSupportManage =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [
           AuthorizationPrivilege.CREATE,
@@ -179,9 +180,9 @@ export class OrganizationAuthorizationService {
           AuthorizationPrivilege.DELETE,
         ],
         [AuthorizationCredential.GLOBAL_SUPPORT],
-        CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_COMMUNITY_READ
+        CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_SUPPORT_MANAGE
       );
-    newRules.push(communityAdmin2);
+    newRules.push(globalSupportManage);
 
     // Allow Global admins + Global Space Admins to manage access to Spaces + contents
     const globalAdmin =
