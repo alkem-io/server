@@ -7,7 +7,7 @@ export enum FlowState {
 export const spaceDefaultsInnovationFlowStatesRootSpace: IInnovationFlowState[] =
   [
     {
-      displayName: FlowStates.NOT_USED,
+      displayName: FlowState.NOT_USED,
       description:
         '🔍 A journey of discovery! Gather insights through research and observation.',
     },

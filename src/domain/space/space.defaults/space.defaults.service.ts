@@ -40,7 +40,7 @@ import { spaceDefaultsCalloutsOpportunity } from './definitions/oppportunity/spa
 import { spaceDefaultsCalloutsChallenge } from './definitions/challenge/space.defaults.callouts.challenge';
 import { spaceDefaultsCalloutsRootSpace } from './definitions/root-space/space.defaults.callouts.root.space';
 import { spaceDefaultsCalloutsVirtualContributor } from './definitions/virtual-contributor/space.defaults.callouts.virtual.contributor';
-import { spaceDefaultsSettingsRootSpace } from './definitions/root-space/space.defautls.settings..root.space';
+import { spaceDefaultsSettingsRootSpace } from './definitions/root-space/space.defaults.settings.root.space';
 import { spaceDefaultsSettingsOpportunity } from './definitions/oppportunity/space.defaults.settings.opportunity';
 import { spaceDefaultsSettingsChallenge } from './definitions/challenge/space.defaults.settings.challenge';
 import { spaceDefaultsSettingsVirtualContributor } from './definitions/virtual-contributor/space.defaults.settings.virtual.contributor';
@@ -49,6 +49,10 @@ import { spaceDefaultsInnovationFlowStatesOpportunity } from './definitions/oppp
 import { spaceDefaultsInnovationFlowStatesRootSpace } from './definitions/root-space/space.defaults.innovation.flow.root.space';
 import { spaceDefaultsInnovationFlowStatesVirtualContributor } from './definitions/virtual-contributor/space.defaults.innovation.flow.virtual.contributor';
 import { IInnovationFlowState } from '@domain/collaboration/innovation-flow-states/innovation.flow.state.interface';
+import { spaceDefaultsCalloutGroupsBlankSlate } from './definitions/blank-slate/space.defaults.callout.groups.blank.slate';
+import { spaceDefaultsCalloutsBlankSlate } from './definitions/blank-slate/space.defaults.callouts.blank.slate';
+import { spaceDefaultsSettingsBlankSlate } from './definitions/blank-slate/space.defaults.settings.blank.slate';
+import { spaceDefaultsInnovationFlowStatesBlankSlate } from './definitions/blank-slate/space.defaults.innovation.flow.blank.slate';
 
 @Injectable()
 export class SpaceDefaultsService {
@@ -155,6 +159,8 @@ export class SpaceDefaultsService {
         return spaceDefaultsCalloutGroupsRootSpace;
       case SpaceType.VIRTUAL_CONTRIBUTOR:
         return spaceDefaultsCalloutGroupsVirtualContributor;
+      case SpaceType.BLANK_SLATE:
+        return spaceDefaultsCalloutGroupsBlankSlate;
       default:
         throw new EntityNotInitializedException(
           `Invalid space type: ${spaceType}`,
@@ -168,9 +174,15 @@ export class SpaceDefaultsService {
       case SpaceType.CHALLENGE:
       case SpaceType.VIRTUAL_CONTRIBUTOR:
       case SpaceType.OPPORTUNITY:
+      case SpaceType.BLANK_SLATE:
         return CalloutGroupName.HOME;
       case SpaceType.SPACE:
         return CalloutGroupName.KNOWLEDGE;
+      default:
+        throw new EntityNotInitializedException(
+          `Invalid space type: ${spaceType}`,
+          LogContext.ROLES
+        );
     }
   }
 
@@ -222,6 +234,8 @@ export class SpaceDefaultsService {
         return spaceDefaultsCalloutsRootSpace;
       case SpaceType.VIRTUAL_CONTRIBUTOR:
         return spaceDefaultsCalloutsVirtualContributor;
+      case SpaceType.BLANK_SLATE:
+        return spaceDefaultsCalloutsBlankSlate;
       default:
         throw new EntityNotInitializedException(
           `Invalid space type: ${spaceType}`,
@@ -246,6 +260,8 @@ export class SpaceDefaultsService {
         return spaceDefaultsSettingsRootSpace;
       case SpaceType.VIRTUAL_CONTRIBUTOR:
         return spaceDefaultsSettingsVirtualContributor;
+      case SpaceType.BLANK_SLATE:
+        return spaceDefaultsSettingsBlankSlate;
       default:
         throw new EntityNotInitializedException(
           `Invalid space type: ${spaceType}`,
@@ -266,6 +282,8 @@ export class SpaceDefaultsService {
         return spaceDefaultsInnovationFlowStatesRootSpace;
       case SpaceType.VIRTUAL_CONTRIBUTOR:
         return spaceDefaultsInnovationFlowStatesVirtualContributor;
+      case SpaceType.BLANK_SLATE:
+        return spaceDefaultsInnovationFlowStatesBlankSlate;
       default:
         throw new EntityNotInitializedException(
           `Invalid space type: ${spaceType}`,

@@ -2,7 +2,7 @@ import { CalloutGroupName } from '@common/enums/callout.group.name';
 import { CalloutState } from '@common/enums/callout.state';
 import { CalloutType } from '@common/enums/callout.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { FlowStates } from './space.defaults.innovation.flow.virtual.contributor';
+import { FlowState } from './space.defaults.innovation.flow.virtual.contributor';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
 
 export const spaceDefaultsCalloutsVirtualContributor: CreateCalloutInput[] = [
@@ -22,7 +22,7 @@ export const spaceDefaultsCalloutsVirtualContributor: CreateCalloutInput[] = [
         tagsets: [
           {
             name: TagsetReservedName.FLOW_STATE,
-            tags: [FlowStates.INTRODUCTION],
+            tags: [FlowState.INTRODUCTION],
           },
         ],
       },
@@ -44,7 +44,7 @@ export const spaceDefaultsCalloutsVirtualContributor: CreateCalloutInput[] = [
         tagsets: [
           {
             name: TagsetReservedName.FLOW_STATE,
-            tags: [FlowStates.INTRODUCTION],
+            tags: [FlowState.INTRODUCTION],
           },
         ],
       },
@@ -66,7 +66,7 @@ export const spaceDefaultsCalloutsVirtualContributor: CreateCalloutInput[] = [
         tagsets: [
           {
             name: TagsetReservedName.FLOW_STATE,
-            tags: [FlowStates.INTRODUCTION],
+            tags: [FlowState.INTRODUCTION],
           },
         ],
       },
@@ -88,7 +88,7 @@ export const spaceDefaultsCalloutsVirtualContributor: CreateCalloutInput[] = [
         tagsets: [
           {
             name: TagsetReservedName.FLOW_STATE,
-            tags: [FlowStates.INTRODUCTION],
+            tags: [FlowState.INTRODUCTION],
           },
         ],
       },
@@ -110,7 +110,7 @@ export const spaceDefaultsCalloutsVirtualContributor: CreateCalloutInput[] = [
         tagsets: [
           {
             name: TagsetReservedName.FLOW_STATE,
-            tags: [FlowStates.INTRODUCTION],
+            tags: [FlowState.INTRODUCTION],
           },
         ],
       },
@@ -132,7 +132,7 @@ export const spaceDefaultsCalloutsVirtualContributor: CreateCalloutInput[] = [
         tagsets: [
           {
             name: TagsetReservedName.FLOW_STATE,
-            tags: [FlowStates.INTRODUCTION],
+            tags: [FlowState.INTRODUCTION],
           },
         ],
       },
@@ -154,7 +154,7 @@ export const spaceDefaultsCalloutsVirtualContributor: CreateCalloutInput[] = [
         tagsets: [
           {
             name: TagsetReservedName.FLOW_STATE,
-            tags: [FlowStates.BODY_OF_KNOWLEDGE],
+            tags: [FlowState.BODY_OF_KNOWLEDGE],
           },
         ],
       },
@@ -176,7 +176,7 @@ export const spaceDefaultsCalloutsVirtualContributor: CreateCalloutInput[] = [
         tagsets: [
           {
             name: TagsetReservedName.FLOW_STATE,
-            tags: [FlowStates.BODY_OF_KNOWLEDGE],
+            tags: [FlowState.BODY_OF_KNOWLEDGE],
           },
         ],
       },
@@ -199,7 +199,7 @@ export const spaceDefaultsCalloutsVirtualContributor: CreateCalloutInput[] = [
         tagsets: [
           {
             name: TagsetReservedName.FLOW_STATE,
-            tags: [FlowStates.BODY_OF_KNOWLEDGE],
+            tags: [FlowState.BODY_OF_KNOWLEDGE],
           },
         ],
       },
@@ -221,7 +221,7 @@ export const spaceDefaultsCalloutsVirtualContributor: CreateCalloutInput[] = [
         tagsets: [
           {
             name: TagsetReservedName.FLOW_STATE,
-            tags: [FlowStates.GOING_LIVE],
+            tags: [FlowState.GOING_LIVE],
           },
         ],
       },
