@@ -89,6 +89,10 @@ search:
   # The dash at the end is MANDATORY
   index_pattern: ${SEARCH_INDEX_PATTERN}:alkemio-data-
 
+licensing:
+  wingback:
+    key: ${WINGBACK_API_KEY}:key
+
 ## identity ##
 
 # Defines all authentication and authorization configuration.
