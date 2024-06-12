@@ -2,8 +2,8 @@ import { IEvent } from '@nestjs/cqrs';
 import { registerEnumType } from '@nestjs/graphql';
 
 export enum SpaceIngestionPurpose {
-  Knowledge = 'knowledge',
-  Context = 'context',
+  KNOWLEDGE = 'knowledge',
+  CONTEXT = 'context',
 }
 
 registerEnumType(SpaceIngestionPurpose, { name: 'SpaceIngestionPurpose' });
