@@ -62,6 +62,8 @@ import { IVirtualContributor } from '../virtual-contributor';
 import { VirtualContributorService } from '../virtual-contributor/virtual.contributor.service';
 import { CommunityRoleImplicit } from '@common/enums/community.role.implicit';
 import { AuthorizationCredential } from '@common/enums';
+import { ContributorService } from '../contributor/contributor.service';
+import { IContributor } from '../contributor/contributor.interface';
 
 @Injectable()
 export class CommunityService {
@@ -69,6 +71,7 @@ export class CommunityService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private agentService: AgentService,
     private userService: UserService,
+    private contributorService: ContributorService,
     private organizationService: OrganizationService,
     private virtualContributorService: VirtualContributorService,
     private userGroupService: UserGroupService,
@@ -444,11 +447,11 @@ export class CommunityService {
   }
 
   private async findOpenInvitation(
-    userID: string,
+    contributorID: string,
     communityID: string
   ): Promise<IInvitation | undefined> {
     const invitations = await this.invitationService.findExistingInvitations(
-      userID,
+      contributorID,
       communityID
     );
     for (const invitation of invitations) {
@@ -551,6 +554,39 @@ export class CommunityService {
     return policyRole.credential;
   }
 
+  async assignContributorToRole(
+    community: ICommunity,
+    contributorID: string,
+    role: CommunityRole,
+    contributorType: CommunityContributorType,
+    agentInfo?: AgentInfo,
+    triggerNewMemberEvents = false
+  ): Promise<IContributor> {
+    switch (contributorType) {
+      case CommunityContributorType.USER:
+        return await this.assignUserToRole(
+          community,
+          contributorID,
+          role,
+          agentInfo,
+          triggerNewMemberEvents
+        );
+      case CommunityContributorType.ORGANIZATION:
+        return await this.assignOrganizationToRole(
+          community,
+          contributorID,
+          role
+        );
+      case CommunityContributorType.VIRTUAL:
+        return await this.assignVirtualToRole(community, contributorID, role);
+      default:
+        throw new EntityNotInitializedException(
+          `Invalid community contributor type: ${contributorType}`,
+          LogContext.ROLES
+        );
+    }
+  }
+
   async assignUserToRole(
     community: ICommunity,
     userID: string,
@@ -573,7 +609,7 @@ export class CommunityService {
       return user;
     }
 
-    user.agent = await this.assignContributorToRole(
+    user.agent = await this.assignContributorAgentToRole(
       community,
       agent,
       role,
@@ -647,7 +683,7 @@ export class CommunityService {
       );
     }
 
-    virtualContributor.agent = await this.assignContributorToRole(
+    virtualContributor.agent = await this.assignContributorAgentToRole(
       community,
       agent,
       role,
@@ -755,7 +791,7 @@ export class CommunityService {
     const { organization, agent } =
       await this.organizationService.getOrganizationAndAgent(organizationID);
 
-    organization.agent = await this.assignContributorToRole(
+    organization.agent = await this.assignContributorAgentToRole(
       community,
       agent,
       role,
@@ -977,7 +1013,7 @@ export class CommunityService {
     );
   }
 
-  public async assignContributorToRole(
+  public async assignContributorAgentToRole(
     community: ICommunity,
     agent: IAgent,
     role: CommunityRole,
@@ -1176,9 +1212,10 @@ export class CommunityService {
   async createInvitationExistingUser(
     invitationData: CreateInvitationInput
   ): Promise<IInvitation> {
-    const { user, agent } = await this.userService.getUserAndAgent(
-      invitationData.invitedUser
-    );
+    const { contributor: contributor, agent } =
+      await this.contributorService.getContributorAndAgent(
+        invitationData.invitedContributor
+      );
     const community = await this.getCommunityOrFail(
       invitationData.communityID,
       {
@@ -1186,7 +1223,11 @@ export class CommunityService {
       }
     );
 
-    await this.validateInvitationToExistingUser(user, agent, community);
+    await this.validateInvitationToExistingContributor(
+      contributor,
+      agent,
+      community
+    );
 
     const invitation = await this.invitationService.createInvitation(
       invitationData
@@ -1245,7 +1286,7 @@ export class CommunityService {
     const openInvitation = await this.findOpenInvitation(user.id, community.id);
     if (openInvitation) {
       throw new CommunityMembershipException(
-        `An open invitation (ID: ${openInvitation.id}) already exists for user ${openInvitation.invitedUser} on Community: ${community.id}.`,
+        `An open invitation (ID: ${openInvitation.id}) already exists for contributor ${openInvitation.invitedContributor} (${openInvitation.contributorType}) on Community: ${community.id}.`,
         LogContext.COMMUNITY
       );
     }
@@ -1259,21 +1300,24 @@ export class CommunityService {
       );
   }
 
-  private async validateInvitationToExistingUser(
-    user: IUser,
+  private async validateInvitationToExistingContributor(
+    contributor: IContributor,
     agent: IAgent,
     community: ICommunity
   ) {
-    const openInvitation = await this.findOpenInvitation(user.id, community.id);
+    const openInvitation = await this.findOpenInvitation(
+      contributor.id,
+      community.id
+    );
     if (openInvitation) {
       throw new CommunityMembershipException(
-        `An open invitation (ID: ${openInvitation.id}) already exists for user ${openInvitation.invitedUser} on Community: ${community.id}.`,
+        `An open invitation (ID: ${openInvitation.id}) already exists for contributor ${openInvitation.invitedContributor} (${openInvitation.contributorType}) on Community: ${community.id}.`,
         LogContext.COMMUNITY
       );
     }
 
     const openApplication = await this.findOpenApplication(
-      user.id,
+      contributor.id,
       community.id
     );
     if (openApplication) {
@@ -1287,7 +1331,7 @@ export class CommunityService {
     const isExistingMember = await this.isMember(agent, community);
     if (isExistingMember)
       throw new CommunityMembershipException(
-        `User ${user.nameID} is already a member of the Community: ${community.id}.`,
+        `User ${contributor.nameID} is already a member of the Community: ${community.id}.`,
         LogContext.COMMUNITY
       );
   }

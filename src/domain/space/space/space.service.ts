@@ -884,7 +884,7 @@ export class SpaceService {
       );
     }
 
-    await this.communityService.assignContributorToRole(
+    await this.communityService.assignContributorAgentToRole(
       space.community,
       contributor.agent,
       role,

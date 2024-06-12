@@ -21,6 +21,7 @@ import { DeleteUserInput } from '@domain/community/user/dto/user.dto.delete';
 import { InvitationService } from '@domain/community/invitation/invitation.service';
 import { ApplicationService } from '@domain/community/application/application.service';
 import { OrganizationRole } from '@common/enums/organization.role';
+import { CommunityContributorType } from '@common/enums/community.contributor.type';
 
 export class RegistrationService {
   constructor(
@@ -126,7 +127,8 @@ export class RegistrationService {
         );
       }
       const invitationInput: CreateInvitationInput = {
-        invitedUser: user.id,
+        invitedContributor: user.id,
+        contributorType: CommunityContributorType.USER,
         communityID: community.id,
         createdBy: externalInvitation.createdBy,
         invitedToParent: externalInvitation.invitedToParent,
@@ -155,9 +157,8 @@ export class RegistrationService {
   ): Promise<IUser> {
     const userID = deleteData.ID;
 
-    const invitations = await this.invitationService.findInvitationsForUser(
-      userID
-    );
+    const invitations =
+      await this.invitationService.findInvitationsForContributor(userID);
     for (const invitation of invitations) {
       await this.invitationService.deleteInvitation({ ID: invitation.id });
     }

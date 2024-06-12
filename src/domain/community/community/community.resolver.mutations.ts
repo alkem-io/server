@@ -60,6 +60,7 @@ import {
   SpaceIngestionPurpose,
 } from '@services/infrastructure/event-bus/commands';
 import { AccountHostService } from '@domain/space/account/account.host.service';
+import { CommunityContributorType } from '@common/enums/community.contributor.type';
 
 const IAnyInvitation = createUnionType({
   name: 'AnyInvitation',
@@ -547,7 +548,8 @@ export class CommunityResolverMutations {
   ): Promise<IInvitation> {
     const input: CreateInvitationInput = {
       communityID: community.id,
-      invitedUser: invitedUser.id,
+      invitedContributor: invitedUser.id,
+      contributorType: CommunityContributorType.USER,
       createdBy: agentInfo.userID,
       invitedToParent,
       welcomeMessage,
