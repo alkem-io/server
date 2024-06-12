@@ -25,6 +25,7 @@ import {
   CREDENTIAL_RULE_ORGANIZATION_READ,
   CREDENTIAL_RULE_ORGANIZATION_SELF_REMOVAL,
   CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_SUPPORT_MANAGE,
+  CREDENTIAL_RULE_TYPES_ORGANIZATION_PLATFORM_ADMIN,
 } from '@common/constants';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
@@ -218,6 +219,19 @@ export class OrganizationAuthorizationService {
       );
 
     newRules.push(organizationAdmin);
+
+    // Allow global admins do platform admin actions
+    const globalAdminPlatformAdminNotInherited =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.PLATFORM_ADMIN],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+        ],
+        CREDENTIAL_RULE_TYPES_ORGANIZATION_PLATFORM_ADMIN
+      );
+    globalAdminNotInherited.cascade = false;
+    newRules.push(globalAdminPlatformAdminNotInherited);
 
     const readPrivilege = this.authorizationPolicyService.createCredentialRule(
       [AuthorizationPrivilege.READ],

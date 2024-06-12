@@ -36,10 +36,12 @@ export const CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_ADMINS =
   'credentialRuleTypes-organizationGlobalAdmins';
 export const CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_ADMINS_ALL =
   'credentialRuleTypes-organizationGlobalAdminsAll';
+export const CREDENTIAL_RULE_TYPES_ORGANIZATION_PLATFORM_ADMIN =
+  'credentialRuleTypes-organizationPlatformAdmin';
 export const CREDENTIAL_RULE_TYPES_USER_AUTHORIZATION_RESET =
   'credentialRuleTypes-userAuthorizationReset';
 export const CREDENTIAL_RULE_TYPES_USER_PLATFORM_ADMIN =
-  'credentialRuleTypes-userrPlatformAdmin';
+  'credentialRuleTypes-userPlatformAdmin';
 export const CREDENTIAL_RULE_TYPES_USER_GLOBAL_COMMUNITY_READ =
   'credentialRuleTypes-userGlobalCommunityRead';
 export const CREDENTIAL_RULE_TYPES_VC_GLOBAL_COMMUNITY_READ =
