@@ -120,7 +120,7 @@ export class WhiteboardIntegrationService {
   }
 
   public who(data: WhoInputData): Promise<AgentInfo> {
-    return this.authenticationService.getAgentInfo(data);
+    return this.authenticationService.getAgentInfo(data.auth);
   }
 
   public async contribution({
