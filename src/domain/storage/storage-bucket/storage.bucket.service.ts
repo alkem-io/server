@@ -36,18 +36,6 @@ import { StorageUploadFailedException } from '@common/exceptions/storage/storage
 export class StorageBucketService {
   DEFAULT_MAX_ALLOWED_FILE_SIZE = 15728640;
 
-  DEFAULT_VISUAL_ALLOWED_MIME_TYPES: MimeFileType[] = [
-    MimeFileType.JPG,
-    MimeFileType.JPEG,
-    MimeFileType.XPNG,
-    MimeFileType.PNG,
-    MimeFileType.GIF,
-    MimeFileType.WEBP,
-    MimeFileType.SVG,
-    MimeFileType.AVIF,
-    MimeFileType.PDF,
-  ];
-
   constructor(
     private documentService: DocumentService,
     private authorizationPolicyService: AuthorizationPolicyService,
