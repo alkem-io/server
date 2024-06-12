@@ -17,7 +17,10 @@ import { DocumentService } from '../document/document.service';
 import { StorageBucket } from './storage.bucket.entity';
 import { IStorageBucket } from './storage.bucket.interface';
 import { StorageBucketArgsDocuments } from './dto/storage.bucket.args.documents';
-import { MimeFileType } from '@common/enums/mime.file.type';
+import {
+  DEFAULT_ALLOWED_MIME_TYPES,
+  MimeFileType,
+} from '@common/enums/mime.file.type';
 import { CreateDocumentInput } from '../document/dto/document.dto.create';
 import { ReadStream } from 'fs';
 import { ValidationException } from '@common/exceptions';
@@ -67,8 +70,7 @@ export class StorageBucketService {
     storage.authorization = new AuthorizationPolicy();
     storage.documents = [];
     storage.allowedMimeTypes =
-      storageBucketData?.allowedMimeTypes ||
-      this.DEFAULT_VISUAL_ALLOWED_MIME_TYPES;
+      storageBucketData?.allowedMimeTypes || DEFAULT_ALLOWED_MIME_TYPES;
     storage.maxFileSize =
       storageBucketData?.maxFileSize || this.DEFAULT_MAX_ALLOWED_FILE_SIZE;
     storage.storageAggregator = storageBucketData.storageAggregator;
