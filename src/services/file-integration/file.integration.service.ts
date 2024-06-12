@@ -41,14 +41,6 @@ export class FileIntegrationService {
       auth
     );
 
-    if (!requesterAgentInfo.userID) {
-      return new FileInfoOutputData({
-        read: false,
-        errorCode: ReadOutputErrorCode.USER_NOT_IDENTIFIED,
-        error: 'User not identified',
-      });
-    }
-
     let document: IDocument | undefined;
     try {
       document = await this.documentService.getDocumentOrFail(docId);
