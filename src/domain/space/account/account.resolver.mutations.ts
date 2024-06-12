@@ -177,9 +177,9 @@ export class AccountResolverMutations {
     );
 
     // Update the authorization policy as most of the changes imply auth policy updates
-    return await this.accountAuthorizationService.applyAuthorizationPolicy(
-      result
-    );
+    return this.accountAuthorizationService
+      .applyAuthorizationPolicy(result)
+      .then(account => this.accountService.save(account));
   }
 
   @UseGuards(GraphqlGuard)
