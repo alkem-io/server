@@ -37,9 +37,12 @@ export class InvitationService {
   ) {}
 
   async createInvitation(
-    invitationData: CreateInvitationInput
+    invitationData: CreateInvitationInput,
+    contributor: IContributor
   ): Promise<IInvitation> {
     const invitation: IInvitation = Invitation.create(invitationData);
+    invitation.contributorType =
+      await this.contributorService.getContributorType(contributor);
 
     invitation.authorization = new AuthorizationPolicy();
 

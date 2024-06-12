@@ -38,7 +38,6 @@ import { NotificationInputCommunityInvitation } from '@services/adapters/notific
 import { InvitationEventInput } from '../invitation/dto/invitation.dto.event';
 import { CommunityInvitationLifecycleOptionsProvider } from './community.lifecycle.invitation.options.provider';
 import { CreateInvitationInput, IInvitation } from '../invitation';
-import { CreateInvitationForUsersOnCommunityInput } from './dto/community.dto.invite.existing.user';
 import { IOrganization } from '../organization';
 import { IUser } from '../user/user.interface';
 import { CreateInvitationUserByEmailOnCommunityInput } from './dto/community.dto.invite.external.user';
@@ -60,7 +59,9 @@ import {
   SpaceIngestionPurpose,
 } from '@services/infrastructure/event-bus/commands';
 import { AccountHostService } from '@domain/space/account/account.host.service';
-import { CommunityContributorType } from '@common/enums/community.contributor.type';
+import { CreateInvitationForContributorsOnCommunityInput } from './dto/community.dto.invite.contributor';
+import { IContributor } from '../contributor/contributor.interface';
+import { ContributorService } from '../contributor/contributor.service';
 
 const IAnyInvitation = createUnionType({
   name: 'AnyInvitation',
@@ -95,6 +96,7 @@ export class CommunityResolverMutations {
     private invitationExternalAuthorizationService: InvitationExternalAuthorizationService,
     private communityAuthorizationService: CommunityAuthorizationService,
     private accountHostService: AccountHostService,
+    private contributorService: ContributorService,
     private eventBus: EventBus
   ) {}
 
@@ -454,13 +456,13 @@ export class CommunityResolverMutations {
   @UseGuards(GraphqlGuard)
   @Mutation(() => [IInvitation], {
     description:
-      'Invite an existing User to join the specified Community as a member.',
+      'Invite an existing Contriburor to join the specified Community as a member.',
   })
   @Profiling.api
-  async inviteExistingUserForCommunityMembership(
+  async inviteContributorsForCommunityMembership(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('invitationData')
-    invitationData: CreateInvitationForUsersOnCommunityInput
+    invitationData: CreateInvitationForContributorsOnCommunityInput
   ): Promise<IInvitation[]> {
     const community = await this.communityService.getCommunityOrFail(
       invitationData.communityID,
@@ -480,14 +482,17 @@ export class CommunityResolverMutations {
       `create invitation community: ${community.id}`
     );
 
-    const users: IUser[] = [];
-    for (const userID of invitationData.invitedUsers) {
-      const user = await this.userService.getUserOrFail(userID, {
-        relations: {
-          agent: true,
-        },
-      });
-      users.push(user);
+    const contributors: IContributor[] = [];
+    for (const contributorID of invitationData.invitedCotributors) {
+      const contributor = await this.contributorService.getContributorOrFail(
+        contributorID,
+        {
+          relations: {
+            agent: true,
+          },
+        }
+      );
+      contributors.push(contributor);
     }
 
     // Logic is that the ability to invite to a subspace requires the ability to invite to the
@@ -502,20 +507,20 @@ export class CommunityResolverMutations {
       );
 
       // Need to see if also can invite to the parent community if any of the users are not members there
-      for (const user of users) {
-        if (!user.agent) {
+      for (const contributor of contributors) {
+        if (!contributor.agent) {
           throw new EntityNotInitializedException(
-            `Unable to load agent on user: ${user.id}`,
+            `Unable to load agent on contributor: ${contributor.id}`,
             LogContext.COMMUNITY
           );
         }
         const isMember = await this.communityService.isMember(
-          user.agent,
+          contributor.agent,
           community.parentCommunity
         );
         if (!isMember && !canInviteToParent) {
           throw new CommunityInvitationException(
-            `User is not a member of the parent community (${community.parentCommunity.id}) and the current user does not have the privilege to invite to the parent community`,
+            `Contributor is not a member of the parent community (${community.parentCommunity.id}) and the current user does not have the privilege to invite to the parent community`,
             LogContext.COMMUNITY
           );
         } else {
@@ -527,10 +532,10 @@ export class CommunityResolverMutations {
     }
 
     return Promise.all(
-      users.map(async invitedUser => {
-        return await this.inviteSingleExistingUser(
+      contributors.map(async invitedContributor => {
+        return await this.inviteSingleExistingContributor(
           community,
-          invitedUser,
+          invitedContributor,
           agentInfo,
           invitationData.invitedToParent,
           invitationData.welcomeMessage
@@ -539,25 +544,23 @@ export class CommunityResolverMutations {
     );
   }
 
-  private async inviteSingleExistingUser(
+  private async inviteSingleExistingContributor(
     community: ICommunity,
-    invitedUser: IUser,
+    invitedContributor: IContributor,
     agentInfo: AgentInfo,
     invitedToParent: boolean,
     welcomeMessage?: string
   ): Promise<IInvitation> {
     const input: CreateInvitationInput = {
       communityID: community.id,
-      invitedContributor: invitedUser.id,
-      contributorType: CommunityContributorType.USER,
+      invitedContributor: invitedContributor.id,
       createdBy: agentInfo.userID,
       invitedToParent,
       welcomeMessage,
     };
 
-    let invitation = await this.communityService.createInvitationExistingUser(
-      input
-    );
+    let invitation =
+      await this.communityService.createInvitationExistingContributor(input);
 
     invitation =
       await this.invitationAuthorizationService.applyAuthorizationPolicy(
@@ -570,7 +573,7 @@ export class CommunityResolverMutations {
     const notificationInput: NotificationInputCommunityInvitation = {
       triggeredBy: agentInfo.userID,
       community: community,
-      invitedUser: invitedUser.id,
+      invitedUser: invitedContributor.id,
       welcomeMessage,
     };
 
@@ -663,7 +666,7 @@ export class CommunityResolverMutations {
     }
 
     if (existingUser) {
-      return this.inviteSingleExistingUser(
+      return this.inviteSingleExistingContributor(
         community,
         existingUser,
         agentInfo,

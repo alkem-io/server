@@ -8,11 +8,13 @@ import { Organization } from '../organization';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
+  RelationshipNotFoundException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums/logging.context';
 import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 import { IAgent } from '@domain/agent/agent/agent.interface';
 import { VirtualContributor } from '../virtual-contributor';
+import { CommunityContributorType } from '@common/enums/community.contributor.type';
 
 @Injectable()
 export class ContributorService {
@@ -159,5 +161,17 @@ export class ContributorService {
       );
     }
     return { contributor: contributor, agent: contributor.agent };
+  }
+
+  public getContributorType(contributor: IContributor) {
+    if (contributor instanceof User) return CommunityContributorType.USER;
+    if (contributor instanceof Organization)
+      return CommunityContributorType.ORGANIZATION;
+    if (contributor instanceof VirtualContributor)
+      return CommunityContributorType.VIRTUAL;
+    throw new RelationshipNotFoundException(
+      `Unable to determine contributor type for ${contributor.id}`,
+      LogContext.COMMUNITY
+    );
   }
 }

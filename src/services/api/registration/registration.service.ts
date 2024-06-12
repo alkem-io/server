@@ -21,7 +21,6 @@ import { DeleteUserInput } from '@domain/community/user/dto/user.dto.delete';
 import { InvitationService } from '@domain/community/invitation/invitation.service';
 import { ApplicationService } from '@domain/community/application/application.service';
 import { OrganizationRole } from '@common/enums/organization.role';
-import { CommunityContributorType } from '@common/enums/community.contributor.type';
 
 export class RegistrationService {
   constructor(
@@ -128,14 +127,14 @@ export class RegistrationService {
       }
       const invitationInput: CreateInvitationInput = {
         invitedContributor: user.id,
-        contributorType: CommunityContributorType.USER,
         communityID: community.id,
         createdBy: externalInvitation.createdBy,
         invitedToParent: externalInvitation.invitedToParent,
       };
-      let invitation = await this.communityService.createInvitationExistingUser(
-        invitationInput
-      );
+      let invitation =
+        await this.communityService.createInvitationExistingContributor(
+          invitationInput
+        );
       invitation.invitedToParent = externalInvitation.invitedToParent;
       invitation =
         await this.invitationAuthorizationService.applyAuthorizationPolicy(

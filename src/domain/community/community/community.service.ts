@@ -1209,7 +1209,7 @@ export class CommunityService {
     return application;
   }
 
-  async createInvitationExistingUser(
+  async createInvitationExistingContributor(
     invitationData: CreateInvitationInput
   ): Promise<IInvitation> {
     const { contributor: contributor, agent } =
@@ -1230,7 +1230,8 @@ export class CommunityService {
     );
 
     const invitation = await this.invitationService.createInvitation(
-      invitationData
+      invitationData,
+      contributor
     );
     community.invitations?.push(invitation);
     await this.communityRepository.save(community);
