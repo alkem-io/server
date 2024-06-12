@@ -175,7 +175,10 @@ export class CommunityAuthorizationService {
     const globalAdminAddMembers =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.COMMUNITY_ADD_MEMBER],
-        [AuthorizationCredential.GLOBAL_ADMIN],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+        ],
         CREDENTIAL_RULE_TYPES_COMMUNITY_ADD_MEMBERS
       );
     newRules.push(globalAdminAddMembers);
