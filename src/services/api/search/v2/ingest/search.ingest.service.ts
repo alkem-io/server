@@ -860,14 +860,14 @@ export class SearchIngestService {
         take: limit,
       })
       .then(spaces => {
-        const spaceLevel0Posts: any[] = [];
+        const posts: any[] = [];
         spaces.forEach(space =>
           space?.collaboration?.callouts?.forEach(callout =>
             callout?.contributions?.forEach(contribution => {
               if (!contribution.post) {
                 return;
               }
-              spaceLevel0Posts.push({
+              posts.push({
                 ...contribution.post,
                 type: SearchEntityTypes.POST,
                 license: {
@@ -886,69 +886,8 @@ export class SearchIngestService {
             })
           )
         );
-        const spaceLevel1Posts: any[] = [];
-        spaces.forEach(space =>
-          space?.subspaces?.forEach(subspace =>
-            subspace?.collaboration?.callouts?.forEach(callout =>
-              callout?.contributions?.forEach(contribution => {
-                if (!contribution.post) {
-                  return;
-                }
-                spaceLevel1Posts.push({
-                  ...contribution.post,
-                  type: SearchEntityTypes.POST,
-                  license: {
-                    visibility:
-                      space?.account?.license?.visibility ?? EMPTY_VALUE,
-                  },
-                  spaceID: space.id,
-                  challengeID: subspace.id,
-                  calloutID: callout.id,
-                  collaborationID: space?.collaboration?.id ?? EMPTY_VALUE,
-                  profile: {
-                    ...contribution.post.profile,
-                    tagsets: undefined,
-                    tags: processTagsets(contribution.post?.profile?.tagsets),
-                  },
-                });
-              })
-            )
-          )
-        );
-        const spaceLevel2Posts: any[] = [];
-        spaces.forEach(space =>
-          space?.subspaces?.forEach(subspace =>
-            subspace?.subspaces?.forEach(subsubspace =>
-              subsubspace?.collaboration?.callouts?.forEach(callout =>
-                callout?.contributions?.forEach(contribution => {
-                  if (!contribution.post) {
-                    return;
-                  }
-                  spaceLevel2Posts.push({
-                    ...contribution.post,
-                    type: SearchEntityTypes.POST,
-                    license: {
-                      visibility:
-                        space?.account?.license?.visibility ?? EMPTY_VALUE,
-                    },
-                    spaceID: space.id,
-                    challengeID: subspace.id,
-                    opportunityID: subsubspace.id,
-                    calloutID: callout.id,
-                    collaborationID: space?.collaboration?.id ?? EMPTY_VALUE,
-                    profile: {
-                      ...contribution.post.profile,
-                      tagsets: undefined,
-                      tags: processTagsets(contribution.post?.profile?.tagsets),
-                    },
-                  });
-                })
-              )
-            )
-          )
-        );
 
-        return [...spaceLevel0Posts, ...spaceLevel1Posts, ...spaceLevel2Posts];
+        return posts;
       });
   }
 }

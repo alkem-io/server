@@ -678,7 +678,9 @@ export class SpaceService {
     const space = await this.getSpace(spaceID, options);
     if (!space)
       throw new EntityNotFoundException(
-        `Unable to find Space with ID: ${spaceID}`,
+        `Unable to find Space with ID: ${spaceID} using options '${JSON.stringify(
+          options
+        )}`,
         LogContext.SPACES
       );
     return space;
