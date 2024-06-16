@@ -485,7 +485,7 @@ export class CommunityResolverMutations {
     );
 
     const contributors: IContributor[] = [];
-    for (const contributorID of invitationData.invitedCotributors) {
+    for (const contributorID of invitationData.invitedContributors) {
       const contributor = await this.contributorService.getContributorOrFail(
         contributorID,
         {

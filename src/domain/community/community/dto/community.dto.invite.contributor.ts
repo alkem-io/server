@@ -13,7 +13,7 @@ export class CreateInvitationForContributorsOnCommunityInput {
     nullable: false,
     description: 'The identifiers for the contributors being invited.',
   })
-  invitedCotributors!: string[];
+  invitedContributors!: string[];
 
   @Field({ nullable: true })
   @IsOptional()
