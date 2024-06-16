@@ -1279,7 +1279,7 @@ export class CommunityService {
     );
     if (openApplication) {
       throw new CommunityMembershipException(
-        `An open application (ID: ${openApplication.id}) already exists for user ${openApplication.user?.id} on Community: ${community.id}.`,
+        `An open application (ID: ${openApplication.id}) already exists for contributor ${openApplication.user?.id} on Community: ${community.id}.`,
         LogContext.COMMUNITY
       );
     }
@@ -1296,7 +1296,7 @@ export class CommunityService {
     const isExistingMember = await this.isMember(agent, community);
     if (isExistingMember)
       throw new CommunityMembershipException(
-        `User ${user.nameID} is already a member of the Community: ${community.id}.`,
+        `Contributor ${user.nameID} is already a member of the Community: ${community.id}.`,
         LogContext.COMMUNITY
       );
   }
@@ -1323,7 +1323,7 @@ export class CommunityService {
     );
     if (openApplication) {
       throw new CommunityMembershipException(
-        `An open application (ID: ${openApplication.id}) already exists for user ${openApplication.user?.id} on Community: ${community.id}.`,
+        `An open application (ID: ${openApplication.id}) already exists for contributor ${openApplication.user?.id} on Community: ${community.id}.`,
         LogContext.COMMUNITY
       );
     }
@@ -1332,7 +1332,7 @@ export class CommunityService {
     const isExistingMember = await this.isMember(agent, community);
     if (isExistingMember)
       throw new CommunityMembershipException(
-        `User ${contributor.nameID} is already a member of the Community: ${community.id}.`,
+        `Contributor ${contributor.nameID} is already a member of the Community: ${community.id}.`,
         LogContext.COMMUNITY
       );
   }
