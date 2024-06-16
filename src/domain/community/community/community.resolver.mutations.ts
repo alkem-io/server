@@ -476,6 +476,12 @@ export class CommunityResolverMutations {
         },
       }
     );
+    if (invitationData.invitedContributors.length === 0) {
+      throw new CommunityInvitationException(
+        `No contributors were provided to invite: ${community.id}`,
+        LogContext.COMMUNITY
+      );
+    }
 
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
