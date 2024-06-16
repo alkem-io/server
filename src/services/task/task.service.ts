@@ -143,6 +143,7 @@ export class TaskService {
     const task = await this.getOrFail(id);
 
     task.status = status;
+    task.end = new Date().getTime();
 
     await this.cacheManager.set(task.id, task, {
       ttl: TTL,
