@@ -60,6 +60,7 @@ import {
   SpaceIngestionPurpose,
 } from '@services/infrastructure/event-bus/commands';
 import { AccountHostService } from '@domain/space/account/account.host.service';
+import { InvitationExternalService } from '../invitation.external/invitation.external.service';
 
 const IAnyInvitation = createUnionType({
   name: 'AnyInvitation',
@@ -94,6 +95,7 @@ export class CommunityResolverMutations {
     private invitationExternalAuthorizationService: InvitationExternalAuthorizationService,
     private communityAuthorizationService: CommunityAuthorizationService,
     private accountHostService: AccountHostService,
+    private invitationExternalService: InvitationExternalService,
     private eventBus: EventBus
   ) {}
 
@@ -681,6 +683,9 @@ export class CommunityResolverMutations {
         externalInvitation,
         community.authorization
       );
+    externalInvitation = await this.invitationExternalService.save(
+      externalInvitation
+    );
 
     const notificationInput: NotificationInputCommunityInvitationExternal = {
       triggeredBy: agentInfo.userID,
