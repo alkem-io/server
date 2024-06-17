@@ -112,7 +112,7 @@ export class SpaceResolverMutations {
       );
     }
 
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       space.authorization,
       AuthorizationPrivilege.UPDATE,
@@ -125,8 +125,9 @@ export class SpaceResolverMutations {
     );
 
     // As the settings may update the authorization for the Space, the authorization policy will need to be reset
-    await this.spaceAuthorizationService.applyAuthorizationPolicy(updatedSpace);
-    return await this.spaceService.getSpaceOrFail(space.id);
+    return this.spaceAuthorizationService
+      .applyAuthorizationPolicy(updatedSpace)
+      .then(space => this.spaceService.save(space));
   }
 
   @UseGuards(GraphqlGuard)
@@ -139,7 +140,7 @@ export class SpaceResolverMutations {
     @Args('updateData') updateData: UpdateSpacePlatformSettingsInput
   ): Promise<ISpace> {
     const space = await this.spaceService.getSpaceOrFail(updateData.spaceID);
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       space.authorization,
       AuthorizationPrivilege.PLATFORM_ADMIN,
@@ -176,7 +177,7 @@ export class SpaceResolverMutations {
         LogContext.SPACES
       );
     }
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       space.authorization,
       AuthorizationPrivilege.CREATE_SUBSPACE,
@@ -185,7 +186,7 @@ export class SpaceResolverMutations {
 
     // For the creation based on the template from another challenge require platform admin privileges
     if (subspaceData.collaborationData?.collaborationTemplateID) {
-      await this.authorizationService.grantAccessOrFail(
+      this.authorizationService.grantAccessOrFail(
         agentInfo,
         space.authorization,
         AuthorizationPrivilege.CREATE,
@@ -197,8 +198,9 @@ export class SpaceResolverMutations {
       agentInfo
     );
 
-    const subspaceAuth =
-      await this.spaceAuthorizationService.applyAuthorizationPolicy(subspace);
+    const subspaceAuth = await this.spaceAuthorizationService
+      .applyAuthorizationPolicy(subspace)
+      .then(space => this.spaceService.save(space));
 
     this.activityAdapter.subspaceCreated(
       {
@@ -209,7 +211,7 @@ export class SpaceResolverMutations {
       subspace.level
     );
 
-    this.contributionReporter.challengeCreated(
+    this.contributionReporter.subspaceCreated(
       {
         id: subspace.id,
         name: subspace.profile.displayName,

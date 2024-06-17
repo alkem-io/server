@@ -6,6 +6,8 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy/author
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 import { ITemplateBase } from '../template-base/template.base.interface';
 import { CommunityGuidelinesTemplate } from './community.guidelines.template.entity';
+import { ICommunityGuidelinesTemplate } from './community.guidelines.template.interface';
+import { CommunityGuidelinesAuthorizationService } from '@domain/community/community-guidelines/community.guidelines.service.authorization';
 
 @Injectable()
 export class CommunityGuidelinesTemplateAuthorizationService {
@@ -13,11 +15,12 @@ export class CommunityGuidelinesTemplateAuthorizationService {
     private authorizationPolicyService: AuthorizationPolicyService,
     @InjectRepository(CommunityGuidelinesTemplate)
     private communityGuidelinesTemplateRepository: Repository<CommunityGuidelinesTemplate>,
-    private profileAuthorizationService: ProfileAuthorizationService
+    private profileAuthorizationService: ProfileAuthorizationService,
+    private communityGuidelinesAuthorizationService: CommunityGuidelinesAuthorizationService
   ) {}
 
   async applyAuthorizationPolicy(
-    communityGuidelinesTemplate: ITemplateBase,
+    communityGuidelinesTemplate: ICommunityGuidelinesTemplate,
     parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<ITemplateBase> {
     // Inherit from the parent
@@ -30,6 +33,13 @@ export class CommunityGuidelinesTemplateAuthorizationService {
     communityGuidelinesTemplate.profile =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
         communityGuidelinesTemplate.profile,
+        communityGuidelinesTemplate.authorization
+      );
+
+    // Cascade
+    communityGuidelinesTemplate.guidelines =
+      await this.communityGuidelinesAuthorizationService.applyAuthorizationPolicy(
+        communityGuidelinesTemplate.guidelines,
         communityGuidelinesTemplate.authorization
       );
 

@@ -50,7 +50,7 @@ export class ConversionResolverMutations {
     @Args('convertData')
     convertChallengeToSpaceData: ConvertSubspaceToSpaceInput
   ): Promise<ISpace> {
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       this.authorizationGlobalAdminPolicy,
       AuthorizationPrivilege.CREATE_SPACE,
@@ -61,9 +61,9 @@ export class ConversionResolverMutations {
       agentInfo
     );
 
-    return await this.spaceAuthorizationService.applyAuthorizationPolicy(
-      newSpace
-    );
+    return this.spaceAuthorizationService
+      .applyAuthorizationPolicy(newSpace)
+      .then(space => this.spaceService.save(space));
   }
 
   @UseGuards(GraphqlGuard)
@@ -94,7 +94,7 @@ export class ConversionResolverMutations {
       );
     }
     const spaceID = subsubspace.account.space.id;
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       this.authorizationGlobalAdminPolicy,
       AuthorizationPrivilege.CREATE,
@@ -116,7 +116,10 @@ export class ConversionResolverMutations {
         },
       },
     });
-    await this.spaceAuthorizationService.applyAuthorizationPolicy(parentSpace);
+    await this.spaceAuthorizationService
+      .applyAuthorizationPolicy(parentSpace)
+      .then(space => this.spaceService.save(space));
+    // return the latest, after the parent has saved
     return this.spaceService.getSpaceOrFail(newChallenge.id);
   }
 }

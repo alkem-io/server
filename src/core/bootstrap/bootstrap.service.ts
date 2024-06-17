@@ -292,10 +292,12 @@ export class BootstrapService {
         },
         hostID: DEFAULT_HOST_ORG_NAMEID,
       };
-      const account = await this.accountService.createAccount(spaceInput);
-      return await this.accountAuthorizationService.applyAuthorizationPolicy(
-        account
-      );
+      return this.accountService
+        .createAccount(spaceInput)
+        .then(account =>
+          this.accountAuthorizationService.applyAuthorizationPolicy(account)
+        )
+        .then(account => this.accountService.save(account));
     }
   }
 }

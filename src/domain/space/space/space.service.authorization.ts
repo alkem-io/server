@@ -151,7 +151,7 @@ export class SpaceAuthorizationService {
         space.authorization.anonymousReadAccess = false;
         break;
     }
-
+    // has to be saved to propagate to all child entities
     await this.spaceService.save(space);
 
     // Cascade down
@@ -178,7 +178,7 @@ export class SpaceAuthorizationService {
         break;
     }
 
-    return await this.spaceService.save(space);
+    return space;
   }
 
   public async propagateAuthorizationToChildEntities(
@@ -245,6 +245,8 @@ export class SpaceAuthorizationService {
           communityPolicy
         );
     }
+    // save the community
+    await this.spaceService.save(space);
 
     space.collaboration =
       await this.collaborationAuthorizationService.applyAuthorizationPolicy(
@@ -294,7 +296,7 @@ export class SpaceAuthorizationService {
     }
     space.subspaces = updatedSpaces;
 
-    return await this.spaceService.save(space);
+    return space;
   }
 
   private extendPrivilegeRuleCreateSubspace(

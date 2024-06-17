@@ -30,7 +30,7 @@ export class UserGroupAuthorizationService {
     parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<IUserGroup> {
     userGroup.authorization =
-      await this.authorizationPolicyService.inheritParentAuthorization(
+      this.authorizationPolicyService.inheritParentAuthorization(
         userGroup.authorization,
         parentAuthorization
       );
