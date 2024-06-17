@@ -85,16 +85,6 @@ export class SpaceService {
     account: IAccount,
     agentInfo?: AgentInfo
   ): Promise<ISpace> {
-    // Hard code / overwrite for now for root space level
-    if (
-      spaceData.level === SpaceLevel.SPACE &&
-      spaceData.type !== SpaceType.SPACE
-    ) {
-      throw new NotSupportedException(
-        `Root space must have a type of SPACE: '${spaceData.type}'`,
-        LogContext.SPACES
-      );
-    }
     if (!spaceData.type) {
       // default to match the level if not specified
       switch (spaceData.level) {
@@ -111,6 +101,16 @@ export class SpaceService {
           spaceData.type = SpaceType.CHALLENGE;
           break;
       }
+    }
+    // Hard code / overwrite for now for root space level
+    if (
+      spaceData.level === SpaceLevel.SPACE &&
+      spaceData.type !== SpaceType.SPACE
+    ) {
+      throw new NotSupportedException(
+        `Root space must have a type of SPACE: '${spaceData.type}'`,
+        LogContext.SPACES
+      );
     }
 
     const space: ISpace = Space.create(spaceData);
