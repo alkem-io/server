@@ -24,6 +24,8 @@ import {
   CREDENTIAL_RULE_ORGANIZATION_ADMIN,
   CREDENTIAL_RULE_ORGANIZATION_READ,
   CREDENTIAL_RULE_ORGANIZATION_SELF_REMOVAL,
+  CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_SUPPORT_MANAGE,
+  CREDENTIAL_RULE_TYPES_ORGANIZATION_PLATFORM_ADMIN,
 } from '@common/constants';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
@@ -162,19 +164,26 @@ export class OrganizationAuthorizationService {
     globalAdminNotInherited.cascade = false;
     newRules.push(globalAdminNotInherited);
 
-    const communityAdmin =
+    const globalCommunityRead =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.READ],
+        [AuthorizationCredential.GLOBAL_COMMUNITY_READ],
+        CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_COMMUNITY_READ
+      );
+    newRules.push(globalCommunityRead);
+
+    const globalSupportManage =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [
-          AuthorizationPrivilege.GRANT,
           AuthorizationPrivilege.CREATE,
           AuthorizationPrivilege.READ,
           AuthorizationPrivilege.UPDATE,
           AuthorizationPrivilege.DELETE,
         ],
-        [AuthorizationCredential.GLOBAL_COMMUNITY_READ],
-        CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_COMMUNITY_READ
+        [AuthorizationCredential.GLOBAL_SUPPORT],
+        CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_SUPPORT_MANAGE
       );
-    newRules.push(communityAdmin);
+    newRules.push(globalSupportManage);
 
     // Allow Global admins + Global Space Admins to manage access to Spaces + contents
     const globalAdmin =
@@ -210,6 +219,19 @@ export class OrganizationAuthorizationService {
       );
 
     newRules.push(organizationAdmin);
+
+    // Allow global admins do platform admin actions
+    const globalAdminPlatformAdminNotInherited =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.PLATFORM_ADMIN],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+        ],
+        CREDENTIAL_RULE_TYPES_ORGANIZATION_PLATFORM_ADMIN
+      );
+    globalAdminNotInherited.cascade = false;
+    newRules.push(globalAdminPlatformAdminNotInherited);
 
     const readPrivilege = this.authorizationPolicyService.createCredentialRule(
       [AuthorizationPrivilege.READ],

@@ -12,11 +12,12 @@ import {
 import { VirtualContributorService } from './virtual.contributor.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
-  CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_COMMUNITY_READ,
-  CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_ADMINS,
   CREDENTIAL_RULE_ORGANIZATION_ADMIN,
   CREDENTIAL_RULE_ORGANIZATION_READ,
   CREDENTIAL_RULE_VIRTUAL_CONTRIBUTOR_CREATED_BY,
+  CREDENTIAL_RULE_TYPES_VC_GLOBAL_COMMUNITY_READ,
+  CREDENTIAL_RULE_TYPES_VC_GLOBAL_SUPPORT_MANAGE,
+  CREDENTIAL_RULE_TYPES_VC_GLOBAL_ADMINS,
 } from '@common/constants';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 import { IVirtualContributor } from './virtual.contributor.interface';
@@ -114,19 +115,26 @@ export class VirtualContributorAuthorizationService {
 
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
-    const communityAdmin =
+    const globalCommunityRead =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.READ],
+        [AuthorizationCredential.GLOBAL_COMMUNITY_READ],
+        CREDENTIAL_RULE_TYPES_VC_GLOBAL_COMMUNITY_READ
+      );
+    newRules.push(globalCommunityRead);
+
+    const globalSupportManage =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [
-          AuthorizationPrivilege.GRANT,
           AuthorizationPrivilege.CREATE,
           AuthorizationPrivilege.READ,
           AuthorizationPrivilege.UPDATE,
           AuthorizationPrivilege.DELETE,
         ],
-        [AuthorizationCredential.GLOBAL_COMMUNITY_READ],
-        CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_COMMUNITY_READ
+        [AuthorizationCredential.GLOBAL_SUPPORT],
+        CREDENTIAL_RULE_TYPES_VC_GLOBAL_SUPPORT_MANAGE
       );
-    newRules.push(communityAdmin);
+    newRules.push(globalSupportManage);
 
     // Allow Global admins + Global Space Admins to manage access to Spaces + contents
     const globalAdmin =
@@ -136,7 +144,7 @@ export class VirtualContributorAuthorizationService {
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_SUPPORT,
         ],
-        CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_ADMINS
+        CREDENTIAL_RULE_TYPES_VC_GLOBAL_ADMINS
       );
     newRules.push(globalAdmin);
 
