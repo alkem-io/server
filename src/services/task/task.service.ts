@@ -9,6 +9,8 @@ import { TaskStatus } from '@domain/task/dto/task.status.enum';
 import { Task } from './task.interface';
 import { TASK_LIST_CACHE_KEY } from './task.list.key';
 
+const TTL = 3600;
+
 @Injectable()
 export class TaskService {
   constructor(
@@ -31,7 +33,7 @@ export class TaskService {
       LogContext.TASKS
     );
     await this.cacheManager.set<Array<string>>(TASK_LIST_CACHE_KEY, [], {
-      ttl: 1000,
+      ttl: TTL,
     });
     return []; // set returns 'ok'
   }
@@ -78,7 +80,7 @@ export class TaskService {
       errors: [],
     };
     await this.cacheManager.set<Task>(task.id, task, {
-      ttl: 1000,
+      ttl: TTL,
     });
     await this.addTaskToList(task);
     return task;
@@ -101,14 +103,14 @@ export class TaskService {
       task.itemsDone !== undefined && (task.itemsDone += 1);
     }
 
-    if (task.itemsCount === task.itemsDone) {
+    if (task.itemsCount && task.itemsCount === task.itemsDone) {
       task.status = TaskStatus.COMPLETED;
     }
 
-    task.results.push(result);
+    task.results.unshift(`[${new Date().toISOString()}]::${result}`);
 
     await this.cacheManager.set(task.id, task, {
-      ttl: 1000,
+      ttl: TTL,
     });
   }
 
@@ -127,10 +129,24 @@ export class TaskService {
       task.status = TaskStatus.COMPLETED;
     }
 
-    task.errors.push(error);
+    task.errors.unshift(error);
 
     await this.cacheManager.set(task.id, task, {
-      ttl: 1000,
+      ttl: TTL,
+    });
+  }
+
+  public async complete(
+    id: string,
+    status: TaskStatus.COMPLETED | TaskStatus.ERRORED = TaskStatus.COMPLETED
+  ) {
+    const task = await this.getOrFail(id);
+
+    task.status = status;
+    task.end = new Date().getTime();
+
+    await this.cacheManager.set(task.id, task, {
+      ttl: TTL,
     });
   }
 
@@ -149,7 +165,7 @@ export class TaskService {
     list.push(task.id);
 
     return this.cacheManager
-      .set(TASK_LIST_CACHE_KEY, list, { ttl: 1000 })
+      .set(TASK_LIST_CACHE_KEY, list, { ttl: TTL })
       .then(
         () => true,
         reason => {

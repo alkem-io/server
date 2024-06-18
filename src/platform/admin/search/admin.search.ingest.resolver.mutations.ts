@@ -1,33 +1,28 @@
-import { reduce } from 'lodash';
-import { UseGuards } from '@nestjs/common';
+import { Inject, LoggerService, UseGuards } from '@nestjs/common';
 import { Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
-import {
-  AlkemioErrorStatus,
-  AuthorizationPrivilege,
-  LogContext,
-} from '@common/enums';
+import { AuthorizationPrivilege } from '@common/enums';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import {
-  AdminSearchIngestResult,
-  IngestResult,
-} from '@platform/admin/search/admin.search.ingest.result';
-import { SearchIngestService } from '@services/api/search2/search.ingest/search.ingest.service';
-import { BaseException } from '@common/exceptions/base.exception';
+import { SearchIngestService } from '@services/api/search/v2/ingest/search.ingest.service';
+import { TaskService } from '@services/task';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { TaskStatus } from '@domain/task/dto';
 
 @Resolver()
 export class AdminSearchIngestResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
     private platformAuthorizationPolicyService: PlatformAuthorizationPolicyService,
-    private searchIngestService: SearchIngestService
+    private searchIngestService: SearchIngestService,
+    private taskService: TaskService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService
   ) {}
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => AdminSearchIngestResult, {
+  @Mutation(() => String, {
     description:
       'Ingests new data into Elasticsearch from scratch. This will delete all existing data and ingest new data from the source. This is an admin only operation.',
   })
@@ -41,27 +36,37 @@ export class AdminSearchIngestResolverMutations {
       AuthorizationPrivilege.PLATFORM_ADMIN,
       `Ingest new data into Elasticsearch from scratch: ${agentInfo.email}`
     );
-    const deleteResult = await this.searchIngestService.removeIndices();
 
-    if (!deleteResult.acknowledged) {
-      throw new BaseException(
-        deleteResult.message ?? 'Failed to delete indices',
-        LogContext.SEARCH_INGEST,
-        AlkemioErrorStatus.UNSPECIFIED
-      );
-    }
-    // small workaround until the return type is defined
-    const result = await this.searchIngestService.ingest();
-    const results = reduce(
-      result,
-      (acc, { total, batches }, key) => {
-        acc.push({ index: key, total, batches });
-        return acc;
-      },
-      [] as IngestResult[]
-    );
-    return {
-      results,
-    };
+    this.logger.verbose?.('Starting search ingest from scratch');
+
+    const task = await this.taskService.create();
+
+    this.searchIngestService
+      .removeIndices()
+      .then(res => {
+        if (!res.acknowledged) {
+          throw new Error(
+            res.message ? res.message : 'Failed to delete indices'
+          );
+        }
+        this.taskService.updateTaskResults(task.id, 'Indices removed');
+        return this.searchIngestService.ensureIndicesExist();
+      })
+      .then(res => {
+        if (!res.acknowledged) {
+          throw new Error(
+            res.message ? res.message : 'Failed to create indices'
+          );
+        }
+        this.taskService.updateTaskResults(task.id, 'Indices recreated');
+        return this.searchIngestService.ingest(task);
+      })
+      .then(() => this.taskService.complete(task.id))
+      .catch(async e => {
+        await this.taskService.updateTaskErrors(task.id, e?.message);
+        return this.taskService.complete(task.id, TaskStatus.ERRORED);
+      });
+
+    return task.id;
   }
 }

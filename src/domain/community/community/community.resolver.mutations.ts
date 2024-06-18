@@ -59,6 +59,7 @@ import {
   IngestSpace,
   SpaceIngestionPurpose,
 } from '@services/infrastructure/event-bus/commands';
+import { AccountHostService } from '@domain/space/account/account.host.service';
 import { InvitationExternalService } from '../invitation.external/invitation.external.service';
 
 const IAnyInvitation = createUnionType({
@@ -91,9 +92,10 @@ export class CommunityResolverMutations {
     private applicationAuthorizationService: ApplicationAuthorizationService,
     private invitationService: InvitationService,
     private invitationAuthorizationService: InvitationAuthorizationService,
-    private invitationExternalService: InvitationExternalService,
     private invitationExternalAuthorizationService: InvitationExternalAuthorizationService,
     private communityAuthorizationService: CommunityAuthorizationService,
+    private accountHostService: AccountHostService,
+    private invitationExternalService: InvitationExternalService,
     private eventBus: EventBus
   ) {}
 
@@ -204,7 +206,17 @@ export class CommunityResolverMutations {
 
     let requiredPrivilege = AuthorizationPrivilege.GRANT;
     if (roleData.role === CommunityRole.MEMBER) {
-      requiredPrivilege = AuthorizationPrivilege.COMMUNITY_ADD_MEMBER;
+      const sameAccount =
+        await this.communityService.isCommunityAccountMatchingVcAccount(
+          community.id,
+          roleData.virtualContributorID
+        );
+      if (sameAccount) {
+        requiredPrivilege =
+          AuthorizationPrivilege.COMMUNITY_ADD_MEMBER_VC_FROM_ACCOUNT;
+      } else {
+        requiredPrivilege = AuthorizationPrivilege.COMMUNITY_ADD_MEMBER;
+      }
     }
 
     this.authorizationService.grantAccessOrFail(
@@ -239,9 +251,12 @@ export class CommunityResolverMutations {
         }
       );
 
+    const host = await this.accountHostService.getHostOrFail(virtual.account);
+
     virtual =
       await this.virtualContributorAuthorizationService.applyAuthorizationPolicy(
         virtual,
+        host,
         virtual.account.authorization
       );
     virtual = await this.virtualContributorService.save(virtual);
@@ -362,9 +377,11 @@ export class CommunityResolverMutations {
           },
         }
       );
+    const host = await this.accountHostService.getHostOrFail(virtual.account);
     virtual =
       await this.virtualContributorAuthorizationService.applyAuthorizationPolicy(
         virtual,
+        host,
         virtual.account.authorization
       );
     return await this.virtualContributorService.save(virtual);
@@ -666,6 +683,9 @@ export class CommunityResolverMutations {
         externalInvitation,
         community.authorization
       );
+    externalInvitation = await this.invitationExternalService.save(
+      externalInvitation
+    );
 
     const notificationInput: NotificationInputCommunityInvitationExternal = {
       triggeredBy: agentInfo.userID,

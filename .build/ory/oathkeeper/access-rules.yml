@@ -33,8 +33,9 @@
     methods:
       - GET
   authenticators:
-    - handler: cookie_session
-    - handler: noop
+    - handler: bearer_token   # for API clients
+    - handler: cookie_session # for browsers
+    - handler: noop           # no authentication
   authorizer:
     handler: allow
   mutators:

@@ -6,6 +6,7 @@ import {
   MockWinstonProvider,
 } from '@test/mocks';
 import { SearchIngestService } from './search.ingest.service';
+import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 
 describe('SearchIngestService', () => {
   let service: SearchIngestService;
@@ -19,7 +20,9 @@ describe('SearchIngestService', () => {
         MockEntityManagerProvider,
         MockConfigService,
       ],
-    }).compile();
+    })
+      .useMocker(defaultMockerFactory)
+      .compile();
 
     service = module.get<SearchIngestService>(SearchIngestService);
   });
