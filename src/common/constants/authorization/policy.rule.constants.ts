@@ -26,5 +26,6 @@ export const PRIVILEGE_RULE_TYPES_INNOVATION_FLOW_UPDATE =
   'privilegeRuleTypes-innovationFlowUpdate';
 export const PRIVILEGE_RULE_READ_USER_SETTINGS =
   'privilegeRule-readUserSettings';
-export const POLICY_RULE_VC_ADD_TO_COMMUNITY =
-  'policyRule-virtualContributorAddToCommunity';
+export const POLICY_RULE_COMMUNITY_INVITE_MEMBER = 'policyRule-communityInvite';
+export const POLICY_RULE_COMMUNITY_ADD_VC =
+  'policyRule-communityAddVirtualContributor';
