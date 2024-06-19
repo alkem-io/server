@@ -10,6 +10,8 @@ import { SearchIngestService } from '@services/api/search/v2/ingest/search.inges
 import { TaskService } from '@services/task';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { TaskStatus } from '@domain/task/dto';
+import { LicenseManagerService } from '@core/license-manager';
+import { randomUUID } from 'crypto';
 
 @Resolver()
 export class AdminSearchIngestResolverMutations {
@@ -18,8 +20,28 @@ export class AdminSearchIngestResolverMutations {
     private platformAuthorizationPolicyService: PlatformAuthorizationPolicyService,
     private searchIngestService: SearchIngestService,
     private taskService: TaskService,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService,
+    private licenseManagerService: LicenseManagerService
   ) {}
+  // todo: remove
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => String)
+  public async adminCreateLicenseCostumer() {
+    const res = await this.licenseManagerService.createCostumer({
+      name: `Test User ${randomUUID()}`,
+      emails: {
+        main: `main${randomUUID()}@alkem.io`,
+        secondary: `secondary${randomUUID()}@alkem.io`,
+      },
+      tax_details: {
+        vat_id: 'vat_id',
+      },
+      notes: 'notes',
+      customer_reference: `your-internal-user-id-${randomUUID()}`,
+      contracts: [],
+    });
+    return res.id;
+  }
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => String, {
