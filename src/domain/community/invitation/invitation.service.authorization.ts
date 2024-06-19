@@ -35,7 +35,7 @@ export class InvitationAuthorizationService {
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
     // get the user
-    const user = await this.invitationService.getInvitedUser(invitation);
+    const user = await this.invitationService.getInvitedContributor(invitation);
 
     // also grant the user privileges to work with their own invitation
     const userInvitationRule =

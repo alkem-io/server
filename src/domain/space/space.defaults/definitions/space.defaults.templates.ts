@@ -1,4 +1,4 @@
-import { innovationFlowStatesDefault } from './space.defaults.innovation.flow';
+import { spaceDefaultsInnovationFlowStatesChallenge } from './challenge/space.defaults.innovation.flow.challenge';
 
 export const templatesSetDefaults: any = {
   posts: [
@@ -43,7 +43,7 @@ export const templatesSetDefaults: any = {
         description: 'Default innovationFlow',
         tags: ['default'],
       },
-      states: innovationFlowStatesDefault,
+      states: spaceDefaultsInnovationFlowStatesChallenge,
     },
     {
       profile: {

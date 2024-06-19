@@ -25,6 +25,7 @@ import { AccountService } from '@domain/space/account/account.service';
 import { SpaceService } from '@domain/space/space/space.service';
 import { CreateSubspaceInput } from '@domain/space/space/dto/space.dto.create.subspace';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
+import { SpaceLevel } from '@common/enums/space.level';
 
 export class ConversionService {
   constructor(
@@ -96,7 +97,7 @@ export class ConversionService {
         profileData: {
           displayName: subspace.profile.displayName,
         },
-        level: 0,
+        level: SpaceLevel.SPACE,
         type: SpaceType.SPACE,
       },
     };
@@ -295,7 +296,7 @@ export class ConversionService {
         displayName: subsubspace.profile.displayName,
       },
       storageAggregatorParent: spaceStorageAggregator,
-      level: 1,
+      level: SpaceLevel.CHALLENGE,
       type: SpaceType.CHALLENGE,
     };
     const emptyChallenge = await this.spaceService.createSubspace(
