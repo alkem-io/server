@@ -61,9 +61,7 @@ export class CommunityEventsService {
           }
         );
         break;
-      case SpaceType.CHALLENGE:
-      case SpaceType.VIRTUAL_CONTRIBUTOR:
-      case SpaceType.OPPORTUNITY:
+      default: // Challenge, Opportunity, VIRTUAL_CONTRIBUTOR, BLANK_SLATE...
         this.contributionReporter.subspaceJoined(
           {
             id: community.parentID,
