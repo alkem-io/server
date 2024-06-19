@@ -15,6 +15,7 @@ import { VirtualContributor } from './virtual.contributor.entity';
 import { CommunicationAdapterModule } from '@services/adapters/communication-adapter/communication-adapter.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { AiPersonaModule } from '../ai-persona/ai.persona.module';
+import { AiServerAdapterModule } from '@services/adapters/ai-server-adapter/ai.server.adapter.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { AiPersonaModule } from '../ai-persona/ai.persona.module';
     NamingModule,
     StorageAggregatorModule,
     AiPersonaModule,
+    AiServerAdapterModule,
     CommunicationAdapterModule,
     TypeOrmModule.forFeature([VirtualContributor]),
   ],

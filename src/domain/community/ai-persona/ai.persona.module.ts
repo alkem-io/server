@@ -8,11 +8,13 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { AiPersona } from './ai.persona.entity';
 import { AiPersonaResolverFields } from './ai.persona.resolver.fields';
+import { AiServerAdapterModule } from '@services/adapters/ai-server-adapter/ai.server.adapter.module';
 
 @Module({
   imports: [
     AuthorizationPolicyModule,
     AuthorizationModule,
+    AiServerAdapterModule,
     TypeOrmModule.forFeature([AiPersona]),
   ],
   providers: [
