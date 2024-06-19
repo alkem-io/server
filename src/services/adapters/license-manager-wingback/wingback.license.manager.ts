@@ -1,65 +1,42 @@
-import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Injectable } from '@nestjs/common';
+import { HttpService } from '@nestjs/axios';
+import { firstValueFrom, map } from 'rxjs';
 import { AlkemioConfig } from '@src/types';
+import {
+  CreateCostumer,
+  LicenseManager,
+  UpdateCostumer,
+} from 'src/core/license-manager';
+
+export interface CreateWingbackCustomer extends CreateCostumer {}
 
 @Injectable()
-export class WingbackService {
+export class WingbackLicenseManager implements LicenseManager {
   private readonly apiKey: string;
+  private readonly endpoint: string;
 
   constructor(
-    private readonly configService: ConfigService<AlkemioConfig, true>
+    private readonly configService: ConfigService<AlkemioConfig, true>,
+    private readonly httpService: HttpService
   ) {
-    this.apiKey = this.configService.get('licensing.wingback.key', {
+    const config = this.configService.get('licensing.wingback', {
       infer: true,
     });
+    this.apiKey = config.key;
+    this.endpoint = config.endpoint;
   }
 
   // https://docs.wingback.com/dev/guides/integrate-wingback-signup-flow#1-create-a-new-customer-in-wingback-backend
-  public async createCustomer(): Promise<void> {
-    throw new Error('Method not implemented');
-
-    //     fetch('https://api.app.wingback.com/v1/c/customer', {
-    //       method: 'POST',
-    //       headers: {
-    //         'Content-Type': 'application/json',
-    //         'wb-key': 'YOUR_SECRET_API_KEY'
-    //       },
-    //       body: JSON.stringify({
-    //         // all optional
-    //         emails: {'main': 'customer@example.com'},
-    //         name: 'John Doe',
-    //         customer_reference: 'your-internal-customer-reference-or-id'
-    //       })
-    //     })
-    //       .then(response => response.json())
-    //       .then(data => {
-    //         // TODO: store wingbacks customer id in your database!
-    //         console.log(data);
-    //         customerId = data.id;
-    //       })
-    //       .catch(error => {
-    //         console.error('Error creating customer:', error);
-    //       });
-    //
-    // // Activate a Wingback Customer
-    //     fetch('https://api.app.wingback.com/v1/c/customer/'+customerId+'/activate', {
-    //       method: 'POST',
-    //       headers: {
-    //         'Content-Type': 'application/json',
-    //         'wb-key': 'YOUR_SECRET_API_KEY'
-    //       }
-    //     })
-    //       .then(response => response.json())
-    //       .then(data => {
-    //         // TODO: proceed to next step
-    //         console.log(data);
-    //       })
-    //       .catch(error => {
-    //         console.error('Error activating customer:', error);
-    //       });
+  public async createCustomer(
+    data: CreateWingbackCustomer
+  ): Promise<{ id: string }> {
+    return this.sendPost<string>('/v1/c/customer', data).then(response => ({
+      id: response,
+    }));
   }
   // https://docs.wingback.com/dev/guides/integrate-wingback-signup-flow#2-collect-payment-information
-  public triggerPaymentSession(): void {
+  public triggerPaymentSession(): Promise<void> {
     throw new Error('Method not implemented');
 
     // Create a Payment Method Session Token
@@ -125,7 +102,50 @@ export class WingbackService {
     throw new Error('Method not implemented');
   }
 
-  private cacheApiKey(): Promise<boolean> {
+  activateCustomer(id: string): Promise<boolean> {
     throw new Error('Method not implemented');
+  }
+
+  getCostumer(id: string): Promise<unknown> {
+    throw new Error('Method not implemented');
+  }
+
+  inactivateCustomer(id: string): Promise<boolean> {
+    throw new Error('Method not implemented');
+  }
+
+  updateCostumer<TPayload extends UpdateCostumer>(
+    data: TPayload
+  ): Promise<unknown> {
+    throw new Error('Method not implemented');
+  }
+
+  private sendPost<TResult, TInput = unknown>(
+    path: string,
+    data: TInput
+  ): Promise<TResult> {
+    const request$ = this.httpService
+      .post<TResult>(`${this.endpoint}${path}`, data, {
+        headers: {
+          'Content-Type': 'application/json',
+          'wb-key': this.apiKey,
+        },
+      })
+      .pipe(map(response => response.data));
+
+    return firstValueFrom(request$);
+  }
+
+  private sendGet<TInput, TResult>(path: string): Promise<TResult> {
+    const request$ = this.httpService
+      .get<TResult>(`${this.endpoint}${path}`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'wb-key': this.apiKey,
+        },
+      })
+      .pipe(map(response => response.data));
+
+    return firstValueFrom(request$);
   }
 }
