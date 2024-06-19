@@ -11,7 +11,7 @@ import {
 import { WingbackEntitlement } from '@services/adapters/license-manager-wingback/types/entitlement';
 
 export interface CreateWingbackCustomer extends CreateCostumer {}
-
+// https://docs.wingback.com/dev/api-reference/introduction
 @Injectable()
 export class WingbackLicenseManager implements LicenseManager {
   private readonly apiKey: string;
