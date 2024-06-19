@@ -56,6 +56,16 @@ authenticators:
     config:
       subject: guest
 
+  bearer_token:
+    enabled: true
+    config:
+      check_session_url: http://kratos:4433/sessions/whoami
+      preserve_path: true
+      extra_from: "@this"
+      subject_from: "identity.id"
+      token_from:
+        header: Authorization
+
   cookie_session:
     enabled: true
     config:
