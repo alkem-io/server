@@ -62,4 +62,6 @@ export enum LogContext {
   LOCAL_STORAGE = 'local-storage',
   INNOVATION_FLOW = 'innovation-flow',
   FILE_INTEGRATION = 'file-integration',
+  AI_SERVER = 'ai-server',
+  AI_PERSONA_SERVICE = 'ai-persona-service',
 }

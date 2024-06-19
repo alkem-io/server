@@ -1,11 +1,9 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IContributorBase } from '../contributor/contributor.base.interface';
 import { IAccount } from '@domain/space/account/account.interface';
-import { BodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
 import { IContributor } from '../contributor/contributor.interface';
-import { IVirtualPersona } from '@platform/virtual-persona/virtual.persona.interface';
-import { UUID } from '@domain/common/scalars';
 import { SearchVisibility } from '@common/enums/search.visibility';
+import { IAiPersona } from '../ai-persona';
 
 @ObjectType('VirtualContributor', {
   implements: () => [IContributor],
@@ -14,10 +12,10 @@ export class IVirtualContributor
   extends IContributorBase
   implements IContributor
 {
-  @Field(() => IVirtualPersona, {
-    description: 'The virtual persona being used by this virtual contributor',
+  @Field(() => IAiPersona, {
+    description: 'The AI persona being used by this virtual contributor',
   })
-  virtualPersona!: IVirtualPersona;
+  aiPersona!: IAiPersona;
 
   communicationID!: string;
   @Field(() => IAccount, {
@@ -32,15 +30,9 @@ export class IVirtualContributor
   })
   searchVisibility!: SearchVisibility;
 
-  @Field(() => BodyOfKnowledgeType, {
-    nullable: true,
-    description: 'The body of knowledge type used for the Virtual Contributor',
+  @Field(() => Boolean, {
+    nullable: false,
+    description: 'Flag to control if this VC is listed in the platform store.',
   })
-  bodyOfKnowledgeType?: BodyOfKnowledgeType;
-
-  @Field(() => UUID, {
-    nullable: true,
-    description: 'The body of knowledge ID used for the Virtual Contributor',
-  })
-  bodyOfKnowledgeID?: string;
+  listedInStore!: boolean;
 }

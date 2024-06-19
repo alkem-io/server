@@ -31,8 +31,8 @@ import {
   IngestSpace,
   SpaceIngestionPurpose,
 } from '@services/infrastructure/event-bus/commands';
-import { VirtualPersonaService } from '@platform/virtual-persona/virtual.persona.service';
-import { IVirtualPersona } from '@platform/virtual-persona';
+import { VirtualPersonaService } from '@services/ai-server/ai-persona-service/virtual.persona.service';
+import { IVirtualPersona } from '@services/ai-server/ai-persona-service';
 import { BodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { Platform } from '@platform/platfrom/platform.entity';
@@ -99,7 +99,7 @@ export class VirtualContributorService {
       virtualContributor.bodyOfKnowledgeType = BodyOfKnowledgeType.OTHER;
     }
 
-    virtualContributor.virtualPersona = virtualPersona;
+    virtualContributor.aiPersona = virtualPersona;
 
     virtualContributor.storageAggregator =
       await this.storageAggregatorService.createStorageAggregator();

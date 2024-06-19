@@ -2,9 +2,8 @@ import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
 import { IVirtualContributor } from './virtual.contributor.interface';
 import { ContributorBase } from '../contributor/contributor.base.entity';
 import { Account } from '@domain/space/account/account.entity';
-import { BodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
-import { VirtualPersona } from '@platform/virtual-persona/virtual.persona.entity';
 import { SearchVisibility } from '@common/enums/search.visibility';
+import { AiPersona } from '../ai-persona';
 
 @Entity()
 export class VirtualContributor
@@ -12,12 +11,12 @@ export class VirtualContributor
   implements IVirtualContributor
 {
   // Note: a many-one without corresponding one-many
-  @ManyToOne(() => VirtualPersona, {
+  @ManyToOne(() => AiPersona, {
     eager: true,
     cascade: true,
   })
   @JoinColumn()
-  virtualPersona!: VirtualPersona;
+  aiPersona!: AiPersona;
 
   @ManyToOne(() => Account, account => account.virtualContributors, {
     eager: true,
@@ -25,6 +24,9 @@ export class VirtualContributor
   })
   @JoinColumn()
   account!: Account;
+
+  @Column()
+  listedInStore!: boolean;
 
   @Column({ length: 255, nullable: false })
   communicationID!: string;
@@ -35,10 +37,4 @@ export class VirtualContributor
     default: SearchVisibility.ACCOUNT,
   })
   searchVisibility!: SearchVisibility;
-
-  @Column({ length: 64, nullable: true })
-  bodyOfKnowledgeType!: BodyOfKnowledgeType;
-
-  @Column({ length: 255, nullable: true })
-  bodyOfKnowledgeID!: string;
 }
