@@ -18,7 +18,6 @@ import { RoomServiceEvents } from './room.service.events';
 import { RoomEventResolverSubscription } from './room.event.resolver.subscription';
 import { SubscriptionServiceModule } from '@services/subscriptions/subscription-service';
 import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
-import { VirtualPersonaModule } from '@services/ai-server/ai-persona-service/virtual.persona.module';
 
 @Module({
   imports: [
@@ -32,7 +31,6 @@ import { VirtualPersonaModule } from '@services/ai-server/ai-persona-service/vir
     RoomModule,
     CommunicationAdapterModule,
     MessagingModule,
-    VirtualPersonaModule,
     VirtualContributorModule,
     TypeOrmModule.forFeature([Room]),
     SubscriptionServiceModule,
