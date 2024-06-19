@@ -6,7 +6,6 @@ import { ISpaceDefaults } from '../space.defaults/space.defaults.interface';
 import { ISpace } from '../space/space.interface';
 import { IAgent } from '@domain/agent/agent/agent.interface';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
-import { IAiPersona } from '@domain/community/ai-persona';
 
 @ObjectType('Account')
 export class IAccount extends IAuthorizable {
@@ -16,5 +15,4 @@ export class IAccount extends IAuthorizable {
   defaults?: ISpaceDefaults;
   license?: ILicense;
   virtualContributors!: IVirtualContributor[];
-  aiPersonas!: IAiPersona[];
 }

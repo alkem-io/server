@@ -3,12 +3,7 @@ import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exc
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import {
-  EntityManager,
-  FindOneOptions,
-  FindOptionsRelations,
-  Repository,
-} from 'typeorm';
+import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
 import { AiServer } from './ai.server.entity';
 import { IAiServer } from './ai.server.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
@@ -26,6 +21,9 @@ import {
 } from '@services/ai-server/ai-persona-service';
 import { AiPersonaServiceService } from '../ai-persona-service/ai.persona.service.service';
 import { AiServerRole } from '@common/enums/ai.server.role';
+import { AiPersonaEngineAdapter } from '../ai-persona-engine-adapter/ai.persona.engine.adapter';
+import { AiServerIngestAiPersonaServiceInput } from './dto/ai.server.dto.ingest.ai.persona.service';
+import { AiPersonaEngineAdapterInputBase } from '../ai-persona-engine-adapter/dto/ai.persona.engine.adapter.dto.base';
 
 @Injectable()
 export class AiServerService {
@@ -33,7 +31,7 @@ export class AiServerService {
     private userService: UserService,
     private agentService: AgentService,
     private aiPersonaServiceService: AiPersonaServiceService,
-    private entityManager: EntityManager,
+    private aiPersonaEngineAdapter: AiPersonaEngineAdapter,
     @InjectRepository(AiServer)
     private aiServerRepository: Repository<AiServer>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -158,6 +156,23 @@ export class AiServerService {
     return await this.userService.getUserWithAgent(removeData.userID);
   }
 
+  public async ingestAiPersonaService(
+    ingestData: AiServerIngestAiPersonaServiceInput
+  ): Promise<boolean> {
+    const aiPersonaService =
+      await this.aiPersonaServiceService.getAiPersonaServiceOrFail(
+        ingestData.aiPersonaServiceID
+      );
+    const ingestAdapterInput: AiPersonaEngineAdapterInputBase = {
+      engine: aiPersonaService.engine,
+      userId: '',
+    };
+    const result = await this.aiPersonaEngineAdapter.sendIngest(
+      ingestAdapterInput
+    );
+    return result;
+  }
+
   private async removeValidationSingleGlobalAdmin(): Promise<boolean> {
     // Check more than one
     const globalAdmins = await this.userService.usersWithCredentials({
@@ -171,6 +186,7 @@ export class AiServerService {
 
     return true;
   }
+
   private getCredentialForRole(role: AiServerRole): ICredentialDefinition {
     const result: ICredentialDefinition = {
       type: '',

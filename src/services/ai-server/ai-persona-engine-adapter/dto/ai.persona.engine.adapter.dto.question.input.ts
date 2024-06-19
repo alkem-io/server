@@ -5,4 +5,5 @@ export interface AiPersonaEngineAdapterQueryInput
   question: string;
   prompt?: string;
   contextSpaceNameID?: string;
+  knowledgeSpaceNameID?: string;
 }

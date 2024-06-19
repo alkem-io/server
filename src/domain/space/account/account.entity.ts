@@ -7,7 +7,6 @@ import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { Space } from '../space/space.entity';
 import { Agent } from '@domain/agent/agent/agent.entity';
 import { VirtualContributor } from '@domain/community/virtual-contributor';
-import { AiPersona } from '@domain/community/ai-persona';
 @Entity()
 export class Account extends AuthorizableEntity implements IAccount {
   @OneToOne(() => Agent, { eager: false, cascade: true, onDelete: 'SET NULL' })
@@ -51,10 +50,4 @@ export class Account extends AuthorizableEntity implements IAccount {
     cascade: true,
   })
   virtualContributors!: VirtualContributor[];
-
-  @OneToMany(() => AiPersona, persona => persona.account, {
-    eager: false,
-    cascade: true,
-  })
-  aiPersonas!: AiPersona[];
 }

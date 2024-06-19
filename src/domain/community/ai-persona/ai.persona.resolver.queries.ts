@@ -20,6 +20,6 @@ export class AiPersonaResolverQueries {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('chatData') chatData: AiPersonaQuestionInput
   ): Promise<IAiPersonaQuestionResult> {
-    return this.aiPersonaService.askQuestion(chatData, agentInfo, '', '');
+    return this.aiPersonaService.askQuestion(chatData, agentInfo, '');
   }
 }

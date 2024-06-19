@@ -15,6 +15,7 @@ import { AiPersonaServiceAuthorizationService } from '../ai-persona-service/ai.p
 import { RemoveAiServerRoleFromUserInput } from './dto/ai.server.dto.remove.role.user';
 import { CreateAiPersonaServiceInput } from '../ai-persona-service/dto/ai.persona.service.dto.create';
 import { IAiPersonaService } from '../ai-persona-service/ai.persona.service.interface';
+import { AiServerIngestAiPersonaServiceInput } from './dto/ai.server.dto.ingest.ai.persona.service';
 
 @Resolver()
 export class AiServerResolverMutations {
@@ -122,5 +123,23 @@ export class AiServerResolverMutations {
     await this.aiPersonaServiceService.save(aiPersonaService);
 
     return aiPersonaService;
+  }
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => Boolean, {
+    description: 'Ingest the data on the specified AI Persona Service.',
+  })
+  async ingest(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('aiPersonaServiceData')
+    ingestData: AiServerIngestAiPersonaServiceInput
+  ): Promise<boolean> {
+    const aiServer = await this.aiServerService.getAiServerOrFail();
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      aiServer.authorization,
+      AuthorizationPrivilege.PLATFORM_ADMIN,
+      `ingest data on AI Persona Service: ${ingestData.aiPersonaServiceID}`
+    );
+    return this.aiServerService.ingestAiPersonaService(ingestData);
   }
 }
