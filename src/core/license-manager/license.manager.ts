@@ -45,12 +45,12 @@ export interface LicenseManager {
   updateCostumer<TPayload extends UpdateCostumer>(
     data: TPayload
   ): Promise<unknown>; // todo
-  getCostumer(id: string): Promise<unknown>; // todo
-  activateCustomer(id: string): Promise<boolean>;
-  inactivateCustomer(id: string): Promise<boolean>;
+  getCostumer(customerId: string): Promise<unknown>; // todo
+  activateCustomer(customerId: string): Promise<boolean>;
+  inactivateCustomer(customerId: string): Promise<boolean>;
   // contract
-  assignPlan(): Promise<void>;
-  getEntitlements(): Promise<void>;
+  assignPlan(): Promise<unknown>; // todo
+  getEntitlements(customerId: string): Promise<Record<string, unknown>[]>; // todo
   // entitlements
   // usage
   // report usage

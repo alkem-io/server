@@ -16,4 +16,10 @@ export class LicenseManagerService {
   public createCostumer(data: CreateCostumer): Promise<{ id: string } | never> {
     return this.licenseManager.createCustomer(data);
   }
+
+  public getEntitlements(
+    customerId: string
+  ): Promise<Record<string, unknown>[]> {
+    return this.licenseManager.getEntitlements(customerId);
+  }
 }

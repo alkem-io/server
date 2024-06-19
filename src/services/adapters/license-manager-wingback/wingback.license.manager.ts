@@ -8,6 +8,7 @@ import {
   LicenseManager,
   UpdateCostumer,
 } from 'src/core/license-manager';
+import { WingbackEntitlement } from '@services/adapters/license-manager-wingback/types/entitlement';
 
 export interface CreateWingbackCustomer extends CreateCostumer {}
 
@@ -98,19 +99,21 @@ export class WingbackLicenseManager implements LicenseManager {
     // })
   }
   // https://docs.wingback.com/dev/api-reference/entitlement/get_c_entitlement_customerid_access
-  public getEntitlements(): Promise<void> {
+  public getEntitlements(customerId: string): Promise<WingbackEntitlement[]> {
+    return this.sendGet<WingbackEntitlement[]>(
+      `/v1/c/entitlement/${customerId}/access`
+    );
+  }
+
+  activateCustomer(customerId: string): Promise<boolean> {
     throw new Error('Method not implemented');
   }
 
-  activateCustomer(id: string): Promise<boolean> {
+  getCostumer(customerId: string): Promise<unknown> {
     throw new Error('Method not implemented');
   }
 
-  getCostumer(id: string): Promise<unknown> {
-    throw new Error('Method not implemented');
-  }
-
-  inactivateCustomer(id: string): Promise<boolean> {
+  inactivateCustomer(customerId: string): Promise<boolean> {
     throw new Error('Method not implemented');
   }
 
@@ -136,7 +139,7 @@ export class WingbackLicenseManager implements LicenseManager {
     return firstValueFrom(request$);
   }
 
-  private sendGet<TInput, TResult>(path: string): Promise<TResult> {
+  private sendGet<TResult, TInput = unknown>(path: string): Promise<TResult> {
     const request$ = this.httpService
       .get<TResult>(`${this.endpoint}${path}`, {
         headers: {

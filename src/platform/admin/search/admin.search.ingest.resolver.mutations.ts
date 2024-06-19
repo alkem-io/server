@@ -1,5 +1,5 @@
 import { Inject, LoggerService, UseGuards } from '@nestjs/common';
-import { Mutation, Resolver } from '@nestjs/graphql';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { AuthorizationPrivilege } from '@common/enums';
@@ -12,6 +12,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { TaskStatus } from '@domain/task/dto';
 import { LicenseManagerService } from '@core/license-manager';
 import { randomUUID } from 'crypto';
+import { ChatGuidanceAnswerRelevanceInput } from '@services/api/chat-guidance/dto/chat.guidance.relevance.dto';
 
 @Resolver()
 export class AdminSearchIngestResolverMutations {
@@ -41,6 +42,16 @@ export class AdminSearchIngestResolverMutations {
       contracts: [],
     });
     return res.id;
+  }
+
+  // todo: remove
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => String)
+  public async adminGetCostumerEntitlements(
+    @Args('costumerID') costumerId: string
+  ) {
+    const result = await this.licenseManagerService.getEntitlements(costumerId);
+    return JSON.stringify(result, null, 2);
   }
 
   @UseGuards(GraphqlGuard)
