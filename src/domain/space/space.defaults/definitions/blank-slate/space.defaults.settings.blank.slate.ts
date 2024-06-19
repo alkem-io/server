@@ -2,19 +2,19 @@ import { CommunityMembershipPolicy } from '@common/enums/community.membership.po
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 
-export const subspaceSettingsDefaults: ISpaceSettings = {
+export const spaceDefaultsSettingsBlankSlate: ISpaceSettings = {
   privacy: {
     mode: SpacePrivacyMode.PUBLIC,
-    allowPlatformSupportAsAdmin: false,
+    allowPlatformSupportAsAdmin: true,
   },
   membership: {
-    policy: CommunityMembershipPolicy.OPEN,
+    policy: CommunityMembershipPolicy.APPLICATIONS,
     trustedOrganizations: [], // only allow to be host org for now, not on subspaces
-    allowSubspaceAdminsToInviteMembers: false,
+    allowSubspaceAdminsToInviteMembers: true,
   },
   collaboration: {
-    inheritMembershipRights: true,
-    allowMembersToCreateSubspaces: true,
-    allowMembersToCreateCallouts: true,
+    inheritMembershipRights: false,
+    allowMembersToCreateSubspaces: false,
+    allowMembersToCreateCallouts: false,
   },
 };
