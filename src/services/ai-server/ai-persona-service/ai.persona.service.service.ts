@@ -17,12 +17,18 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { AiPersonaEngineAdapterQueryInput } from '@services/ai-server/ai-persona-engine-adapter/dto/ai.persona.engine.adapter.dto.question.input';
 import { AiPersonaEngineAdapter } from '@services/ai-server/ai-persona-engine-adapter/ai.persona.engine.adapter';
 import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
+import { EventBus } from '@nestjs/cqrs';
+import {
+  IngestSpace,
+  SpaceIngestionPurpose,
+} from '@services/infrastructure/event-bus/commands';
 
 @Injectable()
 export class AiPersonaServiceService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private aiPersonaEngineAdapter: AiPersonaEngineAdapter,
+    private eventBus: EventBus,
     @InjectRepository(AiPersonaService)
     private aiPersonaServiceRepository: Repository<AiPersonaService>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -44,6 +50,14 @@ export class AiPersonaServiceService {
       `Created new AI Persona Service with id ${aiPersonaService.id}`,
       LogContext.PLATFORM
     );
+
+    if (aiPersonaServiceData.bodyOfKnowledgeID)
+      this.eventBus.publish(
+        new IngestSpace(
+          aiPersonaServiceData.bodyOfKnowledgeID,
+          SpaceIngestionPurpose.Knowledge
+        )
+      );
 
     return savedVP;
   }

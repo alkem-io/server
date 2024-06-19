@@ -1,5 +1,7 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { AiServerAdapterAskQuestionInput } from './dto/ai.server.adapter.dto.ask.question';
+import { IAiPersonaQuestionResult } from './dto/ai.server.adapter.dto.question.result';
 
 @Injectable()
 export class AiServerAdapter {
@@ -8,7 +10,12 @@ export class AiServerAdapter {
     private readonly logger: LoggerService
   ) {}
 
-  async askQuestion(question: string): Promise<string> {
-    return question;
+  async askQuestion(
+    questionInput: AiServerAdapterAskQuestionInput
+  ): Promise<IAiPersonaQuestionResult> {
+    return {
+      question: questionInput.question,
+      answer: questionInput.question,
+    };
   }
 }

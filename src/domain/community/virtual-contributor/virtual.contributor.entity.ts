@@ -1,4 +1,4 @@
-import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
 import { IVirtualContributor } from './virtual.contributor.interface';
 import { ContributorBase } from '../contributor/contributor.base.entity';
 import { Account } from '@domain/space/account/account.entity';
@@ -10,8 +10,7 @@ export class VirtualContributor
   extends ContributorBase
   implements IVirtualContributor
 {
-  // Note: a many-one without corresponding one-many
-  @ManyToOne(() => AiPersona, {
+  @OneToOne(() => AiPersona, {
     eager: true,
     cascade: true,
   })

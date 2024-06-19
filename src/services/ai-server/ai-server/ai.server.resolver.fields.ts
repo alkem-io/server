@@ -71,8 +71,7 @@ export class AiServerResolverFields {
     return this.aiPersonaServiceService.askQuestion(
       chatData,
       agentInfo,
-      '',
-      ''
+      'contextSpaceNameID'
     );
   }
 }

@@ -14,7 +14,8 @@ import { AiPersonaQuestionInput } from './dto/ai.persona.question.dto.input';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { LogContext } from '@common/enums/logging.context';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { AiPersonaEngineAdapterQueryInput } from '@services/ai-server/ai-persona-engine-adapter/dto/ai.persona.engine.adapter.dto.question.input';
+import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
+import { AiServerAdapterAskQuestionInput } from '@services/adapters/ai-server-adapter/dto/ai.server.adapter.dto.ask.question';
 
 @Injectable()
 export class AiPersonaService {
@@ -22,6 +23,7 @@ export class AiPersonaService {
     private authorizationPolicyService: AuthorizationPolicyService,
     @InjectRepository(AiPersona)
     private aiPersonaRepository: Repository<AiPersona>,
+    private aiServerAdapter: AiServerAdapter,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -124,15 +126,16 @@ export class AiPersonaService {
       );
     }
 
-    const input: AiPersonaEngineAdapterQueryInput = {
-      userId: agentInfo.userID,
+    this.logger.verbose?.(
+      `Asking question to AI Persona from user ${agentInfo.userID} + with context ${contextSpaceNameID}`,
+      LogContext.PLATFORM
+    );
+
+    const input: AiServerAdapterAskQuestionInput = {
       question: personaQuestionInput.question,
-      contextSpaceNameID,
+      personaServiceID: aiPersona.aiPersonaService.id,
     };
 
-    this.logger.error(input);
-    const response = await this.aiPersonaEngineAdapter.sendQuery(input);
-
-    return response;
+    return await this.aiServerAdapter.askQuestion(input);
   }
 }

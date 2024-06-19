@@ -26,13 +26,9 @@ import { CreateVirtualContributorInput } from './dto/virtual.contributor.dto.cre
 import { UpdateVirtualContributorInput } from './dto/virtual.contributor.dto.update';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
-import { EventBus } from '@nestjs/cqrs';
-import {
-  IngestSpace,
-  SpaceIngestionPurpose,
-} from '@services/infrastructure/event-bus/commands';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
-import { AiServerService } from '@services/ai-server/ai-server/ai.server.service';
+import { AiPersonaService } from '../ai-persona/ai.persona.service';
+import { CreateAiPersonaInput } from '../ai-persona/dto';
 
 @Injectable()
 export class VirtualContributorService {
@@ -43,8 +39,7 @@ export class VirtualContributorService {
     private storageAggregatorService: StorageAggregatorService,
     private communicationAdapter: CommunicationAdapter,
     private namingService: NamingService,
-    private aiServerService: AiServerService,
-    private eventBus: EventBus,
+    private aiPersonaService: AiPersonaService,
     @InjectRepository(VirtualContributor)
     private virtualContributorRepository: Repository<VirtualContributor>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -79,17 +74,12 @@ export class VirtualContributorService {
     if (communicationID) {
       virtualContributor.communicationID = communicationID;
     }
-
-    let aiPersona: IVirtualPersona;
-    if (virtualContributorData.aiPersonaID) {
-      aiPersona = await this.virtualPersonaService.getVirtualPersonaOrFail(
-        virtualContributorData.aiPersonaID
-      );
-    } else {
-      aiPersona = await this.aiServerService.getDefaultAiPersonaServiceOrFail();
-    }
-
-    virtualContributor.aiPersona = aiPersona;
+    const aiPersonaInput: CreateAiPersonaInput = {
+      description: `AI Persona for virtual contributor ${virtualContributor.nameID}`,
+    };
+    virtualContributor.aiPersona = await this.aiPersonaService.createAiPersona(
+      aiPersonaInput
+    );
 
     virtualContributor.storageAggregator =
       await this.storageAggregatorService.createStorageAggregator();
@@ -129,14 +119,6 @@ export class VirtualContributorService {
       `Created new virtual with id ${virtualContributor.id}`,
       LogContext.COMMUNITY
     );
-
-    if (virtualContributorData.bodyOfKnowledgeID)
-      this.eventBus.publish(
-        new IngestSpace(
-          virtualContributorData.bodyOfKnowledgeID,
-          SpaceIngestionPurpose.Knowledge
-        )
-      );
 
     return virtualContributor;
   }
