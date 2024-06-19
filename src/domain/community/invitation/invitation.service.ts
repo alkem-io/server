@@ -21,6 +21,8 @@ import { asyncFilter } from '@common/utils';
 import { IUser } from '../user';
 import { UserService } from '../user/user.service';
 import { LogContext } from '@common/enums/logging.context';
+import { ContributorService } from '../contributor/contributor.service';
+import { IContributor } from '../contributor/contributor.interface';
 
 @Injectable()
 export class InvitationService {
@@ -29,14 +31,18 @@ export class InvitationService {
     @InjectRepository(Invitation)
     private invitationRepository: Repository<Invitation>,
     private userService: UserService,
+    private contributorService: ContributorService,
     private lifecycleService: LifecycleService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   async createInvitation(
-    invitationData: CreateInvitationInput
+    invitationData: CreateInvitationInput,
+    contributor: IContributor
   ): Promise<IInvitation> {
     const invitation: IInvitation = Invitation.create(invitationData);
+    invitation.contributorType =
+      await this.contributorService.getContributorType(contributor);
 
     invitation.authorization = new AuthorizationPolicy();
 
@@ -99,14 +105,16 @@ export class InvitationService {
     return '';
   }
 
-  async getInvitedUser(invitation: IInvitation): Promise<IUser> {
-    const user = await this.userService.getUserOrFail(invitation.invitedUser);
-    if (!user)
+  async getInvitedContributor(invitation: IInvitation): Promise<IContributor> {
+    const contributor = await this.contributorService.getContributorOrFail(
+      invitation.invitedContributor
+    );
+    if (!contributor)
       throw new RelationshipNotFoundException(
-        `Unable to load User for invitation ${invitation.id} `,
+        `Unable to load contributor for invitation ${invitation.id} `,
         LogContext.COMMUNITY
       );
-    return user;
+    return contributor;
   }
 
   async getCreatedBy(invitation: IInvitation): Promise<IUser> {
@@ -120,11 +128,14 @@ export class InvitationService {
   }
 
   async findExistingInvitations(
-    userID: string,
+    contributorID: string,
     communityID: string
   ): Promise<IInvitation[]> {
     const existingInvitations = await this.invitationRepository.find({
-      where: { invitedUser: userID, community: { id: communityID } },
+      where: {
+        invitedContributor: contributorID,
+        community: { id: communityID },
+      },
       relations: { community: true },
     });
 
@@ -132,13 +143,13 @@ export class InvitationService {
     return [];
   }
 
-  async findInvitationsForUser(
-    userID: string,
+  async findInvitationsForContributor(
+    contributorID: string,
     states: string[] = []
   ): Promise<IInvitation[]> {
     const findOpts: FindManyOptions<Invitation> = {
       relations: { community: true },
-      where: { invitedUser: userID },
+      where: { invitedContributor: contributorID },
     };
 
     if (states.length) {

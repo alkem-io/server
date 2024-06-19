@@ -7,11 +7,11 @@ import { IsOptional, MaxLength } from 'class-validator';
 export class CreateInvitationInput {
   @Field(() => UUID, {
     nullable: false,
-    description: 'The identifier for the user being invited.',
+    description: 'The identifier for the contributor being invited.',
   })
   @IsOptional()
   @MaxLength(UUID_LENGTH)
-  invitedUser!: string;
+  invitedContributor!: string;
 
   @Field({ nullable: true })
   @IsOptional()
