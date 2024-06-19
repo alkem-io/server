@@ -19,7 +19,8 @@ import {
   CREDENTIAL_RULE_TYPES_ACCESS_VIRTUAL_CONTRIBUTORS,
   CREDENTIAL_RULE_TYPES_COMMUNITY_ADD_MEMBERS,
   CREDENTIAL_RULE_TYPES_COMMUNITY_INVITE_MEMBERS,
-  POLICY_RULE_VC_ADD_TO_COMMUNITY,
+  POLICY_RULE_COMMUNITY_ADD_VC,
+  POLICY_RULE_COMMUNITY_INVITE_MEMBER,
 } from '@common/constants';
 import { InvitationExternalAuthorizationService } from '../invitation.external/invitation.external.service.authorization';
 import { InvitationAuthorizationService } from '../invitation/invitation.service.authorization';
@@ -307,12 +308,19 @@ export class CommunityAuthorizationService {
     const createVCPrivilege = new AuthorizationPolicyRulePrivilege(
       [AuthorizationPrivilege.COMMUNITY_ADD_MEMBER_VC_FROM_ACCOUNT],
       AuthorizationPrivilege.GRANT,
-      POLICY_RULE_VC_ADD_TO_COMMUNITY
+      POLICY_RULE_COMMUNITY_ADD_VC
+    );
+
+    // If you are able to add a member, then you are also logically able to invite a member
+    const invitePrivilege = new AuthorizationPolicyRulePrivilege(
+      [AuthorizationPrivilege.COMMUNITY_INVITE],
+      AuthorizationPrivilege.COMMUNITY_ADD_MEMBER,
+      POLICY_RULE_COMMUNITY_INVITE_MEMBER
     );
 
     return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
       authorization,
-      [createVCPrivilege]
+      [createVCPrivilege, invitePrivilege]
     );
   }
 }

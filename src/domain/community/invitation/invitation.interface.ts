@@ -2,10 +2,11 @@ import { ILifecycle } from '@domain/common/lifecycle/lifecycle.interface';
 import { ICommunity } from '@domain/community/community/community.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
+import { CommunityContributorType } from '@common/enums/community.contributor.type';
 
 @ObjectType('Invitation')
 export class IInvitation extends IAuthorizable {
-  invitedUser!: string;
+  invitedContributor!: string;
   createdBy!: string;
 
   community?: ICommunity;
@@ -25,7 +26,13 @@ export class IInvitation extends IAuthorizable {
   @Field(() => Boolean, {
     nullable: false,
     description:
-      'Whether to also add the invited user to the parent community.',
+      'Whether to also add the invited contributor to the parent community.',
   })
   invitedToParent!: boolean;
+
+  @Field(() => CommunityContributorType, {
+    nullable: false,
+    description: 'The type of contributor that is invited.',
+  })
+  contributorType!: CommunityContributorType;
 }

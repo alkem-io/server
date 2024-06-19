@@ -7,6 +7,7 @@ import { IInvitation } from '@domain/community/invitation';
 import { GraphqlGuard } from '@core/authorization';
 import { IUser } from '@domain/community/user/user.interface';
 import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
+import { IContributor } from '../contributor/contributor.interface';
 
 @Resolver(() => IInvitation)
 export class InvitationResolverFields {
@@ -14,13 +15,15 @@ export class InvitationResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('user', () => IUser, {
+  @ResolveField('contributor', () => IContributor, {
     nullable: false,
-    description: 'The User who is invited.',
+    description: 'The Contributor who is invited.',
   })
   @Profiling.api
-  async invitedUser(@Parent() invitation: IInvitation): Promise<IUser> {
-    return await this.invitationService.getInvitedUser(invitation);
+  async invitedContributor(
+    @Parent() invitation: IInvitation
+  ): Promise<IContributor> {
+    return await this.invitationService.getInvitedContributor(invitation);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

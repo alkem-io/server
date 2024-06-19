@@ -4,16 +4,16 @@ import { IsOptional, MaxLength } from 'class-validator';
 import { MID_TEXT_LENGTH, UUID_LENGTH } from '@common/constants';
 
 @InputType()
-export class CreateInvitationForUsersOnCommunityInput {
+export class CreateInvitationForContributorsOnCommunityInput {
   @Field(() => UUID, { nullable: false })
   @MaxLength(UUID_LENGTH)
   communityID!: string;
 
   @Field(() => [UUID], {
     nullable: false,
-    description: 'The identifiers for the users being invited.',
+    description: 'The identifiers for the contributors being invited.',
   })
-  invitedUsers!: string[];
+  invitedContributors!: string[];
 
   @Field({ nullable: true })
   @IsOptional()

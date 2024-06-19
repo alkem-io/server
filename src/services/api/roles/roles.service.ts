@@ -154,10 +154,11 @@ export class RolesService {
     states?: string[]
   ): Promise<InvitationForRoleResult[]> {
     const invitationResults: InvitationForRoleResult[] = [];
-    const invitations = await this.invitationService.findInvitationsForUser(
-      userID,
-      states
-    );
+    const invitations =
+      await this.invitationService.findInvitationsForContributor(
+        userID,
+        states
+      );
 
     if (!invitations) return [];
 
