@@ -29,6 +29,11 @@ import { CommunicationAdapter } from '@services/adapters/communication-adapter/c
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { AiPersonaService } from '../ai-persona/ai.persona.service';
 import { CreateAiPersonaInput } from '../ai-persona/dto';
+import { VirtualContributorQuestionInput } from './dto/virtual.contributor.dto.question.input';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { IAiPersonaQuestionResult } from '../ai-persona/dto/ai.persona.question.dto.result';
+import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
+import { AiServerAdapterAskQuestionInput } from '@services/adapters/ai-server-adapter/dto/ai.server.adapter.dto.ask.question';
 
 @Injectable()
 export class VirtualContributorService {
@@ -40,6 +45,7 @@ export class VirtualContributorService {
     private communicationAdapter: CommunicationAdapter,
     private namingService: NamingService,
     private aiPersonaService: AiPersonaService,
+    private aiServerAdapter: AiServerAdapter,
     @InjectRepository(VirtualContributor)
     private virtualContributorRepository: Repository<VirtualContributor>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -293,6 +299,39 @@ export class VirtualContributorService {
     };
   }
 
+  public async askQuestion(
+    vcQuestionInput: VirtualContributorQuestionInput,
+    agentInfo: AgentInfo,
+    contextSpaceNameID: string
+  ): Promise<IAiPersonaQuestionResult> {
+    const virtualContributor = await this.getVirtualContributorOrFail(
+      vcQuestionInput.virtualContributorID,
+      {
+        relations: {
+          authorization: true,
+          aiPersona: true,
+        },
+      }
+    );
+    if (!virtualContributor.agent) {
+      throw new EntityNotInitializedException(
+        `Virtual Contributor Agent not initialized: ${vcQuestionInput.virtualContributorID}`,
+        LogContext.AUTH
+      );
+    }
+    this.logger.verbose?.(
+      `still need to use the context ${contextSpaceNameID}, ${agentInfo.agentID}`,
+      LogContext.VIRTUAL_CONTRIBUTOR_ENGINE
+    );
+    const aiServerAdapterQuestionInput: AiServerAdapterAskQuestionInput = {
+      personaServiceID: virtualContributor.aiPersona.aiPersonaServiceID,
+      question: vcQuestionInput.question,
+    };
+
+    return await this.aiServerAdapter.askQuestion(aiServerAdapterQuestionInput);
+  }
+
+  // TODO: move to store
   async getVirtualContributors(
     args: ContributorQueryArgs
   ): Promise<IVirtualContributor[]> {

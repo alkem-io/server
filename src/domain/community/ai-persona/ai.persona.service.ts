@@ -114,12 +114,12 @@ export class AiPersonaService {
       personaQuestionInput.aiPersonaID,
       {
         relations: {
-          aiPersonaService: true,
+          authorization: true,
         },
       }
     );
 
-    if (!aiPersona.aiPersonaService) {
+    if (!aiPersona.authorization) {
       throw new EntityNotFoundException(
         `Unable to find AI Persona Service for AI Persona with ID: ${personaQuestionInput.aiPersonaID}`,
         LogContext.PLATFORM
@@ -133,7 +133,7 @@ export class AiPersonaService {
 
     const input: AiServerAdapterAskQuestionInput = {
       question: personaQuestionInput.question,
-      personaServiceID: aiPersona.aiPersonaService.id,
+      personaServiceID: aiPersona.aiPersonaServiceID,
     };
 
     return await this.aiServerAdapter.askQuestion(input);

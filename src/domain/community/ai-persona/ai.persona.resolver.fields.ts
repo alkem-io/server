@@ -10,10 +10,6 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { IAiPersona } from './ai.persona.interface';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { ProfileLoaderCreator } from '@core/dataloader/creators';
-import { Loader } from '@core/dataloader/decorators';
-import { ILoader } from '@core/dataloader/loader.interface';
-import { IProfile } from '@domain/common/profile';
 
 @Resolver(() => IAiPersona)
 export class AiPersonaResolverFields {
@@ -43,28 +39,5 @@ export class AiPersonaResolverFields {
     );
 
     return aiPersona.authorization;
-  }
-
-  // Check authorization inside the field resolver
-  @UseGuards(GraphqlGuard)
-  @ResolveField('profile', () => IProfile, {
-    nullable: false,
-    description: 'The Profile for the AiPersona.',
-  })
-  async profile(
-    @Parent() aiPersona: AiPersona,
-    @CurrentUser() agentInfo: AgentInfo,
-    @Loader(ProfileLoaderCreator, { parentClassRef: AiPersona })
-    loader: ILoader<IProfile>
-  ): Promise<IProfile> {
-    const profile = await loader.load(aiPersona.id);
-    // Check if the user can read the profile entity, not the space
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      profile.authorization,
-      AuthorizationPrivilege.READ,
-      `read profile on space: ${profile.displayName}`
-    );
-    return profile;
   }
 }

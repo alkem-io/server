@@ -34,7 +34,7 @@ import { NotSupportedException } from '@common/exceptions';
 import { EntityManager } from 'typeorm';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { Space } from '@domain/space/space/space.entity';
-import { AiPersonaQuestionInput } from '@domain/community/ai-persona/dto/ai.persona.question.dto.input';
+import { VirtualContributorQuestionInput } from '@domain/community/virtual-contributor/dto/virtual.contributor.dto.question.input';
 
 @Injectable()
 export class RoomServiceEvents {
@@ -109,8 +109,8 @@ export class RoomServiceEvents {
           );
         }
 
-        const chatData: AiPersonaQuestionInput = {
-          aiPersonaID: virtualPersona.id,
+        const chatData: VirtualContributorQuestionInput = {
+          virtualContributorID: virtualContributor.id,
           question: question.message,
         };
 
