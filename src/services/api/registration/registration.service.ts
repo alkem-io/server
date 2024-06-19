@@ -126,14 +126,15 @@ export class RegistrationService {
         );
       }
       const invitationInput: CreateInvitationInput = {
-        invitedUser: user.id,
+        invitedContributor: user.id,
         communityID: community.id,
         createdBy: externalInvitation.createdBy,
         invitedToParent: externalInvitation.invitedToParent,
       };
-      let invitation = await this.communityService.createInvitationExistingUser(
-        invitationInput
-      );
+      let invitation =
+        await this.communityService.createInvitationExistingContributor(
+          invitationInput
+        );
       invitation.invitedToParent = externalInvitation.invitedToParent;
       invitation =
         await this.invitationAuthorizationService.applyAuthorizationPolicy(
@@ -155,9 +156,8 @@ export class RegistrationService {
   ): Promise<IUser> {
     const userID = deleteData.ID;
 
-    const invitations = await this.invitationService.findInvitationsForUser(
-      userID
-    );
+    const invitations =
+      await this.invitationService.findInvitationsForContributor(userID);
     for (const invitation of invitations) {
       await this.invitationService.deleteInvitation({ ID: invitation.id });
     }

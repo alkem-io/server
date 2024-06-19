@@ -5,9 +5,16 @@ import { EntityManager, FindOneOptions } from 'typeorm';
 import { IContributor } from './contributor.interface';
 import { User } from '../user';
 import { Organization } from '../organization';
-import { EntityNotFoundException } from '@common/exceptions';
+import {
+  EntityNotFoundException,
+  EntityNotInitializedException,
+  RelationshipNotFoundException,
+} from '@common/exceptions';
 import { LogContext } from '@common/enums/logging.context';
 import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
+import { IAgent } from '@domain/agent/agent/agent.interface';
+import { VirtualContributor } from '../virtual-contributor';
+import { CommunityContributorType } from '@common/enums/community.contributor.type';
 
 @Injectable()
 export class ContributorService {
@@ -61,7 +68,26 @@ export class ContributorService {
       }
     );
 
-    return userContributors.concat(organizationContributors);
+    const vcContributors = await this.entityManager.find(VirtualContributor, {
+      where: {
+        agent: {
+          credentials: {
+            type: credentialCriteria.type,
+            resourceID: credResourceID,
+          },
+        },
+      },
+      relations: {
+        agent: {
+          credentials: true,
+        },
+      },
+      take: limit,
+    });
+
+    return userContributors
+      .concat(organizationContributors)
+      .concat(vcContributors);
   }
 
   async getContributor(
@@ -80,6 +106,12 @@ export class ContributorService {
           where: { ...options?.where, id: contributorID },
         });
       }
+      if (!contributor) {
+        contributor = await this.entityManager.findOne(VirtualContributor, {
+          ...options,
+          where: { ...options?.where, id: contributorID },
+        });
+      }
     } else {
       // look up based on nameID
       contributor = await this.entityManager.findOne(User, {
@@ -88,6 +120,12 @@ export class ContributorService {
       });
       if (!contributor) {
         contributor = await this.entityManager.findOne(Organization, {
+          ...options,
+          where: { ...options?.where, nameID: contributorID },
+        });
+      }
+      if (!contributor) {
+        contributor = await this.entityManager.findOne(VirtualContributor, {
           ...options,
           where: { ...options?.where, nameID: contributorID },
         });
@@ -107,5 +145,33 @@ export class ContributorService {
         LogContext.COMMUNITY
       );
     return contributor;
+  }
+
+  async getContributorAndAgent(
+    contributorID: string
+  ): Promise<{ contributor: IContributor; agent: IAgent }> {
+    const contributor = await this.getContributorOrFail(contributorID, {
+      relations: { agent: true },
+    });
+
+    if (!contributor.agent) {
+      throw new EntityNotInitializedException(
+        `Contributor Agent not initialized: ${contributorID}`,
+        LogContext.AUTH
+      );
+    }
+    return { contributor: contributor, agent: contributor.agent };
+  }
+
+  public getContributorType(contributor: IContributor) {
+    if (contributor instanceof User) return CommunityContributorType.USER;
+    if (contributor instanceof Organization)
+      return CommunityContributorType.ORGANIZATION;
+    if (contributor instanceof VirtualContributor)
+      return CommunityContributorType.VIRTUAL;
+    throw new RelationshipNotFoundException(
+      `Unable to determine contributor type for ${contributor.id}`,
+      LogContext.COMMUNITY
+    );
   }
 }

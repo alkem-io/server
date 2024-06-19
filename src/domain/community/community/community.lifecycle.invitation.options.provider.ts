@@ -95,9 +95,9 @@ export class CommunityInvitationLifecycleOptionsProvider {
                 },
               }
             );
-            const userID = invitation.invitedUser;
+            const contributorID = invitation.invitedContributor;
             const community = invitation.community;
-            if (!userID || !community) {
+            if (!contributorID || !community) {
               throw new EntityNotInitializedException(
                 `Lifecycle not initialized on Invitation: ${invitation.id}`,
                 LogContext.COMMUNITY
@@ -111,17 +111,18 @@ export class CommunityInvitationLifecycleOptionsProvider {
                   LogContext.COMMUNITY
                 );
               }
-              await this.communityService.assignUserToRole(
+              await this.communityService.assignContributorToRole(
                 community.parentCommunity,
-                userID,
+                contributorID,
                 CommunityRole.MEMBER,
+                invitation.contributorType,
                 event.agentInfo,
                 true
               );
             }
             await this.communityService.assignUserToRole(
               community,
-              userID,
+              contributorID,
               CommunityRole.MEMBER,
               event.agentInfo,
               true
