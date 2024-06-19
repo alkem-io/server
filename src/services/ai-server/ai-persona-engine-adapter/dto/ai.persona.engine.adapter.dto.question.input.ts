@@ -4,6 +4,5 @@ export interface AiPersonaEngineAdapterQueryInput
   extends AiPersonaEngineAdapterInputBase {
   question: string;
   prompt?: string;
-  knowledgeSpaceNameID?: string;
   contextSpaceNameID?: string;
 }

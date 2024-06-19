@@ -7,7 +7,7 @@ import {
   VIRTUAL_CONTRIBUTOR_ENGINE_GUIDANCE,
   VIRTUAL_CONTRIBUTOR_ENGINE_COMMUNITY_MANAGER,
 } from '@common/constants';
-import { Source } from '../chat-guidance-adapter/source.type';
+import { Source } from '../../adapters/chat-guidance-adapter/source.type';
 import { AiPersonaEngineAdapterQueryInput } from './dto/ai.persona.engine.adapter.dto.question.input';
 import { AiPersonaEngineAdapterQueryResponse } from './dto/ai.persona.engine.adapter.dto.question.response';
 import { LogContext } from '@common/enums/logging.context';

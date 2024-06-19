@@ -14,8 +14,8 @@ import { AiPersonaServiceQuestionInput } from './dto/ai.persona.service.question
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { LogContext } from '@common/enums/logging.context';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { AiPersonaEngineAdapterQueryInput } from '@services/adapters/ai-persona-engine-adapter/dto/ai.persona.engine.adapter.dto.question.input';
-import { AiPersonaEngineAdapter } from '@services/adapters/ai-persona-engine-adapter/ai.persona.engine.adapter';
+import { AiPersonaEngineAdapterQueryInput } from '@services/ai-server/ai-persona-engine-adapter/dto/ai.persona.engine.adapter.dto.question.input';
+import { AiPersonaEngineAdapter } from '@services/ai-server/ai-persona-engine-adapter/ai.persona.engine.adapter';
 import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
 
 @Injectable()
@@ -124,8 +124,7 @@ export class AiPersonaServiceService {
   public async askQuestion(
     personaQuestionInput: AiPersonaServiceQuestionInput,
     agentInfo: AgentInfo,
-    contextSpaceNameID: string,
-    knowledgeSpaceNameID?: string
+    contextSpaceNameID: string
   ): Promise<IAiPersonaServiceQuestionResult> {
     const aiPersonaService = await this.getAiPersonaServiceOrFail(
       personaQuestionInput.aiPersonaServiceID
@@ -136,7 +135,6 @@ export class AiPersonaServiceService {
       prompt: aiPersonaService.prompt,
       userId: agentInfo.userID,
       question: personaQuestionInput.question,
-      knowledgeSpaceNameID,
       contextSpaceNameID,
     };
 

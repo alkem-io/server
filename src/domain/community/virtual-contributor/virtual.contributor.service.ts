@@ -1,7 +1,7 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityManager, FindOneOptions, Repository } from 'typeorm';
+import { FindOneOptions, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -31,12 +31,8 @@ import {
   IngestSpace,
   SpaceIngestionPurpose,
 } from '@services/infrastructure/event-bus/commands';
-import { VirtualPersonaService } from '@services/ai-server/ai-persona-service/virtual.persona.service';
-import { IVirtualPersona } from '@services/ai-server/ai-persona-service';
-import { BodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
-import { Platform } from '@platform/platfrom/platform.entity';
-import { IPlatform } from '@platform/platfrom/platform.interface';
+import { AiServerService } from '@services/ai-server/ai-server/ai.server.service';
 
 @Injectable()
 export class VirtualContributorService {
@@ -45,11 +41,9 @@ export class VirtualContributorService {
     private agentService: AgentService,
     private profileService: ProfileService,
     private storageAggregatorService: StorageAggregatorService,
-    private virtualPersonaService: VirtualPersonaService,
     private communicationAdapter: CommunicationAdapter,
-    @InjectEntityManager('default')
-    private entityManager: EntityManager,
     private namingService: NamingService,
+    private aiServerService: AiServerService,
     private eventBus: EventBus,
     @InjectRepository(VirtualContributor)
     private virtualContributorRepository: Repository<VirtualContributor>,
@@ -86,20 +80,16 @@ export class VirtualContributorService {
       virtualContributor.communicationID = communicationID;
     }
 
-    let virtualPersona: IVirtualPersona;
-    if (virtualContributorData.virtualPersonaID) {
-      virtualPersona = await this.virtualPersonaService.getVirtualPersonaOrFail(
-        virtualContributorData.virtualPersonaID
+    let aiPersona: IVirtualPersona;
+    if (virtualContributorData.aiPersonaID) {
+      aiPersona = await this.virtualPersonaService.getVirtualPersonaOrFail(
+        virtualContributorData.aiPersonaID
       );
     } else {
-      virtualPersona = await this.getDefaultVirtualPersonaOrFail();
+      aiPersona = await this.aiServerService.getDefaultAiPersonaServiceOrFail();
     }
 
-    if (virtualContributorData.bodyOfKnowledgeType === undefined) {
-      virtualContributor.bodyOfKnowledgeType = BodyOfKnowledgeType.OTHER;
-    }
-
-    virtualContributor.aiPersona = virtualPersona;
+    virtualContributor.aiPersona = aiPersona;
 
     virtualContributor.storageAggregator =
       await this.storageAggregatorService.createStorageAggregator();
@@ -182,28 +172,6 @@ export class VirtualContributorService {
         `Virtual: the provided displayName is already taken: ${newDisplayName}`,
         LogContext.COMMUNITY
       );
-  }
-
-  // TODO: this is dirty, but works around a circular dependency if we use the actual platform module.
-  // The underlying issue looks to be that the Room service has knowledge of the VP which seems odd...
-  private async getDefaultVirtualPersonaOrFail(): Promise<IVirtualPersona> {
-    let platform: IPlatform | null = null;
-    platform = (
-      await this.entityManager.find(Platform, {
-        take: 1,
-        relations: {
-          defaultVirtualPersona: true,
-        },
-      })
-    )?.[0];
-
-    if (!platform || !platform.defaultVirtualPersona) {
-      throw new EntityNotFoundException(
-        'No Platform default persona found!',
-        LogContext.PLATFORM
-      );
-    }
-    return platform.defaultVirtualPersona;
   }
 
   async updateVirtualContributor(

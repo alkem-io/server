@@ -14,6 +14,7 @@ import { AiPersonaQuestionInput } from './dto/ai.persona.question.dto.input';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { LogContext } from '@common/enums/logging.context';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { AiPersonaEngineAdapterQueryInput } from '@services/ai-server/ai-persona-engine-adapter/dto/ai.persona.engine.adapter.dto.question.input';
 
 @Injectable()
 export class AiPersonaService {
@@ -27,16 +28,18 @@ export class AiPersonaService {
   async createAiPersona(
     aiPersonaData: CreateAiPersonaInput
   ): Promise<IAiPersona> {
-    const aiPersona: IAiPersona = AiPersona.create(aiPersonaData);
+    let aiPersona: IAiPersona = new AiPersona();
+    aiPersona.description = aiPersonaData.description;
+    //AiPersona.create(aiPersonaData);
     aiPersona.authorization = new AuthorizationPolicy();
 
-    const savedVP = await this.aiPersonaRepository.save(aiPersona);
+    aiPersona = await this.aiPersonaRepository.save(aiPersona);
     this.logger.verbose?.(
       `Created new AI Persona with id ${aiPersona.id}`,
       LogContext.PLATFORM
     );
 
-    return savedVP;
+    return aiPersona;
   }
 
   async updateAiPersona(
@@ -103,19 +106,27 @@ export class AiPersonaService {
   public async askQuestion(
     personaQuestionInput: AiPersonaQuestionInput,
     agentInfo: AgentInfo,
-    contextSpaceNameID: string,
-    knowledgeSpaceNameID?: string
+    contextSpaceNameID: string
   ): Promise<IAiPersonaQuestionResult> {
     const aiPersona = await this.getAiPersonaOrFail(
-      personaQuestionInput.aiPersonaID
+      personaQuestionInput.aiPersonaID,
+      {
+        relations: {
+          aiPersonaService: true,
+        },
+      }
     );
 
+    if (!aiPersona.aiPersonaService) {
+      throw new EntityNotFoundException(
+        `Unable to find AI Persona Service for AI Persona with ID: ${personaQuestionInput.aiPersonaID}`,
+        LogContext.PLATFORM
+      );
+    }
+
     const input: AiPersonaEngineAdapterQueryInput = {
-      engine: aiPersona.engine,
-      prompt: aiPersona.prompt,
       userId: agentInfo.userID,
       question: personaQuestionInput.question,
-      knowledgeSpaceNameID,
       contextSpaceNameID,
     };
 
