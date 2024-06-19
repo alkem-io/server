@@ -14,7 +14,7 @@ import { TimelineResolverService } from '../entity-resolver/timeline.resolver.se
 import { StorageAggregatorNotFoundException } from '@common/exceptions/storage.aggregator.not.found.exception';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Space } from '@domain/space/space/space.entity';
-import { SpaceType } from '@common/enums/space.type';
+import { SpaceLevel } from '@common/enums/space.level';
 
 @Injectable()
 export class StorageAggregatorResolverService {
@@ -74,7 +74,7 @@ export class StorageAggregatorResolverService {
   ): Promise<{
     id: string;
     displayName: string;
-    type: SpaceType;
+    level: SpaceLevel;
     nameID: string;
   }> {
     const space = await this.entityManager.findOne(Space, {
@@ -98,7 +98,7 @@ export class StorageAggregatorResolverService {
       id: space.id,
       displayName: space.profile.displayName,
       nameID: space.nameID,
-      type: space.type,
+      level: space.level,
     };
   }
 

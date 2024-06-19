@@ -37,6 +37,7 @@ export class CommunityEventsService {
     agentInfo: AgentInfo,
     newMember: IUser
   ) {
+    // TODO: community just needs to know the level, not the type
     // Send the notification
     const notificationInput: NotificationInputCommunityNewMember = {
       userID: newMember.id,
@@ -60,8 +61,7 @@ export class CommunityEventsService {
           }
         );
         break;
-      case SpaceType.CHALLENGE:
-      case SpaceType.OPPORTUNITY:
+      default: // Challenge, Opportunity, VIRTUAL_CONTRIBUTOR, BLANK_SLATE...
         this.contributionReporter.subspaceJoined(
           {
             id: community.parentID,
