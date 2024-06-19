@@ -31,9 +31,6 @@ import { UserService } from '@domain/community/user/user.service';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AssignPlatformRoleToUserInput } from './dto/platform.dto.assign.role.user';
 import { ILicensing } from '@platform/licensing/licensing.interface';
-import { IVirtualPersona } from '@platform/virtual-persona/virtual.persona.interface';
-import { VirtualPersona } from '@platform/virtual-persona';
-import { VirtualPersonaService } from '@platform/virtual-persona/virtual.persona.service';
 
 @Injectable()
 export class PlatformService {
@@ -41,7 +38,6 @@ export class PlatformService {
     private userService: UserService,
     private agentService: AgentService,
     private communicationService: CommunicationService,
-    private virtualPersonaService: VirtualPersonaService,
     private entityManager: EntityManager,
     @InjectRepository(Platform)
     private platformRepository: Repository<Platform>,
@@ -83,54 +79,6 @@ export class PlatformService {
       );
     }
     return library;
-  }
-
-  async getVirtualPersonas(
-    relations?: FindOptionsRelations<IPlatform>
-  ): Promise<IVirtualPersona[]> {
-    const platform = await this.getPlatformOrFail({
-      relations: {
-        virtualPersonas: true,
-        ...relations,
-      },
-    });
-    const virtualPersonas = platform.virtualPersonas;
-    if (!virtualPersonas) {
-      throw new EntityNotFoundException(
-        'No Virtual Personas found!',
-        LogContext.PLATFORM
-      );
-    }
-    return virtualPersonas;
-  }
-
-  async getDefaultVirtualPersonaOrFail(
-    relations?: FindOptionsRelations<IPlatform>
-  ): Promise<IVirtualPersona> {
-    const platform = await this.getPlatformOrFail({
-      relations: {
-        defaultVirtualPersona: true,
-        ...relations,
-      },
-    });
-    const defaultVirtualPersona = platform.defaultVirtualPersona;
-    if (!defaultVirtualPersona) {
-      throw new EntityNotFoundException(
-        'No default Virtual Personas found!',
-        LogContext.PLATFORM
-      );
-    }
-    return defaultVirtualPersona;
-  }
-
-  public async getVirtualPersonaOrFail(
-    virtualID: string,
-    options?: FindOneOptions<VirtualPersona>
-  ): Promise<IVirtualPersona | never> {
-    return await this.virtualPersonaService.getVirtualPersonaOrFail(
-      virtualID,
-      options
-    );
   }
 
   async getCommunicationOrFail(): Promise<ICommunication> {

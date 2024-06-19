@@ -7,7 +7,6 @@ import { ObjectType } from '@nestjs/graphql';
 import { IConfig } from '@platform/configuration/config/config.interface';
 import { ILicensing } from '@platform/licensing/licensing.interface';
 import { IMetadata } from '@platform/metadata/metadata.interface';
-import { IVirtualPersona } from '@platform/virtual-persona/virtual.persona.interface';
 
 @ObjectType('Platform')
 export abstract class IPlatform extends IAuthorizable {
@@ -18,6 +17,4 @@ export abstract class IPlatform extends IAuthorizable {
   storageAggregator!: IStorageAggregator;
   innovationHubs?: IInnovationHub[];
   licensing?: ILicensing;
-  virtualPersonas?: IVirtualPersona[];
-  defaultVirtualPersona?: IVirtualPersona;
 }

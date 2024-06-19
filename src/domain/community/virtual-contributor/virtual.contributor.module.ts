@@ -13,8 +13,8 @@ import { VirtualStorageAggregatorLoaderCreator } from '@core/dataloader/creators
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
 import { VirtualContributor } from './virtual.contributor.entity';
 import { CommunicationAdapterModule } from '@services/adapters/communication-adapter/communication-adapter.module';
-import { VirtualPersonaModule } from '@platform/virtual-persona/virtual.persona.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
+import { AiPersonaModule } from '../ai-persona/ai.persona.module';
 
 @Module({
   imports: [
@@ -24,7 +24,7 @@ import { NamingModule } from '@services/infrastructure/naming/naming.module';
     ProfileModule,
     NamingModule,
     StorageAggregatorModule,
-    VirtualPersonaModule,
+    AiPersonaModule,
     CommunicationAdapterModule,
     TypeOrmModule.forFeature([VirtualContributor]),
   ],

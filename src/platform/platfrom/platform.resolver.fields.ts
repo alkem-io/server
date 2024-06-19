@@ -2,7 +2,6 @@ import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { ILibrary } from '@library/library/library.interface';
 import { ICommunication } from '@domain/communication/communication/communication.interface';
 import {
-  AuthorizationAgentPrivilege,
   InnovationHub as InnovationHubDecorator,
   Profiling,
 } from '@src/common/decorators';
@@ -22,9 +21,6 @@ import { GraphqlGuard } from '@core/authorization';
 import { UseGuards } from '@nestjs/common';
 import { ReleaseDiscussionOutput } from './dto/release.discussion.dto';
 import { ILicensing } from '@platform/licensing/licensing.interface';
-import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { IVirtualPersona } from '@platform/virtual-persona';
-import { UUID } from '@domain/common/scalars/scalar.uuid';
 
 @Resolver(() => IPlatform)
 export class PlatformResolverFields {
@@ -139,33 +135,5 @@ export class PlatformResolverFields {
     ReleaseDiscussionOutput | undefined
   > {
     return this.platformService.getLatestReleaseDiscussion();
-  }
-
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @ResolveField('defaultVirtualPersona', () => IVirtualPersona, {
-    nullable: false,
-    description: 'The default VirtualPersona in use on the platform.',
-  })
-  @UseGuards(GraphqlGuard)
-  async defaultVirtualPersona(): Promise<IVirtualPersona> {
-    return await this.platformService.getDefaultVirtualPersonaOrFail();
-  }
-
-  @ResolveField(() => [IVirtualPersona], {
-    nullable: false,
-    description: 'The VirtualPersonas on this platform',
-  })
-  async virtualPersonas(): Promise<IVirtualPersona[]> {
-    return await this.platformService.getVirtualPersonas();
-  }
-
-  @ResolveField(() => IVirtualPersona, {
-    nullable: false,
-    description: 'A particular VirtualPersona',
-  })
-  async virtualPersona(
-    @Args('ID', { type: () => UUID, nullable: false }) id: string
-  ): Promise<IVirtualPersona> {
-    return await this.platformService.getVirtualPersonaOrFail(id);
   }
 }

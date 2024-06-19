@@ -16,10 +16,6 @@ import { NotificationAdapter } from '@services/adapters/notification-adapter/not
 import { PlatformService } from './platform.service';
 import { AssignPlatformRoleToUserInput } from './dto/platform.dto.assign.role.user';
 import { PlatformRole } from '@common/enums/platform.role';
-import { IVirtualPersona } from '@platform/virtual-persona/virtual.persona.interface';
-import { CreateVirtualPersonaInput } from '@platform/virtual-persona/dto/virtual.persona.dto.create';
-import { VirtualPersonaService } from '@platform/virtual-persona/virtual.persona.service';
-import { VirtualPersonaAuthorizationService } from '@platform/virtual-persona/virtual.persona.service.authorization';
 
 @Resolver()
 export class PlatformResolverMutations {
@@ -28,9 +24,7 @@ export class PlatformResolverMutations {
     private notificationAdapter: NotificationAdapter,
     private platformService: PlatformService,
     private platformAuthorizationService: PlatformAuthorizationService,
-    private platformAuthorizationPolicyService: PlatformAuthorizationPolicyService,
-    private virtualPersonaService: VirtualPersonaService,
-    private virtualPersonaAuthorizationService: VirtualPersonaAuthorizationService
+    private platformAuthorizationPolicyService: PlatformAuthorizationPolicyService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -116,42 +110,6 @@ export class PlatformResolverMutations {
       membershipData.role
     );
     return user;
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IVirtualPersona, {
-    description: 'Creates a new VirtualPersona on the platform.',
-  })
-  @Profiling.api
-  async createVirtualPersona(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('virtualPersonaData')
-    virtualPersonaData: CreateVirtualPersonaInput
-  ): Promise<IVirtualPersona> {
-    const platformPolicy =
-      await this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      platformPolicy,
-      AuthorizationPrivilege.PLATFORM_ADMIN,
-      `create Virtual persona: ${virtualPersonaData.engine}`
-    );
-    const virtual = await this.virtualPersonaService.createVirtualPersona(
-      virtualPersonaData
-    );
-
-    const virtualWithAuth =
-      await this.virtualPersonaAuthorizationService.applyAuthorizationPolicy(
-        virtual,
-        platformPolicy
-      );
-
-    const platform = await this.platformService.getPlatformOrFail();
-    virtualWithAuth.platform = platform;
-
-    await this.virtualPersonaService.save(virtualWithAuth);
-
-    return virtualWithAuth;
   }
 
   private async notifyPlatformGlobalRoleChange(
