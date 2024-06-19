@@ -92,10 +92,10 @@ export class CommunityResolverMutations {
     private applicationAuthorizationService: ApplicationAuthorizationService,
     private invitationService: InvitationService,
     private invitationAuthorizationService: InvitationAuthorizationService,
-    private invitationExternalService: InvitationExternalService,
     private invitationExternalAuthorizationService: InvitationExternalAuthorizationService,
     private communityAuthorizationService: CommunityAuthorizationService,
     private accountHostService: AccountHostService,
+    private invitationExternalService: InvitationExternalService,
     private eventBus: EventBus
   ) {}
 
