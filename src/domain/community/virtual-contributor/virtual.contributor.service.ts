@@ -74,7 +74,7 @@ export class VirtualContributorService {
       virtualContributorData.profileData?.displayName
     );
 
-    const virtualContributor: IVirtualContributor = VirtualContributor.create(
+    let virtualContributor: IVirtualContributor = VirtualContributor.create(
       virtualContributorData
     );
 
@@ -134,7 +134,7 @@ export class VirtualContributorService {
       parentDisplayID: `virtual-${virtualContributor.nameID}`,
     });
 
-    const savedVC = await this.save(virtualContributor);
+    virtualContributor = await this.save(virtualContributor);
     this.logger.verbose?.(
       `Created new virtual with id ${virtualContributor.id}`,
       LogContext.COMMUNITY
@@ -148,7 +148,7 @@ export class VirtualContributorService {
         )
       );
 
-    return savedVC;
+    return virtualContributor;
   }
 
   async checkNameIdOrFail(nameID: string) {

@@ -4,6 +4,7 @@ import { ContributorBase } from '../contributor/contributor.base.entity';
 import { Account } from '@domain/space/account/account.entity';
 import { BodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
 import { VirtualPersona } from '@platform/virtual-persona/virtual.persona.entity';
+import { SearchVisibility } from '@common/enums/search.visibility';
 
 @Entity()
 export class VirtualContributor
@@ -27,6 +28,13 @@ export class VirtualContributor
 
   @Column({ length: 255, nullable: false })
   communicationID!: string;
+
+  @Column('varchar', {
+    length: 36,
+    nullable: false,
+    default: SearchVisibility.ACCOUNT,
+  })
+  searchVisibility!: SearchVisibility;
 
   @Column({ length: 64, nullable: true })
   bodyOfKnowledgeType!: BodyOfKnowledgeType;

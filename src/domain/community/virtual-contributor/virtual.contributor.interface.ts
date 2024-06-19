@@ -5,6 +5,7 @@ import { BodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.k
 import { IContributor } from '../contributor/contributor.interface';
 import { IVirtualPersona } from '@platform/virtual-persona/virtual.persona.interface';
 import { UUID } from '@domain/common/scalars';
+import { SearchVisibility } from '@common/enums/search.visibility';
 
 @ObjectType('VirtualContributor', {
   implements: () => [IContributor],
@@ -24,6 +25,12 @@ export class IVirtualContributor
     description: 'The account under which the virtual contributor was created',
   })
   account!: IAccount;
+
+  @Field(() => SearchVisibility, {
+    description: 'Visibility of the VC in searches.',
+    nullable: false,
+  })
+  searchVisibility!: SearchVisibility;
 
   @Field(() => BodyOfKnowledgeType, {
     nullable: true,
