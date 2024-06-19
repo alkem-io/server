@@ -5,21 +5,27 @@ import { ValidationException } from '@common/exceptions/validation.exception';
 import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
 import { InnovationPackService } from '@library/innovation-pack/innovaton.pack.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import { CreateInnovationPackOnLibraryInput } from './dto/library.dto.create.innovation.pack';
 import { Library } from './library.entity';
 import { ILibrary } from './library.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { InnovationPacksOrderBy } from '@common/enums/innovation.packs.orderBy';
+import {
+  IVirtualContributor,
+  VirtualContributor,
+} from '@domain/community/virtual-contributor';
 
 @Injectable()
 export class LibraryService {
   constructor(
     private innovationPackService: InnovationPackService,
     private namingService: NamingService,
+    @InjectEntityManager('default')
+    private entityManager: EntityManager,
     @InjectRepository(Library)
     private libraryRepository: Repository<Library>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -35,6 +41,19 @@ export class LibraryService {
         LogContext.LIBRARY
       );
     return library;
+  }
+
+  public async getListedVirtualContributors(): Promise<IVirtualContributor[]> {
+    const virtualContributors = await this.entityManager.find(
+      VirtualContributor,
+      {
+        where: {
+          listedInStore: true,
+        },
+        relations: ['aiPersona', 'account'],
+      }
+    );
+    return virtualContributors;
   }
 
   public async getInnovationPacks(

@@ -12,17 +12,14 @@ export class IVirtualContributor
   extends IContributorBase
   implements IContributor
 {
+  account!: IAccount;
+
+  communicationID!: string;
+
   @Field(() => IAiPersona, {
     description: 'The AI persona being used by this virtual contributor',
   })
   aiPersona!: IAiPersona;
-
-  communicationID!: string;
-  @Field(() => IAccount, {
-    nullable: true,
-    description: 'The account under which the virtual contributor was created',
-  })
-  account!: IAccount;
 
   @Field(() => SearchVisibility, {
     description: 'Visibility of the VC in searches.',

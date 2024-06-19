@@ -10,13 +10,6 @@ export class VirtualContributor
   extends ContributorBase
   implements IVirtualContributor
 {
-  @OneToOne(() => AiPersona, {
-    eager: true,
-    cascade: true,
-  })
-  @JoinColumn()
-  aiPersona!: AiPersona;
-
   @ManyToOne(() => Account, account => account.virtualContributors, {
     eager: true,
     onDelete: 'SET NULL',
@@ -24,11 +17,18 @@ export class VirtualContributor
   @JoinColumn()
   account!: Account;
 
-  @Column()
-  listedInStore!: boolean;
-
   @Column({ length: 255, nullable: false })
   communicationID!: string;
+
+  @OneToOne(() => AiPersona, {
+    eager: true,
+    cascade: true,
+  })
+  @JoinColumn()
+  aiPersona!: AiPersona;
+
+  @Column()
+  listedInStore!: boolean;
 
   @Column('varchar', {
     length: 36,
