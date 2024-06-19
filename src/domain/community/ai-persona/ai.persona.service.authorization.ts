@@ -18,15 +18,13 @@ import {
   CREDENTIAL_RULE_ORGANIZATION_SELF_REMOVAL,
 } from '@common/constants';
 import { IAiPersona } from './ai.persona.interface';
-import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 
 @Injectable()
 export class AiPersonaAuthorizationService {
   constructor(
     private aiPersonaService: AiPersonaService,
     private authorizationPolicy: AuthorizationPolicyService,
-    private authorizationPolicyService: AuthorizationPolicyService,
-    private profileAuthorizationService: ProfileAuthorizationService
+    private authorizationPolicyService: AuthorizationPolicyService
   ) {}
 
   async applyAuthorizationPolicy(
@@ -38,7 +36,6 @@ export class AiPersonaAuthorizationService {
       {
         relations: {
           authorization: true,
-          profile: true,
         },
       }
     );
@@ -60,20 +57,6 @@ export class AiPersonaAuthorizationService {
       aiPersona.authorization,
       aiPersona.id
     );
-
-    // NOTE: Clone the authorization policy to ensure the changes are local to profile
-    const clonedAnonymousReadAccessAuthorization =
-      this.authorizationPolicyService.cloneAuthorizationPolicy(
-        aiPersona.authorization
-      );
-    // To ensure that profile + context on a space are always publicly visible, even for private spaces
-    clonedAnonymousReadAccessAuthorization.anonymousReadAccess = true;
-    // cascade
-    aiPersona.profile =
-      await this.profileAuthorizationService.applyAuthorizationPolicy(
-        aiPersona.profile,
-        clonedAnonymousReadAccessAuthorization // Key that this is publicly visible
-      );
 
     return aiPersona;
   }

@@ -1,20 +1,12 @@
-import { Column, Entity, JoinColumn, OneToOne } from 'typeorm';
+import { Column, Entity } from 'typeorm';
 import { IAiPersona } from './ai.persona.interface';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
-import {
-  AiPersonaService,
-  IAiPersonaService,
-} from '@services/ai-server/ai-persona-service';
+import { AiPersonaService } from '@services/ai-server/ai-persona-service';
 
 @Entity()
 export class AiPersona extends AuthorizableEntity implements IAiPersona {
-  @OneToOne(() => IAiPersonaService, {
-    eager: true,
-    cascade: false,
-    onDelete: 'SET NULL',
-  })
-  @JoinColumn()
-  aiPersonaService!: AiPersonaService;
+  // No direct link; this is a generic identifier
+  aiPersonaServiceID!: AiPersonaService;
 
   //   Meta information:
   // - interactionModes: Q+R

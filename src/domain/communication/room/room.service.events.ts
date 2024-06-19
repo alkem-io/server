@@ -34,8 +34,7 @@ import { NotSupportedException } from '@common/exceptions';
 import { EntityManager } from 'typeorm';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { Space } from '@domain/space/space/space.entity';
-import { VirtualPersonaService } from '@services/ai-server/ai-persona-service/virtual.persona.service';
-import { VirtualPersonaQuestionInput } from '@services/ai-server/ai-persona-service/dto/virtual.persona.question.dto.input';
+import { AiPersonaQuestionInput } from '@domain/community/ai-persona/dto/ai.persona.question.dto.input';
 
 @Injectable()
 export class RoomServiceEvents {
@@ -46,7 +45,6 @@ export class RoomServiceEvents {
     private communityResolverService: CommunityResolverService,
     private roomService: RoomService,
     private subscriptionPublishService: SubscriptionPublishService,
-    private virtualPersonaService: VirtualPersonaService,
     private virtualContributorService: VirtualContributorService,
     // this should use the space service but still the same circular dependency issue :(
     @InjectEntityManager('default')
@@ -111,24 +109,15 @@ export class RoomServiceEvents {
           );
         }
 
-        const chatData: VirtualPersonaQuestionInput = {
-          virtualPersonaID: virtualPersona.id,
+        const chatData: AiPersonaQuestionInput = {
+          aiPersonaID: virtualPersona.id,
           question: question.message,
         };
 
-        let knowledgeSpaceId = undefined;
-        if (virtualContributor.bodyOfKnowledgeID) {
-          //toDo should not be needed, fix in https://app.zenhub.com/workspaces/alkemio-development-5ecb98b262ebd9f4aec4194c/issues/gh/alkem-io/virtual-contributor-ingest-space/5
-          knowledgeSpaceId = await this.getSpaceNameId(
-            virtualContributor.bodyOfKnowledgeID
-          );
-        }
-
-        const result = await this.virtualPersonaService.askQuestion(
+        const result = await this.virtualContributorService.askQuestion(
           chatData,
           agentInfo,
-          spaceNameID,
-          knowledgeSpaceId
+          spaceNameID
         );
 
         let answer = result.answer;

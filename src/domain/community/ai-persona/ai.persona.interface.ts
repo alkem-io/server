@@ -9,11 +9,7 @@ export class IAiPersona extends IAuthorizable {
   // - interactionModes: Q+R
   // - contextModes: full, summary, public profile, none
 
-  @Field(() => IAiPersonaService, {
-    nullable: false,
-    description: 'The AI Persona Service being used by this AI Persona.',
-  })
-  aiPersonaService!: IAiPersonaService;
+  aiPersonaServiceID!: IAiPersonaService;
 
   @Field(() => Markdown, {
     nullable: false,
