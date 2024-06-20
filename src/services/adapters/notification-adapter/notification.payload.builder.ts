@@ -34,6 +34,7 @@ import {
   SpaceBaseEventPayload,
   PlatformGlobalRoleChangeEventPayload,
   RoleChangeType,
+  SpaceCreatedEventPayload,
 } from '@alkemio/notifications-lib';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';

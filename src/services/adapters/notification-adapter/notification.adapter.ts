@@ -337,6 +337,18 @@ export class NotificationAdapter {
     this.notificationsClient.emit<number>(event, payload);
   }
 
+  public async spaceCreated(
+    eventData: NotificationInputSpaceCreated
+  ): Promise<void> {
+    const event = NotificationEventType.SPACE_CREATED;
+    this.logEventTriggered(eventData, event);
+
+    const payload =
+      await this.notificationPayloadBuilder.buildSpaceCreatedPayload(eventData);
+
+    this.notificationsClient.emit<number>(event, payload);
+  }
+
   public async communityNewMember(
     eventData: NotificationInputCommunityNewMember
   ): Promise<void> {
