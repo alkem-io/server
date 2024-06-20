@@ -58,7 +58,9 @@ export class WhiteboardSavedResolverSubscription {
         `[User (${agentInfo.email}) Whiteboard Saved] - Filtering whiteboard id '${payload.whiteboardID}' - match=${isMatch}`,
         LogContext.SUBSCRIPTIONS
       );
-
+      
+      // Something is changing the Date from the payload into a string. GraphQL needs it to be a Date or a serialization error occurs
+      // So we do this conversion here
       payload.updatedDate = new Date(payload.updatedDate);
       return isMatch;
     },
