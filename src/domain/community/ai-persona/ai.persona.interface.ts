@@ -7,7 +7,6 @@ export class IAiPersona extends IAuthorizable {
   //   Meta information:
   // - interactionModes: Q+R
   // - contextModes: full, summary, public profile, none
-
   aiPersonaServiceID!: string;
 
   @Field(() => Markdown, {

@@ -8,16 +8,16 @@ import { AiServerResolverMutations } from './ai.server.resolver.mutations';
 import { AiServerResolverQueries } from './ai.server.resolver.queries';
 import { AiServerService } from './ai.server.service';
 import { AiServerAuthorizationService } from './ai.server.service.authorization';
-import { UserModule } from '@domain/community/user/user.module';
 import { AiPersonaServiceModule } from '../ai-persona-service/ai.persona.service.module';
+import { AiPersonaEngineAdapterModule } from '../ai-persona-engine-adapter/ai.persona.engine.adapter.module';
 
 @Module({
   imports: [
     AuthorizationModule,
     AuthorizationPolicyModule,
-    UserModule,
     AiPersonaServiceModule,
     TypeOrmModule.forFeature([AiServer]),
+    AiPersonaEngineAdapterModule,
   ],
   providers: [
     AiServerResolverQueries,

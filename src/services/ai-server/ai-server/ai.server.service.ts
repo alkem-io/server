@@ -28,8 +28,8 @@ import { AiPersonaEngineAdapterInputBase } from '../ai-persona-engine-adapter/dt
 @Injectable()
 export class AiServerService {
   constructor(
-    private userService: UserService,
-    private agentService: AgentService,
+    // private userService: UserService,
+    // private agentService: AgentService,
     private aiPersonaServiceService: AiPersonaServiceService,
     private aiPersonaEngineAdapter: AiPersonaEngineAdapter,
     @InjectRepository(AiServer)
@@ -119,42 +119,42 @@ export class AiServerService {
     return authorization;
   }
 
-  public async assignAiServerRoleToUser(
-    assignData: AssignAiServerRoleToUserInput
-  ): Promise<IUser> {
-    const agent = await this.userService.getAgent(assignData.userID);
+  // public async assignAiServerRoleToUser(
+  //   assignData: AssignAiServerRoleToUserInput
+  // ): Promise<IUser> {
+  //   const agent = await this.userService.getAgent(assignData.userID);
 
-    const credential = this.getCredentialForRole(assignData.role);
+  //   const credential = this.getCredentialForRole(assignData.role);
 
-    // assign the credential
-    await this.agentService.grantCredential({
-      agentID: agent.id,
-      ...credential,
-    });
+  //   // assign the credential
+  //   await this.agentService.grantCredential({
+  //     agentID: agent.id,
+  //     ...credential,
+  //   });
 
-    return await this.userService.getUserWithAgent(assignData.userID);
-  }
+  //   return await this.userService.getUserWithAgent(assignData.userID);
+  // }
 
-  public async removeAiServerRoleFromUser(
-    removeData: RemoveAiServerRoleFromUserInput
-  ): Promise<IUser> {
-    const agent = await this.userService.getAgent(removeData.userID);
+  // public async removeAiServerRoleFromUser(
+  //   removeData: RemoveAiServerRoleFromUserInput
+  // ): Promise<IUser> {
+  //   const agent = await this.userService.getAgent(removeData.userID);
 
-    // Validation logic
-    if (removeData.role === AiServerRole.GLOBAL_ADMIN) {
-      // Check not the last global admin
-      await this.removeValidationSingleGlobalAdmin();
-    }
+  //   // Validation logic
+  //   if (removeData.role === AiServerRole.GLOBAL_ADMIN) {
+  //     // Check not the last global admin
+  //     await this.removeValidationSingleGlobalAdmin();
+  //   }
 
-    const credential = this.getCredentialForRole(removeData.role);
+  //   const credential = this.getCredentialForRole(removeData.role);
 
-    await this.agentService.revokeCredential({
-      agentID: agent.id,
-      ...credential,
-    });
+  //   await this.agentService.revokeCredential({
+  //     agentID: agent.id,
+  //     ...credential,
+  //   });
 
-    return await this.userService.getUserWithAgent(removeData.userID);
-  }
+  //   return await this.userService.getUserWithAgent(removeData.userID);
+  // }
 
   public async ingestAiPersonaService(
     ingestData: AiServerIngestAiPersonaServiceInput
@@ -173,19 +173,19 @@ export class AiServerService {
     return result;
   }
 
-  private async removeValidationSingleGlobalAdmin(): Promise<boolean> {
-    // Check more than one
-    const globalAdmins = await this.userService.usersWithCredentials({
-      type: AuthorizationCredential.GLOBAL_ADMIN,
-    });
-    if (globalAdmins.length < 2)
-      throw new ForbiddenException(
-        `Not allowed to remove ${AuthorizationCredential.GLOBAL_ADMIN}: last AI Server global-admin`,
-        LogContext.AUTH
-      );
+  // private async removeValidationSingleGlobalAdmin(): Promise<boolean> {
+  //   // Check more than one
+  //   const globalAdmins = await this.userService.usersWithCredentials({
+  //     type: AuthorizationCredential.GLOBAL_ADMIN,
+  //   });
+  //   if (globalAdmins.length < 2)
+  //     throw new ForbiddenException(
+  //       `Not allowed to remove ${AuthorizationCredential.GLOBAL_ADMIN}: last AI Server global-admin`,
+  //       LogContext.AUTH
+  //     );
 
-    return true;
-  }
+  //   return true;
+  // }
 
   private getCredentialForRole(role: AiServerRole): ICredentialDefinition {
     const result: ICredentialDefinition = {

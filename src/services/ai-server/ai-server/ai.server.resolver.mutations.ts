@@ -35,7 +35,7 @@ export class AiServerResolverMutations {
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<IAiServer> {
     const aiServer = await this.aiServerService.getAiServerOrFail();
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       aiServer.authorization,
       AuthorizationPrivilege.AUTHORIZATION_RESET,
@@ -44,52 +44,52 @@ export class AiServerResolverMutations {
     return await this.aiServerAuthorizationService.applyAuthorizationPolicy();
   }
 
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IUser, {
-    description: 'Assigns a aiServer role to a User.',
-  })
-  async assignAiServerRoleToUser(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('membershipData') membershipData: AssignAiServerRoleToUserInput
-  ): Promise<IUser> {
-    const aiServer = await this.aiServerService.getAiServerOrFail();
-    const privilegeRequired = AuthorizationPrivilege.PLATFORM_ADMIN;
+  // @UseGuards(GraphqlGuard)
+  // @Mutation(() => IUser, {
+  //   description: 'Assigns a aiServer role to a User.',
+  // })
+  // async assignAiServerRoleToUser(
+  //   @CurrentUser() agentInfo: AgentInfo,
+  //   @Args('membershipData') membershipData: AssignAiServerRoleToUserInput
+  // ): Promise<IUser> {
+  //   const aiServer = await this.aiServerService.getAiServerOrFail();
+  //   const privilegeRequired = AuthorizationPrivilege.PLATFORM_ADMIN;
 
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      aiServer.authorization,
-      privilegeRequired,
-      `assign user aiServer role admin: ${membershipData.userID} - ${membershipData.role}`
-    );
-    const user = await this.aiServerService.assignAiServerRoleToUser(
-      membershipData
-    );
+  //   this.authorizationService.grantAccessOrFail(
+  //     agentInfo,
+  //     aiServer.authorization,
+  //     privilegeRequired,
+  //     `assign user aiServer role admin: ${membershipData.userID} - ${membershipData.role}`
+  //   );
+  //   const user = await this.aiServerService.assignAiServerRoleToUser(
+  //     membershipData
+  //   );
 
-    return user;
-  }
+  //   return user;
+  // }
 
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IUser, {
-    description: 'Removes a User from a aiServer role.',
-  })
-  async removeAiServerRoleFromUser(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('membershipData') membershipData: RemoveAiServerRoleFromUserInput
-  ): Promise<IUser> {
-    const aiServer = await this.aiServerService.getAiServerOrFail();
-    const privilegeRequired = AuthorizationPrivilege.PLATFORM_ADMIN;
+  // @UseGuards(GraphqlGuard)
+  // @Mutation(() => IUser, {
+  //   description: 'Removes a User from a aiServer role.',
+  // })
+  // async removeAiServerRoleFromUser(
+  //   @CurrentUser() agentInfo: AgentInfo,
+  //   @Args('membershipData') membershipData: RemoveAiServerRoleFromUserInput
+  // ): Promise<IUser> {
+  //   const aiServer = await this.aiServerService.getAiServerOrFail();
+  //   const privilegeRequired = AuthorizationPrivilege.PLATFORM_ADMIN;
 
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      aiServer.authorization,
-      privilegeRequired,
-      `remove user aiServer role: ${membershipData.userID} - ${membershipData.role}`
-    );
-    const user = await this.aiServerService.removeAiServerRoleFromUser(
-      membershipData
-    );
-    return user;
-  }
+  //   this.authorizationService.grantAccessOrFail(
+  //     agentInfo,
+  //     aiServer.authorization,
+  //     privilegeRequired,
+  //     `remove user aiServer role: ${membershipData.userID} - ${membershipData.role}`
+  //   );
+  //   const user = await this.aiServerService.removeAiServerRoleFromUser(
+  //     membershipData
+  //   );
+  //   return user;
+  // }
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IAiPersonaService, {
@@ -101,7 +101,7 @@ export class AiServerResolverMutations {
     aiPersonaServiceData: CreateAiPersonaServiceInput
   ): Promise<IAiPersonaService> {
     const aiServer = await this.aiServerService.getAiServerOrFail();
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       aiServer.authorization,
       AuthorizationPrivilege.PLATFORM_ADMIN,
@@ -134,7 +134,7 @@ export class AiServerResolverMutations {
     ingestData: AiServerIngestAiPersonaServiceInput
   ): Promise<boolean> {
     const aiServer = await this.aiServerService.getAiServerOrFail();
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       aiServer.authorization,
       AuthorizationPrivilege.PLATFORM_ADMIN,

@@ -7,7 +7,7 @@ import { IAiServer } from './ai.server.interface';
 import { AiServerService } from './ai.server.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { GraphqlGuard } from '@core/authorization';
-import { UseGuards } from '@nestjs/common';
+import { Injectable, UseGuards } from '@nestjs/common';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { IAiPersonaService } from '@services/ai-server/ai-persona-service';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
