@@ -35,6 +35,7 @@ import { WHITEBOARD_CONTENT_UPDATE } from './events/event.names';
 import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
 import { LicenseEngineService } from '@core/license-engine/license.engine.service';
 import { LicensePrivilege } from '@common/enums/license.privilege';
+import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
 
 @Injectable()
 export class WhiteboardService {
@@ -49,6 +50,7 @@ export class WhiteboardService {
     private profileService: ProfileService,
     private profileDocumentsService: ProfileDocumentsService,
     private whiteboardAuthService: WhiteboardAuthorizationService,
+    private subscriptionPublishService: SubscriptionPublishService,
     private communityResolverService: CommunityResolverService,
     @InjectEntityManager() private entityManager: EntityManager
   ) {}
@@ -221,6 +223,11 @@ export class WhiteboardService {
     const savedWhiteboard = await this.save(whiteboard);
 
     this.eventEmitter.emit(WHITEBOARD_CONTENT_UPDATE, savedWhiteboard.id);
+
+    this.subscriptionPublishService.publishWhiteboardSaved(
+      whiteboard.id,
+      new Date(Date.now())
+    );
 
     return savedWhiteboard;
   }
