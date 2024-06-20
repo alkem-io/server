@@ -13,13 +13,13 @@ import { IProfile } from '@domain/common/profile/profile.interface';
 import { IAgent } from '@domain/agent';
 
 @InterfaceType('Contributor', {
-  resolveType(journey) {
-    if (journey instanceof User) return IUser;
-    if (journey instanceof Organization) return IOrganization;
-    if (journey instanceof VirtualContributor) return IVirtualContributor;
+  resolveType(contributor) {
+    if (contributor instanceof User) return IUser;
+    if (contributor instanceof Organization) return IOrganization;
+    if (contributor instanceof VirtualContributor) return IVirtualContributor;
 
     throw new RelationshipNotFoundException(
-      `Unable to determine contributor type for ${journey.id}`,
+      `Unable to determine contributor type for ${contributor.id}`,
       LogContext.COMMUNITY
     );
   },

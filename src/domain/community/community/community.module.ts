@@ -31,6 +31,7 @@ import { CommunityGuidelinesModule } from '../community-guidelines/community.gui
 import { VirtualContributorModule } from '../virtual-contributor/virtual.contributor.module';
 import { LicenseEngineModule } from '@core/license-engine/license.engine.module';
 import { AccountHostModule } from '@domain/space/account/account.host.module';
+import { ContributorModule } from '../contributor/contributor.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { AccountHostModule } from '@domain/space/account/account.host.module';
     AgentModule,
     UserGroupModule,
     UserModule,
+    ContributorModule,
     OrganizationModule,
     VirtualContributorModule,
     ApplicationModule,

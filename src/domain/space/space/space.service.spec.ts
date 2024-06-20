@@ -16,6 +16,7 @@ import { License } from '@domain/license/license/license.entity';
 import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
 import { Account } from '../account/account.entity';
 import { SpaceType } from '@common/enums/space.type';
+import { SpaceLevel } from '@common/enums/space.level';
 
 const moduleMocker = new ModuleMocker(global);
 
@@ -98,7 +99,7 @@ const getSubspacesMock = (
         ...getEntityMock<Account>(),
       },
       type: SpaceType.CHALLENGE,
-      level: 1,
+      level: SpaceLevel.CHALLENGE,
       collaboration: {
         id: '',
         groupsStr: JSON.stringify([
@@ -187,7 +188,7 @@ const getSubsubspacesMock = (subsubspaceId: string, count: number): Space[] => {
         ...getEntityMock<Account>(),
       },
       type: SpaceType.OPPORTUNITY,
-      level: 2,
+      level: SpaceLevel.OPPORTUNITY,
       collaboration: {
         id: '',
         groupsStr: JSON.stringify([

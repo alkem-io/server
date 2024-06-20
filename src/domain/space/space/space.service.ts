@@ -85,12 +85,33 @@ export class SpaceService {
     account: IAccount,
     agentInfo?: AgentInfo
   ): Promise<ISpace> {
-    // Temporary setup that matches 1-1; later the type and level will be separately assigned
-    spaceData.type = SpaceType.SPACE;
-    if (spaceData.level === SpaceLevel.CHALLENGE)
-      spaceData.type = SpaceType.CHALLENGE;
-    if (spaceData.level === SpaceLevel.OPPORTUNITY)
-      spaceData.type = SpaceType.OPPORTUNITY;
+    if (!spaceData.type) {
+      // default to match the level if not specified
+      switch (spaceData.level) {
+        case SpaceLevel.SPACE:
+          spaceData.type = SpaceType.SPACE;
+          break;
+        case SpaceLevel.CHALLENGE:
+          spaceData.type = SpaceType.CHALLENGE;
+          break;
+        case SpaceLevel.OPPORTUNITY:
+          spaceData.type = SpaceType.OPPORTUNITY;
+          break;
+        default:
+          spaceData.type = SpaceType.CHALLENGE;
+          break;
+      }
+    }
+    // Hard code / overwrite for now for root space level
+    if (
+      spaceData.level === SpaceLevel.SPACE &&
+      spaceData.type !== SpaceType.SPACE
+    ) {
+      throw new NotSupportedException(
+        `Root space must have a type of SPACE: '${spaceData.type}'`,
+        LogContext.SPACES
+      );
+    }
 
     const space: ISpace = Space.create(spaceData);
 
@@ -106,7 +127,7 @@ export class SpaceService {
     space.authorization = new AuthorizationPolicy();
     space.account = account;
     space.settingsStr = this.spaceSettingsService.serializeSettings(
-      this.spaceDefaultsService.getDefaultSpaceSettings(spaceData.level)
+      this.spaceDefaultsService.getDefaultSpaceSettings(spaceData.type)
     );
 
     const parentStorageAggregator = spaceData.storageAggregatorParent;
@@ -194,7 +215,7 @@ export class SpaceService {
         spaceData.collaborationData?.collaborationTemplateID
       );
     const defaultCallouts = this.spaceDefaultsService.getDefaultCallouts(
-      space.level
+      space.type
     );
     const calloutInputs =
       await this.spaceDefaultsService.getCreateCalloutInputs(
@@ -886,7 +907,7 @@ export class SpaceService {
       );
     }
 
-    await this.communityService.assignContributorToRole(
+    await this.communityService.assignContributorAgentToRole(
       space.community,
       contributor.agent,
       role,

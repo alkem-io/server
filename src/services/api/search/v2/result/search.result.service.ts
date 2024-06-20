@@ -184,8 +184,8 @@ export class SearchResultService {
       relations: { parentSpace: true },
       select: {
         id: true,
-        type: true,
-        parentSpace: { id: true, type: true },
+        level: true,
+        parentSpace: { id: true, level: true },
       },
     });
 

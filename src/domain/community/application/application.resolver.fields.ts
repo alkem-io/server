@@ -5,9 +5,9 @@ import { ApplicationService } from './application.service';
 import { AuthorizationPrivilege } from '@common/enums';
 import { Application, IApplication } from '@domain/community/application';
 import { GraphqlGuard } from '@core/authorization';
-import { IUser } from '@domain/community/user/user.interface';
 import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
 import { IQuestion } from '@domain/common/question/question.interface';
+import { IContributor } from '../contributor/contributor.interface';
 
 @Resolver(() => IApplication)
 export class ApplicationResolverFields {
@@ -15,13 +15,13 @@ export class ApplicationResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('user', () => IUser, {
+  @ResolveField('contributor', () => IContributor, {
     nullable: false,
     description: 'The User for this Application.',
   })
   @Profiling.api
-  async user(@Parent() application: Application): Promise<IUser> {
-    return await this.applicationService.getUser(application.id);
+  async contributor(@Parent() application: Application): Promise<IContributor> {
+    return await this.applicationService.getContributor(application.id);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

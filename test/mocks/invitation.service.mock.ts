@@ -7,7 +7,7 @@ export const MockInvitationService: ValueProvider<
 > = {
   provide: InvitationService,
   useValue: {
-    findInvitationsForUser: jest.fn(),
+    findInvitationsForContributor: jest.fn(),
     isFinalizedInvitation: jest.fn(),
     getInvitationState: jest.fn(),
   },
