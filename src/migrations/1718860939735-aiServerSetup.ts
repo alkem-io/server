@@ -88,14 +88,20 @@ export class aiServerSetup1718860939735 implements MigrationInterface {
     const virtualContributors: {
       id: string;
       virtualPersonaId: string;
+      bodyOfKnowledgeType: string;
+      bodyOfKnowledgeID: string;
     }[] = await queryRunner.query(
-      `SELECT id, virtualPersonaId FROM virtual_contributor`
+      `SELECT id, virtualPersonaId, bodyOfKnowledgeType, bodyOfKnowledgeID FROM virtual_contributor`
     );
     for (const vc of virtualContributors) {
-      const [virtualPersona]: { id: string; licensePolicyId: string }[] =
-        await queryRunner.query(
-          `SELECT id, licensePolicyId FROM virtual_persona WHERE id = '${vc.virtualPersonaId}'`
-        );
+      const [virtualPersona]: {
+        id: string;
+        engine: string;
+        prompt: string;
+        dataAccessMode: string;
+      }[] = await queryRunner.query(
+        `SELECT id, engine, prompt, dataAccessMode FROM virtual_persona WHERE id = '${vc.virtualPersonaId}'`
+      );
       if (!virtualPersona) {
         console.log(
           `unable to identify virtual persona for virtual contributor ${vc.id}`
