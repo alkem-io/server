@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { VirtualContributorService } from './virtual.contributor.service';
 import { VirtualContributorResolverMutations } from './virtual.contributor.resolver.mutations';
+import { VirtualContributorResolverQueries } from './virtual.contributor.resolver.queries';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { VirtualContributorResolverFields } from './virtual.contributor.resolver.fields';
 import { ProfileModule } from '@domain/common/profile/profile.module';
@@ -33,6 +34,7 @@ import { AiServerAdapterModule } from '@services/adapters/ai-server-adapter/ai.s
     VirtualContributorService,
     VirtualContributorAuthorizationService,
     VirtualContributorResolverMutations,
+    VirtualContributorResolverQueries,
     VirtualContributorResolverFields,
     VirtualStorageAggregatorLoaderCreator,
   ],

@@ -151,11 +151,12 @@ export class aiServerSetup1718860939735 implements MigrationInterface {
                     1, '', '', 0, '')`
       );
       await queryRunner.query(
-        `INSERT INTO ai_persona (id, version, aiPersonaServiceID, authorizationId) VALUES
+        `INSERT INTO ai_persona (id, version, aiPersonaServiceID, authorizationId, description) VALUES
                 ('${aiPersonaID}',
                 1,
                 '${aiPersonaServiceID}',
-                '${aiPersonaAuthID}')`
+                '${aiPersonaAuthID}',
+                '')`
       );
       await queryRunner.query(
         `UPDATE virtual_contributor SET aiPersonaId = '${aiPersonaID}' WHERE id = '${vc.id}'`
