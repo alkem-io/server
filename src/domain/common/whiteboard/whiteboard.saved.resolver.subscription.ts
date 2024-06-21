@@ -39,11 +39,15 @@ export class WhiteboardSavedResolverSubscription {
       context
     ) {
       const agentInfo = context.req?.user;
-      const logMsgPrefix = `[Whhiteboard Saved (${agentInfo.email})] - `;
+      const logMsgPrefix = `[Whiteboard Saved (${agentInfo.email})] - `;
       this.logger.verbose?.(
         `${logMsgPrefix} Sending out event: ${payload.whiteboardID} `,
         LogContext.SUBSCRIPTIONS
       );
+      // Something is changing the Date from the payload into a string. GraphQL needs it to be a Date or a serialization error occurs
+      // So we do this conversion here
+      payload.updatedDate = new Date(payload.updatedDate);
+
       return payload;
     },
     async filter(
@@ -58,10 +62,6 @@ export class WhiteboardSavedResolverSubscription {
         `[User (${agentInfo.email}) Whiteboard Saved] - Filtering whiteboard id '${payload.whiteboardID}' - match=${isMatch}`,
         LogContext.SUBSCRIPTIONS
       );
-      
-      // Something is changing the Date from the payload into a string. GraphQL needs it to be a Date or a serialization error occurs
-      // So we do this conversion here
-      payload.updatedDate = new Date(payload.updatedDate);
       return isMatch;
     },
   })
@@ -78,7 +78,7 @@ export class WhiteboardSavedResolverSubscription {
     const whiteboard = await this.whiteboardService.getWhiteboardOrFail(
       whiteboardID
     );
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       whiteboard.authorization,
       AuthorizationPrivilege.READ,

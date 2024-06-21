@@ -219,14 +219,14 @@ export class WhiteboardService {
     );
 
     whiteboard.content = JSON.stringify(newContent);
-
+    whiteboard.updatedDate = new Date(); // Make sure that at least the updatedDate is updated (if the content is the same)
     const savedWhiteboard = await this.save(whiteboard);
 
     this.eventEmitter.emit(WHITEBOARD_CONTENT_UPDATE, savedWhiteboard.id);
 
     this.subscriptionPublishService.publishWhiteboardSaved(
       whiteboard.id,
-      new Date(Date.now())
+      whiteboard.updatedDate
     );
 
     return savedWhiteboard;
