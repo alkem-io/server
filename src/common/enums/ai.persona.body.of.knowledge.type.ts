@@ -1,8 +1,8 @@
 import { registerEnumType } from '@nestjs/graphql';
-export enum BodyOfKnowledgeType {
-  SPACE = 'space',
+export enum AiPersonaBodyOfKnowledgeType {
+  ALKEMIO_SPACE = 'space', // TODO: rename to alkemio-space as value
   OTHER = 'other',
 }
-registerEnumType(BodyOfKnowledgeType, {
-  name: 'BodyOfKnowledgeType',
+registerEnumType(AiPersonaBodyOfKnowledgeType, {
+  name: 'AiPersonaBodyOfKnowledgeType',
 });
