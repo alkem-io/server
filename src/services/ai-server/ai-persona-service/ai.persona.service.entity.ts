@@ -2,8 +2,8 @@ import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
 import { IAiPersonaService } from './ai.persona.service.interface';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { AiServer } from '../ai-server/ai.server.entity';
-import { AiPersonaAccessMode } from '@common/enums/ai.persona.access.mode';
-import { BodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
+import { AiPersonaDataAccessMode } from '@common/enums/ai.persona.data.access.mode';
+import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
 import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
 
 @Entity()
@@ -23,15 +23,15 @@ export class AiPersonaService
   @Column({
     length: 64,
     nullable: false,
-    default: AiPersonaAccessMode.SPACE_PROFILE,
+    default: AiPersonaDataAccessMode.SPACE_PROFILE,
   })
-  dataAccessMode!: AiPersonaAccessMode;
+  dataAccessMode!: AiPersonaDataAccessMode;
 
   @Column('text', { nullable: false })
   prompt!: string;
 
   @Column({ length: 64, nullable: true })
-  bodyOfKnowledgeType!: BodyOfKnowledgeType;
+  bodyOfKnowledgeType!: AiPersonaBodyOfKnowledgeType;
 
   @Column({ length: 255, nullable: true })
   bodyOfKnowledgeID!: string;
