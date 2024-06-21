@@ -4,10 +4,10 @@ import { UseGuards } from '@nestjs/common';
 import { CurrentUser } from '@src/common/decorators';
 import { Args, ResolveField } from '@nestjs/graphql';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { InvitationForRoleResult } from './dto/roles.dto.result.invitation';
+import { CommunityInvitationForRoleResult } from './dto/roles.dto.result.community.invitation';
 import { RolesService } from './roles.service';
 import { ContributorRoles } from './dto/roles.dto.result.contributor';
-import { ApplicationForRoleResult } from './dto/roles.dto.result.application';
+import { CommunityApplicationForRoleResult } from './dto/roles.dto.result.community.application';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { AuthorizationPrivilege } from '@common/enums';
@@ -48,7 +48,7 @@ export class RolesResolverFields {
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField('invitations', () => [InvitationForRoleResult], {
+  @ResolveField('invitations', () => [CommunityInvitationForRoleResult], {
     description:
       'The invitations for the specified user; only accessible for platform admins',
   })
@@ -62,18 +62,21 @@ export class RolesResolverFields {
       description: 'The state names you want to filter on',
     })
     states: string[]
-  ): Promise<InvitationForRoleResult[]> {
+  ): Promise<CommunityInvitationForRoleResult[]> {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.PLATFORM_ADMIN,
       `roles user query: ${agentInfo.email}`
     );
-    return await this.rolesService.getUserInvitations(roles.id, states);
+    return await this.rolesService.getCommunityInvitationsForUser(
+      roles.id,
+      states
+    );
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField('applications', () => [ApplicationForRoleResult], {
+  @ResolveField('applications', () => [CommunityApplicationForRoleResult], {
     description:
       'The applications for the specified user; only accessible for platform admins',
   })
@@ -87,13 +90,16 @@ export class RolesResolverFields {
       description: 'The state names you want to filter on',
     })
     states: string[]
-  ): Promise<ApplicationForRoleResult[]> {
+  ): Promise<CommunityApplicationForRoleResult[]> {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.PLATFORM_ADMIN,
       `roles user query: ${agentInfo.email}`
     );
-    return await this.rolesService.getUserApplications(roles.id, states);
+    return await this.rolesService.getCommunityApplicationsForUser(
+      roles.id,
+      states
+    );
   }
 }

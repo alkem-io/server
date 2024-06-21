@@ -164,7 +164,9 @@ describe('RolesService', () => {
     });
 
     it.skip('Should get user applications', async () => {
-      const res = await rolesService.getUserApplications(testData.user.id);
+      const res = await rolesService.getCommunityApplicationsForUser(
+        testData.user.id
+      );
 
       expect(res).toEqual(
         expect.arrayContaining([
@@ -182,7 +184,7 @@ describe('RolesService', () => {
         .mockResolvedValueOnce(false);
 
       await asyncToThrow(
-        rolesService.getUserApplications(testData.user.id),
+        rolesService.getCommunityApplicationsForUser(testData.user.id),
         RelationshipNotFoundException
       );
     });
