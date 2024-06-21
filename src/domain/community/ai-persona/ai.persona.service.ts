@@ -35,8 +35,9 @@ export class AiPersonaService {
   ): Promise<IAiPersona> {
     let aiPersona: IAiPersona = new AiPersona();
     aiPersona.description = aiPersonaData.description;
-    //AiPersona.create(aiPersonaData);
     aiPersona.authorization = new AuthorizationPolicy();
+
+    // TODO: use AiServerWrapper to create a new AI Persona Service if no persona service ID is provided
 
     // For now fixed.
     aiPersona.bodyOfKnowledgeType = AiPersonaBodyOfKnowledgeType.ALKEMIO_SPACE;
