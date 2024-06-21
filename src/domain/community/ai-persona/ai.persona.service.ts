@@ -16,6 +16,9 @@ import { LogContext } from '@common/enums/logging.context';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
 import { AiServerAdapterAskQuestionInput } from '@services/adapters/ai-server-adapter/dto/ai.server.adapter.dto.ask.question';
+import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
+import { AiPersonaDataAccessMode } from '@common/enums/ai.persona.data.access.mode';
+import { AiPersonaInteractionMode } from '@common/enums/ai.persona.interaction.mode';
 
 @Injectable()
 export class AiPersonaService {
@@ -34,6 +37,12 @@ export class AiPersonaService {
     aiPersona.description = aiPersonaData.description;
     //AiPersona.create(aiPersonaData);
     aiPersona.authorization = new AuthorizationPolicy();
+
+    // For now fixed.
+    aiPersona.bodyOfKnowledgeType = AiPersonaBodyOfKnowledgeType.ALKEMIO_SPACE;
+    aiPersona.dataAccessMode =
+      AiPersonaDataAccessMode.SPACE_PROFILE_AND_CONTENTS;
+    aiPersona.interactionModes = [AiPersonaInteractionMode.DISCUSSION_TAGGING];
 
     aiPersona = await this.aiPersonaRepository.save(aiPersona);
     this.logger.verbose?.(
