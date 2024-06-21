@@ -23,6 +23,7 @@ import { RolesResultSpace } from './dto/roles.dto.result.space';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { SpaceService } from '@domain/space/space/space.service';
+import { UserLookupService } from '@services/infrastructure/user-lookup/user.lookup.service';
 
 export class RolesService {
   constructor(
@@ -35,6 +36,7 @@ export class RolesService {
     private spaceService: SpaceService,
     private authorizationService: AuthorizationService,
     private organizationService: OrganizationService,
+    private userLookupService: UserLookupService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -154,11 +156,21 @@ export class RolesService {
     states?: string[]
   ): Promise<CommunityInvitationForRoleResult[]> {
     const invitationResults: CommunityInvitationForRoleResult[] = [];
-    const invitations =
-      await this.invitationService.findInvitationsForContributor(
-        userID,
-        states
-      );
+
+    // What contributors are managed by this user?
+    const contributorsManagedByUser =
+      await this.userLookupService.getContributorsManagedByUser(userID);
+    const invitations: IInvitation[] = [];
+    for (const contributor of contributorsManagedByUser) {
+      const contributorInvitations =
+        await this.invitationService.findInvitationsForContributor(
+          contributor.id,
+          states
+        );
+      if (contributorInvitations) {
+        invitations.push(...contributorInvitations);
+      }
+    }
 
     if (!invitations) return [];
 
@@ -205,6 +217,8 @@ export class RolesService {
       invitation.createdDate,
       invitation.updatedDate
     );
+    invitationResult.contributorID = invitation.invitedContributor;
+    invitationResult.contributorType = invitation.contributorType;
 
     invitationResult.createdBy = invitation.createdBy;
     invitationResult.welcomeMessage = invitation.welcomeMessage;
