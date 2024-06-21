@@ -50,7 +50,10 @@ export class LibraryService {
         where: {
           listedInStore: true,
         },
-        relations: ['aiPersona', 'account'],
+        relations: {
+          aiPersona: true,
+          account: true,
+        },
       }
     );
     return virtualContributors;
