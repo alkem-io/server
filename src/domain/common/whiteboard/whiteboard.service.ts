@@ -36,6 +36,7 @@ import { CalloutContribution } from '@domain/collaboration/callout-contribution/
 import { LicenseEngineService } from '@core/license-engine/license.engine.service';
 import { LicensePrivilege } from '@common/enums/license.privilege';
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
+import { isEqual } from 'lodash';
 
 @Injectable()
 export class WhiteboardService {
@@ -198,12 +199,19 @@ export class WhiteboardService {
         profile: true,
       },
     });
+    const currentWhiteboardContent = JSON.parse(whiteboard.content);
+    const newWhiteboardContent = JSON.parse(
+      updateWhiteboardContentData.content
+    );
 
-    if (
-      !updateWhiteboardContentData.content ||
-      updateWhiteboardContentData.content === whiteboard.content
-    ) {
-      return whiteboard;
+    if (isEqual(currentWhiteboardContent, newWhiteboardContent)) {
+      whiteboard.updatedDate = new Date();
+
+      this.subscriptionPublishService.publishWhiteboardSaved(
+        whiteboard.id,
+        whiteboard.updatedDate
+      );
+      return this.save(whiteboard);
     }
 
     if (!whiteboard?.profile) {
@@ -213,20 +221,19 @@ export class WhiteboardService {
       );
     }
 
-    const newContent = await this.reuploadDocumentsIfNotInBucket(
-      JSON.parse(updateWhiteboardContentData.content),
+    const newContentWithFiles = await this.reuploadDocumentsIfNotInBucket(
+      newWhiteboardContent,
       whiteboard?.profile.id
     );
 
-    whiteboard.content = JSON.stringify(newContent);
-    whiteboard.updatedDate = new Date(); // Make sure that at least the updatedDate is updated (if the content is the same)
+    whiteboard.content = JSON.stringify(newContentWithFiles);
     const savedWhiteboard = await this.save(whiteboard);
 
     this.eventEmitter.emit(WHITEBOARD_CONTENT_UPDATE, savedWhiteboard.id);
 
     this.subscriptionPublishService.publishWhiteboardSaved(
       whiteboard.id,
-      whiteboard.updatedDate
+      savedWhiteboard.updatedDate
     );
 
     return savedWhiteboard;
