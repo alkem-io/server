@@ -11,7 +11,7 @@ import {
   DeleteAiPersonaServiceInput,
   UpdateAiPersonaServiceInput,
 } from './dto';
-import { AiPersonaIngestInput } from './dto/ai.persona.service.dto.ingest';
+import { AiPersonaServiceIngestInput } from './dto/ai.persona.service.dto.ingest';
 
 @Resolver(() => IAiPersonaService)
 export class AiPersonaServiceResolverMutations {
@@ -25,7 +25,7 @@ export class AiPersonaServiceResolverMutations {
     description: 'Updates the specified AI Persona.',
   })
   @Profiling.api
-  async updateAiPersonaService(
+  async aiServerUpdateAiPersonaService(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('aiPersonaServiceData')
     aiPersonaServiceData: UpdateAiPersonaServiceInput
@@ -50,7 +50,7 @@ export class AiPersonaServiceResolverMutations {
   @Mutation(() => IAiPersonaService, {
     description: 'Deletes the specified AiPersonaService.',
   })
-  async deleteAiPersonaService(
+  async aiServerDeleteAiPersonaService(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('deleteData') deleteData: DeleteAiPersonaServiceInput
   ): Promise<IAiPersonaService> {
@@ -74,10 +74,10 @@ export class AiPersonaServiceResolverMutations {
     description:
       'Trigger an ingesting of data on the remove AI Persona Service.',
   })
-  async ingest(
+  async aiServerPersonaServiceIngest(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('ingestData')
-    aiPersonaIngestData: AiPersonaIngestInput
+    aiPersonaIngestData: AiPersonaServiceIngestInput
   ): Promise<boolean> {
     const aiPersonaService =
       await this.aiPersonaServiceService.getAiPersonaServiceOrFail(

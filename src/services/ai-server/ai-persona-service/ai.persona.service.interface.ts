@@ -1,9 +1,9 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
-import { AiPersonaAccessMode } from '@common/enums/ai.persona.access.mode';
+import { AiPersonaDataAccessMode } from '@common/enums/ai.persona.data.access.mode';
 import { IAiServer } from '../ai-server/ai.server.interface';
-import { BodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
+import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
 import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
 
 @ObjectType('AiPersonaService')
@@ -22,17 +22,17 @@ export class IAiPersonaService extends IAuthorizable {
   })
   prompt!: string;
 
-  @Field(() => AiPersonaAccessMode, {
+  @Field(() => AiPersonaDataAccessMode, {
     nullable: false,
     description: 'The required data access by the Virtual Persona',
   })
-  dataAccessMode!: AiPersonaAccessMode;
+  dataAccessMode!: AiPersonaDataAccessMode;
 
-  @Field(() => BodyOfKnowledgeType, {
+  @Field(() => AiPersonaBodyOfKnowledgeType, {
     nullable: true,
     description: 'The body of knowledge type used for the AI Persona Service',
   })
-  bodyOfKnowledgeType!: BodyOfKnowledgeType;
+  bodyOfKnowledgeType!: AiPersonaBodyOfKnowledgeType;
 
   @Field(() => UUID, {
     nullable: true,
