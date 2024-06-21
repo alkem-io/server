@@ -7,13 +7,13 @@ import { MaxLength } from 'class-validator';
 
 @InputType()
 export class CreateAiPersonaInput {
-  @Field(() => Markdown, { nullable: false })
+  @Field(() => Markdown, { nullable: true })
   @MaxLength(HUGE_TEXT_LENGTH)
-  description!: string;
+  description?: string = '';
 
   @Field(() => UUID, { nullable: true })
-  aiPersonaServiceID?: string;
+  aiPersonaServiceID?: string = undefined;
 
   @Field(() => CreateAiPersonaServiceInput, { nullable: true })
-  aiPersonService?: CreateAiPersonaServiceInput;
+  aiPersonaService?: CreateAiPersonaServiceInput = undefined;
 }

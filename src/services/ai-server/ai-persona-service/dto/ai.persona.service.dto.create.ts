@@ -9,23 +9,25 @@ import { AiPersonaDataAccessMode } from '@common/enums/ai.persona.data.access.mo
 
 @InputType()
 export class CreateAiPersonaServiceInput {
-  @Field(() => AiPersonaEngine, { nullable: false })
+  @Field(() => AiPersonaEngine, { nullable: true })
   @MaxLength(SMALL_TEXT_LENGTH)
-  engine!: AiPersonaEngine;
+  engine?: AiPersonaEngine = AiPersonaEngine.EXPERT;
 
   @Field(() => JSON, { nullable: true })
   @MaxLength(LONG_TEXT_LENGTH)
-  prompt!: string;
+  prompt?: string = '';
 
-  @Field(() => AiPersonaDataAccessMode, { nullable: false })
+  @Field(() => AiPersonaDataAccessMode, { nullable: true })
   @MaxLength(SMALL_TEXT_LENGTH)
-  dataAccessMode!: AiPersonaDataAccessMode;
+  dataAccessMode?: AiPersonaDataAccessMode =
+    AiPersonaDataAccessMode.SPACE_PROFILE_AND_CONTENTS;
 
-  @Field(() => AiPersonaBodyOfKnowledgeType, { nullable: false })
+  @Field(() => AiPersonaBodyOfKnowledgeType, { nullable: true })
   @MaxLength(SMALL_TEXT_LENGTH)
-  bodyOfKnowledgeType!: AiPersonaBodyOfKnowledgeType;
+  bodyOfKnowledgeType?: AiPersonaBodyOfKnowledgeType =
+    AiPersonaBodyOfKnowledgeType.ALKEMIO_SPACE;
 
-  @Field(() => UUID, { nullable: false })
+  @Field(() => UUID, { nullable: true })
   @MaxLength(SMALL_TEXT_LENGTH)
-  bodyOfKnowledgeID!: string;
+  bodyOfKnowledgeID: string = '';
 }

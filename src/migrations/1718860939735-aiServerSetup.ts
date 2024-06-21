@@ -25,9 +25,7 @@ export class aiServerSetup1718860939735 implements MigrationInterface {
                                                         \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
                                                         \`version\` int NOT NULL,
                                                         \`authorizationId\` char(36) NULL,
-                                                        \`defaultAiPersonaServiceId\` char(36) NULL,
                                                         UNIQUE INDEX \`REL_9d520fa5fed56042918e48fc4b\` (\`authorizationId\`),
-                                                        UNIQUE INDEX \`REL_8926f3b8a0ae47076f8266c9aa\` (\`defaultAiPersonaServiceId\`),
                                                         PRIMARY KEY (\`id\`)) ENGINE=InnoDB`);
 
     await queryRunner.query(`CREATE TABLE IF NOT EXISTS \`ai_persona_service\` (
@@ -181,11 +179,6 @@ export class aiServerSetup1718860939735 implements MigrationInterface {
       );
     }
 
-    // set the default persona service to the last created
-    await queryRunner.query(
-      `UPDATE ai_server SET defaultAiPersonaServiceId = '${aiPersonaServiceID}'`
-    );
-
     // update persona indicies after data is populated
     await queryRunner.query(
       `ALTER TABLE \`virtual_contributor\` ADD UNIQUE INDEX \`IDX_55b8101bdf4f566645e928c26e\` (\`aiPersonaId\`)`
@@ -201,10 +194,6 @@ export class aiServerSetup1718860939735 implements MigrationInterface {
     );
     await queryRunner.query(
       `ALTER TABLE \`ai_server\` ADD CONSTRAINT \`FK_9d520fa5fed56042918e48fc4b5\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
-    );
-
-    await queryRunner.query(
-      `ALTER TABLE \`ai_server\` ADD CONSTRAINT \`FK_8926f3b8a0ae47076f8266c9aa1\` FOREIGN KEY (\`defaultAiPersonaServiceId\`) REFERENCES \`ai_persona_service\`(\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION`
     );
 
     await queryRunner.query(

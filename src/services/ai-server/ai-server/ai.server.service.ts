@@ -24,6 +24,7 @@ import { AiServerRole } from '@common/enums/ai.server.role';
 import { AiPersonaEngineAdapter } from '../ai-persona-engine-adapter/ai.persona.engine.adapter';
 import { AiServerIngestAiPersonaServiceInput } from './dto/ai.server.dto.ingest.ai.persona.service';
 import { AiPersonaEngineAdapterInputBase } from '../ai-persona-engine-adapter/dto/ai.persona.engine.adapter.dto.base';
+import { CreateAiPersonaServiceInput } from '../ai-persona-service/dto';
 
 @Injectable()
 export class AiServerService {
@@ -36,6 +37,22 @@ export class AiServerService {
     private aiServerRepository: Repository<AiServer>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
+
+  async createAiPersonaService(
+    personaServiceData: CreateAiPersonaServiceInput
+  ) {
+    const server = await this.getAiServerOrFail({
+      relations: { aiPersonaServices: true },
+    });
+    const aiPersonaService =
+      await this.aiPersonaServiceService.createAiPersonaService(
+        personaServiceData
+      );
+    server.aiPersonaServices = server.aiPersonaServices ?? [];
+    server.aiPersonaServices.push(aiPersonaService);
+    await this.saveAiServer(server);
+    return aiPersonaService;
+  }
 
   async getAiServerOrFail(
     options?: FindOneOptions<AiServer>

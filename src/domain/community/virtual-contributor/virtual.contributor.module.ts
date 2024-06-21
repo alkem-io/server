@@ -16,6 +16,7 @@ import { CommunicationAdapterModule } from '@services/adapters/communication-ada
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { AiPersonaModule } from '../ai-persona/ai.persona.module';
 import { AiServerAdapterModule } from '@services/adapters/ai-server-adapter/ai.server.adapter.module';
+import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { AiServerAdapterModule } from '@services/adapters/ai-server-adapter/ai.s
     AiServerAdapterModule,
     CommunicationAdapterModule,
     TypeOrmModule.forFeature([VirtualContributor]),
+    PlatformAuthorizationPolicyModule,
   ],
   providers: [
     VirtualContributorService,

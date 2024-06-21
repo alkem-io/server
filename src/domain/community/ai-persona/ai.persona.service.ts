@@ -19,6 +19,7 @@ import { AiServerAdapterAskQuestionInput } from '@services/adapters/ai-server-ad
 import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
 import { AiPersonaDataAccessMode } from '@common/enums/ai.persona.data.access.mode';
 import { AiPersonaInteractionMode } from '@common/enums/ai.persona.interaction.mode';
+import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
 
 @Injectable()
 export class AiPersonaService {
@@ -34,7 +35,7 @@ export class AiPersonaService {
     aiPersonaData: CreateAiPersonaInput
   ): Promise<IAiPersona> {
     let aiPersona: IAiPersona = new AiPersona();
-    aiPersona.description = aiPersonaData.description;
+    aiPersona.description = aiPersonaData.description ?? '';
     aiPersona.authorization = new AuthorizationPolicy();
 
     // TODO: use AiServerWrapper to create a new AI Persona Service if no persona service ID is provided
@@ -44,6 +45,16 @@ export class AiPersonaService {
     aiPersona.dataAccessMode =
       AiPersonaDataAccessMode.SPACE_PROFILE_AND_CONTENTS;
     aiPersona.interactionModes = [AiPersonaInteractionMode.DISCUSSION_TAGGING];
+
+    if (aiPersonaData.aiPersonaServiceID) {
+      aiPersona.aiPersonaServiceID = aiPersonaData.aiPersonaServiceID;
+    } else if (aiPersonaData.aiPersonaService) {
+      const aiPersonaService =
+        await this.aiServerAdapter.createAiPersonaService(
+          aiPersonaData.aiPersonaService
+        );
+      aiPersona.aiPersonaServiceID = aiPersonaService.id;
+    }
 
     aiPersona = await this.aiPersonaRepository.save(aiPersona);
     this.logger.verbose?.(

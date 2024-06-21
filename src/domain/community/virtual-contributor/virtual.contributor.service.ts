@@ -34,6 +34,7 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IAiPersonaQuestionResult } from '../ai-persona/dto/ai.persona.question.dto.result';
 import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
 import { AiServerAdapterAskQuestionInput } from '@services/adapters/ai-server-adapter/dto/ai.server.adapter.dto.ask.question';
+import { SearchVisibility } from '@common/enums/search.visibility';
 
 @Injectable()
 export class VirtualContributorService {
@@ -73,6 +74,9 @@ export class VirtualContributorService {
       virtualContributorData
     );
 
+    virtualContributor.listedInStore = true;
+    virtualContributor.searchVisibility = SearchVisibility.ACCOUNT;
+
     virtualContributor.authorization = new AuthorizationPolicy();
     const communicationID = await this.communicationAdapter.tryRegisterNewUser(
       `virtual-contributor-${virtualContributor.nameID}@alkem.io`
@@ -80,7 +84,10 @@ export class VirtualContributorService {
     if (communicationID) {
       virtualContributor.communicationID = communicationID;
     }
+
+    this.logger.log(virtualContributorData);
     const aiPersonaInput: CreateAiPersonaInput = {
+      ...virtualContributorData.aiPersona,
       description: `AI Persona for virtual contributor ${virtualContributor.nameID}`,
     };
     virtualContributor.aiPersona = await this.aiPersonaService.createAiPersona(
@@ -241,6 +248,13 @@ export class VirtualContributorService {
       virtualContributor as VirtualContributor
     );
     result.id = virtualContributorID;
+
+    if (virtualContributor.aiPersona) {
+      await this.aiPersonaService.deleteAiPersona({
+        ID: virtualContributor.aiPersona.id,
+      });
+    }
+
     return result;
   }
 

@@ -22,6 +22,8 @@ import {
   IngestSpace,
   SpaceIngestionPurpose,
 } from '@services/infrastructure/event-bus/commands';
+import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
+import { AiServerService } from '../ai-server/ai.server.service';
 
 @Injectable()
 export class AiPersonaServiceService {
@@ -37,13 +39,19 @@ export class AiPersonaServiceService {
   async createAiPersonaService(
     aiPersonaServiceData: CreateAiPersonaServiceInput
   ): Promise<IAiPersonaService> {
-    if (aiPersonaServiceData.prompt === undefined)
-      aiPersonaServiceData.prompt = '';
     const aiPersonaService: IAiPersonaService = new AiPersonaService();
     // TODO: map in the data   AiPersonaService.create(aiPersonaServiceData);
     aiPersonaService.authorization = new AuthorizationPolicy();
 
-    const savedVP = await this.aiPersonaServiceRepository.save(
+    aiPersonaService.bodyOfKnowledgeID = aiPersonaServiceData.bodyOfKnowledgeID;
+    aiPersonaService.engine =
+      aiPersonaServiceData.engine ?? AiPersonaEngine.EXPERT;
+    aiPersonaService.bodyOfKnowledgeType =
+      aiPersonaServiceData.bodyOfKnowledgeType ??
+      AiPersonaBodyOfKnowledgeType.ALKEMIO_SPACE;
+    aiPersonaService.prompt = aiPersonaServiceData.prompt ?? '';
+
+    const savedAiPersonaService = await this.aiPersonaServiceRepository.save(
       aiPersonaService
     );
     this.logger.verbose?.(
@@ -59,7 +67,7 @@ export class AiPersonaServiceService {
         )
       );
 
-    return savedVP;
+    return savedAiPersonaService;
   }
 
   async updateAiPersonaService(

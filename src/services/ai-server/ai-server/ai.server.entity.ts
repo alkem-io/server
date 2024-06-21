@@ -14,11 +14,4 @@ export class AiServer extends AuthorizableEntity implements IAiServer {
     }
   )
   aiPersonaServices!: AiPersonaService[];
-
-  @OneToOne(() => AiPersonaService, {
-    eager: false,
-    cascade: false,
-  })
-  @JoinColumn()
-  defaultAiPersonaService?: AiPersonaService;
 }
