@@ -10,8 +10,12 @@ export class aiServerSetup1718860939735 implements MigrationInterface {
                                                         \`aiPersonaServiceID\` varchar(128) NOT NULL,
                                                         \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
                                                         \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
-                                                        \`version\` int NOT NULL, \`description\` text NULL,
+                                                        \`version\` int NOT NULL,
+                                                        \`description\` text DEFAULT NULL,
                                                         \`authorizationId\` char(36) NULL,
+                                                        \`interactionModes\` text DEFAULT NULL,
+                                                        \`dataAccessMode\` varchar(64) DEFAULT NULL,
+                                                        \`bodyOfKnowledgeType\` varchar(64) DEFAULT NULL,
                                                         UNIQUE INDEX \`REL_293f0d3ef60cb0ca0006044ecf\` (\`authorizationId\`),
                                                         PRIMARY KEY (\`id\`)) ENGINE=InnoDB`);
 
@@ -151,12 +155,26 @@ export class aiServerSetup1718860939735 implements MigrationInterface {
                     1, '', '', 0, '')`
       );
       await queryRunner.query(
-        `INSERT INTO ai_persona (id, version, aiPersonaServiceID, authorizationId, description) VALUES
-                ('${aiPersonaID}',
-                1,
-                '${aiPersonaServiceID}',
-                '${aiPersonaAuthID}',
-                '')`
+        `INSERT INTO ai_persona (\
+              id, \
+              version, \
+              aiPersonaServiceID, \
+              authorizationId,\
+              bodyOfKnowledgeType,\
+              dataAccessMode,\
+              interactionModes,\
+              description\
+            )\
+            VALUES (\
+              '${aiPersonaID}',\
+              1,\
+              '${aiPersonaServiceID}',\
+              '${aiPersonaAuthID}',\
+              '${vc.bodyOfKnowledgeType}',\
+              '${virtualPersona.dataAccessMode}',\
+              '[${['discussion-tagging']}]',\
+              ''\
+            )`
       );
       await queryRunner.query(
         `UPDATE virtual_contributor SET aiPersonaId = '${aiPersonaID}' WHERE id = '${vc.id}'`
@@ -184,9 +202,11 @@ export class aiServerSetup1718860939735 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE \`ai_server\` ADD CONSTRAINT \`FK_9d520fa5fed56042918e48fc4b5\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
+
     await queryRunner.query(
       `ALTER TABLE \`ai_server\` ADD CONSTRAINT \`FK_8926f3b8a0ae47076f8266c9aa1\` FOREIGN KEY (\`defaultAiPersonaServiceId\`) REFERENCES \`ai_persona_service\`(\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION`
     );
+
     await queryRunner.query(
       `ALTER TABLE \`ai_persona_service\` ADD CONSTRAINT \`FK_79206feb0038b1c5597668dc4b5\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );

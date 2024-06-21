@@ -4,8 +4,8 @@ import { LONG_TEXT_LENGTH, SMALL_TEXT_LENGTH } from '@src/common/constants';
 import JSON from 'graphql-type-json';
 import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
 import { UUID } from '@domain/common/scalars';
-import { BodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
-import { AiPersonaAccessMode } from '@common/enums/ai.persona.access.mode';
+import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
+import { AiPersonaDataAccessMode } from '@common/enums/ai.persona.data.access.mode';
 
 @InputType()
 export class CreateAiPersonaServiceInput {
@@ -17,13 +17,13 @@ export class CreateAiPersonaServiceInput {
   @MaxLength(LONG_TEXT_LENGTH)
   prompt!: string;
 
-  @Field(() => AiPersonaAccessMode, { nullable: false })
+  @Field(() => AiPersonaDataAccessMode, { nullable: false })
   @MaxLength(SMALL_TEXT_LENGTH)
-  dataAccessMode!: AiPersonaAccessMode;
+  dataAccessMode!: AiPersonaDataAccessMode;
 
-  @Field(() => BodyOfKnowledgeType, { nullable: false })
+  @Field(() => AiPersonaBodyOfKnowledgeType, { nullable: false })
   @MaxLength(SMALL_TEXT_LENGTH)
-  bodyOfKnowledgeType!: BodyOfKnowledgeType;
+  bodyOfKnowledgeType!: AiPersonaBodyOfKnowledgeType;
 
   @Field(() => UUID, { nullable: false })
   @MaxLength(SMALL_TEXT_LENGTH)
