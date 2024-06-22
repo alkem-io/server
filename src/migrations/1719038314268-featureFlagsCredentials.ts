@@ -110,15 +110,15 @@ export class featureFlagsCredentials1719038314268
             const credentialID = randomUUID();
             let credentialType: string = '';
             switch (flag.name) {
-              case LicenseCredential.WHITEBOARD_MULTI_USER:
+              case LicenseCredential.FEATURE_WHITEBOARD_MULTI_USER:
                 credentialType =
                   LicenseCredential.FEATURE_WHITEBOARD_MULTI_USER;
                 break;
-              case LicenseCredential.CALLOUT_TO_CALLOUT_TEMPLATE:
+              case LicenseCredential.FEATURE_CALLOUT_TO_CALLOUT_TEMPLATE:
                 credentialType =
                   LicenseCredential.FEATURE_CALLOUT_TO_CALLOUT_TEMPLATE;
                 break;
-              case LicenseCredential.VIRTUAL_CONTRIBUTORS:
+              case LicenseCredential.FEATURE_VIRTUAL_CONTRIBUTORS:
                 credentialType = LicenseCredential.FEATURE_VIRTUAL_CONTRIBUTORS;
                 break;
             }
@@ -160,12 +160,6 @@ export class featureFlagsCredentials1719038314268
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {}
-}
-
-export enum LicenseCredential {
-  WHITEBOARD_MULTI_USER = 'whiteboard-multi-user',
-  CALLOUT_TO_CALLOUT_TEMPLATE = 'callout-to-callout-template',
-  VIRTUAL_CONTRIBUTORS = 'virtual-contributors',
 }
 
 export enum LicenseCredential {
@@ -230,17 +224,17 @@ export enum LicensePrivilege {
 
 export const licenseCredentialRules: CredentialRule[] = [
   {
-    credentialType: LicenseCredential.VIRTUAL_CONTRIBUTORS,
+    credentialType: LicenseCredential.FEATURE_VIRTUAL_CONTRIBUTORS,
     grantedPrivileges: [LicensePrivilege.VIRTUAL_CONTRIBUTOR_ACCESS],
     name: 'Virtual Contributors',
   },
   {
-    credentialType: LicenseCredential.WHITEBOARD_MULTI_USER,
+    credentialType: LicenseCredential.FEATURE_WHITEBOARD_MULTI_USER,
     grantedPrivileges: [LicensePrivilege.WHITEBOARD_MULTI_USER],
     name: 'Multi-user whiteboards',
   },
   {
-    credentialType: LicenseCredential.CALLOUT_TO_CALLOUT_TEMPLATE,
+    credentialType: LicenseCredential.FEATURE_CALLOUT_TO_CALLOUT_TEMPLATE,
     grantedPrivileges: [LicensePrivilege.CALLOUT_SAVE_AS_TEMPLATE],
     name: 'Callout templates',
   },
