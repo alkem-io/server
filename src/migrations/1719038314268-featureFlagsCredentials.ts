@@ -7,31 +7,39 @@ export class featureFlagsCredentials1719038314268
   name = 'featureFlagsCredentials1719038314268';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    // Update existing plans to have new flags
-    const existingPlans: {
-      id: string;
-      name: string;
-    }[] = await queryRunner.query(`SELECT id, name FROM \`license_plan\``);
-    for (const existingPlan of existingPlans) {
-      let assignToNewOrganizationAccounts = false;
-      let assignToNewUserAccounts = false;
-      if (existingPlan.name === 'FREE') {
-        assignToNewOrganizationAccounts = true;
-        assignToNewUserAccounts = true;
-      }
-      await queryRunner.query(
-        `UPDATE \`license_plan\`
-          SET \`assignToNewAccounts\` = ?,
-              \`assignToNewUserAccounts\` = ?
-          WHERE id = ?;
-        `,
-        [
-          assignToNewOrganizationAccounts,
-          assignToNewUserAccounts,
-          existingPlan.id,
-        ]
-      );
-    }
+    // Add the new flags on license_plan
+    // await queryRunner.query(
+    //   `ALTER TABLE \`license_plan\` ADD \`assignToNewOrganizationAccounts\` tinyint NOT NULL DEFAULT '0'`
+    // );
+    // await queryRunner.query(
+    //   `ALTER TABLE \`license_plan\` ADD \`assignToNewUserAccounts\` tinyint NOT NULL DEFAULT '0'`
+    // );
+
+    // // Update existing plans to have new flags
+    // const existingPlans: {
+    //   id: string;
+    //   name: string;
+    // }[] = await queryRunner.query(`SELECT id, name FROM \`license_plan\``);
+    // for (const existingPlan of existingPlans) {
+    //   let assignToNewOrganizationAccounts = false;
+    //   let assignToNewUserAccounts = false;
+    //   if (existingPlan.name === 'FREE') {
+    //     assignToNewOrganizationAccounts = true;
+    //     assignToNewUserAccounts = true;
+    //   }
+    //   await queryRunner.query(
+    //     `UPDATE \`license_plan\`
+    //       SET \`assignToNewOrganizationAccounts\` = ?,
+    //           \`assignToNewUserAccounts\` = ?
+    //       WHERE id = ?;
+    //     `,
+    //     [
+    //       assignToNewOrganizationAccounts,
+    //       assignToNewUserAccounts,
+    //       existingPlan.id,
+    //     ]
+    //   );
+    // }
 
     // Create a new plan for each of the planDefinitions
     const [platform]: {
@@ -43,7 +51,9 @@ export class featureFlagsCredentials1719038314268
       const planID = randomUUID();
       await queryRunner.query(
         `INSERT INTO \`license_plan\`
-          ( \`id\`,  \`version\`, \`name\`,
+          ( \`id\`,
+            \`version\`,
+            \`name\`,
             \`enabled\`,
             \`licensingId\`,
             \`sortOrder\`,
@@ -53,10 +63,10 @@ export class featureFlagsCredentials1719038314268
             \`requiresPaymentMethod\`,
             \`requiresContactSupport\`,
             \`licenseCredential\`,
-            \`assignToNewAccounts\`,
+            \`assignToNewOrganizationAccounts\`,
             \`assignToNewUserAccounts\`)
           VALUES
-          (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+          (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
         `,
         [
           planID, // id
@@ -147,8 +157,6 @@ export class featureFlagsCredentials1719038314268
     await queryRunner.query(
       `ALTER TABLE \`license_policy\` DROP COLUMN \`featureFlagRules\` `
     );
-
-    throw new Error('Migration complete');
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {}
