@@ -76,17 +76,19 @@ export class ForumResolverMutations {
         LogContext.SPACES
       );
 
-    const discussion = await this.forumService.createDiscussion(
+    let discussion = await this.forumService.createDiscussion(
       createData,
       agentInfo.userID,
       agentInfo.communicationID
     );
 
-    const savedDiscussion = await this.discussionService.save(discussion);
-    await this.discussionAuthorizationService.applyAuthorizationPolicy(
-      discussion,
-      forum.authorization
-    );
+    discussion =
+      await this.discussionAuthorizationService.applyAuthorizationPolicy(
+        discussion,
+        forum.authorization
+      );
+
+    discussion = await this.discussionService.save(discussion);
 
     // Send the notification
     const notificationInput: NotificationInputForumDiscussionCreated = {
@@ -112,6 +114,6 @@ export class ForumResolverMutations {
       subscriptionPayload
     );
 
-    return savedDiscussion;
+    return discussion;
   }
 }
