@@ -5,13 +5,13 @@ import { IDiscussion } from './discussion.interface';
 import { DiscussionService } from './discussion.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
-import { RoomAuthorizationService } from '../room/room.service.authorization';
+import { RoomAuthorizationService } from '../../domain/communication/room/room.service.authorization';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { CREDENTIAL_RULE_TYPES_UPDATE_FORUM_DISCUSSION } from '@common/constants/authorization/credential.rule.types.constants';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { LogContext } from '@common/enums/logging.context';
-import { CommunicationDiscussionPrivacy } from '@common/enums/communication.discussion.privacy';
+import { ForumDiscussionPrivacy } from '@common/enums/forum.discussion.privacy';
 
 @Injectable()
 export class DiscussionAuthorizationService {
@@ -62,13 +62,13 @@ export class DiscussionAuthorizationService {
         discussion.authorization
       );
     switch (discussion.privacy) {
-      case CommunicationDiscussionPrivacy.PUBLIC:
+      case ForumDiscussionPrivacy.PUBLIC:
         // To ensure that the discussion + discussion profile is visible for non-authenticated users
         discussion.authorization.anonymousReadAccess = true;
         break;
-      case CommunicationDiscussionPrivacy.AUTHENTICATED:
+      case ForumDiscussionPrivacy.AUTHENTICATED:
         break;
-      case CommunicationDiscussionPrivacy.AUTHOR:
+      case ForumDiscussionPrivacy.AUTHOR:
         // This actually requires a NOT in the authorization framework; for later
         break;
     }

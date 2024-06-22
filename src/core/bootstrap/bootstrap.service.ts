@@ -73,7 +73,7 @@ export class BootstrapService {
       await this.ensureSpaceSingleton();
       await this.bootstrapProfiles();
       await this.ensureSsiPopulated();
-      await this.platformService.ensureCommunicationCreated();
+      await this.platformService.ensureForumCreated();
       // reset auth as last in the actions
       await this.ensureAuthorizationsPopulated();
       // await this.ensureSpaceNamesInElastic();

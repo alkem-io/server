@@ -1,9 +1,9 @@
 import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
 import { IDiscussion } from './discussion.interface';
-import { Communication } from '../communication/communication.entity';
-import { Room } from '../room/room.entity';
+import { Room } from '../../domain/communication/room/room.entity';
 import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
-import { CommunicationDiscussionPrivacy } from '@common/enums/communication.discussion.privacy';
+import { Forum } from '@platform/forum/forum.entity';
+import { ForumDiscussionPrivacy } from '@common/enums/forum.discussion.privacy';
 
 @Entity()
 export class Discussion extends NameableEntity implements IDiscussion {
@@ -21,17 +21,17 @@ export class Discussion extends NameableEntity implements IDiscussion {
   @Column('char', { length: 36, nullable: true })
   createdBy!: string;
 
-  @ManyToOne(() => Communication, communication => communication.discussions, {
+  @ManyToOne(() => Forum, communication => communication.discussions, {
     eager: false,
     cascade: false,
     onDelete: 'CASCADE',
   })
-  communication?: Communication;
+  forum?: Forum;
 
   @Column('varchar', {
     length: 255,
     nullable: false,
-    default: CommunicationDiscussionPrivacy.AUTHENTICATED,
+    default: ForumDiscussionPrivacy.AUTHENTICATED,
   })
   privacy!: string;
 }

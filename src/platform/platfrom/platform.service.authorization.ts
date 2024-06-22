@@ -7,7 +7,6 @@ import { Platform } from './platform.entity';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { LibraryAuthorizationService } from '@library/library/library.service.authorization';
 import { PlatformService } from './platform.service';
-import { CommunicationAuthorizationService } from '@domain/communication/communication/communication.service.authorization';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import {
@@ -34,6 +33,7 @@ import { RelationshipNotFoundException } from '@common/exceptions/relationship.n
 import { LicensingAuthorizationService } from '@platform/licensing/licensing.service.authorization';
 import { VirtualPersonaAuthorizationService } from '@platform/virtual-persona/virtual.persona.service.authorization';
 import { IVirtualPersona } from '@platform/virtual-persona';
+import { ForumAuthorizationService } from '@platform/forum/forum.service.authorization';
 
 @Injectable()
 export class PlatformAuthorizationService {
@@ -41,7 +41,7 @@ export class PlatformAuthorizationService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private platformAuthorizationPolicyService: PlatformAuthorizationPolicyService,
     private libraryAuthorizationService: LibraryAuthorizationService,
-    private communicationAuthorizationService: CommunicationAuthorizationService,
+    private forumAuthorizationService: ForumAuthorizationService,
     private platformService: PlatformService,
     private innovationHubService: InnovationHubService,
     private innovationHubAuthorizationService: InnovationHubAuthorizationService,
@@ -115,7 +115,7 @@ export class PlatformAuthorizationService {
         library: {
           innovationPacks: true,
         },
-        communication: true,
+        forum: true,
         storageAggregator: true,
         licensing: true,
         virtualPersonas: true,
@@ -124,7 +124,7 @@ export class PlatformAuthorizationService {
 
     if (
       !platform.library ||
-      !platform.communication ||
+      !platform.forum ||
       !platform.storageAggregator ||
       !platform.licensing ||
       !platform.virtualPersonas
@@ -150,9 +150,9 @@ export class PlatformAuthorizationService {
     const extendedAuthPolicy = await this.appendCredentialRulesCommunication(
       copyPlatformAuthorization
     );
-    platform.communication =
-      await this.communicationAuthorizationService.applyAuthorizationPolicy(
-        platform.communication,
+    platform.forum =
+      await this.forumAuthorizationService.applyAuthorizationPolicy(
+        platform.forum,
         extendedAuthPolicy
       );
 

@@ -1,12 +1,12 @@
-import { DiscussionCategory } from '@common/enums/communication.discussion.category';
 import { Field, ObjectType } from '@nestjs/graphql';
-import { IRoom } from '../room/room.interface';
+import { IRoom } from '../../domain/communication/room/room.interface';
 import { INameable } from '@domain/common/entity/nameable-entity';
-import { CommunicationDiscussionPrivacy } from '@common/enums/communication.discussion.privacy';
+import { ForumDiscussionPrivacy } from '@common/enums/forum.discussion.privacy';
+import { ForumDiscussionCategory } from '@common/enums/forum.discussion.category';
 
 @ObjectType('Discussion')
 export abstract class IDiscussion extends INameable {
-  @Field(() => DiscussionCategory, {
+  @Field(() => ForumDiscussionCategory, {
     description: 'The category assigned to this Discussion.',
   })
   category!: string;
@@ -15,7 +15,7 @@ export abstract class IDiscussion extends INameable {
 
   comments!: IRoom;
 
-  @Field(() => CommunicationDiscussionPrivacy, {
+  @Field(() => ForumDiscussionPrivacy, {
     description:
       'Privacy mode for the Discussion. Note: this is not yet implemented in the authorization policy.',
   })
