@@ -1,11 +1,9 @@
-import { UpdateNameableInput } from '@domain/common/entity/nameable-entity/dto/nameable.dto.update';
+import { UpdateBaseAlkemioInput } from '@domain/common/entity/base-entity';
 import { WhiteboardContent } from '@domain/common/scalars/scalar.whiteboard.content';
 import { InputType, Field } from '@nestjs/graphql';
-import { IsOptional } from 'class-validator';
 
 @InputType()
-export class UpdateWhiteboardContentInput extends UpdateNameableInput {
-  @Field(() => WhiteboardContent, { nullable: true })
-  @IsOptional()
-  content?: string;
+export class UpdateWhiteboardContentInput extends UpdateBaseAlkemioInput {
+  @Field(() => WhiteboardContent)
+  content!: string;
 }

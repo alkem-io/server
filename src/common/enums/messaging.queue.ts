@@ -12,6 +12,7 @@ export enum MessagingQueue {
   EXCALIDRAW_EVENTS = 'alkemio-excalidraw-events',
   //
   SUBSCRIPTION_WHITEBOARD_CONTENT = 'alkemio-subscriptions-whiteboard-content',
+  SUBSCRIPTION_WHITEBOARD_SAVED = 'alkemio-subscriptions-whiteboard-saved',
   SUBSCRIPTION_PROFILE_VERIFIED_CREDENTIAL = 'alkemio-subscriptions-profile-verified-credential',
   SUBSCRIPTION_CALLOUT_POST_CREATED = 'alkemio-subscriptions-callout-post-created',
   SUBSCRIPTION_DISCUSSION_UPDATED = 'alkemio-subscriptions-discussion-updated',
