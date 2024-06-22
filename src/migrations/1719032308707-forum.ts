@@ -65,7 +65,7 @@ export class forum1719032308707 implements MigrationInterface {
       );
       if (communication) {
         await queryRunner.query(
-          `INSERT INTO forum (id, version, discussionCategories, authorizationId) VALUES (?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO forum (id, version, discussionCategories, authorizationId) VALUES (?, ?, ?, ?)`,
           [
             communication.id, // id
             1, // version
@@ -76,10 +76,6 @@ export class forum1719032308707 implements MigrationInterface {
         // Move over all the Discussions
         await queryRunner.query(
           `UPDATE discussion SET forumId = '${communication.id}' WHERE communicationId = '${platform.communicationId}'`
-        );
-        // and also remove data in communicationId
-        await queryRunner.query(
-          `UPDATE discussion SET communicationId = '' WHERE communicationId = '${platform.communicationId}'`
         );
 
         // delete the communication
