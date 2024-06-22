@@ -65,11 +65,9 @@ export class forum1719032308707 implements MigrationInterface {
       );
       if (communication) {
         await queryRunner.query(
-          `INSERT INTO forum (id, createdDate, updatedDate, version, discussionCategories, authorizationId) VALUES (?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO forum (id, version, discussionCategories, authorizationId) VALUES (?, ?, ?, ?, ?, ?)`,
           [
             communication.id, // id
-            new Date(), // createdDate
-            new Date(), // updatedDate
             1, // version
             communication.discussionCategories, // discussionCategories
             communication.authorizationId, // authorizationId
