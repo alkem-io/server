@@ -1,4 +1,4 @@
-import { ISpace } from '@domain/challenge/space/space.interface';
+import { ISpace } from '@domain/space/space/space.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { ISearchResultBase } from './search.result.dto.entry.base.interface';
 import { ISearchResult } from './search.result.entry.interface';
@@ -15,4 +15,10 @@ export abstract class ISearchResultSpace
     description: 'The Space that was found.',
   })
   space!: ISpace;
+
+  @Field(() => ISpace, {
+    nullable: true,
+    description: 'The parent of this Space, if any.',
+  })
+  parentSpace?: ISpace;
 }

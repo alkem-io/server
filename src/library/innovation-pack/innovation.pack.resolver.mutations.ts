@@ -4,7 +4,7 @@ import { CurrentUser, Profiling } from '@src/common/decorators';
 import { InnovationPackService } from './innovaton.pack.service';
 
 import { GraphqlGuard } from '@core/authorization';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { IInnovationPack } from './innovation.pack.interface';

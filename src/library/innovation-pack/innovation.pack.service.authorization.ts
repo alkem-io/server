@@ -90,11 +90,12 @@ export class InnovationPackAuthorizationService {
     const providerOrg = await this.innovationPackService.getProvider(
       innovationPack.id
     );
-    if (!providerOrg)
+    if (!providerOrg) {
       throw new EntityNotInitializedException(
         `Providing organization not found for InnovationPack: ${innovationPack.id}`,
         LogContext.LIBRARY
       );
+    }
 
     const providerOrgAdmins =
       this.authorizationPolicyService.createCredentialRule(
@@ -114,12 +115,9 @@ export class InnovationPackAuthorizationService {
       );
     newRules.push(providerOrgAdmins);
 
-    const updatedAuthorization =
-      this.authorizationPolicyService.appendCredentialAuthorizationRules(
-        authorization,
-        newRules
-      );
-
-    return updatedAuthorization;
+    return this.authorizationPolicyService.appendCredentialAuthorizationRules(
+      authorization,
+      newRules
+    );
   }
 }

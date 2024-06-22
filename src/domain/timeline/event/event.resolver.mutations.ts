@@ -5,7 +5,7 @@ import { CurrentUser } from '@common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { ICalendarEvent } from './event.interface';
 import { DeleteCalendarEventInput } from './dto/event.dto.delete';
 import { UpdateCalendarEventInput } from './dto/event.dto.update';

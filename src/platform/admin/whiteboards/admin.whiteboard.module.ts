@@ -8,7 +8,6 @@ import { AdminWhiteboardResolverMutations } from './admin.whiteboard.resolver.mu
 
 @Module({
   imports: [
-    AuthorizationModule,
     StorageBucketModule,
     DocumentModule,
     AuthorizationModule,

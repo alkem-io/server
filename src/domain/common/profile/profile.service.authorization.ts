@@ -7,6 +7,9 @@ import { ProfileService } from './profile.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { VisualAuthorizationService } from '../visual/visual.service.authorization';
 import { StorageBucketAuthorizationService } from '@domain/storage/storage-bucket/storage.bucket.service.authorization';
+import { LogContext } from '@common/enums/logging.context';
+import { RelationshipNotFoundException } from '@common/exceptions';
+import { Profiling } from '@common/decorators';
 
 @Injectable()
 export class ProfileAuthorizationService {
@@ -19,6 +22,7 @@ export class ProfileAuthorizationService {
     private profileRepository: Repository<Profile>
   ) {}
 
+  @Profiling.api
   async applyAuthorizationPolicy(
     profileInput: IProfile,
     parentAuthorization: IAuthorizationPolicy | undefined
@@ -31,10 +35,26 @@ export class ProfileAuthorizationService {
           tagsets: true,
           authorization: true,
           visuals: true,
-          storageBucket: true,
+          storageBucket: {
+            documents: {
+              tagset: true,
+            },
+          },
         },
       }
     );
+    if (
+      !profile.references ||
+      !profile.tagsets ||
+      !profile.authorization ||
+      !profile.visuals ||
+      !profile.storageBucket
+    ) {
+      throw new RelationshipNotFoundException(
+        `Unable to load Profile with entities at start of auth reset: ${profileInput.id} `,
+        LogContext.ACCOUNT
+      );
+    }
 
     // Inherit from the parent
     profile.authorization =
@@ -43,43 +63,35 @@ export class ProfileAuthorizationService {
         parentAuthorization
       );
 
-    if (profile.references) {
-      for (const reference of profile.references) {
-        reference.authorization =
-          this.authorizationPolicyService.inheritParentAuthorization(
-            reference.authorization,
-            profile.authorization
-          );
-      }
-    }
-
-    if (profile.tagsets) {
-      for (const tagset of profile.tagsets) {
-        tagset.authorization =
-          this.authorizationPolicyService.inheritParentAuthorization(
-            tagset.authorization,
-            profile.authorization
-          );
-      }
-    }
-    if (profile.visuals) {
-      for (const visual of profile.visuals) {
-        const visualWithAuth =
-          await this.visualAuthorizationService.applyAuthorizationPolicy(
-            visual,
-            profile.authorization
-          );
-        visual.authorization = visualWithAuth.authorization;
-      }
-    }
-
-    if (profile.storageBucket) {
-      profile.storageBucket =
-        await this.storageBucketAuthorizationService.applyAuthorizationPolicy(
-          profile.storageBucket,
+    for (const reference of profile.references) {
+      reference.authorization =
+        this.authorizationPolicyService.inheritParentAuthorization(
+          reference.authorization,
           profile.authorization
         );
     }
-    return await this.profileRepository.save(profile);
+
+    for (const tagset of profile.tagsets) {
+      tagset.authorization =
+        this.authorizationPolicyService.inheritParentAuthorization(
+          tagset.authorization,
+          profile.authorization
+        );
+    }
+
+    for (const visual of profile.visuals) {
+      this.visualAuthorizationService.applyAuthorizationPolicy(
+        visual,
+        profile.authorization
+      );
+    }
+
+    profile.storageBucket =
+      this.storageBucketAuthorizationService.applyAuthorizationPolicy(
+        profile.storageBucket,
+        profile.authorization
+      );
+
+    return profile;
   }
 }

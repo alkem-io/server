@@ -1,16 +1,25 @@
 export enum MessagingQueue {
-  CHAT_GUIDANCE = 'alkemio-chat-guidance',
+  VIRTUAL_CONTRIBUTOR_ENGINE_GUIDANCE = 'virtual-contributor-engine-guidance',
+  VIRTUAL_CONTRIBUTOR_ENGINE_COMMUNITY_MANAGER = 'virtual-contributor-engine-community-manager',
+  VIRTUAL_CONTRIBUTOR_ENGINE_EXPERT = 'virtual-contributor-engine-expert',
+  //
   WALLET_MANAGER = 'alkemio-wallet-manager',
   NOTIFICATIONS = 'alkemio-notifications',
   MATRIX_ADAPTER = 'alkemio-matrix-adapter',
+  //
   AUTH_RESET = 'alkemio-auth-reset',
+  //
   EXCALIDRAW_EVENTS = 'alkemio-excalidraw-events',
+  //
   SUBSCRIPTION_WHITEBOARD_CONTENT = 'alkemio-subscriptions-whiteboard-content',
+  SUBSCRIPTION_WHITEBOARD_SAVED = 'alkemio-subscriptions-whiteboard-saved',
   SUBSCRIPTION_PROFILE_VERIFIED_CREDENTIAL = 'alkemio-subscriptions-profile-verified-credential',
   SUBSCRIPTION_CALLOUT_POST_CREATED = 'alkemio-subscriptions-callout-post-created',
   SUBSCRIPTION_DISCUSSION_UPDATED = 'alkemio-subscriptions-discussion-updated',
-  SUBSCRIPTION_OPPORTUNITY_CREATED = 'alkemio-subscriptions-opportunity-created',
-  SUBSCRIPTION_CHALLENGE_CREATED = 'alkemio-subscriptions-challenge-created',
+  SUBSCRIPTION_SUBSPACE_CREATED = 'alkemio-subscriptions-subspace-created',
   SUBSCRIPTION_ACTIVITY_CREATED = 'alkemio-subscriptions-activity-created',
   SUBSCRIPTION_ROOM_EVENT = 'alkemio-subscriptions-room-event',
+  //
+  AUTH = 'auth',
+  FILES = 'alkemio-files',
 }

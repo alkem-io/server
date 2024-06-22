@@ -21,7 +21,7 @@ import { IOrganizationVerification } from '../organization-verification/organiza
 import { INVP } from '@domain/common/nvp/nvp.interface';
 import { IPreference } from '@domain/common/preference';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
-import { AgentInfo } from '@src/core/authentication/agent-info';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { Loader } from '@core/dataloader/decorators';
@@ -239,10 +239,9 @@ export class OrganizationResolverFields {
   }
 
   @ResolveField('agent', () => IAgent, {
-    nullable: true,
+    nullable: false,
     description: 'The Agent representing this User.',
   })
-  @Profiling.api
   async agent(
     @Parent() organization: Organization,
     @Loader(AgentLoaderCreator, { parentClassRef: Organization })

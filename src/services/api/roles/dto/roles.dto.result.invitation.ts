@@ -1,5 +1,6 @@
 import { UUID } from '@domain/common/scalars';
 import { Field, ObjectType } from '@nestjs/graphql';
+import { SpaceLevel } from '@common/enums/space.level';
 
 @ObjectType()
 export class InvitationForRoleResult {
@@ -44,18 +45,11 @@ export class InvitationForRoleResult {
   })
   spaceID!: string;
 
-  @Field(() => UUID, {
-    description:
-      'ID for the Challenge being invited to, if any. Or the Challenge containing the Opportunity being invited to.',
-    nullable: true,
+  @Field(() => Number, {
+    description: 'Nesting level of the Space',
   })
-  challengeID?: string;
+  spaceLevel!: SpaceLevel;
 
-  @Field(() => UUID, {
-    description: 'ID for the Opportunity being invited to, if any.',
-    nullable: true,
-  })
-  opportunityID?: string;
   @Field(() => UUID, {
     description: 'The welcome message of the invitation',
     nullable: true,
@@ -68,6 +62,7 @@ export class InvitationForRoleResult {
     state: string,
     id: string,
     spaceID: string,
+    spaceLevel: SpaceLevel,
     createdDate: Date,
     updatedDate: Date
   ) {
@@ -76,6 +71,7 @@ export class InvitationForRoleResult {
     this.state = state;
     this.id = id;
     this.spaceID = spaceID;
+    this.spaceLevel = spaceLevel;
     this.createdDate = createdDate;
     this.updatedDate = updatedDate;
   }

@@ -15,12 +15,34 @@ export type ExcalidrawFile = {
   url?: string; // field extended by us; url pointing to the storage api
 };
 
-export type ExcalidrawElement =
+type ExalidrawElementType =
+  | 'rectangle'
+  | 'image'
+  | 'text'
+  | 'arrow'
+  | 'line'
+  | 'ellipse'
+  | 'diamond'
+  | 'freedraw';
+
+export type ExcalidrawElement = { type: ExalidrawElementType } & (
   | ExcalidrawImageElement
   | {
       [key: string]: string | number | Array<unknown>;
-    };
+    }
+);
 
 export type ExcalidrawImageElement = {
+  type: 'image';
   fileId: string | null;
 };
+
+export type ExcalidrawTextElement = {
+  type: 'text';
+  originalText: string;
+};
+
+export const isExcalidrawTextElement = (
+  element: ExcalidrawElement
+): element is ExcalidrawTextElement =>
+  (element as ExcalidrawTextElement)?.type === 'text';

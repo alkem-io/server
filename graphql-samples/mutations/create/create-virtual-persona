@@ -1,0 +1,18 @@
+mutation createVirtualPersona($virtualPersonaData: CreateVirtualPersonaInput!) {
+  createVirtualPersona(virtualPersonaData: $virtualPersonaData ) {
+    id
+    prompt
+  }
+}
+
+
+{
+  "virtualPersonaData": {
+    "prompt": "my super prompt",
+    "nameID": "persona1",
+    "profileData": {
+      "displayName": "virtual 11"
+    },
+    "engine": "COMMUNITY_MANAGER"
+  }
+}

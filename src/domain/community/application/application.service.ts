@@ -20,9 +20,9 @@ import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { applicationLifecycleConfig } from '@domain/community/application/application.lifecycle.config';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { IUser } from '@domain/community/user/user.interface';
 import { IQuestion } from '@domain/common/question/question.interface';
 import { asyncFilter } from '@common/utils';
+import { IContributor } from '../contributor/contributor.interface';
 
 @Injectable()
 export class ApplicationService {
@@ -37,11 +37,9 @@ export class ApplicationService {
   ) {}
 
   async createApplication(
-    applicationData: CreateApplicationInput,
-    spaceID = ''
+    applicationData: CreateApplicationInput
   ): Promise<IApplication> {
     const application: IApplication = Application.create(applicationData);
-    application.spaceID = spaceID;
     application.user = await this.userService.getUserOrFail(
       applicationData.userID
     );
@@ -101,14 +99,14 @@ export class ApplicationService {
     return await this.applicationRepository.save(application);
   }
 
-  async getUser(applicationID: string): Promise<IUser> {
+  async getContributor(applicationID: string): Promise<IContributor> {
     const application = await this.getApplicationOrFail(applicationID, {
       relations: { user: true },
     });
     const user = application.user;
     if (!user)
       throw new RelationshipNotFoundException(
-        `Unable to load User for Application ${applicationID} `,
+        `Unable to load Contributor for Application ${applicationID} `,
         LogContext.COMMUNITY
       );
     return user;

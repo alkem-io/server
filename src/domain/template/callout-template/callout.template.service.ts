@@ -1,9 +1,8 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext, ProfileType } from '@common/enums';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { CalloutTemplate } from './callout.template.entity';
 import { ICalloutTemplate } from './callout.template.interface';
 import { TemplateBaseService } from '../template-base/template.base.service';
@@ -13,15 +12,13 @@ import { CalloutFramingService } from '@domain/collaboration/callout-framing/cal
 import { CalloutContributionDefaultsService } from '@domain/collaboration/callout-contribution-defaults/callout.contribution.defaults.service';
 import { CalloutContributionPolicyService } from '@domain/collaboration/callout-contribution-policy/callout.contribution.policy.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 
 @Injectable()
 export class CalloutTemplateService {
   constructor(
     @InjectRepository(CalloutTemplate)
     private calloutTemplateRepository: Repository<CalloutTemplate>,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService,
     private templateBaseService: TemplateBaseService,
     private calloutFramingService: CalloutFramingService,
     private calloutContributionDefaultsService: CalloutContributionDefaultsService,
@@ -86,15 +83,14 @@ export class CalloutTemplateService {
 
   async updateCalloutTemplate(
     calloutTemplateInput: ICalloutTemplate,
-    calloutTemplateData: UpdateCalloutTemplateInput,
-    agentInfo: AgentInfo
+    calloutTemplateData: UpdateCalloutTemplateInput
   ): Promise<ICalloutTemplate> {
     const calloutTemplate = await this.getCalloutTemplateOrFail(
       calloutTemplateInput.id,
       {
         relations: {
           profile: true,
-          framing: true,
+          framing: { whiteboard: true },
           contributionPolicy: true,
           contributionDefaults: true,
         },
@@ -157,5 +153,13 @@ export class CalloutTemplateService {
     );
     result.id = templateId;
     return result;
+  }
+
+  getCountInTemplatesSet(templatesSetID: string): Promise<number> {
+    return this.calloutTemplateRepository.countBy({
+      templatesSet: {
+        id: templatesSetID,
+      },
+    });
   }
 }

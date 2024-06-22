@@ -1,5 +1,5 @@
 import { Inject, UseGuards } from '@nestjs/common';
-import { Args, Mutation, Resolver } from '@nestjs/graphql';
+import { Args, createUnionType, Mutation, Resolver } from '@nestjs/graphql';
 import { IUserGroup } from '@domain/community/user-group';
 import { CommunityService } from './community.service';
 import { CurrentUser, Profiling } from '@src/common/decorators';
@@ -8,7 +8,7 @@ import { ApplicationService } from '@domain/community/application/application.se
 import { ICommunity } from '@domain/community/community/community.interface';
 import { CommunityApplicationLifecycleOptionsProvider } from './community.lifecycle.application.options.provider';
 import { GraphqlGuard } from '@core/authorization';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UserService } from '@domain/community/user/user.service';
@@ -23,7 +23,6 @@ import { CommunityApplyInput } from './dto/community.dto.apply';
 import { CommunityMemberClaim } from '@services/external/trust-registry/trust.registry.claim/claim.community.member';
 import { AgentBeginVerifiedCredentialOfferOutput } from '@domain/agent/agent/dto/agent.dto.verified.credential.offer.begin.output';
 import { AlkemioUserClaim } from '@services/external/trust-registry/trust.registry.claim/claim.alkemio.user';
-import { CreateFeedbackOnCommunityContextInput } from '@domain/community/community/dto/community.dto.create.feedback.on.context';
 import { CreateUserGroupInput } from '../user-group/dto';
 import { RemoveCommunityRoleFromOrganizationInput } from './dto/community.dto.role.remove.organization';
 import { AssignCommunityRoleToOrganizationInput } from './dto/community.dto.role.assign.organization';
@@ -31,7 +30,6 @@ import { CommunityRole } from '@common/enums/community.role';
 import { AssignCommunityRoleToUserInput } from './dto/community.dto.role.assign.user';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { NotificationInputCommunityApplication } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.application';
-import { NotificationInputCommunityContextReview } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.context.review';
 import { CommunityAuthorizationService } from './community.service.authorization';
 import { UpdateCommunityApplicationFormInput } from './dto/community.dto.update.application.form';
 import { InvitationAuthorizationService } from '../invitation/invitation.service.authorization';
@@ -40,15 +38,42 @@ import { NotificationInputCommunityInvitation } from '@services/adapters/notific
 import { InvitationEventInput } from '../invitation/dto/invitation.dto.event';
 import { CommunityInvitationLifecycleOptionsProvider } from './community.lifecycle.invitation.options.provider';
 import { CreateInvitationInput, IInvitation } from '../invitation';
-import { CreateInvitationExistingUserOnCommunityInput } from './dto/community.dto.invite.existing.user';
 import { IOrganization } from '../organization';
 import { IUser } from '../user/user.interface';
-import { CreateInvitationExternalUserOnCommunityInput } from './dto/community.dto.invite.external.user';
+import { CreateInvitationUserByEmailOnCommunityInput } from './dto/community.dto.invite.external.user';
 import { InvitationExternalAuthorizationService } from '../invitation.external/invitation.external.service.authorization';
 import { IInvitationExternal } from '../invitation.external';
 import { NotificationInputCommunityInvitationExternal } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.invitation.external';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 import { CommunityMembershipException } from '@common/exceptions/community.membership.exception';
+import { AssignCommunityRoleToVirtualInput } from './dto/community.dto.role.assign.virtual';
+import { RemoveCommunityRoleFromVirtualInput } from './dto/community.dto.role.remove.virtual';
+import { VirtualContributorAuthorizationService } from '../virtual-contributor/virtual.contributor.service.authorization';
+import { VirtualContributorService } from '../virtual-contributor/virtual.contributor.service';
+import { IVirtualContributor } from '../virtual-contributor';
+import { EntityNotInitializedException } from '@common/exceptions';
+import { CommunityInvitationException } from '@common/exceptions/community.invitation.exception';
+import { EventBus } from '@nestjs/cqrs';
+import {
+  IngestSpace,
+  SpaceIngestionPurpose,
+} from '@services/infrastructure/event-bus/commands';
+import { AccountHostService } from '@domain/space/account/account.host.service';
+import { CreateInvitationForContributorsOnCommunityInput } from './dto/community.dto.invite.contributor';
+import { IContributor } from '../contributor/contributor.interface';
+import { ContributorService } from '../contributor/contributor.service';
+import { InvitationExternalService } from '../invitation.external/invitation.external.service';
+
+const IAnyInvitation = createUnionType({
+  name: 'AnyInvitation',
+  types: () => [IInvitation, IInvitationExternal],
+  resolveType(value: IInvitation | IInvitationExternal) {
+    if ('user' in value) {
+      return IInvitation;
+    }
+    return IInvitationExternal;
+  },
+});
 
 @Resolver()
 export class CommunityResolverMutations {
@@ -57,6 +82,8 @@ export class CommunityResolverMutations {
     private notificationAdapter: NotificationAdapter,
     private userService: UserService,
     private userAuthorizationService: UserAuthorizationService,
+    private virtualContributorService: VirtualContributorService,
+    private virtualContributorAuthorizationService: VirtualContributorAuthorizationService,
     private userGroupAuthorizationService: UserGroupAuthorizationService,
     private communityService: CommunityService,
     @Inject(CommunityApplicationLifecycleOptionsProvider)
@@ -68,7 +95,11 @@ export class CommunityResolverMutations {
     private invitationService: InvitationService,
     private invitationAuthorizationService: InvitationAuthorizationService,
     private invitationExternalAuthorizationService: InvitationExternalAuthorizationService,
-    private communityAuthorizationService: CommunityAuthorizationService
+    private communityAuthorizationService: CommunityAuthorizationService,
+    private accountHostService: AccountHostService,
+    private contributorService: ContributorService,
+    private invitationExternalService: InvitationExternalService,
+    private eventBus: EventBus
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -105,7 +136,6 @@ export class CommunityResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('roleData') roleData: AssignCommunityRoleToUserInput
   ): Promise<IUser> {
-    this.validateNotHostRole(roleData.role);
     const community = await this.communityService.getCommunityOrFail(
       roleData.communityID
     );
@@ -115,12 +145,13 @@ export class CommunityResolverMutations {
       requiredPrivilege = AuthorizationPrivilege.COMMUNITY_ADD_MEMBER;
     }
 
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       community.authorization,
       requiredPrivilege,
       `assign user community role: ${community.id}`
     );
+
     await this.communityService.assignUserToRole(
       community,
       roleData.userID,
@@ -130,8 +161,9 @@ export class CommunityResolverMutations {
     );
 
     // reset the user authorization policy so that their profile is visible to other community members
-    const user = await this.userService.getUserOrFail(roleData.userID);
-    return await this.userAuthorizationService.applyAuthorizationPolicy(user);
+    let user = await this.userService.getUserOrFail(roleData.userID);
+    user = await this.userAuthorizationService.applyAuthorizationPolicy(user);
+    return await this.userService.save(user);
   }
 
   @UseGuards(GraphqlGuard)
@@ -144,12 +176,11 @@ export class CommunityResolverMutations {
     @Args('roleData')
     roleData: AssignCommunityRoleToOrganizationInput
   ): Promise<IOrganization> {
-    this.validateNotHostRole(roleData.role);
     const community = await this.communityService.getCommunityOrFail(
       roleData.communityID
     );
 
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       community.authorization,
       AuthorizationPrivilege.GRANT,
@@ -163,6 +194,89 @@ export class CommunityResolverMutations {
   }
 
   @UseGuards(GraphqlGuard)
+  @Mutation(() => IVirtualContributor, {
+    description:
+      'Assigns a Virtual Contributor to a role in the specified Community.',
+  })
+  @Profiling.api
+  async assignCommunityRoleToVirtual(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('roleData') roleData: AssignCommunityRoleToVirtualInput
+  ): Promise<IVirtualContributor> {
+    const community = await this.communityService.getCommunityOrFail(
+      roleData.communityID
+    );
+
+    let requiredPrivilege = AuthorizationPrivilege.GRANT;
+    if (roleData.role === CommunityRole.MEMBER) {
+      const sameAccount =
+        await this.communityService.isCommunityAccountMatchingVcAccount(
+          community.id,
+          roleData.virtualContributorID
+        );
+      if (sameAccount) {
+        requiredPrivilege =
+          AuthorizationPrivilege.COMMUNITY_ADD_MEMBER_VC_FROM_ACCOUNT;
+      } else {
+        requiredPrivilege = AuthorizationPrivilege.COMMUNITY_ADD_MEMBER;
+      }
+    }
+
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      community.authorization,
+      requiredPrivilege,
+      `assign virtual community role: ${community.id}`
+    );
+
+    // Also require ACCESS_VIRTUAL_CONTRIBUTORS to assign a virtual contributor
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      community.authorization,
+      AuthorizationPrivilege.ACCESS_VIRTUAL_CONTRIBUTOR,
+      `assign virtual community role VC privilege: ${community.id}`
+    );
+
+    await this.communityService.assignVirtualToRole(
+      community,
+      roleData.virtualContributorID,
+      roleData.role
+    );
+
+    // reset the user authorization policy so that their profile is visible to other community members
+    let virtual =
+      await this.virtualContributorService.getVirtualContributorOrFail(
+        roleData.virtualContributorID,
+        {
+          relations: {
+            account: true,
+          },
+        }
+      );
+
+    const host = await this.accountHostService.getHostOrFail(virtual.account);
+
+    virtual =
+      await this.virtualContributorAuthorizationService.applyAuthorizationPolicy(
+        virtual,
+        host,
+        virtual.account.authorization
+      );
+    virtual = await this.virtualContributorService.save(virtual);
+
+    // publish to EB for space ingestion
+    const spaceID = await this.communityService.getRootSpaceID(community);
+    // we are publising an event instead of executing a command because Nest's CQRS
+    // won't execute a command unless a command handler is defined within the application
+    // we want to have an external handler so for now events will do
+    this.eventBus.publish(
+      new IngestSpace(spaceID, SpaceIngestionPurpose.Context)
+    );
+
+    return virtual;
+  }
+
+  @UseGuards(GraphqlGuard)
   @Mutation(() => IUser, {
     description: 'Removes a User from a Role in the specified Community.',
   })
@@ -171,7 +285,6 @@ export class CommunityResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('roleData') roleData: RemoveCommunityRoleFromUserInput
   ): Promise<IUser> {
-    this.validateNotHostRole(roleData.role);
     const community = await this.communityService.getCommunityOrFail(
       roleData.communityID
     );
@@ -199,8 +312,9 @@ export class CommunityResolverMutations {
     );
     // reset the user authorization policy so that their profile is not visible
     // to other community members
-    const user = await this.userService.getUserOrFail(roleData.userID);
-    return await this.userAuthorizationService.applyAuthorizationPolicy(user);
+    let user = await this.userService.getUserOrFail(roleData.userID);
+    user = await this.userAuthorizationService.applyAuthorizationPolicy(user);
+    return await this.userService.save(user);
   }
 
   @UseGuards(GraphqlGuard)
@@ -213,7 +327,6 @@ export class CommunityResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('roleData') roleData: RemoveCommunityRoleFromOrganizationInput
   ): Promise<IOrganization> {
-    this.validateNotHostRole(roleData.role);
     const community = await this.communityService.getCommunityOrFail(
       roleData.communityID
     );
@@ -232,6 +345,52 @@ export class CommunityResolverMutations {
   }
 
   @UseGuards(GraphqlGuard)
+  @Mutation(() => IVirtualContributor, {
+    description: 'Removes a Virtual from a Role in the specified Community.',
+  })
+  @Profiling.api
+  async removeCommunityRoleFromVirtual(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('roleData') roleData: RemoveCommunityRoleFromVirtualInput
+  ): Promise<IVirtualContributor> {
+    const community = await this.communityService.getCommunityOrFail(
+      roleData.communityID
+    );
+
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      community.authorization,
+      AuthorizationPrivilege.GRANT,
+      `remove virtual from community role: ${community.id}`
+    );
+
+    await this.communityService.removeVirtualFromRole(
+      community,
+      roleData.virtualContributorID,
+      roleData.role
+    );
+    // reset the user authorization policy so that their profile is not visible
+    // to other community members
+    let virtual =
+      await this.virtualContributorService.getVirtualContributorOrFail(
+        roleData.virtualContributorID,
+        {
+          relations: {
+            account: true,
+          },
+        }
+      );
+    const host = await this.accountHostService.getHostOrFail(virtual.account);
+    virtual =
+      await this.virtualContributorAuthorizationService.applyAuthorizationPolicy(
+        virtual,
+        host,
+        virtual.account.authorization
+      );
+    return await this.virtualContributorService.save(virtual);
+  }
+
+  @UseGuards(GraphqlGuard)
   @Mutation(() => IApplication, {
     description: 'Apply to join the specified Community as a member.',
   })
@@ -241,7 +400,12 @@ export class CommunityResolverMutations {
     @Args('applicationData') applicationData: CommunityApplyInput
   ): Promise<IApplication> {
     const community = await this.communityService.getCommunityOrFail(
-      applicationData.communityID
+      applicationData.communityID,
+      {
+        relations: {
+          parentCommunity: true,
+        },
+      }
     );
 
     await this.authorizationService.grantAccessOrFail(
@@ -251,17 +415,35 @@ export class CommunityResolverMutations {
       `create application community: ${community.id}`
     );
 
-    const application = await this.communityService.createApplication({
+    if (community.parentCommunity) {
+      const { agent } = await this.userService.getUserAndAgent(
+        agentInfo.userID
+      );
+      const userIsMemberInParent = await this.communityService.isInRole(
+        agent,
+        community.parentCommunity,
+        CommunityRole.MEMBER
+      );
+      if (!userIsMemberInParent) {
+        throw new CommunityMembershipException(
+          `Unable to apply for Community (${community.id}): user is not a member of the parent Community`,
+          LogContext.COMMUNITY
+        );
+      }
+    }
+
+    let application = await this.communityService.createApplication({
       parentID: community.id,
       questions: applicationData.questions,
       userID: agentInfo.userID,
     });
 
-    const savedApplication =
+    application =
       await this.applicationAuthorizationService.applyAuthorizationPolicy(
         application,
         community.authorization
       );
+    application = await this.applicationService.save(application);
 
     // Send the notification
     const notificationInput: NotificationInputCommunityApplication = {
@@ -270,23 +452,36 @@ export class CommunityResolverMutations {
     };
     await this.notificationAdapter.applicationCreated(notificationInput);
 
-    return savedApplication;
+    return application;
   }
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => [IInvitation], {
     description:
-      'Invite an existing User to join the specified Community as a member.',
+      'Invite an existing Contriburor to join the specified Community as a member.',
   })
   @Profiling.api
-  async inviteExistingUserForCommunityMembership(
+  async inviteContributorsForCommunityMembership(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('invitationData')
-    invitationData: CreateInvitationExistingUserOnCommunityInput
+    invitationData: CreateInvitationForContributorsOnCommunityInput
   ): Promise<IInvitation[]> {
     const community = await this.communityService.getCommunityOrFail(
-      invitationData.communityID
+      invitationData.communityID,
+      {
+        relations: {
+          parentCommunity: {
+            authorization: true,
+          },
+        },
+      }
     );
+    if (invitationData.invitedContributors.length === 0) {
+      throw new CommunityInvitationException(
+        `No contributors were provided to invite: ${community.id}`,
+        LogContext.COMMUNITY
+      );
+    }
 
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -295,71 +490,213 @@ export class CommunityResolverMutations {
       `create invitation community: ${community.id}`
     );
 
-    const invitations: IInvitation[] = [];
-
-    for (const invitedUser of invitationData.invitedUsers) {
-      const input: CreateInvitationInput = {
-        communityID: community.id,
-        invitedUser: invitedUser,
-        createdBy: agentInfo.userID,
-        welcomeMessage: invitationData.welcomeMessage,
-      };
-      const invitation =
-        await this.communityService.createInvitationExistingUser(input);
-
-      const savedInvitation =
-        await this.invitationAuthorizationService.applyAuthorizationPolicy(
-          invitation,
-          community.authorization
-        );
-
-      // Send the notification
-      const notificationInput: NotificationInputCommunityInvitation = {
-        triggeredBy: agentInfo.userID,
-        community: community,
-        invitedUser: invitedUser,
-      };
-      await this.notificationAdapter.invitationCreated(notificationInput);
-
-      invitations.push(savedInvitation);
+    const contributors: IContributor[] = [];
+    for (const contributorID of invitationData.invitedContributors) {
+      const contributor = await this.contributorService.getContributorOrFail(
+        contributorID,
+        {
+          relations: {
+            agent: true,
+          },
+        }
+      );
+      contributors.push(contributor);
     }
 
-    return invitations;
+    // Logic is that the ability to invite to a subspace requires the ability to invite to the
+    // parent community if the user is not a member there
+    if (community.parentCommunity) {
+      const parentCommunityAuthorization =
+        community.parentCommunity.authorization;
+      const canInviteToParent = this.authorizationService.isAccessGranted(
+        agentInfo,
+        parentCommunityAuthorization,
+        AuthorizationPrivilege.COMMUNITY_INVITE
+      );
+
+      // Need to see if also can invite to the parent community if any of the users are not members there
+      for (const contributor of contributors) {
+        if (!contributor.agent) {
+          throw new EntityNotInitializedException(
+            `Unable to load agent on contributor: ${contributor.id}`,
+            LogContext.COMMUNITY
+          );
+        }
+        const isMember = await this.communityService.isMember(
+          contributor.agent,
+          community.parentCommunity
+        );
+        if (!isMember && !canInviteToParent) {
+          throw new CommunityInvitationException(
+            `Contributor is not a member of the parent community (${community.parentCommunity.id}) and the current user does not have the privilege to invite to the parent community`,
+            LogContext.COMMUNITY
+          );
+        } else {
+          invitationData.invitedToParent = true;
+        }
+      }
+    } else {
+      invitationData.invitedToParent = false;
+    }
+
+    return Promise.all(
+      contributors.map(async invitedContributor => {
+        return await this.inviteSingleExistingContributor(
+          community,
+          invitedContributor,
+          agentInfo,
+          invitationData.invitedToParent,
+          invitationData.welcomeMessage
+        );
+      })
+    );
+  }
+
+  private async inviteSingleExistingContributor(
+    community: ICommunity,
+    invitedContributor: IContributor,
+    agentInfo: AgentInfo,
+    invitedToParent: boolean,
+    welcomeMessage?: string
+  ): Promise<IInvitation> {
+    const input: CreateInvitationInput = {
+      communityID: community.id,
+      invitedContributor: invitedContributor.id,
+      createdBy: agentInfo.userID,
+      invitedToParent,
+      welcomeMessage,
+    };
+
+    let invitation =
+      await this.communityService.createInvitationExistingContributor(input);
+
+    invitation =
+      await this.invitationAuthorizationService.applyAuthorizationPolicy(
+        invitation,
+        community.authorization
+      );
+    invitation = await this.invitationService.save(invitation);
+
+    // Send the notification
+    const notificationInput: NotificationInputCommunityInvitation = {
+      triggeredBy: agentInfo.userID,
+      community: community,
+      invitedUser: invitedContributor.id,
+      welcomeMessage,
+    };
+
+    await this.notificationAdapter.invitationCreated(notificationInput);
+
+    return invitation;
   }
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => IInvitationExternal, {
+  @Mutation(() => IAnyInvitation, {
     description:
       'Invite an external User to join the specified Community as a member.',
   })
   @Profiling.api
-  async inviteExternalUserForCommunityMembership(
+  async inviteForCommunityMembershipByEmail(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('invitationData')
-    invitationData: CreateInvitationExternalUserOnCommunityInput
-  ): Promise<IInvitationExternal> {
+    invitationData: CreateInvitationUserByEmailOnCommunityInput
+  ): Promise<IInvitation | IInvitationExternal> {
     const community = await this.communityService.getCommunityOrFail(
-      invitationData.communityID
+      invitationData.communityID,
+      {
+        relations: {
+          parentCommunity: {
+            authorization: true,
+          },
+        },
+      }
     );
 
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       community.authorization,
       AuthorizationPrivilege.COMMUNITY_INVITE,
       `create invitation external community: ${community.id}`
     );
 
-    const externalInvitation =
+    const existingUser = await this.userService.getUserByEmail(
+      invitationData.email,
+      {
+        relations: {
+          agent: true,
+        },
+      }
+    );
+
+    // Logic is that the ability to invite to a subspace requires the ability to invite to the
+    // parent community if the user is not a member there
+    if (community.parentCommunity) {
+      const parentCommunityAuthorization =
+        community.parentCommunity.authorization;
+      const canInviteToParent = this.authorizationService.isAccessGranted(
+        agentInfo,
+        parentCommunityAuthorization,
+        AuthorizationPrivilege.COMMUNITY_INVITE
+      );
+      if (existingUser !== null) {
+        // Need to see if also can invite to the parent community if any of the users are not members there
+        if (!existingUser.agent) {
+          throw new EntityNotInitializedException(
+            `Unable to load agent on user: ${existingUser.id}`,
+            LogContext.COMMUNITY
+          );
+        }
+        const isMember = await this.communityService.isMember(
+          existingUser.agent,
+          community.parentCommunity
+        );
+        if (!isMember) {
+          if (!canInviteToParent) {
+            throw new CommunityInvitationException(
+              `User is not a member of the parent community (${community.parentCommunity.id}) and the current user does not have the privilege to invite to the parent community`,
+              LogContext.COMMUNITY
+            );
+          } else {
+            invitationData.invitedToParent = true;
+          }
+        }
+      } else {
+        // Not an existing user
+        if (!canInviteToParent) {
+          throw new CommunityInvitationException(
+            `New external user (${invitationData.email}) and the current user (${agentInfo.email}) does not have the privilege to invite to the parent community: ${community.parentCommunity.id}`,
+            LogContext.COMMUNITY
+          );
+        } else {
+          invitationData.invitedToParent = true;
+        }
+      }
+    }
+
+    if (existingUser) {
+      return this.inviteSingleExistingContributor(
+        community,
+        existingUser,
+        agentInfo,
+        invitationData.invitedToParent,
+        invitationData.welcomeMessage
+      );
+    }
+
+    let externalInvitation =
       await this.communityService.createInvitationExternalUser(
         invitationData,
         agentInfo
       );
 
-    const savedInvitation =
+    externalInvitation =
       await this.invitationExternalAuthorizationService.applyAuthorizationPolicy(
         externalInvitation,
         community.authorization
       );
+    externalInvitation = await this.invitationExternalService.save(
+      externalInvitation
+    );
 
     const notificationInput: NotificationInputCommunityInvitationExternal = {
       triggeredBy: agentInfo.userID,
@@ -368,7 +705,7 @@ export class CommunityResolverMutations {
       welcomeMessage: invitationData.welcomeMessage,
     };
     await this.notificationAdapter.externalInvitationCreated(notificationInput);
-    return savedInvitation;
+    return externalInvitation;
   }
 
   @UseGuards(GraphqlGuard)
@@ -411,7 +748,6 @@ export class CommunityResolverMutations {
     const community = await this.communityService.getCommunityOrFail(
       joiningData.communityID
     );
-
     const membershipStatus = await this.communityService.getMembershipStatus(
       agentInfo,
       community
@@ -525,48 +861,5 @@ export class CommunityResolverMutations {
         },
       ]
     );
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => Boolean, {
-    description:
-      'Creates feedback on community context from users having COMMUNITY_CONTEXT_REVIEW privilege',
-  })
-  @Profiling.api
-  async createFeedbackOnCommunityContext(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('feedbackData') feedbackData: CreateFeedbackOnCommunityContextInput
-  ): Promise<boolean> {
-    const community = await this.communityService.getCommunityOrFail(
-      feedbackData.communityID
-    );
-
-    // todo: must check COMMUNITY_CONTEXT_REVIEW on Challenge
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      community.authorization,
-      AuthorizationPrivilege.COMMUNITY_CONTEXT_REVIEW,
-      `creating feedback on community: ${community.id}`
-    );
-
-    // Send the notification
-    const notificationInput: NotificationInputCommunityContextReview = {
-      triggeredBy: agentInfo.userID,
-      community: community,
-      questions: feedbackData.questions,
-    };
-    await this.notificationAdapter.communityContextReview(notificationInput);
-
-    return true;
-  }
-
-  // For now Host role is only allowed to be assigned via platform level settings
-  private validateNotHostRole(role: CommunityRole) {
-    if (role === CommunityRole.HOST) {
-      throw new CommunityMembershipException(
-        `Unable to assign Role (${role}) in community: setting of Host role requires platform settings`,
-        LogContext.COMMUNITY
-      );
-    }
   }
 }

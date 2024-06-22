@@ -5,7 +5,7 @@ import { CurrentUser } from '@common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IDocument } from './document.interface';
 import { DeleteDocumentInput } from './dto/document.dto.delete';
 import { UpdateDocumentInput } from './dto/document.dto.update';

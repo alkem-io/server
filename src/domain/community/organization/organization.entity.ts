@@ -11,12 +11,11 @@ import { UserGroup } from '@domain/community/user-group/user-group.entity';
 import { IOrganization } from './organization.interface';
 import { OrganizationVerification } from '../organization-verification/organization.verification.entity';
 import { PreferenceSet } from '@domain/common/preference-set';
-import { Contributor } from '../contributor/contributor.entity';
-import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
+import { ContributorBase } from '../contributor/contributor.base.entity';
 
 @Entity()
 export class Organization
-  extends Contributor
+  extends ContributorBase
   implements IOrganization, IGroupable
 {
   @Column({
@@ -58,14 +57,6 @@ export class Organization
   })
   @JoinColumn()
   preferenceSet?: PreferenceSet;
-
-  @OneToOne(() => StorageAggregator, {
-    eager: false,
-    cascade: true,
-    onDelete: 'SET NULL',
-  })
-  @JoinColumn()
-  storageAggregator?: StorageAggregator;
 
   constructor() {
     super();

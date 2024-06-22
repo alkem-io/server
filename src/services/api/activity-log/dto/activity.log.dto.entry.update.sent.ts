@@ -21,4 +21,10 @@ export abstract class IActivityLogEntryUpdateSent
     description: 'The Message that been sent to this Community.',
   })
   message!: string;
+
+  @Field(() => String, {
+    nullable: false,
+    description: 'The url to the Journey.',
+  })
+  journeyUrl!: string;
 }

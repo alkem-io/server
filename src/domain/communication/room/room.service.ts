@@ -19,6 +19,11 @@ import { RoomRemoveMessageInput } from './dto/room.dto.remove.message';
 import { RoomSendMessageInput } from './dto/room.dto.send.message';
 import { CommunicationRoomResult } from '@services/adapters/communication-adapter/dto/communication.dto.room.result';
 
+interface MessageSender {
+  id: string;
+  type: 'user' | 'virtualContributor' | 'unknown';
+}
+
 @Injectable()
 export class RoomService {
   constructor(
@@ -105,19 +110,63 @@ export class RoomService {
     return rooms;
   }
 
-  async populateRoomMessageSenders(messages: IMessage[]): Promise<IMessage[]> {
-    const knownSendersMap = new Map<string, string>();
-    for (const message of messages) {
-      const matrixUserID = message.sender;
-      let alkemioUserID = knownSendersMap.get(matrixUserID);
-      if (!alkemioUserID) {
-        alkemioUserID =
-          await this.identityResolverService.getUserIDByCommunicationsID(
+  private async identitySender(
+    knownSendersMap: Map<string, MessageSender>,
+    matrixUserID: string
+  ): Promise<MessageSender> {
+    let messageSender = knownSendersMap.get(matrixUserID);
+    if (!messageSender) {
+      const alkemioUserID =
+        await this.identityResolverService.getUserIDByCommunicationsID(
+          matrixUserID
+        );
+      if (alkemioUserID) {
+        messageSender = {
+          id: alkemioUserID,
+          type: 'user',
+        };
+      } else {
+        const virtualContributorID =
+          await this.identityResolverService.getContributorIDByCommunicationsID(
             matrixUserID
           );
-        knownSendersMap.set(matrixUserID, alkemioUserID);
+        if (virtualContributorID) {
+          messageSender = {
+            id: virtualContributorID,
+            type: 'virtualContributor',
+          };
+        }
       }
-      message.sender = alkemioUserID;
+      if (messageSender) {
+        knownSendersMap.set(matrixUserID, messageSender);
+      }
+    }
+    if (!messageSender) {
+      throw new Error(`Unable to identify sender for ${matrixUserID}`);
+    }
+    return messageSender;
+  }
+
+  async populateRoomMessageSenders(messages: IMessage[]): Promise<IMessage[]> {
+    const knownSendersMap = new Map<string, MessageSender>();
+    for (const message of messages) {
+      const matrixUserID = message.sender;
+      let messageSender: MessageSender = { id: 'unknown', type: 'unknown' };
+      try {
+        messageSender = await this.identitySender(
+          knownSendersMap,
+          matrixUserID
+        );
+      } catch (error) {
+        this.logger.error(
+          `Unable to identify sender for message with id ${message.id}`,
+          error,
+          LogContext.COMMUNICATION
+        );
+      }
+
+      message.sender = messageSender.id;
+      message.senderType = messageSender.type;
       if (message.reactions) {
         message.reactions = await this.populateRoomReactionSenders(
           message.reactions,
@@ -133,19 +182,20 @@ export class RoomService {
 
   async populateRoomReactionSenders(
     reactions: IMessageReaction[],
-    knownSendersMap: Map<string, string>
+    knownSendersMap: Map<string, MessageSender>
   ): Promise<IMessageReaction[]> {
     for (const reaction of reactions) {
       const matrixUserID = reaction.sender;
-      let alkemioUserID = knownSendersMap.get(matrixUserID);
-      if (!alkemioUserID) {
-        alkemioUserID =
-          await this.identityResolverService.getUserIDByCommunicationsID(
-            matrixUserID
-          );
-        knownSendersMap.set(matrixUserID, alkemioUserID);
+      try {
+        const reactionSender = await this.identitySender(
+          knownSendersMap,
+          matrixUserID
+        );
+
+        reaction.sender = reactionSender.id;
+      } catch (error) {
+        reaction.sender = 'unknown';
       }
-      reaction.sender = alkemioUserID;
     }
 
     return reactions;
@@ -197,7 +247,7 @@ export class RoomService {
       roomID: room.externalRoomID,
     });
 
-    message.sender = alkemioUserID;
+    message.sender = alkemioUserID!;
     room.messagesCount = room.messagesCount + 1;
     await this.save(room);
     return message;
@@ -206,7 +256,8 @@ export class RoomService {
   async sendMessageReply(
     room: IRoom,
     communicationUserID: string,
-    messageData: RoomSendMessageReplyInput
+    messageData: RoomSendMessageReplyInput,
+    senderType: 'user' | 'virtualContributor'
   ): Promise<IMessage> {
     // Ensure the user is a member of room and group so can send
     await this.communicationAdapter.addUserToRoom(
@@ -214,18 +265,27 @@ export class RoomService {
       communicationUserID
     );
 
-    const alkemioUserID =
-      await this.identityResolverService.getUserIDByCommunicationsID(
-        communicationUserID
-      );
-    const message = await this.communicationAdapter.sendMessageReply({
-      senderCommunicationsID: communicationUserID,
-      message: messageData.message,
-      roomID: room.externalRoomID,
-      threadID: messageData.threadID,
-    });
+    const alkemioSenderID =
+      senderType === 'virtualContributor'
+        ? await this.identityResolverService.getContributorIDByCommunicationsID(
+            communicationUserID
+          )
+        : await this.identityResolverService.getUserIDByCommunicationsID(
+            communicationUserID
+          );
+    const message = await this.communicationAdapter.sendMessageReply(
+      {
+        senderCommunicationsID: communicationUserID,
+        message: messageData.message,
+        roomID: room.externalRoomID,
+        threadID: messageData.threadID,
+      },
+      senderType
+    );
 
-    message.sender = alkemioUserID;
+    message.sender = alkemioSenderID!;
+    message.senderType = senderType;
+
     room.messagesCount = room.messagesCount + 1;
     await this.save(room);
 
@@ -254,7 +314,7 @@ export class RoomService {
       messageID: reactionData.messageID,
     });
 
-    reaction.sender = alkemioUserID;
+    reaction.sender = alkemioUserID!;
     return reaction;
   }
 
@@ -292,9 +352,12 @@ export class RoomService {
       );
       return senderCommunicationID;
     }
-    return await this.identityResolverService.getUserIDByCommunicationsID(
-      senderCommunicationID
-    );
+    const alkemioUserID =
+      await this.identityResolverService.getUserIDByCommunicationsID(
+        senderCommunicationID
+      );
+
+    return alkemioUserID ?? '';
   }
 
   async getUserIdForReaction(room: IRoom, reactionID: string): Promise<string> {
@@ -311,8 +374,11 @@ export class RoomService {
       );
       return senderCommunicationID;
     }
-    return await this.identityResolverService.getUserIDByCommunicationsID(
-      senderCommunicationID
-    );
+    const alkemioUserID =
+      await this.identityResolverService.getUserIDByCommunicationsID(
+        senderCommunicationID
+      );
+
+    return alkemioUserID ?? '';
   }
 }

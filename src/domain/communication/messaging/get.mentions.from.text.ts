@@ -1,7 +1,7 @@
 import { Mention, MentionedEntityType } from './mention.interface';
 
 const MENTION_REGEX = new RegExp(
-  `\\[@[^\\]]*]\\((http|https):\\/\\/[^)]*\\/(?<type>${MentionedEntityType.USER}|${MentionedEntityType.ORGANIZATION})\\/(?<nameid>[^)]+)\\)`,
+  `\\[@[^\\]]*]\\((http|https):\\/\\/[^)]*\\/(?<type>${MentionedEntityType.USER}|${MentionedEntityType.ORGANIZATION}|${MentionedEntityType.VIRTUAL_CONTRIBUTOR})\\/(?<nameid>[^)]+)\\)`,
   'gm'
 );
 
@@ -17,6 +17,11 @@ export const getMentionsFromText = (text: string): Mention[] => {
       result.push({
         nameId: match.groups.nameid,
         type: MentionedEntityType.ORGANIZATION,
+      });
+    } else if (match.groups?.type === MentionedEntityType.VIRTUAL_CONTRIBUTOR) {
+      result.push({
+        nameId: match.groups.nameid,
+        type: MentionedEntityType.VIRTUAL_CONTRIBUTOR,
       });
     }
   }

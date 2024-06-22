@@ -1,3 +1,10 @@
+import { MiddlewareConsumer, Module } from '@nestjs/common';
+import { CacheModule } from '@nestjs/cache-manager';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { APP_FILTER, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
+import { GraphQLModule } from '@nestjs/graphql';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { CloseCode } from 'graphql-ws';
 import { ConfigurationTypes } from '@common/enums';
 import { ValidationPipe } from '@common/pipes/validation.pipe';
@@ -13,19 +20,13 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { BootstrapModule } from '@core/bootstrap/bootstrap.module';
 import { RequestLoggerMiddleware } from '@core/middleware/request.logger.middleware';
 import { AgentModule } from '@domain/agent/agent/agent.module';
-import { SpaceModule } from '@domain/challenge/space/space.module';
+import { SpaceModule } from '@domain/space/space/space.module';
 import { ScalarsModule } from '@domain/common/scalars/scalars.module';
-import { CacheModule, MiddlewareConsumer, Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { APP_FILTER, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
-import { GraphQLModule } from '@nestjs/graphql';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { AdminCommunicationModule } from '@platform/admin/communication/admin.communication.module';
 import { AppController } from '@src/app.controller';
 import { WinstonConfigService } from '@src/config/winston.config';
 import { MetadataModule } from '@src/platform/metadata/metadata.module';
-import { SearchModule } from '@services/api/search/search.module';
+import { SearchModule } from '@services/api/search/v1/search.module';
 import { KonfigModule } from '@src/platform/configuration/config/config.module';
 import { print } from 'graphql/language/printer';
 import { WinstonModule } from 'nest-winston';
@@ -57,6 +58,7 @@ import { MessageReactionModule } from '@domain/communication/message.reaction/me
 import {
   HttpExceptionFilter,
   GraphqlExceptionFilter,
+  UnhandledExceptionFilter,
 } from '@core/error-handling';
 import { MeModule } from '@services/api/me';
 import { ExcalidrawServerModule } from '@services/external/excalidraw-backend';
@@ -68,6 +70,13 @@ import { IpfsLogModule } from '@services/api-rest/ipfs-log/ipfs.log.module';
 import { ContributionMoveModule } from '@domain/collaboration/callout-contribution/callout.contribution.move.module';
 import { TaskGraphqlModule } from '@domain/task/task.module';
 import { ActivityFeedModule } from '@domain/activity-feed';
+import { AdminSearchIngestModule } from '@platform/admin/search/admin.search.ingest.module';
+import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
+import { EventBusModule } from '@services/infrastructure/event-bus/event.bus.module';
+import { WhiteboardIntegrationModule } from '@services/whiteboard-integration/whiteboard.integration.module';
+import { PlatformSettingsModule } from '@platform/settings/platform.settings.module';
+import { FileIntegrationModule } from '@services/file-integration';
+import { AdminLicensingModule } from '@platform/admin/licensing/admin.licensing.module';
 
 @Module({
   imports: [
@@ -83,6 +92,11 @@ import { ActivityFeedModule } from '@domain/activity-feed';
         store: redisStore,
         host: configService.get(ConfigurationTypes.STORAGE)?.redis?.host,
         port: configService.get(ConfigurationTypes.STORAGE)?.redis?.port,
+        redisOptions: {
+          connectTimeout:
+            configService.get(ConfigurationTypes.STORAGE)?.redis?.timeout *
+            1000, // Connection timeout in milliseconds
+        },
       }),
       inject: [ConfigService],
     }),
@@ -225,6 +239,8 @@ import { ActivityFeedModule } from '@domain/activity-feed';
     RolesModule,
     KonfigModule,
     AdminCommunicationModule,
+    AdminSearchIngestModule,
+    AdminLicensingModule,
     AgentModule,
     MessageModule,
     MessageReactionModule,
@@ -243,10 +259,15 @@ import { ActivityFeedModule } from '@domain/activity-feed';
     MeModule,
     ExcalidrawServerModule,
     ChatGuidanceModule,
+    VirtualContributorModule,
     LookupModule,
     AuthResetSubscriberModule,
     TaskGraphqlModule,
     ActivityFeedModule,
+    EventBusModule,
+    WhiteboardIntegrationModule,
+    FileIntegrationModule,
+    PlatformSettingsModule,
   ],
   controllers: [AppController, SsiCredentialFlowController],
   providers: [
@@ -257,6 +278,12 @@ import { ActivityFeedModule } from '@domain/activity-feed';
     {
       provide: APP_INTERCEPTOR,
       useClass: InnovationHubInterceptor,
+    },
+    {
+      // This should be the first filter in the list:
+      // See Catch everything at: https://docs.nestjs.com/exception-filters
+      provide: APP_FILTER,
+      useClass: UnhandledExceptionFilter,
     },
     {
       provide: APP_FILTER,

@@ -19,20 +19,21 @@ import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authoriz
 import { InnovationHubService } from '@domain/innovation-hub';
 import { InnovationHubAuthorizationService } from '@domain/innovation-hub/innovation.hub.service.authorization';
 import {
-  CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_DASHBOARD,
+  CREDENTIAL_RULE_PLATFORM_CREATE_ORGANIZATION,
+  CREDENTIAL_RULE_PLATFORM_CREATE_SPACE,
   CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_GUIDANCE,
   CREDENTIAL_RULE_TYPES_PLATFORM_ADMINS,
-  CREDENTIAL_RULE_TYPES_PLATFORM_ANY_ADMIN,
+  CREDENTIAL_RULE_TYPES_PLATFORM_AUTH_RESET,
   CREDENTIAL_RULE_TYPES_PLATFORM_FILE_UPLOAD_ANY_USER,
   CREDENTIAL_RULE_TYPES_PLATFORM_GRANT_GLOBAL_ADMINS,
+  CREDENTIAL_RULE_TYPES_PLATFORM_MGMT,
   CREDENTIAL_RULE_TYPES_PLATFORM_READ_REGISTERED,
-  POLICY_RULE_PLATFORM_CREATE,
 } from '@common/constants';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
-import { OrganizationService } from '@domain/community/organization/organization.service';
-import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
+import { LicensingAuthorizationService } from '@platform/licensing/licensing.service.authorization';
+import { VirtualPersonaAuthorizationService } from '@platform/virtual-persona/virtual.persona.service.authorization';
+import { IVirtualPersona } from '@platform/virtual-persona';
 
 @Injectable()
 export class PlatformAuthorizationService {
@@ -45,7 +46,9 @@ export class PlatformAuthorizationService {
     private innovationHubService: InnovationHubService,
     private innovationHubAuthorizationService: InnovationHubAuthorizationService,
     private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
-    private organizationService: OrganizationService,
+    private licensingAuthorizationService: LicensingAuthorizationService,
+    private virtualPersonaAuthorizationService: VirtualPersonaAuthorizationService,
+
     @InjectRepository(Platform)
     private platformRepository: Repository<Platform>
   ) {}
@@ -54,10 +57,7 @@ export class PlatformAuthorizationService {
     const platform = await this.platformService.getPlatformOrFail({
       relations: {
         authorization: true,
-        library: {
-          innovationPacks: true,
-        },
-        communication: true,
+        virtualPersonas: true,
       },
     });
 
@@ -78,12 +78,12 @@ export class PlatformAuthorizationService {
       platform.authorization
     );
 
-    const privilegeRules = this.createPlatformPrivilegeRules();
-    platform.authorization =
-      this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
-        platform.authorization,
-        privilegeRules
-      );
+    // const privilegeRules = this.createPlatformPrivilegeRules();
+    // platform.authorization =
+    //   this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
+    //     platform.authorization,
+    //     privilegeRules
+    //   );
 
     // Cascade down
     const platformPropagated = await this.propagateAuthorizationToChildEntities(
@@ -100,9 +100,6 @@ export class PlatformAuthorizationService {
     const credentialRuleInteractiveGuidance =
       await this.createCredentialRuleInteractiveGuidance();
     credentialRules.push(credentialRuleInteractiveGuidance);
-    const credentialRuleDashbaord =
-      await this.createCredentialRuleDashboardRefresh();
-    credentialRules.push(credentialRuleDashbaord);
 
     return this.authorizationPolicyService.appendCredentialAuthorizationRules(
       authorization,
@@ -120,24 +117,29 @@ export class PlatformAuthorizationService {
         },
         communication: true,
         storageAggregator: true,
+        licensing: true,
+        virtualPersonas: true,
       },
     });
 
     if (
       !platform.library ||
       !platform.communication ||
-      !platform.storageAggregator
+      !platform.storageAggregator ||
+      !platform.licensing ||
+      !platform.virtualPersonas
     )
       throw new RelationshipNotFoundException(
-        `Unable to load entities for platform: ${platform.id} `,
+        `Unable to load entities for platform auth: ${platform.id} `,
         LogContext.PLATFORM
       );
 
     platform.authorization = authorization;
-    await this.libraryAuthorizationService.applyAuthorizationPolicy(
-      platform.library,
-      platform.authorization
-    );
+    platform.library =
+      await this.libraryAuthorizationService.applyAuthorizationPolicy(
+        platform.library,
+        platform.authorization
+      );
 
     const copyPlatformAuthorization: IAuthorizationPolicy =
       this.authorizationPolicyService.cloneAuthorizationPolicy(
@@ -167,12 +169,28 @@ export class PlatformAuthorizationService {
     const innovationHubs = await this.innovationHubService.getInnovationHubs({
       relations: {},
     });
-
     for (const innovationHub of innovationHubs) {
       this.innovationHubAuthorizationService.applyAuthorizationPolicyAndSave(
         innovationHub
       );
     }
+
+    const updatedPersonas: IVirtualPersona[] = [];
+    for (const virtualPersona of platform.virtualPersonas) {
+      const updatedPersona =
+        await this.virtualPersonaAuthorizationService.applyAuthorizationPolicy(
+          virtualPersona,
+          platform.authorization
+        );
+      updatedPersonas.push(updatedPersona);
+    }
+    platform.virtualPersonas = updatedPersonas;
+
+    platform.licensing =
+      await this.licensingAuthorizationService.applyAuthorizationPolicy(
+        platform.licensing,
+        platform.authorization
+      );
     return platform;
   }
 
@@ -252,24 +270,6 @@ export class PlatformAuthorizationService {
     return userGuidanceChatAccessPrivilegeRule;
   }
 
-  private async createCredentialRuleDashboardRefresh(): Promise<IAuthorizationPolicyRuleCredential> {
-    const criterias: ICredentialDefinition[] = [];
-    // Assign all users that are beta tester
-    const betaTesterUser: ICredentialDefinition = {
-      type: AuthorizationCredential.BETA_TESTER,
-      resourceID: '',
-    };
-    criterias.push(betaTesterUser);
-
-    const interactiveGuidanceRule =
-      this.authorizationPolicyService.createCredentialRule(
-        [AuthorizationPrivilege.ACCESS_DASHBOARD_REFRESH],
-        criterias,
-        CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_DASHBOARD
-      );
-    interactiveGuidanceRule.cascade = false;
-    return interactiveGuidanceRule;
-  }
   private createPlatformCredentialRules(): IAuthorizationPolicyRuleCredential[] {
     const credentialRules: IAuthorizationPolicyRuleCredential[] = [];
 
@@ -283,19 +283,46 @@ export class PlatformAuthorizationService {
     globalAdminNotInherited.cascade = false;
     credentialRules.push(globalAdminNotInherited);
 
-    // Allow global admin Spaces to access Platform mgmt
+    // Allow global supportto access Platform mgmt
     const platformAdmin =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.PLATFORM_ADMIN],
         [
           AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_ADMIN_SPACES,
-          AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
         ],
         CREDENTIAL_RULE_TYPES_PLATFORM_ADMINS
       );
     platformAdmin.cascade = false;
     credentialRules.push(platformAdmin);
+
+    const globalSupportPlatformAdmin =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [
+          AuthorizationPrivilege.CREATE,
+          AuthorizationPrivilege.READ,
+          AuthorizationPrivilege.UPDATE,
+          AuthorizationPrivilege.DELETE,
+        ],
+        [AuthorizationCredential.GLOBAL_SUPPORT],
+        CREDENTIAL_RULE_TYPES_PLATFORM_MGMT
+      );
+    globalSupportPlatformAdmin.cascade = true;
+    credentialRules.push(globalSupportPlatformAdmin);
+
+    // Allow global support to reset auth
+    const platformResetAuth =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.AUTHORIZATION_RESET],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+        ],
+        CREDENTIAL_RULE_TYPES_PLATFORM_AUTH_RESET
+      );
+    platformResetAuth.cascade = false;
+    credentialRules.push(platformResetAuth);
 
     // Allow all registered users to query non-protected user information
     const userNotInherited =
@@ -307,51 +334,32 @@ export class PlatformAuthorizationService {
     userNotInherited.cascade = false;
     credentialRules.push(userNotInherited);
 
+    const createSpace =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.CREATE_SPACE],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+          AuthorizationCredential.BETA_TESTER,
+        ],
+        CREDENTIAL_RULE_PLATFORM_CREATE_SPACE
+      );
+    createSpace.cascade = false;
+    credentialRules.push(createSpace);
+
     const createOrg =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.CREATE_ORGANIZATION],
         [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT,
           AuthorizationCredential.SPACE_ADMIN,
-          AuthorizationCredential.CHALLENGE_ADMIN,
         ],
-        CREDENTIAL_RULE_TYPES_PLATFORM_ANY_ADMIN
+        CREDENTIAL_RULE_PLATFORM_CREATE_ORGANIZATION
       );
     createOrg.cascade = false;
     credentialRules.push(createOrg);
 
-    const admin =
-      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.ADMIN],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_ADMIN_SPACES,
-          AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY,
-          AuthorizationCredential.SPACE_ADMIN,
-          AuthorizationCredential.CHALLENGE_ADMIN,
-          AuthorizationCredential.OPPORTUNITY_ADMIN,
-          AuthorizationCredential.ORGANIZATION_ADMIN,
-        ],
-        CREDENTIAL_RULE_TYPES_PLATFORM_ANY_ADMIN
-      );
-    admin.cascade = false;
-    credentialRules.push(admin);
-
     return credentialRules;
-  }
-
-  private createPlatformPrivilegeRules(): AuthorizationPolicyRulePrivilege[] {
-    const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
-
-    const createPrivilege = new AuthorizationPolicyRulePrivilege(
-      [
-        AuthorizationPrivilege.CREATE_SPACE,
-        AuthorizationPrivilege.CREATE_ORGANIZATION,
-      ],
-      AuthorizationPrivilege.CREATE,
-      POLICY_RULE_PLATFORM_CREATE
-    );
-    privilegeRules.push(createPrivilege);
-
-    return privilegeRules;
   }
 }

@@ -30,17 +30,11 @@ import { IAgent } from '@domain/agent/agent';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CredentialsSearchInput } from '@domain/agent/credential/dto/credentials.dto.search';
-import { RemoveOrganizationAssociateInput } from './dto/organization.dto.remove.associate';
-import { AssignOrganizationAssociateInput } from './dto/organization.dto.assign.associate';
-import { AssignOrganizationAdminInput } from './dto/organization.dto.assign.admin';
-import { RemoveOrganizationAdminInput } from './dto/organization.dto.remove.admin';
-import { RemoveOrganizationOwnerInput } from './dto/organization.dto.remove.owner';
-import { AssignOrganizationOwnerInput } from './dto/organization.dto.assign.owner';
 import { OrganizationVerificationService } from '../organization-verification/organization.verification.service';
 import { IOrganizationVerification } from '../organization-verification/organization.verification.interface';
 import { NVP } from '@domain/common/nvp/nvp.entity';
 import { INVP } from '@domain/common/nvp/nvp.interface';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { IPreferenceSet } from '@domain/common/preference-set';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
@@ -60,6 +54,10 @@ import { OrganizationRole } from '@common/enums/organization.role';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { applyOrganizationFilter } from '@core/filtering/filters/organizationFilter';
+import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { AssignOrganizationRoleToUserInput } from './dto/organization.dto.assign.role.to.user';
+import { RemoveOrganizationRoleFromUserInput } from './dto/organization.dto.remove.role.from.user';
+import { NamingService } from '@services/infrastructure/naming/naming.service';
 
 @Injectable()
 export class OrganizationService {
@@ -70,6 +68,7 @@ export class OrganizationService {
     private agentService: AgentService,
     private userGroupService: UserGroupService,
     private profileService: ProfileService,
+    private namingService: NamingService,
     private preferenceSetService: PreferenceSetService,
     private storageAggregatorService: StorageAggregatorService,
     @InjectRepository(Organization)
@@ -81,9 +80,15 @@ export class OrganizationService {
     organizationData: CreateOrganizationInput,
     agentInfo?: AgentInfo
   ): Promise<IOrganization> {
-    // Convert nameID to lower case
-    organizationData.nameID = organizationData.nameID.toLowerCase();
-    await this.checkNameIdOrFail(organizationData.nameID);
+    if (organizationData.nameID) {
+      // Convert nameID to lower case
+      organizationData.nameID = organizationData.nameID.toLowerCase();
+      await this.checkNameIdOrFail(organizationData.nameID);
+    } else {
+      organizationData.nameID = await this.createOrganizationNameID(
+        organizationData.profileData?.displayName
+      );
+    }
     await this.checkDisplayNameOrFail(
       organizationData.profileData?.displayName
     );
@@ -137,13 +142,15 @@ export class OrganizationService {
       );
     // Assign the creating agent as both a member and admin
     if (agentInfo) {
-      await this.assignMember({
+      await this.assignOrganizationRoleToUser({
         organizationID: savedOrg.id,
         userID: agentInfo.userID,
+        role: OrganizationRole.ASSOCIATE,
       });
-      await this.assignOrganizationAdmin({
+      await this.assignOrganizationRoleToUser({
         organizationID: savedOrg.id,
         userID: agentInfo.userID,
+        role: OrganizationRole.ADMIN,
       });
     }
 
@@ -209,21 +216,6 @@ export class OrganizationService {
       );
     }
 
-    if (organizationData.nameID) {
-      this.logger.verbose?.(
-        `${organizationData.nameID} - ${organization.nameID}`,
-        LogContext.COMMUNICATION
-      );
-      if (
-        organizationData.nameID.toLowerCase() !==
-        organization.nameID.toLowerCase()
-      ) {
-        // updating the nameID, check new value is allowed
-        await this.checkNameIdOrFail(organizationData.nameID);
-        organization.nameID = organizationData.nameID;
-      }
-    }
-
     if (organizationData.legalEntityName !== undefined) {
       organization.legalEntityName = organizationData.legalEntityName;
     }
@@ -257,20 +249,21 @@ export class OrganizationService {
         storageAggregator: true,
       },
     });
-    const isSpaceHost = await this.isSpaceHost(organization);
+    const isSpaceHost = await this.isAccountHost(organization);
     if (isSpaceHost) {
       throw new ForbiddenException(
-        'Unable to delete Organization: host of one or more spaces',
-        LogContext.CHALLENGES
+        'Unable to delete Organization: host of one or more accounts',
+        LogContext.SPACES
       );
     }
     // Start by removing all issued org owner credentials in case this causes issues
     const owners = await this.getOwners(organization);
     for (const owner of owners) {
-      await this.removeOrganizationOwner(
+      await this.removeOrganizationRoleFromUser(
         {
           userID: owner.id,
           organizationID: organization.id,
+          role: OrganizationRole.OWNER,
         },
         false
       );
@@ -279,18 +272,20 @@ export class OrganizationService {
     // Remove all issued membership credentials
     const members = await this.getAssociates(organization);
     for (const member of members) {
-      await this.removeAssociate({
+      await this.removeOrganizationRoleFromUser({
         userID: member.id,
         organizationID: organization.id,
+        role: OrganizationRole.ASSOCIATE,
       });
     }
 
     // Remove all issued org admin credentials
     const admins = await this.getAdmins(organization);
     for (const admin of admins) {
-      await this.removeOrganizationAdmin({
+      await this.removeOrganizationRoleFromUser({
         userID: admin.id,
         organizationID: organization.id,
+        role: OrganizationRole.ADMIN,
       });
     }
 
@@ -339,7 +334,7 @@ export class OrganizationService {
     return result;
   }
 
-  async isSpaceHost(organization: IOrganization): Promise<boolean> {
+  async isAccountHost(organization: IOrganization): Promise<boolean> {
     if (!organization.agent)
       throw new RelationshipNotFoundException(
         `Unable to load agent for organization: ${organization.id}`,
@@ -347,7 +342,7 @@ export class OrganizationService {
       );
 
     return await this.agentService.hasValidCredential(organization.agent.id, {
-      type: AuthorizationCredential.SPACE_HOST,
+      type: AuthorizationCredential.ACCOUNT_HOST,
     });
   }
 
@@ -439,6 +434,34 @@ export class OrganizationService {
     return getPaginationResults(qb, paginationArgs);
   }
 
+  private getCredentialForRole(
+    role: OrganizationRole,
+    organizationID: string
+  ): ICredentialDefinition {
+    const result: ICredentialDefinition = {
+      type: '',
+      resourceID: organizationID,
+    };
+    switch (role) {
+      case OrganizationRole.ASSOCIATE:
+        result.type = AuthorizationCredential.ORGANIZATION_ASSOCIATE;
+        break;
+      case OrganizationRole.ADMIN:
+        result.type = AuthorizationCredential.ORGANIZATION_ADMIN;
+        break;
+      case OrganizationRole.OWNER:
+        result.type = AuthorizationCredential.ORGANIZATION_OWNER;
+        break;
+
+      default:
+        throw new ForbiddenException(
+          `Role not supported: ${role}`,
+          LogContext.AUTH
+        );
+    }
+    return result;
+  }
+
   async getMetrics(organization: IOrganization): Promise<INVP[]> {
     const activity: INVP[] = [];
 
@@ -511,7 +534,7 @@ export class OrganizationService {
 
   async createGroup(groupData: CreateUserGroupInput): Promise<IUserGroup> {
     const orgID = groupData.parentID;
-    const groupName = groupData.profileData.displayName;
+    const groupName = groupData.profile.displayName;
     // First find the Challenge
     this.logger.verbose?.(
       `Adding userGroup (${groupName}) to organization (${orgID})`
@@ -673,47 +696,8 @@ export class OrganizationService {
     return organizationMatchesCount;
   }
 
-  async assignMember(
-    membershipData: AssignOrganizationAssociateInput
-  ): Promise<IOrganization> {
-    const organization = await this.getOrganizationOrFail(
-      membershipData.organizationID
-    );
-
-    // Assign a credential for community membership
-    const { user, agent } = await this.userService.getUserAndAgent(
-      membershipData.userID
-    );
-
-    user.agent = await this.agentService.grantCredential({
-      agentID: agent.id,
-      type: AuthorizationCredential.ORGANIZATION_ASSOCIATE,
-      resourceID: organization.id,
-    });
-    return organization;
-  }
-
-  async removeAssociate(
-    membershipData: RemoveOrganizationAssociateInput
-  ): Promise<IOrganization> {
-    const { user, agent } = await this.userService.getUserAndAgent(
-      membershipData.userID
-    );
-
-    const organization = await this.getOrganizationOrFail(
-      membershipData.organizationID
-    );
-    user.agent = await this.agentService.revokeCredential({
-      agentID: agent.id,
-      type: AuthorizationCredential.ORGANIZATION_ASSOCIATE,
-      resourceID: organization.id,
-    });
-
-    return organization;
-  }
-
-  async assignOrganizationAdmin(
-    assignData: AssignOrganizationAdminInput
+  async assignOrganizationRoleToUser(
+    assignData: AssignOrganizationRoleToUserInput
   ): Promise<IUser> {
     const userID = assignData.userID;
     const agent = await this.userService.getAgent(userID);
@@ -721,73 +705,49 @@ export class OrganizationService {
       assignData.organizationID
     );
 
-    await this.agentService.grantCredential({
-      agentID: agent.id,
-      type: AuthorizationCredential.ORGANIZATION_ADMIN,
-      resourceID: organization.id,
-    });
-
-    return await this.userService.getUserWithAgent(userID);
-  }
-
-  async removeOrganizationAdmin(
-    removeData: RemoveOrganizationAdminInput
-  ): Promise<IUser> {
-    const organizationID = removeData.organizationID;
-    const organization = await this.getOrganizationOrFail(organizationID);
-    const agent = await this.userService.getAgent(removeData.userID);
-
-    await this.agentService.revokeCredential({
-      agentID: agent.id,
-      type: AuthorizationCredential.ORGANIZATION_ADMIN,
-      resourceID: organization.id,
-    });
-
-    return await this.userService.getUserWithAgent(removeData.userID);
-  }
-
-  async assignOrganizationOwner(
-    assignData: AssignOrganizationOwnerInput
-  ): Promise<IUser> {
-    const userID = assignData.userID;
-    const agent = await this.userService.getAgent(userID);
-    const organization = await this.getOrganizationOrFail(
-      assignData.organizationID
+    const credential = this.getCredentialForRole(
+      assignData.role,
+      organization.id
     );
 
     await this.agentService.grantCredential({
       agentID: agent.id,
-      type: AuthorizationCredential.ORGANIZATION_OWNER,
-      resourceID: organization.id,
+      ...credential,
     });
 
     return await this.userService.getUserWithAgent(userID);
   }
 
-  async removeOrganizationOwner(
-    removeData: RemoveOrganizationOwnerInput,
-    checkAtLeastOneOwner = true
+  async removeOrganizationRoleFromUser(
+    removeData: RemoveOrganizationRoleFromUserInput,
+    validationRoles = true
   ): Promise<IUser> {
     const organizationID = removeData.organizationID;
     const organization = await this.getOrganizationOrFail(organizationID);
     const agent = await this.userService.getAgent(removeData.userID);
 
-    if (checkAtLeastOneOwner) {
-      const orgOwners = await this.userService.usersWithCredentials({
-        type: AuthorizationCredential.ORGANIZATION_OWNER,
-        resourceID: organizationID,
-      });
-      if (orgOwners.length === 1)
-        throw new ForbiddenException(
-          `Not allowed to remove last owner for organisaiton: ${organization.nameID}`,
-          LogContext.AUTH
-        );
+    if (validationRoles) {
+      if (removeData.role === OrganizationRole.OWNER) {
+        const orgOwners = await this.userService.usersWithCredentials({
+          type: AuthorizationCredential.ORGANIZATION_OWNER,
+          resourceID: organizationID,
+        });
+        if (orgOwners.length === 1)
+          throw new ForbiddenException(
+            `Not allowed to remove last owner for organisaiton: ${organization.nameID}`,
+            LogContext.AUTH
+          );
+      }
     }
 
+    const credential = this.getCredentialForRole(
+      removeData.role,
+      organization.id
+    );
+
     await this.agentService.revokeCredential({
       agentID: agent.id,
-      type: AuthorizationCredential.ORGANIZATION_OWNER,
-      resourceID: organization.id,
+      ...credential,
     });
 
     return await this.userService.getUserWithAgent(removeData.userID);
@@ -824,5 +784,15 @@ export class OrganizationService {
   async getOrganizationByDomain(domain: string): Promise<IOrganization | null> {
     const org = await this.organizationRepository.findOneBy({ domain: domain });
     return org;
+  }
+
+  public async createOrganizationNameID(displayName: string): Promise<string> {
+    const base = `${displayName}`;
+    const reservedNameIDs =
+      await this.namingService.getReservedNameIDsInVirtualContributors(); // This will need to be smarter later
+    return this.namingService.createNameIdAvoidingReservedNameIDs(
+      base,
+      reservedNameIDs
+    );
   }
 }

@@ -1,6 +1,6 @@
 import { Field, InputType } from '@nestjs/graphql';
 import { NameID } from '@domain/common/scalars/scalar.nameid';
-import { UpdateBaseAlkemioInput } from '@domain/common/entity/base-entity/base.alkemio.dto.update';
+import { UpdateBaseAlkemioInput } from '@domain/common/entity/base-entity/dto/base.alkemio.dto.update';
 import { UpdateCalloutContributionDefaultsInput } from '@domain/collaboration/callout-contribution-defaults/dto';
 import { Type } from 'class-transformer';
 import { ValidateNested } from 'class-validator';

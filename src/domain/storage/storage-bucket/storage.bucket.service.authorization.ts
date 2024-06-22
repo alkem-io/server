@@ -1,35 +1,35 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { StorageBucket } from './storage.bucket.entity';
-import { StorageBucketService } from './storage.bucket.service';
 import { IStorageBucket } from './storage.bucket.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { DocumentAuthorizationService } from '../document/document.service.authorization';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
-import { AuthorizationPrivilege } from '@common/enums';
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import {
   POLICY_RULE_STORAGE_BUCKET_UPDATER_FILE_UPLOAD,
   POLICY_RULE_PLATFORM_DELETE,
   POLICY_RULE_STORAGE_BUCKET_CONTRIBUTOR_FILE_UPLOAD,
 } from '@common/constants';
 import { IDocument } from '../document';
+import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 
 @Injectable()
 export class StorageBucketAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
-    private documentAuthorizationService: DocumentAuthorizationService,
-    private storageBucketService: StorageBucketService,
-    @InjectRepository(StorageBucket)
-    private storageRepository: Repository<StorageBucket>
+    private documentAuthorizationService: DocumentAuthorizationService
   ) {}
 
-  async applyAuthorizationPolicy(
+  applyAuthorizationPolicy(
     storageBucket: IStorageBucket,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): Promise<IStorageBucket> {
+  ): IStorageBucket {
+    if (!storageBucket.documents) {
+      throw new RelationshipNotFoundException(
+        `Unable to load entities to reset auth for StorageBucket ${storageBucket.id} `,
+        LogContext.STORAGE_BUCKET
+      );
+    }
     // Ensure always applying from a clean state
     storageBucket.authorization = this.authorizationPolicyService.reset(
       storageBucket.authorization
@@ -45,30 +45,15 @@ export class StorageBucketAuthorizationService {
     );
 
     // Cascade down
-    const storagePropagated = await this.propagateAuthorizationToChildEntities(
-      storageBucket
-    );
-
-    return await this.storageRepository.save(storagePropagated);
-  }
-
-  private async propagateAuthorizationToChildEntities(
-    storageBucket: IStorageBucket
-  ): Promise<IStorageBucket> {
-    storageBucket.documents = await this.storageBucketService.getDocuments(
-      storageBucket
-    );
     const updatedDocuments: IDocument[] = [];
     for (const document of storageBucket.documents) {
-      document.authorization = (
-        await this.documentAuthorizationService.applyAuthorizationPolicy(
+      document.authorization =
+        this.documentAuthorizationService.applyAuthorizationPolicy(
           document,
           storageBucket.authorization
-        )
-      ).authorization;
+        ).authorization;
       updatedDocuments.push(document);
     }
-
     storageBucket.documents = updatedDocuments;
 
     return storageBucket;

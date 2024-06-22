@@ -11,6 +11,7 @@ import {
   CommunityPolicyRoleLimitsException,
   EntityNotFoundException,
   EntityNotInitializedException,
+  RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -34,18 +35,17 @@ import { CommunityContributorsUpdateType } from '@common/enums/community.contrib
 import { CommunityContributorType } from '@common/enums/community.contributor.type';
 import { ICommunityRolePolicy } from '../community-policy/community.policy.role.interface';
 import { ICommunityPolicy } from '../community-policy/community.policy.interface';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { CommunityPolicyService } from '../community-policy/community.policy.service';
 import { ICommunityPolicyDefinition } from '../community-policy/community.policy.definition';
 import { DiscussionCategoryCommunity } from '@common/enums/communication.discussion.category.community';
 import { IForm } from '@domain/common/form/form.interface';
 import { FormService } from '@domain/common/form/form.service';
-import { CreateFormInput } from '@domain/common/form/dto/form.dto.create';
 import { UpdateFormInput } from '@domain/common/form/dto/form.dto.update';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 import { InvitationService } from '../invitation/invitation.service';
 import { IInvitation } from '../invitation/invitation.interface';
-import { CreateInvitationExternalUserOnCommunityInput } from './dto/community.dto.invite.external.user';
+import { CreateInvitationUserByEmailOnCommunityInput } from './dto/community.dto.invite.external.user';
 import { IInvitationExternal } from '../invitation.external';
 import { InvitationExternalService } from '../invitation.external/invitation.external.service';
 import { CreateInvitationExternalInput } from '../invitation.external/dto/invitation.external.dto.create';
@@ -54,7 +54,16 @@ import { CreateInvitationInput } from '../invitation/dto/invitation.dto.create';
 import { CommunityMembershipException } from '@common/exceptions/community.membership.exception';
 import { CommunityEventsService } from './community.service.events';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
-import { SpaceType } from '@common/enums/space.type';
+import { CommunityGuidelinesService } from '../community-guidelines/community.guidelines.service';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { CreateCommunityInput } from './dto/community.dto.create';
+import { ICommunityGuidelines } from '../community-guidelines/community.guidelines.interface';
+import { IVirtualContributor } from '../virtual-contributor';
+import { VirtualContributorService } from '../virtual-contributor/virtual.contributor.service';
+import { CommunityRoleImplicit } from '@common/enums/community.role.implicit';
+import { AuthorizationCredential } from '@common/enums';
+import { ContributorService } from '../contributor/contributor.service';
+import { IContributor } from '../contributor/contributor.interface';
 
 @Injectable()
 export class CommunityService {
@@ -62,7 +71,9 @@ export class CommunityService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private agentService: AgentService,
     private userService: UserService,
+    private contributorService: ContributorService,
     private organizationService: OrganizationService,
+    private virtualContributorService: VirtualContributorService,
     private userGroupService: UserGroupService,
     private applicationService: ApplicationService,
     private invitationService: InvitationService,
@@ -70,6 +81,7 @@ export class CommunityService {
     private communicationService: CommunicationService,
     private communityResolverService: CommunityResolverService,
     private communityEventsService: CommunityEventsService,
+    private communityGuidelinesService: CommunityGuidelinesService,
     private formService: FormService,
     private communityPolicyService: CommunityPolicyService,
     private storageAggregatorResolverService: StorageAggregatorResolverService,
@@ -79,23 +91,25 @@ export class CommunityService {
   ) {}
 
   async createCommunity(
-    name: string,
-    spaceID: string,
-    type: SpaceType,
-    policy: ICommunityPolicyDefinition,
-    applicationFormData: CreateFormInput
+    communityData: CreateCommunityInput,
+    storageAggregator: IStorageAggregator
   ): Promise<ICommunity> {
-    const community: ICommunity = new Community(type);
+    const community: ICommunity = new Community(communityData.type);
     community.authorization = new AuthorizationPolicy();
+    const policy = communityData.policy as ICommunityPolicyDefinition;
     community.policy = await this.communityPolicyService.createCommunityPolicy(
       policy.member,
       policy.lead,
-      policy.admin,
-      policy.host
+      policy.admin
     );
-    community.spaceID = spaceID;
+
+    community.guidelines =
+      await this.communityGuidelinesService.createCommunityGuidelines(
+        communityData.guidelines,
+        storageAggregator
+      );
     community.applicationForm = await this.formService.createForm(
-      applicationFormData
+      communityData.applicationForm
     );
 
     community.applications = [];
@@ -105,8 +119,8 @@ export class CommunityService {
     community.groups = [];
     community.communication =
       await this.communicationService.createCommunication(
-        name,
-        spaceID,
+        communityData.name,
+        '',
         Object.values(DiscussionCategoryCommunity)
       );
     return await this.communityRepository.save(community);
@@ -114,7 +128,7 @@ export class CommunityService {
 
   async createGroup(groupData: CreateUserGroupInput): Promise<IUserGroup> {
     const communityID = groupData.parentID;
-    const groupName = groupData.profileData.displayName;
+    const groupName = groupData.profile.displayName;
 
     this.logger.verbose?.(
       `Adding userGroup (${groupName}) to Community (${communityID})`,
@@ -133,8 +147,7 @@ export class CommunityService {
     const group = await this.userGroupService.addGroupWithName(
       community,
       groupName,
-      storageAggregator,
-      community.spaceID
+      storageAggregator
     );
     await this.communityRepository.save(community);
 
@@ -153,6 +166,33 @@ export class CommunityService {
       );
     }
     return communityWithGroups.groups;
+  }
+
+  // Loads the group into the Community entity if not already present
+  async getUserGroup(
+    community: ICommunity,
+    groupID: string
+  ): Promise<IUserGroup> {
+    const communityWithGroups = await this.getCommunityOrFail(community.id, {
+      relations: { groups: true },
+    });
+    if (!communityWithGroups.groups) {
+      throw new EntityNotInitializedException(
+        `Community not initialized: ${community.id}`,
+        LogContext.COMMUNITY
+      );
+    }
+    const result = communityWithGroups.groups.find(
+      group => group.id === groupID
+    );
+    if (!result) {
+      throw new EntityNotFoundException(
+        `Unable to find group with ID: '${groupID}'`,
+        LogContext.COMMUNITY,
+        { communityId: community.id, communityType: community.type }
+      );
+    }
+    return result;
   }
 
   async getCommunityOrFail(
@@ -181,16 +221,31 @@ export class CommunityService {
         groups: true,
         communication: true,
         applicationForm: true,
+        guidelines: true,
       },
     });
+    if (
+      !community.communication ||
+      !community.communication.updates ||
+      !community.policy ||
+      !community.groups ||
+      !community.applications ||
+      !community.invitations ||
+      !community.externalInvitations ||
+      !community.guidelines ||
+      !community.applicationForm
+    ) {
+      throw new RelationshipNotFoundException(
+        `Unable to load child entities for community for deletion: ${community.id} `,
+        LogContext.COMMUNITY
+      );
+    }
 
     // Remove all groups
-    if (community.groups) {
-      for (const group of community.groups) {
-        await this.userGroupService.removeUserGroup({
-          ID: group.id,
-        });
-      }
+    for (const group of community.groups) {
+      await this.userGroupService.removeUserGroup({
+        ID: group.id,
+      });
     }
 
     // Remove all issued role credentials for contributors
@@ -218,43 +273,36 @@ export class CommunityService {
       await this.authorizationPolicyService.delete(community.authorization);
 
     // Remove all applications
-    if (community.applications) {
-      for (const application of community.applications) {
-        await this.applicationService.deleteApplication({
-          ID: application.id,
-        });
-      }
+    for (const application of community.applications) {
+      await this.applicationService.deleteApplication({
+        ID: application.id,
+      });
     }
 
     // Remove all invitations
-    if (community.invitations) {
-      for (const invitation of community.invitations) {
-        await this.invitationService.deleteInvitation({
-          ID: invitation.id,
-        });
-      }
-    }
-    if (community.externalInvitations) {
-      for (const externalInvitation of community.externalInvitations) {
-        await this.invitationExternalService.deleteInvitationExternal({
-          ID: externalInvitation.id,
-        });
-      }
+    for (const invitation of community.invitations) {
+      await this.invitationService.deleteInvitation({
+        ID: invitation.id,
+      });
     }
 
-    if (community.communication) {
-      await this.communicationService.removeCommunication(
-        community.communication.id
-      );
+    for (const externalInvitation of community.externalInvitations) {
+      await this.invitationExternalService.deleteInvitationExternal({
+        ID: externalInvitation.id,
+      });
     }
 
-    if (community.applicationForm) {
-      await this.formService.removeForm(community.applicationForm);
-    }
+    await this.communicationService.removeCommunication(
+      community.communication.id
+    );
 
-    if (community.policy) {
-      await this.communityPolicyService.removeCommunityPolicy(community.policy);
-    }
+    await this.formService.removeForm(community.applicationForm);
+
+    await this.communityPolicyService.removeCommunityPolicy(community.policy);
+
+    await this.communityGuidelinesService.deleteCommunityGuidelines(
+      community.guidelines.id
+    );
 
     await this.communityRepository.remove(community as Community);
     return true;
@@ -330,7 +378,13 @@ export class CommunityService {
       agentInfo.userID,
       community.id
     );
-    if (openInvitation) return CommunityMembershipStatus.INVITATION_PENDING;
+
+    if (
+      openInvitation &&
+      (await this.invitationService.canInvitationBeAccepted(openInvitation.id))
+    ) {
+      return CommunityMembershipStatus.INVITATION_PENDING;
+    }
 
     return CommunityMembershipStatus.NOT_MEMBER;
   }
@@ -346,6 +400,26 @@ export class CommunityService {
     ) as CommunityRole[];
     for (const role of roles) {
       const hasAgentRole = await this.isInRole(agent, community, role);
+      if (hasAgentRole) {
+        result.push(role);
+      }
+    }
+
+    return result;
+  }
+
+  async getCommunityImplicitRoles(
+    agentInfo: AgentInfo,
+    community: ICommunity
+  ): Promise<CommunityRoleImplicit[]> {
+    const result: CommunityRoleImplicit[] = [];
+    const agent = await this.agentService.getAgentOrFail(agentInfo.agentID);
+
+    const rolesImplicit: CommunityRoleImplicit[] = Object.values(
+      CommunityRoleImplicit
+    ) as CommunityRoleImplicit[];
+    for (const role of rolesImplicit) {
+      const hasAgentRole = await this.isInRoleImplicit(agent, community, role);
       if (hasAgentRole) {
         result.push(role);
       }
@@ -373,11 +447,11 @@ export class CommunityService {
   }
 
   private async findOpenInvitation(
-    userID: string,
+    contributorID: string,
     communityID: string
   ): Promise<IInvitation | undefined> {
     const invitations = await this.invitationService.findExistingInvitations(
-      userID,
+      contributorID,
       communityID
     );
     for (const invitation of invitations) {
@@ -406,6 +480,22 @@ export class CommunityService {
         resourceID: membershipCredential.resourceID,
       },
       limit
+    );
+  }
+
+  async getVirtualContributorsWithRole(
+    community: ICommunity,
+    role: CommunityRole
+  ): Promise<IVirtualContributor[]> {
+    const membershipCredential = this.getCredentialDefinitionForRole(
+      community,
+      role
+    );
+    return await this.virtualContributorService.virtualContributorsWithCredentials(
+      {
+        type: membershipCredential.type,
+        resourceID: membershipCredential.resourceID,
+      }
     );
   }
 
@@ -452,8 +542,7 @@ export class CommunityService {
 
   public async getDisplayName(community: ICommunity): Promise<string> {
     return await this.communityResolverService.getDisplayNameForCommunityOrFail(
-      community.id,
-      community.type
+      community.id
     );
   }
 
@@ -465,6 +554,39 @@ export class CommunityService {
     return policyRole.credential;
   }
 
+  async assignContributorToRole(
+    community: ICommunity,
+    contributorID: string,
+    role: CommunityRole,
+    contributorType: CommunityContributorType,
+    agentInfo?: AgentInfo,
+    triggerNewMemberEvents = false
+  ): Promise<IContributor> {
+    switch (contributorType) {
+      case CommunityContributorType.USER:
+        return await this.assignUserToRole(
+          community,
+          contributorID,
+          role,
+          agentInfo,
+          triggerNewMemberEvents
+        );
+      case CommunityContributorType.ORGANIZATION:
+        return await this.assignOrganizationToRole(
+          community,
+          contributorID,
+          role
+        );
+      case CommunityContributorType.VIRTUAL:
+        return await this.assignVirtualToRole(community, contributorID, role);
+      default:
+        throw new EntityNotInitializedException(
+          `Invalid community contributor type: ${contributorType}`,
+          LogContext.ROLES
+        );
+    }
+  }
+
   async assignUserToRole(
     community: ICommunity,
     userID: string,
@@ -473,23 +595,42 @@ export class CommunityService {
     triggerNewMemberEvents = false
   ): Promise<IUser> {
     const { user, agent } = await this.userService.getUserAndAgent(userID);
-    const hasMemberRoleInParent = await this.isMemberInParentCommunity(
-      agent,
-      community.id
-    );
+    const { isMember: hasMemberRoleInParent, parentCommunity } =
+      await this.isMemberInParentCommunity(agent, community.id);
     if (!hasMemberRoleInParent) {
       throw new ValidationException(
-        `Unable to assign Agent (${agent.id}) to community (${community.id}): agent is not a member of parent community`,
-        LogContext.CHALLENGES
+        `Unable to assign Agent (${agent.id}) to community (${community.id}): agent is not a member of parent community ${parentCommunity?.id}`,
+        LogContext.SPACES
       );
     }
 
-    user.agent = await this.assignContributorToRole(
+    const userAlreadyHasRole = await this.isInRole(agent, community, role);
+    if (userAlreadyHasRole) {
+      return user;
+    }
+
+    user.agent = await this.assignContributorAgentToRole(
       community,
       agent,
       role,
       CommunityContributorType.USER
     );
+    if (role === CommunityRole.ADMIN && parentCommunity) {
+      // also assign as subspace admin in parent community if there is a parent community
+      const credential = this.getCredentialForImplicitRole(
+        parentCommunity,
+        CommunityRoleImplicit.SUBSPACE_ADMIN
+      );
+      const alreadyHasSubspaceAdmin =
+        await this.agentService.hasValidCredential(agent.id, credential);
+      if (!alreadyHasSubspaceAdmin) {
+        await this.assignContributorToImplicitRole(
+          parentCommunity,
+          agent,
+          CommunityRoleImplicit.SUBSPACE_ADMIN
+        );
+      }
+    }
 
     if (role === CommunityRole.MEMBER) {
       this.addMemberToCommunication(user, community);
@@ -502,9 +643,11 @@ export class CommunityService {
         );
 
         if (triggerNewMemberEvents) {
+          const rootSpaceID = await this.getRootSpaceID(community);
           const displayName = await this.getDisplayName(community);
           await this.communityEventsService.processCommunityNewMemberEvents(
             community,
+            rootSpaceID,
             displayName,
             agentInfo,
             user
@@ -514,6 +657,40 @@ export class CommunityService {
     }
 
     return user;
+  }
+
+  async assignVirtualToRole(
+    community: ICommunity,
+    virtualContributorID: string,
+    role: CommunityRole
+  ): Promise<IVirtualContributor> {
+    const { virtualContributor, agent } =
+      await this.virtualContributorService.getVirtualContributorAndAgent(
+        virtualContributorID
+      );
+    const { isMember: hasMemberRoleInParent, parentCommunity } =
+      await this.isMemberInParentCommunity(agent, community.id);
+    if (!hasMemberRoleInParent) {
+      if (!parentCommunity) {
+        throw new ValidationException(
+          `Unable to find parent community for community ${community.id}`,
+          LogContext.SPACES
+        );
+      }
+      throw new ValidationException(
+        `Unable to assign Agent (${agent.id}) to community (${community.id}): agent is not a member of parent community ${parentCommunity.id}`,
+        LogContext.SPACES
+      );
+    }
+
+    virtualContributor.agent = await this.assignContributorAgentToRole(
+      community,
+      agent,
+      role,
+      CommunityContributorType.VIRTUAL
+    );
+
+    return virtualContributor;
   }
 
   private async addMemberToCommunication(
@@ -536,7 +713,7 @@ export class CommunityService {
   private async isMemberInParentCommunity(
     agent: IAgent,
     communityID: string
-  ): Promise<boolean> {
+  ): Promise<{ parentCommunity: ICommunity | undefined; isMember: boolean }> {
     const community = await this.getCommunityOrFail(communityID, {
       relations: { parentCommunity: true },
     });
@@ -547,9 +724,15 @@ export class CommunityService {
         agent,
         community.parentCommunity
       );
-      return isParentMember;
+      return {
+        parentCommunity: community?.parentCommunity,
+        isMember: isParentMember,
+      };
     }
-    return true;
+    return {
+      parentCommunity: undefined,
+      isMember: true,
+    };
   }
 
   public getCommunityPolicy(community: ICommunity): ICommunityPolicy {
@@ -561,6 +744,25 @@ export class CommunityService {
       );
     }
     return policy;
+  }
+
+  public async getCommunityGuidelines(
+    community: ICommunity
+  ): Promise<ICommunityGuidelines> {
+    const communityWithGuidelines = await this.getCommunityOrFail(
+      community.id,
+      {
+        relations: { guidelines: true },
+      }
+    );
+
+    if (!communityWithGuidelines.guidelines) {
+      throw new EntityNotInitializedException(
+        `Unable to locate guidelines for community: ${community.id}`,
+        LogContext.COMMUNITY
+      );
+    }
+    return communityWithGuidelines.guidelines;
   }
 
   async getCommunication(
@@ -589,7 +791,7 @@ export class CommunityService {
     const { organization, agent } =
       await this.organizationService.getOrganizationAndAgent(organizationID);
 
-    organization.agent = await this.assignContributorToRole(
+    organization.agent = await this.assignContributorAgentToRole(
       community,
       agent,
       role,
@@ -615,6 +817,26 @@ export class CommunityService {
       validatePolicyLimits
     );
 
+    const parentCommunity = await this.getParentCommunity(community);
+    if (role === CommunityRole.ADMIN && parentCommunity) {
+      // Check if an admin anywhere else in the community
+      const peerCommunities = await this.getPeerCommunites(
+        parentCommunity,
+        community
+      );
+      const hasAnotherAdminRole = peerCommunities.some(pc =>
+        this.isInRole(agent, pc, CommunityRole.ADMIN)
+      );
+
+      if (!hasAnotherAdminRole) {
+        await this.removeContributorToImplicitRole(
+          parentCommunity,
+          agent,
+          CommunityRoleImplicit.SUBSPACE_ADMIN
+        );
+      }
+    }
+
     if (role === CommunityRole.MEMBER) {
       const communication = await this.getCommunication(community.id);
       this.communicationService
@@ -629,6 +851,22 @@ export class CommunityService {
     }
 
     return user;
+  }
+
+  private async getPeerCommunites(
+    parentCommunity: ICommunity,
+    childCommunity: ICommunity
+  ): Promise<ICommunity[]> {
+    const peerCommunities = await this.communityRepository.find({
+      where: {
+        parentCommunity: {
+          id: parentCommunity.id,
+        },
+      },
+    });
+    return peerCommunities.filter(
+      community => community.id !== childCommunity.id
+    );
   }
 
   async removeOrganizationFromRole(
@@ -649,6 +887,38 @@ export class CommunityService {
     );
 
     return organization;
+  }
+
+  async removeVirtualFromRole(
+    community: ICommunity,
+    virtualContributorID: string,
+    role: CommunityRole,
+    validatePolicyLimits = true
+  ): Promise<IVirtualContributor> {
+    const { virtualContributor, agent } =
+      await this.virtualContributorService.getVirtualContributorAndAgent(
+        virtualContributorID
+      );
+
+    virtualContributor.agent = await this.removeContributorFromRole(
+      community,
+      agent,
+      role,
+      CommunityContributorType.VIRTUAL,
+      validatePolicyLimits
+    );
+
+    return virtualContributor;
+  }
+
+  public async isCommunityAccountMatchingVcAccount(
+    communityID: string,
+    virtualContributorID: string
+  ): Promise<boolean> {
+    return await this.communityResolverService.isCommunityAccountMatchingVcAccount(
+      communityID,
+      virtualContributorID
+    );
   }
 
   private async validateUserCommunityPolicy(
@@ -737,7 +1007,13 @@ export class CommunityService {
       );
   }
 
-  private async assignContributorToRole(
+  public async getRootSpaceID(community: ICommunity): Promise<string> {
+    return await this.communityResolverService.getRootSpaceIDFromCommunityOrFail(
+      community
+    );
+  }
+
+  public async assignContributorAgentToRole(
     community: ICommunity,
     agent: IAgent,
     role: CommunityRole,
@@ -757,6 +1033,59 @@ export class CommunityService {
       type: communityPolicyRole.credential.type,
       resourceID: communityPolicyRole.credential.resourceID,
     });
+  }
+
+  private async assignContributorToImplicitRole(
+    community: ICommunity,
+    agent: IAgent,
+    role: CommunityRoleImplicit
+  ): Promise<IAgent> {
+    const credential = this.getCredentialForImplicitRole(community, role);
+
+    return await this.agentService.grantCredential({
+      agentID: agent.id,
+      type: credential.type,
+      resourceID: credential.resourceID,
+    });
+  }
+
+  private async removeContributorToImplicitRole(
+    community: ICommunity,
+    agent: IAgent,
+    role: CommunityRoleImplicit
+  ): Promise<IAgent> {
+    const credential = this.getCredentialForImplicitRole(community, role);
+
+    return await this.agentService.revokeCredential({
+      agentID: agent.id,
+      type: credential.type,
+      resourceID: credential.resourceID,
+    });
+  }
+
+  private getCredentialForImplicitRole(
+    community: ICommunity,
+    role: CommunityRoleImplicit
+  ): CredentialDefinition {
+    // Use the admin credential to get the resourceID
+    const adminCredential = this.getCredentialDefinitionForRole(
+      community,
+      CommunityRole.ADMIN
+    );
+    const resourceID = adminCredential.resourceID;
+    switch (role) {
+      case CommunityRoleImplicit.SUBSPACE_ADMIN:
+        return {
+          type: AuthorizationCredential.SPACE_SUBSPACE_ADMIN,
+          resourceID,
+        };
+      default: {
+        throw new CommunityMembershipException(
+          `Invalid implicit role: ${role}`,
+          LogContext.COMMUNITY
+        );
+      }
+    }
   }
 
   private async removeContributorFromRole(
@@ -839,11 +1168,24 @@ export class CommunityService {
     return validCredential;
   }
 
-  async getCommunities(spaceId: string): Promise<Community[]> {
-    const communites = await this.communityRepository.find({
-      where: { spaceID: spaceId },
-    });
-    return communites || [];
+  async isInRoleImplicit(
+    agent: IAgent,
+    community: ICommunity,
+    role: CommunityRoleImplicit
+  ): Promise<boolean> {
+    const membershipCredential = this.getCredentialForImplicitRole(
+      community,
+      role
+    );
+
+    const validCredential = await this.agentService.hasValidCredential(
+      agent.id,
+      {
+        type: membershipCredential.type,
+        resourceID: membershipCredential.resourceID,
+      }
+    );
+    return validCredential;
   }
 
   async createApplication(
@@ -858,15 +1200,8 @@ export class CommunityService {
 
     await this.validateApplicationFromUser(user, agent, community);
 
-    const spaceID = community.spaceID;
-    if (!spaceID)
-      throw new EntityNotInitializedException(
-        `Unable to locate containing space: ${community.id}`,
-        LogContext.COMMUNITY
-      );
     const application = await this.applicationService.createApplication(
-      applicationData,
-      spaceID
+      applicationData
     );
     community.applications?.push(application);
     await this.communityRepository.save(community);
@@ -874,12 +1209,13 @@ export class CommunityService {
     return application;
   }
 
-  async createInvitationExistingUser(
+  async createInvitationExistingContributor(
     invitationData: CreateInvitationInput
   ): Promise<IInvitation> {
-    const { user, agent } = await this.userService.getUserAndAgent(
-      invitationData.invitedUser
-    );
+    const { contributor: contributor, agent } =
+      await this.contributorService.getContributorAndAgent(
+        invitationData.invitedContributor
+      );
     const community = await this.getCommunityOrFail(
       invitationData.communityID,
       {
@@ -887,10 +1223,15 @@ export class CommunityService {
       }
     );
 
-    await this.validateInvitationToExistingUser(user, agent, community);
+    await this.validateInvitationToExistingContributor(
+      contributor,
+      agent,
+      community
+    );
 
     const invitation = await this.invitationService.createInvitation(
-      invitationData
+      invitationData,
+      contributor
     );
     community.invitations?.push(invitation);
     await this.communityRepository.save(community);
@@ -899,7 +1240,7 @@ export class CommunityService {
   }
 
   async createInvitationExternalUser(
-    invitationData: CreateInvitationExternalUserOnCommunityInput,
+    invitationData: CreateInvitationUserByEmailOnCommunityInput,
     agentInfo: AgentInfo
   ): Promise<IInvitationExternal> {
     await this.validateInvitationToExternalUser(
@@ -938,7 +1279,7 @@ export class CommunityService {
     );
     if (openApplication) {
       throw new CommunityMembershipException(
-        `An open application (ID: ${openApplication.id}) already exists for user ${openApplication.user?.id} on Community: ${community.id}.`,
+        `An open application (ID: ${openApplication.id}) already exists for contributor ${openApplication.user?.id} on Community: ${community.id}.`,
         LogContext.COMMUNITY
       );
     }
@@ -946,7 +1287,7 @@ export class CommunityService {
     const openInvitation = await this.findOpenInvitation(user.id, community.id);
     if (openInvitation) {
       throw new CommunityMembershipException(
-        `An open invitation (ID: ${openInvitation.id}) already exists for user ${openInvitation.invitedUser} on Community: ${community.id}.`,
+        `An open invitation (ID: ${openInvitation.id}) already exists for contributor ${openInvitation.invitedContributor} (${openInvitation.contributorType}) on Community: ${community.id}.`,
         LogContext.COMMUNITY
       );
     }
@@ -955,31 +1296,34 @@ export class CommunityService {
     const isExistingMember = await this.isMember(agent, community);
     if (isExistingMember)
       throw new CommunityMembershipException(
-        `User ${user.nameID} is already a member of the Community: ${community.id}.`,
+        `Contributor ${user.nameID} is already a member of the Community: ${community.id}.`,
         LogContext.COMMUNITY
       );
   }
 
-  private async validateInvitationToExistingUser(
-    user: IUser,
+  private async validateInvitationToExistingContributor(
+    contributor: IContributor,
     agent: IAgent,
     community: ICommunity
   ) {
-    const openInvitation = await this.findOpenInvitation(user.id, community.id);
+    const openInvitation = await this.findOpenInvitation(
+      contributor.id,
+      community.id
+    );
     if (openInvitation) {
       throw new CommunityMembershipException(
-        `An open invitation (ID: ${openInvitation.id}) already exists for user ${openInvitation.invitedUser} on Community: ${community.id}.`,
+        `An open invitation (ID: ${openInvitation.id}) already exists for contributor ${openInvitation.invitedContributor} (${openInvitation.contributorType}) on Community: ${community.id}.`,
         LogContext.COMMUNITY
       );
     }
 
     const openApplication = await this.findOpenApplication(
-      user.id,
+      contributor.id,
       community.id
     );
     if (openApplication) {
       throw new CommunityMembershipException(
-        `An open application (ID: ${openApplication.id}) already exists for user ${openApplication.user?.id} on Community: ${community.id}.`,
+        `An open application (ID: ${openApplication.id}) already exists for contributor ${openApplication.user?.id} on Community: ${community.id}.`,
         LogContext.COMMUNITY
       );
     }
@@ -988,7 +1332,7 @@ export class CommunityService {
     const isExistingMember = await this.isMember(agent, community);
     if (isExistingMember)
       throw new CommunityMembershipException(
-        `User ${user.nameID} is already a member of the Community: ${community.id}.`,
+        `Contributor ${contributor.nameID} is already a member of the Community: ${community.id}.`,
         LogContext.COMMUNITY
       );
   }
@@ -1018,25 +1362,6 @@ export class CommunityService {
         );
       }
     }
-  }
-
-  async getCommunityInAccountOrFail(
-    communityID: string,
-    accountID: string
-  ): Promise<ICommunity> {
-    const community = await this.communityRepository.findOneBy({
-      id: communityID,
-      spaceID: accountID,
-    });
-
-    if (!community) {
-      throw new EntityNotFoundException(
-        `Unable to find Community with ID: ${communityID}`,
-        LogContext.COMMUNITY
-      );
-    }
-
-    return community;
   }
 
   async getApplications(community: ICommunity): Promise<IApplication[]> {

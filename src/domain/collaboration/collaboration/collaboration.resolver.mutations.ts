@@ -4,7 +4,7 @@ import { CurrentUser, Profiling } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { RelationAuthorizationService } from '@domain/collaboration/relation/relation.service.authorization';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
@@ -19,11 +19,11 @@ import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { ActivityInputCalloutPublished } from '@services/adapters/activity-adapter/dto/activity.dto.input.callout.published';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
-import { NotificationInputCollaborationInterest } from '@services/adapters/notification-adapter/dto/notification.dto.input.collaboration.interest';
 import { NotificationInputCalloutPublished } from '@services/adapters/notification-adapter/dto/notification.dto.input.callout.published';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { UpdateCollaborationCalloutsSortOrderInput } from './dto/collaboration.dto.update.callouts.sort.order';
+import { CalloutService } from '../callout/callout.service';
 
 @Resolver()
 export class CollaborationResolverMutations {
@@ -36,7 +36,8 @@ export class CollaborationResolverMutations {
     private authorizationService: AuthorizationService,
     private collaborationService: CollaborationService,
     private activityAdapter: ActivityAdapter,
-    private notificationAdapter: NotificationAdapter
+    private notificationAdapter: NotificationAdapter,
+    private calloutService: CalloutService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -101,14 +102,6 @@ export class CollaborationResolverMutations {
         relationData
       );
 
-    // Send the notification
-    const notificationInput: NotificationInputCollaborationInterest = {
-      triggeredBy: agentInfo.userID,
-      relation: relation,
-      collaboration: collaboration,
-    };
-    await this.notificationAdapter.collaborationInterest(notificationInput);
-
     return this.relationAuthorizationService.applyAuthorizationPolicy(
       relation,
       collaborationAuthorizationPolicy,
@@ -137,24 +130,23 @@ export class CollaborationResolverMutations {
       `create callout on collaboration: ${collaboration.id}`
     );
 
-    const callout =
-      await this.collaborationService.createCalloutOnCollaboration(
-        calloutData,
-        agentInfo.userID
-      );
+    let callout = await this.collaborationService.createCalloutOnCollaboration(
+      calloutData,
+      agentInfo.userID
+    );
 
     const communityPolicy = await this.collaborationService.getCommunityPolicy(
       collaboration.id
     );
 
-    const calloutAuthorized =
-      await this.calloutAuthorizationService.applyAuthorizationPolicy(
-        callout,
-        collaboration.authorization,
-        communityPolicy
-      );
+    callout = await this.calloutAuthorizationService.applyAuthorizationPolicy(
+      callout,
+      collaboration.authorization,
+      communityPolicy
+    );
+    callout = await this.calloutService.save(callout);
 
-    if (calloutAuthorized.visibility === CalloutVisibility.PUBLISHED) {
+    if (callout.visibility === CalloutVisibility.PUBLISHED) {
       if (calloutData.sendNotification) {
         const notificationInput: NotificationInputCalloutPublished = {
           triggeredBy: agentInfo.userID,
@@ -170,9 +162,13 @@ export class CollaborationResolverMutations {
       this.activityAdapter.calloutPublished(activityLogInput);
     }
 
-    const { spaceID } =
+    const community =
       await this.communityResolverService.getCommunityFromCalloutOrFail(
         callout.id
+      );
+    const spaceID =
+      await this.communityResolverService.getRootSpaceIDFromCommunityOrFail(
+        community
       );
 
     this.contributionReporter.calloutCreated(
@@ -187,7 +183,7 @@ export class CollaborationResolverMutations {
       }
     );
 
-    return calloutAuthorized;
+    return callout;
   }
 
   @UseGuards(GraphqlGuard)

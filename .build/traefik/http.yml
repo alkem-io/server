@@ -55,6 +55,16 @@ http:
         servers:
           - url: 'http://synapse-admin:80/'
 
+    whiteboard-collaboration:
+      loadBalancer:
+        servers:
+          - url: 'http://whiteboard-collaboration:4002/'
+
+    file-service:
+      loadBalancer:
+        servers:
+          - url: 'http://file-service:4003/'
+
   middlewares:
     strip-api-private-non-interactive-prefix:
       stripPrefix:
@@ -137,14 +147,6 @@ http:
       entryPoints:
         - 'web'
 
-    api-private-rest:
-      rule: 'PathPrefix(`/api/private/rest`)'
-      service: 'oathkeeper-proxy'
-      middlewares:
-        - strip-api-private-prefix
-      entryPoints:
-        - 'web'
-
     api-private-non-interactive-rest:
       rule: 'PathPrefix(`/api/private/non-interactive/rest`)'
       service: 'alkemio-server'
@@ -153,11 +155,19 @@ http:
       entryPoints:
         - 'web'
 
-    api-private-ws-socket.io:
+    whiteboard-collaboration:
       rule: 'PathPrefix(`/api/private/ws`)'
       service: 'oathkeeper-proxy'
       middlewares:
         - strip-api-private-prefix-socket-io
+      entryPoints:
+        - 'web'
+    # more specific than 'api-private-rest'
+    file-service:
+      rule: 'PathPrefix(`/api/private/rest/storage`)'
+      service: 'oathkeeper-proxy'
+      middlewares:
+        - strip-api-private-prefix
       entryPoints:
         - 'web'
 

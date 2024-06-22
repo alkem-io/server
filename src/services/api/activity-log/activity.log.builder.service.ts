@@ -4,16 +4,14 @@ import { IActivityLogEntryMemberJoined } from '@services/api/activity-log/dto/ac
 import { IActivityLogEntryCalloutPublished } from '@services/api/activity-log/dto/activity.log.dto.entry.callout.published';
 import { IActivityLogEntryCalloutPostCreated } from '@services/api/activity-log/dto/activity.log.dto.entry.callout.post.created';
 import { IActivityLogEntryCalloutWhiteboardCreated } from '@services/api/activity-log/dto/activity.log.dto.entry.callout.whiteboard.created';
-import { IActivityLogEntryChallengeCreated } from '@services/api/activity-log/dto/activity.log.dto.entry.challenge.created';
-import { IActivityLogEntryOpportunityCreated } from '@services/api/activity-log/dto/activity.log.dto.entry.opportunity.created';
+import { IActivityLogEntryChallengeCreated } from '@services/api/activity-log/dto/activity.log.dto.entry.subspace.created';
+import { IActivityLogEntryOpportunityCreated } from '@services/api/activity-log/dto/activity.log.dto.entry.subsubspace.created';
 import { IActivityLogEntryCalloutPostComment } from '@services/api/activity-log/dto/activity.log.dto.entry.callout.post.comment';
 import { IActivityLogEntryCalloutDiscussionComment } from '@services/api/activity-log/dto/activity.log.dto.entry.callout.discussion.comment';
 import { UserService } from '@domain/community/user/user.service';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { PostService } from '@domain/collaboration/post/post.service';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
-import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
-import { OpportunityService } from '@domain/challenge/opportunity/opportunity.service';
 import { CommunityService } from '@domain/community/community/community.service';
 import { IActivityLogEntry } from './dto/activity.log.entry.interface';
 import { IActivityLogEntryUpdateSent } from './dto/activity.log.dto.entry.update.sent';
@@ -25,6 +23,13 @@ import { CalendarService } from '@domain/timeline/calendar/calendar.service';
 import { CalendarEventService } from '@domain/timeline/event/event.service';
 import { LinkService } from '@domain/collaboration/link/link.service';
 import { IActivityLogEntryCalloutWhiteboardContentModified } from './dto/activity.log.dto.entry.callout.whiteboard.content.modified';
+import { SpaceService } from '@domain/space/space/space.service';
+import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
+import { InjectEntityManager } from '@nestjs/typeorm';
+import { EntityManager } from 'typeorm';
+import { Space } from '@domain/space/space/space.entity';
+import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
+import { LogContext } from '@common/enums/logging.context';
 
 export default class ActivityLogBuilderService implements IActivityLogBuilder {
   constructor(
@@ -33,13 +38,15 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
     private readonly calloutService: CalloutService,
     private readonly postService: PostService,
     private readonly whiteboardService: WhiteboardService,
-    private readonly challengeService: ChallengeService,
-    private readonly opportunityService: OpportunityService,
+    private readonly spaceService: SpaceService,
     private readonly communityService: CommunityService,
     private readonly roomService: RoomService,
     private readonly linkService: LinkService,
     private readonly calendarService: CalendarService,
-    private readonly calendarEventService: CalendarEventService
+    private readonly calendarEventService: CalendarEventService,
+    private readonly urlGeneratorService: UrlGeneratorService,
+    @InjectEntityManager('default')
+    private entityManager: EntityManager
   ) {}
 
   async [ActivityEventType.MEMBER_JOINED](rawActivity: IActivity) {
@@ -150,23 +157,23 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
   }
 
   async [ActivityEventType.CHALLENGE_CREATED](rawActivity: IActivity) {
-    const challenge = await this.challengeService.getChallengeOrFail(
+    const subspace = await this.spaceService.getSpaceOrFail(
       rawActivity.resourceID
     );
     const activityChallengeCreated: IActivityLogEntryChallengeCreated = {
       ...this.activityLogEntryBase,
-      challenge: challenge,
+      subspace: subspace,
     };
     return activityChallengeCreated;
   }
 
   async [ActivityEventType.OPPORTUNITY_CREATED](rawActivity: IActivity) {
-    const opportunity = await this.opportunityService.getOpportunityOrFail(
+    const subsubspace = await this.spaceService.getSpaceOrFail(
       rawActivity.resourceID
     );
     const activityOpportunityCreated: IActivityLogEntryOpportunityCreated = {
       ...this.activityLogEntryBase,
-      opportunity: opportunity,
+      subsubspace: subsubspace,
     };
     return activityOpportunityCreated;
   }
@@ -187,10 +194,33 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
     const updates = await this.roomService.getRoomOrFail(
       rawActivity.resourceID
     );
+
+    const collaborationID = rawActivity.collaborationID;
+    const space = await this.entityManager.findOne(Space, {
+      where: {
+        collaboration: {
+          id: collaborationID,
+        },
+      },
+      relations: {
+        profile: true,
+      },
+    });
+    if (!space) {
+      throw new EntityNotFoundException(
+        `Unable to find Space for provided collaborationID: ${collaborationID}`,
+        LogContext.COLLABORATION
+      );
+    }
+
+    const spaceUrl = await this.urlGeneratorService.generateUrlForProfile(
+      space.profile
+    );
     const activityUpdateSent: IActivityLogEntryUpdateSent = {
       ...this.activityLogEntryBase,
       updates: updates,
       message: rawActivity.description || '',
+      journeyUrl: spaceUrl,
     };
     return activityUpdateSent;
   }

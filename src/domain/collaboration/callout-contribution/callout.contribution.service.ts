@@ -10,7 +10,6 @@ import { LogContext } from '@common/enums/logging.context';
 import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
 import { IWhiteboard } from '@domain/common/whiteboard/types';
-import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { PostService } from '../post/post.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IPost } from '../post';
@@ -28,7 +27,6 @@ export class CalloutContributionService {
     private postService: PostService,
     private whiteboardService: WhiteboardService,
     private linkService: LinkService,
-    private namingService: NamingService,
     @InjectRepository(CalloutContribution)
     private contributionRepository: Repository<CalloutContribution>
   ) {}
@@ -52,9 +50,6 @@ export class CalloutContributionService {
         contributionPolicy,
         CalloutContributionType.WHITEBOARD
       );
-      whiteboard.nameID = this.namingService.createNameID(
-        `${whiteboard.profileData.displayName}`
-      );
       contribution.whiteboard = await this.whiteboardService.createWhiteboard(
         whiteboard,
         storageAggregator,
@@ -67,9 +62,7 @@ export class CalloutContributionService {
         contributionPolicy,
         CalloutContributionType.POST
       );
-      post.nameID =
-        post.nameID ??
-        this.namingService.createNameID(`${post.profileData.displayName}`);
+
       contribution.post = await this.postService.createPost(
         post,
         storageAggregator,

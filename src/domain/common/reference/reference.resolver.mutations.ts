@@ -1,6 +1,6 @@
 import { CurrentUser, Profiling } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { GraphqlGuard } from '@core/authorization';
 import { IReference } from '@domain/common/reference/reference.interface';
 import { DeleteReferenceInput } from '@domain/common/reference/dto/reference.dto.delete';
@@ -131,14 +131,17 @@ export class ReferenceResolverMutations {
     );
 
     const documentAuthorized =
-      await this.documentAuthorizationService.applyAuthorizationPolicy(
+      this.documentAuthorizationService.applyAuthorizationPolicy(
         document,
         storageBucket.authorization
       );
+    const documentSaved = await this.documentService.saveDocument(
+      documentAuthorized
+    );
 
     const updateData: UpdateReferenceInput = {
       ID: reference.id,
-      uri: this.documentService.getPubliclyAccessibleURL(documentAuthorized),
+      uri: this.documentService.getPubliclyAccessibleURL(documentSaved),
     };
     return await this.referenceService.updateReference(updateData);
   }

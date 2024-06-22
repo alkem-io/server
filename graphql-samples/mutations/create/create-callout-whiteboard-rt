@@ -24,7 +24,7 @@ Variables:
     "tags": [],
     "type": "WHITEBOARD_RT",
     "state": "OPEN",
-    "groupName": "HOME_1",
+    "groupName": "HOME",
     "visibility": "PUBLISHED",
     "sendNotification": false
   }

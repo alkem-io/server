@@ -1,4 +1,3 @@
-import { CommunityPolicyFlag } from '@common/enums/community.policy.flag';
 import { CommunityRole } from '@common/enums/community.role';
 import { LogContext } from '@common/enums/logging.context';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
@@ -10,6 +9,7 @@ import { Repository } from 'typeorm';
 import { CommunityPolicy } from './community.policy.entity';
 import { ICommunityPolicy } from './community.policy.interface';
 import { ICommunityRolePolicy } from './community.policy.role.interface';
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
 
 @Injectable()
 export class CommunityPolicyService {
@@ -22,13 +22,11 @@ export class CommunityPolicyService {
   public createCommunityPolicy(
     member: ICommunityRolePolicy,
     lead: ICommunityRolePolicy,
-    admin: ICommunityRolePolicy,
-    host: ICommunityRolePolicy
+    admin: ICommunityRolePolicy
   ): Promise<ICommunityPolicy> {
     const policy: ICommunityPolicy = new CommunityPolicy(
       this.serializeRolePolicy(member),
       this.serializeRolePolicy(lead),
-      this.serializeRolePolicy(host),
       this.serializeRolePolicy(admin)
     );
     return this.save(policy);
@@ -54,8 +52,6 @@ export class CommunityPolicyService {
         return this.deserializeRolePolicy(policy.lead);
       case CommunityRole.ADMIN:
         return this.deserializeRolePolicy(policy.admin);
-      case CommunityRole.HOST:
-        return this.deserializeRolePolicy(policy.host);
       default:
         throw new EntityNotInitializedException(
           `Unable to locate role '${role}' for community policy: ${policy.id}`,
@@ -64,33 +60,21 @@ export class CommunityPolicyService {
     }
   }
 
-  setFlag(policy: ICommunityPolicy, flag: CommunityPolicyFlag, value: boolean) {
-    policy.flags.set(flag, value);
-  }
-
-  getFlag(policy: ICommunityPolicy, flag: CommunityPolicyFlag): boolean {
-    const result = policy.flags.get(flag);
-    if (result === undefined) {
-      throw new EntityNotInitializedException(
-        `Unable to locate flag for community policy: ${policy.id}, flag: ${flag}`,
-        LogContext.COMMUNITY
-      );
-    }
-    return result;
-  }
-
   getDirectParentCredentialForRole(
     policy: ICommunityPolicy,
     role: CommunityRole
-  ): ICredentialDefinition {
+  ): ICredentialDefinition | undefined {
     const rolePolicy = this.getCommunityRolePolicy(policy, role);
 
     // First entry is the immediate parent
+    if (rolePolicy.parentCredentials.length === 0) {
+      return undefined;
+    }
     const parentCommunityCredential = rolePolicy.parentCredentials[0];
     return parentCommunityCredential;
   }
 
-  getParentCredentialsForRole(
+  public getParentCredentialsForRole(
     policy: ICommunityPolicy,
     role: CommunityRole
   ): ICredentialDefinition[] {
@@ -99,15 +83,29 @@ export class CommunityPolicyService {
     return rolePolicy.parentCredentials;
   }
 
-  getAllCredentialsForRole(
+  public getCredentialsForRoleWithParents(
     policy: ICommunityPolicy,
     role: CommunityRole
   ): ICredentialDefinition[] {
-    const rolePolicy = this.getCommunityRolePolicy(policy, role);
-    return [rolePolicy.credential, ...rolePolicy.parentCredentials];
+    const result = this.getCredentialsForRole(policy, role);
+    return result.concat(this.getParentCredentialsForRole(policy, role));
   }
 
-  getCredentialForRole(
+  public getCredentialsForRole(
+    policy: ICommunityPolicy,
+    role: CommunityRole
+  ): ICredentialDefinition[] {
+    const result = [this.getCredentialForRole(policy, role)];
+    if (policy.settings.privacy.allowPlatformSupportAsAdmin) {
+      result.push({
+        type: AuthorizationCredential.GLOBAL_SUPPORT,
+        resourceID: '',
+      });
+    }
+    return result;
+  }
+
+  public getCredentialForRole(
     policy: ICommunityPolicy,
     role: CommunityRole
   ): ICredentialDefinition {
@@ -132,10 +130,6 @@ export class CommunityPolicyService {
     adminPolicy.credential.resourceID = resourceID;
     communityPolicy.admin = this.serializeRolePolicy(adminPolicy);
 
-    const hostPolicy = this.deserializeRolePolicy(communityPolicy.host);
-    hostPolicy.credential.resourceID = resourceID;
-    communityPolicy.host = this.serializeRolePolicy(hostPolicy);
-
     return this.save(communityPolicy);
   }
 
@@ -155,15 +149,10 @@ export class CommunityPolicyService {
       communityPolicyParent.admin,
       communityPolicy.admin
     );
-    const hostPolicy = this.inheritParentRoleCredentials(
-      communityPolicyParent.host,
-      communityPolicy.host
-    );
 
     communityPolicy.member = this.serializeRolePolicy(memberPolicy);
     communityPolicy.lead = this.serializeRolePolicy(leadPolicy);
     communityPolicy.admin = this.serializeRolePolicy(adminPolicy);
-    communityPolicy.host = this.serializeRolePolicy(hostPolicy);
 
     return this.save(communityPolicy);
   }

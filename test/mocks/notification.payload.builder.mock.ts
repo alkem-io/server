@@ -12,7 +12,6 @@ export const MockNotificationsPayloadBuilder: ValueProvider<
     buildCommentCreatedOnPostPayload: jest.fn(),
     buildPlatformForumDiscussionCreatedNotificationPayload: jest.fn(),
     buildCommunicationUpdateSentNotificationPayload: jest.fn(),
-    buildCommunityContextReviewSubmittedNotificationPayload: jest.fn(),
     buildCommunityNewMemberPayload: jest.fn(),
     buildUserRegisteredNotificationPayload: jest.fn(),
   },

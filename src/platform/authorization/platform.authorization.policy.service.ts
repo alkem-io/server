@@ -76,10 +76,7 @@ export class PlatformAuthorizationPolicyService {
           AuthorizationPrivilege.DELETE,
           AuthorizationPrivilege.GRANT,
         ],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_ADMIN_SPACES,
-        ],
+        [AuthorizationCredential.GLOBAL_ADMIN],
         CREDENTIAL_RULE_TYPES_PLATFORM_GLOBAL_ADMINS
       );
     credentialRules.push(globalAdmins);

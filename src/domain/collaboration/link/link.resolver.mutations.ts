@@ -8,7 +8,7 @@ import { CurrentUser, Profiling } from '@common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { StorageBucketUploadFileOnLinkInput } from '@domain/storage/storage-bucket/dto/storage.bucket.dto.upload.file.on.link';
 import { FileUpload, GraphQLUpload } from 'graphql-upload';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
@@ -120,14 +120,17 @@ export class LinkResolverMutations {
     );
 
     const documentAuthorized =
-      await this.documentAuthorizationService.applyAuthorizationPolicy(
+      this.documentAuthorizationService.applyAuthorizationPolicy(
         document,
         storageBucket.authorization
       );
+    const documentSaved = await this.documentService.saveDocument(
+      documentAuthorized
+    );
 
     const updateData: UpdateLinkInput = {
       ID: link.id,
-      uri: this.documentService.getPubliclyAccessibleURL(documentAuthorized),
+      uri: this.documentService.getPubliclyAccessibleURL(documentSaved),
     };
     return await this.linkService.updateLink(updateData);
   }

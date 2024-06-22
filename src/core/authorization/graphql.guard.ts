@@ -12,7 +12,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { AuthenticationException } from '@common/exceptions';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationRuleAgentPrivilege } from './authorization.rule.agent.privilege';
 
 @Injectable()

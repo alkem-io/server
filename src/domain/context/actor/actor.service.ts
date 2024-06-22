@@ -36,7 +36,7 @@ export class ActorService {
     if (!actor)
       throw new EntityNotFoundException(
         `Not able to locate actor with the specified ID: ${actorID}`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     return actor;
   }

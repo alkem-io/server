@@ -1,8 +1,6 @@
-import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
-import { ISpace } from '@domain/challenge/space/space.interface';
+import { ISpace } from '@domain/space/space/space.interface';
 import { IPost } from '@domain/collaboration/post/post.interface';
 import { ICallout } from '@domain/collaboration/callout';
-import { IOpportunity } from '@domain/challenge/opportunity';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { ISearchResultBase } from './search.result.dto.entry.base.interface';
 import { ISearchResult } from './search.result.entry.interface';
@@ -31,18 +29,4 @@ export abstract class ISearchResultPost
     description: 'The Callout of the Post.',
   })
   callout!: ICallout;
-
-  @Field(() => IChallenge, {
-    nullable: true,
-    description:
-      'The Challenge of the Post. Applicable for Callouts on Opportunities and Challenges.',
-  })
-  challenge?: IChallenge;
-
-  @Field(() => IOpportunity, {
-    nullable: true,
-    description:
-      'The Opportunity of the Post. Applicable only for Callouts on Opportunities.',
-  })
-  opportunity?: IOpportunity;
 }

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { NotificationInputCommunityNewMember } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.new.member';
@@ -32,10 +32,12 @@ export class CommunityEventsService {
 
   public async processCommunityNewMemberEvents(
     community: ICommunity,
+    spaceID: string,
     displayName: string,
     agentInfo: AgentInfo,
     newMember: IUser
   ) {
+    // TODO: community just needs to know the level, not the type
     // Send the notification
     const notificationInput: NotificationInputCommunityNewMember = {
       userID: newMember.id,
@@ -51,7 +53,7 @@ export class CommunityEventsService {
           {
             id: community.parentID,
             name: displayName,
-            space: community.spaceID,
+            space: spaceID,
           },
           {
             id: agentInfo.userID,
@@ -59,25 +61,12 @@ export class CommunityEventsService {
           }
         );
         break;
-      case SpaceType.CHALLENGE:
-        this.contributionReporter.challengeJoined(
+      default: // Challenge, Opportunity, VIRTUAL_CONTRIBUTOR, BLANK_SLATE...
+        this.contributionReporter.subspaceJoined(
           {
             id: community.parentID,
             name: displayName,
-            space: community.spaceID,
-          },
-          {
-            id: agentInfo.userID,
-            email: agentInfo.email,
-          }
-        );
-        break;
-      case SpaceType.OPPORTUNITY:
-        this.contributionReporter.opportunityJoined(
-          {
-            id: community.parentID,
-            name: displayName,
-            space: community.spaceID,
+            space: spaceID,
           },
           {
             id: agentInfo.userID,

@@ -3,7 +3,7 @@ import { GraphqlGuard } from '@core/authorization';
 import { UseGuards } from '@nestjs/common';
 import { CurrentUser } from '@src/common/decorators';
 import { ResolveField } from '@nestjs/graphql';
-import { AgentInfo } from '@core/authentication/agent-info';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { LookupQueryResults } from './dto/lookup.query.results';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -34,12 +34,8 @@ import { ICalendar } from '@domain/timeline/calendar/calendar.interface';
 import { CalendarService } from '@domain/timeline/calendar/calendar.service';
 import { ApplicationService } from '@domain/community/application/application.service';
 import { InvitationService } from '@domain/community/invitation/invitation.service';
-import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
-import { OpportunityService } from '@domain/challenge/opportunity/opportunity.service';
 import { IApplication } from '@domain/community/application';
 import { IInvitation } from '@domain/community/invitation';
-import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
-import { IOpportunity } from '@domain/challenge/opportunity';
 import { CalloutTemplateService } from '@domain/template/callout-template/callout.template.service';
 import { ICalloutTemplate } from '@domain/template/callout-template/callout.template.interface';
 import { WhiteboardService } from '@domain/common/whiteboard';
@@ -52,6 +48,12 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { UserService } from '@domain/community/user/user.service';
+import { ISpace } from '@domain/space/space/space.interface';
+import { SpaceService } from '@domain/space/space/space.service';
+import { ICommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.interface';
+import { CommunityGuidelinesService } from '@domain/community/community-guidelines/community.guidelines.service';
+import { CommunityGuidelinesTemplateService } from '@domain/template/community-guidelines-template/community.guidelines.template.service';
+import { ICommunityGuidelinesTemplate } from '@domain/template/community-guidelines-template/community.guidelines.template.interface';
 
 @Resolver(() => LookupQueryResults)
 export class LookupResolverFields {
@@ -62,8 +64,6 @@ export class LookupResolverFields {
     private communityService: CommunityService,
     private applicationService: ApplicationService,
     private invitationService: InvitationService,
-    private challengeService: ChallengeService,
-    private opportunityService: OpportunityService,
     private collaborationService: CollaborationService,
     private contextService: ContextService,
     private whiteboardService: WhiteboardService,
@@ -79,8 +79,25 @@ export class LookupResolverFields {
     private documentService: DocumentService,
     private innovationFlowTemplateService: InnovationFlowTemplateService,
     private storageAggregatorService: StorageAggregatorService,
-    private userService: UserService
+    private spaceService: SpaceService,
+    private userService: UserService,
+    private guidelinesService: CommunityGuidelinesService,
+    private guidelinesTemplateService: CommunityGuidelinesTemplateService
   ) {}
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField(() => ISpace, {
+    nullable: true,
+    description: 'Lookup the specified Space',
+  })
+  async space(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('ID', { type: () => UUID }) id: string
+  ): Promise<ISpace> {
+    const space = await this.spaceService.getSpaceOrFail(id);
+
+    return space;
+  }
 
   @UseGuards(GraphqlGuard)
   @ResolveField(() => IDocument, {
@@ -92,7 +109,7 @@ export class LookupResolverFields {
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<IDocument> {
     const document = await this.documentService.getDocumentOrFail(id);
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       document.authorization,
       AuthorizationPrivilege.READ,
@@ -116,7 +133,7 @@ export class LookupResolverFields {
       await this.authorizationPolicyService.getAuthorizationPolicyOrFail(id);
     const platformAuthorization =
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       platformAuthorization,
       AuthorizationPrivilege.PLATFORM_ADMIN,
@@ -141,7 +158,7 @@ export class LookupResolverFields {
     @Args('userID', { type: () => UUID }) userID: string,
     @Args('authorizationID', { type: () => UUID }) authorizationID: string
   ): Promise<AuthorizationPrivilege[]> {
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.PLATFORM_ADMIN,
@@ -170,7 +187,7 @@ export class LookupResolverFields {
   ): Promise<IStorageAggregator> {
     const document =
       await this.storageAggregatorService.getStorageAggregatorOrFail(id);
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       document.authorization,
       AuthorizationPrivilege.READ,
@@ -190,7 +207,7 @@ export class LookupResolverFields {
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<IApplication> {
     const application = await this.applicationService.getApplicationOrFail(id);
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       application.authorization,
       AuthorizationPrivilege.READ,
@@ -210,7 +227,7 @@ export class LookupResolverFields {
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<IInvitation> {
     const invitation = await this.invitationService.getInvitationOrFail(id);
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       invitation.authorization,
       AuthorizationPrivilege.READ,
@@ -251,7 +268,7 @@ export class LookupResolverFields {
   ): Promise<ICollaboration> {
     const collaboration =
       await this.collaborationService.getCollaborationOrFail(id);
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       collaboration.authorization,
       AuthorizationPrivilege.READ,
@@ -272,7 +289,7 @@ export class LookupResolverFields {
   ): Promise<ICalendarEvent> {
     const calendarEvent =
       await this.calendarEventService.getCalendarEventOrFail(id);
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       calendarEvent.authorization,
       AuthorizationPrivilege.READ,
@@ -292,7 +309,7 @@ export class LookupResolverFields {
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<ICalendar> {
     const calendar = await this.calendarService.getCalendarOrFail(id);
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       calendar.authorization,
       AuthorizationPrivilege.READ,
@@ -508,42 +525,46 @@ export class LookupResolverFields {
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField(() => IChallenge, {
+  @ResolveField(() => ICommunityGuidelines, {
     nullable: true,
-    description: 'Lookup the specified Challenge',
+    description: 'Lookup the specified Community guidelines',
   })
-  async challenge(
+  async communityGuidelines(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID }) id: string
-  ): Promise<IChallenge> {
-    const challenge = await this.challengeService.getChallengeOrFail(id);
+  ): Promise<ICommunityGuidelines> {
+    const guidelines =
+      await this.guidelinesService.getCommunityGuidelinesOrFail(id);
     this.authorizationService.grantAccessOrFail(
       agentInfo,
-      challenge.authorization,
+      guidelines.authorization,
       AuthorizationPrivilege.READ,
-      `lookup Challenge: ${challenge.id}`
+      `lookup Community guidelines: ${guidelines.id}`
     );
 
-    return challenge;
+    return guidelines;
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField(() => IOpportunity, {
+  @ResolveField(() => ICommunityGuidelinesTemplate, {
     nullable: true,
-    description: 'Lookup the specified Opportunity',
+    description: 'Lookup the specified InnovationFlow Template',
   })
-  async opportunity(
+  async communityGuidelinesTemplate(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID }) id: string
-  ): Promise<IOpportunity> {
-    const opportunity = await this.opportunityService.getOpportunityOrFail(id);
+  ): Promise<ICommunityGuidelinesTemplate> {
+    const guidelinesTemplate =
+      await this.guidelinesTemplateService.getCommunityGuidelinesTemplateOrFail(
+        id
+      );
     this.authorizationService.grantAccessOrFail(
       agentInfo,
-      opportunity.authorization,
+      guidelinesTemplate.authorization,
       AuthorizationPrivilege.READ,
-      `lookup Opportunity: ${opportunity.id}`
+      `lookup Community guidelines Template: ${guidelinesTemplate.id}`
     );
 
-    return opportunity;
+    return guidelinesTemplate;
   }
 }

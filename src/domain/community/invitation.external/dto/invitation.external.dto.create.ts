@@ -29,4 +29,6 @@ export class CreateInvitationExternalInput {
   createdBy!: string;
 
   communityID!: string;
+
+  invitedToParent!: boolean;
 }

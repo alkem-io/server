@@ -6,7 +6,7 @@ import { AuthorizationPrivilege } from '@common/enums';
 import { UserAuthorizationPrivilegesInput } from './dto/authorization.dto.user.authorization.privileges';
 import { UseGuards } from '@nestjs/common/decorators/core/use-guards.decorator';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AgentInfo } from '@core/authentication/agent-info';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AdminAuthorizationService } from './admin.authorization.service';
 import { UsersWithAuthorizationCredentialInput } from './dto/authorization.dto.users.with.credential';
 import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';

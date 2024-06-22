@@ -3,7 +3,7 @@ import { Resolver, Args, Mutation } from '@nestjs/graphql';
 import { CurrentUser } from '@src/common/decorators';
 import { InnovationFlowService } from './innovaton.flow.service';
 import { GraphqlGuard } from '@core/authorization';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { IInnovationFlow } from './innovation.flow.interface';

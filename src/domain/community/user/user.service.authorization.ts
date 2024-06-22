@@ -20,17 +20,22 @@ import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authoriz
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import {
   CREDENTIAL_RULE_TYPES_USER_AUTHORIZATION_RESET,
-  CREDENTIAL_RULE_TYPES_USER_GLOBAL_ADMIN_COMMUNITY,
+  CREDENTIAL_RULE_TYPES_USER_GLOBAL_COMMUNITY_READ,
   CREDENTIAL_RULE_USER_SELF_ADMIN,
   CREDENTIAL_RULE_USER_READ_PII,
   CREDENTIAL_RULE_TYPES_USER_PLATFORM_ADMIN,
+  CREDENTIAL_RULE_USER_READ,
+  PRIVILEGE_RULE_READ_USER_SETTINGS,
 } from '@common/constants';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
+import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
+import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 
 @Injectable()
 export class UserAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
+    private agentAuthorizationService: AgentAuthorizationService,
     private profileAuthorizationService: ProfileAuthorizationService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private preferenceSetAuthorizationService: PreferenceSetAuthorizationService,
@@ -44,7 +49,9 @@ export class UserAuthorizationService {
       relations: {
         agent: true,
         profile: true,
-        preferenceSet: true,
+        preferenceSet: {
+          preferences: true,
+        },
         storageAggregator: true,
       },
     });
@@ -52,6 +59,7 @@ export class UserAuthorizationService {
       !user.agent ||
       !user.profile ||
       !user.preferenceSet ||
+      !user.preferenceSet.preferences ||
       !user.storageAggregator
     )
       throw new RelationshipNotFoundException(
@@ -71,6 +79,9 @@ export class UserAuthorizationService {
       user.authorization,
       user
     );
+
+    user.authorization = this.appendPrivilegeRules(user.authorization);
+
     // NOTE: Clone the authorization policy to ensure the changes are local to profile
     const clonedAnonymousReadAccessAuthorization =
       this.authorizationPolicyService.cloneAuthorizationPolicy(
@@ -86,14 +97,13 @@ export class UserAuthorizationService {
         clonedAnonymousReadAccessAuthorization // Key that this is publicly visible
       );
 
-    user.agent.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
-        user.agent.authorization,
-        user.authorization
-      );
+    user.agent = this.agentAuthorizationService.applyAuthorizationPolicy(
+      user.agent,
+      user.authorization
+    );
 
     user.preferenceSet =
-      await this.preferenceSetAuthorizationService.applyAuthorizationPolicy(
+      this.preferenceSetAuthorizationService.applyAuthorizationPolicy(
         user.preferenceSet,
         user.authorization
       );
@@ -133,7 +143,7 @@ export class UserAuthorizationService {
         [AuthorizationPrivilege.AUTHORIZATION_RESET],
         [
           AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_ADMIN_SPACES,
+          AuthorizationCredential.GLOBAL_SUPPORT,
         ],
         CREDENTIAL_RULE_TYPES_USER_AUTHORIZATION_RESET
       );
@@ -144,7 +154,10 @@ export class UserAuthorizationService {
     const globalAdminPlatformAdminNotInherited =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.PLATFORM_ADMIN],
-        [AuthorizationCredential.GLOBAL_ADMIN],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+        ],
         CREDENTIAL_RULE_TYPES_USER_PLATFORM_ADMIN
       );
     globalAdminNotInherited.cascade = false;
@@ -152,14 +165,9 @@ export class UserAuthorizationService {
 
     const communityAdmin =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [
-          AuthorizationPrivilege.CREATE,
-          AuthorizationPrivilege.READ,
-          AuthorizationPrivilege.UPDATE,
-          AuthorizationPrivilege.DELETE,
-        ],
-        [AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY],
-        CREDENTIAL_RULE_TYPES_USER_GLOBAL_ADMIN_COMMUNITY
+        [AuthorizationPrivilege.READ],
+        [AuthorizationCredential.GLOBAL_COMMUNITY_READ],
+        CREDENTIAL_RULE_TYPES_USER_GLOBAL_COMMUNITY_READ
       );
 
     newRules.push(communityAdmin);
@@ -204,6 +212,21 @@ export class UserAuthorizationService {
     );
     newRules.push(userSelfAdmin);
 
+    const communityReader =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [
+          AuthorizationPrivilege.READ,
+          AuthorizationPrivilege.READ_USER_SETTINGS,
+        ],
+        [
+          AuthorizationCredential.GLOBAL_COMMUNITY_READ,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+        ],
+        CREDENTIAL_RULE_USER_READ
+      );
+    communityReader.cascade = true;
+    newRules.push(communityReader);
+
     // Determine who is able to see the PII designated fields for a User
     const { credentials } = await this.userService.getUserAndCredentials(
       user.id
@@ -218,11 +241,11 @@ export class UserAuthorizationService {
       resourceID: '',
     });
     readUserPiiCredentials.push({
-      type: AuthorizationCredential.GLOBAL_ADMIN_SPACES,
+      type: AuthorizationCredential.GLOBAL_SUPPORT,
       resourceID: '',
     });
     readUserPiiCredentials.push({
-      type: AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY,
+      type: AuthorizationCredential.GLOBAL_COMMUNITY_READ,
       resourceID: '',
     });
 
@@ -232,11 +255,6 @@ export class UserAuthorizationService {
       if (credential.type === AuthorizationCredential.SPACE_MEMBER) {
         readUserPiiCredentials.push({
           type: AuthorizationCredential.SPACE_ADMIN,
-          resourceID: credential.resourceID,
-        });
-      } else if (credential.type === AuthorizationCredential.CHALLENGE_MEMBER) {
-        readUserPiiCredentials.push({
-          type: AuthorizationCredential.CHALLENGE_ADMIN,
           resourceID: credential.resourceID,
         });
       } else if (
@@ -264,5 +282,23 @@ export class UserAuthorizationService {
     );
 
     return authorization;
+  }
+
+  private appendPrivilegeRules(
+    authorization: IAuthorizationPolicy
+  ): IAuthorizationPolicy {
+    const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
+
+    const readSettingsPrivilege = new AuthorizationPolicyRulePrivilege(
+      [AuthorizationPrivilege.READ_USER_SETTINGS],
+      AuthorizationPrivilege.UPDATE,
+      PRIVILEGE_RULE_READ_USER_SETTINGS
+    );
+    privilegeRules.push(readSettingsPrivilege);
+
+    return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
+      authorization,
+      privilegeRules
+    );
   }
 }

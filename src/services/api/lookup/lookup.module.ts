@@ -17,8 +17,6 @@ import { CalendarEventModule } from '@domain/timeline/event/event.module';
 import { CalendarModule } from '@domain/timeline/calendar/calendar.module';
 import { ApplicationModule } from '@domain/community/application/application.module';
 import { InvitationModule } from '@domain/community/invitation/invitation.module';
-import { ChallengeModule } from '@domain/challenge/challenge/challenge.module';
-import { OpportunityModule } from '@domain/challenge/opportunity/opportunity.module';
 import { CalloutTemplateModule } from '@domain/template/callout-template/callout.template.module';
 import { WhiteboardModule } from '@domain/common/whiteboard';
 import { DocumentModule } from '@domain/storage/document/document.module';
@@ -26,6 +24,9 @@ import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/stor
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { UserModule } from '@domain/community/user/user.module';
+import { SpaceModule } from '@domain/space/space/space.module';
+import { CommunityGuidelinesModule } from '@domain/community/community-guidelines/community.guidelines.module';
+import { CommunityGuidelinesTemplateModule } from '@domain/template/community-guidelines-template/community.guidelines.template.module';
 
 @Module({
   imports: [
@@ -47,12 +48,13 @@ import { UserModule } from '@domain/community/user/user.module';
     RoomModule,
     ApplicationModule,
     InvitationModule,
-    ChallengeModule,
-    OpportunityModule,
     DocumentModule,
     StorageAggregatorModule,
     PlatformAuthorizationPolicyModule,
     UserModule,
+    SpaceModule,
+    CommunityGuidelinesModule,
+    CommunityGuidelinesTemplateModule,
   ],
   providers: [LookupService, LookupResolverQueries, LookupResolverFields],
   exports: [LookupService],

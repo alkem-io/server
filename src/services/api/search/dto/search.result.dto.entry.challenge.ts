@@ -1,5 +1,4 @@
-import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
-import { ISpace } from '@domain/challenge/space/space.interface';
+import { ISpace } from '@domain/space/space/space.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { ISearchResultBase } from './search.result.dto.entry.base.interface';
 import { ISearchResult } from './search.result.entry.interface';
@@ -11,11 +10,11 @@ export abstract class ISearchResultChallenge
   extends ISearchResultBase
   implements ISearchResult
 {
-  @Field(() => IChallenge, {
+  @Field(() => ISpace, {
     nullable: false,
     description: 'The Challenge that was found.',
   })
-  challenge!: IChallenge;
+  subspace!: ISpace;
 
   @Field(() => ISpace, {
     nullable: false,

@@ -22,9 +22,13 @@ import { UserFilterInput } from '@core/filtering';
 import { ICommunityPolicy } from '../community-policy/community.policy.interface';
 import { IForm } from '@domain/common/form/form.interface';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IInvitation } from '../invitation';
 import { IInvitationExternal } from '../invitation.external';
+import { UUID } from '@domain/common/scalars/scalar.uuid';
+import { ICommunityGuidelines } from '../community-guidelines/community.guidelines.interface';
+import { IVirtualContributor } from '../virtual-contributor';
+import { CommunityRoleImplicit } from '@common/enums/community.role.implicit';
 
 @Resolver(() => ICommunity)
 export class CommunityResolverFields {
@@ -36,7 +40,7 @@ export class CommunityResolverFields {
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('groups', () => [IUserGroup], {
-    nullable: true,
+    nullable: false,
     description: 'Groups of users related to a Community.',
   })
   @Profiling.api
@@ -46,8 +50,21 @@ export class CommunityResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
+  @ResolveField('group', () => IUserGroup, {
+    nullable: false,
+    description: 'The user group with the specified id anywhere in the space',
+  })
+  async group(
+    @Parent() community: ICommunity,
+    @Args('ID', { type: () => UUID }) groupID: string
+  ): Promise<IUserGroup> {
+    return await this.communityService.getUserGroup(community, groupID);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('memberUsers', () => [IUser], {
-    nullable: true,
+    nullable: false,
     description: 'All users that are contributing to this Community.',
   })
   @Profiling.api
@@ -78,7 +95,7 @@ export class CommunityResolverFields {
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('availableMemberUsers', () => PaginatedUsers, {
-    nullable: true,
+    nullable: false,
     description: 'All available users that are potential Community members.',
   })
   @Profiling.api
@@ -119,7 +136,7 @@ export class CommunityResolverFields {
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('usersInRole', () => [IUser], {
-    nullable: true,
+    nullable: false,
     description: 'All users that have the specified Role in this Community.',
   })
   @Profiling.api
@@ -134,7 +151,7 @@ export class CommunityResolverFields {
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('organizationsInRole', () => [IOrganization], {
-    nullable: true,
+    nullable: false,
     description:
       'All Organizations that have the specified Role in this Community.',
   })
@@ -152,8 +169,26 @@ export class CommunityResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
+  @ResolveField('virtualContributorsInRole', () => [IVirtualContributor], {
+    nullable: false,
+    description: 'All virtuals that have the specified Role in this Community.',
+  })
+  @Profiling.api
+  async virtualsInRole(
+    @Parent() community: Community,
+    @Args('role', { type: () => CommunityRole, nullable: false })
+    role: CommunityRole
+  ) {
+    return await this.communityService.getVirtualContributorsWithRole(
+      community,
+      role
+    );
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('availableLeadUsers', () => PaginatedUsers, {
-    nullable: true,
+    nullable: false,
     description:
       'All member users excluding the current lead users in this Community.',
   })
@@ -190,7 +225,7 @@ export class CommunityResolverFields {
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('invitations', () => [IInvitation], {
-    nullable: true,
+    nullable: false,
     description: 'Invitations for this community.',
   })
   @Profiling.api
@@ -201,7 +236,7 @@ export class CommunityResolverFields {
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('invitationsExternal', () => [IInvitationExternal], {
-    nullable: true,
+    nullable: false,
     description:
       'Invitations to join this Community for users not yet on the Alkemio platform.',
   })
@@ -215,7 +250,7 @@ export class CommunityResolverFields {
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('applications', () => [IApplication], {
-    nullable: true,
+    nullable: false,
     description: 'Applications available for this community.',
   })
   @Profiling.api
@@ -226,7 +261,7 @@ export class CommunityResolverFields {
 
   @UseGuards(GraphqlGuard)
   @ResolveField('applicationForm', () => IForm, {
-    nullable: true,
+    nullable: false,
     description: 'The Form used for Applications to this community.',
   })
   @Profiling.api
@@ -237,7 +272,7 @@ export class CommunityResolverFields {
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('communication', () => ICommunication, {
-    nullable: true,
+    nullable: false,
     description: 'The Communications for this Community.',
   })
   @Profiling.api
@@ -250,7 +285,7 @@ export class CommunityResolverFields {
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('policy', () => ICommunityPolicy, {
-    nullable: true,
+    nullable: false,
     description: 'The policy that defines the roles for this Community.',
   })
   async policy(@Parent() community: Community): Promise<ICommunityPolicy> {
@@ -271,7 +306,7 @@ export class CommunityResolverFields {
 
   @UseGuards(GraphqlGuard)
   @ResolveField('myRoles', () => [CommunityRole], {
-    nullable: true,
+    nullable: false,
     description:
       'The roles on this community for the currently logged in user.',
   })
@@ -280,5 +315,32 @@ export class CommunityResolverFields {
     @Parent() community: ICommunity
   ): Promise<CommunityRole[]> {
     return this.communityService.getCommunityRoles(agentInfo, community);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField('myRolesImplicit', () => [CommunityRoleImplicit], {
+    nullable: false,
+    description:
+      'The implicit roles on this community for the currently logged in user.',
+  })
+  async myRolesImplicit(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Parent() community: ICommunity
+  ): Promise<CommunityRoleImplicit[]> {
+    return this.communityService.getCommunityImplicitRoles(
+      agentInfo,
+      community
+    );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField('guidelines', () => ICommunityGuidelines, {
+    nullable: false,
+    description: 'The guidelines for members of this Community.',
+  })
+  async guidelines(
+    @Parent() community: ICommunity
+  ): Promise<ICommunityGuidelines> {
+    return await this.communityService.getCommunityGuidelines(community);
   }
 }

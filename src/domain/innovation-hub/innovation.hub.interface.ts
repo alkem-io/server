@@ -2,6 +2,7 @@ import { Field, ObjectType } from '@nestjs/graphql';
 import { INameable } from '@domain/common/entity/nameable-entity';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { InnovationHubType } from './innovation.hub.type.enum';
+import { IAccount } from '@domain/space/account/account.interface';
 
 @ObjectType('InnovationHub')
 export abstract class IInnovationHub extends INameable {
@@ -24,4 +25,6 @@ export abstract class IInnovationHub extends INameable {
 
   // exposed through the field resolver
   spaceListFilter?: string[];
+
+  account!: IAccount;
 }

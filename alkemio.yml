@@ -80,6 +80,15 @@ security:
 innovation_hub:
   header: ${INNOVATION_HUB_HEADER}:origin
 
+search:
+  # use the new search implementation; alternatively it will use the original mysql search implementation
+  use_new: ${SEARCH_USE_NEW}:true
+  # max results per search
+  max_results: ${SEARCH_MAX_RESULTS}:40
+  # the index pattern used when ingesting data, e.g. alkemio-data-[organization];
+  # The dash at the end is MANDATORY
+  index_pattern: ${SEARCH_INDEX_PATTERN}:alkemio-data-
+
 ## identity ##
 
 # Defines all authentication and authorization configuration.
@@ -293,16 +302,6 @@ storage:
     # Flag setting whether MySQL operations should be logged to the console.
     logging: ${ENABLE_ORM_LOGGING}:false
 
-  # IPFS (https://ipfs.io/) configuration.
-  ipfs:
-    # IPFS API endpoint. The name that the server uses for access IPFS for uploads.
-    endpoint: ${IPFS_ENDPOINT}:http://localhost:5001
-
-    # IPFS http proxy endpoint. Exposed through traefik (or any ingress / reverse proxy of choice).
-    client_endpoint: ${IPFS_CLIENT_ENDPOINT}:http://localhost:3000/ipfs
-    # Timeout to abort the request after a fixed time, in milliseconds.
-    timeout: ${IPFS_TIMEOUT}:15000
-
   local_storage:
     # Absolute path
     path: ${LOCAL_STORAGE_PATH}:.storage
@@ -313,6 +312,8 @@ storage:
     host: ${REDIS_HOST}:localhost
     # Redis port
     port: ${REDIS_PORT}:6379
+    # Redis timeout, in seconds
+    timeout: ${REDIS_TIMEOUT}:60
 
 microservices:
   rabbitmq:
@@ -375,11 +376,10 @@ collaboration:
     # number of simultaneous collaborators
     max_collaborators_in_room: ${WHITEBOARD_MAX_COLLABORATORS_IN_ROOM}:20
 
-
 ## Configuration of the legal / usability aspects of the platform
 platform:
   # Terms of usage that all users comply with
-  terms: ${PLATFORM_TERMS}:https://alkemio.org/legal/hub/#tc
+  terms: ${PLATFORM_TERMS}:https://welcome.alkem.io/legal/#tc
 
   # Privacy policy for the platform
   privacy: ${PLATFORM_PRIVACY}:https://alkemio.org/privacy/
@@ -388,7 +388,7 @@ platform:
   security: ${PLATFORM_SECURITY}:https://alkemio.org/security/
 
   # Link for support requests
-  support: ${PLATFORM_SUPPORT}:https://alkemio.org/support/
+  support: ${PLATFORM_SUPPORT}:https://welcome.alkem.io/contact/
 
   # Link for latest platform release notification
   forumreleases: ${PLATFORM_FORUM_RELEASES}:https://alkem.io/forum/releases/latest
@@ -416,6 +416,12 @@ platform:
 
   # Home page - Foundation
   foundation: ${PLATFORM_FOUNDATION}:https://alkemio.org/
+
+  # Home page - Contact Support
+  contactsupport: ${PLATFORM_CONTACTSUPPORT}:https://welcome.alkem.io/contact/
+
+  # Home page - Switch Plan
+  switchplan: ${PLATFORM_SWITCHPLAN}:https://welcome.alkem.io/pricing-own-space/
 
   # Home page - Opensource
   opensource: ${PLATFORM_OPENSOURCE}:https://github.com/alkem-io

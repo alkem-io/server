@@ -27,23 +27,33 @@ import { InvitationExternalModule } from '../invitation.external/invitation.exte
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { CommunityEventsService } from './community.service.events';
 import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
+import { CommunityGuidelinesModule } from '../community-guidelines/community.guidelines.module';
+import { VirtualContributorModule } from '../virtual-contributor/virtual.contributor.module';
+import { LicenseEngineModule } from '@core/license-engine/license.engine.module';
+import { AccountHostModule } from '@domain/space/account/account.host.module';
+import { ContributorModule } from '../contributor/contributor.module';
 
 @Module({
   imports: [
     ActivityAdapterModule,
+    AccountHostModule,
     NotificationAdapterModule,
     AuthorizationModule,
     AuthorizationPolicyModule,
     AgentModule,
     UserGroupModule,
     UserModule,
+    ContributorModule,
     OrganizationModule,
+    VirtualContributorModule,
     ApplicationModule,
     InvitationModule,
     InvitationExternalModule,
     CommunicationModule,
     CommunityPolicyModule,
+    CommunityGuidelinesModule,
     LifecycleModule,
+    LicenseEngineModule,
     AgentModule,
     EntityResolverModule,
     StorageAggregatorResolverModule,

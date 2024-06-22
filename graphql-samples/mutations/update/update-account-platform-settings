@@ -1,0 +1,16 @@
+mutation updateAccountPlatformSettings($updateData: UpdateAccountPlatformSettingsInput!) {
+  updateAccountPlatformSettings(updateData: $updateData) {
+    id
+  }
+}
+
+Variables:
+{
+  "updateData": {
+    "accountID": "uuid",
+    "license": {
+      "visibility": "ARCHIVED"
+    },
+    "hostID": "uuid_nameid"
+  }
+}

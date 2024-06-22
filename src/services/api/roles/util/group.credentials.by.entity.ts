@@ -1,10 +1,19 @@
 import { ICredential } from '@src/domain';
-import { AuthorizationCredential, CredentialRole } from '@common/enums';
+import { AuthorizationCredential } from '@common/enums';
+import { AccountRole } from '@common/enums/account.role';
+import { OrganizationRole } from '@common/enums/organization.role';
+import { CommunityRole } from '@common/enums/community.role';
+import { CommunityRoleImplicit } from '@common/enums/community.role.implicit';
+
+export type CredentialRole =
+  | AccountRole
+  | OrganizationRole
+  | CommunityRole
+  | CommunityRoleImplicit;
 
 export type EntityCredentialType =
+  | 'accounts'
   | 'spaces'
-  | 'challenges'
-  | 'opportunities'
   | 'organizations'
   | 'groups';
 
@@ -25,27 +34,15 @@ export type CredentialMap = Map<
  */
 export const groupCredentialsByEntity = (credentials: ICredential[]) => {
   return credentials.reduce<CredentialMap>((map, credential) => {
-    if (
+    if (credential.type === AuthorizationCredential.ACCOUNT_HOST) {
+      return setMap(map, 'accounts', credential);
+    } else if (
       credential.type === AuthorizationCredential.SPACE_ADMIN ||
-      credential.type === AuthorizationCredential.SPACE_HOST ||
       credential.type === AuthorizationCredential.SPACE_LEAD ||
-      credential.type === AuthorizationCredential.SPACE_MEMBER
+      credential.type === AuthorizationCredential.SPACE_MEMBER ||
+      credential.type === AuthorizationCredential.SPACE_SUBSPACE_ADMIN
     ) {
       return setMap(map, 'spaces', credential);
-    } else if (
-      credential.type === AuthorizationCredential.CHALLENGE_ADMIN ||
-      credential.type === AuthorizationCredential.CHALLENGE_HOST ||
-      credential.type === AuthorizationCredential.CHALLENGE_LEAD ||
-      credential.type === AuthorizationCredential.CHALLENGE_MEMBER
-    ) {
-      return setMap(map, 'challenges', credential);
-    } else if (
-      credential.type === AuthorizationCredential.OPPORTUNITY_ADMIN ||
-      credential.type === AuthorizationCredential.OPPORTUNITY_HOST ||
-      credential.type === AuthorizationCredential.OPPORTUNITY_LEAD ||
-      credential.type === AuthorizationCredential.OPPORTUNITY_MEMBER
-    ) {
-      return setMap(map, 'opportunities', credential);
     } else if (
       credential.type === AuthorizationCredential.ORGANIZATION_ADMIN ||
       credential.type === AuthorizationCredential.ORGANIZATION_OWNER ||
@@ -88,27 +85,19 @@ const credentialTypeToRole = (
   type: AuthorizationCredential
 ): CredentialRole => {
   const roleMap: Partial<Record<AuthorizationCredential, CredentialRole>> = {
-    [AuthorizationCredential.SPACE_ADMIN]: CredentialRole.ADMIN,
-    [AuthorizationCredential.CHALLENGE_ADMIN]: CredentialRole.ADMIN,
-    [AuthorizationCredential.OPPORTUNITY_ADMIN]: CredentialRole.ADMIN,
-    [AuthorizationCredential.ORGANIZATION_ADMIN]: CredentialRole.ADMIN,
+    [AuthorizationCredential.ACCOUNT_HOST]: AccountRole.HOST,
+    [AuthorizationCredential.SPACE_ADMIN]: CommunityRole.ADMIN,
+    [AuthorizationCredential.SPACE_LEAD]: CommunityRole.LEAD,
+    [AuthorizationCredential.SPACE_MEMBER]: CommunityRole.MEMBER,
+    [AuthorizationCredential.SPACE_SUBSPACE_ADMIN]:
+      CommunityRoleImplicit.SUBSPACE_ADMIN,
 
-    [AuthorizationCredential.SPACE_HOST]: CredentialRole.HOST,
-    [AuthorizationCredential.CHALLENGE_HOST]: CredentialRole.HOST,
-    [AuthorizationCredential.OPPORTUNITY_HOST]: CredentialRole.HOST,
+    [AuthorizationCredential.ORGANIZATION_ADMIN]: OrganizationRole.ADMIN,
+    [AuthorizationCredential.ORGANIZATION_ASSOCIATE]:
+      OrganizationRole.ASSOCIATE,
+    [AuthorizationCredential.ORGANIZATION_OWNER]: OrganizationRole.OWNER,
 
-    [AuthorizationCredential.SPACE_LEAD]: CredentialRole.LEAD,
-    [AuthorizationCredential.CHALLENGE_LEAD]: CredentialRole.LEAD,
-    [AuthorizationCredential.OPPORTUNITY_LEAD]: CredentialRole.LEAD,
-
-    [AuthorizationCredential.SPACE_MEMBER]: CredentialRole.MEMBER,
-    [AuthorizationCredential.CHALLENGE_MEMBER]: CredentialRole.MEMBER,
-    [AuthorizationCredential.OPPORTUNITY_MEMBER]: CredentialRole.MEMBER,
-
-    [AuthorizationCredential.ORGANIZATION_ASSOCIATE]: CredentialRole.ASSOCIATE,
-    [AuthorizationCredential.ORGANIZATION_OWNER]: CredentialRole.OWNER,
-
-    [AuthorizationCredential.USER_GROUP_MEMBER]: CredentialRole.MEMBER,
+    [AuthorizationCredential.USER_GROUP_MEMBER]: CommunityRole.MEMBER, // hack for now; not used
   };
 
   const role = roleMap[type];

@@ -9,7 +9,7 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { FormatNotSupportedException } from '@common/exceptions/format.not.supported.exception';
-import { AgentInfo } from '@core/authentication/agent-info';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IAgent } from '@domain/agent/agent';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import {
@@ -28,12 +28,8 @@ import {
   UpdateUserInput,
   User,
 } from '@domain/community/user';
-import {
-  CACHE_MANAGER,
-  Inject,
-  Injectable,
-  LoggerService,
-} from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { Cache, CachingConfig } from 'cache-manager';
@@ -54,7 +50,7 @@ import { getPaginationResults } from '@core/pagination/pagination.fn';
 import { IPaginatedType } from '@core/pagination/paginated.type';
 import { CreateProfileInput } from '@domain/common/profile/dto/profile.dto.create';
 import { validateEmail } from '@common/utils';
-import { AgentInfoMetadata } from '@core/authentication/agent-info-metadata';
+import { AgentInfoMetadata } from '@core/authentication.agent.info/agent.info.metadata';
 import { CommunityCredentials } from './dto/user.dto.community.credentials';
 import { CommunityMemberCredentials } from './dto/user.dto.community.member.credentials';
 import { VisualType } from '@common/enums/visual.type';
@@ -109,6 +105,19 @@ export class UserService {
 
   async createUser(userData: CreateUserInput): Promise<IUser> {
     await this.validateUserProfileCreationRequest(userData);
+    if (!userData.nameID) {
+      if (userData.firstName && userData.lastName) {
+        userData.nameID = await this.createUserNameID(
+          userData.firstName || '',
+          userData.lastName
+        );
+      } else {
+        throw new ValidationException(
+          `User creation: NameID not provided and first/last name not available: ${userData.email}`,
+          LogContext.COMMUNITY
+        );
+      }
+    }
 
     const user: IUser = User.create(userData);
     user.authorization = new AuthorizationPolicy();
@@ -305,8 +314,12 @@ export class UserService {
       agentInfo.avatarURL
     );
 
-    let user = await this.createUser({
-      nameID: this.createUserNameID(agentInfo.firstName, agentInfo.lastName),
+    const nameID = await this.createUserNameID(
+      agentInfo.firstName,
+      agentInfo.lastName
+    );
+    const user = await this.createUser({
+      nameID,
       email: email,
       firstName: agentInfo.firstName,
       lastName: agentInfo.lastName,
@@ -317,31 +330,34 @@ export class UserService {
       },
     });
 
-    if (!isAlkemioDocumentURL) {
-      if (!user.profile?.storageBucket?.id) {
-        throw new EntityNotInitializedException(
-          `User profile storage bucket not initialized for user with id: ${user.id}`,
-          LogContext.COMMUNITY
-        );
-      }
+    // Used for creating an avatar from a linkedin profile picture
+    // BUG: https://github.com/alkem-io/server/issues/3944
 
-      if (!user.profile.visuals) {
-        throw new EntityNotInitializedException(
-          `Visuals not initialized for profile with id: ${user.profile.id}`,
-          LogContext.COMMUNITY
-        );
-      }
+    // if (!isAlkemioDocumentURL) {
+    //   if (!user.profile?.storageBucket?.id) {
+    //     throw new EntityNotInitializedException(
+    //       `User profile storage bucket not initialized for user with id: ${user.id}`,
+    //       LogContext.COMMUNITY
+    //     );
+    //   }
 
-      const { visual, document } = await this.avatarService.createAvatarFromURL(
-        user.profile?.storageBucket?.id,
-        user.id,
-        agentInfo.avatarURL ?? user.profile.visuals[0].uri
-      );
+    //   if (!user.profile.visuals) {
+    //     throw new EntityNotInitializedException(
+    //       `Visuals not initialized for profile with id: ${user.profile.id}`,
+    //       LogContext.COMMUNITY
+    //     );
+    //   }
 
-      user.profile.visuals = [visual];
-      user.profile.storageBucket.documents = [document];
-      user = await this.save(user);
-    }
+    //   const { visual, document } = await this.avatarService.createAvatarFromURL(
+    //     user.profile?.storageBucket?.id,
+    //     user.id,
+    //     agentInfo.avatarURL ?? user.profile.visuals[0].uri
+    //   );
+
+    //   user.profile.visuals = [visual];
+    //   user.profile.storageBucket.documents = [document];
+    //   user = await this.save(user);
+    // }
 
     return user;
   }
@@ -865,16 +881,6 @@ export class UserService {
     return userMatchesCount;
   }
 
-  private getAgentOrFail(user: IUser): IAgent {
-    const agent = user.agent;
-    if (!agent)
-      throw new EntityNotInitializedException(
-        `Unable to find agent for user: ${user.id}`,
-        LogContext.AUTH
-      );
-    return agent;
-  }
-
   async getStorageAggregatorOrFail(
     userID: string
   ): Promise<IStorageAggregator> {
@@ -925,13 +931,17 @@ export class UserService {
     return directRooms;
   }
 
-  createUserNameID(
+  public async createUserNameID(
     firstName: string,
-    lastName: string,
-    useRandomSuffix = true
-  ): string {
+    lastName: string
+  ): Promise<string> {
     const base = `${firstName}-${lastName}`;
-    return this.namingService.createNameID(base, useRandomSuffix);
+    const reservedNameIDs =
+      await this.namingService.getReservedNameIDsInUsers(); // This will need to be smarter later
+    return this.namingService.createNameIdAvoidingReservedNameIDs(
+      base,
+      reservedNameIDs
+    );
   }
 
   async findProfilesByBatch(userIds: string[]): Promise<(IProfile | Error)[]> {

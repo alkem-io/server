@@ -140,7 +140,7 @@ export class VisualService {
     if (!visual)
       throw new EntityNotFoundException(
         `Not able to locate visual with the specified ID: ${visualID}`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     return visual;
   }

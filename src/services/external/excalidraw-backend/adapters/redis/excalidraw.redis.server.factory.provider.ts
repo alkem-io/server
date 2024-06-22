@@ -57,9 +57,25 @@ const factory = async (
 
   const redisAdapterFactory = (() => {
     try {
-      const pubClient = createClient({ url: `redis://${host}:${port}` });
+      const pubClient = createClient({
+        url: `redis://${host}:${port}`,
+        max_attempts: 25,
+        socket_keepalive: true,
+        disable_resubscribing: false,
+        enable_offline_queue: true,
+        retry_unfulfilled_commands: true,
+      });
       const subClient = pubClient.duplicate();
-      return createAdapter(pubClient, subClient);
+      pubClient.on('error', (error: Error) =>
+        logger.error(error.message, error.stack, LogContext.EXCALIDRAW_SERVER)
+      );
+      subClient.on('error', (error: Error) =>
+        logger.error(error.message, error.stack, LogContext.EXCALIDRAW_SERVER)
+      );
+      return createAdapter(pubClient, subClient, {
+        requestsTimeout: 10000,
+        key: appId,
+      });
     } catch (error) {
       throw new BaseException(
         'Error while initializing Redis adapter',

@@ -8,12 +8,10 @@ import { NotificationPayloadBuilder } from './notification.payload.builder';
 import { NOTIFICATIONS_SERVICE } from '@common/constants/providers';
 import { ClientProxy } from '@nestjs/microservices';
 import { NotificationEventType } from '@alkemio/notifications-lib';
-import { NotificationInputCollaborationInterest } from './dto/notification.dto.input.collaboration.interest';
 import { NotificationInputUpdateSent } from './dto/notification.dto.input.update.sent';
 import { NotificationInputForumDiscussionCreated } from './dto/notification.dto.input.discussion.created';
 import { NotificationInputCommunityApplication } from './dto/notification.dto.input.community.application';
 import { NotificationInputCommunityNewMember } from './dto/notification.dto.input.community.new.member';
-import { NotificationInputCommunityContextReview } from './dto/notification.dto.input.community.context.review';
 import { NotificationInputUserRegistered } from './dto/notification.dto.input.user.registered';
 import { NotificationInputUserRemoved } from './dto/notification.dto.input.user.removed';
 import { NotificationInputWhiteboardCreated } from './dto/notification.dto.input.whiteboard.created';
@@ -30,6 +28,7 @@ import { NotificationInputForumDiscussionComment } from './dto/notification.dto.
 import { NotificationInputCommunityInvitation } from './dto/notification.dto.input.community.invitation';
 import { NotificationInputCommentReply } from './dto/notification.dto.input.comment.reply';
 import { NotificationInputCommunityInvitationExternal } from './dto/notification.dto.input.community.invitation.external';
+import { NotificationInputPlatformGlobalRoleChange } from './dto/notification.dto.input.platform.global.role.change';
 
 @Injectable()
 export class NotificationAdapter {
@@ -79,21 +78,6 @@ export class NotificationAdapter {
       );
 
     this.notificationsClient.emit<number>(event, payload);
-  }
-
-  public async collaborationInterest(
-    eventData: NotificationInputCollaborationInterest
-  ): Promise<void> {
-    const event = NotificationEventType.COLLABORATION_INTEREST;
-    this.logEventTriggered(eventData, event);
-
-    const payload =
-      await this.notificationPayloadBuilder.buildCollaborationInterestPayload(
-        eventData.triggeredBy,
-        eventData.collaboration,
-        eventData.relation
-      );
-    this.notificationsClient.emit(event, payload);
   }
 
   public async postComment(
@@ -250,9 +234,7 @@ export class NotificationAdapter {
         eventData.triggeredBy,
         eventData.mentionedEntityID,
         eventData.comment,
-        eventData.commentsId,
         eventData.originEntity.id,
-        eventData.originEntity.nameId,
         eventData.originEntity.displayName,
         eventData.commentType
       );
@@ -273,9 +255,7 @@ export class NotificationAdapter {
         eventData.triggeredBy,
         eventData.mentionedEntityID,
         eventData.comment,
-        eventData.commentsId,
         eventData.originEntity.id,
-        eventData.originEntity.nameId,
         eventData.originEntity.displayName,
         eventData.commentType
       );
@@ -333,7 +313,8 @@ export class NotificationAdapter {
       await this.notificationPayloadBuilder.buildInvitationCreatedNotificationPayload(
         eventData.triggeredBy,
         eventData.invitedUser,
-        eventData.community
+        eventData.community,
+        eventData.welcomeMessage
       );
 
     this.notificationsClient.emit<number>(event, payload);
@@ -371,19 +352,21 @@ export class NotificationAdapter {
     this.notificationsClient.emit(event, payload);
   }
 
-  public async communityContextReview(
-    eventData: NotificationInputCommunityContextReview
+  public async platformGlobalRoleChanged(
+    eventData: NotificationInputPlatformGlobalRoleChange
   ): Promise<void> {
-    const event = NotificationEventType.COLLABORATION_CONTEXT_REVIEW_SUBMITTED;
+    const event = NotificationEventType.PLATFORM_GLOBAL_ROLE_CHANGE;
     this.logEventTriggered(eventData, event);
 
     const payload =
-      await this.notificationPayloadBuilder.buildCommunityContextReviewSubmittedNotificationPayload(
+      await this.notificationPayloadBuilder.buildGlobalRoleChangedNotificationPayload(
         eventData.triggeredBy,
-        eventData.community.id,
-        eventData.questions
+        eventData.userID,
+        eventData.type,
+        eventData.role
       );
-    this.notificationsClient.emit(event, payload);
+
+    this.notificationsClient.emit<number>(event, payload);
   }
 
   public async userRegistered(

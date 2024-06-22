@@ -20,6 +20,7 @@ import { CommunityPolicy } from '../community-policy/community.policy.entity';
 import { Form } from '@domain/common/form/form.entity';
 import { Invitation } from '../invitation/invitation.entity';
 import { InvitationExternal } from '../invitation.external/invitation.external.entity';
+import { CommunityGuidelines } from '../community-guidelines/community.guidelines.entity';
 import { SpaceType } from '@common/enums/space.type';
 
 @Entity()
@@ -27,9 +28,6 @@ export class Community
   extends AuthorizableEntity
   implements ICommunity, IGroupable
 {
-  @Column()
-  spaceID: string;
-
   @OneToOne(() => Communication, {
     eager: false,
     cascade: true,
@@ -37,6 +35,14 @@ export class Community
   })
   @JoinColumn()
   communication?: Communication;
+
+  @OneToOne(() => CommunityGuidelines, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  guidelines?: CommunityGuidelines;
 
   @OneToOne(() => Form, {
     eager: false,
@@ -103,7 +109,6 @@ export class Community
   constructor(type: SpaceType) {
     super();
     this.type = type;
-    this.spaceID = '';
     this.parentID = '';
   }
 }

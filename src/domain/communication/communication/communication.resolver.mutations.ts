@@ -4,7 +4,7 @@ import { Args, Mutation } from '@nestjs/graphql';
 import { CommunicationService } from './communication.service';
 import { CurrentUser } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { IDiscussion } from '../discussion/discussion.interface';
@@ -70,7 +70,7 @@ export class CommunicationResolverMutations {
       await this.authorizationService.grantAccessOrFail(
         agentInfo,
         platformAuthorization,
-        AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
+        AuthorizationPrivilege.PLATFORM_ADMIN,
         `User not authorized to create discussion with ${DiscussionCategory.RELEASES} category.`
       );
     }
@@ -83,7 +83,7 @@ export class CommunicationResolverMutations {
     if (!displayNameAvailable)
       throw new ValidationException(
         `Unable to create Discussion: the provided displayName is already taken: ${createData.profile.displayName}`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
 
     const discussion = await this.communicationService.createDiscussion(

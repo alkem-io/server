@@ -6,12 +6,11 @@ import { UserModule } from '@domain/community/user/user.module';
 import { MeService } from './me.service';
 import { MeResolverQueries } from './me.resolver.queries';
 import { MeResolverFields } from './me.resolver.fields';
-import { SpaceModule } from '@domain/challenge/space/space.module';
+import { SpaceModule } from '@domain/space/space/space.module';
 import { RolesModule } from '../roles/roles.module';
-import { ChallengeModule } from '@domain/challenge/challenge/challenge.module';
-import { OpportunityModule } from '@domain/challenge/opportunity/opportunity.module';
 import { ActivityLogModule } from '../activity-log/activity.log.module';
 import { ActivityModule } from '@platform/activity/activity.module';
+import { CommunityModule } from '@domain/community/community/community.module';
 
 @Module({
   imports: [
@@ -20,11 +19,10 @@ import { ActivityModule } from '@platform/activity/activity.module';
     InvitationModule,
     UserModule,
     SpaceModule,
-    ChallengeModule,
-    OpportunityModule,
     RolesModule,
     ActivityLogModule,
     ActivityModule,
+    CommunityModule,
   ],
   providers: [MeService, MeResolverQueries, MeResolverFields],
   exports: [MeService],

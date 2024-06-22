@@ -1,0 +1,20 @@
+mutation createAccount($accountData: CreateAccountInput!) {
+  createAccount(accountData: $accountData) {
+    id
+    spaceID
+  }
+}
+
+
+{
+  "accountData":
+  {
+    "hostID": "Eco1Host",
+    "spaceData": {
+      "nameID": "eco1",
+      "profileData": {
+        "displayName": "Test space2"
+      }
+    }
+  }
+}

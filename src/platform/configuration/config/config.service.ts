@@ -1,7 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ITemplate } from './template/template.interface';
-import * as uxTemplate from '@templates/ux-template.json';
 import { IConfig } from './config.interface';
 import { IAuthenticationProviderConfig } from './authentication/providers/authentication.provider.config.interface';
 import { ConfigurationTypes } from '@common/enums';
@@ -27,7 +25,6 @@ export class KonfigService {
       ConfigurationTypes.INTEGRATIONS
     )?.geo;
     return {
-      template: await this.getTemplate(),
       authentication: {
         providers: await this.getAuthenticationProvidersConfig(),
       },
@@ -93,6 +90,10 @@ export class KonfigService {
           ?.innovationLibrary,
         foundation: this.configService.get(ConfigurationTypes.PLATFORM)
           ?.foundation,
+        contactsupport: this.configService.get(ConfigurationTypes.PLATFORM)
+          ?.contactsupport,
+        switchplan: this.configService.get(ConfigurationTypes.PLATFORM)
+          ?.switchplan,
         opensource: this.configService.get(ConfigurationTypes.PLATFORM)
           ?.opensource,
         releases: this.configService.get(ConfigurationTypes.PLATFORM)?.releases,
@@ -132,14 +133,6 @@ export class KonfigService {
     ];
 
     return authProviders;
-  }
-
-  async getTemplate(): Promise<ITemplate> {
-    const template = {
-      ...uxTemplate,
-    };
-
-    return template;
   }
 
   async getOryConfig(): Promise<IOryConfig> {

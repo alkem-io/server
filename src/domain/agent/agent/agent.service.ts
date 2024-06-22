@@ -15,12 +15,8 @@ import { Agent, CreateAgentInput, IAgent } from '@domain/agent/agent';
 import { CredentialsSearchInput, ICredential } from '@domain/agent/credential';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import {
-  CACHE_MANAGER,
-  Inject,
-  Injectable,
-  LoggerService,
-} from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Cache } from 'cache-manager';
@@ -31,7 +27,6 @@ import { WalletManagerCommand } from '@common/enums/wallet.manager.command';
 import { CredentialMetadataOutput } from '../verified-credential/dto/verified.credential.dto.metadata';
 import { IClaim } from '@services/external/trust-registry/trust.registry.claim/claim.interface';
 import { TrustRegistryAdapter } from '@services/external/trust-registry/trust.registry.adapter/trust.registry.adapter';
-import { GrantCredentialInput } from './dto/agent.dto.credential.grant';
 import { RevokeCredentialInput } from './dto/agent.dto.credential.revoke';
 import { AgentBeginVerifiedCredentialRequestOutput } from './dto/agent.dto.verified.credential.request.begin.output';
 import { AgentBeginVerifiedCredentialOfferOutput } from './dto/agent.dto.verified.credential.offer.begin.output';
@@ -48,14 +43,15 @@ import { SsiSovrhdRegisterCallbackSession } from '@services/adapters/ssi-sovrhd/
 import { AgentInteractionVerifiedCredentialRequestSovrhd } from './dto/agent.dto.interaction.verified.credential.request.sovrhd';
 import { SsiSovrhdRegisterCallbackCredential } from '@services/adapters/ssi-sovrhd/dto/ssi.sovrhd.dto.register.callback.credential';
 import { getRandomId } from '@src/common/utils';
-import { AgentCacheService } from './agent.cache.service';
+import { AgentInfoCacheService } from '../../../core/authentication.agent.info/agent.info.cache.service';
+import { GrantCredentialToAgentInput } from './dto/agent.dto.credential.grant';
 
 @Injectable()
 export class AgentService {
   private readonly cache_ttl: number;
 
   constructor(
-    private agentCacheService: AgentCacheService,
+    private agentInfoCacheService: AgentInfoCacheService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private configService: ConfigService,
     private credentialService: CredentialService,
@@ -180,7 +176,7 @@ export class AgentService {
   }
 
   async grantCredential(
-    grantCredentialData: GrantCredentialInput
+    grantCredentialData: GrantCredentialToAgentInput
   ): Promise<IAgent> {
     const { agent, credentials } = await this.getAgentCredentials(
       grantCredentialData.agentID
@@ -201,13 +197,12 @@ export class AgentService {
       }
     }
 
-    const credential = await this.credentialService.createCredential({
-      type: grantCredentialData.type,
-      resourceID: grantCredentialData.resourceID,
-    });
+    const credential = await this.credentialService.createCredential(
+      grantCredentialData
+    );
 
     agent.credentials?.push(credential);
-    await this.agentCacheService.updateAgentInfoCache(agent);
+    await this.agentInfoCacheService.updateAgentInfoCache(agent);
     await this.setAgentCache(agent);
 
     return await this.saveAgent(agent);
@@ -234,10 +229,10 @@ export class AgentService {
       }
     }
     agent.credentials = newCredentials;
-    await this.agentCacheService.updateAgentInfoCache(agent);
+    await this.agentInfoCacheService.updateAgentInfoCache(agent);
     await this.setAgentCache(agent);
 
-    return agent;
+    return await this.saveAgent(agent);
   }
 
   async hasValidCredential(

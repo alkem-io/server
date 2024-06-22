@@ -1,6 +1,6 @@
 import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { AgentInfo } from '@core/authentication/agent-info';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IChatGuidanceQueryResult } from './dto/chat.guidance.query.result.dto';
 import { ConfigurationTypes } from '@common/enums/configuration.type';
 import { ConfigService } from '@nestjs/config';

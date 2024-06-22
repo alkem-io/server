@@ -25,11 +25,9 @@ import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { CollaborationArgsCallouts } from './dto/collaboration.args.callouts';
-import { AgentInfo } from '@core/authentication/agent-info';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UpdateCollaborationCalloutsSortOrderInput } from './dto/collaboration.dto.update.callouts.sort.order';
-import { getJourneyByCollaboration } from '@common/utils';
-import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { TagsetTemplateSetService } from '@domain/common/tagset-template-set/tagset.template.set.service';
 import {
   CreateTagsetTemplateInput,
@@ -44,18 +42,18 @@ import { keyBy } from 'lodash';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { CalloutType } from '@common/enums/callout.type';
-import { Opportunity } from '@domain/challenge/opportunity';
 import { InnovationFlowService } from '../innovation-flow/innovaton.flow.service';
-import { SpaceDefaultsService } from '@domain/challenge/space.defaults/space.defaults.service';
+import { SpaceDefaultsService } from '@domain/space/space.defaults/space.defaults.service';
 import { TagsetType } from '@common/enums/tagset.type';
 import { IInnovationFlow } from '../innovation-flow/innovation.flow.interface';
 import { CreateCollaborationInput } from './dto/collaboration.dto.create';
-import { Space } from '@domain/challenge/space/space.entity';
+import { Space } from '@domain/space/space/space.entity';
 import { ICalloutGroup } from '../callout-groups/callout.group.interface';
 import { CalloutGroupsService } from '../callout-groups/callout.group.service';
-import { IAccount } from '@domain/challenge/account/account.interface';
+import { IAccount } from '@domain/space/account/account.interface';
 import { SpaceType } from '@common/enums/space.type';
 import { CalloutGroupName } from '@common/enums/callout.group.name';
+import { SpaceLevel } from '@common/enums/space.level';
 
 @Injectable()
 export class CollaborationService {
@@ -99,6 +97,7 @@ export class CollaborationService {
     const innovationFlowInput =
       await this.spaceDefaultsService.getCreateInnovationFlowInput(
         account.id,
+        spaceType,
         collaborationData.innovationFlowTemplateID
       );
     const allowedStates = innovationFlowInput.states.map(
@@ -247,98 +246,67 @@ export class CollaborationService {
   public async getChildCollaborationsOrFail(
     collaborationID: string
   ): Promise<ICollaboration[] | never> {
-    // check if exists
-    await this.getCollaborationOrFail(collaborationID);
-
-    const { spaceId, challengeId } = await getJourneyByCollaboration(
-      this.entityManager,
-      collaborationID
-    );
-
-    if (spaceId) {
-      const space = await this.entityManager.findOne(Space, {
-        where: { id: spaceId },
-        relations: {
-          account: true,
-        },
-      });
-      if (!space?.account) {
-        throw new EntityNotFoundException(
-          `Unable to find Space found with the given id: ${spaceId}`,
-          LogContext.COLLABORATION
-        );
-      }
-      const accountID = space.account.id;
-      const challengesWithCollab = await this.entityManager.find(Challenge, {
-        where: {
-          account: {
-            id: accountID,
-          },
-        },
-        relations: {
+    const space = await this.entityManager.findOne(Space, {
+      where: { collaboration: { id: collaborationID } },
+      relations: {
+        account: true,
+        subspaces: {
           collaboration: true,
         },
-        select: {
-          collaboration: {
-            id: true,
-          },
-        },
-      });
-      const oppsWithCollab = await this.entityManager.find(Opportunity, {
-        where: {
-          account: {
-            id: accountID,
-          },
-        },
-        relations: {
-          collaboration: true,
-        },
-        select: {
-          collaboration: {
-            id: true,
-          },
-        },
-      });
-
-      return [...challengesWithCollab, ...oppsWithCollab].map(x => {
-        if (!x.collaboration) {
-          throw new EntityNotInitializedException(
-            `Collaboration not found on ${
-              x instanceof Challenge ? 'Challenge' : 'Opportunity'
-            } '${x.id}'`,
-            LogContext.COLLABORATION
-          );
-        }
-        return x.collaboration;
-      });
+      },
+    });
+    if (!space) {
+      throw new EntityNotFoundException(
+        `Unable to find Space for provided collaborationID: ${collaborationID}`,
+        LogContext.COLLABORATION
+      );
     }
+    const accountID = space.account.id;
 
-    if (challengeId) {
-      const challenge = await this.entityManager.findOneOrFail(Challenge, {
-        where: { id: challengeId },
-        relations: {
-          opportunities: {
+    switch (space.level) {
+      case SpaceLevel.SPACE:
+        const spacesInAccount = await this.entityManager.find(Space, {
+          where: {
+            account: {
+              id: accountID,
+            },
+          },
+          relations: {
             collaboration: true,
           },
-        },
-      });
-
-      if (!challenge.opportunities) {
-        throw new EntityNotInitializedException(
-          `Opportunities not found on challenge ${challengeId}`,
-          LogContext.COLLABORATION
-        );
-      }
-
-      return challenge.opportunities?.map(opp => {
-        if (!opp.collaboration) {
+          select: {
+            collaboration: {
+              id: true,
+            },
+          },
+        });
+        return [...spacesInAccount].map(x => {
+          if (!x.collaboration) {
+            throw new EntityNotInitializedException(
+              `Collaboration not found on ${x.type} '${x.id}'`,
+              LogContext.COLLABORATION
+            );
+          }
+          return x.collaboration;
+        });
+      case SpaceLevel.CHALLENGE:
+        const subsubspaces = space.subspaces;
+        if (!subsubspaces) {
           throw new EntityNotInitializedException(
-            `Collaboration not found on opportunity ${opp.id}`,
+            `Subsubspaces not found on subspace ${space.type}`,
             LogContext.COLLABORATION
           );
         }
-        return opp.collaboration;
-      });
+
+        return subsubspaces?.map(subsubspace => {
+          if (!subsubspace.collaboration) {
+            throw new EntityNotInitializedException(
+              `Collaboration not found on subsubspace ${subsubspace.id}`,
+              LogContext.COLLABORATION
+            );
+          }
+          return subsubspace.collaboration;
+        });
     }
 
     return [];
@@ -417,21 +385,23 @@ export class CollaborationService {
         );
     }
 
+    const reservedNameIDs =
+      await this.namingService.getReservedNameIDsInCollaboration(
+        collaboration.id
+      );
     if (calloutData.nameID && calloutData.nameID.length > 0) {
-      const nameAvailable =
-        await this.namingService.isCalloutNameIdAvailableInCollaboration(
-          calloutData.nameID,
-          collaboration.id
-        );
-      if (!nameAvailable)
+      const nameIdAlreadyTaken = reservedNameIDs.includes(calloutData.nameID);
+      if (nameIdAlreadyTaken)
         throw new ValidationException(
           `Unable to create Callout: the provided nameID is already taken: ${calloutData.nameID}`,
-          LogContext.CHALLENGES
+          LogContext.SPACES
         );
     } else {
-      calloutData.nameID = this.namingService.createNameID(
-        `${calloutData.framing.profile.displayName}`
-      );
+      calloutData.nameID =
+        this.namingService.createNameIdAvoidingReservedNameIDs(
+          `${calloutData.framing.profile.displayName}`,
+          reservedNameIDs
+        );
     }
 
     const displayNameAvailable =
@@ -442,7 +412,7 @@ export class CollaborationService {
     if (!displayNameAvailable)
       throw new ValidationException(
         `Unable to create Callout: the provided displayName is already taken: ${calloutData.framing.profile.displayName}`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
 
     const tagsetTemplates = collaboration.tagsetTemplateSet.tagsetTemplates;
@@ -638,17 +608,17 @@ export class CollaborationService {
   }
 
   async getInnovationFlow(collaborationID: string): Promise<IInnovationFlow> {
-    const challenge = await this.getCollaborationOrFail(collaborationID, {
+    const collaboration = await this.getCollaborationOrFail(collaborationID, {
       relations: {
         innovationFlow: true,
       },
     });
 
-    const innovationFlow = challenge.innovationFlow;
+    const innovationFlow = collaboration.innovationFlow;
     if (!innovationFlow)
       throw new RelationshipNotFoundException(
         `Unable to load InnovationFlow for Collaboration ${collaborationID} `,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
 
     return innovationFlow;
@@ -762,21 +732,10 @@ export class CollaborationService {
     return result.whiteboardsCount;
   }
 
-  public async getRelationsCount(
-    collaboration: ICollaboration
-  ): Promise<number> {
-    const postsCount =
-      await this.relationService.getRelationsInCollaborationCount(
-        collaboration.id
-      );
-
-    return postsCount;
-  }
-
   public async getCommunityPolicy(
     collaborationID: string
   ): Promise<ICommunityPolicy> {
-    return await this.namingService.getCommunityPolicyForCollaboration(
+    return await this.namingService.getCommunityPolicyWithSettingsForCollaboration(
       collaborationID
     );
   }
@@ -837,58 +796,5 @@ export class CollaborationService {
     );
 
     return calloutsInOrder;
-  }
-
-  public async getJourneyFromCollaboration(collaborationId: string): Promise<
-    | {
-        spaceId?: string;
-        challengeId?: string;
-        opportunityId?: string;
-      }
-    | undefined
-  > {
-    const [space]: { id: string }[] = await this.entityManager.query(
-      `
-      SELECT space.id FROM alkemio.collaboration
-      RIGHT JOIN space on collaboration.id = space.collaborationId
-      WHERE collaboration.id = '${collaborationId}'
-    `
-    );
-
-    if (space) {
-      return {
-        spaceId: space.id,
-      };
-    }
-
-    const [challenge]: { id: string }[] = await this.entityManager.query(
-      `
-      SELECT challenge.id FROM alkemio.collaboration
-      RIGHT JOIN challenge on collaboration.id = challenge.collaborationId
-      WHERE collaboration.id = '${collaborationId}'
-    `
-    );
-
-    if (challenge) {
-      return {
-        challengeId: challenge.id,
-      };
-    }
-
-    const [opportunity]: { id: string }[] = await this.entityManager.query(
-      `
-      SELECT opportunity.id FROM alkemio.collaboration
-      RIGHT JOIN opportunity on collaboration.id = opportunity.collaborationId
-      WHERE collaboration.id = '${collaborationId}'
-    `
-    );
-
-    if (opportunity) {
-      return {
-        opportunityId: opportunity.id,
-      };
-    }
-
-    return undefined;
   }
 }

@@ -1,11 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { ApplicationService } from './application.service';
 import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
-import { Application } from './application.entity';
 import { IApplication } from './application.interface';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { CREDENTIAL_RULE_COMMUNITY_USER_APPLICATION } from '@common/constants/authorization/credential.rule.constants';
@@ -14,9 +11,7 @@ import { CREDENTIAL_RULE_COMMUNITY_USER_APPLICATION } from '@common/constants/au
 export class ApplicationAuthorizationService {
   constructor(
     private applicationService: ApplicationService,
-    private authorizationPolicyService: AuthorizationPolicyService,
-    @InjectRepository(Application)
-    private applicationRepository: Repository<Application>
+    private authorizationPolicyService: AuthorizationPolicyService
   ) {}
 
   async applyAuthorizationPolicy(
@@ -33,7 +28,7 @@ export class ApplicationAuthorizationService {
       application
     );
 
-    return await this.applicationRepository.save(application);
+    return application;
   }
 
   private async extendAuthorizationPolicy(
@@ -42,7 +37,7 @@ export class ApplicationAuthorizationService {
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
     // get the user
-    const user = await this.applicationService.getUser(application.id);
+    const user = await this.applicationService.getContributor(application.id);
 
     // also grant the user privileges to manage their own application
     const userApplicationRule =
@@ -62,13 +57,9 @@ export class ApplicationAuthorizationService {
       );
     newRules.push(userApplicationRule);
 
-    //
-    const updatedAuthorization =
-      this.authorizationPolicyService.appendCredentialAuthorizationRules(
-        application.authorization,
-        newRules
-      );
-
-    return updatedAuthorization;
+    return this.authorizationPolicyService.appendCredentialAuthorizationRules(
+      application.authorization,
+      newRules
+    );
   }
 }

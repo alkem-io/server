@@ -3,9 +3,7 @@ import { UUID } from '@domain/common/scalars';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums/logging.context';
 import { SearchResultType } from '@common/enums/search.result.type';
-import { ISearchResultOpportunity } from './search.result.dto.entry.opportunity';
 import { ISearchResultSpace } from './search.result.dto.entry.space';
-import { ISearchResultChallenge } from './search.result.dto.entry.challenge';
 import { ISearchResultUser } from './search.result.dto.entry.user';
 import { ISearchResultOrganization } from './search.result.dto.entry.organization';
 import { IBaseAlkemio } from '@domain/common/entity/base-entity';
@@ -18,11 +16,9 @@ import { ISearchResultCallout } from './search.result.dto.entry.callout';
     const type = searchResult.type;
     switch (type) {
       case SearchResultType.SPACE:
-        return ISearchResultSpace;
       case SearchResultType.CHALLENGE:
-        return ISearchResultChallenge;
       case SearchResultType.OPPORTUNITY:
-        return ISearchResultOpportunity;
+        return ISearchResultSpace;
       case SearchResultType.USER:
         return ISearchResultUser;
       case SearchResultType.ORGANIZATION:

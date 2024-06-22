@@ -17,6 +17,7 @@ export class IMessageReaction {
   emoji!: string;
 
   sender!: string;
+  senderType!: 'user' | 'virtualContributor';
 
   @Field(() => Number, {
     nullable: false,

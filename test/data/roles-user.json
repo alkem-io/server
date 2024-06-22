@@ -1,100 +1,25 @@
 {
   "rolesUser": {
-    "spaces": [
-      {
-        "displayName": "UN Sustainable Development Goals",
-        "nameID": "un-sdgs",
-        "id": "b69f82a1-bc7d-486c-85f9-e7ac6e689f4e/00655835-4d15-4546-801e-1ab80ac3078a",
-        "userGroups": [],
-        "roles": ["member"],
-        "challenges": [
-          {
-            "displayName": "Food security and nutrition and sustainable agriculture",
-            "nameID": "food-sec",
-            "id": "d3c76102-087b-4b40-8aa5-b5e6023784d0",
-            "userGroups": [],
-            "roles": ["member"]
-          },
-          {
-            "displayName": "Rural Development",
-            "nameID": "rural",
-            "id": "ed5b344e-72d1-4256-a385-f3b6e4aaaabf",
-            "userGroups": [],
-            "roles": ["member"]
-          },
-          {
-            "displayName": "Atmosphere",
-            "nameID": "atmosphere",
-            "id": "6adba2b9-a062-4269-a4da-8c924ded32d6",
-            "userGroups": [],
-            "roles": ["member"]
-          },
-          {
-            "displayName": "Energy",
-            "nameID": "energyop",
-            "id": "fbaf88eb-97b3-48c8-bb6f-47229b571729",
-            "userGroups": [],
-            "roles": ["member"]
-          },
-          {
-            "displayName": "Water and sanitation",
-            "nameID": "water-sanit",
-            "id": "6d4ccf6e-3872-4aa6-955c-77730924cfa9",
-            "userGroups": [],
-            "roles": ["member"]
-          }
-        ],
-        "opportunities": [],
-        "spaceID": "00655835-4d15-4546-801e-1ab80ac3078a",
-        "space": {
-          "displayName": "UN Sustainable Development Goals",
-          "nameID": "un-sdgs",
-          "template": "",
-          "id": "00655835-4d15-4546-801e-1ab80ac3078a",
-          "community": {
-            "displayName": "UN Sustainable Development Goals",
-            "type": "space",
-            "spaceID": "00655835-4d15-4546-801e-1ab80ac3078a",
-            "parentID": "00655835-4d15-4546-801e-1ab80ac3078a",
-            "policy": "{\"member\":{\"credential\":{\"type\":\"space-member\",\"resourceID\":\"00655835-4d15-4546-801e-1ab80ac3078a\"},\"minOrg\":0,\"maxOrg\":-1,\"minUser\":0,\"maxUser\":-1},\"lead\":{\"credential\":{\"type\":\"space-host\",\"resourceID\":\"00655835-4d15-4546-801e-1ab80ac3078a\"},\"minOrg\":0,\"maxOrg\":1,\"minUser\":0,\"maxUser\":2}}",
-            "id": "d9269921-1660-4f76-95d1-16c5b3d06fb1",
-            "authorization": {
-              "anonymousReadAccess": false,
-              "credentialRules": "[{\"type\":\"global-admin\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"grant\",\"read\",\"update\",\"delete\"],\"cascade\":true},{\"type\":\"global-admin-community\",\"resourceID\":\"\",\"grantedPrivileges\":[\"read\"],\"cascade\":true},{\"type\":\"space-admin\",\"resourceID\":\"00655835-4d15-4546-801e-1ab80ac3078a\",\"grantedPrivileges\":[\"create\",\"read\",\"update\",\"delete\",\"grant\"],\"cascade\":true},{\"type\":\"space-member\",\"resourceID\":\"00655835-4d15-4546-801e-1ab80ac3078a\",\"grantedPrivileges\":[\"read\"],\"cascade\":true},{\"type\":\"global-admin-community\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"grant\",\"read\",\"update\",\"delete\"],\"cascade\":true},{\"type\":\"global-registered\",\"resourceID\":\"\",\"grantedPrivileges\":[\"community-apply\"],\"cascade\":false}]",
-              "verifiedCredentialRules": "[]",
-              "privilegeRules": "[]",
-              "id": "4b4b27c3-6a46-4bb1-b437-fc569aa0ff3e"
-            }
-          },
-          "authorization": {
-            "anonymousReadAccess": false,
-            "credentialRules": "[{\"type\":\"global-admin\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"grant\",\"read\",\"update\",\"delete\"],\"cascade\":true},{\"type\":\"global-admin-community\",\"resourceID\":\"\",\"grantedPrivileges\":[\"read\"],\"cascade\":true},{\"type\":\"space-admin\",\"resourceID\":\"00655835-4d15-4546-801e-1ab80ac3078a\",\"grantedPrivileges\":[\"create\",\"read\",\"update\",\"delete\",\"grant\"],\"cascade\":true},{\"type\":\"space-member\",\"resourceID\":\"00655835-4d15-4546-801e-1ab80ac3078a\",\"grantedPrivileges\":[\"read\"],\"cascade\":true}]",
-            "verifiedCredentialRules": "[]",
-            "privilegeRules": "",
-            "id": "26b45df9-85fe-4dff-942a-726b17455911"
-          },
-          "tagset": {
-            "tags": [
-              "collaborate",
-              "connect",
-              "context",
-              "coordinate",
-              "community",
-              "challenge"
-            ],
-            "name": "default",
-            "id": "093da171-5454-452f-b024-937ccb057920",
-            "authorization": {
-              "anonymousReadAccess": false,
-              "credentialRules": "[{\"type\":\"global-admin\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"grant\",\"read\",\"update\",\"delete\"],\"cascade\":true},{\"type\":\"global-admin-community\",\"resourceID\":\"\",\"grantedPrivileges\":[\"read\"],\"cascade\":true},{\"type\":\"space-admin\",\"resourceID\":\"00655835-4d15-4546-801e-1ab80ac3078a\",\"grantedPrivileges\":[\"create\",\"read\",\"update\",\"delete\",\"grant\"],\"cascade\":true},{\"type\":\"space-member\",\"resourceID\":\"00655835-4d15-4546-801e-1ab80ac3078a\",\"grantedPrivileges\":[\"read\"],\"cascade\":true}]",
-              "verifiedCredentialRules": "[]",
-              "privilegeRules": "",
-              "id": "515a3ada-1b37-4c23-8da4-c431cce5880b"
-            }
-          }
+    "space": {
+      "displayName": "UN Sustainable Development Goals",
+      "nameID": "un-sdgs",
+      "id": "00655835-4d15-4546-801e-1ab80ac3078a",
+      "roles": ["member"],
+      "subspaces": [
+        {
+          "displayName": "Food security and nutrition and sustainable agriculture",
+          "nameID": "food-sec",
+          "id": "d3c76102-087b-4b40-8aa5-b5e6023784d0",
+          "roles": ["member", "lead"]
+        },
+        {
+          "displayName": "Rural Development",
+          "nameID": "rural",
+          "id": "ed5b344e-72d1-4256-a385-f3b6e4aaaabf",
+          "roles": ["member"]
         }
-      }
-    ],
+      ]
+    },
     "organizations": [
       {
         "displayName": "SDGS – water",
@@ -162,7 +87,6 @@
         "spaceID": "bde93e37-4581-4b27-a6d9-07f12b33847c"
       }
     ],
-    "communities": [],
-    "id": "b69f82a1-bc7d-486c-85f9-e7ac6e689f4e"
+    "communities": []
   }
 }

@@ -1,9 +1,8 @@
-version: '3.7'
-
 volumes:
   alkemio_dev_mysql:
   alkemio_dev_postgres:
   tmpvolume:
+  chroma-data:
   rabbitmq_data:
     driver: local
 
@@ -53,8 +52,8 @@ services:
     volumes:
       - alkemio_dev_mysql:/var/lib/mysql
       - ./.scripts/schema.sql:/bootstrap_scripts/1.sql
-      - ./.scripts/migrations/CSVs:/tmp/CSVs
-      - tmpvolume:/tmp
+      - ./.scripts/migrations/CSVs:/var/lib/mysql-files/CSVs
+      - tmpvolume:/var/lib/mysql-files
     command: --init-file /bootstrap_scripts/1.sql
 
   kratos-migrate:
@@ -205,7 +204,8 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_notifications
     hostname: notifications
-    image: alkemio/notifications:v0.14.3
+    image: alkemio/notifications:v0.17.2
+    platform: linux/x86_64
     environment:
       - RABBITMQ_HOST
       - RABBITMQ_USER
@@ -235,6 +235,7 @@ services:
     container_name: alkemio_dev_matrix_adapter
     hostname: matrix-adapter
     image: alkemio/matrix-adapter:v0.3.1
+    platform: linux/x86_64
     environment:
       - RABBITMQ_HOST
       - RABBITMQ_USER
@@ -267,38 +268,41 @@ services:
     ports:
       - 6379
 
-  guidance_engine:
-    container_name: alkemio_dev_guidance_engine
-    hostname: guidance-engine
-    image: alkemio/guidance-engine:v0.6.1
-    restart: always
-    volumes:
-       - /dev/shm:/dev/shm
-       - ~/alkemio/data:${AI_LOCAL_PATH:-/home/alkemio/data}
-    networks:
-      - alkemio_dev_net
-    depends_on:
-      rabbitmq:
-        condition: "service_healthy"
+  whiteboard-collaboration:
+    container_name: alkemio_dev_whiteboard_collaboration
+    hostname: whiteboard-collaboration
+    image: alkemio/whiteboard-collaboration-service:v0.3.0
+    platform: linux/x86_64
     environment:
       - RABBITMQ_HOST
       - RABBITMQ_USER
       - RABBITMQ_PASSWORD
+      - LOGGING_CONSOLE_ENABLED
+      - LOGGING_LEVEL_CONSOLE
       - ENVIRONMENT=dev
-      - EMBEDDINGS_DEPLOYMENT_NAME
-      - AZURE_OPENAI_API_KEY
-      - AZURE_OPENAI_ENDPOINT
-      - OPENAI_API_VERSION
-      - AI_MODEL_TEMPERATURE
-      - AI_SOURCE_WEBSITE
-      - AI_SOURCE_WEBSITE2
-      - AI_WEBSITE_REPO
-      - AI_WEBSITE_REPO2
-      - AI_LOCAL_PATH
-      - AI_GITHUB_USER
-      - AI_GITHUB_PAT
-      - LLM_DEPLOYMENT_NAME
-      - LANGCHAIN_TRACING_V2
-      - LANGCHAIN_ENDPOINT
-      - LANGCHAIN_API_KEY
-      - LANGCHAIN_PROJECT
+    restart: always
+    networks:
+      - alkemio_dev_net
+    ports:
+      - 4002
+
+  file-service:
+    container_name: alkemio_dev_file_service
+    hostname: file-service
+    image: alkemio/file-service:v0.1.0
+    platform: linux/x86_64
+    environment:
+      - RABBITMQ_HOST
+      - RABBITMQ_USER
+      - RABBITMQ_PASSWORD
+      - LOGGING_CONSOLE_ENABLED
+      - LOGGING_LEVEL_CONSOLE
+      - ENVIRONMENT=dev
+      - LOCAL_STORAGE_PATH
+    restart: always
+    volumes:
+      - ../server/.storage:${LOCAL_STORAGE_PATH}
+    networks:
+      - alkemio_dev_net
+    ports:
+      - 4003

@@ -53,7 +53,7 @@ export class EcosystemModelService {
     if (!ecosystemModel)
       throw new EntityNotFoundException(
         `No EcosystemModel found with the given id: ${ecosystemModelID}`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     return ecosystemModel;
   }
@@ -96,7 +96,7 @@ export class EcosystemModelService {
     if (!ecosystem.restrictedActorGroupNames) {
       throw new EntityNotInitializedException(
         'Non-initialised EcosystemModel submitted',
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     }
     for (const name of ecosystem.restrictedActorGroupNames) {
@@ -130,7 +130,7 @@ export class EcosystemModelService {
     if (existingActorGroup)
       throw new ValidationException(
         `Already have an actor group with the provided name: ${name}`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
 
     const actorGroup = await this.actorGroupService.createActorGroup(
@@ -139,7 +139,7 @@ export class EcosystemModelService {
     if (!ecosystemModel.actorGroups)
       throw new EntityNotInitializedException(
         `Ecosystem Model (${ecosystemId}) not initialised`,
-        LogContext.CHALLENGES
+        LogContext.SPACES
       );
     ecosystemModel.actorGroups.push(actorGroup);
     await this.ecosystemModelRepository.save(ecosystemModel);

@@ -14,6 +14,7 @@ import { IStorageAggregatorParent } from './dto/storage.aggregator.dto.parent';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { IStorageBucket } from '../storage-bucket/storage.bucket.interface';
 import { EntityNotInitializedException } from '@common/exceptions';
+import { SpaceLevel } from '@common/enums/space.level';
 @Injectable()
 export class StorageAggregatorService {
   constructor(
@@ -216,18 +217,18 @@ export class StorageAggregatorService {
       );
 
     let url = '';
-    switch (journeyInfo.type) {
-      case 'opportunity':
-        url = await this.urlGeneratorService.generateUrlForOpportunity(
+    switch (journeyInfo.level) {
+      case SpaceLevel.OPPORTUNITY:
+        url = await this.urlGeneratorService.generateUrlForSubsubspace(
           journeyInfo.id
         );
         break;
-      case 'challenge':
-        url = await this.urlGeneratorService.generateUrlForChallenge(
+      case SpaceLevel.CHALLENGE:
+        url = await this.urlGeneratorService.generateUrlForSubspace(
           journeyInfo.id
         );
         break;
-      case 'space':
+      case SpaceLevel.SPACE:
         url = this.urlGeneratorService.generateUrlForSpace(journeyInfo.nameID);
         break;
     }

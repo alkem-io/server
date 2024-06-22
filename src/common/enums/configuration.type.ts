@@ -13,4 +13,5 @@ export enum ConfigurationTypes {
   SSI = 'ssi',
   INTEGRATIONS = 'integrations',
   INNOVATION_HUB = 'innovation_hub',
+  SEARCH = 'search',
 }

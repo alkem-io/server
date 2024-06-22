@@ -3,6 +3,7 @@ import { Community } from '@domain/community/community/community.entity';
 import { Lifecycle } from '@domain/common/lifecycle/lifecycle.entity';
 import { IInvitation } from './invitation.interface';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
+import { CommunityContributorType } from '@common/enums/community.contributor.type';
 @Entity()
 export class Invitation extends AuthorizableEntity implements IInvitation {
   @OneToOne(() => Lifecycle, {
@@ -21,11 +22,17 @@ export class Invitation extends AuthorizableEntity implements IInvitation {
   community?: Community;
 
   @Column('char', { length: 36, nullable: true })
-  invitedUser!: string;
+  invitedContributor!: string;
 
   @Column('char', { length: 36, nullable: true })
   createdBy!: string;
 
   @Column('varchar', { length: 512, nullable: true })
   welcomeMessage?: string;
+
+  @Column('boolean', { default: false })
+  invitedToParent!: boolean;
+
+  @Column('char', { length: 36, nullable: true })
+  contributorType!: CommunityContributorType;
 }

@@ -2,7 +2,7 @@ import { UseGuards } from '@nestjs/common';
 import { Args, Resolver, Query } from '@nestjs/graphql';
 import { CurrentUser } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { ChatGuidanceInput } from './dto/chat.guidance.dto.input';
 import { ChatGuidanceService } from './chat.guidance.service';
 import { IChatGuidanceQueryResult } from './dto/chat.guidance.query.result.dto';

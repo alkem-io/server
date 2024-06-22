@@ -1,4 +1,5 @@
-import { CacheModule, Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
+import { CacheModule } from '@nestjs/cache-manager';
 import { PassportModule } from '@nestjs/passport';
 import { UserModule } from '@domain/community/user/user.module';
 import { AuthenticationService } from './authentication.service';
@@ -8,6 +9,7 @@ import { OryStrategy } from './ory.strategy';
 import { CredentialModule } from '@domain/agent/credential/credential.module';
 import { OryApiStrategy } from './ory.api.strategy';
 import { AgentModule } from '@domain/agent/agent/agent.module';
+import { AuthenticationAgentInfoModule } from '@core/authentication.agent.info/agent.info.module';
 @Module({
   imports: [
     PassportModule.register({
@@ -17,6 +19,7 @@ import { AgentModule } from '@domain/agent/agent/agent.module';
     UserModule,
     AgentModule,
     CredentialModule,
+    AuthenticationAgentInfoModule,
     CacheModule.register(),
     JwtModule.registerAsync({
       imports: [ConfigModule],

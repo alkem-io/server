@@ -21,7 +21,7 @@ export class InnovationFlowTemplateService {
     private templateBaseService: TemplateBaseService
   ) {}
 
-  async createInnovationFLowTemplate(
+  async createInnovationFlowTemplate(
     innovationFlowTemplateData: CreateInnovationFlowTemplateInput,
     storageAggregator: IStorageAggregator
   ): Promise<IInnovationFlowTemplate> {
@@ -37,10 +37,13 @@ export class InnovationFlowTemplateService {
       storageAggregator
     );
 
-    innovationFlowTemplate.states =
-      this.innovationFlowStatesService.serializeStates(
+    const convertedStates =
+      this.innovationFlowStatesService.convertInputsToStates(
         innovationFlowTemplateData.states
       );
+
+    innovationFlowTemplate.states =
+      this.innovationFlowStatesService.serializeStates(convertedStates);
 
     return await this.innovationFlowTemplateRepository.save(
       innovationFlowTemplate
@@ -83,10 +86,12 @@ export class InnovationFlowTemplateService {
       this.innovationFlowStatesService.validateDefinition(
         innovationFlowTemplateData.states
       );
-      innovationFlowTemplate.states =
-        this.innovationFlowStatesService.serializeStates(
+      const convertedStates =
+        this.innovationFlowStatesService.convertInputsToStates(
           innovationFlowTemplateData.states
         );
+      innovationFlowTemplate.states =
+        this.innovationFlowStatesService.serializeStates(convertedStates);
     }
 
     return await this.innovationFlowTemplateRepository.save(

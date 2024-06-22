@@ -3,6 +3,8 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IInnovationFlowState } from './innovation.flow.state.interface';
 import { ValidationException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
+import { CreateInnovationFlowStateInput } from './dto/innovation.flow.state.dto.create';
+import { UpdateInnovationFlowStateInput } from './dto/innovation.flow.state.dto.update';
 
 @Injectable()
 export class InnovationFlowStatesService {
@@ -28,7 +30,24 @@ export class InnovationFlowStatesService {
     return JSON.parse(statesStr);
   }
 
-  public validateDefinition(states: IInnovationFlowState[]) {
+  public convertInputsToStates(
+    statesInput:
+      | CreateInnovationFlowStateInput[]
+      | UpdateInnovationFlowStateInput[]
+  ): IInnovationFlowState[] {
+    const result: IInnovationFlowState[] = [];
+    for (const stateInput of statesInput) {
+      const state: IInnovationFlowState = {
+        displayName: stateInput.displayName,
+        description: stateInput.description || '',
+      };
+      result.push(state);
+    }
+    return result;
+  }
+  public validateDefinition(
+    states: CreateInnovationFlowStateInput[] | UpdateInnovationFlowStateInput[]
+  ) {
     if (states.length === 0) {
       throw new ValidationException(
         `At least one state must be defined: ${states}`,

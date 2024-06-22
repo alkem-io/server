@@ -1,6 +1,7 @@
-import { CACHE_MANAGER, ValueProvider } from '@nestjs/common';
-import { PublicPart } from '../utils/public-part';
+import { ValueProvider } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
+import { PublicPart } from '../utils/public-part';
 
 export const MockCacheManager: ValueProvider<PublicPart<Cache>> = {
   provide: CACHE_MANAGER,

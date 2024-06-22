@@ -1,4 +1,4 @@
-import { DeleteBaseAlkemioInput } from '@domain/common/entity/base-entity/base.alkemio.dto.delete';
+import { DeleteBaseAlkemioInput } from '@domain/common/entity/base-entity/dto/base.alkemio.dto.delete';
 import { InputType } from '@nestjs/graphql';
 
 @InputType()

@@ -1,4 +1,4 @@
-FROM node:16.15.0-alpine
+FROM node:20.9.0-alpine
 
 
 # Create app directory
@@ -13,7 +13,7 @@ ARG ENV_ARG=production
 # where available (npm@5+)
 COPY package*.json ./
 
-RUN npm i -g npm@8.5.5
+RUN npm i -g npm@10.1.0
 RUN npm install
 
 # If you are building your code for production
@@ -35,4 +35,4 @@ ENV GRAPHQL_ENDPOINT_PORT=${GRAPHQL_ENDPOINT_PORT_ARG}
 ENV NODE_ENV=${ENV_ARG}
 
 EXPOSE ${GRAPHQL_ENDPOINT_PORT_ARG}
-CMD ["/bin/sh", "-c", "npm run start:prod"]
+CMD ["/bin/sh", "-c", "npm run start:prod NODE_OPTIONS=--max-old-space-size=2048"]

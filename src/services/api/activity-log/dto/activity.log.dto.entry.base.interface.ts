@@ -1,10 +1,10 @@
 import { ActivityEventType } from '@common/enums/activity.event.type';
-import { JourneyTypeEnum } from '@common/enums/journey.type';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { IUser } from '@domain/community/user';
 import { Field } from '@nestjs/graphql';
 import { NameID } from '@domain/common/scalars';
-import { IJourney } from '@domain/challenge/base-challenge/journey.interface';
+import { SpaceType } from '@common/enums/space.type';
+import { ISpace } from '@domain/space/space/space.interface';
 
 export abstract class IActivityLogEntryBase {
   @Field(() => UUID, {
@@ -60,15 +60,15 @@ export abstract class IActivityLogEntryBase {
   })
   parentDisplayName!: string;
 
-  @Field(() => JourneyTypeEnum, {
+  @Field(() => SpaceType, {
     nullable: true,
     description: 'The type of journey',
   })
-  journeyType?: JourneyTypeEnum;
+  journeyType?: SpaceType;
 
-  @Field(() => IJourney, {
+  @Field(() => ISpace, {
     nullable: true,
     description: 'The journey where the activity happened',
   })
-  journey?: IJourney;
+  journey?: ISpace;
 }

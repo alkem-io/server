@@ -1,20 +1,13 @@
-export const CREDENTIAL_RULE_CHALLENGE_SPACE_ADMINS =
-  'credentialRule-challengeSpaceAdmins';
-export const CREDENTIAL_RULE_CHALLENGE_ADMINS =
-  'credentialRule-challengeAdmins';
-export const CREDENTIAL_RULE_CHALLENGE_MEMBER_READ =
-  'credentialRule-challengeMemberRead';
-export const CREDENTIAL_RULE_CHALLENGE_CREATE_OPPORTUNITY =
-  'credentialRule-challengeCreateOpportunity';
-export const CREDENTIAL_RULE_CHALLENGE_SPACE_MEMBER_JOIN =
-  'credentialRule-challengeSpaceMemberJoin';
-export const CREDENTIAL_RULE_CHALLENGE_SPACE_MEMBER_APPLY =
-  'credentialRule-challengeSpaceMemberApply';
-export const CREDENTIAL_RULE_CHALLENGE_SPACE_ADMIN_DELETE =
-  'credentialRule-challengeSpaceAdminDelete';
+export const CREDENTIAL_RULE_SUBSPACE_ADMINS = 'credentialRule-SubspaceAdmins';
+export const CREDENTIAL_RULE_MEMBER_CREATE_SUBSPACE =
+  'credentialRule-memberCreateSubspace';
+export const CREDENTIAL_RULE_SUBSPACE_PARENT_MEMBER_JOIN =
+  'credentialRule-subspaceParentMemberJoin';
+export const CREDENTIAL_RULE_SUBSPACE_PARENT_MEMBER_APPLY =
+  'credentialRule-subspaceParentMemberApply';
+export const CREDENTIAL_RULE_SPACE_ADMIN_DELETE_SUBSPACE =
+  'credentialRule-SpaceAdminDeleteSubspace';
 export const CREDENTIAL_RULE_SPACE_ADMINS = 'credentialRule-spaceAdmins';
-export const CREDENTIAL_RULE_SPACE_MEMBERS_CREATE_CHALLENGES =
-  'credentialRule-spaceMembersCreateChallenges';
 export const CREDENTIAL_RULE_SPACE_MEMBERS_READ =
   'credentialRule-spaceMembersRead';
 export const CREDENTIAL_RULE_SPACE_HOST_ASSOCIATES_JOIN =
@@ -32,10 +25,6 @@ export const CREDENTIAL_RULE_CALLOUT_CREATED_BY =
   'credentialRule-calloutCreatedBy';
 export const CREDENTIAL_RULE_COLLABORATION_CONTRIBUTORS =
   'credentialRule-collaborationContributors';
-export const CREDENTIAL_RULE_OPPORTUNITY_ADMIN =
-  'credentialRule-opportunityAdmin';
-export const CREDENTIAL_RULE_OPPORTUNITY_MEMBER =
-  'credentialRule-opportunityMember';
 export const CREDENTIAL_RULE_RELATION_CREATED_BY =
   'credentialRule-relationCreatedBy';
 export const CREDENTIAL_RULE_WHITEBOARD_CREATED_BY =
@@ -64,10 +53,14 @@ export const CREDENTIAL_RULE_ORGANIZATION_SELF_REMOVAL =
   'credentialRule-organizationSelfRemoval';
 export const CREDENTIAL_RULE_USER_GROUP_READ = 'credentialRule-userGroupRead';
 export const CREDENTIAL_RULE_USER_SELF_ADMIN = 'credentialRule-userSelfAdmin';
+export const CREDENTIAL_RULE_LICENSE_MANAGER = 'credentialRule-licenseManager';
 export const CREDENTIAL_RULE_USER_READ_PII = 'credentialRule-userReadPii';
+export const CREDENTIAL_RULE_USER_READ = 'credentialRule-userRead';
 export const CREDENTIAL_RULE_CALENDAR_EVENT_CREATED_BY =
   'credentialRule-calendarEventCreatedBy';
 export const CREDENTIAL_RULE_DOCUMENT_CREATED_BY =
   'credentialRule-documentCreatedBy';
 export const CREDENTIAL_RULE_LIBRARY_INNOVATION_PACK_PROVIDER_ADMIN =
   'credentialRule-libraryInnovationPackProvider';
+export const CREDENTIAL_RULE_VIRTUAL_CONTRIBUTOR_CREATED_BY =
+  'credentialRule-virtualContributorCreatedBy';

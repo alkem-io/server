@@ -19,7 +19,7 @@ import { CredentialsSearchInput } from '@domain/agent/credential/dto/credentials
 import { IAuthorizationPolicyRuleCredential } from '../../../core/authorization/authorization.policy.rule.credential.interface';
 import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AgentInfo } from '@core/authentication/agent-info';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationPolicyRuleVerifiedCredential } from '@core/authorization/authorization.policy.rule.verified.credential';
 import { IAuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege.interface';
 import { IAuthorizationPolicyRuleVerifiedCredential } from '@core/authorization/authorization.policy.rule.verified.credential.interface';
@@ -85,11 +85,11 @@ export class AuthorizationPolicyService {
         case AuthorizationRoleGlobal.GLOBAL_ADMIN:
           credType = AuthorizationCredential.GLOBAL_ADMIN;
           break;
-        case AuthorizationRoleGlobal.GLOBAL_COMMUNITY_ADMIN:
-          credType = AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY;
+        case AuthorizationRoleGlobal.GLOBAL_COMMUNITY_READ:
+          credType = AuthorizationCredential.GLOBAL_COMMUNITY_READ;
           break;
-        case AuthorizationRoleGlobal.GLOBAL_ADMIN_SPACES:
-          credType = AuthorizationCredential.GLOBAL_ADMIN_SPACES;
+        case AuthorizationRoleGlobal.GLOBAL_SUPPORT:
+          credType = AuthorizationCredential.GLOBAL_SUPPORT;
           break;
         default:
           throw new ForbiddenException(
@@ -287,6 +287,12 @@ export class AuthorizationPolicyService {
     // create a new child definition if one is not provided, a temporary fix
     let child = childAuthorization;
     if (!child) {
+      this.logger.error(
+        `Encountered undefined child authorization policy, parent authorization: ${JSON.stringify(
+          parentAuthorization
+        )}`,
+        LogContext.AUTH
+      );
       child = new AuthorizationPolicy();
     }
     const parent = this.validateAuthorization(parentAuthorization);

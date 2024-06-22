@@ -27,6 +27,7 @@ import { StorageAggregatorResolverModule } from '@services/infrastructure/storag
     CommunicationAdapterModule,
     CommunicationAdapterModule,
     EntityResolverModule,
+    NamingModule,
     PlatformAuthorizationPolicyModule,
     StorageAggregatorResolverModule,
     NamingModule,

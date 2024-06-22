@@ -80,7 +80,7 @@ export class DiscussionAuthorizationService {
       );
 
     discussion.comments =
-      await this.roomAuthorizationService.applyAuthorizationPolicy(
+      this.roomAuthorizationService.applyAuthorizationPolicy(
         discussion.comments,
         clonedAuthorization
       );
@@ -107,8 +107,7 @@ export class DiscussionAuthorizationService {
         [AuthorizationPrivilege.UPDATE],
         [
           AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_ADMIN_SPACES,
-          AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY,
+          AuthorizationCredential.GLOBAL_SUPPORT,
         ],
         CREDENTIAL_RULE_TYPES_UPDATE_FORUM_DISCUSSION
       );

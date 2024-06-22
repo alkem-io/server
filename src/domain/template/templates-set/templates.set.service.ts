@@ -8,13 +8,16 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { ICommunityGuidelinesTemplate } from '@domain/template/community-guidelines-template/community.guidelines.template.interface';
+import { CreateCommunityGuidelinesTemplateInput } from '@domain/template/community-guidelines-template/dto/community.guidelines.template.dto.create';
 import { TemplatesSet } from './templates.set.entity';
 import { ITemplatesSet } from './templates.set.interface';
-import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { PostTemplateService } from '../post-template/post.template.service';
 import { WhiteboardTemplateService } from '../whiteboard-template/whiteboard.template.service';
 import { InnovationFlowTemplateService } from '../innovation-flow-template/innovation.flow.template.service';
+import { CommunityGuidelinesTemplateService } from '../community-guidelines-template/community.guidelines.template.service';
 import { IPostTemplate } from '../post-template/post.template.interface';
 import { IWhiteboardTemplate } from '../whiteboard-template/whiteboard.template.interface';
 import { IInnovationFlowTemplate } from '../innovation-flow-template/innovation.flow.template.interface';
@@ -24,7 +27,7 @@ import { CreateInnovationFlowTemplateInput } from '../innovation-flow-template/d
 import { ICalloutTemplate } from '../callout-template/callout.template.interface';
 import { CreateCalloutTemplateInput } from '../callout-template/dto/callout.template.dto.create';
 import { CalloutTemplateService } from '../callout-template/callout.template.service';
-import { AgentInfo } from '@core/authentication/agent-info';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 
@@ -39,6 +42,7 @@ export class TemplatesSetService {
     private postTemplateService: PostTemplateService,
     private whiteboardTemplateService: WhiteboardTemplateService,
     private innovationFlowTemplateService: InnovationFlowTemplateService,
+    private communityGuidelinesTemplateService: CommunityGuidelinesTemplateService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -48,6 +52,7 @@ export class TemplatesSetService {
     templatesSet.postTemplates = [];
     templatesSet.whiteboardTemplates = [];
     templatesSet.innovationFlowTemplates = [];
+    templatesSet.communityGuidelinesTemplates = [];
 
     return await this.templatesSetRepository.save(templatesSet);
   }
@@ -75,6 +80,8 @@ export class TemplatesSetService {
         postTemplates: true,
         whiteboardTemplates: true,
         innovationFlowTemplates: true,
+        communityGuidelinesTemplates: true,
+        calloutTemplates: true,
       },
     });
 
@@ -97,6 +104,20 @@ export class TemplatesSetService {
       for (const innovationFlowTemplate of templatesSet.innovationFlowTemplates) {
         await this.innovationFlowTemplateService.deleteInnovationFlowTemplate(
           innovationFlowTemplate
+        );
+      }
+    }
+    if (templatesSet.calloutTemplates) {
+      for (const calloutTemplate of templatesSet.calloutTemplates) {
+        await this.calloutTemplateService.deleteCalloutTemplate(
+          calloutTemplate
+        );
+      }
+    }
+    if (templatesSet.communityGuidelinesTemplates) {
+      for (const communityGuidelinesTemplate of templatesSet.communityGuidelinesTemplates) {
+        await this.communityGuidelinesTemplateService.deleteCommunityGuidelinesTemplate(
+          communityGuidelinesTemplate
         );
       }
     }
@@ -147,6 +168,40 @@ export class TemplatesSetService {
       );
     }
     return templatesSetPopulated.calloutTemplates;
+  }
+
+  public getCommunityGuidelinesTemplate(
+    templateId: string,
+    templatesSetId: string
+  ): Promise<ICommunityGuidelinesTemplate> {
+    return this.communityGuidelinesTemplateService.getCommunityGuidelinesTemplateOrFail(
+      templateId,
+      {
+        where: { templatesSet: { id: templatesSetId } },
+      }
+    );
+  }
+
+  async getCommunityGuidelinesTemplates(
+    templatesSet: ITemplatesSet
+  ): Promise<ICommunityGuidelinesTemplate[]> {
+    const templatesSetPopulated = await this.getTemplatesSetOrFail(
+      templatesSet.id,
+      {
+        relations: {
+          communityGuidelinesTemplates: {
+            profile: true,
+          },
+        },
+      }
+    );
+    if (!templatesSetPopulated.communityGuidelinesTemplates) {
+      throw new EntityNotInitializedException(
+        `TemplatesSet not initialized: ${templatesSetPopulated.id}`,
+        LogContext.TEMPLATES
+      );
+    }
+    return templatesSetPopulated.communityGuidelinesTemplates;
   }
 
   public getPostTemplate(
@@ -227,7 +282,7 @@ export class TemplatesSetService {
 
     for (const innovationFlowTemplateDefault of innovationFlowTemplateInputs) {
       const innovationFlowTemplate =
-        await this.innovationFlowTemplateService.createInnovationFLowTemplate(
+        await this.innovationFlowTemplateService.createInnovationFlowTemplate(
           innovationFlowTemplateDefault,
           storageAggregator
         );
@@ -321,6 +376,34 @@ export class TemplatesSetService {
     return whiteboardTemplate;
   }
 
+  async createCommunityGuidelinesTemplate(
+    templatesSet: ITemplatesSet,
+    communityGuidelinesTemplateInput: CreateCommunityGuidelinesTemplateInput
+  ): Promise<ICommunityGuidelinesTemplate> {
+    if (
+      !communityGuidelinesTemplateInput.communityGuidelinesID &&
+      !communityGuidelinesTemplateInput.communityGuidelines
+    ) {
+      throw new ValidationException(
+        'A Community Guidelines ID or a Community Guidelines input must be provided',
+        LogContext.CONTEXT
+      );
+    }
+
+    templatesSet.communityGuidelinesTemplates =
+      await this.getCommunityGuidelinesTemplates(templatesSet);
+
+    const storageAggregator = await this.getStorageAggregator(templatesSet);
+    const communityGuidelinesTemplate =
+      await this.communityGuidelinesTemplateService.createCommunityGuidelinesTemplate(
+        communityGuidelinesTemplateInput,
+        storageAggregator
+      );
+    templatesSet.communityGuidelinesTemplates.push(communityGuidelinesTemplate);
+    await this.templatesSetRepository.save(templatesSet);
+    return communityGuidelinesTemplate;
+  }
+
   async getInnovationFlowTemplates(
     templatesSet: ITemplatesSet
   ): Promise<IInnovationFlowTemplate[]> {
@@ -370,7 +453,7 @@ export class TemplatesSetService {
     }
     const storageAggregator = await this.getStorageAggregator(templatesSet);
     const innovationFlowTemplate =
-      await this.innovationFlowTemplateService.createInnovationFLowTemplate(
+      await this.innovationFlowTemplateService.createInnovationFlowTemplate(
         innovationFlowTemplateInput,
         storageAggregator
       );
@@ -391,7 +474,20 @@ export class TemplatesSetService {
       templatesSetID
     );
 
-    return whiteboardTemplatesCount + postTemplatesCount + innovationFlowsCount;
+    const calloutTemplatesCount = await this.getCalloutTemplatesCount(
+      templatesSetID
+    );
+
+    const communityGuidelinesTemplatesCount =
+      await this.getCommunityGuidelinesTemplatesCount(templatesSetID);
+
+    return (
+      whiteboardTemplatesCount +
+      postTemplatesCount +
+      innovationFlowsCount +
+      calloutTemplatesCount +
+      communityGuidelinesTemplatesCount
+    );
   }
 
   getWhiteboardTemplatesCount(templatesSetID: string): Promise<number> {
@@ -406,6 +502,18 @@ export class TemplatesSetService {
 
   getInnovationFlowTemplatesCount(templatesSetID: string): Promise<number> {
     return this.innovationFlowTemplateService.getCountInTemplatesSet(
+      templatesSetID
+    );
+  }
+
+  getCalloutTemplatesCount(templatesSetID: string): Promise<number> {
+    return this.calloutTemplateService.getCountInTemplatesSet(templatesSetID);
+  }
+
+  getCommunityGuidelinesTemplatesCount(
+    templatesSetID: string
+  ): Promise<number> {
+    return this.communityGuidelinesTemplateService.getCountInTemplatesSet(
       templatesSetID
     );
   }

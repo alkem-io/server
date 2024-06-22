@@ -24,17 +24,18 @@
               - forbidden
 
 
-- id: 'alkemio:api:private:rest'
+- id: 'alkemio:api:private:rest:storage'
   upstream:
     preserve_host: true
-    url: 'http://host.docker.internal:4000'
+    url: 'http://file-service:4003'
   match:
-    url: 'http://localhost:3000/rest/<**>'
+    url: 'http://localhost:3000/rest/storage/<**>'
     methods:
       - GET
   authenticators:
-    - handler: cookie_session
-    - handler: noop
+    - handler: bearer_token   # for API clients
+    - handler: cookie_session # for browsers
+    - handler: noop           # no authentication
   authorizer:
     handler: allow
   mutators:
@@ -44,7 +45,7 @@
 - id: 'alkemio:api:private:ws:socket-io'
   upstream:
     preserve_host: true
-    url: 'http://host.docker.internal:4001'
+    url: 'http://whiteboard-collaboration:4002'
   match:
     url: 'http://localhost:3000/socket.io/<**>'
     methods:

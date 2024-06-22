@@ -16,6 +16,7 @@ import {
 } from './event.names';
 import { SocketIoSocket } from './socket.io.socket';
 import { CollaboratorModeReasons } from './collaboration.mode.reasons';
+import { SaveResponse } from './save.reponse';
 
 type ListenEvents = {
   [CONNECTION]: (socket: SocketIoSocket) => void;
@@ -28,13 +29,13 @@ type EmitEvents = {
   [INIT_ROOM]: () => void;
   [CLIENT_BROADCAST]: (data: ArrayBuffer) => void;
   [ROOM_USER_CHANGE]: (socketIDs: Array<string>) => void;
-  [SERVER_SAVE_REQUEST]: () => void;
   [SAVED]: () => void;
   [FIRST_IN_ROOM]: () => void;
   [COLLABORATOR_MODE]: (data: {
     mode: 'read' | 'write';
     reason?: CollaboratorModeReasons;
   }) => void;
+  [SERVER_SAVE_REQUEST]: (cb: (val: SaveResponse) => void) => void;
 };
 type ServerSideEvents = {
   [SERVER_SIDE_ROOM_DELETED]: (serverId: string, roomId: string) => void;

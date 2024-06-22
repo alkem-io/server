@@ -5,7 +5,7 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy/author
 import { UseGuards } from '@nestjs/common';
 import { GraphqlGuard } from '@core/authorization';
 import { CurrentUser, Profiling } from '@common/decorators';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { CommunicationAdminEnsureAccessInput } from './dto/admin.communication.dto.ensure.access.input';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AdminCommunicationService } from './admin.communication.service';

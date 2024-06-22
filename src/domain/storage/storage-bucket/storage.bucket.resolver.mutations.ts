@@ -2,7 +2,7 @@ import { UseGuards } from '@nestjs/common';
 import { Resolver, Mutation, Args } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { StorageBucketService } from './storage.bucket.service';
@@ -60,7 +60,7 @@ export class StorageBucketResolverMutations {
         document,
         storageBucket.authorization
       );
-
+    await this.documentService.saveDocument(documentAuthorized);
     return this.documentService.getPubliclyAccessibleURL(documentAuthorized);
   }
 

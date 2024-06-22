@@ -1,6 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
@@ -8,7 +6,6 @@ import { EntityNotInitializedException } from '@common/exceptions/entity.not.ini
 import { LogContext } from '@common/enums/logging.context';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
-import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { CalloutAuthorizationService } from '@domain/collaboration/callout/callout.service.authorization';
 import { AuthorizationCredential } from '@common/enums';
@@ -16,9 +13,7 @@ import { ICommunityPolicy } from '@domain/community/community-policy/community.p
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { CommunityPolicyService } from '@domain/community/community-policy/community.policy.service';
-import { CommunityPolicyFlag } from '@common/enums/community.policy.flag';
 import {
-  CREDENTIAL_RULE_TYPES_COLLABORATION_CREATE_RELATION_REGISTERED,
   CREDENTIAL_RULE_COLLABORATION_CONTRIBUTORS,
   POLICY_RULE_COLLABORATION_CREATE,
   POLICY_RULE_CALLOUT_CONTRIBUTE,
@@ -30,31 +25,54 @@ import { CommunityRole } from '@common/enums/community.role';
 import { TimelineAuthorizationService } from '@domain/timeline/timeline/timeline.service.authorization';
 import { ICallout } from '../callout/callout.interface';
 import { ILicense } from '@domain/license/license/license.interface';
-import { LicenseService } from '@domain/license/license/license.service';
-import { LicenseFeatureFlagName } from '@common/enums/license.feature.flag.name';
 import { InnovationFlowAuthorizationService } from '../innovation-flow/innovation.flow.service.authorization';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
+import { LicenseEngineService } from '@core/license-engine/license.engine.service';
+import { LicensePrivilege } from '@common/enums/license.privilege';
 
 @Injectable()
 export class CollaborationAuthorizationService {
   constructor(
+    private licenseEngineService: LicenseEngineService,
     private collaborationService: CollaborationService,
     private communityPolicyService: CommunityPolicyService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private timelineAuthorizationService: TimelineAuthorizationService,
-    private licenseService: LicenseService,
     private calloutAuthorizationService: CalloutAuthorizationService,
-    private innovationFlowAuthorizationService: InnovationFlowAuthorizationService,
-    @InjectRepository(Collaboration)
-    private collaborationRepository: Repository<Collaboration>
+    private innovationFlowAuthorizationService: InnovationFlowAuthorizationService
   ) {}
 
   public async applyAuthorizationPolicy(
-    collaboration: ICollaboration,
+    collaborationInput: ICollaboration,
     parentAuthorization: IAuthorizationPolicy | undefined,
     communityPolicy: ICommunityPolicy,
     license: ILicense
   ): Promise<ICollaboration> {
+    const collaboration =
+      await this.collaborationService.getCollaborationOrFail(
+        collaborationInput.id,
+        {
+          relations: {
+            callouts: true,
+            innovationFlow: {
+              profile: true,
+            },
+            timeline: true,
+            relations: true,
+          },
+        }
+      );
+    if (
+      !collaboration.callouts ||
+      !collaboration.innovationFlow ||
+      !collaboration.timeline ||
+      !collaboration.relations
+    ) {
+      throw new RelationshipNotFoundException(
+        `Unable to load child entities for collaboration authorization:  ${collaboration.id}`,
+        LogContext.SPACES
+      );
+    }
     collaboration.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         collaboration.authorization,
@@ -76,38 +94,27 @@ export class CollaborationAuthorizationService {
       communityPolicy,
       license
     );
-    await this.collaborationRepository.save(collaboration);
-    return await this.propagateAuthorizationToChildEntities(
+
+    return this.propagateAuthorizationToChildEntities(
       collaboration,
       communityPolicy
     );
   }
 
-  public async propagateAuthorizationToChildEntities(
-    collaborationInput: ICollaboration,
+  private async propagateAuthorizationToChildEntities(
+    collaboration: ICollaboration,
     communityPolicy: ICommunityPolicy
   ): Promise<ICollaboration> {
-    const collaboration =
-      await this.collaborationService.getCollaborationOrFail(
-        collaborationInput.id,
-        {
-          relations: {
-            callouts: true,
-            innovationFlow: true,
-            timeline: true,
-            relations: true,
-          },
-        }
-      );
     if (
       !collaboration.callouts ||
       !collaboration.innovationFlow ||
+      !collaboration.innovationFlow.profile ||
       !collaboration.timeline ||
       !collaboration.relations
     ) {
       throw new RelationshipNotFoundException(
-        `Unable to load child entities for collaboration authorization:  ${collaboration.id}`,
-        LogContext.CHALLENGES
+        `Unable to load child entities for collaboration authorization children:  ${collaboration.id}`,
+        LogContext.SPACES
       );
     }
 
@@ -135,6 +142,12 @@ export class CollaborationAuthorizationService {
         communityPolicy
       );
 
+    collaboration.innovationFlow =
+      await this.innovationFlowAuthorizationService.applyAuthorizationPolicy(
+        collaboration.innovationFlow,
+        collaboration.authorization
+      );
+
     collaboration.timeline =
       await this.timelineAuthorizationService.applyAuthorizationPolicy(
         collaboration.timeline,
@@ -149,49 +162,32 @@ export class CollaborationAuthorizationService {
         );
     }
 
-    collaboration.innovationFlow =
-      await this.innovationFlowAuthorizationService.applyAuthorizationPolicy(
-        collaboration.innovationFlow,
-        collaboration.authorization
-      );
-
-    return await this.collaborationService.save(collaboration);
+    return collaboration;
   }
 
   private getContributorCredentials(
     policy: ICommunityPolicy
   ): ICredentialDefinition[] {
     // add challenge members
-    const contributors = [
-      this.communityPolicyService.getCredentialForRole(
+    let contributorCriterias =
+      this.communityPolicyService.getCredentialsForRole(
         policy,
         CommunityRole.MEMBER
-      ),
-    ];
+      );
     // optionally add space members
-    if (
-      this.communityPolicyService.getFlag(
-        policy,
-        CommunityPolicyFlag.ALLOW_SPACE_MEMBERS_TO_CONTRIBUTE
-      )
-    ) {
-      const parentCredentials =
-        this.communityPolicyService.getParentCredentialsForRole(
+    if (policy.settings.collaboration.inheritMembershipRights) {
+      contributorCriterias =
+        this.communityPolicyService.getCredentialsForRoleWithParents(
           policy,
           CommunityRole.MEMBER
         );
-      contributors.push(...parentCredentials);
     }
 
-    contributors.push({
+    contributorCriterias.push({
       type: AuthorizationCredential.GLOBAL_ADMIN,
       resourceID: '',
     });
-    contributors.push({
-      type: AuthorizationCredential.GLOBAL_ADMIN_SPACES,
-      resourceID: '',
-    });
-    return contributors;
+    return contributorCriterias;
   }
 
   private async appendCredentialRules(
@@ -209,32 +205,29 @@ export class CollaborationAuthorizationService {
 
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
-    const communityMemberNotInherited =
-      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.CREATE_RELATION],
-        [AuthorizationCredential.USER_SELF_MANAGEMENT],
-        CREDENTIAL_RULE_TYPES_COLLABORATION_CREATE_RELATION_REGISTERED
-      );
-    communityMemberNotInherited.cascade = false;
-    newRules.push(communityMemberNotInherited);
-
     const saveAsTemplateEnabled =
-      await this.licenseService.isFeatureFlagEnabled(
-        license,
-        LicenseFeatureFlagName.CALLOUT_TO_CALLOUT_TEMPLATE
+      await this.licenseEngineService.isAccessGranted(
+        LicensePrivilege.CALLOUT_SAVE_AS_TEMPLATE,
+        license
       );
     if (saveAsTemplateEnabled) {
-      const saveAsTemplate =
-        this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+      const adminCriterias = this.communityPolicyService.getCredentialsForRole(
+        policy,
+        CommunityRole.ADMIN
+      );
+      adminCriterias.push({
+        type: AuthorizationCredential.GLOBAL_ADMIN,
+        resourceID: '',
+      });
+      const saveAsTemplateRule =
+        this.authorizationPolicyService.createCredentialRule(
           [AuthorizationPrivilege.SAVE_AS_TEMPLATE],
-          [
-            AuthorizationCredential.GLOBAL_ADMIN,
-            AuthorizationCredential.GLOBAL_ADMIN_SPACES,
-          ],
+          adminCriterias,
           CREDENTIAL_RULE_TYPES_CALLOUT_SAVE_AS_TEMPLATE
         );
-      saveAsTemplate.cascade = false;
-      newRules.push(saveAsTemplate);
+
+      saveAsTemplateRule.cascade = false;
+      newRules.push(saveAsTemplateRule);
     }
 
     return this.authorizationPolicyService.appendCredentialAuthorizationRules(
@@ -281,18 +274,15 @@ export class CollaborationAuthorizationService {
     const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
 
     const createPrivilege = new AuthorizationPolicyRulePrivilege(
-      [
-        AuthorizationPrivilege.CREATE_CALLOUT,
-        AuthorizationPrivilege.CREATE_RELATION,
-      ],
+      [AuthorizationPrivilege.CREATE_CALLOUT],
       AuthorizationPrivilege.CREATE,
       POLICY_RULE_COLLABORATION_CREATE
     );
     privilegeRules.push(createPrivilege);
 
-    const whiteboardRtEnabled = await this.licenseService.isFeatureFlagEnabled(
-      license,
-      LicenseFeatureFlagName.WHITEBOARD_MULTI_USER
+    const whiteboardRtEnabled = await this.licenseEngineService.isAccessGranted(
+      LicensePrivilege.WHITEBOARD_MULTI_USER,
+      license
     );
     if (whiteboardRtEnabled) {
       const createWhiteboardRtPrivilege = new AuthorizationPolicyRulePrivilege(
@@ -302,12 +292,8 @@ export class CollaborationAuthorizationService {
       );
       privilegeRules.push(createWhiteboardRtPrivilege);
     }
-    if (
-      this.communityPolicyService.getFlag(
-        policy,
-        CommunityPolicyFlag.ALLOW_CONTRIBUTORS_TO_CREATE_CALLOUTS
-      )
-    ) {
+    const collaborationSettings = policy.settings.collaboration;
+    if (collaborationSettings.allowMembersToCreateCallouts) {
       const createCalloutPrivilege = new AuthorizationPolicyRulePrivilege(
         [AuthorizationPrivilege.CREATE_CALLOUT],
         AuthorizationPrivilege.CONTRIBUTE,

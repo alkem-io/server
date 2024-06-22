@@ -4,7 +4,7 @@ import {
   Profiling,
 } from '@common/decorators';
 import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { GraphqlGuard } from '@core/authorization';
 import { IAgent } from '@domain/agent/agent';
 import { IUser, User } from '@domain/community/user';
@@ -66,7 +66,7 @@ export class UserResolverFields {
   }
 
   @ResolveField('agent', () => IAgent, {
-    nullable: true,
+    nullable: false,
     description: 'The Agent representing this User.',
   })
   @Profiling.api
@@ -97,7 +97,6 @@ export class UserResolverFields {
     nullable: false,
     description: 'The preferences for this user',
   })
-  @Profiling.api
   async preferences(
     @Parent() user: User,
     @CurrentUser() agentInfo: AgentInfo
@@ -107,7 +106,7 @@ export class UserResolverFields {
       !(await this.isAccessGranted(
         user,
         agentInfo,
-        AuthorizationPrivilege.UPDATE
+        AuthorizationPrivilege.READ_USER_SETTINGS
       ))
     ) {
       return [];
@@ -242,8 +241,8 @@ export class UserResolverFields {
       // todo: remove later, this is code to track down a particular race condition: https://github.com/alkem-io/notifications/issues/283
       const hasGlobalAdminCredential = agentInfo.credentials.some(
         credential =>
-          credential.type === AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY ||
-          credential.type === AuthorizationCredential.GLOBAL_ADMIN_SPACES
+          credential.type === AuthorizationCredential.GLOBAL_COMMUNITY_READ ||
+          credential.type === AuthorizationCredential.GLOBAL_SUPPORT
       );
       if (hasGlobalAdminCredential) {
         this.logger.error(

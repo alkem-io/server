@@ -6,8 +6,8 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository, FindOneOptions } from 'typeorm';
 import { FeatureFlag } from './feature.flag.entity';
 import { ILicenseFeatureFlag } from './feature.flag.interface';
-import { UpdateFeatureFlagInput } from './dto/feature.flag.dto.update';
 import { CreateFeatureFlagInput } from './dto/feature.flag.dto.create';
+import { UpdateFeatureFlagInput } from './dto/feature.flag.dto.update';
 
 @Injectable()
 export class FeatureFlagService {
@@ -49,13 +49,11 @@ export class FeatureFlagService {
     return featureFlag;
   }
 
-  async updateFeatureFlag(
-    featureFlagID: string,
+  public async updateFeatureFlag(
+    featureFlag: ILicenseFeatureFlag,
     licenseUpdateData: UpdateFeatureFlagInput
   ): Promise<ILicenseFeatureFlag> {
-    const featureFlag = await this.getFeatureFlagOrFail(featureFlagID);
     featureFlag.enabled = licenseUpdateData.enabled;
-    featureFlag.name = licenseUpdateData.name;
     return await this.save(featureFlag);
   }
 

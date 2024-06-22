@@ -1,5 +1,4 @@
 import {
-  Column,
   Entity,
   JoinColumn,
   JoinTable,
@@ -16,9 +15,6 @@ import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { IQuestion } from '@domain/common/question/question.interface';
 @Entity()
 export class Application extends AuthorizableEntity implements IApplication {
-  @Column()
-  spaceID?: string;
-
   @OneToOne(() => Lifecycle, {
     eager: true,
     cascade: true,

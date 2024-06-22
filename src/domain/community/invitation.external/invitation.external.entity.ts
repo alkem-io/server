@@ -31,4 +31,7 @@ export class InvitationExternal
 
   @Column('boolean', { default: false })
   profileCreated!: boolean;
+
+  @Column('boolean', { default: false })
+  invitedToParent!: boolean;
 }

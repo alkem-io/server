@@ -1,38 +1,31 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { IDocument } from './document.interface';
-import { Document } from './document.entity';
 import {
   AuthorizationCredential,
   AuthorizationPrivilege,
   LogContext,
 } from '@common/enums';
-import { DocumentService } from './document.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { CREDENTIAL_RULE_DOCUMENT_CREATED_BY } from '@common/constants/authorization/credential.rule.constants';
+import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 @Injectable()
 export class DocumentAuthorizationService {
-  constructor(
-    private documentService: DocumentService,
-    private authorizationPolicyService: AuthorizationPolicyService,
-    @InjectRepository(Document)
-    private documentRepository: Repository<Document>
-  ) {}
+  constructor(private authorizationPolicyService: AuthorizationPolicyService) {}
 
-  async applyAuthorizationPolicy(
-    documentInput: IDocument,
+  applyAuthorizationPolicy(
+    document: IDocument,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): Promise<IDocument> {
-    const document = await this.documentService.getDocumentOrFail(
-      documentInput.id,
-      {
-        relations: { tagset: true },
-      }
-    );
+  ): IDocument {
+    if (!document.tagset) {
+      throw new RelationshipNotFoundException(
+        `Unable to find entities required to reset auth for Document ${document.id} `,
+        LogContext.STORAGE_BUCKET
+      );
+    }
+
     document.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         document.authorization,
@@ -42,15 +35,13 @@ export class DocumentAuthorizationService {
     // Extend to give the user creating the document more rights
     document.authorization = this.appendCredentialRules(document);
 
-    if (document.tagset) {
-      document.tagset.authorization =
-        this.authorizationPolicyService.inheritParentAuthorization(
-          document.tagset.authorization,
-          document.authorization
-        );
-    }
+    document.tagset.authorization =
+      this.authorizationPolicyService.inheritParentAuthorization(
+        document.tagset.authorization,
+        document.authorization
+      );
 
-    return await this.documentRepository.save(document);
+    return document;
   }
 
   private appendCredentialRules(document: IDocument): IAuthorizationPolicy {

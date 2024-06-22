@@ -1,5 +1,5 @@
-import { Injectable } from '@nestjs/common';
-import { AgentInfo } from '@core/authentication';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IMessage } from '../message/message.interface';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { ActivityInputCalloutPostComment } from '@services/adapters/activity-adapter/dto/activity.dto.input.callout.post.comment';
@@ -22,6 +22,20 @@ import { ICallout } from '@domain/collaboration/callout';
 import { ActivityInputCalloutDiscussionComment } from '@services/adapters/activity-adapter/dto/activity.dto.input.callout.discussion.comment';
 import { NotificationInputCommentReply } from '@services/adapters/notification-adapter/dto/notification.dto.input.comment.reply';
 import { IProfile } from '@domain/common/profile';
+import { Mention, MentionedEntityType } from '../messaging/mention.interface';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { LogContext } from '@common/enums/logging.context';
+import { MutationType } from '@common/enums/subscriptions/mutation.type';
+import { RoomSendMessageReplyInput } from '@domain/communication/room/dto/room.dto.send.message.reply';
+import { SubscriptionPublishService } from '@services/subscriptions/subscription-service/subscription.publish.service';
+import { RoomService } from './room.service';
+import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
+import { NotSupportedException } from '@common/exceptions';
+import { EntityManager } from 'typeorm';
+import { InjectEntityManager } from '@nestjs/typeorm';
+import { Space } from '@domain/space/space/space.entity';
+import { VirtualPersonaService } from '@platform/virtual-persona/virtual.persona.service';
+import { VirtualPersonaQuestionInput } from '@platform/virtual-persona/dto/virtual.persona.question.dto.input';
 
 @Injectable()
 export class RoomServiceEvents {
@@ -29,8 +43,126 @@ export class RoomServiceEvents {
     private activityAdapter: ActivityAdapter,
     private contributionReporter: ContributionReporterService,
     private notificationAdapter: NotificationAdapter,
-    private communityResolverService: CommunityResolverService
+    private communityResolverService: CommunityResolverService,
+    private roomService: RoomService,
+    private subscriptionPublishService: SubscriptionPublishService,
+    private virtualPersonaService: VirtualPersonaService,
+    private virtualContributorService: VirtualContributorService,
+    // this should use the space service but still the same circular dependency issue :(
+    @InjectEntityManager('default')
+    private entityManager: EntityManager,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService
   ) {}
+
+  // should this use Space Service?
+  private async getSpaceNameId(id: string) {
+    const space = await this.entityManager.findOneByOrFail(Space, { id });
+    return space.nameID;
+  }
+
+  public async processVirtualContributorMentions(
+    mentions: Mention[],
+    question: Pick<IMessage, 'id' | 'message'>,
+    agentInfo: AgentInfo,
+    room: IRoom,
+    accessToVirtualContributors: boolean
+  ) {
+    const community = await this.communityResolverService.getCommunityFromRoom(
+      room.id,
+      room.type as RoomType
+    );
+
+    const spaceNameID =
+      await this.communityResolverService.getRootSpaceNameIDFromCommunityOrFail(
+        community
+      );
+
+    for (const mention of mentions) {
+      if (mention.type === MentionedEntityType.VIRTUAL_CONTRIBUTOR) {
+        // Only throw exception here for the case that there is an actual mention
+        if (!accessToVirtualContributors) {
+          throw new NotSupportedException(
+            `Access to Virtual Contributors is not supported for this room: ${room.id}`,
+            LogContext.COMMUNICATION
+          );
+        }
+
+        this.logger.warn(
+          `got mention for VC: ${mention.nameId}`,
+          LogContext.COMMUNICATION
+        );
+
+        const virtualContributor =
+          await this.virtualContributorService.getVirtualContributor(
+            mention.nameId,
+            {
+              relations: {
+                virtualPersona: true,
+              },
+            }
+          );
+
+        const virtualPersona = virtualContributor?.virtualPersona;
+
+        if (!virtualPersona) {
+          throw new Error(
+            `VirtualPersona not loaded for VirtualContributor ${virtualContributor?.nameID}`
+          );
+        }
+
+        const chatData: VirtualPersonaQuestionInput = {
+          virtualPersonaID: virtualPersona.id,
+          question: question.message,
+        };
+
+        let knowledgeSpaceId = undefined;
+        if (virtualContributor.bodyOfKnowledgeID) {
+          //toDo should not be needed, fix in https://app.zenhub.com/workspaces/alkemio-development-5ecb98b262ebd9f4aec4194c/issues/gh/alkem-io/virtual-contributor-ingest-space/5
+          knowledgeSpaceId = await this.getSpaceNameId(
+            virtualContributor.bodyOfKnowledgeID
+          );
+        }
+
+        const result = await this.virtualPersonaService.askQuestion(
+          chatData,
+          agentInfo,
+          spaceNameID,
+          knowledgeSpaceId
+        );
+
+        let answer = result.answer;
+        this.logger.warn(
+          `got answer for VC: ${answer}`,
+          LogContext.COMMUNICATION
+        );
+
+        if (result.sources) {
+          answer = `${answer}\n${result.sources
+            .map(({ title, uri }) => `- [${title}](${uri})`)
+            .join('\n')}`;
+        }
+
+        const answerData: RoomSendMessageReplyInput = {
+          message: answer,
+          roomID: room.id,
+          threadID: question.id,
+        };
+        const answerMessage = await this.roomService.sendMessageReply(
+          room,
+          virtualContributor.communicationID,
+          answerData,
+          'virtualContributor'
+        );
+
+        this.subscriptionPublishService.publishRoomEvent(
+          room.id,
+          MutationType.CREATE,
+          answerMessage
+        );
+      }
+    }
+  }
 
   public processNotificationMentions(
     parentEntityId: string,
@@ -39,7 +171,7 @@ export class RoomServiceEvents {
     room: IRoom,
     message: IMessage,
     agentInfo: AgentInfo
-  ) {
+  ): Mention[] {
     const mentions = getMentionsFromText(message.message);
     const entityMentionsNotificationInput: NotificationInputEntityMentions = {
       triggeredBy: agentInfo.userID,
@@ -54,6 +186,7 @@ export class RoomServiceEvents {
       commentType: room.type as RoomType,
     };
     this.notificationAdapter.entityMentions(entityMentionsNotificationInput);
+    return mentions;
   }
 
   public async processNotificationCommentReply(
@@ -130,11 +263,15 @@ export class RoomServiceEvents {
       await this.communityResolverService.getCommunityFromPostRoomOrFail(
         room.id
       );
+    const spaceID =
+      await this.communityResolverService.getRootSpaceIDFromCommunityOrFail(
+        community
+      );
     this.contributionReporter.calloutPostCommentCreated(
       {
         id: post.id,
         name: post.profile.displayName,
-        space: community.spaceID,
+        space: spaceID,
       },
       {
         id: agentInfo.userID,
@@ -166,9 +303,13 @@ export class RoomServiceEvents {
     };
     this.activityAdapter.updateSent(activityLogInput);
 
-    const { spaceID } =
+    const community =
       await this.communityResolverService.getCommunityFromUpdatesOrFail(
         room.id
+      );
+    const spaceID =
+      await this.communityResolverService.getRootSpaceIDFromCommunityOrFail(
+        community
       );
 
     this.contributionReporter.updateCreated(
@@ -207,9 +348,13 @@ export class RoomServiceEvents {
     };
     this.activityAdapter.calloutCommentCreated(activityLogInput);
 
-    const { spaceID } =
+    const community =
       await this.communityResolverService.getCommunityFromCalloutOrFail(
         callout.id
+      );
+    const spaceID =
+      await this.communityResolverService.getRootSpaceIDFromCommunityOrFail(
+        community
       );
 
     this.contributionReporter.calloutCommentCreated(

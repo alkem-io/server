@@ -29,4 +29,6 @@ export class CommunicationCreateDiscussionInput {
   @Field(() => [String], { nullable: true })
   @IsOptional()
   tags?: string[];
+
+  nameID?: string;
 }

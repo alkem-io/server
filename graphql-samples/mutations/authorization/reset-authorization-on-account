@@ -1,0 +1,16 @@
+mutation authorizationPolicyResetOnAccount(
+  $authorizationResetData: AccountAuthorizationResetInput!
+) {
+  authorizationPolicyResetOnAccount(
+    authorizationResetData: $authorizationResetData
+  ) {
+    id
+  }
+}
+
+
+{
+  "authorizationResetData": {
+    "accountID": "e21a7907-43f8-4ff8-833b-883c7e1292dc"
+  }
+}

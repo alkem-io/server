@@ -9,7 +9,7 @@ import {
 } from '@domain/context/actor-group';
 import { IActor } from '@domain/context/actor/actor.interface';
 import { AuthorizationPrivilege } from '@common/enums';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { CurrentUser } from '@common/decorators';
 import { ActorService } from '../actor/actor.service';

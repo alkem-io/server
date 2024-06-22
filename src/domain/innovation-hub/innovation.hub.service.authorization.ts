@@ -5,6 +5,13 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { IInnovationHub, InnovationHub } from './types';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
+import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
+import { LogContext } from '@common/enums/logging.context';
+import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
+import { CREDENTIAL_RULE_TYPES_INNOVATION_HUBS } from '@common/constants/authorization/credential.rule.types.constants';
 
 @Injectable()
 export class InnovationHubAuthorizationService {
@@ -17,20 +24,21 @@ export class InnovationHubAuthorizationService {
   ) {}
 
   public async applyAuthorizationPolicyAndSave(
-    space: IInnovationHub
+    hub: IInnovationHub
   ): Promise<IInnovationHub> {
-    space.authorization = this.authorizationPolicyService.reset(
-      space.authorization
+    hub.authorization = this.authorizationPolicyService.reset(
+      hub.authorization
     );
-    space.authorization =
+    hub.authorization =
       this.platformAuthorizationService.inheritRootAuthorizationPolicy(
-        space.authorization
+        hub.authorization
       );
-    space.authorization.anonymousReadAccess = true;
+    hub.authorization.anonymousReadAccess = true;
+    hub.authorization = this.extendAuthorizationPolicyRules(hub.authorization);
 
-    space = await this.cascadeAuthorization(space);
+    hub = await this.cascadeAuthorization(hub);
 
-    return this.spaceRepository.save(space);
+    return this.spaceRepository.save(hub);
   }
 
   private async cascadeAuthorization(
@@ -45,5 +53,42 @@ export class InnovationHubAuthorizationService {
     }
 
     return innovationHub;
+  }
+
+  private extendAuthorizationPolicyRules(
+    hubAuthorization: IAuthorizationPolicy
+  ): IAuthorizationPolicy {
+    if (!hubAuthorization) {
+      throw new EntityNotInitializedException(
+        'Authorization policy is not initialized on InnovationHub',
+        LogContext.INNOVATION_HUB
+      );
+    }
+
+    const newRules: IAuthorizationPolicyRuleCredential[] = [];
+    const innovationHubAdmins =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [
+          AuthorizationPrivilege.READ,
+          AuthorizationPrivilege.UPDATE,
+          AuthorizationPrivilege.CREATE,
+          AuthorizationPrivilege.DELETE,
+        ],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
+        ],
+        CREDENTIAL_RULE_TYPES_INNOVATION_HUBS
+      );
+    innovationHubAdmins.cascade = true;
+    newRules.push(innovationHubAdmins);
+
+    this.authorizationPolicyService.appendCredentialAuthorizationRules(
+      hubAuthorization,
+      newRules
+    );
+
+    return hubAuthorization;
   }
 }

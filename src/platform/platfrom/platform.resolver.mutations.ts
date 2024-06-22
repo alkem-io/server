@@ -1,20 +1,36 @@
 import { UseGuards } from '@nestjs/common';
-import { Resolver, Mutation } from '@nestjs/graphql';
+import { Resolver, Mutation, Args } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { IPlatform } from './platform.interface';
 import { PlatformAuthorizationService } from './platform.service.authorization';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
+import { RoleChangeType } from '@alkemio/notifications-lib';
+import { RemovePlatformRoleFromUserInput } from '@platform/platfrom/dto/platform.dto.remove.role.user';
+import { IUser } from '@domain/community/user/user.interface';
+import { NotificationInputPlatformGlobalRoleChange } from '@services/adapters/notification-adapter/dto/notification.dto.input.platform.global.role.change';
+import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
+import { PlatformService } from './platform.service';
+import { AssignPlatformRoleToUserInput } from './dto/platform.dto.assign.role.user';
+import { PlatformRole } from '@common/enums/platform.role';
+import { IVirtualPersona } from '@platform/virtual-persona/virtual.persona.interface';
+import { CreateVirtualPersonaInput } from '@platform/virtual-persona/dto/virtual.persona.dto.create';
+import { VirtualPersonaService } from '@platform/virtual-persona/virtual.persona.service';
+import { VirtualPersonaAuthorizationService } from '@platform/virtual-persona/virtual.persona.service.authorization';
 
 @Resolver()
 export class PlatformResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
+    private notificationAdapter: NotificationAdapter,
+    private platformService: PlatformService,
     private platformAuthorizationService: PlatformAuthorizationService,
-    private platformAuthorizationPolicyService: PlatformAuthorizationPolicyService
+    private platformAuthorizationPolicyService: PlatformAuthorizationPolicyService,
+    private virtualPersonaService: VirtualPersonaService,
+    private virtualPersonaAuthorizationService: VirtualPersonaAuthorizationService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -30,9 +46,126 @@ export class PlatformResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       platformPolicy,
-      AuthorizationPrivilege.UPDATE, // todo: replace with AUTHORIZATION_RESET once that has been granted
+      AuthorizationPrivilege.PLATFORM_ADMIN, // TODO: back to authorization reset
       `reset authorization on platform: ${agentInfo.email}`
     );
     return await this.platformAuthorizationService.applyAuthorizationPolicy();
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IUser, {
+    description: 'Assigns a platform role to a User.',
+  })
+  async assignPlatformRoleToUser(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('membershipData') membershipData: AssignPlatformRoleToUserInput
+  ): Promise<IUser> {
+    const platformPolicy =
+      await this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();
+    let privilegeRequired = AuthorizationPrivilege.GRANT_GLOBAL_ADMINS;
+    if (membershipData.role === PlatformRole.BETA_TESTER) {
+      privilegeRequired = AuthorizationPrivilege.PLATFORM_ADMIN;
+    }
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      platformPolicy,
+      privilegeRequired,
+      `assign user platform role admin: ${membershipData.userID} - ${membershipData.role}`
+    );
+    const user = await this.platformService.assignPlatformRoleToUser(
+      membershipData
+    );
+
+    this.notifyPlatformGlobalRoleChange(
+      agentInfo.userID,
+      user,
+      RoleChangeType.ADDED,
+      membershipData.role
+    );
+    return user;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IUser, {
+    description: 'Removes a User from a platform role.',
+  })
+  @Profiling.api
+  async removePlatformRoleFromUser(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('membershipData') membershipData: RemovePlatformRoleFromUserInput
+  ): Promise<IUser> {
+    const platformPolicy =
+      await this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();
+    let privilegeRequired = AuthorizationPrivilege.GRANT_GLOBAL_ADMINS;
+    if (membershipData.role === PlatformRole.BETA_TESTER) {
+      privilegeRequired = AuthorizationPrivilege.PLATFORM_ADMIN;
+    }
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      platformPolicy,
+      privilegeRequired,
+      `remove user platform role: ${membershipData.userID} - ${membershipData.role}`
+    );
+    const user = await this.platformService.removePlatformRoleFromUser(
+      membershipData
+    );
+    this.notifyPlatformGlobalRoleChange(
+      agentInfo.userID,
+      user,
+      RoleChangeType.REMOVED,
+      membershipData.role
+    );
+    return user;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IVirtualPersona, {
+    description: 'Creates a new VirtualPersona on the platform.',
+  })
+  @Profiling.api
+  async createVirtualPersona(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('virtualPersonaData')
+    virtualPersonaData: CreateVirtualPersonaInput
+  ): Promise<IVirtualPersona> {
+    const platformPolicy =
+      await this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      platformPolicy,
+      AuthorizationPrivilege.PLATFORM_ADMIN,
+      `create Virtual persona: ${virtualPersonaData.engine}`
+    );
+    const virtual = await this.virtualPersonaService.createVirtualPersona(
+      virtualPersonaData
+    );
+
+    const virtualWithAuth =
+      await this.virtualPersonaAuthorizationService.applyAuthorizationPolicy(
+        virtual,
+        platformPolicy
+      );
+
+    const platform = await this.platformService.getPlatformOrFail();
+    virtualWithAuth.platform = platform;
+
+    await this.virtualPersonaService.save(virtualWithAuth);
+
+    return virtualWithAuth;
+  }
+
+  private async notifyPlatformGlobalRoleChange(
+    triggeredBy: string,
+    user: IUser,
+    type: RoleChangeType,
+    role: string
+  ) {
+    const notificationInput: NotificationInputPlatformGlobalRoleChange = {
+      triggeredBy,
+      userID: user.id,
+      type: type,
+      role: role,
+    };
+    await this.notificationAdapter.platformGlobalRoleChanged(notificationInput);
   }
 }

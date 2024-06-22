@@ -86,19 +86,21 @@ export class LibraryService {
         LogContext.LIBRARY
       );
 
+    const reservedNameIDs =
+      await this.namingService.getReservedNameIDsInLibrary(library.id);
     if (innovationPackData.nameID && innovationPackData.nameID.length > 0) {
-      const nameAvailable = await this.innovationPackService.isNameIdAvailable(
-        innovationPackData.nameID
-      );
-      if (!nameAvailable)
+      const nameTaken = reservedNameIDs.includes(innovationPackData.nameID);
+      if (nameTaken)
         throw new ValidationException(
           `Unable to create InnovationPack: the provided nameID is already taken: ${innovationPackData.nameID}`,
           LogContext.LIBRARY
         );
     } else {
-      innovationPackData.nameID = this.namingService.createNameID(
-        `${innovationPackData.profileData.displayName}`
-      );
+      innovationPackData.nameID =
+        this.namingService.createNameIdAvoidingReservedNameIDs(
+          `${innovationPackData.profileData.displayName}`,
+          reservedNameIDs
+        );
     }
 
     const innovationPack =

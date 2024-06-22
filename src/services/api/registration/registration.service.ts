@@ -2,7 +2,7 @@ import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { UserService } from '@domain/community/user/user.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
-import { AgentInfo } from '@core/authentication/agent-info';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IUser } from '@domain/community/user/user.interface';
 import { LogContext } from '@common/enums/logging.context';
 import { UserNotVerifiedException } from '@common/exceptions/user/user.not.verified.exception';
@@ -20,6 +20,7 @@ import { CreateInvitationInput } from '@domain/community/invitation/dto/invitati
 import { DeleteUserInput } from '@domain/community/user/dto/user.dto.delete';
 import { InvitationService } from '@domain/community/invitation/invitation.service';
 import { ApplicationService } from '@domain/community/application/application.service';
+import { OrganizationRole } from '@common/enums/organization.role';
 
 export class RegistrationService {
   constructor(
@@ -96,9 +97,10 @@ export class RegistrationService {
       return false;
     }
 
-    await this.organizationService.assignMember({
+    await this.organizationService.assignOrganizationRoleToUser({
       organizationID: org.id,
       userID: user.id,
+      role: OrganizationRole.ASSOCIATE,
     });
 
     this.logger.verbose?.(
@@ -124,18 +126,23 @@ export class RegistrationService {
         );
       }
       const invitationInput: CreateInvitationInput = {
-        invitedUser: user.id,
+        invitedContributor: user.id,
         communityID: community.id,
         createdBy: externalInvitation.createdBy,
+        invitedToParent: externalInvitation.invitedToParent,
       };
-      const invitation =
-        await this.communityService.createInvitationExistingUser(
+      let invitation =
+        await this.communityService.createInvitationExistingContributor(
           invitationInput
         );
-      await this.invitationAuthorizationService.applyAuthorizationPolicy(
-        invitation,
-        community.authorization
-      );
+      invitation.invitedToParent = externalInvitation.invitedToParent;
+      invitation =
+        await this.invitationAuthorizationService.applyAuthorizationPolicy(
+          invitation,
+          community.authorization
+        );
+      invitation = await this.invitationService.save(invitation);
+
       invitations.push(invitation);
       await this.invitationExternalService.recordProfileCreated(
         externalInvitation
@@ -149,9 +156,8 @@ export class RegistrationService {
   ): Promise<IUser> {
     const userID = deleteData.ID;
 
-    const invitations = await this.invitationService.findInvitationsForUser(
-      userID
-    );
+    const invitations =
+      await this.invitationService.findInvitationsForContributor(userID);
     for (const invitation of invitations) {
       await this.invitationService.deleteInvitation({ ID: invitation.id });
     }

@@ -9,25 +9,22 @@ export const spacesQuery = gql`
       }
       community {
         id
-        displayName
       }
-      challenges {
+      subspaces {
         nameID
         profile {
           displayName
         }
         community {
           id
-          displayName
         }
-        opportunities {
+        subspaces {
           nameID
           profile {
             displayName
           }
           community {
             id
-            displayName
           }
         }
       }

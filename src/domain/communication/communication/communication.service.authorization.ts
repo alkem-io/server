@@ -34,7 +34,9 @@ export class CommunicationAuthorizationService {
             discussions: {
               comments: true,
             },
-            updates: true,
+            updates: {
+              authorization: true,
+            },
           },
         }
       );
@@ -42,7 +44,7 @@ export class CommunicationAuthorizationService {
     if (!communication.discussions || !communication.updates) {
       throw new RelationshipNotFoundException(
         `Unable to load entities to reset auth for communication ${communication.id} `,
-        LogContext.CHALLENGES
+        LogContext.COMMUNICATION
       );
     }
 
@@ -64,7 +66,7 @@ export class CommunicationAuthorizationService {
     }
 
     communication.updates =
-      await this.roomAuthorizationService.applyAuthorizationPolicy(
+      this.roomAuthorizationService.applyAuthorizationPolicy(
         communication.updates,
         communication.authorization
       );
@@ -74,7 +76,7 @@ export class CommunicationAuthorizationService {
         communication.updates.authorization
       );
 
-    return await this.communicationService.save(communication);
+    return communication;
   }
 
   private appendPrivilegeRules(

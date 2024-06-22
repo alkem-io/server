@@ -1,0 +1,72 @@
+import { Inject, LoggerService, UseGuards } from '@nestjs/common';
+import { Mutation, Resolver } from '@nestjs/graphql';
+import { CurrentUser, Profiling } from '@src/common/decorators';
+import { GraphqlGuard } from '@core/authorization/graphql.guard';
+import { AuthorizationPrivilege } from '@common/enums';
+import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { SearchIngestService } from '@services/api/search/v2/ingest/search.ingest.service';
+import { TaskService } from '@services/task';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { TaskStatus } from '@domain/task/dto';
+
+@Resolver()
+export class AdminSearchIngestResolverMutations {
+  constructor(
+    private authorizationService: AuthorizationService,
+    private platformAuthorizationPolicyService: PlatformAuthorizationPolicyService,
+    private searchIngestService: SearchIngestService,
+    private taskService: TaskService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService
+  ) {}
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => String, {
+    description:
+      'Ingests new data into Elasticsearch from scratch. This will delete all existing data and ingest new data from the source. This is an admin only operation.',
+  })
+  @Profiling.api
+  async adminSearchIngestFromScratch(@CurrentUser() agentInfo: AgentInfo) {
+    const platformPolicy =
+      await this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      platformPolicy,
+      AuthorizationPrivilege.PLATFORM_ADMIN,
+      `Ingest new data into Elasticsearch from scratch: ${agentInfo.email}`
+    );
+
+    this.logger.verbose?.('Starting search ingest from scratch');
+
+    const task = await this.taskService.create();
+
+    this.searchIngestService
+      .removeIndices()
+      .then(res => {
+        if (!res.acknowledged) {
+          throw new Error(
+            res.message ? res.message : 'Failed to delete indices'
+          );
+        }
+        this.taskService.updateTaskResults(task.id, 'Indices removed');
+        return this.searchIngestService.ensureIndicesExist();
+      })
+      .then(res => {
+        if (!res.acknowledged) {
+          throw new Error(
+            res.message ? res.message : 'Failed to create indices'
+          );
+        }
+        this.taskService.updateTaskResults(task.id, 'Indices recreated');
+        return this.searchIngestService.ingest(task);
+      })
+      .then(() => this.taskService.complete(task.id))
+      .catch(async e => {
+        await this.taskService.updateTaskErrors(task.id, e?.message);
+        return this.taskService.complete(task.id, TaskStatus.ERRORED);
+      });
+
+    return task.id;
+  }
+}

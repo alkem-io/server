@@ -19,18 +19,22 @@ import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
   CREDENTIAL_RULE_TYPES_ORGANIZATION_AUTHORIZATION_RESET,
-  CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_ADMIN_COMMUNITY,
+  CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_COMMUNITY_READ,
   CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_ADMINS,
   CREDENTIAL_RULE_ORGANIZATION_ADMIN,
   CREDENTIAL_RULE_ORGANIZATION_READ,
   CREDENTIAL_RULE_ORGANIZATION_SELF_REMOVAL,
+  CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_SUPPORT_MANAGE,
+  CREDENTIAL_RULE_TYPES_ORGANIZATION_PLATFORM_ADMIN,
 } from '@common/constants';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
+import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
 
 @Injectable()
 export class OrganizationAuthorizationService {
   constructor(
     private organizationService: OrganizationService,
+    private agentAuthorizationService: AgentAuthorizationService,
     private authorizationPolicy: AuthorizationPolicyService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private userGroupAuthorizationService: UserGroupAuthorizationService,
@@ -55,7 +59,9 @@ export class OrganizationAuthorizationService {
           agent: true,
           groups: true,
           verification: true,
-          preferenceSet: true,
+          preferenceSet: {
+            preferences: true,
+          },
         },
       }
     );
@@ -65,7 +71,8 @@ export class OrganizationAuthorizationService {
       !organization.agent ||
       !organization.groups ||
       !organization.verification ||
-      !organization.preferenceSet
+      !organization.preferenceSet ||
+      !organization.preferenceSet.preferences
     )
       throw new RelationshipNotFoundException(
         `Unable to load entities for organization: ${organization.id} `,
@@ -102,9 +109,9 @@ export class OrganizationAuthorizationService {
         organization.authorization
       );
 
-    organization.agent.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
-        organization.agent.authorization,
+    organization.agent =
+      this.agentAuthorizationService.applyAuthorizationPolicy(
+        organization.agent,
         organization.authorization
       );
 
@@ -124,7 +131,7 @@ export class OrganizationAuthorizationService {
       );
 
     organization.preferenceSet =
-      await this.preferenceSetAuthorizationService.applyAuthorizationPolicy(
+      this.preferenceSetAuthorizationService.applyAuthorizationPolicy(
         organization.preferenceSet,
         organization.authorization
       );
@@ -150,26 +157,33 @@ export class OrganizationAuthorizationService {
         [AuthorizationPrivilege.AUTHORIZATION_RESET],
         [
           AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_ADMIN_SPACES,
+          AuthorizationCredential.GLOBAL_SUPPORT,
         ],
         CREDENTIAL_RULE_TYPES_ORGANIZATION_AUTHORIZATION_RESET
       );
     globalAdminNotInherited.cascade = false;
     newRules.push(globalAdminNotInherited);
 
-    const communityAdmin =
+    const globalCommunityRead =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.READ],
+        [AuthorizationCredential.GLOBAL_COMMUNITY_READ],
+        CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_COMMUNITY_READ
+      );
+    newRules.push(globalCommunityRead);
+
+    const globalSupportManage =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [
-          AuthorizationPrivilege.GRANT,
           AuthorizationPrivilege.CREATE,
           AuthorizationPrivilege.READ,
           AuthorizationPrivilege.UPDATE,
           AuthorizationPrivilege.DELETE,
         ],
-        [AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY],
-        CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_ADMIN_COMMUNITY
+        [AuthorizationCredential.GLOBAL_SUPPORT],
+        CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_SUPPORT_MANAGE
       );
-    newRules.push(communityAdmin);
+    newRules.push(globalSupportManage);
 
     // Allow Global admins + Global Space Admins to manage access to Spaces + contents
     const globalAdmin =
@@ -177,7 +191,7 @@ export class OrganizationAuthorizationService {
         [AuthorizationPrivilege.GRANT],
         [
           AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_ADMIN_SPACES,
+          AuthorizationCredential.GLOBAL_SUPPORT,
         ],
         CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_ADMINS
       );
@@ -206,6 +220,19 @@ export class OrganizationAuthorizationService {
 
     newRules.push(organizationAdmin);
 
+    // Allow global admins do platform admin actions
+    const globalAdminPlatformAdminNotInherited =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.PLATFORM_ADMIN],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+        ],
+        CREDENTIAL_RULE_TYPES_ORGANIZATION_PLATFORM_ADMIN
+      );
+    globalAdminNotInherited.cascade = false;
+    newRules.push(globalAdminPlatformAdminNotInherited);
+
     const readPrivilege = this.authorizationPolicyService.createCredentialRule(
       [AuthorizationPrivilege.READ],
       [
@@ -223,6 +250,10 @@ export class OrganizationAuthorizationService {
         },
         {
           type: AuthorizationCredential.GLOBAL_REGISTERED,
+          resourceID: '',
+        },
+        {
+          type: AuthorizationCredential.GLOBAL_COMMUNITY_READ,
           resourceID: '',
         },
       ],

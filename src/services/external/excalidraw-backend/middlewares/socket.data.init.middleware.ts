@@ -1,4 +1,4 @@
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { SocketIoSocket } from '../types/socket.io.socket';
 import { SimpleMiddlewareHandler } from './middleware.handler.type';
 

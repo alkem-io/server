@@ -1,4 +1,4 @@
-import { UpdateBaseAlkemioInput } from '@domain/common/entity/base-entity/base.alkemio.dto.update';
+import { UpdateBaseAlkemioInput } from '@domain/common/entity/base-entity/dto/base.alkemio.dto.update';
 import { UpdateProfileInput } from '@domain/common/profile/dto/profile.dto.update';
 import { InputType, Field } from '@nestjs/graphql';
 import { Type } from 'class-transformer';
