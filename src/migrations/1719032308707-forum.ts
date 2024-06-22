@@ -39,6 +39,15 @@ export class forum1719032308707 implements MigrationInterface {
     );
 
     await queryRunner.query(
+      `ALTER TABLE \`discussion\` DROP FOREIGN KEY \`FK_c6a084fe80d01c41d9f142d51aa\` `
+    );
+
+    // communicationId
+    await queryRunner.query(
+      `ALTER TABLE \`platform\` DROP FOREIGN KEY \`FK_55333901817dd09d5906537e088\``
+    );
+
+    await queryRunner.query(
       `DROP INDEX \`REL_3eb4c1d5063176a184485399f1\` ON \`platform\``
     );
 
