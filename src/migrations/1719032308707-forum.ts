@@ -1,4 +1,5 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
+import { randomUUID } from 'crypto';
 
 export class forum1719032308707 implements MigrationInterface {
   name = 'forum1719032308707';
@@ -64,10 +65,11 @@ export class forum1719032308707 implements MigrationInterface {
         `SELECT id, authorizationId, discussionCategories FROM communication where id = '${platform.communicationId}'`
       );
       if (communication) {
+        const forumID = randomUUID();
         await queryRunner.query(
           `INSERT INTO forum (id, version, discussionCategories, authorizationId) VALUES (?, ?, ?, ?)`,
           [
-            communication.id, // id
+            forumID,
             1, // version
             communication.discussionCategories, // discussionCategories
             communication.authorizationId, // authorizationId
@@ -75,7 +77,11 @@ export class forum1719032308707 implements MigrationInterface {
         );
         // Move over all the Discussions
         await queryRunner.query(
-          `UPDATE discussion SET forumId = '${communication.id}' WHERE communicationId = '${platform.communicationId}'`
+          `UPDATE discussion SET forumId = '${forumID}' WHERE communicationId = '${platform.communicationId}'`
+        );
+
+        await queryRunner.query(
+          `UPDATE platform SET forumId = '${forumID}' WHERE id = '${platform.id}'`
         );
 
         // delete the communication
