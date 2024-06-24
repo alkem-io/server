@@ -559,6 +559,7 @@ export class NotificationPayloadBuilder {
       }
     } else {
       // look up based on nameID
+      // toDo https://app.zenhub.com/workspaces/alkemio-development-5ecb98b262ebd9f4aec4194c/issues/gh/alkem-io/server/4126
       contributor = await this.entityManager.findOne(User, {
         ...options,
         where: { ...options?.where, nameID: contributorID },
