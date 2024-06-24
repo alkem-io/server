@@ -4,13 +4,12 @@ import { Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
 import { ILicensePolicy } from './license.policy.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { ILicenseFeatureFlag } from '@domain/license/feature-flag/feature.flag.interface';
-import { ILicensePolicyRuleFeatureFlag } from '@core/license-engine/license.policy.rule.feature.flag.interface';
 import { LicensePolicy } from './license.policy.entity';
 import { LicenseEngineService } from '@core/license-engine/license.engine.service';
 import { LicensePrivilege } from '@common/enums/license.privilege';
 import { LogContext } from '@common/enums/logging.context';
-import { LicenseFeatureFlagName } from '@common/enums/license.feature.flag.name';
+import { ILicensePolicyCredentialRule } from '@core/license-engine';
+import { LicenseCredential } from '@common/enums/license.credential';
 
 @Injectable()
 export class LicensePolicyService {
@@ -22,16 +21,14 @@ export class LicensePolicyService {
     private readonly logger: LoggerService
   ) {}
 
-  createFeatureFlagRule(
+  createCredentialRule(
     grantedPrivileges: LicensePrivilege[],
-    featureFlag: ILicenseFeatureFlag,
+    credentialType: LicenseCredential,
     name: string
-  ): ILicensePolicyRuleFeatureFlag {
-    const featureFlagName: LicenseFeatureFlagName =
-      featureFlag.name as LicenseFeatureFlagName;
+  ): ILicensePolicyCredentialRule {
     return {
       grantedPrivileges,
-      featureFlagName,
+      credentialType,
       name,
     };
   }
@@ -60,11 +57,9 @@ export class LicensePolicyService {
     return await this.licensePolicyRepository.save(licensePolicy);
   }
 
-  getFeatureFlagRules(
-    license: ILicensePolicy
-  ): ILicensePolicyRuleFeatureFlag[] {
-    const rules = this.licenseEngineService.convertFeatureFlagRulesStr(
-      license.featureFlagRules
+  getCredentialRules(license: ILicensePolicy): ILicensePolicyCredentialRule[] {
+    const rules = this.licenseEngineService.convertCredentialRulesStr(
+      license.credentialRulesStr
     );
     return rules;
   }
