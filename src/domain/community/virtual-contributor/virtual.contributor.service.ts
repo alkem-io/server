@@ -147,7 +147,7 @@ export class VirtualContributorService {
       this.eventBus.publish(
         new IngestSpace(
           virtualContributorData.bodyOfKnowledgeID,
-          SpaceIngestionPurpose.Knowledge
+          SpaceIngestionPurpose.KNOWLEDGE
         )
       );
 
