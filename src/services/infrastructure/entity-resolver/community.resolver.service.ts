@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
-import { Discussion } from '@domain/communication/discussion/discussion.entity';
 import { Community, ICommunity } from '@domain/community/community';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
@@ -17,8 +16,6 @@ export class CommunityResolverService {
   constructor(
     @InjectRepository(Community)
     private communityRepository: Repository<Community>,
-    @InjectRepository(Discussion)
-    private discussionRepository: Repository<Discussion>,
     @InjectRepository(Communication)
     private communicationRepository: Repository<Communication>,
     @InjectEntityManager('default')
@@ -137,32 +134,6 @@ export class CommunityResolverService {
       `Unable to find Agent for account for given community id: ${community.id}`,
       LogContext.COLLABORATION
     );
-  }
-
-  public async getCommunityFromDiscussionOrFail(
-    discussionID: string
-  ): Promise<ICommunity> {
-    const discussion = await this.discussionRepository
-      .createQueryBuilder('discussion')
-      .leftJoinAndSelect('discussion.communication', 'communication')
-      .where('discussion.id = :id')
-      .setParameters({ id: `${discussionID}` })
-      .getOne();
-
-    const community = await this.communityRepository
-      .createQueryBuilder('community')
-      .where('communicationId = :id')
-      .setParameters({ id: `${discussion?.communication?.id}` })
-      .getOne();
-
-    if (!community) {
-      throw new EntityNotFoundException(
-        `Unable to find Community for Discussion: ${discussionID}`,
-        LogContext.COMMUNITY
-      );
-    }
-
-    return community;
   }
 
   public async getCommunityFromUpdatesOrFail(
