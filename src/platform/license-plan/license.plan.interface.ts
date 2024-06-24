@@ -2,6 +2,7 @@ import { Field, ObjectType } from '@nestjs/graphql';
 import { IBaseAlkemio } from '@domain/common/entity/base-entity';
 import { ILicensing } from '@platform/licensing/licensing.interface';
 import { LicenseCredential } from '@common/enums/license.credential';
+import { LicensePlanType } from '@common/enums/license.plan.type';
 
 @ObjectType('LicensePlan')
 export abstract class ILicensePlan extends IBaseAlkemio {
@@ -24,6 +25,12 @@ export abstract class ILicensePlan extends IBaseAlkemio {
     description: 'The sorting order for this Plan.',
   })
   sortOrder!: number;
+
+  @Field(() => LicensePlanType, {
+    nullable: false,
+    description: 'The type of this License Plan.',
+  })
+  type!: LicensePlanType;
 
   @Field(() => Number, {
     nullable: true,
