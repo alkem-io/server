@@ -10,6 +10,7 @@ import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interf
 import { LibraryService } from './library.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { InnovationPacksInput } from './dto/library.dto.innovationPacks.input';
+import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 
 @Resolver(() => ILibrary)
 export class LibraryResolverFields {
@@ -64,5 +65,15 @@ export class LibraryResolverFields {
       queryData?.limit,
       queryData?.orderBy
     );
+  }
+
+  // TODO: these may want later to be on a Store entity
+  @UseGuards(GraphqlGuard)
+  @ResolveField(() => [IVirtualContributor], {
+    nullable: false,
+    description: 'The VirtualContributors listed on this platform',
+  })
+  async virtualContributors(): Promise<IVirtualContributor[]> {
+    return await this.libraryService.getListedVirtualContributors();
   }
 }
