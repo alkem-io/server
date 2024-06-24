@@ -1,5 +1,6 @@
 import { SMALL_TEXT_LENGTH } from '@common/constants/entity.field.length.constants';
 import { LicenseCredential } from '@common/enums/license.credential';
+import { LicensePlanType } from '@common/enums/license.plan.type';
 import { Field, InputType } from '@nestjs/graphql';
 import { MaxLength } from 'class-validator';
 
@@ -35,6 +36,12 @@ export class CreateLicensePlanInput {
     nullable: false,
   })
   isFree!: boolean;
+
+  @Field(() => LicensePlanType, {
+    nullable: false,
+    description: 'The type of this License Plan.',
+  })
+  type!: LicensePlanType;
 
   @Field(() => Boolean, {
     description: 'Is there a trial period enabled',

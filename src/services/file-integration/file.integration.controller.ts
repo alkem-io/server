@@ -9,7 +9,7 @@ import {
 import { FileIntegrationService } from './file.integration.service';
 import { FileMessagePatternEnum } from './types/message.pattern';
 import { FileInfoInputData } from './inputs';
-import { FileInfoOutputData } from './outputs';
+import { FileInfoOutputData, HealthCheckOutputData } from './outputs';
 import { ack } from '../util';
 
 @Controller()
@@ -23,5 +23,13 @@ export class FileIntegrationController {
   ): Promise<FileInfoOutputData> {
     ack(context);
     return this.integrationService.fileInfo(data);
+  }
+
+  @MessagePattern(FileMessagePatternEnum.HEALTH_CHECK, Transport.RMQ)
+  public health(@Ctx() context: RmqContext): HealthCheckOutputData {
+    ack(context);
+    // can be tight to more complex health check in the future
+    // for now just return true
+    return new HealthCheckOutputData(true);
   }
 }
