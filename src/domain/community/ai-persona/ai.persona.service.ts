@@ -19,6 +19,7 @@ import { AiServerAdapterAskQuestionInput } from '@services/adapters/ai-server-ad
 import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
 import { AiPersonaDataAccessMode } from '@common/enums/ai.persona.data.access.mode';
 import { AiPersonaInteractionMode } from '@common/enums/ai.persona.interaction.mode';
+import { SpaceIngestionPurpose } from '@services/infrastructure/event-bus/commands';
 
 @Injectable()
 export class AiPersonaService {
@@ -44,6 +45,11 @@ export class AiPersonaService {
     if (aiPersonaData.aiPersonaServiceID) {
       const personaService = await this.aiServerAdapter.getPersonaServiceOrFail(
         aiPersonaData.aiPersonaServiceID
+      );
+
+      this.aiServerAdapter.ensurePersonaIsUsable(
+        personaService.id,
+        SpaceIngestionPurpose.Knowledge
       );
       aiPersona.aiPersonaServiceID = personaService.id;
     } else if (aiPersonaData.aiPersonaService) {

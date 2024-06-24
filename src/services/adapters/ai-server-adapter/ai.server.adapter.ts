@@ -7,6 +7,7 @@ import { CreateAiPersonaServiceInput } from '@services/ai-server/ai-persona-serv
 import { IAiPersonaService } from '@services/ai-server/ai-persona-service';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AiPersonaServiceQuestionInput } from '@services/ai-server/ai-persona-service/dto/ai.persona.service.question.dto.input';
+import { SpaceIngestionPurpose } from '@services/infrastructure/event-bus/commands';
 
 @Injectable()
 export class AiServerAdapter {
@@ -15,6 +16,20 @@ export class AiServerAdapter {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
+
+  async ensureSpaceIsUsable(
+    spaceID: string,
+    purpose: SpaceIngestionPurpose
+  ): Promise<void> {
+    return this.aiServer.ensureSpaceIsUsable(spaceID, purpose);
+  }
+
+  async ensurePersonaIsUsable(
+    personaServiceId: string,
+    purpose: SpaceIngestionPurpose
+  ): Promise<void> {
+    return this.aiServer.ensurePersonaIsUsable(personaServiceId, purpose);
+  }
 
   async getPersonaServiceOrFail(
     personaServiceId: string
@@ -33,7 +48,6 @@ export class AiServerAdapter {
     agentInfo: AgentInfo,
     contextSapceNameID: string
   ): Promise<IAiPersonaQuestionResult> {
-    console.log(questionInput);
     return this.aiServer.askQuestion(
       questionInput as unknown as AiPersonaServiceQuestionInput,
       agentInfo,

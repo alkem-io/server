@@ -10,11 +10,6 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { ForbiddenException } from '@common/exceptions/forbidden.exception';
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
-import { RemoveAiServerRoleFromUserInput } from './dto/ai.server.dto.remove.role.user';
-import { IUser } from '@domain/community/user/user.interface';
-import { UserService } from '@domain/community/user/user.service';
-import { AgentService } from '@domain/agent/agent/agent.service';
-import { AssignAiServerRoleToUserInput } from './dto/ai.server.dto.assign.role.user';
 import {
   AiPersonaService,
   IAiPersonaService,
@@ -25,9 +20,13 @@ import { AiPersonaEngineAdapter } from '../ai-persona-engine-adapter/ai.persona.
 import { AiServerIngestAiPersonaServiceInput } from './dto/ai.server.dto.ingest.ai.persona.service';
 import { AiPersonaEngineAdapterInputBase } from '../ai-persona-engine-adapter/dto/ai.persona.engine.adapter.dto.base';
 import { CreateAiPersonaServiceInput } from '../ai-persona-service/dto';
-import { AiServerAdapterAskQuestionInput } from '@services/adapters/ai-server-adapter/dto/ai.server.adapter.dto.ask.question';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AiPersonaServiceQuestionInput } from '../ai-persona-service/dto/ai.persona.service.question.dto.input';
+import {
+  IngestSpace,
+  SpaceIngestionPurpose,
+} from '@services/infrastructure/event-bus/commands';
+import { EventBus } from '@nestjs/cqrs';
 
 @Injectable()
 export class AiServerService {
@@ -38,8 +37,28 @@ export class AiServerService {
     private aiPersonaEngineAdapter: AiPersonaEngineAdapter,
     @InjectRepository(AiServer)
     private aiServerRepository: Repository<AiServer>,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService,
+    private eventBus: EventBus
   ) {}
+
+  async ensurePersonaIsUsable(
+    personaServiceId: string,
+    purpose: SpaceIngestionPurpose
+  ): Promise<void> {
+    const aiPersonaService =
+      await this.aiPersonaServiceService.getAiPersonaServiceOrFail(
+        personaServiceId
+      );
+    await this.ensureSpaceIsUsable(aiPersonaService.bodyOfKnowledgeID, purpose);
+  }
+
+  async ensureSpaceIsUsable(
+    spaceID: string,
+    purpose: SpaceIngestionPurpose
+  ): Promise<void> {
+    this.eventBus.publish(new IngestSpace(spaceID, purpose));
+  }
 
   async askQuestion(
     questionInput: AiPersonaServiceQuestionInput,

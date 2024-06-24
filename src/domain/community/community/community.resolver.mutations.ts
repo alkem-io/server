@@ -53,16 +53,13 @@ import { VirtualContributorService } from '../virtual-contributor/virtual.contri
 import { IVirtualContributor } from '../virtual-contributor';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { CommunityInvitationException } from '@common/exceptions/community.invitation.exception';
-import { EventBus } from '@nestjs/cqrs';
-import {
-  IngestSpace,
-  SpaceIngestionPurpose,
-} from '@services/infrastructure/event-bus/commands';
+import { SpaceIngestionPurpose } from '@services/infrastructure/event-bus/commands';
 import { AccountHostService } from '@domain/space/account/account.host.service';
 import { CreateInvitationForContributorsOnCommunityInput } from './dto/community.dto.invite.contributor';
 import { IContributor } from '../contributor/contributor.interface';
 import { ContributorService } from '../contributor/contributor.service';
 import { InvitationExternalService } from '../invitation.external/invitation.external.service';
+import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
 
 const IAnyInvitation = createUnionType({
   name: 'AnyInvitation',
@@ -99,7 +96,7 @@ export class CommunityResolverMutations {
     private accountHostService: AccountHostService,
     private contributorService: ContributorService,
     private invitationExternalService: InvitationExternalService,
-    private eventBus: EventBus
+    private aiServerAdapter: AiServerAdapter
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -264,13 +261,11 @@ export class CommunityResolverMutations {
       );
     virtual = await this.virtualContributorService.save(virtual);
 
-    // publish to EB for space ingestion
     const spaceID = await this.communityService.getRootSpaceID(community);
-    // we are publising an event instead of executing a command because Nest's CQRS
-    // won't execute a command unless a command handler is defined within the application
-    // we want to have an external handler so for now events will do
-    this.eventBus.publish(
-      new IngestSpace(spaceID, SpaceIngestionPurpose.Context)
+
+    this.aiServerAdapter.ensureSpaceIsUsable(
+      spaceID,
+      SpaceIngestionPurpose.Context
     );
 
     return virtual;

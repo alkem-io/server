@@ -23,7 +23,6 @@ import {
   SpaceIngestionPurpose,
 } from '@services/infrastructure/event-bus/commands';
 import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
-import { AiServerService } from '../ai-server/ai.server.service';
 
 @Injectable()
 export class AiPersonaServiceService {
