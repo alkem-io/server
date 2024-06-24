@@ -7,37 +7,27 @@ import { CommunicationResolverMutations } from './communication.resolver.mutatio
 import { CommunicationService } from './communication.service';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { CommunicationAuthorizationService } from './communication.service.authorization';
-import { DiscussionModule } from '../discussion/discussion.module';
 import { CommunicationAdapterModule } from '@services/adapters/communication-adapter/communication-adapter.module';
-import { CommunicationResolverSubscriptions } from './communication.resolver.subscriptions';
 import { RoomModule } from '../room/room.module';
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
-import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
-import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
-import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
+import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 
 @Module({
   imports: [
     AuthorizationModule,
     NotificationAdapterModule,
     AuthorizationPolicyModule,
-    DiscussionModule,
     RoomModule,
     CommunicationAdapterModule,
-    CommunicationAdapterModule,
-    EntityResolverModule,
-    NamingModule,
-    PlatformAuthorizationPolicyModule,
     StorageAggregatorResolverModule,
-    NamingModule,
+    PlatformAuthorizationPolicyModule,
     TypeOrmModule.forFeature([Communication]),
   ],
   providers: [
     CommunicationService,
     CommunicationResolverMutations,
     CommunicationResolverFields,
-    CommunicationResolverSubscriptions,
     CommunicationAuthorizationService,
   ],
   exports: [CommunicationService, CommunicationAuthorizationService],

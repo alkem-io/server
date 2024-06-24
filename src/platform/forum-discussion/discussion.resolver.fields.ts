@@ -11,7 +11,7 @@ import { Loader } from '@core/dataloader/decorators';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { ProfileLoaderCreator } from '@core/dataloader/creators';
-import { IRoom } from '../room/room.interface';
+import { IRoom } from '../../domain/communication/room/room.interface';
 import { DiscussionService } from './discussion.service';
 
 @Resolver(() => IDiscussion)

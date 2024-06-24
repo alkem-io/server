@@ -1,7 +1,6 @@
 import { ConfigurationTypes, LogContext } from '@common/enums';
 import { EntityNotFoundException } from '@common/exceptions';
 import { NotificationEventException } from '@common/exceptions/notification.event.exception';
-import { IDiscussion } from '@domain/communication/discussion/discussion.interface';
 import { ICommunity } from '@domain/community/community';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
@@ -51,6 +50,7 @@ import { NotificationInputPostCreated } from './dto/notification.dto.input.post.
 import { NotificationInputPostComment } from './dto/notification.dto.input.post.comment';
 import { ContributionResolverService } from '@services/infrastructure/entity-resolver/contribution.resolver.service';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
+import { IDiscussion } from '@platform/forum-discussion/discussion.interface';
 
 @Injectable()
 export class NotificationPayloadBuilder {

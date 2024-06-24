@@ -3,8 +3,8 @@ import { NamingService } from './naming.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { CalendarEvent } from '@domain/timeline/event';
-import { Discussion } from '@domain/communication/discussion/discussion.entity';
 import { InnovationHub } from '@domain/innovation-hub/innovation.hub.entity';
+import { Discussion } from '@platform/forum-discussion/discussion.entity';
 
 @Module({
   imports: [

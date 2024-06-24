@@ -1,70 +1,60 @@
 import { Injectable } from '@nestjs/common';
-import { ICommunication } from '@domain/communication/communication';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
+import { DiscussionAuthorizationService } from '../forum-discussion/discussion.service.authorization';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
-import { CommunicationService } from './communication.service';
+import { ForumService } from './forum.service';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import {
   POLICY_RULE_FORUM_CONTRIBUTE,
   POLICY_RULE_FORUM_CREATE,
 } from '@common/constants';
-import { RoomAuthorizationService } from '../room/room.service.authorization';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
+import { IForum } from './forum.interface';
 
 @Injectable()
-export class CommunicationAuthorizationService {
+export class ForumAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
-    private communicationService: CommunicationService,
-    private roomAuthorizationService: RoomAuthorizationService
+    private forumService: ForumService,
+    private discussionAuthorizationService: DiscussionAuthorizationService
   ) {}
 
   async applyAuthorizationPolicy(
-    communicationInput: ICommunication,
+    forumInput: IForum,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): Promise<ICommunication> {
-    const communication =
-      await this.communicationService.getCommunicationOrFail(
-        communicationInput.id,
-        {
-          relations: {
-            updates: {
-              authorization: true,
-            },
-          },
-        }
-      );
+  ): Promise<IForum> {
+    const forum = await this.forumService.getForumOrFail(forumInput.id, {
+      relations: {
+        discussions: {
+          comments: true,
+        },
+      },
+    });
 
-    if (!communication.updates) {
+    if (!forum.discussions) {
       throw new RelationshipNotFoundException(
-        `Unable to load entities to reset auth for communication ${communication.id} `,
+        `Unable to load entities to reset auth for forum ${forum.id} `,
         LogContext.COMMUNICATION
       );
     }
 
-    communication.authorization =
+    forum.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
-        communication.authorization,
+        forum.authorization,
         parentAuthorization
       );
 
-    communication.authorization = this.appendPrivilegeRules(
-      communication.authorization
-    );
+    forum.authorization = this.appendPrivilegeRules(forum.authorization);
 
-    communication.updates =
-      this.roomAuthorizationService.applyAuthorizationPolicy(
-        communication.updates,
-        communication.authorization
+    for (const discussion of forum.discussions) {
+      await this.discussionAuthorizationService.applyAuthorizationPolicy(
+        discussion,
+        forum.authorization
       );
-    // Note: do NOT allow contributors to create new messages for updates...
-    communication.updates.authorization =
-      this.roomAuthorizationService.allowContributorsToReplyReactToMessages(
-        communication.updates.authorization
-      );
+    }
 
-    return communication;
+    return forum;
   }
 
   private appendPrivilegeRules(
