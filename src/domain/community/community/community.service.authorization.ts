@@ -19,13 +19,13 @@ import {
   CREDENTIAL_RULE_TYPES_ACCESS_VIRTUAL_CONTRIBUTORS,
   CREDENTIAL_RULE_TYPES_COMMUNITY_ADD_MEMBERS,
   CREDENTIAL_RULE_TYPES_COMMUNITY_INVITE_MEMBERS,
-  POLICY_RULE_VC_ADD_TO_COMMUNITY,
+  POLICY_RULE_COMMUNITY_ADD_VC,
+  POLICY_RULE_COMMUNITY_INVITE_MEMBER,
 } from '@common/constants';
 import { InvitationExternalAuthorizationService } from '../invitation.external/invitation.external.service.authorization';
 import { InvitationAuthorizationService } from '../invitation/invitation.service.authorization';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { CommunityGuidelinesAuthorizationService } from '../community-guidelines/community.guidelines.service.authorization';
-import { ILicense } from '@domain/license/license/license.interface';
 import { CommunityPolicyService } from '../community-policy/community.policy.service';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { ICommunityPolicy } from '../community-policy/community.policy.interface';
@@ -33,6 +33,7 @@ import { CommunityRole } from '@common/enums/community.role';
 import { LicenseEngineService } from '@core/license-engine/license.engine.service';
 import { LicensePrivilege } from '@common/enums/license.privilege';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
+import { IAgent } from '@domain/agent';
 
 @Injectable()
 export class CommunityAuthorizationService {
@@ -52,7 +53,7 @@ export class CommunityAuthorizationService {
   async applyAuthorizationPolicy(
     communityInput: ICommunity,
     parentAuthorization: IAuthorizationPolicy | undefined,
-    license: ILicense,
+    accountAgent: IAgent,
     communityPolicy: ICommunityPolicy
   ): Promise<ICommunity> {
     const community = await this.communityService.getCommunityOrFail(
@@ -100,7 +101,7 @@ export class CommunityAuthorizationService {
     community.authorization = await this.extendAuthorizationPolicy(
       community.authorization,
       parentAuthorization?.anonymousReadAccess,
-      license,
+      accountAgent,
       communityPolicy
     );
     community.authorization = this.appendVerifiedCredentialRules(
@@ -167,7 +168,7 @@ export class CommunityAuthorizationService {
   private async extendAuthorizationPolicy(
     authorization: IAuthorizationPolicy | undefined,
     allowGlobalRegisteredReadAccess: boolean | undefined,
-    license: ILicense,
+    accountAgent: IAgent,
     policy: ICommunityPolicy
   ): Promise<IAuthorizationPolicy> {
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
@@ -224,7 +225,7 @@ export class CommunityAuthorizationService {
     const accessVirtualContributors =
       await this.licenseEngineService.isAccessGranted(
         LicensePrivilege.VIRTUAL_CONTRIBUTOR_ACCESS,
-        license
+        accountAgent
       );
     if (accessVirtualContributors) {
       const criterias: ICredentialDefinition[] =
@@ -307,12 +308,19 @@ export class CommunityAuthorizationService {
     const createVCPrivilege = new AuthorizationPolicyRulePrivilege(
       [AuthorizationPrivilege.COMMUNITY_ADD_MEMBER_VC_FROM_ACCOUNT],
       AuthorizationPrivilege.GRANT,
-      POLICY_RULE_VC_ADD_TO_COMMUNITY
+      POLICY_RULE_COMMUNITY_ADD_VC
+    );
+
+    // If you are able to add a member, then you are also logically able to invite a member
+    const invitePrivilege = new AuthorizationPolicyRulePrivilege(
+      [AuthorizationPrivilege.COMMUNITY_INVITE],
+      AuthorizationPrivilege.COMMUNITY_ADD_MEMBER,
+      POLICY_RULE_COMMUNITY_INVITE_MEMBER
     );
 
     return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
       authorization,
-      [createVCPrivilege]
+      [createVCPrivilege, invitePrivilege]
     );
   }
 }

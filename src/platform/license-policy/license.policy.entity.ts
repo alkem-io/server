@@ -8,10 +8,10 @@ export class LicensePolicy
   implements ILicensePolicy
 {
   @Column('text')
-  featureFlagRules: string;
+  credentialRulesStr: string;
 
   constructor() {
     super();
-    this.featureFlagRules = '';
+    this.credentialRulesStr = '';
   }
 }

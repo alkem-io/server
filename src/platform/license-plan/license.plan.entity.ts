@@ -3,6 +3,7 @@ import { ILicensePlan } from './license.plan.interface';
 import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
 import { Licensing } from '@platform/licensing/licensing.entity';
 import { LicenseCredential } from '@common/enums/license.credential';
+import { LicensePlanType } from '@common/enums/license.plan.type';
 
 @Entity()
 export class LicensePlan extends BaseAlkemioEntity implements ILicensePlan {
@@ -39,4 +40,13 @@ export class LicensePlan extends BaseAlkemioEntity implements ILicensePlan {
 
   @Column('text', { nullable: false })
   licenseCredential!: LicenseCredential;
+
+  @Column('text', { nullable: false })
+  type!: LicensePlanType;
+
+  @Column('boolean', { nullable: false, default: false })
+  assignToNewOrganizationAccounts!: boolean;
+
+  @Column('boolean', { nullable: false, default: false })
+  assignToNewUserAccounts!: boolean;
 }

@@ -2,6 +2,8 @@ export const SUBSCRIPTION_DISCUSSION_UPDATED =
   'alkemio-subscriptions-discussion-updated';
 export const SUBSCRIPTION_WHITEBOARD_CONTENT =
   'alkemio-subscriptions-whiteboard-content';
+export const SUBSCRIPTION_WHITEBOARD_SAVED =
+  'alkemio-subscriptions-whiteboard-saved';
 export const SUBSCRIPTION_CALLOUT_POST_CREATED =
   'alkemio-subscriptions-callout-post-created';
 export const SUBSCRIPTION_PROFILE_VERIFIED_CREDENTIAL =

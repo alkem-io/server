@@ -33,7 +33,7 @@ export class VirtualContributorResolverMutations {
       await this.virtualContributorService.getVirtualContributorOrFail(
         virtualContributorData.ID
       );
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       virtual.authorization,
       AuthorizationPrivilege.UPDATE,
@@ -57,7 +57,7 @@ export class VirtualContributorResolverMutations {
       await this.virtualContributorService.getVirtualContributorOrFail(
         deleteData.ID
       );
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       virtual.authorization,
       AuthorizationPrivilege.DELETE,

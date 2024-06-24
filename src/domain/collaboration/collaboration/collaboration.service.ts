@@ -53,6 +53,7 @@ import { CalloutGroupsService } from '../callout-groups/callout.group.service';
 import { IAccount } from '@domain/space/account/account.interface';
 import { SpaceType } from '@common/enums/space.type';
 import { CalloutGroupName } from '@common/enums/callout.group.name';
+import { SpaceLevel } from '@common/enums/space.level';
 
 @Injectable()
 export class CollaborationService {
@@ -96,6 +97,7 @@ export class CollaborationService {
     const innovationFlowInput =
       await this.spaceDefaultsService.getCreateInnovationFlowInput(
         account.id,
+        spaceType,
         collaborationData.innovationFlowTemplateID
       );
     const allowedStates = innovationFlowInput.states.map(
@@ -261,8 +263,8 @@ export class CollaborationService {
     }
     const accountID = space.account.id;
 
-    switch (space.type) {
-      case SpaceType.SPACE:
+    switch (space.level) {
+      case SpaceLevel.SPACE:
         const spacesInAccount = await this.entityManager.find(Space, {
           where: {
             account: {
@@ -287,7 +289,7 @@ export class CollaborationService {
           }
           return x.collaboration;
         });
-      case SpaceType.CHALLENGE:
+      case SpaceLevel.CHALLENGE:
         const subsubspaces = space.subspaces;
         if (!subsubspaces) {
           throw new EntityNotInitializedException(

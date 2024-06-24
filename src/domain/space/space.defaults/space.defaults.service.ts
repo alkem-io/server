@@ -15,19 +15,13 @@ import { TemplatesSetService } from '@domain/template/templates-set/templates.se
 import { IInnovationFlowTemplate } from '@domain/template/innovation-flow-template/innovation.flow.template.interface';
 import { CreateInnovationFlowInput } from '@domain/collaboration/innovation-flow/dto';
 import { templatesSetDefaults } from './definitions/space.defaults.templates';
-import { innovationFlowStatesDefault } from './definitions/space.defaults.innovation.flow';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
 import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
 import { ISpaceSettings } from '../space.settings/space.settings.interface';
-import { spaceSettingsDefaults } from './definitions/space.settings';
 import { ICalloutGroup } from '@domain/collaboration/callout-groups/callout.group.interface';
-import { spaceCalloutGroups } from './definitions/space.callout.group';
-import { subspaceCalloutGroups } from './definitions/subspace.callout.group';
 import { Account } from '../account/account.entity';
-import { subspaceDefaultCallouts } from './definitions/subspace.default.callouts';
 import { subspaceCommunityPolicy } from './definitions/subspace.community.policy';
-import { spaceDefaultCallouts } from './definitions/space.default.callouts';
 import { spaceCommunityPolicy } from './definitions/space.community.policy';
 import { ICommunityPolicyDefinition } from '@domain/community/community-policy/community.policy.definition';
 import { CreateFormInput } from '@domain/common/form/dto/form.dto.create';
@@ -35,10 +29,30 @@ import { subspceCommunityApplicationForm } from './definitions/subspace.communit
 import { spaceCommunityApplicationForm } from './definitions/space.community.application.form';
 import { ProfileType } from '@common/enums';
 import { CalloutGroupName } from '@common/enums/callout.group.name';
-import { subspaceSettingsDefaults } from './definitions/subspace.settings';
 import { SpaceLevel } from '@common/enums/space.level';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { SpaceType } from '@common/enums/space.type';
+import { spaceDefaultsCalloutGroupsChallenge } from './definitions/challenge/space.defaults.callout.groups.challenge';
+import { spaceDefaultsCalloutGroupsOpportunity } from './definitions/oppportunity/space.defaults.callout.groups.opportunity';
+import { spaceDefaultsCalloutGroupsRootSpace } from './definitions/root-space/space.defaults.callout.groups.root.space';
+import { spaceDefaultsCalloutGroupsVirtualContributor } from './definitions/virtual-contributor/space.defaults.callout.groups.virtual.contributor';
+import { spaceDefaultsCalloutsOpportunity } from './definitions/oppportunity/space.defaults.callouts.opportunity';
+import { spaceDefaultsCalloutsChallenge } from './definitions/challenge/space.defaults.callouts.challenge';
+import { spaceDefaultsCalloutsRootSpace } from './definitions/root-space/space.defaults.callouts.root.space';
+import { spaceDefaultsCalloutsVirtualContributor } from './definitions/virtual-contributor/space.defaults.callouts.virtual.contributor';
+import { spaceDefaultsSettingsRootSpace } from './definitions/root-space/space.defaults.settings.root.space';
+import { spaceDefaultsSettingsOpportunity } from './definitions/oppportunity/space.defaults.settings.opportunity';
+import { spaceDefaultsSettingsChallenge } from './definitions/challenge/space.defaults.settings.challenge';
+import { spaceDefaultsSettingsVirtualContributor } from './definitions/virtual-contributor/space.defaults.settings.virtual.contributor';
+import { spaceDefaultsInnovationFlowStatesChallenge } from './definitions/challenge/space.defaults.innovation.flow.challenge';
+import { spaceDefaultsInnovationFlowStatesOpportunity } from './definitions/oppportunity/space.defaults.innovation.flow.opportunity';
+import { spaceDefaultsInnovationFlowStatesRootSpace } from './definitions/root-space/space.defaults.innovation.flow.root.space';
+import { spaceDefaultsInnovationFlowStatesVirtualContributor } from './definitions/virtual-contributor/space.defaults.innovation.flow.virtual.contributor';
+import { IInnovationFlowState } from '@domain/collaboration/innovation-flow-states/innovation.flow.state.interface';
+import { spaceDefaultsCalloutGroupsBlankSlate } from './definitions/blank-slate/space.defaults.callout.groups.blank.slate';
+import { spaceDefaultsCalloutsBlankSlate } from './definitions/blank-slate/space.defaults.callouts.blank.slate';
+import { spaceDefaultsSettingsBlankSlate } from './definitions/blank-slate/space.defaults.settings.blank.slate';
+import { spaceDefaultsInnovationFlowStatesBlankSlate } from './definitions/blank-slate/space.defaults.innovation.flow.blank.slate';
 
 @Injectable()
 export class SpaceDefaultsService {
@@ -138,10 +152,15 @@ export class SpaceDefaultsService {
   public getCalloutGroups(spaceType: SpaceType): ICalloutGroup[] {
     switch (spaceType) {
       case SpaceType.CHALLENGE:
+        return spaceDefaultsCalloutGroupsChallenge;
       case SpaceType.OPPORTUNITY:
-        return subspaceCalloutGroups;
+        return spaceDefaultsCalloutGroupsOpportunity;
       case SpaceType.SPACE:
-        return spaceCalloutGroups;
+        return spaceDefaultsCalloutGroupsRootSpace;
+      case SpaceType.VIRTUAL_CONTRIBUTOR:
+        return spaceDefaultsCalloutGroupsVirtualContributor;
+      case SpaceType.BLANK_SLATE:
+        return spaceDefaultsCalloutGroupsBlankSlate;
       default:
         throw new EntityNotInitializedException(
           `Invalid space type: ${spaceType}`,
@@ -153,10 +172,17 @@ export class SpaceDefaultsService {
   public getCalloutGroupDefault(spaceType: SpaceType): CalloutGroupName {
     switch (spaceType) {
       case SpaceType.CHALLENGE:
+      case SpaceType.VIRTUAL_CONTRIBUTOR:
       case SpaceType.OPPORTUNITY:
+      case SpaceType.BLANK_SLATE:
         return CalloutGroupName.HOME;
       case SpaceType.SPACE:
         return CalloutGroupName.KNOWLEDGE;
+      default:
+        throw new EntityNotInitializedException(
+          `Invalid space type: ${spaceType}`,
+          LogContext.ROLES
+        );
     }
   }
 
@@ -198,13 +224,23 @@ export class SpaceDefaultsService {
     }
   }
 
-  public getDefaultCallouts(spaceLevel: SpaceLevel): CreateCalloutInput[] {
-    switch (spaceLevel) {
-      case SpaceLevel.CHALLENGE:
-      case SpaceLevel.OPPORTUNITY:
-        return subspaceDefaultCallouts;
-      case SpaceLevel.SPACE:
-        return spaceDefaultCallouts;
+  public getDefaultCallouts(spaceType: SpaceType): CreateCalloutInput[] {
+    switch (spaceType) {
+      case SpaceType.CHALLENGE:
+        return spaceDefaultsCalloutsChallenge;
+      case SpaceType.OPPORTUNITY:
+        return spaceDefaultsCalloutsOpportunity;
+      case SpaceType.SPACE:
+        return spaceDefaultsCalloutsRootSpace;
+      case SpaceType.VIRTUAL_CONTRIBUTOR:
+        return spaceDefaultsCalloutsVirtualContributor;
+      case SpaceType.BLANK_SLATE:
+        return spaceDefaultsCalloutsBlankSlate;
+      default:
+        throw new EntityNotInitializedException(
+          `Invalid space type: ${spaceType}`,
+          LogContext.ROLES
+        );
     }
   }
 
@@ -214,18 +250,51 @@ export class SpaceDefaultsService {
     return spaceDefaults.innovationFlowTemplate;
   }
 
-  public getDefaultSpaceSettings(spaceLevel: SpaceLevel): ISpaceSettings {
-    switch (spaceLevel) {
-      case SpaceLevel.CHALLENGE:
-      case SpaceLevel.OPPORTUNITY:
-        return subspaceSettingsDefaults;
-      case SpaceLevel.SPACE:
-        return spaceSettingsDefaults;
+  public getDefaultSpaceSettings(spaceType: SpaceType): ISpaceSettings {
+    switch (spaceType) {
+      case SpaceType.CHALLENGE:
+        return spaceDefaultsSettingsChallenge;
+      case SpaceType.OPPORTUNITY:
+        return spaceDefaultsSettingsOpportunity;
+      case SpaceType.SPACE:
+        return spaceDefaultsSettingsRootSpace;
+      case SpaceType.VIRTUAL_CONTRIBUTOR:
+        return spaceDefaultsSettingsVirtualContributor;
+      case SpaceType.BLANK_SLATE:
+        return spaceDefaultsSettingsBlankSlate;
+      default:
+        throw new EntityNotInitializedException(
+          `Invalid space type: ${spaceType}`,
+          LogContext.ROLES
+        );
+    }
+  }
+
+  public getDefaultInnovationFlowStates(
+    spaceType: SpaceType
+  ): IInnovationFlowState[] {
+    switch (spaceType) {
+      case SpaceType.CHALLENGE:
+        return spaceDefaultsInnovationFlowStatesChallenge;
+      case SpaceType.OPPORTUNITY:
+        return spaceDefaultsInnovationFlowStatesOpportunity;
+      case SpaceType.SPACE:
+        return spaceDefaultsInnovationFlowStatesRootSpace;
+      case SpaceType.VIRTUAL_CONTRIBUTOR:
+        return spaceDefaultsInnovationFlowStatesVirtualContributor;
+      case SpaceType.BLANK_SLATE:
+        return spaceDefaultsInnovationFlowStatesBlankSlate;
+      default:
+        throw new EntityNotInitializedException(
+          `Invalid space type: ${spaceType}`,
+          LogContext.ROLES
+        );
     }
   }
 
   public async getCreateInnovationFlowInput(
     accountID: string,
+    spaceType: SpaceType,
     innovationFlowTemplateID?: string
   ): Promise<CreateInnovationFlowInput> {
     // Start with using the provided argument
@@ -249,28 +318,36 @@ export class SpaceDefaultsService {
     }
 
     // If no argument is provided, then use the default template for the space, if set
-    const spaceDefaults = await this.getDefaultsForAccountOrFail(accountID);
-    if (spaceDefaults.innovationFlowTemplate) {
-      const template =
-        await this.innovationFlowTemplateService.getInnovationFlowTemplateOrFail(
-          spaceDefaults.innovationFlowTemplate.id,
-          {
-            relations: { profile: true },
-          }
-        );
-      spaceDefaults.innovationFlowTemplate;
-      // Note: no profile currently present, so use the one from the template for now
-      const result: CreateInnovationFlowInput = {
-        profile: {
-          displayName: template.profile.displayName,
-          description: template.profile.description,
-        },
-        states: this.innovationFlowStatesService.getStates(template.states),
-      };
-      return result;
+    // for spaces of type challenge or opportunity
+    if (
+      spaceType === SpaceType.CHALLENGE ||
+      spaceType === SpaceType.OPPORTUNITY
+    ) {
+      const spaceDefaults = await this.getDefaultsForAccountOrFail(accountID);
+      if (spaceDefaults.innovationFlowTemplate) {
+        const template =
+          await this.innovationFlowTemplateService.getInnovationFlowTemplateOrFail(
+            spaceDefaults.innovationFlowTemplate.id,
+            {
+              relations: { profile: true },
+            }
+          );
+        spaceDefaults.innovationFlowTemplate;
+        // Note: no profile currently present, so use the one from the template for now
+        const result: CreateInnovationFlowInput = {
+          profile: {
+            displayName: template.profile.displayName,
+            description: template.profile.description,
+          },
+          states: this.innovationFlowStatesService.getStates(template.states),
+        };
+        return result;
+      }
     }
 
-    // If no default template is set, then make up one
+    // If no default template is set, then pick up the default based on the specified type
+    const innovationFlowStatesDefault =
+      this.getDefaultInnovationFlowStates(spaceType);
     const result: CreateInnovationFlowInput = {
       profile: {
         displayName: 'default',

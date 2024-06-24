@@ -9,6 +9,7 @@ export enum LogContext {
   COMMUNITY = 'community',
   DATA_LOADER = 'data-loader',
   COMMUNICATION = 'communication',
+  PLATFORM_FORUM = 'platform-forum',
   COMMUNICATION_EVENTS = 'communication_events',
   COLLABORATION = 'collaboration',
   AGENT = 'agent',
@@ -62,4 +63,6 @@ export enum LogContext {
   LOCAL_STORAGE = 'local-storage',
   INNOVATION_FLOW = 'innovation-flow',
   FILE_INTEGRATION = 'file-integration',
+  AI_SERVER = 'ai-server',
+  AI_PERSONA_SERVICE = 'ai-persona-service',
 }

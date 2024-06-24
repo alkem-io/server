@@ -3,6 +3,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import {
   SUBSCRIPTION_ACTIVITY_CREATED,
   SUBSCRIPTION_ROOM_EVENT,
+  SUBSCRIPTION_WHITEBOARD_SAVED,
 } from '@src/common/constants';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { IActivity } from '@platform/activity';
@@ -12,6 +13,7 @@ import { IMessageReaction } from '@domain/communication/message.reaction/message
 import {
   ActivityCreatedSubscriptionPayload,
   RoomEventSubscriptionPayload,
+  WhiteboardSavedSubscriptionPayload,
 } from './dto';
 
 @Injectable()
@@ -20,7 +22,9 @@ export class SubscriptionPublishService {
     @Inject(SUBSCRIPTION_ACTIVITY_CREATED)
     private activityCreatedSubscription: PubSubEngine,
     @Inject(SUBSCRIPTION_ROOM_EVENT)
-    private roomEventsSubscription: PubSubEngine
+    private roomEventsSubscription: PubSubEngine,
+    @Inject(SUBSCRIPTION_WHITEBOARD_SAVED)
+    private whiteboardSavedSubscription: PubSubEngine
   ) {}
 
   public publishActivity(
@@ -65,6 +69,22 @@ export class SubscriptionPublishService {
 
     return this.roomEventsSubscription.publish(
       SubscriptionType.ROOM_EVENTS,
+      payload
+    );
+  }
+
+  public publishWhiteboardSaved(
+    whiteboardId: string,
+    updatedDate: Date
+  ): Promise<void> {
+    const payload: WhiteboardSavedSubscriptionPayload = {
+      eventID: `whiteboard-saved-${randomInt()}`,
+      whiteboardID: whiteboardId,
+      updatedDate,
+    };
+
+    return this.whiteboardSavedSubscription.publish(
+      SubscriptionType.WHITEBOARD_SAVED,
       payload
     );
   }

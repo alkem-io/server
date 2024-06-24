@@ -9,6 +9,8 @@ export const MimeFileType = {
 
 export type MimeFileType = MimeTypeVisual | MimeTypeDocument;
 
+export const DEFAULT_ALLOWED_MIME_TYPES = Object.values(MimeFileType);
+
 registerEnumType(MimeFileType, {
   name: 'MimeType',
 });

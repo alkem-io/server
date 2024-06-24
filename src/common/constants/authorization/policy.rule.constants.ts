@@ -5,10 +5,8 @@ export const POLICY_RULE_WHITEBOARD_CONTENT_UPDATE =
 export const POLICY_RULE_VISUAL_UPDATE = 'policyRule-visualUpdate';
 export const POLICY_RULE_ROOM_CONTRIBUTE = 'policyRule-roomContribute';
 export const POLICY_RULE_ROOM_ADMINS = 'policyRule-roomAdminsCreate';
-export const POLICY_RULE_COMMUNICATION_CONTRIBUTE =
-  'policyRule-communicateContribute';
-export const POLICY_RULE_COMMUNICATION_CREATE =
-  'policyRule-communicationCreate';
+export const POLICY_RULE_FORUM_CONTRIBUTE = 'policyRule-forumContribute';
+export const POLICY_RULE_FORUM_CREATE = 'policyRule-forumCreate';
 export const POLICY_RULE_PLATFORM_DELETE = 'policyRule-platformDelete';
 export const POLICY_RULE_CALLOUT_CREATE = 'policyRule-calloutCreate';
 export const POLICY_RULE_CALLOUT_CONTRIBUTE = 'policyRule-calloutContribute';
@@ -26,5 +24,6 @@ export const PRIVILEGE_RULE_TYPES_INNOVATION_FLOW_UPDATE =
   'privilegeRuleTypes-innovationFlowUpdate';
 export const PRIVILEGE_RULE_READ_USER_SETTINGS =
   'privilegeRule-readUserSettings';
-export const POLICY_RULE_VC_ADD_TO_COMMUNITY =
-  'policyRule-virtualContributorAddToCommunity';
+export const POLICY_RULE_COMMUNITY_INVITE_MEMBER = 'policyRule-communityInvite';
+export const POLICY_RULE_COMMUNITY_ADD_VC =
+  'policyRule-communityAddVirtualContributor';

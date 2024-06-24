@@ -14,7 +14,7 @@ import { TimelineResolverService } from '../entity-resolver/timeline.resolver.se
 import { StorageAggregatorNotFoundException } from '@common/exceptions/storage.aggregator.not.found.exception';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Space } from '@domain/space/space/space.entity';
-import { SpaceType } from '@common/enums/space.type';
+import { SpaceLevel } from '@common/enums/space.level';
 
 @Injectable()
 export class StorageAggregatorResolverService {
@@ -74,7 +74,7 @@ export class StorageAggregatorResolverService {
   ): Promise<{
     id: string;
     displayName: string;
-    type: SpaceType;
+    level: SpaceLevel;
     nameID: string;
   }> {
     const space = await this.entityManager.findOne(Space, {
@@ -98,7 +98,7 @@ export class StorageAggregatorResolverService {
       id: space.id,
       displayName: space.profile.displayName,
       nameID: space.nameID,
-      type: space.type,
+      level: space.level,
     };
   }
 
@@ -185,12 +185,8 @@ export class StorageAggregatorResolverService {
     return await this.getStorageAggregatorIdForCollaboration(collaborationId);
   }
 
-  public async getStorageAggregatorForCommunication(
-    communicationID: string
-  ): Promise<IStorageAggregator> {
-    const storageAggregatorId =
-      await this.getStorageAggregatorIdForCommunication(communicationID);
-    return await this.getStorageAggregatorOrFail(storageAggregatorId);
+  public async getStorageAggregatorForForum(): Promise<IStorageAggregator> {
+    return await this.getPlatformStorageAggregator();
   }
 
   public async getStorageAggregatorForCommunity(
@@ -222,37 +218,6 @@ export class StorageAggregatorResolverService {
       );
     }
     return space.storageAggregator.id;
-  }
-
-  private async getStorageAggregatorIdForCommunication(
-    communicationID: string
-  ): Promise<string> {
-    const query = `SELECT \`id\` FROM \`community\`
-      WHERE \`community\`.\`communicationId\`='${communicationID}'`;
-    const [communityQueryResult]: {
-      id: string;
-    }[] = await this.entityManager.connection.query(query);
-
-    if (!communityQueryResult) {
-      const query = `SELECT \`id\` FROM \`platform\`
-      WHERE \`platform\`.\`communicationId\`='${communicationID}'`;
-      const [platformQueryResult]: {
-        id: string;
-      }[] = await this.entityManager.connection.query(query);
-      if (!platformQueryResult) {
-        this.logger.error(
-          `lookup for communication ${communicationID} - community / platform not found`,
-          undefined,
-          LogContext.STORAGE_BUCKET
-        );
-      }
-      const platformStorageAggregator =
-        await this.getPlatformStorageAggregator();
-      return platformStorageAggregator.id;
-    }
-    return await this.getStorageAggregatorIdForCommunity(
-      communityQueryResult.id
-    );
   }
 
   public async getStorageAggregatorForCallout(

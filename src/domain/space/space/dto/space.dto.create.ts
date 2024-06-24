@@ -38,5 +38,7 @@ export class CreateSpaceInput extends CreateNameableInput {
 
   level!: number;
 
+  @Field(() => SpaceType, { nullable: true })
+  @IsOptional()
   type!: SpaceType;
 }
