@@ -30,10 +30,7 @@ import { VirtualContributorAuthorizationService } from '@domain/community/virtua
 import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
 import { IngestSpaceInput } from '../space/dto/space.dto.ingest';
 import { EventBus } from '@nestjs/cqrs';
-import {
-  IngestSpace,
-  SpaceIngestionPurpose,
-} from '@services/infrastructure/event-bus/commands';
+import { IngestSpace } from '@services/infrastructure/event-bus/commands';
 import { CommunityContributorType } from '@common/enums/community.contributor.type';
 import { CommunityRole } from '@common/enums/community.role';
 import { AccountHostService } from './account.host.service';
@@ -65,7 +62,7 @@ export class AccountResolverMutations {
   ): Promise<IAccount> {
     const authorizationPolicy =
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       authorizationPolicy,
       AuthorizationPrivilege.CREATE_SPACE,
@@ -168,7 +165,7 @@ export class AccountResolverMutations {
     const account = await this.accountService.getAccountOrFail(
       updateData.accountID
     );
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       account.authorization,
       AuthorizationPrivilege.PLATFORM_ADMIN,
@@ -213,7 +210,7 @@ export class AccountResolverMutations {
         LogContext.ACCOUNT
       );
     }
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       spaceDefaults.authorization,
       AuthorizationPrivilege.UPDATE,
@@ -323,9 +320,7 @@ export class AccountResolverMutations {
       `ingest space: ${space.nameID}(${space.id})`
     );
 
-    this.eventBus.publish(
-      new IngestSpace(space.id, SpaceIngestionPurpose.Knowledge)
-    );
+    this.eventBus.publish(new IngestSpace(space.id, ingestSpaceData.purpose));
     return space;
   }
 }

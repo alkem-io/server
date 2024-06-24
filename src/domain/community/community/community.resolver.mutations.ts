@@ -262,7 +262,6 @@ export class CommunityResolverMutations {
     virtual = await this.virtualContributorService.save(virtual);
 
     const spaceID = await this.communityService.getRootSpaceID(community);
-
     this.aiServerAdapter.ensureSpaceIsUsable(
       spaceID,
       SpaceIngestionPurpose.Context
