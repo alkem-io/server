@@ -3,7 +3,6 @@ import { SpaceVisibility } from '@common/enums/space.visibility';
 import { groupCredentialsByEntity } from '@services/api/roles/util/group.credentials.by.entity';
 import { SpaceService } from '@domain/space/space/space.service';
 import { RolesService } from '../roles/roles.service';
-import { CommunityApplicationForRoleResult } from '../roles/dto/roles.dto.result.community.application';
 import { ISpace } from '@domain/space/space/space.interface';
 import { SpacesQueryArgs } from '@domain/space/space/dto/space.args.query.spaces';
 import { ActivityLogService } from '../activity-log';
@@ -19,6 +18,7 @@ import { CommunityInvitationResult } from './dto/me.invitation.result';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { EntityNotFoundException } from '@common/exceptions';
 import { InvitationService } from '@domain/community/invitation/invitation.service';
+import { CommunityApplicationResult } from './dto/me.application.result';
 
 @Injectable()
 export class MeService {
@@ -62,6 +62,7 @@ export class MeService {
         invitation: invitation,
         space: space,
         state: state,
+        createdDate: invitation.createdDate,
       });
     }
     return results;
@@ -70,11 +71,33 @@ export class MeService {
   public async getCommunityApplicationsForUser(
     userId: string,
     states?: string[]
-  ): Promise<CommunityApplicationForRoleResult[]> {
-    return await this.rolesService.getCommunityApplicationsForUser(
-      userId,
-      states
-    );
+  ): Promise<CommunityApplicationResult[]> {
+    const applications =
+      await this.rolesService.getCommunityApplicationsForUser(userId, states);
+    const results: CommunityApplicationResult[] = [];
+    for (const application of applications) {
+      if (!application.community) {
+        throw new EntityNotFoundException(
+          `Community not found for application ${application.id}`,
+          LogContext.COMMUNITY
+        );
+      }
+      const space =
+        await this.communityResolverService.getSpaceForCommunityOrFail(
+          application.community.id
+        );
+      const state = await this.invitationService.getInvitationState(
+        application.id
+      );
+      results.push({
+        id: `${space.id}-${application.id}`,
+        application: application,
+        space: space,
+        state: state,
+        createdDate: application.createdDate,
+      });
+    }
+    return results;
   }
 
   public async getSpaceMemberships(

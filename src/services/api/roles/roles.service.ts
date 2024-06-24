@@ -98,12 +98,17 @@ export class RolesService {
   public async getCommunityApplicationsForUser(
     userID: string,
     states?: string[]
-  ): Promise<CommunityApplicationForRoleResult[]> {
-    const applicationResults: CommunityApplicationForRoleResult[] = [];
-    const applications = await this.applicationService.findApplicationsForUser(
+  ): Promise<IApplication[]> {
+    return await this.applicationService.findApplicationsForUser(
       userID,
       states
     );
+  }
+
+  public async convertApplicationsToRoleResults(
+    applications: IApplication[]
+  ): Promise<CommunityApplicationForRoleResult[]> {
+    const applicationResults: CommunityApplicationForRoleResult[] = [];
     for (const application of applications) {
       const community = application.community;
       const state = await this.applicationService.getApplicationState(

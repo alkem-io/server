@@ -98,9 +98,10 @@ export class RolesResolverFields {
       AuthorizationPrivilege.PLATFORM_ADMIN,
       `roles user query: ${agentInfo.email}`
     );
-    return await this.rolesService.getCommunityApplicationsForUser(
-      roles.id,
-      states
+    const applications =
+      await this.rolesService.getCommunityApplicationsForUser(roles.id, states);
+    return await this.rolesService.convertApplicationsToRoleResults(
+      applications
     );
   }
 }
