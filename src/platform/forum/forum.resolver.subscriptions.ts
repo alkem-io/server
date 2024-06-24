@@ -11,18 +11,18 @@ import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { SUBSCRIPTION_DISCUSSION_UPDATED } from '@common/constants/providers';
-import { IDiscussion } from '../discussion/discussion.interface';
-import { DiscussionService } from '../discussion/discussion.service';
-import { CommunicationService } from './communication.service';
-import { CommunicationDiscussionUpdated } from './dto/communication.dto.event.discussion.updated';
+import { IDiscussion } from '../forum-discussion/discussion.interface';
+import { DiscussionService } from '../forum-discussion/discussion.service';
+import { ForumService } from './forum.service';
+import { ForumDiscussionUpdated } from './dto/forum.dto.event.discussion.updated';
 import { UUID_LENGTH } from '@common/constants';
 import { SubscriptionUserNotAuthenticated } from '@common/exceptions/subscription.user.not.authenticated';
 
 @Resolver()
-export class CommunicationResolverSubscriptions {
+export class ForumResolverSubscriptions {
   constructor(
     private authorizationService: AuthorizationService,
-    private communicationService: CommunicationService,
+    private forumService: ForumService,
     private discussionService: DiscussionService,
     @Inject(SUBSCRIPTION_DISCUSSION_UPDATED)
     private subscriptionDiscussionUpdated: PubSubEngine,
@@ -34,8 +34,8 @@ export class CommunicationResolverSubscriptions {
   @Subscription(() => IDiscussion, {
     description: 'Receive updates on Discussions',
     async resolve(
-      this: CommunicationResolverSubscriptions,
-      payload: CommunicationDiscussionUpdated,
+      this: ForumResolverSubscriptions,
+      payload: ForumDiscussionUpdated,
       _: any,
       context: any
     ): Promise<IDiscussion> {
@@ -49,15 +49,15 @@ export class CommunicationResolverSubscriptions {
       );
     },
     async filter(
-      this: CommunicationResolverSubscriptions,
-      payload: CommunicationDiscussionUpdated,
+      this: ForumResolverSubscriptions,
+      payload: ForumDiscussionUpdated,
       variables: any,
       context: any
     ) {
       const agentInfo = context.req?.user;
-      const isMatch = await this.discussionService.isDiscussionInCommunication(
+      const isMatch = await this.discussionService.isDiscussionInForum(
         payload.discussionID,
-        variables.communicationID
+        variables.forumID
       );
       this.logger.verbose?.(
         `[User (${agentInfo.email}) Discussion Update] - Filtering event id '${payload.eventID}' - match? ${isMatch}`,
@@ -66,15 +66,14 @@ export class CommunicationResolverSubscriptions {
       return isMatch;
     },
   })
-  async communicationDiscussionUpdated(
+  async forumDiscussionUpdated(
     @CurrentUser() agentInfo: AgentInfo,
     @Args({
-      name: 'communicationID',
+      name: 'forumID',
       type: () => UUID,
-      description:
-        'The IDs of the Communication to subscribe to all updates on.',
+      description: 'The IDs of the Forum to subscribe to all updates on.',
     })
-    communicationID: string
+    forumID: string
   ) {
     // Only allow subscriptions for logged in users
     if (agentInfo.userID.length !== UUID_LENGTH) {
@@ -85,21 +84,20 @@ export class CommunicationResolverSubscriptions {
     }
     const logMsgPrefix = `[User (${agentInfo.email}) Discussion Update] - `;
     this.logger.verbose?.(
-      `${logMsgPrefix} Subscribing to Discussions on Communication: ${communicationID}`,
+      `${logMsgPrefix} Subscribing to Discussions on Forum: ${forumID}`,
       LogContext.SUBSCRIPTIONS
     );
 
-    const communication =
-      await this.communicationService.getCommunicationOrFail(communicationID);
+    const forum = await this.forumService.getForumOrFail(forumID);
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      communication.authorization,
+      forum.authorization,
       AuthorizationPrivilege.READ,
-      `subscription to discussion updates on: ${communication.id}`
+      `subscription to discussion updates on: ${forum.id}`
     );
 
     return this.subscriptionDiscussionUpdated.asyncIterator(
-      SubscriptionType.COMMUNICATION_DISCUSSION_UPDATED
+      SubscriptionType.FORUM_DISCUSSION_UPDATED
     );
   }
 }

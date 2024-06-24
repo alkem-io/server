@@ -12,9 +12,7 @@ import { IPost } from '@domain/collaboration/post/post.interface';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { CalendarEvent, ICalendarEvent } from '@domain/timeline/event';
 import { Inject, LoggerService } from '@nestjs/common';
-import { Discussion } from '@domain/communication/discussion/discussion.entity';
 import { InnovationHub } from '@domain/innovation-hub/innovation.hub.entity';
-import { IDiscussion } from '@domain/communication/discussion/discussion.interface';
 import { ICallout } from '@domain/collaboration/callout';
 import { NAMEID_LENGTH } from '@common/constants';
 import { Space } from '@domain/space/space/space.entity';
@@ -24,6 +22,8 @@ import { User } from '@domain/community/user/user.entity';
 import { InnovationPack } from '@library/innovation-pack/innovation.pack.entity';
 import { VirtualContributor } from '@domain/community/virtual-contributor';
 import { Organization } from '@domain/community/organization';
+import { Discussion } from '@platform/forum-discussion/discussion.entity';
+import { IDiscussion } from '@platform/forum-discussion/discussion.interface';
 
 export class NamingService {
   replaceSpecialCharacters = require('replace-special-characters');
@@ -58,13 +58,11 @@ export class NamingService {
     return nameIDs;
   }
 
-  public async getReservedNameIDsInCommunication(
-    communicationID: string
-  ): Promise<string[]> {
+  public async getReservedNameIDsInForum(forumID: string): Promise<string[]> {
     const discussions = await this.entityManager.find(Discussion, {
       where: {
-        communication: {
-          id: communicationID,
+        forum: {
+          id: forumID,
         },
       },
       select: {
@@ -217,18 +215,18 @@ export class NamingService {
     return true;
   }
 
-  async isDiscussionDisplayNameAvailableInCommunication(
+  async isDiscussionDisplayNameAvailableInForum(
     displayName: string,
-    communicationID: string
+    forumID: string
   ): Promise<boolean> {
     const query = this.discussionRepository
       .createQueryBuilder('discussion')
-      .leftJoinAndSelect('discussion.communication', 'communication')
+      .leftJoinAndSelect('discussion.forum', 'forum')
       .leftJoinAndSelect('discussion.profile', 'profile')
-      .where('communication.id = :id')
+      .where('forum.id = :id')
       .andWhere('profile.displayName = :displayName')
       .setParameters({
-        id: `${communicationID}`,
+        id: `${forumID}`,
         displayName: `${displayName}`,
       });
     const discussionsWithDisplayName = await query.getOne();

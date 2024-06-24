@@ -21,6 +21,7 @@ import { AgentModule } from '@domain/agent/agent/agent.module';
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
 import { LicensingModule } from '@platform/licensing/licensing.module';
 import { VirtualPersonaModule } from '@platform/virtual-persona/virtual.persona.module';
+import { ForumModule } from '@platform/forum/forum.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { VirtualPersonaModule } from '@platform/virtual-persona/virtual.persona.
     CommunicationModule,
     PlatformAuthorizationPolicyModule,
     LibraryModule,
+    ForumModule,
     StorageAggregatorModule,
     KonfigModule,
     MetadataModule,

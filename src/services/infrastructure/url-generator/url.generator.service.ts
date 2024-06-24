@@ -1,6 +1,9 @@
 import { LogContext, ProfileType } from '@common/enums';
 import { ConfigurationTypes } from '@common/enums/configuration.type';
-import { EntityNotFoundException } from '@common/exceptions';
+import {
+  EntityNotFoundException,
+  RelationshipNotFoundException,
+} from '@common/exceptions';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
@@ -14,6 +17,11 @@ import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { CalloutTemplate } from '@domain/template/callout-template/callout.template.entity';
 import { ISpace } from '@domain/space/space/space.interface';
 import { SpaceLevel } from '@common/enums/space.level';
+import { IContributor } from '@domain/community/contributor/contributor.interface';
+import { CommunityContributorType } from '@common/enums/community.contributor.type';
+import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
+import { User } from '@domain/community/user/user.entity';
+import { Organization } from '@domain/community/organization/organization.entity';
 
 @Injectable()
 export class UrlGeneratorService {
@@ -288,12 +296,37 @@ export class UrlGeneratorService {
     return '';
   }
 
-  public createUrlForUserNameID(userNameID: string): string {
-    return `${this.endpoint_cluster}/${this.PATH_USER}/${userNameID}`;
+  public createUrlForContributor(contributor: IContributor): string {
+    const type = this.getContributorType(contributor);
+    let path = this.PATH_VIRTUAL_CONTRIBUTOR;
+    switch (type) {
+      case CommunityContributorType.USER:
+        path = this.PATH_USER;
+        break;
+      case CommunityContributorType.ORGANIZATION:
+        path = this.PATH_ORGANIZATION;
+        break;
+      case CommunityContributorType.VIRTUAL:
+        path = this.PATH_VIRTUAL_CONTRIBUTOR;
+        break;
+    }
+    return `${this.endpoint_cluster}/${path}/${contributor.nameID}`;
   }
 
   public createUrlForOrganizationNameID(organizationNameID: string): string {
     return `${this.endpoint_cluster}/${this.PATH_ORGANIZATION}/${organizationNameID}`;
+  }
+
+  private getContributorType(contributor: IContributor) {
+    if (contributor instanceof User) return CommunityContributorType.USER;
+    if (contributor instanceof Organization)
+      return CommunityContributorType.ORGANIZATION;
+    if (contributor instanceof VirtualContributor)
+      return CommunityContributorType.VIRTUAL;
+    throw new RelationshipNotFoundException(
+      `Unable to determine contributor type for ${contributor.id}`,
+      LogContext.COMMUNITY
+    );
   }
 
   public async getNameableEntityInfoOrFail(
