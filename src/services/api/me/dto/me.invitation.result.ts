@@ -5,7 +5,7 @@ import { CommunityPendingMembershipResult } from './me.pending.membership.result
 @ObjectType()
 export class CommunityInvitationResult extends CommunityPendingMembershipResult {
   @Field(() => IInvitation, {
-    description: 'The inviation itself',
+    description: 'The invitation itself',
   })
   invitation!: IInvitation;
 }
