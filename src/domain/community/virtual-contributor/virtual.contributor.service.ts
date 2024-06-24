@@ -324,6 +324,7 @@ export class VirtualContributorService {
         relations: {
           authorization: true,
           aiPersona: true,
+          agent: true,
         },
       }
     );
@@ -342,7 +343,11 @@ export class VirtualContributorService {
       question: vcQuestionInput.question,
     };
 
-    return await this.aiServerAdapter.askQuestion(aiServerAdapterQuestionInput);
+    return await this.aiServerAdapter.askQuestion(
+      aiServerAdapterQuestionInput,
+      agentInfo,
+      contextSpaceNameID
+    );
   }
 
   // TODO: move to store

@@ -25,6 +25,9 @@ import { AiPersonaEngineAdapter } from '../ai-persona-engine-adapter/ai.persona.
 import { AiServerIngestAiPersonaServiceInput } from './dto/ai.server.dto.ingest.ai.persona.service';
 import { AiPersonaEngineAdapterInputBase } from '../ai-persona-engine-adapter/dto/ai.persona.engine.adapter.dto.base';
 import { CreateAiPersonaServiceInput } from '../ai-persona-service/dto';
+import { AiServerAdapterAskQuestionInput } from '@services/adapters/ai-server-adapter/dto/ai.server.adapter.dto.ask.question';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { AiPersonaServiceQuestionInput } from '../ai-persona-service/dto/ai.persona.service.question.dto.input';
 
 @Injectable()
 export class AiServerService {
@@ -37,6 +40,18 @@ export class AiServerService {
     private aiServerRepository: Repository<AiServer>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
+
+  async askQuestion(
+    questionInput: AiPersonaServiceQuestionInput,
+    agentInfo: AgentInfo,
+    contextSapceNameID: string
+  ) {
+    return this.aiPersonaServiceService.askQuestion(
+      questionInput,
+      agentInfo,
+      contextSapceNameID
+    );
+  }
 
   async createAiPersonaService(
     personaServiceData: CreateAiPersonaServiceInput

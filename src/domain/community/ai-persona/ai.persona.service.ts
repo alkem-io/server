@@ -19,7 +19,6 @@ import { AiServerAdapterAskQuestionInput } from '@services/adapters/ai-server-ad
 import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
 import { AiPersonaDataAccessMode } from '@common/enums/ai.persona.data.access.mode';
 import { AiPersonaInteractionMode } from '@common/enums/ai.persona.interaction.mode';
-import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
 
 @Injectable()
 export class AiPersonaService {
@@ -37,17 +36,16 @@ export class AiPersonaService {
     let aiPersona: IAiPersona = new AiPersona();
     aiPersona.description = aiPersonaData.description ?? '';
     aiPersona.authorization = new AuthorizationPolicy();
-
-    // TODO: use AiServerWrapper to create a new AI Persona Service if no persona service ID is provided
-
-    // For now fixed.
     aiPersona.bodyOfKnowledgeType = AiPersonaBodyOfKnowledgeType.ALKEMIO_SPACE;
     aiPersona.dataAccessMode =
       AiPersonaDataAccessMode.SPACE_PROFILE_AND_CONTENTS;
     aiPersona.interactionModes = [AiPersonaInteractionMode.DISCUSSION_TAGGING];
 
     if (aiPersonaData.aiPersonaServiceID) {
-      aiPersona.aiPersonaServiceID = aiPersonaData.aiPersonaServiceID;
+      const personaService = await this.aiServerAdapter.getPersonaServiceOrFail(
+        aiPersonaData.aiPersonaServiceID
+      );
+      aiPersona.aiPersonaServiceID = personaService.id;
     } else if (aiPersonaData.aiPersonaService) {
       const aiPersonaService =
         await this.aiServerAdapter.createAiPersonaService(
@@ -157,6 +155,10 @@ export class AiPersonaService {
       personaServiceID: aiPersona.aiPersonaServiceID,
     };
 
-    return await this.aiServerAdapter.askQuestion(input);
+    return await this.aiServerAdapter.askQuestion(
+      input,
+      agentInfo,
+      contextSpaceNameID
+    );
   }
 }

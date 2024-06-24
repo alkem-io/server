@@ -1,5 +1,5 @@
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
-import { Entity, JoinColumn, OneToMany, OneToOne } from 'typeorm';
+import { Entity, OneToMany } from 'typeorm';
 import { AiPersonaService } from '../ai-persona-service/ai.persona.service.entity';
 import { IAiServer } from './ai.server.interface';
 

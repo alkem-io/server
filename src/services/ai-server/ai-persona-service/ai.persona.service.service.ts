@@ -157,6 +157,7 @@ export class AiPersonaServiceService {
       prompt: aiPersonaService.prompt,
       userId: agentInfo.userID,
       question: personaQuestionInput.question,
+      knowledgeSpaceNameID: aiPersonaService.bodyOfKnowledgeID,
       contextSpaceNameID,
     };
 
