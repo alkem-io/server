@@ -3,7 +3,7 @@ import { Field, ObjectType } from '@nestjs/graphql';
 import { SpaceLevel } from '@common/enums/space.level';
 
 @ObjectType()
-export class InvitationForRoleResult {
+export class CommunityApplicationForRoleResult {
   @Field(() => UUID, {
     description: 'ID for the application',
   })
@@ -20,15 +20,9 @@ export class InvitationForRoleResult {
   displayName: string;
 
   @Field(() => String, {
-    description: 'The current state of the invitation.',
+    description: 'The current state of the application.',
   })
   state: string;
-
-  @Field(() => UUID, {
-    description: 'ID for the user that created the invitation.',
-    nullable: false,
-  })
-  createdBy!: string;
 
   @Field(() => Date, {
     description: 'Date of creation',
@@ -49,12 +43,6 @@ export class InvitationForRoleResult {
     description: 'Nesting level of the Space',
   })
   spaceLevel!: SpaceLevel;
-
-  @Field(() => UUID, {
-    description: 'The welcome message of the invitation',
-    nullable: true,
-  })
-  welcomeMessage?: string;
 
   constructor(
     communityID: string,
