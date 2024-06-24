@@ -11,7 +11,6 @@ import { ISpace } from './space.interface';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { CommunityPolicyService } from '@domain/community/community-policy/community.policy.service';
-import { ILicense } from '@domain/license/license/license.interface';
 import { CommunityAuthorizationService } from '@domain/community/community/community.service.authorization';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
@@ -43,6 +42,7 @@ import { ICredentialDefinition } from '@domain/agent/credential/credential.defin
 import { SpaceSettingsService } from '../space.settings/space.settings.service';
 import { SpaceLevel } from '@common/enums/space.level';
 import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
+import { IAgent } from '@domain/agent/agent/agent.interface';
 
 @Injectable()
 export class SpaceAuthorizationService {
@@ -68,6 +68,9 @@ export class SpaceAuthorizationService {
         },
         account: {
           license: true,
+          agent: {
+            credentials: true,
+          },
           authorization: true,
         },
         parentSpace: {
@@ -81,6 +84,8 @@ export class SpaceAuthorizationService {
       !space.community.policy ||
       !space.account ||
       !space.account.license ||
+      !space.account.agent ||
+      !space.account.agent.credentials ||
       !space.account.authorization
     )
       throw new RelationshipNotFoundException(
@@ -94,6 +99,7 @@ export class SpaceAuthorizationService {
     const communityPolicyWithFlags = this.getCommunityPolicyWithSettings(space);
 
     const license = space.account.license;
+    const accountAgent = space.account.agent;
     const privateSpace =
       space.community.policy.settings.privacy.mode === SpacePrivacyMode.PRIVATE;
     const accountAuthorization = space.account.authorization;
@@ -156,7 +162,10 @@ export class SpaceAuthorizationService {
 
     // Cascade down
     // propagate authorization rules for child entities
-    space = await this.propagateAuthorizationToChildEntities(space, license);
+    space = await this.propagateAuthorizationToChildEntities(
+      space,
+      accountAgent
+    );
     if (!space.community)
       throw new RelationshipNotFoundException(
         `Unable to load Community on space after child entities propagation: ${space.id} `,
@@ -183,13 +192,10 @@ export class SpaceAuthorizationService {
 
   public async propagateAuthorizationToChildEntities(
     spaceInput: ISpace,
-    license: ILicense
+    accountAgent: IAgent
   ): Promise<ISpace> {
     const space = await this.spaceService.getSpaceOrFail(spaceInput.id, {
       relations: {
-        account: {
-          license: true,
-        },
         agent: true,
         collaboration: true,
         community: {
@@ -202,8 +208,6 @@ export class SpaceAuthorizationService {
       },
     });
     if (
-      !space.account ||
-      !space.account.license ||
       !space.agent ||
       !space.collaboration ||
       !space.community ||
@@ -232,7 +236,7 @@ export class SpaceAuthorizationService {
       await this.communityAuthorizationService.applyAuthorizationPolicy(
         space.community,
         space.authorization,
-        license,
+        accountAgent,
         communityPolicy
       );
 
@@ -253,7 +257,7 @@ export class SpaceAuthorizationService {
         space.collaboration,
         space.authorization,
         communityPolicy,
-        license
+        accountAgent
       );
 
     space.agent = this.agentAuthorizationService.applyAuthorizationPolicy(

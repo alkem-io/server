@@ -21,6 +21,7 @@ import { LicensingModule } from '@platform/licensing/licensing.module';
 import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
 import { LicenseIssuerModule } from '@platform/license-issuer/license.issuer.module';
 import { AccountHostModule } from './account.host.module';
+import { LicenseEngineModule } from '@core/license-engine/license.engine.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { AccountHostModule } from './account.host.module';
     LicenseModule,
     LicensingModule,
     LicenseIssuerModule,
+    LicenseEngineModule,
     NameReporterModule,
     TypeOrmModule.forFeature([Account]),
   ],

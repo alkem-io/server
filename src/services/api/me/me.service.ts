@@ -3,8 +3,8 @@ import { SpaceVisibility } from '@common/enums/space.visibility';
 import { groupCredentialsByEntity } from '@services/api/roles/util/group.credentials.by.entity';
 import { SpaceService } from '@domain/space/space/space.service';
 import { RolesService } from '../roles/roles.service';
-import { ApplicationForRoleResult } from '../roles/dto/roles.dto.result.application';
-import { InvitationForRoleResult } from '../roles/dto/roles.dto.result.invitation';
+import { CommunityApplicationForRoleResult } from '../roles/dto/roles.dto.result.community.application';
+import { CommunityInvitationForRoleResult } from '../roles/dto/roles.dto.result.community.invitation';
 import { ISpace } from '@domain/space/space/space.interface';
 import { SpacesQueryArgs } from '@domain/space/space/dto/space.args.query.spaces';
 import { ActivityLogService } from '../activity-log';
@@ -29,18 +29,24 @@ export class MeService {
     private readonly logger: LoggerService
   ) {}
 
-  public async getUserInvitations(
+  public async getCommunityInvitationsForUser(
     userId: string,
     states?: string[]
-  ): Promise<InvitationForRoleResult[]> {
-    return await this.rolesService.getUserInvitations(userId, states);
+  ): Promise<CommunityInvitationForRoleResult[]> {
+    return await this.rolesService.getCommunityInvitationsForUser(
+      userId,
+      states
+    );
   }
 
-  public async getUserApplications(
+  public async getCommunityApplicationsForUser(
     userId: string,
     states?: string[]
-  ): Promise<ApplicationForRoleResult[]> {
-    return await this.rolesService.getUserApplications(userId, states);
+  ): Promise<CommunityApplicationForRoleResult[]> {
+    return await this.rolesService.getCommunityApplicationsForUser(
+      userId,
+      states
+    );
   }
 
   public async getSpaceMemberships(

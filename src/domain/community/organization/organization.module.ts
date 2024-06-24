@@ -20,12 +20,14 @@ import { PlatformAuthorizationPolicyModule } from '@src/platform/authorization/p
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { OrganizationStorageAggregatorLoaderCreator } from '@core/dataloader/creators/loader.creators/community/organization.storage.aggregator.loader.creator';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
+import { ContributorModule } from '../contributor/contributor.module';
 
 @Module({
   imports: [
     AgentModule,
     AuthorizationPolicyModule,
     AuthorizationModule,
+    ContributorModule,
     OrganizationVerificationModule,
     UserModule,
     UserGroupModule,

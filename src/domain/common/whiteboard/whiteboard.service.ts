@@ -245,7 +245,7 @@ export class WhiteboardService {
         whiteboardId
       );
     const license =
-      await this.communityResolverService.getLicenseFromCommunityOrFail(
+      await this.communityResolverService.getAccountAgentFromCommunityOrFail(
         community
       );
 

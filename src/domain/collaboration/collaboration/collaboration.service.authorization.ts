@@ -24,11 +24,11 @@ import {
 import { CommunityRole } from '@common/enums/community.role';
 import { TimelineAuthorizationService } from '@domain/timeline/timeline/timeline.service.authorization';
 import { ICallout } from '../callout/callout.interface';
-import { ILicense } from '@domain/license/license/license.interface';
 import { InnovationFlowAuthorizationService } from '../innovation-flow/innovation.flow.service.authorization';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { LicenseEngineService } from '@core/license-engine/license.engine.service';
 import { LicensePrivilege } from '@common/enums/license.privilege';
+import { IAgent } from '@domain/agent/agent/agent.interface';
 
 @Injectable()
 export class CollaborationAuthorizationService {
@@ -46,7 +46,7 @@ export class CollaborationAuthorizationService {
     collaborationInput: ICollaboration,
     parentAuthorization: IAuthorizationPolicy | undefined,
     communityPolicy: ICommunityPolicy,
-    license: ILicense
+    accountAgent: IAgent
   ): Promise<ICollaboration> {
     const collaboration =
       await this.collaborationService.getCollaborationOrFail(
@@ -82,7 +82,7 @@ export class CollaborationAuthorizationService {
     collaboration.authorization = await this.appendCredentialRules(
       collaboration.authorization,
       communityPolicy,
-      license
+      accountAgent
     );
     collaboration.authorization = this.appendCredentialRulesForContributors(
       collaboration.authorization,
@@ -92,7 +92,7 @@ export class CollaborationAuthorizationService {
     collaboration.authorization = await this.appendPrivilegeRules(
       collaboration.authorization,
       communityPolicy,
-      license
+      accountAgent
     );
 
     return this.propagateAuthorizationToChildEntities(
@@ -193,7 +193,7 @@ export class CollaborationAuthorizationService {
   private async appendCredentialRules(
     authorization: IAuthorizationPolicy | undefined,
     policy: ICommunityPolicy,
-    license: ILicense
+    accountAgent: IAgent
   ): Promise<IAuthorizationPolicy> {
     if (!authorization)
       throw new EntityNotInitializedException(
@@ -208,7 +208,7 @@ export class CollaborationAuthorizationService {
     const saveAsTemplateEnabled =
       await this.licenseEngineService.isAccessGranted(
         LicensePrivilege.CALLOUT_SAVE_AS_TEMPLATE,
-        license
+        accountAgent
       );
     if (saveAsTemplateEnabled) {
       const adminCriterias = this.communityPolicyService.getCredentialsForRole(
@@ -269,7 +269,7 @@ export class CollaborationAuthorizationService {
   private async appendPrivilegeRules(
     authorization: IAuthorizationPolicy,
     policy: ICommunityPolicy,
-    license: ILicense
+    accountAgent: IAgent
   ): Promise<IAuthorizationPolicy> {
     const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
 
@@ -282,7 +282,7 @@ export class CollaborationAuthorizationService {
 
     const whiteboardRtEnabled = await this.licenseEngineService.isAccessGranted(
       LicensePrivilege.WHITEBOARD_MULTI_USER,
-      license
+      accountAgent
     );
     if (whiteboardRtEnabled) {
       const createWhiteboardRtPrivilege = new AuthorizationPolicyRulePrivilege(

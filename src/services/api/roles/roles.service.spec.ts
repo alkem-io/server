@@ -32,6 +32,7 @@ import { SpaceLevel } from '@common/enums/space.level';
 import { Space } from '@domain/space/space/space.entity';
 import { License } from '@domain/license/license/license.entity';
 import { RolesResultCommunity } from './dto/roles.dto.result.community';
+import { MockUserLookupService } from '@test/mocks/user.lookup.service.mock';
 
 describe('RolesService', () => {
   let rolesService: RolesService;
@@ -56,6 +57,7 @@ describe('RolesService', () => {
         MockWinstonProvider,
         MockEntityManagerProvider,
         MockSpaceService,
+        MockUserLookupService,
         RolesService,
       ],
     }).compile();
@@ -164,7 +166,9 @@ describe('RolesService', () => {
     });
 
     it.skip('Should get user applications', async () => {
-      const res = await rolesService.getUserApplications(testData.user.id);
+      const res = await rolesService.getCommunityApplicationsForUser(
+        testData.user.id
+      );
 
       expect(res).toEqual(
         expect.arrayContaining([
@@ -182,7 +186,7 @@ describe('RolesService', () => {
         .mockResolvedValueOnce(false);
 
       await asyncToThrow(
-        rolesService.getUserApplications(testData.user.id),
+        rolesService.getCommunityApplicationsForUser(testData.user.id),
         RelationshipNotFoundException
       );
     });
@@ -255,7 +259,6 @@ const getSpaceRoleResultMock = ({
         license: {
           id: `license-${id}`,
           visibility: SpaceVisibility.ACTIVE,
-          featureFlags: [],
           ...getEntityMock<License>(),
         },
       },

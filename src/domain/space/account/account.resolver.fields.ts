@@ -34,6 +34,7 @@ import {
   VirtualContributor,
 } from '@domain/community/virtual-contributor';
 import { AccountHostService } from './account.host.service';
+import { LicensePrivilege } from '@common/enums/license.privilege';
 
 @Resolver(() => IAccount)
 export class AccountResolverFields {
@@ -115,6 +116,17 @@ export class AccountResolverFields {
     @Loader(AccountLicenseLoaderCreator) loader: ILoader<ILicense>
   ): Promise<ILicense> {
     return loader.load(account.id);
+  }
+
+  @ResolveField('licensePrivileges', () => [LicensePrivilege], {
+    nullable: true,
+    description:
+      'The privileges granted based on the License credentials held by this Account.',
+  })
+  async licensePrivileges(
+    @Parent() account: IAccount
+  ): Promise<LicensePrivilege[]> {
+    return this.accountService.getLicensePrivileges(account);
   }
 
   @ResolveField('host', () => IContributor, {

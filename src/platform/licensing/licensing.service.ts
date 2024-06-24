@@ -55,24 +55,6 @@ export class LicensingService {
     return licensingFrameworks[0];
   }
 
-  public async getBasePlan(licensingID: string): Promise<ILicensePlan> {
-    const licensing = await this.getLicensingOrFail(licensingID, {
-      relations: {
-        basePlan: true,
-      },
-    });
-    const basePlan = licensing.basePlan;
-
-    if (!basePlan) {
-      throw new EntityNotFoundException(
-        `Unable to find base plan: ${licensing.id}`,
-        LogContext.LICENSE
-      );
-    }
-
-    return basePlan;
-  }
-
   public async save(licensing: ILicensing): Promise<ILicensing> {
     return this.licensingRepository.save(licensing);
   }

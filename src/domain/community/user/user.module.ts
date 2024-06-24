@@ -30,6 +30,7 @@ import { UserStorageAggregatorLoaderCreator } from '@core/dataloader/creators/lo
 import { DocumentModule } from '@domain/storage/document/document.module';
 import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
 import { AvatarModule } from '@domain/common/visual/avatar.module';
+import { ContributorModule } from '../contributor/contributor.module';
 
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import { AvatarModule } from '@domain/common/visual/avatar.module';
     StorageBucketModule,
     DocumentModule,
     AvatarModule,
+    ContributorModule,
     TypeOrmModule.forFeature([User]),
   ],
   providers: [

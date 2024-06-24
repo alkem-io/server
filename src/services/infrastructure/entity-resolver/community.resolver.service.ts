@@ -8,8 +8,8 @@ import { Communication } from '@domain/communication/communication/communication
 import { Space } from '@domain/space/space/space.entity';
 import { ISpace } from '@domain/space/space/space.interface';
 import { RoomType } from '@common/enums/room.type';
-import { ILicense } from '@domain/license/license/license.interface';
 import { VirtualContributor } from '@domain/community/virtual-contributor';
+import { IAgent } from '@domain/agent';
 
 @Injectable()
 export class CommunityResolverService {
@@ -109,9 +109,9 @@ export class CommunityResolverService {
     );
   }
 
-  public async getLicenseFromCommunityOrFail(
+  public async getAccountAgentFromCommunityOrFail(
     community: ICommunity
-  ): Promise<ILicense> {
+  ): Promise<IAgent> {
     const space = await this.entityManager.findOne(Space, {
       where: {
         community: {
@@ -120,23 +120,18 @@ export class CommunityResolverService {
       },
       relations: {
         account: {
-          license: {
-            featureFlags: true,
+          agent: {
+            credentials: true,
           },
         },
       },
     });
-    if (
-      space &&
-      space.account &&
-      space.account.license &&
-      space.account.license.featureFlags
-    ) {
-      return space.account.license;
+    if (space && space.account && space.account.agent) {
+      return space.account.agent;
     }
 
     throw new EntityNotFoundException(
-      `Unable to find License feature flags for given community id: ${community.id}`,
+      `Unable to find Agent for account for given community id: ${community.id}`,
       LogContext.COLLABORATION
     );
   }
