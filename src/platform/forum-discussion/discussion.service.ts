@@ -8,16 +8,16 @@ import { Discussion } from './discussion.entity';
 import { IDiscussion } from './discussion.interface';
 import { UpdateDiscussionInput } from './dto/discussion.dto.update';
 import { DeleteDiscussionInput } from './dto/discussion.dto.delete';
-import { RoomService } from '../room/room.service';
-import { CommunicationCreateDiscussionInput } from '../communication/dto/communication.dto.create.discussion';
+import { RoomService } from '../../domain/communication/room/room.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
-import { IRoom } from '../room/room.interface';
+import { IRoom } from '../../domain/communication/room/room.interface';
 import { RoomType } from '@common/enums/room.type';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { ForumCreateDiscussionInput } from '@platform/forum/dto/forum.dto.create.discussion';
 
 @Injectable()
 export class DiscussionService {
@@ -30,7 +30,7 @@ export class DiscussionService {
   ) {}
 
   async createDiscussion(
-    discussionData: CommunicationCreateDiscussionInput,
+    discussionData: ForumCreateDiscussionInput,
     userID: string,
     communicationDisplayName: string,
     roomType: RoomType,
@@ -177,17 +177,17 @@ export class DiscussionService {
     return room;
   }
 
-  async isDiscussionInCommunication(
+  async isDiscussionInForum(
     discussionID: string,
-    communicationID: string
+    forumID: string
   ): Promise<boolean> {
     const discussion = await this.discussionRepository
       .createQueryBuilder('discussion')
       .where('discussion.id = :discussionID')
-      .andWhere('discussion.communicationId = :communicationID')
+      .andWhere('discussion.forumId = :forumID')
       .setParameters({
         discussionID: `${discussionID}`,
-        communicationID: `${communicationID}`,
+        forumID: `${forumID}`,
       })
       .getOne();
     if (discussion) return true;

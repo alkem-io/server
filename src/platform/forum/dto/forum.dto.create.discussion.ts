@@ -1,26 +1,25 @@
-import { DiscussionCategory } from '@common/enums/communication.discussion.category';
+import { ForumDiscussionCategory } from '@common/enums/forum.discussion.category';
 import { CreateProfileInput } from '@domain/common/profile/dto/profile.dto.create';
 import { UUID } from '@domain/common/scalars';
 import { Field, InputType } from '@nestjs/graphql';
 import { Type } from 'class-transformer';
-
 import { IsOptional, ValidateNested } from 'class-validator';
 
 @InputType()
-export class CommunicationCreateDiscussionInput {
+export class ForumCreateDiscussionInput {
   @Field(() => UUID, {
     nullable: false,
     description:
-      'The identifier for the Communication entity the Discussion is being created on.',
+      'The identifier for the Forum entity the Discussion is being created on.',
   })
-  communicationID!: string;
+  forumID!: string;
 
   @Field(() => CreateProfileInput, { nullable: false })
   @ValidateNested({ each: true })
   @Type(() => CreateProfileInput)
   profile!: CreateProfileInput;
 
-  @Field(() => DiscussionCategory, {
+  @Field(() => ForumDiscussionCategory, {
     nullable: false,
     description: 'The category for the Discussion',
   })

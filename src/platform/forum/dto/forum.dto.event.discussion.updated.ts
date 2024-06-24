@@ -1,7 +1,7 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 
-@ObjectType('CommunicationDiscussionUpdated')
-export class CommunicationDiscussionUpdated {
+@ObjectType('ForumDiscussionUpdated')
+export class ForumDiscussionUpdated {
   // To identify the event
   eventID!: string;
 

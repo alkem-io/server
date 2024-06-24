@@ -1,9 +1,5 @@
-import { COMMUNICATION_PLATFORM_SPACEID } from '@common/constants';
-import { DiscussionCategoryPlatform } from '@common/enums/communication.discussion.category.platform';
 import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
-import { ICommunication } from '@domain/communication/communication/communication.interface';
-import { CommunicationService } from '@domain/communication/communication/communication.service';
 import { ILibrary } from '@library/library/library.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -18,8 +14,6 @@ import { Platform } from './platform.entity';
 import { IPlatform } from './platform.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
-import { DiscussionCategory } from '@common/enums/communication.discussion.category';
-import { Discussion } from '@domain/communication/discussion/discussion.entity';
 import { ReleaseDiscussionOutput } from './dto/release.discussion.dto';
 import { PlatformRole } from '@common/enums/platform.role';
 import { ForbiddenException } from '@common/exceptions/forbidden.exception';
@@ -31,13 +25,17 @@ import { UserService } from '@domain/community/user/user.service';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AssignPlatformRoleToUserInput } from './dto/platform.dto.assign.role.user';
 import { ILicensing } from '@platform/licensing/licensing.interface';
+import { ForumService } from '@platform/forum/forum.service';
+import { IForum } from '@platform/forum/forum.interface';
+import { ForumDiscussionCategory } from '@common/enums/forum.discussion.category';
+import { Discussion } from '@platform/forum-discussion/discussion.entity';
 
 @Injectable()
 export class PlatformService {
   constructor(
     private userService: UserService,
     private agentService: AgentService,
-    private communicationService: CommunicationService,
+    private forumService: ForumService,
     private entityManager: EntityManager,
     @InjectRepository(Platform)
     private platformRepository: Repository<Platform>,
@@ -81,36 +79,33 @@ export class PlatformService {
     return library;
   }
 
-  async getCommunicationOrFail(): Promise<ICommunication> {
+  async getForumOrFail(): Promise<IForum> {
     const platform = await this.getPlatformOrFail({
-      relations: { communication: true },
+      relations: { forum: true },
     });
-    const communication = platform.communication;
-    if (!communication) {
+    const forum = platform.forum;
+    if (!forum) {
       throw new EntityNotFoundException(
-        'No Platform Communication found!',
+        'No Platform Forum found!',
         LogContext.PLATFORM
       );
     }
-    return communication;
+    return forum;
   }
 
-  async ensureCommunicationCreated(): Promise<ICommunication> {
+  async ensureForumCreated(): Promise<IForum> {
     const platform = await this.getPlatformOrFail({
-      relations: { communication: true },
+      relations: { forum: true },
     });
-    const communication = platform.communication;
-    if (!communication) {
-      platform.communication =
-        await this.communicationService.createCommunication(
-          'platform',
-          COMMUNICATION_PLATFORM_SPACEID,
-          Object.values(DiscussionCategoryPlatform)
-        );
+    const forum = platform.forum;
+    if (!forum) {
+      platform.forum = await this.forumService.createForum(
+        Object.values(ForumDiscussionCategory)
+      );
       await this.savePlatform(platform);
-      return platform.communication;
+      return platform.forum;
     }
-    return communication;
+    return forum;
   }
 
   async getStorageAggregator(
@@ -172,7 +167,7 @@ export class PlatformService {
       latestDiscussion = await this.entityManager
         .getRepository(Discussion)
         .findOneOrFail({
-          where: { category: DiscussionCategory.RELEASES },
+          where: { category: ForumDiscussionCategory.RELEASES },
           order: { createdDate: 'DESC' },
         });
     } catch (error) {

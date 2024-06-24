@@ -7,7 +7,6 @@ import { AdminCommunicationResolverMutations } from './admin.communication.resol
 import { AdminCommunicationResolverQueries } from './admin.communication.resolver.queries';
 import { CommunicationModule } from '@domain/communication/communication/communication.module';
 import { CommunityModule } from '@domain/community/community/community.module';
-import { DiscussionModule } from '@domain/communication/discussion/discussion.module';
 
 @Module({
   imports: [
@@ -16,7 +15,6 @@ import { DiscussionModule } from '@domain/communication/discussion/discussion.mo
     CommunityModule,
     CommunicationModule,
     CommunicationAdapterModule,
-    DiscussionModule,
   ],
   providers: [
     AdminCommunicationService,

@@ -1,6 +1,5 @@
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { ILibrary } from '@library/library/library.interface';
-import { ICommunication } from '@domain/communication/communication/communication.interface';
 import {
   InnovationHub as InnovationHubDecorator,
   Profiling,
@@ -21,6 +20,7 @@ import { GraphqlGuard } from '@core/authorization';
 import { UseGuards } from '@nestjs/common';
 import { ReleaseDiscussionOutput } from './dto/release.discussion.dto';
 import { ILicensing } from '@platform/licensing/licensing.interface';
+import { IForum } from '@platform/forum';
 
 @Resolver(() => IPlatform)
 export class PlatformResolverFields {
@@ -49,12 +49,12 @@ export class PlatformResolverFields {
     });
   }
 
-  @ResolveField('communication', () => ICommunication, {
+  @ResolveField('forum', () => IForum, {
     nullable: false,
-    description: 'The Communications for the platform',
+    description: 'The Forum for the platform',
   })
-  communication(): Promise<ICommunication> {
-    return this.platformService.getCommunicationOrFail();
+  async forum(): Promise<IForum> {
+    return await this.platformService.getForumOrFail();
   }
 
   @ResolveField('storageAggregator', () => IStorageAggregator, {
