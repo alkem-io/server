@@ -259,7 +259,6 @@ const getSpaceRoleResultMock = ({
         license: {
           id: `license-${id}`,
           visibility: SpaceVisibility.ACTIVE,
-          featureFlags: [],
           ...getEntityMock<License>(),
         },
       },

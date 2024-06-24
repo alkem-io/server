@@ -165,15 +165,19 @@ export class SpaceResolverMutations {
     const space = await this.spaceService.getSpaceOrFail(subspaceData.spaceID, {
       relations: {
         account: {
-          license: {
-            featureFlags: true,
+          agent: {
+            credentials: true,
           },
         },
       },
     });
-    if (!space.account || !space.account.license) {
+    if (
+      !space.account ||
+      !space.account.agent ||
+      !space.account.agent.credentials
+    ) {
       throw new EntityNotInitializedException(
-        `Unabl to load license for Space: ${space.id}`,
+        `Unabl to load agent with credentials for Account for Space: ${space.id}`,
         LogContext.SPACES
       );
     }

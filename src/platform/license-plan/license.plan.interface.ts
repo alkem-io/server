@@ -60,4 +60,16 @@ export abstract class ILicensePlan extends IBaseAlkemio {
     nullable: false,
   })
   licenseCredential!: LicenseCredential;
+
+  @Field(() => Boolean, {
+    description: 'Assign this plan to all new User accounts',
+    nullable: false,
+  })
+  assignToNewUserAccounts!: boolean;
+
+  @Field(() => Boolean, {
+    description: 'Assign this plan to all new Organization accounts',
+    nullable: false,
+  })
+  assignToNewOrganizationAccounts!: boolean;
 }

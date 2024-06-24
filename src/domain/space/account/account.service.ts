@@ -37,9 +37,11 @@ import { CreateVirtualContributorOnAccountInput } from './dto/account.dto.create
 import { IVirtualContributor } from '@domain/community/virtual-contributor';
 import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
 import { User } from '@domain/community/user';
-import { LicenseFeatureFlagName } from '@common/enums/license.feature.flag.name';
 import { LicenseIssuerService } from '@platform/license-issuer/license.issuer.service';
 import { AccountHostService } from './account.host.service';
+import { Organization } from '@domain/community/organization/organization.entity';
+import { LicensePrivilege } from '@common/enums/license.privilege';
+import { LicenseEngineService } from '@core/license-engine/license.engine.service';
 
 @Injectable()
 export class AccountService {
@@ -52,6 +54,7 @@ export class AccountService {
     private licenseService: LicenseService,
     private contributorService: ContributorService,
     private licensingService: LicensingService,
+    private licenseEngineService: LicenseEngineService,
     private licenseIssuerService: LicenseIssuerService,
     private virtualContributorService: VirtualContributorService,
     @InjectRepository(Account)
@@ -70,23 +73,6 @@ export class AccountService {
     const licensingFramework =
       await this.licensingService.getDefaultLicensingOrFail();
 
-    const licensePlansToAssign: ILicensePlan[] = [];
-    const basePlan = await this.licensingService.getBasePlan(
-      licensingFramework.id
-    );
-    licensePlansToAssign.push(basePlan);
-    if (
-      accountData.licensePlanID &&
-      accountData.licensePlanID !== basePlan.id
-    ) {
-      licensePlansToAssign.push(
-        await this.licensingService.getLicensePlanOrFail(
-          licensingFramework.id,
-          accountData.licensePlanID
-        )
-      );
-    }
-
     const account: IAccount = new Account();
     account.authorization = new AuthorizationPolicy();
     account.library = await this.templatesSetService.createTemplatesSet();
@@ -104,23 +90,25 @@ export class AccountService {
       agentInfo
     );
     const host = await this.setAccountHost(account, accountData.hostID);
-    if (host instanceof User) {
-      account.license = await this.licenseService.updateLicense(
-        account.license,
-        {
-          featureFlags: [
-            {
-              name: LicenseFeatureFlagName.VIRTUAL_CONTRIBUTORS,
-              enabled: true,
-            },
-          ],
-        }
-      );
-    }
 
     account.agent = await this.agentService.createAgent({
       parentDisplayID: `account-${account.space.nameID}`,
     });
+
+    const licensePlansToAssign: ILicensePlan[] = [];
+    const licensePlans = await this.licensingService.getLicensePlans(
+      licensingFramework.id
+    );
+    for (const plan of licensePlans) {
+      if (host instanceof User && plan.assignToNewUserAccounts) {
+        licensePlansToAssign.push(plan);
+      } else if (
+        host instanceof Organization &&
+        plan.assignToNewOrganizationAccounts
+      ) {
+        licensePlansToAssign.push(plan);
+      }
+    }
 
     for (const licensePlan of licensePlansToAssign) {
       account.agent = await this.licenseIssuerService.assignLicensePlan(
@@ -240,7 +228,7 @@ export class AccountService {
         agent: true,
         space: true,
         library: true,
-        license: { featureFlags: true },
+        license: true,
         defaults: true,
         virtualContributors: true,
       },
@@ -250,7 +238,6 @@ export class AccountService {
       !account.agent ||
       !account.space ||
       !account.license ||
-      !account.license?.featureFlags ||
       !account.defaults ||
       !account.library ||
       !account.virtualContributors
@@ -322,6 +309,29 @@ export class AccountService {
 
     return accounts;
   }
+  async getLicensePrivileges(account: IAccount): Promise<LicensePrivilege[]> {
+    let accountAgent = account.agent;
+    if (!account.agent) {
+      const accountWithAgent = await this.getAccountOrFail(account.id, {
+        relations: {
+          agent: {
+            credentials: true,
+          },
+        },
+      });
+      accountAgent = accountWithAgent.agent;
+    }
+    if (!accountAgent) {
+      throw new EntityNotFoundException(
+        `Unable to find agent with credentials for account: ${account.id}`,
+        LogContext.ACCOUNT
+      );
+    }
+    const privileges = await this.licenseEngineService.getGrantedPrivileges(
+      accountAgent
+    );
+    return privileges;
+  }
 
   async getLibraryOrFail(accountId: string): Promise<ITemplatesSet> {
     const accountWithTemplates = await this.getAccountOrFail(accountId, {
@@ -346,7 +356,7 @@ export class AccountService {
   async getLicenseOrFail(accountId: string): Promise<ILicense> {
     const account = await this.getAccountOrFail(accountId, {
       relations: {
-        license: { featureFlags: true },
+        license: true,
       },
     });
     const license = account.license;
