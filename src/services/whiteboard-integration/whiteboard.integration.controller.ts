@@ -7,6 +7,7 @@ import {
   RmqContext,
   Transport,
 } from '@nestjs/microservices';
+import { ack } from '../util';
 import { UserInfo, WhiteboardIntegrationMessagePattern } from './types';
 import { WhiteboardIntegrationService } from './whiteboard.integration.service';
 import { WhiteboardIntegrationEventPattern } from './types/event.pattern';
@@ -16,9 +17,7 @@ import {
   InfoInputData,
   WhoInputData,
 } from './inputs';
-import { InfoOutputData } from './outputs/info.output.data';
-import { ack } from '../util';
-import { HealthCheckOutputData } from '@services/file-integration/outputs';
+import { InfoOutputData, HealthCheckOutputData } from './outputs';
 
 /**
  * Controller exposing the Whiteboard Integration service via message queue.
