@@ -49,7 +49,7 @@ export class AiPersonaService {
 
       this.aiServerAdapter.ensurePersonaIsUsable(
         personaService.id,
-        SpaceIngestionPurpose.Knowledge
+        SpaceIngestionPurpose.KNOWLEDGE
       );
       aiPersona.aiPersonaServiceID = personaService.id;
     } else if (aiPersonaData.aiPersonaService) {

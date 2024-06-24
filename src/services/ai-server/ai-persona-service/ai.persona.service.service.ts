@@ -62,7 +62,7 @@ export class AiPersonaServiceService {
       this.eventBus.publish(
         new IngestSpace(
           aiPersonaServiceData.bodyOfKnowledgeID,
-          SpaceIngestionPurpose.Knowledge
+          SpaceIngestionPurpose.KNOWLEDGE
         )
       );
 
