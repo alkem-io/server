@@ -156,6 +156,7 @@ export class AdminAuthorizationResolverMutations {
   ): Promise<string> {
     const platformPolicy =
       await this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();
+
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       platformPolicy,

@@ -34,8 +34,7 @@ import { NotSupportedException } from '@common/exceptions';
 import { EntityManager } from 'typeorm';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { Space } from '@domain/space/space/space.entity';
-import { VirtualPersonaService } from '@platform/virtual-persona/virtual.persona.service';
-import { VirtualPersonaQuestionInput } from '@platform/virtual-persona/dto/virtual.persona.question.dto.input';
+import { VirtualContributorQuestionInput } from '@domain/community/virtual-contributor/dto/virtual.contributor.dto.question.input';
 
 @Injectable()
 export class RoomServiceEvents {
@@ -46,7 +45,6 @@ export class RoomServiceEvents {
     private communityResolverService: CommunityResolverService,
     private roomService: RoomService,
     private subscriptionPublishService: SubscriptionPublishService,
-    private virtualPersonaService: VirtualPersonaService,
     private virtualContributorService: VirtualContributorService,
     // this should use the space service but still the same circular dependency issue :(
     @InjectEntityManager('default')
@@ -98,12 +96,12 @@ export class RoomServiceEvents {
             mention.nameId,
             {
               relations: {
-                virtualPersona: true,
+                aiPersona: true,
               },
             }
           );
 
-        const virtualPersona = virtualContributor?.virtualPersona;
+        const virtualPersona = virtualContributor?.aiPersona;
 
         if (!virtualPersona) {
           throw new Error(
@@ -111,24 +109,15 @@ export class RoomServiceEvents {
           );
         }
 
-        const chatData: VirtualPersonaQuestionInput = {
-          virtualPersonaID: virtualPersona.id,
+        const chatData: VirtualContributorQuestionInput = {
+          virtualContributorID: virtualContributor.id,
           question: question.message,
         };
 
-        let knowledgeSpaceId = undefined;
-        if (virtualContributor.bodyOfKnowledgeID) {
-          //toDo should not be needed, fix in https://app.zenhub.com/workspaces/alkemio-development-5ecb98b262ebd9f4aec4194c/issues/gh/alkem-io/virtual-contributor-ingest-space/5
-          knowledgeSpaceId = await this.getSpaceNameId(
-            virtualContributor.bodyOfKnowledgeID
-          );
-        }
-
-        const result = await this.virtualPersonaService.askQuestion(
+        const result = await this.virtualContributorService.askQuestion(
           chatData,
           agentInfo,
-          spaceNameID,
-          knowledgeSpaceId
+          spaceNameID
         );
 
         let answer = result.answer;

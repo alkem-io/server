@@ -27,6 +27,7 @@ import { UserModule } from '@domain/community/user/user.module';
 import { SpaceModule } from '@domain/space/space/space.module';
 import { CommunityGuidelinesModule } from '@domain/community/community-guidelines/community.guidelines.module';
 import { CommunityGuidelinesTemplateModule } from '@domain/template/community-guidelines-template/community.guidelines.template.module';
+import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
 
 @Module({
   imports: [
@@ -55,6 +56,7 @@ import { CommunityGuidelinesTemplateModule } from '@domain/template/community-gu
     SpaceModule,
     CommunityGuidelinesModule,
     CommunityGuidelinesTemplateModule,
+    VirtualContributorModule,
   ],
   providers: [LookupService, LookupResolverQueries, LookupResolverFields],
   exports: [LookupService],

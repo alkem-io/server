@@ -32,6 +32,7 @@ import { VirtualContributorModule } from '../virtual-contributor/virtual.contrib
 import { LicenseEngineModule } from '@core/license-engine/license.engine.module';
 import { AccountHostModule } from '@domain/space/account/account.host.module';
 import { ContributorModule } from '../contributor/contributor.module';
+import { AiServerAdapterModule } from '@services/adapters/ai-server-adapter/ai.server.adapter.module';
 
 @Module({
   imports: [
@@ -61,6 +62,7 @@ import { ContributorModule } from '../contributor/contributor.module';
     TypeOrmModule.forFeature([Community]),
     TrustRegistryAdapterModule,
     ContributionReporterModule,
+    AiServerAdapterModule,
   ],
   providers: [
     CommunityService,

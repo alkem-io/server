@@ -26,16 +26,15 @@ import { CreateVirtualContributorInput } from './dto/virtual.contributor.dto.cre
 import { UpdateVirtualContributorInput } from './dto/virtual.contributor.dto.update';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
-import { EventBus } from '@nestjs/cqrs';
-import {
-  IngestSpace,
-  SpaceIngestionPurpose,
-} from '@services/infrastructure/event-bus/commands';
-import { VirtualPersonaService } from '@platform/virtual-persona/virtual.persona.service';
-import { IVirtualPersona } from '@platform/virtual-persona';
-import { VirtualContributorEngine } from '@common/enums/virtual.contributor.engine';
-import { BodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
+import { AiPersonaService } from '../ai-persona/ai.persona.service';
+import { CreateAiPersonaInput } from '../ai-persona/dto';
+import { VirtualContributorQuestionInput } from './dto/virtual.contributor.dto.question.input';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { IAiPersonaQuestionResult } from '../ai-persona/dto/ai.persona.question.dto.result';
+import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
+import { AiServerAdapterAskQuestionInput } from '@services/adapters/ai-server-adapter/dto/ai.server.adapter.dto.ask.question';
+import { SearchVisibility } from '@common/enums/search.visibility';
 
 @Injectable()
 export class VirtualContributorService {
@@ -44,10 +43,10 @@ export class VirtualContributorService {
     private agentService: AgentService,
     private profileService: ProfileService,
     private storageAggregatorService: StorageAggregatorService,
-    private virtualPersonaService: VirtualPersonaService,
     private communicationAdapter: CommunicationAdapter,
     private namingService: NamingService,
-    private eventBus: EventBus,
+    private aiPersonaService: AiPersonaService,
+    private aiServerAdapter: AiServerAdapter,
     @InjectRepository(VirtualContributor)
     private virtualContributorRepository: Repository<VirtualContributor>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -71,9 +70,12 @@ export class VirtualContributorService {
       virtualContributorData.profileData?.displayName
     );
 
-    const virtualContributor: IVirtualContributor = VirtualContributor.create(
+    let virtualContributor: IVirtualContributor = VirtualContributor.create(
       virtualContributorData
     );
+
+    virtualContributor.listedInStore = true;
+    virtualContributor.searchVisibility = SearchVisibility.ACCOUNT;
 
     virtualContributor.authorization = new AuthorizationPolicy();
     const communicationID = await this.communicationAdapter.tryRegisterNewUser(
@@ -83,24 +85,14 @@ export class VirtualContributorService {
       virtualContributor.communicationID = communicationID;
     }
 
-    let virtualPersona: IVirtualPersona;
-    if (virtualContributorData.virtualPersonaID) {
-      virtualPersona = await this.virtualPersonaService.getVirtualPersonaOrFail(
-        virtualContributorData.virtualPersonaID
-      );
-    } else {
-      //toDo fix this: https://app.zenhub.com/workspaces/alkemio-development-5ecb98b262ebd9f4aec4194c/issues/gh/alkem-io/server/4010
-      virtualPersona =
-        await this.virtualPersonaService.getVirtualPersonaByEngineOrFail(
-          VirtualContributorEngine.EXPERT
-        );
-    }
-
-    if (virtualContributorData.bodyOfKnowledgeType === undefined) {
-      virtualContributor.bodyOfKnowledgeType = BodyOfKnowledgeType.OTHER;
-    }
-
-    virtualContributor.virtualPersona = virtualPersona;
+    this.logger.log(virtualContributorData);
+    const aiPersonaInput: CreateAiPersonaInput = {
+      ...virtualContributorData.aiPersona,
+      description: `AI Persona for virtual contributor ${virtualContributor.nameID}`,
+    };
+    virtualContributor.aiPersona = await this.aiPersonaService.createAiPersona(
+      aiPersonaInput
+    );
 
     virtualContributor.storageAggregator =
       await this.storageAggregatorService.createStorageAggregator();
@@ -135,23 +127,13 @@ export class VirtualContributorService {
       parentDisplayID: `virtual-${virtualContributor.nameID}`,
     });
 
-    const savedVC = await this.virtualContributorRepository.save(
-      virtualContributor
-    );
+    virtualContributor = await this.save(virtualContributor);
     this.logger.verbose?.(
       `Created new virtual with id ${virtualContributor.id}`,
       LogContext.COMMUNITY
     );
 
-    if (virtualContributorData.bodyOfKnowledgeID)
-      this.eventBus.publish(
-        new IngestSpace(
-          virtualContributorData.bodyOfKnowledgeID,
-          SpaceIngestionPurpose.KNOWLEDGE
-        )
-      );
-
-    return savedVC;
+    return virtualContributor;
   }
 
   async checkNameIdOrFail(nameID: string) {
@@ -225,7 +207,7 @@ export class VirtualContributorService {
       }
     }
 
-    return await this.virtualContributorRepository.save(virtual);
+    return await this.save(virtual);
   }
 
   async deleteVirtualContributor(
@@ -266,6 +248,13 @@ export class VirtualContributorService {
       virtualContributor as VirtualContributor
     );
     result.id = virtualContributorID;
+
+    if (virtualContributor.aiPersona) {
+      await this.aiPersonaService.deleteAiPersona({
+        ID: virtualContributor.aiPersona.id,
+      });
+    }
+
     return result;
   }
 
@@ -324,6 +313,44 @@ export class VirtualContributorService {
     };
   }
 
+  public async askQuestion(
+    vcQuestionInput: VirtualContributorQuestionInput,
+    agentInfo: AgentInfo,
+    contextSpaceNameID: string
+  ): Promise<IAiPersonaQuestionResult> {
+    const virtualContributor = await this.getVirtualContributorOrFail(
+      vcQuestionInput.virtualContributorID,
+      {
+        relations: {
+          authorization: true,
+          aiPersona: true,
+          agent: true,
+        },
+      }
+    );
+    if (!virtualContributor.agent) {
+      throw new EntityNotInitializedException(
+        `Virtual Contributor Agent not initialized: ${vcQuestionInput.virtualContributorID}`,
+        LogContext.AUTH
+      );
+    }
+    this.logger.verbose?.(
+      `still need to use the context ${contextSpaceNameID}, ${agentInfo.agentID}`,
+      LogContext.VIRTUAL_CONTRIBUTOR_ENGINE
+    );
+    const aiServerAdapterQuestionInput: AiServerAdapterAskQuestionInput = {
+      personaServiceID: virtualContributor.aiPersona.aiPersonaServiceID,
+      question: vcQuestionInput.question,
+    };
+
+    return await this.aiServerAdapter.askQuestion(
+      aiServerAdapterQuestionInput,
+      agentInfo,
+      contextSpaceNameID
+    );
+  }
+
+  // TODO: move to store
   async getVirtualContributors(
     args: ContributorQueryArgs
   ): Promise<IVirtualContributor[]> {
