@@ -30,7 +30,7 @@ export class Document extends AuthorizableEntity implements IDocument {
   @Column('text', { nullable: true })
   displayName = '';
 
-  @Column('varchar', { length: 36, default: '' })
+  @Column('varchar', { length: 128, default: '' })
   mimeType!: MimeFileType;
 
   @Column('int')
