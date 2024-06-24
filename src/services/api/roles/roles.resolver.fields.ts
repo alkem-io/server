@@ -69,10 +69,11 @@ export class RolesResolverFields {
       AuthorizationPrivilege.PLATFORM_ADMIN,
       `roles user query: ${agentInfo.email}`
     );
-    return await this.rolesService.getCommunityInvitationsForUser(
+    const invitations = await this.rolesService.getCommunityInvitationsForUser(
       roles.id,
       states
     );
+    return await this.rolesService.convertInvitationsToRoleResults(invitations);
   }
 
   @UseGuards(GraphqlGuard)

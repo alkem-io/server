@@ -4,7 +4,6 @@ import { groupCredentialsByEntity } from '@services/api/roles/util/group.credent
 import { SpaceService } from '@domain/space/space/space.service';
 import { RolesService } from '../roles/roles.service';
 import { CommunityApplicationForRoleResult } from '../roles/dto/roles.dto.result.community.application';
-import { CommunityInvitationForRoleResult } from '../roles/dto/roles.dto.result.community.invitation';
 import { ISpace } from '@domain/space/space/space.interface';
 import { SpacesQueryArgs } from '@domain/space/space/dto/space.args.query.spaces';
 import { ActivityLogService } from '../activity-log';
@@ -16,6 +15,10 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { sortSpacesByActivity } from '@domain/space/space/sort.spaces.by.activity';
 import { CommunityRole } from '@common/enums/community.role';
 import { CommunityService } from '@domain/community/community/community.service';
+import { CommunityInvitationResult } from './dto/me.invitation.result';
+import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
+import { EntityNotFoundException } from '@common/exceptions';
+import { InvitationService } from '@domain/community/invitation/invitation.service';
 
 @Injectable()
 export class MeService {
@@ -25,6 +28,8 @@ export class MeService {
     private activityLogService: ActivityLogService,
     private activityService: ActivityService,
     private communityService: CommunityService,
+    private communityResolverService: CommunityResolverService,
+    private invitationService: InvitationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -32,11 +37,34 @@ export class MeService {
   public async getCommunityInvitationsForUser(
     userId: string,
     states?: string[]
-  ): Promise<CommunityInvitationForRoleResult[]> {
-    return await this.rolesService.getCommunityInvitationsForUser(
+  ): Promise<CommunityInvitationResult[]> {
+    const invitations = await this.rolesService.getCommunityInvitationsForUser(
       userId,
       states
     );
+    const results: CommunityInvitationResult[] = [];
+    for (const invitation of invitations) {
+      if (!invitation.community) {
+        throw new EntityNotFoundException(
+          `Community not found for invitation ${invitation.id}`,
+          LogContext.COMMUNITY
+        );
+      }
+      const space =
+        await this.communityResolverService.getSpaceForCommunityOrFail(
+          invitation.community.id
+        );
+      const state = await this.invitationService.getInvitationState(
+        invitation.id
+      );
+      results.push({
+        id: `${space.id}-${invitation.id}`,
+        invitation: invitation,
+        space: space,
+        state: state,
+      });
+    }
+    return results;
   }
 
   public async getCommunityApplicationsForUser(

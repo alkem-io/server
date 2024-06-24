@@ -154,9 +154,7 @@ export class RolesService {
   public async getCommunityInvitationsForUser(
     userID: string,
     states?: string[]
-  ): Promise<CommunityInvitationForRoleResult[]> {
-    const invitationResults: CommunityInvitationForRoleResult[] = [];
-
+  ): Promise<IInvitation[]> {
     // What contributors are managed by this user?
     const contributorsManagedByUser =
       await this.userLookupService.getContributorsManagedByUser(userID);
@@ -172,8 +170,13 @@ export class RolesService {
       }
     }
 
-    if (!invitations) return [];
+    return invitations;
+  }
 
+  public async convertInvitationsToRoleResults(
+    invitations: IInvitation[]
+  ): Promise<CommunityInvitationForRoleResult[]> {
+    const invitationResults: CommunityInvitationForRoleResult[] = [];
     for (const invitation of invitations) {
       const community = invitation.community;
       const state = await this.invitationService.getInvitationState(
