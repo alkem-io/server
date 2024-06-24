@@ -11,10 +11,10 @@ import { UserService } from '@domain/community/user/user.service';
 import { ISpace } from '@domain/space/space/space.interface';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { MeService } from './me.service';
-import { CommunityApplicationForRoleResult } from '../roles/dto/roles.dto.result.community.application';
-import { CommunityInvitationForRoleResult } from '../roles/dto/roles.dto.result.community.invitation';
 import { LogContext } from '@common/enums';
 import { MySpaceResults } from './dto/my.journeys.results';
+import { CommunityInvitationResult } from './dto/me.invitation.result';
+import { CommunityApplicationResult } from './dto/me.application.result';
 
 @Resolver(() => MeQueryResults)
 export class MeResolverFields {
@@ -47,13 +47,9 @@ export class MeResolverFields {
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField(
-    'communityInvitations',
-    () => [CommunityInvitationForRoleResult],
-    {
-      description: 'The invitations the current authenticated user can act on.',
-    }
-  )
+  @ResolveField('communityInvitations', () => [CommunityInvitationResult], {
+    description: 'The invitations the current authenticated user can act on.',
+  })
   public async communityInvitations(
     @CurrentUser() agentInfo: AgentInfo,
     @Args({
@@ -63,7 +59,7 @@ export class MeResolverFields {
       description: 'The state names you want to filter on',
     })
     states: string[]
-  ): Promise<CommunityInvitationForRoleResult[]> {
+  ): Promise<CommunityInvitationResult[]> {
     return this.meService.getCommunityInvitationsForUser(
       agentInfo.userID,
       states
@@ -71,15 +67,11 @@ export class MeResolverFields {
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField(
-    'communityApplications',
-    () => [CommunityApplicationForRoleResult],
-    {
-      description:
-        'The community applicationscurrent authenticated user can act on.',
-    }
-  )
-  public async communityAplications(
+  @ResolveField('communityApplications', () => [CommunityApplicationResult], {
+    description:
+      'The community applications current authenticated user can act on.',
+  })
+  public async communityApplications(
     @CurrentUser() agentInfo: AgentInfo,
     @Args({
       name: 'states',
@@ -88,7 +80,7 @@ export class MeResolverFields {
       description: 'The state names you want to filter on',
     })
     states: string[]
-  ): Promise<CommunityApplicationForRoleResult[]> {
+  ): Promise<CommunityApplicationResult[]> {
     return this.meService.getCommunityApplicationsForUser(
       agentInfo.userID,
       states
