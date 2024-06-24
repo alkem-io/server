@@ -98,12 +98,17 @@ export class RolesService {
   public async getCommunityApplicationsForUser(
     userID: string,
     states?: string[]
-  ): Promise<CommunityApplicationForRoleResult[]> {
-    const applicationResults: CommunityApplicationForRoleResult[] = [];
-    const applications = await this.applicationService.findApplicationsForUser(
+  ): Promise<IApplication[]> {
+    return await this.applicationService.findApplicationsForUser(
       userID,
       states
     );
+  }
+
+  public async convertApplicationsToRoleResults(
+    applications: IApplication[]
+  ): Promise<CommunityApplicationForRoleResult[]> {
+    const applicationResults: CommunityApplicationForRoleResult[] = [];
     for (const application of applications) {
       const community = application.community;
       const state = await this.applicationService.getApplicationState(
@@ -154,9 +159,7 @@ export class RolesService {
   public async getCommunityInvitationsForUser(
     userID: string,
     states?: string[]
-  ): Promise<CommunityInvitationForRoleResult[]> {
-    const invitationResults: CommunityInvitationForRoleResult[] = [];
-
+  ): Promise<IInvitation[]> {
     // What contributors are managed by this user?
     const contributorsManagedByUser =
       await this.userLookupService.getContributorsManagedByUser(userID);
@@ -172,8 +175,13 @@ export class RolesService {
       }
     }
 
-    if (!invitations) return [];
+    return invitations;
+  }
 
+  public async convertInvitationsToRoleResults(
+    invitations: IInvitation[]
+  ): Promise<CommunityInvitationForRoleResult[]> {
+    const invitationResults: CommunityInvitationForRoleResult[] = [];
     for (const invitation of invitations) {
       const community = invitation.community;
       const state = await this.invitationService.getInvitationState(
