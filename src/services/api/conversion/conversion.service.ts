@@ -14,7 +14,6 @@ import { IOrganization } from '@domain/community/organization/organization.inter
 import { IUser } from '@domain/community/user/user.interface';
 import { ICommunity } from '@domain/community/community/community.interface';
 import { CommunicationService } from '@domain/communication/communication/communication.service';
-import { DiscussionCategoryCommunity } from '@common/enums/communication.discussion.category.community';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { ICallout } from '@domain/collaboration/callout';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
@@ -521,11 +520,7 @@ export class ConversionService {
       childCommunity.id
     );
     const tmpCommunication =
-      await this.communicationService.createCommunication(
-        'temp',
-        '',
-        Object.values(DiscussionCategoryCommunity)
-      );
+      await this.communicationService.createCommunication('temp', '');
     childCommunity.communication = tmpCommunication;
     // Need to save with temp communication to avoid db validation error re duplicate usage
     await this.communityService.save(childCommunity);

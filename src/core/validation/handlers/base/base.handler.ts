@@ -21,7 +21,6 @@ import {
 import { CreateSubspaceInput } from '@domain/space/space/dto/space.dto.create.subspace';
 import { CreateActorInput, UpdateActorInput } from '@domain/context/actor';
 import { CommunityApplyInput } from '@domain/community/community/dto/community.dto.apply';
-import { CommunicationCreateDiscussionInput } from '@domain/communication/communication/dto/communication.dto.create.discussion';
 import { CreateReferenceOnProfileInput } from '@domain/common/profile/dto/profile.dto.create.reference';
 import {
   CreateTagsetOnProfileInput,
@@ -32,7 +31,7 @@ import { OrganizationVerificationEventInput } from '@domain/community/organizati
 import { RoomSendMessageInput } from '@domain/communication/room/dto/room.dto.send.message';
 import { UpdatePostInput } from '@domain/collaboration/post/dto/post.dto.update';
 import { UpdateWhiteboardDirectInput } from '@domain/common/whiteboard/types';
-import { UpdateDiscussionInput } from '@domain/communication/discussion/dto/discussion.dto.update';
+import { UpdateDiscussionInput } from '@platform/forum-discussion/dto/discussion.dto.update';
 import { UpdateEcosystemModelInput } from '@domain/context/ecosystem-model/dto/ecosystem-model.dto.update';
 import { SendMessageOnCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.message.created';
 import { CreateCalloutOnCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create.callout';
@@ -84,6 +83,7 @@ import {
 import { UpdateAccountDefaultsInput } from '@domain/space/account/dto/account.dto.update.defaults';
 import { UpdateCommunityGuidelinesInput } from '@domain/community/community-guidelines/dto/community.guidelines.dto.update';
 import { CreateInvitationForContributorsOnCommunityInput } from '@domain/community/community/dto/community.dto.invite.contributor';
+import { ForumCreateDiscussionInput } from '@platform/forum/dto/forum.dto.create.discussion';
 
 export class BaseHandler extends AbstractHandler {
   public async handle(
@@ -151,7 +151,7 @@ export class BaseHandler extends AbstractHandler {
       CommunityApplyInput,
       CreateInvitationForContributorsOnCommunityInput,
       CreateInvitationUserByEmailOnCommunityInput,
-      CommunicationCreateDiscussionInput,
+      ForumCreateDiscussionInput,
       SendMessageOnCalloutInput,
       CreateCalloutOnCollaborationInput,
     ];

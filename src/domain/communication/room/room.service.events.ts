@@ -11,7 +11,7 @@ import { NotificationInputEntityMentions } from '@services/adapters/notification
 import { getMentionsFromText } from '../messaging/get.mentions.from.text';
 import { IRoom } from './room.interface';
 import { NotificationInputForumDiscussionComment } from '@services/adapters/notification-adapter/dto/notification.dto.input.forum.discussion.comment';
-import { IDiscussion } from '../discussion/discussion.interface';
+import { IDiscussion } from '../../../platform/forum-discussion/discussion.interface';
 import { NotificationInputUpdateSent } from '@services/adapters/notification-adapter/dto/notification.dto.input.update.sent';
 import { ActivityInputUpdateSent } from '@services/adapters/activity-adapter/dto/activity.dto.input.update.sent';
 import { ActivityInputMessageRemoved } from '@services/adapters/activity-adapter/dto/activity.dto.input.message.removed';

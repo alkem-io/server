@@ -14,6 +14,8 @@ import { WhiteboardAuthorizationService } from './whiteboard.service.authorizati
 import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
 import { ProfileDocumentsModule } from '@domain/profile-documents/profile.documents.module';
 import { LicenseEngineModule } from '@core/license-engine/license.engine.module';
+import { SubscriptionServiceModule } from '@services/subscriptions/subscription-service';
+import { WhiteboardSavedResolverSubscription } from './whiteboard.saved.resolver.subscription';
 
 @Module({
   imports: [
@@ -27,12 +29,14 @@ import { LicenseEngineModule } from '@core/license-engine/license.engine.module'
     StorageBucketModule,
     TypeOrmModule.forFeature([Whiteboard]),
     ProfileDocumentsModule,
+    SubscriptionServiceModule,
   ],
   providers: [
     WhiteboardService,
     WhiteboardAuthorizationService,
     WhiteboardResolverMutations,
     WhiteboardResolverFields,
+    WhiteboardSavedResolverSubscription,
   ],
   exports: [
     WhiteboardService,
