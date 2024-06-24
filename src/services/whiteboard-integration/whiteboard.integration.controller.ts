@@ -7,6 +7,7 @@ import {
   RmqContext,
   Transport,
 } from '@nestjs/microservices';
+import { ack } from '../util';
 import { UserInfo, WhiteboardIntegrationMessagePattern } from './types';
 import { WhiteboardIntegrationService } from './whiteboard.integration.service';
 import { WhiteboardIntegrationEventPattern } from './types/event.pattern';
@@ -16,8 +17,7 @@ import {
   InfoInputData,
   WhoInputData,
 } from './inputs';
-import { InfoOutputData } from './outputs/info.output.data';
-import { ack } from '../util';
+import { InfoOutputData, HealthCheckOutputData } from './outputs';
 
 /**
  * Controller exposing the Whiteboard Integration service via message queue.
@@ -68,5 +68,13 @@ export class WhiteboardIntegrationController {
   ) {
     ack(context);
     this.integrationService.contentModified(data);
+  }
+
+  @MessagePattern(WhiteboardIntegrationEventPattern.HEALTH_CHECK, Transport.RMQ)
+  public health(@Ctx() context: RmqContext): HealthCheckOutputData {
+    ack(context);
+    // can be tight to more complex health check in the future
+    // for now just return true
+    return new HealthCheckOutputData(true);
   }
 }
