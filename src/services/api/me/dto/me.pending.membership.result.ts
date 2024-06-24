@@ -13,14 +13,4 @@ export class CommunityPendingMembershipResult {
     description: 'The space that the application is for',
   })
   space!: ISpace;
-
-  @Field(() => String, {
-    description: 'The current state of the invitation.',
-  })
-  state!: string;
-
-  @Field(() => Date, {
-    description: 'Date of creation',
-  })
-  createdDate!: Date;
 }

@@ -69,9 +69,9 @@ export class MeResolverFields {
   @UseGuards(GraphqlGuard)
   @ResolveField('communityApplications', () => [CommunityApplicationResult], {
     description:
-      'The community applicationscurrent authenticated user can act on.',
+      'The community applications current authenticated user can act on.',
   })
-  public async communityAplications(
+  public async communityApplications(
     @CurrentUser() agentInfo: AgentInfo,
     @Args({
       name: 'states',

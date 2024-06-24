@@ -17,7 +17,6 @@ import { CommunityService } from '@domain/community/community/community.service'
 import { CommunityInvitationResult } from './dto/me.invitation.result';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { EntityNotFoundException } from '@common/exceptions';
-import { InvitationService } from '@domain/community/invitation/invitation.service';
 import { CommunityApplicationResult } from './dto/me.application.result';
 
 @Injectable()
@@ -29,7 +28,6 @@ export class MeService {
     private activityService: ActivityService,
     private communityService: CommunityService,
     private communityResolverService: CommunityResolverService,
-    private invitationService: InvitationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -54,15 +52,10 @@ export class MeService {
         await this.communityResolverService.getSpaceForCommunityOrFail(
           invitation.community.id
         );
-      const state = await this.invitationService.getInvitationState(
-        invitation.id
-      );
       results.push({
         id: `${space.id}-${invitation.id}`,
         invitation: invitation,
         space: space,
-        state: state,
-        createdDate: invitation.createdDate,
       });
     }
     return results;
@@ -86,15 +79,10 @@ export class MeService {
         await this.communityResolverService.getSpaceForCommunityOrFail(
           application.community.id
         );
-      const state = await this.invitationService.getInvitationState(
-        application.id
-      );
       results.push({
         id: `${space.id}-${application.id}`,
         application: application,
         space: space,
-        state: state,
-        createdDate: application.createdDate,
       });
     }
     return results;
