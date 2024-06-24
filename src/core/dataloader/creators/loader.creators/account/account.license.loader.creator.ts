@@ -16,7 +16,7 @@ export class AccountLicenseLoaderCreator
     return createTypedRelationDataLoader(
       this.manager,
       Account,
-      { license: { featureFlags: true } },
+      { license: true },
       this.constructor.name,
       options
     );
