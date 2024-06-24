@@ -39,4 +39,10 @@ export class LicensePlan extends BaseAlkemioEntity implements ILicensePlan {
 
   @Column('text', { nullable: false })
   licenseCredential!: LicenseCredential;
+
+  @Column('boolean', { nullable: false, default: false })
+  assignToNewOrganizationAccounts!: boolean;
+
+  @Column('boolean', { nullable: false, default: false })
+  assignToNewUserAccounts!: boolean;
 }

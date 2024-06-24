@@ -1,1 +1,1 @@
-export * from './license.policy.rule.feature.flag.interface';
+export * from './license.policy.rule.credential.interface';
