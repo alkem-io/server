@@ -84,9 +84,8 @@ export class UserLookupService {
     );
 
     for (const accountID of accountIDs) {
-      const virtualContributors = await this.getContributorsManagedByAccount(
-        accountID
-      );
+      const virtualContributors =
+        await this.getVirtualContributorsManagedByAccount(accountID);
       contributorsManagedByUser.push(...virtualContributors);
     }
 
@@ -111,7 +110,7 @@ export class UserLookupService {
     return contributorsManagedByUser;
   }
 
-  private async getContributorsManagedByAccount(
+  private async getVirtualContributorsManagedByAccount(
     accountID: string
   ): Promise<IContributor[]> {
     const virtualContributors = await this.entityManager.find(
