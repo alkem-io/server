@@ -35,6 +35,7 @@ import {
 } from '@domain/community/virtual-contributor';
 import { AccountHostService } from './account.host.service';
 import { LicensePrivilege } from '@common/enums/license.privilege';
+import { LicensePlanType } from '@common/enums/license.plan.type';
 
 @Resolver(() => IAccount)
 export class AccountResolverFields {
@@ -183,7 +184,7 @@ export class AccountResolverFields {
           ),
         };
       })
-      .filter(item => item.plan)
+      .filter(item => item.plan?.type === LicensePlanType.SPACE_PLAN)
       .sort((a, b) => b.plan!.sortOrder - a.plan!.sortOrder)?.[0].subscription;
   }
 

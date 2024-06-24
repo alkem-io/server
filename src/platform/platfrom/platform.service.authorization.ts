@@ -31,8 +31,6 @@ import {
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { LicensingAuthorizationService } from '@platform/licensing/licensing.service.authorization';
-import { VirtualPersonaAuthorizationService } from '@platform/virtual-persona/virtual.persona.service.authorization';
-import { IVirtualPersona } from '@platform/virtual-persona';
 import { ForumAuthorizationService } from '@platform/forum/forum.service.authorization';
 
 @Injectable()
@@ -47,7 +45,6 @@ export class PlatformAuthorizationService {
     private innovationHubAuthorizationService: InnovationHubAuthorizationService,
     private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
     private licensingAuthorizationService: LicensingAuthorizationService,
-    private virtualPersonaAuthorizationService: VirtualPersonaAuthorizationService,
 
     @InjectRepository(Platform)
     private platformRepository: Repository<Platform>
@@ -57,7 +54,6 @@ export class PlatformAuthorizationService {
     const platform = await this.platformService.getPlatformOrFail({
       relations: {
         authorization: true,
-        virtualPersonas: true,
       },
     });
 
@@ -118,7 +114,6 @@ export class PlatformAuthorizationService {
         forum: true,
         storageAggregator: true,
         licensing: true,
-        virtualPersonas: true,
       },
     });
 
@@ -126,8 +121,7 @@ export class PlatformAuthorizationService {
       !platform.library ||
       !platform.forum ||
       !platform.storageAggregator ||
-      !platform.licensing ||
-      !platform.virtualPersonas
+      !platform.licensing
     )
       throw new RelationshipNotFoundException(
         `Unable to load entities for platform auth: ${platform.id} `,
@@ -174,17 +168,6 @@ export class PlatformAuthorizationService {
         innovationHub
       );
     }
-
-    const updatedPersonas: IVirtualPersona[] = [];
-    for (const virtualPersona of platform.virtualPersonas) {
-      const updatedPersona =
-        await this.virtualPersonaAuthorizationService.applyAuthorizationPolicy(
-          virtualPersona,
-          platform.authorization
-        );
-      updatedPersonas.push(updatedPersona);
-    }
-    platform.virtualPersonas = updatedPersonas;
 
     platform.licensing =
       await this.licensingAuthorizationService.applyAuthorizationPolicy(

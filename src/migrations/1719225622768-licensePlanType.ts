@@ -12,18 +12,22 @@ export class licensePlanType1719225622768 implements MigrationInterface {
       id: string;
       name: string;
     }[] = await queryRunner.query(`SELECT id, name FROM license_plan`);
+
     for (const licensePlan of licensePlans) {
-      let type = LicensePlanType.SPACE_PLAN;
-      if (licensePlan.name.toLowerCase().includes('feature')) {
-        type = LicensePlanType.SPACE_FEATURE_FLAG;
-      }
+      const type = licensePlan.name.toLowerCase().startsWith('feature_')
+        ? LicensePlanType.SPACE_FEATURE_FLAG
+        : LicensePlanType.SPACE_PLAN;
       await queryRunner.query(
         `UPDATE license_plan SET type = '${type}' WHERE id = '${licensePlan.id}'`
       );
     }
   }
 
-  public async down(queryRunner: QueryRunner): Promise<void> {}
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(
+      `ALTER TABLE \`license_plan\` DROP COLUMN \`type\``
+    );
+  }
 }
 
 export enum LicensePlanType {

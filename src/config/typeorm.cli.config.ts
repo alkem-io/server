@@ -21,6 +21,7 @@ export const typeormCliConfig: MysqlConnectionOptions = {
     join('src', 'domain', '**', '*.entity.{ts,js}'),
     join('src', 'library', '**', '*.entity.{ts,js}'),
     join('src', 'platform', '**', '*.entity.{ts,js}'),
+    join('src', 'services', '**', '*.entity.{ts,js}'),
   ],
   migrations: [join('src', 'migrations', '*.{ts,js}')],
   migrationsTableName: 'migrations_typeorm',
