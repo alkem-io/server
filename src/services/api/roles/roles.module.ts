@@ -15,6 +15,7 @@ import { InvitationModule } from '@domain/community/invitation/invitation.module
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { RolesResolverFields } from './roles.resolver.fields';
 import { UserLookupModule } from '@services/infrastructure/user-lookup/user.lookup.module';
+import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { UserLookupModule } from '@services/infrastructure/user-lookup/user.look
     UserGroupModule,
     CommunityModule,
     OrganizationModule,
+    VirtualContributorModule,
     SpaceModule,
     PlatformAuthorizationPolicyModule,
     SpaceFilterModule,
