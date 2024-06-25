@@ -4,6 +4,7 @@ import { InjectEntityManager } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { UserService } from '@domain/community/user/user.service';
+import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
 import { ICommunity } from '@domain/community/community';
 import { ApplicationService } from '@domain/community/application/application.service';
 import { IApplication } from '@domain/community/application';
@@ -24,11 +25,13 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { SpaceService } from '@domain/space/space/space.service';
 import { UserLookupService } from '@services/infrastructure/user-lookup/user.lookup.service';
+import { RolesVirtualContributorInput } from './dto/roles.dto.input.virtual.contributor';
 
 export class RolesService {
   constructor(
     @InjectEntityManager() private entityManager: EntityManager,
     private userService: UserService,
+    private virtualContributorService: VirtualContributorService,
     private applicationService: ApplicationService,
     private invitationService: InvitationService,
     private spaceFilterService: SpaceFilterService,
@@ -65,6 +68,21 @@ export class RolesService {
     contributorRoles.id = membershipData.organizationID;
     contributorRoles.filter = membershipData.filter;
     contributorRoles.credentials = agent?.credentials || [];
+
+    return contributorRoles;
+  }
+
+  async getRolesForVirtualContributor(
+    membershipData: RolesVirtualContributorInput
+  ): Promise<ContributorRoles> {
+    const contributorRoles = new ContributorRoles();
+    const vc =
+      await this.virtualContributorService.getVirtualContributorAndAgent(
+        membershipData.virtualContributorID
+      );
+
+    contributorRoles.id = membershipData.virtualContributorID;
+    contributorRoles.credentials = vc.agent?.credentials || [];
 
     return contributorRoles;
   }
