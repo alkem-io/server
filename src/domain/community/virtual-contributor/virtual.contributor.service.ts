@@ -207,6 +207,14 @@ export class VirtualContributorService {
       }
     }
 
+    if (typeof virtualContributorData.listedInStore === 'boolean') {
+      virtual.listedInStore = !!virtualContributorData.listedInStore;
+    }
+
+    if (virtualContributorData.searchVisibility) {
+      virtual.searchVisibility = virtualContributorData.searchVisibility;
+    }
+
     return await this.save(virtual);
   }
 
