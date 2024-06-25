@@ -120,10 +120,11 @@ export class CommunityInvitationLifecycleOptionsProvider {
                 true
               );
             }
-            await this.communityService.assignUserToRole(
+            await this.communityService.assignContributorToRole(
               community,
               contributorID,
               CommunityRole.MEMBER,
+              invitation.contributorType,
               event.agentInfo,
               true
             );
