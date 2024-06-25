@@ -54,6 +54,10 @@ import { IDiscussion } from '@platform/forum-discussion/discussion.interface';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
+import { AccountHostService } from '@domain/space/account/account.host.service';
+import { IAccount } from '@domain/space/account/account.interface';
+import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
+import { VirtualContributorInvitationCreatedEventPayload } from '@alkemio/notifications-lib/dist/dto/virtual.contributor.invitation.created.event.payload';
 
 @Injectable()
 export class NotificationPayloadBuilder {
@@ -69,7 +73,9 @@ export class NotificationPayloadBuilder {
     private readonly logger: LoggerService,
     private configService: ConfigService,
     private contributionResolverService: ContributionResolverService,
-    private urlGeneratorService: UrlGeneratorService
+    private urlGeneratorService: UrlGeneratorService,
+    private accountHostService: AccountHostService,
+    private virtualContributorService: VirtualContributorService
   ) {}
 
   async buildApplicationCreatedNotificationPayload(
@@ -112,6 +118,36 @@ export class NotificationPayloadBuilder {
     };
 
     return payload;
+  }
+
+  async buildInvitationVirtualContributorCreatedNotificationPayload(
+    invitationCreatorID: string,
+    virtualContributorID: string,
+    account: IAccount,
+    community: ICommunity
+  ): Promise<VirtualContributorInvitationCreatedEventPayload> {
+    const spacePayload = await this.buildSpacePayload(
+      community,
+      invitationCreatorID
+    );
+    const host = await this.accountHostService.getHostOrFail(account);
+    const hostPayload = await this.getContributorPayloadOrFail(host.id);
+    const virtualContributor =
+      await this.virtualContributorService.getVirtualContributorOrFail(
+        virtualContributorID,
+        { relations: { profile: true } }
+      );
+
+    return {
+      host: hostPayload,
+      virtualContributor: {
+        name: virtualContributor.profile.displayName,
+        url: this.urlGeneratorService.generateUrlForVC(
+          virtualContributor.nameID
+        ),
+      },
+      ...spacePayload,
+    };
   }
 
   async buildExternalInvitationCreatedNotificationPayload(

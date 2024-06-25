@@ -29,6 +29,7 @@ import { NotificationInputCommunityInvitation } from './dto/notification.dto.inp
 import { NotificationInputCommentReply } from './dto/notification.dto.input.comment.reply';
 import { NotificationInputCommunityInvitationExternal } from './dto/notification.dto.input.community.invitation.external';
 import { NotificationInputPlatformGlobalRoleChange } from './dto/notification.dto.input.platform.global.role.change';
+import { NotificationInputCommunityVirtualContributorInvitation } from './dto/notification.dto.input.community.vc.invitation';
 
 @Injectable()
 export class NotificationAdapter {
@@ -315,6 +316,23 @@ export class NotificationAdapter {
         eventData.invitedUser,
         eventData.community,
         eventData.welcomeMessage
+      );
+
+    this.notificationsClient.emit<number>(event, payload);
+  }
+
+  public async invitationVirtualContributorCreated(
+    eventData: NotificationInputCommunityVirtualContributorInvitation
+  ): Promise<void> {
+    const event = NotificationEventType.COMMUNITY_INVITATION_CREATED_VC;
+    this.logEventTriggered(eventData, event);
+
+    const payload =
+      await this.notificationPayloadBuilder.buildInvitationVirtualContributorCreatedNotificationPayload(
+        eventData.triggeredBy,
+        eventData.virtualContributorID,
+        eventData.account,
+        eventData.community
       );
 
     this.notificationsClient.emit<number>(event, payload);

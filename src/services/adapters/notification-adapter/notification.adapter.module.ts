@@ -8,6 +8,8 @@ import { ActivityModule } from '@src/platform/activity/activity.module';
 import { NotificationAdapter } from './notification.adapter';
 import { NotificationPayloadBuilder } from './notification.payload.builder';
 import { UrlGeneratorModule } from '@services/infrastructure/url-generator/url.generator.module';
+import { AccountHostModule } from '@domain/space/account/account.host.module';
+import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
 
 @Module({
   imports: [
@@ -15,6 +17,8 @@ import { UrlGeneratorModule } from '@services/infrastructure/url-generator/url.g
     EntityResolverModule,
     UrlGeneratorModule,
     TypeOrmModule.forFeature([Post, Whiteboard, Community]),
+    AccountHostModule,
+    VirtualContributorModule,
   ],
   providers: [NotificationAdapter, NotificationPayloadBuilder],
   exports: [NotificationAdapter],
