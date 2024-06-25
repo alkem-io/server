@@ -5,7 +5,7 @@ import { Field, InputType } from '@nestjs/graphql';
 export class RolesVirtualContributorInput {
   @Field(() => UUID_NAMEID, {
     nullable: false,
-    description: 'The ID of the VC to retrieve the roles of.',
+    description: 'The ID or nameID of the VC to retrieve the roles of.',
   })
   virtualContributorID!: string;
 }
