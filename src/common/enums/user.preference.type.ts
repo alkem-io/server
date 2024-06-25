@@ -29,7 +29,6 @@ export enum UserPreferenceType {
   NOTIFICATION_FORUM_DISCUSSION_CREATED = 'NotificationForumDiscussionCreated',
   NOTIFICATION_FORUM_DISCUSSION_COMMENT = 'NotificationForumDiscussionComment',
   NOTIFICATION_COMMENT_REPLY = 'NotificationCommentReply',
-  NOTIFICATION_VIRTUAL_CONTRIBUTOR_INVITATION_HOST = 'NotificationVirtualContributorInvitationHost',
 }
 
 registerEnumType(UserPreferenceType, {

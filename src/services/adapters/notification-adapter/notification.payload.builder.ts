@@ -134,20 +134,20 @@ export class NotificationPayloadBuilder {
     const hostPayload = await this.getContributorPayloadOrFail(host.id);
     const virtualContributor =
       await this.virtualContributorService.getVirtualContributorOrFail(
-        virtualContributorID
+        virtualContributorID,
+        { relations: { profile: true } }
       );
-    const payload: VirtualContributorInvitationCreatedEventPayload = {
+
+    return {
       host: hostPayload,
       virtualContributor: {
-        name: virtualContributor.nameID,
+        name: virtualContributor.profile.displayName,
         url: this.urlGeneratorService.generateUrlForVC(
           virtualContributor.nameID
         ),
       },
       ...spacePayload,
-    } as any;
-
-    return payload;
+    };
   }
 
   async buildExternalInvitationCreatedNotificationPayload(
