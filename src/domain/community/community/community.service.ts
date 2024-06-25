@@ -38,7 +38,6 @@ import { ICommunityPolicy } from '../community-policy/community.policy.interface
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { CommunityPolicyService } from '../community-policy/community.policy.service';
 import { ICommunityPolicyDefinition } from '../community-policy/community.policy.definition';
-import { DiscussionCategoryCommunity } from '@common/enums/communication.discussion.category.community';
 import { IForm } from '@domain/common/form/form.interface';
 import { FormService } from '@domain/common/form/form.service';
 import { UpdateFormInput } from '@domain/common/form/dto/form.dto.update';
@@ -120,8 +119,7 @@ export class CommunityService {
     community.communication =
       await this.communicationService.createCommunication(
         communityData.name,
-        '',
-        Object.values(DiscussionCategoryCommunity)
+        ''
       );
     return await this.communityRepository.save(community);
   }

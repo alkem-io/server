@@ -1,7 +1,6 @@
-import { Column, Entity, JoinColumn, OneToMany, OneToOne } from 'typeorm';
+import { Column, Entity, JoinColumn, OneToOne } from 'typeorm';
 import { ICommunication } from '@domain/communication/communication/communication.interface';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity/authorizable.entity';
-import { Discussion } from '@domain/communication/discussion/discussion.entity';
 import { Room } from '../room/room.entity';
 
 @Entity()
@@ -11,15 +10,6 @@ export class Communication
 {
   @Column()
   spaceID: string;
-
-  @OneToMany(() => Discussion, discussion => discussion.communication, {
-    eager: false,
-    cascade: true,
-  })
-  discussions?: Discussion[];
-
-  @Column('simple-array')
-  discussionCategories: string[];
 
   @OneToOne(() => Room, {
     eager: true,
@@ -36,6 +26,5 @@ export class Communication
     super();
     this.spaceID = '';
     this.displayName = displayName || '';
-    this.discussionCategories = [];
   }
 }

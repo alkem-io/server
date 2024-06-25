@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
 import { VirtualContributorService } from './virtual.contributor.service';
 import { VirtualContributorResolverMutations } from './virtual.contributor.resolver.mutations';
+import { VirtualContributorResolverQueries } from './virtual.contributor.resolver.queries';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { VirtualContributorResolverFields } from './virtual.contributor.resolver.fields';
 import { ProfileModule } from '@domain/common/profile/profile.module';
-import { VirtualContributorResolverQueries } from './virtual.contributor.resolver.queries';
 import { VirtualContributorAuthorizationService } from './virtual.contributor.service.authorization';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
@@ -13,8 +13,10 @@ import { VirtualStorageAggregatorLoaderCreator } from '@core/dataloader/creators
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
 import { VirtualContributor } from './virtual.contributor.entity';
 import { CommunicationAdapterModule } from '@services/adapters/communication-adapter/communication-adapter.module';
-import { VirtualPersonaModule } from '@platform/virtual-persona/virtual.persona.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
+import { AiPersonaModule } from '../ai-persona/ai.persona.module';
+import { AiServerAdapterModule } from '@services/adapters/ai-server-adapter/ai.server.adapter.module';
+import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 
 @Module({
   imports: [
@@ -24,15 +26,17 @@ import { NamingModule } from '@services/infrastructure/naming/naming.module';
     ProfileModule,
     NamingModule,
     StorageAggregatorModule,
-    VirtualPersonaModule,
+    AiPersonaModule,
+    AiServerAdapterModule,
     CommunicationAdapterModule,
     TypeOrmModule.forFeature([VirtualContributor]),
+    PlatformAuthorizationPolicyModule,
   ],
   providers: [
     VirtualContributorService,
     VirtualContributorAuthorizationService,
-    VirtualContributorResolverQueries,
     VirtualContributorResolverMutations,
+    VirtualContributorResolverQueries,
     VirtualContributorResolverFields,
     VirtualStorageAggregatorLoaderCreator,
   ],

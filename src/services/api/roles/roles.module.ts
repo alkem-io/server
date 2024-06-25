@@ -14,6 +14,7 @@ import { SpaceFilterModule } from '@services/infrastructure/space-filter/space.f
 import { InvitationModule } from '@domain/community/invitation/invitation.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { RolesResolverFields } from './roles.resolver.fields';
+import { UserLookupModule } from '@services/infrastructure/user-lookup/user.lookup.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { RolesResolverFields } from './roles.resolver.fields';
     PlatformAuthorizationPolicyModule,
     SpaceFilterModule,
     EntityResolverModule,
+    UserLookupModule,
   ],
   providers: [RolesService, RolesResolverQueries, RolesResolverFields],
   exports: [RolesService],

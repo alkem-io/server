@@ -37,9 +37,7 @@ export const getSpaceRolesForContributorEntityData = async (
       relations = {
         profile: true,
         account: {
-          license: {
-            featureFlags: true,
-          },
+          license: true,
         },
       };
     }

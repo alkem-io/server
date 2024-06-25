@@ -26,7 +26,6 @@ import { InvitationExternalAuthorizationService } from '../invitation.external/i
 import { InvitationAuthorizationService } from '../invitation/invitation.service.authorization';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { CommunityGuidelinesAuthorizationService } from '../community-guidelines/community.guidelines.service.authorization';
-import { ILicense } from '@domain/license/license/license.interface';
 import { CommunityPolicyService } from '../community-policy/community.policy.service';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { ICommunityPolicy } from '../community-policy/community.policy.interface';
@@ -34,6 +33,7 @@ import { CommunityRole } from '@common/enums/community.role';
 import { LicenseEngineService } from '@core/license-engine/license.engine.service';
 import { LicensePrivilege } from '@common/enums/license.privilege';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
+import { IAgent } from '@domain/agent';
 
 @Injectable()
 export class CommunityAuthorizationService {
@@ -53,7 +53,7 @@ export class CommunityAuthorizationService {
   async applyAuthorizationPolicy(
     communityInput: ICommunity,
     parentAuthorization: IAuthorizationPolicy | undefined,
-    license: ILicense,
+    accountAgent: IAgent,
     communityPolicy: ICommunityPolicy
   ): Promise<ICommunity> {
     const community = await this.communityService.getCommunityOrFail(
@@ -101,7 +101,7 @@ export class CommunityAuthorizationService {
     community.authorization = await this.extendAuthorizationPolicy(
       community.authorization,
       parentAuthorization?.anonymousReadAccess,
-      license,
+      accountAgent,
       communityPolicy
     );
     community.authorization = this.appendVerifiedCredentialRules(
@@ -168,7 +168,7 @@ export class CommunityAuthorizationService {
   private async extendAuthorizationPolicy(
     authorization: IAuthorizationPolicy | undefined,
     allowGlobalRegisteredReadAccess: boolean | undefined,
-    license: ILicense,
+    accountAgent: IAgent,
     policy: ICommunityPolicy
   ): Promise<IAuthorizationPolicy> {
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
@@ -225,7 +225,7 @@ export class CommunityAuthorizationService {
     const accessVirtualContributors =
       await this.licenseEngineService.isAccessGranted(
         LicensePrivilege.VIRTUAL_CONTRIBUTOR_ACCESS,
-        license
+        accountAgent
       );
     if (accessVirtualContributors) {
       const criterias: ICredentialDefinition[] =

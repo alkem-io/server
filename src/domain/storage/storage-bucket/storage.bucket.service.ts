@@ -17,7 +17,10 @@ import { DocumentService } from '../document/document.service';
 import { StorageBucket } from './storage.bucket.entity';
 import { IStorageBucket } from './storage.bucket.interface';
 import { StorageBucketArgsDocuments } from './dto/storage.bucket.args.documents';
-import { MimeFileType } from '@common/enums/mime.file.type';
+import {
+  DEFAULT_ALLOWED_MIME_TYPES,
+  MimeFileType,
+} from '@common/enums/mime.file.type';
 import { CreateDocumentInput } from '../document/dto/document.dto.create';
 import { ReadStream } from 'fs';
 import { ValidationException } from '@common/exceptions';
@@ -32,18 +35,6 @@ import { StorageUploadFailedException } from '@common/exceptions/storage/storage
 @Injectable()
 export class StorageBucketService {
   DEFAULT_MAX_ALLOWED_FILE_SIZE = 15728640;
-
-  DEFAULT_VISUAL_ALLOWED_MIME_TYPES: MimeFileType[] = [
-    MimeFileType.JPG,
-    MimeFileType.JPEG,
-    MimeFileType.XPNG,
-    MimeFileType.PNG,
-    MimeFileType.GIF,
-    MimeFileType.WEBP,
-    MimeFileType.SVG,
-    MimeFileType.AVIF,
-    MimeFileType.PDF,
-  ];
 
   constructor(
     private documentService: DocumentService,
@@ -67,8 +58,7 @@ export class StorageBucketService {
     storage.authorization = new AuthorizationPolicy();
     storage.documents = [];
     storage.allowedMimeTypes =
-      storageBucketData?.allowedMimeTypes ||
-      this.DEFAULT_VISUAL_ALLOWED_MIME_TYPES;
+      storageBucketData?.allowedMimeTypes || DEFAULT_ALLOWED_MIME_TYPES;
     storage.maxFileSize =
       storageBucketData?.maxFileSize || this.DEFAULT_MAX_ALLOWED_FILE_SIZE;
     storage.storageAggregator = storageBucketData.storageAggregator;

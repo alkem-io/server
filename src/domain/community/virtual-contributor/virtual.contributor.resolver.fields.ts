@@ -6,11 +6,7 @@ import { VirtualContributorService } from './virtual.contributor.service';
 import { AuthorizationPrivilege } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
 import { IProfile } from '@domain/common/profile';
-import {
-  AuthorizationAgentPrivilege,
-  CurrentUser,
-  Profiling,
-} from '@common/decorators';
+import { AuthorizationAgentPrivilege, CurrentUser } from '@common/decorators';
 import { IAgent } from '@domain/agent/agent';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -34,12 +30,31 @@ export class VirtualContributorResolverFields {
     private virtualService: VirtualContributorService
   ) {}
 
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @ResolveField('account', () => IAccount, {
+    nullable: true,
+    description: 'The Account of the Virtual Contributor.',
+  })
+  @UseGuards(GraphqlGuard)
+  async account(
+    @Parent() virtualContributor: VirtualContributor,
+    @Loader(AccountLoaderCreator, { parentClassRef: VirtualContributor })
+    loader: ILoader<IAccount>
+  ): Promise<IAccount | null> {
+    let account: IAccount | never;
+    try {
+      account = await loader.load(virtualContributor.id);
+    } catch (error) {
+      return null;
+    }
+    return account;
+  }
+
   @UseGuards(GraphqlGuard)
   @ResolveField('authorization', () => IAuthorizationPolicy, {
     nullable: true,
     description: 'The Authorization for this Virtual.',
   })
-  @Profiling.api
   async authorization(
     @Parent() parent: VirtualContributor,
     @CurrentUser() agentInfo: AgentInfo
@@ -86,7 +101,6 @@ export class VirtualContributorResolverFields {
     nullable: false,
     description: 'The Agent representing this User.',
   })
-  @Profiling.api
   async agent(
     @Parent() virtualContributor: VirtualContributor,
     @Loader(AgentLoaderCreator, { parentClassRef: VirtualContributor })
@@ -108,26 +122,5 @@ export class VirtualContributorResolverFields {
     loader: ILoader<IStorageAggregator>
   ): Promise<IStorageAggregator> {
     return loader.load(virtualContributor.id);
-  }
-
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @ResolveField('account', () => IAccount, {
-    nullable: true,
-    description: 'The Account of the Virtual Contributor.',
-  })
-  @Profiling.api
-  @UseGuards(GraphqlGuard)
-  async account(
-    @Parent() virtualContributor: VirtualContributor,
-    @Loader(AccountLoaderCreator, { parentClassRef: VirtualContributor })
-    loader: ILoader<IAccount>
-  ): Promise<IAccount | null> {
-    let account: IAccount | never;
-    try {
-      account = await loader.load(virtualContributor.id);
-    } catch (error) {
-      return null;
-    }
-    return account;
   }
 }
