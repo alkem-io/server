@@ -145,7 +145,7 @@ export class AiPersonaServiceService {
   public async askQuestion(
     personaQuestionInput: AiPersonaServiceQuestionInput,
     agentInfo: AgentInfo,
-    contextSpaceNameID: string
+    contextSpaceID: string
   ): Promise<IAiPersonaServiceQuestionResult> {
     const aiPersonaService = await this.getAiPersonaServiceOrFail(
       personaQuestionInput.aiPersonaServiceID
@@ -157,7 +157,7 @@ export class AiPersonaServiceService {
       userId: agentInfo.userID,
       question: personaQuestionInput.question,
       knowledgeSpaceNameID: aiPersonaService.bodyOfKnowledgeID,
-      contextSpaceNameID,
+      contextSpaceNameID: contextSpaceID,
     };
 
     this.logger.error(input);

@@ -324,7 +324,7 @@ export class VirtualContributorService {
   public async askQuestion(
     vcQuestionInput: VirtualContributorQuestionInput,
     agentInfo: AgentInfo,
-    contextSpaceNameID: string
+    contextSpaceID: string
   ): Promise<IAiPersonaQuestionResult> {
     const virtualContributor = await this.getVirtualContributorOrFail(
       vcQuestionInput.virtualContributorID,
@@ -343,7 +343,7 @@ export class VirtualContributorService {
       );
     }
     this.logger.verbose?.(
-      `still need to use the context ${contextSpaceNameID}, ${agentInfo.agentID}`,
+      `still need to use the context ${contextSpaceID}, ${agentInfo.agentID}`,
       LogContext.VIRTUAL_CONTRIBUTOR_ENGINE
     );
     const aiServerAdapterQuestionInput: AiServerAdapterAskQuestionInput = {
@@ -354,7 +354,7 @@ export class VirtualContributorService {
     return await this.aiServerAdapter.askQuestion(
       aiServerAdapterQuestionInput,
       agentInfo,
-      contextSpaceNameID
+      contextSpaceID
     );
   }
 

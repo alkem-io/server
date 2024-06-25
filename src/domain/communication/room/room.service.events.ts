@@ -71,8 +71,8 @@ export class RoomServiceEvents {
       room.type as RoomType
     );
 
-    const spaceNameID =
-      await this.communityResolverService.getRootSpaceNameIDFromCommunityOrFail(
+    const spaceID =
+      await this.communityResolverService.getRootSpaceIDFromCommunityOrFail(
         community
       );
 
@@ -117,7 +117,7 @@ export class RoomServiceEvents {
         const result = await this.virtualContributorService.askQuestion(
           chatData,
           agentInfo,
-          spaceNameID
+          spaceID
         );
 
         let answer = result.answer;
