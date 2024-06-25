@@ -6,6 +6,7 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { RolesOrganizationInput } from './dto/roles.dto.input.organization';
+import { RolesVirtualContributorInput } from './dto/roles.dto.input.virtual.contributor';
 import { RolesService } from './roles.service';
 import { RolesUserInput } from './dto/roles.dto.input.user';
 import { ContributorRoles } from './dto/roles.dto.result.contributor';
@@ -45,5 +46,15 @@ export class RolesResolverQueries {
     @Args('rolesData') rolesData: RolesOrganizationInput
   ): Promise<ContributorRoles> {
     return await this.rolesServices.getRolesForOrganization(rolesData);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Query(() => ContributorRoles, {
+    description: 'The roles that the specified VirtualContributor has.',
+  })
+  async rolesVirtualContributor(
+    @Args('rolesData') rolesData: RolesVirtualContributorInput
+  ): Promise<ContributorRoles> {
+    return await this.rolesServices.getRolesForVirtualContributor(rolesData);
   }
 }

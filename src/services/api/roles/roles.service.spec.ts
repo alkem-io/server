@@ -33,6 +33,7 @@ import { Space } from '@domain/space/space/space.entity';
 import { License } from '@domain/license/license/license.entity';
 import { RolesResultCommunity } from './dto/roles.dto.result.community';
 import { MockUserLookupService } from '@test/mocks/user.lookup.service.mock';
+import { MockVirtualContributorService } from '@test/mocks/virtual.contributor.service.mock';
 
 describe('RolesService', () => {
   let rolesService: RolesService;
@@ -58,6 +59,7 @@ describe('RolesService', () => {
         MockEntityManagerProvider,
         MockSpaceService,
         MockUserLookupService,
+        MockVirtualContributorService,
         RolesService,
       ],
     }).compile();
