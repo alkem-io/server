@@ -50,7 +50,10 @@ import { AssignCommunityRoleToVirtualInput } from './dto/community.dto.role.assi
 import { RemoveCommunityRoleFromVirtualInput } from './dto/community.dto.role.remove.virtual';
 import { VirtualContributorAuthorizationService } from '../virtual-contributor/virtual.contributor.service.authorization';
 import { VirtualContributorService } from '../virtual-contributor/virtual.contributor.service';
-import { IVirtualContributor } from '../virtual-contributor';
+import {
+  IVirtualContributor,
+  VirtualContributor,
+} from '../virtual-contributor';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { CommunityInvitationException } from '@common/exceptions/community.invitation.exception';
 import { SpaceIngestionPurpose } from '@services/infrastructure/event-bus/commands';
@@ -60,6 +63,7 @@ import { IContributor } from '../contributor/contributor.interface';
 import { ContributorService } from '../contributor/contributor.service';
 import { InvitationExternalService } from '../invitation.external/invitation.external.service';
 import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
+import { NotificationInputCommunityVirtualContributorInvitation } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.vc.invitation';
 
 const IAnyInvitation = createUnionType({
   name: 'AnyInvitation',
@@ -571,15 +575,29 @@ export class CommunityResolverMutations {
       );
     invitation = await this.invitationService.save(invitation);
 
-    // Send the notification
-    const notificationInput: NotificationInputCommunityInvitation = {
-      triggeredBy: agentInfo.userID,
-      community: community,
-      invitedUser: invitedContributor.id,
-      welcomeMessage,
-    };
+    if (invitedContributor instanceof VirtualContributor) {
+      const notificationInput: NotificationInputCommunityVirtualContributorInvitation =
+        {
+          triggeredBy: agentInfo.userID,
+          community: community,
+          virtualContributorID: invitedContributor.id,
+          account: invitedContributor.account,
+        };
 
-    await this.notificationAdapter.invitationCreated(notificationInput);
+      await this.notificationAdapter.invitationVirtualContributorCreated(
+        notificationInput
+      );
+    } else {
+      // Send the notification
+      const notificationInput: NotificationInputCommunityInvitation = {
+        triggeredBy: agentInfo.userID,
+        community: community,
+        invitedUser: invitedContributor.id,
+        welcomeMessage,
+      };
+
+      await this.notificationAdapter.invitationCreated(notificationInput);
+    }
 
     return invitation;
   }

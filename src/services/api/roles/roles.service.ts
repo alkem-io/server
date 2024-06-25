@@ -4,6 +4,7 @@ import { InjectEntityManager } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { UserService } from '@domain/community/user/user.service';
+import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
 import { ICommunity } from '@domain/community/community';
 import { ApplicationService } from '@domain/community/application/application.service';
 import { IApplication } from '@domain/community/application';
@@ -24,11 +25,13 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { SpaceService } from '@domain/space/space/space.service';
 import { UserLookupService } from '@services/infrastructure/user-lookup/user.lookup.service';
+import { RolesVirtualContributorInput } from './dto/roles.dto.input.virtual.contributor';
 
 export class RolesService {
   constructor(
     @InjectEntityManager() private entityManager: EntityManager,
     private userService: UserService,
+    private virtualContributorService: VirtualContributorService,
     private applicationService: ApplicationService,
     private invitationService: InvitationService,
     private spaceFilterService: SpaceFilterService,
@@ -69,6 +72,21 @@ export class RolesService {
     return contributorRoles;
   }
 
+  async getRolesForVirtualContributor(
+    membershipData: RolesVirtualContributorInput
+  ): Promise<ContributorRoles> {
+    const contributorRoles = new ContributorRoles();
+    const vc =
+      await this.virtualContributorService.getVirtualContributorAndAgent(
+        membershipData.virtualContributorID
+      );
+
+    contributorRoles.id = membershipData.virtualContributorID;
+    contributorRoles.credentials = vc.agent?.credentials || [];
+
+    return contributorRoles;
+  }
+
   async getOrganizationRolesForUser(
     roles: ContributorRoles
   ): Promise<RolesResultOrganization[]> {
@@ -98,12 +116,17 @@ export class RolesService {
   public async getCommunityApplicationsForUser(
     userID: string,
     states?: string[]
-  ): Promise<CommunityApplicationForRoleResult[]> {
-    const applicationResults: CommunityApplicationForRoleResult[] = [];
-    const applications = await this.applicationService.findApplicationsForUser(
+  ): Promise<IApplication[]> {
+    return await this.applicationService.findApplicationsForUser(
       userID,
       states
     );
+  }
+
+  public async convertApplicationsToRoleResults(
+    applications: IApplication[]
+  ): Promise<CommunityApplicationForRoleResult[]> {
+    const applicationResults: CommunityApplicationForRoleResult[] = [];
     for (const application of applications) {
       const community = application.community;
       const state = await this.applicationService.getApplicationState(
@@ -154,9 +177,7 @@ export class RolesService {
   public async getCommunityInvitationsForUser(
     userID: string,
     states?: string[]
-  ): Promise<CommunityInvitationForRoleResult[]> {
-    const invitationResults: CommunityInvitationForRoleResult[] = [];
-
+  ): Promise<IInvitation[]> {
     // What contributors are managed by this user?
     const contributorsManagedByUser =
       await this.userLookupService.getContributorsManagedByUser(userID);
@@ -172,8 +193,13 @@ export class RolesService {
       }
     }
 
-    if (!invitations) return [];
+    return invitations;
+  }
 
+  public async convertInvitationsToRoleResults(
+    invitations: IInvitation[]
+  ): Promise<CommunityInvitationForRoleResult[]> {
+    const invitationResults: CommunityInvitationForRoleResult[] = [];
     for (const invitation of invitations) {
       const community = invitation.community;
       const state = await this.invitationService.getInvitationState(

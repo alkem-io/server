@@ -149,6 +149,10 @@ export class UrlGeneratorService {
     return url;
   }
 
+  public generateUrlForVC(nameID: string): string {
+    return `${this.endpoint_cluster}/vc/${nameID}`;
+  }
+
   async createJourneyAdminCommunityURL(space: ISpace): Promise<string> {
     const spaceNameID = space.nameID;
     const baseURL = `${this.endpoint_cluster}/admin/spaces/${spaceNameID}`;
