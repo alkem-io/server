@@ -133,7 +133,7 @@ export class AiPersonaService {
   public async askQuestion(
     personaQuestionInput: AiPersonaQuestionInput,
     agentInfo: AgentInfo,
-    contextSpaceNameID: string
+    contextSpaceID: string
   ): Promise<IAiPersonaQuestionResult> {
     const aiPersona = await this.getAiPersonaOrFail(
       personaQuestionInput.aiPersonaID,
@@ -152,7 +152,7 @@ export class AiPersonaService {
     }
 
     this.logger.verbose?.(
-      `Asking question to AI Persona from user ${agentInfo.userID} + with context ${contextSpaceNameID}`,
+      `Asking question to AI Persona from user ${agentInfo.userID} + with context ${contextSpaceID}`,
       LogContext.PLATFORM
     );
 
@@ -164,7 +164,7 @@ export class AiPersonaService {
     return await this.aiServerAdapter.askQuestion(
       input,
       agentInfo,
-      contextSpaceNameID
+      contextSpaceID
     );
   }
 }
