@@ -80,20 +80,6 @@ export class CommunityResolverService {
     return virtualContributor.account.id === accountID;
   }
 
-  public async getRootSpaceNameIDFromCommunityOrFail(
-    community: ICommunity
-  ): Promise<string> {
-    const space = await this.getRootSpaceFromCommunity(community);
-    if (space && space.account && space.account.space) {
-      return space.account.space.nameID;
-    }
-
-    throw new EntityNotFoundException(
-      `Unable to find Space for given community id: ${community.id}`,
-      LogContext.COLLABORATION
-    );
-  }
-
   public async getRootSpaceIDFromCommunityOrFail(
     community: ICommunity
   ): Promise<string> {

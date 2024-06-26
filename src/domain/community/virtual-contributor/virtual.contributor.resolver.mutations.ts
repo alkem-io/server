@@ -1,5 +1,5 @@
 import { UseGuards } from '@nestjs/common';
-import { Args, Resolver, Mutation } from '@nestjs/graphql';
+import { Args, Resolver, Mutation, ObjectType } from '@nestjs/graphql';
 import { VirtualContributorService } from './virtual.contributor.service';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
@@ -12,6 +12,7 @@ import {
   UpdateVirtualContributorInput,
 } from './dto';
 
+@ObjectType('MigrateEmbeddings')
 @Resolver(() => IVirtualContributor)
 export class VirtualContributorResolverMutations {
   constructor(
