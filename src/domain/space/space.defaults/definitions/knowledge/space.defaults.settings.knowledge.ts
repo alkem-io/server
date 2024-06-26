@@ -2,7 +2,7 @@ import { CommunityMembershipPolicy } from '@common/enums/community.membership.po
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 
-export const spaceDefaultsSettingsVirtualContributor: ISpaceSettings = {
+export const spaceDefaultsSettingsKnowledge: ISpaceSettings = {
   privacy: {
     mode: SpacePrivacyMode.PRIVATE,
     allowPlatformSupportAsAdmin: false,
