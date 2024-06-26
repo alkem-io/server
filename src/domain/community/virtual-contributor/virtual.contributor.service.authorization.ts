@@ -12,12 +12,10 @@ import {
 import { VirtualContributorService } from './virtual.contributor.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
-  CREDENTIAL_RULE_ORGANIZATION_ADMIN,
-  CREDENTIAL_RULE_ORGANIZATION_READ,
-  CREDENTIAL_RULE_VIRTUAL_CONTRIBUTOR_CREATED_BY,
   CREDENTIAL_RULE_TYPES_VC_GLOBAL_COMMUNITY_READ,
   CREDENTIAL_RULE_TYPES_VC_GLOBAL_SUPPORT_MANAGE,
   CREDENTIAL_RULE_TYPES_VC_GLOBAL_ADMINS,
+  CREDENTIAL_RULE_TYPES_VC_PROVIDER,
 } from '@common/constants';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 import { IVirtualContributor } from './virtual.contributor.interface';
@@ -179,7 +177,7 @@ export class VirtualContributorAuthorizationService {
           resourceID: accountID,
         },
       ],
-      CREDENTIAL_RULE_ORGANIZATION_ADMIN
+      CREDENTIAL_RULE_TYPES_VC_PROVIDER
     );
 
     newRules.push(virtualAdmin);
@@ -192,7 +190,7 @@ export class VirtualContributorAuthorizationService {
           resourceID: '',
         },
       ],
-      CREDENTIAL_RULE_ORGANIZATION_READ
+      CREDENTIAL_RULE_TYPES_VC_GLOBAL_COMMUNITY_READ
     );
     newRules.push(readPrivilege);
 
@@ -222,18 +220,6 @@ export class VirtualContributorAuthorizationService {
     const accountHostCred = this.createCredentialCriteriaForHost(host);
 
     hostSelfManagementCriterias.push(accountHostCred);
-
-    const selfManageVC = this.authorizationPolicyService.createCredentialRule(
-      [
-        AuthorizationPrivilege.READ,
-        AuthorizationPrivilege.UPDATE,
-        AuthorizationPrivilege.DELETE,
-      ],
-      hostSelfManagementCriterias,
-      CREDENTIAL_RULE_VIRTUAL_CONTRIBUTOR_CREATED_BY
-    );
-    selfManageVC.cascade = true;
-    newRules.push(selfManageVC);
 
     this.authorizationPolicyService.appendCredentialAuthorizationRules(
       authorization,

@@ -48,6 +48,8 @@ export const CREDENTIAL_RULE_TYPES_VC_GLOBAL_COMMUNITY_READ =
   'credentialRuleTypes-vcGlobalCommunityRead';
 export const CREDENTIAL_RULE_TYPES_VC_GLOBAL_SUPPORT_MANAGE =
   'credentialRuleTypes-vcGlobalSupportManage';
+export const CREDENTIAL_RULE_TYPES_VC_PROVIDER =
+  'credentialRuleTypes-vcProvider';
 export const CREDENTIAL_RULE_TYPES_VC_GLOBAL_ADMINS =
   'credentialRuleTypes-vcGlobalAdmins';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_GLOBAL_ADMINS =

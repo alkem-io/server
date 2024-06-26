@@ -7,7 +7,6 @@ import {
   RelationshipNotFoundException,
 } from '@common/exceptions';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
-
 import { IAiPersona } from './ai.persona.interface';
 
 @Injectable()
