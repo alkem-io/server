@@ -370,7 +370,7 @@ export class VirtualContributorService {
       LogContext.AI_PERSONA_SerVICE_ENGINE
     );
     const aiServerAdapterQuestionInput: AiServerAdapterAskQuestionInput = {
-      personaServiceID: virtualContributor.aiPersona.aiPersonaServiceID,
+      aiPersonaServiceID: virtualContributor.aiPersona.aiPersonaServiceID,
       question: vcQuestionInput.question,
     };
 
