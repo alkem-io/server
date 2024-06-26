@@ -45,12 +45,13 @@ export class AiServerService {
   async ensurePersonaIsUsable(
     personaServiceId: string,
     purpose: SpaceIngestionPurpose
-  ): Promise<void> {
+  ): Promise<boolean> {
     const aiPersonaService =
       await this.aiPersonaServiceService.getAiPersonaServiceOrFail(
         personaServiceId
       );
     await this.ensureSpaceIsUsable(aiPersonaService.bodyOfKnowledgeID, purpose);
+    return true;
   }
 
   async ensureSpaceIsUsable(

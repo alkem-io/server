@@ -322,6 +322,28 @@ export class VirtualContributorService {
     };
   }
 
+  public async refershBodyOfKnowledge(
+    virtualContributor: IVirtualContributor,
+    agentInfo: AgentInfo
+  ): Promise<boolean> {
+    if (!virtualContributor.aiPersona) {
+      throw new EntityNotInitializedException(
+        `Virtual Contributor does not have aiPersona initialized: ${virtualContributor.id}`,
+        LogContext.AUTH
+      );
+    }
+    this.logger.verbose?.(
+      `refreshing the body of knowledge ${virtualContributor.id}, by ${agentInfo.userID}`,
+      LogContext.VIRTUAL_CONTRIBUTOR
+    );
+
+    const aiPersona = virtualContributor.aiPersona;
+
+    return await this.aiServerAdapter.refreshBodyOfKnowlege(
+      aiPersona.aiPersonaServiceID
+    );
+  }
+
   public async askQuestion(
     vcQuestionInput: VirtualContributorQuestionInput,
     agentInfo: AgentInfo,

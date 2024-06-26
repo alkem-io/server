@@ -8,6 +8,7 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AiPersonaServiceQuestionInput } from '@services/ai-server/ai-persona-service/dto/ai.persona.service.question.dto.input';
 import { SpaceIngestionPurpose } from '@services/infrastructure/event-bus/commands';
 import { IMessageAnswerToQuestion } from '@domain/communication/message.answer.to.question/message.answer.to.question.interface';
+import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
 
 @Injectable()
 export class AiServerAdapter {
@@ -27,13 +28,20 @@ export class AiServerAdapter {
   async ensurePersonaIsUsable(
     personaServiceId: string,
     purpose: SpaceIngestionPurpose
-  ): Promise<void> {
+  ): Promise<boolean> {
     return this.aiServer.ensurePersonaIsUsable(personaServiceId, purpose);
+  }
+
+  async refreshBodyOfKnowlege(personaServiceId: string): Promise<boolean> {
+    return this.aiServer.ensurePersonaIsUsable(
+      personaServiceId,
+      SpaceIngestionPurpose.KNOWLEDGE
+    );
   }
 
   async getPersonaServiceBodyOfKnowledgeType(
     personaServiceId: string
-  ): Promise<string> {
+  ): Promise<AiPersonaBodyOfKnowledgeType> {
     const aiPersonaService = await this.aiServer.getAiPersonaServiceOrFail(
       personaServiceId
     );

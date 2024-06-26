@@ -22,13 +22,15 @@ export class aiPersonaFields1719225624444 implements MigrationInterface {
       }[] = await queryRunner.query(
         `SELECT id, bodyOfKnowledgeType, bodyOfKnowledgeID FROM ai_persona_service where id = '${aiPersona.aiPersonaServiceID}'`
       );
-      const bodyOfKnowledge = `Body of knowledge:  based on the AI persona service ID: ${aiPersona.aiPersonaServiceID}`;
+      const bodyOfKnowledge = `Body of knowledge: based on the AI persona service ID: ${aiPersona.aiPersonaServiceID}`;
       await queryRunner.query(
         `UPDATE ai_persona SET bodyOfKnowledge = '${bodyOfKnowledge}' WHERE id = '${aiPersona.id}'`
       );
     }
 
-    throw new Error(`migration completed successfully `);
+    await queryRunner.query(
+      `ALTER TABLE \`ai_persona\` DROP COLUMN \`bodyOfKnowledgeType\``
+    );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {}

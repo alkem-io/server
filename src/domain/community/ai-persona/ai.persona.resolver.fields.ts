@@ -38,7 +38,9 @@ export class AiPersonaResolverFields {
     nullable: true,
     description: 'The body of knowledge type used for the AI Persona.',
   })
-  async bodyOfKnowledgeType(@Parent() aiPersona: AiPersona): Promise<string> {
+  async bodyOfKnowledgeType(
+    @Parent() aiPersona: AiPersona
+  ): Promise<AiPersonaBodyOfKnowledgeType> {
     return await this.aiServerWrapper.getPersonaServiceBodyOfKnowledgeType(
       aiPersona.aiPersonaServiceID
     );
