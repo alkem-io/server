@@ -158,7 +158,7 @@ export class AiPersonaService {
 
     const input: AiServerAdapterAskQuestionInput = {
       question: personaQuestionInput.question,
-      personaServiceID: aiPersona.aiPersonaServiceID,
+      aiPersonaServiceID: aiPersona.aiPersonaServiceID,
     };
 
     return await this.aiServerAdapter.askQuestion(

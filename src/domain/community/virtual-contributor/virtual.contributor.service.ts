@@ -347,7 +347,7 @@ export class VirtualContributorService {
       LogContext.VIRTUAL_CONTRIBUTOR_ENGINE
     );
     const aiServerAdapterQuestionInput: AiServerAdapterAskQuestionInput = {
-      personaServiceID: virtualContributor.aiPersona.aiPersonaServiceID,
+      aiPersonaServiceID: virtualContributor.aiPersona.aiPersonaServiceID,
       question: vcQuestionInput.question,
     };
 

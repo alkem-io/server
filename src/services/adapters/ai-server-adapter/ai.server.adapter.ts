@@ -6,7 +6,6 @@ import { AiServerService } from '@services/ai-server/ai-server/ai.server.service
 import { CreateAiPersonaServiceInput } from '@services/ai-server/ai-persona-service/dto';
 import { IAiPersonaService } from '@services/ai-server/ai-persona-service';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { AiPersonaServiceQuestionInput } from '@services/ai-server/ai-persona-service/dto/ai.persona.service.question.dto.input';
 import { SpaceIngestionPurpose } from '@services/infrastructure/event-bus/commands';
 
 @Injectable()
@@ -49,7 +48,7 @@ export class AiServerAdapter {
     contextSapceNameID: string
   ): Promise<IAiPersonaQuestionResult> {
     return this.aiServer.askQuestion(
-      questionInput as unknown as AiPersonaServiceQuestionInput,
+      questionInput,
       agentInfo,
       contextSapceNameID
     );
