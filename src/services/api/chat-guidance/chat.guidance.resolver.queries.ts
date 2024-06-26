@@ -5,10 +5,10 @@ import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { ChatGuidanceInput } from './dto/chat.guidance.dto.input';
 import { ChatGuidanceService } from './chat.guidance.service';
-import { IChatGuidanceQueryResult } from './dto/chat.guidance.query.result.dto';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { IMessageAnswerToQuestion } from '@domain/communication/message.answer.to.question/message.answer.to.question.interface';
 @Resolver()
 export class ChatGuidanceResolverQueries {
   constructor(
@@ -18,14 +18,14 @@ export class ChatGuidanceResolverQueries {
   ) {}
 
   @UseGuards(GraphqlGuard)
-  @Query(() => IChatGuidanceQueryResult, {
+  @Query(() => IMessageAnswerToQuestion, {
     nullable: false,
     description: 'Ask the chat engine for guidance.',
   })
   async askChatGuidanceQuestion(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('chatData') chatData: ChatGuidanceInput
-  ): Promise<IChatGuidanceQueryResult> {
+  ): Promise<IMessageAnswerToQuestion> {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),

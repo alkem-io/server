@@ -11,6 +11,7 @@ import {
   DeleteVirtualContributorInput,
   UpdateVirtualContributorInput,
 } from './dto';
+import { RefreshVirtualContributorBodyOfKnowledgeInput } from './dto/virtual.contributor.dto.refresh.body.of.knowlege';
 
 @ObjectType('MigrateEmbeddings')
 @Resolver(() => IVirtualContributor)
@@ -66,6 +67,37 @@ export class VirtualContributorResolverMutations {
     );
     return await this.virtualContributorService.deleteVirtualContributor(
       deleteData.ID
+    );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => Boolean, {
+    description:
+      'Triggers a request to the backing AI Service to refresh the knowledge that is available to it.',
+  })
+  async refreshVirtualContributorBodyOfKnowledge(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('deleteData')
+    refreshData: RefreshVirtualContributorBodyOfKnowledgeInput
+  ): Promise<boolean> {
+    const virtual =
+      await this.virtualContributorService.getVirtualContributorOrFail(
+        refreshData.virtualContributorID,
+        {
+          relations: {
+            aiPersona: true,
+          },
+        }
+      );
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      virtual.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `deleteOrg: ${virtual.nameID}`
+    );
+    return await this.virtualContributorService.refershBodyOfKnowledge(
+      virtual,
+      agentInfo
     );
   }
 }

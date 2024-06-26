@@ -7,14 +7,14 @@ import { IAiServer } from './ai.server.interface';
 import { AiServerService } from './ai.server.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { GraphqlGuard } from '@core/authorization';
-import { Injectable, UseGuards } from '@nestjs/common';
+import { UseGuards } from '@nestjs/common';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { IAiPersonaService } from '@services/ai-server/ai-persona-service';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { AiPersonaServiceQuestionInput } from '../ai-persona-service/dto/ai.persona.service.question.dto.input';
-import { IAiPersonaServiceQuestionResult } from '../ai-persona-service/dto/ai.persona.service.question.dto.result';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AiPersonaServiceService } from '../ai-persona-service/ai.persona.service.service';
+import { IMessageAnswerToQuestion } from '@domain/communication/message.answer.to.question/message.answer.to.question.interface';
 
 @Resolver(() => IAiServer)
 export class AiServerResolverFields {
@@ -60,14 +60,14 @@ export class AiServerResolverFields {
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField(() => IAiPersonaServiceQuestionResult, {
+  @ResolveField(() => IMessageAnswerToQuestion, {
     nullable: false,
     description: 'Ask the virtual persona engine for guidance.',
   })
   async askAiPersonaServiceQuestion(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('chatData') chatData: AiPersonaServiceQuestionInput
-  ): Promise<IAiPersonaServiceQuestionResult> {
+  ): Promise<IMessageAnswerToQuestion> {
     return this.aiPersonaServiceService.askQuestion(
       chatData,
       agentInfo,

@@ -31,10 +31,11 @@ import { AiPersonaService } from '../ai-persona/ai.persona.service';
 import { CreateAiPersonaInput } from '../ai-persona/dto';
 import { VirtualContributorQuestionInput } from './dto/virtual.contributor.dto.question.input';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { IAiPersonaQuestionResult } from '../ai-persona/dto/ai.persona.question.dto.result';
 import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
 import { AiServerAdapterAskQuestionInput } from '@services/adapters/ai-server-adapter/dto/ai.server.adapter.dto.ask.question';
 import { SearchVisibility } from '@common/enums/search.visibility';
+import { IMessageAnswerToQuestion } from '@domain/communication/message.answer.to.question/message.answer.to.question.interface';
+import { IAiPersona } from '../ai-persona';
 
 @Injectable()
 export class VirtualContributorService {
@@ -321,11 +322,33 @@ export class VirtualContributorService {
     };
   }
 
+  public async refershBodyOfKnowledge(
+    virtualContributor: IVirtualContributor,
+    agentInfo: AgentInfo
+  ): Promise<boolean> {
+    if (!virtualContributor.aiPersona) {
+      throw new EntityNotInitializedException(
+        `Virtual Contributor does not have aiPersona initialized: ${virtualContributor.id}`,
+        LogContext.AUTH
+      );
+    }
+    this.logger.verbose?.(
+      `refreshing the body of knowledge ${virtualContributor.id}, by ${agentInfo.userID}`,
+      LogContext.VIRTUAL_CONTRIBUTOR
+    );
+
+    const aiPersona = virtualContributor.aiPersona;
+
+    return await this.aiServerAdapter.refreshBodyOfKnowlege(
+      aiPersona.aiPersonaServiceID
+    );
+  }
+
   public async askQuestion(
     vcQuestionInput: VirtualContributorQuestionInput,
     agentInfo: AgentInfo,
     contextSpaceID: string
-  ): Promise<IAiPersonaQuestionResult> {
+  ): Promise<IMessageAnswerToQuestion> {
     const virtualContributor = await this.getVirtualContributorOrFail(
       vcQuestionInput.virtualContributorID,
       {
@@ -344,7 +367,7 @@ export class VirtualContributorService {
     }
     this.logger.verbose?.(
       `still need to use the context ${contextSpaceID}, ${agentInfo.agentID}`,
-      LogContext.VIRTUAL_CONTRIBUTOR_ENGINE
+      LogContext.AI_PERSONA_SERVICE_ENGINE
     );
     const aiServerAdapterQuestionInput: AiServerAdapterAskQuestionInput = {
       aiPersonaServiceID: virtualContributor.aiPersona.aiPersonaServiceID,
@@ -409,6 +432,30 @@ export class VirtualContributorService {
       );
 
     return agent;
+  }
+
+  async getAiPersonaOrFail(
+    virtualContributor: IVirtualContributor
+  ): Promise<IAiPersona> {
+    if (virtualContributor.aiPersona) {
+      return virtualContributor.aiPersona;
+    }
+    const virtualContributorWithAiPersona =
+      await this.getVirtualContributorOrFail(virtualContributor.id, {
+        relations: {
+          aiPersona: true,
+        },
+      });
+    const aiPersona = virtualContributorWithAiPersona.aiPersona;
+
+    if (!aiPersona) {
+      throw new EntityNotFoundException(
+        `Unable to find aiPersona for VirtualContributor: ${virtualContributor.nameID}`,
+        LogContext.VIRTUAL_CONTRIBUTOR
+      );
+    }
+
+    return aiPersona;
   }
 
   async getStorageAggregatorOrFail(

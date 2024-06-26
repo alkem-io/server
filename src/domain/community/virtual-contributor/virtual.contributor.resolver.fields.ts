@@ -22,12 +22,13 @@ import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.a
 import { IVirtualContributor } from './virtual.contributor.interface';
 import { VirtualStorageAggregatorLoaderCreator } from '@core/dataloader/creators/loader.creators/community/virtual.storage.aggregator.loader.creator';
 import { IAccount } from '@domain/space/account/account.interface';
+import { IAiPersona } from '../ai-persona';
 
 @Resolver(() => IVirtualContributor)
 export class VirtualContributorResolverFields {
   constructor(
     private authorizationService: AuthorizationService,
-    private virtualService: VirtualContributorService
+    private virtualContributorService: VirtualContributorService
   ) {}
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -60,9 +61,10 @@ export class VirtualContributorResolverFields {
     @CurrentUser() agentInfo: AgentInfo
   ) {
     // Reload to ensure the authorization is loaded
-    const virtual = await this.virtualService.getVirtualContributorOrFail(
-      parent.id
-    );
+    const virtual =
+      await this.virtualContributorService.getVirtualContributorOrFail(
+        parent.id
+      );
 
     this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -88,7 +90,7 @@ export class VirtualContributorResolverFields {
     const profile = await loader.load(virtualContributor.id);
     // Note: the Virtual profile is public.
     // Check if the user can read the profile entity, not the actual Virtual entity
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       profile.authorization,
       AuthorizationPrivilege.READ,
@@ -122,5 +124,19 @@ export class VirtualContributorResolverFields {
     loader: ILoader<IStorageAggregator>
   ): Promise<IStorageAggregator> {
     return loader.load(virtualContributor.id);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @ResolveField('aiPersona', () => IAiPersona, {
+    nullable: true,
+    description: 'The AI persona being used by this virtual contributor',
+  })
+  @UseGuards(GraphqlGuard)
+  async aiPersona(
+    @Parent() virtualContributor: VirtualContributor
+  ): Promise<IAiPersona> {
+    return this.virtualContributorService.getAiPersonaOrFail(
+      virtualContributor
+    );
   }
 }

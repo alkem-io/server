@@ -12,12 +12,10 @@ import {
 import { VirtualContributorService } from './virtual.contributor.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
-  CREDENTIAL_RULE_ORGANIZATION_ADMIN,
-  CREDENTIAL_RULE_ORGANIZATION_READ,
-  CREDENTIAL_RULE_VIRTUAL_CONTRIBUTOR_CREATED_BY,
   CREDENTIAL_RULE_TYPES_VC_GLOBAL_COMMUNITY_READ,
   CREDENTIAL_RULE_TYPES_VC_GLOBAL_SUPPORT_MANAGE,
   CREDENTIAL_RULE_TYPES_VC_GLOBAL_ADMINS,
+  CREDENTIAL_RULE_TYPES_VC_PROVIDER,
 } from '@common/constants';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 import { IVirtualContributor } from './virtual.contributor.interface';
@@ -26,6 +24,7 @@ import { ICredentialDefinition } from '@domain/agent/credential/credential.defin
 import { IContributor } from '../contributor/contributor.interface';
 import { Organization } from '../organization';
 import { User } from '../user';
+import { AiPersonaAuthorizationService } from '../ai-persona/ai.persona.service.authorization';
 
 @Injectable()
 export class VirtualContributorAuthorizationService {
@@ -35,6 +34,7 @@ export class VirtualContributorAuthorizationService {
     private authorizationPolicy: AuthorizationPolicyService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private profileAuthorizationService: ProfileAuthorizationService,
+    private aiPersonaAuthorizationService: AiPersonaAuthorizationService,
     private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService
   ) {}
 
@@ -50,10 +50,16 @@ export class VirtualContributorAuthorizationService {
           storageAggregator: true,
           profile: true,
           agent: true,
+          aiPersona: true,
         },
       }
     );
-    if (!virtual.profile || !virtual.storageAggregator || !virtual.agent)
+    if (
+      !virtual.profile ||
+      !virtual.storageAggregator ||
+      !virtual.agent ||
+      !virtual.aiPersona
+    )
       throw new RelationshipNotFoundException(
         `Unable to load entities for virtual: ${virtual.id} `,
         LogContext.COMMUNITY
@@ -99,6 +105,12 @@ export class VirtualContributorAuthorizationService {
       virtual.agent,
       virtual.authorization
     );
+
+    virtual.aiPersona =
+      await this.aiPersonaAuthorizationService.applyAuthorizationPolicy(
+        virtual.aiPersona,
+        virtual.authorization
+      );
 
     return virtual;
   }
@@ -165,7 +177,7 @@ export class VirtualContributorAuthorizationService {
           resourceID: accountID,
         },
       ],
-      CREDENTIAL_RULE_ORGANIZATION_ADMIN
+      CREDENTIAL_RULE_TYPES_VC_PROVIDER
     );
 
     newRules.push(virtualAdmin);
@@ -178,7 +190,7 @@ export class VirtualContributorAuthorizationService {
           resourceID: '',
         },
       ],
-      CREDENTIAL_RULE_ORGANIZATION_READ
+      CREDENTIAL_RULE_TYPES_VC_GLOBAL_COMMUNITY_READ
     );
     newRules.push(readPrivilege);
 
@@ -208,18 +220,6 @@ export class VirtualContributorAuthorizationService {
     const accountHostCred = this.createCredentialCriteriaForHost(host);
 
     hostSelfManagementCriterias.push(accountHostCred);
-
-    const selfManageVC = this.authorizationPolicyService.createCredentialRule(
-      [
-        AuthorizationPrivilege.READ,
-        AuthorizationPrivilege.UPDATE,
-        AuthorizationPrivilege.DELETE,
-      ],
-      hostSelfManagementCriterias,
-      CREDENTIAL_RULE_VIRTUAL_CONTRIBUTOR_CREATED_BY
-    );
-    selfManageVC.cascade = true;
-    newRules.push(selfManageVC);
 
     this.authorizationPolicyService.appendCredentialAuthorizationRules(
       authorization,
