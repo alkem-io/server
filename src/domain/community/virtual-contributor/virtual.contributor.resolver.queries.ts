@@ -1,6 +1,6 @@
 import { UUID_NAMEID } from '@domain/common/scalars';
 import { Args, Query, Resolver } from '@nestjs/graphql';
-import { CurrentUser, Profiling } from '@src/common/decorators';
+import { CurrentUser } from '@src/common/decorators';
 import { IVirtualContributor } from './virtual.contributor.interface';
 import { VirtualContributorService } from './virtual.contributor.service';
 import { ContributorQueryArgs } from '../contributor/dto/contributor.query.args';
@@ -10,17 +10,15 @@ import { AuthorizationPrivilege } from '@common/enums';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { UseGuards } from '@nestjs/common';
 import { GraphqlGuard } from '@core/authorization';
-import { IAiPersonaQuestionResult } from '../ai-persona/dto/ai.persona.question.dto.result';
-import { AiPersonaQuestionInput } from '../ai-persona/dto/ai.persona.question.dto.input';
-import { AiPersonaService } from '../ai-persona/ai.persona.service';
+import { VirtualContributorQuestionInput } from './dto/virtual.contributor.dto.question.input';
+import { IMessageAnswerToQuestion } from '@domain/communication/message.answer.to.question/message.answer.to.question.interface';
 
 @Resolver()
 export class VirtualContributorResolverQueries {
   constructor(
     private virtualContributorService: VirtualContributorService,
     private authorizationService: AuthorizationService,
-    private platformAuthorizationPolicyService: PlatformAuthorizationPolicyService,
-    private aiPersonaService: AiPersonaService
+    private platformAuthorizationPolicyService: PlatformAuthorizationPolicyService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -28,7 +26,6 @@ export class VirtualContributorResolverQueries {
     nullable: false,
     description: 'The VirtualContributors on this platform',
   })
-  @Profiling.api
   async virtualContributors(
     @Args({ nullable: true }) args: ContributorQueryArgs,
     @CurrentUser() agentInfo: AgentInfo
@@ -52,7 +49,6 @@ export class VirtualContributorResolverQueries {
     nullable: false,
     description: 'A particular VirtualContributor',
   })
-  @Profiling.api
   async virtualContributor(
     @Args('ID', { type: () => UUID_NAMEID, nullable: false }) id: string
   ): Promise<IVirtualContributor> {
@@ -60,14 +56,24 @@ export class VirtualContributorResolverQueries {
   }
 
   @UseGuards(GraphqlGuard)
-  @Query(() => IAiPersonaQuestionResult, {
+  @Query(() => IMessageAnswerToQuestion, {
     nullable: false,
-    description: 'Ask the virtual persona engine for guidance.',
+    description: 'Ask the virtual contributor a question directly.',
   })
-  async askAiPersonaQuestion(
+  async askVirtualContributorQuestion(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('chatData') chatData: AiPersonaQuestionInput
-  ): Promise<IAiPersonaQuestionResult> {
-    return this.aiPersonaService.askQuestion(chatData, agentInfo, '');
+    @Args('chatData') chatData: VirtualContributorQuestionInput
+  ): Promise<IMessageAnswerToQuestion> {
+    const virtualContributor =
+      await this.virtualContributorService.getVirtualContributorOrFail(
+        chatData.virtualContributorID
+      );
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      virtualContributor.authorization,
+      AuthorizationPrivilege.READ,
+      `asking a question to virtual contributor (${virtualContributor.id}): $chatData.question`
+    );
+    return this.virtualContributorService.askQuestion(chatData, agentInfo, '');
   }
 }

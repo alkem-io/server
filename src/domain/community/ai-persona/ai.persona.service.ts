@@ -9,8 +9,6 @@ import { IAiPersona } from './ai.persona.interface';
 import { CreateAiPersonaInput as CreateAiPersonaInput } from './dto/ai.persona.dto.create';
 import { DeleteAiPersonaInput as DeleteAiPersonaInput } from './dto/ai.persona.dto.delete';
 import { UpdateAiPersonaInput } from './dto/ai.persona.dto.update';
-import { IAiPersonaQuestionResult } from './dto/ai.persona.question.dto.result';
-import { AiPersonaQuestionInput } from './dto/ai.persona.question.dto.input';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { LogContext } from '@common/enums/logging.context';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -19,6 +17,7 @@ import { AiServerAdapterAskQuestionInput } from '@services/adapters/ai-server-ad
 import { AiPersonaDataAccessMode } from '@common/enums/ai.persona.data.access.mode';
 import { AiPersonaInteractionMode } from '@common/enums/ai.persona.interaction.mode';
 import { SpaceIngestionPurpose } from '@services/infrastructure/event-bus/commands';
+import { IMessageAnswerToQuestion } from '@domain/communication/message.answer.to.question/message.answer.to.question.interface';
 
 @Injectable()
 export class AiPersonaService {
@@ -113,13 +112,13 @@ export class AiPersonaService {
   }
 
   public async getAiPersonaOrFail(
-    virtualID: string,
+    aiPersonaID: string,
     options?: FindOneOptions<AiPersona>
   ): Promise<IAiPersona | never> {
-    const aiPersona = await this.getAiPersona(virtualID, options);
+    const aiPersona = await this.getAiPersona(aiPersonaID, options);
     if (!aiPersona)
       throw new EntityNotFoundException(
-        `Unable to find Virtual Persona with ID: ${virtualID}`,
+        `Unable to find Virtual Persona with ID: ${aiPersonaID}`,
         LogContext.PLATFORM
       );
     return aiPersona;
@@ -130,33 +129,18 @@ export class AiPersonaService {
   }
 
   public async askQuestion(
-    personaQuestionInput: AiPersonaQuestionInput,
+    aiPersona: IAiPersona,
+    question: string,
     agentInfo: AgentInfo,
     contextSpaceID: string
-  ): Promise<IAiPersonaQuestionResult> {
-    const aiPersona = await this.getAiPersonaOrFail(
-      personaQuestionInput.aiPersonaID,
-      {
-        relations: {
-          authorization: true,
-        },
-      }
-    );
-
-    if (!aiPersona.authorization) {
-      throw new EntityNotFoundException(
-        `Unable to find AI Persona Service for AI Persona with ID: ${personaQuestionInput.aiPersonaID}`,
-        LogContext.PLATFORM
-      );
-    }
-
+  ): Promise<IMessageAnswerToQuestion> {
     this.logger.verbose?.(
       `Asking question to AI Persona from user ${agentInfo.userID} + with context ${contextSpaceID}`,
       LogContext.PLATFORM
     );
 
     const input: AiServerAdapterAskQuestionInput = {
-      question: personaQuestionInput.question,
+      question: question,
       personaServiceID: aiPersona.aiPersonaServiceID,
     };
 

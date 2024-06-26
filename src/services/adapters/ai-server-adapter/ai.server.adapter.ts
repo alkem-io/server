@@ -1,13 +1,13 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AiServerAdapterAskQuestionInput } from './dto/ai.server.adapter.dto.ask.question';
-import { IAiPersonaQuestionResult } from './dto/ai.server.adapter.dto.question.result';
 import { AiServerService } from '@services/ai-server/ai-server/ai.server.service';
 import { CreateAiPersonaServiceInput } from '@services/ai-server/ai-persona-service/dto';
 import { IAiPersonaService } from '@services/ai-server/ai-persona-service';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AiPersonaServiceQuestionInput } from '@services/ai-server/ai-persona-service/dto/ai.persona.service.question.dto.input';
 import { SpaceIngestionPurpose } from '@services/infrastructure/event-bus/commands';
+import { IMessageAnswerToQuestion } from '@domain/communication/message.answer.to.question/message.answer.to.question.interface';
 
 @Injectable()
 export class AiServerAdapter {
@@ -47,7 +47,7 @@ export class AiServerAdapter {
     questionInput: AiServerAdapterAskQuestionInput,
     agentInfo: AgentInfo,
     contextSapceNameID: string
-  ): Promise<IAiPersonaQuestionResult> {
+  ): Promise<IMessageAnswerToQuestion> {
     return this.aiServer.askQuestion(
       questionInput as unknown as AiPersonaServiceQuestionInput,
       agentInfo,

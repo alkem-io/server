@@ -1,11 +1,11 @@
 import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { IChatGuidanceQueryResult } from './dto/chat.guidance.query.result.dto';
 import { ConfigurationTypes } from '@common/enums/configuration.type';
 import { ConfigService } from '@nestjs/config';
 import { GuidanceEngineAdapter } from '@services/adapters/chat-guidance-adapter/guidance.engine.adapter';
 import { ChatGuidanceInput } from './dto/chat.guidance.dto.input';
+import { IMessageAnswerToQuestion } from '@domain/communication/message.answer.to.question/message.answer.to.question.interface';
 
 export class ChatGuidanceService {
   constructor(
@@ -17,7 +17,7 @@ export class ChatGuidanceService {
   public async askQuestion(
     chatData: ChatGuidanceInput,
     agentInfo: AgentInfo
-  ): Promise<IChatGuidanceQueryResult> {
+  ): Promise<IMessageAnswerToQuestion> {
     const response = await this.guidanceEngineAdapter.sendQuery({
       userId: agentInfo.userID,
       question: chatData.question,

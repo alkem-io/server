@@ -31,10 +31,10 @@ import { AiPersonaService } from '../ai-persona/ai.persona.service';
 import { CreateAiPersonaInput } from '../ai-persona/dto';
 import { VirtualContributorQuestionInput } from './dto/virtual.contributor.dto.question.input';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { IAiPersonaQuestionResult } from '../ai-persona/dto/ai.persona.question.dto.result';
 import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
 import { AiServerAdapterAskQuestionInput } from '@services/adapters/ai-server-adapter/dto/ai.server.adapter.dto.ask.question';
 import { SearchVisibility } from '@common/enums/search.visibility';
+import { IMessageAnswerToQuestion } from '@domain/communication/message.answer.to.question/message.answer.to.question.interface';
 
 @Injectable()
 export class VirtualContributorService {
@@ -325,7 +325,7 @@ export class VirtualContributorService {
     vcQuestionInput: VirtualContributorQuestionInput,
     agentInfo: AgentInfo,
     contextSpaceID: string
-  ): Promise<IAiPersonaQuestionResult> {
+  ): Promise<IMessageAnswerToQuestion> {
     const virtualContributor = await this.getVirtualContributorOrFail(
       vcQuestionInput.virtualContributorID,
       {
@@ -344,7 +344,7 @@ export class VirtualContributorService {
     }
     this.logger.verbose?.(
       `still need to use the context ${contextSpaceID}, ${agentInfo.agentID}`,
-      LogContext.VIRTUAL_CONTRIBUTOR_ENGINE
+      LogContext.AI_PERSONA_SerVICE_ENGINE
     );
     const aiServerAdapterQuestionInput: AiServerAdapterAskQuestionInput = {
       personaServiceID: virtualContributor.aiPersona.aiPersonaServiceID,
