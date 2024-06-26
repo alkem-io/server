@@ -9,7 +9,6 @@ import { IAiPersonaService } from './ai.persona.service.interface';
 import { CreateAiPersonaServiceInput as CreateAiPersonaServiceInput } from './dto/ai.persona.service.dto.create';
 import { DeleteAiPersonaServiceInput as DeleteAiPersonaServiceInput } from './dto/ai.persona..service.dto.delete';
 import { UpdateAiPersonaServiceInput } from './dto/ai.persona.service.dto.update';
-import { IAiPersonaServiceQuestionResult } from './dto/ai.persona.service.question.dto.result';
 import { AiPersonaServiceQuestionInput } from './dto/ai.persona.service.question.dto.input';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { LogContext } from '@common/enums/logging.context';
@@ -23,6 +22,7 @@ import {
   SpaceIngestionPurpose,
 } from '@services/infrastructure/event-bus/commands';
 import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
+import { IMessageAnswerToQuestion } from '@domain/communication/message.answer.to.question/message.answer.to.question.interface';
 
 @Injectable()
 export class AiPersonaServiceService {
@@ -146,7 +146,7 @@ export class AiPersonaServiceService {
     personaQuestionInput: AiPersonaServiceQuestionInput,
     agentInfo: AgentInfo,
     contextSpaceID: string
-  ): Promise<IAiPersonaServiceQuestionResult> {
+  ): Promise<IMessageAnswerToQuestion> {
     const aiPersonaService = await this.getAiPersonaServiceOrFail(
       personaQuestionInput.aiPersonaServiceID
     );

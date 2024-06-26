@@ -11,6 +11,10 @@ export class CreateAiPersonaInput {
   @MaxLength(HUGE_TEXT_LENGTH)
   description?: string = '';
 
+  @Field(() => Markdown, { nullable: true })
+  @MaxLength(HUGE_TEXT_LENGTH)
+  bodyOfKnowledge?: string = '';
+
   @Field(() => UUID, { nullable: true })
   aiPersonaServiceID?: string = undefined;
 

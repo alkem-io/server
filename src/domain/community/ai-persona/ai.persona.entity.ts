@@ -2,7 +2,6 @@ import { Column, Entity } from 'typeorm';
 import { IAiPersona } from './ai.persona.interface';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { AiPersonaInteractionMode } from '@common/enums/ai.persona.interaction.mode';
-import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
 import { AiPersonaDataAccessMode } from '@common/enums/ai.persona.data.access.mode';
 
 @Entity()
@@ -26,10 +25,6 @@ export class AiPersona extends AuthorizableEntity implements IAiPersona {
   })
   interactionModes!: AiPersonaInteractionMode[];
 
-  @Column('varchar', {
-    length: 255,
-    nullable: false,
-    default: AiPersonaBodyOfKnowledgeType.ALKEMIO_SPACE,
-  })
-  bodyOfKnowledgeType!: AiPersonaBodyOfKnowledgeType;
+  @Column('text', { nullable: true })
+  bodyOfKnowledge = '';
 }
