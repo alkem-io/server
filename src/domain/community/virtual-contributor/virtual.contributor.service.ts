@@ -367,7 +367,7 @@ export class VirtualContributorService {
     }
     this.logger.verbose?.(
       `still need to use the context ${contextSpaceID}, ${agentInfo.agentID}`,
-      LogContext.AI_PERSONA_SerVICE_ENGINE
+      LogContext.AI_PERSONA_SERVICE_ENGINE
     );
     const aiServerAdapterQuestionInput: AiServerAdapterAskQuestionInput = {
       aiPersonaServiceID: virtualContributor.aiPersona.aiPersonaServiceID,

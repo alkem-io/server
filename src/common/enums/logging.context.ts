@@ -65,5 +65,5 @@ export enum LogContext {
   VIRTUAL_CONTRIBUTOR = 'virtual-contributor',
   AI_SERVER = 'ai-server',
   AI_PERSONA_SERVICE = 'ai-persona-service',
-  AI_PERSONA_SerVICE_ENGINE = 'ai-persona-service-engine',
+  AI_PERSONA_SERVICE_ENGINE = 'ai-persona-service-engine',
 }
