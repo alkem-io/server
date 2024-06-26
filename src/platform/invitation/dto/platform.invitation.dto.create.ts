@@ -3,7 +3,7 @@ import { Field, InputType } from '@nestjs/graphql';
 import { IsEmail, IsOptional, MaxLength } from 'class-validator';
 
 @InputType()
-export class CreateInvitationExternalInput {
+export class CreatePlatformInvitationInput {
   @Field({
     nullable: false,
   })

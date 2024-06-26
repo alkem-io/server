@@ -5,36 +5,36 @@ import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { DeleteInvitationExternalInput } from './dto/invitation.external.dto.delete';
-import { InvitationExternalService } from './invitation.external.service';
-import { IInvitationExternal } from './invitation.external.interface';
+import { DeletePlatformInvitationInput } from './dto/platform.invitation.dto.delete';
+import { PlatformInvitationService } from './platform.invitation.service';
+import { IPlatformInvitation } from './platform.invitation.interface';
 
 @Resolver()
-export class InvitationExternalResolverMutations {
+export class PlatformInvitationResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
-    private invitationExternalService: InvitationExternalService
+    private platformInvitationService: PlatformInvitationService
   ) {}
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => IInvitationExternal, {
-    description: 'Removes the specified User invitationExternal.',
+  @Mutation(() => IPlatformInvitation, {
+    description: 'Removes the specified User platformInvitation.',
   })
-  async deleteInvitationExternal(
+  async deletePlatformInvitation(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('deleteData') deleteData: DeleteInvitationExternalInput
-  ): Promise<IInvitationExternal> {
+    @Args('deleteData') deleteData: DeletePlatformInvitationInput
+  ): Promise<IPlatformInvitation> {
     const externalInvitation =
-      await this.invitationExternalService.getInvitationExternalOrFail(
+      await this.platformInvitationService.getPlatformInvitationOrFail(
         deleteData.ID
       );
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       externalInvitation.authorization,
       AuthorizationPrivilege.DELETE,
-      `delete invitationExternal to community: ${externalInvitation.id}`
+      `delete platformInvitation to community: ${externalInvitation.id}`
     );
-    return await this.invitationExternalService.deleteInvitationExternal(
+    return await this.platformInvitationService.deletePlatformInvitation(
       deleteData
     );
   }

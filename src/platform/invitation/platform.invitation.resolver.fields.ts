@@ -1,29 +1,29 @@
 import { UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Parent, ResolveField } from '@nestjs/graphql';
-import { InvitationExternalService } from './invitation.external.service';
+import { PlatformInvitationService } from './platform.invitation.service';
 import { AuthorizationPrivilege } from '@common/enums';
-import { IInvitationExternal } from '@domain/community/invitation.external/invitation.external.interface';
 import { GraphqlGuard } from '@core/authorization';
 import { IUser } from '@domain/community/user/user.interface';
 import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
+import { IPlatformInvitation } from './platform.invitation.interface';
 
-@Resolver(() => IInvitationExternal)
-export class InvitationExternalResolverFields {
-  constructor(private invitationExternalService: InvitationExternalService) {}
+@Resolver(() => IPlatformInvitation)
+export class PlatformInvitationResolverFields {
+  constructor(private platformInvitationService: PlatformInvitationService) {}
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('createdBy', () => IUser, {
     nullable: false,
-    description: 'The User who triggered the invitationExternal.',
+    description: 'The User who triggered the platformInvitation.',
   })
   @Profiling.api
   async createdBy(
-    @Parent() invitationExternal: IInvitationExternal
+    @Parent() platformInvitation: IPlatformInvitation
   ): Promise<IUser> {
-    return await this.invitationExternalService.getCreatedBy(
-      invitationExternal
+    return await this.platformInvitationService.getCreatedBy(
+      platformInvitation
     );
   }
 }

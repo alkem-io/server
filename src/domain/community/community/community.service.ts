@@ -44,10 +44,7 @@ import { UpdateFormInput } from '@domain/common/form/dto/form.dto.update';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 import { InvitationService } from '../invitation/invitation.service';
 import { IInvitation } from '../invitation/invitation.interface';
-import { CreateInvitationUserByEmailOnCommunityInput } from './dto/community.dto.invite.external.user';
-import { IInvitationExternal } from '../invitation.external';
-import { InvitationExternalService } from '../invitation.external/invitation.external.service';
-import { CreateInvitationExternalInput } from '../invitation.external/dto/invitation.external.dto.create';
+import { CreatePlatformInvitationOnCommunityInput } from './dto/community.dto.platform.invitation.community';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { CreateInvitationInput } from '../invitation/dto/invitation.dto.create';
 import { CommunityMembershipException } from '@common/exceptions/community.membership.exception';
@@ -63,6 +60,9 @@ import { CommunityRoleImplicit } from '@common/enums/community.role.implicit';
 import { AuthorizationCredential } from '@common/enums';
 import { ContributorService } from '../contributor/contributor.service';
 import { IContributor } from '../contributor/contributor.interface';
+import { PlatformInvitationService } from '@platform/invitation/platform.invitation.service';
+import { IPlatformInvitation } from '@platform/invitation';
+import { CreatePlatformInvitationInput } from '@platform/invitation/dto/platform.invitation.dto.create';
 
 @Injectable()
 export class CommunityService {
@@ -76,7 +76,7 @@ export class CommunityService {
     private userGroupService: UserGroupService,
     private applicationService: ApplicationService,
     private invitationService: InvitationService,
-    private invitationExternalService: InvitationExternalService,
+    private platformInvitationService: PlatformInvitationService,
     private communicationService: CommunicationService,
     private communityResolverService: CommunityResolverService,
     private communityEventsService: CommunityEventsService,
@@ -285,7 +285,7 @@ export class CommunityService {
     }
 
     for (const externalInvitation of community.externalInvitations) {
-      await this.invitationExternalService.deleteInvitationExternal({
+      await this.platformInvitationService.deletePlatformInvitation({
         ID: externalInvitation.id,
       });
     }
@@ -1237,10 +1237,10 @@ export class CommunityService {
     return invitation;
   }
 
-  async createInvitationExternalUser(
-    invitationData: CreateInvitationUserByEmailOnCommunityInput,
+  async createPlatformInvitation(
+    invitationData: CreatePlatformInvitationOnCommunityInput,
     agentInfo: AgentInfo
-  ): Promise<IInvitationExternal> {
+  ): Promise<IPlatformInvitation> {
     await this.validateInvitationToExternalUser(
       invitationData.email,
       invitationData.communityID
@@ -1252,12 +1252,12 @@ export class CommunityService {
       }
     );
 
-    const externalInvitationInput: CreateInvitationExternalInput = {
+    const externalInvitationInput: CreatePlatformInvitationInput = {
       ...invitationData,
       createdBy: agentInfo.userID,
     };
     const externalInvitation =
-      await this.invitationExternalService.createInvitationExternal(
+      await this.platformInvitationService.createPlatformInvitation(
         externalInvitationInput
       );
     community.externalInvitations?.push(externalInvitation);
@@ -1348,11 +1348,11 @@ export class CommunityService {
       );
     }
 
-    const existingExternalInvitations =
-      await this.invitationExternalService.findInvitationExternalsForUser(
+    const existingPlatformInvitations =
+      await this.platformInvitationService.findPlatformInvitationsForUser(
         email
       );
-    for (const existingExternalInvitation of existingExternalInvitations) {
+    for (const existingExternalInvitation of existingPlatformInvitations) {
       if (existingExternalInvitation.community.id === communityID) {
         throw new CommunityMembershipException(
           `An invitation with the provided email address (${email}) already exists for the specified community: ${communityID}`,
@@ -1376,9 +1376,9 @@ export class CommunityService {
     return communityApps?.invitations || [];
   }
 
-  async getExternalInvitations(
+  async getPlatformInvitations(
     community: ICommunity
-  ): Promise<IInvitationExternal[]> {
+  ): Promise<IPlatformInvitation[]> {
     const communityApps = await this.getCommunityOrFail(community.id, {
       relations: { externalInvitations: true },
     });

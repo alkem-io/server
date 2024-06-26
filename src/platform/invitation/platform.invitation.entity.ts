@@ -1,11 +1,11 @@
 import { Column, Entity, ManyToOne } from 'typeorm';
 import { Community } from '@domain/community/community/community.entity';
-import { IInvitationExternal } from './invitation.external.interface';
+import { IPlatformInvitation } from './platform.invitation.interface';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 @Entity()
-export class InvitationExternal
+export class PlatformInvitation
   extends AuthorizableEntity
-  implements IInvitationExternal
+  implements IPlatformInvitation
 {
   @ManyToOne(() => Community, community => community.externalInvitations, {
     eager: false,

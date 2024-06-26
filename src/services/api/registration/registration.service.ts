@@ -12,7 +12,6 @@ import { OrganizationPreferenceType } from '@common/enums/organization.preferenc
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { UserAuthorizationService } from '@domain/community/user/user.service.authorization';
 import { IInvitation } from '@domain/community/invitation/invitation.interface';
-import { InvitationExternalService } from '@domain/community/invitation.external/invitation.external.service';
 import { CommunityService } from '@domain/community/community/community.service';
 import { InvitationAuthorizationService } from '@domain/community/invitation/invitation.service.authorization';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
@@ -21,6 +20,7 @@ import { DeleteUserInput } from '@domain/community/user/dto/user.dto.delete';
 import { InvitationService } from '@domain/community/invitation/invitation.service';
 import { ApplicationService } from '@domain/community/application/application.service';
 import { OrganizationRole } from '@common/enums/organization.role';
+import { PlatformInvitationService } from '@platform/invitation/platform.invitation.service';
 
 export class RegistrationService {
   constructor(
@@ -29,7 +29,7 @@ export class RegistrationService {
     private preferenceSetService: PreferenceSetService,
     private userAuthorizationService: UserAuthorizationService,
     private communityService: CommunityService,
-    private invitationExternalService: InvitationExternalService,
+    private platformInvitationService: PlatformInvitationService,
     private invitationAuthorizationService: InvitationAuthorizationService,
     private invitationService: InvitationService,
     private applicationService: ApplicationService,
@@ -112,7 +112,7 @@ export class RegistrationService {
 
   public async processPendingInvitations(user: IUser): Promise<IInvitation[]> {
     const externalInvitations =
-      await this.invitationExternalService.findInvitationExternalsForUser(
+      await this.platformInvitationService.findPlatformInvitationsForUser(
         user.email
       );
 
@@ -144,7 +144,7 @@ export class RegistrationService {
       invitation = await this.invitationService.save(invitation);
 
       invitations.push(invitation);
-      await this.invitationExternalService.recordProfileCreated(
+      await this.platformInvitationService.recordProfileCreated(
         externalInvitation
       );
     }

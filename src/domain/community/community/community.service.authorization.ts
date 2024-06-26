@@ -22,7 +22,6 @@ import {
   POLICY_RULE_COMMUNITY_ADD_VC,
   POLICY_RULE_COMMUNITY_INVITE_MEMBER,
 } from '@common/constants';
-import { InvitationExternalAuthorizationService } from '../invitation.external/invitation.external.service.authorization';
 import { InvitationAuthorizationService } from '../invitation/invitation.service.authorization';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { CommunityGuidelinesAuthorizationService } from '../community-guidelines/community.guidelines.service.authorization';
@@ -34,6 +33,7 @@ import { LicenseEngineService } from '@core/license-engine/license.engine.servic
 import { LicensePrivilege } from '@common/enums/license.privilege';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { IAgent } from '@domain/agent';
+import { PlatformInvitationAuthorizationService } from '@platform/invitation/platform.invitation.service.authorization';
 
 @Injectable()
 export class CommunityAuthorizationService {
@@ -46,7 +46,7 @@ export class CommunityAuthorizationService {
     private applicationAuthorizationService: ApplicationAuthorizationService,
     private invitationAuthorizationService: InvitationAuthorizationService,
     private communityPolicyService: CommunityPolicyService,
-    private invitationExternalAuthorizationService: InvitationExternalAuthorizationService,
+    private platformInvitationAuthorizationService: PlatformInvitationAuthorizationService,
     private communityGuidelinesAuthorizationService: CommunityGuidelinesAuthorizationService
   ) {}
 
@@ -147,7 +147,7 @@ export class CommunityAuthorizationService {
 
     for (const externalInvitation of community.externalInvitations) {
       const invitationReset =
-        await this.invitationExternalAuthorizationService.applyAuthorizationPolicy(
+        await this.platformInvitationAuthorizationService.applyAuthorizationPolicy(
           externalInvitation,
           community.authorization
         );

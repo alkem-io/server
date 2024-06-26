@@ -8,8 +8,8 @@ import { NotificationAdapterModule } from '@services/adapters/notification-adapt
 import { CommunityModule } from '@domain/community/community/community.module';
 import { InvitationModule } from '@domain/community/invitation/invitation.module';
 import { ApplicationModule } from '@domain/community/application/application.module';
-import { InvitationExternalModule } from '@domain/community/invitation.external/invitation.external.module';
 import { PreferenceSetModule } from '@domain/common/preference-set/preference.set.module';
+import { PlatformInvitationModule } from '@platform/invitation/platform.invitation.module';
 
 @Module({
   imports: [
@@ -20,7 +20,7 @@ import { PreferenceSetModule } from '@domain/common/preference-set/preference.se
     PreferenceSetModule,
     OrganizationModule,
     InvitationModule,
-    InvitationExternalModule,
+    PlatformInvitationModule,
     ApplicationModule,
   ],
   providers: [RegistrationService, RegistrationResolverMutations],
