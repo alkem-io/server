@@ -654,7 +654,7 @@ export class CommunityResolverMutations {
           LogContext.COMMUNITY
         );
       } else {
-        invitationData.invitedToParent = true;
+        invitationData.communityInvitedToParent = true;
       }
     }
 

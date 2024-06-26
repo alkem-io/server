@@ -10,6 +10,7 @@ import { InvitationModule } from '@domain/community/invitation/invitation.module
 import { ApplicationModule } from '@domain/community/application/application.module';
 import { PreferenceSetModule } from '@domain/common/preference-set/preference.set.module';
 import { PlatformInvitationModule } from '@platform/invitation/platform.invitation.module';
+import { PlatformModule } from '@platform/platfrom/platform.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { PlatformInvitationModule } from '@platform/invitation/platform.invitati
     OrganizationModule,
     InvitationModule,
     PlatformInvitationModule,
+    PlatformModule,
     ApplicationModule,
   ],
   providers: [RegistrationService, RegistrationResolverMutations],

@@ -1,6 +1,9 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { EntityNotFoundException } from '@common/exceptions';
+import {
+  EntityNotFoundException,
+  ValidationException,
+} from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
@@ -12,9 +15,12 @@ import { CreatePlatformInvitationInput } from './dto/platform.invitation.dto.cre
 import { DeletePlatformInvitationInput } from './dto/platform.invitation.dto.delete';
 import { UserLookupService } from '@services/infrastructure/user-lookup/user.lookup.service';
 import { IUser } from '@domain/community/user/user.interface';
+import { PlatformRole } from '@common/enums/platform.role';
 
 @Injectable()
 export class PlatformInvitationService {
+  private acceptedPlatformRoles: PlatformRole[] = [PlatformRole.BETA_TESTER];
+
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     @InjectRepository(PlatformInvitation)
@@ -26,6 +32,14 @@ export class PlatformInvitationService {
   async createPlatformInvitation(
     platformInvitationData: CreatePlatformInvitationInput
   ): Promise<IPlatformInvitation> {
+    // Only allow invitations to specific set of platform roles
+    const role = platformInvitationData.platformRole;
+    if (role !== undefined && !this.acceptedPlatformRoles.includes(role)) {
+      throw new ValidationException(
+        `Invalid platform role: ${role}`,
+        LogContext.PLATFORM
+      );
+    }
     const platformInvitation: IPlatformInvitation = PlatformInvitation.create(
       platformInvitationData
     );

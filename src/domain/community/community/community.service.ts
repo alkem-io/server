@@ -1348,12 +1348,15 @@ export class CommunityService {
       );
     }
 
-    const existingPlatformInvitations =
+    const platformInvitations =
       await this.platformInvitationService.findPlatformInvitationsForUser(
         email
       );
-    for (const existingExternalInvitation of existingPlatformInvitations) {
-      if (existingExternalInvitation.community.id === communityID) {
+    for (const platformInvitation of platformInvitations) {
+      if (
+        platformInvitation.community &&
+        platformInvitation.community.id === communityID
+      ) {
         throw new CommunityMembershipException(
           `An invitation with the provided email address (${email}) already exists for the specified community: ${communityID}`,
           LogContext.COMMUNITY
