@@ -57,7 +57,10 @@ export class PlatformResolverMutations {
     const platformPolicy =
       await this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();
     let privilegeRequired = AuthorizationPrivilege.GRANT_GLOBAL_ADMINS;
-    if (membershipData.role === PlatformRole.BETA_TESTER) {
+    if (
+      membershipData.role === PlatformRole.BETA_TESTER ||
+      membershipData.role === PlatformRole.VC_CAMPAIGN
+    ) {
       privilegeRequired = AuthorizationPrivilege.PLATFORM_ADMIN;
     }
     await this.authorizationService.grantAccessOrFail(

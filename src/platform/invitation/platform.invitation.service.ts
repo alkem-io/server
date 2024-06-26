@@ -19,7 +19,10 @@ import { PlatformRole } from '@common/enums/platform.role';
 
 @Injectable()
 export class PlatformInvitationService {
-  private acceptedPlatformRoles: PlatformRole[] = [PlatformRole.BETA_TESTER];
+  private acceptedPlatformRoles: PlatformRole[] = [
+    PlatformRole.BETA_TESTER,
+    PlatformRole.VC_CAMPAIGN,
+  ];
 
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,

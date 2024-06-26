@@ -324,6 +324,7 @@ export class PlatformAuthorizationService {
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_SUPPORT,
           AuthorizationCredential.BETA_TESTER,
+          AuthorizationCredential.VC_CAMPAIGN,
         ],
         CREDENTIAL_RULE_PLATFORM_CREATE_SPACE
       );

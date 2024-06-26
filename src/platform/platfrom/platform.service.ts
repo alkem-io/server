@@ -251,6 +251,9 @@ export class PlatformService {
       case PlatformRole.BETA_TESTER:
         result.type = AuthorizationCredential.BETA_TESTER;
         break;
+      case PlatformRole.VC_CAMPAIGN:
+        result.type = AuthorizationCredential.VC_CAMPAIGN;
+        break;
       default:
         throw new ForbiddenException(
           `Role not supported: ${role}`,
