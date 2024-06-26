@@ -1,13 +1,9 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class licensePlanType1719225622768 implements MigrationInterface {
-  name = 'licensePlanType1719225622768';
+export class spaceTypeKnowledgeType1719225623900 implements MigrationInterface {
+  name = 'spaceTypeKnowledgeType1719225623900';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(
-      `ALTER TABLE \`license_plan\` ADD \`type\` varchar(255) NULL`
-    );
-
     const spaces: {
       id: string;
       type: string;
