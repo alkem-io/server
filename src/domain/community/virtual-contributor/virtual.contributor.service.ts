@@ -35,6 +35,7 @@ import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.
 import { AiServerAdapterAskQuestionInput } from '@services/adapters/ai-server-adapter/dto/ai.server.adapter.dto.ask.question';
 import { SearchVisibility } from '@common/enums/search.visibility';
 import { IMessageAnswerToQuestion } from '@domain/communication/message.answer.to.question/message.answer.to.question.interface';
+import { IAiPersona } from '../ai-persona';
 
 @Injectable()
 export class VirtualContributorService {
@@ -409,6 +410,30 @@ export class VirtualContributorService {
       );
 
     return agent;
+  }
+
+  async getAiPersonaOrFail(
+    virtualContributor: IVirtualContributor
+  ): Promise<IAiPersona> {
+    if (virtualContributor.aiPersona) {
+      return virtualContributor.aiPersona;
+    }
+    const virtualContributorWithAiPersona =
+      await this.getVirtualContributorOrFail(virtualContributor.id, {
+        relations: {
+          aiPersona: true,
+        },
+      });
+    const aiPersona = virtualContributorWithAiPersona.aiPersona;
+
+    if (!aiPersona) {
+      throw new EntityNotFoundException(
+        `Unable to find aiPersona for VirtualContributor: ${virtualContributor.nameID}`,
+        LogContext.VIRTUAL_CONTRIBUTOR
+      );
+    }
+
+    return aiPersona;
   }
 
   async getStorageAggregatorOrFail(
