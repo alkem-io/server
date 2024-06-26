@@ -16,7 +16,7 @@ export class IAiPersona extends IAuthorizable {
 
   @Field(() => Markdown, {
     nullable: false,
-    description: 'The type of knowledge provided by this AI Persona.',
+    description: 'A overview of knowledge provided by this AI Persona.',
   })
   bodyOfKnowledge!: string;
 

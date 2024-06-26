@@ -31,6 +31,24 @@ export class AiServerAdapter {
     return this.aiServer.ensurePersonaIsUsable(personaServiceId, purpose);
   }
 
+  async getPersonaServiceBodyOfKnowledgeType(
+    personaServiceId: string
+  ): Promise<string> {
+    const aiPersonaService = await this.aiServer.getAiPersonaServiceOrFail(
+      personaServiceId
+    );
+    return aiPersonaService.bodyOfKnowledgeType;
+  }
+
+  async getPersonaServiceBodyOfKnowledgeID(
+    personaServiceId: string
+  ): Promise<string> {
+    const aiPersonaService = await this.aiServer.getAiPersonaServiceOrFail(
+      personaServiceId
+    );
+    return aiPersonaService.bodyOfKnowledgeID;
+  }
+
   async getPersonaServiceOrFail(
     personaServiceId: string
   ): Promise<IAiPersonaService> {

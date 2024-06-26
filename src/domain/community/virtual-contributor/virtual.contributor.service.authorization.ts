@@ -26,6 +26,7 @@ import { ICredentialDefinition } from '@domain/agent/credential/credential.defin
 import { IContributor } from '../contributor/contributor.interface';
 import { Organization } from '../organization';
 import { User } from '../user';
+import { AiPersonaAuthorizationService } from '../ai-persona/ai.persona.service.authorization';
 
 @Injectable()
 export class VirtualContributorAuthorizationService {
@@ -35,6 +36,7 @@ export class VirtualContributorAuthorizationService {
     private authorizationPolicy: AuthorizationPolicyService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private profileAuthorizationService: ProfileAuthorizationService,
+    private aiPersonaAuthorizationService: AiPersonaAuthorizationService,
     private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService
   ) {}
 
@@ -50,10 +52,16 @@ export class VirtualContributorAuthorizationService {
           storageAggregator: true,
           profile: true,
           agent: true,
+          aiPersona: true,
         },
       }
     );
-    if (!virtual.profile || !virtual.storageAggregator || !virtual.agent)
+    if (
+      !virtual.profile ||
+      !virtual.storageAggregator ||
+      !virtual.agent ||
+      !virtual.aiPersona
+    )
       throw new RelationshipNotFoundException(
         `Unable to load entities for virtual: ${virtual.id} `,
         LogContext.COMMUNITY
@@ -99,6 +107,12 @@ export class VirtualContributorAuthorizationService {
       virtual.agent,
       virtual.authorization
     );
+
+    virtual.aiPersona =
+      await this.aiPersonaAuthorizationService.applyAuthorizationPolicy(
+        virtual.aiPersona,
+        virtual.authorization
+      );
 
     return virtual;
   }

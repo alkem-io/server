@@ -27,24 +27,17 @@ export class AiPersonaAuthorizationService {
     private authorizationPolicyService: AuthorizationPolicyService
   ) {}
 
-  async applyAuthorizationPolicy(
-    aiPersonaInput: IAiPersona,
+  applyAuthorizationPolicy(
+    aiPersona: IAiPersona,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): Promise<IAiPersona> {
-    const aiPersona = await this.aiPersonaService.getAiPersonaOrFail(
-      aiPersonaInput.id,
-      {
-        relations: {
-          authorization: true,
-        },
-      }
-    );
-    if (!aiPersona.authorization)
+  ): IAiPersona {
+    if (!aiPersona.authorization) {
       throw new RelationshipNotFoundException(
         `Unable to load entities for virtual persona: ${aiPersona.id} `,
         LogContext.COMMUNITY
       );
-    aiPersona.authorization = await this.authorizationPolicyService.reset(
+    }
+    aiPersona.authorization = this.authorizationPolicyService.reset(
       aiPersona.authorization
     );
 
