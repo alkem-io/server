@@ -15,7 +15,7 @@ import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.
 export class AiPersonaResolverFields {
   constructor(
     private aiPersonaService: AiPersonaService,
-    private aiServerWrapper: AiServerAdapter
+    private aiServerAdapter: AiServerAdapter
   ) {}
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -41,7 +41,7 @@ export class AiPersonaResolverFields {
   async bodyOfKnowledgeType(
     @Parent() aiPersona: AiPersona
   ): Promise<AiPersonaBodyOfKnowledgeType> {
-    return await this.aiServerWrapper.getPersonaServiceBodyOfKnowledgeType(
+    return await this.aiServerAdapter.getPersonaServiceBodyOfKnowledgeType(
       aiPersona.aiPersonaServiceID
     );
   }
@@ -53,7 +53,7 @@ export class AiPersonaResolverFields {
     description: 'The body of knowledge ID used for the AI Persona.',
   })
   async bodyOfKnowledgeID(@Parent() aiPersona: AiPersona): Promise<string> {
-    return await this.aiServerWrapper.getPersonaServiceBodyOfKnowledgeID(
+    return await this.aiServerAdapter.getPersonaServiceBodyOfKnowledgeID(
       aiPersona.aiPersonaServiceID
     );
   }

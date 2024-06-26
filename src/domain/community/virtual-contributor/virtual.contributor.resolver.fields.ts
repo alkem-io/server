@@ -90,7 +90,7 @@ export class VirtualContributorResolverFields {
     const profile = await loader.load(virtualContributor.id);
     // Note: the Virtual profile is public.
     // Check if the user can read the profile entity, not the actual Virtual entity
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       profile.authorization,
       AuthorizationPrivilege.READ,
@@ -134,8 +134,8 @@ export class VirtualContributorResolverFields {
   @UseGuards(GraphqlGuard)
   async aiPersona(
     @Parent() virtualContributor: VirtualContributor
-  ): Promise<IStorageAggregator> {
-    return await this.virtualContributorService.getAiPersonaOrFail(
+  ): Promise<IAiPersona> {
+    return this.virtualContributorService.getAiPersonaOrFail(
       virtualContributor
     );
   }
