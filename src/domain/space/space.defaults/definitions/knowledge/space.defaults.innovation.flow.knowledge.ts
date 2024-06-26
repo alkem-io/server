@@ -6,7 +6,7 @@ export enum FlowState {
   BODY_OF_KNOWLEDGE = 'Body of Knowledge',
 }
 
-export const spaceDefaultsInnovationFlowStatesVirtualContributor: IInnovationFlowState[] =
+export const spaceDefaultsInnovationFlowStatesKnowledge: IInnovationFlowState[] =
   [
     {
       displayName: FlowState.INTRODUCTION,
