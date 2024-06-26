@@ -10,13 +10,17 @@ import { AuthorizationPrivilege } from '@common/enums';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { UseGuards } from '@nestjs/common';
 import { GraphqlGuard } from '@core/authorization';
+import { IAiPersonaQuestionResult } from '../ai-persona/dto/ai.persona.question.dto.result';
+import { AiPersonaQuestionInput } from '../ai-persona/dto/ai.persona.question.dto.input';
+import { AiPersonaService } from '../ai-persona/ai.persona.service';
 
 @Resolver()
 export class VirtualContributorResolverQueries {
   constructor(
     private virtualContributorService: VirtualContributorService,
     private authorizationService: AuthorizationService,
-    private platformAuthorizationPolicyService: PlatformAuthorizationPolicyService
+    private platformAuthorizationPolicyService: PlatformAuthorizationPolicyService,
+    private aiPersonaService: AiPersonaService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -53,5 +57,17 @@ export class VirtualContributorResolverQueries {
     @Args('ID', { type: () => UUID_NAMEID, nullable: false }) id: string
   ): Promise<IVirtualContributor> {
     return await this.virtualContributorService.getVirtualContributorOrFail(id);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Query(() => IAiPersonaQuestionResult, {
+    nullable: false,
+    description: 'Ask the virtual persona engine for guidance.',
+  })
+  async askAiPersonaQuestion(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('chatData') chatData: AiPersonaQuestionInput
+  ): Promise<IAiPersonaQuestionResult> {
+    return this.aiPersonaService.askQuestion(chatData, agentInfo, '');
   }
 }
