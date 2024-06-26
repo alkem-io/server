@@ -53,7 +53,7 @@ export class MeService {
           invitation.community.id
         );
       results.push({
-        id: `${space.id}-${invitation.id}`,
+        id: `${invitation.id}`,
         invitation: invitation,
         space: space,
       });
@@ -80,7 +80,7 @@ export class MeService {
           application.community.id
         );
       results.push({
-        id: `${space.id}-${application.id}`,
+        id: `${application.id}`,
         application: application,
         space: space,
       });
