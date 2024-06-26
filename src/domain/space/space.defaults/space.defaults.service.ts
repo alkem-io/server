@@ -35,19 +35,19 @@ import { SpaceType } from '@common/enums/space.type';
 import { spaceDefaultsCalloutGroupsChallenge } from './definitions/challenge/space.defaults.callout.groups.challenge';
 import { spaceDefaultsCalloutGroupsOpportunity } from './definitions/oppportunity/space.defaults.callout.groups.opportunity';
 import { spaceDefaultsCalloutGroupsRootSpace } from './definitions/root-space/space.defaults.callout.groups.root.space';
-import { spaceDefaultsCalloutGroupsVirtualContributor } from './definitions/virtual-contributor/space.defaults.callout.groups.virtual.contributor';
+import { spaceDefaultsCalloutGroupsKnowledge } from './definitions/knowledge/space.defaults.callout.groups.knowledge';
 import { spaceDefaultsCalloutsOpportunity } from './definitions/oppportunity/space.defaults.callouts.opportunity';
 import { spaceDefaultsCalloutsChallenge } from './definitions/challenge/space.defaults.callouts.challenge';
 import { spaceDefaultsCalloutsRootSpace } from './definitions/root-space/space.defaults.callouts.root.space';
-import { spaceDefaultsCalloutsVirtualContributor } from './definitions/virtual-contributor/space.defaults.callouts.virtual.contributor';
+import { spaceDefaultsCalloutsKnowledge } from './definitions/knowledge/space.defaults.callouts.knowledge';
 import { spaceDefaultsSettingsRootSpace } from './definitions/root-space/space.defaults.settings.root.space';
 import { spaceDefaultsSettingsOpportunity } from './definitions/oppportunity/space.defaults.settings.opportunity';
 import { spaceDefaultsSettingsChallenge } from './definitions/challenge/space.defaults.settings.challenge';
-import { spaceDefaultsSettingsVirtualContributor } from './definitions/virtual-contributor/space.defaults.settings.virtual.contributor';
+import { spaceDefaultsSettingsKnowledge } from './definitions/knowledge/space.defaults.settings.knowledge';
 import { spaceDefaultsInnovationFlowStatesChallenge } from './definitions/challenge/space.defaults.innovation.flow.challenge';
 import { spaceDefaultsInnovationFlowStatesOpportunity } from './definitions/oppportunity/space.defaults.innovation.flow.opportunity';
 import { spaceDefaultsInnovationFlowStatesRootSpace } from './definitions/root-space/space.defaults.innovation.flow.root.space';
-import { spaceDefaultsInnovationFlowStatesVirtualContributor } from './definitions/virtual-contributor/space.defaults.innovation.flow.virtual.contributor';
+import { spaceDefaultsInnovationFlowStatesKnowledge } from './definitions/knowledge/space.defaults.innovation.flow.knowledge';
 import { IInnovationFlowState } from '@domain/collaboration/innovation-flow-states/innovation.flow.state.interface';
 import { spaceDefaultsCalloutGroupsBlankSlate } from './definitions/blank-slate/space.defaults.callout.groups.blank.slate';
 import { spaceDefaultsCalloutsBlankSlate } from './definitions/blank-slate/space.defaults.callouts.blank.slate';
@@ -157,8 +157,8 @@ export class SpaceDefaultsService {
         return spaceDefaultsCalloutGroupsOpportunity;
       case SpaceType.SPACE:
         return spaceDefaultsCalloutGroupsRootSpace;
-      case SpaceType.VIRTUAL_CONTRIBUTOR:
-        return spaceDefaultsCalloutGroupsVirtualContributor;
+      case SpaceType.KNOWLEDGE:
+        return spaceDefaultsCalloutGroupsKnowledge;
       case SpaceType.BLANK_SLATE:
         return spaceDefaultsCalloutGroupsBlankSlate;
       default:
@@ -172,7 +172,7 @@ export class SpaceDefaultsService {
   public getCalloutGroupDefault(spaceType: SpaceType): CalloutGroupName {
     switch (spaceType) {
       case SpaceType.CHALLENGE:
-      case SpaceType.VIRTUAL_CONTRIBUTOR:
+      case SpaceType.KNOWLEDGE:
       case SpaceType.OPPORTUNITY:
       case SpaceType.BLANK_SLATE:
         return CalloutGroupName.HOME;
@@ -232,8 +232,8 @@ export class SpaceDefaultsService {
         return spaceDefaultsCalloutsOpportunity;
       case SpaceType.SPACE:
         return spaceDefaultsCalloutsRootSpace;
-      case SpaceType.VIRTUAL_CONTRIBUTOR:
-        return spaceDefaultsCalloutsVirtualContributor;
+      case SpaceType.KNOWLEDGE:
+        return spaceDefaultsCalloutsKnowledge;
       case SpaceType.BLANK_SLATE:
         return spaceDefaultsCalloutsBlankSlate;
       default:
@@ -258,8 +258,8 @@ export class SpaceDefaultsService {
         return spaceDefaultsSettingsOpportunity;
       case SpaceType.SPACE:
         return spaceDefaultsSettingsRootSpace;
-      case SpaceType.VIRTUAL_CONTRIBUTOR:
-        return spaceDefaultsSettingsVirtualContributor;
+      case SpaceType.KNOWLEDGE:
+        return spaceDefaultsSettingsKnowledge;
       case SpaceType.BLANK_SLATE:
         return spaceDefaultsSettingsBlankSlate;
       default:
@@ -280,8 +280,8 @@ export class SpaceDefaultsService {
         return spaceDefaultsInnovationFlowStatesOpportunity;
       case SpaceType.SPACE:
         return spaceDefaultsInnovationFlowStatesRootSpace;
-      case SpaceType.VIRTUAL_CONTRIBUTOR:
-        return spaceDefaultsInnovationFlowStatesVirtualContributor;
+      case SpaceType.KNOWLEDGE:
+        return spaceDefaultsInnovationFlowStatesKnowledge;
       case SpaceType.BLANK_SLATE:
         return spaceDefaultsInnovationFlowStatesBlankSlate;
       default:

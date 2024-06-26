@@ -4,7 +4,7 @@ export enum SpaceType {
   SPACE = 'space',
   CHALLENGE = 'challenge',
   OPPORTUNITY = 'opportunity',
-  VIRTUAL_CONTRIBUTOR = 'vc',
+  KNOWLEDGE = 'knowledge',
   BLANK_SLATE = 'blank-slate',
 }
 
