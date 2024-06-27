@@ -60,18 +60,38 @@ export class SpaceAuthorizationService {
   ) {}
 
   async applyAuthorizationPolicy(spaceInput: ISpace): Promise<ISpace> {
+    const spaceAccountLicense = await this.spaceService.getSpaceOrFail(
+      spaceInput.id,
+      {
+        relations: {
+          account: {
+            license: true,
+            agent: {
+              credentials: true,
+            },
+          },
+        },
+      }
+    );
+    if (
+      !spaceAccountLicense.account ||
+      !spaceAccountLicense.account.license ||
+      !spaceAccountLicense.account.agent ||
+      !spaceAccountLicense.account.agent.credentials
+    ) {
+      throw new RelationshipNotFoundException(
+        `Unable to load Space with entities at start of auth reset: ${spaceAccountLicense.id} `,
+        LogContext.SPACES
+      );
+    }
+    const spaceVisibility = spaceAccountLicense.account.license.visibility;
+    const accountAgent = spaceAccountLicense.account.agent;
+
     let space = await this.spaceService.getSpaceOrFail(spaceInput.id, {
       relations: {
         authorization: true,
         community: {
           policy: true,
-        },
-        account: {
-          license: true,
-          agent: {
-            credentials: true,
-          },
-          authorization: true,
         },
         parentSpace: {
           authorization: true,
@@ -82,10 +102,6 @@ export class SpaceAuthorizationService {
       !space.authorization ||
       !space.community ||
       !space.community.policy ||
-      !space.account ||
-      !space.account.license ||
-      !space.account.agent ||
-      !space.account.agent.credentials ||
       !space.account.authorization
     )
       throw new RelationshipNotFoundException(
@@ -98,8 +114,6 @@ export class SpaceAuthorizationService {
     );
     const communityPolicyWithFlags = this.getCommunityPolicyWithSettings(space);
 
-    const license = space.account.license;
-    const accountAgent = space.account.agent;
     const privateSpace =
       space.community.policy.settings.privacy.mode === SpacePrivacyMode.PRIVATE;
     const accountAuthorization = space.account.authorization;
@@ -137,7 +151,7 @@ export class SpaceAuthorizationService {
       );
     }
     // Extend rules depending on the Visibility
-    switch (license.visibility) {
+    switch (spaceVisibility) {
       case SpaceVisibility.ACTIVE:
       case SpaceVisibility.DEMO:
         space.authorization = this.extendAuthorizationPolicyLocal(
@@ -174,7 +188,7 @@ export class SpaceAuthorizationService {
 
     // Finally update the child entities that depend on license
     // directly after propagation
-    switch (license.visibility) {
+    switch (spaceVisibility) {
       case SpaceVisibility.ACTIVE:
       case SpaceVisibility.DEMO:
         space.community.authorization =
