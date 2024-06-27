@@ -19,7 +19,7 @@ export const spaceDefaultsInnovationFlowStatesKnowledge: IInnovationFlowState[] 
         'Here you can share all relevant information for the Virtual Contributor to know about. To get started, three posts have already been added. Click on the ➕ Collaboration Tool to add more.',
     },
     {
-      displayName: FlowState.GOING_LIVE,
+      displayName: FlowState.UPDATING_KNOWLEDGE,
       description: '',
     },
   ];
