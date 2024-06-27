@@ -7,6 +7,7 @@ export enum PlatformRole {
   COMMUNITY_READER = 'community-reader',
   SPACES_READER = 'spaces-reader',
   BETA_TESTER = 'beta-tester',
+  VC_CAMPAIGN = 'vc-campaign',
 }
 
 registerEnumType(PlatformRole, {

@@ -27,7 +27,7 @@ import { MentionedEntityType } from '@domain/communication/messaging/mention.int
 import { NotificationInputForumDiscussionComment } from './dto/notification.dto.input.forum.discussion.comment';
 import { NotificationInputCommunityInvitation } from './dto/notification.dto.input.community.invitation';
 import { NotificationInputCommentReply } from './dto/notification.dto.input.comment.reply';
-import { NotificationInputCommunityInvitationExternal } from './dto/notification.dto.input.community.invitation.external';
+import { NotificationInputPlatformInvitation } from './dto/notification.dto.input.platform.invitation';
 import { NotificationInputPlatformGlobalRoleChange } from './dto/notification.dto.input.platform.global.role.change';
 import { NotificationInputCommunityVirtualContributorInvitation } from './dto/notification.dto.input.community.vc.invitation';
 
@@ -338,8 +338,8 @@ export class NotificationAdapter {
     this.notificationsClient.emit<number>(event, payload);
   }
 
-  public async externalInvitationCreated(
-    eventData: NotificationInputCommunityInvitationExternal
+  public async platformInvitationCreated(
+    eventData: NotificationInputPlatformInvitation
   ): Promise<void> {
     const event = NotificationEventType.COMMUNITY_EXTERNAL_INVITATION_CREATED;
     this.logEventTriggered(eventData, event);
