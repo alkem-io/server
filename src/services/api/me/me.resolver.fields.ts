@@ -1,4 +1,4 @@
-import { Resolver } from '@nestjs/graphql';
+import { Float, Resolver } from '@nestjs/graphql';
 import { GraphqlGuard } from '@core/authorization';
 import { UseGuards } from '@nestjs/common';
 import { CurrentUser } from '@src/common/decorators';
