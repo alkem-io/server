@@ -331,7 +331,7 @@ export class NotificationAdapter {
       await this.notificationPayloadBuilder.buildInvitationVirtualContributorCreatedNotificationPayload(
         eventData.triggeredBy,
         eventData.virtualContributorID,
-        eventData.account,
+        eventData.accountHost,
         eventData.community
       );
 
