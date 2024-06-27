@@ -32,6 +32,7 @@ import {
   SpaceBaseEventPayload,
   PlatformGlobalRoleChangeEventPayload,
   RoleChangeType,
+  CommunityPlatformInvitationCreatedEventPayload,
 } from '@alkemio/notifications-lib';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
@@ -151,12 +152,12 @@ export class NotificationPayloadBuilder {
     invitedUserEmail: string,
     community: ICommunity,
     message?: string
-  ): Promise<CommunityExternalInvitationCreatedEventPayload> {
+  ): Promise<CommunityPlatformInvitationCreatedEventPayload> {
     const spacePayload = await this.buildSpacePayload(
       community,
       invitationCreatorID
     );
-    const payload: CommunityExternalInvitationCreatedEventPayload = {
+    const payload: CommunityPlatformInvitationCreatedEventPayload = {
       invitees: [{ email: invitedUserEmail }],
       welcomeMessage: message,
       ...spacePayload,

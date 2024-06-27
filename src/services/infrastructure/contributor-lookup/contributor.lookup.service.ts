@@ -11,7 +11,7 @@ import {
   RelationshipNotFoundException,
 } from '@common/exceptions';
 import { AuthorizationCredential, LogContext } from '@common/enums';
-import { Credential, ICredential } from '@domain/agent';
+import { Credential, CredentialsSearchInput, ICredential } from '@domain/agent';
 import { VirtualContributor } from '@domain/community/virtual-contributor';
 import { Organization } from '@domain/community/organization';
 import { CommunityContributorType } from '@common/enums/community.contributor.type';
@@ -140,6 +140,117 @@ export class ContributorLookupService {
       `Unable to determine contributor type for ${contributor.id}`,
       LogContext.COMMUNITY
     );
+  }
+
+  async contributorsWithCredentials(
+    credentialCriteria: CredentialsSearchInput,
+    limit?: number
+  ): Promise<IContributor[]> {
+    const credResourceID = credentialCriteria.resourceID || '';
+
+    const userContributors: IContributor[] = await this.entityManager.find(
+      User,
+      {
+        where: {
+          agent: {
+            credentials: {
+              type: credentialCriteria.type,
+              resourceID: credResourceID,
+            },
+          },
+        },
+        relations: {
+          agent: {
+            credentials: true,
+          },
+        },
+        take: limit,
+      }
+    );
+    const organizationContributors = await this.entityManager.find(
+      Organization,
+      {
+        where: {
+          agent: {
+            credentials: {
+              type: credentialCriteria.type,
+              resourceID: credResourceID,
+            },
+          },
+        },
+        relations: {
+          agent: {
+            credentials: true,
+          },
+        },
+        take: limit,
+      }
+    );
+
+    const vcContributors = await this.entityManager.find(VirtualContributor, {
+      where: {
+        agent: {
+          credentials: {
+            type: credentialCriteria.type,
+            resourceID: credResourceID,
+          },
+        },
+      },
+      relations: {
+        agent: {
+          credentials: true,
+        },
+      },
+      take: limit,
+    });
+
+    return userContributors
+      .concat(organizationContributors)
+      .concat(vcContributors);
+  }
+
+  async getContributor(
+    contributorID: string,
+    options?: FindOneOptions<IContributor>
+  ): Promise<IContributor | null> {
+    let contributor: IContributor | null;
+    if (contributorID.length === UUID_LENGTH) {
+      contributor = await this.entityManager.findOne(User, {
+        ...options,
+        where: { ...options?.where, id: contributorID },
+      });
+      if (!contributor) {
+        contributor = await this.entityManager.findOne(Organization, {
+          ...options,
+          where: { ...options?.where, id: contributorID },
+        });
+      }
+      if (!contributor) {
+        contributor = await this.entityManager.findOne(VirtualContributor, {
+          ...options,
+          where: { ...options?.where, id: contributorID },
+        });
+      }
+    } else {
+      // look up based on nameID
+      contributor = await this.entityManager.findOne(User, {
+        ...options,
+        where: { ...options?.where, nameID: contributorID },
+      });
+      if (!contributor) {
+        contributor = await this.entityManager.findOne(Organization, {
+          ...options,
+          where: { ...options?.where, nameID: contributorID },
+        });
+      }
+      if (!contributor) {
+        contributor = await this.entityManager.findOne(VirtualContributor, {
+          ...options,
+          where: { ...options?.where, nameID: contributorID },
+        });
+      }
+    }
+    return contributor;
   }
 
   private async getCredentialsByTypeHeldByAgent(
