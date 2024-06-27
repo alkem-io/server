@@ -9,7 +9,7 @@ export class platformInvitations1719431685862 implements MigrationInterface {
     );
 
     await queryRunner.query(
-      `ALTER TABLE \`platform_invitation\` ADD \`platformId\` varchar(36) NULL`
+      `ALTER TABLE \`platform_invitation\` ADD \`platformId\` char(36) NULL`
     );
 
     await queryRunner.query(
