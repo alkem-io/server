@@ -10,11 +10,13 @@ import { PreferenceSetModule } from '@domain/common/preference-set/preference.se
 import { PreferenceModule } from '@domain/common/preference';
 import { ContributorService } from './contributor.service';
 import { ContributorAuthorizationService } from './contributor.service.authorization';
+import { ContributorLookupModule } from '@services/infrastructure/contributor-lookup/contributor.lookup.module';
 
 @Module({
   imports: [
     ProfileModule,
     AgentModule,
+    ContributorLookupModule,
     NamingModule,
     AuthorizationPolicyModule,
     AuthorizationModule,

@@ -341,7 +341,7 @@ export class NotificationAdapter {
   public async externalInvitationCreated(
     eventData: NotificationInputCommunityInvitationExternal
   ): Promise<void> {
-    const event = NotificationEventType.COMMUNITY_EXTERNAL_INVITATION_CREATED;
+    const event = NotificationEventType.COMMUNITY_PLATFORM_INVITATION_CREATED;
     this.logEventTriggered(eventData, event);
 
     const payload =
@@ -364,7 +364,7 @@ export class NotificationAdapter {
     const payload =
       await this.notificationPayloadBuilder.buildCommunityNewMemberPayload(
         eventData.triggeredBy,
-        eventData.userID,
+        eventData.contributorID,
         eventData.community
       );
     this.notificationsClient.emit(event, payload);

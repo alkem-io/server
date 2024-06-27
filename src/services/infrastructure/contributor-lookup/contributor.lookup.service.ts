@@ -6,13 +6,17 @@ import { User } from '@domain/community/user/user.entity';
 import { IUser } from '@domain/community/user/user.interface';
 import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
-import { EntityNotFoundException } from '@common/exceptions';
+import {
+  EntityNotFoundException,
+  RelationshipNotFoundException,
+} from '@common/exceptions';
 import { AuthorizationCredential, LogContext } from '@common/enums';
 import { Credential, ICredential } from '@domain/agent';
 import { VirtualContributor } from '@domain/community/virtual-contributor';
 import { Organization } from '@domain/community/organization';
+import { CommunityContributorType } from '@common/enums/community.contributor.type';
 
-export class UserLookupService {
+export class ContributorLookupService {
   constructor(
     @InjectEntityManager('default')
     private entityManager: EntityManager,
@@ -124,6 +128,18 @@ export class UserLookupService {
       }
     );
     return virtualContributors;
+  }
+
+  public getContributorType(contributor: IContributor) {
+    if (contributor instanceof User) return CommunityContributorType.USER;
+    if (contributor instanceof Organization)
+      return CommunityContributorType.ORGANIZATION;
+    if (contributor instanceof VirtualContributor)
+      return CommunityContributorType.VIRTUAL;
+    throw new RelationshipNotFoundException(
+      `Unable to determine contributor type for ${contributor.id}`,
+      LogContext.COMMUNITY
+    );
   }
 
   private async getCredentialsByTypeHeldByAgent(

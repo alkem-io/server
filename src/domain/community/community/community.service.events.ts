@@ -40,7 +40,7 @@ export class CommunityEventsService {
     // TODO: community just needs to know the level, not the type
     // Send the notification
     const notificationInput: NotificationInputCommunityNewMember = {
-      userID: newMember.id,
+      contributorID: newMember.id,
       triggeredBy: agentInfo.userID,
       community: community,
     };

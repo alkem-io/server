@@ -5,7 +5,7 @@ import { ICommunity } from '@domain/community/community';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityManager, FindOneOptions, Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import { Post } from '@domain/collaboration/post/post.entity';
 import {
   CollaborationPostCreatedEventPayload,
@@ -27,7 +27,6 @@ import {
   CommunityInvitationCreatedEventPayload,
   CollaborationWhiteboardCreatedEventPayload,
   CommentReplyEventPayload,
-  CommunityExternalInvitationCreatedEventPayload,
   BaseEventPayload,
   ContributorPayload,
   SpaceBaseEventPayload,
@@ -38,8 +37,6 @@ import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { IMessage } from '@domain/communication/message/message.interface';
 import { IUser } from '@domain/community/user/user.interface';
-import { User } from '@domain/community/user/user.entity';
-import { Organization } from '@domain/community/organization/organization.entity';
 import { Community } from '@domain/community/community/community.entity';
 import { ConfigService } from '@nestjs/config/dist/config.service';
 import { RoomType } from '@common/enums/room.type';
@@ -51,17 +48,16 @@ import { NotificationInputPostComment } from './dto/notification.dto.input.post.
 import { ContributionResolverService } from '@services/infrastructure/entity-resolver/contribution.resolver.service';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { IDiscussion } from '@platform/forum-discussion/discussion.interface';
-import { IContributor } from '@domain/community/contributor/contributor.interface';
-import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
-import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { AccountHostService } from '@domain/space/account/account.host.service';
 import { IAccount } from '@domain/space/account/account.interface';
 import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
 import { VirtualContributorInvitationCreatedEventPayload } from '@alkemio/notifications-lib/dist/dto/virtual.contributor.invitation.created.event.payload';
+import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 
 @Injectable()
 export class NotificationPayloadBuilder {
   constructor(
+    private contributorLookupService: ContributorLookupService,
     private communityResolverService: CommunityResolverService,
     @InjectRepository(Post)
     private postRepository: Repository<Post>,
@@ -420,13 +416,13 @@ export class NotificationPayloadBuilder {
 
   async buildCommunityNewMemberPayload(
     triggeredBy: string,
-    userID: string,
+    contributorID: string,
     community: ICommunity
   ): Promise<CommunityNewMemberPayload> {
     const spacePayload = await this.buildSpacePayload(community, triggeredBy);
-    const memberPayload = await this.getContributorPayloadOrFail(userID);
+    const memberPayload = await this.getContributorPayloadOrFail(contributorID);
     const payload: CommunityNewMemberPayload = {
-      user: memberPayload,
+      contributor: memberPayload,
       ...spacePayload,
     };
 
@@ -544,11 +540,14 @@ export class NotificationPayloadBuilder {
   private async getContributorPayloadOrFail(
     contributorID: string
   ): Promise<ContributorPayload> {
-    const contributor = await this.getContributor(contributorID, {
-      relations: {
-        profile: true,
-      },
-    });
+    const contributor = await this.contributorLookupService.getContributor(
+      contributorID,
+      {
+        relations: {
+          profile: true,
+        },
+      }
+    );
 
     if (!contributor || !contributor.profile) {
       throw new EntityNotFoundException(
@@ -556,6 +555,9 @@ export class NotificationPayloadBuilder {
         LogContext.COMMUNITY
       );
     }
+
+    const contributorType =
+      this.contributorLookupService.getContributorType(contributor);
 
     const userURL = await this.urlGeneratorService.createUrlForContributor(
       contributor
@@ -567,53 +569,9 @@ export class NotificationPayloadBuilder {
         displayName: contributor.profile.displayName,
         url: userURL,
       },
+      type: contributorType,
     };
     return result;
-  }
-
-  private async getContributor(
-    contributorID: string,
-    options?: FindOneOptions<IContributor>
-  ): Promise<IContributor | null> {
-    let contributor: IContributor | null;
-    if (contributorID.length === UUID_LENGTH) {
-      contributor = await this.entityManager.findOne(User, {
-        ...options,
-        where: { ...options?.where, id: contributorID },
-      });
-      if (!contributor) {
-        contributor = await this.entityManager.findOne(Organization, {
-          ...options,
-          where: { ...options?.where, id: contributorID },
-        });
-      }
-      if (!contributor) {
-        contributor = await this.entityManager.findOne(VirtualContributor, {
-          ...options,
-          where: { ...options?.where, id: contributorID },
-        });
-      }
-    } else {
-      // look up based on nameID
-      // toDo https://app.zenhub.com/workspaces/alkemio-development-5ecb98b262ebd9f4aec4194c/issues/gh/alkem-io/server/4126
-      contributor = await this.entityManager.findOne(User, {
-        ...options,
-        where: { ...options?.where, nameID: contributorID },
-      });
-      if (!contributor) {
-        contributor = await this.entityManager.findOne(Organization, {
-          ...options,
-          where: { ...options?.where, nameID: contributorID },
-        });
-      }
-      if (!contributor) {
-        contributor = await this.entityManager.findOne(VirtualContributor, {
-          ...options,
-          where: { ...options?.where, nameID: contributorID },
-        });
-      }
-    }
-    return contributor;
   }
 
   async buildCommunicationOrganizationMessageNotificationPayload(
