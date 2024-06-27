@@ -50,9 +50,9 @@ import { NotificationInputPostComment } from './dto/notification.dto.input.post.
 import { ContributionResolverService } from '@services/infrastructure/entity-resolver/contribution.resolver.service';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { IDiscussion } from '@platform/forum-discussion/discussion.interface';
-import { AccountHostService } from '@domain/space/account/account.host.service';
-import { IAccount } from '@domain/space/account/account.interface';
 import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
+import { IContributor } from '@domain/community/contributor/contributor.interface';
+import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
 
 @Injectable()
 export class NotificationPayloadBuilder {
@@ -68,7 +68,7 @@ export class NotificationPayloadBuilder {
     private configService: ConfigService,
     private contributionResolverService: ContributionResolverService,
     private urlGeneratorService: UrlGeneratorService,
-    private accountHostService: AccountHostService
+    private virtualContributorService: VirtualContributorService
   ) {}
 
   async buildApplicationCreatedNotificationPayload(
@@ -116,19 +116,18 @@ export class NotificationPayloadBuilder {
   async buildInvitationVirtualContributorCreatedNotificationPayload(
     invitationCreatorID: string,
     virtualContributorID: string,
-    account: IAccount,
+    accountHost: IContributor,
     community: ICommunity
   ): Promise<CommunityInvitationVirtualContributorCreatedEventPayload> {
     const spacePayload = await this.buildSpacePayload(
       community,
       invitationCreatorID
     );
-    const host = await this.accountHostService.getHostOrFail(account);
-    const hostPayload = await this.getContributorPayloadOrFail(host.id);
-    const virtualContributorPayload = await this.getContributorPayloadOrFail(
-      virtualContributorID
-    );
 
+    const hostPayload = await this.getContributorPayloadOrFail(accountHost.id);
+
+    const virtualContributorPayload: ContributorPayload =
+      await this.getContributorPayloadOrFail(virtualContributorID);
     const result: CommunityInvitationVirtualContributorCreatedEventPayload = {
       host: hostPayload,
       invitee: virtualContributorPayload,

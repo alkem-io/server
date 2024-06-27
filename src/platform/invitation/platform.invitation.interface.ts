@@ -1,9 +1,11 @@
 import { ICommunity } from '@domain/community/community/community.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
+import { PlatformRole } from '@common/enums/platform.role';
+import { IPlatform } from '@platform/platfrom/platform.interface';
 
-@ObjectType('InvitationExternal')
-export class IInvitationExternal extends IAuthorizable {
+@ObjectType('PlatformInvitation')
+export class IPlatformInvitation extends IAuthorizable {
   @Field(() => String, {
     description: 'The email address of the external user being invited',
   })
@@ -25,15 +27,23 @@ export class IInvitationExternal extends IAuthorizable {
 
   createdBy!: string;
 
-  community!: ICommunity;
-
   @Field(() => Date)
   createdDate!: Date;
+
+  community?: ICommunity;
+
+  platform?: IPlatform;
 
   @Field(() => Boolean, {
     nullable: false,
     description:
       'Whether to also add the invited user to the parent community.',
   })
-  invitedToParent!: boolean;
+  communityInvitedToParent!: boolean;
+
+  @Field(() => PlatformRole, {
+    nullable: true,
+    description: 'The platform role the user will receive when they sign up',
+  })
+  platformRole?: PlatformRole;
 }
