@@ -115,7 +115,8 @@ export class NotificationPayloadBuilder {
     invitationCreatorID: string,
     virtualContributorID: string,
     accountHost: IContributor,
-    community: ICommunity
+    community: ICommunity,
+    welcomeMessage?: string
   ): Promise<CommunityInvitationVirtualContributorCreatedEventPayload> {
     const spacePayload = await this.buildSpacePayload(
       community,
@@ -129,6 +130,7 @@ export class NotificationPayloadBuilder {
     const result: CommunityInvitationVirtualContributorCreatedEventPayload = {
       host: hostPayload,
       invitee: virtualContributorPayload,
+      welcomeMessage,
       ...spacePayload,
     };
     return result;

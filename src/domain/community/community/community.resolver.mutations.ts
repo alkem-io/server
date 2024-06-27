@@ -58,11 +58,11 @@ import { CreateInvitationForContributorsOnCommunityInput } from './dto/community
 import { IContributor } from '../contributor/contributor.interface';
 import { ContributorService } from '../contributor/contributor.service';
 import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
-import { NotificationInputCommunityVirtualContributorInvitation } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.vc.invitation';
 import { PlatformInvitationAuthorizationService } from '@platform/invitation/platform.invitation.service.authorization';
 import { PlatformInvitationService } from '@platform/invitation/platform.invitation.service';
 import { IPlatformInvitation } from '@platform/invitation';
 import { NotificationInputPlatformInvitation } from '@services/adapters/notification-adapter/dto/notification.dto.input.platform.invitation';
+import { NotificationInputCommunityInvitationVirtualContributor } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.invitation.vc';
 
 @Resolver()
 export class CommunityResolverMutations {
@@ -570,12 +570,13 @@ export class CommunityResolverMutations {
       const accountHost = await this.virtualContributorService.getAccountHost(
         invitedContributor
       );
-      const notificationInput: NotificationInputCommunityVirtualContributorInvitation =
+      const notificationInput: NotificationInputCommunityInvitationVirtualContributor =
         {
           triggeredBy: agentInfo.userID,
           community: community,
-          virtualContributorID: invitedContributor.id,
+          invitedContributorID: invitedContributor.id,
           accountHost: accountHost,
+          welcomeMessage,
         };
 
       await this.notificationAdapter.invitationVirtualContributorCreated(
@@ -586,7 +587,7 @@ export class CommunityResolverMutations {
       const notificationInput: NotificationInputCommunityInvitation = {
         triggeredBy: agentInfo.userID,
         community: community,
-        invitedUser: invitedContributor.id,
+        invitedContributorID: invitedContributor.id,
         welcomeMessage,
       };
 
