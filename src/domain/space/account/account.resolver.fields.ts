@@ -164,6 +164,7 @@ export class AccountResolverFields {
     description: 'The "highest" subscription active for this Account.',
   })
   async activeSubscription(@Parent() account: Account) {
+    // TODO: Extract as a method in account service
     const licensingFramework =
       await this.licensingService.getDefaultLicensingOrFail();
 

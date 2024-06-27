@@ -33,7 +33,7 @@ import {
   SpaceBaseEventPayload,
   PlatformGlobalRoleChangeEventPayload,
   RoleChangeType,
-  SpaceCreatedEventPayload,
+  // SpaceCreatedEventPayload,
 } from '@alkemio/notifications-lib';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
@@ -432,6 +432,22 @@ export class NotificationPayloadBuilder {
     };
 
     return payload;
+  }
+
+  async buildSpaceCreatedPayload(
+    triggeredBy: string,
+    account: IAccount,
+    community: ICommunity
+    // ): Promise<SpaceCreatedEventPayload> {
+  ): Promise<any> {
+    const spacePayload = await this.buildSpacePayload(community, triggeredBy);
+
+    const host = await this.accountHostService.getHostOrFail(account);
+    const hostPayload = await this.getContributorPayloadOrFail(host.id);
+    return {
+      host: hostPayload,
+      ...spacePayload,
+    };
   }
 
   async buildCommunicationUpdateSentNotificationPayload(

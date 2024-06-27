@@ -8,6 +8,7 @@ import { ActivityInputMemberJoined } from '@services/adapters/activity-adapter/d
 import { IUser } from '../user/user.interface';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { SpaceType } from '@common/enums/space.type';
+import { NotificationInputSpaceCreated } from '@services/adapters/notification-adapter/dto/notification.dto.input.space.created';
 
 @Injectable()
 export class CommunityEventsService {
@@ -75,5 +76,18 @@ export class CommunityEventsService {
         );
         break;
     }
+  }
+
+  public async createCommunityNewSpaceActivity(
+    community: ICommunity,
+    // newMember: IUser,
+    agentInfo: AgentInfo
+  ) {
+    const activityLogInput: NotificationInputSpaceCreated = {
+      triggeredBy: agentInfo.userID,
+      community: community,
+      // user: newMember,
+    };
+    await this.activityAdapter.memberJoined(activityLogInput);
   }
 }

@@ -34,6 +34,8 @@ import { IngestSpace } from '@services/infrastructure/event-bus/commands';
 import { CommunityContributorType } from '@common/enums/community.contributor.type';
 import { CommunityRole } from '@common/enums/community.role';
 import { AccountHostService } from './account.host.service';
+import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
+import { NotificationInputSpaceCreated } from '@services/adapters/notification-adapter/dto/notification.dto.input.space.created';
 
 @Resolver()
 export class AccountResolverMutations {
@@ -49,7 +51,8 @@ export class AccountResolverMutations {
     private spaceDefaultsService: SpaceDefaultsService,
     private namingReporter: NameReporterService,
     private spaceService: SpaceService,
-    private eventBus: EventBus
+    private eventBus: EventBus,
+    private notificationAdapter: NotificationAdapter
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -82,6 +85,15 @@ export class AccountResolverMutations {
       space.id,
       space.profile.displayName
     );
+
+    // notification
+    const notificationInput: NotificationInputSpaceCreated = {
+      triggeredBy: agentInfo.userID,
+      community: community,
+      account: invitedContributor.account,
+    };
+    await this.notificationAdapter.spaceCreated(notificationInput);
+
     return accountUpdated;
   }
 

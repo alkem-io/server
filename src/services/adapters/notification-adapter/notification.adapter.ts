@@ -30,6 +30,7 @@ import { NotificationInputCommentReply } from './dto/notification.dto.input.comm
 import { NotificationInputCommunityInvitationExternal } from './dto/notification.dto.input.community.invitation.external';
 import { NotificationInputPlatformGlobalRoleChange } from './dto/notification.dto.input.platform.global.role.change';
 import { NotificationInputCommunityVirtualContributorInvitation } from './dto/notification.dto.input.community.vc.invitation';
+import { NotificationInputSpaceCreated } from './dto/notification.dto.input.space.created';
 
 @Injectable()
 export class NotificationAdapter {
@@ -362,7 +363,11 @@ export class NotificationAdapter {
     this.logEventTriggered(eventData, event);
 
     const payload =
-      await this.notificationPayloadBuilder.buildSpaceCreatedPayload(eventData);
+      await this.notificationPayloadBuilder.buildSpaceCreatedPayload(
+        eventData.triggeredBy,
+        eventData.account,
+        eventData.community
+      );
 
     this.notificationsClient.emit<number>(event, payload);
   }
