@@ -120,9 +120,9 @@ export class PlatformResolverMutations {
   @UseGuards(GraphqlGuard)
   @Mutation(() => IPlatformInvitation, {
     description:
-      'Invite a User to join the platform and the specified Community as a member.',
+      'Invite a User to join the platform in a particular Platform role e.g. BetaTester',
   })
-  async createPlatformInvitationForRole(
+  async inviteUserToPlatformWithRole(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('invitationData')
     invitationData: CreatePlatformInvitationForRoleInput
@@ -136,6 +136,9 @@ export class PlatformResolverMutations {
       AuthorizationPrivilege.PLATFORM_ADMIN,
       `invitation to platform in global role: ${invitationData.email}`
     );
+
+    // TODO: Notification
+
     return await this.platformService.createPlatformInvitation(
       invitationData,
       agentInfo

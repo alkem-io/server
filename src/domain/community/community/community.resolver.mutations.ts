@@ -597,7 +597,7 @@ export class CommunityResolverMutations {
       'Invite a User to join the platform and the specified Community as a member.',
   })
   @Profiling.api
-  async createPlatformInvitationForCommunity(
+  async inviteUserToPlatformAndCommunity(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('invitationData')
     invitationData: CreatePlatformInvitationOnCommunityInput
