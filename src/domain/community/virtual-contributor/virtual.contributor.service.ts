@@ -36,6 +36,8 @@ import { AiServerAdapterAskQuestionInput } from '@services/adapters/ai-server-ad
 import { SearchVisibility } from '@common/enums/search.visibility';
 import { IMessageAnswerToQuestion } from '@domain/communication/message.answer.to.question/message.answer.to.question.interface';
 import { IAiPersona } from '../ai-persona';
+import { IContributor } from '../contributor/contributor.interface';
+import { AccountHostService } from '@domain/space/account/account.host.service';
 
 @Injectable()
 export class VirtualContributorService {
@@ -48,6 +50,7 @@ export class VirtualContributorService {
     private namingService: NamingService,
     private aiPersonaService: AiPersonaService,
     private aiServerAdapter: AiServerAdapter,
+    private accountHostService: AccountHostService,
     @InjectRepository(VirtualContributor)
     private virtualContributorRepository: Repository<VirtualContributor>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -417,7 +420,9 @@ export class VirtualContributorService {
     return await this.virtualContributorRepository.save(virtualContributor);
   }
 
-  async getAgent(virtualContributor: IVirtualContributor): Promise<IAgent> {
+  public async getAgent(
+    virtualContributor: IVirtualContributor
+  ): Promise<IAgent> {
     const virtualContributorWithAgent = await this.getVirtualContributorOrFail(
       virtualContributor.id,
       {
@@ -432,6 +437,24 @@ export class VirtualContributorService {
       );
 
     return agent;
+  }
+
+  public async getAccountHost(
+    virtualContributor: IVirtualContributor
+  ): Promise<IContributor> {
+    const virtualContributorWithAccount =
+      await this.getVirtualContributorOrFail(virtualContributor.id, {
+        relations: { account: true },
+      });
+    const account = virtualContributorWithAccount.account;
+    if (!account)
+      throw new EntityNotInitializedException(
+        `Virtual Contributor Account not initialized: ${virtualContributor.id}`,
+        LogContext.AUTH
+      );
+
+    const host = await this.accountHostService.getHostOrFail(account);
+    return host;
   }
 
   async getAiPersonaOrFail(
