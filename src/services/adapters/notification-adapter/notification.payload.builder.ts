@@ -33,6 +33,7 @@ import {
   PlatformGlobalRoleChangeEventPayload,
   RoleChangeType,
   CommunityPlatformInvitationCreatedEventPayload,
+  VirtualContributorInvitationCreatedEventPayload,
 } from '@alkemio/notifications-lib';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
@@ -52,7 +53,6 @@ import { IDiscussion } from '@platform/forum-discussion/discussion.interface';
 import { AccountHostService } from '@domain/space/account/account.host.service';
 import { IAccount } from '@domain/space/account/account.interface';
 import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
-import { VirtualContributorInvitationCreatedEventPayload } from '@alkemio/notifications-lib/dist/dto/virtual.contributor.invitation.created.event.payload';
 import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 
 @Injectable()
