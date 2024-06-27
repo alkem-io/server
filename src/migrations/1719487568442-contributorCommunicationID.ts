@@ -9,14 +9,7 @@ export class contributorCommunicationID1719487568442
     await queryRunner.query(
       'ALTER TABLE `organization` ADD `communicationID` varchar(255) NOT NULL'
     );
-    const organizations: {
-      id: string;
-    }[] = await queryRunner.query('SELECT id FROM organization');
-    for (const organization of organizations) {
-      await queryRunner.query(
-        `UPDATE organization SET communicationID = '' WHERE id = '${organization.id}'`
-      );
-    }
+    await queryRunner.query(`UPDATE organization SET communicationID = ''`);
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {}
