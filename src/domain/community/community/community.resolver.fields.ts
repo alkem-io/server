@@ -24,11 +24,11 @@ import { IForm } from '@domain/common/form/form.interface';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IInvitation } from '../invitation';
-import { IInvitationExternal } from '../invitation.external';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { ICommunityGuidelines } from '../community-guidelines/community.guidelines.interface';
 import { IVirtualContributor } from '../virtual-contributor';
 import { CommunityRoleImplicit } from '@common/enums/community.role.implicit';
+import { IPlatformInvitation } from '@platform/invitation';
 
 @Resolver(() => ICommunity)
 export class CommunityResolverFields {
@@ -235,16 +235,16 @@ export class CommunityResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('invitationsExternal', () => [IInvitationExternal], {
+  @ResolveField('platformInvitations', () => [IPlatformInvitation], {
     nullable: false,
     description:
       'Invitations to join this Community for users not yet on the Alkemio platform.',
   })
   @Profiling.api
-  async invitationsExternal(
+  async platformInvitations(
     @Parent() community: Community
-  ): Promise<IInvitationExternal[]> {
-    return await this.communityService.getExternalInvitations(community);
+  ): Promise<IPlatformInvitation[]> {
+    return await this.communityService.getPlatformInvitations(community);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

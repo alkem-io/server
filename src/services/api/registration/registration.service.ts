@@ -12,15 +12,15 @@ import { OrganizationPreferenceType } from '@common/enums/organization.preferenc
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { UserAuthorizationService } from '@domain/community/user/user.service.authorization';
 import { IInvitation } from '@domain/community/invitation/invitation.interface';
-import { InvitationExternalService } from '@domain/community/invitation.external/invitation.external.service';
 import { CommunityService } from '@domain/community/community/community.service';
 import { InvitationAuthorizationService } from '@domain/community/invitation/invitation.service.authorization';
-import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { CreateInvitationInput } from '@domain/community/invitation/dto/invitation.dto.create';
 import { DeleteUserInput } from '@domain/community/user/dto/user.dto.delete';
 import { InvitationService } from '@domain/community/invitation/invitation.service';
 import { ApplicationService } from '@domain/community/application/application.service';
 import { OrganizationRole } from '@common/enums/organization.role';
+import { PlatformInvitationService } from '@platform/invitation/platform.invitation.service';
+import { PlatformService } from '@platform/platfrom/platform.service';
 
 export class RegistrationService {
   constructor(
@@ -29,7 +29,8 @@ export class RegistrationService {
     private preferenceSetService: PreferenceSetService,
     private userAuthorizationService: UserAuthorizationService,
     private communityService: CommunityService,
-    private invitationExternalService: InvitationExternalService,
+    private platformInvitationService: PlatformInvitationService,
+    private platformService: PlatformService,
     private invitationAuthorizationService: InvitationAuthorizationService,
     private invitationService: InvitationService,
     private applicationService: ApplicationService,
@@ -111,44 +112,52 @@ export class RegistrationService {
   }
 
   public async processPendingInvitations(user: IUser): Promise<IInvitation[]> {
-    const externalInvitations =
-      await this.invitationExternalService.findInvitationExternalsForUser(
+    const platformInvitations =
+      await this.platformInvitationService.findPlatformInvitationsForUser(
         user.email
       );
 
-    const invitations: IInvitation[] = [];
-    for (const externalInvitation of externalInvitations) {
-      const community = externalInvitation.community;
-      if (!community) {
-        throw new RelationshipNotFoundException(
-          `Unable to load Community that created invitationExternal ${externalInvitation.id} `,
-          LogContext.COMMUNITY
-        );
-      }
-      const invitationInput: CreateInvitationInput = {
-        invitedContributor: user.id,
-        communityID: community.id,
-        createdBy: externalInvitation.createdBy,
-        invitedToParent: externalInvitation.invitedToParent,
-      };
-      let invitation =
-        await this.communityService.createInvitationExistingContributor(
-          invitationInput
-        );
-      invitation.invitedToParent = externalInvitation.invitedToParent;
-      invitation =
-        await this.invitationAuthorizationService.applyAuthorizationPolicy(
-          invitation,
-          community.authorization
-        );
-      invitation = await this.invitationService.save(invitation);
+    const communityInvitations: IInvitation[] = [];
+    for (const platformInvitation of platformInvitations) {
+      const community = platformInvitation.community;
 
-      invitations.push(invitation);
-      await this.invitationExternalService.recordProfileCreated(
-        externalInvitation
+      // Process community invitations
+      if (community) {
+        const invitationInput: CreateInvitationInput = {
+          invitedContributor: user.id,
+          communityID: community.id,
+          createdBy: platformInvitation.createdBy,
+          invitedToParent: platformInvitation.communityInvitedToParent,
+        };
+        let invitation =
+          await this.communityService.createInvitationExistingContributor(
+            invitationInput
+          );
+        invitation.invitedToParent =
+          platformInvitation.communityInvitedToParent;
+        invitation =
+          await this.invitationAuthorizationService.applyAuthorizationPolicy(
+            invitation,
+            community.authorization
+          );
+        invitation = await this.invitationService.save(invitation);
+
+        communityInvitations.push(invitation);
+      }
+
+      // Proces platform role invitations
+      if (platformInvitation.platformRole) {
+        const membershipData = {
+          userID: user.id,
+          role: platformInvitation.platformRole,
+        };
+        await this.platformService.assignPlatformRoleToUser(membershipData);
+      }
+      await this.platformInvitationService.recordProfileCreated(
+        platformInvitation
       );
     }
-    return invitations;
+    return communityInvitations;
   }
 
   async deleteUserWithPendingMemberships(
