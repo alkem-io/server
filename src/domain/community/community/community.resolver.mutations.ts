@@ -241,7 +241,9 @@ export class CommunityResolverMutations {
     await this.communityService.assignVirtualToRole(
       community,
       roleData.virtualContributorID,
-      roleData.role
+      roleData.role,
+      agentInfo,
+      true
     );
 
     // reset the user authorization policy so that their profile is visible to other community members

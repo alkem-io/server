@@ -576,7 +576,13 @@ export class CommunityService {
           role
         );
       case CommunityContributorType.VIRTUAL:
-        return await this.assignVirtualToRole(community, contributorID, role);
+        return await this.assignVirtualToRole(
+          community,
+          contributorID,
+          role,
+          agentInfo,
+          triggerNewMemberEvents
+        );
       default:
         throw new EntityNotInitializedException(
           `Invalid community contributor type: ${contributorType}`,
@@ -676,7 +682,9 @@ export class CommunityService {
   async assignVirtualToRole(
     community: ICommunity,
     virtualContributorID: string,
-    role: CommunityRole
+    role: CommunityRole,
+    agentInfo?: AgentInfo,
+    triggerNewMemberEvents = false
   ): Promise<IVirtualContributor> {
     const { virtualContributor, agent } =
       await this.virtualContributorService.getVirtualContributorAndAgent(
@@ -704,6 +712,13 @@ export class CommunityService {
       CommunityContributorType.VIRTUAL
     );
 
+    await this.contributorAddedToRole(
+      virtualContributor,
+      community,
+      role,
+      agentInfo,
+      triggerNewMemberEvents
+    );
     return virtualContributor;
   }
 
