@@ -32,6 +32,8 @@ import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-a
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { LicensingAuthorizationService } from '@platform/licensing/licensing.service.authorization';
 import { ForumAuthorizationService } from '@platform/forum/forum.service.authorization';
+import { PlatformInvitationAuthorizationService } from '@platform/invitation/platform.invitation.service.authorization';
+import { IPlatformInvitation } from '@platform/invitation';
 
 @Injectable()
 export class PlatformAuthorizationService {
@@ -44,6 +46,7 @@ export class PlatformAuthorizationService {
     private innovationHubService: InnovationHubService,
     private innovationHubAuthorizationService: InnovationHubAuthorizationService,
     private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
+    private platformInvitationAuthorizationService: PlatformInvitationAuthorizationService,
     private licensingAuthorizationService: LicensingAuthorizationService,
 
     @InjectRepository(Platform)
@@ -51,13 +54,14 @@ export class PlatformAuthorizationService {
   ) {}
 
   async applyAuthorizationPolicy(): Promise<IPlatform> {
-    const platform = await this.platformService.getPlatformOrFail({
+    let platform = await this.platformService.getPlatformOrFail({
       relations: {
         authorization: true,
+        platformInvitations: true,
       },
     });
 
-    if (!platform.authorization)
+    if (!platform.authorization || !platform.platformInvitations)
       throw new RelationshipNotFoundException(
         `Unable to load entities for platform: ${platform.id} `,
         LogContext.PLATFORM
@@ -74,6 +78,17 @@ export class PlatformAuthorizationService {
       platform.authorization
     );
 
+    const updatedInvitations: IPlatformInvitation[] = [];
+    for (const platformInvitation of platform.platformInvitations) {
+      const updatedInvitation =
+        await this.platformInvitationAuthorizationService.applyAuthorizationPolicy(
+          platformInvitation,
+          platform.authorization
+        );
+      updatedInvitations.push(updatedInvitation);
+    }
+    platform.platformInvitations = updatedInvitations;
+
     // const privilegeRules = this.createPlatformPrivilegeRules();
     // platform.authorization =
     //   this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
@@ -82,11 +97,11 @@ export class PlatformAuthorizationService {
     //   );
 
     // Cascade down
-    const platformPropagated = await this.propagateAuthorizationToChildEntities(
+    platform = await this.propagateAuthorizationToChildEntities(
       platform.authorization
     );
 
-    return await this.platformRepository.save(platformPropagated);
+    return await this.platformRepository.save(platform);
   }
 
   private async appendCredentialRules(

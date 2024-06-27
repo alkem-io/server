@@ -235,13 +235,13 @@ export class CommunityResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('invitationsExternal', () => [IPlatformInvitation], {
+  @ResolveField('platformInvitations', () => [IPlatformInvitation], {
     nullable: false,
     description:
       'Invitations to join this Community for users not yet on the Alkemio platform.',
   })
   @Profiling.api
-  async invitationsExternal(
+  async platformInvitations(
     @Parent() community: Community
   ): Promise<IPlatformInvitation[]> {
     return await this.communityService.getPlatformInvitations(community);

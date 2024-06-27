@@ -78,7 +78,7 @@ export class Community
       cascade: true,
     }
   )
-  externalInvitations?: PlatformInvitation[];
+  platformInvitations?: PlatformInvitation[];
 
   @OneToOne(() => CommunityPolicy, {
     eager: true,

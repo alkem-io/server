@@ -67,7 +67,7 @@ export class CommunityAuthorizationService {
           groups: true,
           applications: true,
           invitations: true,
-          externalInvitations: true,
+          platformInvitations: true,
           guidelines: {
             profile: true,
           },
@@ -81,7 +81,7 @@ export class CommunityAuthorizationService {
       !community.groups ||
       !community.applications ||
       !community.invitations ||
-      !community.externalInvitations
+      !community.platformInvitations
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load child entities for community authorization: ${community.id} `,
@@ -145,7 +145,7 @@ export class CommunityAuthorizationService {
       invitation.authorization = invitationReset.authorization;
     }
 
-    for (const externalInvitation of community.externalInvitations) {
+    for (const externalInvitation of community.platformInvitations) {
       const invitationReset =
         await this.platformInvitationAuthorizationService.applyAuthorizationPolicy(
           externalInvitation,

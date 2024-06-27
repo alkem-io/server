@@ -8,14 +8,12 @@ import { PlatformInvitationResolverMutations } from './platform.invitation.resol
 import { PlatformInvitation } from './platform.invitation.entity';
 import { PlatformInvitationService } from './platform.invitation.service';
 import { UserLookupModule } from '@services/infrastructure/user-lookup/user.lookup.module';
-import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 
 @Module({
   imports: [
     AuthorizationPolicyModule,
     AuthorizationModule,
     UserLookupModule,
-    PlatformAuthorizationPolicyModule,
     TypeOrmModule.forFeature([PlatformInvitation]),
   ],
   providers: [

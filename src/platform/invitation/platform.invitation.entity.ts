@@ -10,7 +10,7 @@ export class PlatformInvitation
   implements IPlatformInvitation
 {
   // Platform invitations for Community
-  @ManyToOne(() => Community, community => community.externalInvitations, {
+  @ManyToOne(() => Community, community => community.platformInvitations, {
     eager: false,
     cascade: false,
     onDelete: 'CASCADE',

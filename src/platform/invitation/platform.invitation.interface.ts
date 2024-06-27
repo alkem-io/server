@@ -2,6 +2,7 @@ import { ICommunity } from '@domain/community/community/community.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { PlatformRole } from '@common/enums/platform.role';
+import { IPlatform } from '@platform/platfrom/platform.interface';
 
 @ObjectType('PlatformInvitation')
 export class IPlatformInvitation extends IAuthorizable {
@@ -30,6 +31,8 @@ export class IPlatformInvitation extends IAuthorizable {
   createdDate!: Date;
 
   community?: ICommunity;
+
+  platform?: IPlatform;
 
   @Field(() => Boolean, {
     nullable: false,

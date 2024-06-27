@@ -19,7 +19,7 @@ export abstract class ICommunity extends IAuthorizable {
 
   applications?: IApplication[];
   invitations?: IInvitation[];
-  externalInvitations?: IPlatformInvitation[];
+  platformInvitations?: IPlatformInvitation[];
 
   applicationForm?: IForm;
 

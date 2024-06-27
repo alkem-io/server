@@ -113,7 +113,7 @@ export class CommunityService {
 
     community.applications = [];
     community.invitations = [];
-    community.externalInvitations = [];
+    community.platformInvitations = [];
 
     community.groups = [];
     community.communication =
@@ -215,7 +215,7 @@ export class CommunityService {
       relations: {
         applications: true,
         invitations: true,
-        externalInvitations: true,
+        platformInvitations: true,
         groups: true,
         communication: true,
         applicationForm: true,
@@ -229,7 +229,7 @@ export class CommunityService {
       !community.groups ||
       !community.applications ||
       !community.invitations ||
-      !community.externalInvitations ||
+      !community.platformInvitations ||
       !community.guidelines ||
       !community.applicationForm
     ) {
@@ -284,7 +284,7 @@ export class CommunityService {
       });
     }
 
-    for (const externalInvitation of community.externalInvitations) {
+    for (const externalInvitation of community.platformInvitations) {
       await this.platformInvitationService.deletePlatformInvitation({
         ID: externalInvitation.id,
       });
@@ -1248,7 +1248,7 @@ export class CommunityService {
     const community = await this.getCommunityOrFail(
       invitationData.communityID,
       {
-        relations: { externalInvitations: true },
+        relations: { platformInvitations: true },
       }
     );
 
@@ -1260,7 +1260,7 @@ export class CommunityService {
       await this.platformInvitationService.createPlatformInvitation(
         externalInvitationInput
       );
-    community.externalInvitations?.push(externalInvitation);
+    community.platformInvitations?.push(externalInvitation);
     await this.communityRepository.save(community);
 
     return externalInvitation;
@@ -1383,9 +1383,9 @@ export class CommunityService {
     community: ICommunity
   ): Promise<IPlatformInvitation[]> {
     const communityApps = await this.getCommunityOrFail(community.id, {
-      relations: { externalInvitations: true },
+      relations: { platformInvitations: true },
     });
-    return communityApps?.externalInvitations || [];
+    return communityApps?.platformInvitations || [];
   }
 
   async getApplicationForm(community: ICommunity): Promise<IForm> {
