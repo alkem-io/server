@@ -215,13 +215,13 @@ export const spaceDefaultsCalloutsKnowledge: CreateCalloutInput[] = [
     groupName: CalloutGroupName.HOME,
     framing: {
       profile: {
-        displayName: 'Updating my VC',
+        displayName: 'Updating my Body of Knowledge',
         description:
           'You can add additional information to the Body of Knowledge at any time. However, you need to update your Virtual Contributor to pick up the latest information. How? \n\n1. Go to the profile of your Virtual Contributor.\n2. Go to the settings and click on the settings tab.\n3. Click on the button update UPDATE KNOWLEDGE.\n',
         tagsets: [
           {
             name: TagsetReservedName.FLOW_STATE,
-            tags: [FlowState.GOING_LIVE],
+            tags: [FlowState.KNOWLEDGE_UPDATES],
           },
         ],
       },
