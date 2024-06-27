@@ -5,9 +5,9 @@ import { ContributionReporterService } from '@services/external/elasticsearch/co
 import { NotificationInputCommunityNewMember } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.new.member';
 import { ICommunity } from './community.interface';
 import { ActivityInputMemberJoined } from '@services/adapters/activity-adapter/dto/activity.dto.input.member.joined';
-import { IUser } from '../user/user.interface';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { SpaceType } from '@common/enums/space.type';
+import { IContributor } from '../contributor/contributor.interface';
 
 @Injectable()
 export class CommunityEventsService {
@@ -19,13 +19,13 @@ export class CommunityEventsService {
 
   public async registerCommunityNewMemberActivity(
     community: ICommunity,
-    newMember: IUser,
+    newContributor: IContributor,
     agentInfo: AgentInfo
   ) {
     const activityLogInput: ActivityInputMemberJoined = {
       triggeredBy: agentInfo.userID,
       community: community,
-      user: newMember,
+      contributor: newContributor,
     };
     await this.activityAdapter.memberJoined(activityLogInput);
   }
@@ -35,12 +35,12 @@ export class CommunityEventsService {
     spaceID: string,
     displayName: string,
     agentInfo: AgentInfo,
-    newMember: IUser
+    newContributor: IContributor
   ) {
     // TODO: community just needs to know the level, not the type
     // Send the notification
     const notificationInput: NotificationInputCommunityNewMember = {
-      contributorID: newMember.id,
+      contributorID: newContributor.id,
       triggeredBy: agentInfo.userID,
       community: community,
     };

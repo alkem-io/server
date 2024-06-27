@@ -630,13 +630,31 @@ export class CommunityService {
       }
     }
 
+    await this.contributorAddedToRole(
+      user,
+      community,
+      role,
+      agentInfo,
+      triggerNewMemberEvents
+    );
+
+    return user;
+  }
+
+  private async contributorAddedToRole(
+    contributor: IContributor,
+    community: ICommunity,
+    role: CommunityRole,
+    agentInfo?: AgentInfo,
+    triggerNewMemberEvents = false
+  ) {
     if (role === CommunityRole.MEMBER) {
-      this.addMemberToCommunication(user, community);
+      this.addMemberToCommunication(contributor, community);
 
       if (agentInfo) {
         await this.communityEventsService.registerCommunityNewMemberActivity(
           community,
-          user,
+          contributor,
           agentInfo
         );
 
@@ -648,13 +666,11 @@ export class CommunityService {
             rootSpaceID,
             displayName,
             agentInfo,
-            user
+            contributor
           );
         }
       }
     }
-
-    return user;
   }
 
   async assignVirtualToRole(
@@ -692,13 +708,16 @@ export class CommunityService {
   }
 
   private async addMemberToCommunication(
-    user: IUser,
+    contributor: IContributor,
     community: ICommunity
   ): Promise<void> {
     // register the user for the community rooms
     const communication = await this.getCommunication(community.id);
     this.communicationService
-      .addUserToCommunications(communication, user.communicationID)
+      .addContributorToCommunications(
+        communication,
+        contributor.communicationID
+      )
       .catch(error =>
         this.logger.error(
           `Unable to add user to community messaging (${community.id}): ${error}`,

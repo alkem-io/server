@@ -97,14 +97,18 @@ export class CommunicationService {
     return true;
   }
 
-  async addUserToCommunications(
+  async addContributorToCommunications(
     communication: ICommunication,
-    communicationUserID: string
+    contributorCommunicationID: string
   ): Promise<boolean> {
+    if (!contributorCommunicationID || contributorCommunicationID === '') {
+      // no communication ID to manage, just return
+      return true;
+    }
     const communicationRoomIDs = await this.getRoomsUsed(communication);
     await this.communicationAdapter.grantUserAccessToRooms(
       communicationRoomIDs,
-      communicationUserID
+      contributorCommunicationID
     );
 
     return true;
