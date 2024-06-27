@@ -51,21 +51,18 @@ export class AccountAuthorizationService {
   ) {}
 
   async applyAuthorizationPolicy(accountInput: IAccount): Promise<IAccount> {
-    const account = await this.accountService.getAccountOrFail(
-      accountInput.id,
-      {
-        relations: {
-          agent: true,
-          space: {
-            profile: true,
-          },
-          license: true,
-          library: true,
-          defaults: true,
-          virtualContributors: true,
+    let account = await this.accountService.getAccountOrFail(accountInput.id, {
+      relations: {
+        agent: true,
+        space: {
+          profile: true,
         },
-      }
-    );
+        license: true,
+        library: true,
+        defaults: true,
+        virtualContributors: true,
+      },
+    });
     if (
       !account.agent ||
       !account.library ||
@@ -100,7 +97,21 @@ export class AccountAuthorizationService {
       account.space
     );
 
-    await this.accountService.save(account);
+    account = await this.accountService.save(account);
+    if (
+      !account.agent ||
+      !account.library ||
+      !account.license ||
+      !account.defaults ||
+      !account.space ||
+      !account.space.profile ||
+      !account.virtualContributors
+    ) {
+      throw new RelationshipNotFoundException(
+        `Unable to load Account with entities at start of auth reset: ${account.id} `,
+        LogContext.ACCOUNT
+      );
+    }
     account.agent = this.agentAuthorizationService.applyAuthorizationPolicy(
       account.agent,
       account.authorization
