@@ -11,7 +11,7 @@ import { CalendarEventAuthorizationService } from './event.service.authorization
 import { CommunityPolicyModule } from '@domain/community/community-policy/community.policy.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { RoomModule } from '@domain/communication/room/room.module';
-import { UserLookupModule } from '@services/infrastructure/user-lookup/user.lookup.module';
+import { ContributorLookupModule } from '@services/infrastructure/contributor-lookup/contributor.lookup.module';
 
 @Module({
   imports: [
@@ -19,7 +19,7 @@ import { UserLookupModule } from '@services/infrastructure/user-lookup/user.look
     AuthorizationModule,
     RoomModule,
     VisualModule,
-    UserLookupModule,
+    ContributorLookupModule,
     ProfileModule,
     CommunityPolicyModule,
     TypeOrmModule.forFeature([CalendarEvent]),

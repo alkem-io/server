@@ -8,4 +8,7 @@ export abstract class IContributorBase extends INameable {
   agent!: IAgent;
 
   storageAggregator?: IStorageAggregator;
+
+  // the internal communicationID (Matrix) for the user
+  communicationID!: string;
 }

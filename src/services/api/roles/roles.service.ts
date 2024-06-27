@@ -24,7 +24,7 @@ import { RolesResultSpace } from './dto/roles.dto.result.space';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { SpaceService } from '@domain/space/space/space.service';
-import { UserLookupService } from '@services/infrastructure/user-lookup/user.lookup.service';
+import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 import { RolesVirtualContributorInput } from './dto/roles.dto.input.virtual.contributor';
 
 export class RolesService {
@@ -39,7 +39,7 @@ export class RolesService {
     private spaceService: SpaceService,
     private authorizationService: AuthorizationService,
     private organizationService: OrganizationService,
-    private userLookupService: UserLookupService,
+    private userLookupService: ContributorLookupService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 

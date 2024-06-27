@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-inferrable-types */
-import { JoinColumn, OneToOne } from 'typeorm';
+import { Column, JoinColumn, OneToOne } from 'typeorm';
 import { Agent } from '@domain/agent/agent/agent.entity';
 import { IContributorBase } from './contributor.base.interface';
 import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
@@ -20,6 +20,9 @@ export class ContributorBase
   })
   @JoinColumn()
   storageAggregator?: StorageAggregator;
+
+  @Column()
+  communicationID: string = '';
 
   constructor() {
     super();

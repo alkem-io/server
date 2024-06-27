@@ -7,13 +7,13 @@ import { PlatformInvitationAuthorizationService } from './platform.invitation.se
 import { PlatformInvitationResolverMutations } from './platform.invitation.resolver.mutations';
 import { PlatformInvitation } from './platform.invitation.entity';
 import { PlatformInvitationService } from './platform.invitation.service';
-import { UserLookupModule } from '@services/infrastructure/user-lookup/user.lookup.module';
+import { ContributorLookupModule } from '@services/infrastructure/contributor-lookup/contributor.lookup.module';
 
 @Module({
   imports: [
     AuthorizationPolicyModule,
     AuthorizationModule,
-    UserLookupModule,
+    ContributorLookupModule,
     TypeOrmModule.forFeature([PlatformInvitation]),
   ],
   providers: [
