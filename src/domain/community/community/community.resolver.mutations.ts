@@ -54,7 +54,6 @@ import {
 import { EntityNotInitializedException } from '@common/exceptions';
 import { CommunityInvitationException } from '@common/exceptions/community.invitation.exception';
 import { SpaceIngestionPurpose } from '@services/infrastructure/event-bus/commands';
-import { AccountHostService } from '@domain/space/account/account.host.service';
 import { CreateInvitationForContributorsOnCommunityInput } from './dto/community.dto.invite.contributor';
 import { IContributor } from '../contributor/contributor.interface';
 import { ContributorService } from '../contributor/contributor.service';
@@ -85,7 +84,6 @@ export class CommunityResolverMutations {
     private invitationService: InvitationService,
     private invitationAuthorizationService: InvitationAuthorizationService,
     private communityAuthorizationService: CommunityAuthorizationService,
-    private accountHostService: AccountHostService,
     private contributorService: ContributorService,
     private aiServerAdapter: AiServerAdapter,
     private platformInvitationAuthorizationService: PlatformInvitationAuthorizationService,
@@ -244,7 +242,7 @@ export class CommunityResolverMutations {
         }
       );
 
-    const host = await this.accountHostService.getHostOrFail(virtual.account);
+    const host = await this.virtualContributorService.getAccountHost(virtual);
 
     virtual =
       await this.virtualContributorAuthorizationService.applyAuthorizationPolicy(
@@ -363,11 +361,13 @@ export class CommunityResolverMutations {
         roleData.virtualContributorID,
         {
           relations: {
-            account: true,
+            account: {
+              authorization: true,
+            },
           },
         }
       );
-    const host = await this.accountHostService.getHostOrFail(virtual.account);
+    const host = await this.virtualContributorService.getAccountHost(virtual);
     virtual =
       await this.virtualContributorAuthorizationService.applyAuthorizationPolicy(
         virtual,
@@ -565,12 +565,15 @@ export class CommunityResolverMutations {
     invitation = await this.invitationService.save(invitation);
 
     if (invitedContributor instanceof VirtualContributor) {
+      const accountHost = await this.virtualContributorService.getAccountHost(
+        invitedContributor
+      );
       const notificationInput: NotificationInputCommunityVirtualContributorInvitation =
         {
           triggeredBy: agentInfo.userID,
           community: community,
           virtualContributorID: invitedContributor.id,
-          account: invitedContributor.account,
+          accountHost: accountHost,
         };
 
       await this.notificationAdapter.invitationVirtualContributorCreated(
