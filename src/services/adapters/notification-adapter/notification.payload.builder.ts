@@ -3,9 +3,9 @@ import { EntityNotFoundException } from '@common/exceptions';
 import { NotificationEventException } from '@common/exceptions/notification.event.exception';
 import { ICommunity } from '@domain/community/community';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityManager, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Post } from '@domain/collaboration/post/post.entity';
 import {
   CollaborationPostCreatedEventPayload,
@@ -33,7 +33,7 @@ import {
   PlatformGlobalRoleChangeEventPayload,
   RoleChangeType,
   CommunityPlatformInvitationCreatedEventPayload,
-  VirtualContributorInvitationCreatedEventPayload,
+  CommunityInvitationVirtualContributorCreatedEventPayload,
 } from '@alkemio/notifications-lib';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
@@ -52,7 +52,6 @@ import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.
 import { IDiscussion } from '@platform/forum-discussion/discussion.interface';
 import { AccountHostService } from '@domain/space/account/account.host.service';
 import { IAccount } from '@domain/space/account/account.interface';
-import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
 import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 
 @Injectable()
@@ -64,15 +63,12 @@ export class NotificationPayloadBuilder {
     private postRepository: Repository<Post>,
     @InjectRepository(Community)
     private communityRepository: Repository<Community>,
-    @InjectEntityManager('default')
-    private entityManager: EntityManager,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private configService: ConfigService,
     private contributionResolverService: ContributionResolverService,
     private urlGeneratorService: UrlGeneratorService,
-    private accountHostService: AccountHostService,
-    private virtualContributorService: VirtualContributorService
+    private accountHostService: AccountHostService
   ) {}
 
   async buildApplicationCreatedNotificationPayload(
@@ -122,29 +118,23 @@ export class NotificationPayloadBuilder {
     virtualContributorID: string,
     account: IAccount,
     community: ICommunity
-  ): Promise<VirtualContributorInvitationCreatedEventPayload> {
+  ): Promise<CommunityInvitationVirtualContributorCreatedEventPayload> {
     const spacePayload = await this.buildSpacePayload(
       community,
       invitationCreatorID
     );
     const host = await this.accountHostService.getHostOrFail(account);
     const hostPayload = await this.getContributorPayloadOrFail(host.id);
-    const virtualContributor =
-      await this.virtualContributorService.getVirtualContributorOrFail(
-        virtualContributorID,
-        { relations: { profile: true } }
-      );
+    const virtualContributorPayload = await this.getContributorPayloadOrFail(
+      virtualContributorID
+    );
 
-    return {
+    const result: CommunityInvitationVirtualContributorCreatedEventPayload = {
       host: hostPayload,
-      virtualContributor: {
-        name: virtualContributor.profile.displayName,
-        url: this.urlGeneratorService.generateUrlForVC(
-          virtualContributor.nameID
-        ),
-      },
+      invitee: virtualContributorPayload,
       ...spacePayload,
     };
+    return result;
   }
 
   async buildExternalInvitationCreatedNotificationPayload(
