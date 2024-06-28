@@ -54,7 +54,6 @@ export class LibraryService {
         },
         relations: {
           aiPersona: true,
-          account: true,
         },
       }
     );
