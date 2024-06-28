@@ -9,17 +9,21 @@ import { Agent } from '@domain/agent/agent/agent.entity';
 import { VirtualContributor } from '@domain/community/virtual-contributor';
 @Entity()
 export class Account extends AuthorizableEntity implements IAccount {
-  @OneToOne(() => Agent, { eager: false, cascade: true, onDelete: 'SET NULL' })
-  @JoinColumn()
-  agent?: Agent;
-
   @OneToOne(() => Space, {
     eager: false,
-    cascade: false, // important: each space looks after saving itself!
+    cascade: false, // important: each space looks after saving itself! Same as space.subspaces field
     onDelete: 'SET NULL',
   })
   @JoinColumn()
   space?: Space;
+
+  @OneToOne(() => Agent, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  agent?: Agent;
 
   @OneToOne(() => License, {
     eager: false,

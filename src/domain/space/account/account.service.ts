@@ -41,6 +41,7 @@ import { Organization } from '@domain/community/organization/organization.entity
 import { LicensePrivilege } from '@common/enums/license.privilege';
 import { LicenseEngineService } from '@core/license-engine/license.engine.service';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
+import { CreateSpaceOnAccountInput } from './dto/account.dto.create.space';
 
 @Injectable()
 export class AccountService {
@@ -131,11 +132,21 @@ export class AccountService {
 
   async createSpaceOnAccount(
     account: IAccount,
-    spaceData: CreateSpaceInput,
+    spaceOnAccountData: CreateSpaceOnAccountInput,
     agentInfo?: AgentInfo
   ) {
+    if (!account.storageAggregator) {
+      throw new RelationshipNotFoundException(
+        `Unable to find storage aggregator on account for creating space ${account.id} `,
+        LogContext.ACCOUNT
+      );
+    }
+    const spaceData = spaceOnAccountData.spaceData;
     await this.validateSpaceData(spaceData);
+    // Set data for the root space
     spaceData.level = 0;
+    spaceData.storageAggregatorParent = account.storageAggregator;
+
     const space = await this.spaceService.createSpace(
       spaceData,
       account,

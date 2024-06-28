@@ -33,7 +33,7 @@ export class Space extends NameableEntity implements ISpace {
 
   // Note: no counter OneToMany as this is a pre ManyToOne relationship
   @ManyToOne(() => Account, {
-    eager: true,
+    eager: true, // TODO: really would like to drop this, not least for performance reasons...
     cascade: false,
     onDelete: 'SET NULL',
   })

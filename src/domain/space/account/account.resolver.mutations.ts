@@ -33,6 +33,7 @@ import { EventBus } from '@nestjs/cqrs';
 import { IngestSpace } from '@services/infrastructure/event-bus/commands';
 import { CommunityContributorType } from '@common/enums/community.contributor.type';
 import { CommunityRole } from '@common/enums/community.role';
+import { CreateSpaceOnAccountInput } from './dto/account.dto.create.space';
 
 @Resolver()
 export class AccountResolverMutations {
@@ -67,9 +68,14 @@ export class AccountResolverMutations {
       `create space: ${accountData.spaceData?.nameID}`
     );
     let account = await this.accountService.createAccount(accountData);
+
+    const createSpaceOnAccountData: CreateSpaceOnAccountInput = {
+      accountID: account.id,
+      spaceData: accountData.spaceData,
+    };
     const rootSpace = await this.accountService.createSpaceOnAccount(
       account,
-      accountData.spaceData,
+      createSpaceOnAccountData,
       agentInfo
     );
 
