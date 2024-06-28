@@ -329,7 +329,7 @@ export class ActivityAdapter {
     const activity = await this.activityService.createActivity({
       triggeredBy: eventData.triggeredBy,
       collaborationID,
-      resourceID: eventData.contributor.id, // the user that joined
+      resourceID: eventData.contributor.id, // the contributor that joined
       parentID: community.id, // the community that was joined
       description: description,
       type: eventType,

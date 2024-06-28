@@ -19,6 +19,7 @@ import { CalendarEventModule } from '@domain/timeline/event/event.module';
 import { SpaceModule } from '@domain/space/space/space.module';
 import { LinkModule } from '@domain/collaboration/link/link.module';
 import { UrlGeneratorModule } from '@services/infrastructure/url-generator';
+import { ContributorLookupModule } from '@services/infrastructure/contributor-lookup/contributor.lookup.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { UrlGeneratorModule } from '@services/infrastructure/url-generator';
     ActivityModule,
     CollaborationModule,
     UserModule,
+    ContributorLookupModule,
     CommunityModule,
     CalloutModule,
     PostModule,
