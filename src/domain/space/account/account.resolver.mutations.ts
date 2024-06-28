@@ -79,16 +79,17 @@ export class AccountResolverMutations {
           storageAggregator: true,
         },
       });
-    const rootSpace = await this.accountService.createSpaceOnAccount(
+    account = await this.accountService.createSpaceOnAccount(
       accountWithStorageAggregator,
       createSpaceOnAccountData,
       agentInfo
     );
-
     account = await this.accountAuthorizationService.applyAuthorizationPolicy(
       account
     );
     account = await this.accountService.save(account);
+
+    const rootSpace = await this.accountService.getRootSpace(account);
 
     await this.namingReporter.createOrUpdateName(
       rootSpace.id,

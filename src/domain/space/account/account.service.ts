@@ -132,7 +132,7 @@ export class AccountService {
     account: IAccount,
     spaceOnAccountData: CreateSpaceOnAccountInput,
     agentInfo?: AgentInfo
-  ) {
+  ): Promise<IAccount> {
     if (!account.storageAggregator) {
       throw new RelationshipNotFoundException(
         `Unable to find storage aggregator on account for creating space ${account.id} `,
@@ -151,10 +151,10 @@ export class AccountService {
       agentInfo
     );
     account.space = space;
-    await this.save(account);
+    const savedAccount = await this.save(account);
 
     await this.spaceService.assignUserToRoles(account.space, agentInfo);
-    return space;
+    return savedAccount;
   }
 
   async validateSpaceData(spaceData: CreateSpaceInput) {

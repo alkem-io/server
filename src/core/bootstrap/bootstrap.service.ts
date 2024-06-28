@@ -299,11 +299,10 @@ export class BootstrapService {
         accountID: account.id,
         spaceData: spaceInput.spaceData,
       };
-      account.space = await this.accountService.createSpaceOnAccount(
+      account = await this.accountService.createSpaceOnAccount(
         account,
         createSpaceAccountInput
       );
-      account = await this.accountService.save(account);
       account = await this.accountAuthorizationService.applyAuthorizationPolicy(
         account
       );
