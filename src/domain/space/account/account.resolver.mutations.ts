@@ -73,8 +73,14 @@ export class AccountResolverMutations {
       accountID: account.id,
       spaceData: accountData.spaceData,
     };
+    const accountWithStorageAggregator =
+      await this.accountService.getAccountOrFail(account.id, {
+        relations: {
+          storageAggregator: true,
+        },
+      });
     const rootSpace = await this.accountService.createSpaceOnAccount(
-      account,
+      accountWithStorageAggregator,
       createSpaceOnAccountData,
       agentInfo
     );

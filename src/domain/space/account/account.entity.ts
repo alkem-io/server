@@ -7,6 +7,7 @@ import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { Space } from '../space/space.entity';
 import { Agent } from '@domain/agent/agent/agent.entity';
 import { VirtualContributor } from '@domain/community/virtual-contributor';
+import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
 @Entity()
 export class Account extends AuthorizableEntity implements IAccount {
   @OneToOne(() => Space, {
@@ -24,6 +25,14 @@ export class Account extends AuthorizableEntity implements IAccount {
   })
   @JoinColumn()
   agent?: Agent;
+
+  @OneToOne(() => StorageAggregator, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  storageAggregator?: StorageAggregator;
 
   @OneToOne(() => License, {
     eager: false,

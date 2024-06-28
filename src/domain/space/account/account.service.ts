@@ -68,21 +68,19 @@ export class AccountService {
 
     let account: IAccount = new Account();
     account.authorization = new AuthorizationPolicy();
+    account.storageAggregator =
+      await this.storageAggregatorService.createStorageAggregator();
     account.library = await this.templatesSetService.createTemplatesSet();
     account.defaults = await this.spaceDefaultsService.createSpaceDefaults();
     account.license = await this.licenseService.createLicense({
       visibility: SpaceVisibility.ACTIVE,
     });
 
-    // Root level storage aggregator for Accont
-    const storageAggregator =
-      await this.storageAggregatorService.createStorageAggregator();
-
     // And set the defaults
     account.library =
       await this.spaceDefaultsService.addDefaultTemplatesToSpaceLibrary(
         account.library,
-        storageAggregator
+        account.storageAggregator
       );
     if (
       account.defaults &&
@@ -94,7 +92,7 @@ export class AccountService {
     }
 
     account.agent = await this.agentService.createAgent({
-      parentDisplayID: `account-${accountData.spaceData.nameID}`,
+      parentDisplayID: `account-${account.id}`,
     });
 
     const host = await this.accountHostService.getHostByID(accountData.hostID);
