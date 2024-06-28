@@ -33,13 +33,12 @@ import { EventBus } from '@nestjs/cqrs';
 import { IngestSpace } from '@services/infrastructure/event-bus/commands';
 import { CommunityContributorType } from '@common/enums/community.contributor.type';
 import { CommunityRole } from '@common/enums/community.role';
-import { AccountHostService } from './account.host.service';
+import { CreateSpaceOnAccountInput } from './dto/account.dto.create.space';
 
 @Resolver()
 export class AccountResolverMutations {
   constructor(
     private accountService: AccountService,
-    private accountHostService: AccountHostService,
     private accountAuthorizationService: AccountAuthorizationService,
     private authorizationService: AuthorizationService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
@@ -68,21 +67,35 @@ export class AccountResolverMutations {
       AuthorizationPrivilege.CREATE_SPACE,
       `create space: ${accountData.spaceData?.nameID}`
     );
-    const account = await this.accountService.createAccount(
-      accountData,
+    let account = await this.accountService.createAccount(accountData);
+
+    const createSpaceOnAccountData: CreateSpaceOnAccountInput = {
+      accountID: account.id,
+      spaceData: accountData.spaceData,
+    };
+    const accountWithStorageAggregator =
+      await this.accountService.getAccountOrFail(account.id, {
+        relations: {
+          storageAggregator: true,
+        },
+      });
+    account = await this.accountService.createSpaceOnAccount(
+      accountWithStorageAggregator,
+      createSpaceOnAccountData,
       agentInfo
     );
+    account = await this.accountAuthorizationService.applyAuthorizationPolicy(
+      account
+    );
+    account = await this.accountService.save(account);
 
-    const accountUpdated = await this.accountAuthorizationService
-      .applyAuthorizationPolicy(account)
-      .then(account => this.accountService.save(account));
-    const space = await this.accountService.getRootSpace(accountUpdated);
+    const rootSpace = await this.accountService.getRootSpace(account);
 
     await this.namingReporter.createOrUpdateName(
-      space.id,
-      space.profile.displayName
+      rootSpace.id,
+      rootSpace.profile.displayName
     );
-    return accountUpdated;
+    return account;
   }
 
   @UseGuards(GraphqlGuard)
@@ -176,6 +189,8 @@ export class AccountResolverMutations {
       updateData
     );
 
+    await this.accountService.save(result);
+
     // Update the authorization policy as most of the changes imply auth policy updates
     return this.accountAuthorizationService
       .applyAuthorizationPolicy(result)
@@ -267,11 +282,9 @@ export class AccountResolverMutations {
       virtualContributorData
     );
 
-    const host = await this.accountHostService.getHostOrFail(account);
     virtual =
       await this.virtualContributorAuthorizationService.applyAuthorizationPolicy(
         virtual,
-        host,
         account.authorization
       );
 

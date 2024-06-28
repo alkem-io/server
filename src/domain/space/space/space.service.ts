@@ -130,10 +130,9 @@ export class SpaceService {
       this.spaceDefaultsService.getDefaultSpaceSettings(spaceData.type)
     );
 
-    const parentStorageAggregator = spaceData.storageAggregatorParent;
     const storageAggregator =
       await this.storageAggregatorService.createStorageAggregator(
-        parentStorageAggregator
+        spaceData.storageAggregatorParent
       );
     space.storageAggregator = storageAggregator;
 

@@ -14,8 +14,6 @@ export class IVirtualContributor
 {
   account!: IAccount;
 
-  communicationID!: string;
-
   aiPersona!: IAiPersona;
 
   @Field(() => SearchVisibility, {

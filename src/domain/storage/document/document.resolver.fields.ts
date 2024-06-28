@@ -6,14 +6,14 @@ import { EntityNotFoundException } from '@common/exceptions';
 import { IUser } from '@domain/community/user/user.interface';
 import { IDocument } from './document.interface';
 import { DocumentService } from './document.service';
-import { UserLookupService } from '@services/infrastructure/user-lookup/user.lookup.service';
+import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 
 @Resolver(() => IDocument)
 export class DocumentResolverFields {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    private userLookupService: UserLookupService,
+    private userLookupService: ContributorLookupService,
     private documentService: DocumentService
   ) {}
 

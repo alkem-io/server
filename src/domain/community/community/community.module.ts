@@ -29,15 +29,12 @@ import { StorageAggregatorResolverModule } from '@services/infrastructure/storag
 import { CommunityGuidelinesModule } from '../community-guidelines/community.guidelines.module';
 import { VirtualContributorModule } from '../virtual-contributor/virtual.contributor.module';
 import { LicenseEngineModule } from '@core/license-engine/license.engine.module';
-import { AccountHostModule } from '@domain/space/account/account.host.module';
 import { ContributorModule } from '../contributor/contributor.module';
-import { AiServerAdapterModule } from '@services/adapters/ai-server-adapter/ai.server.adapter.module';
 import { PlatformInvitationModule } from '@platform/invitation/platform.invitation.module';
 
 @Module({
   imports: [
     ActivityAdapterModule,
-    AccountHostModule,
     NotificationAdapterModule,
     AuthorizationModule,
     AuthorizationPolicyModule,
@@ -62,7 +59,6 @@ import { PlatformInvitationModule } from '@platform/invitation/platform.invitati
     TypeOrmModule.forFeature([Community]),
     TrustRegistryAdapterModule,
     ContributionReporterModule,
-    AiServerAdapterModule,
   ],
   providers: [
     CommunityService,

@@ -7,19 +7,32 @@ import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { Space } from '../space/space.entity';
 import { Agent } from '@domain/agent/agent/agent.entity';
 import { VirtualContributor } from '@domain/community/virtual-contributor';
+import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
 @Entity()
 export class Account extends AuthorizableEntity implements IAccount {
-  @OneToOne(() => Agent, { eager: false, cascade: true, onDelete: 'SET NULL' })
-  @JoinColumn()
-  agent?: Agent;
-
   @OneToOne(() => Space, {
+    eager: false,
+    cascade: false, // important: each space looks after saving itself! Same as space.subspaces field
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  space?: Space;
+
+  @OneToOne(() => Agent, {
     eager: false,
     cascade: true,
     onDelete: 'SET NULL',
   })
   @JoinColumn()
-  space?: Space;
+  agent?: Agent;
+
+  @OneToOne(() => StorageAggregator, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  storageAggregator?: StorageAggregator;
 
   @OneToOne(() => License, {
     eager: false,

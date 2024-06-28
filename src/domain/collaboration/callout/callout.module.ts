@@ -17,7 +17,7 @@ import { MessagingModule } from '@domain/communication/messaging/messaging.modul
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
 import { RoomModule } from '@domain/communication/room/room.module';
 import { ReferenceModule } from '@domain/common/reference/reference.module';
-import { UserLookupModule } from '@services/infrastructure/user-lookup/user.lookup.module';
+import { ContributorLookupModule } from '@services/infrastructure/contributor-lookup/contributor.lookup.module';
 import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
 import { CalloutFramingModule } from '../callout-framing/callout.framing.module';
 import { CalloutContributionDefaultsModule } from '../callout-contribution-defaults/callout.contribution.defaults.module';
@@ -36,7 +36,7 @@ import { PostModule } from '../post/post.module';
     RoomModule,
     CommunityPolicyModule,
     EntityResolverModule,
-    UserLookupModule,
+    ContributorLookupModule,
     NamingModule,
     MessagingModule,
     ReferenceModule,

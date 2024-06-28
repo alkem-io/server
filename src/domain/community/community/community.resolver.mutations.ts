@@ -45,7 +45,6 @@ import { CommunityMembershipStatus } from '@common/enums/community.membership.st
 import { CommunityMembershipException } from '@common/exceptions/community.membership.exception';
 import { AssignCommunityRoleToVirtualInput } from './dto/community.dto.role.assign.virtual';
 import { RemoveCommunityRoleFromVirtualInput } from './dto/community.dto.role.remove.virtual';
-import { VirtualContributorAuthorizationService } from '../virtual-contributor/virtual.contributor.service.authorization';
 import { VirtualContributorService } from '../virtual-contributor/virtual.contributor.service';
 import {
   IVirtualContributor,
@@ -53,17 +52,14 @@ import {
 } from '../virtual-contributor';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { CommunityInvitationException } from '@common/exceptions/community.invitation.exception';
-import { SpaceIngestionPurpose } from '@services/infrastructure/event-bus/commands';
-import { AccountHostService } from '@domain/space/account/account.host.service';
 import { CreateInvitationForContributorsOnCommunityInput } from './dto/community.dto.invite.contributor';
 import { IContributor } from '../contributor/contributor.interface';
 import { ContributorService } from '../contributor/contributor.service';
-import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
-import { NotificationInputCommunityVirtualContributorInvitation } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.vc.invitation';
 import { PlatformInvitationAuthorizationService } from '@platform/invitation/platform.invitation.service.authorization';
 import { PlatformInvitationService } from '@platform/invitation/platform.invitation.service';
 import { IPlatformInvitation } from '@platform/invitation';
 import { NotificationInputPlatformInvitation } from '@services/adapters/notification-adapter/dto/notification.dto.input.platform.invitation';
+import { NotificationInputCommunityInvitationVirtualContributor } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.invitation.vc';
 
 @Resolver()
 export class CommunityResolverMutations {
@@ -73,7 +69,6 @@ export class CommunityResolverMutations {
     private userService: UserService,
     private userAuthorizationService: UserAuthorizationService,
     private virtualContributorService: VirtualContributorService,
-    private virtualContributorAuthorizationService: VirtualContributorAuthorizationService,
     private userGroupAuthorizationService: UserGroupAuthorizationService,
     private communityService: CommunityService,
     @Inject(CommunityApplicationLifecycleOptionsProvider)
@@ -85,9 +80,7 @@ export class CommunityResolverMutations {
     private invitationService: InvitationService,
     private invitationAuthorizationService: InvitationAuthorizationService,
     private communityAuthorizationService: CommunityAuthorizationService,
-    private accountHostService: AccountHostService,
     private contributorService: ContributorService,
-    private aiServerAdapter: AiServerAdapter,
     private platformInvitationAuthorizationService: PlatformInvitationAuthorizationService,
     private platformInvitationService: PlatformInvitationService
   ) {}
@@ -230,37 +223,14 @@ export class CommunityResolverMutations {
     await this.communityService.assignVirtualToRole(
       community,
       roleData.virtualContributorID,
-      roleData.role
+      roleData.role,
+      agentInfo,
+      true
     );
 
-    // reset the user authorization policy so that their profile is visible to other community members
-    let virtual =
-      await this.virtualContributorService.getVirtualContributorOrFail(
-        roleData.virtualContributorID,
-        {
-          relations: {
-            account: true,
-          },
-        }
-      );
-
-    const host = await this.accountHostService.getHostOrFail(virtual.account);
-
-    virtual =
-      await this.virtualContributorAuthorizationService.applyAuthorizationPolicy(
-        virtual,
-        host,
-        virtual.account.authorization
-      );
-    virtual = await this.virtualContributorService.save(virtual);
-
-    const spaceID = await this.communityService.getRootSpaceID(community);
-    this.aiServerAdapter.ensureSpaceIsUsable(
-      spaceID,
-      SpaceIngestionPurpose.CONTEXT
+    return await this.virtualContributorService.getVirtualContributorOrFail(
+      roleData.virtualContributorID
     );
-
-    return virtual;
   }
 
   @UseGuards(GraphqlGuard)
@@ -356,25 +326,10 @@ export class CommunityResolverMutations {
       roleData.virtualContributorID,
       roleData.role
     );
-    // reset the user authorization policy so that their profile is not visible
-    // to other community members
-    let virtual =
-      await this.virtualContributorService.getVirtualContributorOrFail(
-        roleData.virtualContributorID,
-        {
-          relations: {
-            account: true,
-          },
-        }
-      );
-    const host = await this.accountHostService.getHostOrFail(virtual.account);
-    virtual =
-      await this.virtualContributorAuthorizationService.applyAuthorizationPolicy(
-        virtual,
-        host,
-        virtual.account.authorization
-      );
-    return await this.virtualContributorService.save(virtual);
+
+    return await this.virtualContributorService.getVirtualContributorOrFail(
+      roleData.virtualContributorID
+    );
   }
 
   @UseGuards(GraphqlGuard)
@@ -565,12 +520,16 @@ export class CommunityResolverMutations {
     invitation = await this.invitationService.save(invitation);
 
     if (invitedContributor instanceof VirtualContributor) {
-      const notificationInput: NotificationInputCommunityVirtualContributorInvitation =
+      const accountHost = await this.virtualContributorService.getAccountHost(
+        invitedContributor
+      );
+      const notificationInput: NotificationInputCommunityInvitationVirtualContributor =
         {
           triggeredBy: agentInfo.userID,
           community: community,
-          virtualContributorID: invitedContributor.id,
-          account: invitedContributor.account,
+          invitedContributorID: invitedContributor.id,
+          accountHost: accountHost,
+          welcomeMessage,
         };
 
       await this.notificationAdapter.invitationVirtualContributorCreated(
@@ -581,7 +540,7 @@ export class CommunityResolverMutations {
       const notificationInput: NotificationInputCommunityInvitation = {
         triggeredBy: agentInfo.userID,
         community: community,
-        invitedUser: invitedContributor.id,
+        invitedContributorID: invitedContributor.id,
         welcomeMessage,
       };
 
