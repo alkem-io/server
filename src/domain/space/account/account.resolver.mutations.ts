@@ -84,6 +84,7 @@ export class AccountResolverMutations {
       createSpaceOnAccountData,
       agentInfo
     );
+    account.space = rootSpace;
 
     account = await this.accountAuthorizationService.applyAuthorizationPolicy(
       account

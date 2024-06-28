@@ -46,16 +46,19 @@ export class AccountAuthorizationService {
   ) {}
 
   async applyAuthorizationPolicy(accountInput: IAccount): Promise<IAccount> {
-    let account = await this.accountService.getAccountOrFail(accountInput.id, {
-      relations: {
-        agent: true,
-        space: true,
-        license: true,
-        library: true,
-        defaults: true,
-        virtualContributors: true,
-      },
-    });
+    const account = await this.accountService.getAccountOrFail(
+      accountInput.id,
+      {
+        relations: {
+          agent: true,
+          space: true,
+          license: true,
+          library: true,
+          defaults: true,
+          virtualContributors: true,
+        },
+      }
+    );
     if (
       !account.agent ||
       !account.library ||
@@ -123,17 +126,21 @@ export class AccountAuthorizationService {
     account.virtualContributors = updatedVCs;
 
     // Need to save as there is still a circular dependency from space auth to account auth reset
-    account = await this.accountService.save(account);
+    const savedAccount = await this.accountService.save(account);
 
     // And cascade into the space if there is one
-    if (account.space) {
-      account.space =
-        await this.spaceAuthorizationService.applyAuthorizationPolicy(
-          account.space
-        );
+    if (!account.space) {
+      throw new RelationshipNotFoundException(
+        `No space on account for resetting: ${account.id} `,
+        LogContext.ACCOUNT
+      );
     }
+    savedAccount.space =
+      await this.spaceAuthorizationService.applyAuthorizationPolicy(
+        account.space
+      );
 
-    return account;
+    return savedAccount;
   }
 
   private extendAuthorizationPolicy(
