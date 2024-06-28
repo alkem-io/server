@@ -136,7 +136,8 @@ export class SpaceAuthorizationService {
     space.authorization = this.authorizationPolicyService.reset(
       space.authorization
     );
-    const communityPolicyWithFlags = this.getCommunityPolicyWithSettings(space);
+    const communityPolicyWithSettings =
+      this.getCommunityPolicyWithSettings(space);
 
     const privateSpace =
       space.community.policy.settings.privacy.mode === SpacePrivacyMode.PRIVATE;
@@ -180,14 +181,14 @@ export class SpaceAuthorizationService {
       case SpaceVisibility.DEMO:
         space.authorization = this.extendAuthorizationPolicyLocal(
           space.authorization,
-          communityPolicyWithFlags,
+          communityPolicyWithSettings,
           space,
           deletionCredentialCriterias
         );
         if (privateSpace && space.level !== SpaceLevel.SPACE) {
           space.authorization = this.extendPrivateSubspaceAdmins(
             space.authorization,
-            communityPolicyWithFlags
+            communityPolicyWithSettings
           );
         }
         break;
@@ -204,8 +205,10 @@ export class SpaceAuthorizationService {
     // propagate authorization rules for child entities
     space = await this.propagateAuthorizationToChildEntities(
       space,
-      accountAgent
+      accountAgent,
+      communityPolicyWithSettings
     );
+
     if (!space.community)
       throw new RelationshipNotFoundException(
         `Unable to load Community on space after child entities propagation: ${space.id} `,
@@ -220,7 +223,7 @@ export class SpaceAuthorizationService {
         space.community.authorization =
           this.extendCommunityAuthorizationPolicySpace(
             space.community.authorization,
-            communityPolicyWithFlags
+            communityPolicyWithSettings
           );
         break;
       case SpaceVisibility.ARCHIVED:
@@ -252,21 +255,10 @@ export class SpaceAuthorizationService {
   }
 
   public async propagateAuthorizationToChildEntities(
-    spaceInput: ISpace,
-    accountAgent: IAgent
+    space: ISpace,
+    accountAgent: IAgent,
+    communityPolicyWithSettings: ICommunityPolicy
   ): Promise<ISpace> {
-    const space = await this.spaceService.getSpaceOrFail(spaceInput.id, {
-      relations: {
-        agent: true,
-        collaboration: true,
-        community: {
-          policy: true,
-        },
-        context: true,
-        profile: true,
-        storageAggregator: true,
-      },
-    });
     if (
       !space.agent ||
       !space.collaboration ||
@@ -281,7 +273,6 @@ export class SpaceAuthorizationService {
         LogContext.SPACES
       );
     }
-    const communityPolicy = this.getCommunityPolicyWithSettings(space);
 
     // Clone the authorization policy
     const clonedAuthorization =
@@ -296,7 +287,7 @@ export class SpaceAuthorizationService {
         space.community,
         space.authorization,
         accountAgent,
-        communityPolicy
+        communityPolicyWithSettings
       );
 
     // Subspaces to allow some membership options based on the parent space recential
@@ -305,7 +296,7 @@ export class SpaceAuthorizationService {
       space.community.authorization =
         this.extendCommunityAuthorizationPolicySubspace(
           space.community.authorization,
-          communityPolicy
+          communityPolicyWithSettings
         );
     }
 
@@ -313,7 +304,7 @@ export class SpaceAuthorizationService {
       await this.collaborationAuthorizationService.applyAuthorizationPolicy(
         space.collaboration,
         space.authorization,
-        communityPolicy,
+        communityPolicyWithSettings,
         accountAgent
       );
 
