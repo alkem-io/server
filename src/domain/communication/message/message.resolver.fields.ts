@@ -4,7 +4,7 @@ import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions';
 import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { UserLookupService } from '@services/infrastructure/user-lookup/user.lookup.service';
+import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 import { VirtualContributor } from '@domain/community/virtual-contributor';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -15,7 +15,7 @@ export class MessageResolverFields {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    private userLookupService: UserLookupService,
+    private userLookupService: ContributorLookupService,
     @InjectRepository(VirtualContributor)
     private virtualContributorRepository: Repository<VirtualContributor>
   ) {}

@@ -27,8 +27,6 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { CreateAccountInput } from './dto/account.dto.create';
 import { CreateSpaceInput } from '../space/dto/space.dto.create';
-import { IContributor } from '@domain/community/contributor/contributor.interface';
-import { ContributorService } from '@domain/community/contributor/contributor.service';
 import { LicensingService } from '@platform/licensing/licensing.service';
 import { ILicensePlan } from '@platform/license-plan/license.plan.interface';
 import { IAccountSubscription } from './account.license.subscription.interface';
@@ -42,6 +40,7 @@ import { AccountHostService } from '../account.host/account.host.service';
 import { Organization } from '@domain/community/organization/organization.entity';
 import { LicensePrivilege } from '@common/enums/license.privilege';
 import { LicenseEngineService } from '@core/license-engine/license.engine.service';
+import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 
 @Injectable()
 export class AccountService {
@@ -52,28 +51,21 @@ export class AccountService {
     private templatesSetService: TemplatesSetService,
     private spaceDefaultsService: SpaceDefaultsService,
     private licenseService: LicenseService,
-    private contributorService: ContributorService,
     private licensingService: LicensingService,
     private licenseEngineService: LicenseEngineService,
     private licenseIssuerService: LicenseIssuerService,
+    private storageAggregatorService: StorageAggregatorService,
     private virtualContributorService: VirtualContributorService,
     @InjectRepository(Account)
     private accountRepository: Repository<Account>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async createAccount(
-    accountData: CreateAccountInput,
-    agentInfo?: AgentInfo
-  ): Promise<IAccount> {
-    // Before doing any creation check the space data!
-    const spaceData = accountData.spaceData;
-    await this.validateSpaceData(spaceData);
-
+  async createAccount(accountData: CreateAccountInput): Promise<IAccount> {
     const licensingFramework =
       await this.licensingService.getDefaultLicensingOrFail();
 
-    const account: IAccount = new Account();
+    let account: IAccount = new Account();
     account.authorization = new AuthorizationPolicy();
     account.library = await this.templatesSetService.createTemplatesSet();
     account.defaults = await this.spaceDefaultsService.createSpaceDefaults();
@@ -81,19 +73,30 @@ export class AccountService {
       visibility: SpaceVisibility.ACTIVE,
     });
 
-    await this.save(account);
+    // Root level storage aggregator for Accont
+    const storageAggregator =
+      await this.storageAggregatorService.createStorageAggregator();
 
-    spaceData.level = 0;
-    account.space = await this.spaceService.createSpace(
-      spaceData,
-      account,
-      agentInfo
-    );
-    const host = await this.setAccountHost(account, accountData.hostID);
+    // And set the defaults
+    account.library =
+      await this.spaceDefaultsService.addDefaultTemplatesToSpaceLibrary(
+        account.library,
+        storageAggregator
+      );
+    if (
+      account.defaults &&
+      account.library &&
+      account.library.innovationFlowTemplates.length !== 0
+    ) {
+      account.defaults.innovationFlowTemplate =
+        account.library.innovationFlowTemplates[0];
+    }
 
     account.agent = await this.agentService.createAgent({
-      parentDisplayID: `account-${account.space.nameID}`,
+      parentDisplayID: `account-${accountData.spaceData.nameID}`,
     });
+
+    const host = await this.accountHostService.getHostByID(accountData.hostID);
 
     const licensePlansToAssign: ILicensePlan[] = [];
     const licensePlans = await this.licensingService.getLicensePlans(
@@ -110,34 +113,39 @@ export class AccountService {
       }
     }
 
+    const accountAgent = account.agent;
+    account = await this.save(account);
+
     for (const licensePlan of licensePlansToAssign) {
       account.agent = await this.licenseIssuerService.assignLicensePlan(
-        account.agent,
+        accountAgent,
         licensePlan,
         account.id
       );
     }
 
-    const storageAggregator =
-      await this.spaceService.getStorageAggregatorOrFail(account.space.id);
-    // And set the defaults
-    account.library =
-      await this.spaceDefaultsService.addDefaultTemplatesToSpaceLibrary(
-        account.library,
-        storageAggregator
-      );
-    if (
-      account.defaults &&
-      account.library &&
-      account.library.innovationFlowTemplates.length !== 0
-    ) {
-      account.defaults.innovationFlowTemplate =
-        account.library.innovationFlowTemplates[0];
-    }
+    await this.accountHostService.setAccountHost(account, accountData.hostID);
 
-    const savedAccount = await this.accountRepository.save(account);
+    return account;
+  }
+
+  async createSpaceOnAccount(
+    account: IAccount,
+    spaceData: CreateSpaceInput,
+    agentInfo?: AgentInfo
+  ) {
+    await this.validateSpaceData(spaceData);
+    spaceData.level = 0;
+    const space = await this.spaceService.createSpace(
+      spaceData,
+      account,
+      agentInfo
+    );
+    account.space = space;
+    await this.save(account);
+
     await this.spaceService.assignUserToRoles(account.space, agentInfo);
-    return savedAccount;
+    return space;
   }
 
   async validateSpaceData(spaceData: CreateSpaceInput) {
@@ -208,7 +216,7 @@ export class AccountService {
     }
 
     if (updateData.hostID) {
-      await this.setAccountHost(account, updateData.hostID);
+      await this.accountHostService.setAccountHost(account, updateData.hostID);
     }
 
     if (updateData.license) {
@@ -421,39 +429,6 @@ export class AccountService {
       }
     }
     return subscriptions;
-  }
-
-  async setAccountHost(
-    account: IAccount,
-    hostContributorID: string
-  ): Promise<IContributor> {
-    const contributor = await this.contributorService.getContributorOrFail(
-      hostContributorID,
-      {
-        relations: {
-          agent: true,
-        },
-      }
-    );
-
-    const existingHost = await this.accountHostService.getHost(account);
-
-    if (existingHost) {
-      await this.agentService.revokeCredential({
-        agentID: existingHost.agent.id,
-        type: AuthorizationCredential.ACCOUNT_HOST,
-        resourceID: account.id,
-      });
-    }
-
-    // assign the credential
-    contributor.agent = await this.agentService.grantCredential({
-      agentID: contributor.agent.id,
-      type: AuthorizationCredential.ACCOUNT_HOST,
-      resourceID: account.id,
-    });
-
-    return contributor;
   }
 
   public async createVirtualContributorOnAccount(

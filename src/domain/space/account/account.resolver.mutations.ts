@@ -66,21 +66,23 @@ export class AccountResolverMutations {
       AuthorizationPrivilege.CREATE_SPACE,
       `create space: ${accountData.spaceData?.nameID}`
     );
-    const account = await this.accountService.createAccount(
-      accountData,
+    let account = await this.accountService.createAccount(accountData);
+    const rootSpace = await this.accountService.createSpaceOnAccount(
+      account,
+      accountData.spaceData,
       agentInfo
     );
 
-    const accountUpdated = await this.accountAuthorizationService
-      .applyAuthorizationPolicy(account)
-      .then(account => this.accountService.save(account));
-    const space = await this.accountService.getRootSpace(accountUpdated);
+    account = await this.accountAuthorizationService.applyAuthorizationPolicy(
+      account
+    );
+    account = await this.accountService.save(account);
 
     await this.namingReporter.createOrUpdateName(
-      space.id,
-      space.profile.displayName
+      rootSpace.id,
+      rootSpace.profile.displayName
     );
-    return accountUpdated;
+    return account;
   }
 
   @UseGuards(GraphqlGuard)

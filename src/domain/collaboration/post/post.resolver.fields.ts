@@ -12,14 +12,14 @@ import { Loader } from '@core/dataloader/decorators';
 import { ProfileLoaderCreator } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Post } from '@domain/collaboration/post/post.entity';
-import { UserLookupService } from '@services/infrastructure/user-lookup/user.lookup.service';
+import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 
 @Resolver(() => IPost)
 export class PostResolverFields {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    private userLookupService: UserLookupService
+    private userLookupService: ContributorLookupService
   ) {}
 
   @ResolveField('createdBy', () => IUser, {

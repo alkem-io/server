@@ -38,9 +38,6 @@ export class User extends ContributorBase implements IUser {
   @Column()
   gender: string = '';
 
-  @Column()
-  communicationID: string = '';
-
   @Column({ type: 'boolean' })
   serviceProfile: boolean = false;
 

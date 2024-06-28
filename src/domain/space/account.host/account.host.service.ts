@@ -8,11 +8,13 @@ import { AccountException, EntityNotFoundException } from '@common/exceptions';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { User } from '@domain/community/user';
 import { Organization } from '@domain/community/organization';
+import { AgentService } from '@domain/agent/agent/agent.service';
 
 @Injectable()
 export class AccountHostService {
   constructor(
     private contributorService: ContributorService,
+    private agentService: AgentService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -83,5 +85,39 @@ export class AccountHostService {
         LogContext.COMMUNITY
       );
     return host;
+  }
+
+  public async getHostByID(contributorID: string): Promise<IContributor> {
+    return this.contributorService.getContributorOrFail(contributorID, {
+      relations: {
+        agent: true,
+      },
+    });
+  }
+
+  async setAccountHost(
+    account: IAccount,
+    hostContributorID: string
+  ): Promise<IContributor> {
+    const contributor = await this.getHostByID(hostContributorID);
+
+    const existingHost = await this.getHost(account);
+
+    if (existingHost) {
+      await this.agentService.revokeCredential({
+        agentID: existingHost.agent.id,
+        type: AuthorizationCredential.ACCOUNT_HOST,
+        resourceID: account.id,
+      });
+    }
+
+    // assign the credential
+    contributor.agent = await this.agentService.grantCredential({
+      agentID: contributor.agent.id,
+      type: AuthorizationCredential.ACCOUNT_HOST,
+      resourceID: account.id,
+    });
+
+    return contributor;
   }
 }

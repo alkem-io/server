@@ -29,7 +29,6 @@ import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.aut
 import { IVirtualContributor } from '@domain/community/virtual-contributor';
 import { VirtualContributorAuthorizationService } from '@domain/community/virtual-contributor/virtual.contributor.service.authorization';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
-import { ISpace } from '../space/space.interface';
 import { AccountHostService } from '../account.host/account.host.service';
 
 @Injectable()
@@ -50,9 +49,7 @@ export class AccountAuthorizationService {
     let account = await this.accountService.getAccountOrFail(accountInput.id, {
       relations: {
         agent: true,
-        space: {
-          profile: true,
-        },
+        space: true,
         license: true,
         library: true,
         defaults: true,
@@ -64,8 +61,6 @@ export class AccountAuthorizationService {
       !account.library ||
       !account.license ||
       !account.defaults ||
-      !account.space ||
-      !account.space.profile ||
       !account.virtualContributors
     ) {
       throw new RelationshipNotFoundException(
@@ -87,12 +82,11 @@ export class AccountAuthorizationService {
         account.authorization
       );
 
-    // Extend for global roles
     account.authorization = this.extendAuthorizationPolicy(
       account.authorization,
       account.id,
       hostCredentials,
-      account.space
+      account.space?.id
     );
 
     account.agent = this.agentAuthorizationService.applyAuthorizationPolicy(
@@ -104,27 +98,6 @@ export class AccountAuthorizationService {
       account.license,
       account.authorization
     );
-
-    account = await this.accountService.save(account);
-    if (
-      !account.agent ||
-      !account.library ||
-      !account.license ||
-      !account.defaults ||
-      !account.space ||
-      !account.space.profile ||
-      !account.virtualContributors
-    ) {
-      throw new RelationshipNotFoundException(
-        `Unable to load Account with entities at start of auth reset: ${account.id} `,
-        LogContext.ACCOUNT
-      );
-    }
-
-    account.space =
-      await this.spaceAuthorizationService.applyAuthorizationPolicy(
-        account.space
-      );
 
     account.library =
       await this.templatesSetAuthorizationService.applyAuthorizationPolicy(
@@ -149,6 +122,17 @@ export class AccountAuthorizationService {
     }
     account.virtualContributors = updatedVCs;
 
+    // Need to save as there is still a circular dependency from space auth to account auth reset
+    account = await this.accountService.save(account);
+
+    // And cascade into the space if there is one
+    if (account.space) {
+      account.space =
+        await this.spaceAuthorizationService.applyAuthorizationPolicy(
+          account.space
+        );
+    }
+
     return account;
   }
 
@@ -156,7 +140,7 @@ export class AccountAuthorizationService {
     authorization: IAuthorizationPolicy | undefined,
     accountID: string,
     hostCredentials: ICredentialDefinition[],
-    rootSpace: ISpace
+    rootSpaceID: string | undefined
   ): IAuthorizationPolicy {
     if (!authorization) {
       throw new EntityNotInitializedException(
@@ -222,10 +206,13 @@ export class AccountAuthorizationService {
       resourceID: '',
     });
 
-    createVCsCriterias.push({
-      type: AuthorizationCredential.SPACE_ADMIN,
-      resourceID: rootSpace.id,
-    });
+    // If there is a root space, then also allow the admins to manage the account for now
+    if (rootSpaceID) {
+      createVCsCriterias.push({
+        type: AuthorizationCredential.SPACE_ADMIN,
+        resourceID: rootSpaceID,
+      });
+    }
 
     const createVC = this.authorizationPolicyService.createCredentialRule(
       [AuthorizationPrivilege.CREATE_VIRTUAL_CONTRIBUTOR],
