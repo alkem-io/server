@@ -18,7 +18,7 @@ export const spaceDefaultsCalloutsKnowledge: CreateCalloutInput[] = [
       profile: {
         displayName: 'No Time? A quick summary ⬇️',
         description:
-          '*   <strong>Virtual Contributors</strong> are dynamic entities that engage with you based on a curated body of knowledge.\n*   This knowledge repository consists of texts and documents that you collect within a designated <strong>Subspace</strong> of your Space.\n*   To activate a Virtual Contributor, navigate to your <strong>Space Settings</strong> and select the <strong>Account</strong> tab.\n*   Once activated, anyone in your Space can interact with the Virtual Contributor by mentioning it in a comment to a post using the format <strong>@name-of-virtual-contributor</strong>.\n',
+          '*   <strong>Virtual Contributors</strong> are dynamic entities that engage with you based on a curated body of knowledge.\n*   This knowledge repository consists of texts and documents that you collect within a designated <strong>Subspace</strong> of your Space.\n*   To update the Virtual Contributor with newly added knowledge, Go to the profile of your Virtual Contributor.\n2. Go to the settings and click on the settings tab.\n3. Click on the button UPDATE KNOWLEDGE.\n*   Anyone in your Space can interact with the Virtual Contributor by mentioning it in a comment to a post using the format <strong>@name-of-virtual-contributor</strong>.\n',
         tagsets: [
           {
             name: TagsetReservedName.FLOW_STATE,
@@ -194,7 +194,7 @@ export const spaceDefaultsCalloutsKnowledge: CreateCalloutInput[] = [
       profile: {
         displayName: 'Example 3: Links and Documents',
         description:
-          'Aside from inserting text, you can also upload documents and add links to expand the Body of Knowledge. Click on the plus below to add a link or (PDF) document or click on the ⚙️ at the top right of this post, and click EDIT to update this text.\n',
+          'Aside from inserting text, you can also upload documents and add links to expand the Body of Knowledge. Click on the plus below to add a link or (PDF) document and click on the ⚙️ at the top right of this post, and click EDIT to update this text.\n',
 
         tagsets: [
           {
@@ -215,13 +215,13 @@ export const spaceDefaultsCalloutsKnowledge: CreateCalloutInput[] = [
     groupName: CalloutGroupName.HOME,
     framing: {
       profile: {
-        displayName: 'Ready? Go!',
+        displayName: 'Updating my Body of Knowledge',
         description:
-          'To activate your Virtual Contributor,\n\n1.  Click here to go to the <strong>Account tab</strong> of your <strong>Space Settings</strong> (this link will be opened in a new tab).\n2.  Scroll down a little bit and click on CREATE VIRTUAL CONTRIBUTOR.\n3.  Give your VC a name and select this Subspace (Your Virtual Contributor) to use as a Body of Knowledge. Thats it!\n\nAnd then of course the interesting part comes along.. Interact with your VC! It is added to the Space automatically, so add a post in your Knowledge base and ask your VC for its thoughts 👍😊 Not sure how? Read the post about interacting with your VC in the Introduction phase of this flow.\n',
+          'You can add additional information to the Body of Knowledge at any time. However, you need to update your Virtual Contributor to pick up the latest information. How? \n\n1. Go to the profile of your Virtual Contributor.\n2. Go to the settings and click on the settings tab.\n3. Click on the button UPDATE KNOWLEDGE.\n',
         tagsets: [
           {
             name: TagsetReservedName.FLOW_STATE,
-            tags: [FlowState.GOING_LIVE],
+            tags: [FlowState.KNOWLEDGE_UPDATES],
           },
         ],
       },
