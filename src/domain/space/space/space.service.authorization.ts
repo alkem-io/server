@@ -64,6 +64,11 @@ export class SpaceAuthorizationService {
       spaceInput.id,
       {
         relations: {
+          parentSpace: {
+            community: {
+              policy: true,
+            },
+          },
           account: {
             license: true,
             agent: {
@@ -84,8 +89,27 @@ export class SpaceAuthorizationService {
         LogContext.SPACES
       );
     }
+
     const spaceVisibility = spaceAccountLicense.account.license.visibility;
     const accountAgent = spaceAccountLicense.account.agent;
+    // Allow the parent admins to also delete subspaces
+    let deletionCredentialCriterias: ICredentialDefinition[] = [];
+    if (spaceAccountLicense.parentSpace) {
+      if (
+        !spaceAccountLicense.parentSpace.community ||
+        !spaceAccountLicense.parentSpace.community.policy
+      ) {
+        throw new RelationshipNotFoundException(
+          `Unable to load Space with parent community policy in auth reset: ${spaceAccountLicense.id} `,
+          LogContext.SPACES
+        );
+      }
+      deletionCredentialCriterias =
+        this.communityPolicyService.getCredentialsForRole(
+          spaceAccountLicense.parentSpace.community.policy,
+          CommunityRole.ADMIN
+        );
+    }
 
     let space = await this.spaceService.getSpaceOrFail(spaceInput.id, {
       relations: {
@@ -157,7 +181,8 @@ export class SpaceAuthorizationService {
         space.authorization = this.extendAuthorizationPolicyLocal(
           space.authorization,
           communityPolicyWithFlags,
-          space
+          space,
+          deletionCredentialCriterias
         );
         if (privateSpace && space.level !== SpaceLevel.SPACE) {
           space.authorization = this.extendPrivateSubspaceAdmins(
@@ -171,8 +196,6 @@ export class SpaceAuthorizationService {
         space.authorization.anonymousReadAccess = false;
         break;
     }
-    // has to be saved to propagate to all child entities
-    await this.spaceService.save(space);
 
     // Cascade down
     // propagate authorization rules for child entities
@@ -201,6 +224,27 @@ export class SpaceAuthorizationService {
         break;
     }
 
+    // Save with all child entities updated with exception of subspaces as they need to look after their own saving
+    space = await this.spaceService.save(space);
+
+    space = await this.spaceService.getSpaceOrFail(spaceInput.id, {
+      relations: {
+        subspaces: true,
+      },
+    });
+    if (!space.subspaces) {
+      throw new RelationshipNotFoundException(
+        `Unable to load Space with subspaces at part of auth reset: ${spaceAccountLicense.id} `,
+        LogContext.SPACES
+      );
+    }
+
+    // Finally propagate to child spaces
+    // NOTE: each space will look after saving itself
+    for (const subspace of space.subspaces) {
+      await this.applyAuthorizationPolicy(subspace);
+    }
+
     return space;
   }
 
@@ -218,7 +262,6 @@ export class SpaceAuthorizationService {
         context: true,
         profile: true,
         storageAggregator: true,
-        subspaces: true,
       },
     });
     if (
@@ -228,8 +271,7 @@ export class SpaceAuthorizationService {
       !space.community.policy ||
       !space.context ||
       !space.profile ||
-      !space.storageAggregator ||
-      !space.subspaces
+      !space.storageAggregator
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load entities on auth reset for space base ${space.id} `,
@@ -263,8 +305,6 @@ export class SpaceAuthorizationService {
           communityPolicy
         );
     }
-    // save the community
-    await this.spaceService.save(space);
 
     space.collaboration =
       await this.collaborationAuthorizationService.applyAuthorizationPolicy(
@@ -297,23 +337,6 @@ export class SpaceAuthorizationService {
         space.authorization
       );
 
-    const spaceAdminCriteria =
-      this.communityPolicyService.getCredentialsForRole(
-        communityPolicy,
-        CommunityRole.ADMIN
-      );
-    const updatedSpaces: ISpace[] = [];
-    for (const subspace of space.subspaces) {
-      const updatedSubspace = await this.applyAuthorizationPolicy(subspace);
-
-      updatedSubspace.authorization = this.extendSubSpaceAuthorization(
-        subspace.authorization,
-        spaceAdminCriteria
-      );
-      updatedSpaces.push(updatedSubspace);
-    }
-    space.subspaces = updatedSpaces;
-
     return space;
   }
 
@@ -337,7 +360,8 @@ export class SpaceAuthorizationService {
   public extendAuthorizationPolicyLocal(
     authorization: IAuthorizationPolicy,
     policy: ICommunityPolicy,
-    space: ISpace
+    space: ISpace,
+    deletionCredentialCriterias: ICredentialDefinition[]
   ): IAuthorizationPolicy {
     this.extendPrivilegeRuleCreateSubspace(authorization);
 
@@ -345,6 +369,17 @@ export class SpaceAuthorizationService {
 
     if (policy.settings.privacy.mode === SpacePrivacyMode.PRIVATE) {
       authorization.anonymousReadAccess = false;
+    }
+
+    if (deletionCredentialCriterias.length !== 0) {
+      const deleteSubspaces =
+        this.authorizationPolicyService.createCredentialRule(
+          [AuthorizationPrivilege.DELETE],
+          deletionCredentialCriterias,
+          CREDENTIAL_RULE_SPACE_ADMIN_DELETE_SUBSPACE
+        );
+      deleteSubspaces.cascade = false;
+      newRules.push(deleteSubspaces);
     }
 
     const memberCriteras = this.communityPolicyService.getCredentialsForRole(
@@ -594,26 +629,6 @@ export class SpaceAuthorizationService {
 
     return this.authorizationPolicyService.appendCredentialAuthorizationRules(
       communityAuthorization,
-      newRules
-    );
-  }
-
-  public extendSubSpaceAuthorization(
-    authorization: IAuthorizationPolicy | undefined,
-    credentialCriterias: ICredentialDefinition[]
-  ): IAuthorizationPolicy {
-    const newRules: IAuthorizationPolicyRuleCredential[] = [];
-    const deleteSubspaces =
-      this.authorizationPolicyService.createCredentialRule(
-        [AuthorizationPrivilege.DELETE],
-        credentialCriterias,
-        CREDENTIAL_RULE_SPACE_ADMIN_DELETE_SUBSPACE
-      );
-    deleteSubspaces.cascade = false;
-    newRules.push(deleteSubspaces);
-
-    return this.authorizationPolicyService.appendCredentialAuthorizationRules(
-      authorization,
       newRules
     );
   }
