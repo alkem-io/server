@@ -30,6 +30,7 @@ import { IVirtualContributor } from '@domain/community/virtual-contributor';
 import { VirtualContributorAuthorizationService } from '@domain/community/virtual-contributor/virtual.contributor.service.authorization';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { AccountHostService } from '../account.host/account.host.service';
+import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 
 @Injectable()
 export class AccountAuthorizationService {
@@ -41,6 +42,7 @@ export class AccountAuthorizationService {
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private spaceAuthorizationService: SpaceAuthorizationService,
     private virtualContributorAuthorizationService: VirtualContributorAuthorizationService,
+    private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
     private accountService: AccountService,
     private accountHostService: AccountHostService
   ) {}
@@ -56,6 +58,7 @@ export class AccountAuthorizationService {
           library: true,
           defaults: true,
           virtualContributors: true,
+          storageAggregator: true,
         },
       }
     );
@@ -65,7 +68,8 @@ export class AccountAuthorizationService {
       !account.library ||
       !account.license ||
       !account.defaults ||
-      !account.virtualContributors
+      !account.virtualContributors ||
+      !account.storageAggregator
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load Account with entities at start of auth reset: ${account.id} `,
@@ -106,6 +110,12 @@ export class AccountAuthorizationService {
     account.library =
       await this.templatesSetAuthorizationService.applyAuthorizationPolicy(
         account.library,
+        account.authorization
+      );
+
+    account.storageAggregator =
+      await this.storageAggregatorAuthorizationService.applyAuthorizationPolicy(
+        account.storageAggregator,
         account.authorization
       );
 
