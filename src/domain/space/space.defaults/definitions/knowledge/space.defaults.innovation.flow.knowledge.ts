@@ -4,6 +4,7 @@ export enum FlowState {
   GOING_LIVE = 'Going Live',
   INTRODUCTION = 'Introduction',
   BODY_OF_KNOWLEDGE = 'Body of Knowledge',
+  KNOWLEDGE_UPDATES = 'Knowledge Updates',
 }
 
 export const spaceDefaultsInnovationFlowStatesKnowledge: IInnovationFlowState[] =
