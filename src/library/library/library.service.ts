@@ -18,6 +18,7 @@ import {
   IVirtualContributor,
   VirtualContributor,
 } from '@domain/community/virtual-contributor';
+import { SearchVisibility } from '@common/enums/search.visibility';
 
 @Injectable()
 export class LibraryService {
@@ -49,6 +50,7 @@ export class LibraryService {
       {
         where: {
           listedInStore: true,
+          searchVisibility: SearchVisibility.PUBLIC,
         },
         relations: {
           aiPersona: true,
