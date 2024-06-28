@@ -1,7 +1,10 @@
 import { Field, ObjectType } from '@nestjs/graphql';
+import { IAnswerToQuestionSource } from './message.answer.to.question.source.interface';
 
-@ObjectType('ChatGuidanceResult')
-export abstract class IChatGuidanceQueryResult {
+@ObjectType('MessageAnswerQuestion', {
+  description: 'A detailed answer to a question, typically from an AI service.',
+})
+export class IMessageAnswerToQuestion {
   @Field(() => String, {
     nullable: true,
     description: 'The id of the answer; null if an error was returned',
@@ -14,30 +17,15 @@ export abstract class IChatGuidanceQueryResult {
   })
   question!: string;
 
-  @Field(() => [ISource], {
+  @Field(() => [IAnswerToQuestionSource], {
     nullable: true,
     description: 'The sources used to answer the question',
   })
-  sources?: ISource[];
+  sources?: IAnswerToQuestionSource[];
 
   @Field(() => String, {
     nullable: false,
     description: 'The answer to the question',
   })
   answer!: string;
-}
-
-@ObjectType('Source')
-export abstract class ISource {
-  @Field(() => String, {
-    nullable: true,
-    description: 'The URI of the source',
-  })
-  uri?: string;
-
-  @Field(() => String, {
-    nullable: true,
-    description: 'The title of the source',
-  })
-  title?: string;
 }

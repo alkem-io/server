@@ -6,7 +6,10 @@ import { Args, ResolveField } from '@nestjs/graphql';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { MeQueryResults } from '@services/api/me/dto';
 import { IUser } from '@domain/community/user';
-import { AuthenticationException } from '@common/exceptions';
+import {
+  AuthenticationException,
+  ValidationException,
+} from '@common/exceptions';
 import { UserService } from '@domain/community/user/user.service';
 import { ISpace } from '@domain/space/space/space.interface';
 import { SpaceVisibility } from '@common/enums/space.visibility';
@@ -60,6 +63,12 @@ export class MeResolverFields {
     })
     states: string[]
   ): Promise<CommunityInvitationResult[]> {
+    if (agentInfo.userID === '') {
+      throw new ValidationException(
+        'Unable to retrieve invitations as no userID provided.',
+        LogContext.COMMUNITY
+      );
+    }
     return this.meService.getCommunityInvitationsForUser(
       agentInfo.userID,
       states
@@ -81,6 +90,12 @@ export class MeResolverFields {
     })
     states: string[]
   ): Promise<CommunityApplicationResult[]> {
+    if (agentInfo.userID === '') {
+      throw new ValidationException(
+        'Unable to retrieve invitations as no userID provided.',
+        LogContext.COMMUNITY
+      );
+    }
     return this.meService.getCommunityApplicationsForUser(
       agentInfo.userID,
       states

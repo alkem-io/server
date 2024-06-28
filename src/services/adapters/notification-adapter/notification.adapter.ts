@@ -27,9 +27,9 @@ import { MentionedEntityType } from '@domain/communication/messaging/mention.int
 import { NotificationInputForumDiscussionComment } from './dto/notification.dto.input.forum.discussion.comment';
 import { NotificationInputCommunityInvitation } from './dto/notification.dto.input.community.invitation';
 import { NotificationInputCommentReply } from './dto/notification.dto.input.comment.reply';
-import { NotificationInputCommunityInvitationExternal } from './dto/notification.dto.input.community.invitation.external';
+import { NotificationInputPlatformInvitation } from './dto/notification.dto.input.platform.invitation';
 import { NotificationInputPlatformGlobalRoleChange } from './dto/notification.dto.input.platform.global.role.change';
-import { NotificationInputCommunityVirtualContributorInvitation } from './dto/notification.dto.input.community.vc.invitation';
+import { NotificationInputCommunityInvitationVirtualContributor } from './dto/notification.dto.input.community.invitation.vc';
 
 @Injectable()
 export class NotificationAdapter {
@@ -313,7 +313,7 @@ export class NotificationAdapter {
     const payload =
       await this.notificationPayloadBuilder.buildInvitationCreatedNotificationPayload(
         eventData.triggeredBy,
-        eventData.invitedUser,
+        eventData.invitedContributorID,
         eventData.community,
         eventData.welcomeMessage
       );
@@ -322,7 +322,7 @@ export class NotificationAdapter {
   }
 
   public async invitationVirtualContributorCreated(
-    eventData: NotificationInputCommunityVirtualContributorInvitation
+    eventData: NotificationInputCommunityInvitationVirtualContributor
   ): Promise<void> {
     const event = NotificationEventType.COMMUNITY_INVITATION_CREATED_VC;
     this.logEventTriggered(eventData, event);
@@ -330,18 +330,19 @@ export class NotificationAdapter {
     const payload =
       await this.notificationPayloadBuilder.buildInvitationVirtualContributorCreatedNotificationPayload(
         eventData.triggeredBy,
-        eventData.virtualContributorID,
-        eventData.account,
-        eventData.community
+        eventData.invitedContributorID,
+        eventData.accountHost,
+        eventData.community,
+        eventData.welcomeMessage
       );
 
     this.notificationsClient.emit<number>(event, payload);
   }
 
-  public async externalInvitationCreated(
-    eventData: NotificationInputCommunityInvitationExternal
+  public async platformInvitationCreated(
+    eventData: NotificationInputPlatformInvitation
   ): Promise<void> {
-    const event = NotificationEventType.COMMUNITY_EXTERNAL_INVITATION_CREATED;
+    const event = NotificationEventType.COMMUNITY_PLATFORM_INVITATION_CREATED;
     this.logEventTriggered(eventData, event);
 
     const payload =
@@ -364,7 +365,7 @@ export class NotificationAdapter {
     const payload =
       await this.notificationPayloadBuilder.buildCommunityNewMemberPayload(
         eventData.triggeredBy,
-        eventData.userID,
+        eventData.contributorID,
         eventData.community
       );
     this.notificationsClient.emit(event, payload);

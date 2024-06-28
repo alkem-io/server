@@ -31,10 +31,13 @@ import { AiPersonaService } from '../ai-persona/ai.persona.service';
 import { CreateAiPersonaInput } from '../ai-persona/dto';
 import { VirtualContributorQuestionInput } from './dto/virtual.contributor.dto.question.input';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { IAiPersonaQuestionResult } from '../ai-persona/dto/ai.persona.question.dto.result';
 import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
 import { AiServerAdapterAskQuestionInput } from '@services/adapters/ai-server-adapter/dto/ai.server.adapter.dto.ask.question';
 import { SearchVisibility } from '@common/enums/search.visibility';
+import { IMessageAnswerToQuestion } from '@domain/communication/message.answer.to.question/message.answer.to.question.interface';
+import { IAiPersona } from '../ai-persona';
+import { IContributor } from '../contributor/contributor.interface';
+import { AccountHostService } from '@domain/space/account/account.host.service';
 
 @Injectable()
 export class VirtualContributorService {
@@ -47,6 +50,7 @@ export class VirtualContributorService {
     private namingService: NamingService,
     private aiPersonaService: AiPersonaService,
     private aiServerAdapter: AiServerAdapter,
+    private accountHostService: AccountHostService,
     @InjectRepository(VirtualContributor)
     private virtualContributorRepository: Repository<VirtualContributor>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -321,11 +325,33 @@ export class VirtualContributorService {
     };
   }
 
+  public async refershBodyOfKnowledge(
+    virtualContributor: IVirtualContributor,
+    agentInfo: AgentInfo
+  ): Promise<boolean> {
+    if (!virtualContributor.aiPersona) {
+      throw new EntityNotInitializedException(
+        `Virtual Contributor does not have aiPersona initialized: ${virtualContributor.id}`,
+        LogContext.AUTH
+      );
+    }
+    this.logger.verbose?.(
+      `refreshing the body of knowledge ${virtualContributor.id}, by ${agentInfo.userID}`,
+      LogContext.VIRTUAL_CONTRIBUTOR
+    );
+
+    const aiPersona = virtualContributor.aiPersona;
+
+    return await this.aiServerAdapter.refreshBodyOfKnowlege(
+      aiPersona.aiPersonaServiceID
+    );
+  }
+
   public async askQuestion(
     vcQuestionInput: VirtualContributorQuestionInput,
     agentInfo: AgentInfo,
     contextSpaceID: string
-  ): Promise<IAiPersonaQuestionResult> {
+  ): Promise<IMessageAnswerToQuestion> {
     const virtualContributor = await this.getVirtualContributorOrFail(
       vcQuestionInput.virtualContributorID,
       {
@@ -344,7 +370,7 @@ export class VirtualContributorService {
     }
     this.logger.verbose?.(
       `still need to use the context ${contextSpaceID}, ${agentInfo.agentID}`,
-      LogContext.VIRTUAL_CONTRIBUTOR_ENGINE
+      LogContext.AI_PERSONA_SERVICE_ENGINE
     );
     const aiServerAdapterQuestionInput: AiServerAdapterAskQuestionInput = {
       aiPersonaServiceID: virtualContributor.aiPersona.aiPersonaServiceID,
@@ -394,7 +420,9 @@ export class VirtualContributorService {
     return await this.virtualContributorRepository.save(virtualContributor);
   }
 
-  async getAgent(virtualContributor: IVirtualContributor): Promise<IAgent> {
+  public async getAgent(
+    virtualContributor: IVirtualContributor
+  ): Promise<IAgent> {
     const virtualContributorWithAgent = await this.getVirtualContributorOrFail(
       virtualContributor.id,
       {
@@ -409,6 +437,48 @@ export class VirtualContributorService {
       );
 
     return agent;
+  }
+
+  public async getAccountHost(
+    virtualContributor: IVirtualContributor
+  ): Promise<IContributor> {
+    const virtualContributorWithAccount =
+      await this.getVirtualContributorOrFail(virtualContributor.id, {
+        relations: { account: true },
+      });
+    const account = virtualContributorWithAccount.account;
+    if (!account)
+      throw new EntityNotInitializedException(
+        `Virtual Contributor Account not initialized: ${virtualContributor.id}`,
+        LogContext.AUTH
+      );
+
+    const host = await this.accountHostService.getHostOrFail(account);
+    return host;
+  }
+
+  async getAiPersonaOrFail(
+    virtualContributor: IVirtualContributor
+  ): Promise<IAiPersona> {
+    if (virtualContributor.aiPersona) {
+      return virtualContributor.aiPersona;
+    }
+    const virtualContributorWithAiPersona =
+      await this.getVirtualContributorOrFail(virtualContributor.id, {
+        relations: {
+          aiPersona: true,
+        },
+      });
+    const aiPersona = virtualContributorWithAiPersona.aiPersona;
+
+    if (!aiPersona) {
+      throw new EntityNotFoundException(
+        `Unable to find aiPersona for VirtualContributor: ${virtualContributor.nameID}`,
+        LogContext.VIRTUAL_CONTRIBUTOR
+      );
+    }
+
+    return aiPersona;
   }
 
   async getStorageAggregatorOrFail(

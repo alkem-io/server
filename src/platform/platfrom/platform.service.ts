@@ -29,6 +29,10 @@ import { ForumService } from '@platform/forum/forum.service';
 import { IForum } from '@platform/forum/forum.interface';
 import { ForumDiscussionCategory } from '@common/enums/forum.discussion.category';
 import { Discussion } from '@platform/forum-discussion/discussion.entity';
+import { CreatePlatformInvitationInput } from '@platform/invitation/dto/platform.invitation.dto.create';
+import { IPlatformInvitation } from '@platform/invitation/platform.invitation.interface';
+import { PlatformInvitationService } from '@platform/invitation/platform.invitation.service';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 
 @Injectable()
 export class PlatformService {
@@ -36,6 +40,7 @@ export class PlatformService {
     private userService: UserService,
     private agentService: AgentService,
     private forumService: ForumService,
+    private platformInvitationService: PlatformInvitationService,
     private entityManager: EntityManager,
     @InjectRepository(Platform)
     private platformRepository: Repository<Platform>,
@@ -77,6 +82,41 @@ export class PlatformService {
       );
     }
     return library;
+  }
+
+  async createPlatformInvitation(
+    platformInvitationData: CreatePlatformInvitationInput,
+    agentInfo: AgentInfo
+  ): Promise<IPlatformInvitation> {
+    const platform = await this.getPlatformOrFail({
+      relations: { platformInvitations: true },
+    });
+    if (!platform.platformInvitations) {
+      throw new EntityNotFoundException(
+        'No Platform Invitation found!',
+        LogContext.PLATFORM
+      );
+    }
+    const platformInvitation =
+      await this.platformInvitationService.createPlatformInvitation(
+        platformInvitationData
+      );
+    platformInvitation.platform = platform;
+    platformInvitation.createdBy = agentInfo.userID;
+    return await this.platformInvitationService.save(platformInvitation);
+  }
+
+  async getPlatformInvitationsForRole(): Promise<IPlatformInvitation[]> {
+    const platform = await this.getPlatformOrFail({
+      relations: { platformInvitations: true },
+    });
+    if (!platform.platformInvitations) {
+      throw new EntityNotFoundException(
+        'No Platform Invitation found!',
+        LogContext.PLATFORM
+      );
+    }
+    return platform.platformInvitations;
   }
 
   async getForumOrFail(): Promise<IForum> {
@@ -250,6 +290,9 @@ export class PlatformService {
         break;
       case PlatformRole.BETA_TESTER:
         result.type = AuthorizationCredential.BETA_TESTER;
+        break;
+      case PlatformRole.VC_CAMPAIGN:
+        result.type = AuthorizationCredential.VC_CAMPAIGN;
         break;
       default:
         throw new ForbiddenException(

@@ -24,7 +24,13 @@ export class RolesResultSpace extends RolesResultCommunity {
   visibility!: SpaceVisibility;
 
   constructor(space: ISpace) {
-    super(space.nameID, space.id, space.profile.displayName, space.type);
+    super(
+      space.nameID,
+      space.id,
+      space.profile.displayName,
+      space.type,
+      space.level
+    );
     this.spaceID = space.id;
     this.space = space;
     this.visibility =

@@ -325,11 +325,11 @@ export class ActivityAdapter {
     const collaborationID = await this.getCollaborationIdFromCommunity(
       community.id
     );
-    const description = `[${community.type}] '${eventData.user.nameID}'`;
+    const description = `[${community.type}] '${eventData.contributor.nameID}'`;
     const activity = await this.activityService.createActivity({
       triggeredBy: eventData.triggeredBy,
       collaborationID,
-      resourceID: eventData.user.id, // the user that joined
+      resourceID: eventData.contributor.id, // the user that joined
       parentID: community.id, // the community that was joined
       description: description,
       type: eventType,

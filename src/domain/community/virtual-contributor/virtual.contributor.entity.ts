@@ -11,17 +11,14 @@ export class VirtualContributor
   implements IVirtualContributor
 {
   @ManyToOne(() => Account, account => account.virtualContributors, {
-    eager: true,
+    eager: false,
     onDelete: 'SET NULL',
   })
   @JoinColumn()
   account!: Account;
 
-  @Column({ length: 255, nullable: false })
-  communicationID!: string;
-
   @OneToOne(() => AiPersona, {
-    eager: true,
+    eager: false,
     cascade: true,
   })
   @JoinColumn()

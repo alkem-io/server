@@ -14,11 +14,6 @@ export class IVirtualContributor
 {
   account!: IAccount;
 
-  communicationID!: string;
-
-  @Field(() => IAiPersona, {
-    description: 'The AI persona being used by this virtual contributor',
-  })
   aiPersona!: IAiPersona;
 
   @Field(() => SearchVisibility, {

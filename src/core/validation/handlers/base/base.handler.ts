@@ -49,7 +49,6 @@ import {
   UpdateDocumentInput,
 } from '@domain/storage/document';
 import { VisualUploadImageInput } from '@domain/common/visual/dto/visual.dto.upload.image';
-import { CreateInvitationUserByEmailOnCommunityInput } from '@domain/community/community/dto/community.dto.invite.external.user';
 import { UpdateInnovationFlowInput } from '@domain/collaboration/innovation-flow/dto';
 import {
   CreateCalloutFramingInput,
@@ -84,6 +83,7 @@ import { UpdateAccountDefaultsInput } from '@domain/space/account/dto/account.dt
 import { UpdateCommunityGuidelinesInput } from '@domain/community/community-guidelines/dto/community.guidelines.dto.update';
 import { CreateInvitationForContributorsOnCommunityInput } from '@domain/community/community/dto/community.dto.invite.contributor';
 import { ForumCreateDiscussionInput } from '@platform/forum/dto/forum.dto.create.discussion';
+import { CreatePlatformInvitationOnCommunityInput } from '@domain/community/community/dto/community.dto.platform.invitation.community';
 
 export class BaseHandler extends AbstractHandler {
   public async handle(
@@ -150,7 +150,7 @@ export class BaseHandler extends AbstractHandler {
       VisualUploadImageInput,
       CommunityApplyInput,
       CreateInvitationForContributorsOnCommunityInput,
-      CreateInvitationUserByEmailOnCommunityInput,
+      CreatePlatformInvitationOnCommunityInput,
       ForumCreateDiscussionInput,
       SendMessageOnCalloutInput,
       CreateCalloutOnCollaborationInput,
