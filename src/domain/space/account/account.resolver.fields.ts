@@ -33,7 +33,7 @@ import {
   IVirtualContributor,
   VirtualContributor,
 } from '@domain/community/virtual-contributor';
-import { AccountHostService } from './account.host.service';
+import { AccountHostService } from '../account.host/account.host.service';
 import { LicensePrivilege } from '@common/enums/license.privilege';
 import { LicensePlanType } from '@common/enums/license.plan.type';
 

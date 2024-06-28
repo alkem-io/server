@@ -17,7 +17,7 @@ import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { AiPersonaModule } from '../ai-persona/ai.persona.module';
 import { AiServerAdapterModule } from '@services/adapters/ai-server-adapter/ai.server.adapter.module';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
-import { AccountHostModule } from '@domain/space/account/account.host.module';
+import { AccountHostModule } from '@domain/space/account.host/account.host.module';
 
 @Module({
   imports: [
