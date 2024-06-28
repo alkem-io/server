@@ -197,6 +197,9 @@ export class SpaceAuthorizationService {
         break;
     }
 
+    // Save before proparagating to child entities
+    space = await this.spaceService.save(space);
+
     // Cascade down
     // propagate authorization rules for child entities
     space = await this.propagateAuthorizationToChildEntities(

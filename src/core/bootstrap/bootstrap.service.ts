@@ -70,7 +70,7 @@ export class BootstrapService {
       )?.logging?.profiling_enabled;
       if (profilingEnabled) Profiling.profilingEnabled = profilingEnabled;
 
-      await this.ensureSpaceSingleton();
+      await this.ensureAccountSpaceSingleton();
       await this.bootstrapProfiles();
       await this.ensureSsiPopulated();
       await this.platformService.ensureForumCreated();
@@ -255,7 +255,7 @@ export class BootstrapService {
     }
   }
 
-  async ensureSpaceSingleton() {
+  async ensureAccountSpaceSingleton() {
     this.logger.verbose?.(
       '=== Ensuring at least one Account with a space is present ===',
       LogContext.BOOTSTRAP
@@ -292,12 +292,12 @@ export class BootstrapService {
         },
         hostID: DEFAULT_HOST_ORG_NAMEID,
       };
-      return this.accountService
-        .createAccount(spaceInput)
-        .then(account =>
-          this.accountAuthorizationService.applyAuthorizationPolicy(account)
-        )
-        .then(account => this.accountService.save(account));
+
+      let account = await this.accountService.createAccount(spaceInput);
+      account = await this.accountAuthorizationService.applyAuthorizationPolicy(
+        account
+      );
+      return await this.accountService.save(account);
     }
   }
 }
