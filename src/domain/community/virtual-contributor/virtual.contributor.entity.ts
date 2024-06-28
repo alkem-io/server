@@ -17,9 +17,6 @@ export class VirtualContributor
   @JoinColumn()
   account!: Account;
 
-  @Column({ length: 255, nullable: false })
-  communicationID!: string;
-
   @OneToOne(() => AiPersona, {
     eager: false,
     cascade: true,
