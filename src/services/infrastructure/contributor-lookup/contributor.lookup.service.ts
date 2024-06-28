@@ -253,6 +253,19 @@ export class ContributorLookupService {
     return contributor;
   }
 
+  async getContributorOrFail(
+    contributorID: string,
+    options?: FindOneOptions<IContributor>
+  ): Promise<IContributor | never> {
+    const contributor = await this.getContributor(contributorID, options);
+    if (!contributor)
+      throw new EntityNotFoundException(
+        `Unable to find Contributor with ID: ${contributorID}`,
+        LogContext.COMMUNITY
+      );
+    return contributor;
+  }
+
   private async getCredentialsByTypeHeldByAgent(
     agentID: string,
     credentialType: AuthorizationCredential
