@@ -21,11 +21,13 @@ import { LinkService } from '@domain/collaboration/link/link.service';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { EntityManager } from 'typeorm/entity-manager/EntityManager';
 import { InjectEntityManager } from '@nestjs/typeorm';
+import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 
 export class ActivityLogService {
   constructor(
     private activityService: ActivityService,
     private userService: UserService,
+    private contributorLookupService: ContributorLookupService,
     private calloutService: CalloutService,
     private postService: PostService,
     private whiteboardService: WhiteboardService,
@@ -133,7 +135,7 @@ export class ActivityLogService {
       const activityBuilder: IActivityLogBuilder =
         new ActivityLogBuilderService(
           activityLogEntryBase,
-          this.userService,
+          this.contributorLookupService,
           this.calloutService,
           this.postService,
           this.whiteboardService,
