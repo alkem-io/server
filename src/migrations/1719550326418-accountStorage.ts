@@ -22,9 +22,13 @@ export class accountStorage1719550326418 implements MigrationInterface {
       }[] = await queryRunner.query(
         `SELECT id, storageAggregatorId FROM space WHERE id = '${account.spaceId}'`
       );
-      await queryRunner.query(
-        `UPDATE storage_aggregator SET parentStorageAggregatorId = '${accountStorageAggregatorID}' WHERE id = '${rootSpace.storageAggregatorId}'`
-      );
+      if (rootSpace) {
+        await queryRunner.query(
+          `UPDATE storage_aggregator SET parentStorageAggregatorId = '${accountStorageAggregatorID}' WHERE id = '${rootSpace.storageAggregatorId}'`
+        );
+      } else {
+        console.log(`No root space found for account ${account.id}`);
+      }
     }
 
     await queryRunner.query(
