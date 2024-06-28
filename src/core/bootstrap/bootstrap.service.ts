@@ -32,6 +32,7 @@ import { SpaceType } from '@common/enums/space.type';
 import { SearchIngestService } from '@services/api/search/v2/ingest/search.ingest.service';
 import { CreateAccountInput } from '@domain/space/account/dto/account.dto.create';
 import { SpaceLevel } from '@common/enums/space.level';
+import { CreateSpaceOnAccountInput } from '@domain/space/account/dto/account.dto.create.space';
 
 @Injectable()
 export class BootstrapService {
@@ -294,6 +295,15 @@ export class BootstrapService {
       };
 
       let account = await this.accountService.createAccount(spaceInput);
+      const createSpaceAccountInput: CreateSpaceOnAccountInput = {
+        accountID: account.id,
+        spaceData: spaceInput.spaceData,
+      };
+      account.space = await this.accountService.createSpaceOnAccount(
+        account,
+        createSpaceAccountInput
+      );
+      account = await this.accountService.save(account);
       account = await this.accountAuthorizationService.applyAuthorizationPolicy(
         account
       );
