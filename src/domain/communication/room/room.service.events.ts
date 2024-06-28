@@ -31,10 +31,8 @@ import { SubscriptionPublishService } from '@services/subscriptions/subscription
 import { RoomService } from './room.service';
 import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
 import { NotSupportedException } from '@common/exceptions';
-import { EntityManager } from 'typeorm';
-import { InjectEntityManager } from '@nestjs/typeorm';
-import { Space } from '@domain/space/space/space.entity';
 import { VirtualContributorQuestionInput } from '@domain/community/virtual-contributor/dto/virtual.contributor.dto.question.input';
+import { MessageService } from '../message/message.service';
 
 @Injectable()
 export class RoomServiceEvents {
@@ -44,20 +42,12 @@ export class RoomServiceEvents {
     private notificationAdapter: NotificationAdapter,
     private communityResolverService: CommunityResolverService,
     private roomService: RoomService,
+    private messageService: MessageService,
     private subscriptionPublishService: SubscriptionPublishService,
     private virtualContributorService: VirtualContributorService,
-    // this should use the space service but still the same circular dependency issue :(
-    @InjectEntityManager('default')
-    private entityManager: EntityManager,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
-
-  // should this use Space Service?
-  private async getSpaceNameId(id: string) {
-    const space = await this.entityManager.findOneByOrFail(Space, { id });
-    return space.nameID;
-  }
 
   public async processVirtualContributorMentions(
     mentions: Mention[],
@@ -71,8 +61,8 @@ export class RoomServiceEvents {
       room.type as RoomType
     );
 
-    const spaceNameID =
-      await this.communityResolverService.getRootSpaceNameIDFromCommunityOrFail(
+    const spaceID =
+      await this.communityResolverService.getRootSpaceIDFromCommunityOrFail(
         community
       );
 
@@ -117,23 +107,14 @@ export class RoomServiceEvents {
         const result = await this.virtualContributorService.askQuestion(
           chatData,
           agentInfo,
-          spaceNameID
+          spaceID
         );
 
-        let answer = result.answer;
-        this.logger.warn(
-          `got answer for VC: ${answer}`,
-          LogContext.COMMUNICATION
-        );
-
-        if (result.sources) {
-          answer = `${answer}\n${result.sources
-            .map(({ title, uri }) => `- [${title}](${uri})`)
-            .join('\n')}`;
-        }
+        const simpleAnswer =
+          this.messageService.convertAnswerToSimpleMessage(result);
 
         const answerData: RoomSendMessageReplyInput = {
-          message: answer,
+          message: simpleAnswer,
           roomID: room.id,
           threadID: question.id,
         };

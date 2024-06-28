@@ -5,39 +5,56 @@ import { AiPersona } from './ai.persona.entity';
 import { AiPersonaService } from './ai.persona.service';
 import { AuthorizationPrivilege } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
-import { CurrentUser, Profiling } from '@common/decorators';
-import { AuthorizationService } from '@core/authorization/authorization.service';
+import { AuthorizationAgentPrivilege } from '@common/decorators';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { IAiPersona } from './ai.persona.interface';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
+import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
 
 @Resolver(() => IAiPersona)
 export class AiPersonaResolverFields {
   constructor(
-    private authorizationService: AuthorizationService,
-    private aiPersonaService: AiPersonaService
+    private aiPersonaService: AiPersonaService,
+    private aiServerAdapter: AiServerAdapter
   ) {}
 
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('authorization', () => IAuthorizationPolicy, {
     nullable: true,
     description: 'The Authorization for this Virtual.',
   })
-  @Profiling.api
-  async authorization(
-    @Parent() parent: AiPersona,
-    @CurrentUser() agentInfo: AgentInfo
-  ) {
+  async authorization(@Parent() parent: AiPersona) {
     // Reload to ensure the authorization is loaded
     const aiPersona = await this.aiPersonaService.getAiPersonaOrFail(parent.id);
 
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      aiPersona.authorization,
-      AuthorizationPrivilege.READ,
-      `virtual authorization access: ${aiPersona.id}`
-    );
-
     return aiPersona.authorization;
+  }
+
+  // Expose these fields for now so that we do not have a regression in functionality on the client
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('bodyOfKnowledgeType', () => AiPersonaBodyOfKnowledgeType, {
+    nullable: true,
+    description: 'The body of knowledge type used for the AI Persona.',
+  })
+  async bodyOfKnowledgeType(
+    @Parent() aiPersona: AiPersona
+  ): Promise<AiPersonaBodyOfKnowledgeType> {
+    return await this.aiServerAdapter.getPersonaServiceBodyOfKnowledgeType(
+      aiPersona.aiPersonaServiceID
+    );
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('bodyOfKnowledgeID', () => String, {
+    nullable: true,
+    description: 'The body of knowledge ID used for the AI Persona.',
+  })
+  async bodyOfKnowledgeID(@Parent() aiPersona: AiPersona): Promise<string> {
+    return await this.aiServerAdapter.getPersonaServiceBodyOfKnowledgeID(
+      aiPersona.aiPersonaServiceID
+    );
   }
 }

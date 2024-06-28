@@ -3,9 +3,9 @@ import { EntityNotFoundException } from '@common/exceptions';
 import { NotificationEventException } from '@common/exceptions/notification.event.exception';
 import { ICommunity } from '@domain/community/community';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityManager, FindOneOptions, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Post } from '@domain/collaboration/post/post.entity';
 import {
   CollaborationPostCreatedEventPayload,
@@ -27,20 +27,19 @@ import {
   CommunityInvitationCreatedEventPayload,
   CollaborationWhiteboardCreatedEventPayload,
   CommentReplyEventPayload,
-  CommunityExternalInvitationCreatedEventPayload,
   BaseEventPayload,
   ContributorPayload,
   SpaceBaseEventPayload,
   PlatformGlobalRoleChangeEventPayload,
   RoleChangeType,
+  CommunityPlatformInvitationCreatedEventPayload,
+  CommunityInvitationVirtualContributorCreatedEventPayload,
   // SpaceCreatedEventPayload,
 } from '@alkemio/notifications-lib';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { IMessage } from '@domain/communication/message/message.interface';
 import { IUser } from '@domain/community/user/user.interface';
-import { User } from '@domain/community/user/user.entity';
-import { Organization } from '@domain/community/organization/organization.entity';
 import { Community } from '@domain/community/community/community.entity';
 import { ConfigService } from '@nestjs/config/dist/config.service';
 import { RoomType } from '@common/enums/room.type';
@@ -52,31 +51,23 @@ import { NotificationInputPostComment } from './dto/notification.dto.input.post.
 import { ContributionResolverService } from '@services/infrastructure/entity-resolver/contribution.resolver.service';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { IDiscussion } from '@platform/forum-discussion/discussion.interface';
+import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
-import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
-import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
-import { AccountHostService } from '@domain/space/account/account.host.service';
-import { IAccount } from '@domain/space/account/account.interface';
-import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
-import { VirtualContributorInvitationCreatedEventPayload } from '@alkemio/notifications-lib/dist/dto/virtual.contributor.invitation.created.event.payload';
 
 @Injectable()
 export class NotificationPayloadBuilder {
   constructor(
+    private contributorLookupService: ContributorLookupService,
     private communityResolverService: CommunityResolverService,
     @InjectRepository(Post)
     private postRepository: Repository<Post>,
     @InjectRepository(Community)
     private communityRepository: Repository<Community>,
-    @InjectEntityManager('default')
-    private entityManager: EntityManager,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private configService: ConfigService,
     private contributionResolverService: ContributionResolverService,
-    private urlGeneratorService: UrlGeneratorService,
-    private accountHostService: AccountHostService,
-    private virtualContributorService: VirtualContributorService
+    private urlGeneratorService: UrlGeneratorService
   ) {}
 
   async buildApplicationCreatedNotificationPayload(
@@ -124,31 +115,26 @@ export class NotificationPayloadBuilder {
   async buildInvitationVirtualContributorCreatedNotificationPayload(
     invitationCreatorID: string,
     virtualContributorID: string,
-    account: IAccount,
-    community: ICommunity
-  ): Promise<VirtualContributorInvitationCreatedEventPayload> {
+    accountHost: IContributor,
+    community: ICommunity,
+    welcomeMessage?: string
+  ): Promise<CommunityInvitationVirtualContributorCreatedEventPayload> {
     const spacePayload = await this.buildSpacePayload(
       community,
       invitationCreatorID
     );
-    const host = await this.accountHostService.getHostOrFail(account);
-    const hostPayload = await this.getContributorPayloadOrFail(host.id);
-    const virtualContributor =
-      await this.virtualContributorService.getVirtualContributorOrFail(
-        virtualContributorID,
-        { relations: { profile: true } }
-      );
 
-    return {
+    const hostPayload = await this.getContributorPayloadOrFail(accountHost.id);
+
+    const virtualContributorPayload: ContributorPayload =
+      await this.getContributorPayloadOrFail(virtualContributorID);
+    const result: CommunityInvitationVirtualContributorCreatedEventPayload = {
       host: hostPayload,
-      virtualContributor: {
-        name: virtualContributor.profile.displayName,
-        url: this.urlGeneratorService.generateUrlForVC(
-          virtualContributor.nameID
-        ),
-      },
+      invitee: virtualContributorPayload,
+      welcomeMessage,
       ...spacePayload,
     };
+    return result;
   }
 
   async buildExternalInvitationCreatedNotificationPayload(
@@ -156,12 +142,12 @@ export class NotificationPayloadBuilder {
     invitedUserEmail: string,
     community: ICommunity,
     message?: string
-  ): Promise<CommunityExternalInvitationCreatedEventPayload> {
+  ): Promise<CommunityPlatformInvitationCreatedEventPayload> {
     const spacePayload = await this.buildSpacePayload(
       community,
       invitationCreatorID
     );
-    const payload: CommunityExternalInvitationCreatedEventPayload = {
+    const payload: CommunityPlatformInvitationCreatedEventPayload = {
       invitees: [{ email: invitedUserEmail }],
       welcomeMessage: message,
       ...spacePayload,
@@ -421,13 +407,13 @@ export class NotificationPayloadBuilder {
 
   async buildCommunityNewMemberPayload(
     triggeredBy: string,
-    userID: string,
+    contributorID: string,
     community: ICommunity
   ): Promise<CommunityNewMemberPayload> {
     const spacePayload = await this.buildSpacePayload(community, triggeredBy);
-    const memberPayload = await this.getContributorPayloadOrFail(userID);
+    const memberPayload = await this.getContributorPayloadOrFail(contributorID);
     const payload: CommunityNewMemberPayload = {
-      user: memberPayload,
+      contributor: memberPayload,
       ...spacePayload,
     };
 
@@ -561,11 +547,14 @@ export class NotificationPayloadBuilder {
   private async getContributorPayloadOrFail(
     contributorID: string
   ): Promise<ContributorPayload> {
-    const contributor = await this.getContributor(contributorID, {
-      relations: {
-        profile: true,
-      },
-    });
+    const contributor = await this.contributorLookupService.getContributor(
+      contributorID,
+      {
+        relations: {
+          profile: true,
+        },
+      }
+    );
 
     if (!contributor || !contributor.profile) {
       throw new EntityNotFoundException(
@@ -573,6 +562,9 @@ export class NotificationPayloadBuilder {
         LogContext.COMMUNITY
       );
     }
+
+    const contributorType =
+      this.contributorLookupService.getContributorType(contributor);
 
     const userURL = await this.urlGeneratorService.createUrlForContributor(
       contributor
@@ -584,53 +576,9 @@ export class NotificationPayloadBuilder {
         displayName: contributor.profile.displayName,
         url: userURL,
       },
+      type: contributorType,
     };
     return result;
-  }
-
-  private async getContributor(
-    contributorID: string,
-    options?: FindOneOptions<IContributor>
-  ): Promise<IContributor | null> {
-    let contributor: IContributor | null;
-    if (contributorID.length === UUID_LENGTH) {
-      contributor = await this.entityManager.findOne(User, {
-        ...options,
-        where: { ...options?.where, id: contributorID },
-      });
-      if (!contributor) {
-        contributor = await this.entityManager.findOne(Organization, {
-          ...options,
-          where: { ...options?.where, id: contributorID },
-        });
-      }
-      if (!contributor) {
-        contributor = await this.entityManager.findOne(VirtualContributor, {
-          ...options,
-          where: { ...options?.where, id: contributorID },
-        });
-      }
-    } else {
-      // look up based on nameID
-      // toDo https://app.zenhub.com/workspaces/alkemio-development-5ecb98b262ebd9f4aec4194c/issues/gh/alkem-io/server/4126
-      contributor = await this.entityManager.findOne(User, {
-        ...options,
-        where: { ...options?.where, nameID: contributorID },
-      });
-      if (!contributor) {
-        contributor = await this.entityManager.findOne(Organization, {
-          ...options,
-          where: { ...options?.where, nameID: contributorID },
-        });
-      }
-      if (!contributor) {
-        contributor = await this.entityManager.findOne(VirtualContributor, {
-          ...options,
-          where: { ...options?.where, nameID: contributorID },
-        });
-      }
-    }
-    return contributor;
   }
 
   async buildCommunicationOrganizationMessageNotificationPayload(

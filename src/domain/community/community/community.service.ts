@@ -44,10 +44,7 @@ import { UpdateFormInput } from '@domain/common/form/dto/form.dto.update';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 import { InvitationService } from '../invitation/invitation.service';
 import { IInvitation } from '../invitation/invitation.interface';
-import { CreateInvitationUserByEmailOnCommunityInput } from './dto/community.dto.invite.external.user';
-import { IInvitationExternal } from '../invitation.external';
-import { InvitationExternalService } from '../invitation.external/invitation.external.service';
-import { CreateInvitationExternalInput } from '../invitation.external/dto/invitation.external.dto.create';
+import { CreatePlatformInvitationOnCommunityInput } from './dto/community.dto.platform.invitation.community';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { CreateInvitationInput } from '../invitation/dto/invitation.dto.create';
 import { CommunityMembershipException } from '@common/exceptions/community.membership.exception';
@@ -63,6 +60,9 @@ import { CommunityRoleImplicit } from '@common/enums/community.role.implicit';
 import { AuthorizationCredential } from '@common/enums';
 import { ContributorService } from '../contributor/contributor.service';
 import { IContributor } from '../contributor/contributor.interface';
+import { PlatformInvitationService } from '@platform/invitation/platform.invitation.service';
+import { IPlatformInvitation } from '@platform/invitation';
+import { CreatePlatformInvitationInput } from '@platform/invitation/dto/platform.invitation.dto.create';
 
 @Injectable()
 export class CommunityService {
@@ -76,7 +76,7 @@ export class CommunityService {
     private userGroupService: UserGroupService,
     private applicationService: ApplicationService,
     private invitationService: InvitationService,
-    private invitationExternalService: InvitationExternalService,
+    private platformInvitationService: PlatformInvitationService,
     private communicationService: CommunicationService,
     private communityResolverService: CommunityResolverService,
     private communityEventsService: CommunityEventsService,
@@ -113,7 +113,7 @@ export class CommunityService {
 
     community.applications = [];
     community.invitations = [];
-    community.externalInvitations = [];
+    community.platformInvitations = [];
 
     community.groups = [];
     community.communication =
@@ -215,7 +215,7 @@ export class CommunityService {
       relations: {
         applications: true,
         invitations: true,
-        externalInvitations: true,
+        platformInvitations: true,
         groups: true,
         communication: true,
         applicationForm: true,
@@ -229,7 +229,7 @@ export class CommunityService {
       !community.groups ||
       !community.applications ||
       !community.invitations ||
-      !community.externalInvitations ||
+      !community.platformInvitations ||
       !community.guidelines ||
       !community.applicationForm
     ) {
@@ -284,8 +284,8 @@ export class CommunityService {
       });
     }
 
-    for (const externalInvitation of community.externalInvitations) {
-      await this.invitationExternalService.deleteInvitationExternal({
+    for (const externalInvitation of community.platformInvitations) {
+      await this.platformInvitationService.deletePlatformInvitation({
         ID: externalInvitation.id,
       });
     }
@@ -576,7 +576,13 @@ export class CommunityService {
           role
         );
       case CommunityContributorType.VIRTUAL:
-        return await this.assignVirtualToRole(community, contributorID, role);
+        return await this.assignVirtualToRole(
+          community,
+          contributorID,
+          role,
+          agentInfo,
+          triggerNewMemberEvents
+        );
       default:
         throw new EntityNotInitializedException(
           `Invalid community contributor type: ${contributorType}`,
@@ -630,13 +636,31 @@ export class CommunityService {
       }
     }
 
+    await this.contributorAddedToRole(
+      user,
+      community,
+      role,
+      agentInfo,
+      triggerNewMemberEvents
+    );
+
+    return user;
+  }
+
+  private async contributorAddedToRole(
+    contributor: IContributor,
+    community: ICommunity,
+    role: CommunityRole,
+    agentInfo?: AgentInfo,
+    triggerNewMemberEvents = false
+  ) {
     if (role === CommunityRole.MEMBER) {
-      this.addMemberToCommunication(user, community);
+      this.addMemberToCommunication(contributor, community);
 
       if (agentInfo) {
         await this.communityEventsService.registerCommunityNewMemberActivity(
           community,
-          user,
+          contributor,
           agentInfo
         );
 
@@ -648,19 +672,19 @@ export class CommunityService {
             rootSpaceID,
             displayName,
             agentInfo,
-            user
+            contributor
           );
         }
       }
     }
-
-    return user;
   }
 
   async assignVirtualToRole(
     community: ICommunity,
     virtualContributorID: string,
-    role: CommunityRole
+    role: CommunityRole,
+    agentInfo?: AgentInfo,
+    triggerNewMemberEvents = false
   ): Promise<IVirtualContributor> {
     const { virtualContributor, agent } =
       await this.virtualContributorService.getVirtualContributorAndAgent(
@@ -688,17 +712,27 @@ export class CommunityService {
       CommunityContributorType.VIRTUAL
     );
 
+    await this.contributorAddedToRole(
+      virtualContributor,
+      community,
+      role,
+      agentInfo,
+      triggerNewMemberEvents
+    );
     return virtualContributor;
   }
 
   private async addMemberToCommunication(
-    user: IUser,
+    contributor: IContributor,
     community: ICommunity
   ): Promise<void> {
     // register the user for the community rooms
     const communication = await this.getCommunication(community.id);
     this.communicationService
-      .addUserToCommunications(communication, user.communicationID)
+      .addContributorToCommunications(
+        communication,
+        contributor.communicationID
+      )
       .catch(error =>
         this.logger.error(
           `Unable to add user to community messaging (${community.id}): ${error}`,
@@ -1237,10 +1271,10 @@ export class CommunityService {
     return invitation;
   }
 
-  async createInvitationExternalUser(
-    invitationData: CreateInvitationUserByEmailOnCommunityInput,
+  async createPlatformInvitation(
+    invitationData: CreatePlatformInvitationOnCommunityInput,
     agentInfo: AgentInfo
-  ): Promise<IInvitationExternal> {
+  ): Promise<IPlatformInvitation> {
     await this.validateInvitationToExternalUser(
       invitationData.email,
       invitationData.communityID
@@ -1248,19 +1282,19 @@ export class CommunityService {
     const community = await this.getCommunityOrFail(
       invitationData.communityID,
       {
-        relations: { externalInvitations: true },
+        relations: { platformInvitations: true },
       }
     );
 
-    const externalInvitationInput: CreateInvitationExternalInput = {
+    const externalInvitationInput: CreatePlatformInvitationInput = {
       ...invitationData,
       createdBy: agentInfo.userID,
     };
     const externalInvitation =
-      await this.invitationExternalService.createInvitationExternal(
+      await this.platformInvitationService.createPlatformInvitation(
         externalInvitationInput
       );
-    community.externalInvitations?.push(externalInvitation);
+    community.platformInvitations?.push(externalInvitation);
     await this.communityRepository.save(community);
 
     return externalInvitation;
@@ -1348,12 +1382,15 @@ export class CommunityService {
       );
     }
 
-    const existingExternalInvitations =
-      await this.invitationExternalService.findInvitationExternalsForUser(
+    const platformInvitations =
+      await this.platformInvitationService.findPlatformInvitationsForUser(
         email
       );
-    for (const existingExternalInvitation of existingExternalInvitations) {
-      if (existingExternalInvitation.community.id === communityID) {
+    for (const platformInvitation of platformInvitations) {
+      if (
+        platformInvitation.community &&
+        platformInvitation.community.id === communityID
+      ) {
         throw new CommunityMembershipException(
           `An invitation with the provided email address (${email}) already exists for the specified community: ${communityID}`,
           LogContext.COMMUNITY
@@ -1376,13 +1413,13 @@ export class CommunityService {
     return communityApps?.invitations || [];
   }
 
-  async getExternalInvitations(
+  async getPlatformInvitations(
     community: ICommunity
-  ): Promise<IInvitationExternal[]> {
+  ): Promise<IPlatformInvitation[]> {
     const communityApps = await this.getCommunityOrFail(community.id, {
-      relations: { externalInvitations: true },
+      relations: { platformInvitations: true },
     });
-    return communityApps?.externalInvitations || [];
+    return communityApps?.platformInvitations || [];
   }
 
   async getApplicationForm(community: ICommunity): Promise<IForm> {

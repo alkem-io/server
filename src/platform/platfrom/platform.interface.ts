@@ -5,6 +5,7 @@ import { ILibrary } from '@library/library/library.interface';
 import { ObjectType } from '@nestjs/graphql';
 import { IConfig } from '@platform/configuration/config/config.interface';
 import { IForum } from '@platform/forum';
+import { IPlatformInvitation } from '@platform/invitation';
 import { ILicensing } from '@platform/licensing/licensing.interface';
 import { IMetadata } from '@platform/metadata/metadata.interface';
 
@@ -17,4 +18,5 @@ export abstract class IPlatform extends IAuthorizable {
   storageAggregator!: IStorageAggregator;
   innovationHubs?: IInnovationHub[];
   licensing?: ILicensing;
+  platformInvitations!: IPlatformInvitation[];
 }

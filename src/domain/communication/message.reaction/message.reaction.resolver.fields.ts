@@ -5,14 +5,14 @@ import { EntityNotFoundException } from '@common/exceptions';
 import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IMessageReaction } from './message.reaction.interface';
-import { UserLookupService } from '@services/infrastructure/user-lookup/user.lookup.service';
+import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 
 @Resolver(() => IMessageReaction)
 export class MessageReactionResolverFields {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    private userLookupService: UserLookupService
+    private userLookupService: ContributorLookupService
   ) {}
 
   @ResolveField('sender', () => IUser, {

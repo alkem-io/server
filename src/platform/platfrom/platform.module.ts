@@ -15,12 +15,12 @@ import { InnovationHubModule } from '@domain/innovation-hub';
 import { KonfigModule } from '@platform/configuration/config/config.module';
 import { MetadataModule } from '@platform/metadata/metadata.module';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
-import { OrganizationModule } from '@domain/community/organization/organization.module';
-import { UserModule } from '@domain/community/user/user.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
 import { LicensingModule } from '@platform/licensing/licensing.module';
 import { ForumModule } from '@platform/forum/forum.module';
+import { PlatformInvitationModule } from '@platform/invitation/platform.invitation.module';
+import { UserModule } from '@domain/community/user/user.module';
 
 @Module({
   imports: [
@@ -35,10 +35,10 @@ import { ForumModule } from '@platform/forum/forum.module';
     MetadataModule,
     InnovationHubModule,
     LicensingModule,
-    OrganizationModule,
-    UserModule,
     AgentModule,
     NotificationAdapterModule,
+    PlatformInvitationModule,
+    UserModule,
     TypeOrmModule.forFeature([Platform]),
   ],
   providers: [

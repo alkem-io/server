@@ -16,6 +16,8 @@ import { NotificationAdapter } from '@services/adapters/notification-adapter/not
 import { PlatformService } from './platform.service';
 import { AssignPlatformRoleToUserInput } from './dto/platform.dto.assign.role.user';
 import { PlatformRole } from '@common/enums/platform.role';
+import { CreatePlatformInvitationForRoleInput } from '@platform/platfrom/dto/platform.invitation.dto.global.role';
+import { IPlatformInvitation } from '@platform/invitation/platform.invitation.interface';
 
 @Resolver()
 export class PlatformResolverMutations {
@@ -57,7 +59,10 @@ export class PlatformResolverMutations {
     const platformPolicy =
       await this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();
     let privilegeRequired = AuthorizationPrivilege.GRANT_GLOBAL_ADMINS;
-    if (membershipData.role === PlatformRole.BETA_TESTER) {
+    if (
+      membershipData.role === PlatformRole.BETA_TESTER ||
+      membershipData.role === PlatformRole.VC_CAMPAIGN
+    ) {
       privilegeRequired = AuthorizationPrivilege.PLATFORM_ADMIN;
     }
     await this.authorizationService.grantAccessOrFail(
@@ -110,6 +115,34 @@ export class PlatformResolverMutations {
       membershipData.role
     );
     return user;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IPlatformInvitation, {
+    description:
+      'Invite a User to join the platform in a particular Platform role e.g. BetaTester',
+  })
+  async inviteUserToPlatformWithRole(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('invitationData')
+    invitationData: CreatePlatformInvitationForRoleInput
+  ): Promise<IPlatformInvitation> {
+    const platformPolicy =
+      await this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();
+
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      platformPolicy,
+      AuthorizationPrivilege.PLATFORM_ADMIN,
+      `invitation to platform in global role: ${invitationData.email}`
+    );
+
+    // TODO: Notification
+
+    return await this.platformService.createPlatformInvitation(
+      invitationData,
+      agentInfo
+    );
   }
 
   private async notifyPlatformGlobalRoleChange(

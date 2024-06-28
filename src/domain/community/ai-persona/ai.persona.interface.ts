@@ -1,7 +1,6 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
-import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
 import { AiPersonaDataAccessMode } from '@common/enums/ai.persona.data.access.mode';
 import { AiPersonaInteractionMode } from '@common/enums/ai.persona.interaction.mode';
 
@@ -15,11 +14,11 @@ export class IAiPersona extends IAuthorizable {
   })
   description!: string;
 
-  @Field(() => AiPersonaBodyOfKnowledgeType, {
+  @Field(() => Markdown, {
     nullable: false,
-    description: 'The type of knowledge provided by this AI Persona.',
+    description: 'A overview of knowledge provided by this AI Persona.',
   })
-  bodyOfKnowledgeType!: AiPersonaBodyOfKnowledgeType;
+  bodyOfKnowledge!: string;
 
   @Field(() => AiPersonaDataAccessMode, {
     nullable: false,

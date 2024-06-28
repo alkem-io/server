@@ -3,7 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { TagsetModule } from '@domain/common/tagset/tagset.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
-import { UserLookupModule } from '@services/infrastructure/user-lookup/user.lookup.module';
+import { ContributorLookupModule } from '@services/infrastructure/contributor-lookup/contributor.lookup.module';
 import { StorageServiceModule } from '@services/adapters/storage';
 import { Document } from './document.entity';
 import { DocumentResolverMutations } from './document.resolver.mutations';
@@ -16,7 +16,7 @@ import { DocumentAuthorizationService } from './document.service.authorization';
     AuthorizationPolicyModule,
     AuthorizationModule,
     TagsetModule,
-    UserLookupModule,
+    ContributorLookupModule,
     StorageServiceModule,
     TypeOrmModule.forFeature([Document]),
   ],

@@ -10,6 +10,7 @@ import { AiServerService } from './ai.server.service';
 import { AiServerAuthorizationService } from './ai.server.service.authorization';
 import { AiPersonaServiceModule } from '../ai-persona-service/ai.persona.service.module';
 import { AiPersonaEngineAdapterModule } from '../ai-persona-engine-adapter/ai.persona.engine.adapter.module';
+import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { AiPersonaEngineAdapterModule } from '../ai-persona-engine-adapter/ai.pe
     AiPersonaServiceModule,
     TypeOrmModule.forFeature([AiServer]),
     AiPersonaEngineAdapterModule,
+    PlatformAuthorizationPolicyModule,
   ],
   providers: [
     AiServerResolverQueries,

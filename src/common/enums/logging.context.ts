@@ -47,7 +47,6 @@ export enum LogContext {
   GEO = 'geo',
   CALENDAR = 'calendar',
   INNOVATION_HUB = 'innovation-hub',
-  VIRTUAL_CONTRIBUTOR_ENGINE = 'virtual-contributor-engine',
   CHAT_GUIDANCE = 'chat-guidance',
   CHAT_GUIDANCE_REPORTER = 'chat-guidance-reporter',
   TAGSET = 'tagset',
@@ -63,6 +62,8 @@ export enum LogContext {
   LOCAL_STORAGE = 'local-storage',
   INNOVATION_FLOW = 'innovation-flow',
   FILE_INTEGRATION = 'file-integration',
+  VIRTUAL_CONTRIBUTOR = 'virtual-contributor',
   AI_SERVER = 'ai-server',
   AI_PERSONA_SERVICE = 'ai-persona-service',
+  AI_PERSONA_SERVICE_ENGINE = 'ai-persona-service-engine',
 }

@@ -115,7 +115,7 @@ export class AdminCommunicationService {
       CommunityRole.MEMBER
     );
     for (const communityMember of communityMembers) {
-      await this.communicationService.addUserToCommunications(
+      await this.communicationService.addContributorToCommunications(
         communication,
         communityMember.communicationID
       );

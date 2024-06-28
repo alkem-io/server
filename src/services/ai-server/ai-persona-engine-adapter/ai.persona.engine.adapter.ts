@@ -15,8 +15,8 @@ import { AiPersonaEngineAdapterInputBase } from './dto/ai.persona.engine.adapter
 import { AiPersonaEngineAdapterBaseResponse } from './dto/ai.persona.engine.adapter.dto.base.response';
 import { ChatGuidanceInput } from '@services/api/chat-guidance/dto/chat.guidance.dto.input';
 import { ValidationException } from '@common/exceptions';
-import { IAiPersonaQuestionResult } from '@domain/community/ai-persona/dto/ai.persona.question.dto.result';
 import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
+import { IMessageAnswerToQuestion } from '@domain/communication/message.answer.to.question/message.answer.to.question.interface';
 
 enum AiPersonaEngineEventType {
   QUERY = 'query',
@@ -42,7 +42,7 @@ export class AiPersonaEngineAdapter {
 
   public async sendQuery(
     eventData: AiPersonaEngineAdapterQueryInput
-  ): Promise<IAiPersonaQuestionResult> {
+  ): Promise<IMessageAnswerToQuestion> {
     let responseData: AiPersonaEngineAdapterQueryResponse | undefined;
 
     try {
@@ -51,7 +51,7 @@ export class AiPersonaEngineAdapter {
           if (!eventData.prompt)
             throw new ValidationException(
               'Prompt property is required for community manager engine!',
-              LogContext.VIRTUAL_CONTRIBUTOR_ENGINE
+              LogContext.AI_PERSONA_SERVICE_ENGINE
             );
           const responseCommunityManager =
             this.virtualContributorEngineCommunityManager.send<
@@ -64,7 +64,7 @@ export class AiPersonaEngineAdapter {
           if (!eventData.contextSpaceNameID || !eventData.knowledgeSpaceNameID)
             throw new ValidationException(
               'ContextSpaceNameID and knowledgeSpaceNameID properties are required for expert engine!',
-              LogContext.VIRTUAL_CONTRIBUTOR_ENGINE
+              LogContext.AI_PERSONA_SERVICE_ENGINE
             );
           const responseExpert = this.virtualContributorEngineExpert.send<
             AiPersonaEngineAdapterQueryResponse,
@@ -88,7 +88,7 @@ export class AiPersonaEngineAdapter {
       this.logger.error(
         errorMessage,
         undefined,
-        LogContext.VIRTUAL_CONTRIBUTOR_ENGINE
+        LogContext.AI_PERSONA_SERVICE_ENGINE
       );
       // not a real answer; just return an error
       return {
@@ -102,7 +102,7 @@ export class AiPersonaEngineAdapter {
       this.logger.error(
         errorMessage,
         undefined,
-        LogContext.VIRTUAL_CONTRIBUTOR_ENGINE
+        LogContext.AI_PERSONA_SERVICE_ENGINE
       );
       // not a real answer; just return an error
       return {
@@ -133,7 +133,7 @@ export class AiPersonaEngineAdapter {
       this.logger.error(
         errorMessage,
         err?.stack,
-        LogContext.VIRTUAL_CONTRIBUTOR_ENGINE
+        LogContext.AI_PERSONA_SERVICE_ENGINE
       );
       // not a real answer; just return an error
       return {
@@ -160,7 +160,7 @@ export class AiPersonaEngineAdapter {
       this.logger.error(
         `Could not send reset to chat guidance adapter! ${err}`,
         err?.stack,
-        LogContext.VIRTUAL_CONTRIBUTOR_ENGINE
+        LogContext.AI_PERSONA_SERVICE_ENGINE
       );
       return false;
     }
@@ -182,7 +182,7 @@ export class AiPersonaEngineAdapter {
       this.logger.error(
         `Could not send ingest to chat guidance adapter! ${err}`,
         err?.stack,
-        LogContext.VIRTUAL_CONTRIBUTOR_ENGINE
+        LogContext.AI_PERSONA_SERVICE_ENGINE
       );
       return false;
     }

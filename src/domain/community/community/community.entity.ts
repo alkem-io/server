@@ -19,9 +19,9 @@ import {
 import { CommunityPolicy } from '../community-policy/community.policy.entity';
 import { Form } from '@domain/common/form/form.entity';
 import { Invitation } from '../invitation/invitation.entity';
-import { InvitationExternal } from '../invitation.external/invitation.external.entity';
 import { CommunityGuidelines } from '../community-guidelines/community.guidelines.entity';
 import { SpaceType } from '@common/enums/space.type';
+import { PlatformInvitation } from '@platform/invitation';
 
 @Entity()
 export class Community
@@ -71,14 +71,14 @@ export class Community
   invitations?: Invitation[];
 
   @OneToMany(
-    () => InvitationExternal,
-    invitationExternal => invitationExternal.community,
+    () => PlatformInvitation,
+    platformInvitation => platformInvitation.community,
     {
       eager: false,
       cascade: true,
     }
   )
-  externalInvitations?: InvitationExternal[];
+  platformInvitations?: PlatformInvitation[];
 
   @OneToOne(() => CommunityPolicy, {
     eager: true,
