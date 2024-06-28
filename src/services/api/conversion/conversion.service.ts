@@ -101,8 +101,7 @@ export class ConversionService {
       },
     };
     const emptyAccount = await this.accountService.createAccount(
-      createAccountInput,
-      agentInfo
+      createAccountInput
     );
 
     if (!emptyAccount.space) {

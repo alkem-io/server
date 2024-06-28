@@ -37,7 +37,7 @@ import { SearchVisibility } from '@common/enums/search.visibility';
 import { IMessageAnswerToQuestion } from '@domain/communication/message.answer.to.question/message.answer.to.question.interface';
 import { IAiPersona } from '../ai-persona';
 import { IContributor } from '../contributor/contributor.interface';
-import { AccountHostService } from '@domain/space/account/account.host.service';
+import { AccountHostService } from '@domain/space/account.host/account.host.service';
 
 @Injectable()
 export class VirtualContributorService {
