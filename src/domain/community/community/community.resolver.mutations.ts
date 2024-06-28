@@ -314,9 +314,18 @@ export class CommunityResolverMutations {
       roleData.communityID
     );
 
+    // Extend the authorization policy with a credential rule to assign the GRANT privilege
+    // to the user with rights around the incoming virtual being removed.
+    //. Then if it is the user that is logged in then the user will have the GRANT privilege + so can carry out the mutation
+    const extendedAuthorization =
+      await this.communityAuthorizationService.extendAuthorizationPolicyForVirtualContributorRemoval(
+        community,
+        roleData.virtualContributorID
+      );
+
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      community.authorization,
+      extendedAuthorization,
       AuthorizationPrivilege.GRANT,
       `remove virtual from community role: ${community.id}`
     );

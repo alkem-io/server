@@ -21,6 +21,7 @@ import {
   CREDENTIAL_RULE_TYPES_COMMUNITY_INVITE_MEMBERS,
   POLICY_RULE_COMMUNITY_ADD_VC,
   POLICY_RULE_COMMUNITY_INVITE_MEMBER,
+  CREDENTIAL_RULE_COMMUNITY_VIRTUAL_CONTRIBUTOR_REMOVAL,
 } from '@common/constants';
 import { InvitationAuthorizationService } from '../invitation/invitation.service.authorization';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
@@ -34,6 +35,7 @@ import { LicensePrivilege } from '@common/enums/license.privilege';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { IAgent } from '@domain/agent';
 import { PlatformInvitationAuthorizationService } from '@platform/invitation/platform.invitation.service.authorization';
+import { VirtualContributorService } from '../virtual-contributor/virtual.contributor.service';
 
 @Injectable()
 export class CommunityAuthorizationService {
@@ -46,6 +48,7 @@ export class CommunityAuthorizationService {
     private applicationAuthorizationService: ApplicationAuthorizationService,
     private invitationAuthorizationService: InvitationAuthorizationService,
     private communityPolicyService: CommunityPolicyService,
+    private virtualContributorService: VirtualContributorService,
     private platformInvitationAuthorizationService: PlatformInvitationAuthorizationService,
     private communityGuidelinesAuthorizationService: CommunityGuidelinesAuthorizationService
   ) {}
@@ -285,6 +288,39 @@ export class CommunityAuthorizationService {
           },
         ],
         CREDENTIAL_RULE_COMMUNITY_SELF_REMOVAL
+      );
+    newRules.push(userSelfRemovalRule);
+
+    const clonedCommunityAuthorization =
+      this.authorizationPolicyService.cloneAuthorizationPolicy(
+        community.authorization
+      );
+
+    const updatedAuthorization =
+      this.authorizationPolicyService.appendCredentialAuthorizationRules(
+        clonedCommunityAuthorization,
+        newRules
+      );
+
+    return updatedAuthorization;
+  }
+
+  public async extendAuthorizationPolicyForVirtualContributorRemoval(
+    community: ICommunity,
+    virtualContributorToBeRemoved: string
+  ): Promise<IAuthorizationPolicy> {
+    const newRules: IAuthorizationPolicyRuleCredential[] = [];
+
+    const accountHostCredentials =
+      await this.virtualContributorService.getAccountHostCredentials(
+        virtualContributorToBeRemoved
+      );
+
+    const userSelfRemovalRule =
+      this.authorizationPolicyService.createCredentialRule(
+        [AuthorizationPrivilege.GRANT],
+        accountHostCredentials,
+        CREDENTIAL_RULE_COMMUNITY_VIRTUAL_CONTRIBUTOR_REMOVAL
       );
     newRules.push(userSelfRemovalRule);
 
