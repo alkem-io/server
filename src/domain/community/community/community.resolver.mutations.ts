@@ -45,7 +45,6 @@ import { CommunityMembershipStatus } from '@common/enums/community.membership.st
 import { CommunityMembershipException } from '@common/exceptions/community.membership.exception';
 import { AssignCommunityRoleToVirtualInput } from './dto/community.dto.role.assign.virtual';
 import { RemoveCommunityRoleFromVirtualInput } from './dto/community.dto.role.remove.virtual';
-import { VirtualContributorAuthorizationService } from '../virtual-contributor/virtual.contributor.service.authorization';
 import { VirtualContributorService } from '../virtual-contributor/virtual.contributor.service';
 import {
   IVirtualContributor,
@@ -53,11 +52,9 @@ import {
 } from '../virtual-contributor';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { CommunityInvitationException } from '@common/exceptions/community.invitation.exception';
-import { SpaceIngestionPurpose } from '@services/infrastructure/event-bus/commands';
 import { CreateInvitationForContributorsOnCommunityInput } from './dto/community.dto.invite.contributor';
 import { IContributor } from '../contributor/contributor.interface';
 import { ContributorService } from '../contributor/contributor.service';
-import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
 import { NotificationInputCommunityVirtualContributorInvitation } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.vc.invitation';
 import { PlatformInvitationAuthorizationService } from '@platform/invitation/platform.invitation.service.authorization';
 import { PlatformInvitationService } from '@platform/invitation/platform.invitation.service';
@@ -72,7 +69,6 @@ export class CommunityResolverMutations {
     private userService: UserService,
     private userAuthorizationService: UserAuthorizationService,
     private virtualContributorService: VirtualContributorService,
-    private virtualContributorAuthorizationService: VirtualContributorAuthorizationService,
     private userGroupAuthorizationService: UserGroupAuthorizationService,
     private communityService: CommunityService,
     @Inject(CommunityApplicationLifecycleOptionsProvider)
@@ -85,7 +81,6 @@ export class CommunityResolverMutations {
     private invitationAuthorizationService: InvitationAuthorizationService,
     private communityAuthorizationService: CommunityAuthorizationService,
     private contributorService: ContributorService,
-    private aiServerAdapter: AiServerAdapter,
     private platformInvitationAuthorizationService: PlatformInvitationAuthorizationService,
     private platformInvitationService: PlatformInvitationService
   ) {}
@@ -231,34 +226,9 @@ export class CommunityResolverMutations {
       roleData.role
     );
 
-    // reset the user authorization policy so that their profile is visible to other community members
-    let virtual =
-      await this.virtualContributorService.getVirtualContributorOrFail(
-        roleData.virtualContributorID,
-        {
-          relations: {
-            account: true,
-          },
-        }
-      );
-
-    const host = await this.virtualContributorService.getAccountHost(virtual);
-
-    virtual =
-      await this.virtualContributorAuthorizationService.applyAuthorizationPolicy(
-        virtual,
-        host,
-        virtual.account.authorization
-      );
-    virtual = await this.virtualContributorService.save(virtual);
-
-    const spaceID = await this.communityService.getRootSpaceID(community);
-    this.aiServerAdapter.ensureSpaceIsUsable(
-      spaceID,
-      SpaceIngestionPurpose.CONTEXT
+    return await this.virtualContributorService.getVirtualContributorOrFail(
+      roleData.virtualContributorID
     );
-
-    return virtual;
   }
 
   @UseGuards(GraphqlGuard)
@@ -354,27 +324,10 @@ export class CommunityResolverMutations {
       roleData.virtualContributorID,
       roleData.role
     );
-    // reset the user authorization policy so that their profile is not visible
-    // to other community members
-    let virtual =
-      await this.virtualContributorService.getVirtualContributorOrFail(
-        roleData.virtualContributorID,
-        {
-          relations: {
-            account: {
-              authorization: true,
-            },
-          },
-        }
-      );
-    const host = await this.virtualContributorService.getAccountHost(virtual);
-    virtual =
-      await this.virtualContributorAuthorizationService.applyAuthorizationPolicy(
-        virtual,
-        host,
-        virtual.account.authorization
-      );
-    return await this.virtualContributorService.save(virtual);
+
+    return await this.virtualContributorService.getVirtualContributorOrFail(
+      roleData.virtualContributorID
+    );
   }
 
   @UseGuards(GraphqlGuard)

@@ -38,7 +38,7 @@ import { IVirtualContributor } from '@domain/community/virtual-contributor';
 import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
 import { User } from '@domain/community/user';
 import { LicenseIssuerService } from '@platform/license-issuer/license.issuer.service';
-import { AccountHostService } from './account.host.service';
+import { AccountHostService } from '../account.host/account.host.service';
 import { Organization } from '@domain/community/organization/organization.entity';
 import { LicensePrivilege } from '@common/enums/license.privilege';
 import { LicenseEngineService } from '@core/license-engine/license.engine.service';

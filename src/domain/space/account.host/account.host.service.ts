@@ -3,8 +3,11 @@ import { IContributor } from '@domain/community/contributor/contributor.interfac
 import { ContributorService } from '@domain/community/contributor/contributor.service';
 import { Injectable, Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { IAccount } from './account.interface';
-import { EntityNotFoundException } from '@common/exceptions';
+import { IAccount } from '../account/account.interface';
+import { AccountException, EntityNotFoundException } from '@common/exceptions';
+import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { User } from '@domain/community/user';
+import { Organization } from '@domain/community/organization';
 
 @Injectable()
 export class AccountHostService {
@@ -40,7 +43,39 @@ export class AccountHostService {
     return null;
   }
 
-  async getHostOrFail(account: IAccount): Promise<IContributor> {
+  public async getHostCredentials(
+    account: IAccount
+  ): Promise<ICredentialDefinition[]> {
+    const accountHost = await this.getHostOrFail(account);
+    const accountHostCredentials: ICredentialDefinition[] = [];
+    if (accountHost instanceof User) {
+      const userCriteria: ICredentialDefinition = {
+        type: AuthorizationCredential.ACCOUNT_HOST,
+        resourceID: account.id,
+      };
+      accountHostCredentials.push(userCriteria);
+    } else if (accountHost instanceof Organization) {
+      const organizationCriteriaAdmin: ICredentialDefinition = {
+        type: AuthorizationCredential.ORGANIZATION_ADMIN,
+        resourceID: accountHost.id,
+      };
+      const organizationCriteriaOwner: ICredentialDefinition = {
+        type: AuthorizationCredential.ORGANIZATION_OWNER,
+        resourceID: accountHost.id,
+      };
+      accountHostCredentials.push(organizationCriteriaAdmin);
+      accountHostCredentials.push(organizationCriteriaOwner);
+    } else {
+      throw new AccountException(
+        `Unable to determine host type for: ${account.id}, of type '${accountHost.constructor.name}'`,
+        LogContext.ACCOUNT
+      );
+    }
+
+    return accountHostCredentials;
+  }
+
+  public async getHostOrFail(account: IAccount): Promise<IContributor> {
     const host = await this.getHost(account);
     if (!host)
       throw new EntityNotFoundException(

@@ -15,7 +15,7 @@ export class Account extends AuthorizableEntity implements IAccount {
 
   @OneToOne(() => Space, {
     eager: false,
-    cascade: true,
+    cascade: false, // important: each space looks after saving itself!
     onDelete: 'SET NULL',
   })
   @JoinColumn()

@@ -6,7 +6,6 @@ import {
 } from '@common/enums';
 import { AccountService } from './account.service';
 import {
-  AccountException,
   EntityNotInitializedException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
@@ -30,11 +29,8 @@ import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.aut
 import { IVirtualContributor } from '@domain/community/virtual-contributor';
 import { VirtualContributorAuthorizationService } from '@domain/community/virtual-contributor/virtual.contributor.service.authorization';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
-import { IContributor } from '@domain/community/contributor/contributor.interface';
-import { Organization } from '@domain/community/organization';
-import { User } from '@domain/community/user/user.entity';
 import { ISpace } from '../space/space.interface';
-import { AccountHostService } from './account.host.service';
+import { AccountHostService } from '../account.host/account.host.service';
 
 @Injectable()
 export class AccountAuthorizationService {
@@ -77,7 +73,9 @@ export class AccountAuthorizationService {
         LogContext.ACCOUNT
       );
     }
-    const host = await this.accountHostService.getHostOrFail(account);
+    const hostCredentials = await this.accountHostService.getHostCredentials(
+      account
+    );
 
     // Ensure always applying from a clean state
     account.authorization = this.authorizationPolicyService.reset(
@@ -93,7 +91,7 @@ export class AccountAuthorizationService {
     account.authorization = this.extendAuthorizationPolicy(
       account.authorization,
       account.id,
-      host,
+      hostCredentials,
       account.space
     );
 
@@ -128,18 +126,16 @@ export class AccountAuthorizationService {
         account.space
       );
 
-    // Library and defaults are inherited from the space
-    const spaceAuthorization = account.space.authorization;
     account.library =
       await this.templatesSetAuthorizationService.applyAuthorizationPolicy(
         account.library,
-        spaceAuthorization
+        account.authorization
       );
 
     account.defaults.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         account.defaults.authorization,
-        spaceAuthorization
+        account.authorization
       );
 
     const updatedVCs: IVirtualContributor[] = [];
@@ -147,8 +143,7 @@ export class AccountAuthorizationService {
       const udpatedVC =
         await this.virtualContributorAuthorizationService.applyAuthorizationPolicy(
           vc,
-          host,
-          spaceAuthorization
+          account.authorization
         );
       updatedVCs.push(udpatedVC);
     }
@@ -160,7 +155,7 @@ export class AccountAuthorizationService {
   private extendAuthorizationPolicy(
     authorization: IAuthorizationPolicy | undefined,
     accountID: string,
-    host: IContributor,
+    hostCredentials: ICredentialDefinition[],
     rootSpace: ISpace
   ): IAuthorizationPolicy {
     if (!authorization) {
@@ -217,7 +212,7 @@ export class AccountAuthorizationService {
     newRules.push(globalSpacesReader);
 
     // Create the criterias for who can create a VC
-    const createVCsCriterias: ICredentialDefinition[] = [];
+    const createVCsCriterias: ICredentialDefinition[] = [...hostCredentials];
     createVCsCriterias.push({
       type: AuthorizationCredential.GLOBAL_ADMIN,
       resourceID: '',
@@ -226,12 +221,11 @@ export class AccountAuthorizationService {
       type: AuthorizationCredential.GLOBAL_SUPPORT,
       resourceID: '',
     });
-    const accountHostCred = this.createCredentialCriteriaForHost(host);
+
     createVCsCriterias.push({
       type: AuthorizationCredential.SPACE_ADMIN,
       resourceID: rootSpace.id,
     });
-    createVCsCriterias.push(accountHostCred);
 
     const createVC = this.authorizationPolicyService.createCredentialRule(
       [AuthorizationPrivilege.CREATE_VIRTUAL_CONTRIBUTOR],
@@ -244,38 +238,15 @@ export class AccountAuthorizationService {
     // Allow hosts (users = self mgmt, org = org admin) to delete their own account
     const userHostsRule = this.authorizationPolicyService.createCredentialRule(
       [AuthorizationPrivilege.DELETE],
-      [accountHostCred],
+      [...hostCredentials],
       CREDENTIAL_RULE_TYPES_ACCOUNT_DELETE
     );
     userHostsRule.cascade = false;
     newRules.push(userHostsRule);
 
-    this.authorizationPolicyService.appendCredentialAuthorizationRules(
+    return this.authorizationPolicyService.appendCredentialAuthorizationRules(
       authorization,
       newRules
     );
-
-    return authorization;
-  }
-
-  private createCredentialCriteriaForHost(
-    host: IContributor
-  ): ICredentialDefinition {
-    if (host instanceof User) {
-      return {
-        type: AuthorizationCredential.USER_SELF_MANAGEMENT,
-        resourceID: host.id,
-      };
-    } else if (host instanceof Organization) {
-      return {
-        type: AuthorizationCredential.ORGANIZATION_ADMIN,
-        resourceID: host.id,
-      };
-    } else {
-      throw new AccountException(
-        `Unable to determine host type for: ${host.id}, of type '${host.constructor.name}'`,
-        LogContext.ACCOUNT
-      );
-    }
   }
 }
