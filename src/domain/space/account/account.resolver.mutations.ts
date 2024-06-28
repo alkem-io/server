@@ -189,6 +189,8 @@ export class AccountResolverMutations {
       updateData
     );
 
+    await this.accountService.save(result);
+
     // Update the authorization policy as most of the changes imply auth policy updates
     return this.accountAuthorizationService
       .applyAuthorizationPolicy(result)
