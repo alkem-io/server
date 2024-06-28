@@ -120,6 +120,11 @@ export class SpaceAuthorizationService {
         parentSpace: {
           authorization: true,
         },
+        agent: true,
+        collaboration: true,
+        context: true,
+        profile: true,
+        storageAggregator: true,
       },
     });
     if (
