@@ -92,6 +92,7 @@ export class SpaceAuthorizationService {
 
     const spaceVisibility = spaceAccountLicense.account.license.visibility;
     const accountAgent = spaceAccountLicense.account.agent;
+
     // Allow the parent admins to also delete subspaces
     let deletionCredentialCriterias: ICredentialDefinition[] = [];
     if (spaceAccountLicense.parentSpace) {
@@ -104,9 +105,13 @@ export class SpaceAuthorizationService {
           LogContext.SPACES
         );
       }
+
+      const parentCommunityPolicyWithSettings =
+        this.getCommunityPolicyWithSettings(spaceAccountLicense.parentSpace);
+
       deletionCredentialCriterias =
         this.communityPolicyService.getCredentialsForRole(
-          spaceAccountLicense.parentSpace.community.policy,
+          parentCommunityPolicyWithSettings,
           CommunityRole.ADMIN
         );
     }
@@ -141,9 +146,9 @@ export class SpaceAuthorizationService {
     space.authorization = this.authorizationPolicyService.reset(
       space.authorization
     );
+
     const communityPolicyWithSettings =
       this.getCommunityPolicyWithSettings(space);
-
     const privateSpace =
       space.community.policy.settings.privacy.mode === SpacePrivacyMode.PRIVATE;
     const accountAuthorization = space.account.authorization;
