@@ -61,6 +61,7 @@ export class AccountAuthorizationService {
     );
     if (
       !account.agent ||
+      !account.space ||
       !account.library ||
       !account.license ||
       !account.defaults ||
