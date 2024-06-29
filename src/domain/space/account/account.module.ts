@@ -23,6 +23,7 @@ import { LicenseIssuerModule } from '@platform/license-issuer/license.issuer.mod
 import { AccountHostModule } from '../account.host/account.host.module';
 import { LicenseEngineModule } from '@core/license-engine/license.engine.module';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
+import { CommunityPolicyModule } from '@domain/community/community-policy/community.policy.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/stor
     LicenseIssuerModule,
     LicenseEngineModule,
     NameReporterModule,
+    CommunityPolicyModule,
     TypeOrmModule.forFeature([Account]),
   ],
   providers: [
