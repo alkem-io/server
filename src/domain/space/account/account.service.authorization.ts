@@ -23,7 +23,6 @@ import {
   CREDENTIAL_RULE_TYPES_ACCOUNT_CHILD_ENTITIES,
   CREDENTIAL_RULE_TYPES_ACCOUNT_DELETE,
   CREDENTIAL_RULE_TYPES_SPACE_AUTHORIZATION_GLOBAL_ADMIN_GRANT,
-  CREDENTIAL_RULE_TYPES_SPACE_GLOBAL_ADMIN_COMMUNITY_READ,
   CREDENTIAL_RULE_TYPES_SPACE_READ,
 } from '@common/constants/authorization/credential.rule.types.constants';
 import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
@@ -218,14 +217,6 @@ export class AccountAuthorizationService {
       );
     authorizationReset.cascade = false;
     newRules.push(authorizationReset);
-
-    const communityAdmin =
-      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.READ],
-        [AuthorizationCredential.GLOBAL_COMMUNITY_READ],
-        CREDENTIAL_RULE_TYPES_SPACE_GLOBAL_ADMIN_COMMUNITY_READ
-      );
-    newRules.push(communityAdmin);
 
     // Allow Global admins to manage access to Spaces + contents
     const globalAdmin =

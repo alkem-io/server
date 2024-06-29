@@ -4,8 +4,8 @@ export const CREDENTIAL_RULE_TYPES_ACCOUNT_DELETE =
   'credentialRuleTypes-accountDelete';
 export const CREDENTIAL_RULE_TYPES_ACCOUNT_CHILD_ENTITIES =
   'credentialRuleTypes-accountChildEntities';
-export const CREDENTIAL_RULE_TYPES_SPACE_GLOBAL_ADMIN_COMMUNITY_READ =
-  'credentialRuleTypes-spaceGlobalAdminCommunityRead';
+export const CREDENTIAL_RULE_TYPES_SPACE_GLOBAL_COMMUNITY_READ =
+  'credentialRuleTypes-spaceGlobalCommunityRead';
 export const CREDENTIAL_RULE_TYPES_SPACE_PLATFORM_SETTINGS =
   'credentialRuleTypes-spacePlatformSettings';
 export const CREDENTIAL_RULE_TYPES_SPACE_READ =
