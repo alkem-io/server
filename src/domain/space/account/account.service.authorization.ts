@@ -34,6 +34,7 @@ import { AccountHostService } from '../account.host/account.host.service';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { CommunityPolicyService } from '@domain/community/community-policy/community.policy.service';
 import { CommunityRole } from '@common/enums/community.role';
+import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 
 @Injectable()
 export class AccountAuthorizationService {
@@ -46,6 +47,7 @@ export class AccountAuthorizationService {
     private spaceAuthorizationService: SpaceAuthorizationService,
     private virtualContributorAuthorizationService: VirtualContributorAuthorizationService,
     private communityPolicyService: CommunityPolicyService,
+    private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
     private accountService: AccountService,
     private accountHostService: AccountHostService
   ) {}
@@ -65,6 +67,7 @@ export class AccountAuthorizationService {
           library: true,
           defaults: true,
           virtualContributors: true,
+          storageAggregator: true,
         },
       }
     );
@@ -76,7 +79,8 @@ export class AccountAuthorizationService {
       !account.library ||
       !account.license ||
       !account.defaults ||
-      !account.virtualContributors
+      !account.virtualContributors ||
+      !account.storageAggregator
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load Account with entities at start of auth reset: ${account.id} `,
@@ -132,6 +136,12 @@ export class AccountAuthorizationService {
       await this.templatesSetAuthorizationService.applyAuthorizationPolicy(
         account.library,
         clonedAccountAuth
+      );
+
+    account.storageAggregator =
+      await this.storageAggregatorAuthorizationService.applyAuthorizationPolicy(
+        account.storageAggregator,
+        account.authorization
       );
 
     account.defaults.authorization =
