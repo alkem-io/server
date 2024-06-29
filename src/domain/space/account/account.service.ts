@@ -248,6 +248,7 @@ export class AccountService {
         license: true,
         defaults: true,
         virtualContributors: true,
+        storageAggregator: true,
       },
     });
 
@@ -257,7 +258,8 @@ export class AccountService {
       !account.license ||
       !account.defaults ||
       !account.library ||
-      !account.virtualContributors
+      !account.virtualContributors ||
+      !account.storageAggregator
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load all entities for deletion of account ${account.id} `,
@@ -276,6 +278,7 @@ export class AccountService {
 
     await this.licenseService.delete(account.license.id);
     await this.spaceDefaultsService.deleteSpaceDefaults(account.defaults.id);
+    await this.storageAggregatorService.delete(account.storageAggregator.id);
 
     // Remove the account host credential
     host.agent = await this.agentService.revokeCredential({
