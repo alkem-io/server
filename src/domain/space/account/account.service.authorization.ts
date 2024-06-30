@@ -261,17 +261,19 @@ export class AccountAuthorizationService {
       );
     accountChildEntitiesManage.push(...spaceAdminCriterias);
     if (accountChildEntitiesManage.length !== 0) {
-      const spaceAdmin = this.authorizationPolicyService.createCredentialRule(
-        [
-          AuthorizationPrivilege.CREATE,
-          AuthorizationPrivilege.READ,
-          AuthorizationPrivilege.UPDATE,
-          AuthorizationPrivilege.DELETE,
-        ],
-        accountChildEntitiesManage,
-        CREDENTIAL_RULE_TYPES_ACCOUNT_CHILD_ENTITIES
-      );
-      newRules.push(spaceAdmin);
+      const accountChildEntities =
+        this.authorizationPolicyService.createCredentialRule(
+          [
+            AuthorizationPrivilege.CREATE,
+            AuthorizationPrivilege.READ,
+            AuthorizationPrivilege.UPDATE,
+            AuthorizationPrivilege.DELETE,
+            AuthorizationPrivilege.GRANT,
+          ],
+          accountChildEntitiesManage,
+          CREDENTIAL_RULE_TYPES_ACCOUNT_CHILD_ENTITIES
+        );
+      newRules.push(accountChildEntities);
     }
     return this.authorizationPolicyService.appendCredentialAuthorizationRules(
       authorization,
