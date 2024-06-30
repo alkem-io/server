@@ -5,6 +5,7 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy/author
 import { CommunicationService } from './communication.service';
 import { RoomAuthorizationService } from '../room/room.service.authorization';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
+import { LogContext } from '@common/enums/logging.context';
 
 @Injectable()
 export class CommunicationAuthorizationService {
