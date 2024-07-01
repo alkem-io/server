@@ -281,7 +281,7 @@ export class AccountResolverMutations {
 
     const clonedAccountAuth =
       await this.accountAuthorizationService.getClonedAccountAuthExtendedForChildEntities(
-        virtual.account
+        account
       );
 
     // Need
