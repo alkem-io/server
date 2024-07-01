@@ -5,7 +5,6 @@ import { ProfileAuthorizationService } from '@domain/common/profile/profile.serv
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import {
-  AccountException,
   EntityNotInitializedException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
@@ -14,16 +13,10 @@ import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authoriz
 import {
   CREDENTIAL_RULE_TYPES_VC_GLOBAL_COMMUNITY_READ,
   CREDENTIAL_RULE_TYPES_VC_GLOBAL_SUPPORT_MANAGE,
-  CREDENTIAL_RULE_TYPES_VC_GLOBAL_ADMINS,
-  CREDENTIAL_RULE_TYPES_VC_PROVIDER,
 } from '@common/constants';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 import { IVirtualContributor } from './virtual.contributor.interface';
 import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
-import { IContributor } from '../contributor/contributor.interface';
-import { Organization } from '../organization';
-import { User } from '../user';
 import { AiPersonaAuthorizationService } from '../ai-persona/ai.persona.service.authorization';
 
 @Injectable()
@@ -40,7 +33,6 @@ export class VirtualContributorAuthorizationService {
 
   async applyAuthorizationPolicy(
     virtualInput: IVirtualContributor,
-    host: IContributor,
     parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<IVirtualContributor> {
     const virtual = await this.virtualService.getVirtualContributorOrFail(
@@ -77,11 +69,6 @@ export class VirtualContributorAuthorizationService {
       virtual.id
     );
 
-    virtual.authorization = this.extendAuthorizationPolicy(
-      virtual.authorization,
-      host
-    );
-
     // NOTE: Clone the authorization policy to ensure the changes are local to profile
     const clonedVirtualAuthorizationAnonymousAccess =
       this.authorizationPolicyService.cloneAuthorizationPolicy(
@@ -107,7 +94,7 @@ export class VirtualContributorAuthorizationService {
     );
 
     virtual.aiPersona =
-      await this.aiPersonaAuthorizationService.applyAuthorizationPolicy(
+      this.aiPersonaAuthorizationService.applyAuthorizationPolicy(
         virtual.aiPersona,
         virtual.authorization
       );
@@ -130,11 +117,15 @@ export class VirtualContributorAuthorizationService {
     const globalCommunityRead =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.READ],
-        [AuthorizationCredential.GLOBAL_COMMUNITY_READ],
+        [
+          AuthorizationCredential.GLOBAL_REGISTERED,
+          AuthorizationCredential.GLOBAL_COMMUNITY_READ,
+        ],
         CREDENTIAL_RULE_TYPES_VC_GLOBAL_COMMUNITY_READ
       );
     newRules.push(globalCommunityRead);
 
+    // TODO: rule that for now allows global support ability to manage VCs, this to be removed later
     const globalSupportManage =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [
@@ -148,52 +139,6 @@ export class VirtualContributorAuthorizationService {
       );
     newRules.push(globalSupportManage);
 
-    // Allow Global admins + Global Space Admins to manage access to Spaces + contents
-    const globalAdmin =
-      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.GRANT],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-        ],
-        CREDENTIAL_RULE_TYPES_VC_GLOBAL_ADMINS
-      );
-    newRules.push(globalAdmin);
-
-    const virtualAdmin = this.authorizationPolicyService.createCredentialRule(
-      [
-        AuthorizationPrivilege.GRANT,
-        AuthorizationPrivilege.CREATE,
-        AuthorizationPrivilege.UPDATE,
-        AuthorizationPrivilege.DELETE,
-      ],
-      [
-        {
-          type: AuthorizationCredential.ACCOUNT_HOST,
-          resourceID: accountID,
-        },
-        {
-          type: AuthorizationCredential.ORGANIZATION_OWNER,
-          resourceID: accountID,
-        },
-      ],
-      CREDENTIAL_RULE_TYPES_VC_PROVIDER
-    );
-
-    newRules.push(virtualAdmin);
-
-    const readPrivilege = this.authorizationPolicyService.createCredentialRule(
-      [AuthorizationPrivilege.READ],
-      [
-        {
-          type: AuthorizationCredential.GLOBAL_REGISTERED,
-          resourceID: '',
-        },
-      ],
-      CREDENTIAL_RULE_TYPES_VC_GLOBAL_COMMUNITY_READ
-    );
-    newRules.push(readPrivilege);
-
     const updatedAuthorization =
       this.authorizationPolicy.appendCredentialAuthorizationRules(
         authorization,
@@ -201,52 +146,5 @@ export class VirtualContributorAuthorizationService {
       );
 
     return updatedAuthorization;
-  }
-
-  private extendAuthorizationPolicy(
-    authorization: IAuthorizationPolicy | undefined,
-    host: IContributor
-  ): IAuthorizationPolicy {
-    if (!authorization) {
-      throw new EntityNotInitializedException(
-        `Authorization definition not found for: contributor ${host.id}`,
-        LogContext.ACCOUNT
-      );
-    }
-    const newRules: IAuthorizationPolicyRuleCredential[] = [];
-
-    // Create the criterias for who can create a VC
-    const hostSelfManagementCriterias: ICredentialDefinition[] = [];
-    const accountHostCred = this.createCredentialCriteriaForHost(host);
-
-    hostSelfManagementCriterias.push(accountHostCred);
-
-    this.authorizationPolicyService.appendCredentialAuthorizationRules(
-      authorization,
-      newRules
-    );
-
-    return authorization;
-  }
-
-  private createCredentialCriteriaForHost(
-    host: IContributor
-  ): ICredentialDefinition {
-    if (host instanceof User) {
-      return {
-        type: AuthorizationCredential.USER_SELF_MANAGEMENT,
-        resourceID: host.id,
-      };
-    } else if (host instanceof Organization) {
-      return {
-        type: AuthorizationCredential.ORGANIZATION_ADMIN,
-        resourceID: host.id,
-      };
-    } else {
-      throw new AccountException(
-        `Unable to determine host type for: ${host.id}, of type '${host.constructor.name}'`,
-        LogContext.ACCOUNT
-      );
-    }
   }
 }

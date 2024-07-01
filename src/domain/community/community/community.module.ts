@@ -30,7 +30,6 @@ import { CommunityGuidelinesModule } from '../community-guidelines/community.gui
 import { VirtualContributorModule } from '../virtual-contributor/virtual.contributor.module';
 import { LicenseEngineModule } from '@core/license-engine/license.engine.module';
 import { ContributorModule } from '../contributor/contributor.module';
-import { AiServerAdapterModule } from '@services/adapters/ai-server-adapter/ai.server.adapter.module';
 import { PlatformInvitationModule } from '@platform/invitation/platform.invitation.module';
 
 @Module({
@@ -60,7 +59,6 @@ import { PlatformInvitationModule } from '@platform/invitation/platform.invitati
     TypeOrmModule.forFeature([Community]),
     TrustRegistryAdapterModule,
     ContributionReporterModule,
-    AiServerAdapterModule,
   ],
   providers: [
     CommunityService,
