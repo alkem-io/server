@@ -66,7 +66,7 @@ export class AiServerService {
     agentInfo: AgentInfo,
     contextID: string
   ) {
-    if (await this.isContextLoaded(contextID)) {
+    if (!(await this.isContextLoaded(contextID))) {
       this.eventBus.publish(
         new IngestSpace(contextID, SpaceIngestionPurpose.CONTEXT)
       );
@@ -83,20 +83,17 @@ export class AiServerService {
   }
 
   private async isContextLoaded(contextID: string): Promise<boolean> {
-    const vectorDb = this.config.get(ConfigurationTypes.PLATFORM).vector_db;
+    const { host, port } = this.config.get(
+      ConfigurationTypes.PLATFORM
+    ).vector_db;
+    const chroma = new ChromaClient({ path: `http://${host}:${port}` });
 
-    const chroma = new ChromaClient({
-      path: `http://${vectorDb.host}:${vectorDb.port}`,
-    });
-    // get all chroma collections
     const collections = await chroma.listCollections();
     const collectionSearchedFor = this.getContextCollectionID(contextID);
 
-    const match = collections.find(entry =>
+    return collections.some(entry =>
       entry.name.includes(collectionSearchedFor)
     );
-    if (match) return true;
-    return false;
   }
 
   async createAiPersonaService(
