@@ -21,7 +21,7 @@ export class AiServerAdapter {
     spaceID: string,
     purpose: SpaceIngestionPurpose
   ): Promise<void> {
-    return this.aiServer.ensureSpaceIsUsable(spaceID, purpose);
+    return this.aiServer.ensureContextIsIngested(spaceID, purpose);
   }
 
   async ensurePersonaIsUsable(

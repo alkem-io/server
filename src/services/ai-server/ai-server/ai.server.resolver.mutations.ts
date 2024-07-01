@@ -162,7 +162,7 @@ export class AiServerResolverMutations {
 
       // ask the AI server to ingest the space again;
       // the ingest space service uses the UUID as collection identifier now
-      this.aiServerService.ensureSpaceIsUsable(
+      this.aiServerService.ensureContextIsIngested(
         space.id,
         purpose as SpaceIngestionPurpose
       );
