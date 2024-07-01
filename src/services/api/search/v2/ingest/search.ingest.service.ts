@@ -222,51 +222,60 @@ export class SearchIngestService {
       {
         index: `${this.indexPattern}spaces`,
         fetchFn: this.fetchSpacesLevel0.bind(this),
+        countFn: this.fetchSpacesLevel0Count.bind(this),
         batchSize: 100,
       },
       {
         index: `${this.indexPattern}subspaces`,
         fetchFn: this.fetchSpacesLevel1.bind(this),
+        countFn: this.fetchSpacesLevel1Count.bind(this),
         batchSize: 100,
       },
       {
         index: `${this.indexPattern}subspaces`,
         fetchFn: this.fetchSpacesLevel2.bind(this),
+        countFn: this.fetchSpacesLevel2Count.bind(this),
         batchSize: 100,
       },
       {
         index: `${this.indexPattern}organizations`,
-        fetchFn: this.fetchOrganization.bind(this),
+        fetchFn: this.fetchOrganizations.bind(this),
+        countFn: this.fetchOrganizationsCount.bind(this),
         batchSize: 100,
       },
       {
         index: `${this.indexPattern}users`,
         fetchFn: this.fetchUsers.bind(this),
+        countFn: this.fetchUsersCount.bind(this),
         batchSize: 100,
       },
       {
         index: `${this.indexPattern}callouts`,
         fetchFn: this.fetchCallout.bind(this),
+        countFn: this.fetchCalloutCount.bind(this),
         batchSize: 20,
       },
       {
         index: `${this.indexPattern}posts`,
         fetchFn: this.fetchPosts.bind(this),
+        countFn: this.fetchPostsCount.bind(this),
         batchSize: 20,
       },
       {
         index: `${this.indexPattern}whiteboards`,
         fetchFn: this.fetchWhiteboard.bind(this),
-        batchSize: 10,
+        countFn: this.fetchWhiteboardCount.bind(this),
+        batchSize: 20,
       },
     ];
 
     return asyncReduceSequential(
       params,
-      async (acc, { index, fetchFn, batchSize }) => {
+      async (acc, { index, fetchFn, countFn, batchSize }) => {
         const batches = await this.fetchAndIngest(
           index,
           fetchFn,
+          countFn,
           batchSize,
           task
         );
@@ -285,26 +294,20 @@ export class SearchIngestService {
   private async fetchAndIngest(
     index: string,
     fetchFn: (start: number, limit: number) => Promise<unknown[]>,
+    countFn: () => Promise<number>,
     batchSize: number,
     task: Task
   ): Promise<IngestBatchResultType[]> {
     let start = 0;
     const results: IngestBatchResultType[] = [];
 
-    while (true) {
-      const fetched = await fetchFn(start, batchSize);
-      // if there are no results fetched, we have reached the end
-      if (!fetched.length) {
-        break;
-      }
+    const total = await countFn();
 
-      const result = await this.ingestBulk(fetched, index, task);
-      results.push(result);
-      // some statement are not directly querying a table, but instead parent entities
-      // so the total count is not predictable; in that case an extra query has to be made
-      // to ensure there is no more data
-      if (!fetched.length) {
-        break;
+    while (start <= total) {
+      const fetched = await fetchFn(start, batchSize);
+      if (fetched.length) {
+        const result = await this.ingestBulk(fetched, index, task);
+        results.push(result);
       }
 
       start += batchSize;
@@ -387,6 +390,14 @@ export class SearchIngestService {
     }
   }
   // TODO: validate the loaded data for missing relations - https://github.com/alkem-io/server/issues/3699
+  private fetchSpacesLevel0Count() {
+    return this.entityManager.count<Space>(Space, {
+      where: {
+        account: { license: { visibility: Not(SpaceVisibility.ARCHIVED) } },
+        level: SpaceLevel.SPACE,
+      },
+    });
+  }
   private fetchSpacesLevel0(start: number, limit: number) {
     return this.entityManager
       .find<Space>(Space, {
@@ -422,6 +433,14 @@ export class SearchIngestService {
       });
   }
 
+  private fetchSpacesLevel1Count() {
+    return this.entityManager.count<Space>(Space, {
+      where: {
+        account: { license: { visibility: Not(SpaceVisibility.ARCHIVED) } },
+        level: SpaceLevel.CHALLENGE,
+      },
+    });
+  }
   private fetchSpacesLevel1(start: number, limit: number) {
     return this.entityManager
       .find<Space>(Space, {
@@ -460,6 +479,14 @@ export class SearchIngestService {
       });
   }
 
+  private fetchSpacesLevel2Count() {
+    return this.entityManager.count<Space>(Space, {
+      where: {
+        account: { license: { visibility: Not(SpaceVisibility.ARCHIVED) } },
+        level: SpaceLevel.OPPORTUNITY,
+      },
+    });
+  }
   private fetchSpacesLevel2(start: number, limit: number) {
     return this.entityManager
       .find<Space>(Space, {
@@ -498,7 +525,10 @@ export class SearchIngestService {
       });
   }
 
-  private fetchOrganization(start: number, limit: number) {
+  private fetchOrganizationsCount() {
+    return this.entityManager.count<Organization>(Organization);
+  }
+  private fetchOrganizations(start: number, limit: number) {
     return this.entityManager
       .find<Organization>(Organization, {
         loadEagerRelations: false,
@@ -524,6 +554,11 @@ export class SearchIngestService {
       });
   }
 
+  private fetchUsersCount() {
+    return this.entityManager.count<User>(User, {
+      where: { serviceProfile: false },
+    });
+  }
   private fetchUsers(start: number, limit: number) {
     return this.entityManager
       .find(User, {
@@ -557,6 +592,16 @@ export class SearchIngestService {
       );
   }
 
+  private fetchCalloutCount() {
+    return this.entityManager.count<Space>(Space, {
+      loadEagerRelations: false,
+      where: {
+        account: {
+          license: { visibility: Not(SpaceVisibility.ARCHIVED) },
+        },
+      },
+    });
+  }
   private fetchCallout(start: number, limit: number) {
     return this.entityManager
       .find<Space>(Space, {
@@ -624,6 +669,16 @@ export class SearchIngestService {
       );
   }
 
+  private fetchWhiteboardCount() {
+    return this.entityManager.count<Space>(Space, {
+      loadEagerRelations: false,
+      where: {
+        account: {
+          license: { visibility: Not(SpaceVisibility.ARCHIVED) },
+        },
+      },
+    });
+  }
   private fetchWhiteboard(start: number, limit: number) {
     return this.entityManager
       .find<Space>(Space, {
@@ -778,6 +833,16 @@ export class SearchIngestService {
       });
   }
 
+  private fetchPostsCount() {
+    return this.entityManager.count<Space>(Space, {
+      loadEagerRelations: false,
+      where: {
+        account: {
+          license: { visibility: Not(SpaceVisibility.ARCHIVED) },
+        },
+      },
+    });
+  }
   private fetchPosts(start: number, limit: number) {
     return this.entityManager
       .find<Space>(Space, {
