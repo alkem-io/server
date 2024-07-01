@@ -279,10 +279,16 @@ export class AccountResolverMutations {
       virtualContributorData
     );
 
+    const clonedAccountAuth =
+      await this.accountAuthorizationService.getClonedAccountAuthExtendedForChildEntities(
+        virtual.account
+      );
+
+    // Need
     virtual =
       await this.virtualContributorAuthorizationService.applyAuthorizationPolicy(
         virtual,
-        account.authorization
+        clonedAccountAuth
       );
 
     virtual = await this.virtualContributorService.save(virtual);
