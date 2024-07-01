@@ -33,6 +33,7 @@ import { CommunityRole } from '@common/enums/community.role';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { NotificationInputSpaceCreated } from '@services/adapters/notification-adapter/dto/notification.dto.input.space.created';
 import { CreateSpaceOnAccountInput } from './dto/account.dto.create.space';
+import { CommunityService } from '@domain/community/community/community.service';
 
 @Resolver()
 export class AccountResolverMutations {
@@ -47,7 +48,8 @@ export class AccountResolverMutations {
     private spaceDefaultsService: SpaceDefaultsService,
     private namingReporter: NameReporterService,
     private spaceService: SpaceService,
-    private notificationAdapter: NotificationAdapter
+    private notificationAdapter: NotificationAdapter,
+    private communityService: CommunityService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -96,12 +98,23 @@ export class AccountResolverMutations {
     );
 
     // notification
-    const notificationInput: NotificationInputSpaceCreated = {
-      triggeredBy: agentInfo.userID,
-      community: community,
-      account: invitedContributor.account,
-    };
-    await this.notificationAdapter.spaceCreated(notificationInput);
+    // const community = await this.communityService.getCommunityOrFail(
+    //   space.community?.id,
+    //   {
+    //     relations: {
+    //       parentCommunity: {
+    //         authorization: true,
+    //       },
+    //     },
+    //   }
+    // );
+    // const notificationInput: NotificationInputSpaceCreated = {
+    //   triggeredBy: agentInfo.userID,
+    //   community: community,
+    //   account: space.account,
+    // };
+    // console.log(notificationInput);
+    // await this.notificationAdapter.spaceCreated(notificationInput);
 
     return account;
   }

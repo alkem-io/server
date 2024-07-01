@@ -53,6 +53,8 @@ import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.
 import { IDiscussion } from '@platform/forum-discussion/discussion.interface';
 import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
+import { IAccount } from '@domain/space/account/account.interface';
+import { AccountHostService } from '@domain/space/account.host/account.host.service';
 
 @Injectable()
 export class NotificationPayloadBuilder {
@@ -67,7 +69,8 @@ export class NotificationPayloadBuilder {
     private readonly logger: LoggerService,
     private configService: ConfigService,
     private contributionResolverService: ContributionResolverService,
-    private urlGeneratorService: UrlGeneratorService
+    private urlGeneratorService: UrlGeneratorService,
+    private accountHostService: AccountHostService
   ) {}
 
   async buildApplicationCreatedNotificationPayload(

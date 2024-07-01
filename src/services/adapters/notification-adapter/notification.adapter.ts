@@ -370,6 +370,7 @@ export class NotificationAdapter {
         eventData.community
       );
 
+    console.log(payload);
     this.notificationsClient.emit<number>(event, payload);
   }
 

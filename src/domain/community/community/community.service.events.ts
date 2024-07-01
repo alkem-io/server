@@ -77,17 +77,4 @@ export class CommunityEventsService {
         break;
     }
   }
-
-  public async createCommunityNewSpaceActivity(
-    community: ICommunity,
-    // newMember: IUser,
-    agentInfo: AgentInfo
-  ) {
-    const activityLogInput: NotificationInputSpaceCreated = {
-      triggeredBy: agentInfo.userID,
-      community: community,
-      // user: newMember,
-    };
-    await this.activityAdapter.memberJoined(activityLogInput);
-  }
 }

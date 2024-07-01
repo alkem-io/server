@@ -13,7 +13,6 @@ export enum ActivityEventType {
   CHALLENGE_CREATED = 'challenge-created',
   OPPORTUNITY_CREATED = 'opportunity-created',
   CALENDAR_EVENT_CREATED = 'calendar-event-created',
-  SPACE_CREATED = 'space-created',
 }
 
 registerEnumType(ActivityEventType, {
