@@ -54,6 +54,8 @@ import { ICommunityGuidelines } from '@domain/community/community-guidelines/com
 import { CommunityGuidelinesService } from '@domain/community/community-guidelines/community.guidelines.service';
 import { CommunityGuidelinesTemplateService } from '@domain/template/community-guidelines-template/community.guidelines.template.service';
 import { ICommunityGuidelinesTemplate } from '@domain/template/community-guidelines-template/community.guidelines.template.interface';
+import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
+import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
 
 @Resolver(() => LookupQueryResults)
 export class LookupResolverFields {
@@ -82,7 +84,8 @@ export class LookupResolverFields {
     private spaceService: SpaceService,
     private userService: UserService,
     private guidelinesService: CommunityGuidelinesService,
-    private guidelinesTemplateService: CommunityGuidelinesTemplateService
+    private guidelinesTemplateService: CommunityGuidelinesTemplateService,
+    private virtualContributorService: VirtualContributorService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -90,10 +93,7 @@ export class LookupResolverFields {
     nullable: true,
     description: 'Lookup the specified Space',
   })
-  async space(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('ID', { type: () => UUID }) id: string
-  ): Promise<ISpace> {
+  async space(@Args('ID', { type: () => UUID }) id: string): Promise<ISpace> {
     const space = await this.spaceService.getSpaceOrFail(id);
 
     return space;
@@ -117,6 +117,17 @@ export class LookupResolverFields {
     );
 
     return document;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField(() => IVirtualContributor, {
+    nullable: true,
+    description: 'A particular VirtualContributor',
+  })
+  async virtualContributor(
+    @Args('ID', { type: () => UUID, nullable: false }) id: string
+  ): Promise<IVirtualContributor> {
+    return await this.virtualContributorService.getVirtualContributorOrFail(id);
   }
 
   @UseGuards(GraphqlGuard)

@@ -7,7 +7,7 @@ import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 import { CalloutContributionService } from './callout.contribution.service';
 import { IPost } from '../post/post.interface';
 import { IUser } from '@domain/community/user/user.interface';
-import { UserLookupService } from '@services/infrastructure/user-lookup/user.lookup.service';
+import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -18,7 +18,7 @@ import { ILink } from '../link/link.interface';
 export class CalloutContributionResolverFields {
   constructor(
     private calloutContributionService: CalloutContributionService,
-    private userLookupService: UserLookupService,
+    private userLookupService: ContributorLookupService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}

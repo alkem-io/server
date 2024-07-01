@@ -8,7 +8,6 @@ import { IActivityLogEntryChallengeCreated } from '@services/api/activity-log/dt
 import { IActivityLogEntryOpportunityCreated } from '@services/api/activity-log/dto/activity.log.dto.entry.subsubspace.created';
 import { IActivityLogEntryCalloutPostComment } from '@services/api/activity-log/dto/activity.log.dto.entry.callout.post.comment';
 import { IActivityLogEntryCalloutDiscussionComment } from '@services/api/activity-log/dto/activity.log.dto.entry.callout.discussion.comment';
-import { UserService } from '@domain/community/user/user.service';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { PostService } from '@domain/collaboration/post/post.service';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
@@ -30,11 +29,12 @@ import { EntityManager } from 'typeorm';
 import { Space } from '@domain/space/space/space.entity';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { LogContext } from '@common/enums/logging.context';
+import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 
 export default class ActivityLogBuilderService implements IActivityLogBuilder {
   constructor(
     private readonly activityLogEntryBase: IActivityLogEntry,
-    private readonly userService: UserService,
+    private readonly contributorLookupService: ContributorLookupService,
     private readonly calloutService: CalloutService,
     private readonly postService: PostService,
     private readonly whiteboardService: WhiteboardService,
@@ -53,13 +53,18 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
     const community = await this.communityService.getCommunityOrFail(
       rawActivity.parentID
     );
-    const userJoining = await this.userService.getUserOrFail(
-      rawActivity.resourceID
-    );
+    const contributorJoining =
+      await this.contributorLookupService.getContributorOrFail(
+        rawActivity.resourceID
+      );
+
+    const contributorType =
+      this.contributorLookupService.getContributorType(contributorJoining);
     const activityMemberJoined: IActivityLogEntryMemberJoined = {
       ...this.activityLogEntryBase,
       community: community,
-      user: userJoining,
+      contributor: contributorJoining,
+      contributorType: contributorType,
       communityType: `${community.type}`,
     };
     return activityMemberJoined;

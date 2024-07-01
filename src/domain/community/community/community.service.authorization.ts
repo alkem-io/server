@@ -22,11 +22,9 @@ import {
   POLICY_RULE_COMMUNITY_ADD_VC,
   POLICY_RULE_COMMUNITY_INVITE_MEMBER,
 } from '@common/constants';
-import { InvitationExternalAuthorizationService } from '../invitation.external/invitation.external.service.authorization';
 import { InvitationAuthorizationService } from '../invitation/invitation.service.authorization';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { CommunityGuidelinesAuthorizationService } from '../community-guidelines/community.guidelines.service.authorization';
-import { ILicense } from '@domain/license/license/license.interface';
 import { CommunityPolicyService } from '../community-policy/community.policy.service';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { ICommunityPolicy } from '../community-policy/community.policy.interface';
@@ -34,6 +32,8 @@ import { CommunityRole } from '@common/enums/community.role';
 import { LicenseEngineService } from '@core/license-engine/license.engine.service';
 import { LicensePrivilege } from '@common/enums/license.privilege';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
+import { IAgent } from '@domain/agent';
+import { PlatformInvitationAuthorizationService } from '@platform/invitation/platform.invitation.service.authorization';
 
 @Injectable()
 export class CommunityAuthorizationService {
@@ -46,14 +46,14 @@ export class CommunityAuthorizationService {
     private applicationAuthorizationService: ApplicationAuthorizationService,
     private invitationAuthorizationService: InvitationAuthorizationService,
     private communityPolicyService: CommunityPolicyService,
-    private invitationExternalAuthorizationService: InvitationExternalAuthorizationService,
+    private platformInvitationAuthorizationService: PlatformInvitationAuthorizationService,
     private communityGuidelinesAuthorizationService: CommunityGuidelinesAuthorizationService
   ) {}
 
   async applyAuthorizationPolicy(
     communityInput: ICommunity,
     parentAuthorization: IAuthorizationPolicy | undefined,
-    license: ILicense,
+    accountAgent: IAgent,
     communityPolicy: ICommunityPolicy
   ): Promise<ICommunity> {
     const community = await this.communityService.getCommunityOrFail(
@@ -67,7 +67,7 @@ export class CommunityAuthorizationService {
           groups: true,
           applications: true,
           invitations: true,
-          externalInvitations: true,
+          platformInvitations: true,
           guidelines: {
             profile: true,
           },
@@ -81,7 +81,7 @@ export class CommunityAuthorizationService {
       !community.groups ||
       !community.applications ||
       !community.invitations ||
-      !community.externalInvitations
+      !community.platformInvitations
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load child entities for community authorization: ${community.id} `,
@@ -101,7 +101,7 @@ export class CommunityAuthorizationService {
     community.authorization = await this.extendAuthorizationPolicy(
       community.authorization,
       parentAuthorization?.anonymousReadAccess,
-      license,
+      accountAgent,
       communityPolicy
     );
     community.authorization = this.appendVerifiedCredentialRules(
@@ -145,9 +145,9 @@ export class CommunityAuthorizationService {
       invitation.authorization = invitationReset.authorization;
     }
 
-    for (const externalInvitation of community.externalInvitations) {
+    for (const externalInvitation of community.platformInvitations) {
       const invitationReset =
-        await this.invitationExternalAuthorizationService.applyAuthorizationPolicy(
+        await this.platformInvitationAuthorizationService.applyAuthorizationPolicy(
           externalInvitation,
           community.authorization
         );
@@ -168,7 +168,7 @@ export class CommunityAuthorizationService {
   private async extendAuthorizationPolicy(
     authorization: IAuthorizationPolicy | undefined,
     allowGlobalRegisteredReadAccess: boolean | undefined,
-    license: ILicense,
+    accountAgent: IAgent,
     policy: ICommunityPolicy
   ): Promise<IAuthorizationPolicy> {
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
@@ -225,7 +225,7 @@ export class CommunityAuthorizationService {
     const accessVirtualContributors =
       await this.licenseEngineService.isAccessGranted(
         LicensePrivilege.VIRTUAL_CONTRIBUTOR_ACCESS,
-        license
+        accountAgent
       );
     if (accessVirtualContributors) {
       const criterias: ICredentialDefinition[] =

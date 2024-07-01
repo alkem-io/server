@@ -1,0 +1,82 @@
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { AiServerAdapterAskQuestionInput } from './dto/ai.server.adapter.dto.ask.question';
+import { AiServerService } from '@services/ai-server/ai-server/ai.server.service';
+import { CreateAiPersonaServiceInput } from '@services/ai-server/ai-persona-service/dto';
+import { IAiPersonaService } from '@services/ai-server/ai-persona-service';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { SpaceIngestionPurpose } from '@services/infrastructure/event-bus/commands';
+import { IMessageAnswerToQuestion } from '@domain/communication/message.answer.to.question/message.answer.to.question.interface';
+import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
+
+@Injectable()
+export class AiServerAdapter {
+  constructor(
+    private aiServer: AiServerService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService
+  ) {}
+
+  async ensureSpaceIsUsable(
+    spaceID: string,
+    purpose: SpaceIngestionPurpose
+  ): Promise<void> {
+    return this.aiServer.ensureSpaceIsUsable(spaceID, purpose);
+  }
+
+  async ensurePersonaIsUsable(
+    personaServiceId: string,
+    purpose: SpaceIngestionPurpose
+  ): Promise<boolean> {
+    return this.aiServer.ensurePersonaIsUsable(personaServiceId, purpose);
+  }
+
+  async refreshBodyOfKnowlege(personaServiceId: string): Promise<boolean> {
+    return this.aiServer.ensurePersonaIsUsable(
+      personaServiceId,
+      SpaceIngestionPurpose.KNOWLEDGE
+    );
+  }
+
+  async getPersonaServiceBodyOfKnowledgeType(
+    personaServiceId: string
+  ): Promise<AiPersonaBodyOfKnowledgeType> {
+    const aiPersonaService = await this.aiServer.getAiPersonaServiceOrFail(
+      personaServiceId
+    );
+    return aiPersonaService.bodyOfKnowledgeType;
+  }
+
+  async getPersonaServiceBodyOfKnowledgeID(
+    personaServiceId: string
+  ): Promise<string> {
+    const aiPersonaService = await this.aiServer.getAiPersonaServiceOrFail(
+      personaServiceId
+    );
+    return aiPersonaService.bodyOfKnowledgeID;
+  }
+
+  async getPersonaServiceOrFail(
+    personaServiceId: string
+  ): Promise<IAiPersonaService> {
+    return this.aiServer.getAiPersonaServiceOrFail(personaServiceId);
+  }
+
+  async createAiPersonaService(
+    personaServiceData: CreateAiPersonaServiceInput
+  ) {
+    return this.aiServer.createAiPersonaService(personaServiceData);
+  }
+
+  async askQuestion(
+    questionInput: AiServerAdapterAskQuestionInput,
+    agentInfo: AgentInfo,
+    contextSapceNameID: string
+  ): Promise<IMessageAnswerToQuestion> {
+    return this.aiServer.askQuestion(
+      questionInput,
+      agentInfo,
+      contextSapceNameID
+    );
+  }
+}

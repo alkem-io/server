@@ -45,29 +45,6 @@ export class WhiteboardIntegrationService {
     )?.whiteboards?.max_collaborators_in_room;
   }
 
-  private async buildAgentInfo(userId: string): Promise<AgentInfo> {
-    const user = await this.userService.getUserOrFail(userId, {
-      relations: { agent: true },
-    });
-
-    if (!user.agent) {
-      throw new EntityNotInitializedException(
-        `Agent not loaded for User: ${user.id}`,
-        LogContext.AUTH,
-        { userId }
-      );
-    }
-
-    // const verifiedCredentials =
-    //   await this.agentService.getVerifiedCredentials(user.agent);
-    const verifiedCredentials = [] as IVerifiedCredential[];
-    // construct the agent info object needed for isAccessGranted
-    return {
-      credentials: user.agent.credentials ?? [],
-      verifiedCredentials,
-    } as AgentInfo;
-  }
-
   public async accessGranted(data: AccessGrantedInputData): Promise<boolean> {
     try {
       const whiteboard = await this.whiteboardService.getWhiteboardOrFail(
@@ -159,5 +136,28 @@ export class WhiteboardIntegrationService {
       .catch(err => {
         this.logger.error(err?.message, err?.stack, LogContext.ACTIVITY);
       });
+  }
+
+  private async buildAgentInfo(userId: string): Promise<AgentInfo> {
+    const user = await this.userService.getUserOrFail(userId, {
+      relations: { agent: true },
+    });
+
+    if (!user.agent) {
+      throw new EntityNotInitializedException(
+        `Agent not loaded for User: ${user.id}`,
+        LogContext.AUTH,
+        { userId }
+      );
+    }
+
+    // const verifiedCredentials =
+    //   await this.agentService.getVerifiedCredentials(user.agent);
+    const verifiedCredentials = [] as IVerifiedCredential[];
+    // construct the agent info object needed for isAccessGranted
+    return {
+      credentials: user.agent.credentials ?? [],
+      verifiedCredentials,
+    } as AgentInfo;
   }
 }

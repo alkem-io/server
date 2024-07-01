@@ -33,6 +33,8 @@ import { ILoader } from '@core/dataloader/loader.interface';
 import { OrganizationStorageAggregatorLoaderCreator } from '@core/dataloader/creators/loader.creators/community/organization.storage.aggregator.loader.creator';
 import { OrganizationRole } from '@common/enums/organization.role';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { IAccount } from '@domain/space/account/account.interface';
+import { ContributorService } from '../contributor/contributor.service';
 
 @Resolver(() => IOrganization)
 export class OrganizationResolverFields {
@@ -40,7 +42,8 @@ export class OrganizationResolverFields {
     private authorizationService: AuthorizationService,
     private organizationService: OrganizationService,
     private groupService: UserGroupService,
-    private preferenceSetService: PreferenceSetService
+    private preferenceSetService: PreferenceSetService,
+    private contributorService: ContributorService
   ) {}
 
   //@AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -107,6 +110,29 @@ export class OrganizationResolverFields {
     }
 
     return userGroup;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField('accounts', () => [IAccount], {
+    nullable: false,
+    description: 'The accounts hosted by this Organization.',
+  })
+  @Profiling.api
+  async accounts(
+    @Parent() organization: IOrganization,
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<IAccount[]> {
+    const accountsVisible = await this.authorizationService.isAccessGranted(
+      agentInfo,
+      organization.authorization,
+      AuthorizationPrivilege.UPDATE
+    );
+    if (accountsVisible) {
+      return await this.contributorService.getAccountsHostedByContributor(
+        organization
+      );
+    }
+    return [];
   }
 
   @UseGuards(GraphqlGuard)

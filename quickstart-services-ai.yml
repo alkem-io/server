@@ -439,7 +439,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_virtual-contributor-ingest-space
     hostname: virtual-contributor-ingest-space
-    image: alkemio/virtual-contributor-ingest-space:v0.4.2
+    image: alkemio/virtual-contributor-ingest-space:v0.6.1
     platform: linux/x86_64
     restart: always
     volumes:

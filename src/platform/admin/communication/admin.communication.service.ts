@@ -14,7 +14,6 @@ import { CommunicationAdminRoomResult } from './dto/admin.communication.dto.orph
 import { CommunicationAdminRemoveOrphanedRoomInput } from './dto/admin.communication.dto.remove.orphaned.room';
 import { ValidationException } from '@common/exceptions';
 import { CommunityRole } from '@common/enums/community.role';
-import { DiscussionService } from '@domain/communication/discussion/discussion.service';
 import { IRoom } from '@domain/communication/room/room.interface';
 
 @Injectable()
@@ -22,7 +21,6 @@ export class AdminCommunicationService {
   constructor(
     private communicationAdapter: CommunicationAdapter,
     private communicationService: CommunicationService,
-    private discussionService: DiscussionService,
     private communityService: CommunityService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -57,17 +55,6 @@ export class AdminCommunicationService {
     );
     result.rooms.push(updatesResult);
 
-    const discussions = await this.communicationService.getDiscussions(
-      communication
-    );
-    for (const discussion of discussions) {
-      const comments = await this.discussionService.getComments(discussion.id);
-      const discussionResult = await this.createCommunicationAdminRoomResult(
-        comments,
-        communityMembers
-      );
-      result.rooms.push(discussionResult);
-    }
     return result;
   }
 
@@ -128,7 +115,7 @@ export class AdminCommunicationService {
       CommunityRole.MEMBER
     );
     for (const communityMember of communityMembers) {
-      await this.communicationService.addUserToCommunications(
+      await this.communicationService.addContributorToCommunications(
         communication,
         communityMember.communicationID
       );

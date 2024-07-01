@@ -1,7 +1,7 @@
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { ILibrary } from '@library/library/library.interface';
-import { ICommunication } from '@domain/communication/communication/communication.interface';
 import {
+  AuthorizationAgentPrivilege,
   InnovationHub as InnovationHubDecorator,
   Profiling,
 } from '@src/common/decorators';
@@ -21,6 +21,9 @@ import { GraphqlGuard } from '@core/authorization';
 import { UseGuards } from '@nestjs/common';
 import { ReleaseDiscussionOutput } from './dto/release.discussion.dto';
 import { ILicensing } from '@platform/licensing/licensing.interface';
+import { IForum } from '@platform/forum';
+import { IPlatformInvitation } from '@platform/invitation/platform.invitation.interface';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 
 @Resolver(() => IPlatform)
 export class PlatformResolverFields {
@@ -48,13 +51,24 @@ export class PlatformResolverFields {
       library: { innovationPacks: true },
     });
   }
-
-  @ResolveField('communication', () => ICommunication, {
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('platformInvitations', () => [IPlatformInvitation], {
     nullable: false,
-    description: 'The Communications for the platform',
+    description:
+      'Invitations to join roles for users not yet on the Alkemio platform.',
   })
-  communication(): Promise<ICommunication> {
-    return this.platformService.getCommunicationOrFail();
+  @Profiling.api
+  async platformInvitations(): Promise<IPlatformInvitation[]> {
+    return await this.platformService.getPlatformInvitationsForRole();
+  }
+
+  @ResolveField('forum', () => IForum, {
+    nullable: false,
+    description: 'The Forum for the platform',
+  })
+  async forum(): Promise<IForum> {
+    return await this.platformService.getForumOrFail();
   }
 
   @ResolveField('storageAggregator', () => IStorageAggregator, {

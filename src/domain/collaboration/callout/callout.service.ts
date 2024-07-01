@@ -25,7 +25,7 @@ import { RoomService } from '@domain/communication/room/room.service';
 import { RoomType } from '@common/enums/room.type';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { ITagsetTemplate } from '@domain/common/tagset-template';
-import { UserLookupService } from '@services/infrastructure/user-lookup/user.lookup.service';
+import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 import { CalloutFramingService } from '../callout-framing/callout.framing.service';
 import { ICalloutFraming } from '../callout-framing/callout.framing.interface';
 import { CalloutContributionDefaultsService } from '../callout-contribution-defaults/callout.contribution.defaults.service';
@@ -47,7 +47,7 @@ export class CalloutService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private namingService: NamingService,
     private roomService: RoomService,
-    private userLookupService: UserLookupService,
+    private userLookupService: ContributorLookupService,
     private calloutFramingService: CalloutFramingService,
     private contributionDefaultsService: CalloutContributionDefaultsService,
     private contributionPolicyService: CalloutContributionPolicyService,

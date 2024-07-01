@@ -1,21 +1,21 @@
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
-import { Communication } from '@domain/communication/communication/communication.entity';
 import { Library } from '@library/library/library.entity';
 import { Entity, JoinColumn, OneToMany, OneToOne } from 'typeorm';
 import { IPlatform } from './platform.interface';
 import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
 import { Licensing } from '@platform/licensing/licensing.entity';
-import { VirtualPersona } from '@platform/virtual-persona/virtual.persona.entity';
+import { Forum } from '@platform/forum';
+import { PlatformInvitation } from '@platform/invitation';
 
 @Entity()
 export class Platform extends AuthorizableEntity implements IPlatform {
-  @OneToOne(() => Communication, {
+  @OneToOne(() => Forum, {
     eager: false,
     cascade: true,
     onDelete: 'SET NULL',
   })
   @JoinColumn()
-  communication?: Communication;
+  forum?: Forum;
 
   @OneToOne(() => Library, {
     eager: false,
@@ -41,9 +41,13 @@ export class Platform extends AuthorizableEntity implements IPlatform {
   @JoinColumn()
   licensing?: Licensing;
 
-  @OneToMany(() => VirtualPersona, persona => persona.platform, {
-    eager: false,
-    cascade: true,
-  })
-  virtualPersonas!: VirtualPersona[];
+  @OneToMany(
+    () => PlatformInvitation,
+    platformInvitation => platformInvitation.platform,
+    {
+      eager: false,
+      cascade: true,
+    }
+  )
+  platformInvitations!: PlatformInvitation[];
 }

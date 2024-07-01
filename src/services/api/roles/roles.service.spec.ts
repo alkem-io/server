@@ -32,6 +32,8 @@ import { SpaceLevel } from '@common/enums/space.level';
 import { Space } from '@domain/space/space/space.entity';
 import { License } from '@domain/license/license/license.entity';
 import { RolesResultCommunity } from './dto/roles.dto.result.community';
+import { MockUserLookupService } from '@test/mocks/user.lookup.service.mock';
+import { MockVirtualContributorService } from '@test/mocks/virtual.contributor.service.mock';
 
 describe('RolesService', () => {
   let rolesService: RolesService;
@@ -56,6 +58,8 @@ describe('RolesService', () => {
         MockWinstonProvider,
         MockEntityManagerProvider,
         MockSpaceService,
+        MockUserLookupService,
+        MockVirtualContributorService,
         RolesService,
       ],
     }).compile();
@@ -164,7 +168,9 @@ describe('RolesService', () => {
     });
 
     it.skip('Should get user applications', async () => {
-      const res = await rolesService.getUserApplications(testData.user.id);
+      const res = await rolesService.getCommunityApplicationsForUser(
+        testData.user.id
+      );
 
       expect(res).toEqual(
         expect.arrayContaining([
@@ -182,7 +188,7 @@ describe('RolesService', () => {
         .mockResolvedValueOnce(false);
 
       await asyncToThrow(
-        rolesService.getUserApplications(testData.user.id),
+        rolesService.getCommunityApplicationsForUser(testData.user.id),
         RelationshipNotFoundException
       );
     });
@@ -230,6 +236,7 @@ const getSpaceRoleResultMock = ({
     id,
     displayName,
     type: SpaceType.SPACE,
+    level: SpaceLevel.SPACE,
     spaceID: id,
     nameID: `space-${id}`,
     visibility: SpaceVisibility.ACTIVE,
@@ -255,7 +262,6 @@ const getSpaceRoleResultMock = ({
         license: {
           id: `license-${id}`,
           visibility: SpaceVisibility.ACTIVE,
-          featureFlags: [],
           ...getEntityMock<License>(),
         },
       },
@@ -283,6 +289,7 @@ const getSubpaceRoleResultMock = ({
     nameID: `subspace-${id}`,
     roles,
     type,
+    level: SpaceLevel.SPACE,
   };
 };
 

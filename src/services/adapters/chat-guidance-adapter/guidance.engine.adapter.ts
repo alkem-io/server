@@ -2,7 +2,6 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ClientProxy } from '@nestjs/microservices';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { firstValueFrom } from 'rxjs';
-import { IChatGuidanceQueryResult } from '@services/api/chat-guidance/dto/chat.guidance.query.result.dto';
 import { LogContext } from '@common/enums';
 import { GuidanceEngineInputBase } from './dto/guidance.engine.dto.base';
 import { GuidanceEngineBaseResponse } from './dto/guidance.engine.dto.base.response';
@@ -11,6 +10,7 @@ import { GuidanceEngineQueryResponse } from './dto/guidance.engine.dto.question.
 import { Source } from './source.type';
 import { GuidanceReporterService } from '@services/external/elasticsearch/guidance-reporter';
 import { VIRTUAL_CONTRIBUTOR_ENGINE_GUIDANCE } from '@common/constants';
+import { IMessageAnswerToQuestion } from '@domain/communication/message.answer.to.question/message.answer.to.question.interface';
 
 enum GuidanceEngineEventType {
   QUERY = 'query',
@@ -33,7 +33,7 @@ export class GuidanceEngineAdapter {
 
   public async sendQuery(
     eventData: GuidanceEngineQueryInput
-  ): Promise<IChatGuidanceQueryResult> {
+  ): Promise<IMessageAnswerToQuestion> {
     let responseData: GuidanceEngineQueryResponse | undefined;
 
     try {

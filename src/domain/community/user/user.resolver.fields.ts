@@ -30,6 +30,8 @@ import {
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Loader } from '@core/dataloader/decorators';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { ContributorService } from '../contributor/contributor.service';
+import { IAccount } from '@domain/space/account/account.interface';
 
 @Resolver(() => IUser)
 export class UserResolverFields {
@@ -38,6 +40,7 @@ export class UserResolverFields {
     private userService: UserService,
     private preferenceSetService: PreferenceSetService,
     private messagingService: MessagingService,
+    private contributorService: ContributorService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -178,6 +181,27 @@ export class UserResolverFields {
       return user.phone;
     }
     return 'not accessible';
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField('accounts', () => [IAccount], {
+    nullable: false,
+    description: 'The accounts hosted by this User.',
+  })
+  @Profiling.api
+  async accounts(
+    @Parent() user: User,
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<IAccount[]> {
+    const accountsVisible = await this.isAccessGranted(
+      user,
+      agentInfo,
+      AuthorizationPrivilege.READ_USER_PII
+    );
+    if (accountsVisible) {
+      return await this.contributorService.getAccountsHostedByContributor(user);
+    }
+    return [];
   }
 
   @UseGuards(GraphqlGuard)

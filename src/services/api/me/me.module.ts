@@ -11,6 +11,7 @@ import { RolesModule } from '../roles/roles.module';
 import { ActivityLogModule } from '../activity-log/activity.log.module';
 import { ActivityModule } from '@platform/activity/activity.module';
 import { CommunityModule } from '@domain/community/community/community.module';
+import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { CommunityModule } from '@domain/community/community/community.module';
     ActivityLogModule,
     ActivityModule,
     CommunityModule,
+    EntityResolverModule,
   ],
   providers: [MeService, MeResolverQueries, MeResolverFields],
   exports: [MeService],

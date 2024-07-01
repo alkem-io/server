@@ -33,7 +33,9 @@ import {
   IVirtualContributor,
   VirtualContributor,
 } from '@domain/community/virtual-contributor';
-import { AccountHostService } from './account.host.service';
+import { AccountHostService } from '../account.host/account.host.service';
+import { LicensePrivilege } from '@common/enums/license.privilege';
+import { LicensePlanType } from '@common/enums/license.plan.type';
 
 @Resolver(() => IAccount)
 export class AccountResolverFields {
@@ -117,6 +119,17 @@ export class AccountResolverFields {
     return loader.load(account.id);
   }
 
+  @ResolveField('licensePrivileges', () => [LicensePrivilege], {
+    nullable: true,
+    description:
+      'The privileges granted based on the License credentials held by this Account.',
+  })
+  async licensePrivileges(
+    @Parent() account: IAccount
+  ): Promise<LicensePrivilege[]> {
+    return this.accountService.getLicensePrivileges(account);
+  }
+
   @ResolveField('host', () => IContributor, {
     nullable: true,
     description: 'The Account host.',
@@ -171,7 +184,7 @@ export class AccountResolverFields {
           ),
         };
       })
-      .filter(item => item.plan)
+      .filter(item => item.plan?.type === LicensePlanType.SPACE_PLAN)
       .sort((a, b) => b.plan!.sortOrder - a.plan!.sortOrder)?.[0].subscription;
   }
 

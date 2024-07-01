@@ -16,10 +16,8 @@ import { NotificationAdapter } from '@services/adapters/notification-adapter/not
 import { PlatformService } from './platform.service';
 import { AssignPlatformRoleToUserInput } from './dto/platform.dto.assign.role.user';
 import { PlatformRole } from '@common/enums/platform.role';
-import { IVirtualPersona } from '@platform/virtual-persona/virtual.persona.interface';
-import { CreateVirtualPersonaInput } from '@platform/virtual-persona/dto/virtual.persona.dto.create';
-import { VirtualPersonaService } from '@platform/virtual-persona/virtual.persona.service';
-import { VirtualPersonaAuthorizationService } from '@platform/virtual-persona/virtual.persona.service.authorization';
+import { CreatePlatformInvitationForRoleInput } from '@platform/platfrom/dto/platform.invitation.dto.global.role';
+import { IPlatformInvitation } from '@platform/invitation/platform.invitation.interface';
 
 @Resolver()
 export class PlatformResolverMutations {
@@ -28,9 +26,7 @@ export class PlatformResolverMutations {
     private notificationAdapter: NotificationAdapter,
     private platformService: PlatformService,
     private platformAuthorizationService: PlatformAuthorizationService,
-    private platformAuthorizationPolicyService: PlatformAuthorizationPolicyService,
-    private virtualPersonaService: VirtualPersonaService,
-    private virtualPersonaAuthorizationService: VirtualPersonaAuthorizationService
+    private platformAuthorizationPolicyService: PlatformAuthorizationPolicyService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -63,7 +59,10 @@ export class PlatformResolverMutations {
     const platformPolicy =
       await this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();
     let privilegeRequired = AuthorizationPrivilege.GRANT_GLOBAL_ADMINS;
-    if (membershipData.role === PlatformRole.BETA_TESTER) {
+    if (
+      membershipData.role === PlatformRole.BETA_TESTER ||
+      membershipData.role === PlatformRole.VC_CAMPAIGN
+    ) {
       privilegeRequired = AuthorizationPrivilege.PLATFORM_ADMIN;
     }
     await this.authorizationService.grantAccessOrFail(
@@ -119,39 +118,31 @@ export class PlatformResolverMutations {
   }
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => IVirtualPersona, {
-    description: 'Creates a new VirtualPersona on the platform.',
+  @Mutation(() => IPlatformInvitation, {
+    description:
+      'Invite a User to join the platform in a particular Platform role e.g. BetaTester',
   })
-  @Profiling.api
-  async createVirtualPersona(
+  async inviteUserToPlatformWithRole(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('virtualPersonaData')
-    virtualPersonaData: CreateVirtualPersonaInput
-  ): Promise<IVirtualPersona> {
+    @Args('invitationData')
+    invitationData: CreatePlatformInvitationForRoleInput
+  ): Promise<IPlatformInvitation> {
     const platformPolicy =
       await this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();
+
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       platformPolicy,
       AuthorizationPrivilege.PLATFORM_ADMIN,
-      `create Virtual persona: ${virtualPersonaData.engine}`
-    );
-    const virtual = await this.virtualPersonaService.createVirtualPersona(
-      virtualPersonaData
+      `invitation to platform in global role: ${invitationData.email}`
     );
 
-    const virtualWithAuth =
-      await this.virtualPersonaAuthorizationService.applyAuthorizationPolicy(
-        virtual,
-        platformPolicy
-      );
+    // TODO: Notification
 
-    const platform = await this.platformService.getPlatformOrFail();
-    virtualWithAuth.platform = platform;
-
-    await this.virtualPersonaService.save(virtualWithAuth);
-
-    return virtualWithAuth;
+    return await this.platformService.createPlatformInvitation(
+      invitationData,
+      agentInfo
+    );
   }
 
   private async notifyPlatformGlobalRoleChange(

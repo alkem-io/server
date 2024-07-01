@@ -26,9 +26,6 @@ export class IUser extends IContributorBase implements IContributor {
 
   preferenceSet?: IPreferenceSet;
 
-  // the internal communicationID (Matrix) for the user
-  communicationID!: string;
-
   // Indicates if this profile is a service profile that is only used for service account style access
   // to the platform. Temporary measure, full service account support for later.
   serviceProfile!: boolean;

@@ -10,6 +10,7 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { InvitationAuthorizationService } from './invitation.service.authorization';
 import { InvitationResolverMutations } from './invitation.resolver.mutations';
 import { ContributorModule } from '../contributor/contributor.module';
+import { VirtualContributorModule } from '../virtual-contributor/virtual.contributor.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { ContributorModule } from '../contributor/contributor.module';
     LifecycleModule,
     UserModule,
     ContributorModule,
+    VirtualContributorModule,
     TypeOrmModule.forFeature([Invitation]),
   ],
   providers: [

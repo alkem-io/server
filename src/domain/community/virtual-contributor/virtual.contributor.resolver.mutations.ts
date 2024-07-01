@@ -1,5 +1,5 @@
 import { UseGuards } from '@nestjs/common';
-import { Args, Resolver, Mutation } from '@nestjs/graphql';
+import { Args, Resolver, Mutation, ObjectType } from '@nestjs/graphql';
 import { VirtualContributorService } from './virtual.contributor.service';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
@@ -11,7 +11,9 @@ import {
   DeleteVirtualContributorInput,
   UpdateVirtualContributorInput,
 } from './dto';
+import { RefreshVirtualContributorBodyOfKnowledgeInput } from './dto/virtual.contributor.dto.refresh.body.of.knowlege';
 
+@ObjectType('MigrateEmbeddings')
 @Resolver(() => IVirtualContributor)
 export class VirtualContributorResolverMutations {
   constructor(
@@ -33,7 +35,7 @@ export class VirtualContributorResolverMutations {
       await this.virtualContributorService.getVirtualContributorOrFail(
         virtualContributorData.ID
       );
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       virtual.authorization,
       AuthorizationPrivilege.UPDATE,
@@ -57,7 +59,7 @@ export class VirtualContributorResolverMutations {
       await this.virtualContributorService.getVirtualContributorOrFail(
         deleteData.ID
       );
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       virtual.authorization,
       AuthorizationPrivilege.DELETE,
@@ -65,6 +67,37 @@ export class VirtualContributorResolverMutations {
     );
     return await this.virtualContributorService.deleteVirtualContributor(
       deleteData.ID
+    );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => Boolean, {
+    description:
+      'Triggers a request to the backing AI Service to refresh the knowledge that is available to it.',
+  })
+  async refreshVirtualContributorBodyOfKnowledge(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('deleteData')
+    refreshData: RefreshVirtualContributorBodyOfKnowledgeInput
+  ): Promise<boolean> {
+    const virtual =
+      await this.virtualContributorService.getVirtualContributorOrFail(
+        refreshData.virtualContributorID,
+        {
+          relations: {
+            aiPersona: true,
+          },
+        }
+      );
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      virtual.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `deleteOrg: ${virtual.nameID}`
+    );
+    return await this.virtualContributorService.refershBodyOfKnowledge(
+      virtual,
+      agentInfo
     );
   }
 }

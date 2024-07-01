@@ -12,31 +12,17 @@ import {
   ICommunication,
 } from '@domain/communication/communication';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
-import { IDiscussion } from '../discussion/discussion.interface';
-import { DiscussionService } from '../discussion/discussion.service';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { IUser } from '@domain/community/user/user.interface';
-import { CommunicationCreateDiscussionInput } from './dto/communication.dto.create.discussion';
-import { DiscussionCategory } from '@common/enums/communication.discussion.category';
-import { CommunicationDiscussionCategoryException } from '@common/exceptions/communication.discussion.category.exception';
-import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 import { RoomService } from '../room/room.service';
 import { IRoom } from '../room/room.interface';
 import { RoomType } from '@common/enums/room.type';
-import { COMMUNICATION_PLATFORM_SPACEID } from '@common/constants';
-import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
-import { DiscussionsOrderBy } from '@common/enums/discussions.orderBy';
-import { Discussion } from '../discussion/discussion.entity';
-import { NamingService } from '@services/infrastructure/naming/naming.service';
 
 @Injectable()
 export class CommunicationService {
   constructor(
-    private discussionService: DiscussionService,
     private roomService: RoomService,
     private communicationAdapter: CommunicationAdapter,
-    private storageAggregatorResolverService: StorageAggregatorResolverService,
-    private namingService: NamingService,
     @InjectRepository(Communication)
     private communicationRepository: Repository<Communication>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -44,15 +30,11 @@ export class CommunicationService {
 
   async createCommunication(
     displayName: string,
-    spaceID: string,
-    discussionCategories: DiscussionCategory[]
+    spaceID: string
   ): Promise<ICommunication> {
     const communication: ICommunication = new Communication(displayName);
     communication.authorization = new AuthorizationPolicy();
     communication.spaceID = spaceID;
-
-    communication.discussions = [];
-    communication.discussionCategories = discussionCategories;
 
     // save to get the id assigned
     await this.save(communication);
@@ -67,150 +49,6 @@ export class CommunicationService {
 
   async save(communication: ICommunication): Promise<ICommunication> {
     return await this.communicationRepository.save(communication);
-  }
-
-  async createDiscussion(
-    discussionData: CommunicationCreateDiscussionInput,
-    userID: string,
-    userCommunicationID: string
-  ): Promise<IDiscussion> {
-    const displayName = discussionData.profile.displayName;
-    const communicationID = discussionData.communicationID;
-
-    this.logger.verbose?.(
-      `[Discussion] Adding discussion (${displayName}) to Communication (${communicationID})`,
-      LogContext.COMMUNICATION
-    );
-
-    // Try to find the Communication
-    const communication = await this.getCommunicationOrFail(communicationID, {
-      relations: { discussions: true },
-    });
-
-    if (!communication.discussionCategories.includes(discussionData.category)) {
-      throw new CommunicationDiscussionCategoryException(
-        `Invalid discussion category supplied ('${discussionData.category}'), allowed categories: ${communication.discussionCategories}`,
-        LogContext.COMMUNICATION
-      );
-    }
-
-    let roomType = RoomType.DISCUSSION;
-    if (this.isPlatformCommunication(communication)) {
-      roomType = RoomType.DISCUSSION_FORUM;
-    }
-
-    const storageAggregator =
-      await this.storageAggregatorResolverService.getStorageAggregatorForCommunication(
-        communication.id
-      );
-    const reservedNameIDs =
-      await this.namingService.getReservedNameIDsInCommunication(
-        communication.id
-      );
-    discussionData.nameID =
-      this.namingService.createNameIdAvoidingReservedNameIDs(
-        `${discussionData.profile.displayName}`,
-        reservedNameIDs
-      );
-    const discussion = await this.discussionService.createDiscussion(
-      discussionData,
-      userID,
-      communication.displayName,
-      roomType,
-      storageAggregator
-    );
-    this.logger.verbose?.(
-      `[Discussion] Room created (${displayName}) and membership replicated from Updates (${communicationID})`,
-      LogContext.COMMUNICATION
-    );
-
-    communication.discussions?.push(discussion);
-    await this.communicationRepository.save(communication);
-
-    // Trigger a room membership request for the current user that is not awaited
-    const room = await this.discussionService.getComments(discussion.id);
-    await this.communicationAdapter.addUserToRoom(
-      room.externalRoomID,
-      userCommunicationID
-    );
-
-    // we're no longer replicating membership, because all the rooms are public and visible.
-    // Set the Matrix membership so that users sending to rooms they are a member of responds quickly
-    // const updates = this.getUpdates(communication);
-    // Do not await as the memberhip will be updated in the background
-    // this.communicationAdapter.replicateRoomMembership(
-    //   discussion.communicationRoomID,
-    //   updates.communicationRoomID,
-    //   userCommunicationID
-    // );
-
-    return discussion;
-  }
-
-  private isPlatformCommunication(communication: ICommunication): boolean {
-    if (communication.spaceID === COMMUNICATION_PLATFORM_SPACEID) {
-      return true;
-    }
-    return false;
-  }
-
-  async getDiscussions(
-    communication: ICommunication,
-    limit?: number,
-    orderBy: DiscussionsOrderBy = DiscussionsOrderBy.DISCUSSIONS_CREATEDATE_DESC
-  ): Promise<IDiscussion[]> {
-    const communicationWithDiscussions = await this.getCommunicationOrFail(
-      communication.id,
-      {
-        relations: { discussions: true },
-      }
-    );
-    const discussions = communicationWithDiscussions.discussions;
-    if (!discussions)
-      throw new EntityNotInitializedException(
-        `Unable to load Discussions for Communication: ${communication.id} `,
-        LogContext.COMMUNICATION
-      );
-
-    const sortedDiscussions = (discussions as Discussion[]).sort((a, b) => {
-      switch (orderBy) {
-        case DiscussionsOrderBy.DISCUSSIONS_CREATEDATE_ASC:
-          return a.createdDate.getTime() - b.createdDate.getTime();
-        case DiscussionsOrderBy.DISCUSSIONS_CREATEDATE_DESC:
-          return b.createdDate.getTime() - a.createdDate.getTime();
-      }
-      return 0;
-    });
-    return limit && limit > 0
-      ? sortedDiscussions.slice(0, limit)
-      : sortedDiscussions;
-  }
-
-  async getDiscussionOrFail(
-    communication: ICommunication,
-    discussionID: string
-  ): Promise<IDiscussion> {
-    const discussions = await this.getDiscussions(communication);
-    let discussion: IDiscussion | undefined;
-    if (discussionID.length === UUID_LENGTH) {
-      discussion = discussions.find(
-        discussion => discussion.id === discussionID
-      );
-    }
-    if (!discussion) {
-      // look up based on nameID
-      discussion = discussions.find(
-        discussion => discussion.nameID === discussionID
-      );
-    }
-
-    if (!discussion) {
-      throw new EntityNotFoundException(
-        `Unable to find Discussion with ID: ${discussionID}`,
-        LogContext.COMMUNICATION
-      );
-    }
-    return discussion;
   }
 
   getUpdates(communication: ICommunication): IRoom {
@@ -244,30 +82,33 @@ export class CommunicationService {
   async removeCommunication(communicationID: string): Promise<boolean> {
     // Note need to load it in with all contained entities so can remove fully
     const communication = await this.getCommunicationOrFail(communicationID, {
-      relations: { discussions: true },
+      relations: { updates: true },
     });
 
-    // Remove all groups
-    for (const discussion of await this.getDiscussions(communication)) {
-      await this.discussionService.removeDiscussion({
-        ID: discussion.id,
-      });
-    }
+    if (!communication.updates)
+      throw new EntityNotFoundException(
+        `Unable to find Communication with ID: ${communicationID}`,
+        LogContext.COMMUNICATION
+      );
 
-    await this.roomService.deleteRoom(this.getUpdates(communication));
+    await this.roomService.deleteRoom(communication.updates);
 
     await this.communicationRepository.remove(communication as Communication);
     return true;
   }
 
-  async addUserToCommunications(
+  async addContributorToCommunications(
     communication: ICommunication,
-    communicationUserID: string
+    contributorCommunicationID: string
   ): Promise<boolean> {
+    if (!contributorCommunicationID || contributorCommunicationID === '') {
+      // no communication ID to manage, just return
+      return true;
+    }
     const communicationRoomIDs = await this.getRoomsUsed(communication);
     await this.communicationAdapter.grantUserAccessToRooms(
       communicationRoomIDs,
-      communicationUserID
+      contributorCommunicationID
     );
 
     return true;
@@ -277,11 +118,7 @@ export class CommunicationService {
     const communicationRoomIDs: string[] = [
       this.getUpdates(communication).externalRoomID,
     ];
-    const discussions = await this.getDiscussions(communication);
-    for (const discussion of discussions) {
-      const room = await this.discussionService.getComments(discussion.id);
-      communicationRoomIDs.push(room.displayName);
-    }
+
     return communicationRoomIDs;
   }
 
@@ -304,10 +141,7 @@ export class CommunicationService {
     const communicationRoomIDs: string[] = [
       this.getUpdates(communication).externalRoomID,
     ];
-    for (const discussion of await this.getDiscussions(communication)) {
-      const room = await this.discussionService.getComments(discussion.id);
-      communicationRoomIDs.push(room.externalRoomID);
-    }
+
     await this.communicationAdapter.removeUserFromRooms(
       communicationRoomIDs,
       user.communicationID

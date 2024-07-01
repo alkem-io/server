@@ -23,20 +23,18 @@ import { CommunityAuthorizationService } from './community.service.authorization
 import { FormModule } from '@domain/common/form/form.module';
 import { InvitationModule } from '../invitation/invitation.module';
 import { CommunityInvitationLifecycleOptionsProvider } from './community.lifecycle.invitation.options.provider';
-import { InvitationExternalModule } from '../invitation.external/invitation.external.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { CommunityEventsService } from './community.service.events';
 import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
 import { CommunityGuidelinesModule } from '../community-guidelines/community.guidelines.module';
 import { VirtualContributorModule } from '../virtual-contributor/virtual.contributor.module';
 import { LicenseEngineModule } from '@core/license-engine/license.engine.module';
-import { AccountHostModule } from '@domain/space/account/account.host.module';
 import { ContributorModule } from '../contributor/contributor.module';
+import { PlatformInvitationModule } from '@platform/invitation/platform.invitation.module';
 
 @Module({
   imports: [
     ActivityAdapterModule,
-    AccountHostModule,
     NotificationAdapterModule,
     AuthorizationModule,
     AuthorizationPolicyModule,
@@ -48,7 +46,7 @@ import { ContributorModule } from '../contributor/contributor.module';
     VirtualContributorModule,
     ApplicationModule,
     InvitationModule,
-    InvitationExternalModule,
+    PlatformInvitationModule,
     CommunicationModule,
     CommunityPolicyModule,
     CommunityGuidelinesModule,

@@ -4,16 +4,17 @@ import { InjectEntityManager } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { UserService } from '@domain/community/user/user.service';
+import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
 import { ICommunity } from '@domain/community/community';
 import { ApplicationService } from '@domain/community/application/application.service';
 import { IApplication } from '@domain/community/application';
 import { SpaceFilterService } from '@services/infrastructure/space-filter/space.filter.service';
 import { RolesUserInput } from './dto/roles.dto.input.user';
 import { ContributorRoles } from './dto/roles.dto.result.contributor';
-import { ApplicationForRoleResult } from './dto/roles.dto.result.application';
+import { CommunityApplicationForRoleResult } from './dto/roles.dto.result.community.application';
 import { RolesOrganizationInput } from './dto/roles.dto.input.organization';
 import { mapSpaceCredentialsToRoles } from './util/map.space.credentials.to.roles';
-import { InvitationForRoleResult } from './dto/roles.dto.result.invitation';
+import { CommunityInvitationForRoleResult } from './dto/roles.dto.result.community.invitation';
 import { InvitationService } from '@domain/community/invitation/invitation.service';
 import { IInvitation } from '@domain/community/invitation';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
@@ -23,11 +24,14 @@ import { RolesResultSpace } from './dto/roles.dto.result.space';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { SpaceService } from '@domain/space/space/space.service';
+import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
+import { RolesVirtualContributorInput } from './dto/roles.dto.input.virtual.contributor';
 
 export class RolesService {
   constructor(
     @InjectEntityManager() private entityManager: EntityManager,
     private userService: UserService,
+    private virtualContributorService: VirtualContributorService,
     private applicationService: ApplicationService,
     private invitationService: InvitationService,
     private spaceFilterService: SpaceFilterService,
@@ -35,6 +39,7 @@ export class RolesService {
     private spaceService: SpaceService,
     private authorizationService: AuthorizationService,
     private organizationService: OrganizationService,
+    private userLookupService: ContributorLookupService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -67,6 +72,21 @@ export class RolesService {
     return contributorRoles;
   }
 
+  async getRolesForVirtualContributor(
+    membershipData: RolesVirtualContributorInput
+  ): Promise<ContributorRoles> {
+    const contributorRoles = new ContributorRoles();
+    const vc =
+      await this.virtualContributorService.getVirtualContributorAndAgent(
+        membershipData.virtualContributorID
+      );
+
+    contributorRoles.id = membershipData.virtualContributorID;
+    contributorRoles.credentials = vc.agent?.credentials || [];
+
+    return contributorRoles;
+  }
+
   async getOrganizationRolesForUser(
     roles: ContributorRoles
   ): Promise<RolesResultOrganization[]> {
@@ -93,15 +113,20 @@ export class RolesService {
     );
   }
 
-  public async getUserApplications(
+  public async getCommunityApplicationsForUser(
     userID: string,
     states?: string[]
-  ): Promise<ApplicationForRoleResult[]> {
-    const applicationResults: ApplicationForRoleResult[] = [];
-    const applications = await this.applicationService.findApplicationsForUser(
+  ): Promise<IApplication[]> {
+    return await this.applicationService.findApplicationsForUser(
       userID,
       states
     );
+  }
+
+  public async convertApplicationsToRoleResults(
+    applications: IApplication[]
+  ): Promise<CommunityApplicationForRoleResult[]> {
+    const applicationResults: CommunityApplicationForRoleResult[] = [];
     for (const application of applications) {
       const community = application.community;
       const state = await this.applicationService.getApplicationState(
@@ -125,7 +150,7 @@ export class RolesService {
     community: ICommunity,
     state: string,
     application: IApplication
-  ): Promise<ApplicationForRoleResult> {
+  ): Promise<CommunityApplicationForRoleResult> {
     const communityDisplayName =
       await this.communityResolverService.getDisplayNameForCommunityOrFail(
         community.id
@@ -135,7 +160,7 @@ export class RolesService {
       community.id
     );
 
-    const applicationResult = new ApplicationForRoleResult(
+    const applicationResult = new CommunityApplicationForRoleResult(
       community.id,
       communityDisplayName,
       state,
@@ -149,19 +174,32 @@ export class RolesService {
     return applicationResult;
   }
 
-  public async getUserInvitations(
+  public async getCommunityInvitationsForUser(
     userID: string,
     states?: string[]
-  ): Promise<InvitationForRoleResult[]> {
-    const invitationResults: InvitationForRoleResult[] = [];
-    const invitations =
-      await this.invitationService.findInvitationsForContributor(
-        userID,
-        states
-      );
+  ): Promise<IInvitation[]> {
+    // What contributors are managed by this user?
+    const contributorsManagedByUser =
+      await this.userLookupService.getContributorsManagedByUser(userID);
+    const invitations: IInvitation[] = [];
+    for (const contributor of contributorsManagedByUser) {
+      const contributorInvitations =
+        await this.invitationService.findInvitationsForContributor(
+          contributor.id,
+          states
+        );
+      if (contributorInvitations) {
+        invitations.push(...contributorInvitations);
+      }
+    }
 
-    if (!invitations) return [];
+    return invitations;
+  }
 
+  public async convertInvitationsToRoleResults(
+    invitations: IInvitation[]
+  ): Promise<CommunityInvitationForRoleResult[]> {
+    const invitationResults: CommunityInvitationForRoleResult[] = [];
     for (const invitation of invitations) {
       const community = invitation.community;
       const state = await this.invitationService.getInvitationState(
@@ -185,7 +223,7 @@ export class RolesService {
     community: ICommunity,
     state: string,
     invitation: IInvitation
-  ): Promise<InvitationForRoleResult> {
+  ): Promise<CommunityInvitationForRoleResult> {
     const communityDisplayName =
       await this.communityResolverService.getDisplayNameForCommunityOrFail(
         community.id
@@ -195,7 +233,7 @@ export class RolesService {
       community.id
     );
 
-    const invitationResult = new InvitationForRoleResult(
+    const invitationResult = new CommunityInvitationForRoleResult(
       community.id,
       communityDisplayName,
       state,
@@ -205,6 +243,8 @@ export class RolesService {
       invitation.createdDate,
       invitation.updatedDate
     );
+    invitationResult.contributorID = invitation.invitedContributor;
+    invitationResult.contributorType = invitation.contributorType;
 
     invitationResult.createdBy = invitation.createdBy;
     invitationResult.welcomeMessage = invitation.welcomeMessage;
