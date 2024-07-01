@@ -162,14 +162,15 @@ export class ActivityService {
 
     const queryParameters: unknown[] = [];
 
-    const defaultCondition = 'activity.visibility = ?';
+    const visibilityCondition = 'activity.visibility = ?';
 
     queryParameters.push(visibility);
 
     const collaborationIdsCondition =
       collaborationIDs && collaborationIDs.length > 0
-        ? ' AND activity.collaborationId IN (?)'
+        ? 'activity.collaborationId IN (?)'
         : undefined;
+
     if (collaborationIdsCondition) {
       queryParameters.push(collaborationIDs);
     }
@@ -190,7 +191,7 @@ export class ActivityService {
     }
 
     const whereConditions = [
-      defaultCondition,
+      visibilityCondition,
       collaborationIdsCondition,
       typesCondition,
       triggeredByCondition,
