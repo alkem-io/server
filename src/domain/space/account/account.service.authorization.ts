@@ -18,18 +18,22 @@ import { SpaceAuthorizationService } from '../space/space.service.authorization'
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
-  CREDENTIAL_RULE_ACCOUNT_CREATE_VIRTUAL_CONTRIBUTOR,
   CREDENTIAL_RULE_TYPES_ACCOUNT_AUTHORIZATION_RESET,
-  CREDENTIAL_RULE_TYPES_ACCOUNT_DELETE,
-  CREDENTIAL_RULE_TYPES_SPACE_AUTHORIZATION_GLOBAL_ADMIN_GRANT,
-  CREDENTIAL_RULE_TYPES_SPACE_GLOBAL_ADMIN_COMMUNITY_READ,
-  CREDENTIAL_RULE_TYPES_SPACE_READ,
+  CREDENTIAL_RULE_TYPES_ACCOUNT_CHILD_ENTITIES,
+  CREDENTIAL_RULE_TYPES_ACCOUNT_MANAGE,
+  CREDENTIAL_RULE_TYPES_GLOBAL_SPACE_READ,
 } from '@common/constants/authorization/credential.rule.types.constants';
 import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
 import { IVirtualContributor } from '@domain/community/virtual-contributor';
 import { VirtualContributorAuthorizationService } from '@domain/community/virtual-contributor/virtual.contributor.service.authorization';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { AccountHostService } from '../account.host/account.host.service';
+import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
+import { CommunityPolicyService } from '@domain/community/community-policy/community.policy.service';
+import { CommunityRole } from '@common/enums/community.role';
+import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
+import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
+import { POLICY_RULE_ACCOUNT_CREATE_VC } from '@common/constants/authorization/policy.rule.constants';
 
 @Injectable()
 export class AccountAuthorizationService {
@@ -41,6 +45,8 @@ export class AccountAuthorizationService {
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private spaceAuthorizationService: SpaceAuthorizationService,
     private virtualContributorAuthorizationService: VirtualContributorAuthorizationService,
+    private communityPolicyService: CommunityPolicyService,
+    private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
     private accountService: AccountService,
     private accountHostService: AccountHostService
   ) {}
@@ -51,21 +57,29 @@ export class AccountAuthorizationService {
       {
         relations: {
           agent: true,
-          space: true,
+          space: {
+            community: {
+              policy: true,
+            },
+          },
           license: true,
           library: true,
           defaults: true,
           virtualContributors: true,
+          storageAggregator: true,
         },
       }
     );
     if (
       !account.agent ||
       !account.space ||
+      !account.space.community ||
+      !account.space.community.policy ||
       !account.library ||
       !account.license ||
       !account.defaults ||
-      !account.virtualContributors
+      !account.virtualContributors ||
+      !account.storageAggregator
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load Account with entities at start of auth reset: ${account.id} `,
@@ -86,12 +100,16 @@ export class AccountAuthorizationService {
         account.authorization
       );
 
+    // For now also use the root space admins to have some access
+    const communityPolicyWithSettings =
+      this.spaceAuthorizationService.getCommunityPolicyWithSettings(
+        account.space
+      );
     account.authorization = this.extendAuthorizationPolicy(
       account.authorization,
-      account.id,
-      hostCredentials,
-      account.space?.id
+      hostCredentials
     );
+    account.authorization = this.appendPrivilegeRules(account.authorization);
 
     account.agent = this.agentAuthorizationService.applyAuthorizationPolicy(
       account.agent,
@@ -103,16 +121,33 @@ export class AccountAuthorizationService {
       account.authorization
     );
 
+    let clonedAccountAuth =
+      this.authorizationPolicyService.cloneAuthorizationPolicy(
+        account.authorization
+      );
+    clonedAccountAuth = this.extendAuthorizationPolicyForChildEntities(
+      clonedAccountAuth,
+      communityPolicyWithSettings,
+      hostCredentials
+    );
+
+    // For certain child entities allow the space admin also pretty much full control
     account.library =
       await this.templatesSetAuthorizationService.applyAuthorizationPolicy(
         account.library,
+        clonedAccountAuth
+      );
+
+    account.storageAggregator =
+      await this.storageAggregatorAuthorizationService.applyAuthorizationPolicy(
+        account.storageAggregator,
         account.authorization
       );
 
     account.defaults.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         account.defaults.authorization,
-        account.authorization
+        clonedAccountAuth
       );
 
     const updatedVCs: IVirtualContributor[] = [];
@@ -120,7 +155,7 @@ export class AccountAuthorizationService {
       const udpatedVC =
         await this.virtualContributorAuthorizationService.applyAuthorizationPolicy(
           vc,
-          account.authorization
+          clonedAccountAuth
         );
       updatedVCs.push(udpatedVC);
     }
@@ -146,18 +181,17 @@ export class AccountAuthorizationService {
 
   private extendAuthorizationPolicy(
     authorization: IAuthorizationPolicy | undefined,
-    accountID: string,
-    hostCredentials: ICredentialDefinition[],
-    rootSpaceID: string | undefined
+    hostCredentials: ICredentialDefinition[]
   ): IAuthorizationPolicy {
     if (!authorization) {
       throw new EntityNotInitializedException(
-        `Authorization definition not found for: ${accountID}`,
+        'Authorization definition not found for account',
         LogContext.ACCOUNT
       );
     }
+
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
-    // By default it is world visible
+    // By default it is world visible. TODO: work through the logic on this
     authorization.anonymousReadAccess = true;
 
     // Allow global admins to reset authorization, manage platform settings
@@ -177,64 +211,25 @@ export class AccountAuthorizationService {
     authorizationReset.cascade = false;
     newRules.push(authorizationReset);
 
-    const communityAdmin =
-      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.READ],
-        [AuthorizationCredential.GLOBAL_COMMUNITY_READ],
-        CREDENTIAL_RULE_TYPES_SPACE_GLOBAL_ADMIN_COMMUNITY_READ
-      );
-    newRules.push(communityAdmin);
-
-    // Allow Global admins to manage access to Spaces + contents
-    const globalAdmin =
-      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.GRANT],
-        [AuthorizationCredential.GLOBAL_ADMIN],
-        CREDENTIAL_RULE_TYPES_SPACE_AUTHORIZATION_GLOBAL_ADMIN_GRANT
-      );
-    newRules.push(globalAdmin);
-
     // Allow Global Spaces Read to view Spaces + contents
     const globalSpacesReader =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.READ],
         [AuthorizationCredential.GLOBAL_SPACES_READER],
-        CREDENTIAL_RULE_TYPES_SPACE_READ
+        CREDENTIAL_RULE_TYPES_GLOBAL_SPACE_READ
       );
     newRules.push(globalSpacesReader);
 
-    // Create the criterias for who can create a VC
-    const createVCsCriterias: ICredentialDefinition[] = [...hostCredentials];
-    createVCsCriterias.push({
-      type: AuthorizationCredential.GLOBAL_ADMIN,
-      resourceID: '',
-    });
-    createVCsCriterias.push({
-      type: AuthorizationCredential.GLOBAL_SUPPORT,
-      resourceID: '',
-    });
-
-    // If there is a root space, then also allow the admins to manage the account for now
-    if (rootSpaceID) {
-      createVCsCriterias.push({
-        type: AuthorizationCredential.SPACE_ADMIN,
-        resourceID: rootSpaceID,
-      });
-    }
-
-    const createVC = this.authorizationPolicyService.createCredentialRule(
-      [AuthorizationPrivilege.CREATE_VIRTUAL_CONTRIBUTOR],
-      createVCsCriterias,
-      CREDENTIAL_RULE_ACCOUNT_CREATE_VIRTUAL_CONTRIBUTOR
-    );
-    createVC.cascade = false;
-    newRules.push(createVC);
-
-    // Allow hosts (users = self mgmt, org = org admin) to delete their own account
+    // Allow hosts (users = self mgmt, org = org admin) to manage their own account
     const userHostsRule = this.authorizationPolicyService.createCredentialRule(
-      [AuthorizationPrivilege.DELETE],
+      [
+        AuthorizationPrivilege.CREATE,
+        AuthorizationPrivilege.READ,
+        AuthorizationPrivilege.UPDATE,
+        AuthorizationPrivilege.DELETE,
+      ],
       [...hostCredentials],
-      CREDENTIAL_RULE_TYPES_ACCOUNT_DELETE
+      CREDENTIAL_RULE_TYPES_ACCOUNT_MANAGE
     );
     userHostsRule.cascade = false;
     newRules.push(userHostsRule);
@@ -242,6 +237,65 @@ export class AccountAuthorizationService {
     return this.authorizationPolicyService.appendCredentialAuthorizationRules(
       authorization,
       newRules
+    );
+  }
+
+  private extendAuthorizationPolicyForChildEntities(
+    authorization: IAuthorizationPolicy | undefined,
+    communityPolicyWithSettings: ICommunityPolicy,
+    hostCredentials: ICredentialDefinition[]
+  ): IAuthorizationPolicy {
+    if (!authorization) {
+      throw new EntityNotInitializedException(
+        'Authorization definition not found for account',
+        LogContext.ACCOUNT
+      );
+    }
+    const newRules: IAuthorizationPolicyRuleCredential[] = [];
+    // If there is a root space, then also allow the admins to manage the account for now
+    const accountChildEntitiesManage = hostCredentials;
+    const spaceAdminCriterias =
+      this.communityPolicyService.getCredentialsForRole(
+        communityPolicyWithSettings,
+        CommunityRole.ADMIN
+      );
+    accountChildEntitiesManage.push(...spaceAdminCriterias);
+    if (accountChildEntitiesManage.length !== 0) {
+      const accountChildEntities =
+        this.authorizationPolicyService.createCredentialRule(
+          [
+            AuthorizationPrivilege.CREATE,
+            AuthorizationPrivilege.READ,
+            AuthorizationPrivilege.UPDATE,
+            AuthorizationPrivilege.DELETE,
+            AuthorizationPrivilege.GRANT,
+          ],
+          accountChildEntitiesManage,
+          CREDENTIAL_RULE_TYPES_ACCOUNT_CHILD_ENTITIES
+        );
+      newRules.push(accountChildEntities);
+    }
+    return this.authorizationPolicyService.appendCredentialAuthorizationRules(
+      authorization,
+      newRules
+    );
+  }
+
+  private appendPrivilegeRules(
+    authorization: IAuthorizationPolicy
+  ): IAuthorizationPolicy {
+    const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
+
+    const createVcPrivilege = new AuthorizationPolicyRulePrivilege(
+      [AuthorizationPrivilege.CREATE_VIRTUAL_CONTRIBUTOR],
+      AuthorizationPrivilege.CREATE,
+      POLICY_RULE_ACCOUNT_CREATE_VC
+    );
+    privilegeRules.push(createVcPrivilege);
+
+    return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
+      authorization,
+      privilegeRules
     );
   }
 }

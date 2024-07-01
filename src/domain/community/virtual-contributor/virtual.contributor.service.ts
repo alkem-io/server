@@ -38,6 +38,7 @@ import { IMessageAnswerToQuestion } from '@domain/communication/message.answer.t
 import { IAiPersona } from '../ai-persona';
 import { IContributor } from '../contributor/contributor.interface';
 import { AccountHostService } from '@domain/space/account.host/account.host.service';
+import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 
 @Injectable()
 export class VirtualContributorService {
@@ -455,6 +456,26 @@ export class VirtualContributorService {
 
     const host = await this.accountHostService.getHostOrFail(account);
     return host;
+  }
+
+  public async getAccountHostCredentials(
+    virtualContributorID: string
+  ): Promise<ICredentialDefinition[]> {
+    const virtualContributorWithAccount =
+      await this.getVirtualContributorOrFail(virtualContributorID, {
+        relations: { account: true },
+      });
+    const account = virtualContributorWithAccount.account;
+    if (!account)
+      throw new EntityNotInitializedException(
+        `Virtual Contributor Account not initialized: ${virtualContributorID}`,
+        LogContext.AUTH
+      );
+
+    const hostCredentials = await this.accountHostService.getHostCredentials(
+      account
+    );
+    return hostCredentials;
   }
 
   async getAiPersonaOrFail(

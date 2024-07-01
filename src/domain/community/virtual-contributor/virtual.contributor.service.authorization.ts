@@ -125,6 +125,7 @@ export class VirtualContributorAuthorizationService {
       );
     newRules.push(globalCommunityRead);
 
+    // TODO: rule that for now allows global support ability to manage VCs, this to be removed later
     const globalSupportManage =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [

@@ -1,15 +1,15 @@
 export const CREDENTIAL_RULE_TYPES_ACCOUNT_AUTHORIZATION_RESET =
   'credentialRuleTypes-accountAuthorizationReset';
-export const CREDENTIAL_RULE_TYPES_ACCOUNT_DELETE =
-  'credentialRuleTypes-accountDelete';
-export const CREDENTIAL_RULE_TYPES_SPACE_GLOBAL_ADMIN_COMMUNITY_READ =
-  'credentialRuleTypes-spaceGlobalAdminCommunityRead';
+export const CREDENTIAL_RULE_TYPES_ACCOUNT_MANAGE =
+  'credentialRuleTypes-accountManage';
+export const CREDENTIAL_RULE_TYPES_ACCOUNT_CHILD_ENTITIES =
+  'credentialRuleTypes-accountChildEntities';
+export const CREDENTIAL_RULE_TYPES_SPACE_GLOBAL_COMMUNITY_READ =
+  'credentialRuleTypes-spaceGlobalCommunityRead';
 export const CREDENTIAL_RULE_TYPES_SPACE_PLATFORM_SETTINGS =
   'credentialRuleTypes-spacePlatformSettings';
-export const CREDENTIAL_RULE_TYPES_SPACE_READ =
+export const CREDENTIAL_RULE_TYPES_GLOBAL_SPACE_READ =
   'credentialRuleTypes-spaceGlobalRead';
-export const CREDENTIAL_RULE_TYPES_SPACE_AUTHORIZATION_GLOBAL_ADMIN_GRANT =
-  'credentialRuleTypes-spaceAuthorizationGlobalAdminGrant';
 export const CREDENTIAL_RULE_TYPES_SPACE_COMMUNITY_APPLY_GLOBAL_REGISTERED =
   'credentialRuleTypes-spaceCommunityApplyGlobalRegistered';
 export const CREDENTIAL_RULE_TYPES_SPACE_COMMUNITY_JOIN_GLOBAL_REGISTERED =
@@ -70,8 +70,6 @@ export const CREDENTIAL_RULE_TYPES_PLATFORM_ANY_ADMIN =
   'credentialRuleTypes-platformAnyAdmin';
 export const CREDENTIAL_RULE_PLATFORM_CREATE_ORGANIZATION =
   'credentialRuleTypes-platformCreateOrganization';
-export const CREDENTIAL_RULE_ACCOUNT_CREATE_VIRTUAL_CONTRIBUTOR =
-  'credentialRuleTypes-accountCreateVirtualContributor';
 export const CREDENTIAL_RULE_PLATFORM_CREATE_SPACE =
   'credentialRuleTypes-platformCreateSpace';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_GUIDANCE =

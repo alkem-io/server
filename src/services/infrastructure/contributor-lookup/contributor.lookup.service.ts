@@ -58,6 +58,7 @@ export class ContributorLookupService {
     return user;
   }
 
+  // TODO: this may be heavy, is there a better way to do this?
   // Note: this logic should be reworked when the Account relationship to User / Organization is resolved
   public async getContributorsManagedByUser(
     userID: string
@@ -78,27 +79,12 @@ export class ContributorLookupService {
     // Obviously this user managed itself :)
     contributorsManagedByUser.push(user);
 
-    // Get all the VCs hosted on accounts from the User
-    const accountHostCredentials = await this.getCredentialsByTypeHeldByAgent(
-      user.agent.id,
-      AuthorizationCredential.ACCOUNT_HOST
-    );
-    const accountIDs = accountHostCredentials.map(
-      credential => credential.resourceID
-    );
-
-    for (const accountID of accountIDs) {
-      const virtualContributors =
-        await this.getVirtualContributorsManagedByAccount(accountID);
-      contributorsManagedByUser.push(...virtualContributors);
-    }
-
     // Get all the organizations managed by the User
     const organiationOwnerCredentials =
-      await this.getCredentialsByTypeHeldByAgent(
-        user.agent.id,
-        AuthorizationCredential.ACCOUNT_HOST
-      );
+      await this.getCredentialsByTypeHeldByAgent(user.agent.id, [
+        AuthorizationCredential.ORGANIZATION_OWNER,
+        AuthorizationCredential.ORGANIZATION_ADMIN,
+      ]);
     const organizationsIDs = organiationOwnerCredentials.map(
       credential => credential.resourceID
     );
@@ -106,9 +92,38 @@ export class ContributorLookupService {
       where: {
         id: In(organizationsIDs),
       },
+      relations: {
+        agent: true,
+      },
     });
     if (organizations.length > 0) {
       contributorsManagedByUser.push(...organizations);
+    }
+
+    // Get all the Accounts from the User directly or via Organizations the user manages
+    const accountIDs: string[] = [];
+    const userAccountHostCredentials =
+      await this.getCredentialsByTypeHeldByAgent(user.agent.id, [
+        AuthorizationCredential.ACCOUNT_HOST,
+      ]);
+    userAccountHostCredentials.forEach(credential =>
+      accountIDs.push(credential.resourceID)
+    );
+    for (const organization of organizations) {
+      const orgAccountHostCredentials =
+        await this.getCredentialsByTypeHeldByAgent(organization.agent.id, [
+          AuthorizationCredential.ACCOUNT_HOST,
+        ]);
+      orgAccountHostCredentials.forEach(credential =>
+        accountIDs.push(credential.resourceID)
+      );
+    }
+
+    // Finally, get all the virtual contributors managed by the accounts
+    for (const accountID of accountIDs) {
+      const virtualContributors =
+        await this.getVirtualContributorsManagedByAccount(accountID);
+      contributorsManagedByUser.push(...virtualContributors);
     }
 
     return contributorsManagedByUser;
@@ -268,11 +283,11 @@ export class ContributorLookupService {
 
   private async getCredentialsByTypeHeldByAgent(
     agentID: string,
-    credentialType: AuthorizationCredential
+    credentialTypes: AuthorizationCredential[]
   ): Promise<ICredential[]> {
     const hostedAccountCredentials = await this.entityManager.find(Credential, {
       where: {
-        type: credentialType,
+        type: In(credentialTypes),
         agent: {
           id: agentID,
         },
