@@ -28,9 +28,6 @@ import { IVirtualContributor } from '@domain/community/virtual-contributor/virtu
 import { CreateVirtualContributorOnAccountInput } from './dto/account.dto.create.virtual.contributor';
 import { VirtualContributorAuthorizationService } from '@domain/community/virtual-contributor/virtual.contributor.service.authorization';
 import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
-import { IngestSpaceInput } from '../space/dto/space.dto.ingest';
-import { EventBus } from '@nestjs/cqrs';
-import { IngestSpace } from '@services/infrastructure/event-bus/commands';
 import { CommunityContributorType } from '@common/enums/community.contributor.type';
 import { CommunityRole } from '@common/enums/community.role';
 import { CreateSpaceOnAccountInput } from './dto/account.dto.create.space';
@@ -47,8 +44,7 @@ export class AccountResolverMutations {
     private virtualContributorAuthorizationService: VirtualContributorAuthorizationService,
     private spaceDefaultsService: SpaceDefaultsService,
     private namingReporter: NameReporterService,
-    private spaceService: SpaceService,
-    private eventBus: EventBus
+    private spaceService: SpaceService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -175,7 +171,7 @@ export class AccountResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('updateData') updateData: UpdateAccountPlatformSettingsInput
   ): Promise<IAccount> {
-    const account = await this.accountService.getAccountOrFail(
+    let account = await this.accountService.getAccountOrFail(
       updateData.accountID
     );
     this.authorizationService.grantAccessOrFail(
@@ -192,9 +188,10 @@ export class AccountResolverMutations {
     await this.accountService.save(result);
 
     // Update the authorization policy as most of the changes imply auth policy updates
-    return this.accountAuthorizationService
-      .applyAuthorizationPolicy(result)
-      .then(account => this.accountService.save(account));
+    account = await this.accountAuthorizationService.applyAuthorizationPolicy(
+      result
+    );
+    return await this.accountService.save(account);
   }
 
   @UseGuards(GraphqlGuard)
@@ -302,38 +299,5 @@ export class AccountResolverMutations {
     return await this.virtualContributorService.getVirtualContributorOrFail(
       virtual.id
     );
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => ISpace, {
-    description: 'Triggers space ingestion.',
-  })
-  async ingestSpace(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('ingestSpaceData')
-    ingestSpaceData: IngestSpaceInput
-  ): Promise<ISpace> {
-    const space = await this.spaceService.getSpaceOrFail(
-      ingestSpaceData.spaceID,
-      {
-        relations: {
-          account: {
-            defaults: {
-              authorization: true,
-            },
-          },
-        },
-      }
-    );
-
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      space.account.authorization,
-      AuthorizationPrivilege.PLATFORM_ADMIN,
-      `ingest space: ${space.nameID}(${space.id})`
-    );
-
-    this.eventBus.publish(new IngestSpace(space.id, ingestSpaceData.purpose));
-    return space;
   }
 }
