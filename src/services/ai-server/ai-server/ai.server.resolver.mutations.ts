@@ -14,7 +14,6 @@ import { CreateAiPersonaServiceInput } from '../ai-persona-service/dto/ai.person
 import { IAiPersonaService } from '../ai-persona-service/ai.persona.service.interface';
 import { ConfigurationTypes } from '@common/enums';
 import { Space } from '@domain/space/space/space.entity';
-import { SpaceIngestionPurpose } from '@services/infrastructure/event-bus/commands';
 import { ChromaClient } from 'chromadb';
 import { ConfigService } from '@nestjs/config';
 import { InjectEntityManager } from '@nestjs/typeorm';
@@ -105,67 +104,6 @@ export class AiServerResolverMutations {
       if (uuidCollection) {
         await chroma.deleteCollection(collection);
       }
-    }
-
-    return { success: true };
-  }
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IMigrateEmbeddingsResponse, {
-    description: 'Copies collections nameID-... into UUID-...',
-  })
-  @Profiling.api
-  async copyCollections(
-    @CurrentUser() agentInfo: AgentInfo
-  ): Promise<IMigrateEmbeddingsResponse> {
-    const platformAuthorization =
-      await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      platformAuthorization,
-      AuthorizationPrivilege.PLATFORM_ADMIN,
-      'User not authenticated to migrate embeddings'
-    );
-
-    const vectorDb = this.config.get(ConfigurationTypes.PLATFORM).vector_db;
-
-    const chroma = new ChromaClient({
-      path: `http://${vectorDb.host}:${vectorDb.port}`,
-    });
-    // get all chroma collections
-    const collections = await chroma.listCollections();
-
-    for (const collection of collections) {
-      // extract collection identifier and purpose
-      const [, nameID, purpose] =
-        collection.name.match(/(.*)-(knowledge|context)/) || [];
-
-      // if the identifier is of UUID format, skip it
-      if (
-        /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/.test(
-          nameID
-        )
-      ) {
-        continue;
-      }
-      // get the space by nameID
-      const space = await this.entityManager.findOne(Space, {
-        where: { nameID: nameID },
-      });
-
-      // if the space doesn't exit skip the colletion
-      if (!space) {
-        this.logger.warn(
-          `Space with nameID ${nameID} does't exist but ${collection.name} is still in Chroma`
-        );
-        continue;
-      }
-
-      // ask the AI server to ingest the space again;
-      // the ingest space service uses the UUID as collection identifier now
-      this.aiServerService.ensureContextIsIngested(
-        space.id,
-        purpose as SpaceIngestionPurpose
-      );
     }
 
     return { success: true };

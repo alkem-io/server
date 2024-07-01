@@ -5,7 +5,6 @@ import { AiServerService } from '@services/ai-server/ai-server/ai.server.service
 import { CreateAiPersonaServiceInput } from '@services/ai-server/ai-persona-service/dto';
 import { IAiPersonaService } from '@services/ai-server/ai-persona-service';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { SpaceIngestionPurpose } from '@services/infrastructure/event-bus/commands';
 import { IMessageAnswerToQuestion } from '@domain/communication/message.answer.to.question/message.answer.to.question.interface';
 import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
 
@@ -17,25 +16,16 @@ export class AiServerAdapter {
     private readonly logger: LoggerService
   ) {}
 
-  async ensureSpaceIsUsable(
-    spaceID: string,
-    purpose: SpaceIngestionPurpose
-  ): Promise<void> {
-    return this.aiServer.ensureContextIsIngested(spaceID, purpose);
-  }
-
-  async ensurePersonaIsUsable(
-    personaServiceId: string,
-    purpose: SpaceIngestionPurpose
-  ): Promise<boolean> {
-    return this.aiServer.ensurePersonaIsUsable(personaServiceId, purpose);
+  async ensurePersonaIsUsable(personaServiceId: string): Promise<boolean> {
+    return this.aiServer.ensurePersonaIsUsable(personaServiceId);
   }
 
   async refreshBodyOfKnowlege(personaServiceId: string): Promise<boolean> {
-    return this.aiServer.ensurePersonaIsUsable(
-      personaServiceId,
-      SpaceIngestionPurpose.KNOWLEDGE
-    );
+    return this.aiServer.ensurePersonaIsUsable(personaServiceId);
+  }
+
+  async ensureContextIsLoaded(spaceID: string): Promise<void> {
+    await this.aiServer.ensureContextIsIngested(spaceID);
   }
 
   async getPersonaServiceBodyOfKnowledgeType(

@@ -63,6 +63,7 @@ import { IContributor } from '../contributor/contributor.interface';
 import { PlatformInvitationService } from '@platform/invitation/platform.invitation.service';
 import { IPlatformInvitation } from '@platform/invitation';
 import { CreatePlatformInvitationInput } from '@platform/invitation/dto/platform.invitation.dto.create';
+import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
 
 @Injectable()
 export class CommunityService {
@@ -84,6 +85,7 @@ export class CommunityService {
     private formService: FormService,
     private communityPolicyService: CommunityPolicyService,
     private storageAggregatorResolverService: StorageAggregatorResolverService,
+    private aiServerAdapter: AiServerAdapter, //TODO: remove this asap
     @InjectRepository(Community)
     private communityRepository: Repository<Community>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -719,6 +721,12 @@ export class CommunityService {
       agentInfo,
       triggerNewMemberEvents
     );
+    // TO: THIS BREAKS THE DECOUPLING
+    const space =
+      await this.communityResolverService.getSpaceForCommunityOrFail(
+        community.id
+      );
+    this.aiServerAdapter.ensureContextIsLoaded(space.id);
     return virtualContributor;
   }
 

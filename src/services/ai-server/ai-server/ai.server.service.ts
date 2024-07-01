@@ -23,12 +23,16 @@ import {
   SpaceIngestionPurpose,
 } from '@services/infrastructure/event-bus/commands';
 import { EventBus } from '@nestjs/cqrs';
+import { ConfigService } from '@nestjs/config';
+import { ChromaClient } from 'chromadb';
+import { ConfigurationTypes } from '@common/enums/configuration.type';
 
 @Injectable()
 export class AiServerService {
   constructor(
     private aiPersonaServiceService: AiPersonaServiceService,
     private aiPersonaEngineAdapter: AiPersonaEngineAdapter,
+    private config: ConfigService,
     @InjectRepository(AiServer)
     private aiServerRepository: Repository<AiServer>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -36,33 +40,25 @@ export class AiServerService {
     private eventBus: EventBus
   ) {}
 
-  async ensurePersonaIsUsable(
-    personaServiceId: string,
-    purpose: SpaceIngestionPurpose
-  ): Promise<boolean> {
+  async ensurePersonaIsUsable(personaServiceId: string): Promise<boolean> {
     const aiPersonaService =
       await this.aiPersonaServiceService.getAiPersonaServiceOrFail(
         personaServiceId
       );
-    await this.ensureSpaceBoNIsIngested(
-      aiPersonaService.bodyOfKnowledgeID,
-      purpose
-    );
+    await this.ensureSpaceBoNIsIngested(aiPersonaService.bodyOfKnowledgeID);
     return true;
   }
 
-  public async ensureSpaceBoNIsIngested(
-    spaceID: string,
-    purpose: SpaceIngestionPurpose
-  ): Promise<void> {
-    this.eventBus.publish(new IngestSpace(spaceID, purpose));
+  public async ensureSpaceBoNIsIngested(spaceID: string): Promise<void> {
+    this.eventBus.publish(
+      new IngestSpace(spaceID, SpaceIngestionPurpose.KNOWLEDGE)
+    );
   }
 
-  public async ensureContextIsIngested(
-    spaceID: string,
-    purpose: SpaceIngestionPurpose
-  ): Promise<void> {
-    this.eventBus.publish(new IngestSpace(spaceID, purpose));
+  public async ensureContextIsIngested(spaceID: string): Promise<void> {
+    this.eventBus.publish(
+      new IngestSpace(spaceID, SpaceIngestionPurpose.CONTEXT)
+    );
   }
 
   public async askQuestion(
@@ -70,14 +66,37 @@ export class AiServerService {
     agentInfo: AgentInfo,
     contextID: string
   ) {
-    if (contextNotLoaded) {
-      await this.eventBus.publish(new IngestSpace(spaceID, purpose));
+    if (await this.isContextLoaded(contextID)) {
+      this.eventBus.publish(
+        new IngestSpace(contextID, SpaceIngestionPurpose.CONTEXT)
+      );
     }
     return this.aiPersonaServiceService.askQuestion(
       questionInput,
       agentInfo,
       contextID
     );
+  }
+
+  private getContextCollectionID(contextID: string): string {
+    return `${contextID}-${SpaceIngestionPurpose.CONTEXT}`;
+  }
+
+  private async isContextLoaded(contextID: string): Promise<boolean> {
+    const vectorDb = this.config.get(ConfigurationTypes.PLATFORM).vector_db;
+
+    const chroma = new ChromaClient({
+      path: `http://${vectorDb.host}:${vectorDb.port}`,
+    });
+    // get all chroma collections
+    const collections = await chroma.listCollections();
+    const collectionSearchedFor = this.getContextCollectionID(contextID);
+
+    const match = collections.find(entry =>
+      entry.name.includes(collectionSearchedFor)
+    );
+    if (match) return true;
+    return false;
   }
 
   async createAiPersonaService(
