@@ -52,24 +52,97 @@ export class AccountAuthorizationService {
   ) {}
 
   async applyAuthorizationPolicy(accountInput: IAccount): Promise<IAccount> {
-    const account = await this.accountService.getAccountOrFail(
-      accountInput.id,
-      {
-        relations: {
-          agent: true,
-          space: {
-            community: {
-              policy: true,
-            },
+    let account = await this.accountService.getAccountOrFail(accountInput.id, {
+      relations: {
+        agent: true,
+        space: {
+          community: {
+            policy: true,
           },
-          license: true,
-          library: true,
-          defaults: true,
-          virtualContributors: true,
-          storageAggregator: true,
         },
-      }
+        license: true,
+        library: true,
+        defaults: true,
+        virtualContributors: true,
+        storageAggregator: true,
+      },
+    });
+    if (!account.space) {
+      throw new RelationshipNotFoundException(
+        `Unable to load Account with entities at start of auth reset: ${account.id} `,
+        LogContext.ACCOUNT
+      );
+    }
+
+    // Ensure always applying from a clean state
+    account.authorization = this.authorizationPolicyService.reset(
+      account.authorization
     );
+    account.authorization.anonymousReadAccess = false;
+    account.authorization =
+      this.platformAuthorizationService.inheritRootAuthorizationPolicy(
+        account.authorization
+      );
+
+    account.authorization = await this.extendAuthorizationPolicy(
+      account,
+      account.authorization
+    );
+    account.authorization = this.appendPrivilegeRules(account.authorization);
+
+    account = await this.applyAuthorizationPolicyForChildEntities(account);
+
+    // Need to save as there is still a circular dependency from space auth to account auth reset
+    const savedAccount = await this.accountService.save(account);
+
+    // And cascade into the space if there is one
+    if (!account.space) {
+      throw new RelationshipNotFoundException(
+        `No space on account for resetting: ${account.id} `,
+        LogContext.ACCOUNT
+      );
+    }
+    savedAccount.space =
+      await this.spaceAuthorizationService.applyAuthorizationPolicy(
+        account.space
+      );
+
+    return savedAccount;
+  }
+  public async getClonedAccountAuthExtendedForChildEntities(
+    account: IAccount
+  ): Promise<IAuthorizationPolicy> {
+    if (!account.space) {
+      throw new RelationshipNotFoundException(
+        `Unable to load Account with entities at start of auth reset: ${account.id} `,
+        LogContext.ACCOUNT
+      );
+    }
+    let clonedAccountAuth =
+      this.authorizationPolicyService.cloneAuthorizationPolicy(
+        account.authorization
+      );
+
+    const communityPolicyWithSettings =
+      this.spaceAuthorizationService.getCommunityPolicyWithSettings(
+        account.space
+      );
+
+    const hostCredentials = await this.accountHostService.getHostCredentials(
+      account
+    );
+
+    clonedAccountAuth = this.extendAuthorizationPolicyForChildEntities(
+      clonedAccountAuth,
+      communityPolicyWithSettings,
+      hostCredentials
+    );
+    return clonedAccountAuth;
+  }
+
+  public async applyAuthorizationPolicyForChildEntities(
+    account: IAccount
+  ): Promise<IAccount> {
     if (
       !account.agent ||
       !account.space ||
@@ -86,30 +159,9 @@ export class AccountAuthorizationService {
         LogContext.ACCOUNT
       );
     }
-    const hostCredentials = await this.accountHostService.getHostCredentials(
-      account
-    );
 
-    // Ensure always applying from a clean state
-    account.authorization = this.authorizationPolicyService.reset(
-      account.authorization
-    );
-    account.authorization.anonymousReadAccess = false;
-    account.authorization =
-      this.platformAuthorizationService.inheritRootAuthorizationPolicy(
-        account.authorization
-      );
-
-    // For now also use the root space admins to have some access
-    const communityPolicyWithSettings =
-      this.spaceAuthorizationService.getCommunityPolicyWithSettings(
-        account.space
-      );
-    account.authorization = this.extendAuthorizationPolicy(
-      account.authorization,
-      hostCredentials
-    );
-    account.authorization = this.appendPrivilegeRules(account.authorization);
+    const clonedAccountAuth =
+      await this.getClonedAccountAuthExtendedForChildEntities(account);
 
     account.agent = this.agentAuthorizationService.applyAuthorizationPolicy(
       account.agent,
@@ -119,16 +171,6 @@ export class AccountAuthorizationService {
     account.license = this.licenseAuthorizationService.applyAuthorizationPolicy(
       account.license,
       account.authorization
-    );
-
-    let clonedAccountAuth =
-      this.authorizationPolicyService.cloneAuthorizationPolicy(
-        account.authorization
-      );
-    clonedAccountAuth = this.extendAuthorizationPolicyForChildEntities(
-      clonedAccountAuth,
-      communityPolicyWithSettings,
-      hostCredentials
     );
 
     // For certain child entities allow the space admin also pretty much full control
@@ -160,35 +202,23 @@ export class AccountAuthorizationService {
       updatedVCs.push(udpatedVC);
     }
     account.virtualContributors = updatedVCs;
-
-    // Need to save as there is still a circular dependency from space auth to account auth reset
-    const savedAccount = await this.accountService.save(account);
-
-    // And cascade into the space if there is one
-    if (!account.space) {
-      throw new RelationshipNotFoundException(
-        `No space on account for resetting: ${account.id} `,
-        LogContext.ACCOUNT
-      );
-    }
-    savedAccount.space =
-      await this.spaceAuthorizationService.applyAuthorizationPolicy(
-        account.space
-      );
-
-    return savedAccount;
+    return account;
   }
 
-  private extendAuthorizationPolicy(
-    authorization: IAuthorizationPolicy | undefined,
-    hostCredentials: ICredentialDefinition[]
-  ): IAuthorizationPolicy {
+  private async extendAuthorizationPolicy(
+    account: IAccount,
+    authorization: IAuthorizationPolicy | undefined
+  ): Promise<IAuthorizationPolicy> {
     if (!authorization) {
       throw new EntityNotInitializedException(
         'Authorization definition not found for account',
         LogContext.ACCOUNT
       );
     }
+
+    const hostCredentials = await this.accountHostService.getHostCredentials(
+      account
+    );
 
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
     // By default it is world visible. TODO: work through the logic on this
