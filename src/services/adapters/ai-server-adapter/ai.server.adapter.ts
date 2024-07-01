@@ -16,10 +16,6 @@ export class AiServerAdapter {
     private readonly logger: LoggerService
   ) {}
 
-  async ensurePersonaIsUsable(personaServiceId: string): Promise<boolean> {
-    return this.aiServer.ensurePersonaIsUsable(personaServiceId);
-  }
-
   async refreshBodyOfKnowlege(personaServiceId: string): Promise<boolean> {
     return this.aiServer.ensurePersonaIsUsable(personaServiceId);
   }

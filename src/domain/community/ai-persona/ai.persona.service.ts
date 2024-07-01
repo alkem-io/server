@@ -44,7 +44,7 @@ export class AiPersonaService {
         aiPersonaData.aiPersonaServiceID
       );
 
-      this.aiServerAdapter.ensurePersonaIsUsable(personaService.id);
+      this.aiServerAdapter.refreshBodyOfKnowlege(personaService.id);
       aiPersona.aiPersonaServiceID = personaService.id;
     } else if (aiPersonaData.aiPersonaService) {
       const aiPersonaService =
