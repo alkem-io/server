@@ -245,13 +245,13 @@ export class SearchIngestService {
         batchSize: 100,
       },
       {
-        index: `${this.indexPattern}posts`,
-        fetchFn: this.fetchPosts.bind(this),
+        index: `${this.indexPattern}callouts`,
+        fetchFn: this.fetchCallout.bind(this),
         batchSize: 20,
       },
       {
-        index: `${this.indexPattern}callouts`,
-        fetchFn: this.fetchCallout.bind(this),
+        index: `${this.indexPattern}posts`,
+        fetchFn: this.fetchPosts.bind(this),
         batchSize: 20,
       },
       {
@@ -568,6 +568,9 @@ export class SearchIngestService {
         },
         relations: {
           account: { license: true },
+          parentSpace: {
+            parentSpace: true,
+          },
           collaboration: {
             callouts: {
               framing: {
@@ -579,6 +582,7 @@ export class SearchIngestService {
         select: {
           id: true,
           account: { id: true, license: { visibility: true } },
+          parentSpace: { id: true, parentSpace: { id: true } },
           collaboration: {
             id: true,
             callouts: {
@@ -605,7 +609,10 @@ export class SearchIngestService {
             license: {
               visibility: space?.account?.license?.visibility ?? EMPTY_VALUE,
             },
-            spaceID: space.id,
+            spaceID:
+              space.parentSpace?.parentSpace?.id ??
+              space.parentSpace?.id ??
+              space.id,
             collaborationID: space?.collaboration?.id ?? EMPTY_VALUE,
             profile: {
               ...callout.framing.profile,
@@ -642,6 +649,9 @@ export class SearchIngestService {
               },
             },
           },
+          parentSpace: {
+            parentSpace: true,
+          },
         },
         select: {
           id: true,
@@ -671,13 +681,20 @@ export class SearchIngestService {
               },
             },
           },
+          parentSpace: {
+            id: true,
+            parentSpace: {
+              id: true,
+            },
+          },
         },
         skip: start,
         take: limit,
       })
       .then(spaces => {
         return spaces.flatMap(space => {
-          return space.collaboration?.callouts
+          const callouts = space.collaboration?.callouts;
+          return callouts
             ?.flatMap(callout => {
               // a callout can have whiteboard in the framing
               // AND whiteboards in the contributions
@@ -699,7 +716,10 @@ export class SearchIngestService {
                     visibility:
                       space?.account?.license?.visibility ?? EMPTY_VALUE,
                   },
-                  spaceID: space.id,
+                  spaceID:
+                    space?.parentSpace?.parentSpace?.id ??
+                    space?.parentSpace?.id ??
+                    space.id,
                   calloutID: callout.id,
                   collaborationID: space?.collaboration?.id ?? EMPTY_VALUE,
                   profile: {
@@ -735,7 +755,10 @@ export class SearchIngestService {
                     visibility:
                       space?.account?.license?.visibility ?? EMPTY_VALUE,
                   },
-                  spaceID: space.id,
+                  spaceID:
+                    space?.parentSpace?.parentSpace?.id ??
+                    space?.parentSpace?.id ??
+                    space.id,
                   calloutID: callout.id,
                   collaborationID: space?.collaboration?.id ?? EMPTY_VALUE,
                   profile: {
@@ -775,27 +798,8 @@ export class SearchIngestService {
               },
             },
           },
-          subspaces: {
-            collaboration: {
-              callouts: {
-                contributions: {
-                  post: {
-                    profile: profileRelationOptions,
-                  },
-                },
-              },
-            },
-            subspaces: {
-              collaboration: {
-                callouts: {
-                  contributions: {
-                    post: {
-                      profile: profileRelationOptions,
-                    },
-                  },
-                },
-              },
-            },
+          parentSpace: {
+            parentSpace: true,
           },
         },
         select: {
@@ -817,42 +821,10 @@ export class SearchIngestService {
               },
             },
           },
-          subspaces: {
+          parentSpace: {
             id: true,
-            collaboration: {
+            parentSpace: {
               id: true,
-              callouts: {
-                id: true,
-                contributions: {
-                  id: true,
-                  post: {
-                    id: true,
-                    createdBy: true,
-                    createdDate: true,
-                    nameID: true,
-                    profile: profileSelectOptions,
-                  },
-                },
-              },
-            },
-            subspaces: {
-              id: true,
-              collaboration: {
-                id: true,
-                callouts: {
-                  id: true,
-                  contributions: {
-                    id: true,
-                    post: {
-                      id: true,
-                      createdBy: true,
-                      createdDate: true,
-                      nameID: true,
-                      profile: profileSelectOptions,
-                    },
-                  },
-                },
-              },
             },
           },
         },
@@ -861,9 +833,11 @@ export class SearchIngestService {
       })
       .then(spaces => {
         const posts: any[] = [];
-        spaces.forEach(space =>
-          space?.collaboration?.callouts?.forEach(callout =>
-            callout?.contributions?.forEach(contribution => {
+        spaces.forEach(space => {
+          const callouts = space?.collaboration?.callouts;
+          callouts?.forEach(callout => {
+            const contributions = callout?.contributions;
+            contributions?.forEach(contribution => {
               if (!contribution.post) {
                 return;
               }
@@ -874,7 +848,10 @@ export class SearchIngestService {
                   visibility:
                     space?.account?.license?.visibility ?? EMPTY_VALUE,
                 },
-                spaceID: space.id,
+                spaceID:
+                  space.parentSpace?.parentSpace?.id ??
+                  space.parentSpace?.id ??
+                  space.id,
                 calloutID: callout.id,
                 collaborationID: space?.collaboration?.id ?? EMPTY_VALUE,
                 profile: {
@@ -883,9 +860,9 @@ export class SearchIngestService {
                   tagsets: undefined,
                 },
               });
-            })
-          )
-        );
+            });
+          });
+        });
 
         return posts;
       });
@@ -895,7 +872,7 @@ export class SearchIngestService {
 const processTagsets = (tagsets: Tagset[] | undefined) => {
   return tagsets?.flatMap(tagset => tagset.tags).join(' ');
 };
-// todo: maybe look for text in the shapes also
+
 const extractTextFromWhiteboardContent = (content: string): string => {
   if (!content) {
     return '';
