@@ -160,20 +160,39 @@ export class ActivityService {
       limit,
     } = options ?? {};
 
-    const defaultCondition = `activity.visibility = ${visibility} AND activity.collaborationId IN (${collaborationIDs
-      .map(c => `'${c}'`)
-      .join(',')})`;
-    const typesCondition =
-      types && types.length > 0
-        ? `activity.type IN (${types.map(t => `'${t}'`).join(',')})`
+    const queryParameters: unknown[] = [];
+
+    const visibilityCondition = 'activity.visibility = ?';
+
+    queryParameters.push(visibility);
+
+    const collaborationIdsCondition =
+      collaborationIDs && collaborationIDs.length > 0
+        ? 'activity.collaborationId IN (?)'
         : undefined;
 
+    if (collaborationIdsCondition) {
+      queryParameters.push(collaborationIDs);
+    }
+
+    const typesCondition =
+      types && types.length > 0 ? 'activity.type IN (?)' : undefined;
+
+    if (typesCondition) {
+      queryParameters.push(types);
+    }
+
     const triggeredByCondition = userID
-      ? `activity.triggeredBy = '${userID}'`
+      ? 'activity.triggeredBy = ?'
       : undefined;
 
+    if (triggeredByCondition) {
+      queryParameters.push(userID);
+    }
+
     const whereConditions = [
-      defaultCondition,
+      visibilityCondition,
+      collaborationIdsCondition,
       typesCondition,
       triggeredByCondition,
     ]
@@ -189,7 +208,8 @@ export class ActivityService {
       group by activity.resourceId, activity.triggeredBy, activity.type
       order by latest ${orderBy}
       ${limit ? `LIMIT ${limit}` : ''};
-      `
+      `,
+      queryParameters
     );
 
     const activityIDs = groupedActivities.map(a => a.latest);
