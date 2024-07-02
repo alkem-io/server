@@ -9,6 +9,7 @@ export enum SearchResultType {
   USERGROUP = 'usergroup',
   POST = 'post',
   CALLOUT = 'callout',
+  WHITEBOARD = 'whiteboard',
 }
 
 registerEnumType(SearchResultType, {

@@ -22,4 +22,5 @@ export interface ISearchResultBuilder {
   [SearchResultType.USERGROUP]: SearchResultBuilderFunction<ISearchResultUserGroup>;
   [SearchResultType.POST]: SearchResultBuilderFunction<ISearchResultPost>;
   [SearchResultType.CALLOUT]: SearchResultBuilderFunction<ISearchResultCallout>;
+  [SearchResultType.WHITEBOARD]: SearchResultBuilderFunction<ISearchResultCallout>;
 }

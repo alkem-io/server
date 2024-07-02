@@ -176,6 +176,13 @@ export class SearchExtractService {
     const filteredIndices = entityTypesFilter.map(
       type => TYPE_TO_INDEX(this.indexPattern)[type as SearchEntityTypes]
     );
+    // todo: remove this when whiteboard is a separate search result
+    // include the whiteboards, if the callout is included
+    if (entityTypesFilter.includes(SearchEntityTypes.CALLOUT)) {
+      filteredIndices.push(
+        TYPE_TO_INDEX(this.indexPattern)[SearchEntityTypes.WHITEBOARD]
+      );
+    }
 
     if (onlyPublicResults) {
       const publicIndices = Object.values(
