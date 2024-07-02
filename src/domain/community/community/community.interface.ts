@@ -8,7 +8,6 @@ import { ICommunityPolicy } from '../community-policy/community.policy.interface
 import { IForm } from '@domain/common/form/form.interface';
 import { IInvitation } from '../invitation/invitation.interface';
 import { ICommunityGuidelines } from '../community-guidelines/community.guidelines.interface';
-import { SpaceType } from '@common/enums/space.type';
 import { IPlatformInvitation } from '@platform/invitation';
 
 @ObjectType('Community', {
@@ -29,7 +28,6 @@ export abstract class ICommunity extends IAuthorizable {
   guidelines?: ICommunityGuidelines;
 
   communication?: ICommunication;
-  type!: SpaceType;
 
   parentID!: string;
 }

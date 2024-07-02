@@ -144,7 +144,6 @@ export class SpaceService {
 
     const communityData: CreateCommunityInput = {
       name: spaceData.profileData.displayName,
-      type: spaceData.type as SpaceType,
       policy: communityPolicy,
       applicationForm: applicationFormData,
       guidelines: {

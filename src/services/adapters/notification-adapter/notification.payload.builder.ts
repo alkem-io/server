@@ -719,7 +719,7 @@ export class NotificationPayloadBuilder {
       space: {
         id: space.id,
         nameID: space.nameID,
-        type: community.type,
+        type: space.type,
         profile: {
           displayName: space.profile.displayName,
           url: url,
