@@ -286,6 +286,7 @@ export class StorageBucketService {
   public async size(storage: IStorageBucket): Promise<number> {
     const documentsSize = await this.documentRepository
       .createQueryBuilder('document')
+      .select([])
       .where('document.storageBucketId = :storageBucketId', {
         storageBucketId: storage.id,
       })
