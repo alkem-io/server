@@ -31,6 +31,7 @@ import { VirtualContributorModule } from '../virtual-contributor/virtual.contrib
 import { LicenseEngineModule } from '@core/license-engine/license.engine.module';
 import { ContributorModule } from '../contributor/contributor.module';
 import { PlatformInvitationModule } from '@platform/invitation/platform.invitation.module';
+import { AiServerAdapterModule } from '@services/adapters/ai-server-adapter/ai.server.adapter.module';
 
 @Module({
   imports: [
@@ -59,6 +60,7 @@ import { PlatformInvitationModule } from '@platform/invitation/platform.invitati
     TypeOrmModule.forFeature([Community]),
     TrustRegistryAdapterModule,
     ContributionReporterModule,
+    AiServerAdapterModule, // TODO REMOVE
   ],
   providers: [
     CommunityService,

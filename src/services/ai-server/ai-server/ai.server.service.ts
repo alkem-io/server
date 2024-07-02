@@ -7,15 +7,11 @@ import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
 import { AiServer } from './ai.server.entity';
 import { IAiServer } from './ai.server.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
-import { ForbiddenException } from '@common/exceptions/forbidden.exception';
-import { AuthorizationCredential } from '@common/enums/authorization.credential';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import {
   AiPersonaService,
   IAiPersonaService,
 } from '@services/ai-server/ai-persona-service';
 import { AiPersonaServiceService } from '../ai-persona-service/ai.persona.service.service';
-import { AiServerRole } from '@common/enums/ai.server.role';
 import { AiPersonaEngineAdapter } from '../ai-persona-engine-adapter/ai.persona.engine.adapter';
 import { AiServerIngestAiPersonaServiceInput } from './dto/ai.server.dto.ingest.ai.persona.service';
 import { AiPersonaEngineAdapterInputBase } from '../ai-persona-engine-adapter/dto/ai.persona.engine.adapter.dto.base';
@@ -27,14 +23,16 @@ import {
   SpaceIngestionPurpose,
 } from '@services/infrastructure/event-bus/commands';
 import { EventBus } from '@nestjs/cqrs';
+import { ConfigService } from '@nestjs/config';
+import { ChromaClient } from 'chromadb';
+import { ConfigurationTypes } from '@common/enums/configuration.type';
 
 @Injectable()
 export class AiServerService {
   constructor(
-    // private userService: UserService,
-    // private agentService: AgentService,
     private aiPersonaServiceService: AiPersonaServiceService,
     private aiPersonaEngineAdapter: AiPersonaEngineAdapter,
+    private config: ConfigService,
     @InjectRepository(AiServer)
     private aiServerRepository: Repository<AiServer>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -42,34 +40,59 @@ export class AiServerService {
     private eventBus: EventBus
   ) {}
 
-  async ensurePersonaIsUsable(
-    personaServiceId: string,
-    purpose: SpaceIngestionPurpose
-  ): Promise<boolean> {
+  async ensurePersonaIsUsable(personaServiceId: string): Promise<boolean> {
     const aiPersonaService =
       await this.aiPersonaServiceService.getAiPersonaServiceOrFail(
         personaServiceId
       );
-    await this.ensureSpaceIsUsable(aiPersonaService.bodyOfKnowledgeID, purpose);
+    await this.ensureSpaceBoNIsIngested(aiPersonaService.bodyOfKnowledgeID);
     return true;
   }
 
-  async ensureSpaceIsUsable(
-    spaceID: string,
-    purpose: SpaceIngestionPurpose
-  ): Promise<void> {
-    this.eventBus.publish(new IngestSpace(spaceID, purpose));
+  public async ensureSpaceBoNIsIngested(spaceID: string): Promise<void> {
+    this.eventBus.publish(
+      new IngestSpace(spaceID, SpaceIngestionPurpose.KNOWLEDGE)
+    );
   }
 
-  async askQuestion(
+  public async ensureContextIsIngested(spaceID: string): Promise<void> {
+    this.eventBus.publish(
+      new IngestSpace(spaceID, SpaceIngestionPurpose.CONTEXT)
+    );
+  }
+
+  public async askQuestion(
     questionInput: AiPersonaServiceQuestionInput,
     agentInfo: AgentInfo,
-    contextSapceNameID: string
+    contextID: string
   ) {
+    if (!(await this.isContextLoaded(contextID))) {
+      this.eventBus.publish(
+        new IngestSpace(contextID, SpaceIngestionPurpose.CONTEXT)
+      );
+    }
     return this.aiPersonaServiceService.askQuestion(
       questionInput,
       agentInfo,
-      contextSapceNameID
+      contextID
+    );
+  }
+
+  private getContextCollectionID(contextID: string): string {
+    return `${contextID}-${SpaceIngestionPurpose.CONTEXT}`;
+  }
+
+  private async isContextLoaded(contextID: string): Promise<boolean> {
+    const { host, port } = this.config.get(
+      ConfigurationTypes.PLATFORM
+    ).vector_db;
+    const chroma = new ChromaClient({ path: `http://${host}:${port}` });
+
+    const collections = await chroma.listCollections();
+    const collectionSearchedFor = this.getContextCollectionID(contextID);
+
+    return collections.some(entry =>
+      entry.name.includes(collectionSearchedFor)
     );
   }
 
@@ -171,43 +194,6 @@ export class AiServerService {
     return authorization;
   }
 
-  // public async assignAiServerRoleToUser(
-  //   assignData: AssignAiServerRoleToUserInput
-  // ): Promise<IUser> {
-  //   const agent = await this.userService.getAgent(assignData.userID);
-
-  //   const credential = this.getCredentialForRole(assignData.role);
-
-  //   // assign the credential
-  //   await this.agentService.grantCredential({
-  //     agentID: agent.id,
-  //     ...credential,
-  //   });
-
-  //   return await this.userService.getUserWithAgent(assignData.userID);
-  // }
-
-  // public async removeAiServerRoleFromUser(
-  //   removeData: RemoveAiServerRoleFromUserInput
-  // ): Promise<IUser> {
-  //   const agent = await this.userService.getAgent(removeData.userID);
-
-  //   // Validation logic
-  //   if (removeData.role === AiServerRole.GLOBAL_ADMIN) {
-  //     // Check not the last global admin
-  //     await this.removeValidationSingleGlobalAdmin();
-  //   }
-
-  //   const credential = this.getCredentialForRole(removeData.role);
-
-  //   await this.agentService.revokeCredential({
-  //     agentID: agent.id,
-  //     ...credential,
-  //   });
-
-  //   return await this.userService.getUserWithAgent(removeData.userID);
-  // }
-
   public async ingestAiPersonaService(
     ingestData: AiServerIngestAiPersonaServiceInput
   ): Promise<boolean> {
@@ -222,41 +208,6 @@ export class AiServerService {
     const result = await this.aiPersonaEngineAdapter.sendIngest(
       ingestAdapterInput
     );
-    return result;
-  }
-
-  // private async removeValidationSingleGlobalAdmin(): Promise<boolean> {
-  //   // Check more than one
-  //   const globalAdmins = await this.userService.usersWithCredentials({
-  //     type: AuthorizationCredential.GLOBAL_ADMIN,
-  //   });
-  //   if (globalAdmins.length < 2)
-  //     throw new ForbiddenException(
-  //       `Not allowed to remove ${AuthorizationCredential.GLOBAL_ADMIN}: last AI Server global-admin`,
-  //       LogContext.AUTH
-  //     );
-
-  //   return true;
-  // }
-
-  private getCredentialForRole(role: AiServerRole): ICredentialDefinition {
-    const result: ICredentialDefinition = {
-      type: '',
-      resourceID: '',
-    };
-    switch (role) {
-      case AiServerRole.GLOBAL_ADMIN:
-        result.type = AuthorizationCredential.GLOBAL_ADMIN;
-        break;
-      case AiServerRole.SUPPORT:
-        result.type = AuthorizationCredential.GLOBAL_SUPPORT;
-        break;
-      default:
-        throw new ForbiddenException(
-          `Role not supported: ${role}`,
-          LogContext.AI_SERVER
-        );
-    }
     return result;
   }
 }
