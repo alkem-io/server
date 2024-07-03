@@ -9,7 +9,6 @@ import { NotificationAdapter } from './notification.adapter';
 import { NotificationPayloadBuilder } from './notification.payload.builder';
 import { UrlGeneratorModule } from '@services/infrastructure/url-generator/url.generator.module';
 import { ContributorLookupModule } from '@services/infrastructure/contributor-lookup/contributor.lookup.module';
-import { AccountHostService } from '@domain/space/account.host/account.host.service';
 
 @Module({
   imports: [
@@ -19,11 +18,7 @@ import { AccountHostService } from '@domain/space/account.host/account.host.serv
     TypeOrmModule.forFeature([Post, Whiteboard, Community]),
     ContributorLookupModule,
   ],
-  providers: [
-    NotificationAdapter,
-    NotificationPayloadBuilder,
-    AccountHostService,
-  ],
+  providers: [NotificationAdapter, NotificationPayloadBuilder],
   exports: [NotificationAdapter],
 })
 export class NotificationAdapterModule {}

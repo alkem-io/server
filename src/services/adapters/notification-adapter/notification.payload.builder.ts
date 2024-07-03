@@ -34,7 +34,7 @@ import {
   RoleChangeType,
   CommunityPlatformInvitationCreatedEventPayload,
   CommunityInvitationVirtualContributorCreatedEventPayload,
-  // SpaceCreatedEventPayload,
+  SpaceCreatedEventPayload,
 } from '@alkemio/notifications-lib';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
@@ -54,7 +54,7 @@ import { IDiscussion } from '@platform/forum-discussion/discussion.interface';
 import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { IAccount } from '@domain/space/account/account.interface';
-import { AccountHostService } from '@domain/space/account.host/account.host.service';
+import { Space } from '@domain/space/space/space.entity';
 
 @Injectable()
 export class NotificationPayloadBuilder {
@@ -69,8 +69,7 @@ export class NotificationPayloadBuilder {
     private readonly logger: LoggerService,
     private configService: ConfigService,
     private contributionResolverService: ContributionResolverService,
-    private urlGeneratorService: UrlGeneratorService,
-    private accountHostService: AccountHostService
+    private urlGeneratorService: UrlGeneratorService // private accountService: AccountService
   ) {}
 
   async buildApplicationCreatedNotificationPayload(
@@ -427,14 +426,16 @@ export class NotificationPayloadBuilder {
     triggeredBy: string,
     account: IAccount,
     community: ICommunity
-    // ): Promise<SpaceCreatedEventPayload> {
-  ): Promise<any> {
+  ): Promise<SpaceCreatedEventPayload> {
     const spacePayload = await this.buildSpacePayload(community, triggeredBy);
+    const sender = await this.getContributorPayloadOrFail(triggeredBy);
 
-    const host = await this.accountHostService.getHostOrFail(account);
-    const hostPayload = await this.getContributorPayloadOrFail(host.id);
     return {
-      host: hostPayload,
+      sender: {
+        name: sender?.profile.displayName,
+        url: sender?.profile.url,
+      },
+      created: Date.now(),
       ...spacePayload,
     };
   }
@@ -727,9 +728,9 @@ export class NotificationPayloadBuilder {
   ): Promise<SpaceBaseEventPayload> {
     const basePayload = this.buildBaseEventPayload(triggeredBy);
     const space =
-      await this.communityResolverService.getSpaceForCommunityOrFail(
+      (await this.communityResolverService.getSpaceForCommunityOrFail(
         community.id
-      );
+      )) as Space;
     const url = await this.urlGeneratorService.generateUrlForProfile(
       space.profile
     );

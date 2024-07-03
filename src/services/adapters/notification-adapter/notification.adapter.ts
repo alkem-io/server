@@ -369,8 +369,6 @@ export class NotificationAdapter {
         eventData.account,
         eventData.community
       );
-
-    console.log(payload);
     this.notificationsClient.emit<number>(event, payload);
   }
 

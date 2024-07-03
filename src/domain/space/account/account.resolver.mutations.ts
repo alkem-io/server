@@ -90,31 +90,39 @@ export class AccountResolverMutations {
     );
     account = await this.accountService.save(account);
 
-    const rootSpace = await this.accountService.getRootSpace(account);
+    const rootSpace = await this.accountService.getRootSpace(account, {
+      relations: {
+        community: true,
+      },
+    });
 
     await this.namingReporter.createOrUpdateName(
       rootSpace.id,
       rootSpace.profile.displayName
     );
 
-    // notification
-    // const community = await this.communityService.getCommunityOrFail(
-    //   space.community?.id,
-    //   {
-    //     relations: {
-    //       parentCommunity: {
-    //         authorization: true,
-    //       },
-    //     },
-    //   }
-    // );
-    // const notificationInput: NotificationInputSpaceCreated = {
-    //   triggeredBy: agentInfo.userID,
-    //   community: community,
-    //   account: space.account,
-    // };
-    // console.log(notificationInput);
-    // await this.notificationAdapter.spaceCreated(notificationInput);
+    if (!rootSpace.community?.id) {
+      throw new RelationshipNotFoundException(
+        `Unable to find community with id ${rootSpace.community?.id} `,
+        LogContext.ACCOUNT
+      );
+    }
+    const community = await this.communityService.getCommunityOrFail(
+      rootSpace.community?.id,
+      {
+        relations: {
+          parentCommunity: {
+            authorization: true,
+          },
+        },
+      }
+    );
+    const notificationInput: NotificationInputSpaceCreated = {
+      triggeredBy: agentInfo.userID,
+      community: community,
+      account: account,
+    };
+    await this.notificationAdapter.spaceCreated(notificationInput);
 
     return account;
   }
