@@ -69,7 +69,7 @@ export class NotificationPayloadBuilder {
     private readonly logger: LoggerService,
     private configService: ConfigService,
     private contributionResolverService: ContributionResolverService,
-    private urlGeneratorService: UrlGeneratorService // private accountService: AccountService
+    private urlGeneratorService: UrlGeneratorService
   ) {}
 
   async buildApplicationCreatedNotificationPayload(
