@@ -35,21 +35,20 @@ export class RegistrationResolverMutations {
   async createUserNewRegistration(
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<IUser> {
-    const user = await this.registrationService.registerNewUser(agentInfo);
+    let user = await this.registrationService.registerNewUser(agentInfo);
 
-    const savedUser =
-      await this.userAuthorizationService.applyAuthorizationPolicy(user);
+    user = await this.userAuthorizationService.applyAuthorizationPolicy(user);
 
     await this.registrationService.processPendingInvitations(user);
 
     // Send the notification
     const notificationInput: NotificationInputUserRegistered = {
       triggeredBy: agentInfo.userID,
-      userID: savedUser.id,
+      userID: user.id,
     };
-    await this.notificationAdapter.userRegistered(notificationInput);
+    this.notificationAdapter.userRegistered(notificationInput);
 
-    return savedUser;
+    return user;
   }
 
   @UseGuards(GraphqlGuard)
