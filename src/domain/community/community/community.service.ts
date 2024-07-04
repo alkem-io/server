@@ -95,7 +95,7 @@ export class CommunityService {
     communityData: CreateCommunityInput,
     storageAggregator: IStorageAggregator
   ): Promise<ICommunity> {
-    const community: ICommunity = new Community(communityData.type);
+    const community: ICommunity = new Community();
     community.authorization = new AuthorizationPolicy();
     const policy = communityData.policy as ICommunityPolicyDefinition;
     community.policy = await this.communityPolicyService.createCommunityPolicy(
@@ -189,7 +189,7 @@ export class CommunityService {
       throw new EntityNotFoundException(
         `Unable to find group with ID: '${groupID}'`,
         LogContext.COMMUNITY,
-        { communityId: community.id, communityType: community.type }
+        { communityId: community.id }
       );
     }
     return result;

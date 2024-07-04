@@ -65,7 +65,6 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
       community: community,
       contributor: contributorJoining,
       contributorType: contributorType,
-      communityType: `${community.type}`,
     };
     return activityMemberJoined;
   }

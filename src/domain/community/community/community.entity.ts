@@ -12,15 +12,11 @@ import { ICommunity } from '@domain/community/community/community.interface';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { Application } from '@domain/community/application/application.entity';
 import { Communication } from '@domain/communication/communication/communication.entity';
-import {
-  TINY_TEXT_LENGTH,
-  UUID_LENGTH,
-} from '@src/common/constants/entity.field.length.constants';
+import { UUID_LENGTH } from '@src/common/constants/entity.field.length.constants';
 import { CommunityPolicy } from '../community-policy/community.policy.entity';
 import { Form } from '@domain/common/form/form.entity';
 import { Invitation } from '../invitation/invitation.entity';
 import { CommunityGuidelines } from '../community-guidelines/community.guidelines.entity';
-import { SpaceType } from '@common/enums/space.type';
 import { PlatformInvitation } from '@platform/invitation';
 
 @Entity()
@@ -97,18 +93,12 @@ export class Community
   parentCommunity?: Community;
 
   @Column({
-    length: TINY_TEXT_LENGTH,
-  })
-  type!: SpaceType;
-
-  @Column({
     length: UUID_LENGTH,
   })
   parentID!: string;
 
-  constructor(type: SpaceType) {
+  constructor() {
     super();
-    this.type = type;
     this.parentID = '';
   }
 }
