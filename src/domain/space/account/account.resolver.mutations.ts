@@ -103,7 +103,7 @@ export class AccountResolverMutations {
 
     if (!rootSpace.community?.id) {
       throw new RelationshipNotFoundException(
-        `Unable to find community with id ${rootSpace.community?.id} `,
+        `Unable to find community with id ${rootSpace.community?.id}`,
         LogContext.ACCOUNT
       );
     }
@@ -251,7 +251,7 @@ export class AccountResolverMutations {
     const spaceDefaults = space.account.defaults;
     if (!spaceDefaults) {
       throw new RelationshipNotFoundException(
-        `Unable to load defaults for space ${spaceDefaultsData.spaceID} `,
+        `Unable to load defaults for space ${spaceDefaultsData.spaceID}`,
         LogContext.ACCOUNT
       );
     }

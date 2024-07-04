@@ -431,8 +431,8 @@ export class NotificationPayloadBuilder {
 
     return {
       sender: {
-        name: sender?.profile.displayName,
-        url: sender?.profile.url,
+        name: sender.profile.displayName,
+        url: sender.profile.url,
       },
       created: Date.now(),
       ...spacePayload,
