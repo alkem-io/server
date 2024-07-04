@@ -54,7 +54,6 @@ import { IDiscussion } from '@platform/forum-discussion/discussion.interface';
 import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { IAccount } from '@domain/space/account/account.interface';
-import { Space } from '@domain/space/space/space.entity';
 
 @Injectable()
 export class NotificationPayloadBuilder {
@@ -728,9 +727,9 @@ export class NotificationPayloadBuilder {
   ): Promise<SpaceBaseEventPayload> {
     const basePayload = this.buildBaseEventPayload(triggeredBy);
     const space =
-      (await this.communityResolverService.getSpaceForCommunityOrFail(
+      await this.communityResolverService.getSpaceForCommunityOrFail(
         community.id
-      )) as Space;
+      );
     const url = await this.urlGeneratorService.generateUrlForProfile(
       space.profile
     );
