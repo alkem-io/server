@@ -339,7 +339,7 @@ export class CommunicationAdapter {
     } catch (err: any) {
       this.logInteractionError(eventType, err, eventID);
       throw new MatrixEntityNotFoundException(
-        `Failed to delete message from room: ${err}`,
+        'Failed to delete message from room',
         LogContext.COMMUNICATION
       );
     }
