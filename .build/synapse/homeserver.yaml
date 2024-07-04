@@ -57,10 +57,6 @@ pid_file: /data/homeserver.pid
 #
 #soft_file_limit: 0
 
-sliding_sync:
-    enabled: true
-    proxy: http://localhost:8009
-
 # Presence tracking allows users to see the state (e.g online/offline)
 # of other local and remote users.
 #
@@ -389,8 +385,7 @@ limit_remote_rooms:
   #complexity_error: "This room is too complex."
 
   # allow server admins to join complex rooms. Default is false.
-  #
-  admins_can_join: true
+  # admins_can_join: true
 
 # Whether to require a user to be in the room to add an alias to it.
 # Defaults to 'true'.
