@@ -29,6 +29,8 @@ import { ISearchResultCallout } from './search.result.dto.entry.callout';
         return ISearchResultUserGroup;
       case SearchResultType.CALLOUT:
         return ISearchResultCallout;
+      case SearchResultType.WHITEBOARD:
+        return ISearchResultCallout;
     }
 
     throw new RelationshipNotFoundException(

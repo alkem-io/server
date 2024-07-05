@@ -289,11 +289,10 @@ export class StorageBucketService {
       .where('document.storageBucketId = :storageBucketId', {
         storageBucketId: storage.id,
       })
-      .addSelect('SUM(size)', 'totalSize')
-      .getRawOne();
+      .select('SUM(size)', 'totalSize')
+      .getRawOne<{ totalSize: number }>();
 
-    if (!documentsSize || !documentsSize.totalSize) return 0;
-    return documentsSize.totalSize;
+    return documentsSize?.totalSize ?? 0;
   }
 
   public async getFilteredDocuments(

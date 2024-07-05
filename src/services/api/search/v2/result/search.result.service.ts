@@ -395,8 +395,42 @@ export class SearchResultService {
 
     const whiteboardIds = rawSearchResults.map(hit => hit.result.id);
 
-    const callouts = await this.entityManager.findBy(Callout, {
-      id: In(whiteboardIds),
+    const callouts = await this.entityManager.find(Callout, {
+      where: [
+        {
+          framing: {
+            whiteboard: {
+              id: In(whiteboardIds),
+            },
+          },
+        },
+        {
+          contributions: {
+            whiteboard: {
+              id: In(whiteboardIds),
+            },
+          },
+        },
+      ],
+      relations: {
+        framing: { whiteboard: true },
+        contributions: { whiteboard: true },
+      },
+      select: {
+        framing: {
+          id: true,
+          whiteboard: {
+            id: true,
+          },
+        },
+        contributions: {
+          id: true,
+          whiteboard: {
+            id: true,
+          },
+          post: { id: true },
+        },
+      },
     });
     // usually the authorization is last but here it might be more expensive than usual
     // find the authorized post first, then get the parents, and map the results
@@ -413,12 +447,16 @@ export class SearchResultService {
     return parents
       .map<ISearchResultCallout | undefined>(parent => {
         const rawSearchResult = rawSearchResults.find(
-          hit => hit.result.id === parent.callout.id
+          hit =>
+            hit.result.id === parent.callout.framing.whiteboard?.id ||
+            parent.callout.contributions?.some(
+              contribution => hit.result.id === contribution.whiteboard?.id
+            )
         );
 
         if (!rawSearchResult) {
           this.logger.error(
-            `Unable to find raw search result for Callout: ${parent.callout.id}`,
+            `Unable to find raw search result for Whiteboard: ${parent.callout.id}`,
             undefined,
             LogContext.SEARCH
           );
@@ -427,6 +465,9 @@ export class SearchResultService {
 
         return {
           ...rawSearchResult,
+          // todo remove when whiteboard is a separate search result
+          // patch this so it displays the search result as a callout
+          type: SearchEntityTypes.CALLOUT,
           callout: parent.callout,
           space: parent.space,
         };

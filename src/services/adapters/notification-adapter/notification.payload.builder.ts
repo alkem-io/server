@@ -34,6 +34,7 @@ import {
   RoleChangeType,
   CommunityPlatformInvitationCreatedEventPayload,
   CommunityInvitationVirtualContributorCreatedEventPayload,
+  SpaceCreatedEventPayload,
 } from '@alkemio/notifications-lib';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
@@ -52,6 +53,7 @@ import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.
 import { IDiscussion } from '@platform/forum-discussion/discussion.interface';
 import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
+import { IAccount } from '@domain/space/account/account.interface';
 
 @Injectable()
 export class NotificationPayloadBuilder {
@@ -419,6 +421,24 @@ export class NotificationPayloadBuilder {
     return payload;
   }
 
+  async buildSpaceCreatedPayload(
+    triggeredBy: string,
+    account: IAccount,
+    community: ICommunity
+  ): Promise<SpaceCreatedEventPayload> {
+    const spacePayload = await this.buildSpacePayload(community, triggeredBy);
+    const sender = await this.getContributorPayloadOrFail(triggeredBy);
+
+    return {
+      sender: {
+        name: sender.profile.displayName,
+        url: sender.profile.url,
+      },
+      created: Date.now(),
+      ...spacePayload,
+    };
+  }
+
   async buildCommunicationUpdateSentNotificationPayload(
     updateCreatorId: string,
     updates: IRoom
@@ -719,7 +739,7 @@ export class NotificationPayloadBuilder {
       space: {
         id: space.id,
         nameID: space.nameID,
-        type: community.type,
+        type: space.type,
         profile: {
           displayName: space.profile.displayName,
           url: url,
