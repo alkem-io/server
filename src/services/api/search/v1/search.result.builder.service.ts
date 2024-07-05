@@ -47,7 +47,6 @@ export default class SearchResultBuilderService
     private readonly calloutService: CalloutService,
     private readonly entityManager: EntityManager
   ) {}
-
   async [SearchResultType.SPACE](rawSearchResult: ISearchResult) {
     const space = await this.spaceService.getSpaceOrFail(
       rawSearchResult.result.id
@@ -244,5 +243,11 @@ export default class SearchResultBuilderService
       space: {} as ISpace,
     };
     return searchResultCallout;
+  }
+
+  async [SearchResultType.WHITEBOARD](
+    _rawSearchResult: ISearchResult
+  ): Promise<ISearchResultCallout> {
+    throw new Error('Method not implemented.');
   }
 }
