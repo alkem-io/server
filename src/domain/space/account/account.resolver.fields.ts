@@ -35,7 +35,6 @@ import {
 } from '@domain/community/virtual-contributor';
 import { AccountHostService } from '../account.host/account.host.service';
 import { LicensePrivilege } from '@common/enums/license.privilege';
-import { LicensePlanType } from '@common/enums/license.plan.type';
 
 @Resolver(() => IAccount)
 export class AccountResolverFields {
@@ -163,36 +162,15 @@ export class AccountResolverFields {
     nullable: true,
     description: 'The "highest" subscription active for this Account.',
   })
-  async activeSubscription(@Parent() account: Account) {
-    const licensingFramework =
-      await this.licensingService.getDefaultLicensingOrFail();
-
-    const today = new Date();
-    const plans = await this.licensingService.getLicensePlans(
-      licensingFramework.id
-    );
-
-    return (await this.accountService.getSubscriptions(account))
-      .filter(
-        subscription => !subscription.expires || subscription.expires > today
-      )
-      .map(subscription => {
-        return {
-          subscription,
-          plan: plans.find(
-            plan => plan.licenseCredential === subscription.name
-          ),
-        };
-      })
-      .filter(item => item.plan?.type === LicensePlanType.SPACE_PLAN)
-      .sort((a, b) => b.plan!.sortOrder - a.plan!.sortOrder)?.[0].subscription;
+  async activeSubscription(@Parent() account: IAccount) {
+    return this.accountService.activeSubscription(account);
   }
 
   @ResolveField('subscriptions', () => [IAccountSubscription], {
     nullable: false,
     description: 'The subscriptions active for this Account.',
   })
-  async subscriptions(@Parent() account: Account) {
+  async subscriptions(@Parent() account: IAccount) {
     return await this.accountService.getSubscriptions(account);
   }
 
