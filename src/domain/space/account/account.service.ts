@@ -42,6 +42,8 @@ import { LicensePrivilege } from '@common/enums/license.privilege';
 import { LicenseEngineService } from '@core/license-engine/license.engine.service';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { CreateSpaceOnAccountInput } from './dto/account.dto.create.space';
+import { Space } from '../space/space.entity';
+import { LicensePlanType } from '@common/enums/license.plan.type';
 
 @Injectable()
 export class AccountService {
@@ -391,7 +393,10 @@ export class AccountService {
     return license;
   }
 
-  async getRootSpace(accountInput: IAccount): Promise<ISpace> {
+  async getRootSpace(
+    accountInput: IAccount,
+    options?: FindOneOptions<Space>
+  ): Promise<ISpace> {
     if (accountInput.space && accountInput.space.profile) {
       return accountInput.space;
     }
@@ -399,6 +404,7 @@ export class AccountService {
       relations: {
         space: {
           profile: true,
+          ...options?.relations,
         },
       },
     });
@@ -465,5 +471,30 @@ export class AccountService {
     await this.save(account);
 
     return vc;
+  }
+
+  public async activeSubscription(account: IAccount) {
+    const licensingFramework =
+      await this.licensingService.getDefaultLicensingOrFail();
+
+    const today = new Date();
+    const plans = await this.licensingService.getLicensePlans(
+      licensingFramework.id
+    );
+
+    return (await this.getSubscriptions(account))
+      .filter(
+        subscription => !subscription.expires || subscription.expires > today
+      )
+      .map(subscription => {
+        return {
+          subscription,
+          plan: plans.find(
+            plan => plan.licenseCredential === subscription.name
+          ),
+        };
+      })
+      .filter(item => item.plan?.type === LicensePlanType.SPACE_PLAN)
+      .sort((a, b) => b.plan!.sortOrder - a.plan!.sortOrder)?.[0].subscription;
   }
 }

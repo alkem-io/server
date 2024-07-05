@@ -30,6 +30,7 @@ import { NotificationInputCommentReply } from './dto/notification.dto.input.comm
 import { NotificationInputPlatformInvitation } from './dto/notification.dto.input.platform.invitation';
 import { NotificationInputPlatformGlobalRoleChange } from './dto/notification.dto.input.platform.global.role.change';
 import { NotificationInputCommunityInvitationVirtualContributor } from './dto/notification.dto.input.community.invitation.vc';
+import { NotificationInputSpaceCreated } from './dto/notification.dto.input.space.created';
 
 @Injectable()
 export class NotificationAdapter {
@@ -353,6 +354,21 @@ export class NotificationAdapter {
         eventData.welcomeMessage
       );
 
+    this.notificationsClient.emit<number>(event, payload);
+  }
+
+  public async spaceCreated(
+    eventData: NotificationInputSpaceCreated
+  ): Promise<void> {
+    const event = NotificationEventType.SPACE_CREATED;
+    this.logEventTriggered(eventData, event);
+
+    const payload =
+      await this.notificationPayloadBuilder.buildSpaceCreatedPayload(
+        eventData.triggeredBy,
+        eventData.account,
+        eventData.community
+      );
     this.notificationsClient.emit<number>(event, payload);
   }
 
