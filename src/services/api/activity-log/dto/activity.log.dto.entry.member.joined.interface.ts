@@ -24,12 +24,6 @@ export abstract class IActivityLogEntryMemberJoined
   })
   contributorType!: CommunityContributorType;
 
-  @Field(() => String, {
-    nullable: false,
-    description: 'The type of the the Community.',
-  })
-  communityType!: string;
-
   @Field(() => ICommunity, {
     nullable: false,
     description: 'The community that was joined.',
