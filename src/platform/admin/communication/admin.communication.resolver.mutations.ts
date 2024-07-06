@@ -10,8 +10,9 @@ import { CommunicationAdminEnsureAccessInput } from './dto/admin.communication.d
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AdminCommunicationService } from './admin.communication.service';
 import { CommunicationAdminRemoveOrphanedRoomInput } from './dto/admin.communication.dto.remove.orphaned.room';
-import { CommunicationAdminUpdateRoomsJoinRuleInput } from './dto/admin.communication.dto.update.rooms.joinrule';
+import { CommunicationAdminUpdateRoomStateInput } from './dto/admin.communication.dto.update.room.state';
 import { GLOBAL_POLICY_ADMIN_COMMUNICATION_GRANT } from '@common/constants/authorization/global.policy.constants';
+import { CommunicationRoomResult } from '@services/adapters/communication-adapter/dto/communication.dto.room.result';
 
 @Resolver()
 export class AdminCommunicationResolverMutations {
@@ -75,22 +76,24 @@ export class AdminCommunicationResolverMutations {
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => Boolean, {
-    description: 'Allow updating the rule for joining rooms: public or invite.',
+    description: 'Allow updating the state flags of a particular rule.',
   })
   @Profiling.api
-  async adminCommunicationUpdateRoomsJoinRule(
-    @Args('changeRoomAccessData')
-    changeRoomAccessData: CommunicationAdminUpdateRoomsJoinRuleInput,
+  async adminCommunicationUpdateRoomState(
+    @Args('roomStateData')
+    roomStateData: CommunicationAdminUpdateRoomStateInput,
     @CurrentUser() agentInfo: AgentInfo
-  ): Promise<boolean> {
+  ): Promise<CommunicationRoomResult> {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       this.communicationGlobalAdminPolicy,
       AuthorizationPrivilege.GRANT,
       `communications admin update join rule on all rooms: ${agentInfo.email}`
     );
-    return await this.adminCommunicationService.setMatrixRoomsJoinRule(
-      changeRoomAccessData.isPublic
+    return await this.adminCommunicationService.updateMatrixRoomState(
+      roomStateData.roomID,
+      roomStateData.isWorldVisible,
+      roomStateData.isPublic
     );
   }
 }

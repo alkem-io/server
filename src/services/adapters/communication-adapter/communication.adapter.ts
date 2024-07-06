@@ -19,6 +19,7 @@ import {
   RoomAddMessageReactionPayload,
   RoomRemoveMessageReactionPayload,
   RoomAddMessageReactionResponsePayload,
+  UpdateRoomStatePayload,
 } from '@alkemio/matrix-adapter-lib';
 import { RoomDetailsPayload } from '@alkemio/matrix-adapter-lib';
 import { RoomDetailsResponsePayload } from '@alkemio/matrix-adapter-lib';
@@ -45,10 +46,6 @@ import { RemoveRoomPayload } from '@alkemio/matrix-adapter-lib';
 import { RemoveRoomResponsePayload } from '@alkemio/matrix-adapter-lib';
 import { RoomMembersPayload } from '@alkemio/matrix-adapter-lib';
 import { RoomMembersResponsePayload } from '@alkemio/matrix-adapter-lib';
-import { RoomJoinRulePayload } from '@alkemio/matrix-adapter-lib';
-import { RoomJoinRuleResponsePayload } from '@alkemio/matrix-adapter-lib';
-import { UpdateRoomsGuestAccessPayload } from '@alkemio/matrix-adapter-lib';
-import { UpdateRoomsGuestAccessResponsePayload } from '@alkemio/matrix-adapter-lib';
 import { SendMessageToUserPayload } from '@alkemio/matrix-adapter-lib';
 import { SendMessageToUserResponsePayload } from '@alkemio/matrix-adapter-lib';
 import { RoomsUserDirectPayload } from '@alkemio/matrix-adapter-lib';
@@ -94,7 +91,7 @@ export class CommunicationAdapter {
   ): Promise<IMessage> {
     const eventType = MatrixAdapterEventType.ROOM_SEND_MESSAGE;
     const inputPayload: RoomSendMessagePayload = {
-      triggeredBy: '',
+      triggeredBy: sendMessageData.senderCommunicationsID,
       roomID: sendMessageData.roomID,
       message: sendMessageData.message,
       senderID: sendMessageData.senderCommunicationsID,
@@ -231,7 +228,7 @@ export class CommunicationAdapter {
   ): Promise<string> {
     const eventType = MatrixAdapterEventType.ROOM_REMOVE_REACTION_TO_MESSAGE;
     const inputPayload: RoomRemoveMessageReactionPayload = {
-      triggeredBy: '',
+      triggeredBy: removeReactionData.senderCommunicationsID,
       roomID: removeReactionData.roomID,
       reactionID: removeReactionData.reactionID,
       senderID: removeReactionData.senderCommunicationsID,
@@ -285,21 +282,9 @@ export class CommunicationAdapter {
         response
       );
       this.logResponsePayload(eventType, responseData, eventID);
-      return {
-        ...responseData.room,
-        messages: responseData.room.messages.map(message => {
-          return {
-            ...message,
-            senderType: 'user',
-            reactions: message.reactions.map(reaction => {
-              return {
-                ...reaction,
-                senderType: 'user',
-              };
-            }),
-          };
-        }),
-      };
+      return this.convertRoomDetailsResponseToCommunicationRoomResult(
+        responseData
+      );
     } catch (err: any) {
       this.logInteractionError(eventType, err, eventID);
       throw new MatrixEntityNotFoundException(
@@ -309,12 +294,32 @@ export class CommunicationAdapter {
     }
   }
 
+  private convertRoomDetailsResponseToCommunicationRoomResult(
+    roomDetailsResponse: RoomDetailsResponsePayload
+  ): CommunicationRoomResult {
+    return {
+      ...roomDetailsResponse.room,
+      messages: roomDetailsResponse.room.messages.map(message => {
+        return {
+          ...message,
+          senderType: 'user',
+          reactions: message.reactions.map(reaction => {
+            return {
+              ...reaction,
+              senderType: 'user',
+            };
+          }),
+        };
+      }),
+    };
+  }
+
   async deleteMessage(
     deleteMessageData: CommunicationDeleteMessageInput
   ): Promise<string> {
     const eventType = MatrixAdapterEventType.ROOM_DELETE_MESSAGE;
     const inputPayload: RoomDeleteMessagePayload = {
-      triggeredBy: '',
+      triggeredBy: deleteMessageData.senderCommunicationsID,
       roomID: deleteMessageData.roomID,
       messageID: deleteMessageData.messageId,
       senderID: deleteMessageData.senderCommunicationsID,
@@ -334,7 +339,7 @@ export class CommunicationAdapter {
     } catch (err: any) {
       this.logInteractionError(eventType, err, eventID);
       throw new MatrixEntityNotFoundException(
-        `Failed to delete message from room: ${err}`,
+        'Failed to delete message from room',
         LogContext.COMMUNICATION
       );
     }
@@ -823,11 +828,17 @@ export class CommunicationAdapter {
     return userIDs;
   }
 
-  async getRoomJoinRule(roomID: string): Promise<string> {
-    const eventType = MatrixAdapterEventType.ROOM_JOIN_RULE;
-    const inputPayload: RoomJoinRulePayload = {
+  async updateMatrixRoomState(
+    roomID: string,
+    worldVisible = true,
+    allowGuests = true
+  ): Promise<CommunicationRoomResult> {
+    const eventType = MatrixAdapterEventType.UPDATE_ROOM_STATE;
+    const inputPayload: UpdateRoomStatePayload = {
       triggeredBy: '',
-      roomID: roomID,
+      roomID,
+      historyWorldVisibile: worldVisible,
+      allowJoining: allowGuests,
     };
     const eventID = this.logInputPayload(eventType, inputPayload);
     const response = this.matrixAdapterClient.send(
@@ -836,49 +847,20 @@ export class CommunicationAdapter {
     );
 
     try {
-      const responseData = await firstValueFrom<RoomJoinRuleResponsePayload>(
+      const responseData = await firstValueFrom<RoomDetailsResponsePayload>(
         response
       );
       this.logResponsePayload(eventType, responseData, eventID);
-      return responseData.rule;
+      return this.convertRoomDetailsResponseToCommunicationRoomResult(
+        responseData
+      );
     } catch (err: any) {
       this.logInteractionError(eventType, err, eventID);
-      this.logger.verbose?.(
-        `Unable to get room join rule  (${roomID}): ${err}`,
-        LogContext.COMMUNICATION
-      );
+      const message = `Unable to change guest access for rooms to (${
+        allowGuests ? 'Public' : 'Private'
+      }): ${err}`;
+      this.logger.error(message, err?.stack, LogContext.COMMUNICATION);
       throw err;
-    }
-  }
-
-  async setMatrixRoomsGuestAccess(roomIDs: string[], allowGuests = true) {
-    const eventType = MatrixAdapterEventType.UPDATE_ROOMS_GUEST_ACCESS;
-    const inputPayload: UpdateRoomsGuestAccessPayload = {
-      triggeredBy: '',
-      roomIDs,
-      allowGuests,
-    };
-    const eventID = this.logInputPayload(eventType, inputPayload);
-    const response = this.matrixAdapterClient.send(
-      { cmd: eventType },
-      inputPayload
-    );
-
-    try {
-      const responseData =
-        await firstValueFrom<UpdateRoomsGuestAccessResponsePayload>(response);
-      this.logResponsePayload(eventType, responseData, eventID);
-      return responseData.success;
-    } catch (err: any) {
-      this.logInteractionError(eventType, err, eventID);
-      this.logger.error(
-        `Unable to change guest access for rooms to (${
-          allowGuests ? 'Public' : 'Private'
-        }): ${err}`,
-        err?.stack,
-        LogContext.COMMUNICATION
-      );
-      return false;
     }
   }
 

@@ -8,13 +8,15 @@ import { ActivityInputMemberJoined } from '@services/adapters/activity-adapter/d
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { SpaceType } from '@common/enums/space.type';
 import { IContributor } from '../contributor/contributor.interface';
+import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 
 @Injectable()
 export class CommunityEventsService {
   constructor(
     private contributionReporter: ContributionReporterService,
     private notificationAdapter: NotificationAdapter,
-    private activityAdapter: ActivityAdapter
+    private activityAdapter: ActivityAdapter,
+    private communityResolverService: CommunityResolverService
   ) {}
 
   public async registerCommunityNewMemberActivity(
@@ -32,7 +34,7 @@ export class CommunityEventsService {
 
   public async processCommunityNewMemberEvents(
     community: ICommunity,
-    spaceID: string,
+    rootSpaceID: string,
     displayName: string,
     agentInfo: AgentInfo,
     newContributor: IContributor
@@ -47,13 +49,17 @@ export class CommunityEventsService {
     await this.notificationAdapter.communityNewMember(notificationInput);
 
     // Record the contribution events
-    switch (community.type) {
+    const space =
+      await this.communityResolverService.getSpaceForCommunityOrFail(
+        community.id
+      );
+    switch (space.type) {
       case SpaceType.SPACE:
         this.contributionReporter.spaceJoined(
           {
             id: community.parentID,
             name: displayName,
-            space: spaceID,
+            space: rootSpaceID,
           },
           {
             id: agentInfo.userID,
@@ -66,7 +72,7 @@ export class CommunityEventsService {
           {
             id: community.parentID,
             name: displayName,
-            space: spaceID,
+            space: rootSpaceID,
           },
           {
             id: agentInfo.userID,

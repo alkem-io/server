@@ -30,7 +30,10 @@ import { VirtualContributorAuthorizationService } from '@domain/community/virtua
 import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
 import { CommunityContributorType } from '@common/enums/community.contributor.type';
 import { CommunityRole } from '@common/enums/community.role';
+import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
+import { NotificationInputSpaceCreated } from '@services/adapters/notification-adapter/dto/notification.dto.input.space.created';
 import { CreateSpaceOnAccountInput } from './dto/account.dto.create.space';
+import { CommunityService } from '@domain/community/community/community.service';
 
 @Resolver()
 export class AccountResolverMutations {
@@ -44,7 +47,9 @@ export class AccountResolverMutations {
     private virtualContributorAuthorizationService: VirtualContributorAuthorizationService,
     private spaceDefaultsService: SpaceDefaultsService,
     private namingReporter: NameReporterService,
-    private spaceService: SpaceService
+    private spaceService: SpaceService,
+    private notificationAdapter: NotificationAdapter,
+    private communityService: CommunityService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -85,12 +90,40 @@ export class AccountResolverMutations {
     );
     account = await this.accountService.save(account);
 
-    const rootSpace = await this.accountService.getRootSpace(account);
+    const rootSpace = await this.accountService.getRootSpace(account, {
+      relations: {
+        community: true,
+      },
+    });
 
     await this.namingReporter.createOrUpdateName(
       rootSpace.id,
       rootSpace.profile.displayName
     );
+
+    if (!rootSpace.community?.id) {
+      throw new RelationshipNotFoundException(
+        `Unable to find community with id ${rootSpace.community?.id}`,
+        LogContext.ACCOUNT
+      );
+    }
+    const community = await this.communityService.getCommunityOrFail(
+      rootSpace.community?.id,
+      {
+        relations: {
+          parentCommunity: {
+            authorization: true,
+          },
+        },
+      }
+    );
+    const notificationInput: NotificationInputSpaceCreated = {
+      triggeredBy: agentInfo.userID,
+      community: community,
+      account: account,
+    };
+    await this.notificationAdapter.spaceCreated(notificationInput);
+
     return account;
   }
 
@@ -218,7 +251,7 @@ export class AccountResolverMutations {
     const spaceDefaults = space.account.defaults;
     if (!spaceDefaults) {
       throw new RelationshipNotFoundException(
-        `Unable to load defaults for space ${spaceDefaultsData.spaceID} `,
+        `Unable to load defaults for space ${spaceDefaultsData.spaceID}`,
         LogContext.ACCOUNT
       );
     }
