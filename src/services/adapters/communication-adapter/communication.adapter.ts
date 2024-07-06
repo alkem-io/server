@@ -91,7 +91,7 @@ export class CommunicationAdapter {
   ): Promise<IMessage> {
     const eventType = MatrixAdapterEventType.ROOM_SEND_MESSAGE;
     const inputPayload: RoomSendMessagePayload = {
-      triggeredBy: '',
+      triggeredBy: sendMessageData.senderCommunicationsID,
       roomID: sendMessageData.roomID,
       message: sendMessageData.message,
       senderID: sendMessageData.senderCommunicationsID,
@@ -228,7 +228,7 @@ export class CommunicationAdapter {
   ): Promise<string> {
     const eventType = MatrixAdapterEventType.ROOM_REMOVE_REACTION_TO_MESSAGE;
     const inputPayload: RoomRemoveMessageReactionPayload = {
-      triggeredBy: '',
+      triggeredBy: removeReactionData.senderCommunicationsID,
       roomID: removeReactionData.roomID,
       reactionID: removeReactionData.reactionID,
       senderID: removeReactionData.senderCommunicationsID,
@@ -319,7 +319,7 @@ export class CommunicationAdapter {
   ): Promise<string> {
     const eventType = MatrixAdapterEventType.ROOM_DELETE_MESSAGE;
     const inputPayload: RoomDeleteMessagePayload = {
-      triggeredBy: '',
+      triggeredBy: deleteMessageData.senderCommunicationsID,
       roomID: deleteMessageData.roomID,
       messageID: deleteMessageData.messageId,
       senderID: deleteMessageData.senderCommunicationsID,
