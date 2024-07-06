@@ -63,7 +63,7 @@ export class UserResolverFields {
       agentInfo,
       profile.authorization,
       AuthorizationPrivilege.READ,
-      `read profile on User: ${profile.displayName}`
+      `read profile on User: ${profile.displayName} with current user being: ${agentInfo.userID}`
     );
     return profile;
   }
