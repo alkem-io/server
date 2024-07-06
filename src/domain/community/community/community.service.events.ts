@@ -34,7 +34,7 @@ export class CommunityEventsService {
 
   public async processCommunityNewMemberEvents(
     community: ICommunity,
-    spaceID: string,
+    rootSpaceID: string,
     displayName: string,
     agentInfo: AgentInfo,
     newContributor: IContributor
@@ -50,14 +50,16 @@ export class CommunityEventsService {
 
     // Record the contribution events
     const space =
-      await this.communityResolverService.getSpaceForCommunityOrFail(spaceID);
+      await this.communityResolverService.getSpaceForCommunityOrFail(
+        community.id
+      );
     switch (space.type) {
       case SpaceType.SPACE:
         this.contributionReporter.spaceJoined(
           {
             id: community.parentID,
             name: displayName,
-            space: spaceID,
+            space: rootSpaceID,
           },
           {
             id: agentInfo.userID,
@@ -70,7 +72,7 @@ export class CommunityEventsService {
           {
             id: community.parentID,
             name: displayName,
-            space: spaceID,
+            space: rootSpaceID,
           },
           {
             id: agentInfo.userID,
