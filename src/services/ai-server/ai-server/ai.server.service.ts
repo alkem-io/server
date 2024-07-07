@@ -26,6 +26,7 @@ import { EventBus } from '@nestjs/cqrs';
 import { ConfigService } from '@nestjs/config';
 import { ChromaClient } from 'chromadb';
 import { ConfigurationTypes } from '@common/enums/configuration.type';
+import { IMessageAnswerToQuestion } from '@domain/communication/message.answer.to.question/message.answer.to.question.interface';
 
 @Injectable()
 export class AiServerService {
@@ -65,7 +66,25 @@ export class AiServerService {
     questionInput: AiPersonaServiceQuestionInput,
     agentInfo: AgentInfo,
     contextID: string
-  ) {
+  ): Promise<IMessageAnswerToQuestion> {
+    if (!(await this.isContextLoaded(contextID))) {
+      this.eventBus.publish(
+        new IngestSpace(contextID, SpaceIngestionPurpose.CONTEXT)
+      );
+    }
+    return await this.aiPersonaServiceService.askQuestion(
+      questionInput,
+      agentInfo,
+      contextID
+    );
+  }
+
+  // TODO: send over the original question / answer? Send over the whole thread?
+  public async askFollowUpQuestion(
+    questionInput: AiPersonaServiceQuestionInput,
+    agentInfo: AgentInfo,
+    contextID: string
+  ): Promise<IMessageAnswerToQuestion> {
     if (!(await this.isContextLoaded(contextID))) {
       this.eventBus.publish(
         new IngestSpace(contextID, SpaceIngestionPurpose.CONTEXT)
