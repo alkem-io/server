@@ -360,6 +360,18 @@ export class RoomService {
     return alkemioUserID ?? '';
   }
 
+  async getMessagesInThread(
+    room: IRoom,
+    threadID: string
+  ): Promise<IMessage[]> {
+    this.logger.verbose?.(
+      `Getting messages in thread ${threadID} for room ${room.id}`,
+      LogContext.COMMUNICATION
+    );
+
+    return [];
+  }
+
   async getUserIdForReaction(room: IRoom, reactionID: string): Promise<string> {
     const senderCommunicationID =
       await this.communicationAdapter.getReactionSender(

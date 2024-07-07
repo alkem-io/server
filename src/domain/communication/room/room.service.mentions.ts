@@ -15,14 +15,19 @@ import { RoomSendMessageReplyInput } from '@domain/communication/room/dto/room.d
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service/subscription.publish.service';
 import { RoomService } from './room.service';
 import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
-import { NotSupportedException } from '@common/exceptions';
+import { EntityNotInitializedException } from '@common/exceptions';
 import { VirtualContributorQuestionInput } from '@domain/community/virtual-contributor/dto/virtual.contributor.dto.question.input';
 import { MessageService } from '../message/message.service';
 
 @Injectable()
 export class RoomServiceMentions {
-  MENTION_REGEX = new RegExp(
+  MENTION_REGEX_ALL = new RegExp(
     `\\[@[^\\]]*]\\((http|https):\\/\\/[^)]*\\/(?<type>${MentionedEntityType.USER}|${MentionedEntityType.ORGANIZATION}|${MentionedEntityType.VIRTUAL_CONTRIBUTOR})\\/(?<nameid>[^)]+)\\)`,
+    'gm'
+  );
+
+  MENTION_REGEX_VC = new RegExp(
+    `\\[@[^\\]]*]\\((http|https):\\/\\/[^)]*\\/(?<type>${MentionedEntityType.VIRTUAL_CONTRIBUTOR})\\/(?<nameid>[^)]+)\\)`,
     'gm'
   );
 
@@ -39,10 +44,10 @@ export class RoomServiceMentions {
 
   public async processVirtualContributorMentions(
     mentions: Mention[],
-    question: Pick<IMessage, 'id' | 'message'>,
+    question: string,
+    threadID: string,
     agentInfo: AgentInfo,
-    room: IRoom,
-    accessToVirtualContributors: boolean
+    room: IRoom
   ) {
     const community = await this.communityResolverService.getCommunityFromRoom(
       room.id,
@@ -56,17 +61,9 @@ export class RoomServiceMentions {
 
     for (const mention of mentions) {
       if (mention.type === MentionedEntityType.VIRTUAL_CONTRIBUTOR) {
-        // Only throw exception here for the case that there is an actual mention
-        if (!accessToVirtualContributors) {
-          throw new NotSupportedException(
-            `Access to Virtual Contributors is not supported for this room: ${room.id}`,
-            LogContext.COMMUNICATION
-          );
-        }
-
         this.logger.warn(
           `got mention for VC: ${mention.nameId}`,
-          LogContext.COMMUNICATION
+          LogContext.VIRTUAL_CONTRIBUTOR
         );
 
         const virtualContributor =
@@ -82,14 +79,15 @@ export class RoomServiceMentions {
         const virtualPersona = virtualContributor?.aiPersona;
 
         if (!virtualPersona) {
-          throw new Error(
-            `VirtualPersona not loaded for VirtualContributor ${virtualContributor?.nameID}`
+          throw new EntityNotInitializedException(
+            `VirtualPersona not loaded for VirtualContributor ${virtualContributor?.nameID}`,
+            LogContext.VIRTUAL_CONTRIBUTOR
           );
         }
 
         const chatData: VirtualContributorQuestionInput = {
           virtualContributorID: virtualContributor.id,
-          question: question.message,
+          question: question,
         };
 
         const result = await this.virtualContributorService.askQuestion(
@@ -104,7 +102,7 @@ export class RoomServiceMentions {
         const answerData: RoomSendMessageReplyInput = {
           message: simpleAnswer,
           roomID: room.id,
-          threadID: question.id,
+          threadID: threadID,
         };
         const answerMessage = await this.roomService.sendMessageReply(
           room,
@@ -123,14 +121,14 @@ export class RoomServiceMentions {
   }
 
   public processNotificationMentions(
+    mentions: Mention[],
     parentEntityId: string,
     parentEntityNameId: string,
     parentEntityProfile: IProfile,
     room: IRoom,
     message: IMessage,
     agentInfo: AgentInfo
-  ): Mention[] {
-    const mentions = this.getMentionsFromText(message.message);
+  ) {
     const entityMentionsNotificationInput: NotificationInputEntityMentions = {
       triggeredBy: agentInfo.userID,
       comment: message.message,
@@ -144,12 +142,11 @@ export class RoomServiceMentions {
       commentType: room.type as RoomType,
     };
     this.notificationAdapter.entityMentions(entityMentionsNotificationInput);
-    return mentions;
   }
 
-  public getMentionsFromText = (text: string): Mention[] => {
+  public getMentionsFromText(text: string): Mention[] {
     const result: Mention[] = [];
-    for (const match of text.matchAll(this.MENTION_REGEX)) {
+    for (const match of text.matchAll(this.MENTION_REGEX_ALL)) {
       if (match.groups?.type === MentionedEntityType.USER) {
         result.push({
           nameId: match.groups.nameid,
@@ -170,5 +167,32 @@ export class RoomServiceMentions {
       }
     }
     return result;
-  };
+  }
+
+  // Depends on the messages being in the thread order. Accept a message also to explude (current reply message)
+  public getFirstVcMention(
+    messages: IMessage[],
+    messageToExclude: IMessage
+  ): Mention | undefined {
+    const result: Mention[] = [];
+    for (const message of messages) {
+      if (message.id !== messageToExclude.id) {
+        for (const match of message.message.matchAll(this.MENTION_REGEX_VC)) {
+          if (match.groups?.type === MentionedEntityType.VIRTUAL_CONTRIBUTOR) {
+            result.push({
+              nameId: match.groups.nameid,
+              type: MentionedEntityType.VIRTUAL_CONTRIBUTOR,
+            });
+          }
+        }
+        if (result.length > 0) {
+          break;
+        }
+      }
+    }
+    if (result.length > 0) {
+      return result[0];
+    }
+    return undefined;
+  }
 }

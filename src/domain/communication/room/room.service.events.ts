@@ -21,10 +21,6 @@ import { ActivityInputCalloutDiscussionComment } from '@services/adapters/activi
 import { NotificationInputCommentReply } from '@services/adapters/notification-adapter/dto/notification.dto.input.comment.reply';
 import { IProfile } from '@domain/common/profile';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { SubscriptionPublishService } from '@services/subscriptions/subscription-service/subscription.publish.service';
-import { RoomService } from './room.service';
-import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
-import { MessageService } from '../message/message.service';
 
 @Injectable()
 export class RoomServiceEvents {
@@ -33,10 +29,6 @@ export class RoomServiceEvents {
     private contributionReporter: ContributionReporterService,
     private notificationAdapter: NotificationAdapter,
     private communityResolverService: CommunityResolverService,
-    private roomService: RoomService,
-    private messageService: MessageService,
-    private subscriptionPublishService: SubscriptionPublishService,
-    private virtualContributorService: VirtualContributorService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
