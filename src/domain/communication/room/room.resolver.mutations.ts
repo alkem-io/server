@@ -27,6 +27,7 @@ import { IMessageReaction } from '../message.reaction/message.reaction.interface
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
 import { MutationType } from '@common/enums/subscriptions';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { RoomServiceMentions } from './room.service.mentions';
 
 @Resolver()
 export class RoomResolverMutations {
@@ -36,6 +37,7 @@ export class RoomResolverMutations {
     private namingService: NamingService,
     private roomAuthorizationService: RoomAuthorizationService,
     private roomServiceEvents: RoomServiceEvents,
+    private roomServiceMentions: RoomServiceMentions,
     private subscriptionPublishService: SubscriptionPublishService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -105,14 +107,15 @@ export class RoomResolverMutations {
           messageData.roomID
         );
 
-        const mentionsPost = this.roomServiceEvents.processNotificationMentions(
-          post.id,
-          post.nameID,
-          post.profile,
-          room,
-          message,
-          agentInfo
-        );
+        const mentionsPost =
+          this.roomServiceMentions.processNotificationMentions(
+            post.id,
+            post.nameID,
+            post.profile,
+            room,
+            message,
+            agentInfo
+          );
 
         if (post.createdBy !== agentInfo.userID) {
           this.roomServiceEvents.processNotificationPostComment(
@@ -128,7 +131,7 @@ export class RoomResolverMutations {
           message,
           agentInfo
         );
-        this.roomServiceEvents.processVirtualContributorMentions(
+        this.roomServiceMentions.processVirtualContributorMentions(
           mentionsPost,
           message,
           agentInfo,
@@ -142,7 +145,7 @@ export class RoomResolverMutations {
           messageData.roomID
         );
 
-        this.roomServiceEvents.processNotificationMentions(
+        this.roomServiceMentions.processNotificationMentions(
           calendar.id,
           calendar.nameID,
           calendar.profile,
@@ -157,7 +160,7 @@ export class RoomResolverMutations {
           messageData.roomID
         );
 
-        this.roomServiceEvents.processNotificationMentions(
+        this.roomServiceMentions.processNotificationMentions(
           discussion.id,
           discussion.nameID,
           discussion.profile,
@@ -170,7 +173,7 @@ export class RoomResolverMutations {
         const discussionForum = await this.namingService.getDiscussionForRoom(
           messageData.roomID
         );
-        this.roomServiceEvents.processNotificationMentions(
+        this.roomServiceMentions.processNotificationMentions(
           discussionForum.id,
           discussionForum.nameID,
           discussionForum.profile,
@@ -199,7 +202,7 @@ export class RoomResolverMutations {
         );
 
         // Mentions notificaitons should be sent regardless of callout visibility per client-web#5557
-        const mentions = this.roomServiceEvents.processNotificationMentions(
+        const mentions = this.roomServiceMentions.processNotificationMentions(
           callout.id,
           callout.nameID,
           callout.framing.profile,
@@ -208,7 +211,7 @@ export class RoomResolverMutations {
           agentInfo
         );
 
-        this.roomServiceEvents.processVirtualContributorMentions(
+        this.roomServiceMentions.processVirtualContributorMentions(
           mentions,
           message,
           agentInfo,
@@ -417,7 +420,7 @@ export class RoomResolverMutations {
             agentInfo,
             messageOwnerId
           );
-          this.roomServiceEvents.processNotificationMentions(
+          this.roomServiceMentions.processNotificationMentions(
             callout.id,
             callout.nameID,
             callout.framing.profile,

@@ -19,6 +19,7 @@ import { RoomEventResolverSubscription } from './room.event.resolver.subscriptio
 import { SubscriptionServiceModule } from '@services/subscriptions/subscription-service';
 import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
 import { MessageModule } from '../message/message.module';
+import { RoomServiceMentions } from './room.service.mentions';
 
 @Module({
   imports: [
@@ -29,7 +30,6 @@ import { MessageModule } from '../message/message.module';
     AuthorizationModule,
     AuthorizationPolicyModule,
     NamingModule,
-    RoomModule,
     CommunicationAdapterModule,
     MessagingModule,
     MessageModule,
@@ -44,7 +44,13 @@ import { MessageModule } from '../message/message.module';
     RoomResolverMutations,
     RoomEventResolverSubscription,
     RoomServiceEvents,
+    RoomServiceMentions,
   ],
-  exports: [RoomService, RoomServiceEvents, RoomAuthorizationService],
+  exports: [
+    RoomService,
+    RoomServiceEvents,
+    RoomAuthorizationService,
+    RoomServiceMentions,
+  ],
 })
 export class RoomModule {}
