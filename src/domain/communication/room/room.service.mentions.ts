@@ -4,7 +4,6 @@ import { IMessage } from '../message/message.interface';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { RoomType } from '@common/enums/room.type';
 import { NotificationInputEntityMentions } from '@services/adapters/notification-adapter/dto/notification.dto.input.entity.mentions';
-import { getMentionsFromText } from '../messaging/get.mentions.from.text';
 import { IRoom } from './room.interface';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { IProfile } from '@domain/common/profile';
@@ -21,7 +20,12 @@ import { VirtualContributorQuestionInput } from '@domain/community/virtual-contr
 import { MessageService } from '../message/message.service';
 
 @Injectable()
-export class RoomServiceEvents {
+export class RoomServiceMentions {
+  MENTION_REGEX = new RegExp(
+    `\\[@[^\\]]*]\\((http|https):\\/\\/[^)]*\\/(?<type>${MentionedEntityType.USER}|${MentionedEntityType.ORGANIZATION}|${MentionedEntityType.VIRTUAL_CONTRIBUTOR})\\/(?<nameid>[^)]+)\\)`,
+    'gm'
+  );
+
   constructor(
     private notificationAdapter: NotificationAdapter,
     private communityResolverService: CommunityResolverService,
@@ -126,7 +130,7 @@ export class RoomServiceEvents {
     message: IMessage,
     agentInfo: AgentInfo
   ): Mention[] {
-    const mentions = getMentionsFromText(message.message);
+    const mentions = this.getMentionsFromText(message.message);
     const entityMentionsNotificationInput: NotificationInputEntityMentions = {
       triggeredBy: agentInfo.userID,
       comment: message.message,
@@ -142,4 +146,29 @@ export class RoomServiceEvents {
     this.notificationAdapter.entityMentions(entityMentionsNotificationInput);
     return mentions;
   }
+
+  public getMentionsFromText = (text: string): Mention[] => {
+    const result: Mention[] = [];
+    for (const match of text.matchAll(this.MENTION_REGEX)) {
+      if (match.groups?.type === MentionedEntityType.USER) {
+        result.push({
+          nameId: match.groups.nameid,
+          type: MentionedEntityType.USER,
+        });
+      } else if (match.groups?.type === MentionedEntityType.ORGANIZATION) {
+        result.push({
+          nameId: match.groups.nameid,
+          type: MentionedEntityType.ORGANIZATION,
+        });
+      } else if (
+        match.groups?.type === MentionedEntityType.VIRTUAL_CONTRIBUTOR
+      ) {
+        result.push({
+          nameId: match.groups.nameid,
+          type: MentionedEntityType.VIRTUAL_CONTRIBUTOR,
+        });
+      }
+    }
+    return result;
+  };
 }

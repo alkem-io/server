@@ -1,6 +1,20 @@
-import { getMentionsFromText } from './get.mentions.from.text';
+import { Test, TestingModule } from '@nestjs/testing';
+import { RoomServiceMentions } from './room.service.mentions';
+import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 
-describe('getMentionsFromText', () => {
+describe('MessagingService', () => {
+  let service: RoomServiceMentions;
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [RoomServiceMentions],
+    })
+      .useMocker(defaultMockerFactory)
+      .compile();
+
+    service = module.get<RoomServiceMentions>(RoomServiceMentions);
+  });
+
   it.concurrent.each([
     ['', []],
     ['no mentions here', []],
@@ -77,7 +91,7 @@ describe('getMentionsFromText', () => {
       ],
     ],
   ])('%s -> %j', (text, expected) => {
-    const result = getMentionsFromText(text);
+    const result = service.getMentionsFromText(text);
     expect(result.length).toBe(expected.length);
     expect(result).toStrictEqual(expected);
   });
