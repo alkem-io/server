@@ -392,6 +392,17 @@ export class RoomResolverMutations {
               `First VC mention found in thread ${messageData.threadID} in room ${room.id}`,
               LogContext.VIRTUAL_CONTRIBUTOR
             );
+            const requestForReplyPrompt = `you have received the following reply: "${messageData.message}", please reply with your answer.`;
+            const contextSpaceID =
+              await this.roomServiceMentions.getSpaceIdForRoom(room);
+            await this.roomServiceMentions.askQuestionToVirtualContributor(
+              firstVcMention.nameId,
+              requestForReplyPrompt,
+              threadID,
+              agentInfo,
+              contextSpaceID,
+              room
+            );
           }
         }
         if (callout.visibility === CalloutVisibility.PUBLISHED) {

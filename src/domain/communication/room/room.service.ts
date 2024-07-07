@@ -371,8 +371,9 @@ export class RoomService {
     const roomResult = await this.communicationAdapter.getCommunityRoom(
       room.externalRoomID
     );
+    // First message in the thread provides the threadID, but it itself does not have the threadID set
     const threadMessages = roomResult.messages.filter(
-      m => m.threadID === threadID
+      m => m.threadID === threadID || m.id === threadID
     );
 
     return threadMessages;

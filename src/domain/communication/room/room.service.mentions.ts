@@ -42,6 +42,20 @@ export class RoomServiceMentions {
     private readonly logger: LoggerService
   ) {}
 
+  public async getSpaceIdForRoom(room: IRoom): Promise<string> {
+    const community = await this.communityResolverService.getCommunityFromRoom(
+      room.id,
+      room.type as RoomType
+    );
+
+    // The ID of the actual community where the question is being asked
+    const space =
+      await this.communityResolverService.getSpaceForCommunityOrFail(
+        community.id
+      );
+    return space.id;
+  }
+
   public async processVirtualContributorMentions(
     mentions: Mention[],
     question: string,
@@ -49,75 +63,80 @@ export class RoomServiceMentions {
     agentInfo: AgentInfo,
     room: IRoom
   ) {
-    const community = await this.communityResolverService.getCommunityFromRoom(
-      room.id,
-      room.type as RoomType
-    );
-
-    const spaceID =
-      await this.communityResolverService.getRootSpaceIDFromCommunityOrFail(
-        community
-      );
-
+    const contextSpaceID = await this.getSpaceIdForRoom(room);
     for (const mention of mentions) {
       if (mention.type === MentionedEntityType.VIRTUAL_CONTRIBUTOR) {
         this.logger.warn(
           `got mention for VC: ${mention.nameId}`,
           LogContext.VIRTUAL_CONTRIBUTOR
         );
-
-        const virtualContributor =
-          await this.virtualContributorService.getVirtualContributor(
-            mention.nameId,
-            {
-              relations: {
-                aiPersona: true,
-              },
-            }
-          );
-
-        const virtualPersona = virtualContributor?.aiPersona;
-
-        if (!virtualPersona) {
-          throw new EntityNotInitializedException(
-            `VirtualPersona not loaded for VirtualContributor ${virtualContributor?.nameID}`,
-            LogContext.VIRTUAL_CONTRIBUTOR
-          );
-        }
-
-        const chatData: VirtualContributorQuestionInput = {
-          virtualContributorID: virtualContributor.id,
-          question: question,
-        };
-
-        const result = await this.virtualContributorService.askQuestion(
-          chatData,
+        await this.askQuestionToVirtualContributor(
+          mention.nameId,
+          question,
+          threadID,
           agentInfo,
-          spaceID
-        );
-
-        const simpleAnswer =
-          this.messageService.convertAnswerToSimpleMessage(result);
-
-        const answerData: RoomSendMessageReplyInput = {
-          message: simpleAnswer,
-          roomID: room.id,
-          threadID: threadID,
-        };
-        const answerMessage = await this.roomService.sendMessageReply(
-          room,
-          virtualContributor.communicationID,
-          answerData,
-          'virtualContributor'
-        );
-
-        this.subscriptionPublishService.publishRoomEvent(
-          room.id,
-          MutationType.CREATE,
-          answerMessage
+          contextSpaceID,
+          room
         );
       }
     }
+  }
+
+  public async askQuestionToVirtualContributor(
+    nameID: string,
+    question: string,
+    threadID: string,
+    agentInfo: AgentInfo,
+    contextSpaceID: string,
+    room: IRoom
+  ) {
+    const virtualContributor =
+      await this.virtualContributorService.getVirtualContributor(nameID, {
+        relations: {
+          aiPersona: true,
+        },
+      });
+
+    const virtualPersona = virtualContributor?.aiPersona;
+
+    if (!virtualPersona) {
+      throw new EntityNotInitializedException(
+        `VirtualPersona not loaded for VirtualContributor ${virtualContributor?.nameID}`,
+        LogContext.VIRTUAL_CONTRIBUTOR
+      );
+    }
+
+    const chatData: VirtualContributorQuestionInput = {
+      virtualContributorID: virtualContributor.id,
+      question: question,
+    };
+
+    const result = await this.virtualContributorService.askQuestion(
+      chatData,
+      agentInfo,
+      contextSpaceID
+    );
+
+    const simpleAnswer =
+      this.messageService.convertAnswerToSimpleMessage(result);
+
+    const answerData: RoomSendMessageReplyInput = {
+      message: simpleAnswer,
+      roomID: room.id,
+      threadID: threadID,
+    };
+    const answerMessage = await this.roomService.sendMessageReply(
+      room,
+      virtualContributor.communicationID,
+      answerData,
+      'virtualContributor'
+    );
+
+    this.subscriptionPublishService.publishRoomEvent(
+      room.id,
+      MutationType.CREATE,
+      answerMessage
+    );
   }
 
   public processNotificationMentions(
