@@ -368,8 +368,14 @@ export class RoomService {
       `Getting messages in thread ${threadID} for room ${room.id}`,
       LogContext.COMMUNICATION
     );
+    const roomResult = await this.communicationAdapter.getCommunityRoom(
+      room.externalRoomID
+    );
+    const threadMessages = roomResult.messages.filter(
+      m => m.threadID === threadID
+    );
 
-    return [];
+    return threadMessages;
   }
 
   async getUserIdForReaction(room: IRoom, reactionID: string): Promise<string> {
