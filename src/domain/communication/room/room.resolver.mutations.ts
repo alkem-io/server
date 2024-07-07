@@ -392,6 +392,7 @@ export class RoomResolverMutations {
               `First VC mention found in thread ${messageData.threadID} in room ${room.id}`,
               LogContext.VIRTUAL_CONTRIBUTOR
             );
+            // TODO: this needs to be an explicit follow up question, not a new question. So the prompt should also be generated / managed inside AI server
             const requestForReplyPrompt = `you have received the following reply: "${messageData.message}", please reply with your answer.`;
             const contextSpaceID =
               await this.roomServiceMentions.getSpaceIdForRoom(room);
