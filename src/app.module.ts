@@ -77,6 +77,7 @@ import { WhiteboardIntegrationModule } from '@services/whiteboard-integration/wh
 import { PlatformSettingsModule } from '@platform/settings/platform.settings.module';
 import { FileIntegrationModule } from '@services/file-integration';
 import { AdminLicensingModule } from '@platform/admin/licensing/admin.licensing.module';
+import { PlatformRoleModule } from '@platform/platfrom.role/platform.role.module';
 
 @Module({
   imports: [
@@ -249,6 +250,7 @@ import { AdminLicensingModule } from '@platform/admin/licensing/admin.licensing.
     ConversionModule,
     LibraryModule,
     PlatformModule,
+    PlatformRoleModule,
     ContributionMoveModule,
     GeoLocationModule,
     ContributionReporterModule,
