@@ -707,6 +707,11 @@ export class CommunityService {
       );
     }
 
+    const virtualAlreadyHasRole = await this.isInRole(agent, community, role);
+    if (virtualAlreadyHasRole) {
+      return virtualContributor;
+    }
+
     virtualContributor.agent = await this.assignContributorAgentToRole(
       community,
       agent,
