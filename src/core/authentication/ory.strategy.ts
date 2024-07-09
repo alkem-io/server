@@ -47,7 +47,7 @@ export class OryStrategy extends PassportStrategy(Strategy, 'oathkeeper-jwt') {
       return this.authService.createAgentInfo();
     }
 
-    if (checkIfTokenHasExpired(payload.exp)) {
+    if (checkIfTokenHasExpired(Number(payload.session.expires_at))) {
       throw new TokenException(
         'Access token has expired!',
         LogContext.AUTH,
