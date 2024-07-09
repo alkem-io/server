@@ -192,29 +192,6 @@ export class NamingService {
     return reservedNameIDs;
   }
 
-  async isCalloutDisplayNameAvailableInCollaboration(
-    displayName: string,
-    collaborationID: string
-  ): Promise<boolean> {
-    const query = this.calloutRepository
-      .createQueryBuilder('callout')
-      .leftJoinAndSelect('callout.collaboration', 'collaboration')
-      .leftJoinAndSelect('callout.framing', 'framing')
-      .leftJoinAndSelect('framing.profile', 'profile')
-      .where('collaboration.id = :id')
-      .andWhere('profile.displayName = :displayName')
-      .setParameters({
-        id: `${collaborationID}`,
-        displayName: `${displayName}`,
-      });
-    const calloutsWithDisplayName = await query.getOne();
-    if (calloutsWithDisplayName) {
-      return false;
-    }
-
-    return true;
-  }
-
   async isDiscussionDisplayNameAvailableInForum(
     displayName: string,
     forumID: string
