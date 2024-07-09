@@ -426,10 +426,10 @@ export class CollaborationService {
       storageAggregator,
       userID
     );
-    collaboration.callouts.push(callout);
-    await this.collaborationRepository.save(collaboration);
+    // this has the effect of adding the callout to the collaboration
+    callout.collaboration = collaboration;
 
-    return callout;
+    return this.calloutService.save(callout);
   }
 
   async getTimelineOrFail(collaborationID: string): Promise<ITimeline> {
