@@ -30,6 +30,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { RoomServiceMentions } from './room.service.mentions';
 import { Mention } from '../messaging/mention.interface';
 import { IRoom } from './room.interface';
+import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
 
 @Resolver()
 export class RoomResolverMutations {
@@ -41,6 +42,7 @@ export class RoomResolverMutations {
     private roomServiceEvents: RoomServiceEvents,
     private roomServiceMentions: RoomServiceMentions,
     private subscriptionPublishService: SubscriptionPublishService,
+    private virtualContributorsService: VirtualContributorService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -369,6 +371,11 @@ export class RoomResolverMutations {
         );
 
         if (accessVirtualContributors) {
+          // Check before processing so as not to reply to same message where interaction started
+          const vcInteraction = await this.roomService.getInteractionByThread(
+            room.id,
+            threadID
+          );
           this.roomServiceMentions.processVirtualContributorMentions(
             mentions,
             messageData.message,
@@ -377,27 +384,21 @@ export class RoomResolverMutations {
             room
           );
 
-          // Get the thread messages, see if there is a VC mention in there and if so ask the VC the question
-          // and post the answer as a reply to the thread
-          const threadMessages = await this.roomService.getMessagesInThread(
-            room,
-            messageData.threadID
-          );
-          const firstVcMention = this.roomServiceMentions.getFirstVcMention(
-            threadMessages,
-            reply
-          );
-          if (firstVcMention) {
+          if (vcInteraction) {
             this.logger.verbose?.(
-              `First VC mention found in thread ${messageData.threadID} in room ${room.id}`,
+              `VC Interaction found in thread ${messageData.threadID} in room ${room.id}`,
               LogContext.VIRTUAL_CONTRIBUTOR
             );
+            const vcMentioned =
+              await this.virtualContributorsService.getVirtualContributorOrFail(
+                vcInteraction.virtualContributorID
+              );
             // TODO: this needs to be an explicit follow up question, not a new question. So the prompt should also be generated / managed inside AI server
             const requestForReplyPrompt = `you have received the following reply: "${messageData.message}", please reply with your answer.`;
             const contextSpaceID =
               await this.roomServiceMentions.getSpaceIdForRoom(room);
             await this.roomServiceMentions.askQuestionToVirtualContributor(
-              firstVcMention.nameId,
+              vcMentioned?.nameID,
               requestForReplyPrompt,
               threadID,
               agentInfo,

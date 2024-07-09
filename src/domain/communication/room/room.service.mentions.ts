@@ -26,11 +26,6 @@ export class RoomServiceMentions {
     'gm'
   );
 
-  MENTION_REGEX_VC = new RegExp(
-    `\\[@[^\\]]*]\\((http|https):\\/\\/[^)]*\\/(?<type>${MentionedEntityType.VIRTUAL_CONTRIBUTOR})\\/(?<nameid>[^)]+)\\)`,
-    'gm'
-  );
-
   constructor(
     private notificationAdapter: NotificationAdapter,
     private communityResolverService: CommunityResolverService,
@@ -64,20 +59,31 @@ export class RoomServiceMentions {
     room: IRoom
   ) {
     const contextSpaceID = await this.getSpaceIdForRoom(room);
-    for (const mention of mentions) {
-      if (mention.type === MentionedEntityType.VIRTUAL_CONTRIBUTOR) {
-        this.logger.warn(
-          `got mention for VC: ${mention.nameId}`,
-          LogContext.VIRTUAL_CONTRIBUTOR
-        );
-        await this.askQuestionToVirtualContributor(
-          mention.nameId,
-          question,
-          threadID,
-          agentInfo,
-          contextSpaceID,
-          room
-        );
+    const vcMentions = mentions.filter(
+      mention => mention.type === MentionedEntityType.VIRTUAL_CONTRIBUTOR
+    );
+    // Only the first VC mention starts an interaction
+    let firstVcMentionFound = false;
+    for (const vcMention of vcMentions) {
+      this.logger.verbose?.(
+        `got mention for VC: ${vcMention.nameId}`,
+        LogContext.VIRTUAL_CONTRIBUTOR
+      );
+      await this.askQuestionToVirtualContributor(
+        vcMention.nameId,
+        question,
+        threadID,
+        agentInfo,
+        contextSpaceID,
+        room
+      );
+      if (!firstVcMentionFound) {
+        await this.roomService.addInteractionToRoom({
+          virtualContributorID: vcMention.nameId,
+          roomID: room.id,
+          threadID: threadID,
+        });
+        firstVcMentionFound = true;
       }
     }
   }
@@ -186,32 +192,5 @@ export class RoomServiceMentions {
       }
     }
     return result;
-  }
-
-  // Depends on the messages being in the thread order. Accept a message also to explude (current reply message)
-  public getFirstVcMention(
-    messages: IMessage[],
-    messageToExclude: IMessage
-  ): Mention | undefined {
-    const result: Mention[] = [];
-    for (const message of messages) {
-      if (message.id !== messageToExclude.id) {
-        for (const match of message.message.matchAll(this.MENTION_REGEX_VC)) {
-          if (match.groups?.type === MentionedEntityType.VIRTUAL_CONTRIBUTOR) {
-            result.push({
-              nameId: match.groups.nameid,
-              type: MentionedEntityType.VIRTUAL_CONTRIBUTOR,
-            });
-          }
-        }
-        if (result.length > 0) {
-          break;
-        }
-      }
-    }
-    if (result.length > 0) {
-      return result[0];
-    }
-    return undefined;
   }
 }

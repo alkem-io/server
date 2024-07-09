@@ -18,6 +18,9 @@ import { RoomRemoveReactionToMessageInput } from './dto/room.dto.remove.message.
 import { RoomRemoveMessageInput } from './dto/room.dto.remove.message';
 import { RoomSendMessageInput } from './dto/room.dto.send.message';
 import { CommunicationRoomResult } from '@services/adapters/communication-adapter/dto/communication.dto.room.result';
+import { IInteraction } from '../interaction/interaction.interface';
+import { InteractionService } from '../interaction/interaction.service';
+import { CreateInteractionInput } from '../interaction/dto/interaction.dto.create';
 
 interface MessageSender {
   id: string;
@@ -31,6 +34,7 @@ export class RoomService {
     private roomRepository: Repository<Room>,
     private identityResolverService: IdentityResolverService,
     private communicationAdapter: CommunicationAdapter,
+    private interactionService: InteractionService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -39,6 +43,7 @@ export class RoomService {
     room.authorization = new AuthorizationPolicy();
     room.externalRoomID = await this.initializeCommunicationRoom(room);
     room.messagesCount = 0;
+    room.interactions = [];
     return await this.roomRepository.save(room);
   }
 
@@ -58,7 +63,21 @@ export class RoomService {
     return room;
   }
 
-  async deleteRoom(room: IRoom): Promise<IRoom> {
+  async deleteRoom(roomInput: IRoom): Promise<IRoom> {
+    const room = await this.getRoomOrFail(roomInput.id, {
+      relations: {
+        interactions: true,
+      },
+    });
+    if (!room.interactions) {
+      throw new EntityNotFoundException(
+        `Not able to locate entities on Room for deletion: ${roomInput.id}`,
+        LogContext.COMMUNICATION
+      );
+    }
+    for (const interaction of room.interactions) {
+      await this.interactionService.removeInteraction(interaction.id);
+    }
     const result = await this.roomRepository.remove(room as Room);
     await this.communicationAdapter.removeRoom(room.externalRoomID);
     result.id = room.id;
@@ -73,6 +92,7 @@ export class RoomService {
     const externalRoom = await this.communicationAdapter.getCommunityRoom(
       room.externalRoomID
     );
+
     const messagesCount = externalRoom.messages.length;
     if (messagesCount != room.messagesCount) {
       this.logger.warn(
@@ -83,6 +103,62 @@ export class RoomService {
       await this.save(room);
     }
     return await this.populateRoomMessageSenders(externalRoom.messages);
+  }
+
+  public async addInteractionToRoom(
+    interactionData: CreateInteractionInput
+  ): Promise<IInteraction> {
+    const room = await this.getRoomOrFail(interactionData.roomID, {
+      relations: {
+        interactions: true,
+      },
+    });
+    if (!room.interactions) {
+      throw new EntityNotFoundException(
+        `Not able to locate interactions for the room: ${interactionData.roomID}`,
+        LogContext.COMMUNICATION
+      );
+    }
+
+    const interaction =
+      this.interactionService.createInteraction(interactionData);
+    room.interactions.push(interaction);
+    await this.save(room);
+    return interaction;
+  }
+
+  async getInteractions(roomID: string): Promise<IInteraction[]> {
+    const room = await this.getRoomOrFail(roomID, {
+      relations: {
+        interactions: true,
+      },
+    });
+    if (!room.interactions) {
+      throw new EntityNotFoundException(
+        `Not able to locate interactions for the room: ${roomID}`,
+        LogContext.COMMUNICATION
+      );
+    }
+    return room.interactions;
+  }
+
+  async getInteractionByThread(
+    roomID: string,
+    threadID: string
+  ): Promise<IInteraction | undefined> {
+    const room = await this.getRoomOrFail(roomID, {
+      relations: {
+        interactions: true,
+      },
+    });
+    if (!room.interactions) {
+      throw new EntityNotFoundException(
+        `Not able to locate interactions for the room: ${roomID}`,
+        LogContext.COMMUNICATION
+      );
+    }
+
+    return room.interactions.find(i => i.threadID === threadID);
   }
 
   async removeRoomMessage(
