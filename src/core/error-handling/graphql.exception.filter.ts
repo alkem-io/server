@@ -34,6 +34,7 @@ export class GraphqlExceptionFilter implements GqlExceptionFilter {
       return new GraphQLError(exception.message, {
         extensions: {
           errorId: exception.errorId,
+          code: exception.code,
         },
       });
     }
