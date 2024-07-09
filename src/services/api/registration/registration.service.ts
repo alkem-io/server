@@ -20,7 +20,7 @@ import { InvitationService } from '@domain/community/invitation/invitation.servi
 import { ApplicationService } from '@domain/community/application/application.service';
 import { OrganizationRole } from '@common/enums/organization.role';
 import { PlatformInvitationService } from '@platform/invitation/platform.invitation.service';
-import { PlatformService } from '@platform/platfrom/platform.service';
+import { PlatformRoleService } from '@platform/platfrom.role/platform.role.service';
 
 export class RegistrationService {
   constructor(
@@ -30,7 +30,7 @@ export class RegistrationService {
     private userAuthorizationService: UserAuthorizationService,
     private communityService: CommunityService,
     private platformInvitationService: PlatformInvitationService,
-    private platformService: PlatformService,
+    private platformRoleService: PlatformRoleService,
     private invitationAuthorizationService: InvitationAuthorizationService,
     private invitationService: InvitationService,
     private applicationService: ApplicationService,
@@ -151,7 +151,7 @@ export class RegistrationService {
           userID: user.id,
           role: platformInvitation.platformRole,
         };
-        await this.platformService.assignPlatformRoleToUser(membershipData);
+        await this.platformRoleService.assignPlatformRoleToUser(membershipData);
       }
       await this.platformInvitationService.recordProfileCreated(
         platformInvitation
