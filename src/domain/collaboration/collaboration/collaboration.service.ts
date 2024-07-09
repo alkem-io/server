@@ -404,17 +404,6 @@ export class CollaborationService {
         );
     }
 
-    const displayNameAvailable =
-      await this.namingService.isCalloutDisplayNameAvailableInCollaboration(
-        calloutData.framing.profile.displayName,
-        collaboration.id
-      );
-    if (!displayNameAvailable)
-      throw new ValidationException(
-        `Unable to create Callout: the provided displayName is already taken: ${calloutData.framing.profile.displayName}`,
-        LogContext.SPACES
-      );
-
     const tagsetTemplates = collaboration.tagsetTemplateSet.tagsetTemplates;
     const storageAggregator =
       await this.storageAggregatorResolverService.getStorageAggregatorForCollaboration(
