@@ -3,7 +3,6 @@ import {
   ConfigurationTypes,
   LogContext,
 } from '@common/enums';
-import { TokenException } from '@common/exceptions';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config/dist';
 import { PassportStrategy } from '@nestjs/passport';
@@ -15,6 +14,7 @@ import { OryDefaultIdentitySchema } from './ory.default.identity.schema';
 import { KratosPayload } from './kratos.payload';
 import { verifyIdentityIfOidcAuth } from './verify.identity.if.oidc.auth';
 import { AgentInfo } from '../authentication.agent.info/agent.info';
+import { SessionExpiredException } from '@common/exceptions/session.expired.exception';
 
 @Injectable()
 export class OryStrategy extends PassportStrategy(Strategy, 'oathkeeper-jwt') {
@@ -47,11 +47,11 @@ export class OryStrategy extends PassportStrategy(Strategy, 'oathkeeper-jwt') {
       return this.authService.createAgentInfo();
     }
 
-    if (checkIfTokenHasExpired(Number(payload.session.expires_at))) {
-      throw new TokenException(
-        'Access token has expired!',
+    if (hasExpired(Number(payload.session.expires_at))) {
+      throw new SessionExpiredException(
+        'Session has expired!',
         LogContext.AUTH,
-        AlkemioErrorStatus.TOKEN_EXPIRED
+        AlkemioErrorStatus.SESSION_EXPIRED
       );
     }
 
@@ -62,6 +62,6 @@ export class OryStrategy extends PassportStrategy(Strategy, 'oathkeeper-jwt') {
   }
 }
 
-const checkIfTokenHasExpired = (exp: number): boolean => {
+const hasExpired = (exp: number): boolean => {
   return Date.now() >= exp * 1000;
 };
