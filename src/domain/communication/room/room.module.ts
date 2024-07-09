@@ -20,7 +20,7 @@ import { SubscriptionServiceModule } from '@services/subscriptions/subscription-
 import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
 import { MessageModule } from '../message/message.module';
 import { RoomServiceMentions } from './room.service.mentions';
-import { InteractionModule } from '../interaction/interaction.module';
+import { VcInteractionModule } from '../vc-interaction/vc.interaction.module';
 
 @Module({
   imports: [
@@ -34,7 +34,7 @@ import { InteractionModule } from '../interaction/interaction.module';
     CommunicationAdapterModule,
     MessagingModule,
     MessageModule,
-    InteractionModule,
+    VcInteractionModule,
     VirtualContributorModule,
     TypeOrmModule.forFeature([Room]),
     SubscriptionServiceModule,

@@ -1,11 +1,11 @@
 import { Column, Entity, ManyToOne } from 'typeorm';
 import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
-import { IInteraction } from './interaction.interface';
+import { IVcInteraction } from './vc.interaction.interface';
 import { Room } from '../room/room.entity';
 
 @Entity()
-export class Interaction extends BaseAlkemioEntity implements IInteraction {
-  @ManyToOne(() => Room, room => room.interactions, {
+export class VcInteraction extends BaseAlkemioEntity implements IVcInteraction {
+  @ManyToOne(() => Room, room => room.vcInteractions, {
     eager: false,
     cascade: false,
     onDelete: 'CASCADE',

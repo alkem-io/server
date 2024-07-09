@@ -63,12 +63,21 @@ export class RoomServiceMentions {
       mention => mention.type === MentionedEntityType.VIRTUAL_CONTRIBUTOR
     );
     // Only the first VC mention starts an interaction
+    // check if interaction was not already created instead of hardcoded
     let firstVcMentionFound = false;
     for (const vcMention of vcMentions) {
       this.logger.verbose?.(
         `got mention for VC: ${vcMention.nameId}`,
         LogContext.VIRTUAL_CONTRIBUTOR
       );
+      if (!firstVcMentionFound) {
+        await this.roomService.addVcInteractionToRoom({
+          virtualContributorID: vcMention.nameId,
+          roomID: room.id,
+          threadID: threadID,
+        });
+        firstVcMentionFound = true;
+      }
       await this.askQuestionToVirtualContributor(
         vcMention.nameId,
         question,
@@ -77,14 +86,6 @@ export class RoomServiceMentions {
         contextSpaceID,
         room
       );
-      if (!firstVcMentionFound) {
-        await this.roomService.addInteractionToRoom({
-          virtualContributorID: vcMention.nameId,
-          roomID: room.id,
-          threadID: threadID,
-        });
-        firstVcMentionFound = true;
-      }
     }
   }
 

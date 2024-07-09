@@ -2,7 +2,7 @@ import { Column, Entity, OneToMany } from 'typeorm';
 import { IRoom } from './room.interface';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { RoomType } from '@common/enums/room.type';
-import { Interaction } from '../interaction/interaction.entity';
+import { VcInteraction } from '../vc-interaction/vc.interaction.entity';
 
 @Entity()
 export class Room extends AuthorizableEntity implements IRoom {
@@ -18,11 +18,15 @@ export class Room extends AuthorizableEntity implements IRoom {
   @Column()
   displayName!: string;
 
-  @OneToMany(() => Interaction, interaction => interaction.room, {
-    eager: false,
-    cascade: true,
-  })
-  interactions?: Interaction[];
+  @OneToMany(
+    () => VcInteraction,
+    (interaction: VcInteraction) => interaction.room,
+    {
+      eager: false,
+      cascade: true,
+    }
+  )
+  vcInteractions?: VcInteraction[];
 
   constructor(displayName: string, type: RoomType) {
     super();

@@ -98,7 +98,7 @@ export class AiServerService {
   }
 
   private getContextCollectionID(contextID: string): string {
-    return `${contextID}-${SpaceIngestionPurpose.CONTEXT}`;
+    return `${contextID}-${SpaceIngestionPurpose.CONTEXT}-slon`;
   }
 
   private async isContextLoaded(contextID: string): Promise<boolean> {
@@ -107,12 +107,14 @@ export class AiServerService {
     ).vector_db;
     const chroma = new ChromaClient({ path: `http://${host}:${port}` });
 
-    const collections = await chroma.listCollections();
-    const collectionSearchedFor = this.getContextCollectionID(contextID);
-
-    return collections.some(entry =>
-      entry.name.includes(collectionSearchedFor)
-    );
+    const name = this.getContextCollectionID(contextID);
+    try {
+      // try to get the collection and return true if it is there
+      await chroma.getCollection({ name });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   async createAiPersonaService(

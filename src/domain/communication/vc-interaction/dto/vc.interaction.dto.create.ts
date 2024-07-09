@@ -1,4 +1,4 @@
-export class CreateInteractionInput {
+export class CreateVcInteractionInput {
   roomID!: string;
 
   threadID!: string;

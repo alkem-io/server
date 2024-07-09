@@ -372,7 +372,7 @@ export class RoomResolverMutations {
 
         if (accessVirtualContributors) {
           // Check before processing so as not to reply to same message where interaction started
-          const vcInteraction = await this.roomService.getInteractionByThread(
+          const vcInteraction = await this.roomService.getVcInteractionByThread(
             room.id,
             threadID
           );

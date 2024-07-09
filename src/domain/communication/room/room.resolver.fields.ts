@@ -6,7 +6,7 @@ import { AuthorizationPrivilege } from '@common/enums';
 import { IMessage } from '../message/message.interface';
 import { IRoom } from './room.interface';
 import { RoomService } from './room.service';
-import { IInteraction } from '../interaction/interaction.interface';
+import { IVcInteraction } from '../vc-interaction/vc.interaction.interface';
 
 @Resolver(() => IRoom)
 export class RoomResolverFields {
@@ -26,12 +26,12 @@ export class RoomResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('interactions', () => [IInteraction], {
+  @ResolveField('interactions', () => [IVcInteraction], {
     nullable: false,
     description: 'Virtual Contributor Interactions in this Room.',
   })
-  async interactions(@Parent() room: IRoom): Promise<IInteraction[]> {
-    const result = await this.roomService.getInteractions(room.id);
+  async interactions(@Parent() room: IRoom): Promise<IVcInteraction[]> {
+    const result = await this.roomService.getVcInteractions(room.id);
     if (!result) return [];
     return result;
   }
