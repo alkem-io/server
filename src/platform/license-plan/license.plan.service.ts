@@ -23,6 +23,19 @@ export class LicensePlanService {
   ): Promise<ILicensePlan> {
     const licensePlan: ILicensePlan = LicensePlan.create();
     licensePlan.name = licensePlanData.name;
+    licensePlan.assignToNewOrganizationAccounts =
+      licensePlanData.assignToNewOrganizationAccounts;
+    licensePlan.assignToNewUserAccounts =
+      licensePlanData.assignToNewUserAccounts;
+    licensePlan.enabled = licensePlanData.enabled;
+    licensePlan.isFree = licensePlanData.isFree;
+    licensePlan.licenseCredential = licensePlanData.licenseCredential;
+    licensePlan.pricePerMonth = licensePlanData.pricePerMonth;
+    licensePlan.requiresContactSupport = licensePlanData.requiresContactSupport;
+    licensePlan.requiresPaymentMethod = licensePlanData.requiresPaymentMethod;
+    licensePlan.sortOrder = licensePlanData.sortOrder;
+    licensePlan.trialEnabled = licensePlanData.trialEnabled;
+    licensePlan.type = licensePlanData.type;
 
     return await this.save(licensePlan);
   }
