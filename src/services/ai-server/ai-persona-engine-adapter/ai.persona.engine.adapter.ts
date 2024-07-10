@@ -61,7 +61,7 @@ export class AiPersonaEngineAdapter {
           responseData = await firstValueFrom(responseCommunityManager);
           break;
         case AiPersonaEngine.EXPERT:
-          if (!eventData.contextSpaceNameID || !eventData.knowledgeSpaceNameID)
+          if (!eventData.contextID || !eventData.bodyOfKnowledgeID)
             throw new ValidationException(
               'ContextSpaceNameID and knowledgeSpaceNameID properties are required for expert engine!',
               LogContext.AI_PERSONA_SERVICE_ENGINE

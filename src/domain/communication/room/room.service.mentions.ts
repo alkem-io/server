@@ -18,6 +18,7 @@ import { VirtualContributorService } from '@domain/community/virtual-contributor
 import { EntityNotInitializedException } from '@common/exceptions';
 import { VirtualContributorQuestionInput } from '@domain/community/virtual-contributor/dto/virtual.contributor.dto.question.input';
 import { MessageService } from '../message/message.service';
+import { IVcInteraction } from '../vc-interaction/vc.interaction.interface';
 
 @Injectable()
 export class RoomServiceMentions {
@@ -64,27 +65,32 @@ export class RoomServiceMentions {
     );
     // Only the first VC mention starts an interaction
     // check if interaction was not already created instead of hardcoded
-    let firstVcMentionFound = false;
+    let vcInteraction = await this.roomService.getVcInteractionByThread(
+      room.id,
+      threadID
+    );
+
     for (const vcMention of vcMentions) {
       this.logger.verbose?.(
         `got mention for VC: ${vcMention.nameId}`,
         LogContext.VIRTUAL_CONTRIBUTOR
       );
-      if (!firstVcMentionFound) {
-        await this.roomService.addVcInteractionToRoom({
+      if (!vcInteraction) {
+        vcInteraction = await this.roomService.addVcInteractionToRoom({
           virtualContributorID: vcMention.nameId,
           roomID: room.id,
           threadID: threadID,
         });
-        firstVcMentionFound = true;
       }
+
       await this.askQuestionToVirtualContributor(
         vcMention.nameId,
         question,
         threadID,
         agentInfo,
         contextSpaceID,
-        room
+        room,
+        vcInteraction
       );
     }
   }
@@ -95,7 +101,8 @@ export class RoomServiceMentions {
     threadID: string,
     agentInfo: AgentInfo,
     contextSpaceID: string,
-    room: IRoom
+    room: IRoom,
+    vcInteraction: IVcInteraction | undefined = undefined
   ) {
     const virtualContributor =
       await this.virtualContributorService.getVirtualContributor(nameID, {
@@ -113,16 +120,19 @@ export class RoomServiceMentions {
       );
     }
 
-    const chatData: VirtualContributorQuestionInput = {
+    const vcQuestion: VirtualContributorQuestionInput = {
       virtualContributorID: virtualContributor.id,
       question: question,
+      contextSpaceID,
+      userID: agentInfo.userID,
+      threadID,
     };
 
-    const result = await this.virtualContributorService.askQuestion(
-      chatData,
-      agentInfo,
-      contextSpaceID
-    );
+    if (vcInteraction) {
+      vcQuestion.vcInteractionID = vcInteraction.id;
+    }
+
+    const result = await this.virtualContributorService.askQuestion(vcQuestion);
 
     const simpleAnswer =
       this.messageService.convertAnswerToSimpleMessage(result);

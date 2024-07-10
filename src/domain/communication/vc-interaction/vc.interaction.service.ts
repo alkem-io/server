@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { FindOneOptions, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { VcInteraction } from './vc.interaction.entity';
@@ -23,9 +23,15 @@ export class VcInteractionService {
     return interaction;
   }
 
-  async getVcInteractionOrFail(interactionID: string): Promise<IVcInteraction> {
-    const interaction = await this.interactionRepository.findOneBy({
-      id: interactionID,
+  async getVcInteractionOrFail(
+    interactionID: string,
+    options: FindOneOptions<VcInteraction> = {}
+  ): Promise<IVcInteraction> {
+    const interaction = await this.interactionRepository.findOne({
+      ...options,
+      where: {
+        id: interactionID,
+      },
     });
     if (!interaction)
       throw new EntityNotFoundException(

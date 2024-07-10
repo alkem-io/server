@@ -62,11 +62,12 @@ export class VirtualContributorResolverQueries {
   })
   async askVirtualContributorQuestion(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('chatData') chatData: VirtualContributorQuestionInput
+    @Args('virtualContributorQuestionInput')
+    virtualContributorQuestionInput: VirtualContributorQuestionInput
   ): Promise<IMessageAnswerToQuestion> {
     const virtualContributor =
       await this.virtualContributorService.getVirtualContributorOrFail(
-        chatData.virtualContributorID
+        virtualContributorQuestionInput.virtualContributorID
       );
     this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -74,6 +75,10 @@ export class VirtualContributorResolverQueries {
       AuthorizationPrivilege.READ,
       `asking a question to virtual contributor (${virtualContributor.id}): $chatData.question`
     );
-    return this.virtualContributorService.askQuestion(chatData, agentInfo, '');
+    virtualContributorQuestionInput.userID =
+      virtualContributorQuestionInput.userID ?? agentInfo.userID;
+    return this.virtualContributorService.askQuestion(
+      virtualContributorQuestionInput
+    );
   }
 }

@@ -16,7 +16,6 @@ import { AiPersonaEngineAdapter } from '../ai-persona-engine-adapter/ai.persona.
 import { AiServerIngestAiPersonaServiceInput } from './dto/ai.server.dto.ingest.ai.persona.service';
 import { AiPersonaEngineAdapterInputBase } from '../ai-persona-engine-adapter/dto/ai.persona.engine.adapter.dto.base';
 import { CreateAiPersonaServiceInput } from '../ai-persona-service/dto';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AiPersonaServiceQuestionInput } from '../ai-persona-service/dto/ai.persona.service.question.dto.input';
 import {
   IngestSpace,
@@ -27,12 +26,20 @@ import { ConfigService } from '@nestjs/config';
 import { ChromaClient } from 'chromadb';
 import { ConfigurationTypes } from '@common/enums/configuration.type';
 import { IMessageAnswerToQuestion } from '@domain/communication/message.answer.to.question/message.answer.to.question.interface';
+import { VcInteractionService } from '@domain/communication/vc-interaction/vc.interaction.service';
+import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
+import {
+  InteractionMessage,
+  MessageSenderRole,
+} from '../ai-persona-service/dto/interaction.message';
 
 @Injectable()
 export class AiServerService {
   constructor(
     private aiPersonaServiceService: AiPersonaServiceService,
     private aiPersonaEngineAdapter: AiPersonaEngineAdapter,
+    private vcInteractionService: VcInteractionService,
+    private communicationAdapter: CommunicationAdapter,
     private config: ConfigService,
     @InjectRepository(AiServer)
     private aiServerRepository: Repository<AiServer>,
@@ -63,39 +70,79 @@ export class AiServerService {
   }
 
   public async askQuestion(
-    questionInput: AiPersonaServiceQuestionInput,
-    agentInfo: AgentInfo,
-    contextID: string
+    questionInput: AiPersonaServiceQuestionInput
   ): Promise<IMessageAnswerToQuestion> {
-    if (!(await this.isContextLoaded(contextID))) {
+    if (
+      questionInput.contextID &&
+      !(await this.isContextLoaded(questionInput.contextID))
+    ) {
       this.eventBus.publish(
-        new IngestSpace(contextID, SpaceIngestionPurpose.CONTEXT)
+        new IngestSpace(questionInput.contextID, SpaceIngestionPurpose.CONTEXT)
       );
     }
+    const history = await this.getInteractionMessages(
+      questionInput.interactionID
+    );
+
     return await this.aiPersonaServiceService.askQuestion(
       questionInput,
-      agentInfo,
-      contextID
+      history
     );
   }
-
-  // TODO: send over the original question / answer? Send over the whole thread?
-  public async askFollowUpQuestion(
-    questionInput: AiPersonaServiceQuestionInput,
-    agentInfo: AgentInfo,
-    contextID: string
-  ): Promise<IMessageAnswerToQuestion> {
-    if (!(await this.isContextLoaded(contextID))) {
-      this.eventBus.publish(
-        new IngestSpace(contextID, SpaceIngestionPurpose.CONTEXT)
-      );
+  async getInteractionMessages(
+    interactionID: string | undefined
+  ): Promise<InteractionMessage[]> {
+    if (!interactionID) {
+      return [];
     }
-    return this.aiPersonaServiceService.askQuestion(
-      questionInput,
-      agentInfo,
-      contextID
+    const interaction = await this.vcInteractionService.getVcInteractionOrFail(
+      interactionID,
+      {
+        relations: {
+          room: true,
+        },
+      }
     );
+
+    const room = await this.communicationAdapter.getCommunityRoom(
+      interaction.room.externalRoomID
+    );
+
+    const messages: InteractionMessage[] = [];
+    for (let i = 0; i < room.messages.length; i++) {
+      const message = room.messages[i];
+      if (message.threadID !== interaction.threadID) {
+        continue;
+      }
+
+      let role = MessageSenderRole.USER;
+      if (message.sender.startsWith('@virtualcontributor')) {
+        role = MessageSenderRole.ASSISTANT;
+      }
+
+      messages.push({
+        content: message.message,
+        role,
+      });
+    }
+
+    return messages;
   }
+  // TODO: send over the original question / answer? Send over the whole thread?
+  // public async askFollowUpQuestion(
+  //   questionInput: AiPersonaServiceQuestionInput
+  // ): Promise<IMessageAnswerToQuestion> {
+  //   if (
+  //     questionInput.contextID &&
+  //     !(await this.isContextLoaded(questionInput.contextID))
+  //   ) {
+  //     this.eventBus.publish(
+  //       new IngestSpace(questionInput.contextID, SpaceIngestionPurpose.CONTEXT)
+  //     );
+  //   }
+
+  //   return this.aiPersonaServiceService.askQuestion(questionInput);
+  // }
 
   private getContextCollectionID(contextID: string): string {
     return `${contextID}-${SpaceIngestionPurpose.CONTEXT}-slon`;
@@ -224,7 +271,7 @@ export class AiServerService {
       );
     const ingestAdapterInput: AiPersonaEngineAdapterInputBase = {
       engine: aiPersonaService.engine,
-      userId: '',
+      userID: '',
     };
     const result = await this.aiPersonaEngineAdapter.sendIngest(
       ingestAdapterInput

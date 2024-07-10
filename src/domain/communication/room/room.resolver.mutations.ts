@@ -393,17 +393,17 @@ export class RoomResolverMutations {
               await this.virtualContributorsService.getVirtualContributorOrFail(
                 vcInteraction.virtualContributorID
               );
-            // TODO: this needs to be an explicit follow up question, not a new question. So the prompt should also be generated / managed inside AI server
-            const requestForReplyPrompt = `you have received the following reply: "${messageData.message}", please reply with your answer.`;
             const contextSpaceID =
               await this.roomServiceMentions.getSpaceIdForRoom(room);
+
             await this.roomServiceMentions.askQuestionToVirtualContributor(
               vcMentioned?.nameID,
-              requestForReplyPrompt,
+              messageData.message,
               threadID,
               agentInfo,
               contextSpaceID,
-              room
+              room,
+              vcInteraction
             );
           }
         }
