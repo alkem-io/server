@@ -28,6 +28,7 @@ import { TimelineResolverService } from '@services/infrastructure/entity-resolve
 import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
 import { Space } from '@domain/space/space/space.entity';
 import { ActivityInputSubsubspaceCreated } from './dto/activity.dto.input.subsubspace.created';
+import { SpaceLevel } from '@common/enums/space.level';
 
 @Injectable()
 export class ActivityAdapter {
@@ -50,29 +51,45 @@ export class ActivityAdapter {
   ) {}
 
   public async subspaceCreated(
-    eventData: ActivityInputSubspaceCreated,
-    parentSpaceID: string,
-    subspaceLevel: number
+    eventData: ActivityInputSubspaceCreated
   ): Promise<boolean> {
+    const subspace = await this.entityManager.findOne(Space, {
+      where: {
+        id: eventData.subspace.id,
+      },
+      relations: {
+        profile: true,
+        parentSpace: {
+          collaboration: true,
+        },
+      },
+    });
+    if (
+      !subspace ||
+      !subspace.profile ||
+      !subspace.parentSpace ||
+      !subspace.parentSpace.collaboration
+    ) {
+      throw new EntityNotFoundException(
+        `Unable to find Subspace with all needed entities: ${eventData.subspace.id}`,
+        LogContext.ACTIVITY
+      );
+    }
     const eventType =
-      subspaceLevel === 2
+      subspace.level === SpaceLevel.OPPORTUNITY
         ? ActivityEventType.OPPORTUNITY_CREATED
         : ActivityEventType.CHALLENGE_CREATED;
 
     this.logEventTriggered(eventData, eventType);
 
-    const subspace = eventData.subspace;
-
-    const collaborationID = await this.getCollaborationIdForSpace(
-      parentSpaceID
-    );
+    const collaborationID = subspace.parentSpace.collaboration.id;
     const description = subspace.profile.displayName;
 
     const activity = await this.activityService.createActivity({
       collaborationID,
       triggeredBy: eventData.triggeredBy,
       resourceID: subspace.id,
-      parentID: parentSpaceID,
+      parentID: subspace.parentSpace.id,
       description,
       type: eventType,
     });
