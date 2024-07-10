@@ -197,14 +197,15 @@ export class SpaceResolverMutations {
         `challengeCreate using challenge template: ${space.nameID} - ${subspaceData.collaborationData.collaborationTemplateID}`
       );
     }
-    const subspace = await this.spaceService.createSubspace(
+    let subspace = await this.spaceService.createSubspace(
       subspaceData,
       agentInfo
     );
 
-    const subspaceAuth = await this.spaceAuthorizationService
-      .applyAuthorizationPolicy(subspace)
-      .then(space => this.spaceService.save(space));
+    subspace = await this.spaceAuthorizationService.applyAuthorizationPolicy(
+      subspace
+    );
+    subspace = await this.spaceService.save(subspace);
 
     this.activityAdapter.subspaceCreated(
       {
@@ -237,6 +238,6 @@ export class SpaceResolverMutations {
       subspaceCreatedEvent
     );
 
-    return subspaceAuth;
+    return subspace;
   }
 }
