@@ -206,27 +206,13 @@ export class OrganizationResolverFields {
 
     return await this.organizationService.getOwners(organization);
   }
-
-  @UseGuards(GraphqlGuard)
   @ResolveField('authorization', () => IAuthorizationPolicy, {
     nullable: true,
     description: 'The Authorization for this Organization.',
   })
-  @Profiling.api
-  async authorization(
-    @Parent() parent: Organization,
-    @CurrentUser() agentInfo: AgentInfo
-  ) {
-    // Reload to ensure the authorization is loaded
+  async authorization(@Parent() parent: Organization) {
     const organization = await this.organizationService.getOrganizationOrFail(
       parent.id
-    );
-
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      organization.authorization,
-      AuthorizationPrivilege.READ,
-      `organization authorization access: ${organization.nameID}`
     );
 
     return organization.authorization;
