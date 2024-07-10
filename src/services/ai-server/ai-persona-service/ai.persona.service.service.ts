@@ -160,10 +160,7 @@ export class AiPersonaServiceService {
       contextSpaceNameID: contextSpaceID,
     };
 
-    this.logger.error(input);
-    const response = await this.aiPersonaEngineAdapter.sendQuery(input);
-
-    return response;
+    return this.aiPersonaEngineAdapter.sendQuery(input);
   }
 
   public async ingest(aiPersonaService: IAiPersonaService): Promise<boolean> {
