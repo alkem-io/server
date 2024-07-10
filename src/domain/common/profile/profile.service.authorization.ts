@@ -1,7 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { IProfile, Profile } from '@domain/common/profile';
+import { IProfile } from '@domain/common/profile';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ProfileService } from './profile.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
@@ -9,7 +7,6 @@ import { VisualAuthorizationService } from '../visual/visual.service.authorizati
 import { StorageBucketAuthorizationService } from '@domain/storage/storage-bucket/storage.bucket.service.authorization';
 import { LogContext } from '@common/enums/logging.context';
 import { RelationshipNotFoundException } from '@common/exceptions';
-import { Profiling } from '@common/decorators';
 
 @Injectable()
 export class ProfileAuthorizationService {
@@ -17,12 +14,9 @@ export class ProfileAuthorizationService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private visualAuthorizationService: VisualAuthorizationService,
     private storageBucketAuthorizationService: StorageBucketAuthorizationService,
-    private profileService: ProfileService,
-    @InjectRepository(Profile)
-    private profileRepository: Repository<Profile>
+    private profileService: ProfileService
   ) {}
 
-  @Profiling.api
   async applyAuthorizationPolicy(
     profileInput: IProfile,
     parentAuthorization: IAuthorizationPolicy | undefined
