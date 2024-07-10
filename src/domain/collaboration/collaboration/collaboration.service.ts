@@ -404,17 +404,6 @@ export class CollaborationService {
         );
     }
 
-    const displayNameAvailable =
-      await this.namingService.isCalloutDisplayNameAvailableInCollaboration(
-        calloutData.framing.profile.displayName,
-        collaboration.id
-      );
-    if (!displayNameAvailable)
-      throw new ValidationException(
-        `Unable to create Callout: the provided displayName is already taken: ${calloutData.framing.profile.displayName}`,
-        LogContext.SPACES
-      );
-
     const tagsetTemplates = collaboration.tagsetTemplateSet.tagsetTemplates;
     const storageAggregator =
       await this.storageAggregatorResolverService.getStorageAggregatorForCollaboration(
@@ -426,10 +415,10 @@ export class CollaborationService {
       storageAggregator,
       userID
     );
-    collaboration.callouts.push(callout);
-    await this.collaborationRepository.save(collaboration);
+    // this has the effect of adding the callout to the collaboration
+    callout.collaboration = collaboration;
 
-    return callout;
+    return this.calloutService.save(callout);
   }
 
   async getTimelineOrFail(collaborationID: string): Promise<ITimeline> {

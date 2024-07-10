@@ -868,15 +868,16 @@ export class SpaceService {
         LogContext.SPACES
       );
 
-    space.subspaces.push(subspace);
+    // Set the parent space directly, avoiding saving the whole parent
+    subspace.parentSpace = space;
+
     // Finally set the community relationship
     await this.setCommunityHierarchyForSubspace(
       space.community,
       subspace.community
     );
 
-    await this.spaceRepository.save(space);
-    return subspace;
+    return await this.spaceRepository.save(subspace);
   }
 
   async getSubspace(subspaceID: string, space: ISpace): Promise<ISpace> {
