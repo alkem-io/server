@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
-import { LinkService } from './link.service';
 import { ILink } from './link.interface';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { LogContext } from '@common/enums/logging.context';
@@ -15,7 +14,6 @@ import { CREDENTIAL_RULE_LINK_CREATED_BY } from '@common/constants/authorization
 @Injectable()
 export class LinkAuthorizationService {
   constructor(
-    private linkService: LinkService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private profileAuthorizationService: ProfileAuthorizationService
   ) {}

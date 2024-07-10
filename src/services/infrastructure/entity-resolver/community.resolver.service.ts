@@ -80,6 +80,39 @@ export class CommunityResolverService {
     return virtualContributor.account.id === accountID;
   }
 
+  public async getRootSpaceIDFromCalloutOrFail(
+    calloutID: string
+  ): Promise<string> {
+    const space = await this.entityManager.findOne(Space, {
+      where: {
+        collaboration: {
+          callouts: {
+            id: calloutID,
+          },
+        },
+      },
+      relations: {
+        account: {
+          space: true,
+        },
+      },
+    });
+    if (!space) {
+      throw new EntityNotFoundException(
+        `Unable to find space for callout: ${calloutID}`,
+        LogContext.COMMUNITY
+      );
+    }
+    const rootSpace = space.account.space;
+    if (!rootSpace) {
+      throw new EntityNotFoundException(
+        `Unable to find rootSpace for Callout: ${calloutID}  in space ${space.id}`,
+        LogContext.COMMUNITY
+      );
+    }
+    return rootSpace.id;
+  }
+
   public async getRootSpaceIDFromCommunityOrFail(
     community: ICommunity
   ): Promise<string> {
