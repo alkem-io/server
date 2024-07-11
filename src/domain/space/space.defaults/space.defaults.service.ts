@@ -366,13 +366,12 @@ export class SpaceDefaultsService {
     let calloutInputs: CreateCalloutInput[] = [];
     const addDefaultCallouts = collaborationData?.addDefaultCallouts;
     if (addDefaultCallouts === undefined || addDefaultCallouts) {
-      let calloutDefaults = defaultCallouts;
       const collaborationTemplateID =
         collaborationData?.collaborationTemplateID;
       if (collaborationTemplateID) {
-        calloutDefaults = calloutsFromCollaborationTemplateInput;
+        calloutInputs = calloutsFromCollaborationTemplateInput;
       } else {
-        calloutInputs = calloutDefaults;
+        calloutInputs = defaultCallouts;
       }
     }
     return calloutInputs;
