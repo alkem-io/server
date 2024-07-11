@@ -808,7 +808,6 @@ export class SpaceService {
       relations: {
         account: true,
         storageAggregator: true,
-        subspaces: true,
         community: true,
       },
     });
@@ -838,13 +837,13 @@ export class SpaceService {
     // Update the subspace data being passed in to set the storage aggregator to use
     subspaceData.storageAggregatorParent = space.storageAggregator;
     subspaceData.level = space.level + 1;
-    const subspace = await this.createSpace(
+    let subspace = await this.createSpace(
       subspaceData,
       space.account,
       agentInfo
     );
 
-    const savedSubspace = await this.addSubspaceToSpace(space, subspace);
+    subspace = await this.addSubspaceToSpace(space, subspace);
 
     // Before assigning roles in the subspace check that the user is a member
     if (agentInfo) {
@@ -858,11 +857,11 @@ export class SpaceService {
       }
     }
 
-    return savedSubspace;
+    return subspace;
   }
 
   async addSubspaceToSpace(space: ISpace, subspace: ISpace): Promise<ISpace> {
-    if (!space.subspaces || !space.community)
+    if (!space.community)
       throw new ValidationException(
         `Unable to add Subspace to space, missing relations: ${space.id}`,
         LogContext.SPACES
