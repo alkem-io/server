@@ -197,29 +197,28 @@ export class SpaceResolverMutations {
         `challengeCreate using challenge template: ${space.nameID} - ${subspaceData.collaborationData.collaborationTemplateID}`
       );
     }
-    const subspace = await this.spaceService.createSubspace(
+    let subspace = await this.spaceService.createSubspace(
       subspaceData,
       agentInfo
     );
+    // Save here so can reuse it later without another load
+    const displayName = subspace.profile.displayName;
 
-    const subspaceAuth = await this.spaceAuthorizationService
-      .applyAuthorizationPolicy(subspace)
-      .then(space => this.spaceService.save(space));
-
-    this.activityAdapter.subspaceCreated(
-      {
-        triggeredBy: agentInfo.userID,
-        subspace,
-      },
-      space.id,
-      subspace.level
+    subspace = await this.spaceAuthorizationService.applyAuthorizationPolicy(
+      subspace
     );
+    subspace = await this.spaceService.save(subspace);
+
+    this.activityAdapter.subspaceCreated({
+      triggeredBy: agentInfo.userID,
+      subspace,
+    });
 
     this.contributionReporter.subspaceCreated(
       {
         id: subspace.id,
-        name: subspace.profile.displayName,
-        space: space.id,
+        name: displayName,
+        space: space.id, //TODO: should this be a root space ID?
       },
       {
         id: agentInfo.userID,
@@ -237,6 +236,6 @@ export class SpaceResolverMutations {
       subspaceCreatedEvent
     );
 
-    return subspaceAuth;
+    return subspace;
   }
 }
