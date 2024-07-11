@@ -236,7 +236,7 @@ export class PlatformAuthorizationService {
     // Any member can upload
     const registeredUserUpload =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.FILE_UPLOAD],
+        [AuthorizationPrivilege.FILE_UPLOAD, AuthorizationPrivilege.READ],
         [AuthorizationCredential.GLOBAL_REGISTERED],
         CREDENTIAL_RULE_TYPES_PLATFORM_FILE_UPLOAD_ANY_USER
       );
