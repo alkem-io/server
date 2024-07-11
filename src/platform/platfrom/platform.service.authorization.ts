@@ -240,7 +240,8 @@ export class PlatformAuthorizationService {
         [AuthorizationCredential.GLOBAL_REGISTERED],
         CREDENTIAL_RULE_TYPES_PLATFORM_FILE_UPLOAD_ANY_USER
       );
-    registeredUserUpload.cascade = false;
+    // Cascade so the priviliege is picked up on the dirct storage bucket
+    registeredUserUpload.cascade = true;
     newRules.push(registeredUserUpload);
 
     this.authorizationPolicyService.appendCredentialAuthorizationRules(
