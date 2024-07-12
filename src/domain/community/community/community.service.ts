@@ -1240,7 +1240,7 @@ export class CommunityService {
       applicationData.userID
     );
     const community = await this.getCommunityOrFail(applicationData.parentID, {
-      relations: { applications: true, parentCommunity: true },
+      relations: { parentCommunity: true },
     });
 
     await this.validateApplicationFromUser(user, agent, community);
@@ -1248,10 +1248,8 @@ export class CommunityService {
     const application = await this.applicationService.createApplication(
       applicationData
     );
-    community.applications?.push(application);
-    await this.communityRepository.save(community);
-
-    return application;
+    application.community = community;
+    return await this.applicationService.save(application);
   }
 
   async createInvitationExistingContributor(
@@ -1264,7 +1262,7 @@ export class CommunityService {
     const community = await this.getCommunityOrFail(
       invitationData.communityID,
       {
-        relations: { invitations: true },
+        relations: {},
       }
     );
 
@@ -1278,10 +1276,9 @@ export class CommunityService {
       invitationData,
       contributor
     );
-    community.invitations?.push(invitation);
-    await this.communityRepository.save(community);
+    invitation.community = community;
 
-    return invitation;
+    return await this.invitationService.save(invitation);
   }
 
   async createPlatformInvitation(
@@ -1295,7 +1292,7 @@ export class CommunityService {
     const community = await this.getCommunityOrFail(
       invitationData.communityID,
       {
-        relations: { platformInvitations: true },
+        relations: {},
       }
     );
 
@@ -1307,10 +1304,8 @@ export class CommunityService {
       await this.platformInvitationService.createPlatformInvitation(
         externalInvitationInput
       );
-    community.platformInvitations?.push(externalInvitation);
-    await this.communityRepository.save(community);
-
-    return externalInvitation;
+    externalInvitation.community = community;
+    return await this.platformInvitationService.save(externalInvitation);
   }
 
   private async validateApplicationFromUser(
