@@ -604,7 +604,7 @@ export class CommunityRoleService {
     communityID: string,
     virtualContributorID: string
   ): Promise<boolean> {
-    return await this.communityResolverService.isCommunityAccountMatchingVcAccount(
+    return await this.communityService.isCommunityAccountMatchingVcAccount(
       communityID,
       virtualContributorID
     );

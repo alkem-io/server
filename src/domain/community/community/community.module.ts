@@ -19,12 +19,15 @@ import { LicenseEngineModule } from '@core/license-engine/license.engine.module'
 import { InvitationModule } from '../invitation/invitation.module';
 import { ApplicationModule } from '../application/application.module';
 import { PlatformInvitationModule } from '@platform/invitation/platform.invitation.module';
+import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
+import { VirtualContributorModule } from '../virtual-contributor/virtual.contributor.module';
 
 @Module({
   imports: [
     AuthorizationModule,
     AuthorizationPolicyModule,
     AgentModule,
+    EntityResolverModule,
     UserGroupModule,
     CommunicationModule,
     CommunityPolicyModule,
@@ -36,6 +39,7 @@ import { PlatformInvitationModule } from '@platform/invitation/platform.invitati
     InvitationModule,
     ApplicationModule,
     PlatformInvitationModule,
+    VirtualContributorModule,
     TypeOrmModule.forFeature([Community]),
     TrustRegistryAdapterModule,
   ],
