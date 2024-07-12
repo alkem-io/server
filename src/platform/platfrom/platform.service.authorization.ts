@@ -165,14 +165,18 @@ export class PlatformAuthorizationService {
         extendedAuthPolicy
       );
 
+    let platformStorageAuth =
+      this.authorizationPolicyService.cloneAuthorizationPolicy(
+        platform.authorization
+      );
+    platformStorageAuth =
+      this.extendStorageAuthorizationPolicy(platformStorageAuth);
+    platformStorageAuth.anonymousReadAccess = true;
+
     platform.storageAggregator =
       await this.storageAggregatorAuthorizationService.applyAuthorizationPolicy(
         platform.storageAggregator,
-        platform.authorization
-      );
-    platform.storageAggregator.authorization =
-      this.extendStorageAuthorizationPolicy(
-        platform.storageAggregator.authorization
+        platformStorageAuth
       );
 
     const innovationHubs = await this.innovationHubService.getInnovationHubs({

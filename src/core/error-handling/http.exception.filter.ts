@@ -24,10 +24,14 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const response = httpArguments.getResponse<Response<RestErrorResponse>>();
     const req = httpArguments.getRequest<HttpContext['req']>();
     const status = exception.getStatus();
+    let userID = 'unknown';
+    if (req.user) {
+      userID = req.user.userID;
+    }
 
     exception.details = {
       ...exception.details,
-      userId: req.user.userID,
+      userId: userID,
     };
     /* add values that you want to include as additional data
      e.g. secondParam = { code: '123' };
