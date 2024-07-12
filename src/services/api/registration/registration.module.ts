@@ -5,18 +5,18 @@ import { OrganizationModule } from '@domain/community/organization/organization.
 import { RegistrationResolverMutations } from './registration.resolver.mutations';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
-import { CommunityModule } from '@domain/community/community/community.module';
 import { InvitationModule } from '@domain/community/invitation/invitation.module';
 import { ApplicationModule } from '@domain/community/application/application.module';
 import { PreferenceSetModule } from '@domain/common/preference-set/preference.set.module';
 import { PlatformInvitationModule } from '@platform/invitation/platform.invitation.module';
 import { PlatformRoleModule } from '@platform/platfrom.role/platform.role.module';
+import { CommunityRoleModule } from '@domain/community/community-role/community.role.module';
 
 @Module({
   imports: [
     AuthorizationModule,
     NotificationAdapterModule,
-    CommunityModule,
+    CommunityRoleModule,
     UserModule,
     PreferenceSetModule,
     OrganizationModule,
