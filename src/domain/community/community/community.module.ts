@@ -19,6 +19,8 @@ import { EntityResolverModule } from '@services/infrastructure/entity-resolver/e
 import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
 import { CommunityGuidelinesModule } from '../community-guidelines/community.guidelines.module';
 import { LicenseEngineModule } from '@core/license-engine/license.engine.module';
+import { InvitationModule } from '../invitation/invitation.module';
+import { ApplicationModule } from '../application/application.module';
 
 @Module({
   imports: [
@@ -36,6 +38,8 @@ import { LicenseEngineModule } from '@core/license-engine/license.engine.module'
     EntityResolverModule,
     StorageAggregatorResolverModule,
     FormModule,
+    InvitationModule,
+    ApplicationModule,
     TypeOrmModule.forFeature([Community]),
     TrustRegistryAdapterModule,
   ],
