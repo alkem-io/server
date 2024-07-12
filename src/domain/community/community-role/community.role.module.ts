@@ -15,11 +15,18 @@ import { OrganizationModule } from '../organization/organization.module';
 import { VirtualContributorModule } from '../virtual-contributor/virtual.contributor.module';
 import { ApplicationModule } from '../application/application.module';
 import { InvitationModule } from '../invitation/invitation.module';
+import { AiServerAdapterModule } from '@services/adapters/ai-server-adapter/ai.server.adapter.module';
+import { PlatformInvitationModule } from '@platform/invitation/platform.invitation.module';
+import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
+import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
+import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
+import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
 
 @Module({
   imports: [
     AuthorizationModule,
     AuthorizationPolicyModule,
+    EntityResolverModule,
     AgentModule,
     CommunityModule,
     UserModule,
@@ -28,6 +35,11 @@ import { InvitationModule } from '../invitation/invitation.module';
     VirtualContributorModule,
     ApplicationModule,
     InvitationModule,
+    PlatformInvitationModule,
+    AiServerAdapterModule,
+    ContributionReporterModule,
+    NotificationAdapterModule,
+    ActivityAdapterModule,
   ],
   providers: [
     CommunityRoleService,

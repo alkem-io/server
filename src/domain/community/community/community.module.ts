@@ -5,8 +5,6 @@ import { CommunicationModule } from '@domain/communication/communication/communi
 import { UserGroupModule } from '@domain/community/user-group/user-group.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
-import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
 import { TrustRegistryAdapterModule } from '@services/external/trust-registry/trust.registry.adapter/trust.registry.adapter.module';
 import { CommunityPolicyModule } from '../community-policy/community.policy.module';
 import { Community } from './community.entity';
@@ -15,17 +13,15 @@ import { CommunityResolverMutations } from './community.resolver.mutations';
 import { CommunityService } from './community.service';
 import { CommunityAuthorizationService } from './community.service.authorization';
 import { FormModule } from '@domain/common/form/form.module';
-import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
 import { CommunityGuidelinesModule } from '../community-guidelines/community.guidelines.module';
 import { LicenseEngineModule } from '@core/license-engine/license.engine.module';
 import { InvitationModule } from '../invitation/invitation.module';
 import { ApplicationModule } from '../application/application.module';
+import { PlatformInvitationModule } from '@platform/invitation/platform.invitation.module';
 
 @Module({
   imports: [
-    ActivityAdapterModule,
-    NotificationAdapterModule,
     AuthorizationModule,
     AuthorizationPolicyModule,
     AgentModule,
@@ -35,11 +31,11 @@ import { ApplicationModule } from '../application/application.module';
     CommunityGuidelinesModule,
     LicenseEngineModule,
     AgentModule,
-    EntityResolverModule,
     StorageAggregatorResolverModule,
     FormModule,
     InvitationModule,
     ApplicationModule,
+    PlatformInvitationModule,
     TypeOrmModule.forFeature([Community]),
     TrustRegistryAdapterModule,
   ],

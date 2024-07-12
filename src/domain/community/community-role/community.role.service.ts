@@ -14,7 +14,6 @@ import { IUser } from '@domain/community/user';
 import { ICommunity } from '@domain/community/community';
 import { ApplicationService } from '@domain/community/application/application.service';
 import { AgentService } from '@domain/agent/agent/agent.service';
-import { CommunicationService } from '@domain/communication/communication/communication.service';
 import { LogContext } from '@common/enums/logging.context';
 import { OrganizationService } from '../organization/organization.service';
 import { IOrganization } from '../organization/organization.interface';
@@ -56,7 +55,6 @@ export class CommunityRoleService {
     private applicationService: ApplicationService,
     private invitationService: InvitationService,
     private platformInvitationService: PlatformInvitationService,
-    private communicationService: CommunicationService,
     private communityResolverService: CommunityResolverService,
     private communityRoleEventsService: CommunityRoleEventsService,
     private communityService: CommunityService,
@@ -551,18 +549,10 @@ export class CommunityRoleService {
     }
 
     if (role === CommunityRole.MEMBER) {
-      const communication = await this.communityService.getCommunication(
-        community.id
+      await this.communityService.removeMemberFromCommunication(
+        community,
+        user
       );
-      this.communicationService
-        .removeUserFromCommunications(communication, user)
-        .catch(error =>
-          this.logger.error(
-            `Unable remove user from community messaging (${community.id}): ${error}`,
-            error?.stack,
-            LogContext.COMMUNICATION
-          )
-        );
     }
 
     return user;

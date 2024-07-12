@@ -34,6 +34,7 @@ import { CreateCommunityInput } from './dto/community.dto.create';
 import { ICommunityGuidelines } from '../community-guidelines/community.guidelines.interface';
 import { IContributor } from '../contributor/contributor.interface';
 import { PlatformInvitationService } from '@platform/invitation/platform.invitation.service';
+import { IUser } from '../user/user.interface';
 
 @Injectable()
 export class CommunityService {
@@ -319,6 +320,22 @@ export class CommunityService {
       .catch(error =>
         this.logger.error(
           `Unable to add user to community messaging (${community.id}): ${error}`,
+          error?.stack,
+          LogContext.COMMUNICATION
+        )
+      );
+  }
+
+  public async removeMemberFromCommunication(
+    community: ICommunity,
+    user: IUser
+  ): Promise<void> {
+    const communication = await this.getCommunication(community.id);
+    this.communicationService
+      .removeUserFromCommunications(communication, user)
+      .catch(error =>
+        this.logger.error(
+          `Unable remove user from community messaging (${community.id}): ${error}`,
           error?.stack,
           LogContext.COMMUNICATION
         )
