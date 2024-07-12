@@ -15,6 +15,7 @@ import { CommunicationAdminRemoveOrphanedRoomInput } from './dto/admin.communica
 import { ValidationException } from '@common/exceptions';
 import { CommunityRole } from '@common/enums/community.role';
 import { IRoom } from '@domain/communication/room/room.interface';
+import { CommunityRoleService } from '@domain/community/community-role/community.role.service';
 
 @Injectable()
 export class AdminCommunicationService {
@@ -22,6 +23,7 @@ export class AdminCommunicationService {
     private communicationAdapter: CommunicationAdapter,
     private communicationService: CommunicationService,
     private communityService: CommunityService,
+    private communityRoleService: CommunityRoleService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -35,7 +37,7 @@ export class AdminCommunicationService {
     const community = await this.communityService.getCommunityOrFail(
       communicationData.communityID
     );
-    const communityMembers = await this.communityService.getUsersWithRole(
+    const communityMembers = await this.communityRoleService.getUsersWithRole(
       community,
       CommunityRole.MEMBER
     );
@@ -106,7 +108,7 @@ export class AdminCommunicationService {
     const communication = await this.communityService.getCommunication(
       community.id
     );
-    const communityMembers = await this.communityService.getUsersWithRole(
+    const communityMembers = await this.communityRoleService.getUsersWithRole(
       community,
       CommunityRole.MEMBER
     );

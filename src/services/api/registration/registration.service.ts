@@ -12,7 +12,6 @@ import { OrganizationPreferenceType } from '@common/enums/organization.preferenc
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { UserAuthorizationService } from '@domain/community/user/user.service.authorization';
 import { IInvitation } from '@domain/community/invitation/invitation.interface';
-import { CommunityService } from '@domain/community/community/community.service';
 import { InvitationAuthorizationService } from '@domain/community/invitation/invitation.service.authorization';
 import { CreateInvitationInput } from '@domain/community/invitation/dto/invitation.dto.create';
 import { DeleteUserInput } from '@domain/community/user/dto/user.dto.delete';
@@ -21,6 +20,7 @@ import { ApplicationService } from '@domain/community/application/application.se
 import { OrganizationRole } from '@common/enums/organization.role';
 import { PlatformInvitationService } from '@platform/invitation/platform.invitation.service';
 import { PlatformRoleService } from '@platform/platfrom.role/platform.role.service';
+import { CommunityRoleService } from '@domain/community/community-role/community.role.service';
 
 export class RegistrationService {
   constructor(
@@ -28,7 +28,7 @@ export class RegistrationService {
     private organizationService: OrganizationService,
     private preferenceSetService: PreferenceSetService,
     private userAuthorizationService: UserAuthorizationService,
-    private communityService: CommunityService,
+    private communityRoleService: CommunityRoleService,
     private platformInvitationService: PlatformInvitationService,
     private platformRoleService: PlatformRoleService,
     private invitationAuthorizationService: InvitationAuthorizationService,
@@ -130,7 +130,7 @@ export class RegistrationService {
           invitedToParent: platformInvitation.communityInvitedToParent,
         };
         let invitation =
-          await this.communityService.createInvitationExistingContributor(
+          await this.communityRoleService.createInvitationExistingContributor(
             invitationInput
           );
         invitation.invitedToParent =
