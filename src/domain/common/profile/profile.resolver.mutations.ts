@@ -93,7 +93,7 @@ export class ProfileResolverMutations {
     );
     const reference = await this.profileService.createReference(referenceInput);
     reference.authorization =
-      await this.authorizationPolicyService.inheritParentAuthorization(
+      this.authorizationPolicyService.inheritParentAuthorization(
         reference.authorization,
         profile.authorization
       );

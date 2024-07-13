@@ -33,7 +33,7 @@ export class CalendarEventService {
     calendarEventInput: CreateCalendarEventInput,
     storageAggregator: IStorageAggregator,
     userID: string
-  ): Promise<CalendarEvent> {
+  ): Promise<ICalendarEvent> {
     const calendarEvent: ICalendarEvent =
       CalendarEvent.create(calendarEventInput);
     calendarEvent.profile = await this.profileService.createProfile(
