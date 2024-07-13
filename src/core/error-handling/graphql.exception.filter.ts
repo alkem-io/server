@@ -14,9 +14,10 @@ export class GraphqlExceptionFilter implements GqlExceptionFilter {
   catch(exception: BaseException, host: ArgumentsHost) {
     const httpArguments = host.switchToHttp();
     const ctx = httpArguments.getNext<IGraphQLContext>();
+    const userID = ctx.req.user.userID || 'unknown';
     exception.details = {
       ...exception.details,
-      userId: ctx.req.user.userID,
+      userId: userID,
     };
     /* add values that you want to include as additional data
      e.g. secondParam = { code: '123' };
