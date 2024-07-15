@@ -3,15 +3,15 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { NotificationInputCommunityNewMember } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.new.member';
-import { ICommunity } from './community.interface';
 import { ActivityInputMemberJoined } from '@services/adapters/activity-adapter/dto/activity.dto.input.member.joined';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { SpaceType } from '@common/enums/space.type';
 import { IContributor } from '../contributor/contributor.interface';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
+import { ICommunity } from '../community/community.interface';
 
 @Injectable()
-export class CommunityEventsService {
+export class CommunityRoleEventsService {
   constructor(
     private contributionReporter: ContributionReporterService,
     private notificationAdapter: NotificationAdapter,
