@@ -13,11 +13,11 @@ import { AuthorizationCredential, LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { sortSpacesByActivity } from '@domain/space/space/sort.spaces.by.activity';
 import { CommunityRole } from '@common/enums/community.role';
-import { CommunityService } from '@domain/community/community/community.service';
 import { CommunityInvitationResult } from './dto/me.invitation.result';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { EntityNotFoundException } from '@common/exceptions';
 import { CommunityApplicationResult } from './dto/me.application.result';
+import { CommunityRoleService } from '@domain/community/community-role/community.role.service';
 
 @Injectable()
 export class MeService {
@@ -26,7 +26,7 @@ export class MeService {
     private rolesService: RolesService,
     private activityLogService: ActivityLogService,
     private activityService: ActivityService,
-    private communityService: CommunityService,
+    private communityRoleService: CommunityRoleService,
     private communityResolverService: CommunityResolverService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
@@ -156,7 +156,7 @@ export class MeService {
             );
             continue;
           }
-          const myRoles = await this.communityService.getCommunityRoles(
+          const myRoles = await this.communityRoleService.getCommunityRoles(
             agentInfo,
             activityLog.space.community
           );
