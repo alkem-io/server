@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { RoomServiceMentions } from './room.service.mentions';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 
-describe('MessagingService', () => {
+describe('RoomServiceMentions', () => {
   let service: RoomServiceMentions;
 
   beforeEach(async () => {
