@@ -161,9 +161,7 @@ export class AiPersonaServiceService {
       interactionID: personaQuestionInput.interactionID,
     };
 
-    const response = await this.aiPersonaEngineAdapter.sendQuery(input);
-
-    return response;
+    return this.aiPersonaEngineAdapter.sendQuery(input);
   }
 
   public async ingest(aiPersonaService: IAiPersonaService): Promise<boolean> {

@@ -45,6 +45,7 @@ export class VirtualContributorResolverQueries {
     return await this.virtualContributorService.getVirtualContributors(args);
   }
 
+  @UseGuards(GraphqlGuard)
   @Query(() => IVirtualContributor, {
     nullable: false,
     description: 'A particular VirtualContributor',

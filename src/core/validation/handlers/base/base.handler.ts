@@ -20,7 +20,6 @@ import {
 } from '@domain/community/user-group/dto';
 import { CreateSubspaceInput } from '@domain/space/space/dto/space.dto.create.subspace';
 import { CreateActorInput, UpdateActorInput } from '@domain/context/actor';
-import { CommunityApplyInput } from '@domain/community/community/dto/community.dto.apply';
 import { CreateReferenceOnProfileInput } from '@domain/common/profile/dto/profile.dto.create.reference';
 import {
   CreateTagsetOnProfileInput,
@@ -81,9 +80,10 @@ import {
 } from '@domain/space/account/dto';
 import { UpdateAccountDefaultsInput } from '@domain/space/account/dto/account.dto.update.defaults';
 import { UpdateCommunityGuidelinesInput } from '@domain/community/community-guidelines/dto/community.guidelines.dto.update';
-import { CreateInvitationForContributorsOnCommunityInput } from '@domain/community/community/dto/community.dto.invite.contributor';
 import { ForumCreateDiscussionInput } from '@platform/forum/dto/forum.dto.create.discussion';
-import { CreatePlatformInvitationOnCommunityInput } from '@domain/community/community/dto/community.dto.platform.invitation.community';
+import { CommunityRoleApplyInput } from '@domain/community/community-role/dto/community.role.dto.apply';
+import { CreateInvitationForContributorsOnCommunityInput } from '@domain/community/community-role/dto/community.role.dto.invite.contributor';
+import { CreatePlatformInvitationOnCommunityInput } from '@domain/community/community-role/dto/community.role.dto.platform.invitation.community';
 
 export class BaseHandler extends AbstractHandler {
   public async handle(
@@ -148,7 +148,7 @@ export class BaseHandler extends AbstractHandler {
       UpdateSpaceSettingsEntityInput,
       UpdateSpaceSettingsInput,
       VisualUploadImageInput,
-      CommunityApplyInput,
+      CommunityRoleApplyInput,
       CreateInvitationForContributorsOnCommunityInput,
       CreatePlatformInvitationOnCommunityInput,
       ForumCreateDiscussionInput,
