@@ -1,5 +1,5 @@
 export enum MessageSenderRole {
-  USER = 'user',
+  HUMAN = 'human',
   ASSISTANT = 'assistant',
 }
 export interface InteractionMessage {

@@ -111,19 +111,23 @@ export class AiServerService {
     const messages: InteractionMessage[] = [];
     for (let i = 0; i < room.messages.length; i++) {
       const message = room.messages[i];
-      if (message.threadID !== interaction.threadID) {
-        continue;
-      }
+      // try to skip this check and use Matrix to filter by Room and Thread
+      if (
+        message.threadID === interaction.threadID ||
+        message.id === interaction.threadID
+      ) {
+        let role = MessageSenderRole.HUMAN;
 
-      let role = MessageSenderRole.USER;
-      if (message.sender.startsWith('@virtualcontributor')) {
-        role = MessageSenderRole.ASSISTANT;
-      }
+        // try to set the assistant role for the replies of the specific persona/vc
+        if (message.sender.startsWith('@virtualcontributor')) {
+          role = MessageSenderRole.ASSISTANT;
+        }
 
-      messages.push({
-        content: message.message,
-        role,
-      });
+        messages.push({
+          content: message.message,
+          role,
+        });
+      }
     }
 
     return messages;
