@@ -1,21 +1,23 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { RoomServiceMentions } from './room.service.mentions';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { MockWinstonProvider } from '@test/mocks';
 
 describe('RoomServiceMentions', () => {
   let service: RoomServiceMentions;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [RoomServiceMentions],
+      providers: [MockWinstonProvider, RoomServiceMentions],
+      exports: [RoomServiceMentions],
     })
       .useMocker(defaultMockerFactory)
       .compile();
 
-    service = module.get<RoomServiceMentions>(RoomServiceMentions);
+    service = module.get(RoomServiceMentions);
   });
 
-  it.concurrent.each([
+  it.each([
     ['', []],
     ['no mentions here', []],
     [

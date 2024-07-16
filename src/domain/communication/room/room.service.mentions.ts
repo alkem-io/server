@@ -9,8 +9,8 @@ import { CommunityResolverService } from '@services/infrastructure/entity-resolv
 import { IProfile } from '@domain/common/profile';
 import { Mention, MentionedEntityType } from '../messaging/mention.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { LogContext } from '@common/enums/logging.context';
 import { MutationType } from '@common/enums/subscriptions/mutation.type';
+import { LogContext } from '@common/enums/logging.context';
 import { RoomSendMessageReplyInput } from '@domain/communication/room/dto/room.dto.send.message.reply';
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service/subscription.publish.service';
 import { RoomService } from './room.service';
