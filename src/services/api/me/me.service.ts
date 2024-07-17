@@ -12,17 +12,21 @@ import { ActivityService } from '@platform/activity/activity.service';
 import { AuthorizationCredential, LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { sortSpacesByActivity } from '@domain/space/space/sort.spaces.by.activity';
-import { CommunityRole } from '@common/enums/community.role';
 import { CommunityInvitationResult } from './dto/me.invitation.result';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { EntityNotFoundException } from '@common/exceptions';
 import { CommunityApplicationResult } from './dto/me.application.result';
 import { CommunityRoleService } from '@domain/community/community-role/community.role.service';
+import { ContributorService } from '@domain/community/contributor/contributor.service';
+import { UserService } from '@domain/community/user/user.service';
+import { compact } from 'lodash';
 
 @Injectable()
 export class MeService {
   constructor(
     private spaceService: SpaceService,
+    private contributorService: ContributorService,
+    private userService: UserService,
     private rolesService: RolesService,
     private activityLogService: ActivityLogService,
     private activityService: ActivityService,
@@ -121,8 +125,7 @@ export class MeService {
 
   public async getMySpaces(
     agentInfo: AgentInfo,
-    limit = 20,
-    showOnlyMyCreatedSpaces = false
+    limit = 20
   ): Promise<MySpaceResults[]> {
     const rawActivities = await this.activityService.getMySpacesActivity(
       agentInfo.userID,
@@ -142,38 +145,41 @@ export class MeService {
         );
         continue;
       }
-      if (!showOnlyMyCreatedSpaces) {
-        mySpaceResults.push({
-          space: activityLog.space,
-          latestActivity: activityLog,
-        });
-      } else {
-        if (activityLog?.space) {
-          if (!activityLog?.space.community) {
-            this.logger.warn(
-              `Unable to process space entry ${activityLog?.space.id} because it does not have a community.`,
-              LogContext.ACTIVITY
-            );
-            continue;
-          }
-          const myRoles = await this.communityRoleService.getCommunityRoles(
-            agentInfo,
-            activityLog.space.community
-          );
-          if (
-            myRoles.includes(CommunityRole.ADMIN) &&
-            activityLog.space.level === 0
-          ) {
-            mySpaceResults.push({
-              space: activityLog.space,
-              latestActivity: activityLog,
-            });
-          }
-        }
-      }
+      mySpaceResults.push({
+        space: activityLog.space,
+        latestActivity: activityLog,
+      });
     }
 
     return mySpaceResults.slice(0, limit);
+  }
+
+  public async getMyCreatedSpaces(
+    agentInfo: AgentInfo,
+    limit = 20
+  ): Promise<ISpace[]> {
+    const user = await this.userService.getUserOrFail(agentInfo.userID);
+    if (!user) {
+      throw new EntityNotFoundException(
+        `User not found ${agentInfo.userID}`,
+        LogContext.COMMUNITY
+      );
+    }
+    const accounts = (
+      await this.contributorService.getAccountsHostedByContributor(user, true)
+    )
+      .sort((a, b) =>
+        a.createdDate && b.createdDate
+          ? b.createdDate.getTime() - a.createdDate.getTime() // Sort descending, so latest is the first
+          : 0
+      )
+      .slice(0, limit);
+
+    if (!accounts || accounts.length === 0) {
+      return [];
+    }
+
+    return compact(accounts.map(account => account.space));
   }
 
   public async canCreateFreeSpace(agentInfo: AgentInfo): Promise<boolean> {
