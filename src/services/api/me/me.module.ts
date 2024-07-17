@@ -12,6 +12,7 @@ import { ActivityLogModule } from '../activity-log/activity.log.module';
 import { ActivityModule } from '@platform/activity/activity.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { CommunityRoleModule } from '@domain/community/community-role/community.role.module';
+import { ContributorModule } from '@domain/community/contributor/contributor.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { CommunityRoleModule } from '@domain/community/community-role/community.
     ApplicationModule,
     InvitationModule,
     UserModule,
+    ContributorModule,
     SpaceModule,
     RolesModule,
     ActivityLogModule,
