@@ -10,7 +10,6 @@ import { CreateAiPersonaServiceInput as CreateAiPersonaServiceInput } from './dt
 import { DeleteAiPersonaServiceInput as DeleteAiPersonaServiceInput } from './dto/ai.persona..service.dto.delete';
 import { UpdateAiPersonaServiceInput } from './dto/ai.persona.service.dto.update';
 import { AiPersonaServiceQuestionInput } from './dto/ai.persona.service.question.dto.input';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { LogContext } from '@common/enums/logging.context';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { AiPersonaEngineAdapterQueryInput } from '@services/ai-server/ai-persona-engine-adapter/dto/ai.persona.engine.adapter.dto.question.input';
@@ -23,6 +22,7 @@ import {
 } from '@services/infrastructure/event-bus/commands';
 import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
 import { IMessageAnswerToQuestion } from '@domain/communication/message.answer.to.question/message.answer.to.question.interface';
+import { InteractionMessage } from './dto/interaction.message';
 
 @Injectable()
 export class AiPersonaServiceService {
@@ -144,8 +144,7 @@ export class AiPersonaServiceService {
 
   public async askQuestion(
     personaQuestionInput: AiPersonaServiceQuestionInput,
-    agentInfo: AgentInfo,
-    contextSpaceID: string
+    history: InteractionMessage[]
   ): Promise<IMessageAnswerToQuestion> {
     const aiPersonaService = await this.getAiPersonaServiceOrFail(
       personaQuestionInput.aiPersonaServiceID
@@ -154,10 +153,12 @@ export class AiPersonaServiceService {
     const input: AiPersonaEngineAdapterQueryInput = {
       engine: aiPersonaService.engine,
       prompt: aiPersonaService.prompt,
-      userId: agentInfo.userID,
+      userID: personaQuestionInput.userID,
       question: personaQuestionInput.question,
-      knowledgeSpaceNameID: aiPersonaService.bodyOfKnowledgeID,
-      contextSpaceNameID: contextSpaceID,
+      bodyOfKnowledgeID: aiPersonaService.bodyOfKnowledgeID,
+      contextID: personaQuestionInput.contextID,
+      history,
+      interactionID: personaQuestionInput.interactionID,
     };
 
     return this.aiPersonaEngineAdapter.sendQuery(input);
@@ -167,7 +168,7 @@ export class AiPersonaServiceService {
     // Todo: ???
     return this.aiPersonaEngineAdapter.sendIngest({
       engine: AiPersonaEngine.EXPERT,
-      userId: aiPersonaService.id, // TODO: clearly wrong, just getting code to compile
+      userID: aiPersonaService.id, // TODO: clearly wrong, just getting code to compile
     });
   }
 }

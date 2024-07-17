@@ -1,5 +1,6 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
+import { IVcInteraction } from '../vc-interaction/vc.interaction.interface';
 
 @ObjectType('Room')
 export abstract class IRoom extends IAuthorizable {
@@ -14,4 +15,6 @@ export abstract class IRoom extends IAuthorizable {
   externalRoomID!: string;
 
   displayName!: string;
+
+  vcInteractions?: IVcInteraction[];
 }
