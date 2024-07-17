@@ -167,7 +167,8 @@ export class LookupResolverFields {
   async authorizationPrivilegesForUser(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('userID', { type: () => UUID }) userID: string,
-    @Args('authorizationID', { type: () => UUID }) authorizationID: string
+    @Args('authorizationPolicyID', { type: () => UUID })
+    authorizationPolicyID: string
   ): Promise<AuthorizationPrivilege[]> {
     this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -177,7 +178,7 @@ export class LookupResolverFields {
     );
     const authorization =
       await this.authorizationPolicyService.getAuthorizationPolicyOrFail(
-        authorizationID
+        authorizationPolicyID
       );
     const agent = await this.userService.getAgent(userID);
     return this.authorizationService.getGrantedPrivileges(

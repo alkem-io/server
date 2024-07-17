@@ -126,7 +126,7 @@ services:
 
   synapse:
     container_name: alkemio_dev_synapse
-    image: matrixdotorg/synapse:v1.82.0
+    image: matrixdotorg/synapse:v1.98.0
     depends_on:
       - postgres
     restart: always
@@ -204,7 +204,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_notifications
     hostname: notifications
-    image: alkemio/notifications:v0.17.2
+    image: alkemio/notifications:v0.19.0
     platform: linux/x86_64
     environment:
       - RABBITMQ_HOST
@@ -234,7 +234,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_matrix_adapter
     hostname: matrix-adapter
-    image: alkemio/matrix-adapter:v0.3.1
+    image: alkemio/matrix-adapter:v0.4.5
     platform: linux/x86_64
     environment:
       - RABBITMQ_HOST
@@ -271,7 +271,7 @@ services:
   whiteboard-collaboration:
     container_name: alkemio_dev_whiteboard_collaboration
     hostname: whiteboard-collaboration
-    image: alkemio/whiteboard-collaboration-service:v0.3.0
+    image: alkemio/whiteboard-collaboration-service:v0.3.1
     platform: linux/x86_64
     environment:
       - RABBITMQ_HOST
@@ -289,7 +289,7 @@ services:
   file-service:
     container_name: alkemio_dev_file_service
     hostname: file-service
-    image: alkemio/file-service:v0.1.0
+    image: alkemio/file-service:v0.1.2
     platform: linux/x86_64
     environment:
       - RABBITMQ_HOST
@@ -396,7 +396,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_virtual_contributor_engine_expert
     hostname: virtual-contributor-engine-expert
-    image: alkemio/virtual-contributor-engine-expert:v0.3.4
+    image: alkemio/virtual-contributor-engine-expert:v0.5.0
     platform: linux/x86_64
     restart: always
     volumes:
@@ -439,7 +439,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_virtual-contributor-ingest-space
     hostname: virtual-contributor-ingest-space
-    image: alkemio/virtual-contributor-ingest-space:v0.6.1
+    image: alkemio/virtual-contributor-ingest-space:v0.8.1
     platform: linux/x86_64
     restart: always
     volumes:
