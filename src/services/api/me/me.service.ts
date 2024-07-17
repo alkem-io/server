@@ -153,7 +153,10 @@ export class MeService {
     return mySpaceResults.slice(0, limit);
   }
 
-  public async getMyCreatedSpaces(agentInfo: AgentInfo): Promise<ISpace[]> {
+  public async getMyCreatedSpaces(
+    agentInfo: AgentInfo,
+    limit = 20
+  ): Promise<ISpace[]> {
     const user = await this.userService.getUserOrFail(agentInfo.userID);
     if (!user) {
       throw new EntityNotFoundException(
@@ -161,8 +164,15 @@ export class MeService {
         LogContext.COMMUNITY
       );
     }
-    const accounts =
-      await this.contributorService.getAccountsHostedByContributor(user);
+    const accounts = (
+      await this.contributorService.getAccountsHostedByContributor(user)
+    )
+      .sort((a, b) =>
+        a.createdDate && b.createdDate
+          ? b.createdDate.getTime() - a.createdDate.getTime() // Sort descending, so latest is the first
+          : 0
+      )
+      .slice(0, limit);
 
     return await Promise.all(
       accounts.map(account =>

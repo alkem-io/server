@@ -142,9 +142,17 @@ export class MeResolverFields {
     description: 'The Spaces I have created',
   })
   public myCreatedSpaces(
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args({
+      name: 'limit',
+      type: () => Float,
+      description:
+        'The number of Spaces to return; if omitted return latest 20 created spaces.',
+      nullable: true,
+    })
+    limit: number
   ): Promise<ISpace[]> {
-    return this.meService.getMyCreatedSpaces(agentInfo);
+    return this.meService.getMyCreatedSpaces(agentInfo, limit);
   }
 
   @UseGuards(GraphqlGuard)

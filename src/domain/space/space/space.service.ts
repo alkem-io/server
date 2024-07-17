@@ -1173,7 +1173,7 @@ export class SpaceService {
 
   public async getSpaceForAccountOrFail(accountId: string): Promise<ISpace> {
     const space = await this.spaceRepository.findOne({
-      where: { account: { id: accountId } },
+      where: { level: 0, account: { id: accountId } },
       relations: {
         account: true,
       },
