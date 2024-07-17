@@ -349,9 +349,7 @@ export class VirtualContributorService {
   }
 
   public async askQuestion(
-    vcQuestionInput: VirtualContributorQuestionInput,
-    agentInfo: AgentInfo,
-    contextSpaceID: string
+    vcQuestionInput: VirtualContributorQuestionInput
   ): Promise<IMessageAnswerToQuestion> {
     const virtualContributor = await this.getVirtualContributorOrFail(
       vcQuestionInput.virtualContributorID,
@@ -370,19 +368,19 @@ export class VirtualContributorService {
       );
     }
     this.logger.verbose?.(
-      `still need to use the context ${contextSpaceID}, ${agentInfo.agentID}`,
+      `still need to use the context ${vcQuestionInput.contextSpaceID}, ${vcQuestionInput.userID}`,
       LogContext.AI_PERSONA_SERVICE_ENGINE
     );
     const aiServerAdapterQuestionInput: AiServerAdapterAskQuestionInput = {
       aiPersonaServiceID: virtualContributor.aiPersona.aiPersonaServiceID,
       question: vcQuestionInput.question,
+      contextID: vcQuestionInput.contextSpaceID,
+      userID: vcQuestionInput.userID,
+      threadID: vcQuestionInput.threadID,
+      vcInteractionID: vcQuestionInput.vcInteractionID,
     };
 
-    return await this.aiServerAdapter.askQuestion(
-      aiServerAdapterQuestionInput,
-      agentInfo,
-      contextSpaceID
-    );
+    return await this.aiServerAdapter.askQuestion(aiServerAdapterQuestionInput);
   }
 
   // TODO: move to store
