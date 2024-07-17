@@ -132,15 +132,19 @@ export class MeResolverFields {
         'The number of Journeys to return; if omitted return latest 20 active Journeys.',
       nullable: true,
     })
-    limit: number,
-    @Args('showOnlyMyCreatedSpaces', { type: () => Boolean, nullable: true })
-    showOnlyMyCreatedSpaces: boolean
+    limit: number
   ): Promise<MySpaceResults[]> {
-    return this.meService.getMySpaces(
-      agentInfo,
-      limit,
-      showOnlyMyCreatedSpaces
-    );
+    return this.meService.getMySpaces(agentInfo, limit);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField(() => [ISpace], {
+    description: 'The Spaces I have created',
+  })
+  public myCreatedSpaces(
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<ISpace[]> {
+    return this.meService.getMyCreatedSpaces(agentInfo);
   }
 
   @UseGuards(GraphqlGuard)

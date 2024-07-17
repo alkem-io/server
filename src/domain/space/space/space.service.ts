@@ -1171,6 +1171,24 @@ export class SpaceService {
     return space.account;
   }
 
+  public async getSpaceForAccountOrFail(accountId: string): Promise<ISpace> {
+    const space = await this.spaceRepository.findOne({
+      where: { account: { id: accountId } },
+      relations: {
+        account: true,
+      },
+    });
+
+    if (!space) {
+      throw new EntityNotFoundException(
+        `Unable to find base subspace with accountID: ${accountId}`,
+        LogContext.SPACES
+      );
+    }
+
+    return space;
+  }
+
   public async getCommunity(spaceId: string): Promise<ICommunity> {
     const subspaceWithCommunity = await this.getSpaceOrFail(spaceId, {
       relations: { community: true },
