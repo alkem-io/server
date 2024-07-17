@@ -375,7 +375,7 @@ export class CommunityResolverService {
     if (!space || !space.community) {
       throw new EntityNotFoundException(
         `Unable to find space for commentsId trough post: ${commentsId}`,
-        LogContext.URL_GENERATOR
+        LogContext.COMMUNITY
       );
     }
     return space.community;
@@ -385,10 +385,19 @@ export class CommunityResolverService {
     id: string,
     roomType: RoomType
   ): Promise<ICommunity> {
-    if (roomType === RoomType.CALLOUT) {
-      return this.getCommunityFromCalloutRoomOrFail(id);
-    } else {
-      return this.getCommunityFromPostRoomOrFail(id);
+    switch (roomType) {
+      case RoomType.CALLOUT: {
+        return this.getCommunityFromCalloutRoomOrFail(id);
+      }
+      case RoomType.POST: {
+        return this.getCommunityFromPostRoomOrFail(id);
+      }
+      default: {
+        throw new EntityNotFoundException(
+          `Unable to find communnity for room of type: ${roomType}`,
+          LogContext.COMMUNITY
+        );
+      }
     }
   }
 
