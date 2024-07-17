@@ -77,7 +77,7 @@ export class VirtualContributorResolverMutations {
   })
   async refreshVirtualContributorBodyOfKnowledge(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('deleteData')
+    @Args('refreshData')
     refreshData: RefreshVirtualContributorBodyOfKnowledgeInput
   ): Promise<boolean> {
     const virtual =

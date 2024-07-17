@@ -27,6 +27,10 @@ import { IMessageReaction } from '../message.reaction/message.reaction.interface
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
 import { MutationType } from '@common/enums/subscriptions';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { RoomServiceMentions } from './room.service.mentions';
+import { Mention } from '../messaging/mention.interface';
+import { IRoom } from './room.interface';
+import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
 
 @Resolver()
 export class RoomResolverMutations {
@@ -36,7 +40,9 @@ export class RoomResolverMutations {
     private namingService: NamingService,
     private roomAuthorizationService: RoomAuthorizationService,
     private roomServiceEvents: RoomServiceEvents,
+    private roomServiceMentions: RoomServiceMentions,
     private subscriptionPublishService: SubscriptionPublishService,
+    private virtualContributorsService: VirtualContributorService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -60,38 +66,20 @@ export class RoomResolverMutations {
       `room send message: ${room.id}`
     );
 
-    const accessVirtualContributors = true;
-    // this requires proper propagation to all rooms (space --> collaboration --> callout --> room)
-    // await this.authorizationService.isAccessGranted(
-    //   agentInfo,
-    //   room.authorization,
-    //   AuthorizationPrivilege.ACCESS_VIRTUAL_CONTRIBUTOR
-    // );
+    await this.validateMessageOnCalloutOrFail(room);
 
-    if (room.type === RoomType.CALLOUT) {
-      const callout = await this.namingService.getCalloutForRoom(
-        messageData.roomID
-      );
+    const accessVirtualContributors = this.virtualContributorsEnabled();
 
-      if (callout.type !== CalloutType.POST) {
-        throw new NotSupportedException(
-          'Messages only supported on Comments Callout',
-          LogContext.COLLABORATION
-        );
-      }
-
-      if (callout.contributionPolicy.state === CalloutState.CLOSED) {
-        throw new CalloutClosedException(
-          `New collaborations to a closed Callout with id: '${callout.id}' are not allowed!`
-        );
-      }
-    }
+    const mentions = this.roomServiceMentions.getMentionsFromText(
+      messageData.message
+    );
 
     const message = await this.roomService.sendMessage(
       room,
       agentInfo.communicationID,
       messageData
     );
+    const threadID = message.id;
 
     this.subscriptionPublishService.publishRoomEvent(
       room.id,
@@ -105,7 +93,8 @@ export class RoomResolverMutations {
           messageData.roomID
         );
 
-        const mentionsPost = this.roomServiceEvents.processNotificationMentions(
+        this.roomServiceMentions.processNotificationMentions(
+          mentions,
           post.id,
           post.nameID,
           post.profile,
@@ -128,13 +117,15 @@ export class RoomResolverMutations {
           message,
           agentInfo
         );
-        this.roomServiceEvents.processVirtualContributorMentions(
-          mentionsPost,
-          message,
-          agentInfo,
-          room,
-          accessVirtualContributors
-        );
+        if (accessVirtualContributors) {
+          this.roomServiceMentions.processVirtualContributorMentions(
+            mentions,
+            message.message,
+            threadID,
+            agentInfo,
+            room
+          );
+        }
 
         break;
       case RoomType.CALENDAR_EVENT:
@@ -142,7 +133,8 @@ export class RoomResolverMutations {
           messageData.roomID
         );
 
-        this.roomServiceEvents.processNotificationMentions(
+        this.roomServiceMentions.processNotificationMentions(
+          mentions,
           calendar.id,
           calendar.nameID,
           calendar.profile,
@@ -157,7 +149,8 @@ export class RoomResolverMutations {
           messageData.roomID
         );
 
-        this.roomServiceEvents.processNotificationMentions(
+        this.roomServiceMentions.processNotificationMentions(
+          mentions,
           discussion.id,
           discussion.nameID,
           discussion.profile,
@@ -170,7 +163,8 @@ export class RoomResolverMutations {
         const discussionForum = await this.namingService.getDiscussionForRoom(
           messageData.roomID
         );
-        this.roomServiceEvents.processNotificationMentions(
+        this.roomServiceMentions.processNotificationMentions(
+          mentions,
           discussionForum.id,
           discussionForum.nameID,
           discussionForum.profile,
@@ -199,7 +193,8 @@ export class RoomResolverMutations {
         );
 
         // Mentions notificaitons should be sent regardless of callout visibility per client-web#5557
-        const mentions = this.roomServiceEvents.processNotificationMentions(
+        this.roomServiceMentions.processNotificationMentions(
+          mentions,
           callout.id,
           callout.nameID,
           callout.framing.profile,
@@ -208,13 +203,15 @@ export class RoomResolverMutations {
           agentInfo
         );
 
-        this.roomServiceEvents.processVirtualContributorMentions(
-          mentions,
-          message,
-          agentInfo,
-          room,
-          accessVirtualContributors
-        );
+        if (accessVirtualContributors) {
+          this.roomServiceMentions.processVirtualContributorMentions(
+            mentions,
+            message.message,
+            threadID,
+            agentInfo,
+            room
+          );
+        }
 
         if (callout.visibility === CalloutVisibility.PUBLISHED) {
           this.roomServiceEvents.processActivityCalloutCommentCreated(
@@ -237,57 +234,23 @@ export class RoomResolverMutations {
     return message;
   }
 
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => MessageID, {
-    description: 'Removes a message.',
-  })
-  @Profiling.api
-  async removeMessageOnRoom(
-    @Args('messageData') messageData: RoomRemoveMessageInput,
-    @CurrentUser() agentInfo: AgentInfo
-  ): Promise<string> {
-    const room = await this.roomService.getRoomOrFail(messageData.roomID);
+  private async validateMessageOnCalloutOrFail(room: IRoom) {
+    if (room.type === RoomType.CALLOUT) {
+      const callout = await this.namingService.getCalloutForRoom(room.id);
 
-    // The choice was made **not** to wrap every message in an AuthorizationPolicy.
-    // So we also allow users who sent the message in question to remove the message by
-    // extending the authorization policy in memory but do not persist it.
-    const extendedAuthorization =
-      await this.roomAuthorizationService.extendAuthorizationPolicyForMessageSender(
-        room,
-        messageData.messageID
-      );
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      extendedAuthorization,
-      AuthorizationPrivilege.DELETE,
-      `room remove message: ${room.id}`
-    );
-    const messageID = await this.roomService.removeRoomMessage(
-      room,
-      agentInfo.communicationID,
-      messageData
-    );
-    await this.roomServiceEvents.processActivityMessageRemoved(
-      messageID,
-      agentInfo
-    );
-
-    this.subscriptionPublishService.publishRoomEvent(
-      room.id,
-      MutationType.DELETE,
-      // send empty data, because the resource is deleted
-      {
-        id: messageID,
-        message: '',
-        reactions: [],
-        sender: '',
-        senderType: 'user',
-        threadID: '',
-        timestamp: -1,
+      if (callout.type !== CalloutType.POST) {
+        throw new NotSupportedException(
+          'Messages only supported on Comments Callout',
+          LogContext.COLLABORATION
+        );
       }
-    );
 
-    return messageID;
+      if (callout.contributionPolicy.state === CalloutState.CLOSED) {
+        throw new CalloutClosedException(
+          `New collaborations to a closed Callout with id: '${callout.id}' are not allowed!`
+        );
+      }
+    }
   }
 
   @UseGuards(GraphqlGuard)
@@ -308,9 +271,15 @@ export class RoomResolverMutations {
       `room reply to message: ${room.id}`
     );
 
+    const accessVirtualContributors = this.virtualContributorsEnabled();
+    const mentions: Mention[] = this.roomServiceMentions.getMentionsFromText(
+      messageData.message
+    );
+    const threadID = messageData.threadID;
+
     const messageOwnerId = await this.roomService.getUserIdForMessage(
       room,
-      messageData.threadID
+      threadID
     );
 
     const reply = await this.roomService.sendMessageReply(
@@ -401,6 +370,43 @@ export class RoomResolverMutations {
           messageData.roomID
         );
 
+        if (accessVirtualContributors) {
+          // Check before processing so as not to reply to same message where interaction started
+          const vcInteraction = await this.roomService.getVcInteractionByThread(
+            room.id,
+            threadID
+          );
+          this.roomServiceMentions.processVirtualContributorMentions(
+            mentions,
+            messageData.message,
+            threadID,
+            agentInfo,
+            room
+          );
+
+          if (vcInteraction) {
+            this.logger.verbose?.(
+              `VC Interaction found in thread ${messageData.threadID} in room ${room.id}`,
+              LogContext.VIRTUAL_CONTRIBUTOR
+            );
+            const vcMentioned =
+              await this.virtualContributorsService.getVirtualContributorOrFail(
+                vcInteraction.virtualContributorID
+              );
+            const contextSpaceID =
+              await this.roomServiceMentions.getSpaceIdForRoom(room);
+
+            await this.roomServiceMentions.askQuestionToVirtualContributor(
+              vcMentioned?.nameID,
+              messageData.message,
+              threadID,
+              agentInfo,
+              contextSpaceID,
+              room,
+              vcInteraction
+            );
+          }
+        }
         if (callout.visibility === CalloutVisibility.PUBLISHED) {
           this.roomServiceEvents.processActivityCalloutCommentCreated(
             callout,
@@ -417,7 +423,8 @@ export class RoomResolverMutations {
             agentInfo,
             messageOwnerId
           );
-          this.roomServiceEvents.processNotificationMentions(
+          this.roomServiceMentions.processNotificationMentions(
+            mentions,
             callout.id,
             callout.nameID,
             callout.framing.profile,
@@ -466,6 +473,63 @@ export class RoomResolverMutations {
     );
 
     return reaction;
+  }
+
+  private virtualContributorsEnabled(): boolean {
+    return true;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => MessageID, {
+    description: 'Removes a message.',
+  })
+  @Profiling.api
+  async removeMessageOnRoom(
+    @Args('messageData') messageData: RoomRemoveMessageInput,
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<string> {
+    const room = await this.roomService.getRoomOrFail(messageData.roomID);
+
+    // The choice was made **not** to wrap every message in an AuthorizationPolicy.
+    // So we also allow users who sent the message in question to remove the message by
+    // extending the authorization policy in memory but do not persist it.
+    const extendedAuthorization =
+      await this.roomAuthorizationService.extendAuthorizationPolicyForMessageSender(
+        room,
+        messageData.messageID
+      );
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      extendedAuthorization,
+      AuthorizationPrivilege.DELETE,
+      `room remove message: ${room.id}`
+    );
+    const messageID = await this.roomService.removeRoomMessage(
+      room,
+      agentInfo.communicationID,
+      messageData
+    );
+    await this.roomServiceEvents.processActivityMessageRemoved(
+      messageID,
+      agentInfo
+    );
+
+    this.subscriptionPublishService.publishRoomEvent(
+      room.id,
+      MutationType.DELETE,
+      // send empty data, because the resource is deleted
+      {
+        id: messageID,
+        message: '',
+        reactions: [],
+        sender: '',
+        senderType: 'user',
+        threadID: '',
+        timestamp: -1,
+      }
+    );
+
+    return messageID;
   }
 
   @UseGuards(GraphqlGuard)

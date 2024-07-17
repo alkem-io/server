@@ -4,7 +4,6 @@ import { AiServerAdapterAskQuestionInput } from './dto/ai.server.adapter.dto.ask
 import { AiServerService } from '@services/ai-server/ai-server/ai.server.service';
 import { CreateAiPersonaServiceInput } from '@services/ai-server/ai-persona-service/dto';
 import { IAiPersonaService } from '@services/ai-server/ai-persona-service';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IMessageAnswerToQuestion } from '@domain/communication/message.answer.to.question/message.answer.to.question.interface';
 import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
 
@@ -55,14 +54,12 @@ export class AiServerAdapter {
   }
 
   async askQuestion(
-    questionInput: AiServerAdapterAskQuestionInput,
-    agentInfo: AgentInfo,
-    contextSapceNameID: string
+    questionInput: AiServerAdapterAskQuestionInput
   ): Promise<IMessageAnswerToQuestion> {
-    return this.aiServer.askQuestion(
-      questionInput,
-      agentInfo,
-      contextSapceNameID
-    );
+    const vcInteractionID = questionInput.vcInteractionID;
+    return this.aiServer.askQuestion({
+      ...questionInput,
+      interactionID: vcInteractionID,
+    });
   }
 }

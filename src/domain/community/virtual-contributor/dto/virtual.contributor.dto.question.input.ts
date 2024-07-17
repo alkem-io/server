@@ -14,4 +14,31 @@ export class VirtualContributorQuestionInput {
     description: 'The question that is being asked.',
   })
   question!: string;
+
+  @Field(() => String, {
+    nullable: true,
+    description:
+      'The space in which context the Virtual Contributor is asked a question',
+  })
+  contextSpaceID: string | undefined = undefined;
+
+  @Field(() => String, {
+    nullable: true,
+    description: 'User identifier used internaly by the engine',
+  })
+  userID: string | undefined = undefined;
+
+  @Field(() => String, {
+    nullable: true,
+    description:
+      'The ID of the message thread where the Virtual Contributor is asked a question',
+  })
+  threadID?: string | undefined = undefined;
+
+  @Field(() => String, {
+    nullable: true,
+    description:
+      'The Virtual Contributor interaciton part of which is this question',
+  })
+  vcInteractionID?: string | undefined = undefined;
 }
