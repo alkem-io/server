@@ -124,7 +124,8 @@ export class ContributorService {
   }
 
   public async getAccountsHostedByContributor(
-    contributor: IContributor
+    contributor: IContributor,
+    includeSpace = false
   ): Promise<IAccount[]> {
     let agent = contributor.agent;
     if (!agent) {
@@ -148,6 +149,9 @@ export class ContributorService {
     const accounts = await this.entityManager.find(Account, {
       where: {
         id: In(accountIDs),
+      },
+      relations: {
+        space: includeSpace,
       },
     });
 

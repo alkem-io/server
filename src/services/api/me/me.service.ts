@@ -19,6 +19,7 @@ import { CommunityApplicationResult } from './dto/me.application.result';
 import { CommunityRoleService } from '@domain/community/community-role/community.role.service';
 import { ContributorService } from '@domain/community/contributor/contributor.service';
 import { UserService } from '@domain/community/user/user.service';
+import { compact } from 'lodash';
 
 @Injectable()
 export class MeService {
@@ -165,7 +166,7 @@ export class MeService {
       );
     }
     const accounts = (
-      await this.contributorService.getAccountsHostedByContributor(user)
+      await this.contributorService.getAccountsHostedByContributor(user, true)
     )
       .sort((a, b) =>
         a.createdDate && b.createdDate
@@ -174,11 +175,11 @@ export class MeService {
       )
       .slice(0, limit);
 
-    return await Promise.all(
-      accounts.map(account =>
-        this.spaceService.getSpaceForAccountOrFail(account.id)
-      )
-    );
+    if (!accounts || accounts.length === 0) {
+      return [];
+    }
+
+    return compact(accounts.map(account => account.space));
   }
 
   public async canCreateFreeSpace(agentInfo: AgentInfo): Promise<boolean> {
