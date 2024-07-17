@@ -98,7 +98,7 @@
     "lodash": "^4.17.21",
     "logform": "^2.6.1",
     "module-alias": "^2.2.3",
-    "mysql2": "^3.10.2",
+    "mysql2": "^3.10.3",
     "nest-winston": "^1.9.7",
     "passport-custom": "^1.1.1",
     "passport-jwt": "^4.0.1",
@@ -107,7 +107,7 @@
     "replace-special-characters": "^1.2.7",
     "rxjs": "^7.8.1",
     "socket.io": "^4.7.5",
-    "typeorm": "0.3.12",
+    "typeorm": "0.3.13",
     "winston": "^3.13.1",
     "xstate": "^4.37.2",
     "yaml": "^2.4.5"
