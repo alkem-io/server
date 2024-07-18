@@ -66,8 +66,8 @@ import {
 import { SaveResponse } from './types/save.reponse';
 
 type SaveMessageOpts = { timeout: number };
-type RoomTimers = Map<string, NodeJS.Timer>;
-type SocketTimers = Map<string, NodeJS.Timer>;
+type RoomTimers = Map<string, NodeJS.Timeout>;
+type SocketTimers = Map<string, NodeJS.Timeout>;
 
 @Injectable()
 export class ExcalidrawServer {
