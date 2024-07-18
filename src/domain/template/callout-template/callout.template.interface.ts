@@ -4,6 +4,7 @@ import { ICalloutContributionDefaults } from '@domain/collaboration/callout-cont
 import { ICalloutContributionPolicy } from '@domain/collaboration/callout-contribution-policy/callout.contribution.policy.interface';
 import { ITemplateBase } from '../template-base/template.base.interface';
 import { CalloutType } from '@common/enums/callout.type';
+import { ITemplatesSet } from '../templates-set/templates.set.interface';
 
 @ObjectType('CalloutTemplate')
 export abstract class ICalloutTemplate extends ITemplateBase {
@@ -31,4 +32,6 @@ export abstract class ICalloutTemplate extends ITemplateBase {
       'The response policy to use for Callouts created from this template.  ',
   })
   contributionPolicy!: ICalloutContributionPolicy;
+
+  templatesSet?: ITemplatesSet;
 }

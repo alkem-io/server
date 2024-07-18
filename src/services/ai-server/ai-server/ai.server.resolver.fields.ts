@@ -15,6 +15,7 @@ import { AiPersonaServiceQuestionInput } from '../ai-persona-service/dto/ai.pers
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AiPersonaServiceService } from '../ai-persona-service/ai.persona.service.service';
 import { IMessageAnswerToQuestion } from '@domain/communication/message.answer.to.question/message.answer.to.question.interface';
+import { InteractionMessage } from '../ai-persona-service/dto/interaction.message';
 
 @Resolver(() => IAiServer)
 export class AiServerResolverFields {
@@ -66,12 +67,16 @@ export class AiServerResolverFields {
   })
   async askAiPersonaServiceQuestion(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('chatData') chatData: AiPersonaServiceQuestionInput
+    @Args('aiPersonaQuestionInput')
+    aiPersonaQuestionInput: AiPersonaServiceQuestionInput
   ): Promise<IMessageAnswerToQuestion> {
+    aiPersonaQuestionInput.userID =
+      aiPersonaQuestionInput.userID ?? agentInfo.userID;
+    // hardcode empty history for now; read it from the interaction
+    const history: InteractionMessage[] = [];
     return this.aiPersonaServiceService.askQuestion(
-      chatData,
-      agentInfo,
-      'contextSpaceNameID'
+      aiPersonaQuestionInput,
+      history
     );
   }
 }
