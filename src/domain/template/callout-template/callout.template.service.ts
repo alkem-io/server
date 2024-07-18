@@ -62,6 +62,12 @@ export class CalloutTemplateService {
     return this.calloutTemplateRepository.save(calloutTemplate);
   }
 
+  public async save(
+    calloutTemplate: ICalloutTemplate
+  ): Promise<ICalloutTemplate> {
+    return this.calloutTemplateRepository.save(calloutTemplate);
+  }
+
   public async getCalloutTemplateOrFail(
     calloutTemplateID: string,
     options?: FindOneOptions<CalloutTemplate>
