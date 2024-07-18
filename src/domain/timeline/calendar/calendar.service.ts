@@ -1,7 +1,6 @@
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
-import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { ValidationException } from '@common/exceptions/validation.exception';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
@@ -105,14 +104,10 @@ export class CalendarService {
     const calendar = await this.getCalendarOrFail(
       calendarEventData.calendarID,
       {
-        relations: { events: true },
+        relations: {},
       }
     );
-    if (!calendar.events)
-      throw new EntityNotInitializedException(
-        `Calendar (${calendar}) not initialised`,
-        LogContext.CALENDAR
-      );
+
     const reservedNameIDs =
       await this.namingService.getReservedNameIDsInCalendar(calendar.id);
     if (calendarEventData.nameID && calendarEventData.nameID.length > 0) {
@@ -139,10 +134,8 @@ export class CalendarService {
       storageAggregator,
       userID
     );
-    calendar.events.push(calendarEvent);
-    await this.calendarRepository.save(calendar);
-
-    return calendarEvent;
+    calendarEvent.calendar = calendar;
+    return await this.calendarEventService.save(calendarEvent);
   }
 
   public async getCommunityPolicy(

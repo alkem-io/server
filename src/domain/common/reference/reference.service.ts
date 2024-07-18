@@ -34,6 +34,10 @@ export class ReferenceService {
     return reference;
   }
 
+  public async save(reference: IReference): Promise<IReference> {
+    return await this.referenceRepository.save(reference);
+  }
+
   updateReferenceValues(
     reference: IReference,
     referenceData: UpdateReferenceInput

@@ -261,9 +261,8 @@ export class TemplatesSetService {
       postTemplateInput,
       storageAggregator
     );
-    templatesSet.postTemplates.push(postTemplate);
-    await this.templatesSetRepository.save(templatesSet);
-    return postTemplate;
+    postTemplate.templatesSet = templatesSet;
+    return await this.postTemplateService.save(postTemplate);
   }
 
   async addTemplates(
@@ -304,9 +303,6 @@ export class TemplatesSetService {
     calloutTemplateInput: CreateCalloutTemplateInput,
     agentInfo: AgentInfo
   ): Promise<ICalloutTemplate> {
-    templatesSet.calloutTemplates = await this.getCalloutTemplates(
-      templatesSet
-    );
     const storageAggregator = await this.getStorageAggregator(templatesSet);
     const calloutTemplate =
       await this.calloutTemplateService.createCalloutTemplate(
@@ -314,9 +310,9 @@ export class TemplatesSetService {
         storageAggregator,
         agentInfo
       );
-    templatesSet.calloutTemplates.push(calloutTemplate);
-    await this.templatesSetRepository.save(templatesSet);
-    return calloutTemplate;
+    calloutTemplate.templatesSet = templatesSet;
+
+    return await this.calloutTemplateService.save(calloutTemplate);
   }
 
   public async save(templatesSet: ITemplatesSet): Promise<ITemplatesSet> {
@@ -370,10 +366,8 @@ export class TemplatesSetService {
         whiteboardTemplateInput,
         storageAggregator
       );
-
-    templatesSet.whiteboardTemplates.push(whiteboardTemplate);
-    await this.templatesSetRepository.save(templatesSet);
-    return whiteboardTemplate;
+    whiteboardTemplate.templatesSet = templatesSet;
+    return await this.whiteboardTemplateService.save(whiteboardTemplate);
   }
 
   async createCommunityGuidelinesTemplate(
@@ -399,9 +393,10 @@ export class TemplatesSetService {
         communityGuidelinesTemplateInput,
         storageAggregator
       );
-    templatesSet.communityGuidelinesTemplates.push(communityGuidelinesTemplate);
-    await this.templatesSetRepository.save(templatesSet);
-    return communityGuidelinesTemplate;
+    communityGuidelinesTemplate.templatesSet = templatesSet;
+    return await this.communityGuidelinesTemplateService.save(
+      communityGuidelinesTemplate
+    );
   }
 
   async getInnovationFlowTemplates(
@@ -458,9 +453,10 @@ export class TemplatesSetService {
         storageAggregator
       );
 
-    templatesSet.innovationFlowTemplates.push(innovationFlowTemplate);
-    await this.templatesSetRepository.save(templatesSet);
-    return innovationFlowTemplate;
+    innovationFlowTemplate.templatesSet = templatesSet;
+    return await this.innovationFlowTemplateService.save(
+      innovationFlowTemplate
+    );
   }
 
   async getTemplatesCount(templatesSetID: string): Promise<number> {

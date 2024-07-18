@@ -27,10 +27,5 @@ export class IAiPersona extends IAuthorizable {
   })
   dataAccessMode!: AiPersonaDataAccessMode;
 
-  @Field(() => [AiPersonaInteractionMode], {
-    nullable: false,
-    description:
-      'The type of interactions that are supported by this AI Persona when used.',
-  })
   interactionModes!: AiPersonaInteractionMode[];
 }
