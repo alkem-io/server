@@ -152,14 +152,7 @@ export class StorageBucketService {
     userID: string,
     anonymousReadAccess = false
   ): Promise<IDocument | never> {
-    const storage = await this.getStorageBucketOrFail(storageBucketId, {
-      relations: {},
-    });
-    if (!storage.documents)
-      throw new EntityNotInitializedException(
-        `StorageBucket (${storage}) not initialised`,
-        LogContext.STORAGE_BUCKET
-      );
+    const storage = await this.getStorageBucketOrFail(storageBucketId);
 
     this.validateMimeTypes(storage, mimeType);
 
