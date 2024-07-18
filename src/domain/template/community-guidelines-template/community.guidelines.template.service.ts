@@ -83,6 +83,14 @@ export class CommunityGuidelinesTemplateService {
     );
   }
 
+  public async save(
+    communityGuidelinesTemplate: ICommunityGuidelinesTemplate
+  ): Promise<ICommunityGuidelinesTemplate> {
+    return this.communityGuidelinesTemplateRepository.save(
+      communityGuidelinesTemplate
+    );
+  }
+
   async getCommunityGuidelinesTemplateOrFail(
     communityGuidelinesTemplateID: string,
     options?: FindOneOptions<CommunityGuidelinesTemplate>

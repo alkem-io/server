@@ -24,6 +24,10 @@ export class CredentialService {
     return credential;
   }
 
+  public async save(credential: ICredential): Promise<ICredential> {
+    return await this.credentialRepository.save(credential);
+  }
+
   async getCredentialOrFail(credentialID: string): Promise<ICredential> {
     const credential = await this.credentialRepository.findOneBy({
       id: credentialID,

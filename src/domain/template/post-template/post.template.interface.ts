@@ -1,6 +1,7 @@
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { ITemplateBase } from '../template-base/template.base.interface';
+import { ITemplatesSet } from '../templates-set/templates.set.interface';
 
 @ObjectType('PostTemplate')
 export abstract class IPostTemplate extends ITemplateBase {
@@ -16,4 +17,6 @@ export abstract class IPostTemplate extends ITemplateBase {
       'The default description to show to users filling our a new instance.',
   })
   defaultDescription!: string;
+
+  templatesSet?: ITemplatesSet;
 }

@@ -158,7 +158,7 @@ export class NameReporterService {
         name: this.space_name_enrich_policy,
       });
 
-      return result.status.phase === 'COMPLETE';
+      return result.status?.phase === 'COMPLETE';
     } catch (e) {
       const error = handleElasticError(e);
       this.logger.error(

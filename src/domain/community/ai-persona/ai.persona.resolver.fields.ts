@@ -10,6 +10,7 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { IAiPersona } from './ai.persona.interface';
 import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
 import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
+import { AiPersonaInteractionMode } from '@common/enums/ai.persona.interaction.mode';
 
 @Resolver(() => IAiPersona)
 export class AiPersonaResolverFields {
@@ -56,5 +57,20 @@ export class AiPersonaResolverFields {
     return await this.aiServerAdapter.getPersonaServiceBodyOfKnowledgeID(
       aiPersona.aiPersonaServiceID
     );
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('interactionModes', () => [AiPersonaInteractionMode], {
+    nullable: false,
+    description:
+      'The type of interactions that are supported by this AI Persona when used.',
+  })
+  async interactionModes(
+    @Parent() aiPersona: AiPersona
+  ): Promise<AiPersonaInteractionMode[]> {
+    const interactionModes: AiPersonaInteractionMode[] =
+      aiPersona.interactionModes;
+    return interactionModes;
   }
 }

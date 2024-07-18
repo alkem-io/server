@@ -200,7 +200,7 @@ export class AuthenticationService {
       );
       newSession = data;
       this.logger?.verbose?.(
-        `Session ${sessionToBeExtended.id} extended for identity ${sessionToBeExtended.identity.id}`
+        `Session ${sessionToBeExtended.id} extended for identity ${sessionToBeExtended.identity?.id}`
       );
     } catch (e) {
       const message = (e as Error)?.message ?? e;

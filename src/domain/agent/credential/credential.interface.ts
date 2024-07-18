@@ -2,6 +2,7 @@ import { CredentialType } from '@common/enums/credential.type';
 import { IBaseAlkemio } from '@domain/common/entity/base-entity';
 import { UUID } from '@domain/common/scalars';
 import { Field, ObjectType } from '@nestjs/graphql';
+import { IAgent } from '../agent';
 
 @ObjectType('Credential')
 export abstract class ICredential extends IBaseAlkemio {
@@ -18,4 +19,6 @@ export abstract class ICredential extends IBaseAlkemio {
   issuer?: string;
 
   expires?: Date;
+
+  agent?: IAgent;
 }
