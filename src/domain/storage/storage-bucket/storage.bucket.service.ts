@@ -152,7 +152,9 @@ export class StorageBucketService {
     userID: string,
     anonymousReadAccess = false
   ): Promise<IDocument | never> {
-    const storage = await this.getStorageBucketOrFail(storageBucketId);
+    const storage = await this.getStorageBucketOrFail(storageBucketId, {
+      relations: {},
+    });
 
     this.validateMimeTypes(storage, mimeType);
 
