@@ -16,7 +16,6 @@ import { AiPersonaEngineAdapter } from '../ai-persona-engine-adapter/ai.persona.
 import { AiServerIngestAiPersonaServiceInput } from './dto/ai.server.dto.ingest.ai.persona.service';
 import { AiPersonaEngineAdapterInputBase } from '../ai-persona-engine-adapter/dto/ai.persona.engine.adapter.dto.base';
 import { CreateAiPersonaServiceInput } from '../ai-persona-service/dto';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AiPersonaServiceQuestionInput } from '../ai-persona-service/dto/ai.persona.service.question.dto.input';
 import {
   IngestSpace,
@@ -26,12 +25,21 @@ import { EventBus } from '@nestjs/cqrs';
 import { ConfigService } from '@nestjs/config';
 import { ChromaClient } from 'chromadb';
 import { ConfigurationTypes } from '@common/enums/configuration.type';
+import { IMessageAnswerToQuestion } from '@domain/communication/message.answer.to.question/message.answer.to.question.interface';
+import { VcInteractionService } from '@domain/communication/vc-interaction/vc.interaction.service';
+import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
+import {
+  InteractionMessage,
+  MessageSenderRole,
+} from '../ai-persona-service/dto/interaction.message';
 
 @Injectable()
 export class AiServerService {
   constructor(
     private aiPersonaServiceService: AiPersonaServiceService,
     private aiPersonaEngineAdapter: AiPersonaEngineAdapter,
+    private vcInteractionService: VcInteractionService,
+    private communicationAdapter: CommunicationAdapter,
     private config: ConfigService,
     @InjectRepository(AiServer)
     private aiServerRepository: Repository<AiServer>,
@@ -62,24 +70,86 @@ export class AiServerService {
   }
 
   public async askQuestion(
-    questionInput: AiPersonaServiceQuestionInput,
-    agentInfo: AgentInfo,
-    contextID: string
-  ) {
-    if (!(await this.isContextLoaded(contextID))) {
+    questionInput: AiPersonaServiceQuestionInput
+  ): Promise<IMessageAnswerToQuestion> {
+    if (
+      questionInput.contextID &&
+      !(await this.isContextLoaded(questionInput.contextID))
+    ) {
       this.eventBus.publish(
-        new IngestSpace(contextID, SpaceIngestionPurpose.CONTEXT)
+        new IngestSpace(questionInput.contextID, SpaceIngestionPurpose.CONTEXT)
       );
     }
-    return this.aiPersonaServiceService.askQuestion(
+    const history = await this.getInteractionMessages(
+      questionInput.interactionID
+    );
+
+    return await this.aiPersonaServiceService.askQuestion(
       questionInput,
-      agentInfo,
-      contextID
+      history
     );
   }
+  async getInteractionMessages(
+    interactionID: string | undefined
+  ): Promise<InteractionMessage[]> {
+    if (!interactionID) {
+      return [];
+    }
+    const interaction = await this.vcInteractionService.getVcInteractionOrFail(
+      interactionID,
+      {
+        relations: {
+          room: true,
+        },
+      }
+    );
+
+    const room = await this.communicationAdapter.getCommunityRoom(
+      interaction.room.externalRoomID
+    );
+
+    const messages: InteractionMessage[] = [];
+    for (let i = 0; i < room.messages.length; i++) {
+      const message = room.messages[i];
+      // try to skip this check and use Matrix to filter by Room and Thread
+      if (
+        message.threadID === interaction.threadID ||
+        message.id === interaction.threadID
+      ) {
+        let role = MessageSenderRole.HUMAN;
+
+        // try to set the assistant role for the replies of the specific persona/vc
+        if (message.sender.startsWith('@virtualcontributor')) {
+          role = MessageSenderRole.ASSISTANT;
+        }
+
+        messages.push({
+          content: message.message,
+          role,
+        });
+      }
+    }
+
+    return messages;
+  }
+  // TODO: send over the original question / answer? Send over the whole thread?
+  // public async askFollowUpQuestion(
+  //   questionInput: AiPersonaServiceQuestionInput
+  // ): Promise<IMessageAnswerToQuestion> {
+  //   if (
+  //     questionInput.contextID &&
+  //     !(await this.isContextLoaded(questionInput.contextID))
+  //   ) {
+  //     this.eventBus.publish(
+  //       new IngestSpace(questionInput.contextID, SpaceIngestionPurpose.CONTEXT)
+  //     );
+  //   }
+
+  //   return this.aiPersonaServiceService.askQuestion(questionInput);
+  // }
 
   private getContextCollectionID(contextID: string): string {
-    return `${contextID}-${SpaceIngestionPurpose.CONTEXT}`;
+    return `${contextID}-${SpaceIngestionPurpose.CONTEXT}-slon`;
   }
 
   private async isContextLoaded(contextID: string): Promise<boolean> {
@@ -88,12 +158,14 @@ export class AiServerService {
     ).vector_db;
     const chroma = new ChromaClient({ path: `http://${host}:${port}` });
 
-    const collections = await chroma.listCollections();
-    const collectionSearchedFor = this.getContextCollectionID(contextID);
-
-    return collections.some(entry =>
-      entry.name.includes(collectionSearchedFor)
-    );
+    const name = this.getContextCollectionID(contextID);
+    try {
+      // try to get the collection and return true if it is there
+      await chroma.getCollection({ name });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   async createAiPersonaService(
@@ -203,7 +275,7 @@ export class AiServerService {
       );
     const ingestAdapterInput: AiPersonaEngineAdapterInputBase = {
       engine: aiPersonaService.engine,
-      userId: '',
+      userID: '',
     };
     const result = await this.aiPersonaEngineAdapter.sendIngest(
       ingestAdapterInput

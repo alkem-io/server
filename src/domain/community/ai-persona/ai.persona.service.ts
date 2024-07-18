@@ -140,10 +140,6 @@ export class AiPersonaService {
       aiPersonaServiceID: aiPersona.aiPersonaServiceID,
     };
 
-    return await this.aiServerAdapter.askQuestion(
-      input,
-      agentInfo,
-      contextSpaceID
-    );
+    return await this.aiServerAdapter.askQuestion(input);
   }
 }
