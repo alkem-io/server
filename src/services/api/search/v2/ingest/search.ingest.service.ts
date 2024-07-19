@@ -581,7 +581,6 @@ export class SearchIngestService {
           email: undefined,
           phone: undefined,
           serviceProfile: undefined,
-          gender: undefined,
           type: SearchEntityTypes.USER,
           profile: {
             ...user.profile,
