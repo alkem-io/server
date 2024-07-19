@@ -26,11 +26,11 @@ export class RoomResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('interactions', () => [IVcInteraction], {
+  @ResolveField('vcInteractions', () => [IVcInteraction], {
     nullable: false,
     description: 'Virtual Contributor Interactions in this Room.',
   })
-  async interactions(@Parent() room: IRoom): Promise<IVcInteraction[]> {
+  async vcInteractions(@Parent() room: IRoom): Promise<IVcInteraction[]> {
     const result = await this.roomService.getVcInteractions(room.id);
     if (!result) return [];
     return result;

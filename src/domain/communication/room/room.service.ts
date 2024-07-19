@@ -139,7 +139,10 @@ export class RoomService {
         LogContext.COMMUNICATION
       );
     }
-    return room.vcInteractions;
+    return room.vcInteractions.map(interaction => {
+      interaction.room = room;
+      return interaction;
+    });
   }
 
   async getVcInteractionByThread(

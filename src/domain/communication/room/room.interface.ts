@@ -16,5 +16,8 @@ export abstract class IRoom extends IAuthorizable {
 
   displayName!: string;
 
+  @Field(() => [IVcInteraction], {
+    description: 'Information about the interactions with Virtual Contributors',
+  })
   vcInteractions?: IVcInteraction[];
 }
