@@ -87,6 +87,14 @@ export class SessionExtendMiddleware implements NestMiddleware {
         return next();
       }
 
+      /**
+       * Session cookies in Ory Kratos are pass-by-value (meaning they are not just an id or a reference to a session).
+       * When session is updated, new cookie must be obtained and sent to the client.
+       * toSession() calls /sessions/whoami endpoint that handles that.
+       * Another strategy (may be a more reliable one) is to call /sessions/whoami from the client for the cookies.
+       * In that case we may want to set a special header (e.g. X-Session-Extended) to indicate that the session is extended,
+       * that in turns will trigger the client to call /sessions/whoami.
+       */
       const { headers } = await this.kratosClient.toSession({
         cookie: req.headers.cookie,
       });
