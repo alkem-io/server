@@ -56,6 +56,8 @@ import { CommunityGuidelinesTemplateService } from '@domain/template/community-g
 import { ICommunityGuidelinesTemplate } from '@domain/template/community-guidelines-template/community.guidelines.template.interface';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
+import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 
 @Resolver(() => LookupQueryResults)
 export class LookupResolverFields {
@@ -81,6 +83,7 @@ export class LookupResolverFields {
     private documentService: DocumentService,
     private innovationFlowTemplateService: InnovationFlowTemplateService,
     private storageAggregatorService: StorageAggregatorService,
+    private storageBucketService: StorageBucketService,
     private spaceService: SpaceService,
     private userService: UserService,
     private guidelinesService: CommunityGuidelinesService,
@@ -204,6 +207,26 @@ export class LookupResolverFields {
       document.authorization,
       AuthorizationPrivilege.READ,
       `lookup StorageAggregator: ${document.id}`
+    );
+
+    return document;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField(() => IStorageBucket, {
+    nullable: true,
+    description: 'Lookup the specified StorageBucket',
+  })
+  async storageBucket(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('ID', { type: () => UUID }) id: string
+  ): Promise<IStorageBucket> {
+    const document = await this.storageBucketService.getStorageBucketOrFail(id);
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      document.authorization,
+      AuthorizationPrivilege.READ,
+      `lookup StorageBucket: ${document.id}`
     );
 
     return document;

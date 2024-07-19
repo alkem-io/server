@@ -28,6 +28,7 @@ import { SpaceModule } from '@domain/space/space/space.module';
 import { CommunityGuidelinesModule } from '@domain/community/community-guidelines/community.guidelines.module';
 import { CommunityGuidelinesTemplateModule } from '@domain/template/community-guidelines-template/community.guidelines.template.module';
 import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
+import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { VirtualContributorModule } from '@domain/community/virtual-contributor/
     InvitationModule,
     DocumentModule,
     StorageAggregatorModule,
+    StorageBucketModule,
     PlatformAuthorizationPolicyModule,
     UserModule,
     SpaceModule,
