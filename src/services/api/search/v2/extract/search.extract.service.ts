@@ -148,7 +148,7 @@ export class SearchExtractService {
             }
 
             return {
-              id: hit._id,
+              id: hit._id ?? 'N/A',
               score: hit._score ?? -1,
               type,
               terms: [], // todo - https://github.com/alkem-io/server/issues/3702
