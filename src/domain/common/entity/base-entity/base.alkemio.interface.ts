@@ -9,6 +9,9 @@ export abstract class IBaseAlkemio {
   })
   id!: string;
 
+  @Field(() => Date)
+  createdDate!: Date;
+
   constructor() {
     this.id = '';
   }
