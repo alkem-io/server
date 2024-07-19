@@ -18,12 +18,14 @@ import { SessionExtendException } from '@common/exceptions/auth';
 
 import { AgentInfoCacheService } from '@core/authentication.agent.info/agent.info.cache.service';
 import { getSession } from '@common/utils';
+import ConfigUtils from '@config/config.utils';
+
 @Injectable()
 export class AuthenticationService {
   private readonly kratosPublicUrlServer: string;
   private readonly adminPasswordIdentifier: string;
   private readonly adminPassword: string;
-  private readonly extendAfter: number;
+  private readonly extendSessionMinRemainingTTL: number | undefined; // min time before session expires when it's already allowed to be extended (in milliseconds)
   private readonly kratosIdentityClient: IdentityApi;
   private readonly kratosFrontEndClient: FrontendApi;
 
@@ -48,14 +50,13 @@ export class AuthenticationService {
       ConfigurationTypes.IDENTITY
     ).authentication.providers.ory.admin_service_account.password;
 
-    this.extendAfter =
-      Number(
-        this.configService.get(ConfigurationTypes.IDENTITY).authentication
-          .providers.ory.earliest_possible_extend
-      ) *
-      60 *
-      60 *
-      1000;
+    const earliestPossibleExtend = this.configService.get(
+      ConfigurationTypes.IDENTITY
+    ).authentication.providers.ory.earliest_possible_extend;
+
+    this.extendSessionMinRemainingTTL = this.parseEarliestPossibleExtend(
+      earliestPossibleExtend
+    );
 
     this.kratosIdentityClient = new IdentityApi(
       new Configuration({
@@ -174,48 +175,78 @@ export class AuthenticationService {
     return agentInfo;
   }
 
-  public async extendSession(sessionToBeExtended: Session): Promise<Session> {
-    const bearerToken = await getBearerToken(
+  public async extendSession(sessionToBeExtended: Session): Promise<void> {
+    const adminBearerToken = await getBearerToken(
       this.kratosPublicUrlServer,
       this.adminPasswordIdentifier,
       this.adminPassword
     );
 
-    return this.tryExtendSession(sessionToBeExtended, bearerToken);
+    return this.tryExtendSession(sessionToBeExtended, adminBearerToken);
   }
   // Refresh and Extend Sessions
   // https://www.ory.sh/docs/guides/session-management/refresh-extend-sessions
   private async tryExtendSession(
     sessionToBeExtended: Session,
-    bearerToken: string
-  ): Promise<Session | never> {
-    let newSession: Session;
-
+    adminBearerToken: string
+  ): Promise<void> {
     try {
-      const { data } = await this.kratosIdentityClient.extendSession(
+      /**
+       * This endpoint returns per default a 204 No Content response on success.
+       * Older Ory Network projects may return a 200 OK response with the session in the body.
+       * **Returning the session as part of the response will be deprecated in the future and should not be relied upon.**
+       * Source https://www.ory.sh/docs/reference/api#tag/identity/operation/extendSession
+       */
+      const { status } = await this.kratosIdentityClient.extendSession(
         { id: sessionToBeExtended.id },
-        { headers: { authorization: `Bearer ${bearerToken}` } }
+        { headers: { authorization: `Bearer ${adminBearerToken}` } }
       );
-      newSession = data;
-      this.logger?.verbose?.(
-        `Session ${sessionToBeExtended.id} extended for identity ${sessionToBeExtended.identity?.id}`
-      );
+
+      if (![200, 204].includes(status)) {
+        throw new SessionExtendException(
+          `Request to extend session ${sessionToBeExtended.id} failed with status ${status}`
+        );
+      }
     } catch (e) {
+      if (e instanceof SessionExtendException) {
+        throw e;
+      }
       const message = (e as Error)?.message ?? e;
       throw new SessionExtendException(
         `Session extend for session ${sessionToBeExtended.id} failed with: ${message}`
       );
     }
-
-    return newSession;
   }
 
   public shouldExtendSession(session: Session): boolean {
-    if (!session.expires_at) {
+    if (!session.expires_at || !this.extendSessionMinRemainingTTL) {
       return false;
+    }
+    if (this.extendSessionMinRemainingTTL === -1) {
+      return true; // Set to -1 if specified as lifespan in config, meaning it can be extended at any time
     }
 
     const expiry = new Date(session.expires_at);
-    return Date.now() >= expiry.getTime() - this.extendAfter;
+    return Date.now() >= expiry.getTime() - this.extendSessionMinRemainingTTL;
+  }
+
+  private parseEarliestPossibleExtend(
+    earliestPossibleExtend: unknown
+  ): number | undefined {
+    /**
+     * If you need high flexibility when extending sessions, you can set earliest_possible_extend to lifespan,
+     * which allows sessions to be refreshed during their entire lifespan, even right after they are created.
+     * Source https://www.ory.sh/docs/kratos/session-management/refresh-extend-sessions
+     */
+    if (earliestPossibleExtend === 'lifespan') {
+      return -1;
+    }
+    if (typeof earliestPossibleExtend === 'string') {
+      const seconds = ConfigUtils.parseHMSString(earliestPossibleExtend);
+      if (seconds) {
+        return seconds * 1000;
+      }
+    }
+    return undefined;
   }
 }
