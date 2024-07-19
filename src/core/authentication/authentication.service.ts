@@ -162,11 +162,9 @@ export class AuthenticationService {
     const ssiEnabled = this.configService.get(ConfigurationTypes.SSI).enabled;
 
     if (ssiEnabled) {
-      const VCs = await this.agentService.getVerifiedCredentials({
-        id: agentInfoMetadata.agentID,
-        did: agentInfoMetadata.did,
-        password: agentInfoMetadata.password,
-      });
+      const VCs = await this.agentService.getVerifiedCredentials(
+        agentInfoMetadata.agentID
+      );
 
       agentInfo.verifiedCredentials = VCs;
     }
