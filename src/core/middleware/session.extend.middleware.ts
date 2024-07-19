@@ -9,7 +9,7 @@ import { Request, Response, NextFunction } from 'express';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AuthenticationService } from '@core/authentication/authentication.service';
 import { ConfigurationTypes, LogContext } from '@src/common/enums';
-import { getSession } from '@common/utils';
+import { getSessionFromJwt } from '@common/utils';
 import { Configuration, FrontendApi, Session } from '@ory/kratos-client';
 
 @Injectable()
@@ -58,9 +58,7 @@ export class SessionExtendMiddleware implements NestMiddleware {
 
     let session: Session;
     try {
-      session = await getSession(this.kratosClient, {
-        authorization,
-      });
+      session = getSessionFromJwt(authorization);
     } catch (e: any) {
       this.logger.verbose?.(
         `Error while extracting ory session: ${e?.message}`,
@@ -70,22 +68,13 @@ export class SessionExtendMiddleware implements NestMiddleware {
     }
 
     if (this.authService.shouldExtendSession(session)) {
-      const newSession = await this.authService
-        .extendSession(session)
-        .catch(error => {
-          this.logger.error(
-            `Ory Kratos session failed to be extended: ${error}`,
-            error?.stack,
-            LogContext.AUTH
-          );
-        });
-
-      if (!newSession) {
-        this.logger.warn?.(
-          'New session cookie not sent: new session not found',
-          LogContext.AUTH_TOKEN
+      try {
+        await this.authService.extendSession(session);
+      } catch (error) {
+        this.logger.error(
+          `Ory Kratos session failed to be extended: ${error}`,
+          LogContext.AUTH
         );
-        return next();
       }
 
       const orySessionId: string | undefined =
@@ -98,23 +87,11 @@ export class SessionExtendMiddleware implements NestMiddleware {
         return next();
       }
 
-      const { expires_at: newExpiry } = newSession;
-
-      if (!newExpiry) {
-        this.logger.warn?.(
-          'New session cookie not sent: new expiry date not defined',
-          LogContext.AUTH_TOKEN
-        );
-        return next();
-      }
-
-      res.cookie(this.SESSION_COOKIE_NAME, orySessionId, {
-        path: '/',
-        sameSite: 'lax',
-        expires: new Date(newExpiry),
-        httpOnly: true,
-        encode: val => val, // skip encoding; pass the value as is
+      const { headers } = await this.kratosClient.toSession({
+        cookie: req.headers.cookie,
       });
+
+      res.header('Set-Cookie', headers['set-cookie']);
 
       this.logger.verbose?.('New session cookie sent', LogContext.AUTH_TOKEN);
     }

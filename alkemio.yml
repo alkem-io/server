@@ -188,9 +188,10 @@ identity:
         kratos_public_base_url_server: ${AUTH_ORY_KRATOS_PUBLIC_BASE_URL_SERVER}:http://localhost:3000/ory/kratos/public
         kratos_admin_base_url_server: ${AUTH_ORY_KRATOS_ADMIN_BASE_URL_SERVER}:http://localhost:3000/ory/kratos
 
-        # session can't be extended until *earliest_possible_extend* **hours** before it expires
-        # default is 24
-        earliest_possible_extend: ${AUTH_EARLIEST_POSSIBLE_SESSION_EXTEND}:24
+        # session can't be extended until *earliest_possible_extend* before it expires
+        # the format is 1d12h59m30s, 1d2h, 1h30m, 1m30s, 1s etc.
+        # default is 24h
+        earliest_possible_extend: ${AUTH_EARLIEST_POSSIBLE_SESSION_EXTEND}:24h
 
         # credentials used for kratos related work flows
         admin_service_account:
