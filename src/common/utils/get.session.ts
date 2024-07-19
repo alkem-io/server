@@ -114,7 +114,7 @@ const getSessionFromApiToken = async (
  * @param token
  * @throws {Error}
  */
-const getSessionFromJwt = (token: string): Session | never => {
+export const getSessionFromJwt = (token: string): Session | never => {
   if (!token) {
     throw new Error('Token is empty!');
   }
