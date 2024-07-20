@@ -130,7 +130,9 @@ export class RoomService {
   async getVcInteractions(roomID: string): Promise<IVcInteraction[]> {
     const room = await this.getRoomOrFail(roomID, {
       relations: {
-        vcInteractions: true,
+        vcInteractions: {
+          room: true,
+        },
       },
     });
     if (!room.vcInteractions) {
