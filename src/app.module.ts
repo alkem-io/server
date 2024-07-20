@@ -78,6 +78,10 @@ import { PlatformSettingsModule } from '@platform/settings/platform.settings.mod
 import { FileIntegrationModule } from '@services/file-integration';
 import { AdminLicensingModule } from '@platform/admin/licensing/admin.licensing.module';
 import { PlatformRoleModule } from '@platform/platfrom.role/platform.role.module';
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-expect-error
+import type { GraphQLRequestContextDidResolveOperation } from '@apollo/server/dist/externalTypes/requestPipeline';
+import { apm } from './apm';
 
 @Module({
   imports: [
@@ -173,6 +177,21 @@ import { PlatformRoleModule } from '@platform/platfrom.role/platform.role.module
           ],
         },
         fieldResolverEnhancers: ['guards', 'filters'],
+        plugins: [
+          {
+            async requestDidStart() {
+              return {
+                async didResolveOperation(
+                  requestContext: GraphQLRequestContextDidResolveOperation<any>
+                ) {
+                  const operationName =
+                    requestContext.operationName ?? 'Unnamed';
+                  apm.currentTransaction.name = `GraphQL: ${operationName}`;
+                },
+              };
+            },
+          },
+        ],
         sortSchema: true,
         persistedQueries: false,
         /***

@@ -13,6 +13,7 @@ import { json } from 'body-parser';
 import cookieParser from 'cookie-parser';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { INestApplication } from '@nestjs/common';
+import { apm } from './apm';
 
 const bootstrap = async () => {
   const app = await NestFactory.create(AppModule, {
