@@ -36,6 +36,7 @@ import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorizat
 import { IAgent } from '@domain/agent';
 import { PlatformInvitationAuthorizationService } from '@platform/invitation/platform.invitation.service.authorization';
 import { VirtualContributorService } from '../virtual-contributor/virtual.contributor.service';
+import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 
 @Injectable()
 export class CommunityAuthorizationService {
@@ -57,7 +58,8 @@ export class CommunityAuthorizationService {
     communityInput: ICommunity,
     parentAuthorization: IAuthorizationPolicy | undefined,
     accountAgent: IAgent,
-    communityPolicy: ICommunityPolicy
+    communityPolicy: ICommunityPolicy,
+    spaceSettings: ISpaceSettings
   ): Promise<ICommunity> {
     const community = await this.communityService.getCommunityOrFail(
       communityInput.id,
@@ -105,7 +107,8 @@ export class CommunityAuthorizationService {
       community.authorization,
       parentAuthorization?.anonymousReadAccess,
       accountAgent,
-      communityPolicy
+      communityPolicy,
+      spaceSettings
     );
     community.authorization = this.appendVerifiedCredentialRules(
       community.authorization
@@ -172,7 +175,8 @@ export class CommunityAuthorizationService {
     authorization: IAuthorizationPolicy | undefined,
     allowGlobalRegisteredReadAccess: boolean | undefined,
     accountAgent: IAgent,
-    policy: ICommunityPolicy
+    policy: ICommunityPolicy,
+    spaceSettings: ISpaceSettings
   ): Promise<IAuthorizationPolicy> {
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
@@ -190,9 +194,10 @@ export class CommunityAuthorizationService {
     const inviteMembersCriterias: ICredentialDefinition[] =
       this.communityPolicyService.getCredentialsForRoleWithParents(
         policy,
+        spaceSettings,
         CommunityRole.ADMIN
       );
-    if (policy.settings.membership.allowSubspaceAdminsToInviteMembers) {
+    if (spaceSettings.membership.allowSubspaceAdminsToInviteMembers) {
       // use the member credential to create subspace admin credential
       const subspaceAdminCredential: ICredentialDefinition =
         this.communityPolicyService.getCredentialForRole(
@@ -234,6 +239,7 @@ export class CommunityAuthorizationService {
       const criterias: ICredentialDefinition[] =
         this.communityPolicyService.getCredentialsForRoleWithParents(
           policy,
+          spaceSettings,
           CommunityRole.ADMIN
         );
       criterias.push({
