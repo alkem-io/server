@@ -129,7 +129,7 @@ export class AuthenticationService {
       );
     } catch (error) {
       this.logger.verbose?.(
-        `User not registered: ${agentInfo.email}`,
+        `User not registered: ${agentInfo.email}, ${error}`,
         LogContext.AUTH
       );
     }

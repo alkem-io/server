@@ -452,6 +452,12 @@ export class UserService {
     userID: string,
     options?: FindOneOptions<User>
   ): Promise<IUser | never> {
+    if (userID === '') {
+      throw new EntityNotFoundException(
+        `No userID provided: ${userID}`,
+        LogContext.COMMUNITY
+      );
+    }
     const user = await this.getUserByEmailIdUUID(userID, options);
 
     if (!user) {
@@ -970,14 +976,21 @@ export class UserService {
           credentials: true,
         },
       },
-      select: {
-        id: true,
-        communicationID: true,
-        agent: {
-          id: true,
-          credentials: true,
-        },
-      },
+      // Select is not working as expected, giving either no agent / credentials if do not specify id under agent, or if I do specify id under
+      // agent I get the following error: Duplicate column name 'User__User_agent_id'
+      // select: {
+      //   agent: {
+      //     id: true,
+      //     credentials: {
+      //       id: true,
+      //       type: true,
+      //       resourceID: true,
+      //       expires: true,
+      //     },
+      //   },
+      //   id: true,
+      //   communicationID: true,
+      // },
     });
     if (!user || !user.agent || !user.agent.credentials) {
       throw new EntityNotFoundException(
