@@ -9,15 +9,15 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { RemoveOrganizationRoleFromUserInput } from './dto/organization.role.dto.remove.role.from.user';
 import { AssignOrganizationRoleToUserInput } from './dto/organization.role.dto.assign.role.to.user';
 import { OrganizationRole } from '@common/enums/organization.role';
-import { OrganizationAuthorizationService } from '../organization/organization.service.authorization';
 import { OrganizationRoleService } from './organization.role.service';
 import { IOrganization } from '../organization/organization.interface';
 import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
+import { OrganizationRoleAuthorizationService } from './organization.role.service.authorization';
 
 @Resolver(() => IOrganization)
 export class OrganizationRoleResolverMutations {
   constructor(
-    private organizationAuthorizationService: OrganizationAuthorizationService,
+    private organizationRoleAuthorizationService: OrganizationRoleAuthorizationService,
     private contributorLookupService: ContributorLookupService,
     private organizationRoleService: OrganizationRoleService,
     private authorizationService: AuthorizationService
@@ -67,7 +67,7 @@ export class OrganizationRoleResolverMutations {
       // to the user specified in the incoming mutation. Then if it is the same user as is logged
       // in then the user will have the GRANT privilege + so can carry out the mutation
       authorization =
-        this.organizationAuthorizationService.extendAuthorizationPolicyForSelfRemoval(
+        this.organizationRoleAuthorizationService.extendAuthorizationPolicyForSelfRemoval(
           organization,
           membershipData.userID
         );

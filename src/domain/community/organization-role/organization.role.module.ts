@@ -7,6 +7,7 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { ContributorLookupModule } from '@services/infrastructure/contributor-lookup/contributor.lookup.module';
+import { OrganizationRoleAuthorizationService } from './organization.role.service.authorization';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { ContributorLookupModule } from '@services/infrastructure/contributor-lo
     OrganizationRoleService,
     OrganizationRoleResolverMutations,
     OrganizationRoleResolverFields,
+    OrganizationRoleAuthorizationService,
   ],
   exports: [OrganizationRoleService],
 })
