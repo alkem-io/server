@@ -432,22 +432,13 @@ export class OrganizationService {
   async getMetrics(organization: IOrganization): Promise<INVP[]> {
     const activity: INVP[] = [];
 
-    const membersCount = await this.getMembersCount(organization);
+    const membersCount =
+      await this.organizationRoleService.getMembersCount(organization);
     const membersTopic = new NVP('associates', membersCount.toString());
     membersTopic.id = `associates-${organization.id}`;
     activity.push(membersTopic);
 
     return activity;
-  }
-
-  async getMembersCount(organization: IOrganization): Promise<number> {
-    const credentialMatches =
-      await this.agentService.countAgentsWithMatchingCredentials({
-        type: AuthorizationCredential.ORGANIZATION_ASSOCIATE,
-        resourceID: organization.id,
-      });
-
-    return credentialMatches;
   }
 
   async createGroup(groupData: CreateUserGroupInput): Promise<IUserGroup> {
