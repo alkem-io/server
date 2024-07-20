@@ -130,7 +130,9 @@ export class RoomService {
   async getVcInteractions(roomID: string): Promise<IVcInteraction[]> {
     const room = await this.getRoomOrFail(roomID, {
       relations: {
-        vcInteractions: true,
+        vcInteractions: {
+          room: true,
+        },
       },
     });
     if (!room.vcInteractions) {
@@ -139,10 +141,7 @@ export class RoomService {
         LogContext.COMMUNICATION
       );
     }
-    return room.vcInteractions.map(interaction => {
-      interaction.room = room;
-      return interaction;
-    });
+    return room.vcInteractions;
   }
 
   async getVcInteractionByThread(
