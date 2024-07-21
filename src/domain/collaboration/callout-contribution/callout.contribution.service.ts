@@ -19,7 +19,9 @@ import { ValidationException } from '@common/exceptions';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { LinkService } from '../link/link.service';
 import { ILink } from '../link/link.interface';
+import { InstrumentService } from '@common/decorators/instrumentation';
 
+@InstrumentService
 @Injectable()
 export class CalloutContributionService {
   constructor(

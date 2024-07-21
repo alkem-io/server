@@ -14,7 +14,9 @@ import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileType } from '@common/enums';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { InstrumentService } from '@common/decorators/instrumentation';
 
+@InstrumentService
 @Injectable()
 export class LinkService {
   constructor(

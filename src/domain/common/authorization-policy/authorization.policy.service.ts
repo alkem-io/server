@@ -24,7 +24,9 @@ import { AuthorizationPolicyRuleVerifiedCredential } from '@core/authorization/a
 import { IAuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege.interface';
 import { IAuthorizationPolicyRuleVerifiedCredential } from '@core/authorization/authorization.policy.rule.verified.credential.interface';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { InstrumentService } from '@common/decorators/instrumentation';
 
+@InstrumentService
 @Injectable()
 export class AuthorizationPolicyService {
   constructor(

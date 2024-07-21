@@ -37,7 +37,9 @@ import { LicenseEngineService } from '@core/license-engine/license.engine.servic
 import { LicensePrivilege } from '@common/enums/license.privilege';
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
 import { isEqual } from 'lodash';
+import { InstrumentService } from '@common/decorators/instrumentation';
 
+@InstrumentService
 @Injectable()
 export class WhiteboardService {
   // The eventEmitter is used for cross-service communication.

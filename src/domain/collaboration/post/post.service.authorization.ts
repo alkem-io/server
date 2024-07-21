@@ -19,7 +19,9 @@ import { ProfileAuthorizationService } from '@domain/common/profile/profile.serv
 import { RoomAuthorizationService } from '@domain/communication/room/room.service.authorization';
 import { CommunityRole } from '@common/enums/community.role';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
+import { InstrumentService } from '@common/decorators/instrumentation';
 
+@InstrumentService
 @Injectable()
 export class PostAuthorizationService {
   constructor(

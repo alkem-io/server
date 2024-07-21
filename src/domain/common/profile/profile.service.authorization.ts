@@ -7,7 +7,9 @@ import { VisualAuthorizationService } from '../visual/visual.service.authorizati
 import { StorageBucketAuthorizationService } from '@domain/storage/storage-bucket/storage.bucket.service.authorization';
 import { LogContext } from '@common/enums/logging.context';
 import { RelationshipNotFoundException } from '@common/exceptions';
+import { InstrumentService } from '@common/decorators/instrumentation';
 
+@InstrumentService
 @Injectable()
 export class ProfileAuthorizationService {
   constructor(

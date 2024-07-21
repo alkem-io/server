@@ -20,12 +20,20 @@ export class UnhandledExceptionFilter implements ExceptionFilter {
     /* add values that you want to include as additional data
      e.g. secondParam = { code: '123' };
     */
-    const secondParam = { errorId: randomUUID() };
-    const thirdParam = undefined;
+    const errorId = randomUUID();
+    const secondParam = exception.stack;
+    const thirdParam = 'UnhandledException';
     /* the logger will handle the passed exception by iteration over all it's fields
      * you can provide additional data in the stack and context
      */
-    this.logger.error(exception, secondParam, thirdParam);
+    this.logger.error(
+      {
+        ...exception,
+        errorId,
+      },
+      secondParam,
+      thirdParam
+    );
 
     const contextType = host.getType<ContextTypeWithGraphQL>();
     // If we are in an http context respond something so the browser doesn't stay hanging.
@@ -36,7 +44,7 @@ export class UnhandledExceptionFilter implements ExceptionFilter {
       response.status(500).json({
         statusCode: 500,
         timestamp: new Date().toISOString(),
-        errorId: secondParam.errorId,
+        errorId,
         name:
           process.env.NODE_ENV !== 'production' ? exception.name : undefined,
         message:

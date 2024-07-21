@@ -15,7 +15,9 @@ import { IAuthorizationPolicyRuleVerifiedCredential } from './authorization.poli
 import { AuthorizationInvalidPolicyException } from '@common/exceptions/authorization.invalid.policy.exception';
 import { IAuthorizationPolicyRulePrivilege } from './authorization.policy.rule.privilege.interface';
 import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
+import { InstrumentService } from '@common/decorators/instrumentation';
 
+@InstrumentService
 @Injectable()
 export class AuthorizationService {
   constructor(

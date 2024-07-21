@@ -18,7 +18,9 @@ import {
   CREDENTIAL_RULE_CONTRIBUTION_CREATED_BY_DELETE,
 } from '@common/constants';
 import { LinkAuthorizationService } from '../link/link.service.authorization';
+import { InstrumentService } from '@common/decorators/instrumentation';
 
+@InstrumentService
 @Injectable()
 export class CalloutContributionAuthorizationService {
   constructor(

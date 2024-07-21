@@ -24,7 +24,9 @@ import { VirtualContributor } from '@domain/community/virtual-contributor';
 import { Organization } from '@domain/community/organization';
 import { Discussion } from '@platform/forum-discussion/discussion.entity';
 import { IDiscussion } from '@platform/forum-discussion/discussion.interface';
+import { InstrumentService } from '@common/decorators/instrumentation';
 
+@InstrumentService
 export class NamingService {
   replaceSpecialCharacters = require('replace-special-characters');
 

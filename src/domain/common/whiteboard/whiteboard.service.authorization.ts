@@ -17,7 +17,9 @@ import {
 import { ProfileAuthorizationService } from '../profile/profile.service.authorization';
 import { IWhiteboard } from './whiteboard.interface';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
+import { InstrumentService } from '@common/decorators/instrumentation';
 
+@InstrumentService
 @Injectable()
 export class WhiteboardAuthorizationService {
   constructor(

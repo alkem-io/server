@@ -38,6 +38,7 @@ import { ICalloutContribution } from '../callout-contribution/callout.contributi
 import { CalloutContributionAuthorizationService } from '../callout-contribution/callout.contribution.service.authorization';
 import { CalloutContributionService } from '../callout-contribution/callout.contribution.service';
 import { ILink } from '../link/link.interface';
+import { InstrumentMutation } from '@common/decorators/instrumentation';
 
 @Resolver()
 export class CalloutResolverMutations {
@@ -113,9 +114,8 @@ export class CalloutResolverMutations {
       `update visibility on callout: ${callout.id}`
     );
     const oldVisibility = callout.visibility;
-    const savedCallout = await this.calloutService.updateCalloutVisibility(
-      calloutData
-    );
+    const savedCallout =
+      await this.calloutService.updateCalloutVisibility(calloutData);
 
     if (savedCallout.visibility !== oldVisibility) {
       if (savedCallout.visibility === CalloutVisibility.PUBLISHED) {
@@ -176,6 +176,7 @@ export class CalloutResolverMutations {
     description: 'Create a new Contribution on the Callout.',
   })
   @Profiling.api
+  @InstrumentMutation()
   async createContributionOnCallout(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('contributionData') contributionData: CreateContributionOnCalloutInput
@@ -263,7 +264,7 @@ export class CalloutResolverMutations {
       }
     }
 
-    return await this.calloutContributionService.save(contribution);
+    return this.calloutContributionService.save(contribution);
   }
 
   private async processActivityLinkCreated(

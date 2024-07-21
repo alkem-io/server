@@ -15,7 +15,9 @@ import { StorageAggregatorNotFoundException } from '@common/exceptions/storage.a
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Space } from '@domain/space/space/space.entity';
 import { SpaceLevel } from '@common/enums/space.level';
+import { InstrumentService } from '@common/decorators/instrumentation';
 
+@InstrumentService
 @Injectable()
 export class StorageAggregatorResolverService {
   constructor(
@@ -147,9 +149,8 @@ export class StorageAggregatorResolverService {
   public async getStorageAggregatorForCalendar(
     calendarID: string
   ): Promise<IStorageAggregator> {
-    const storageAggregatorId = await this.getStorageAggregatorIdForCalendar(
-      calendarID
-    );
+    const storageAggregatorId =
+      await this.getStorageAggregatorIdForCalendar(calendarID);
     return await this.getStorageAggregatorOrFail(storageAggregatorId);
   }
 
@@ -192,9 +193,8 @@ export class StorageAggregatorResolverService {
   public async getStorageAggregatorForCommunity(
     communityID: string
   ): Promise<IStorageAggregator> {
-    const storageAggregatorId = await this.getStorageAggregatorIdForCommunity(
-      communityID
-    );
+    const storageAggregatorId =
+      await this.getStorageAggregatorIdForCommunity(communityID);
     return await this.getStorageAggregatorOrFail(storageAggregatorId);
   }
 
@@ -223,9 +223,8 @@ export class StorageAggregatorResolverService {
   public async getStorageAggregatorForCallout(
     calloutID: string
   ): Promise<IStorageAggregator> {
-    const storageAggregatorId = await this.getStorageAggregatorIdForCallout(
-      calloutID
-    );
+    const storageAggregatorId =
+      await this.getStorageAggregatorIdForCallout(calloutID);
     return await this.getStorageAggregatorOrFail(storageAggregatorId);
   }
 

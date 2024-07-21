@@ -10,7 +10,9 @@ import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authoriz
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { CREDENTIAL_RULE_LINK_CREATED_BY } from '@common/constants/authorization/credential.rule.constants';
+import { InstrumentService } from '@common/decorators/instrumentation';
 
+@InstrumentService
 @Injectable()
 export class LinkAuthorizationService {
   constructor(
