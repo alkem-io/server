@@ -11,9 +11,9 @@ import { ValidationPipe } from '@common/pipes/validation.pipe';
 import configuration from '@config/configuration';
 import {
   configQuery,
-  spacesQuery,
   meQuery,
   platformMetadataQuery,
+  spacesQuery,
 } from '@config/graphql';
 import { AuthenticationModule } from '@core/authentication/authentication.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
@@ -56,8 +56,8 @@ import { SsiCredentialFlowModule } from '@services/api-rest/ssi-credential-flow/
 import { StorageAccessModule } from '@services/api-rest/storage-access/storage.access.module';
 import { MessageReactionModule } from '@domain/communication/message.reaction/message.reaction.module';
 import {
-  HttpExceptionFilter,
   GraphqlExceptionFilter,
+  HttpExceptionFilter,
   UnhandledExceptionFilter,
 } from '@core/error-handling';
 import { MeModule } from '@services/api/me';
@@ -184,9 +184,10 @@ import { apm } from './apm';
                 async didResolveOperation(
                   requestContext: GraphQLRequestContextDidResolveOperation<any>
                 ) {
-                  const operationName =
+                  apm.currentTransaction.name =
                     requestContext.operationName ?? 'Unnamed';
-                  apm.currentTransaction.name = `GraphQL: ${operationName}`;
+                  apm.currentTransaction.type =
+                    requestContext.operation.operation;
                 },
               };
             },
