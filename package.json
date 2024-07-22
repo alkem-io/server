@@ -1,6 +1,6 @@
 {
   "name": "alkemio-server",
-  "version": "0.84.4",
+  "version": "0.84.5",
   "description": "Alkemio server, responsible for managing the shared Alkemio platform",
   "author": "Alkemio Foundation",
   "private": false,
@@ -41,7 +41,9 @@
     "migration:run": "npm run typeorm-no-entities migration:run",
     "migration:revert": "npm run typeorm-no-entities migration:revert",
     "migration:show": "npm run typeorm migration:show",
-    "migration:validate": "./.scripts/migrations/run_validate_migration.sh"
+    "migration:validate": "./.scripts/migrations/run_validate_migration.sh",
+    "db:recreate": "ts-node .scripts/tests/recreate-db.ts",
+    "db:reset": "npm run db:recreate && npm run migration:run"
   },
   "overrides": {
     "fs-capacitor": "6.2.0",
