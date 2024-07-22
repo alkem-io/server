@@ -2,6 +2,7 @@ import { UUID_LENGTH } from '@common/constants';
 import { LogContext, ProfileType } from '@common/enums';
 import {
   EntityNotFoundException,
+  RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
@@ -22,12 +23,15 @@ import { VisualType } from '@common/enums/visual.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { SearchVisibility } from '@common/enums/search.visibility';
+import { IContributor } from '@domain/community/contributor/contributor.interface';
+import { AccountHostService } from '@domain/space/account.host/account.host.service';
 
 @Injectable()
 export class InnovationPackService {
   constructor(
     private profileService: ProfileService,
     private templatesSetService: TemplatesSetService,
+    private accountHostService: AccountHostService,
     @InjectRepository(InnovationPack)
     private innovationPackRepository: Repository<InnovationPack>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -226,5 +230,25 @@ export class InnovationPackService {
       );
     }
     return await this.templatesSetService.getTemplatesCount(templatesSetId);
+  }
+
+  public async getProvider(
+    innovationPackID: string
+  ): Promise<IContributor | null> {
+    const innovationPack = await this.innovationPackRepository.findOne({
+      relations: {
+        account: true,
+      },
+    });
+    if (!innovationPack || !innovationPack.account) {
+      throw new RelationshipNotFoundException(
+        `Unable to load provider for InnovationPack ${innovationPackID} `,
+        LogContext.LIBRARY
+      );
+    }
+    const provider = await this.accountHostService.getHost(
+      innovationPack.account
+    );
+    return provider;
   }
 }

@@ -9,6 +9,7 @@ import { InnovationPackResolverMutations } from './innovation.pack.resolver.muta
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
+import { AccountHostModule } from '@domain/space/account.host/account.host.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { ProfileModule } from '@domain/common/profile/profile.module';
     AuthorizationModule,
     AuthorizationPolicyModule,
     ProfileModule,
+    AccountHostModule,
     TypeOrmModule.forFeature([InnovationPack]),
   ],
   providers: [

@@ -11,6 +11,7 @@ import { ProfileLoaderCreator } from '@core/dataloader/creators';
 import { Loader } from '@core/dataloader/decorators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { InnovationPack } from './innovation.pack.entity';
+import { IContributor } from '@domain/community/contributor/contributor.interface';
 
 @Resolver(() => IInnovationPack)
 export class InnovationPackResolverFields {
@@ -42,5 +43,16 @@ export class InnovationPackResolverFields {
     return await this.innovationPackService.getTemplatesSetOrFail(
       innovationPack.id
     );
+  }
+
+  @ResolveField('provider', () => IContributor, {
+    nullable: true,
+    description: 'The InnovationPack provider.',
+  })
+  @Profiling.api
+  async provider(
+    @Parent() innovationPack: IInnovationPack
+  ): Promise<IContributor | null> {
+    return await this.innovationPackService.getProvider(innovationPack.id);
   }
 }
