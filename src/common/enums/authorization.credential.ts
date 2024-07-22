@@ -24,9 +24,6 @@ export enum AuthorizationCredential {
 
   USER_GROUP_MEMBER = 'user-group-member', // Able to be a part of an user group
 
-  // Library related credentials
-  INNOVATION_PACK_PROVIDER = 'innovation-pack-provider',
-
   // Roles to allow easier management of users
   BETA_TESTER = 'beta-tester',
   VC_CAMPAIGN = 'vc-campaign',
