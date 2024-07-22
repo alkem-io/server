@@ -19,7 +19,6 @@ import { Space } from '@domain/space/space/space.entity';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 import { SpaceLevel } from '@common/enums/space.level';
 import { User } from '@domain/community/user/user.entity';
-import { InnovationPack } from '@library/innovation-pack/innovation.pack.entity';
 import { VirtualContributor } from '@domain/community/virtual-contributor';
 import { Organization } from '@domain/community/organization';
 import { Discussion } from '@platform/forum-discussion/discussion.entity';
@@ -29,8 +28,6 @@ export class NamingService {
   replaceSpecialCharacters = require('replace-special-characters');
 
   constructor(
-    @InjectRepository(Callout)
-    private calloutRepository: Repository<Callout>,
     @InjectRepository(Discussion)
     private discussionRepository: Repository<Discussion>,
     @InjectRepository(InnovationHub)
@@ -104,23 +101,6 @@ export class NamingService {
       },
     });
     const nameIDs = events?.map(event => event.nameID) || [];
-    return nameIDs;
-  }
-
-  public async getReservedNameIDsInLibrary(
-    libraryID: string
-  ): Promise<string[]> {
-    const innovationPacks = await this.entityManager.find(InnovationPack, {
-      where: {
-        library: {
-          id: libraryID,
-        },
-      },
-      select: {
-        nameID: true,
-      },
-    });
-    const nameIDs = innovationPacks?.map(pack => pack.nameID) || [];
     return nameIDs;
   }
 

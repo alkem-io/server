@@ -1,6 +1,5 @@
 import { AuthorizationPrivilege } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
-import { IOrganization } from '@domain/community/organization/';
 import { UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
@@ -16,17 +15,6 @@ import { InnovationPack } from './innovation.pack.entity';
 @Resolver(() => IInnovationPack)
 export class InnovationPackResolverFields {
   constructor(private innovationPackService: InnovationPackService) {}
-
-  @ResolveField('provider', () => IOrganization, {
-    nullable: true,
-    description: 'The InnovationPack provider.',
-  })
-  @Profiling.api
-  async provider(
-    @Parent() innovationPack: IInnovationPack
-  ): Promise<IOrganization | undefined> {
-    return await this.innovationPackService.getProvider(innovationPack.id);
-  }
 
   @UseGuards(GraphqlGuard)
   @ResolveField('profile', () => IProfile, {

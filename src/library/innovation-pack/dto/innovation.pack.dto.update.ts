@@ -1,21 +1,22 @@
 import { Field, InputType } from '@nestjs/graphql';
 import { IsOptional } from 'class-validator';
-import { UUID_NAMEID } from '@domain/common/scalars';
 import { UpdateNameableInput } from '@domain/common/entity/nameable-entity/dto/nameable.dto.update';
+import { SearchVisibility } from '@common/enums/search.visibility';
 
 @InputType()
 export class UpdateInnovationPackInput extends UpdateNameableInput {
-  @Field(() => UUID_NAMEID, {
+  @Field(() => Boolean, {
     nullable: true,
-    description: 'Update the provider Organization for the InnovationPack.',
+    description:
+      'Flag to control the visibility of the InnovationPack in the platform Library.',
   })
   @IsOptional()
-  providerOrgID?: string;
+  listedInStore?: boolean;
 
-  // Override the type of entry accepted to accept the nameID also
-  @Field(() => UUID_NAMEID, {
-    nullable: false,
-    description: 'The ID or NameID of the InnovationPack.',
+  @Field(() => SearchVisibility, {
+    description: 'Visibility of the InnovationPack in searches.',
+    nullable: true,
   })
-  ID!: string;
+  @IsOptional()
+  searchVisibility?: SearchVisibility;
 }

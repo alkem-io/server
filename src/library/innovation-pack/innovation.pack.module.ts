@@ -8,8 +8,6 @@ import { InnovationPackResolverFields } from './innovation.pack.resolver.fields'
 import { InnovationPackResolverMutations } from './innovation.pack.resolver.mutations';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
-import { OrganizationModule } from '@domain/community/organization/organization.module';
-import { AgentModule } from '@domain/agent/agent/agent.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
 
 @Module({
@@ -17,9 +15,7 @@ import { ProfileModule } from '@domain/common/profile/profile.module';
     TemplatesSetModule,
     AuthorizationModule,
     AuthorizationPolicyModule,
-    OrganizationModule,
     ProfileModule,
-    AgentModule,
     TypeOrmModule.forFeature([InnovationPack]),
   ],
   providers: [

@@ -34,6 +34,8 @@ import { CommunityRole } from '@common/enums/community.role';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { POLICY_RULE_ACCOUNT_CREATE_VC } from '@common/constants/authorization/policy.rule.constants';
+import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
+import { InnovationPackAuthorizationService } from '@library/innovation-pack/innovation.pack.service.authorization';
 
 @Injectable()
 export class AccountAuthorizationService {
@@ -45,6 +47,7 @@ export class AccountAuthorizationService {
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private spaceAuthorizationService: SpaceAuthorizationService,
     private virtualContributorAuthorizationService: VirtualContributorAuthorizationService,
+    private innovationPackAuthorizationService: InnovationPackAuthorizationService,
     private communityPolicyService: CommunityPolicyService,
     private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
     private accountService: AccountService,
@@ -64,6 +67,7 @@ export class AccountAuthorizationService {
         library: true,
         defaults: true,
         virtualContributors: true,
+        innovationPacks: true,
         storageAggregator: true,
       },
     });
@@ -128,9 +132,8 @@ export class AccountAuthorizationService {
         account.space
       );
 
-    const hostCredentials = await this.accountHostService.getHostCredentials(
-      account
-    );
+    const hostCredentials =
+      await this.accountHostService.getHostCredentials(account);
 
     clonedAccountAuth = this.extendAuthorizationPolicyForChildEntities(
       clonedAccountAuth,
@@ -152,6 +155,7 @@ export class AccountAuthorizationService {
       !account.license ||
       !account.defaults ||
       !account.virtualContributors ||
+      !account.innovationPacks ||
       !account.storageAggregator
     ) {
       throw new RelationshipNotFoundException(
@@ -194,14 +198,25 @@ export class AccountAuthorizationService {
 
     const updatedVCs: IVirtualContributor[] = [];
     for (const vc of account.virtualContributors) {
-      const udpatedVC =
+      const updatedVC =
         await this.virtualContributorAuthorizationService.applyAuthorizationPolicy(
           vc,
           clonedAccountAuth
         );
-      updatedVCs.push(udpatedVC);
+      updatedVCs.push(updatedVC);
     }
     account.virtualContributors = updatedVCs;
+
+    const updatedIPs: IInnovationPack[] = [];
+    for (const ip of account.innovationPacks) {
+      const updatedIP =
+        await this.innovationPackAuthorizationService.applyAuthorizationPolicy(
+          ip,
+          clonedAccountAuth
+        );
+      updatedIPs.push(updatedIP);
+    }
+    account.innovationPacks = updatedIPs;
     return account;
   }
 
@@ -216,9 +231,8 @@ export class AccountAuthorizationService {
       );
     }
 
-    const hostCredentials = await this.accountHostService.getHostCredentials(
-      account
-    );
+    const hostCredentials =
+      await this.accountHostService.getHostCredentials(account);
 
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
     // By default it is world visible. TODO: work through the logic on this

@@ -1,16 +1,9 @@
 import { UUID_LENGTH } from '@common/constants';
-import {
-  AuthorizationCredential,
-  LogContext,
-  ProfileType,
-} from '@common/enums';
+import { LogContext, ProfileType } from '@common/enums';
 import {
   EntityNotFoundException,
-  RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
-
-import { IOrganization } from '@domain/community/organization/organization.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
@@ -20,8 +13,6 @@ import { IInnovationPack } from './innovation.pack.interface';
 import { UpdateInnovationPackInput } from './dto/innovation.pack.dto.update';
 import { ITemplatesSet } from '@domain/template/templates-set/templates.set.interface';
 import { TemplatesSetService } from '@domain/template/templates-set/templates.set.service';
-import { OrganizationService } from '@domain/community/organization/organization.service';
-import { AgentService } from '@domain/agent/agent/agent.service';
 import { CreateInnovationPackInput } from './dto/innovation.pack.dto.create';
 import { DeleteInnovationPackInput } from './dto/innovationPack.dto.delete';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
@@ -30,12 +21,11 @@ import { ProfileService } from '@domain/common/profile/profile.service';
 import { VisualType } from '@common/enums/visual.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { SearchVisibility } from '@common/enums/search.visibility';
 
 @Injectable()
 export class InnovationPackService {
   constructor(
-    private organizationService: OrganizationService,
-    private agentService: AgentService,
     private profileService: ProfileService,
     private templatesSetService: TemplatesSetService,
     @InjectRepository(InnovationPack)
@@ -61,6 +51,9 @@ export class InnovationPackService {
       VisualType.CARD
     );
 
+    innovationPack.listedInStore = true;
+    innovationPack.searchVisibility = SearchVisibility.ACCOUNT;
+
     await this.profileService.addTagsetOnProfile(innovationPack.profile, {
       name: TagsetReservedName.DEFAULT,
       tags: innovationPackData.tags ?? [],
@@ -69,17 +62,7 @@ export class InnovationPackService {
     innovationPack.templatesSet =
       await this.templatesSetService.createTemplatesSet();
 
-    // save before assigning host in case that fails
-    const savedInnovationPack = await this.innovationPackRepository.save(
-      innovationPack
-    );
-
-    await this.setInnovationPackProvider(
-      innovationPack.id,
-      innovationPackData.providerID
-    );
-
-    return savedInnovationPack;
+    return await this.save(innovationPack);
   }
 
   async save(innovationPack: IInnovationPack): Promise<IInnovationPack> {
@@ -119,14 +102,15 @@ export class InnovationPackService {
       );
     }
 
-    if (innovationPackData.providerOrgID) {
-      await this.setInnovationPackProvider(
-        innovationPack.id,
-        innovationPackData.providerOrgID
-      );
+    if (typeof innovationPackData.listedInStore === 'boolean') {
+      innovationPack.listedInStore = !!innovationPackData.listedInStore;
     }
 
-    return await this.innovationPackRepository.save(innovationPack);
+    if (innovationPackData.searchVisibility) {
+      innovationPack.searchVisibility = innovationPackData.searchVisibility;
+    }
+
+    return await this.save(innovationPack);
   }
 
   async deleteInnovationPack(
@@ -135,18 +119,6 @@ export class InnovationPackService {
     const innovationPack = await this.getInnovationPackOrFail(deleteData.ID, {
       relations: { templatesSet: true, profile: true },
     });
-
-    // Remove any host credentials
-    const providerOrg = await this.getProvider(innovationPack.id);
-    if (providerOrg) {
-      const agentHostOrg = await this.organizationService.getAgent(providerOrg);
-      providerOrg.agent = await this.agentService.revokeCredential({
-        agentID: agentHostOrg.id,
-        type: AuthorizationCredential.INNOVATION_PACK_PROVIDER,
-        resourceID: innovationPack.id,
-      });
-      await this.organizationService.save(providerOrg);
-    }
 
     if (innovationPack.templatesSet) {
       await this.templatesSetService.deleteTemplatesSet(
@@ -186,7 +158,7 @@ export class InnovationPackService {
     if (!innovationPack)
       throw new EntityNotFoundException(
         `Unable to find InnovationPack with ID: ${innovationPackID}`,
-        LogContext.SPACES
+        LogContext.LIBRARY
       );
     return innovationPack;
   }
@@ -230,65 +202,11 @@ export class InnovationPackService {
     return templatesSet;
   }
 
-  async setInnovationPackProvider(
-    innovationPackID: string,
-    hostOrgID: string
-  ): Promise<IInnovationPack> {
-    const organization = await this.organizationService.getOrganizationOrFail(
-      hostOrgID,
-      { relations: { agent: true } }
-    );
-
-    const existingHost = await this.getProvider(innovationPackID);
-
-    if (existingHost) {
-      const agentExisting = await this.organizationService.getAgent(
-        existingHost
-      );
-      organization.agent = await this.agentService.revokeCredential({
-        agentID: agentExisting.id,
-        type: AuthorizationCredential.INNOVATION_PACK_PROVIDER,
-        resourceID: innovationPackID,
-      });
-    }
-
-    // assign the credential
-    const agent = await this.organizationService.getAgent(organization);
-    organization.agent = await this.agentService.grantCredential({
-      agentID: agent.id,
-      type: AuthorizationCredential.INNOVATION_PACK_PROVIDER,
-      resourceID: innovationPackID,
-    });
-
-    await this.organizationService.save(organization);
-    return await this.getInnovationPackOrFail(innovationPackID);
-  }
-
   async isNameIdAvailable(nameID: string): Promise<boolean> {
     const innovationPackCount = await this.innovationPackRepository.countBy({
       nameID: nameID,
     });
     return innovationPackCount == 0;
-  }
-
-  async getProvider(
-    innovationPackID: string
-  ): Promise<IOrganization | undefined> {
-    const organizations =
-      await this.organizationService.organizationsWithCredentials({
-        type: AuthorizationCredential.INNOVATION_PACK_PROVIDER,
-        resourceID: innovationPackID,
-      });
-    if (organizations.length == 0) {
-      return undefined;
-    }
-    if (organizations.length > 1) {
-      throw new RelationshipNotFoundException(
-        `More than one provider for InnovationPack ${innovationPackID} `,
-        LogContext.SPACES
-      );
-    }
-    return organizations[0];
   }
 
   async getTemplatesCount(innovationPackID: string): Promise<number> {
