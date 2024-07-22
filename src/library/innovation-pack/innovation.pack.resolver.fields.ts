@@ -46,13 +46,13 @@ export class InnovationPackResolverFields {
   }
 
   @ResolveField('provider', () => IContributor, {
-    nullable: true,
+    nullable: false,
     description: 'The InnovationPack provider.',
   })
   @Profiling.api
   async provider(
     @Parent() innovationPack: IInnovationPack
-  ): Promise<IContributor | null> {
+  ): Promise<IContributor> {
     return await this.innovationPackService.getProvider(innovationPack.id);
   }
 }

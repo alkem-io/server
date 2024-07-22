@@ -232,9 +232,7 @@ export class InnovationPackService {
     return await this.templatesSetService.getTemplatesCount(templatesSetId);
   }
 
-  public async getProvider(
-    innovationPackID: string
-  ): Promise<IContributor | null> {
+  public async getProvider(innovationPackID: string): Promise<IContributor> {
     const innovationPack = await this.innovationPackRepository.findOne({
       relations: {
         account: true,
@@ -242,13 +240,19 @@ export class InnovationPackService {
     });
     if (!innovationPack || !innovationPack.account) {
       throw new RelationshipNotFoundException(
-        `Unable to load provider for InnovationPack ${innovationPackID} `,
+        `Unable to load innovation pack with account to get Provider for InnovationPack ${innovationPackID} `,
         LogContext.LIBRARY
       );
     }
     const provider = await this.accountHostService.getHost(
       innovationPack.account
     );
+    if (!provider) {
+      throw new RelationshipNotFoundException(
+        `Unable to load provider for InnovationPack ${innovationPackID} `,
+        LogContext.LIBRARY
+      );
+    }
     return provider;
   }
 }
