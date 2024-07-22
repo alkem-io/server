@@ -347,7 +347,7 @@ export class AccountResolverMutations {
   @Mutation(() => IInnovationPack, {
     description: 'Creates a new InnovationPack on an Account.',
   })
-  async creatInnovationPack(
+  async createInnovationPack(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('innovationPackData')
     innovationPackData: CreateInnovationPackOnAccountInput
