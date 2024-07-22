@@ -21,10 +21,4 @@ export abstract class ICredential extends IBaseAlkemio {
   expires?: Date;
 
   agent?: IAgent;
-
-  @Field(() => Date)
-  createdDate?: Date;
-
-  @Field(() => Date)
-  updatedDate?: Date;
 }
