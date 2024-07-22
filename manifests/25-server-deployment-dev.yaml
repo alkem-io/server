@@ -54,4 +54,4 @@ spec:
       volumes:
         - name: file-storage
           persistentVolumeClaim:
-            claimName: file-storage-pvc
+            claimName: file-storage-pvc2
