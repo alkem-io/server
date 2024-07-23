@@ -2,9 +2,11 @@ import { IMessageReaction } from '@domain/communication/message.reaction/message
 import { IMessage } from '@domain/communication/message/message.interface';
 import { BaseSubscriptionPayload } from '@interfaces/index';
 import { MutationType } from '@common/enums/subscriptions';
+import { IRoom } from '@domain/communication/room/room.interface';
 
 export interface RoomEventSubscriptionPayload extends BaseSubscriptionPayload {
   roomID: string;
+  room: Partial<IRoom>;
   message?: {
     type: MutationType;
     data: IMessage | { id: string };
