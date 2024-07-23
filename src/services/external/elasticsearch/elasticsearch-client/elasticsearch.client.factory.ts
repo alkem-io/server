@@ -28,7 +28,7 @@ export const elasticSearchClientFactory = async (
     }
     const cert = fs.readFileSync(certPath);
     tlsOptions = {
-      rejectUnauthorized: false,
+      rejectUnauthorized: true,
       ca: cert,
     };
   }
