@@ -34,7 +34,7 @@ export class VcStorage1721767553604 implements MigrationInterface {
           );
         }
       } else {
-        console.log(`No account found for virtual contributor ${vc.id}`);
+        throw new Error(`No account found for virtual contributor ${vc.id}`);
       }
       // Delete the referred to storage aggregator
       await queryRunner.query(
