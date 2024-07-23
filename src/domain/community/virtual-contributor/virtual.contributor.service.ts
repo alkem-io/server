@@ -95,9 +95,8 @@ export class VirtualContributorService {
       ...virtualContributorData.aiPersona,
       description: `AI Persona for virtual contributor ${virtualContributor.nameID}`,
     };
-    virtualContributor.aiPersona = await this.aiPersonaService.createAiPersona(
-      aiPersonaInput
-    );
+    virtualContributor.aiPersona =
+      await this.aiPersonaService.createAiPersona(aiPersonaInput);
 
     virtualContributor.storageAggregator =
       await this.storageAggregatorService.createStorageAggregator();
@@ -470,9 +469,8 @@ export class VirtualContributorService {
         LogContext.AUTH
       );
 
-    const hostCredentials = await this.accountHostService.getHostCredentials(
-      account
-    );
+    const hostCredentials =
+      await this.accountHostService.getHostCredentials(account);
     return hostCredentials;
   }
 

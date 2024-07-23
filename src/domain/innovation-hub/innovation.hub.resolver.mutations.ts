@@ -55,6 +55,6 @@ export class InnovationHubResolverMutations {
       AuthorizationPrivilege.PLATFORM_ADMIN,
       'delete innovation hub'
     );
-    return await this.innovationHubService.deleteOrFail(deleteData.ID);
+    return await this.innovationHubService.delete(deleteData.ID);
   }
 }

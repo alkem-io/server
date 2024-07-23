@@ -299,7 +299,7 @@ export class AccountService {
     }
 
     for (const hub of account.innovationHubs) {
-      await this.innovationHubService.deleteOrFail(hub.id);
+      await this.innovationHubService.delete(hub.id);
     }
 
     const result = await this.accountRepository.remove(account as Account);

@@ -16,6 +16,7 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { SearchVisibility } from '@common/enums/search.visibility';
 
 @Injectable()
 export class InnovationHubService {
@@ -70,6 +71,8 @@ export class InnovationHubService {
 
     const hub: IInnovationHub = InnovationHub.create(createData);
     hub.authorization = new AuthorizationPolicy();
+    hub.listedInStore = true;
+    hub.searchVisibility = SearchVisibility.ACCOUNT;
 
     hub.profile = await this.profileService.createProfile(
       createData.profileData,
@@ -97,10 +100,8 @@ export class InnovationHubService {
   public async updateOrFail(
     input: UpdateInnovationHubInput
   ): Promise<IInnovationHub> {
-    const innovationHub: IInnovationHub = await this.getInnovationHubFlexOrFail(
-      {
-        idOrNameId: input.ID,
-      },
+    const innovationHub: IInnovationHub = await this.getInnovationHubOrFail(
+      input.ID,
       { relations: { profile: true } }
     );
 
@@ -153,17 +154,21 @@ export class InnovationHubService {
         input.profileData
       );
     }
+    if (typeof input.listedInStore === 'boolean') {
+      innovationHub.listedInStore = !!input.listedInStore;
+    }
+
+    if (input.searchVisibility) {
+      innovationHub.searchVisibility = input.searchVisibility;
+    }
 
     return await this.save(innovationHub);
   }
 
-  public async deleteOrFail(innovationHubID: string): Promise<IInnovationHub> {
-    const hub = await this.getInnovationHubFlexOrFail(
-      { idOrNameId: innovationHubID },
-      {
-        relations: { profile: true },
-      }
-    );
+  public async delete(innovationHubID: string): Promise<IInnovationHub> {
+    const hub = await this.getInnovationHubOrFail(innovationHubID, {
+      relations: { profile: true },
+    });
 
     if (hub.profile) {
       await this.profileService.deleteProfile(hub.profile.id);
@@ -184,7 +189,7 @@ export class InnovationHubService {
     return this.innovationHubRepository.find(options);
   }
 
-  async getInnovationHubOrFail(
+  public async getInnovationHubOrFail(
     innovationHubID: string,
     options?: FindOneOptions<InnovationHub>
   ): Promise<IInnovationHub> {
