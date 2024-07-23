@@ -227,11 +227,9 @@ export class RoomResolverMutations {
       // ignore for now, later likely to be an exception
     }
     this.subscriptionPublishService.publishRoomEvent(
-      room.id,
+      room,
       MutationType.CREATE,
-      message,
-      undefined,
-      room
+      message
     );
     return message;
   }
@@ -292,7 +290,7 @@ export class RoomResolverMutations {
     );
 
     this.subscriptionPublishService.publishRoomEvent(
-      room.id,
+      room,
       MutationType.CREATE,
       reply
     );
@@ -492,7 +490,7 @@ export class RoomResolverMutations {
   ): Promise<IMessageReaction> {
     const room = await this.roomService.getRoomOrFail(reactionData.roomID);
 
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       room.authorization,
       AuthorizationPrivilege.CREATE_MESSAGE_REACTION,
@@ -506,7 +504,7 @@ export class RoomResolverMutations {
     );
 
     this.subscriptionPublishService.publishRoomEvent(
-      room.id,
+      room,
       MutationType.CREATE,
       reaction,
       reactionData.messageID
@@ -538,7 +536,7 @@ export class RoomResolverMutations {
         room,
         messageData.messageID
       );
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       extendedAuthorization,
       AuthorizationPrivilege.DELETE,
@@ -555,7 +553,7 @@ export class RoomResolverMutations {
     );
 
     this.subscriptionPublishService.publishRoomEvent(
-      room.id,
+      room,
       MutationType.DELETE,
       // send empty data, because the resource is deleted
       {
@@ -608,7 +606,7 @@ export class RoomResolverMutations {
 
     if (isDeleted) {
       this.subscriptionPublishService.publishRoomEvent(
-        room.id,
+        room,
         MutationType.DELETE,
         // send empty data, because the resource is deleted
         {
