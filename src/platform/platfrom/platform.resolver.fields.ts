@@ -77,8 +77,7 @@ export class PlatformResolverFields {
   }
 
   @ResolveField(() => IInnovationHub, {
-    description:
-      'Details about an Innovation Hubs on the platform. If the arguments are omitted, the current Innovation Hub you are in will be returned.',
+    description: 'Details about the current Innovation Hub you are in.',
     nullable: true,
   })
   public innovationHub(
