@@ -15,6 +15,7 @@ import {
   RoomEventSubscriptionPayload,
   WhiteboardSavedSubscriptionPayload,
 } from './dto';
+import { Room } from '@domain/communication/room';
 
 @Injectable()
 export class SubscriptionPublishService {
@@ -47,11 +48,13 @@ export class SubscriptionPublishService {
     roomId: string,
     type: MutationType,
     data: IMessage | IMessageReaction,
-    messageID?: string
+    messageID?: string,
+    room?: Room
   ): Promise<void> {
     const payload: RoomEventSubscriptionPayload = {
       eventID: `room-event-${randomInt()}`,
       roomID: roomId,
+      room: room || {},
     };
 
     if (isMessage(data)) {

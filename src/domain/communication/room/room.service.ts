@@ -50,7 +50,7 @@ export class RoomService {
   async getRoomOrFail(
     roomID: string,
     options?: FindOneOptions<Room>
-  ): Promise<IRoom> {
+  ): Promise<Room> {
     const room = await this.roomRepository.findOne({
       where: { id: roomID },
       ...options,
