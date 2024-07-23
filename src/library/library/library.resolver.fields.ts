@@ -11,6 +11,7 @@ import { LibraryService } from './library.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { InnovationPacksInput } from './dto/library.dto.innovationPacks.input';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
+import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
 
 @Resolver(() => ILibrary)
 export class LibraryResolverFields {
@@ -75,5 +76,14 @@ export class LibraryResolverFields {
   })
   async virtualContributors(): Promise<IVirtualContributor[]> {
     return await this.libraryService.getListedVirtualContributors();
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField(() => [IInnovationHub], {
+    nullable: false,
+    description: 'The InnovationHub listed on this platform',
+  })
+  async innovationHubs(): Promise<IInnovationHub[]> {
+    return await this.libraryService.getListedInnovationHubs();
   }
 }

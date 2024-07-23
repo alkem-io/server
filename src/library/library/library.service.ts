@@ -19,6 +19,8 @@ import {
   VirtualContributor,
 } from '@domain/community/virtual-contributor';
 import { SearchVisibility } from '@common/enums/search.visibility';
+import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
+import { InnovationHub } from '@domain/innovation-hub/innovation.hub.entity';
 
 @Injectable()
 export class LibraryService {
@@ -58,6 +60,16 @@ export class LibraryService {
       }
     );
     return virtualContributors;
+  }
+
+  public async getListedInnovationHubs(): Promise<IInnovationHub[]> {
+    const innovationHubs = await this.entityManager.find(InnovationHub, {
+      where: {
+        listedInStore: true,
+        searchVisibility: SearchVisibility.PUBLIC,
+      },
+    });
+    return innovationHubs;
   }
 
   public async getInnovationPacks(
