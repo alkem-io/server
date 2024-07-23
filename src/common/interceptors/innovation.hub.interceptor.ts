@@ -66,7 +66,7 @@ export class InnovationHubInterceptor implements NestInterceptor {
 
     try {
       ctx[INNOVATION_HUB_INJECT_TOKEN] =
-        await this.innovationHubService.getInnovationHubOrFail({
+        await this.innovationHubService.getInnovationHubFlexOrFail({
           subdomain: subDomain,
         });
     } catch (e) {

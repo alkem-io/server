@@ -45,9 +45,8 @@ export class LibraryAuthorizationService {
     library.authorization.anonymousReadAccess = true;
 
     // Cascade down
-    const libraryPropagated = await this.propagateAuthorizationToChildEntities(
-      library
-    );
+    const libraryPropagated =
+      await this.propagateAuthorizationToChildEntities(library);
 
     return await this.libraryRepository.save(libraryPropagated);
   }
@@ -55,9 +54,8 @@ export class LibraryAuthorizationService {
   private async propagateAuthorizationToChildEntities(
     library: ILibrary
   ): Promise<ILibrary> {
-    library.innovationPacks = await this.libraryService.getInnovationPacks(
-      library
-    );
+    library.innovationPacks =
+      await this.libraryService.getInnovationPacks(library);
     for (const innovationPack of library.innovationPacks) {
       await this.innovationPackAuthorizationService.applyAuthorizationPolicy(
         innovationPack,
@@ -65,9 +63,8 @@ export class LibraryAuthorizationService {
       );
     }
 
-    library.storageAggregator = await this.libraryService.getStorageAggregator(
-      library
-    );
+    library.storageAggregator =
+      await this.libraryService.getStorageAggregator(library);
     library.storageAggregator =
       await this.storageAggregatorAuthorizationService.applyAuthorizationPolicy(
         library.storageAggregator,

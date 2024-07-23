@@ -31,7 +31,7 @@ export class PlatformSettingsService {
     input: UpdateInnovationHubPlatformSettingsInput
   ): Promise<IInnovationHub | never> {
     const innovationHub: IInnovationHub =
-      await this.innovationHubService.getInnovationHubOrFail(
+      await this.innovationHubService.getInnovationHubFlexOrFail(
         {
           idOrNameId: input.ID,
         },

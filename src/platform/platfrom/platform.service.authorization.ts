@@ -15,8 +15,6 @@ import {
   LogContext,
 } from '@common/enums';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
-import { InnovationHubService } from '@domain/innovation-hub';
-import { InnovationHubAuthorizationService } from '@domain/innovation-hub/innovation.hub.service.authorization';
 import {
   CREDENTIAL_RULE_PLATFORM_CREATE_ORGANIZATION,
   CREDENTIAL_RULE_PLATFORM_CREATE_SPACE,
@@ -43,8 +41,6 @@ export class PlatformAuthorizationService {
     private libraryAuthorizationService: LibraryAuthorizationService,
     private forumAuthorizationService: ForumAuthorizationService,
     private platformService: PlatformService,
-    private innovationHubService: InnovationHubService,
-    private innovationHubAuthorizationService: InnovationHubAuthorizationService,
     private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
     private platformInvitationAuthorizationService: PlatformInvitationAuthorizationService,
     private licensingAuthorizationService: LicensingAuthorizationService,
@@ -178,15 +174,6 @@ export class PlatformAuthorizationService {
         platform.storageAggregator,
         platformStorageAuth
       );
-
-    const innovationHubs = await this.innovationHubService.getInnovationHubs({
-      relations: {},
-    });
-    for (const innovationHub of innovationHubs) {
-      this.innovationHubAuthorizationService.applyAuthorizationPolicyAndSave(
-        innovationHub
-      );
-    }
 
     platform.licensing =
       await this.licensingAuthorizationService.applyAuthorizationPolicy(

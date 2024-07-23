@@ -76,14 +76,6 @@ export class PlatformResolverFields {
     return this.platformService.getLicensing(platform);
   }
 
-  @ResolveField(() => [IInnovationHub], {
-    nullable: false,
-    description: 'List of Innovation Hubs on the platform',
-  })
-  public innovationHubs(): Promise<IInnovationHub[]> {
-    return this.innovationHubService.getInnovationHubs();
-  }
-
   @ResolveField(() => IInnovationHub, {
     description:
       'Details about an Innovation Hubs on the platform. If the arguments are omitted, the current Innovation Hub you are in will be returned.',
@@ -102,7 +94,7 @@ export class PlatformResolverFields {
       return Promise.resolve(innovationHub as IInnovationHub);
     }
 
-    return this.innovationHubService.getInnovationHubOrFail({
+    return this.innovationHubService.getInnovationHubFlexOrFail({
       subdomain: args.subdomain,
       idOrNameId: args.id,
     });
