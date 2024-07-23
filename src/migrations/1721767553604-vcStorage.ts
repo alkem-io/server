@@ -4,6 +4,8 @@ export class VcStorage1721767553604 implements MigrationInterface {
   name = 'VcStorage1721767553604';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
+    // Logic is a) iterate over all VCs b) find the account storage bucket for each c) find all storage buckets
+    // using the storage aggregator of the VC and update them to use the storage aggregator of the account
     const vcs: {
       id: string;
       accountId: string;
