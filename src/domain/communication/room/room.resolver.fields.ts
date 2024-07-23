@@ -1,16 +1,24 @@
 import { GraphqlGuard } from '@core/authorization';
 import { UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { AuthorizationAgentPrivilege } from '@src/common/decorators';
+import {
+  AuthorizationAgentPrivilege,
+  CurrentUser,
+} from '@src/common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
 import { IMessage } from '../message/message.interface';
 import { IRoom } from './room.interface';
 import { RoomService } from './room.service';
 import { IVcInteraction } from '../vc-interaction/vc.interaction.interface';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 
 @Resolver(() => IRoom)
 export class RoomResolverFields {
-  constructor(private roomService: RoomService) {}
+  constructor(
+    private roomService: RoomService,
+    private authorizationService: AuthorizationService
+  ) {}
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
@@ -24,13 +32,22 @@ export class RoomResolverFields {
     return result;
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('vcInteractions', () => [IVcInteraction], {
     nullable: false,
     description: 'Virtual Contributor Interactions in this Room.',
   })
-  async vcInteractions(@Parent() room: IRoom): Promise<IVcInteraction[]> {
+  async vcInteractions(
+    @Parent() room: IRoom,
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<IVcInteraction[]> {
+    const reloadedRoom = await this.roomService.getRoomOrFail(room.id);
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      reloadedRoom.authorization,
+      AuthorizationPrivilege.READ,
+      `resolve vc interactions for: ${reloadedRoom.id}`
+    );
     const result = await this.roomService.getVcInteractions(room.id);
     if (!result) return [];
     return result;
