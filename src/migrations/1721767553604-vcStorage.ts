@@ -4,6 +4,14 @@ export class VcStorage1721767553604 implements MigrationInterface {
   name = 'VcStorage1721767553604';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
+    // Drop FK constraing
+    await queryRunner.query(
+      `ALTER TABLE \`virtual_contributor\` DROP FOREIGN KEY \`FK_29a529635a2b2db9f37ca6d3521\``
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`virtual_contributor\` DROP FOREIGN KEY \`FK_ce68cea88d194e0240b737c3f0c\``
+    );
+
     // Logic is a) iterate over all VCs b) find the account storage bucket for each c) find all storage buckets
     // using the storage aggregator of the VC and update them to use the storage aggregator of the account
     const vcs: {
