@@ -142,9 +142,8 @@ describe('RolesService', () => {
         userID: testData.user.id,
       });
 
-      const organizationRoles = await rolesService.getOrganizationRolesForUser(
-        roles
-      );
+      const organizationRoles =
+        await rolesService.getOrganizationRolesForUser(roles);
       const spaceRoles = await rolesService.getSpaceRolesForContributor(
         roles,
         testData.agentInfo
@@ -259,6 +258,7 @@ const getSpaceRoleResultMock = ({
       account: {
         id: `account-${id}`,
         virtualContributors: [],
+        innovationHubs: [],
         license: {
           id: `license-${id}`,
           visibility: SpaceVisibility.ACTIVE,
