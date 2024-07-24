@@ -27,7 +27,7 @@ import { IMessageReaction } from '../message.reaction/message.reaction.interface
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
 import { MutationType } from '@common/enums/subscriptions';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { RoomServiceMentions } from './mentions.service';
+import { RoomServiceMentions } from './room.service.mentions';
 import { Mention } from '../messaging/mention.interface';
 import { IRoom } from './room.interface';
 import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';

@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { RoomServiceMentions } from './mentions.service';
+import { RoomServiceMentions } from './room.service.mentions';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { MockWinstonProvider } from '@test/mocks';
 
