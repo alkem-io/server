@@ -41,6 +41,7 @@ import { StorageAggregatorService } from '@domain/storage/storage-aggregator/sto
 import { CreateSpaceOnAccountInput } from './dto/account.dto.create.space';
 import { Space } from '../space/space.entity';
 import { LicensePlanType } from '@common/enums/license.plan.type';
+import { SpaceLevel } from '@common/enums/space.level';
 
 @Injectable()
 export class AccountService {
@@ -137,7 +138,7 @@ export class AccountService {
     const spaceData = spaceOnAccountData.spaceData;
     await this.validateSpaceData(spaceData);
     // Set data for the root space
-    spaceData.level = 0;
+    spaceData.level = SpaceLevel.SPACE;
     spaceData.storageAggregatorParent = account.storageAggregator;
 
     const space = await this.spaceService.createSpace(

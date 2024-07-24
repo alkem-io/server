@@ -25,6 +25,7 @@ const createTestSpace = (id: string): ISpace => {
     rowId: 1,
     nameID: 'space1',
     settingsStr: '',
+    levelZeroSpaceID: '',
     profile: {
       id: '1',
       displayName: 'Space 1',

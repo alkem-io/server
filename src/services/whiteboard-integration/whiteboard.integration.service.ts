@@ -108,8 +108,10 @@ export class WhiteboardIntegrationService {
       await this.communityResolver.getCommunityFromWhiteboardOrFail(
         whiteboardId
       );
-    const spaceID =
-      await this.communityResolver.getRootSpaceIDFromCommunityOrFail(community);
+    const levelZeroSpaceID =
+      await this.communityResolver.getLevelZeroSpaceIdForCommunity(
+        community.id
+      );
     const wb = await this.whiteboardService.getProfile(whiteboardId);
 
     users.forEach(({ id, email }) => {
@@ -117,7 +119,7 @@ export class WhiteboardIntegrationService {
         {
           id: whiteboardId,
           name: wb.displayName,
-          space: spaceID,
+          space: levelZeroSpaceID,
         },
         { id, email }
       );

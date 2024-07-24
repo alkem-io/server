@@ -93,6 +93,7 @@ const getSubspacesMock = (
       rowId: i,
       nameID: `challenge-${spaceId}.${i}`,
       settingsStr: JSON.stringify({}),
+      levelZeroSpaceID: spaceId,
       account: {
         id: `account-${spaceId}.${i}`,
         virtualContributors: [],
@@ -182,6 +183,7 @@ const getSubsubspacesMock = (subsubspaceId: string, count: number): Space[] => {
       rowId: i,
       nameID: `subsubspace-${subsubspaceId}.${i}`,
       settingsStr: JSON.stringify({}),
+      levelZeroSpaceID: subsubspaceId,
       account: {
         id: `account-${subsubspaceId}.${i}`,
         virtualContributors: [],
@@ -277,6 +279,7 @@ const getSpaceMock = ({
     rowId: parseInt(id),
     nameID: `space-${id}`,
     settingsStr: JSON.stringify({}),
+    levelZeroSpaceID: '',
     profile: {
       id: `profile-${id}`,
       displayName: `Space ${id}`,

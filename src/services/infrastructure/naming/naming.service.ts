@@ -40,14 +40,12 @@ export class NamingService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  public async getReservedNameIDsInAccount(
-    accountID: string
+  public async getReservedNameIDsInLevelZeroSpace(
+    levelZeroSpaceID: string
   ): Promise<string[]> {
     const subspaces = await this.entityManager.find(Space, {
       where: {
-        account: {
-          id: accountID,
-        },
+        levelZeroSpaceID: levelZeroSpaceID,
         level: Not(SpaceLevel.SPACE),
       },
       select: {

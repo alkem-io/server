@@ -20,6 +20,7 @@ import { SpaceModule } from '@domain/space/space/space.module';
 import { LinkModule } from '@domain/collaboration/link/link.module';
 import { UrlGeneratorModule } from '@services/infrastructure/url-generator';
 import { ContributorLookupModule } from '@services/infrastructure/contributor-lookup/contributor.lookup.module';
+import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { ContributorLookupModule } from '@services/infrastructure/contributor-lo
     SubscriptionServiceModule,
     PlatformAuthorizationPolicyModule,
     UrlGeneratorModule,
+    EntityResolverModule,
   ],
   providers: [
     ActivityLogService,

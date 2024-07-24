@@ -85,9 +85,8 @@ export class AccountResolverMutations {
       createSpaceOnAccountData,
       agentInfo
     );
-    account = await this.accountAuthorizationService.applyAuthorizationPolicy(
-      account
-    );
+    account =
+      await this.accountAuthorizationService.applyAuthorizationPolicy(account);
     account = await this.accountService.save(account);
 
     const rootSpace = await this.accountService.getRootSpace(account, {
@@ -214,16 +213,14 @@ export class AccountResolverMutations {
       `update platform settings on space: ${account.id}`
     );
 
-    const result = await this.accountService.updateAccountPlatformSettings(
-      updateData
-    );
+    const result =
+      await this.accountService.updateAccountPlatformSettings(updateData);
 
     await this.accountService.save(result);
 
     // Update the authorization policy as most of the changes imply auth policy updates
-    account = await this.accountAuthorizationService.applyAuthorizationPolicy(
-      result
-    );
+    account =
+      await this.accountAuthorizationService.applyAuthorizationPolicy(result);
     return await this.accountService.save(account);
   }
 
