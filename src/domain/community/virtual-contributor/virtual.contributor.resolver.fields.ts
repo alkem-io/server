@@ -18,9 +18,7 @@ import {
   ProfileLoaderCreator,
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
-import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { IVirtualContributor } from './virtual.contributor.interface';
-import { VirtualStorageAggregatorLoaderCreator } from '@core/dataloader/creators/loader.creators/community/virtual.storage.aggregator.loader.creator';
 import { IAccount } from '@domain/space/account/account.interface';
 import { IAiPersona } from '../ai-persona';
 
@@ -108,21 +106,6 @@ export class VirtualContributorResolverFields {
     @Loader(AgentLoaderCreator, { parentClassRef: VirtualContributor })
     loader: ILoader<IAgent>
   ): Promise<IAgent> {
-    return loader.load(virtualContributor.id);
-  }
-
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @ResolveField('storageAggregator', () => IStorageAggregator, {
-    nullable: true,
-    description:
-      'The StorageAggregator for managing storage buckets in use by this Virtual',
-  })
-  @UseGuards(GraphqlGuard)
-  async storageAggregator(
-    @Parent() virtualContributor: VirtualContributor,
-    @Loader(VirtualStorageAggregatorLoaderCreator)
-    loader: ILoader<IStorageAggregator>
-  ): Promise<IStorageAggregator> {
     return loader.load(virtualContributor.id);
   }
 
