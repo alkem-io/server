@@ -108,7 +108,7 @@ export class RoomServiceEvents {
         room.id
       );
     const levelZeroSpaceID =
-      await this.communityResolverService.getLevelZeroSpaceIdFrorCommunity(
+      await this.communityResolverService.getLevelZeroSpaceIdForCommunity(
         community.id
       );
     this.contributionReporter.calloutPostCommentCreated(
@@ -152,7 +152,7 @@ export class RoomServiceEvents {
         room.id
       );
     const levelZeroSpaceID =
-      await this.communityResolverService.getLevelZeroSpaceIdFrorCommunity(
+      await this.communityResolverService.getLevelZeroSpaceIdForCommunity(
         community.id
       );
 
@@ -197,7 +197,7 @@ export class RoomServiceEvents {
         callout.id
       );
     const levelZeroSpaceID =
-      await this.communityResolverService.getLevelZeroSpaceIdFrorCommunity(
+      await this.communityResolverService.getLevelZeroSpaceIdForCommunity(
         community.id
       );
 

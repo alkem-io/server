@@ -342,7 +342,7 @@ export class ExcalidrawServer {
     const community =
       await this.communityResolver.getCommunityFromWhiteboardOrFail(roomId);
     const levelZeroSpaceID =
-      await this.communityResolver.getLevelZeroSpaceIdFrorCommunity(
+      await this.communityResolver.getLevelZeroSpaceIdForCommunity(
         community.id
       );
     const wb = await this.whiteboardService.getProfile(roomId);

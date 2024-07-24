@@ -109,7 +109,7 @@ export class WhiteboardIntegrationService {
         whiteboardId
       );
     const levelZeroSpaceID =
-      await this.communityResolver.getLevelZeroSpaceIdFrorCommunity(
+      await this.communityResolver.getLevelZeroSpaceIdForCommunity(
         community.id
       );
     const wb = await this.whiteboardService.getProfile(whiteboardId);

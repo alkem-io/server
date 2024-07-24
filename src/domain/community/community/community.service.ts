@@ -419,7 +419,7 @@ export class CommunityService {
   public async getLevelZeroSpaceIdForCommunity(
     community: ICommunity
   ): Promise<string> {
-    return await this.communityResolverService.getLevelZeroSpaceIdFrorCommunity(
+    return await this.communityResolverService.getLevelZeroSpaceIdForCommunity(
       community.id
     );
   }

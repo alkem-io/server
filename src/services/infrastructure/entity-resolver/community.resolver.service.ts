@@ -22,7 +22,7 @@ export class CommunityResolverService {
     private entityManager: EntityManager
   ) {}
 
-  public async getLevelZeroSpaceIdFrorCommunity(
+  public async getLevelZeroSpaceIdForCommunity(
     communityID: string
   ): Promise<string> {
     const space = await this.entityManager.findOne(Space, {
