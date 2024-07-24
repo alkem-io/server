@@ -729,7 +729,7 @@ export class SpaceService {
   ) {
     const spaces = await this.spaceRepository.find({
       where: {
-        parentSpace: { id: levelZeroSpaceID }, // TODO: levelZeroSpaceID
+        levelZeroSpaceID: levelZeroSpaceID,
       },
     });
     for (const space of spaces) {
