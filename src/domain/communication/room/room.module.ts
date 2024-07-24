@@ -19,7 +19,7 @@ import { RoomEventResolverSubscription } from './room.event.resolver.subscriptio
 import { SubscriptionServiceModule } from '@services/subscriptions/subscription-service';
 import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
 import { MessageModule } from '../message/message.module';
-import { RoomServiceMentions } from './room.service.mentions';
+import { RoomServiceMentions } from './mentions.service';
 import { VcInteractionModule } from '../vc-interaction/vc.interaction.module';
 
 @Module({
