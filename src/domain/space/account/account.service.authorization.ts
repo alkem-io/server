@@ -12,7 +12,6 @@ import {
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IAccount } from './account.interface';
 import { TemplatesSetAuthorizationService } from '@domain/template/templates-set/templates.set.service.authorization';
-import { LicenseAuthorizationService } from '@domain/license/license/license.service.authorization';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { SpaceAuthorizationService } from '../space/space.service.authorization';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
@@ -43,7 +42,6 @@ export class AccountAuthorizationService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private agentAuthorizationService: AgentAuthorizationService,
     private templatesSetAuthorizationService: TemplatesSetAuthorizationService,
-    private licenseAuthorizationService: LicenseAuthorizationService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private spaceAuthorizationService: SpaceAuthorizationService,
     private virtualContributorAuthorizationService: VirtualContributorAuthorizationService,
@@ -63,7 +61,6 @@ export class AccountAuthorizationService {
             policy: true,
           },
         },
-        license: true,
         library: true,
         defaults: true,
         virtualContributors: true,
@@ -154,7 +151,6 @@ export class AccountAuthorizationService {
       !account.space.community ||
       !account.space.community.policy ||
       !account.library ||
-      !account.license ||
       !account.defaults ||
       !account.virtualContributors ||
       !account.storageAggregator
@@ -170,11 +166,6 @@ export class AccountAuthorizationService {
 
     account.agent = this.agentAuthorizationService.applyAuthorizationPolicy(
       account.agent,
-      account.authorization
-    );
-
-    account.license = this.licenseAuthorizationService.applyAuthorizationPolicy(
-      account.license,
       account.authorization
     );
 
