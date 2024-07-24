@@ -13,7 +13,7 @@ import {
 import { AuthorizationCredential, LogContext } from '@common/enums';
 import { Credential, CredentialsSearchInput, ICredential } from '@domain/agent';
 import { VirtualContributor } from '@domain/community/virtual-contributor';
-import { Organization } from '@domain/community/organization';
+import { IOrganization, Organization } from '@domain/community/organization';
 import { CommunityContributorType } from '@common/enums/community.contributor.type';
 
 export class ContributorLookupService {
@@ -56,6 +56,39 @@ export class ContributorLookupService {
       );
     }
     return user;
+  }
+
+  async getOrganization(
+    organizationID: string,
+    options?: FindOneOptions<Organization>
+  ): Promise<IOrganization | null> {
+    let organization: IOrganization | null;
+    if (organizationID.length === UUID_LENGTH) {
+      organization = await this.entityManager.findOne(Organization, {
+        ...options,
+        where: { ...options?.where, id: organizationID },
+      });
+    } else {
+      // look up based on nameID
+      organization = await this.entityManager.findOne(Organization, {
+        ...options,
+        where: { ...options?.where, nameID: organizationID },
+      });
+    }
+    return organization;
+  }
+
+  async getOrganizationOrFail(
+    organizationID: string,
+    options?: FindOneOptions<Organization>
+  ): Promise<IOrganization | never> {
+    const organization = await this.getOrganization(organizationID, options);
+    if (!organization)
+      throw new EntityNotFoundException(
+        `Unable to find Organization with ID: ${organizationID}`,
+        LogContext.COMMUNITY
+      );
+    return organization;
   }
 
   // TODO: this may be heavy, is there a better way to do this?

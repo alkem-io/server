@@ -22,9 +22,6 @@ export class IUser extends IContributorBase implements IContributor {
   @Field(() => String)
   lastName!: string;
 
-  @Field(() => String)
-  gender!: string;
-
   preferenceSet?: IPreferenceSet;
 
   storageAggregator?: IStorageAggregator;
