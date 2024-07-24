@@ -456,18 +456,6 @@ export class UserService {
     };
   }
 
-  private async isAccountHost(user: IUser): Promise<boolean> {
-    if (!user.agent)
-      throw new RelationshipNotFoundException(
-        `Unable to load agent for user: ${user.id}`,
-        LogContext.COMMUNITY
-      );
-
-    return await this.agentService.hasValidCredential(user.agent.id, {
-      type: AuthorizationCredential.ACCOUNT_HOST,
-    });
-  }
-
   async getPreferenceSetOrFail(userID: string): Promise<IPreferenceSet> {
     const user = await this.getUserOrFail(userID, {
       relations: {
