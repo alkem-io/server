@@ -35,7 +35,7 @@ export class AgentResolverFields {
     if (!ssiEnabled) {
       throw new NotEnabledException('SSI is not enabled', LogContext.SSI);
     }
-    const result = await this.agentService.getVerifiedCredentials(agent);
+    const result = await this.agentService.getVerifiedCredentials(agent.id);
     return result;
   }
 }

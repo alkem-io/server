@@ -35,9 +35,6 @@ export class User extends ContributorBase implements IUser {
   @Column()
   phone: string = '';
 
-  @Column()
-  gender: string = '';
-
   @Column({ type: 'boolean' })
   serviceProfile: boolean = false;
 
