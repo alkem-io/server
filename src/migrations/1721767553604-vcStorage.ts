@@ -34,7 +34,7 @@ export class VcStorage1721767553604 implements MigrationInterface {
           accountId: string;
           storageAggregatorId: string;
         }[] = await queryRunner.query(
-          `SELECT id FROM \`storageBucket\` where storageAggregatorId = '${vc.storageAggregatorId}'`
+          `SELECT id FROM \`storage_bucket\` where storageAggregatorId = '${vc.storageAggregatorId}'`
         );
         for (const storageBucket of storageBuckets) {
           await queryRunner.query(
