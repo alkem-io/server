@@ -9,6 +9,18 @@ export abstract class IBaseAlkemio {
   })
   id!: string;
 
+  @Field(() => Date, {
+    description: 'The date at which the entity was created.',
+    nullable: false,
+  })
+  createdDate?: Date;
+
+  @Field(() => Date, {
+    description: 'The date at which the entity was last updated.',
+    nullable: false,
+  })
+  updatedDate?: Date;
+
   constructor() {
     this.id = '';
   }

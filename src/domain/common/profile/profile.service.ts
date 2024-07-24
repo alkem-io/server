@@ -71,9 +71,8 @@ export class ProfileService {
     profile.references = [];
     if (profileData?.referencesData) {
       for (const referenceData of profileData.referencesData) {
-        const reference = await this.referenceService.createReference(
-          referenceData
-        );
+        const reference =
+          await this.referenceService.createReference(referenceData);
         profile.references.push(reference);
       }
     }
@@ -275,9 +274,8 @@ export class ProfileService {
       }
     }
     // If get here then no ref with the same name
-    const newReference = await this.referenceService.createReference(
-      referenceInput
-    );
+    const newReference =
+      await this.referenceService.createReference(referenceInput);
     newReference.profile = profile;
 
     return await this.referenceService.save(newReference);

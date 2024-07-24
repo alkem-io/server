@@ -17,5 +17,4 @@ export class IAccount extends IAuthorizable {
   license?: ILicense;
   virtualContributors!: IVirtualContributor[];
   storageAggregator?: IStorageAggregator;
-  createdDate?: Date;
 }
