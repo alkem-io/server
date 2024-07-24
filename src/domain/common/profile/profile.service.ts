@@ -59,41 +59,27 @@ export class ProfileService {
       type: profileType,
     });
     profile.authorization = new AuthorizationPolicy();
+    // the next statement fails if it's not saved
     profile.storageBucket = await this.storageBucketService.createStorageBucket(
       { storageAggregator: storageAggregator }
     );
 
     profile.visuals = [];
-    profile.location = await this.locationService.createLocation(
+    profile.location = this.locationService.createLocation(
       profileData?.location
     );
 
-    profile.references = [];
-    if (profileData?.referencesData) {
-      for (const referenceData of profileData.referencesData) {
-        const reference =
-          await this.referenceService.createReference(referenceData);
-        profile.references.push(reference);
-      }
-    }
-    await this.profileRepository.save(profile);
-    this.logger.verbose?.(
-      `Created new profile with id: ${profile.id}`,
-      LogContext.COMMUNITY
+    const newReferences = profileData?.referencesData?.map(
+      this.referenceService.createReference
     );
+    profile.references = newReferences ?? [];
 
-    profile.tagsets = [];
-    if (profileData?.tagsets) {
-      for (const tagsetData of profileData?.tagsets) {
-        const tagset = await this.tagsetService.createTagsetWithName(
-          profile.tagsets,
-          tagsetData
-        );
-        profile.tagsets.push(tagset);
-      }
-    }
+    const tagsetsFromInput = profileData?.tagsets?.map(tagsetData =>
+      this.tagsetService.createTagsetWithName([], tagsetData)
+    );
+    profile.tagsets = tagsetsFromInput ?? [];
 
-    return await this.save(profile);
+    return profile;
   }
 
   async updateProfile(

@@ -1,3 +1,4 @@
+import { some } from 'lodash';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 
@@ -233,10 +234,10 @@ export class TagsetService {
     return tagset;
   }
 
-  async createTagsetWithName(
+  public createTagsetWithName(
     existingTagsets: ITagset[],
     tagsetData: CreateTagsetInput
-  ): Promise<ITagset> {
+  ): ITagset {
     // Check if the group already exists, if so log a warning
     if (this.hasTagsetWithName(existingTagsets, tagsetData.name)) {
       throw new ValidationException(
@@ -245,7 +246,7 @@ export class TagsetService {
       );
     }
 
-    return await this.createTagset(tagsetData);
+    return Tagset.create({ ...tagsetData });
   }
 
   async save(tagset: ITagset): Promise<ITagset> {

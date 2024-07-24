@@ -21,16 +21,14 @@ export class ReferenceService {
     private referenceRepository: Repository<Reference>
   ) {}
 
-  async createReference(
-    referenceInput: CreateReferenceInput
-  ): Promise<IReference> {
+  public createReference(referenceInput: CreateReferenceInput): IReference {
     const reference = new Reference(
       referenceInput.name,
       referenceInput.uri || '',
       referenceInput.description
     );
     reference.authorization = new AuthorizationPolicy();
-    await this.referenceRepository.save(reference);
+
     return reference;
   }
 
