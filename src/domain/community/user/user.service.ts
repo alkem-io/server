@@ -951,10 +951,12 @@ export class UserService {
       select: ['id'],
     });
 
-    const results = users.filter(user => userIds.includes(user.id));
+    const results = users.filter((user: { id: string }) =>
+      userIds.includes(user.id)
+    );
     const mappedResults = userIds.map(
       id =>
-        results.find(result => result.id === id)?.profile ||
+        results.find((result: { id: string }) => result.id === id)?.profile ||
         new Error(`Could not load user ${id}`)
     );
     return mappedResults;
@@ -972,21 +974,6 @@ export class UserService {
           credentials: true,
         },
       },
-      // Select is not working as expected, giving either no agent / credentials if do not specify id under agent, or if I do specify id under
-      // agent I get the following error: Duplicate column name 'User__User_agent_id'
-      // select: {
-      //   agent: {
-      //     id: true,
-      //     credentials: {
-      //       id: true,
-      //       type: true,
-      //       resourceID: true,
-      //       expires: true,
-      //     },
-      //   },
-      //   id: true,
-      //   communicationID: true,
-      // },
     });
     if (!user || !user.agent || !user.agent.credentials) {
       throw new EntityNotFoundException(
