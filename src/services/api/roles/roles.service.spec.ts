@@ -70,6 +70,7 @@ describe('RolesService', () => {
     applicationService = moduleRef.get(ApplicationService);
     organizationService = moduleRef.get(OrganizationService);
     communityService = moduleRef.get(CommunityService);
+    communityResolverService = moduleRef.get(CommunityResolverService);
     spaceFilterService = moduleRef.get(SpaceFilterService);
   });
 
