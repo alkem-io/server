@@ -31,11 +31,10 @@ import { IStorageBucketParent } from './dto/storage.bucket.dto.parent';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { ProfileType } from '@common/enums';
 import { StorageUploadFailedException } from '@common/exceptions/storage/storage.upload.failed.exception';
+import { DEFAULT_MAX_ALLOWED_FILE_SIZE } from '@common/constants';
 
 @Injectable()
 export class StorageBucketService {
-  DEFAULT_MAX_ALLOWED_FILE_SIZE = 15728640;
-
   constructor(
     private documentService: DocumentService,
     private authorizationPolicyService: AuthorizationPolicyService,
@@ -60,7 +59,7 @@ export class StorageBucketService {
     storage.allowedMimeTypes =
       storageBucketData?.allowedMimeTypes || DEFAULT_ALLOWED_MIME_TYPES;
     storage.maxFileSize =
-      storageBucketData?.maxFileSize || this.DEFAULT_MAX_ALLOWED_FILE_SIZE;
+      storageBucketData?.maxFileSize || DEFAULT_MAX_ALLOWED_FILE_SIZE;
     storage.storageAggregator = storageBucketData.storageAggregator;
 
     return await this.storageBucketRepository.save(storage);
@@ -188,9 +187,8 @@ export class StorageBucketService {
       /* just consume */
     }
 
-    const document = await this.documentService.createDocument(
-      createDocumentInput
-    );
+    const document =
+      await this.documentService.createDocument(createDocumentInput);
     document.storageBucket = storage;
 
     this.logger.verbose?.(
@@ -215,9 +213,8 @@ export class StorageBucketService {
         LogContext.DOCUMENT
       );
 
-    const documentForReference = await this.documentService.getDocumentFromURL(
-      uri
-    );
+    const documentForReference =
+      await this.documentService.getDocumentFromURL(uri);
 
     try {
       const newDocument = await this.uploadFileAsDocument(

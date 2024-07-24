@@ -19,8 +19,8 @@ export class InnovationFlowTemplate
   )
   templatesSet?: TemplatesSet;
 
-  @Column('text', { nullable: false })
-  states: string = '[]';
+  @Column('text', { nullable: false, default: '' })
+  states!: string;
 
   constructor() {
     super();

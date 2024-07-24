@@ -27,19 +27,19 @@ export class CalendarEvent extends NameableEntity implements ICalendarEvent {
   })
   calendar?: Calendar;
 
-  @Column('datetime')
+  @Column('datetime', { nullable: true })
   startDate!: Date;
 
-  @Column('boolean', { default: true })
-  wholeDay = true;
+  @Column('boolean', { nullable: true })
+  wholeDay!: boolean;
 
-  @Column('boolean', { default: true })
-  multipleDays = true;
+  @Column('boolean', { nullable: true })
+  multipleDays!: boolean;
 
-  @Column('int')
+  @Column('int', { nullable: true })
   durationMinutes!: number;
 
-  @Column('int')
+  @Column('int', { nullable: true })
   durationDays!: number;
 
   constructor() {

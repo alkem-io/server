@@ -15,7 +15,6 @@ export class CalloutContributionPolicy
   @Column('varchar', {
     length: 255,
     nullable: false,
-    default: CalloutState.OPEN,
   })
   state!: CalloutState;
 }

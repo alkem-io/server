@@ -18,20 +18,20 @@ export class TagsetTemplate
   implements ITagsetTemplate
 {
   @Column('varchar', {
-    default: RestrictedTagsetTemplateNames.DEFAULT,
     length: 255,
-    nullable: false,
+    nullable: true,
   })
   name!: string;
 
   @Column('varchar', {
-    default: TagsetType.FREEFORM,
     length: 255,
-    nullable: false,
+    nullable: true,
   })
   type!: TagsetType;
 
-  @Column('simple-array')
+  @Column('simple-array', {
+    nullable: true,
+  })
   allowedValues!: string[];
 
   @Column('varchar', {

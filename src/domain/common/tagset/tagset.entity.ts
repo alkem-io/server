@@ -16,9 +16,8 @@ export class Tagset extends AuthorizableEntity implements ITagset {
   name!: string;
 
   @Column('varchar', {
-    default: TagsetType.FREEFORM,
     length: 255,
-    nullable: false,
+    nullable: true,
   })
   type!: TagsetType;
 

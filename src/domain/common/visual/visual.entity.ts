@@ -9,7 +9,9 @@ export class Visual extends AuthorizableEntity implements IVisual {
   @Column()
   name!: string;
 
-  @Column('text', { default: '' })
+  @Column('text', {
+    nullable: false,
+  })
   uri!: string;
 
   @Column('int')
@@ -24,7 +26,10 @@ export class Visual extends AuthorizableEntity implements IVisual {
   @Column('int')
   maxHeight!: number;
 
-  @Column({ type: 'decimal', precision: 2, scale: 1 })
+  @Column({
+    nullable: true,
+    type: 'float',
+  })
   aspectRatio!: number;
 
   @Column('simple-array')

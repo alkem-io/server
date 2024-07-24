@@ -1,4 +1,5 @@
 import { MimeFileType } from '@common/enums/mime.file.type';
+import { DEFAULT_MAX_ALLOWED_FILE_SIZE } from '@common/constants';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { Column, Entity, ManyToOne, OneToMany } from 'typeorm';
 import { Document } from '../document/document.entity';
@@ -24,9 +25,9 @@ export class StorageBucket
   })
   storageAggregator?: StorageAggregator;
 
-  @Column('simple-array')
+  @Column('simple-array', { nullable: true })
   allowedMimeTypes!: MimeFileType[];
 
-  @Column('int')
+  @Column('int', { nullable: false, default: DEFAULT_MAX_ALLOWED_FILE_SIZE })
   maxFileSize!: number;
 }

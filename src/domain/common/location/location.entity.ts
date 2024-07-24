@@ -4,23 +4,24 @@ import { ILocation } from './location.interface';
 
 @Entity()
 export class Location extends BaseAlkemioEntity implements ILocation {
-  @Column('varchar', { length: 255, nullable: true })
-  city = '';
+  // todo these can be nullable
+  @Column('varchar', { length: 255, nullable: false })
+  city!: string;
 
-  @Column('varchar', { length: 255, nullable: true })
-  country = '';
+  @Column('varchar', { length: 255, nullable: false })
+  country!: string;
 
-  @Column('varchar', { length: 255, nullable: true })
-  addressLine1 = '';
+  @Column('varchar', { length: 255, nullable: false })
+  addressLine1!: string;
 
-  @Column('varchar', { length: 255, nullable: true })
-  addressLine2 = '';
+  @Column('varchar', { length: 128, nullable: false })
+  addressLine2!: string;
 
-  @Column('varchar', { length: 255, nullable: true })
-  stateOrProvince = '';
+  @Column('varchar', { length: 128, nullable: false })
+  stateOrProvince!: string;
 
-  @Column('varchar', { length: 255, nullable: true })
-  postalCode = '';
+  @Column('varchar', { length: 128, nullable: false })
+  postalCode!: string;
 
   constructor() {
     super();

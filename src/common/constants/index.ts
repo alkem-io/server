@@ -5,3 +5,4 @@ export * from './rabbitmq.constants';
 export * from './communication.constants';
 export * from './authorization';
 export * from './innovation.hub.inject.token';
+export * from './default.max.allowed.file.size';

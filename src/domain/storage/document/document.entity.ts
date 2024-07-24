@@ -27,15 +27,15 @@ export class Document extends AuthorizableEntity implements IDocument {
   @JoinColumn()
   tagset!: Tagset;
 
-  @Column('text', { nullable: true })
-  displayName = '';
+  @Column('text', { nullable: false })
+  displayName!: string; // all the code says this has to NOT be nullable
 
-  @Column('varchar', { length: 128, default: '' })
+  @Column('varchar', { length: 128, default: '', nullable: false })
   mimeType!: MimeFileType;
 
-  @Column('int')
+  @Column('int', { nullable: false, default: 0 })
   size!: number;
 
-  @Column('varchar', { length: 128, default: '' })
+  @Column('varchar', { length: 128, nullable: false })
   externalID!: string;
 }

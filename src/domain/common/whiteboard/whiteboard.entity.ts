@@ -43,8 +43,7 @@ export class Whiteboard extends NameableEntity implements IWhiteboard {
 
   @Column('varchar', {
     length: 255,
-    nullable: false,
-    default: ContentUpdatePolicy.ADMINS,
+    nullable: true,
   })
   contentUpdatePolicy!: ContentUpdatePolicy;
 }

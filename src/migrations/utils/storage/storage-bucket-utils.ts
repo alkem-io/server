@@ -88,4 +88,4 @@ export const allowedTypes = [
   'application/pdf',
 ];
 
-export const maxAllowedFileSize = 5242880;
+export const maxAllowedFileSize = 15728640;

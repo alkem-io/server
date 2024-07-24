@@ -76,7 +76,7 @@ export class Callout extends AuthorizableEntity implements ICallout {
   })
   collaboration?: Collaboration;
 
-  @Column('int', { default: 10 })
+  @Column('int', { nullable: false })
   sortOrder!: number;
 
   activity!: number;
@@ -84,7 +84,7 @@ export class Callout extends AuthorizableEntity implements ICallout {
   @Column('char', { length: 36, nullable: true })
   publishedBy!: string;
 
-  @Column('datetime')
+  @Column('datetime', { default: () => 'CURRENT_TIMESTAMP' })
   publishedDate!: Date;
 
   constructor() {
