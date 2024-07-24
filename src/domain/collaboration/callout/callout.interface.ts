@@ -66,10 +66,4 @@ export abstract class ICallout extends IAuthorizable {
   publishedDate!: Date;
 
   collaboration?: ICollaboration;
-
-  @Field(() => Date, {
-    description: 'The date at which the entity was created.',
-    nullable: false,
-  })
-  createdDate?: Date;
 }
