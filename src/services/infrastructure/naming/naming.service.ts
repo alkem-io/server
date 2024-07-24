@@ -251,9 +251,12 @@ export class NamingService {
     return result;
   }
 
-  async getCommunityPolicyWithSettingsForCollaboration(
+  async getCommunityPolicyAndSettingsForCollaboration(
     collaborationID: string
-  ): Promise<ICommunityPolicy> {
+  ): Promise<{
+    communityPolicy: ICommunityPolicy;
+    spaceSettings: ISpaceSettings;
+  }> {
     const space = await this.entityManager.findOne(Space, {
       where: {
         collaboration: {
@@ -273,15 +276,15 @@ export class NamingService {
       );
     }
     // Directly parse the settings string to avoid the need to load the settings service
-    const policy = space.community.policy;
-    const settings: ISpaceSettings = JSON.parse(space.settingsStr);
-    policy.settings = settings;
-    return policy;
+    const communityPolicy = space.community.policy;
+    const spaceSettings: ISpaceSettings = JSON.parse(space.settingsStr);
+    return { communityPolicy, spaceSettings };
   }
 
-  async getCommunityPolicyWithSettingsForCallout(
-    calloutID: string
-  ): Promise<ICommunityPolicy> {
+  async getCommunityPolicyAndSettingsForCallout(calloutID: string): Promise<{
+    communityPolicy: ICommunityPolicy;
+    spaceSettings: ISpaceSettings;
+  }> {
     const space = await this.entityManager.findOne(Space, {
       where: {
         collaboration: {
@@ -304,11 +307,10 @@ export class NamingService {
     }
 
     // Directly parse the settings string to avoid the need to load the settings service
-    const policy = space.community.policy;
-    const settings: ISpaceSettings = JSON.parse(space.settingsStr);
-    policy.settings = settings;
+    const communityPolicy = space.community.policy;
+    const spaceSettings: ISpaceSettings = JSON.parse(space.settingsStr);
 
-    return policy;
+    return { communityPolicy, spaceSettings };
   }
 
   async getPostForRoom(roomID: string): Promise<IPost> {

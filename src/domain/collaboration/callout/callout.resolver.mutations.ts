@@ -225,8 +225,8 @@ export class CalloutResolverMutations {
       agentInfo.userID
     );
 
-    const communityPolicy =
-      await this.namingService.getCommunityPolicyWithSettingsForCallout(
+    const { communityPolicy, spaceSettings } =
+      await this.namingService.getCommunityPolicyAndSettingsForCallout(
         callout.id
       );
     // Ensure settings are available
@@ -234,7 +234,8 @@ export class CalloutResolverMutations {
       await this.contributionAuthorizationService.applyAuthorizationPolicy(
         contribution,
         callout.authorization,
-        communityPolicy
+        communityPolicy,
+        spaceSettings
       );
     contribution = await this.calloutContributionService.save(contribution);
 

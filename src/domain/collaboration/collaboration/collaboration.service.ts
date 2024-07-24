@@ -718,9 +718,11 @@ export class CollaborationService {
   public async getCommunityPolicy(
     collaborationID: string
   ): Promise<ICommunityPolicy> {
-    return await this.namingService.getCommunityPolicyWithSettingsForCollaboration(
-      collaborationID
-    );
+    const { communityPolicy } =
+      await this.namingService.getCommunityPolicyAndSettingsForCollaboration(
+        collaborationID
+      );
+    return communityPolicy;
   }
 
   public async updateCalloutsSortOrder(

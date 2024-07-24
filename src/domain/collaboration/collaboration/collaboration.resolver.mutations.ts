@@ -24,6 +24,7 @@ import { ContributionReporterService } from '@services/external/elasticsearch/co
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { UpdateCollaborationCalloutsSortOrderInput } from './dto/collaboration.dto.update.callouts.sort.order';
 import { CalloutService } from '../callout/callout.service';
+import { NamingService } from '@services/infrastructure/naming/naming.service';
 
 @Resolver()
 export class CollaborationResolverMutations {
@@ -37,7 +38,8 @@ export class CollaborationResolverMutations {
     private collaborationService: CollaborationService,
     private activityAdapter: ActivityAdapter,
     private notificationAdapter: NotificationAdapter,
-    private calloutService: CalloutService
+    private calloutService: CalloutService,
+    private namingService: NamingService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -136,13 +138,15 @@ export class CollaborationResolverMutations {
       agentInfo.userID
     );
 
-    const communityPolicy = await this.collaborationService.getCommunityPolicy(
-      collaboration.id
-    );
+    const { communityPolicy, spaceSettings } =
+      await this.namingService.getCommunityPolicyAndSettingsForCollaboration(
+        collaboration.id
+      );
     callout = await this.calloutAuthorizationService.applyAuthorizationPolicy(
       callout,
       collaboration.authorization,
-      communityPolicy
+      communityPolicy,
+      spaceSettings
     );
     callout = await this.calloutService.save(callout);
 
