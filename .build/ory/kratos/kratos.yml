@@ -27,8 +27,8 @@ selfservice:
         providers:
           - id: linkedin
             provider: linkedin_v2
-            client_id: 77tjjnhvonojf4
-            client_secret: s66LUXd3nj2jxB4G
+            client_id: 775c24tex2bnn8
+            client_secret: RWqM6Qaa1H3QIZo9
             mapper_url: file:///etc/config/kratos/oidc/oidc.linkedin.jsonnet
             scope:
               - openid
