@@ -35,9 +35,4 @@ export class CreateUserInput extends CreateContributorInput {
   @IsOptional()
   @MaxLength(SMALL_TEXT_LENGTH)
   phone?: string;
-
-  @Field({ nullable: true })
-  @IsOptional()
-  @MaxLength(SMALL_TEXT_LENGTH)
-  gender?: string;
 }

@@ -21,6 +21,7 @@ import { EntityResolverModule } from '@services/infrastructure/entity-resolver/e
 import { OrganizationStorageAggregatorLoaderCreator } from '@core/dataloader/creators/loader.creators/community/organization.storage.aggregator.loader.creator';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
 import { ContributorModule } from '../contributor/contributor.module';
+import { OrganizationRoleModule } from '../organization-role/organization.role.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { ContributorModule } from '../contributor/contributor.module';
     AuthorizationModule,
     ContributorModule,
     OrganizationVerificationModule,
+    OrganizationRoleModule,
     UserModule,
     UserGroupModule,
     EntityResolverModule,

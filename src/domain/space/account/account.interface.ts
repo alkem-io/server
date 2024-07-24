@@ -19,5 +19,4 @@ export class IAccount extends IAuthorizable {
   virtualContributors!: IVirtualContributor[];
   innovationPacks!: IInnovationPack[];
   storageAggregator?: IStorageAggregator;
-  createdDate?: Date;
 }

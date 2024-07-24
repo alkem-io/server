@@ -11,6 +11,7 @@ import { PreferenceSetModule } from '@domain/common/preference-set/preference.se
 import { PlatformInvitationModule } from '@platform/invitation/platform.invitation.module';
 import { PlatformRoleModule } from '@platform/platfrom.role/platform.role.module';
 import { CommunityRoleModule } from '@domain/community/community-role/community.role.module';
+import { OrganizationRoleModule } from '@domain/community/organization-role/organization.role.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { CommunityRoleModule } from '@domain/community/community-role/community.
     UserModule,
     PreferenceSetModule,
     OrganizationModule,
+    OrganizationRoleModule,
     InvitationModule,
     PlatformInvitationModule,
     PlatformRoleModule,

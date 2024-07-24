@@ -1,9 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { AuthorizationCredential, LogContext } from '@common/enums';
-import { Repository } from 'typeorm';
 import { AuthorizationPrivilege } from '@common/enums';
-import { IOrganization, Organization } from '@domain/community/organization';
+import { IOrganization } from '@domain/community/organization';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -23,7 +21,6 @@ import {
   CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_ADMINS,
   CREDENTIAL_RULE_ORGANIZATION_ADMIN,
   CREDENTIAL_RULE_ORGANIZATION_READ,
-  CREDENTIAL_RULE_ORGANIZATION_SELF_REMOVAL,
   CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_SUPPORT_MANAGE,
   CREDENTIAL_RULE_TYPES_ORGANIZATION_PLATFORM_ADMIN,
 } from '@common/constants';
@@ -42,9 +39,7 @@ export class OrganizationAuthorizationService {
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private profileAuthorizationService: ProfileAuthorizationService,
     private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
-    private preferenceSetAuthorizationService: PreferenceSetAuthorizationService,
-    @InjectRepository(Organization)
-    private organizationRepository: Repository<Organization>
+    private preferenceSetAuthorizationService: PreferenceSetAuthorizationService
   ) {}
 
   async applyAuthorizationPolicy(
@@ -136,7 +131,7 @@ export class OrganizationAuthorizationService {
         organization.authorization
       );
 
-    return await this.organizationRepository.save(organization);
+    return await this.organizationService.save(organization);
   }
 
   private appendCredentialRules(
@@ -264,39 +259,6 @@ export class OrganizationAuthorizationService {
     const updatedAuthorization =
       this.authorizationPolicy.appendCredentialAuthorizationRules(
         authorization,
-        newRules
-      );
-
-    return updatedAuthorization;
-  }
-
-  public extendAuthorizationPolicyForSelfRemoval(
-    organization: IOrganization,
-    userToBeRemovedID: string
-  ): IAuthorizationPolicy {
-    const newRules: IAuthorizationPolicyRuleCredential[] = [];
-
-    const userSelfRemovalRule =
-      this.authorizationPolicyService.createCredentialRule(
-        [AuthorizationPrivilege.GRANT],
-        [
-          {
-            type: AuthorizationCredential.USER_SELF_MANAGEMENT,
-            resourceID: userToBeRemovedID,
-          },
-        ],
-        CREDENTIAL_RULE_ORGANIZATION_SELF_REMOVAL
-      );
-    newRules.push(userSelfRemovalRule);
-
-    const clonedOrganizationAuthorization =
-      this.authorizationPolicyService.cloneAuthorizationPolicy(
-        organization.authorization
-      );
-
-    const updatedAuthorization =
-      this.authorizationPolicyService.appendCredentialAuthorizationRules(
-        clonedOrganizationAuthorization,
         newRules
       );
 

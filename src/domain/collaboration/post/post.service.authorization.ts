@@ -19,6 +19,7 @@ import { ProfileAuthorizationService } from '@domain/common/profile/profile.serv
 import { RoomAuthorizationService } from '@domain/communication/room/room.service.authorization';
 import { CommunityRole } from '@common/enums/community.role';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
+import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 
 @Injectable()
 export class PostAuthorizationService {
@@ -32,7 +33,8 @@ export class PostAuthorizationService {
   async applyAuthorizationPolicy(
     post: IPost,
     parentAuthorization: IAuthorizationPolicy | undefined,
-    communityPolicy: ICommunityPolicy
+    communityPolicy: ICommunityPolicy,
+    spaceSettings: ISpaceSettings
   ): Promise<IPost> {
     if (!post.profile) {
       throw new RelationshipNotFoundException(
@@ -65,7 +67,11 @@ export class PostAuthorizationService {
     }
 
     // Extend to give the user creating the post more rights
-    post.authorization = this.appendCredentialRules(post, communityPolicy);
+    post.authorization = this.appendCredentialRules(
+      post,
+      communityPolicy,
+      spaceSettings
+    );
 
     // cascade
     post.profile =
@@ -79,7 +85,8 @@ export class PostAuthorizationService {
 
   private appendCredentialRules(
     post: IPost,
-    communityPolicy: ICommunityPolicy
+    communityPolicy: ICommunityPolicy,
+    spaceSettings: ISpaceSettings
   ): IAuthorizationPolicy {
     const authorization = post.authorization;
     if (!authorization)
@@ -107,6 +114,7 @@ export class PostAuthorizationService {
     const credentials =
       this.communityPolicyService.getCredentialsForRoleWithParents(
         communityPolicy,
+        spaceSettings,
         CommunityRole.ADMIN
       );
     credentials.push({
