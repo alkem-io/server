@@ -7,7 +7,6 @@ import { AuthorizationPrivilege } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
 import { IOrganization } from '@domain/community/organization';
 import { IUserGroup } from '@domain/community/user-group';
-import { IUser } from '@domain/community/user';
 import { IProfile } from '@domain/common/profile';
 import {
   AuthorizationAgentPrivilege,
@@ -31,7 +30,6 @@ import {
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { OrganizationStorageAggregatorLoaderCreator } from '@core/dataloader/creators/loader.creators/community/organization.storage.aggregator.loader.creator';
-import { OrganizationRole } from '@common/enums/organization.role';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { IAccount } from '@domain/space/account/account.interface';
 import { ContributorService } from '../contributor/contributor.service';
@@ -135,77 +133,6 @@ export class OrganizationResolverFields {
     return [];
   }
 
-  @UseGuards(GraphqlGuard)
-  @ResolveField('associates', () => [IUser], {
-    nullable: true,
-    description: 'All Users that are associated with this Organization.',
-  })
-  @Profiling.api
-  async associates(
-    @Parent() parent: Organization,
-    @CurrentUser() agentInfo: AgentInfo
-  ): Promise<IUser[]> {
-    // Reload to ensure the authorization is loaded
-    const organization = await this.organizationService.getOrganizationOrFail(
-      parent.id
-    );
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      organization.authorization,
-      AuthorizationPrivilege.READ,
-      `read associates on org: ${organization.nameID}`
-    );
-
-    return await this.organizationService.getAssociates(organization);
-  }
-
-  @UseGuards(GraphqlGuard)
-  @ResolveField('admins', () => [IUser], {
-    nullable: true,
-    description: 'All Users that are admins of this Organization.',
-  })
-  @Profiling.api
-  async admins(
-    @Parent() parent: Organization,
-    @CurrentUser() agentInfo: AgentInfo
-  ): Promise<IUser[]> {
-    // Reload to ensure the authorization is loaded
-    const organization = await this.organizationService.getOrganizationOrFail(
-      parent.id
-    );
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      organization.authorization,
-      AuthorizationPrivilege.READ,
-      `read admins on org: ${organization.nameID}`
-    );
-
-    return await this.organizationService.getAdmins(organization);
-  }
-
-  @UseGuards(GraphqlGuard)
-  @ResolveField('owners', () => [IUser], {
-    nullable: true,
-    description: 'All Users that are owners of this Organization.',
-  })
-  @Profiling.api
-  async owners(
-    @Parent() parent: Organization,
-    @CurrentUser() agentInfo: AgentInfo
-  ): Promise<IUser[]> {
-    // Reload to ensure the authorization is loaded
-    const organization = await this.organizationService.getOrganizationOrFail(
-      parent.id
-    );
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      organization.authorization,
-      AuthorizationPrivilege.READ,
-      `read owners on org: ${organization.nameID}`
-    );
-
-    return await this.organizationService.getOwners(organization);
-  }
   @ResolveField('authorization', () => IAuthorizationPolicy, {
     nullable: true,
     description: 'The Authorization for this Organization.',
@@ -309,19 +236,5 @@ export class OrganizationResolverFields {
       organization.id
     );
     return this.preferenceSetService.getPreferencesOrFail(preferenceSet);
-  }
-
-  @UseGuards(GraphqlGuard)
-  @ResolveField('myRoles', () => [OrganizationRole], {
-    nullable: true,
-    description:
-      'The roles on this Organization for the currently logged in user.',
-  })
-  @Profiling.api
-  async myRoles(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Parent() organization: IOrganization
-  ): Promise<OrganizationRole[]> {
-    return this.organizationService.getMyRoles(agentInfo, organization);
   }
 }

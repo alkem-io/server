@@ -10,6 +10,7 @@ import { CommunityPolicy } from './community.policy.entity';
 import { ICommunityPolicy } from './community.policy.interface';
 import { ICommunityRolePolicy } from './community.policy.role.interface';
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
+import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 
 @Injectable()
 export class CommunityPolicyService {
@@ -85,18 +86,23 @@ export class CommunityPolicyService {
 
   public getCredentialsForRoleWithParents(
     policy: ICommunityPolicy,
+    spaceSettings: ISpaceSettings,
     role: CommunityRole
   ): ICredentialDefinition[] {
-    const result = this.getCredentialsForRole(policy, role);
+    const result = this.getCredentialsForRole(policy, spaceSettings, role);
     return result.concat(this.getParentCredentialsForRole(policy, role));
   }
 
   public getCredentialsForRole(
     policy: ICommunityPolicy,
+    spaceSettings: ISpaceSettings,
     role: CommunityRole
   ): ICredentialDefinition[] {
     const result = [this.getCredentialForRole(policy, role)];
-    if (policy.settings.privacy.allowPlatformSupportAsAdmin) {
+    if (
+      role === CommunityRole.ADMIN &&
+      spaceSettings.privacy.allowPlatformSupportAsAdmin
+    ) {
       result.push({
         type: AuthorizationCredential.GLOBAL_SUPPORT,
         resourceID: '',

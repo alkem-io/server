@@ -27,6 +27,7 @@ import { CommunityPolicyModule } from '@domain/community/community-policy/commun
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
 import { CommunityModule } from '@domain/community/community/community.module';
 import { InnovationHubModule } from '@domain/innovation-hub';
+import { SpaceSettingssModule } from '../space.settings/space.settings.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { InnovationHubModule } from '@domain/innovation-hub';
     VirtualContributorModule,
     TemplatesSetModule,
     SpaceModule,
+    SpaceSettingssModule,
     SpaceDefaultsModule,
     StorageAggregatorModule,
     PlatformAuthorizationPolicyModule,

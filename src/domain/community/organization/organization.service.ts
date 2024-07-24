@@ -22,8 +22,6 @@ import {
   UpdateOrganizationInput,
 } from '@domain/community/organization/dto';
 import { IUserGroup } from '@domain/community/user-group';
-import { IUser } from '@domain/community/user';
-import { UserService } from '@domain/community/user/user.service';
 import { UUID_LENGTH } from '@common/constants';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { IAgent } from '@domain/agent/agent';
@@ -55,16 +53,15 @@ import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.a
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { applyOrganizationFilter } from '@core/filtering/filters/organizationFilter';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
-import { AssignOrganizationRoleToUserInput } from './dto/organization.dto.assign.role.to.user';
-import { RemoveOrganizationRoleFromUserInput } from './dto/organization.dto.remove.role.from.user';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
+import { OrganizationRoleService } from '../organization-role/organization.role.service';
 
 @Injectable()
 export class OrganizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private organizationVerificationService: OrganizationVerificationService,
-    private userService: UserService,
+    private organizationRoleService: OrganizationRoleService,
     private agentService: AgentService,
     private userGroupService: UserGroupService,
     private profileService: ProfileService,
@@ -142,12 +139,12 @@ export class OrganizationService {
       );
     // Assign the creating agent as both a member and admin
     if (agentInfo) {
-      await this.assignOrganizationRoleToUser({
+      await this.organizationRoleService.assignOrganizationRoleToUser({
         organizationID: savedOrg.id,
         userID: agentInfo.userID,
         role: OrganizationRole.ASSOCIATE,
       });
-      await this.assignOrganizationRoleToUser({
+      await this.organizationRoleService.assignOrganizationRoleToUser({
         organizationID: savedOrg.id,
         userID: agentInfo.userID,
         role: OrganizationRole.ADMIN,
@@ -256,38 +253,8 @@ export class OrganizationService {
         LogContext.SPACES
       );
     }
-    // Start by removing all issued org owner credentials in case this causes issues
-    const owners = await this.getOwners(organization);
-    for (const owner of owners) {
-      await this.removeOrganizationRoleFromUser(
-        {
-          userID: owner.id,
-          organizationID: organization.id,
-          role: OrganizationRole.OWNER,
-        },
-        false
-      );
-    }
 
-    // Remove all issued membership credentials
-    const members = await this.getAssociates(organization);
-    for (const member of members) {
-      await this.removeOrganizationRoleFromUser({
-        userID: member.id,
-        organizationID: organization.id,
-        role: OrganizationRole.ASSOCIATE,
-      });
-    }
-
-    // Remove all issued org admin credentials
-    const admins = await this.getAdmins(organization);
-    for (const admin of admins) {
-      await this.removeOrganizationRoleFromUser({
-        userID: admin.id,
-        organizationID: organization.id,
-        role: OrganizationRole.ADMIN,
-      });
-    }
+    await this.organizationRoleService.removeAllRoles(organization);
 
     if (organization.profile) {
       await this.profileService.deleteProfile(organization.profile.id);
@@ -465,71 +432,13 @@ export class OrganizationService {
   async getMetrics(organization: IOrganization): Promise<INVP[]> {
     const activity: INVP[] = [];
 
-    const membersCount = await this.getMembersCount(organization);
+    const membersCount =
+      await this.organizationRoleService.getMembersCount(organization);
     const membersTopic = new NVP('associates', membersCount.toString());
     membersTopic.id = `associates-${organization.id}`;
     activity.push(membersTopic);
 
     return activity;
-  }
-
-  async getMembersCount(organization: IOrganization): Promise<number> {
-    const credentialMatches =
-      await this.agentService.countAgentsWithMatchingCredentials({
-        type: AuthorizationCredential.ORGANIZATION_ASSOCIATE,
-        resourceID: organization.id,
-      });
-
-    return credentialMatches;
-  }
-
-  async getAssociates(organization: IOrganization): Promise<IUser[]> {
-    return await this.userService.usersWithCredentials({
-      type: AuthorizationCredential.ORGANIZATION_ASSOCIATE,
-      resourceID: organization.id,
-    });
-  }
-
-  async getAdmins(organization: IOrganization): Promise<IUser[]> {
-    return await this.userService.usersWithCredentials({
-      type: AuthorizationCredential.ORGANIZATION_ADMIN,
-      resourceID: organization.id,
-    });
-  }
-
-  async getOwners(organization: IOrganization): Promise<IUser[]> {
-    return await this.userService.usersWithCredentials({
-      type: AuthorizationCredential.ORGANIZATION_OWNER,
-      resourceID: organization.id,
-    });
-  }
-
-  async getMyRoles(
-    agentInfo: AgentInfo,
-    organization: IOrganization
-  ): Promise<OrganizationRole[]> {
-    // Note: this code can clearly be optimized so that we hit the db once, but
-    // for a first pass this should be ok
-    const result: OrganizationRole[] = [];
-    const agent = await this.agentService.getAgentOrFail(agentInfo.agentID);
-
-    const isAdmin = await this.agentService.hasValidCredential(agent.id, {
-      type: AuthorizationCredential.ORGANIZATION_ADMIN,
-      resourceID: organization.id,
-    });
-    const isAssociate = await this.agentService.hasValidCredential(agent.id, {
-      type: AuthorizationCredential.ORGANIZATION_ASSOCIATE,
-      resourceID: organization.id,
-    });
-    const isOwner = await this.agentService.hasValidCredential(agent.id, {
-      type: AuthorizationCredential.ORGANIZATION_OWNER,
-      resourceID: organization.id,
-    });
-    if (isOwner) result.push(OrganizationRole.OWNER);
-    if (isAdmin) result.push(OrganizationRole.ADMIN);
-    if (isAssociate) result.push(OrganizationRole.ASSOCIATE);
-
-    return result;
   }
 
   async createGroup(groupData: CreateUserGroupInput): Promise<IUserGroup> {
@@ -694,63 +603,6 @@ export class OrganizationService {
       .getCount();
 
     return organizationMatchesCount;
-  }
-
-  async assignOrganizationRoleToUser(
-    assignData: AssignOrganizationRoleToUserInput
-  ): Promise<IUser> {
-    const userID = assignData.userID;
-    const agent = await this.userService.getAgent(userID);
-    const organization = await this.getOrganizationOrFail(
-      assignData.organizationID
-    );
-
-    const credential = this.getCredentialForRole(
-      assignData.role,
-      organization.id
-    );
-
-    await this.agentService.grantCredential({
-      agentID: agent.id,
-      ...credential,
-    });
-
-    return await this.userService.getUserWithAgent(userID);
-  }
-
-  async removeOrganizationRoleFromUser(
-    removeData: RemoveOrganizationRoleFromUserInput,
-    validationRoles = true
-  ): Promise<IUser> {
-    const organizationID = removeData.organizationID;
-    const organization = await this.getOrganizationOrFail(organizationID);
-    const agent = await this.userService.getAgent(removeData.userID);
-
-    if (validationRoles) {
-      if (removeData.role === OrganizationRole.OWNER) {
-        const orgOwners = await this.userService.usersWithCredentials({
-          type: AuthorizationCredential.ORGANIZATION_OWNER,
-          resourceID: organizationID,
-        });
-        if (orgOwners.length === 1)
-          throw new ForbiddenException(
-            `Not allowed to remove last owner for organisaiton: ${organization.nameID}`,
-            LogContext.AUTH
-          );
-      }
-    }
-
-    const credential = this.getCredentialForRole(
-      removeData.role,
-      organization.id
-    );
-
-    await this.agentService.revokeCredential({
-      agentID: agent.id,
-      ...credential,
-    });
-
-    return await this.userService.getUserWithAgent(removeData.userID);
   }
 
   async getVerification(

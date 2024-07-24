@@ -43,6 +43,7 @@ import { SpaceSettingsService } from '../space.settings/space.settings.service';
 import { SpaceLevel } from '@common/enums/space.level';
 import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
 import { IAgent } from '@domain/agent/agent/agent.interface';
+import { ISpaceSettings } from '../space.settings/space.settings.interface';
 
 @Injectable()
 export class SpaceAuthorizationService {
@@ -106,12 +107,16 @@ export class SpaceAuthorizationService {
         );
       }
 
-      const parentCommunityPolicyWithSettings =
-        this.getCommunityPolicyWithSettings(spaceAccountLicense.parentSpace);
-
+      const parentCommunityPolicyWithSettings = this.getCommunityPolicy(
+        spaceAccountLicense.parentSpace
+      );
+      const spaceSettings = this.spaceSettingsService.getSettings(
+        spaceInput.settingsStr
+      );
       deletionCredentialCriterias =
         this.communityPolicyService.getCredentialsForRole(
           parentCommunityPolicyWithSettings,
+          spaceSettings,
           CommunityRole.ADMIN
         );
     }
@@ -147,10 +152,12 @@ export class SpaceAuthorizationService {
       space.authorization
     );
 
-    const communityPolicyWithSettings =
-      this.getCommunityPolicyWithSettings(space);
+    const communityPolicy = this.getCommunityPolicy(space);
+    const spaceSettings = this.spaceSettingsService.getSettings(
+      space.settingsStr
+    );
     const privateSpace =
-      space.community.policy.settings.privacy.mode === SpacePrivacyMode.PRIVATE;
+      spaceSettings.privacy.mode === SpacePrivacyMode.PRIVATE;
     const accountAuthorization = space.account.authorization;
 
     // Choose what authorization to inherit from
@@ -191,14 +198,16 @@ export class SpaceAuthorizationService {
       case SpaceVisibility.DEMO:
         space.authorization = this.extendAuthorizationPolicyLocal(
           space.authorization,
-          communityPolicyWithSettings,
+          communityPolicy,
+          spaceSettings,
           space,
           deletionCredentialCriterias
         );
         if (privateSpace && space.level !== SpaceLevel.SPACE) {
           space.authorization = this.extendPrivateSubspaceAdmins(
             space.authorization,
-            communityPolicyWithSettings
+            communityPolicy,
+            spaceSettings
           );
         }
         break;
@@ -216,7 +225,8 @@ export class SpaceAuthorizationService {
     space = await this.propagateAuthorizationToChildEntities(
       space,
       accountAgent,
-      communityPolicyWithSettings
+      communityPolicy,
+      spaceSettings
     );
 
     if (!space.community)
@@ -233,7 +243,8 @@ export class SpaceAuthorizationService {
         space.community.authorization =
           this.extendCommunityAuthorizationPolicySpace(
             space.community.authorization,
-            communityPolicyWithSettings
+            communityPolicy,
+            spaceSettings
           );
         break;
       case SpaceVisibility.ARCHIVED:
@@ -267,7 +278,8 @@ export class SpaceAuthorizationService {
   public async propagateAuthorizationToChildEntities(
     space: ISpace,
     accountAgent: IAgent,
-    communityPolicyWithSettings: ICommunityPolicy
+    communityPolicy: ICommunityPolicy,
+    spaceSettings: ISpaceSettings
   ): Promise<ISpace> {
     if (
       !space.agent ||
@@ -297,7 +309,8 @@ export class SpaceAuthorizationService {
         space.community,
         space.authorization,
         accountAgent,
-        communityPolicyWithSettings
+        communityPolicy,
+        spaceSettings
       );
 
     // Subspaces to allow some membership options based on the parent space recential
@@ -306,7 +319,8 @@ export class SpaceAuthorizationService {
       space.community.authorization =
         this.extendCommunityAuthorizationPolicySubspace(
           space.community.authorization,
-          communityPolicyWithSettings
+          communityPolicy,
+          spaceSettings
         );
     }
 
@@ -314,7 +328,8 @@ export class SpaceAuthorizationService {
       await this.collaborationAuthorizationService.applyAuthorizationPolicy(
         space.collaboration,
         space.authorization,
-        communityPolicyWithSettings,
+        communityPolicy,
+        spaceSettings,
         accountAgent
       );
 
@@ -364,6 +379,7 @@ export class SpaceAuthorizationService {
   public extendAuthorizationPolicyLocal(
     authorization: IAuthorizationPolicy,
     policy: ICommunityPolicy,
+    spaceSettings: ISpaceSettings,
     space: ISpace,
     deletionCredentialCriterias: ICredentialDefinition[]
   ): IAuthorizationPolicy {
@@ -371,7 +387,7 @@ export class SpaceAuthorizationService {
 
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
-    if (policy.settings.privacy.mode === SpacePrivacyMode.PRIVATE) {
+    if (spaceSettings.privacy.mode === SpacePrivacyMode.PRIVATE) {
       authorization.anonymousReadAccess = false;
     }
 
@@ -388,6 +404,7 @@ export class SpaceAuthorizationService {
 
     const memberCriteras = this.communityPolicyService.getCredentialsForRole(
       policy,
+      spaceSettings,
       CommunityRole.MEMBER
     );
     const spaceMember = this.authorizationPolicyService.createCredentialRule(
@@ -400,6 +417,7 @@ export class SpaceAuthorizationService {
     const spaceAdminCriterias =
       this.communityPolicyService.getCredentialsForRole(
         policy,
+        spaceSettings,
         CommunityRole.ADMIN
       );
     // Note: this only works for User account hosts
@@ -422,9 +440,9 @@ export class SpaceAuthorizationService {
     );
     newRules.push(spaceAdmin);
 
-    const collaborationSettings = policy.settings.collaboration;
+    const collaborationSettings = spaceSettings.collaboration;
     if (collaborationSettings.allowMembersToCreateSubspaces) {
-      const criteria = this.getContributorCriteria(policy);
+      const criteria = this.getContributorCriteria(policy, spaceSettings);
       const createSubspacePrilegeRule =
         this.authorizationPolicyService.createCredentialRule(
           [AuthorizationPrivilege.CREATE_SUBSPACE],
@@ -456,24 +474,21 @@ export class SpaceAuthorizationService {
     return authorization;
   }
 
-  public getCommunityPolicyWithSettings(spaceInput: ISpace): ICommunityPolicy {
+  public getCommunityPolicy(spaceInput: ISpace): ICommunityPolicy {
     if (!spaceInput.community?.policy)
       throw new EntityNotInitializedException(
         `Unable to load community policy on base space: ${spaceInput.id}`,
         LogContext.SPACES
       );
 
-    const spaceSettings = this.spaceSettingsService.getSettings(
-      spaceInput.settingsStr
-    );
     const communityPolicyWithFlags = spaceInput.community.policy;
-    communityPolicyWithFlags.settings = spaceSettings;
     return communityPolicyWithFlags;
   }
 
   private extendCommunityAuthorizationPolicySubspace(
     authorization: IAuthorizationPolicy | undefined,
-    policy: ICommunityPolicy
+    policy: ICommunityPolicy,
+    spaceSettings: ISpaceSettings
   ): IAuthorizationPolicy {
     if (!authorization)
       throw new EntityNotInitializedException(
@@ -491,7 +506,7 @@ export class SpaceAuthorizationService {
 
     // Allow member of the parent community to Apply
     if (parentCommunityCredential) {
-      const membershipSettings = policy.settings.membership;
+      const membershipSettings = spaceSettings.membership;
       switch (membershipSettings.policy) {
         case CommunityMembershipPolicy.APPLICATIONS:
           const spaceMemberCanApply =
@@ -519,6 +534,7 @@ export class SpaceAuthorizationService {
     const adminCredentials =
       this.communityPolicyService.getCredentialsForRoleWithParents(
         policy,
+        spaceSettings,
         CommunityRole.ADMIN
       );
 
@@ -540,7 +556,8 @@ export class SpaceAuthorizationService {
 
   private extendPrivateSubspaceAdmins(
     authorization: IAuthorizationPolicy | undefined,
-    policy: ICommunityPolicy
+    policy: ICommunityPolicy,
+    spaceSettings: ISpaceSettings
   ): IAuthorizationPolicy {
     if (!authorization)
       throw new EntityNotInitializedException(
@@ -552,6 +569,7 @@ export class SpaceAuthorizationService {
     const spaceAdminCriteria = [
       ...this.communityPolicyService.getCredentialsForRoleWithParents(
         policy,
+        spaceSettings,
         CommunityRole.ADMIN
       ),
     ];
@@ -579,7 +597,8 @@ export class SpaceAuthorizationService {
 
   private extendCommunityAuthorizationPolicySpace(
     communityAuthorization: IAuthorizationPolicy | undefined,
-    policy: ICommunityPolicy
+    policy: ICommunityPolicy,
+    spaceSettings: ISpaceSettings
   ): IAuthorizationPolicy {
     if (!communityAuthorization)
       throw new EntityNotInitializedException(
@@ -589,7 +608,7 @@ export class SpaceAuthorizationService {
 
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
-    const membershipPolicy = policy.settings.membership.policy;
+    const membershipPolicy = spaceSettings.membership.policy;
     switch (membershipPolicy) {
       case CommunityMembershipPolicy.APPLICATIONS:
         const anyUserCanApply =
@@ -638,16 +657,18 @@ export class SpaceAuthorizationService {
   }
 
   private getContributorCriteria(
-    policy: ICommunityPolicy
+    policy: ICommunityPolicy,
+    spaceSettings: ISpaceSettings
   ): ICredentialDefinition[] {
     const memberCriteria = this.communityPolicyService.getCredentialsForRole(
       policy,
+      spaceSettings,
       CommunityRole.MEMBER
     );
-    const collaborationSettings = policy.settings.collaboration;
+    const collaborationSettings = spaceSettings.collaboration;
     if (
       collaborationSettings.inheritMembershipRights &&
-      policy.settings.privacy.mode === SpacePrivacyMode.PUBLIC
+      spaceSettings.privacy.mode === SpacePrivacyMode.PUBLIC
     ) {
       const parentCredential =
         this.communityPolicyService.getDirectParentCredentialForRole(

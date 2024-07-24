@@ -463,22 +463,25 @@ export class AccountService {
   ): Promise<IVirtualContributor> {
     const accountID = vcData.accountID;
     const account = await this.getAccountOrFail(accountID, {
-      relations: { virtualContributors: true },
+      relations: {
+        virtualContributors: true,
+        storageAggregator: true,
+      },
     });
 
-    if (!account.virtualContributors) {
+    if (!account.virtualContributors || !account.storageAggregator) {
       throw new RelationshipNotFoundException(
         `Unable to load Account with required entities for creating VC: ${account.id} `,
         LogContext.ACCOUNT
       );
     }
 
-    const vc =
-      await this.virtualContributorService.createVirtualContributor(vcData);
-    account.virtualContributors.push(vc);
-    await this.save(account);
-
-    return vc;
+    const vc = await this.virtualContributorService.createVirtualContributor(
+      vcData,
+      account.storageAggregator
+    );
+    vc.account = account;
+    return await this.virtualContributorService.save(vc);
   }
 
   public async createInnovationHubOnAccount(

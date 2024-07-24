@@ -169,9 +169,8 @@ export class CollaborationService {
     storageAggregator: IStorageAggregator,
     userID: string | undefined
   ): Promise<ICollaboration> {
-    collaboration.callouts = await this.getCalloutsOnCollaboration(
-      collaboration
-    );
+    collaboration.callouts =
+      await this.getCalloutsOnCollaboration(collaboration);
 
     collaboration.tagsetTemplateSet = await this.getTagsetTemplatesSet(
       collaboration.id
@@ -195,9 +194,8 @@ export class CollaborationService {
   ): Promise<CreateCalloutInput[]> {
     const calloutsData: CreateCalloutInput[] = [];
 
-    const sourceCallouts = await this.getCalloutsOnCollaboration(
-      collaborationSource
-    );
+    const sourceCallouts =
+      await this.getCalloutsOnCollaboration(collaborationSource);
 
     for (const sourceCallout of sourceCallouts) {
       const sourceCalloutInput =
@@ -724,9 +722,11 @@ export class CollaborationService {
   public async getCommunityPolicy(
     collaborationID: string
   ): Promise<ICommunityPolicy> {
-    return await this.namingService.getCommunityPolicyWithSettingsForCollaboration(
-      collaborationID
-    );
+    const { communityPolicy } =
+      await this.namingService.getCommunityPolicyAndSettingsForCollaboration(
+        collaborationID
+      );
+    return communityPolicy;
   }
 
   public async updateCalloutsSortOrder(
