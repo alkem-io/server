@@ -21,11 +21,13 @@ import { OrganizationRole } from '@common/enums/organization.role';
 import { PlatformInvitationService } from '@platform/invitation/platform.invitation.service';
 import { PlatformRoleService } from '@platform/platfrom.role/platform.role.service';
 import { CommunityRoleService } from '@domain/community/community-role/community.role.service';
+import { OrganizationRoleService } from '@domain/community/organization-role/organization.role.service';
 
 export class RegistrationService {
   constructor(
     private userService: UserService,
     private organizationService: OrganizationService,
+    private organizationRoleService: OrganizationRoleService,
     private preferenceSetService: PreferenceSetService,
     private userAuthorizationService: UserAuthorizationService,
     private communityRoleService: CommunityRoleService,
@@ -58,9 +60,8 @@ export class RegistrationService {
   ): Promise<boolean> {
     const userEmailDomain = getEmailDomain(user.email);
 
-    const org = await this.organizationService.getOrganizationByDomain(
-      userEmailDomain
-    );
+    const org =
+      await this.organizationService.getOrganizationByDomain(userEmailDomain);
 
     if (!org) {
       this.logger.verbose?.(
@@ -98,7 +99,7 @@ export class RegistrationService {
       return false;
     }
 
-    await this.organizationService.assignOrganizationRoleToUser({
+    await this.organizationRoleService.assignOrganizationRoleToUser({
       organizationID: org.id,
       userID: user.id,
       role: OrganizationRole.ASSOCIATE,
@@ -171,9 +172,8 @@ export class RegistrationService {
       await this.invitationService.deleteInvitation({ ID: invitation.id });
     }
 
-    const applications = await this.applicationService.findApplicationsForUser(
-      userID
-    );
+    const applications =
+      await this.applicationService.findApplicationsForUser(userID);
     for (const application of applications) {
       await this.applicationService.deleteApplication({ ID: application.id });
     }

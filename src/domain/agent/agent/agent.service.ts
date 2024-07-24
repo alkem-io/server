@@ -197,9 +197,8 @@ export class AgentService {
       }
     }
 
-    const credential = await this.credentialService.createCredential(
-      grantCredentialData
-    );
+    const credential =
+      await this.credentialService.createCredential(grantCredentialData);
 
     agent.credentials?.push(credential);
     await this.agentInfoCacheService.updateAgentInfoCache(agent);
@@ -260,8 +259,10 @@ export class AgentService {
     return await this.saveAgent(agent);
   }
 
-  @Profiling.api
-  async getVerifiedCredentials(agent: IAgent): Promise<IVerifiedCredential[]> {
+  async getVerifiedCredentials(
+    agentID: string
+  ): Promise<IVerifiedCredential[]> {
+    const agent = await this.getAgentOrFail(agentID);
     const verifiedCredentialsWalletMgr =
       await this.walletManagerAdapter.getVerifiedCredentials(
         agent.did,
@@ -471,9 +472,8 @@ export class AgentService {
     nonce: string,
     data: any
   ): Promise<void> {
-    const interactionInfo = await this.getRequestInteractionSovrhdInfoFromCache(
-      nonce
-    );
+    const interactionInfo =
+      await this.getRequestInteractionSovrhdInfoFromCache(nonce);
 
     this.logger.verbose?.(
       `sovhrd callback data: ${JSON.stringify(data)}`,

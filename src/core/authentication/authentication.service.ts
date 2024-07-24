@@ -129,7 +129,7 @@ export class AuthenticationService {
       );
     } catch (error) {
       this.logger.verbose?.(
-        `User not registered: ${agentInfo.email}`,
+        `User not registered: ${agentInfo.email}, ${error}`,
         LogContext.AUTH
       );
     }
@@ -163,11 +163,9 @@ export class AuthenticationService {
     const ssiEnabled = this.configService.get(ConfigurationTypes.SSI).enabled;
 
     if (ssiEnabled) {
-      const VCs = await this.agentService.getVerifiedCredentials({
-        id: agentInfoMetadata.agentID,
-        did: agentInfoMetadata.did,
-        password: agentInfoMetadata.password,
-      });
+      const VCs = await this.agentService.getVerifiedCredentials(
+        agentInfoMetadata.agentID
+      );
 
       agentInfo.verifiedCredentials = VCs;
     }

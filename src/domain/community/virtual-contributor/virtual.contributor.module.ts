@@ -9,8 +9,6 @@ import { VirtualContributorAuthorizationService } from './virtual.contributor.se
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
-import { VirtualStorageAggregatorLoaderCreator } from '@core/dataloader/creators/loader.creators/community/virtual.storage.aggregator.loader.creator';
-import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
 import { VirtualContributor } from './virtual.contributor.entity';
 import { CommunicationAdapterModule } from '@services/adapters/communication-adapter/communication-adapter.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
@@ -26,7 +24,6 @@ import { AccountHostModule } from '@domain/space/account.host/account.host.modul
     AuthorizationModule,
     ProfileModule,
     NamingModule,
-    StorageAggregatorModule,
     AiPersonaModule,
     AiServerAdapterModule,
     CommunicationAdapterModule,
@@ -40,7 +37,6 @@ import { AccountHostModule } from '@domain/space/account.host/account.host.modul
     VirtualContributorResolverMutations,
     VirtualContributorResolverQueries,
     VirtualContributorResolverFields,
-    VirtualStorageAggregatorLoaderCreator,
   ],
   exports: [VirtualContributorService, VirtualContributorAuthorizationService],
 })

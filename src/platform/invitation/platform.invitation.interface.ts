@@ -27,9 +27,6 @@ export class IPlatformInvitation extends IAuthorizable {
 
   createdBy!: string;
 
-  @Field(() => Date)
-  createdDate!: Date;
-
   community?: ICommunity;
 
   platform?: IPlatform;
