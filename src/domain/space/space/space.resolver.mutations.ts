@@ -119,15 +119,17 @@ export class SpaceResolverMutations {
       `space settings update: ${space.id}`
     );
 
-    const updatedSpace = await this.spaceService.updateSpaceSettings(
+    let updatedSpace = await this.spaceService.updateSpaceSettings(
       space,
       settingsData
     );
 
     // As the settings may update the authorization for the Space, the authorization policy will need to be reset
-    return this.spaceAuthorizationService
-      .applyAuthorizationPolicy(updatedSpace)
-      .then(space => this.spaceService.save(space));
+    updatedSpace =
+      await this.spaceAuthorizationService.applyAuthorizationPolicy(
+        updatedSpace
+      );
+    return await this.spaceService.save(updatedSpace);
   }
 
   @UseGuards(GraphqlGuard)
@@ -204,9 +206,8 @@ export class SpaceResolverMutations {
     // Save here so can reuse it later without another load
     const displayName = subspace.profile.displayName;
 
-    subspace = await this.spaceAuthorizationService.applyAuthorizationPolicy(
-      subspace
-    );
+    subspace =
+      await this.spaceAuthorizationService.applyAuthorizationPolicy(subspace);
     subspace = await this.spaceService.save(subspace);
 
     this.activityAdapter.subspaceCreated({

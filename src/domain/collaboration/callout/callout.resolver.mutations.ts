@@ -1,6 +1,6 @@
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
-import { AuthorizationPrivilege } from '@common/enums';
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
 import { Inject, UseGuards } from '@nestjs/common/decorators';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -38,6 +38,7 @@ import { ICalloutContribution } from '../callout-contribution/callout.contributi
 import { CalloutContributionAuthorizationService } from '../callout-contribution/callout.contribution.service.authorization';
 import { CalloutContributionService } from '../callout-contribution/callout.contribution.service';
 import { ILink } from '../link/link.interface';
+import { RelationshipNotFoundException } from '@common/exceptions';
 
 @Resolver()
 export class CalloutResolverMutations {
@@ -113,9 +114,8 @@ export class CalloutResolverMutations {
       `update visibility on callout: ${callout.id}`
     );
     const oldVisibility = callout.visibility;
-    const savedCallout = await this.calloutService.updateCalloutVisibility(
-      calloutData
-    );
+    const savedCallout =
+      await this.calloutService.updateCalloutVisibility(calloutData);
 
     if (savedCallout.visibility !== oldVisibility) {
       if (savedCallout.visibility === CalloutVisibility.PUBLISHED) {
@@ -181,14 +181,31 @@ export class CalloutResolverMutations {
     @Args('contributionData') contributionData: CreateContributionOnCalloutInput
   ): Promise<ICalloutContribution> {
     const callout = await this.calloutService.getCalloutOrFail(
-      contributionData.calloutID
+      contributionData.calloutID,
+      {
+        relations: {
+          collaboration: true,
+        },
+      }
     );
+    if (!callout.collaboration) {
+      throw new RelationshipNotFoundException(
+        `Callout ${callout.id} has no collaboration relationship`,
+        LogContext.COLLABORATION
+      );
+    }
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       callout.authorization,
       AuthorizationPrivilege.CONTRIBUTE,
       `create contribution on callout: ${callout.id}`
     );
+
+    // Get the levelZeroSpaceID for the callout
+    const levelZeroSpaceID =
+      await this.communityResolverService.getLevelZeroSpaceIdForCollaboration(
+        callout.collaboration.id
+      );
 
     if (callout.contributionPolicy.state === CalloutState.CLOSED) {
       if (
@@ -237,6 +254,7 @@ export class CalloutResolverMutations {
           callout,
           contribution,
           contribution.post,
+          levelZeroSpaceID,
           agentInfo
         );
       }
@@ -247,6 +265,7 @@ export class CalloutResolverMutations {
         await this.processActivityLinkCreated(
           callout,
           contribution.link,
+          levelZeroSpaceID,
           agentInfo
         );
       }
@@ -258,6 +277,7 @@ export class CalloutResolverMutations {
           callout,
           contribution,
           contribution.whiteboard,
+          levelZeroSpaceID,
           agentInfo
         );
       }
@@ -269,6 +289,7 @@ export class CalloutResolverMutations {
   private async processActivityLinkCreated(
     callout: ICallout,
     link: ILink,
+    levelZeroSpaceID: string,
     agentInfo: AgentInfo
   ) {
     const activityLogInput: ActivityInputCalloutLinkCreated = {
@@ -278,20 +299,11 @@ export class CalloutResolverMutations {
     };
     this.activityAdapter.calloutLinkCreated(activityLogInput);
 
-    const community =
-      await this.communityResolverService.getCommunityFromCalloutOrFail(
-        callout.id
-      );
-    const spaceID =
-      await this.communityResolverService.getRootSpaceIDFromCommunityOrFail(
-        community
-      );
-
     this.contributionReporter.calloutLinkCreated(
       {
         id: link.id,
         name: link.profile.displayName,
-        space: spaceID,
+        space: levelZeroSpaceID,
       },
       {
         id: agentInfo.userID,
@@ -304,6 +316,7 @@ export class CalloutResolverMutations {
     callout: ICallout,
     contribution: ICalloutContribution,
     whiteboard: IWhiteboard,
+    levelZeroSpaceID: string,
     agentInfo: AgentInfo
   ) {
     const notificationInput: NotificationInputWhiteboardCreated = {
@@ -320,20 +333,11 @@ export class CalloutResolverMutations {
       callout: callout,
     });
 
-    const community =
-      await this.communityResolverService.getCommunityFromCalloutOrFail(
-        callout.id
-      );
-    const spaceID =
-      await this.communityResolverService.getRootSpaceIDFromCommunityOrFail(
-        community
-      );
-
     this.contributionReporter.calloutWhiteboardCreated(
       {
         id: whiteboard.id,
         name: whiteboard.nameID,
-        space: spaceID,
+        space: levelZeroSpaceID,
       },
       {
         id: agentInfo.userID,
@@ -346,6 +350,7 @@ export class CalloutResolverMutations {
     callout: ICallout,
     contribution: ICalloutContribution,
     post: IPost,
+    levelZeroSpaceID: string,
     agentInfo: AgentInfo
   ) {
     const notificationInput: NotificationInputPostCreated = {
@@ -363,20 +368,11 @@ export class CalloutResolverMutations {
     };
     this.activityAdapter.calloutPostCreated(activityLogInput);
 
-    const community =
-      await this.communityResolverService.getCommunityFromCalloutOrFail(
-        callout.id
-      );
-    const spaceID =
-      await this.communityResolverService.getRootSpaceIDFromCommunityOrFail(
-        community
-      );
-
     this.contributionReporter.calloutPostCreated(
       {
         id: post.id,
         name: post.profile.displayName,
-        space: spaceID,
+        space: levelZeroSpaceID,
       },
       {
         id: agentInfo.userID,

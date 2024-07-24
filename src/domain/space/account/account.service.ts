@@ -44,6 +44,7 @@ import { StorageAggregatorService } from '@domain/storage/storage-aggregator/sto
 import { CreateSpaceOnAccountInput } from './dto/account.dto.create.space';
 import { Space } from '../space/space.entity';
 import { LicensePlanType } from '@common/enums/license.plan.type';
+import { SpaceLevel } from '@common/enums/space.level';
 
 @Injectable()
 export class AccountService {
@@ -144,7 +145,7 @@ export class AccountService {
     const spaceData = spaceOnAccountData.spaceData;
     await this.validateSpaceData(spaceData);
     // Set data for the root space
-    spaceData.level = 0;
+    spaceData.level = SpaceLevel.SPACE;
     spaceData.storageAggregatorParent = account.storageAggregator;
 
     const space = await this.spaceService.createSpace(
@@ -349,9 +350,8 @@ export class AccountService {
         LogContext.ACCOUNT
       );
     }
-    const privileges = await this.licenseEngineService.getGrantedPrivileges(
-      accountAgent
-    );
+    const privileges =
+      await this.licenseEngineService.getGrantedPrivileges(accountAgent);
     return privileges;
   }
 
@@ -464,9 +464,8 @@ export class AccountService {
       );
     }
 
-    const vc = await this.virtualContributorService.createVirtualContributor(
-      vcData
-    );
+    const vc =
+      await this.virtualContributorService.createVirtualContributor(vcData);
     account.virtualContributors.push(vc);
     await this.save(account);
 

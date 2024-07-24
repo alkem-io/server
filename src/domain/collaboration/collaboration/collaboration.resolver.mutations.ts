@@ -162,16 +162,16 @@ export class CollaborationResolverMutations {
       this.activityAdapter.calloutPublished(activityLogInput);
     }
 
-    const rootSpaceID =
-      await this.communityResolverService.getRootSpaceIDFromCalloutOrFail(
-        callout.id
+    const levelZeroSpaceID =
+      await this.communityResolverService.getLevelZeroSpaceIdForCollaboration(
+        collaboration.id
       );
 
     this.contributionReporter.calloutCreated(
       {
         id: callout.id,
         name: callout.nameID,
-        space: rootSpaceID,
+        space: levelZeroSpaceID,
       },
       {
         id: agentInfo.userID,
