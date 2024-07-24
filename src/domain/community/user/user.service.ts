@@ -763,10 +763,6 @@ export class UserService {
       user.phone = userInput.phone;
     }
 
-    if (userInput.gender !== undefined) {
-      user.gender = userInput.gender;
-    }
-
     if (userInput.serviceProfile !== undefined) {
       user.serviceProfile = userInput.serviceProfile;
     }
