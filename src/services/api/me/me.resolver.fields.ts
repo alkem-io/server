@@ -21,7 +21,10 @@ import { CommunityApplicationResult } from './dto/me.application.result';
 
 @Resolver(() => MeQueryResults)
 export class MeResolverFields {
-  constructor(private meService: MeService, private userService: UserService) {}
+  constructor(
+    private meService: MeService,
+    private userService: UserService
+  ) {}
 
   @UseGuards(GraphqlGuard)
   @ResolveField('id', () => String, {
@@ -92,7 +95,7 @@ export class MeResolverFields {
   ): Promise<CommunityApplicationResult[]> {
     if (agentInfo.userID === '') {
       throw new ValidationException(
-        'Unable to retrieve invitations as no userID provided.',
+        'Unable to retrieve applications as no userID provided.',
         LogContext.COMMUNITY
       );
     }

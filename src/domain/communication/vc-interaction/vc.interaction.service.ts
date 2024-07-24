@@ -16,7 +16,7 @@ export class VcInteractionService {
 
   public createVcInteraction(
     interactionData: CreateVcInteractionInput
-  ): IVcInteraction {
+  ): VcInteraction {
     const interaction = new VcInteraction();
     interaction.threadID = interactionData.threadID;
     interaction.virtualContributorID = interactionData.virtualContributorID;

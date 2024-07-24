@@ -21,7 +21,6 @@ import { IVirtualContributor } from './virtual.contributor.interface';
 import { VisualType } from '@common/enums/visual.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { CreateVirtualContributorInput } from './dto/virtual.contributor.dto.create';
 import { UpdateVirtualContributorInput } from './dto/virtual.contributor.dto.update';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
@@ -46,7 +45,6 @@ export class VirtualContributorService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private agentService: AgentService,
     private profileService: ProfileService,
-    private storageAggregatorService: StorageAggregatorService,
     private communicationAdapter: CommunicationAdapter,
     private namingService: NamingService,
     private aiPersonaService: AiPersonaService,
@@ -59,7 +57,8 @@ export class VirtualContributorService {
   ) {}
 
   async createVirtualContributor(
-    virtualContributorData: CreateVirtualContributorInput
+    virtualContributorData: CreateVirtualContributorInput,
+    storageAggregator: IStorageAggregator
   ): Promise<IVirtualContributor> {
     if (virtualContributorData.nameID) {
       // Convert nameID to lower case
@@ -95,16 +94,13 @@ export class VirtualContributorService {
       ...virtualContributorData.aiPersona,
       description: `AI Persona for virtual contributor ${virtualContributor.nameID}`,
     };
-    virtualContributor.aiPersona = await this.aiPersonaService.createAiPersona(
-      aiPersonaInput
-    );
+    virtualContributor.aiPersona =
+      await this.aiPersonaService.createAiPersona(aiPersonaInput);
 
-    virtualContributor.storageAggregator =
-      await this.storageAggregatorService.createStorageAggregator();
     virtualContributor.profile = await this.profileService.createProfile(
       virtualContributorData.profileData,
       ProfileType.VIRTUAL_CONTRIBUTOR,
-      virtualContributor.storageAggregator
+      storageAggregator
     );
     await this.profileService.addTagsetOnProfile(virtualContributor.profile, {
       name: TagsetReservedName.KEYWORDS,
@@ -232,19 +228,12 @@ export class VirtualContributorService {
         relations: {
           profile: true,
           agent: true,
-          storageAggregator: true,
         },
       }
     );
 
     if (virtualContributor.profile) {
       await this.profileService.deleteProfile(virtualContributor.profile.id);
-    }
-
-    if (virtualContributor.storageAggregator) {
-      await this.storageAggregatorService.delete(
-        virtualContributor.storageAggregator.id
-      );
     }
 
     if (virtualContributor.authorization) {
@@ -470,9 +459,8 @@ export class VirtualContributorService {
         LogContext.AUTH
       );
 
-    const hostCredentials = await this.accountHostService.getHostCredentials(
-      account
-    );
+    const hostCredentials =
+      await this.accountHostService.getHostCredentials(account);
     return hostCredentials;
   }
 
@@ -498,28 +486,6 @@ export class VirtualContributorService {
     }
 
     return aiPersona;
-  }
-
-  async getStorageAggregatorOrFail(
-    virtualID: string
-  ): Promise<IStorageAggregator> {
-    const virtualContributorWithStorageAggregator =
-      await this.getVirtualContributorOrFail(virtualID, {
-        relations: {
-          storageAggregator: true,
-        },
-      });
-    const storageAggregator =
-      virtualContributorWithStorageAggregator.storageAggregator;
-
-    if (!storageAggregator) {
-      throw new EntityNotFoundException(
-        `Unable to find storageAggregator for Virtual with nameID: ${virtualContributorWithStorageAggregator.nameID}`,
-        LogContext.COMMUNITY
-      );
-    }
-
-    return storageAggregator;
   }
 
   async virtualContributorsWithCredentials(

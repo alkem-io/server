@@ -150,7 +150,7 @@ export class RoomServiceMentions {
     );
 
     this.subscriptionPublishService.publishRoomEvent(
-      room.id,
+      room,
       MutationType.CREATE,
       answerMessage
     );

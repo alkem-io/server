@@ -2,6 +2,7 @@ import { Field, ObjectType } from '@nestjs/graphql';
 import { IPreferenceSet } from '@domain/common/preference-set';
 import { IContributorBase } from '../contributor/contributor.base.interface';
 import { IContributor } from '../contributor/contributor.interface';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 
 @ObjectType('User', {
   implements: () => [IContributor],
@@ -21,10 +22,9 @@ export class IUser extends IContributorBase implements IContributor {
   @Field(() => String)
   lastName!: string;
 
-  @Field(() => String)
-  gender!: string;
-
   preferenceSet?: IPreferenceSet;
+
+  storageAggregator?: IStorageAggregator;
 
   // Indicates if this profile is a service profile that is only used for service account style access
   // to the platform. Temporary measure, full service account support for later.
