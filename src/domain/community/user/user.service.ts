@@ -422,13 +422,6 @@ export class UserService {
     }
     const { id } = user;
 
-    const isAccountHost = await this.isAccountHost(user);
-    if (isAccountHost) {
-      throw new ForbiddenException(
-        'Unable to delete User: host of one or more accounts',
-        LogContext.SPACES
-      );
-    }
     await this.clearUserCache(user);
 
     if (user.profile) {
