@@ -34,6 +34,8 @@ import { CommunityRole } from '@common/enums/community.role';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { POLICY_RULE_ACCOUNT_CREATE_VC } from '@common/constants/authorization/policy.rule.constants';
+import { ISpaceSettings } from '../space.settings/space.settings.interface';
+import { SpaceSettingsService } from '../space.settings/space.settings.service';
 
 @Injectable()
 export class AccountAuthorizationService {
@@ -47,6 +49,7 @@ export class AccountAuthorizationService {
     private virtualContributorAuthorizationService: VirtualContributorAuthorizationService,
     private communityPolicyService: CommunityPolicyService,
     private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
+    private spaceSettingsService: SpaceSettingsService,
     private accountService: AccountService,
     private accountHostService: AccountHostService
   ) {}
@@ -123,18 +126,20 @@ export class AccountAuthorizationService {
         account.authorization
       );
 
-    const communityPolicyWithSettings =
-      this.spaceAuthorizationService.getCommunityPolicyWithSettings(
-        account.space
-      );
-
-    const hostCredentials = await this.accountHostService.getHostCredentials(
-      account
+    const communityPolicy = this.spaceAuthorizationService.getCommunityPolicy(
+      account.space
     );
+    const spaceSettings = this.spaceSettingsService.getSettings(
+      account.space.settingsStr
+    );
+
+    const hostCredentials =
+      await this.accountHostService.getHostCredentials(account);
 
     clonedAccountAuth = this.extendAuthorizationPolicyForChildEntities(
       clonedAccountAuth,
-      communityPolicyWithSettings,
+      communityPolicy,
+      spaceSettings,
       hostCredentials
     );
     return clonedAccountAuth;
@@ -216,9 +221,8 @@ export class AccountAuthorizationService {
       );
     }
 
-    const hostCredentials = await this.accountHostService.getHostCredentials(
-      account
-    );
+    const hostCredentials =
+      await this.accountHostService.getHostCredentials(account);
 
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
     // By default it is world visible. TODO: work through the logic on this
@@ -272,7 +276,8 @@ export class AccountAuthorizationService {
 
   private extendAuthorizationPolicyForChildEntities(
     authorization: IAuthorizationPolicy | undefined,
-    communityPolicyWithSettings: ICommunityPolicy,
+    communityPolicy: ICommunityPolicy,
+    spaceSettings: ISpaceSettings,
     hostCredentials: ICredentialDefinition[]
   ): IAuthorizationPolicy {
     if (!authorization) {
@@ -286,7 +291,8 @@ export class AccountAuthorizationService {
     const accountChildEntitiesManage = hostCredentials;
     const spaceAdminCriterias =
       this.communityPolicyService.getCredentialsForRole(
-        communityPolicyWithSettings,
+        communityPolicy,
+        spaceSettings,
         CommunityRole.ADMIN
       );
     accountChildEntitiesManage.push(...spaceAdminCriterias);
