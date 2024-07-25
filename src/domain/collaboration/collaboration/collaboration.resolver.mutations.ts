@@ -132,7 +132,6 @@ export class CollaborationResolverMutations {
       `create callout on collaboration: ${collaboration.id}`
     );
 
-    // This also saves the callout
     let callout = await this.collaborationService.createCalloutOnCollaboration(
       calloutData,
       agentInfo.userID
@@ -142,12 +141,16 @@ export class CollaborationResolverMutations {
       await this.namingService.getCommunityPolicyAndSettingsForCollaboration(
         collaboration.id
       );
+    // callout needs to be saved to apply the authorization policy
+    await this.calloutService.save(callout);
+
     callout = await this.calloutAuthorizationService.applyAuthorizationPolicy(
       callout,
       collaboration.authorization,
       communityPolicy,
       spaceSettings
     );
+    // needs to save the authorization policy
     callout = await this.calloutService.save(callout);
 
     if (callout.visibility === CalloutVisibility.PUBLISHED) {
