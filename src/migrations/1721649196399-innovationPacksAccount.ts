@@ -24,6 +24,26 @@ export class InnovationPacksAccount1721649196399 implements MigrationInterface {
       `ALTER TABLE \`innovation_pack\` ADD \`accountId\` char(36) NULL`
     );
 
+    const alkemioOrgName = '%Alkemio%';
+    const defaultAccountData: {
+      id: string;
+    }[] = await queryRunner.query(
+      `SELECT account.id as id FROM credential
+        JOIN account ON credential.resourceID = account.id
+        JOIN organization ON credential.agentId = organization.agentId
+        JOIN profile ON organization.profileId = profile.id
+      WHERE credential.type = 'account-host' AND profile.displayName LIKE '${alkemioOrgName}';`
+    );
+    // There needs to be an organization HOSTING AT LEAST ONE SPACE, and called something like '%Alkemio%'
+    if (!defaultAccountData || defaultAccountData.length === 0) {
+      throw new Error(
+        `Organization not found, unable to get a default account with the organization name: ${alkemioOrgName}`
+      );
+    }
+
+    const defaultHostAccount = defaultAccountData[0].id;
+    console.log(`Default host account: ${defaultHostAccount}`);
+
     const libraryStorageAggregatorID =
       await this.getLibraryStorageAggregatorID(queryRunner);
 
@@ -31,7 +51,7 @@ export class InnovationPacksAccount1721649196399 implements MigrationInterface {
       id: string;
     }[] = await queryRunner.query(`SELECT id FROM \`innovation_pack\``);
     for (const innovationPack of innovationPacks) {
-      let accountID = '';
+      let accountID = defaultHostAccount;
 
       const [providerCredential]: {
         id: string;
