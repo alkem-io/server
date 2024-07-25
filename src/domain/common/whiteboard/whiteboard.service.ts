@@ -73,16 +73,13 @@ export class WhiteboardService {
       ProfileType.WHITEBOARD,
       storageAggregator
     );
-    await this.profileService.addVisualOnProfile(
-      whiteboard.profile,
-      VisualType.CARD
-    );
+    this.profileService.addVisualOnProfile(whiteboard.profile, VisualType.CARD);
     await this.profileService.addTagsetOnProfile(whiteboard.profile, {
       name: TagsetReservedName.DEFAULT,
       tags: [],
     });
 
-    return this.save(whiteboard);
+    return whiteboard;
   }
 
   async getWhiteboardOrFail(
