@@ -185,7 +185,7 @@ export class ProfileService {
     return await this.profileRepository.save(profile);
   }
 
-  async addVisualOnProfile(
+  public addVisualOnProfile(
     profile: IProfile,
     visualType: VisualType,
     url?: string
@@ -193,16 +193,16 @@ export class ProfileService {
     let visual: IVisual;
     switch (visualType) {
       case VisualType.AVATAR:
-        visual = await this.visualService.createVisualAvatar();
+        visual = this.visualService.createVisualAvatar();
         break;
       case VisualType.BANNER:
-        visual = await this.visualService.createVisualBanner();
+        visual = this.visualService.createVisualBanner();
         break;
       case VisualType.CARD:
-        visual = await this.visualService.createVisualCard();
+        visual = this.visualService.createVisualCard();
         break;
       case VisualType.BANNER_WIDE:
-        visual = await this.visualService.createVisualBannerWide();
+        visual = this.visualService.createVisualBannerWide();
         break;
 
       default:
@@ -226,14 +226,15 @@ export class ProfileService {
     profile: IProfile,
     tagsetData: CreateTagsetInput
   ): Promise<ITagset> {
-    profile.tagsets = await this.getTagsets(profile);
-    const tagset = await this.tagsetService.createTagsetWithName(
+    if (!profile.tagsets) {
+      profile.tagsets = await this.getTagsets(profile);
+    }
+
+    const tagset = this.tagsetService.createTagsetWithName(
       profile.tagsets,
       tagsetData
     );
     profile.tagsets.push(tagset);
-
-    await this.profileRepository.save(profile);
 
     return tagset;
   }
