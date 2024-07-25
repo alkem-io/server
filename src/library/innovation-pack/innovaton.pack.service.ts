@@ -234,6 +234,7 @@ export class InnovationPackService {
 
   public async getProvider(innovationPackID: string): Promise<IContributor> {
     const innovationPack = await this.innovationPackRepository.findOne({
+      where: { id: innovationPackID },
       relations: {
         account: true,
       },

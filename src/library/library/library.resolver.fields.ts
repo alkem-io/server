@@ -28,7 +28,7 @@ export class LibraryResolverFields {
     queryData?: InnovationPacksInput
   ): Promise<IInnovationPack[]> {
     this.logger.verbose?.(
-      `Ignoring query data ${queryData} for now; to be added back in later`,
+      `Ignoring query data ${JSON.stringify(queryData)} for now; to be added back in later`,
       LogContext.LIBRARY
     );
     return await this.libraryService.getListedInnovationPacks(

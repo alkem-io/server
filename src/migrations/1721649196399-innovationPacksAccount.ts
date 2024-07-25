@@ -24,8 +24,6 @@ export class InnovationPacksAccount1721649196399 implements MigrationInterface {
       `ALTER TABLE \`innovation_pack\` ADD \`accountId\` char(36) NULL`
     );
 
-    let accountID = '';
-
     const libraryStorageAggregatorID =
       await this.getLibraryStorageAggregatorID(queryRunner);
 
@@ -33,6 +31,8 @@ export class InnovationPacksAccount1721649196399 implements MigrationInterface {
       id: string;
     }[] = await queryRunner.query(`SELECT id FROM \`innovation_pack\``);
     for (const innovationPack of innovationPacks) {
+      let accountID = '';
+
       const [providerCredential]: {
         id: string;
         agentId: string;
