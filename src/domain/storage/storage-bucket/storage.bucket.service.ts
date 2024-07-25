@@ -51,7 +51,7 @@ export class StorageBucketService {
     private profileRepository: Repository<Profile>
   ) {}
 
-  public async createStorageBucket(
+  public createStorageBucket(
     storageBucketData: CreateStorageBucketInput
   ): Promise<IStorageBucket> {
     const storage: IStorageBucket = new StorageBucket();
@@ -63,7 +63,7 @@ export class StorageBucketService {
       storageBucketData?.maxFileSize || this.DEFAULT_MAX_ALLOWED_FILE_SIZE;
     storage.storageAggregator = storageBucketData.storageAggregator;
 
-    return await this.storageBucketRepository.save(storage);
+    return this.storageBucketRepository.save(storage);
   }
 
   async deleteStorageBucket(storageID: string): Promise<IStorageBucket> {
@@ -188,9 +188,8 @@ export class StorageBucketService {
       /* just consume */
     }
 
-    const document = await this.documentService.createDocument(
-      createDocumentInput
-    );
+    const document =
+      await this.documentService.createDocument(createDocumentInput);
     document.storageBucket = storage;
 
     this.logger.verbose?.(
@@ -215,9 +214,8 @@ export class StorageBucketService {
         LogContext.DOCUMENT
       );
 
-    const documentForReference = await this.documentService.getDocumentFromURL(
-      uri
-    );
+    const documentForReference =
+      await this.documentService.getDocumentFromURL(uri);
 
     try {
       const newDocument = await this.uploadFileAsDocument(
