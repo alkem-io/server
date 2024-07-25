@@ -1,7 +1,6 @@
 import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
 import { Column, Entity } from 'typeorm';
 import { ICommunityPolicy } from './community.policy.interface';
-import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 
 @Entity()
 export class CommunityPolicy
@@ -16,8 +15,6 @@ export class CommunityPolicy
 
   @Column('text')
   admin!: string;
-
-  settings!: ISpaceSettings;
 
   constructor(member: string, lead: string, admin: string) {
     super();

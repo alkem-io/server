@@ -18,6 +18,7 @@ import {
   CREDENTIAL_RULE_CONTRIBUTION_CREATED_BY_DELETE,
 } from '@common/constants';
 import { LinkAuthorizationService } from '../link/link.service.authorization';
+import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 
 @Injectable()
 export class CalloutContributionAuthorizationService {
@@ -33,7 +34,8 @@ export class CalloutContributionAuthorizationService {
   public async applyAuthorizationPolicy(
     contributionInput: ICalloutContribution,
     parentAuthorization: IAuthorizationPolicy | undefined,
-    communityPolicy: ICommunityPolicy
+    communityPolicy: ICommunityPolicy,
+    spaceSettings: ISpaceSettings
   ): Promise<ICalloutContribution> {
     const contribution =
       await this.contributionService.getCalloutContributionOrFail(
@@ -65,7 +67,8 @@ export class CalloutContributionAuthorizationService {
     // Extend to give the user creating the contribution more rights
     contribution.authorization = this.appendCredentialRules(
       contribution,
-      communityPolicy
+      communityPolicy,
+      spaceSettings
     );
 
     if (contribution.post) {
@@ -73,7 +76,8 @@ export class CalloutContributionAuthorizationService {
         await this.postAuthorizationService.applyAuthorizationPolicy(
           contribution.post,
           contribution.authorization,
-          communityPolicy
+          communityPolicy,
+          spaceSettings
         );
     }
     if (contribution.whiteboard) {
@@ -98,7 +102,8 @@ export class CalloutContributionAuthorizationService {
 
   private appendCredentialRules(
     contribution: ICalloutContribution,
-    communityPolicy: ICommunityPolicy
+    communityPolicy: ICommunityPolicy,
+    spaceSettings: ISpaceSettings
   ): IAuthorizationPolicy {
     const authorization = contribution.authorization;
     if (!authorization)
@@ -146,6 +151,7 @@ export class CalloutContributionAuthorizationService {
     const credentials =
       this.communityPolicyService.getCredentialsForRoleWithParents(
         communityPolicy,
+        spaceSettings,
         CommunityRole.ADMIN
       );
     credentials.push({

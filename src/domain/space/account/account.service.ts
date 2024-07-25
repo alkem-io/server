@@ -349,9 +349,8 @@ export class AccountService {
         LogContext.ACCOUNT
       );
     }
-    const privileges = await this.licenseEngineService.getGrantedPrivileges(
-      accountAgent
-    );
+    const privileges =
+      await this.licenseEngineService.getGrantedPrivileges(accountAgent);
     return privileges;
   }
 
@@ -454,10 +453,13 @@ export class AccountService {
   ): Promise<IVirtualContributor> {
     const accountID = vcData.accountID;
     const account = await this.getAccountOrFail(accountID, {
-      relations: { virtualContributors: true },
+      relations: {
+        virtualContributors: true,
+        storageAggregator: true,
+      },
     });
 
-    if (!account.virtualContributors) {
+    if (!account.virtualContributors || !account.storageAggregator) {
       throw new RelationshipNotFoundException(
         `Unable to load Account with required entities for creating VC: ${account.id} `,
         LogContext.ACCOUNT
@@ -465,12 +467,11 @@ export class AccountService {
     }
 
     const vc = await this.virtualContributorService.createVirtualContributor(
-      vcData
+      vcData,
+      account.storageAggregator
     );
-    account.virtualContributors.push(vc);
-    await this.save(account);
-
-    return vc;
+    vc.account = account;
+    return await this.virtualContributorService.save(vc);
   }
 
   public async activeSubscription(account: IAccount) {

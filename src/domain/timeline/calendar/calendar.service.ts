@@ -7,7 +7,6 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
@@ -136,14 +135,6 @@ export class CalendarService {
     );
     calendarEvent.calendar = calendar;
     return await this.calendarEventService.save(calendarEvent);
-  }
-
-  public async getCommunityPolicy(
-    collaborationID: string
-  ): Promise<ICommunityPolicy> {
-    return await this.namingService.getCommunityPolicyWithSettingsForCollaboration(
-      collaborationID
-    );
   }
 
   public async getCalendarEventsArgs(

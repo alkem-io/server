@@ -5,6 +5,7 @@ import { IOrganizationVerification } from '../organization-verification/organiza
 import { IPreferenceSet } from '@domain/common/preference-set';
 import { IContributorBase } from '../contributor/contributor.base.interface';
 import { IContributor } from '../contributor/contributor.interface';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 
 @ObjectType('Organization', {
   implements: () => [IGroupable, IContributor],
@@ -42,4 +43,6 @@ export class IOrganization extends IContributorBase implements IContributor {
   verification?: IOrganizationVerification;
 
   preferenceSet?: IPreferenceSet;
+
+  storageAggregator?: IStorageAggregator;
 }
