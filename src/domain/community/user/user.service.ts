@@ -1,8 +1,14 @@
 import { UUID_LENGTH } from '@common/constants';
-import { LogContext, ProfileType, UserPreferenceType } from '@common/enums';
+import {
+  AuthorizationCredential,
+  LogContext,
+  ProfileType,
+  UserPreferenceType,
+} from '@common/enums';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
+  ForbiddenException,
   RelationshipNotFoundException,
   UserAlreadyRegisteredException,
   UserRegistrationInvalidEmail,
@@ -384,6 +390,18 @@ export class UserService {
       );
   }
 
+  private async isAccountHost(user: IUser): Promise<boolean> {
+    if (!user.agent)
+      throw new RelationshipNotFoundException(
+        `Unable to load agent for user: ${user.id}`,
+        LogContext.COMMUNITY
+      );
+
+    return await this.agentService.hasValidCredential(user.agent.id, {
+      type: AuthorizationCredential.ACCOUNT_HOST,
+    });
+  }
+
   async deleteUser(deleteData: DeleteUserInput): Promise<IUser> {
     const userID = deleteData.ID;
     const user = await this.getUserOrFail(userID, {
@@ -394,6 +412,14 @@ export class UserService {
         storageAggregator: true,
       },
     });
+
+    const isAccountHost = await this.isAccountHost(user);
+    if (isAccountHost) {
+      throw new ForbiddenException(
+        'Unable to delete User: host of one or more accounts',
+        LogContext.SPACES
+      );
+    }
     const { id } = user;
     await this.clearUserCache(user);
 

@@ -1,7 +1,7 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -38,6 +38,7 @@ import { IAiPersona } from '../ai-persona';
 import { IContributor } from '../contributor/contributor.interface';
 import { AccountHostService } from '@domain/space/account.host/account.host.service';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { Invitation } from '../invitation';
 
 @Injectable()
 export class VirtualContributorService {
@@ -50,6 +51,8 @@ export class VirtualContributorService {
     private aiPersonaService: AiPersonaService,
     private aiServerAdapter: AiServerAdapter,
     private accountHostService: AccountHostService,
+    @InjectEntityManager('default')
+    private entityManager: EntityManager,
     @InjectRepository(VirtualContributor)
     private virtualContributorRepository: Repository<VirtualContributor>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -256,6 +259,8 @@ export class VirtualContributorService {
         ID: virtualContributor.aiPersona.id,
       });
     }
+
+    await this.deleteVCInvitations(virtualContributorID);
 
     return result;
   }
@@ -545,5 +550,18 @@ export class VirtualContributorService {
         .getCount();
 
     return virtualContributorMatchesCount;
+  }
+
+  //adding this to avoid circular dependency between VirtualContributor, Room, and Invitation
+  private async deleteVCInvitations(contributorID: string) {
+    const invitations = await this.entityManager.find(Invitation, {
+      where: { invitedContributor: contributorID },
+    });
+    for (const invitation of invitations) {
+      if (invitation.authorization) {
+        await this.authorizationPolicyService.delete(invitation.authorization);
+      }
+      await this.entityManager.remove(invitation);
+    }
   }
 }
