@@ -1,4 +1,3 @@
-import { some } from 'lodash';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 
@@ -7,11 +6,7 @@ import { Tagset } from './tagset.entity';
 import { ITagset } from './tagset.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums';
-import {
-  EntityNotFoundException,
-  RelationshipNotFoundException,
-  ValidationException,
-} from '@common/exceptions';
+import { EntityNotFoundException, RelationshipNotFoundException, ValidationException } from '@common/exceptions';
 import { CreateTagsetInput } from '@domain/common/tagset/dto/tagset.dto.create';
 import { UpdateTagsetInput } from '@domain/common/tagset/dto/tagset.dto.update';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
@@ -30,13 +25,14 @@ export class TagsetService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async createTagset(tagsetData: CreateTagsetInput): Promise<ITagset> {
-    if (!tagsetData.type) tagsetData.type = TagsetType.FREEFORM;
-    const tagset: ITagset = Tagset.create({ ...tagsetData });
-    tagset.authorization = new AuthorizationPolicy();
-    if (!tagset.tags) tagset.tags = [];
-    tagset.tagsetTemplate = tagsetData.tagsetTemplate;
-    return await this.tagsetRepository.save(tagset);
+  public createTagset(tagsetData: CreateTagsetInput): ITagset {
+    return Tagset.create({
+      ...tagsetData,
+      authorization: new AuthorizationPolicy(),
+      type: tagsetData.type ?? TagsetType.FREEFORM,
+      tags: tagsetData?.tags ?? [],
+      tagsetTemplate: tagsetData.tagsetTemplate,
+    });
   }
 
   async getTagsetOrFail(
@@ -246,7 +242,7 @@ export class TagsetService {
       );
     }
 
-    return Tagset.create({ ...tagsetData });
+    return this.createTagset(tagsetData);
   }
 
   async save(tagset: ITagset): Promise<ITagset> {
