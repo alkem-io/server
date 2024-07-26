@@ -45,7 +45,7 @@ export class PlatformResolverFields {
   })
   library(): Promise<ILibrary> {
     return this.platformService.getLibraryOrFail({
-      library: { innovationPacks: true },
+      library: {},
     });
   }
 

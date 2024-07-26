@@ -58,6 +58,8 @@ import { IVirtualContributor } from '@domain/community/virtual-contributor/virtu
 import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { InnovationPackService } from '@library/innovation-pack/innovaton.pack.service';
+import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
 
 @Resolver(() => LookupQueryResults)
 export class LookupResolverFields {
@@ -73,6 +75,7 @@ export class LookupResolverFields {
     private whiteboardService: WhiteboardService,
     private whiteboardTemplateService: WhiteboardTemplateService,
     private calloutTemplateService: CalloutTemplateService,
+    private innovationPackService: InnovationPackService,
     private profileService: ProfileService,
     private postService: PostService,
     private calloutService: CalloutService,
@@ -210,6 +213,27 @@ export class LookupResolverFields {
     );
 
     return document;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField(() => IInnovationPack, {
+    nullable: true,
+    description: 'Lookup the specified InnovationPack',
+  })
+  async innovationPack(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('ID', { type: () => UUID }) id: string
+  ): Promise<IInnovationPack> {
+    const innovationPack =
+      await this.innovationPackService.getInnovationPackOrFail(id);
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      innovationPack.authorization,
+      AuthorizationPrivilege.READ,
+      `lookup InnovationPack: ${innovationPack.id}`
+    );
+
+    return innovationPack;
   }
 
   @UseGuards(GraphqlGuard)

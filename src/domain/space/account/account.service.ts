@@ -44,6 +44,9 @@ import { StorageAggregatorService } from '@domain/storage/storage-aggregator/sto
 import { CreateSpaceOnAccountInput } from './dto/account.dto.create.space';
 import { Space } from '../space/space.entity';
 import { LicensePlanType } from '@common/enums/license.plan.type';
+import { InnovationPackService } from '@library/innovation-pack/innovaton.pack.service';
+import { CreateInnovationPackOnAccountInput } from './dto/account.dto.create.innovation.pack';
+import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
 
 @Injectable()
 export class AccountService {
@@ -59,6 +62,7 @@ export class AccountService {
     private licenseIssuerService: LicenseIssuerService,
     private storageAggregatorService: StorageAggregatorService,
     private virtualContributorService: VirtualContributorService,
+    private innovationPackService: InnovationPackService,
     @InjectRepository(Account)
     private accountRepository: Repository<Account>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -250,6 +254,7 @@ export class AccountService {
         license: true,
         defaults: true,
         virtualContributors: true,
+        innovationPacks: true,
         storageAggregator: true,
       },
     });
@@ -261,6 +266,7 @@ export class AccountService {
       !account.defaults ||
       !account.library ||
       !account.virtualContributors ||
+      !account.innovationPacks ||
       !account.storageAggregator
     ) {
       throw new RelationshipNotFoundException(
@@ -290,6 +296,9 @@ export class AccountService {
     });
     for (const vc of account.virtualContributors) {
       await this.virtualContributorService.deleteVirtualContributor(vc.id);
+    }
+    for (const ip of account.innovationPacks) {
+      await this.innovationPackService.deleteInnovationPack({ ID: ip.id });
     }
 
     const result = await this.accountRepository.remove(account as Account);
@@ -472,6 +481,29 @@ export class AccountService {
     );
     vc.account = account;
     return await this.virtualContributorService.save(vc);
+  }
+
+  public async createInnovationPackOnAccount(
+    ipData: CreateInnovationPackOnAccountInput
+  ): Promise<IInnovationPack> {
+    const accountID = ipData.accountID;
+    const account = await this.getAccountOrFail(accountID, {
+      relations: { storageAggregator: true },
+    });
+
+    if (!account.storageAggregator) {
+      throw new RelationshipNotFoundException(
+        `Unable to load Account with required entities for creating Innovation Pack: ${account.id} `,
+        LogContext.ACCOUNT
+      );
+    }
+
+    const ip = await this.innovationPackService.createInnovationPack(
+      ipData,
+      account.storageAggregator
+    );
+    ip.account = account;
+    return await this.innovationPackService.save(ip);
   }
 
   public async activeSubscription(account: IAccount) {

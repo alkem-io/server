@@ -803,7 +803,6 @@ export class UrlGeneratorService {
       this.FIELD_PROFILE_ID,
       profileID
     );
-
     return `${this.endpoint_cluster}/${this.PATH_INNOVATION_PACKS}/${innovationPackInfo.entityNameID}`;
   }
 
