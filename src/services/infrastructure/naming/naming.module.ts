@@ -1,14 +1,12 @@
 import { Module } from '@nestjs/common';
 import { NamingService } from './naming.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { CalendarEvent } from '@domain/timeline/event';
 import { InnovationHub } from '@domain/innovation-hub/innovation.hub.entity';
 import { Discussion } from '@platform/forum-discussion/discussion.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Callout]),
     TypeOrmModule.forFeature([CalendarEvent]),
     TypeOrmModule.forFeature([Discussion]),
     TypeOrmModule.forFeature([InnovationHub]),

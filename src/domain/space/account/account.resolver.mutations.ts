@@ -41,6 +41,10 @@ import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface'
 import { CreateInnovationHubOnAccountInput } from './dto/account.dto.create.innovation.hub';
 import { InnovationHubService } from '@domain/innovation-hub';
 import { InnovationHubAuthorizationService } from '@domain/innovation-hub/innovation.hub.service.authorization';
+import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
+import { CreateInnovationPackOnAccountInput } from './dto/account.dto.create.innovation.pack';
+import { InnovationPackAuthorizationService } from '@library/innovation-pack/innovation.pack.service.authorization';
+import { InnovationPackService } from '@library/innovation-pack/innovaton.pack.service';
 
 @Resolver()
 export class AccountResolverMutations {
@@ -54,6 +58,8 @@ export class AccountResolverMutations {
     private virtualContributorAuthorizationService: VirtualContributorAuthorizationService,
     private innovationHubService: InnovationHubService,
     private innovationHubAuthorizationService: InnovationHubAuthorizationService,
+    private innovationPackService: InnovationPackService,
+    private innovationPackAuthorizationService: InnovationPackAuthorizationService,
     private spaceDefaultsService: SpaceDefaultsService,
     private namingReporter: NameReporterService,
     private spaceService: SpaceService,
@@ -388,5 +394,57 @@ export class AccountResolverMutations {
     return await this.virtualContributorService.getVirtualContributorOrFail(
       virtual.id
     );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IInnovationPack, {
+    description: 'Creates a new InnovationPack on an Account.',
+  })
+  async createInnovationPack(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('innovationPackData')
+    innovationPackData: CreateInnovationPackOnAccountInput
+  ): Promise<IInnovationPack> {
+    const account = await this.accountService.getAccountOrFail(
+      innovationPackData.accountID,
+      {
+        relations: {
+          space: {
+            community: true,
+          },
+        },
+      }
+    );
+    if (!account.space || !account.space.community) {
+      throw new EntityNotInitializedException(
+        `Account space or community is not initialized: ${account.id}`,
+        LogContext.ACCOUNT
+      );
+    }
+
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      account.authorization,
+      AuthorizationPrivilege.CREATE,
+      `create Innovation Pack on account: ${innovationPackData.nameID}`
+    );
+
+    let innovationPack =
+      await this.accountService.createInnovationPackOnAccount(
+        innovationPackData
+      );
+
+    const clonedAccountAuth =
+      await this.accountAuthorizationService.getClonedAccountAuthExtendedForChildEntities(
+        account
+      );
+
+    innovationPack =
+      await this.innovationPackAuthorizationService.applyAuthorizationPolicy(
+        innovationPack,
+        clonedAccountAuth
+      );
+
+    return await this.innovationPackService.save(innovationPack);
   }
 }

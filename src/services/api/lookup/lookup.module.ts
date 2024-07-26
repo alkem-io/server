@@ -30,6 +30,7 @@ import { CommunityGuidelinesTemplateModule } from '@domain/template/community-gu
 import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
 import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
 import { InnovationHubModule } from '@domain/innovation-hub';
+import { InnovationPackModule } from '@library/innovation-pack/innovation.pack.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { InnovationHubModule } from '@domain/innovation-hub';
     WhiteboardModule,
     WhiteboardTemplateModule,
     InnovationFlowModule,
+    InnovationPackModule,
     InnovationFlowTemplateModule,
     PostModule,
     ProfileModule,

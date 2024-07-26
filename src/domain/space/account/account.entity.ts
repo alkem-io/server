@@ -9,6 +9,7 @@ import { Agent } from '@domain/agent/agent/agent.entity';
 import { VirtualContributor } from '@domain/community/virtual-contributor';
 import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
 import { InnovationHub } from '@domain/innovation-hub/innovation.hub.entity';
+import { InnovationPack } from '@library/innovation-pack/innovation.pack.entity';
 @Entity()
 export class Account extends AuthorizableEntity implements IAccount {
   @OneToOne(() => Space, {
@@ -70,4 +71,10 @@ export class Account extends AuthorizableEntity implements IAccount {
     cascade: true,
   })
   innovationHubs!: InnovationHub[];
+
+  @OneToMany(() => InnovationPack, innovationPack => innovationPack.account, {
+    eager: false,
+    cascade: true,
+  })
+  innovationPacks!: InnovationPack[];
 }

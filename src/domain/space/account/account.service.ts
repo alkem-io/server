@@ -47,6 +47,9 @@ import { LicensePlanType } from '@common/enums/license.plan.type';
 import { CreateInnovationHubOnAccountInput } from './dto/account.dto.create.innovation.hub';
 import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
 import { InnovationHubService } from '@domain/innovation-hub';
+import { CreateInnovationPackOnAccountInput } from './dto/account.dto.create.innovation.pack';
+import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
+import { InnovationPackService } from '@library/innovation-pack/innovaton.pack.service';
 
 @Injectable()
 export class AccountService {
@@ -63,6 +66,7 @@ export class AccountService {
     private storageAggregatorService: StorageAggregatorService,
     private virtualContributorService: VirtualContributorService,
     private innovationHubService: InnovationHubService,
+    private innovationPackService: InnovationPackService,
     @InjectRepository(Account)
     private accountRepository: Repository<Account>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -254,6 +258,7 @@ export class AccountService {
         license: true,
         defaults: true,
         virtualContributors: true,
+        innovationPacks: true,
         storageAggregator: true,
         innovationHubs: true,
       },
@@ -267,7 +272,8 @@ export class AccountService {
       !account.library ||
       !account.virtualContributors ||
       !account.storageAggregator ||
-      !account.innovationHubs
+      !account.innovationHubs ||
+      !account.innovationPacks
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load all entities for deletion of account ${account.id} `,
@@ -296,6 +302,9 @@ export class AccountService {
     });
     for (const vc of account.virtualContributors) {
       await this.virtualContributorService.deleteVirtualContributor(vc.id);
+    }
+    for (const ip of account.innovationPacks) {
+      await this.innovationPackService.deleteInnovationPack({ ID: ip.id });
     }
 
     for (const hub of account.innovationHubs) {
@@ -494,17 +503,38 @@ export class AccountService {
 
     if (!account.storageAggregator) {
       throw new RelationshipNotFoundException(
-        `Unable to load Account with required entities for creating an INnovationHub: ${account.id} `,
+        `Unable to load Account with required entities for creating an InnovationHub: ${account.id} `,
         LogContext.ACCOUNT
       );
     }
-
     const hub = await this.innovationHubService.createInnovationHub(
       innovationHubData,
       account.storageAggregator
     );
     hub.account = account;
     return await this.innovationHubService.save(hub);
+  }
+
+  public async createInnovationPackOnAccount(
+    ipData: CreateInnovationPackOnAccountInput
+  ): Promise<IInnovationPack> {
+    const accountID = ipData.accountID;
+    const account = await this.getAccountOrFail(accountID, {
+      relations: { storageAggregator: true },
+    });
+
+    if (!account.storageAggregator) {
+      throw new RelationshipNotFoundException(
+        `Unable to load Account with required entities for creating Innovation Pack: ${account.id} `,
+        LogContext.ACCOUNT
+      );
+    }
+    const ip = await this.innovationPackService.createInnovationPack(
+      ipData,
+      account.storageAggregator
+    );
+    ip.account = account;
+    return await this.innovationPackService.save(ip);
   }
 
   public async activeSubscription(account: IAccount) {

@@ -119,9 +119,7 @@ export class PlatformAuthorizationService {
   ): Promise<IPlatform> {
     const platform = await this.platformService.getPlatformOrFail({
       relations: {
-        library: {
-          innovationPacks: true,
-        },
+        library: true,
         forum: true,
         storageAggregator: true,
         licensing: true,
