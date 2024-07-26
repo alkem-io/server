@@ -515,16 +515,10 @@ export class SpaceService {
 
     const qb = this.spaceRepository.createQueryBuilder('space');
     if (visibilities) {
-      qb.leftJoinAndSelect('space.account', 'account');
-      qb.leftJoinAndSelect('account.license', 'license');
       qb.leftJoinAndSelect('space.authorization', 'authorization');
       qb.where({
         level: SpaceLevel.SPACE,
-        account: {
-          license: {
-            visibility: In(visibilities),
-          },
-        },
+        visibility: In(visibilities),
       });
     }
 
@@ -538,8 +532,6 @@ export class SpaceService {
     const qb = this.spaceRepository.createQueryBuilder('space');
 
     qb.leftJoinAndSelect('space.subspaces', 'subspace');
-    qb.leftJoinAndSelect('space.account', 'account');
-    qb.leftJoinAndSelect('account.license', 'license');
     qb.leftJoinAndSelect('space.authorization', 'authorization_policy');
     qb.leftJoinAndSelect('subspace.subspaces', 'subspaces');
     qb.where({
