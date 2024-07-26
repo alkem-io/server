@@ -71,7 +71,6 @@ export class SpaceAuthorizationService {
             },
           },
           account: {
-            license: true,
             agent: {
               credentials: true,
             },
@@ -81,7 +80,6 @@ export class SpaceAuthorizationService {
     );
     if (
       !spaceAccountLicense.account ||
-      !spaceAccountLicense.account.license ||
       !spaceAccountLicense.account.agent ||
       !spaceAccountLicense.account.agent.credentials
     ) {
@@ -91,7 +89,7 @@ export class SpaceAuthorizationService {
       );
     }
 
-    const spaceVisibility = spaceAccountLicense.account.license.visibility;
+    const spaceVisibility = spaceAccountLicense.visibility;
     const accountAgent = spaceAccountLicense.account.agent;
 
     // Allow the parent admins to also delete subspaces

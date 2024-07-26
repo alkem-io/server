@@ -141,7 +141,7 @@ export class SpaceResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('updateData') updateData: UpdateSpacePlatformSettingsInput
   ): Promise<ISpace> {
-    const space = await this.spaceService.getSpaceOrFail(updateData.spaceID);
+    let space = await this.spaceService.getSpaceOrFail(updateData.spaceID);
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       space.authorization,
@@ -149,10 +149,13 @@ export class SpaceResolverMutations {
       `update platform settings on space: ${space.id}`
     );
 
-    return await this.spaceService.updateSpacePlatformSettings(
+    space = await this.spaceService.updateSpacePlatformSettings(
       space,
       updateData
     );
+    space =
+      await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
+    return await this.spaceService.save(space);
   }
 
   @UseGuards(GraphqlGuard)
