@@ -176,15 +176,15 @@ export class SpaceService {
     });
 
     // add the visuals
-    await this.profileService.addVisualOnProfile(
+    this.profileService.addVisualOnProfile(
       space.profile,
       VisualType.AVATAR
     );
-    await this.profileService.addVisualOnProfile(
+    this.profileService.addVisualOnProfile(
       space.profile,
       VisualType.BANNER
     );
-    await this.profileService.addVisualOnProfile(
+    this.profileService.addVisualOnProfile(
       space.profile,
       VisualType.CARD
     );
