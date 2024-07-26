@@ -162,10 +162,7 @@ export class SpaceService {
       storageAggregator
     );
 
-    if (!spaceData.context) {
-      spaceData.context = {};
-    }
-    space.context = await this.contextService.createContext(spaceData.context);
+    space.context = this.contextService.createContext(spaceData.context);
 
     const profileType = this.spaceDefaultsService.getProfileType(space.level);
     space.profile = await this.profileService.createProfile(

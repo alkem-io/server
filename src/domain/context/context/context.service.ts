@@ -4,7 +4,7 @@ import { FindOneOptions, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { ReferenceService } from '@domain/common/reference/reference.service';
-import { IContext, Context, CreateContextInput } from '@domain/context/context';
+import { Context, CreateContextInput, IContext } from '@domain/context/context';
 import { IEcosystemModel } from '@domain/context/ecosystem-model';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { EcosystemModelService } from '@domain/context/ecosystem-model/ecosystem-model.service';
@@ -21,14 +21,12 @@ export class ContextService {
     private contextRepository: Repository<Context>
   ) {}
 
-  async createContext(contextData: CreateContextInput): Promise<IContext> {
-    const context: IContext = Context.create({ ...contextData });
-
-    context.ecosystemModel =
-      await this.ecosystemModelService.createEcosystemModel({});
-    context.authorization = new AuthorizationPolicy();
-
-    return await this.contextRepository.save(context);
+  public createContext(contextData?: CreateContextInput): IContext {
+    return Context.create({
+      ...contextData,
+      authorization: new AuthorizationPolicy(),
+      ecosystemModel: this.ecosystemModelService.createEcosystemModel({}),
+    })
   }
 
   async getContextOrFail(
