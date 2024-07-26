@@ -9,7 +9,7 @@ import {
 } from 'typeorm';
 import { ISpace } from '@domain/space/space/space.interface';
 import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
-import { TINY_TEXT_LENGTH } from '@common/constants';
+import { TINY_TEXT_LENGTH, UUID_LENGTH } from '@common/constants';
 import { SpaceType } from '@common/enums/space.type';
 import { Collaboration } from '@domain/collaboration/collaboration';
 import { Community } from '@domain/community/community';
@@ -88,6 +88,11 @@ export class Space extends NameableEntity implements ISpace {
     length: TINY_TEXT_LENGTH,
   })
   type!: SpaceType;
+
+  @Column({
+    length: UUID_LENGTH,
+  })
+  levelZeroSpaceID!: string;
 
   @Column('int', { nullable: false })
   level!: number;

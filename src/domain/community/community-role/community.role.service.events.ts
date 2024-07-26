@@ -34,7 +34,7 @@ export class CommunityRoleEventsService {
 
   public async processCommunityNewMemberEvents(
     community: ICommunity,
-    rootSpaceID: string,
+    levelZeroSpaceID: string,
     displayName: string,
     agentInfo: AgentInfo,
     newContributor: IContributor
@@ -59,7 +59,7 @@ export class CommunityRoleEventsService {
           {
             id: community.parentID,
             name: displayName,
-            space: rootSpaceID,
+            space: levelZeroSpaceID,
           },
           {
             id: agentInfo.userID,
@@ -72,7 +72,7 @@ export class CommunityRoleEventsService {
           {
             id: community.parentID,
             name: displayName,
-            space: rootSpaceID,
+            space: levelZeroSpaceID,
           },
           {
             id: agentInfo.userID,

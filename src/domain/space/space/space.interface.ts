@@ -43,4 +43,9 @@ export class ISpace extends INameable {
   settingsStr!: string;
 
   storageAggregator?: IStorageAggregator;
+
+  @Field(() => String, {
+    description: 'The ID of the level zero space for this tree.',
+  })
+  levelZeroSpaceID!: string;
 }

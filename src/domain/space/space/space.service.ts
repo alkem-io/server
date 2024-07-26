@@ -117,15 +117,6 @@ export class SpaceService {
 
     const space: ISpace = Space.create(spaceData);
 
-    return await this.initialise(space, spaceData, account, agentInfo);
-  }
-
-  public async initialise(
-    space: ISpace,
-    spaceData: CreateSpaceInput,
-    account: IAccount,
-    agentInfo: AgentInfo | undefined
-  ): Promise<ISpace> {
     space.authorization = new AuthorizationPolicy();
     space.account = account;
     space.settingsStr = this.spaceSettingsService.serializeSettings(
@@ -237,6 +228,10 @@ export class SpaceService {
     });
 
     await this.save(space);
+
+    if (spaceData.level === SpaceLevel.SPACE) {
+      space.levelZeroSpaceID = space.id;
+    }
 
     ////// Community
     // set immediate community parent + resourceID
@@ -820,7 +815,9 @@ export class SpaceService {
       );
     }
     const reservedNameIDs =
-      await this.namingService.getReservedNameIDsInAccount(space.account.id);
+      await this.namingService.getReservedNameIDsInLevelZeroSpace(
+        space.levelZeroSpaceID
+      );
     if (!subspaceData.nameID) {
       subspaceData.nameID =
         this.namingService.createNameIdAvoidingReservedNameIDs(
@@ -871,6 +868,7 @@ export class SpaceService {
 
     // Set the parent space directly, avoiding saving the whole parent
     subspace.parentSpace = space;
+    subspace.levelZeroSpaceID = space.levelZeroSpaceID;
 
     // Finally set the community relationship
     await this.setCommunityHierarchyForSubspace(
@@ -878,13 +876,13 @@ export class SpaceService {
       subspace.community
     );
 
-    return await this.spaceRepository.save(subspace);
+    return await this.save(subspace);
   }
 
   async getSubspace(subspaceID: string, space: ISpace): Promise<ISpace> {
-    return await this.getSubspaceInAccountScopeOrFail(
+    return await this.getSubspaceInLevelZeroScopeOrFail(
       subspaceID,
-      space.account.id
+      space.levelZeroSpaceID
     );
   }
 
@@ -1018,9 +1016,9 @@ export class SpaceService {
     await this.storageAggregatorService.delete(space.storageAggregator.id);
   }
 
-  async getSubspaceInAccount(
+  async getSubspaceInLevelZeroSpace(
     subspaceID: string,
-    accountID: string,
+    levelZeroSpaceID: string,
     options?: FindOneOptions<Space>
   ): Promise<ISpace | null> {
     let subspace: ISpace | null = null;
@@ -1028,9 +1026,7 @@ export class SpaceService {
       subspace = await this.spaceRepository.findOne({
         where: {
           id: subspaceID,
-          account: {
-            id: accountID,
-          },
+          levelZeroSpaceID: levelZeroSpaceID,
         },
         ...options,
       });
@@ -1040,9 +1036,7 @@ export class SpaceService {
       subspace = await this.spaceRepository.findOne({
         where: {
           nameID: subspaceID,
-          account: {
-            id: accountID,
-          },
+          levelZeroSpaceID: levelZeroSpaceID,
         },
         ...options,
       });
@@ -1051,14 +1045,14 @@ export class SpaceService {
     return subspace;
   }
 
-  async getSubspaceInAccountScopeOrFail(
+  async getSubspaceInLevelZeroScopeOrFail(
     subspaceID: string,
-    accountID: string,
+    levelZeroSpaceID: string,
     options?: FindOneOptions<Space>
   ): Promise<ISpace | never> {
-    const subspace = await this.getSubspaceInAccount(
+    const subspace = await this.getSubspaceInLevelZeroSpace(
       subspaceID,
-      accountID,
+      levelZeroSpaceID,
       options
     );
 
@@ -1091,52 +1085,6 @@ export class SpaceService {
       childCommunity,
       parentCommunity
     );
-  }
-
-  public async getSpaceForCommunityOrFail(
-    communityId: string
-  ): Promise<ISpace> {
-    const space = await this.spaceRepository.findOne({
-      where: {
-        community: {
-          id: communityId,
-        },
-      },
-      relations: {
-        profile: true,
-      },
-    });
-    if (!space) {
-      throw new EntityNotFoundException(
-        `Unable to find space for community: ${communityId}`,
-        LogContext.SPACES
-      );
-    }
-    return space;
-  }
-
-  public async getSpaceForCollaborationOrFail(
-    collaborationID: string,
-    options?: FindOneOptions<Space>
-  ): Promise<ISpace> {
-    const space = await this.spaceRepository.findOne({
-      where: {
-        collaboration: {
-          id: collaborationID,
-        },
-      },
-      relations: {
-        ...options?.relations,
-        profile: true,
-      },
-    });
-    if (!space) {
-      throw new EntityNotFoundException(
-        `Unable to find space for collaboration: ${collaborationID}`,
-        LogContext.SPACES
-      );
-    }
-    return space;
   }
 
   public async updateSettings(
@@ -1297,12 +1245,6 @@ export class SpaceService {
   async getMetrics(space: ISpace): Promise<INVP[]> {
     const metrics: INVP[] = [];
 
-    if (!space.account) {
-      throw new EntityNotInitializedException(
-        'Space account not initialized',
-        LogContext.SPACES
-      );
-    }
     // Subspaces
     const subspacesCount = await this.getSubspacesInSpaceCount(space.id);
     const subspacesTopic = new NVP('subspaces', subspacesCount.toString());
@@ -1312,9 +1254,8 @@ export class SpaceService {
     const community = await this.getCommunity(space.id);
 
     // Members
-    const membersCount = await this.communityRoleService.getMembersCount(
-      community
-    );
+    const membersCount =
+      await this.communityRoleService.getMembersCount(community);
     const membersTopic = new NVP('members', membersCount.toString());
     membersTopic.id = `members-${space.id}`;
     metrics.push(membersTopic);

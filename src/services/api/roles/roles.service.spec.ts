@@ -23,7 +23,6 @@ import * as getOrganizationRolesForUserEntityData from './util/get.organization.
 import * as getSpaceRolesForContributorQueryResult from './util/get.space.roles.for.contributor.query.result';
 import { MockInvitationService } from '@test/mocks/invitation.service.mock';
 import { MockCommunityResolverService } from '@test/mocks/community.resolver.service.mock';
-import { SpaceService } from '@domain/space/space/space.service';
 import { RolesResultSpace } from './dto/roles.dto.result.space';
 import { ProfileType } from '@common/enums/profile.type';
 import { Profile } from '@domain/common/profile/profile.entity';
@@ -35,6 +34,7 @@ import { RolesResultCommunity } from './dto/roles.dto.result.community';
 import { MockUserLookupService } from '@test/mocks/user.lookup.service.mock';
 import { MockVirtualContributorService } from '@test/mocks/virtual.contributor.service.mock';
 import { IUser } from '@domain/community/user';
+import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 
 describe('RolesService', () => {
   let rolesService: RolesService;
@@ -43,7 +43,7 @@ describe('RolesService', () => {
   let applicationService: ApplicationService;
   let organizationService: OrganizationService;
   let communityService: CommunityService;
-  let spaceService: SpaceService;
+  let communityResolverService: CommunityResolverService;
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
@@ -70,8 +70,8 @@ describe('RolesService', () => {
     applicationService = moduleRef.get(ApplicationService);
     organizationService = moduleRef.get(OrganizationService);
     communityService = moduleRef.get(CommunityService);
+    communityResolverService = moduleRef.get(CommunityResolverService);
     spaceFilterService = moduleRef.get(SpaceFilterService);
-    spaceService = moduleRef.get(SpaceService);
   });
 
   describe('User Roles', () => {
@@ -134,7 +134,7 @@ describe('RolesService', () => {
       jest.spyOn(communityService, 'isSpaceCommunity').mockResolvedValue(true);
 
       jest
-        .spyOn(spaceService, 'getSpaceForCommunityOrFail')
+        .spyOn(communityResolverService, 'getSpaceForCommunityOrFail')
         .mockResolvedValue(testData.space as any);
     });
 
@@ -246,6 +246,7 @@ const getSpaceRoleResultMock = ({
       settingsStr: JSON.stringify({}),
       rowId: parseInt(id),
       nameID: `space-${id}`,
+      levelZeroSpaceID: '',
       profile: {
         id: `profile-${id}`,
         displayName: `Space ${id}`,
