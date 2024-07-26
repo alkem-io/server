@@ -193,9 +193,13 @@ identity:
         kratos_public_base_url_server: ${AUTH_ORY_KRATOS_PUBLIC_BASE_URL_SERVER}:http://localhost:3000/ory/kratos/public
         kratos_admin_base_url_server: ${AUTH_ORY_KRATOS_ADMIN_BASE_URL_SERVER}:http://localhost:3000/ory/kratos
 
-        # session can't be extended until *earliest_possible_extend* **hours** before it expires
-        # default is 24
-        earliest_possible_extend: ${AUTH_EARLIEST_POSSIBLE_SESSION_EXTEND}:24
+        # Session can't be extended until *earliest_possible_extend* before it expires.
+        # The format is 1d12h59m30s, 1d2h, 1h30m, 1m30s, 1s etc.
+        #
+        # If you need high flexibility when extending sessions, you can set earliest_possible_extend to lifespan,
+        # which allows sessions to be refreshed during their entire lifespan, even right after they are created.
+        # Source https://www.ory.sh/docs/kratos/session-management/refresh-extend-sessions
+        earliest_possible_extend: ${AUTH_EARLIEST_POSSIBLE_SESSION_EXTEND}:24h
 
         # credentials used for kratos related work flows
         admin_service_account:
@@ -359,6 +363,7 @@ integrations:
       namings: ${ELASTIC_INDEX_NAMINGS_NAME}:namings
       guidance_usage: ${ELASTIC_INDEX_GUIDANCE_USAGE_NAME}:guidance-usage
     tls:
+      ca_cert_path: ${ELASTIC_TLS_CA_CERT_PATH}:none
       rejectUnauthorized: ${ELASTIC_TLS_REJECT_UNAUTHORIZED}:false
     policies:
       space_name_enrich_policy: ${ELASTIC_POLICY_SPACE_NAME_ENRICH}:space_name_enrich_policy

@@ -80,6 +80,39 @@ export class CommunityResolverService {
     return virtualContributor.account.id === accountID;
   }
 
+  public async getRootSpaceIDFromCalloutOrFail(
+    calloutID: string
+  ): Promise<string> {
+    const space = await this.entityManager.findOne(Space, {
+      where: {
+        collaboration: {
+          callouts: {
+            id: calloutID,
+          },
+        },
+      },
+      relations: {
+        account: {
+          space: true,
+        },
+      },
+    });
+    if (!space) {
+      throw new EntityNotFoundException(
+        `Unable to find space for callout: ${calloutID}`,
+        LogContext.COMMUNITY
+      );
+    }
+    const rootSpace = space.account.space;
+    if (!rootSpace) {
+      throw new EntityNotFoundException(
+        `Unable to find rootSpace for Callout: ${calloutID}  in space ${space.id}`,
+        LogContext.COMMUNITY
+      );
+    }
+    return rootSpace.id;
+  }
+
   public async getRootSpaceIDFromCommunityOrFail(
     community: ICommunity
   ): Promise<string> {
@@ -342,7 +375,7 @@ export class CommunityResolverService {
     if (!space || !space.community) {
       throw new EntityNotFoundException(
         `Unable to find space for commentsId trough post: ${commentsId}`,
-        LogContext.URL_GENERATOR
+        LogContext.COMMUNITY
       );
     }
     return space.community;
@@ -352,10 +385,19 @@ export class CommunityResolverService {
     id: string,
     roomType: RoomType
   ): Promise<ICommunity> {
-    if (roomType === RoomType.CALLOUT) {
-      return this.getCommunityFromCalloutRoomOrFail(id);
-    } else {
-      return this.getCommunityFromPostRoomOrFail(id);
+    switch (roomType) {
+      case RoomType.CALLOUT: {
+        return this.getCommunityFromCalloutRoomOrFail(id);
+      }
+      case RoomType.POST: {
+        return this.getCommunityFromPostRoomOrFail(id);
+      }
+      default: {
+        throw new EntityNotFoundException(
+          `Unable to find communnity for room of type: ${roomType}`,
+          LogContext.COMMUNITY
+        );
+      }
     }
   }
 

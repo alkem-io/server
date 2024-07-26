@@ -123,9 +123,7 @@ export class PlatformAuthorizationService {
   ): Promise<IPlatform> {
     const platform = await this.platformService.getPlatformOrFail({
       relations: {
-        library: {
-          innovationPacks: true,
-        },
+        library: true,
         forum: true,
         storageAggregator: true,
         licensing: true,
@@ -165,14 +163,18 @@ export class PlatformAuthorizationService {
         extendedAuthPolicy
       );
 
+    let platformStorageAuth =
+      this.authorizationPolicyService.cloneAuthorizationPolicy(
+        platform.authorization
+      );
+    platformStorageAuth =
+      this.extendStorageAuthorizationPolicy(platformStorageAuth);
+    platformStorageAuth.anonymousReadAccess = true;
+
     platform.storageAggregator =
       await this.storageAggregatorAuthorizationService.applyAuthorizationPolicy(
         platform.storageAggregator,
-        platform.authorization
-      );
-    platform.storageAggregator.authorization =
-      this.extendStorageAuthorizationPolicy(
-        platform.storageAggregator.authorization
+        platformStorageAuth
       );
 
     const innovationHubs = await this.innovationHubService.getInnovationHubs({
@@ -236,11 +238,12 @@ export class PlatformAuthorizationService {
     // Any member can upload
     const registeredUserUpload =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.FILE_UPLOAD],
+        [AuthorizationPrivilege.FILE_UPLOAD, AuthorizationPrivilege.READ],
         [AuthorizationCredential.GLOBAL_REGISTERED],
         CREDENTIAL_RULE_TYPES_PLATFORM_FILE_UPLOAD_ANY_USER
       );
-    registeredUserUpload.cascade = false;
+    // Cascade so the priviliege is picked up on the dirct storage bucket
+    registeredUserUpload.cascade = true;
     newRules.push(registeredUserUpload);
 
     this.authorizationPolicyService.appendCredentialAuthorizationRules(

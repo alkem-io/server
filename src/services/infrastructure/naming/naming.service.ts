@@ -19,7 +19,6 @@ import { Space } from '@domain/space/space/space.entity';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 import { SpaceLevel } from '@common/enums/space.level';
 import { User } from '@domain/community/user/user.entity';
-import { InnovationPack } from '@library/innovation-pack/innovation.pack.entity';
 import { VirtualContributor } from '@domain/community/virtual-contributor';
 import { Organization } from '@domain/community/organization';
 import { Discussion } from '@platform/forum-discussion/discussion.entity';
@@ -29,8 +28,6 @@ export class NamingService {
   replaceSpecialCharacters = require('replace-special-characters');
 
   constructor(
-    @InjectRepository(Callout)
-    private calloutRepository: Repository<Callout>,
     @InjectRepository(Discussion)
     private discussionRepository: Repository<Discussion>,
     @InjectRepository(InnovationHub)
@@ -107,23 +104,6 @@ export class NamingService {
     return nameIDs;
   }
 
-  public async getReservedNameIDsInLibrary(
-    libraryID: string
-  ): Promise<string[]> {
-    const innovationPacks = await this.entityManager.find(InnovationPack, {
-      where: {
-        library: {
-          id: libraryID,
-        },
-      },
-      select: {
-        nameID: true,
-      },
-    });
-    const nameIDs = innovationPacks?.map(pack => pack.nameID) || [];
-    return nameIDs;
-  }
-
   public async getReservedNameIDsInHubs(): Promise<string[]> {
     const hubs = await this.entityManager.find(InnovationHub, {
       select: {
@@ -192,29 +172,6 @@ export class NamingService {
     return reservedNameIDs;
   }
 
-  async isCalloutDisplayNameAvailableInCollaboration(
-    displayName: string,
-    collaborationID: string
-  ): Promise<boolean> {
-    const query = this.calloutRepository
-      .createQueryBuilder('callout')
-      .leftJoinAndSelect('callout.collaboration', 'collaboration')
-      .leftJoinAndSelect('callout.framing', 'framing')
-      .leftJoinAndSelect('framing.profile', 'profile')
-      .where('collaboration.id = :id')
-      .andWhere('profile.displayName = :displayName')
-      .setParameters({
-        id: `${collaborationID}`,
-        displayName: `${displayName}`,
-      });
-    const calloutsWithDisplayName = await query.getOne();
-    if (calloutsWithDisplayName) {
-      return false;
-    }
-
-    return true;
-  }
-
   async isDiscussionDisplayNameAvailableInForum(
     displayName: string,
     forumID: string
@@ -276,9 +233,12 @@ export class NamingService {
     return result;
   }
 
-  async getCommunityPolicyWithSettingsForCollaboration(
+  async getCommunityPolicyAndSettingsForCollaboration(
     collaborationID: string
-  ): Promise<ICommunityPolicy> {
+  ): Promise<{
+    communityPolicy: ICommunityPolicy;
+    spaceSettings: ISpaceSettings;
+  }> {
     const space = await this.entityManager.findOne(Space, {
       where: {
         collaboration: {
@@ -298,15 +258,15 @@ export class NamingService {
       );
     }
     // Directly parse the settings string to avoid the need to load the settings service
-    const policy = space.community.policy;
-    const settings: ISpaceSettings = JSON.parse(space.settingsStr);
-    policy.settings = settings;
-    return policy;
+    const communityPolicy = space.community.policy;
+    const spaceSettings: ISpaceSettings = JSON.parse(space.settingsStr);
+    return { communityPolicy, spaceSettings };
   }
 
-  async getCommunityPolicyWithSettingsForCallout(
-    calloutID: string
-  ): Promise<ICommunityPolicy> {
+  async getCommunityPolicyAndSettingsForCallout(calloutID: string): Promise<{
+    communityPolicy: ICommunityPolicy;
+    spaceSettings: ISpaceSettings;
+  }> {
     const space = await this.entityManager.findOne(Space, {
       where: {
         collaboration: {
@@ -329,11 +289,10 @@ export class NamingService {
     }
 
     // Directly parse the settings string to avoid the need to load the settings service
-    const policy = space.community.policy;
-    const settings: ISpaceSettings = JSON.parse(space.settingsStr);
-    policy.settings = settings;
+    const communityPolicy = space.community.policy;
+    const spaceSettings: ISpaceSettings = JSON.parse(space.settingsStr);
 
-    return policy;
+    return { communityPolicy, spaceSettings };
   }
 
   async getPostForRoom(roomID: string): Promise<IPost> {

@@ -24,6 +24,7 @@ import { ContributionReporterService } from '@services/external/elasticsearch/co
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { UpdateCollaborationCalloutsSortOrderInput } from './dto/collaboration.dto.update.callouts.sort.order';
 import { CalloutService } from '../callout/callout.service';
+import { NamingService } from '@services/infrastructure/naming/naming.service';
 
 @Resolver()
 export class CollaborationResolverMutations {
@@ -37,7 +38,8 @@ export class CollaborationResolverMutations {
     private collaborationService: CollaborationService,
     private activityAdapter: ActivityAdapter,
     private notificationAdapter: NotificationAdapter,
-    private calloutService: CalloutService
+    private calloutService: CalloutService,
+    private namingService: NamingService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -130,19 +132,21 @@ export class CollaborationResolverMutations {
       `create callout on collaboration: ${collaboration.id}`
     );
 
+    // This also saves the callout
     let callout = await this.collaborationService.createCalloutOnCollaboration(
       calloutData,
       agentInfo.userID
     );
 
-    const communityPolicy = await this.collaborationService.getCommunityPolicy(
-      collaboration.id
-    );
-
+    const { communityPolicy, spaceSettings } =
+      await this.namingService.getCommunityPolicyAndSettingsForCollaboration(
+        collaboration.id
+      );
     callout = await this.calloutAuthorizationService.applyAuthorizationPolicy(
       callout,
       collaboration.authorization,
-      communityPolicy
+      communityPolicy,
+      spaceSettings
     );
     callout = await this.calloutService.save(callout);
 
@@ -152,7 +156,7 @@ export class CollaborationResolverMutations {
           triggeredBy: agentInfo.userID,
           callout: callout,
         };
-        await this.notificationAdapter.calloutPublished(notificationInput);
+        this.notificationAdapter.calloutPublished(notificationInput);
       }
 
       const activityLogInput: ActivityInputCalloutPublished = {
@@ -162,20 +166,16 @@ export class CollaborationResolverMutations {
       this.activityAdapter.calloutPublished(activityLogInput);
     }
 
-    const community =
-      await this.communityResolverService.getCommunityFromCalloutOrFail(
+    const rootSpaceID =
+      await this.communityResolverService.getRootSpaceIDFromCalloutOrFail(
         callout.id
-      );
-    const spaceID =
-      await this.communityResolverService.getRootSpaceIDFromCommunityOrFail(
-        community
       );
 
     this.contributionReporter.calloutCreated(
       {
         id: callout.id,
         name: callout.nameID,
-        space: spaceID,
+        space: rootSpaceID,
       },
       {
         id: agentInfo.userID,

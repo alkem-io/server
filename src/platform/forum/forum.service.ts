@@ -67,7 +67,7 @@ export class ForumService {
 
     // Try to find the Forum
     const forum = await this.getForumOrFail(forumID, {
-      relations: { discussions: true },
+      relations: {},
     });
 
     if (!forum.discussionCategories.includes(discussionData.category)) {
@@ -87,7 +87,7 @@ export class ForumService {
         `${discussionData.profile.displayName}`,
         reservedNameIDs
       );
-    const discussion = await this.discussionService.createDiscussion(
+    let discussion = await this.discussionService.createDiscussion(
       discussionData,
       userID,
       'platform-forum',
@@ -98,9 +98,9 @@ export class ForumService {
       `[Discussion] Room created (${displayName}) and membership replicated from Updates (${forumID})`,
       LogContext.PLATFORM_FORUM
     );
+    discussion.forum = forum;
 
-    forum.discussions?.push(discussion);
-    await this.forumRepository.save(forum);
+    discussion = await this.discussionService.save(discussion);
 
     // Trigger a room membership request for the current user that is not awaited
     const room = await this.discussionService.getComments(discussion.id);

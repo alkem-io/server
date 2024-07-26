@@ -1,5 +1,6 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
+import { IProfile } from '../profile/profile.interface';
 
 @ObjectType('Reference')
 export abstract class IReference extends IAuthorizable {
@@ -20,4 +21,6 @@ export abstract class IReference extends IAuthorizable {
     description: 'Description of this reference',
   })
   description?: string;
+
+  profile?: IProfile;
 }

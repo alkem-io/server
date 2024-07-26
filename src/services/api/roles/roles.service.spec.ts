@@ -34,6 +34,7 @@ import { License } from '@domain/license/license/license.entity';
 import { RolesResultCommunity } from './dto/roles.dto.result.community';
 import { MockUserLookupService } from '@test/mocks/user.lookup.service.mock';
 import { MockVirtualContributorService } from '@test/mocks/virtual.contributor.service.mock';
+import { IUser } from '@domain/community/user';
 
 describe('RolesService', () => {
   let rolesService: RolesService;
@@ -81,6 +82,8 @@ describe('RolesService', () => {
         roles: spaceRolesData.roles,
         displayName: spaceRolesData.displayName,
       });
+      const user = testData.user as IUser;
+
       const subspaceRolesData = spaceRolesData.subspaces;
       const subspaceRolesMocks: RolesResultCommunity[] = [];
       for (const subspaceRoleData of subspaceRolesData) {
@@ -96,9 +99,7 @@ describe('RolesService', () => {
       }
       spaceRolesMock.subspaces = subspaceRolesMocks;
       const spacesRolesMock: RolesResultSpace[] = [spaceRolesMock];
-      jest
-        .spyOn(userService, 'getUserWithAgent')
-        .mockResolvedValue(testData.user);
+      jest.spyOn(userService, 'getUserWithAgent').mockResolvedValue(user);
 
       jest
         .spyOn(spaceFilterService, 'getAllowedVisibilities')
@@ -142,9 +143,8 @@ describe('RolesService', () => {
         userID: testData.user.id,
       });
 
-      const organizationRoles = await rolesService.getOrganizationRolesForUser(
-        roles
-      );
+      const organizationRoles =
+        await rolesService.getOrganizationRolesForUser(roles);
       const spaceRoles = await rolesService.getSpaceRolesForContributor(
         roles,
         testData.agentInfo
@@ -259,6 +259,7 @@ const getSpaceRoleResultMock = ({
       account: {
         id: `account-${id}`,
         virtualContributors: [],
+        innovationPacks: [],
         license: {
           id: `license-${id}`,
           visibility: SpaceVisibility.ACTIVE,

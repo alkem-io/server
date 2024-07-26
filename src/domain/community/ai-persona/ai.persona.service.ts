@@ -16,7 +16,6 @@ import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.
 import { AiServerAdapterAskQuestionInput } from '@services/adapters/ai-server-adapter/dto/ai.server.adapter.dto.ask.question';
 import { AiPersonaDataAccessMode } from '@common/enums/ai.persona.data.access.mode';
 import { AiPersonaInteractionMode } from '@common/enums/ai.persona.interaction.mode';
-import { SpaceIngestionPurpose } from '@services/infrastructure/event-bus/commands';
 import { IMessageAnswerToQuestion } from '@domain/communication/message.answer.to.question/message.answer.to.question.interface';
 
 @Injectable()
@@ -45,10 +44,7 @@ export class AiPersonaService {
         aiPersonaData.aiPersonaServiceID
       );
 
-      this.aiServerAdapter.ensurePersonaIsUsable(
-        personaService.id,
-        SpaceIngestionPurpose.KNOWLEDGE
-      );
+      this.aiServerAdapter.refreshBodyOfKnowlege(personaService.id);
       aiPersona.aiPersonaServiceID = personaService.id;
     } else if (aiPersonaData.aiPersonaService) {
       const aiPersonaService =
@@ -144,10 +140,6 @@ export class AiPersonaService {
       aiPersonaServiceID: aiPersona.aiPersonaServiceID,
     };
 
-    return await this.aiServerAdapter.askQuestion(
-      input,
-      agentInfo,
-      contextSpaceID
-    );
+    return await this.aiServerAdapter.askQuestion(input);
   }
 }

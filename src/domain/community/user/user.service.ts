@@ -1,8 +1,14 @@
 import { UUID_LENGTH } from '@common/constants';
-import { LogContext, ProfileType, UserPreferenceType } from '@common/enums';
+import {
+  AuthorizationCredential,
+  LogContext,
+  ProfileType,
+  UserPreferenceType,
+} from '@common/enums';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
+  ForbiddenException,
   RelationshipNotFoundException,
   UserAlreadyRegisteredException,
   UserRegistrationInvalidEmail,
@@ -12,11 +18,7 @@ import { FormatNotSupportedException } from '@common/exceptions/format.not.suppo
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IAgent } from '@domain/agent/agent';
 import { AgentService } from '@domain/agent/agent/agent.service';
-import {
-  Credential,
-  CredentialsSearchInput,
-  ICredential,
-} from '@domain/agent/credential';
+import { CredentialsSearchInput, ICredential } from '@domain/agent/credential';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { CommunicationRoomResult } from '@services/adapters/communication-adapter/dto/communication.dto.room.result';
 import { RoomService } from '@domain/communication/room/room.service';
@@ -388,6 +390,18 @@ export class UserService {
       );
   }
 
+  private async isAccountHost(user: IUser): Promise<boolean> {
+    if (!user.agent)
+      throw new RelationshipNotFoundException(
+        `Unable to load agent for user: ${user.id}`,
+        LogContext.COMMUNITY
+      );
+
+    return await this.agentService.hasValidCredential(user.agent.id, {
+      type: AuthorizationCredential.ACCOUNT_HOST,
+    });
+  }
+
   async deleteUser(deleteData: DeleteUserInput): Promise<IUser> {
     const userID = deleteData.ID;
     const user = await this.getUserOrFail(userID, {
@@ -398,6 +412,14 @@ export class UserService {
         storageAggregator: true,
       },
     });
+
+    const isAccountHost = await this.isAccountHost(user);
+    if (isAccountHost) {
+      throw new ForbiddenException(
+        'Unable to delete User: host of one or more accounts',
+        LogContext.SPACES
+      );
+    }
     const { id } = user;
     await this.clearUserCache(user);
 
@@ -456,6 +478,12 @@ export class UserService {
     userID: string,
     options?: FindOneOptions<User>
   ): Promise<IUser | never> {
+    if (userID === '') {
+      throw new EntityNotFoundException(
+        `No userID provided: ${userID}`,
+        LogContext.COMMUNITY
+      );
+    }
     const user = await this.getUserByEmailIdUUID(userID, options);
 
     if (!user) {
@@ -763,10 +791,6 @@ export class UserService {
       user.phone = userInput.phone;
     }
 
-    if (userInput.gender !== undefined) {
-      user.gender = userInput.gender;
-    }
-
     if (userInput.serviceProfile !== undefined) {
       user.serviceProfile = userInput.serviceProfile;
     }
@@ -953,56 +977,41 @@ export class UserService {
       select: ['id'],
     });
 
-    const results = users.filter(user => userIds.includes(user.id));
+    const results = users.filter((user: { id: string }) =>
+      userIds.includes(user.id)
+    );
     const mappedResults = userIds.map(
       id =>
-        results.find(result => result.id === id)?.profile ||
+        results.find((result: { id: string }) => result.id === id)?.profile ||
         new Error(`Could not load user ${id}`)
     );
     return mappedResults;
   }
 
-  public getAgentInfoMetadata(
+  public async getAgentInfoMetadata(
     email: string
   ): Promise<AgentInfoMetadata> | never {
-    return this.userRepository
-      .createQueryBuilder('user')
-      .leftJoin('user.agent', 'agent')
-      .leftJoin('agent.credentials', 'credentials')
-      .select([
-        'user.id as userID',
-        'user.communicationID as communicationID',
-        'agent.id as agentID',
-        'credentials.id as id',
-        'credentials.resourceId as resourceID',
-        'credentials.type as type',
-      ])
-      .where('user.email = :email', { email: email })
-      .getRawMany<AgentInfoMetadata & Credential>()
-      .then(agentsWithCredentials => {
-        if (agentsWithCredentials.length === 0) {
-          throw new EntityNotFoundException(
-            `Unable to load User, Agent or Credentials for User: ${email}`,
-            LogContext.COMMUNITY
-          );
-        }
-
-        const agentInfo = new AgentInfoMetadata();
-        const credentials: ICredential[] = [];
-        for (const agent of agentsWithCredentials) {
-          credentials.push({
-            id: agent.id,
-            resourceID: agent.resourceID,
-            type: agent.type,
-          });
-        }
-
-        agentInfo.credentials = credentials;
-        agentInfo.agentID = agentsWithCredentials[0].agentID;
-        agentInfo.userID = agentsWithCredentials[0].userID;
-        agentInfo.communicationID = agentsWithCredentials[0].communicationID;
-
-        return agentInfo;
-      });
+    const user = await this.userRepository.findOne({
+      where: {
+        email: email,
+      },
+      relations: {
+        agent: {
+          credentials: true,
+        },
+      },
+    });
+    if (!user || !user.agent || !user.agent.credentials) {
+      throw new EntityNotFoundException(
+        `Unable to load User, Agent or Credentials for User: ${email}`,
+        LogContext.COMMUNITY
+      );
+    }
+    const agentInfo = new AgentInfoMetadata();
+    agentInfo.credentials = user.agent.credentials;
+    agentInfo.agentID = user.agent.id;
+    agentInfo.userID = user.id;
+    agentInfo.communicationID = user.communicationID;
+    return agentInfo;
   }
 }

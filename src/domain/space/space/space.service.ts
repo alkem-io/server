@@ -60,6 +60,7 @@ import { SpaceLevel } from '@common/enums/space.level';
 import { UpdateSpaceSettingsInput } from './dto/space.dto.update.settings';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { CommunityContributorType } from '@common/enums/community.contributor.type';
+import { CommunityRoleService } from '@domain/community/community-role/community.role.service';
 
 @Injectable()
 export class SpaceService {
@@ -69,6 +70,7 @@ export class SpaceService {
     private contextService: ContextService,
     private agentService: AgentService,
     private communityService: CommunityService,
+    private communityRoleService: CommunityRoleService,
     private namingService: NamingService,
     private profileService: ProfileService,
     private spaceSettingsService: SpaceSettingsService,
@@ -144,7 +146,6 @@ export class SpaceService {
 
     const communityData: CreateCommunityInput = {
       name: spaceData.profileData.displayName,
-      type: spaceData.type as SpaceType,
       policy: communityPolicy,
       applicationForm: applicationFormData,
       guidelines: {
@@ -809,7 +810,6 @@ export class SpaceService {
       relations: {
         account: true,
         storageAggregator: true,
-        subspaces: true,
         community: true,
       },
     });
@@ -839,18 +839,18 @@ export class SpaceService {
     // Update the subspace data being passed in to set the storage aggregator to use
     subspaceData.storageAggregatorParent = space.storageAggregator;
     subspaceData.level = space.level + 1;
-    const subspace = await this.createSpace(
+    let subspace = await this.createSpace(
       subspaceData,
       space.account,
       agentInfo
     );
 
-    const savedSubspace = await this.addSubspaceToSpace(space, subspace);
+    subspace = await this.addSubspaceToSpace(space, subspace);
 
     // Before assigning roles in the subspace check that the user is a member
     if (agentInfo) {
       const agent = await this.agentService.getAgentOrFail(agentInfo?.agentID);
-      const isMember = await this.communityService.isMember(
+      const isMember = await this.communityRoleService.isMember(
         agent,
         space.community
       );
@@ -859,25 +859,26 @@ export class SpaceService {
       }
     }
 
-    return savedSubspace;
+    return subspace;
   }
 
   async addSubspaceToSpace(space: ISpace, subspace: ISpace): Promise<ISpace> {
-    if (!space.subspaces || !space.community)
+    if (!space.community)
       throw new ValidationException(
         `Unable to add Subspace to space, missing relations: ${space.id}`,
         LogContext.SPACES
       );
 
-    space.subspaces.push(subspace);
+    // Set the parent space directly, avoiding saving the whole parent
+    subspace.parentSpace = space;
+
     // Finally set the community relationship
     await this.setCommunityHierarchyForSubspace(
       space.community,
       subspace.community
     );
 
-    await this.spaceRepository.save(space);
-    return subspace;
+    return await this.spaceRepository.save(subspace);
   }
 
   async getSubspace(subspaceID: string, space: ISpace): Promise<ISpace> {
@@ -906,7 +907,7 @@ export class SpaceService {
       );
     }
 
-    await this.communityService.assignContributorAgentToRole(
+    await this.communityRoleService.assignContributorAgentToRole(
       space.community,
       contributor.agent,
       role,
@@ -925,21 +926,21 @@ export class SpaceService {
       );
     }
     if (agentInfo) {
-      await this.communityService.assignUserToRole(
+      await this.communityRoleService.assignUserToRole(
         space.community,
         agentInfo.userID,
         CommunityRole.MEMBER,
         agentInfo
       );
 
-      await this.communityService.assignUserToRole(
+      await this.communityRoleService.assignUserToRole(
         space.community,
         agentInfo.userID,
         CommunityRole.LEAD,
         agentInfo
       );
 
-      await this.communityService.assignUserToRole(
+      await this.communityRoleService.assignUserToRole(
         space.community,
         agentInfo.userID,
         CommunityRole.ADMIN,
@@ -1008,6 +1009,7 @@ export class SpaceService {
 
     await this.contextService.removeContext(space.context.id);
     await this.collaborationService.deleteCollaboration(space.collaboration.id);
+    await this.communityRoleService.removeAllCommunityRoles(space.community);
     await this.communityService.removeCommunity(space.community.id);
     await this.profileService.deleteProfile(space.profile.id);
     await this.agentService.deleteAgent(space.agent.id);
@@ -1260,7 +1262,7 @@ export class SpaceService {
 
   public async getMembersCount(space: ISpace): Promise<number> {
     const community = await this.getCommunity(space.id);
-    return await this.communityService.getMembersCount(community);
+    return await this.communityRoleService.getMembersCount(community);
   }
 
   public async getPostsCount(space: ISpace): Promise<number> {
@@ -1310,7 +1312,9 @@ export class SpaceService {
     const community = await this.getCommunity(space.id);
 
     // Members
-    const membersCount = await this.communityService.getMembersCount(community);
+    const membersCount = await this.communityRoleService.getMembersCount(
+      community
+    );
     const membersTopic = new NVP('members', membersCount.toString());
     membersTopic.id = `members-${space.id}`;
     metrics.push(membersTopic);

@@ -11,11 +11,13 @@ import { ILicensing } from '@platform/licensing/licensing.interface';
 import { AdminLicensingService } from './admin.licensing.service';
 import { IAccount } from '@domain/space/account/account.interface';
 import { RevokeLicensePlanFromAccount } from './dto/admin.licensing.dto.revoke.license.plan.from.account';
+import { AccountAuthorizationService } from '@domain/space/account/account.service.authorization';
 
 @Resolver()
 export class AdminLicensingResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
+    private accountAuthorizationService: AccountAuthorizationService,
     private licensingService: LicensingService,
     private adminLicensingService: AdminLicensingService
   ) {}
@@ -45,9 +47,13 @@ export class AdminLicensingResolverMutations {
       `assign licensePlan on licensing: ${licensing.id}`
     );
 
-    return await this.adminLicensingService.assignLicensePlanToAccount(
+    const account = await this.adminLicensingService.assignLicensePlanToAccount(
       planData,
       licensing.id
+    );
+    // Need to trigger an authorization reset as some license credentials are used in auth policy e.g. VCs feature flag
+    return await this.accountAuthorizationService.applyAuthorizationPolicy(
+      account
     );
   }
 

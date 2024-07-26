@@ -1,7 +1,7 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -21,7 +21,6 @@ import { IVirtualContributor } from './virtual.contributor.interface';
 import { VisualType } from '@common/enums/visual.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { CreateVirtualContributorInput } from './dto/virtual.contributor.dto.create';
 import { UpdateVirtualContributorInput } from './dto/virtual.contributor.dto.update';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
@@ -38,6 +37,8 @@ import { IMessageAnswerToQuestion } from '@domain/communication/message.answer.t
 import { IAiPersona } from '../ai-persona';
 import { IContributor } from '../contributor/contributor.interface';
 import { AccountHostService } from '@domain/space/account.host/account.host.service';
+import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { Invitation } from '../invitation';
 
 @Injectable()
 export class VirtualContributorService {
@@ -45,12 +46,13 @@ export class VirtualContributorService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private agentService: AgentService,
     private profileService: ProfileService,
-    private storageAggregatorService: StorageAggregatorService,
     private communicationAdapter: CommunicationAdapter,
     private namingService: NamingService,
     private aiPersonaService: AiPersonaService,
     private aiServerAdapter: AiServerAdapter,
     private accountHostService: AccountHostService,
+    @InjectEntityManager('default')
+    private entityManager: EntityManager,
     @InjectRepository(VirtualContributor)
     private virtualContributorRepository: Repository<VirtualContributor>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -58,7 +60,8 @@ export class VirtualContributorService {
   ) {}
 
   async createVirtualContributor(
-    virtualContributorData: CreateVirtualContributorInput
+    virtualContributorData: CreateVirtualContributorInput,
+    storageAggregator: IStorageAggregator
   ): Promise<IVirtualContributor> {
     if (virtualContributorData.nameID) {
       // Convert nameID to lower case
@@ -94,16 +97,13 @@ export class VirtualContributorService {
       ...virtualContributorData.aiPersona,
       description: `AI Persona for virtual contributor ${virtualContributor.nameID}`,
     };
-    virtualContributor.aiPersona = await this.aiPersonaService.createAiPersona(
-      aiPersonaInput
-    );
+    virtualContributor.aiPersona =
+      await this.aiPersonaService.createAiPersona(aiPersonaInput);
 
-    virtualContributor.storageAggregator =
-      await this.storageAggregatorService.createStorageAggregator();
     virtualContributor.profile = await this.profileService.createProfile(
       virtualContributorData.profileData,
       ProfileType.VIRTUAL_CONTRIBUTOR,
-      virtualContributor.storageAggregator
+      storageAggregator
     );
     await this.profileService.addTagsetOnProfile(virtualContributor.profile, {
       name: TagsetReservedName.KEYWORDS,
@@ -231,19 +231,12 @@ export class VirtualContributorService {
         relations: {
           profile: true,
           agent: true,
-          storageAggregator: true,
         },
       }
     );
 
     if (virtualContributor.profile) {
       await this.profileService.deleteProfile(virtualContributor.profile.id);
-    }
-
-    if (virtualContributor.storageAggregator) {
-      await this.storageAggregatorService.delete(
-        virtualContributor.storageAggregator.id
-      );
     }
 
     if (virtualContributor.authorization) {
@@ -266,6 +259,8 @@ export class VirtualContributorService {
         ID: virtualContributor.aiPersona.id,
       });
     }
+
+    await this.deleteVCInvitations(virtualContributorID);
 
     return result;
   }
@@ -348,9 +343,7 @@ export class VirtualContributorService {
   }
 
   public async askQuestion(
-    vcQuestionInput: VirtualContributorQuestionInput,
-    agentInfo: AgentInfo,
-    contextSpaceID: string
+    vcQuestionInput: VirtualContributorQuestionInput
   ): Promise<IMessageAnswerToQuestion> {
     const virtualContributor = await this.getVirtualContributorOrFail(
       vcQuestionInput.virtualContributorID,
@@ -369,19 +362,19 @@ export class VirtualContributorService {
       );
     }
     this.logger.verbose?.(
-      `still need to use the context ${contextSpaceID}, ${agentInfo.agentID}`,
+      `still need to use the context ${vcQuestionInput.contextSpaceID}, ${vcQuestionInput.userID}`,
       LogContext.AI_PERSONA_SERVICE_ENGINE
     );
     const aiServerAdapterQuestionInput: AiServerAdapterAskQuestionInput = {
       aiPersonaServiceID: virtualContributor.aiPersona.aiPersonaServiceID,
       question: vcQuestionInput.question,
+      contextID: vcQuestionInput.contextSpaceID,
+      userID: vcQuestionInput.userID,
+      threadID: vcQuestionInput.threadID,
+      vcInteractionID: vcQuestionInput.vcInteractionID,
     };
 
-    return await this.aiServerAdapter.askQuestion(
-      aiServerAdapterQuestionInput,
-      agentInfo,
-      contextSpaceID
-    );
+    return await this.aiServerAdapter.askQuestion(aiServerAdapterQuestionInput);
   }
 
   // TODO: move to store
@@ -457,6 +450,25 @@ export class VirtualContributorService {
     return host;
   }
 
+  public async getAccountHostCredentials(
+    virtualContributorID: string
+  ): Promise<ICredentialDefinition[]> {
+    const virtualContributorWithAccount =
+      await this.getVirtualContributorOrFail(virtualContributorID, {
+        relations: { account: true },
+      });
+    const account = virtualContributorWithAccount.account;
+    if (!account)
+      throw new EntityNotInitializedException(
+        `Virtual Contributor Account not initialized: ${virtualContributorID}`,
+        LogContext.AUTH
+      );
+
+    const hostCredentials =
+      await this.accountHostService.getHostCredentials(account);
+    return hostCredentials;
+  }
+
   async getAiPersonaOrFail(
     virtualContributor: IVirtualContributor
   ): Promise<IAiPersona> {
@@ -479,28 +491,6 @@ export class VirtualContributorService {
     }
 
     return aiPersona;
-  }
-
-  async getStorageAggregatorOrFail(
-    virtualID: string
-  ): Promise<IStorageAggregator> {
-    const virtualContributorWithStorageAggregator =
-      await this.getVirtualContributorOrFail(virtualID, {
-        relations: {
-          storageAggregator: true,
-        },
-      });
-    const storageAggregator =
-      virtualContributorWithStorageAggregator.storageAggregator;
-
-    if (!storageAggregator) {
-      throw new EntityNotFoundException(
-        `Unable to find storageAggregator for Virtual with nameID: ${virtualContributorWithStorageAggregator.nameID}`,
-        LogContext.COMMUNITY
-      );
-    }
-
-    return storageAggregator;
   }
 
   async virtualContributorsWithCredentials(
@@ -560,5 +550,18 @@ export class VirtualContributorService {
         .getCount();
 
     return virtualContributorMatchesCount;
+  }
+
+  //adding this to avoid circular dependency between VirtualContributor, Room, and Invitation
+  private async deleteVCInvitations(contributorID: string) {
+    const invitations = await this.entityManager.find(Invitation, {
+      where: { invitedContributor: contributorID },
+    });
+    for (const invitation of invitations) {
+      if (invitation.authorization) {
+        await this.authorizationPolicyService.delete(invitation.authorization);
+      }
+      await this.entityManager.remove(invitation);
+    }
   }
 }

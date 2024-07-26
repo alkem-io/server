@@ -23,6 +23,7 @@ import { RoomAuthorizationService } from '@domain/communication/room/room.servic
 import { CalloutFramingAuthorizationService } from '../callout-framing/callout.framing.service.authorization';
 import { CalloutContributionAuthorizationService } from '../callout-contribution/callout.contribution.service.authorization';
 import { ICalloutContribution } from '../callout-contribution/callout.contribution.interface';
+import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 
 @Injectable()
 export class CalloutAuthorizationService {
@@ -37,7 +38,8 @@ export class CalloutAuthorizationService {
   public async applyAuthorizationPolicy(
     calloutInput: ICallout,
     parentAuthorization: IAuthorizationPolicy | undefined,
-    communityPolicy: ICommunityPolicy
+    communityPolicy: ICommunityPolicy,
+    spaceSettings: ISpaceSettings
   ): Promise<ICallout> {
     const callout = await this.calloutService.getCalloutOrFail(
       calloutInput.id,
@@ -88,7 +90,8 @@ export class CalloutAuthorizationService {
         await this.contributionAuthorizationService.applyAuthorizationPolicy(
           contribution,
           callout.authorization,
-          communityPolicy
+          communityPolicy,
+          spaceSettings
         );
       contributions.push(updatedContribution);
     }

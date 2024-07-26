@@ -148,7 +148,7 @@ export class SearchExtractService {
             }
 
             return {
-              id: hit._id,
+              id: hit._id ?? 'N/A',
               score: hit._score ?? -1,
               type,
               terms: [], // todo - https://github.com/alkem-io/server/issues/3702
@@ -176,6 +176,13 @@ export class SearchExtractService {
     const filteredIndices = entityTypesFilter.map(
       type => TYPE_TO_INDEX(this.indexPattern)[type as SearchEntityTypes]
     );
+    // todo: remove this when whiteboard is a separate search result
+    // include the whiteboards, if the callout is included
+    if (entityTypesFilter.includes(SearchEntityTypes.CALLOUT)) {
+      filteredIndices.push(
+        TYPE_TO_INDEX(this.indexPattern)[SearchEntityTypes.WHITEBOARD]
+      );
+    }
 
     if (onlyPublicResults) {
       const publicIndices = Object.values(

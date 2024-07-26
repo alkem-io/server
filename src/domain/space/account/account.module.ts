@@ -24,6 +24,10 @@ import { AccountHostModule } from '../account.host/account.host.module';
 import { LicenseEngineModule } from '@core/license-engine/license.engine.module';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
 import { CommunityPolicyModule } from '@domain/community/community-policy/community.policy.module';
+import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
+import { CommunityModule } from '@domain/community/community/community.module';
+import { InnovationPackModule } from '@library/innovation-pack/innovation.pack.module';
+import { SpaceSettingssModule } from '../space.settings/space.settings.module';
 
 @Module({
   imports: [
@@ -35,6 +39,7 @@ import { CommunityPolicyModule } from '@domain/community/community-policy/commun
     VirtualContributorModule,
     TemplatesSetModule,
     SpaceModule,
+    SpaceSettingssModule,
     SpaceDefaultsModule,
     StorageAggregatorModule,
     PlatformAuthorizationPolicyModule,
@@ -46,6 +51,9 @@ import { CommunityPolicyModule } from '@domain/community/community-policy/commun
     NameReporterModule,
     CommunityPolicyModule,
     TypeOrmModule.forFeature([Account]),
+    NotificationAdapterModule,
+    CommunityModule,
+    InnovationPackModule,
   ],
   providers: [
     AccountService,

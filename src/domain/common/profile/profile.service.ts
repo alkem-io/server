@@ -8,7 +8,6 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { LogContext, ProfileType } from '@common/enums';
-import { Reference } from '@domain/common/reference/reference.entity';
 import { IReference } from '@domain/common/reference/reference.interface';
 import { ReferenceService } from '@domain/common/reference/reference.service';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
@@ -72,9 +71,8 @@ export class ProfileService {
     profile.references = [];
     if (profileData?.referencesData) {
       for (const referenceData of profileData.referencesData) {
-        const reference = await this.referenceService.createReference(
-          referenceData
-        );
+        const reference =
+          await this.referenceService.createReference(referenceData);
         profile.references.push(reference);
       }
     }
@@ -276,14 +274,11 @@ export class ProfileService {
       }
     }
     // If get here then no ref with the same name
-    const newReference = await this.referenceService.createReference(
-      referenceInput
-    );
+    const newReference =
+      await this.referenceService.createReference(referenceInput);
+    newReference.profile = profile;
 
-    await profile.references.push(newReference as Reference);
-    await this.profileRepository.save(profile);
-
-    return newReference;
+    return await this.referenceService.save(newReference);
   }
 
   async getProfileOrFail(

@@ -2,7 +2,7 @@ import { Inject, LoggerService, UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
-import { AuthorizationPrivilege } from '@common/enums';
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -94,9 +94,20 @@ export class AdminSearchIngestResolverMutations {
         this.taskService.updateTaskResults(task.id, 'Indices recreated');
         return this.searchIngestService.ingest(task);
       })
-      .then(() => this.taskService.complete(task.id))
+      .then(() => {
+        this.taskService.complete(task.id);
+        this.logger.verbose?.(
+          'Search ingest from scratch completed',
+          LogContext.SEARCH_INGEST
+        );
+      })
       .catch(async e => {
         await this.taskService.updateTaskErrors(task.id, e?.message);
+        this.logger.error?.(
+          `Search ingest from scratch completed with error: ${e?.message}`,
+          e?.stack,
+          LogContext.SEARCH_INGEST
+        );
         return this.taskService.complete(task.id, TaskStatus.ERRORED);
       });
 

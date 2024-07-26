@@ -4,7 +4,6 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { LogContext } from '@common/enums/logging.context';
 import { ConvertSubspaceToSpaceInput } from './dto/convert.dto.subspace.to.space.input';
 import { ISpace } from '@domain/space/space/space.interface';
-import { CommunityService } from '@domain/community/community/community.service';
 import {
   EntityNotInitializedException,
   ValidationException,
@@ -25,6 +24,8 @@ import { SpaceService } from '@domain/space/space/space.service';
 import { CreateSubspaceInput } from '@domain/space/space/dto/space.dto.create.subspace';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { SpaceLevel } from '@common/enums/space.level';
+import { CommunityRoleService } from '@domain/community/community-role/community.role.service';
+import { CommunityService } from '@domain/community/community/community.service';
 
 export class ConversionService {
   constructor(
@@ -32,6 +33,7 @@ export class ConversionService {
     private spaceService: SpaceService,
     private namingService: NamingService,
     private communityService: CommunityService,
+    private communityRoleService: CommunityRoleService,
     private communicationService: CommunicationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -78,7 +80,7 @@ export class ConversionService {
     }
     // check the community is in a fit state
     const challengeCommunityLeadOrgs =
-      await this.communityService.getOrganizationsWithRole(
+      await this.communityRoleService.getOrganizationsWithRole(
         subspace.community,
         CommunityRole.LEAD
       );
@@ -135,15 +137,15 @@ export class ConversionService {
       );
     }
 
-    const userMembers = await this.communityService.getUsersWithRole(
+    const userMembers = await this.communityRoleService.getUsersWithRole(
       space.community,
       CommunityRole.MEMBER
     );
-    const userLeads = await this.communityService.getUsersWithRole(
+    const userLeads = await this.communityRoleService.getUsersWithRole(
       space.community,
       CommunityRole.LEAD
     );
-    const orgMembers = await this.communityService.getOrganizationsWithRole(
+    const orgMembers = await this.communityRoleService.getOrganizationsWithRole(
       space.community,
       CommunityRole.MEMBER
     );
@@ -157,7 +159,7 @@ export class ConversionService {
       challengeCommunityLeadOrgs
     );
 
-    await this.communityService.removeUserFromRole(
+    await this.communityRoleService.removeUserFromRole(
       space.community,
       agentInfo.userID,
       CommunityRole.MEMBER
@@ -324,19 +326,19 @@ export class ConversionService {
       );
     }
 
-    const userMembers = await this.communityService.getUsersWithRole(
+    const userMembers = await this.communityRoleService.getUsersWithRole(
       subsubspace.community,
       CommunityRole.MEMBER
     );
-    const userLeads = await this.communityService.getUsersWithRole(
+    const userLeads = await this.communityRoleService.getUsersWithRole(
       subsubspace.community,
       CommunityRole.LEAD
     );
-    const orgMembers = await this.communityService.getOrganizationsWithRole(
+    const orgMembers = await this.communityRoleService.getOrganizationsWithRole(
       subsubspace.community,
       CommunityRole.MEMBER
     );
-    const orgLeads = await this.communityService.getOrganizationsWithRole(
+    const orgLeads = await this.communityRoleService.getOrganizationsWithRole(
       subsubspace.community,
       CommunityRole.LEAD
     );
@@ -351,12 +353,12 @@ export class ConversionService {
     );
 
     // also remove the current user from the members of the newly created Challenge, otherwise will end up re-assigning
-    await this.communityService.removeUserFromRole(
+    await this.communityRoleService.removeUserFromRole(
       subspace.community,
       agentInfo.userID,
       CommunityRole.MEMBER
     );
-    await this.communityService.removeUserFromRole(
+    await this.communityRoleService.removeUserFromRole(
       subspace.community,
       agentInfo.userID,
       CommunityRole.LEAD
@@ -541,28 +543,28 @@ export class ConversionService {
     orgLeads: IOrganization[]
   ) {
     for (const userMember of userMembers) {
-      await this.communityService.removeUserFromRole(
+      await this.communityRoleService.removeUserFromRole(
         community,
         userMember.id,
         CommunityRole.MEMBER
       );
     }
     for (const userLead of userLeads) {
-      await this.communityService.removeUserFromRole(
+      await this.communityRoleService.removeUserFromRole(
         community,
         userLead.id,
         CommunityRole.LEAD
       );
     }
     for (const orgMember of orgMembers) {
-      await this.communityService.removeOrganizationFromRole(
+      await this.communityRoleService.removeOrganizationFromRole(
         community,
         orgMember.id,
         CommunityRole.MEMBER
       );
     }
     for (const orgLead of orgLeads) {
-      await this.communityService.removeOrganizationFromRole(
+      await this.communityRoleService.removeOrganizationFromRole(
         community,
         orgLead.id,
         CommunityRole.LEAD
@@ -578,21 +580,21 @@ export class ConversionService {
     orgLeads?: IOrganization[]
   ) {
     for (const userMember of userMembers) {
-      await this.communityService.assignUserToRole(
+      await this.communityRoleService.assignUserToRole(
         community,
         userMember.id,
         CommunityRole.MEMBER
       );
     }
     for (const userLead of userLeads) {
-      await this.communityService.assignUserToRole(
+      await this.communityRoleService.assignUserToRole(
         community,
         userLead.id,
         CommunityRole.LEAD
       );
     }
     for (const orgMember of orgMembers) {
-      await this.communityService.assignOrganizationToRole(
+      await this.communityRoleService.assignOrganizationToRole(
         community,
         orgMember.id,
         CommunityRole.MEMBER
@@ -600,7 +602,7 @@ export class ConversionService {
     }
     if (orgLeads) {
       for (const orgLead of orgLeads) {
-        await this.communityService.assignOrganizationToRole(
+        await this.communityRoleService.assignOrganizationToRole(
           community,
           orgLead.id,
           CommunityRole.LEAD

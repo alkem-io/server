@@ -4,8 +4,6 @@ import { AiServerAdapterAskQuestionInput } from './dto/ai.server.adapter.dto.ask
 import { AiServerService } from '@services/ai-server/ai-server/ai.server.service';
 import { CreateAiPersonaServiceInput } from '@services/ai-server/ai-persona-service/dto';
 import { IAiPersonaService } from '@services/ai-server/ai-persona-service';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { SpaceIngestionPurpose } from '@services/infrastructure/event-bus/commands';
 import { IMessageAnswerToQuestion } from '@domain/communication/message.answer.to.question/message.answer.to.question.interface';
 import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
 
@@ -17,25 +15,12 @@ export class AiServerAdapter {
     private readonly logger: LoggerService
   ) {}
 
-  async ensureSpaceIsUsable(
-    spaceID: string,
-    purpose: SpaceIngestionPurpose
-  ): Promise<void> {
-    return this.aiServer.ensureSpaceIsUsable(spaceID, purpose);
-  }
-
-  async ensurePersonaIsUsable(
-    personaServiceId: string,
-    purpose: SpaceIngestionPurpose
-  ): Promise<boolean> {
-    return this.aiServer.ensurePersonaIsUsable(personaServiceId, purpose);
-  }
-
   async refreshBodyOfKnowlege(personaServiceId: string): Promise<boolean> {
-    return this.aiServer.ensurePersonaIsUsable(
-      personaServiceId,
-      SpaceIngestionPurpose.KNOWLEDGE
-    );
+    return this.aiServer.ensurePersonaIsUsable(personaServiceId);
+  }
+
+  async ensureContextIsLoaded(spaceID: string): Promise<void> {
+    await this.aiServer.ensureContextIsIngested(spaceID);
   }
 
   async getPersonaServiceBodyOfKnowledgeType(
@@ -69,14 +54,12 @@ export class AiServerAdapter {
   }
 
   async askQuestion(
-    questionInput: AiServerAdapterAskQuestionInput,
-    agentInfo: AgentInfo,
-    contextSapceNameID: string
+    questionInput: AiServerAdapterAskQuestionInput
   ): Promise<IMessageAnswerToQuestion> {
-    return this.aiServer.askQuestion(
-      questionInput,
-      agentInfo,
-      contextSapceNameID
-    );
+    const vcInteractionID = questionInput.vcInteractionID;
+    return this.aiServer.askQuestion({
+      ...questionInput,
+      interactionID: vcInteractionID,
+    });
   }
 }

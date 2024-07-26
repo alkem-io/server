@@ -35,7 +35,7 @@ export class DocumentService {
 
   public async createDocument(
     documentInput: CreateDocumentInput
-  ): Promise<Document> {
+  ): Promise<IDocument> {
     const document: IDocument = Document.create({ ...documentInput });
     document.tagset = await this.tagsetService.createTagset({
       name: TagsetReservedName.DEFAULT,
@@ -116,6 +116,10 @@ export class DocumentService {
         LogContext.STORAGE_BUCKET
       );
     return document;
+  }
+
+  public async save(document: IDocument): Promise<IDocument> {
+    return await this.documentRepository.save(document);
   }
 
   public async getUploadedDate(documentID: string): Promise<Date> {

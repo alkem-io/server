@@ -12,7 +12,6 @@ import { OrganizationPreferenceType } from '@common/enums/organization.preferenc
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { UserAuthorizationService } from '@domain/community/user/user.service.authorization';
 import { IInvitation } from '@domain/community/invitation/invitation.interface';
-import { CommunityService } from '@domain/community/community/community.service';
 import { InvitationAuthorizationService } from '@domain/community/invitation/invitation.service.authorization';
 import { CreateInvitationInput } from '@domain/community/invitation/dto/invitation.dto.create';
 import { DeleteUserInput } from '@domain/community/user/dto/user.dto.delete';
@@ -20,17 +19,20 @@ import { InvitationService } from '@domain/community/invitation/invitation.servi
 import { ApplicationService } from '@domain/community/application/application.service';
 import { OrganizationRole } from '@common/enums/organization.role';
 import { PlatformInvitationService } from '@platform/invitation/platform.invitation.service';
-import { PlatformService } from '@platform/platfrom/platform.service';
+import { PlatformRoleService } from '@platform/platfrom.role/platform.role.service';
+import { CommunityRoleService } from '@domain/community/community-role/community.role.service';
+import { OrganizationRoleService } from '@domain/community/organization-role/organization.role.service';
 
 export class RegistrationService {
   constructor(
     private userService: UserService,
     private organizationService: OrganizationService,
+    private organizationRoleService: OrganizationRoleService,
     private preferenceSetService: PreferenceSetService,
     private userAuthorizationService: UserAuthorizationService,
-    private communityService: CommunityService,
+    private communityRoleService: CommunityRoleService,
     private platformInvitationService: PlatformInvitationService,
-    private platformService: PlatformService,
+    private platformRoleService: PlatformRoleService,
     private invitationAuthorizationService: InvitationAuthorizationService,
     private invitationService: InvitationService,
     private applicationService: ApplicationService,
@@ -58,9 +60,8 @@ export class RegistrationService {
   ): Promise<boolean> {
     const userEmailDomain = getEmailDomain(user.email);
 
-    const org = await this.organizationService.getOrganizationByDomain(
-      userEmailDomain
-    );
+    const org =
+      await this.organizationService.getOrganizationByDomain(userEmailDomain);
 
     if (!org) {
       this.logger.verbose?.(
@@ -98,7 +99,7 @@ export class RegistrationService {
       return false;
     }
 
-    await this.organizationService.assignOrganizationRoleToUser({
+    await this.organizationRoleService.assignOrganizationRoleToUser({
       organizationID: org.id,
       userID: user.id,
       role: OrganizationRole.ASSOCIATE,
@@ -130,7 +131,7 @@ export class RegistrationService {
           invitedToParent: platformInvitation.communityInvitedToParent,
         };
         let invitation =
-          await this.communityService.createInvitationExistingContributor(
+          await this.communityRoleService.createInvitationExistingContributor(
             invitationInput
           );
         invitation.invitedToParent =
@@ -151,7 +152,7 @@ export class RegistrationService {
           userID: user.id,
           role: platformInvitation.platformRole,
         };
-        await this.platformService.assignPlatformRoleToUser(membershipData);
+        await this.platformRoleService.assignPlatformRoleToUser(membershipData);
       }
       await this.platformInvitationService.recordProfileCreated(
         platformInvitation
@@ -171,9 +172,8 @@ export class RegistrationService {
       await this.invitationService.deleteInvitation({ ID: invitation.id });
     }
 
-    const applications = await this.applicationService.findApplicationsForUser(
-      userID
-    );
+    const applications =
+      await this.applicationService.findApplicationsForUser(userID);
     for (const application of applications) {
       await this.applicationService.deleteApplication({ ID: application.id });
     }

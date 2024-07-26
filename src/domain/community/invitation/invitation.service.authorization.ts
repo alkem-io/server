@@ -67,19 +67,11 @@ export class InvitationAuthorizationService {
         });
         break;
       case CommunityContributorType.VIRTUAL:
-        const vcWithHost =
-          await this.virtualContributorService.getVirtualContributorOrFail(
-            contributor.id,
-            {
-              relations: {
-                account: true,
-              },
-            }
+        const vcHostCriterias =
+          await this.virtualContributorService.getAccountHostCredentials(
+            contributor.id
           );
-        criterias.push({
-          type: AuthorizationCredential.ACCOUNT_HOST,
-          resourceID: vcWithHost.account.id,
-        });
+        criterias.push(...vcHostCriterias);
         break;
     }
 

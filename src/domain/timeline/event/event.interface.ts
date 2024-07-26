@@ -13,10 +13,6 @@ export abstract class ICalendarEvent extends INameable {
 
   calendar?: ICalendar;
 
-  // Expose the date at which the event was created from parent entity
-  @Field(() => Date)
-  createdDate!: Date;
-
   createdBy!: string;
 
   @Field(() => IRoom, {

@@ -14,7 +14,6 @@ import {
   CREDENTIAL_RULE_TYPES_VC_GLOBAL_COMMUNITY_READ,
   CREDENTIAL_RULE_TYPES_VC_GLOBAL_SUPPORT_MANAGE,
 } from '@common/constants';
-import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 import { IVirtualContributor } from './virtual.contributor.interface';
 import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
 import { AiPersonaAuthorizationService } from '../ai-persona/ai.persona.service.authorization';
@@ -27,8 +26,7 @@ export class VirtualContributorAuthorizationService {
     private authorizationPolicy: AuthorizationPolicyService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private profileAuthorizationService: ProfileAuthorizationService,
-    private aiPersonaAuthorizationService: AiPersonaAuthorizationService,
-    private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService
+    private aiPersonaAuthorizationService: AiPersonaAuthorizationService
   ) {}
 
   async applyAuthorizationPolicy(
@@ -39,19 +37,13 @@ export class VirtualContributorAuthorizationService {
       virtualInput.id,
       {
         relations: {
-          storageAggregator: true,
           profile: true,
           agent: true,
           aiPersona: true,
         },
       }
     );
-    if (
-      !virtual.profile ||
-      !virtual.storageAggregator ||
-      !virtual.agent ||
-      !virtual.aiPersona
-    )
+    if (!virtual.profile || !virtual.agent || !virtual.aiPersona)
       throw new RelationshipNotFoundException(
         `Unable to load entities for virtual: ${virtual.id} `,
         LogContext.COMMUNITY
@@ -80,12 +72,6 @@ export class VirtualContributorAuthorizationService {
       await this.profileAuthorizationService.applyAuthorizationPolicy(
         virtual.profile,
         clonedVirtualAuthorizationAnonymousAccess
-      );
-
-    virtual.storageAggregator =
-      await this.storageAggregatorAuthorizationService.applyAuthorizationPolicy(
-        virtual.storageAggregator,
-        virtual.authorization
       );
 
     virtual.agent = this.agentAuthorizationService.applyAuthorizationPolicy(
@@ -125,6 +111,7 @@ export class VirtualContributorAuthorizationService {
       );
     newRules.push(globalCommunityRead);
 
+    // TODO: rule that for now allows global support ability to manage VCs, this to be removed later
     const globalSupportManage =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [

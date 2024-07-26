@@ -1,7 +1,6 @@
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { ILibrary } from '@library/library/library.interface';
 import {
-  AuthorizationAgentPrivilege,
   InnovationHub as InnovationHubDecorator,
   Profiling,
 } from '@src/common/decorators';
@@ -22,8 +21,6 @@ import { UseGuards } from '@nestjs/common';
 import { ReleaseDiscussionOutput } from './dto/release.discussion.dto';
 import { ILicensing } from '@platform/licensing/licensing.interface';
 import { IForum } from '@platform/forum';
-import { IPlatformInvitation } from '@platform/invitation/platform.invitation.interface';
-import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 
 @Resolver(() => IPlatform)
 export class PlatformResolverFields {
@@ -48,19 +45,8 @@ export class PlatformResolverFields {
   })
   library(): Promise<ILibrary> {
     return this.platformService.getLibraryOrFail({
-      library: { innovationPacks: true },
+      library: {},
     });
-  }
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
-  @ResolveField('platformInvitations', () => [IPlatformInvitation], {
-    nullable: false,
-    description:
-      'Invitations to join roles for users not yet on the Alkemio platform.',
-  })
-  @Profiling.api
-  async platformInvitations(): Promise<IPlatformInvitation[]> {
-    return await this.platformService.getPlatformInvitationsForRole();
   }
 
   @ResolveField('forum', () => IForum, {

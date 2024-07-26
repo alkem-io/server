@@ -1,14 +1,12 @@
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
-import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { ValidationException } from '@common/exceptions/validation.exception';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
@@ -105,14 +103,10 @@ export class CalendarService {
     const calendar = await this.getCalendarOrFail(
       calendarEventData.calendarID,
       {
-        relations: { events: true },
+        relations: {},
       }
     );
-    if (!calendar.events)
-      throw new EntityNotInitializedException(
-        `Calendar (${calendar}) not initialised`,
-        LogContext.CALENDAR
-      );
+
     const reservedNameIDs =
       await this.namingService.getReservedNameIDsInCalendar(calendar.id);
     if (calendarEventData.nameID && calendarEventData.nameID.length > 0) {
@@ -139,18 +133,8 @@ export class CalendarService {
       storageAggregator,
       userID
     );
-    calendar.events.push(calendarEvent);
-    await this.calendarRepository.save(calendar);
-
-    return calendarEvent;
-  }
-
-  public async getCommunityPolicy(
-    collaborationID: string
-  ): Promise<ICommunityPolicy> {
-    return await this.namingService.getCommunityPolicyWithSettingsForCollaboration(
-      collaborationID
-    );
+    calendarEvent.calendar = calendar;
+    return await this.calendarEventService.save(calendarEvent);
   }
 
   public async getCalendarEventsArgs(

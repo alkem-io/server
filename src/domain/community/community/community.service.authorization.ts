@@ -21,6 +21,7 @@ import {
   CREDENTIAL_RULE_TYPES_COMMUNITY_INVITE_MEMBERS,
   POLICY_RULE_COMMUNITY_ADD_VC,
   POLICY_RULE_COMMUNITY_INVITE_MEMBER,
+  CREDENTIAL_RULE_COMMUNITY_VIRTUAL_CONTRIBUTOR_REMOVAL,
 } from '@common/constants';
 import { InvitationAuthorizationService } from '../invitation/invitation.service.authorization';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
@@ -34,6 +35,8 @@ import { LicensePrivilege } from '@common/enums/license.privilege';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { IAgent } from '@domain/agent';
 import { PlatformInvitationAuthorizationService } from '@platform/invitation/platform.invitation.service.authorization';
+import { VirtualContributorService } from '../virtual-contributor/virtual.contributor.service';
+import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 
 @Injectable()
 export class CommunityAuthorizationService {
@@ -46,6 +49,7 @@ export class CommunityAuthorizationService {
     private applicationAuthorizationService: ApplicationAuthorizationService,
     private invitationAuthorizationService: InvitationAuthorizationService,
     private communityPolicyService: CommunityPolicyService,
+    private virtualContributorService: VirtualContributorService,
     private platformInvitationAuthorizationService: PlatformInvitationAuthorizationService,
     private communityGuidelinesAuthorizationService: CommunityGuidelinesAuthorizationService
   ) {}
@@ -54,7 +58,8 @@ export class CommunityAuthorizationService {
     communityInput: ICommunity,
     parentAuthorization: IAuthorizationPolicy | undefined,
     accountAgent: IAgent,
-    communityPolicy: ICommunityPolicy
+    communityPolicy: ICommunityPolicy,
+    spaceSettings: ISpaceSettings
   ): Promise<ICommunity> {
     const community = await this.communityService.getCommunityOrFail(
       communityInput.id,
@@ -102,7 +107,8 @@ export class CommunityAuthorizationService {
       community.authorization,
       parentAuthorization?.anonymousReadAccess,
       accountAgent,
-      communityPolicy
+      communityPolicy,
+      spaceSettings
     );
     community.authorization = this.appendVerifiedCredentialRules(
       community.authorization
@@ -169,7 +175,8 @@ export class CommunityAuthorizationService {
     authorization: IAuthorizationPolicy | undefined,
     allowGlobalRegisteredReadAccess: boolean | undefined,
     accountAgent: IAgent,
-    policy: ICommunityPolicy
+    policy: ICommunityPolicy,
+    spaceSettings: ISpaceSettings
   ): Promise<IAuthorizationPolicy> {
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
@@ -187,9 +194,10 @@ export class CommunityAuthorizationService {
     const inviteMembersCriterias: ICredentialDefinition[] =
       this.communityPolicyService.getCredentialsForRoleWithParents(
         policy,
+        spaceSettings,
         CommunityRole.ADMIN
       );
-    if (policy.settings.membership.allowSubspaceAdminsToInviteMembers) {
+    if (spaceSettings.membership.allowSubspaceAdminsToInviteMembers) {
       // use the member credential to create subspace admin credential
       const subspaceAdminCredential: ICredentialDefinition =
         this.communityPolicyService.getCredentialForRole(
@@ -231,6 +239,7 @@ export class CommunityAuthorizationService {
       const criterias: ICredentialDefinition[] =
         this.communityPolicyService.getCredentialsForRoleWithParents(
           policy,
+          spaceSettings,
           CommunityRole.ADMIN
         );
       criterias.push({
@@ -285,6 +294,39 @@ export class CommunityAuthorizationService {
           },
         ],
         CREDENTIAL_RULE_COMMUNITY_SELF_REMOVAL
+      );
+    newRules.push(userSelfRemovalRule);
+
+    const clonedCommunityAuthorization =
+      this.authorizationPolicyService.cloneAuthorizationPolicy(
+        community.authorization
+      );
+
+    const updatedAuthorization =
+      this.authorizationPolicyService.appendCredentialAuthorizationRules(
+        clonedCommunityAuthorization,
+        newRules
+      );
+
+    return updatedAuthorization;
+  }
+
+  public async extendAuthorizationPolicyForVirtualContributorRemoval(
+    community: ICommunity,
+    virtualContributorToBeRemoved: string
+  ): Promise<IAuthorizationPolicy> {
+    const newRules: IAuthorizationPolicyRuleCredential[] = [];
+
+    const accountHostCredentials =
+      await this.virtualContributorService.getAccountHostCredentials(
+        virtualContributorToBeRemoved
+      );
+
+    const userSelfRemovalRule =
+      this.authorizationPolicyService.createCredentialRule(
+        [AuthorizationPrivilege.GRANT],
+        accountHostCredentials,
+        CREDENTIAL_RULE_COMMUNITY_VIRTUAL_CONTRIBUTOR_REMOVAL
       );
     newRules.push(userSelfRemovalRule);
 

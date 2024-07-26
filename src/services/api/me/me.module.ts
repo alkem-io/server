@@ -10,8 +10,9 @@ import { SpaceModule } from '@domain/space/space/space.module';
 import { RolesModule } from '../roles/roles.module';
 import { ActivityLogModule } from '../activity-log/activity.log.module';
 import { ActivityModule } from '@platform/activity/activity.module';
-import { CommunityModule } from '@domain/community/community/community.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
+import { CommunityRoleModule } from '@domain/community/community-role/community.role.module';
+import { ContributorModule } from '@domain/community/contributor/contributor.module';
 
 @Module({
   imports: [
@@ -19,11 +20,12 @@ import { EntityResolverModule } from '@services/infrastructure/entity-resolver/e
     ApplicationModule,
     InvitationModule,
     UserModule,
+    ContributorModule,
     SpaceModule,
     RolesModule,
     ActivityLogModule,
     ActivityModule,
-    CommunityModule,
+    CommunityRoleModule,
     EntityResolverModule,
   ],
   providers: [MeService, MeResolverQueries, MeResolverFields],

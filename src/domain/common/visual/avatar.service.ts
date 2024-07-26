@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { IVisual } from './visual.interface';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
-import { fromBuffer } from 'file-type';
 import { MimeTypeVisual } from '@common/enums/mime.file.type.visual';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { VisualService } from './visual.service';
@@ -20,6 +19,8 @@ export class AvatarService {
     private documentAuthorizationsService: DocumentAuthorizationService,
     private visualService: VisualService
   ) {}
+  // todo: delete this since it's not used?
+  // will remove a dependency package and some code
   public async createAvatarFromURL(
     storageBucketId: string,
     userId: string,
@@ -27,7 +28,9 @@ export class AvatarService {
   ): Promise<AvatarDocument> {
     const imageBuffer = await urlToBuffer(avatarURL);
 
-    const fileInfo = await fromBuffer(imageBuffer);
+    const fileInfo = await (
+      await import('file-type')
+    ).fileTypeFromBuffer(imageBuffer);
 
     const document =
       await this.storageBucketService.uploadFileAsDocumentFromBuffer(
@@ -49,9 +52,8 @@ export class AvatarService {
         document,
         storageBucket.authorization
       );
-    const documentSaved = await this.documentService.saveDocument(
-      documentAuthorized
-    );
+    const documentSaved =
+      await this.documentService.saveDocument(documentAuthorized);
 
     const visual = await this.visualService.createVisual(
       {

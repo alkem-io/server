@@ -10,10 +10,6 @@ export abstract class IPost extends INameable {
   })
   type!: string;
 
-  // Expose the date at which the post was created from parent entity
-  @Field(() => Date)
-  createdDate!: Date;
-
   createdBy!: string;
 
   @Field(() => IRoom, {
@@ -21,4 +17,10 @@ export abstract class IPost extends INameable {
     description: 'The comments on this Post.',
   })
   comments!: IRoom;
+
+  @Field(() => Date, {
+    description: 'The date at which the entity was created.',
+    nullable: false,
+  })
+  createdDate?: Date;
 }

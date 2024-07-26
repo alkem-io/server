@@ -49,7 +49,7 @@ export class AuthResetController {
     const channel: Channel = context.getChannelRef();
     const originalMsg = context.getMessage() as Message;
 
-    const retryCount = originalMsg.properties.headers[RETRY_HEADER] ?? 0;
+    const retryCount = originalMsg.properties.headers?.[RETRY_HEADER] ?? 0;
 
     try {
       const account = await this.accountService.getAccountOrFail(payload.id);
@@ -93,7 +93,7 @@ export class AuthResetController {
     const channel: Channel = context.getChannelRef();
     const originalMsg = context.getMessage() as Message;
 
-    const retryCount = originalMsg.properties.headers[RETRY_HEADER] ?? 0;
+    const retryCount = originalMsg.properties.headers?.[RETRY_HEADER] ?? 0;
 
     try {
       await this.platformAuthorizationService.applyAuthorizationPolicy();
@@ -138,7 +138,7 @@ export class AuthResetController {
     const channel: Channel = context.getChannelRef();
     const originalMsg = context.getMessage() as Message;
 
-    const retryCount = originalMsg.properties.headers[RETRY_HEADER] ?? 0;
+    const retryCount = originalMsg.properties.headers?.[RETRY_HEADER] ?? 0;
 
     try {
       const user = await this.userService.getUserOrFail(payload.id);
@@ -185,7 +185,7 @@ export class AuthResetController {
     const channel: Channel = context.getChannelRef();
     const originalMsg = context.getMessage() as Message;
 
-    const retryCount = originalMsg.properties.headers[RETRY_HEADER] ?? 0;
+    const retryCount = originalMsg.properties.headers?.[RETRY_HEADER] ?? 0;
 
     try {
       const organization = await this.organizationService.getOrganizationOrFail(

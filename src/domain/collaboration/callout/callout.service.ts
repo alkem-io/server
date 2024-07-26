@@ -163,7 +163,9 @@ export class CalloutService {
     }
     if (!callout)
       throw new EntityNotFoundException(
-        `No Callout found with the given id: ${calloutID}`,
+        `No Callout found with the given id: ${calloutID}, using options: ${JSON.stringify(
+          options
+        )}`,
         LogContext.COLLABORATION
       );
     return callout;
@@ -452,9 +454,9 @@ export class CalloutService {
   ): Promise<ICalloutContribution> {
     const calloutID = contributionData.calloutID;
     const callout = await this.getCalloutOrFail(calloutID, {
-      relations: { contributions: true, contributionPolicy: true },
+      relations: { contributionPolicy: true },
     });
-    if (!callout.contributions || !callout.contributionPolicy)
+    if (!callout.contributionPolicy)
       throw new EntityNotInitializedException(
         `Callout (${calloutID}) not initialised as no contributions`,
         LogContext.COLLABORATION
@@ -486,10 +488,8 @@ export class CalloutService {
         callout.contributionPolicy,
         userID
       );
-    callout.contributions.push(contribution);
-    await this.calloutRepository.save(callout);
-
-    return contribution;
+    contribution.callout = callout;
+    return await this.contributionService.save(contribution);
   }
 
   public async getCalloutFraming(

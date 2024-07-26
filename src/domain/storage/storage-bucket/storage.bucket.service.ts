@@ -153,13 +153,8 @@ export class StorageBucketService {
     anonymousReadAccess = false
   ): Promise<IDocument | never> {
     const storage = await this.getStorageBucketOrFail(storageBucketId, {
-      relations: { documents: true },
+      relations: {},
     });
-    if (!storage.documents)
-      throw new EntityNotInitializedException(
-        `StorageBucket (${storage}) not initialised`,
-        LogContext.STORAGE_BUCKET
-      );
 
     this.validateMimeTypes(storage, mimeType);
 
@@ -196,15 +191,13 @@ export class StorageBucketService {
     const document = await this.documentService.createDocument(
       createDocumentInput
     );
+    document.storageBucket = storage;
 
-    storage.documents.push(document);
     this.logger.verbose?.(
       `Uploaded document '${document.externalID}' on storage bucket: ${storage.id}`,
       LogContext.STORAGE_BUCKET
     );
-    await this.storageBucketRepository.save(storage);
-
-    return document;
+    return await this.documentService.save(document);
   }
 
   async uploadFileFromURI(
@@ -261,9 +254,9 @@ export class StorageBucketService {
   public async addDocumentToBucketOrFail(
     storageBucketId: string,
     document: IDocument
-  ): Promise<void> | never {
+  ): Promise<IDocument> | never {
     const storage = await this.getStorageBucketOrFail(storageBucketId, {
-      relations: { documents: true },
+      relations: {},
     });
     if (!storage.documents) {
       throw new EntityNotInitializedException(
@@ -274,26 +267,25 @@ export class StorageBucketService {
 
     this.validateMimeTypes(storage, document.mimeType);
     this.validateSize(storage, document.size);
-
-    storage.documents.push(document);
+    document.storageBucket = storage;
 
     this.logger.verbose?.(
       `Added document '${document.externalID}' on storage bucket: ${storage.id}`,
       LogContext.STORAGE_BUCKET
     );
-    await this.storageBucketRepository.save(storage);
+    return await this.documentService.save(document);
   }
+
   public async size(storage: IStorageBucket): Promise<number> {
     const documentsSize = await this.documentRepository
       .createQueryBuilder('document')
       .where('document.storageBucketId = :storageBucketId', {
         storageBucketId: storage.id,
       })
-      .addSelect('SUM(size)', 'totalSize')
-      .getRawOne();
+      .select('SUM(size)', 'totalSize')
+      .getRawOne<{ totalSize: number }>();
 
-    if (!documentsSize || !documentsSize.totalSize) return 0;
-    return documentsSize.totalSize;
+    return documentsSize?.totalSize ?? 0;
   }
 
   public async getFilteredDocuments(

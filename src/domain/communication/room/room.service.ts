@@ -18,6 +18,9 @@ import { RoomRemoveReactionToMessageInput } from './dto/room.dto.remove.message.
 import { RoomRemoveMessageInput } from './dto/room.dto.remove.message';
 import { RoomSendMessageInput } from './dto/room.dto.send.message';
 import { CommunicationRoomResult } from '@services/adapters/communication-adapter/dto/communication.dto.room.result';
+import { IVcInteraction } from '../vc-interaction/vc.interaction.interface';
+import { VcInteractionService } from '../vc-interaction/vc.interaction.service';
+import { CreateVcInteractionInput } from '../vc-interaction/dto/vc.interaction.dto.create';
 
 interface MessageSender {
   id: string;
@@ -31,6 +34,7 @@ export class RoomService {
     private roomRepository: Repository<Room>,
     private identityResolverService: IdentityResolverService,
     private communicationAdapter: CommunicationAdapter,
+    private vcInteractionService: VcInteractionService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -39,13 +43,14 @@ export class RoomService {
     room.authorization = new AuthorizationPolicy();
     room.externalRoomID = await this.initializeCommunicationRoom(room);
     room.messagesCount = 0;
+    room.vcInteractions = [];
     return await this.roomRepository.save(room);
   }
 
   async getRoomOrFail(
     roomID: string,
     options?: FindOneOptions<Room>
-  ): Promise<IRoom> {
+  ): Promise<Room> {
     const room = await this.roomRepository.findOne({
       where: { id: roomID },
       ...options,
@@ -58,7 +63,21 @@ export class RoomService {
     return room;
   }
 
-  async deleteRoom(room: IRoom): Promise<IRoom> {
+  async deleteRoom(roomInput: IRoom): Promise<IRoom> {
+    const room = await this.getRoomOrFail(roomInput.id, {
+      relations: {
+        vcInteractions: true,
+      },
+    });
+    if (!room.vcInteractions) {
+      throw new EntityNotFoundException(
+        `Not able to locate entities on Room for deletion: ${roomInput.id}`,
+        LogContext.COMMUNICATION
+      );
+    }
+    for (const interaction of room.vcInteractions) {
+      await this.vcInteractionService.removeVcInteraction(interaction.id);
+    }
     const result = await this.roomRepository.remove(room as Room);
     await this.communicationAdapter.removeRoom(room.externalRoomID);
     result.id = room.id;
@@ -73,6 +92,7 @@ export class RoomService {
     const externalRoom = await this.communicationAdapter.getCommunityRoom(
       room.externalRoomID
     );
+
     const messagesCount = externalRoom.messages.length;
     if (messagesCount != room.messagesCount) {
       this.logger.warn(
@@ -83,6 +103,64 @@ export class RoomService {
       await this.save(room);
     }
     return await this.populateRoomMessageSenders(externalRoom.messages);
+  }
+
+  public async addVcInteractionToRoom(
+    interactionData: CreateVcInteractionInput
+  ): Promise<IVcInteraction> {
+    const room = await this.getRoomOrFail(interactionData.roomID, {
+      relations: {
+        vcInteractions: true,
+      },
+    });
+    if (!room.vcInteractions) {
+      throw new EntityNotFoundException(
+        `Not able to locate interactions for the room: ${interactionData.roomID}`,
+        LogContext.COMMUNICATION
+      );
+    }
+
+    const interaction =
+      this.vcInteractionService.createVcInteraction(interactionData);
+    room.vcInteractions.push(interaction);
+    await this.save(room);
+    return interaction;
+  }
+
+  async getVcInteractions(roomID: string): Promise<IVcInteraction[]> {
+    const room = await this.getRoomOrFail(roomID, {
+      relations: {
+        vcInteractions: {
+          room: true,
+        },
+      },
+    });
+    if (!room.vcInteractions) {
+      throw new EntityNotFoundException(
+        `Not able to locate interactions for the room: ${roomID}`,
+        LogContext.COMMUNICATION
+      );
+    }
+    return room.vcInteractions;
+  }
+
+  async getVcInteractionByThread(
+    roomID: string,
+    threadID: string
+  ): Promise<IVcInteraction | undefined> {
+    const room = await this.getRoomOrFail(roomID, {
+      relations: {
+        vcInteractions: true,
+      },
+    });
+    if (!room.vcInteractions) {
+      throw new EntityNotFoundException(
+        `Not able to locate interactions for the room: ${roomID}`,
+        LogContext.COMMUNICATION
+      );
+    }
+
+    return room.vcInteractions.find(i => i.threadID === threadID);
   }
 
   async removeRoomMessage(
@@ -358,6 +436,25 @@ export class RoomService {
       );
 
     return alkemioUserID ?? '';
+  }
+
+  async getMessagesInThread(
+    room: IRoom,
+    threadID: string
+  ): Promise<IMessage[]> {
+    this.logger.verbose?.(
+      `Getting messages in thread ${threadID} for room ${room.id}`,
+      LogContext.COMMUNICATION
+    );
+    const roomResult = await this.communicationAdapter.getCommunityRoom(
+      room.externalRoomID
+    );
+    // First message in the thread provides the threadID, but it itself does not have the threadID set
+    const threadMessages = roomResult.messages.filter(
+      m => m.threadID === threadID || m.id === threadID
+    );
+
+    return threadMessages;
   }
 
   async getUserIdForReaction(room: IRoom, reactionID: string): Promise<string> {

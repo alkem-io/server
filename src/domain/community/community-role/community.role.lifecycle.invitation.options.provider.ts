@@ -4,7 +4,6 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { MachineOptions } from 'xstate';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { EntityNotInitializedException } from '@common/exceptions';
-import { CommunityService } from './community.service';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
@@ -12,12 +11,13 @@ import { CommunityRole } from '@common/enums/community.role';
 import { InvitationService } from '../invitation/invitation.service';
 import { InvitationEventInput } from '../invitation/dto/invitation.dto.event';
 import { IInvitation } from '../invitation';
+import { CommunityRoleService } from './community.role.service';
 
 @Injectable()
-export class CommunityInvitationLifecycleOptionsProvider {
+export class CommunityRoleInvitationLifecycleOptionsProvider {
   constructor(
     private lifecycleService: LifecycleService,
-    private communityService: CommunityService,
+    private communityRoleService: CommunityRoleService,
     private authorizationService: AuthorizationService,
     private invitationService: InvitationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -111,7 +111,7 @@ export class CommunityInvitationLifecycleOptionsProvider {
                   LogContext.COMMUNITY
                 );
               }
-              await this.communityService.assignContributorToRole(
+              await this.communityRoleService.assignContributorToRole(
                 community.parentCommunity,
                 contributorID,
                 CommunityRole.MEMBER,
@@ -120,7 +120,7 @@ export class CommunityInvitationLifecycleOptionsProvider {
                 true
               );
             }
-            await this.communityService.assignContributorToRole(
+            await this.communityRoleService.assignContributorToRole(
               community,
               contributorID,
               CommunityRole.MEMBER,

@@ -624,6 +624,12 @@ export class UrlGeneratorService {
         LogContext.URL_GENERATOR
       );
     }
+    if (!result.collaborationId) {
+      throw new EntityNotFoundException(
+        `Unable to find collaboration for callout with id: ${calloutID}`,
+        LogContext.URL_GENERATOR
+      );
+    }
     const collaborationJourneyUrlPath = await this.getJourneyUrlPath(
       'collaborationId',
       result.collaborationId
@@ -635,6 +641,12 @@ export class UrlGeneratorService {
     fieldName: string,
     fieldID: string
   ): Promise<string> {
+    if (!fieldID || fieldID === 'null') {
+      throw new EntityNotFoundException(
+        `Unable to find journey with ${fieldName}: ${fieldID}`,
+        LogContext.URL_GENERATOR
+      );
+    }
     let collaborationJourneyUrlPath = await this.getSubsubspaceUrlPath(
       fieldName,
       fieldID
@@ -653,7 +665,7 @@ export class UrlGeneratorService {
     }
     if (!collaborationJourneyUrlPath) {
       throw new EntityNotFoundException(
-        `Unable to find url path for collaboration: ${fieldID}`,
+        `Unable to find url path for collaboration: ${fieldName} - ${fieldID}`,
         LogContext.URL_GENERATOR
       );
     }
@@ -791,7 +803,6 @@ export class UrlGeneratorService {
       this.FIELD_PROFILE_ID,
       profileID
     );
-
     return `${this.endpoint_cluster}/${this.PATH_INNOVATION_PACKS}/${innovationPackInfo.entityNameID}`;
   }
 
