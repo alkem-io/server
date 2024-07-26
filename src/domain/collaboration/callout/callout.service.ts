@@ -110,7 +110,7 @@ export class CalloutService {
       );
     }
 
-    return this.calloutRepository.save(callout);
+    return callout;
   }
 
   private validateCreateCalloutData(calloutData: CreateCalloutInput) {

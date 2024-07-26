@@ -42,6 +42,7 @@ export class CalloutContributionService {
     );
 
     contribution.authorization = new AuthorizationPolicy();
+    contribution.createdBy = userID;
 
     const { post, whiteboard, link } = calloutContributionData;
 
@@ -70,8 +71,6 @@ export class CalloutContributionService {
       );
     }
 
-    contribution.createdBy = userID;
-
     if (link) {
       this.validateContributionType(
         contributionPolicy,
@@ -84,7 +83,7 @@ export class CalloutContributionService {
       );
     }
 
-    return await this.save(contribution);
+    return contribution;
   }
 
   private validateContributionType(
