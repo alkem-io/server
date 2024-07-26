@@ -21,6 +21,7 @@ import {
   AuthorizationLoaderCreator,
   AgentLoaderCreator,
   AccountVirtualContributorsLoaderCreator,
+  AccountInnovationPacksLoaderCreator,
 } from '@core/dataloader/creators/loader.creators';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -35,6 +36,7 @@ import {
 } from '@domain/community/virtual-contributor';
 import { AccountHostService } from '../account.host/account.host.service';
 import { LicensePrivilege } from '@common/enums/license.privilege';
+import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
 
 @Resolver(() => IAccount)
 export class AccountResolverFields {
@@ -183,8 +185,22 @@ export class AccountResolverFields {
     @Loader(AccountVirtualContributorsLoaderCreator, {
       parentClassRef: Account,
     })
-    loader: ILoader<VirtualContributor>
-  ) {
+    loader: ILoader<VirtualContributor[]>
+  ): Promise<IVirtualContributor[]> {
+    return loader.load(account.id);
+  }
+
+  @ResolveField('innovationPacks', () => [IInnovationPack], {
+    nullable: false,
+    description: 'The InnovationPacks for this Account.',
+  })
+  async innovationPacks(
+    @Parent() account: Account,
+    @Loader(AccountInnovationPacksLoaderCreator, {
+      parentClassRef: Account,
+    })
+    loader: ILoader<IInnovationPack[]>
+  ): Promise<IInnovationPack[]> {
     return loader.load(account.id);
   }
 }
