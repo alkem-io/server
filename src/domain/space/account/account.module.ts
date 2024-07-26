@@ -25,6 +25,7 @@ import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/stor
 import { CommunityPolicyModule } from '@domain/community/community-policy/community.policy.module';
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
 import { CommunityModule } from '@domain/community/community/community.module';
+import { InnovationPackModule } from '@library/innovation-pack/innovation.pack.module';
 import { SpaceSettingssModule } from '../space.settings/space.settings.module';
 
 @Module({
@@ -50,6 +51,7 @@ import { SpaceSettingssModule } from '../space.settings/space.settings.module';
     TypeOrmModule.forFeature([Account]),
     NotificationAdapterModule,
     CommunityModule,
+    InnovationPackModule,
   ],
   providers: [
     AccountService,

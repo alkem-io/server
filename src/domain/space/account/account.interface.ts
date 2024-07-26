@@ -6,6 +6,7 @@ import { ISpace } from '../space/space.interface';
 import { IAgent } from '@domain/agent/agent/agent.interface';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
 
 @ObjectType('Account')
 export class IAccount extends IAuthorizable {
@@ -14,5 +15,6 @@ export class IAccount extends IAuthorizable {
   library?: ITemplatesSet;
   defaults?: ISpaceDefaults;
   virtualContributors!: IVirtualContributor[];
+  innovationPacks!: IInnovationPack[];
   storageAggregator?: IStorageAggregator;
 }
