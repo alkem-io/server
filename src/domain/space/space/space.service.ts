@@ -82,7 +82,7 @@ export class SpaceService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async createSpace(
+  public createSpace(
     spaceData: CreateSpaceInput,
     account: IAccount,
     agentInfo?: AgentInfo
@@ -117,7 +117,7 @@ export class SpaceService {
 
     const space: ISpace = Space.create(spaceData);
 
-    return await this.initialise(space, spaceData, account, agentInfo);
+    return this.initialise(space, spaceData, account, agentInfo);
   }
 
   public async initialise(

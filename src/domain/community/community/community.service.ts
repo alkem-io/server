@@ -62,7 +62,7 @@ export class CommunityService {
     const community: ICommunity = new Community();
     community.authorization = new AuthorizationPolicy();
     const policy = communityData.policy as ICommunityPolicyDefinition;
-    community.policy = await this.communityPolicyService.createCommunityPolicy(
+    community.policy = this.communityPolicyService.createCommunityPolicy(
       policy.member,
       policy.lead,
       policy.admin
@@ -73,7 +73,7 @@ export class CommunityService {
         communityData.guidelines,
         storageAggregator
       );
-    community.applicationForm = await this.formService.createForm(
+    community.applicationForm = this.formService.createForm(
       communityData.applicationForm
     );
 
@@ -87,7 +87,7 @@ export class CommunityService {
         communityData.name,
         ''
       );
-    return await this.communityRepository.save(community);
+    return community;
   }
 
   async createGroup(groupData: CreateUserGroupInput): Promise<IUserGroup> {

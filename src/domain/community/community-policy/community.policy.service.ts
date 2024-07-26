@@ -24,13 +24,12 @@ export class CommunityPolicyService {
     member: ICommunityRolePolicy,
     lead: ICommunityRolePolicy,
     admin: ICommunityRolePolicy
-  ): Promise<ICommunityPolicy> {
-    const policy: ICommunityPolicy = new CommunityPolicy(
+  ): ICommunityPolicy {
+    return new CommunityPolicy(
       this.serializeRolePolicy(member),
       this.serializeRolePolicy(lead),
       this.serializeRolePolicy(admin)
-    );
-    return this.save(policy);
+    )
   }
 
   public async removeCommunityPolicy(
