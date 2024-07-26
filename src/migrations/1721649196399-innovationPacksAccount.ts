@@ -1,14 +1,19 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
+import { safelyDropFK } from './utils/safely-drop-foreignKey';
 
 export class InnovationPacksAccount1721649196399 implements MigrationInterface {
   name = 'InnovationPacksAccount1721649196399';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(
-      `ALTER TABLE \`innovation_pack\` DROP FOREIGN KEY \`FK_77777450cf75dc486700ca034c6\``
+    await safelyDropFK(
+      queryRunner,
+      'innovation_pack',
+      'FK_77777450cf75dc486700ca034c6'
     );
-    await queryRunner.query(
-      `ALTER TABLE \`library\` DROP FOREIGN KEY \`FK_6664d59c0b805c9c1ecb0070e16\``
+    await safelyDropFK(
+      queryRunner,
+      'library',
+      'FK_6664d59c0b805c9c1ecb0070e16'
     );
 
     await queryRunner.query(
