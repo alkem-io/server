@@ -78,6 +78,7 @@ import { PlatformSettingsModule } from '@platform/settings/platform.settings.mod
 import { FileIntegrationModule } from '@services/file-integration';
 import { AdminLicensingModule } from '@platform/admin/licensing/admin.licensing.module';
 import { PlatformRoleModule } from '@platform/platfrom.role/platform.role.module';
+import { LookupByNameModule } from '@services/api/lookup-by-name';
 
 @Module({
   imports: [
@@ -263,6 +264,7 @@ import { PlatformRoleModule } from '@platform/platfrom.role/platform.role.module
     ChatGuidanceModule,
     VirtualContributorModule,
     LookupModule,
+    LookupByNameModule,
     AuthResetSubscriberModule,
     TaskGraphqlModule,
     ActivityFeedModule,

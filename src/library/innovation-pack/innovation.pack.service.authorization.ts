@@ -1,21 +1,16 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { InnovationPackService } from './innovaton.pack.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IInnovationPack } from './innovation.pack.interface';
-import { InnovationPack } from './innovation.pack.entity';
 import { TemplatesSetAuthorizationService } from '@domain/template/templates-set/templates.set.service.authorization';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
-import { EntityNotInitializedException } from '@common/exceptions';
 import {
-  AuthorizationCredential,
-  AuthorizationPrivilege,
-  LogContext,
-} from '@common/enums';
+  EntityNotInitializedException,
+  RelationshipNotFoundException,
+} from '@common/exceptions';
+import { LogContext } from '@common/enums';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
-import { CREDENTIAL_RULE_LIBRARY_INNOVATION_PACK_PROVIDER_ADMIN } from '@common/constants/authorization/credential.rule.constants';
 
 @Injectable()
 export class InnovationPackAuthorizationService {
@@ -23,15 +18,29 @@ export class InnovationPackAuthorizationService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private templatesSetAuthorizationService: TemplatesSetAuthorizationService,
     private profileAuthorizationService: ProfileAuthorizationService,
-    private innovationPackService: InnovationPackService,
-    @InjectRepository(InnovationPack)
-    private innovationPackRepository: Repository<InnovationPack>
+    private innovationPackService: InnovationPackService
   ) {}
 
   async applyAuthorizationPolicy(
-    innovationPack: IInnovationPack,
+    innovationPackInput: IInnovationPack,
     parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<IInnovationPack> {
+    const innovationPack =
+      await this.innovationPackService.getInnovationPackOrFail(
+        innovationPackInput.id,
+        {
+          relations: {
+            profile: true,
+            templatesSet: true,
+          },
+        }
+      );
+    if (!innovationPack.profile || !innovationPack.templatesSet) {
+      throw new RelationshipNotFoundException(
+        `Unable to load entities for innovation pack auth reset: ${innovationPack.id} `,
+        LogContext.COMMUNITY
+      );
+    }
     // Ensure always applying from a clean state
     innovationPack.authorization = this.authorizationPolicyService.reset(
       innovationPack.authorization
@@ -42,42 +51,24 @@ export class InnovationPackAuthorizationService {
         parentAuthorization
       );
 
-    innovationPack.authorization = await this.appendCredentialRules(
-      innovationPack
-    );
-
-    // Cascade down
-    const innovationPackPropagated =
-      await this.propagateAuthorizationToChildEntities(innovationPack);
-
-    return await this.innovationPackRepository.save(innovationPackPropagated);
-  }
-
-  private async propagateAuthorizationToChildEntities(
-    innovationPack: IInnovationPack
-  ): Promise<IInnovationPack> {
-    innovationPack.profile = await this.innovationPackService.getProfile(
-      innovationPack
-    );
+    innovationPack.authorization = this.appendCredentialRules(innovationPack);
     innovationPack.profile =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
         innovationPack.profile,
         innovationPack.authorization
       );
     innovationPack.templatesSet =
-      await this.innovationPackService.getTemplatesSetOrFail(innovationPack.id);
-    innovationPack.templatesSet =
       await this.templatesSetAuthorizationService.applyAuthorizationPolicy(
         innovationPack.templatesSet,
         innovationPack.authorization
       );
 
-    return innovationPack;
+    return await this.innovationPackService.save(innovationPack);
   }
 
-  private async appendCredentialRules(
+  private appendCredentialRules(
     innovationPack: IInnovationPack
-  ): Promise<IAuthorizationPolicy> {
+  ): IAuthorizationPolicy {
     const authorization = innovationPack.authorization;
     if (!authorization)
       throw new EntityNotInitializedException(
@@ -87,37 +78,40 @@ export class InnovationPackAuthorizationService {
 
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
-    const providerOrg = await this.innovationPackService.getProvider(
-      innovationPack.id
-    );
-    if (!providerOrg) {
-      throw new EntityNotInitializedException(
-        `Providing organization not found for InnovationPack: ${innovationPack.id}`,
-        LogContext.LIBRARY
-      );
-    }
-
-    const providerOrgAdmins =
-      this.authorizationPolicyService.createCredentialRule(
-        [
-          AuthorizationPrivilege.CREATE,
-          AuthorizationPrivilege.READ,
-          AuthorizationPrivilege.UPDATE,
-          AuthorizationPrivilege.DELETE,
-        ],
-        [
-          {
-            type: AuthorizationCredential.ORGANIZATION_ADMIN,
-            resourceID: providerOrg.id,
-          },
-        ],
-        CREDENTIAL_RULE_LIBRARY_INNOVATION_PACK_PROVIDER_ADMIN
-      );
-    newRules.push(providerOrgAdmins);
-
     return this.authorizationPolicyService.appendCredentialAuthorizationRules(
       authorization,
       newRules
     );
   }
+
+  // // TODO: what does this look like after the move? Prviously the library explicitly allowed read access to anonymous users
+
+  // private extendStorageAuthorizationPolicy(
+  //   storageAuthorization: IAuthorizationPolicy | undefined
+  // ): IAuthorizationPolicy {
+  //   if (!storageAuthorization)
+  //     throw new EntityNotInitializedException(
+  //       'Authorization definition not found',
+  //       LogContext.LIBRARY
+  //     );
+
+  //   const newRules: IAuthorizationPolicyRuleCredential[] = [];
+
+  //   // Any member can upload
+  //   const registeredUsersCanUpload =
+  //     this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+  //       [AuthorizationPrivilege.FILE_UPLOAD],
+  //       [AuthorizationCredential.GLOBAL_REGISTERED],
+  //       CREDENTIAL_RULE_TYPES_LIBRARY_FILE_UPLOAD_ANY_USER
+  //     );
+  //   registeredUsersCanUpload.cascade = false;
+  //   newRules.push(registeredUsersCanUpload);
+
+  //   this.authorizationPolicyService.appendCredentialAuthorizationRules(
+  //     storageAuthorization,
+  //     newRules
+  //   );
+
+  //   return storageAuthorization;
+  // }
 }
