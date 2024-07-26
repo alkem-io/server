@@ -29,99 +29,63 @@ export class InnovationPacksAccount1721649196399 implements MigrationInterface {
       `ALTER TABLE \`innovation_pack\` ADD \`accountId\` char(36) NULL`
     );
 
-    const alkemioOrgName = '%Alkemio%';
-    const defaultAccountData: {
-      id: string;
-    }[] = await queryRunner.query(
-      `SELECT account.id as id FROM credential
-        JOIN account ON credential.resourceID = account.id
-        JOIN organization ON credential.agentId = organization.agentId
-        JOIN profile ON organization.profileId = profile.id
-      WHERE credential.type = 'account-host' AND profile.displayName LIKE '${alkemioOrgName}';`
+    const innovationPacks = await queryRunner.query(
+      `SELECT id FROM \`innovation_pack\``
     );
-    // There needs to be an organization HOSTING AT LEAST ONE SPACE, and called something like '%Alkemio%'
-    if (!defaultAccountData || defaultAccountData.length === 0) {
-      throw new Error(
-        `Organization not found, unable to get a default account with the organization name: ${alkemioOrgName}`
-      );
-    }
+    if (innovationPacks.length > 0) {
+      const defaultHostAccount = await this.getDefaultHostAccount(queryRunner);
+      console.log(`Default host account: ${defaultHostAccount}`);
 
-    const defaultHostAccount = defaultAccountData[0].id;
-    console.log(`Default host account: ${defaultHostAccount}`);
+      const libraryStorageAggregatorID =
+        await this.getLibraryStorageAggregatorID(queryRunner);
 
-    const libraryStorageAggregatorID =
-      await this.getLibraryStorageAggregatorID(queryRunner);
+      for (const innovationPack of innovationPacks) {
+        let accountID = defaultHostAccount;
 
-    const innovationPacks: {
-      id: string;
-    }[] = await queryRunner.query(`SELECT id FROM \`innovation_pack\``);
-    for (const innovationPack of innovationPacks) {
-      let accountID = defaultHostAccount;
-
-      const [providerCredential]: {
-        id: string;
-        agentId: string;
-      }[] = await queryRunner.query(
-        `SELECT id, agentId FROM credential WHERE resourceID = '${innovationPack.id}' and type = 'innovation-pack-provider'`
-      );
-      if (providerCredential) {
-        const [organization]: {
-          id: string;
-          agentId: string;
-        }[] = await queryRunner.query(
-          `SELECT id, agentId FROM organization WHERE agentId = '${providerCredential.agentId}'`
+        const providerCredential = await this.getProviderCredential(
+          queryRunner,
+          innovationPack.id
         );
-        if (organization) {
-          const accountHostCredentials: {
-            id: string;
-            agentId: string;
-            resourceID: string;
-          }[] = await queryRunner.query(
-            `SELECT id, agentId, resourceID FROM credential WHERE agentId = '${organization.agentId}' and type = 'account-host'`
+        if (providerCredential) {
+          const organization = await this.getOrganization(
+            queryRunner,
+            providerCredential.agentId
           );
-          if (accountHostCredentials && accountHostCredentials.length > 0) {
-            const accountHostCredential = accountHostCredentials[0];
-            accountID = accountHostCredential.resourceID;
+          if (organization) {
+            const accountHostCredential = await this.getAccountHostCredential(
+              queryRunner,
+              organization.agentId
+            );
+            if (accountHostCredential) {
+              accountID = accountHostCredential.resourceID;
+            }
           }
         }
-      }
-      if (accountID == '') {
-        throw new Error(
-          `Account ID not found for innovation pack: ${innovationPack.id}`
-        );
-      }
-      const [account]: {
-        id: string;
-        storageAggregatorId: string;
-      }[] = await queryRunner.query(
-        `SELECT id, storageAggregatorId FROM account WHERE id = '${accountID}'`
-      );
-      const listedInStore = true;
-      const searchVisibility = 'public';
-      await queryRunner.query(
-        `UPDATE innovation_pack SET accountId = '${accountID}', listedInStore = ${listedInStore}, searchVisibility='${searchVisibility}' WHERE id = '${innovationPack.id}'`
-      );
 
-      // Update the storageAggregator on all storage buckets that used the old one
-      const storageBuckets: {
-        id: string;
-      }[] = await queryRunner.query(
-        `SELECT id FROM \`storage_bucket\` where storageAggregatorId = '${libraryStorageAggregatorID}'`
-      );
-      for (const storageBucketLibrary of storageBuckets) {
+        if (!accountID) {
+          throw new Error(
+            `Account ID not found for innovation pack: ${innovationPack.id}`
+          );
+        }
+
+        const account = await this.getAccount(queryRunner, accountID);
+        const listedInStore = true;
+        const searchVisibility = 'public';
         await queryRunner.query(
-          `UPDATE storage_bucket SET storageAggregatorId = '${account.storageAggregatorId}' WHERE id = '${storageBucketLibrary.id}'`
+          `UPDATE innovation_pack SET accountId = '${accountID}', listedInStore = ${listedInStore}, searchVisibility='${searchVisibility}' WHERE id = '${innovationPack.id}'`
+        );
+
+        await this.updateStorageBuckets(
+          queryRunner,
+          libraryStorageAggregatorID,
+          account.storageAggregatorId
         );
       }
     }
 
-    // Drop the storage aggregator on library
-    // TODO: No storage buckets, just authorization + profile: how to clean up?
     await queryRunner.query(
       `ALTER TABLE \`library\` DROP COLUMN \`storageAggregatorId\``
     );
-
-    // Remove all credentials of type 'innovation-pack-provider' that are not used
     await queryRunner.query(
       `DELETE FROM credential WHERE type = 'innovation-pack-provider'`
     );
@@ -133,20 +97,106 @@ export class InnovationPacksAccount1721649196399 implements MigrationInterface {
 
   public async down(queryRunner: QueryRunner): Promise<void> {}
 
+  private async getDefaultHostAccount(
+    queryRunner: QueryRunner
+  ): Promise<string> {
+    const orgNamePattern = '%Alkemio%';
+    let result = await queryRunner.query(
+      `SELECT account.id as id FROM credential
+        JOIN account ON credential.resourceID = account.id
+        JOIN organization ON credential.agentId = organization.agentId
+        JOIN profile ON organization.profileId = profile.id
+      WHERE credential.type = 'account-host' AND profile.displayName LIKE ?`,
+      [orgNamePattern]
+    );
+
+    if (!result || result.length === 0) {
+      result = await queryRunner.query(
+        `SELECT account.id as id FROM credential
+          JOIN account ON credential.resourceID = account.id
+          JOIN organization ON credential.agentId = organization.agentId
+        WHERE credential.type = 'account-host' LIMIT 1`
+      );
+
+      if (!result || result.length === 0) {
+        throw new Error(`No account-host credentials found.`);
+      }
+    }
+
+    return result[0].id;
+  }
+
   private async getLibraryStorageAggregatorID(
     queryRunner: QueryRunner
   ): Promise<string> {
-    const library: {
-      id: string;
-      storageAggregatorId: string;
-    }[] = await queryRunner.query(
-      `SELECT id, storageAggregatorId FROM library `
+    const library = await queryRunner.query(
+      `SELECT id, storageAggregatorId FROM library`
     );
-    if (!library || !(library.length === 1)) {
-      throw new Error(
-        `Unable to retrieve storage aggregator on library ${library}`
-      );
+    if (!library || library.length !== 1) {
+      throw new Error(`Unable to retrieve storage aggregator on library`);
     }
     return library[0].storageAggregatorId;
+  }
+
+  private async getProviderCredential(
+    queryRunner: QueryRunner,
+    resourceId: string
+  ): Promise<any> {
+    const result = await queryRunner.query(
+      `SELECT id, agentId FROM credential WHERE resourceID = ? and type = 'innovation-pack-provider'`,
+      [resourceId]
+    );
+    return result[0];
+  }
+
+  private async getOrganization(
+    queryRunner: QueryRunner,
+    agentId: string
+  ): Promise<any> {
+    const result = await queryRunner.query(
+      `SELECT id, agentId FROM organization WHERE agentId = ?`,
+      [agentId]
+    );
+    return result[0];
+  }
+
+  private async getAccountHostCredential(
+    queryRunner: QueryRunner,
+    agentId: string
+  ): Promise<any> {
+    const result = await queryRunner.query(
+      `SELECT id, agentId, resourceID FROM credential WHERE agentId = ? and type = 'account-host'`,
+      [agentId]
+    );
+    return result[0];
+  }
+
+  private async getAccount(
+    queryRunner: QueryRunner,
+    accountId: string
+  ): Promise<any> {
+    const result = await queryRunner.query(
+      `SELECT id, storageAggregatorId FROM account WHERE id = ?`,
+      [accountId]
+    );
+    return result[0];
+  }
+
+  private async updateStorageBuckets(
+    queryRunner: QueryRunner,
+    oldStorageAggregatorId: string,
+    newStorageAggregatorId: string
+  ): Promise<void> {
+    const storageBuckets = await queryRunner.query(
+      `SELECT id FROM \`storage_bucket\` WHERE storageAggregatorId = ?`,
+      [oldStorageAggregatorId]
+    );
+
+    for (const storageBucket of storageBuckets) {
+      await queryRunner.query(
+        `UPDATE storage_bucket SET storageAggregatorId = ? WHERE id = ?`,
+        [newStorageAggregatorId, storageBucket.id]
+      );
+    }
   }
 }
