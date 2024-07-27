@@ -42,13 +42,13 @@ export class ContributorService {
     contributorID: string,
     options?: FindOneOptions<IContributor>
   ): Promise<IContributor | null> {
-    return await this.contributorLookupService.getContributor(
+    return await this.contributorLookupService.getContributorByUUID(
       contributorID,
       options
     );
   }
 
-  async getContributorOrFail(
+  async getContributorByUuidOrFail(
     contributorID: string,
     options?: FindOneOptions<IContributor>
   ): Promise<IContributor | never> {
@@ -64,7 +64,7 @@ export class ContributorService {
   async getContributorAndAgent(
     contributorID: string
   ): Promise<{ contributor: IContributor; agent: IAgent }> {
-    const contributor = await this.getContributorOrFail(contributorID, {
+    const contributor = await this.getContributorByUuidOrFail(contributorID, {
       relations: { agent: true },
     });
 
