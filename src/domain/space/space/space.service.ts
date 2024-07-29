@@ -117,7 +117,7 @@ export class SpaceService {
 
     const space: ISpace = Space.create(spaceData);
     // default to demo space
-    space.visibility = SpaceVisibility.DEMO;
+    space.visibility = SpaceVisibility.ACTIVE;
 
     space.authorization = new AuthorizationPolicy();
     space.account = account;
