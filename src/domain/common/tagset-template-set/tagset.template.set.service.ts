@@ -94,10 +94,10 @@ export class TagsetTemplateSetService {
     return false;
   }
 
-  async addTagsetTemplate(
+  public addTagsetTemplate(
     tagsetTemplateSet: ITagsetTemplateSet,
     tagsetTemplateData: CreateTagsetTemplateInput
-  ): Promise<ITagsetTemplate> {
+  ): ITagsetTemplate {
     // Check if the group already exists, if so log a warning
     if (
       this.hasTagsetTemplateWithName(tagsetTemplateSet, tagsetTemplateData.name)
@@ -108,11 +108,9 @@ export class TagsetTemplateSetService {
       );
     }
 
-    const tagsetTemplate =
-      await this.tagsetTemplateService.createTagsetTemplate(tagsetTemplateData);
+    const tagsetTemplate = this.tagsetTemplateService.createTagsetTemplate(tagsetTemplateData);
     tagsetTemplateSet.tagsetTemplates.push(tagsetTemplate);
 
-    await this.save(tagsetTemplateSet);
     return tagsetTemplate;
   }
 }

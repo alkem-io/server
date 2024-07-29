@@ -110,8 +110,7 @@ export class CollaborationService {
       defaultSelectedValue:
         allowedStates.length > 0 ? allowedStates[0] : undefined,
     };
-    const statesTagsetTemplate =
-      await this.tagsetTemplateSetService.addTagsetTemplate(
+    const statesTagsetTemplate = this.tagsetTemplateSetService.addTagsetTemplate(
         collaboration.tagsetTemplateSet,
         tagsetTemplateDataStates
       );
