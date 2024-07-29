@@ -214,8 +214,7 @@ export class SpaceService {
     const defaultCallouts = this.spaceDefaultsService.getDefaultCallouts(
       space.type
     );
-    const calloutInputs =
-      await this.spaceDefaultsService.getCreateCalloutInputs(
+    const calloutInputs = this.spaceDefaultsService.getCreateCalloutInputs(
         defaultCallouts,
         calloutInputsFromCollaborationTemplate,
         spaceData.collaborationData

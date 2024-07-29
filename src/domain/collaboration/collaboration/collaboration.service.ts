@@ -124,7 +124,7 @@ export class CollaborationService {
         storageAggregator
       );
 
-    return await this.save(collaboration);
+    return collaboration;
   }
 
   public getCalloutGroupNames(collaboration: ICollaboration): string[] {
@@ -148,16 +148,17 @@ export class CollaborationService {
     collaboration: ICollaboration,
     tagsetTemplateData: CreateTagsetTemplateInput
   ): Promise<ITagsetTemplate> {
-    collaboration.tagsetTemplateSet = await this.getTagsetTemplatesSet(
-      collaboration.id
-    );
+    if (!collaboration.tagsetTemplateSet) {
+      collaboration.tagsetTemplateSet = await this.getTagsetTemplatesSet(
+        collaboration.id
+      );
+    }
 
-    const tagsetTemplate =
-      await this.tagsetTemplateSetService.addTagsetTemplate(
+    const tagsetTemplate = this.tagsetTemplateSetService.addTagsetTemplate(
         collaboration.tagsetTemplateSet,
         tagsetTemplateData
       );
-    await this.save(collaboration);
+    await this.save(collaboration); // todo remove
     return tagsetTemplate;
   }
 
@@ -184,7 +185,7 @@ export class CollaborationService {
       callout.visibility = CalloutVisibility.PUBLISHED;
       collaboration.callouts.push(callout);
     }
-    return await this.save(collaboration);
+    return collaboration;
   }
 
   public async createCalloutInputsFromCollaboration(
@@ -194,7 +195,7 @@ export class CollaborationService {
 
     const sourceCallouts =
       await this.getCalloutsOnCollaboration(collaborationSource);
-
+    // todo: can be refactored
     for (const sourceCallout of sourceCallouts) {
       const sourceCalloutInput =
         await this.calloutService.createCalloutInputFromCallout(sourceCallout);

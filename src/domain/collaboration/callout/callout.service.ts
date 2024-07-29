@@ -320,8 +320,7 @@ export class CalloutService {
         },
       },
     });
-    const calloutGroupTagset =
-      await this.calloutFramingService.getCalloutGroupTagset(callout.framing);
+    const calloutGroupTagset = this.calloutFramingService.getCalloutGroupTagset(callout.framing);
     return {
       nameID: callout.nameID,
       type: callout.type,

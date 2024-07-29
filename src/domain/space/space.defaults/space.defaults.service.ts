@@ -373,11 +373,11 @@ export class SpaceDefaultsService {
     return result;
   }
 
-  public async getCreateCalloutInputs(
+  public getCreateCalloutInputs(
     defaultCallouts: CreateCalloutInput[],
     calloutsFromCollaborationTemplateInput: CreateCalloutInput[],
     collaborationData?: CreateCollaborationInput
-  ): Promise<CreateCalloutInput[]> {
+  ): CreateCalloutInput[] {
     let calloutInputs: CreateCalloutInput[] = [];
     const addDefaultCallouts = collaborationData?.addDefaultCallouts;
     if (addDefaultCallouts === undefined || addDefaultCallouts) {
