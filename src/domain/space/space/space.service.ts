@@ -699,6 +699,8 @@ export class SpaceService {
         space.id,
         updateData.visibility
       );
+
+      space.visibility = updateData.visibility;
     }
     if (updateData.nameID && updateData.nameID !== space.nameID) {
       // updating the nameID, check new value is allowed
