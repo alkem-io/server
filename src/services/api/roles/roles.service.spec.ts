@@ -259,6 +259,7 @@ const getSpaceRoleResultMock = ({
       account: {
         id: `account-${id}`,
         virtualContributors: [],
+        innovationHubs: [],
         innovationPacks: [],
         license: {
           id: `license-${id}`,

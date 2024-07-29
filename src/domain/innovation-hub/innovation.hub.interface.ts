@@ -3,6 +3,7 @@ import { INameable } from '@domain/common/entity/nameable-entity';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { InnovationHubType } from './innovation.hub.type.enum';
 import { IAccount } from '@domain/space/account/account.interface';
+import { SearchVisibility } from '@common/enums/search.visibility';
 
 @ObjectType('InnovationHub')
 export abstract class IInnovationHub extends INameable {
@@ -27,4 +28,17 @@ export abstract class IInnovationHub extends INameable {
   spaceListFilter?: string[];
 
   account!: IAccount;
+
+  @Field(() => SearchVisibility, {
+    description: 'Visibility of the InnovationHub in searches.',
+    nullable: false,
+  })
+  searchVisibility!: SearchVisibility;
+
+  @Field(() => Boolean, {
+    nullable: false,
+    description:
+      'Flag to control if this InnovationHub is listed in the platform store.',
+  })
+  listedInStore!: boolean;
 }

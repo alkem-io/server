@@ -44,9 +44,12 @@ import { StorageAggregatorService } from '@domain/storage/storage-aggregator/sto
 import { CreateSpaceOnAccountInput } from './dto/account.dto.create.space';
 import { Space } from '../space/space.entity';
 import { LicensePlanType } from '@common/enums/license.plan.type';
-import { InnovationPackService } from '@library/innovation-pack/innovaton.pack.service';
+import { CreateInnovationHubOnAccountInput } from './dto/account.dto.create.innovation.hub';
+import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
+import { InnovationHubService } from '@domain/innovation-hub';
 import { CreateInnovationPackOnAccountInput } from './dto/account.dto.create.innovation.pack';
 import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
+import { InnovationPackService } from '@library/innovation-pack/innovaton.pack.service';
 
 @Injectable()
 export class AccountService {
@@ -62,6 +65,7 @@ export class AccountService {
     private licenseIssuerService: LicenseIssuerService,
     private storageAggregatorService: StorageAggregatorService,
     private virtualContributorService: VirtualContributorService,
+    private innovationHubService: InnovationHubService,
     private innovationPackService: InnovationPackService,
     @InjectRepository(Account)
     private accountRepository: Repository<Account>,
@@ -256,6 +260,7 @@ export class AccountService {
         virtualContributors: true,
         innovationPacks: true,
         storageAggregator: true,
+        innovationHubs: true,
       },
     });
 
@@ -266,8 +271,9 @@ export class AccountService {
       !account.defaults ||
       !account.library ||
       !account.virtualContributors ||
-      !account.innovationPacks ||
-      !account.storageAggregator
+      !account.storageAggregator ||
+      !account.innovationHubs ||
+      !account.innovationPacks
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load all entities for deletion of account ${account.id} `,
@@ -299,6 +305,10 @@ export class AccountService {
     }
     for (const ip of account.innovationPacks) {
       await this.innovationPackService.deleteInnovationPack({ ID: ip.id });
+    }
+
+    for (const hub of account.innovationHubs) {
+      await this.innovationHubService.delete(hub.id);
     }
 
     const result = await this.accountRepository.remove(account as Account);
@@ -483,6 +493,28 @@ export class AccountService {
     return await this.virtualContributorService.save(vc);
   }
 
+  public async createInnovationHubOnAccount(
+    innovationHubData: CreateInnovationHubOnAccountInput
+  ): Promise<IInnovationHub> {
+    const accountID = innovationHubData.accountID;
+    const account = await this.getAccountOrFail(accountID, {
+      relations: { storageAggregator: true },
+    });
+
+    if (!account.storageAggregator) {
+      throw new RelationshipNotFoundException(
+        `Unable to load Account with required entities for creating an InnovationHub: ${account.id} `,
+        LogContext.ACCOUNT
+      );
+    }
+    const hub = await this.innovationHubService.createInnovationHub(
+      innovationHubData,
+      account.storageAggregator
+    );
+    hub.account = account;
+    return await this.innovationHubService.save(hub);
+  }
+
   public async createInnovationPackOnAccount(
     ipData: CreateInnovationPackOnAccountInput
   ): Promise<IInnovationPack> {
@@ -497,7 +529,6 @@ export class AccountService {
         LogContext.ACCOUNT
       );
     }
-
     const ip = await this.innovationPackService.createInnovationPack(
       ipData,
       account.storageAggregator

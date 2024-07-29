@@ -31,12 +31,9 @@ export class PlatformSettingsService {
     input: UpdateInnovationHubPlatformSettingsInput
   ): Promise<IInnovationHub | never> {
     const innovationHub: IInnovationHub =
-      await this.innovationHubService.getInnovationHubOrFail(
-        {
-          idOrNameId: input.ID,
-        },
-        { relations: { account: true } }
-      );
+      await this.innovationHubService.getInnovationHubOrFail(input.ID, {
+        relations: { account: true },
+      });
 
     if (!innovationHub.account)
       this.logger.warn(
