@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, FindOneOptions, Repository } from 'typeorm';
+import { EntityManager, FindManyOptions, FindOneOptions, FindOptionsRelations, In, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -54,6 +54,7 @@ import { IAccount } from '@domain/space/account/account.interface';
 import { SpaceType } from '@common/enums/space.type';
 import { CalloutGroupName } from '@common/enums/callout.group.name';
 import { SpaceLevel } from '@common/enums/space.level';
+import { Callout } from '@domain/collaboration/callout';
 
 @Injectable()
 export class CollaborationService {
@@ -191,17 +192,25 @@ export class CollaborationService {
   public async createCalloutInputsFromCollaboration(
     collaborationSource: ICollaboration
   ): Promise<CreateCalloutInput[]> {
-    const calloutsData: CreateCalloutInput[] = [];
-
     const sourceCallouts =
-      await this.getCalloutsOnCollaboration(collaborationSource);
-    // todo: can be refactored
-    for (const sourceCallout of sourceCallouts) {
-      const sourceCalloutInput =
-        await this.calloutService.createCalloutInputFromCallout(sourceCallout);
-      calloutsData.push(sourceCalloutInput);
-    }
-    return calloutsData;
+      await this.getCalloutsOnCollaboration(collaborationSource, {
+        relations: {
+          contributionDefaults: true,
+          contributionPolicy: true,
+          framing: {
+            profile: {
+              references: true,
+              location: true,
+              tagsets: true,
+            },
+            whiteboard: {
+              profile: true,
+            },
+          },
+        },
+      });
+
+    return sourceCallouts.map(this.calloutService.createCalloutInputFromCallout);
   }
 
   async save(collaboration: ICollaboration): Promise<ICollaboration> {
@@ -612,19 +621,41 @@ export class CollaborationService {
   }
 
   public async getCalloutsOnCollaboration(
-    collaboration: ICollaboration
+    collaboration: ICollaboration,
+    opts: {
+      calloutIds?: string[],
+      relations?: FindOptionsRelations<Callout>
+    } = {}
   ): Promise<ICallout[]> {
-    const loadedCollaboration = await this.getCollaborationOrFail(
-      collaboration.id,
-      {
-        relations: { callouts: true },
+    const { calloutIds, relations  } = opts;
+    const loadedCollaboration = await this.collaborationRepository.findOne({
+        where: {
+          id: collaboration.id,
+          callouts: calloutIds ? { id: In(calloutIds) } : undefined,
+        },
+        relations: { callouts: relations ?? true },
       }
     );
-    if (!loadedCollaboration.callouts)
+
+    if (!loadedCollaboration) {
       throw new EntityNotFoundException(
-        `Callouts not initialised on collaboration: ${collaboration.id}`,
-        LogContext.CONTEXT
+        'Collaboration not found',
+        LogContext.COLLABORATION,
+        {
+          collaborationID: collaboration.id,
+        }
       );
+    }
+
+    if (!loadedCollaboration.callouts) {
+      throw new EntityNotFoundException(
+        'Callouts not initialised on collaboration',
+        LogContext.COLLABORATION,
+        {
+          collaborationID: collaboration.id
+        }
+      );
+    }
 
     return loadedCollaboration.callouts;
   }
