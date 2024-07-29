@@ -85,13 +85,12 @@ export class CollaborationService {
     collaboration.authorization = new AuthorizationPolicy();
     collaboration.relations = [];
     collaboration.callouts = [];
-    collaboration.timeline = await this.timelineService.createTimeline();
+    collaboration.timeline = this.timelineService.createTimeline();
     const calloutGroups = this.spaceDefaultsService.getCalloutGroups(spaceType);
     collaboration.groupsStr =
       this.calloutGroupsService.serializeGroups(calloutGroups);
 
-    collaboration.tagsetTemplateSet =
-      await this.tagsetTemplateSetService.createTagsetTemplateSet();
+    collaboration.tagsetTemplateSet = this.tagsetTemplateSetService.createTagsetTemplateSet();
 
     // Rely on the logic in Space Defaults to create the right innovation flow input
     const innovationFlowInput =
