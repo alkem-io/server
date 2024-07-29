@@ -82,7 +82,7 @@ export class SpaceService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  public createSpace(
+  public async createSpace(
     spaceData: CreateSpaceInput,
     account: IAccount,
     agentInfo?: AgentInfo
@@ -116,11 +116,11 @@ export class SpaceService {
     }
 
     const space: ISpace = Space.create(spaceData);
-
-    return this.initialise(space, spaceData, account, agentInfo);
+    const initializedSpace = await this.initialise(space, spaceData, account, agentInfo);
+    return this.save(initializedSpace);
   }
 
-  public async initialise(
+  private async initialise(
     space: ISpace,
     spaceData: CreateSpaceInput,
     account: IAccount,
@@ -237,13 +237,12 @@ export class SpaceService {
     ////// Community
     // set immediate community parent + resourceID
     space.community.parentID = space.id;
-    space.community.policy =
-      await this.communityService.updateCommunityPolicyResourceID(
+    space.community.policy = this.communityService.updateCommunityPolicyResourceID(
         space.community,
         space.id
       );
 
-    return await this.save(space);
+    return space;
   }
 
   async save(space: ISpace): Promise<ISpace> {
@@ -841,7 +840,8 @@ export class SpaceService {
       agentInfo
     );
 
-    subspace = await this.addSubspaceToSpace(space, subspace);
+    subspace = this.addSubspaceToSpace(space, subspace);
+    subspace = await this.save(subspace);
 
     // Before assigning roles in the subspace check that the user is a member
     if (agentInfo) {
@@ -858,23 +858,24 @@ export class SpaceService {
     return subspace;
   }
 
-  async addSubspaceToSpace(space: ISpace, subspace: ISpace): Promise<ISpace> {
-    if (!space.community)
+  public addSubspaceToSpace(space: ISpace, subspace: ISpace): ISpace {
+    if (!space.community) {
       throw new ValidationException(
         `Unable to add Subspace to space, missing relations: ${space.id}`,
         LogContext.SPACES
       );
+    }
 
     // Set the parent space directly, avoiding saving the whole parent
     subspace.parentSpace = space;
 
     // Finally set the community relationship
-    await this.setCommunityHierarchyForSubspace(
+    subspace.community = this.setCommunityHierarchyForSubspace(
       space.community,
       subspace.community
     );
 
-    return await this.spaceRepository.save(subspace);
+    return subspace;
   }
 
   async getSubspace(subspaceID: string, space: ISpace): Promise<ISpace> {
@@ -1072,10 +1073,10 @@ export class SpaceService {
     return this.spaceSettingsService.getSettings(space.settingsStr);
   }
 
-  public async setCommunityHierarchyForSubspace(
+  public setCommunityHierarchyForSubspace(
     parentCommunity: ICommunity,
     childCommunity: ICommunity | undefined
-  ) {
+  ): ICommunity {
     if (!childCommunity) {
       throw new RelationshipNotFoundException(
         `Unable to set subspace community relationship, child community not provied: ${parentCommunity.id}`,
@@ -1083,7 +1084,7 @@ export class SpaceService {
       );
     }
     // Finally set the community relationship
-    await this.communityService.setParentCommunity(
+    return this.communityService.setParentCommunity(
       childCommunity,
       parentCommunity
     );
