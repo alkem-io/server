@@ -5,6 +5,7 @@ import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ConfigurationTypes } from '@common/enums';
 import { IngestSpace } from './commands';
+import { AlkemioConfig } from '@src/types';
 
 @Global()
 @Module({
@@ -13,7 +14,7 @@ import { IngestSpace } from './commands';
     RabbitMQModule.forRootAsync(RabbitMQModule, {
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => {
+      useFactory: (configService: ConfigService<AlkemioConfig, true>) => {
         const rbmqConfig = configService.get(ConfigurationTypes.MICROSERVICES)
           .rabbitmq.connection;
         return {

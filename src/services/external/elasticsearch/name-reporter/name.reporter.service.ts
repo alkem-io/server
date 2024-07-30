@@ -6,6 +6,7 @@ import { Client as ElasticClient } from '@elastic/elasticsearch';
 import { ConfigurationTypes, LogContext } from '@common/enums';
 import { NamingDocument } from './types';
 import { handleElasticError } from '@services/external/elasticsearch/utils/handle.elastic.error';
+import { AlkemioConfig } from '@src/types';
 
 @Injectable()
 export class NameReporterService {
@@ -16,7 +17,7 @@ export class NameReporterService {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    private readonly configService: ConfigService,
+    private readonly configService: ConfigService<AlkemioConfig, true>,
     @Inject(ELASTICSEARCH_CLIENT_PROVIDER)
     private readonly client: ElasticClient | undefined
   ) {

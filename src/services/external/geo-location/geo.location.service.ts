@@ -15,6 +15,7 @@ import { GeoInformation } from './geo.information';
 import { GeoPluginResponse } from './geo.plugin.response';
 import { isLimitExceeded } from './utils/is.limit.exceeded';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { AlkemioConfig } from '@src/types';
 
 const geoServiceCallsKey = 'geo-service-call-limit';
 
@@ -29,7 +30,7 @@ export class GeoLocationService {
     @Inject(CACHE_MANAGER)
     private readonly cacheManager: Cache,
     private readonly httpService: HttpService,
-    private readonly configService: ConfigService,
+    private readonly configService: ConfigService<AlkemioConfig, true>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {
     const config = configService.get(ConfigurationTypes.INTEGRATIONS)?.geo;

@@ -64,6 +64,7 @@ import {
   resetCollaboratorModeDebounceWait,
 } from './types/defaults';
 import { SaveResponse } from './types/save.reponse';
+import { AlkemioConfig } from '@src/types';
 
 type SaveMessageOpts = { timeout: number };
 type RoomTimers = Map<string, NodeJS.Timeout>;
@@ -85,7 +86,7 @@ export class ExcalidrawServer {
     @Inject(APP_ID) private appId: string,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService,
     @Inject(EXCALIDRAW_SERVER) private wsServer: SocketIoServer,
-    private configService: ConfigService,
+    private configService: ConfigService<AlkemioConfig, true>,
     private authService: AuthenticationService,
     private authorizationService: AuthorizationService,
     private whiteboardService: WhiteboardService,

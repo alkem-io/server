@@ -5,6 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { ConfigurationTypes } from '@common/enums';
 import { FileTransportOptions } from 'winston/lib/winston/transports';
 import * as logform from 'logform';
+import { AlkemioConfig } from '@src/types';
 
 const LOG_LABEL = 'alkemio-server';
 
@@ -24,7 +25,7 @@ const consoleLoggingProdFormat: logform.Format[] = [
 
 @Injectable()
 export class WinstonConfigService {
-  constructor(private configService: ConfigService) {}
+  constructor(private configService: ConfigService<AlkemioConfig, true>) {}
 
   async createWinstonModuleOptions() {
     const consoleEnabled: boolean = this.configService.get(

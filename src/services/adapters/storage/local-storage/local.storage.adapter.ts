@@ -12,6 +12,7 @@ import {
 } from '@common/exceptions/storage';
 import { StorageService } from '../storage.service.interface';
 import { StorageServiceType } from '../storage.service.type';
+import { AlkemioConfig } from '@src/types';
 
 const writeFileAsync = promisify(writeFile);
 const readFileAsync = promisify(readFile);
@@ -21,7 +22,7 @@ const unlinkAsync = promisify(unlink);
 export class LocalStorageAdapter implements StorageService {
   private readonly storagePath: string;
 
-  constructor(private configService: ConfigService) {
+  constructor(private configService: ConfigService<AlkemioConfig, true>) {
     const pathFromConfig = this.configService.get(ConfigurationTypes.STORAGE)
       ?.local_storage?.path;
     this.storagePath = pathResolve(pathFromConfig);

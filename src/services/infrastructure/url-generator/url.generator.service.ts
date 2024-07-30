@@ -22,6 +22,7 @@ import { CommunityContributorType } from '@common/enums/community.contributor.ty
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { User } from '@domain/community/user/user.entity';
 import { Organization } from '@domain/community/organization/organization.entity';
+import { AlkemioConfig } from '@src/types';
 
 @Injectable()
 export class UrlGeneratorService {
@@ -50,7 +51,7 @@ export class UrlGeneratorService {
   private endpoint_cluster: string;
 
   constructor(
-    private configService: ConfigService,
+    private configService: ConfigService<AlkemioConfig, true>,
     @InjectEntityManager('default')
     private entityManager: EntityManager,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)

@@ -11,11 +11,12 @@ import { SsiVcNotVerifiable } from '@common/exceptions/ssi.vc.not.verifiable';
 import { WalletManagerCredentialOfferMetadata } from '@services/adapters/wallet-manager-adapter/dto/wallet.manager.dto.credential.offer.metadata';
 import { SsiCredentialTypeNotSupported } from '@common/exceptions/ssi.credential.type.not.supported';
 import { SsiIssuerType } from '@common/enums/ssi.issuer.type';
+import { AlkemioConfig } from '@src/types';
 
 @Injectable()
 export class TrustRegistryAdapter {
   constructor(
-    private configService: ConfigService,
+    private configService: ConfigService<AlkemioConfig, true>,
     private trustRegistryConfigurationProvider: TrustRegistryConfigurationAdapter,
     private trustRegistryClaimService: TrustRegistryClaimService
   ) {}

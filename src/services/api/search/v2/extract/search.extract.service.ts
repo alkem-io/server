@@ -16,6 +16,7 @@ import { validateSearchTerms, validateSearchParameters } from '../../util';
 import { functionScoreFunctions } from './function.score.functions';
 import { buildSearchQuery } from './build.search.query';
 import { SearchEntityTypes } from '../../search.entity.types';
+import { AlkemioConfig } from '@src/types';
 
 type SearchEntityTypesPublic =
   | SearchEntityTypes.SPACE
@@ -54,7 +55,7 @@ export class SearchExtractService {
     @Inject(ELASTICSEARCH_CLIENT_PROVIDER)
     private client: ElasticClient | undefined,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService,
-    private configService: ConfigService
+    private configService: ConfigService<AlkemioConfig, true>
   ) {
     this.indexPattern =
       this.configService.get(ConfigurationTypes.SEARCH)?.index_pattern ??

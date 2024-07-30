@@ -25,6 +25,7 @@ import {
 import { ContributionReporterService } from '../external/elasticsearch/contribution-reporter';
 import { minCollaboratorsInRoom } from '../external/excalidraw-backend/types/defaults';
 import { InfoOutputData } from './outputs/info.output.data';
+import { AlkemioConfig } from '@src/types';
 
 @Injectable()
 export class WhiteboardIntegrationService {
@@ -38,7 +39,7 @@ export class WhiteboardIntegrationService {
     private readonly contributionReporter: ContributionReporterService,
     private readonly communityResolver: CommunityResolverService,
     private readonly activityAdapter: ActivityAdapter,
-    private readonly configService: ConfigService
+    private readonly configService: ConfigService<AlkemioConfig, true>
   ) {
     this.maxCollaboratorsInRoom = this.configService.get(
       ConfigurationTypes.COLLABORATION

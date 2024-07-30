@@ -10,9 +10,10 @@ import {
 } from '@common/enums';
 import { BaseException } from '@common/exceptions/base.exception';
 import { SocketIoServer } from '../types/socket.io.server';
+import { AlkemioConfig } from '@src/types';
 
 export const getExcalidrawBaseServerOrFail = (
-  configService: ConfigService,
+  configService: ConfigService<AlkemioConfig, true>,
   logger: LoggerService,
   adapterFactory?: typeof Adapter | ((nsp: Namespace) => Adapter)
 ): SocketIoServer | never => {

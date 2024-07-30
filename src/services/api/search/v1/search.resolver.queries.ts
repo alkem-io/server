@@ -9,11 +9,12 @@ import { SearchService } from './search.service';
 import { Search2Service } from '@services/api/search/v2/search2.service';
 import { ConfigService } from '@nestjs/config';
 import { ConfigurationTypes } from '@common/enums';
+import { AlkemioConfig } from '@src/types';
 @Resolver()
 export class SearchResolverQueries {
   private readonly useNewSearch: boolean;
   constructor(
-    private configService: ConfigService,
+    private configService: ConfigService<AlkemioConfig, true>,
     private searchService: SearchService,
     private search2Service: Search2Service
   ) {

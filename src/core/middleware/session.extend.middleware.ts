@@ -11,6 +11,7 @@ import { AuthenticationService } from '@core/authentication/authentication.servi
 import { ConfigurationTypes, LogContext } from '@src/common/enums';
 import { getSessionFromJwt } from '@common/utils';
 import { Configuration, FrontendApi, Session } from '@ory/kratos-client';
+import { AlkemioConfig } from '@src/types';
 
 @Injectable()
 export class SessionExtendMiddleware implements NestMiddleware {
@@ -21,7 +22,7 @@ export class SessionExtendMiddleware implements NestMiddleware {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private readonly authService: AuthenticationService,
-    private readonly configService: ConfigService
+    private readonly configService: ConfigService<AlkemioConfig, true>
   ) {
     this.SESSION_COOKIE_NAME = this.configService.get(
       ConfigurationTypes.IDENTITY

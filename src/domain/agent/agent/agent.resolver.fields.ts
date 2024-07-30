@@ -13,11 +13,12 @@ import { GraphqlGuard } from '@core/authorization';
 import { ConfigService } from '@nestjs/config';
 import { NotEnabledException } from '@common/exceptions/not.enabled.exception';
 import { IVerifiedCredential } from '../verified-credential/verified.credential.interface';
+import { AlkemioConfig } from '@src/types';
 
 @Resolver(() => IAgent)
 export class AgentResolverFields {
   constructor(
-    private configService: ConfigService,
+    private configService: ConfigService<AlkemioConfig, true>,
     private agentService: AgentService
   ) {}
 

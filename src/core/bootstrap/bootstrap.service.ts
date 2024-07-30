@@ -33,6 +33,7 @@ import { SearchIngestService } from '@services/api/search/v2/ingest/search.inges
 import { CreateAccountInput } from '@domain/space/account/dto/account.dto.create';
 import { SpaceLevel } from '@common/enums/space.level';
 import { CreateSpaceOnAccountInput } from '@domain/space/account/dto/account.dto.create.space';
+import { AlkemioConfig } from '@src/types';
 
 @Injectable()
 export class BootstrapService {
@@ -44,7 +45,7 @@ export class BootstrapService {
     private userAuthorizationService: UserAuthorizationService,
     private accountAuthorizationService: AccountAuthorizationService,
     private adminAuthorizationService: AdminAuthorizationService,
-    private configService: ConfigService,
+    private configService: ConfigService<AlkemioConfig, true>,
     private organizationService: OrganizationService,
     private platformService: PlatformService,
     private organizationAuthorizationService: OrganizationAuthorizationService,
@@ -202,9 +203,8 @@ export class BootstrapService {
             });
           }
           user = await this.userAuthorizationService.grantCredentials(user);
-          user = await this.userAuthorizationService.applyAuthorizationPolicy(
-            user
-          );
+          user =
+            await this.userAuthorizationService.applyAuthorizationPolicy(user);
         }
       }
     } catch (error: any) {
@@ -303,9 +303,10 @@ export class BootstrapService {
         account,
         createSpaceAccountInput
       );
-      account = await this.accountAuthorizationService.applyAuthorizationPolicy(
-        account
-      );
+      account =
+        await this.accountAuthorizationService.applyAuthorizationPolicy(
+          account
+        );
       return await this.accountService.save(account);
     }
   }

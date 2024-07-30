@@ -9,6 +9,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { CID, create, IPFSHTTPClient } from 'ipfs-http-client';
 import { IpfsDeleteFailedException } from '@common/exceptions/ipfs/ipfs.delete.exception';
 import { IpfsGCFailedException } from '@common/exceptions/ipfs/ipfs.gc.exception';
+import { AlkemioConfig } from '@src/types';
 
 @Injectable()
 export class IpfsService {
@@ -16,7 +17,7 @@ export class IpfsService {
   private readonly ipfsClientEndpoint;
 
   constructor(
-    private configService: ConfigService,
+    private configService: ConfigService<AlkemioConfig, true>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {

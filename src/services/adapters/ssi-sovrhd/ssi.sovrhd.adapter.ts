@@ -12,6 +12,7 @@ import { SsiSovrhdRegisterCallbackCredential } from './dto/ssi.sovrhd.dto.regist
 import { SsiSovrhdRegisterResponse } from './dto/ssi.sovrhd.dto.register.response';
 import { SsiSovrhdRequest } from './dto/ssi.sovrhd.dto.request';
 import { SsiSovrhdRequestResponse } from './dto/ssi.sovrhd.dto.request.response';
+import { AlkemioConfig } from '@src/types';
 
 @Injectable()
 export class SsiSovrhdAdapter {
@@ -27,7 +28,7 @@ export class SsiSovrhdAdapter {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    private configService: ConfigService,
+    private configService: ConfigService<AlkemioConfig, true>,
     private httpService: HttpService
   ) {
     const sovrhdConfig = this.configService.get(ConfigurationTypes.SSI)?.issuers

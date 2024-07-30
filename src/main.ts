@@ -13,6 +13,7 @@ import { json } from 'body-parser';
 import cookieParser from 'cookie-parser';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { INestApplication } from '@nestjs/common';
+import { AlkemioConfig } from '@src/types';
 
 const bootstrap = async () => {
   const app = await NestFactory.create(AppModule, {
@@ -24,7 +25,8 @@ const bootstrap = async () => {
      */
     logger: process.env.NODE_ENV === 'production' ? false : undefined,
   });
-  const configService: ConfigService = app.get(ConfigService);
+  const configService: ConfigService<AlkemioConfig, true> =
+    app.get(ConfigService);
   const logger = app.get(WINSTON_MODULE_NEST_PROVIDER);
   const bootstrapService: BootstrapService = app.get(BootstrapService);
 

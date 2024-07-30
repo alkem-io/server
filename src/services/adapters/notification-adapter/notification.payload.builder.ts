@@ -54,6 +54,7 @@ import { IDiscussion } from '@platform/forum-discussion/discussion.interface';
 import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { IAccount } from '@domain/space/account/account.interface';
+import { AlkemioConfig } from '@src/types';
 
 @Injectable()
 export class NotificationPayloadBuilder {
@@ -66,7 +67,7 @@ export class NotificationPayloadBuilder {
     private communityRepository: Repository<Community>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    private configService: ConfigService,
+    private configService: ConfigService<AlkemioConfig, true>,
     private contributionResolverService: ContributionResolverService,
     private urlGeneratorService: UrlGeneratorService
   ) {}
@@ -80,9 +81,8 @@ export class NotificationPayloadBuilder {
       community,
       applicationCreatorID
     );
-    const applicantPayload = await this.getContributorPayloadOrFail(
-      applicantID
-    );
+    const applicantPayload =
+      await this.getContributorPayloadOrFail(applicantID);
     const payload: CommunityApplicationCreatedEventPayload = {
       applicant: applicantPayload,
       ...spacePayload,
@@ -101,9 +101,8 @@ export class NotificationPayloadBuilder {
       community,
       invitationCreatorID
     );
-    const inviteePayload = await this.getContributorPayloadOrFail(
-      invitedUserID
-    );
+    const inviteePayload =
+      await this.getContributorPayloadOrFail(invitedUserID);
     const payload: CommunityInvitationCreatedEventPayload = {
       invitee: inviteePayload,
       welcomeMessage,
@@ -569,9 +568,8 @@ export class NotificationPayloadBuilder {
     const contributorType =
       this.contributorLookupService.getContributorType(contributor);
 
-    const userURL = await this.urlGeneratorService.createUrlForContributor(
-      contributor
-    );
+    const userURL =
+      await this.urlGeneratorService.createUrlForContributor(contributor);
     const result: ContributorPayload = {
       id: contributor.id,
       nameID: contributor.nameID,
@@ -590,9 +588,8 @@ export class NotificationPayloadBuilder {
     organizationID: string
   ): Promise<CommunicationOrganizationMessageEventPayload> {
     const basePayload = this.buildBaseEventPayload(senderID);
-    const orgContribtor = await this.getContributorPayloadOrFail(
-      organizationID
-    );
+    const orgContribtor =
+      await this.getContributorPayloadOrFail(organizationID);
     const payload: CommunicationOrganizationMessageEventPayload = {
       message,
       organization: orgContribtor,
@@ -625,9 +622,8 @@ export class NotificationPayloadBuilder {
     originEntityDisplayName: string,
     commentType: RoomType
   ): Promise<CommunicationUserMentionEventPayload | undefined> {
-    const userContributor = await this.getContributorPayloadOrFail(
-      mentionedUserNameID
-    );
+    const userContributor =
+      await this.getContributorPayloadOrFail(mentionedUserNameID);
 
     const commentOriginUrl = await this.buildCommentOriginUrl(
       commentType,

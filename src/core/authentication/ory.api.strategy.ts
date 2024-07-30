@@ -10,6 +10,7 @@ import { AuthenticationService } from './authentication.service';
 import { OryDefaultIdentitySchema } from './ory.default.identity.schema';
 import { verifyIdentityIfOidcAuth } from './verify.identity.if.oidc.auth';
 import { IncomingMessage } from 'http';
+import { AlkemioConfig } from '@src/types';
 
 @Injectable()
 export class OryApiStrategy extends PassportStrategy(
@@ -18,7 +19,7 @@ export class OryApiStrategy extends PassportStrategy(
 ) {
   private readonly kratosClient: FrontendApi;
   constructor(
-    private readonly configService: ConfigService,
+    private readonly configService: ConfigService<AlkemioConfig, true>,
     private readonly authService: AuthenticationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {

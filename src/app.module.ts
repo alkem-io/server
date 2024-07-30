@@ -32,6 +32,7 @@ import { print } from 'graphql/language/printer';
 import { WinstonModule } from 'nest-winston';
 import { join } from 'path';
 import {
+  AlkemioConfig,
   ConnectionContext,
   SubscriptionsTransportWsWebsocket,
   WebsocketContext,
@@ -90,7 +91,9 @@ import { LookupByNameModule } from '@services/api/lookup-by-name';
     CacheModule.registerAsync({
       isGlobal: true,
       imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => ({
+      useFactory: async (
+        configService: ConfigService<AlkemioConfig, true>
+      ) => ({
         store: redisStore,
         host: configService.get(ConfigurationTypes.STORAGE)?.redis?.host,
         port: configService.get(ConfigurationTypes.STORAGE)?.redis?.port,
@@ -106,7 +109,9 @@ import { LookupByNameModule } from '@services/api/lookup-by-name';
       name: 'default',
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: async (configService: ConfigService) => ({
+      useFactory: async (
+        configService: ConfigService<AlkemioConfig, true>
+      ) => ({
         type: 'mysql',
         insecureAuth: true,
         synchronize: false,
@@ -133,7 +138,9 @@ import { LookupByNameModule } from '@services/api/lookup-by-name';
       driver: ApolloDriver,
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: async (configService: ConfigService) => ({
+      useFactory: async (
+        configService: ConfigService<AlkemioConfig, true>
+      ) => ({
         cors: false, // this is to avoid a duplicate cors origin header being created when behind the oathkeeper reverse proxy
         uploads: false,
         autoSchemaFile: true,

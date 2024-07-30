@@ -15,11 +15,12 @@ import { KratosPayload } from './kratos.payload';
 import { verifyIdentityIfOidcAuth } from './verify.identity.if.oidc.auth';
 import { AgentInfo } from '../authentication.agent.info/agent.info';
 import { SessionExpiredException } from '@common/exceptions/session.expired.exception';
+import { AlkemioConfig } from '@src/types';
 
 @Injectable()
 export class OryStrategy extends PassportStrategy(Strategy, 'oathkeeper-jwt') {
   constructor(
-    private readonly configService: ConfigService,
+    private readonly configService: ConfigService<AlkemioConfig, true>,
     private readonly authService: AuthenticationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {

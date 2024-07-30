@@ -4,10 +4,11 @@ import { PubSubEngine } from 'graphql-subscriptions';
 import { LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ConfigurationTypes, LogContext } from '@common/enums';
+import { AlkemioConfig } from '@src/types';
 
 export async function subscriptionFactory(
   logger: LoggerService,
-  configService: ConfigService,
+  configService: ConfigService<AlkemioConfig, true>,
   exchangeName: string,
   queueName: string
 ): Promise<PubSubEngine | undefined> {

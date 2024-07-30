@@ -19,6 +19,7 @@ import { SessionExtendException } from '@common/exceptions/auth';
 import { AgentInfoCacheService } from '@core/authentication.agent.info/agent.info.cache.service';
 import { getSession } from '@common/utils';
 import ConfigUtils from '@config/config.utils';
+import { AlkemioConfig } from '@src/types';
 
 @Injectable()
 export class AuthenticationService {
@@ -31,7 +32,7 @@ export class AuthenticationService {
 
   constructor(
     private agentCacheService: AgentInfoCacheService,
-    private configService: ConfigService,
+    private configService: ConfigService<AlkemioConfig, true>,
     private userService: UserService,
     private agentService: AgentService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService

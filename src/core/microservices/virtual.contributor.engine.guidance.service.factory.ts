@@ -3,10 +3,11 @@ import { MessagingQueue } from '@common/enums/messaging.queue';
 import { LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ClientProxyFactory, Transport } from '@nestjs/microservices';
+import { AlkemioConfig } from '@src/types';
 
 export async function virtualContributorEngineGuidanceServiceFactory(
   logger: LoggerService,
-  configService: ConfigService
+  configService: ConfigService<AlkemioConfig, true>
 ): Promise<any> {
   const rabbitMqOptions = configService.get(
     ConfigurationTypes.MICROSERVICES

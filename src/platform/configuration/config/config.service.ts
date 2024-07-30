@@ -5,10 +5,11 @@ import { IAuthenticationProviderConfig } from './authentication/providers/authen
 import { ConfigurationTypes } from '@common/enums';
 import { IOryConfig } from './authentication/providers/ory/ory.config.interface';
 import { PlatformFeatureFlagName } from '@common/enums/platform.feature.flag.name';
+import { AlkemioConfig } from '@src/types';
 
 @Injectable()
 export class KonfigService {
-  constructor(private configService: ConfigService) {}
+  constructor(private configService: ConfigService<AlkemioConfig, true>) {}
 
   async getConfig(): Promise<IConfig> {
     const domain = new URL(

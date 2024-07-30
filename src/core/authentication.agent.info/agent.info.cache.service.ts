@@ -11,6 +11,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 // import Redlock, { RedlockAbortSignal } from 'redlock';
 import { EntityManager } from 'typeorm';
 import { IAgent, ICredential } from '../../domain/agent';
+import { AlkemioConfig } from '@src/types';
 @Injectable()
 export class AgentInfoCacheService {
   private readonly cache_ttl: number;
@@ -22,7 +23,7 @@ export class AgentInfoCacheService {
     // private readonly redisLockService: Redlock,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    private configService: ConfigService,
+    private configService: ConfigService<AlkemioConfig, true>,
     @InjectEntityManager('default')
     private entityManager: EntityManager
   ) {

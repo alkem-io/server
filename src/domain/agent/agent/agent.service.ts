@@ -45,6 +45,7 @@ import { SsiSovrhdRegisterCallbackCredential } from '@services/adapters/ssi-sovr
 import { getRandomId } from '@src/common/utils';
 import { AgentInfoCacheService } from '../../../core/authentication.agent.info/agent.info.cache.service';
 import { GrantCredentialToAgentInput } from './dto/agent.dto.credential.grant';
+import { AlkemioConfig } from '@src/types';
 
 @Injectable()
 export class AgentService {
@@ -53,7 +54,7 @@ export class AgentService {
   constructor(
     private agentInfoCacheService: AgentInfoCacheService,
     private authorizationPolicyService: AuthorizationPolicyService,
-    private configService: ConfigService,
+    private configService: ConfigService<AlkemioConfig, true>,
     private credentialService: CredentialService,
     @InjectRepository(Agent)
     private agentRepository: Repository<Agent>,

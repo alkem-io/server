@@ -6,11 +6,12 @@ import { ConfigService } from '@nestjs/config';
 import { GuidanceEngineAdapter } from '@services/adapters/chat-guidance-adapter/guidance.engine.adapter';
 import { ChatGuidanceInput } from './dto/chat.guidance.dto.input';
 import { IMessageAnswerToQuestion } from '@domain/communication/message.answer.to.question/message.answer.to.question.interface';
+import { AlkemioConfig } from '@src/types';
 
 export class ChatGuidanceService {
   constructor(
     private guidanceEngineAdapter: GuidanceEngineAdapter,
-    private configService: ConfigService,
+    private configService: ConfigService<AlkemioConfig, true>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 

@@ -19,11 +19,12 @@ import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { STORAGE_SERVICE } from '@common/constants';
 import { DocumentDeleteFailedException } from '@common/exceptions/document/document.delete.failed.exception';
 import { DocumentSaveFailedException } from '@common/exceptions/document/document.save.failed.exception';
+import { AlkemioConfig } from '@src/types';
 
 @Injectable()
 export class DocumentService {
   constructor(
-    private configService: ConfigService,
+    private configService: ConfigService<AlkemioConfig, true>,
     private authorizationPolicyService: AuthorizationPolicyService,
     private tagsetService: TagsetService,
     @Inject(STORAGE_SERVICE)

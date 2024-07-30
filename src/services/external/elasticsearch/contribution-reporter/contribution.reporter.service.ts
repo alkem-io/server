@@ -13,6 +13,7 @@ import {
 } from '../types';
 import { BaseContribution } from '../events';
 import { ELASTICSEARCH_CLIENT_PROVIDER } from '@constants/index';
+import { AlkemioConfig } from '@src/types';
 
 const isFromAlkemioTeam = (email: string) => /.*@alkem\.io/.test(email);
 
@@ -24,7 +25,7 @@ export class ContributionReporterService {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    private readonly configService: ConfigService,
+    private readonly configService: ConfigService<AlkemioConfig, true>,
     @Inject(ELASTICSEARCH_CLIENT_PROVIDER)
     private readonly client: ElasticClient | undefined
   ) {
