@@ -8,7 +8,7 @@ import { BootstrapService } from './core/bootstrap/bootstrap.service';
 import { faviconMiddleware } from './core/middleware/favicon.middleware';
 import { useContainer } from 'class-validator';
 import { graphqlUploadExpress } from 'graphql-upload';
-import { ConfigurationTypes, MessagingQueue } from '@common/enums';
+import { MessagingQueue } from '@common/enums';
 import { json } from 'body-parser';
 import cookieParser from 'cookie-parser';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
@@ -34,14 +34,15 @@ const bootstrap = async () => {
   useContainer(app.select(AppModule), { fallbackOnErrors: true });
 
   await bootstrapService.bootstrap();
-  const corsEnabled = configService.get(ConfigurationTypes.SECURITY).cors
-    .enabled;
-  if (corsEnabled) {
+  const { enabled, methods, origin, allowed_headers } = configService.get(
+    'security.cors',
+    { infer: true }
+  );
+  if (enabled) {
     app.enableCors({
-      origin: configService.get(ConfigurationTypes.SECURITY)?.cors?.origin,
-      allowedHeaders: configService.get(ConfigurationTypes.SECURITY)?.cors
-        ?.allowed_headers,
-      methods: configService.get(ConfigurationTypes.SECURITY)?.cors?.methods,
+      origin,
+      allowedHeaders: allowed_headers,
+      methods,
     });
   }
 
@@ -55,24 +56,27 @@ const bootstrap = async () => {
 
   app.use(
     graphqlUploadExpress({
-      maxFileSize: configService.get(ConfigurationTypes.STORAGE)?.file
-        ?.max_file_size,
+      maxFileSize: configService.get(ConfigurationTypes.STORAGE, {
+        infer: true,
+      })?.file?.max_file_size,
     })
   );
 
+  const { max_json_payload_size, port } = configService.get('hosting', {
+    infer: true,
+  });
   app.use(
     json({
-      limit: configService.get(ConfigurationTypes.HOSTING)
-        ?.max_json_payload_size,
+      limit: max_json_payload_size,
     })
   );
 
-  await app.listen(
-    configService.get(ConfigurationTypes.HOSTING)?.port as number
-  );
+  await app.listen(port);
 
-  const connectionOptions = configService.get(ConfigurationTypes.MICROSERVICES)
-    ?.rabbitmq?.connection;
+  const connectionOptions = configService.get(
+    'microservices.rabbitmq.connection',
+    { infer: true }
+  );
 
   const heartbeat = process.env.NODE_ENV === 'production' ? 30 : 120;
   const amqpEndpoint = `amqp://${connectionOptions.user}:${connectionOptions.password}@${connectionOptions.host}:${connectionOptions.port}?heartbeat=${heartbeat}`;

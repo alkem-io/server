@@ -6,7 +6,6 @@ import { GraphQLModule } from '@nestjs/graphql';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { CloseCode } from 'graphql-ws';
-import { ConfigurationTypes } from '@common/enums';
 import { ValidationPipe } from '@common/pipes/validation.pipe';
 import configuration from '@config/configuration';
 import {
@@ -91,45 +90,42 @@ import { LookupByNameModule } from '@services/api/lookup-by-name';
     CacheModule.registerAsync({
       isGlobal: true,
       imports: [ConfigModule],
-      useFactory: async (
-        configService: ConfigService<AlkemioConfig, true>
-      ) => ({
-        store: redisStore,
-        host: configService.get(ConfigurationTypes.STORAGE)?.redis?.host,
-        port: configService.get(ConfigurationTypes.STORAGE)?.redis?.port,
-        redisOptions: {
-          connectTimeout:
-            configService.get(ConfigurationTypes.STORAGE)?.redis?.timeout *
-            1000, // Connection timeout in milliseconds
-        },
-      }),
+      useFactory: async (configService: ConfigService<AlkemioConfig, true>) => {
+        const { host, port, timeout } = configService.get('storage.redis', {
+          infer: true,
+        });
+        return {
+          store: redisStore,
+          host,
+          port,
+          redisOptions: { connectTimeout: timeout * 1000 }, // Connection timeout in milliseconds
+        };
+      },
       inject: [ConfigService],
     }),
     TypeOrmModule.forRootAsync({
       name: 'default',
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: async (
-        configService: ConfigService<AlkemioConfig, true>
-      ) => ({
-        type: 'mysql',
-        insecureAuth: true,
-        synchronize: false,
-        cache: true,
-        entities: [join(__dirname, '**', '*.entity.{ts,js}')],
-        host: configService.get(ConfigurationTypes.STORAGE)?.database?.host,
-        port: configService.get(ConfigurationTypes.STORAGE)?.database?.port,
-        charset: configService.get(ConfigurationTypes.STORAGE)?.database
-          ?.charset,
-        username: configService.get(ConfigurationTypes.STORAGE)?.database
-          ?.username,
-        password: configService.get(ConfigurationTypes.STORAGE)?.database
-          ?.password,
-        database: configService.get(ConfigurationTypes.STORAGE)?.database
-          ?.schema,
-        logging: configService.get(ConfigurationTypes.STORAGE)?.database
-          ?.logging,
-      }),
+      useFactory: async (configService: ConfigService<AlkemioConfig, true>) => {
+        const dbOptions = configService.get('storage.database', {
+          infer: true,
+        });
+        return {
+          type: 'mysql',
+          insecureAuth: true,
+          synchronize: false,
+          cache: true,
+          entities: [join(__dirname, '**', '*.entity.{ts,js}')],
+          host: dbOptions.host,
+          port: dbOptions.port,
+          charset: dbOptions.charset,
+          username: dbOptions.username,
+          password: dbOptions.password,
+          database: dbOptions.database,
+          logging: dbOptions.logging,
+        };
+      },
     }),
     WinstonModule.forRootAsync({
       useClass: WinstonConfigService,
@@ -138,104 +134,99 @@ import { LookupByNameModule } from '@services/api/lookup-by-name';
       driver: ApolloDriver,
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: async (
-        configService: ConfigService<AlkemioConfig, true>
-      ) => ({
-        cors: false, // this is to avoid a duplicate cors origin header being created when behind the oathkeeper reverse proxy
-        uploads: false,
-        autoSchemaFile: true,
-        introspection: true,
-        playground: {
-          settings: {
-            'request.credentials': 'include',
-          },
-          tabs: [
-            {
-              name: 'Me',
-              endpoint: `${
-                configService.get(ConfigurationTypes.HOSTING)?.endpoint_cluster
-              }/api/private/graphql`,
-              query: print(meQuery),
+      useFactory: async (configService: ConfigService<AlkemioConfig, true>) => {
+        const endpointCluster = configService.get('hosting.endpoint_cluster', {
+          infer: true,
+        });
+        return {
+          cors: false, // this is to avoid a duplicate cors origin header being created when behind the oathkeeper reverse proxy
+          uploads: false,
+          autoSchemaFile: true,
+          introspection: true,
+          playground: {
+            settings: {
+              'request.credentials': 'include',
             },
-            {
-              name: 'Spaces',
-              endpoint: `${
-                configService.get(ConfigurationTypes.HOSTING)?.endpoint_cluster
-              }/api/private/graphql`,
-              query: print(spacesQuery),
-            },
-            {
-              name: 'Configuration',
-              endpoint: `${
-                configService.get(ConfigurationTypes.HOSTING)?.endpoint_cluster
-              }/api/public/graphql`,
-              query: print(configQuery),
-            },
-            {
-              name: 'Server Metadata',
-              endpoint: `${
-                configService.get(ConfigurationTypes.HOSTING)?.endpoint_cluster
-              }/api/public/graphql`,
-              query: print(platformMetadataQuery),
-            },
-          ],
-        },
-        fieldResolverEnhancers: ['guards', 'filters'],
-        sortSchema: true,
-        persistedQueries: false,
-        /***
-         * graphql-ws requires passing the request object through the context method
-         * !!! this is graphql-ws ONLY
-         */
-        context: (ctx: ConnectionContext) => {
-          if (isWebsocketContext(ctx)) {
-            return {
-              req: {
-                ...ctx.extra.request,
-                headers: {
-                  ...ctx.extra.request.headers,
-                  ...ctx.connectionParams?.headers,
-                },
-                connectionParams: ctx.connectionParams,
+            tabs: [
+              {
+                name: 'Me',
+                endpoint: `${endpointCluster}/api/private/graphql`,
+                query: print(meQuery),
               },
-            };
-          }
-
-          return { req: ctx.req };
-        },
-        subscriptions: {
-          'subscriptions-transport-ws': {
-            /***
-             * subscriptions-transport-ws required passing the request object
-             * through the onConnect method
-             */
-            onConnect: (
-              connectionParams: Record<string, any>,
-              websocket: SubscriptionsTransportWsWebsocket // couldn't find a better type
-            ) => {
+              {
+                name: 'Spaces',
+                endpoint: `${endpointCluster}/api/private/graphql`,
+                query: print(spacesQuery),
+              },
+              {
+                name: 'Configuration',
+                endpoint: `${endpointCluster}/api/public/graphql`,
+                query: print(configQuery),
+              },
+              {
+                name: 'Server Metadata',
+                endpoint: `${endpointCluster}/api/public/graphql`,
+                query: print(platformMetadataQuery),
+              },
+            ],
+          },
+          fieldResolverEnhancers: ['guards', 'filters'],
+          sortSchema: true,
+          persistedQueries: false,
+          /***
+           * graphql-ws requires passing the request object through the context method
+           * !!! this is graphql-ws ONLY
+           */
+          context: (ctx: ConnectionContext) => {
+            if (isWebsocketContext(ctx)) {
               return {
-                req: { headers: websocket?.upgradeReq?.headers },
+                req: {
+                  ...ctx.extra.request,
+                  headers: {
+                    ...ctx.extra.request.headers,
+                    ...ctx.connectionParams?.headers,
+                  },
+                  connectionParams: ctx.connectionParams,
+                },
               };
-            },
-          },
-          'graphql-ws': {
-            onNext: (ctx, message, args, result) => {
-              const context = args.contextValue as IGraphQLContext;
-              const expiry = context.req.user.expiry;
-              // if the session has expired, close the socket
-              if (expiry && expiry < Date.now()) {
-                (ctx as WebsocketContext).extra.socket.close(
-                  CloseCode.Unauthorized,
-                  'Session expired'
-                );
-                return;
-              }
+            }
 
-              return result;
+            return { req: ctx.req };
+          },
+          subscriptions: {
+            'subscriptions-transport-ws': {
+              /***
+               * subscriptions-transport-ws required passing the request object
+               * through the onConnect method
+               */
+              onConnect: (
+                connectionParams: Record<string, any>,
+                websocket: SubscriptionsTransportWsWebsocket // couldn't find a better type
+              ) => {
+                return {
+                  req: { headers: websocket?.upgradeReq?.headers },
+                };
+              },
+            },
+            'graphql-ws': {
+              onNext: (ctx, message, args, result) => {
+                const context = args.contextValue as IGraphQLContext;
+                const expiry = context.req.user.expiry;
+                // if the session has expired, close the socket
+                if (expiry && expiry < Date.now()) {
+                  (ctx as WebsocketContext).extra.socket.close(
+                    CloseCode.Unauthorized,
+                    'Session expired'
+                  );
+                  return;
+                }
+
+                return result;
+              },
             },
           },
-        },
-      }),
+        };
+      },
     }),
     ScalarsModule,
     AuthenticationModule,
