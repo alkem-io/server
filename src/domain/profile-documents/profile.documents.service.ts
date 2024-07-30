@@ -6,6 +6,7 @@ import { StorageBucketService } from '@domain/storage/storage-bucket/storage.buc
 import { DocumentAuthorizationService } from '@domain/storage/document/document.service.authorization';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { ProfileService } from '@domain/common/profile/profile.service';
+import { IProfile } from '@domain/common/profile';
 
 @Injectable()
 export class ProfileDocumentsService {
@@ -20,9 +21,9 @@ export class ProfileDocumentsService {
    * Checks if a document is living under the storage bucket
    * of a profile and adds it if not there
    */
-  public async reuploadDocumentsToProfile(
+  public async reuploadDocumentToProfile(
     fileUrl: string,
-    profileId: string
+    profile: IProfile
   ): Promise<string | undefined> {
     if (!this.documentService.isAlkemioDocumentURL(fileUrl)) {
       throw new BaseException(
@@ -31,14 +32,6 @@ export class ProfileDocumentsService {
         AlkemioErrorStatus.UNSPECIFIED
       );
     }
-
-    const profile = await this.profileService.getProfileOrFail(profileId, {
-      relations: {
-        storageBucket: {
-          documents: true,
-        },
-      },
-    });
 
     const storageBucketToCheck = profile.storageBucket;
 
