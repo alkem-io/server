@@ -102,9 +102,8 @@ export class ConversionService {
         type: SpaceType.SPACE,
       },
     };
-    const emptyAccount = await this.accountService.createAccount(
-      createAccountInput
-    );
+    const emptyAccount =
+      await this.accountService.createAccount(createAccountInput);
 
     if (!emptyAccount.space) {
       throw new EntityNotInitializedException(
@@ -267,7 +266,7 @@ export class ConversionService {
     }
 
     const reservedNameIDs =
-      await this.namingService.getReservedNameIDsInAccount(
+      await this.namingService.getReservedNameIDsInLevelZeroSpace(
         subsubspace.account.id
       );
     const subspaceNameID =

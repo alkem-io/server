@@ -8,6 +8,7 @@ import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interf
 import { LibraryService } from './library.service';
 import { InnovationPacksInput } from './dto/library.dto.innovationPacks.input';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
+import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Resolver(() => ILibrary)
@@ -45,5 +46,14 @@ export class LibraryResolverFields {
   })
   async virtualContributors(): Promise<IVirtualContributor[]> {
     return await this.libraryService.getListedVirtualContributors();
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField(() => [IInnovationHub], {
+    nullable: false,
+    description: 'The InnovationHub listed on this platform',
+  })
+  async innovationHubs(): Promise<IInnovationHub[]> {
+    return await this.libraryService.getListedInnovationHubs();
   }
 }

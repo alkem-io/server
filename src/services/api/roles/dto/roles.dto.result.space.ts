@@ -33,7 +33,6 @@ export class RolesResultSpace extends RolesResultCommunity {
     );
     this.spaceID = space.id;
     this.space = space;
-    this.visibility =
-      space.account?.license?.visibility ?? SpaceVisibility.ACTIVE;
+    this.visibility = space.visibility ?? SpaceVisibility.ACTIVE;
   }
 }

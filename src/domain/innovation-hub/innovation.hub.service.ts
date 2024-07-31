@@ -11,13 +11,12 @@ import { VisualType } from '@common/enums/visual.type';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { IInnovationHub, InnovationHub, InnovationHubType } from './types';
 import { CreateInnovationHubInput, UpdateInnovationHubInput } from './dto';
-import { InnovationHubAuthorizationService } from './innovation.hub.service.authorization';
 import { SpaceService } from '@domain/space/space/space.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
-import { AccountService } from '@domain/space/account/account.service';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { SearchVisibility } from '@common/enums/search.visibility';
 
 @Injectable()
 export class InnovationHubService {
@@ -25,16 +24,14 @@ export class InnovationHubService {
     @InjectRepository(InnovationHub)
     private readonly innovationHubRepository: Repository<InnovationHub>,
     private readonly profileService: ProfileService,
-    private readonly authService: InnovationHubAuthorizationService,
     private readonly authorizationPolicyService: AuthorizationPolicyService,
-    private storageAggregatorResolverService: StorageAggregatorResolverService,
     private readonly spaceService: SpaceService,
-    private readonly accountService: AccountService,
     private namingService: NamingService
   ) {}
 
-  public async createOrFail(
-    createData: CreateInnovationHubInput
+  public async createInnovationHub(
+    createData: CreateInnovationHubInput,
+    storageAggregator: IStorageAggregator
   ): Promise<IInnovationHub | never> {
     try {
       await this.validateCreateInput(createData);
@@ -72,12 +69,10 @@ export class InnovationHubService {
         );
     }
 
-    const { accountID, ...createDataProps } = createData;
-    const hub: IInnovationHub = InnovationHub.create(createDataProps);
+    const hub: IInnovationHub = InnovationHub.create(createData);
     hub.authorization = new AuthorizationPolicy();
-
-    const storageAggregator =
-      await this.storageAggregatorResolverService.getPlatformStorageAggregator();
+    hub.listedInStore = true;
+    hub.searchVisibility = SearchVisibility.ACCOUNT;
 
     hub.profile = await this.profileService.createProfile(
       createData.profileData,
@@ -95,14 +90,7 @@ export class InnovationHubService {
       VisualType.BANNER_WIDE
     );
 
-    if (accountID) {
-      const account = await this.accountService.getAccountOrFail(accountID);
-      hub.account = account;
-    }
-
-    await this.save(hub);
-
-    return this.authService.applyAuthorizationPolicyAndSave(hub);
+    return await this.save(hub);
   }
 
   public save(hub: IInnovationHub): Promise<IInnovationHub> {
@@ -113,9 +101,7 @@ export class InnovationHubService {
     input: UpdateInnovationHubInput
   ): Promise<IInnovationHub> {
     const innovationHub: IInnovationHub = await this.getInnovationHubOrFail(
-      {
-        idOrNameId: input.ID,
-      },
+      input.ID,
       { relations: { profile: true } }
     );
 
@@ -168,17 +154,21 @@ export class InnovationHubService {
         input.profileData
       );
     }
+    if (typeof input.listedInStore === 'boolean') {
+      innovationHub.listedInStore = !!input.listedInStore;
+    }
+
+    if (input.searchVisibility) {
+      innovationHub.searchVisibility = input.searchVisibility;
+    }
 
     return await this.save(innovationHub);
   }
 
-  public async deleteOrFail(innovationHubID: string): Promise<IInnovationHub> {
-    const hub = await this.getInnovationHubOrFail(
-      { idOrNameId: innovationHubID },
-      {
-        relations: { profile: true },
-      }
-    );
+  public async delete(innovationHubID: string): Promise<IInnovationHub> {
+    const hub = await this.getInnovationHubOrFail(innovationHubID, {
+      relations: { profile: true },
+    });
 
     if (hub.profile) {
       await this.profileService.deleteProfile(hub.profile.id);
@@ -200,6 +190,23 @@ export class InnovationHubService {
   }
 
   public async getInnovationHubOrFail(
+    innovationHubID: string,
+    options?: FindOneOptions<InnovationHub>
+  ): Promise<IInnovationHub> {
+    const innovationHub = await this.innovationHubRepository.findOne({
+      where: { id: innovationHubID },
+      ...options,
+    });
+
+    if (!innovationHub)
+      throw new EntityNotFoundException(
+        `Unable to find InnovationHub with ID: ${innovationHubID}`,
+        LogContext.SPACES
+      );
+    return innovationHub;
+  }
+
+  public async getInnovationHubFlexOrFail(
     args: { subdomain?: string; idOrNameId?: string },
     options?: FindOneOptions<InnovationHub>
   ): Promise<InnovationHub | never> {

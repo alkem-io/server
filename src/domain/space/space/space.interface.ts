@@ -7,6 +7,7 @@ import { ICommunity } from '@domain/community/community';
 import { IContext } from '@domain/context/context/context.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { IAccount } from '../account/account.interface';
+import { SpaceVisibility } from '@common/enums/space.visibility';
 
 @ObjectType('Space')
 export class ISpace extends INameable {
@@ -33,6 +34,12 @@ export class ISpace extends INameable {
   })
   type!: SpaceType;
 
+  @Field(() => SpaceVisibility, {
+    description: 'Visibility of the Space.',
+    nullable: false,
+  })
+  visibility!: SpaceVisibility;
+
   agent?: IAgent;
 
   collaboration?: ICollaboration;
@@ -43,4 +50,9 @@ export class ISpace extends INameable {
   settingsStr!: string;
 
   storageAggregator?: IStorageAggregator;
+
+  @Field(() => String, {
+    description: 'The ID of the level zero space for this tree.',
+  })
+  levelZeroSpaceID!: string;
 }

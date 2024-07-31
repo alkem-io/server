@@ -12,15 +12,14 @@ import { IAccount } from '@domain/space/account/account.interface';
 import { ITemplatesSet } from '@domain/template/templates-set';
 import { Loader } from '@core/dataloader/decorators';
 import { ILoader } from '@core/dataloader/loader.interface';
-import { ILicense } from '@domain/license/license/license.interface';
 import { ISpaceDefaults } from '../space.defaults/space.defaults.interface';
 import {
   AccountDefaultsLoaderCreator,
-  AccountLicenseLoaderCreator,
   AccountLibraryLoaderCreator,
   AuthorizationLoaderCreator,
   AgentLoaderCreator,
   AccountVirtualContributorsLoaderCreator,
+  AccountInnovationHubsLoaderCreator,
   AccountInnovationPacksLoaderCreator,
 } from '@core/dataloader/creators/loader.creators';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
@@ -36,6 +35,7 @@ import {
 } from '@domain/community/virtual-contributor';
 import { AccountHostService } from '../account.host/account.host.service';
 import { LicensePrivilege } from '@common/enums/license.privilege';
+import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
 import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
 
 @Resolver(() => IAccount)
@@ -108,18 +108,6 @@ export class AccountResolverFields {
     return loader.load(account.id);
   }
 
-  @ResolveField('license', () => ILicense, {
-    nullable: false,
-    description:
-      'The License governing platform functionality in use by this Account',
-  })
-  async license(
-    @Parent() account: Account,
-    @Loader(AccountLicenseLoaderCreator) loader: ILoader<ILicense>
-  ): Promise<ILicense> {
-    return loader.load(account.id);
-  }
-
   @ResolveField('licensePrivileges', () => [LicensePrivilege], {
     nullable: true,
     description:
@@ -187,6 +175,20 @@ export class AccountResolverFields {
     })
     loader: ILoader<VirtualContributor[]>
   ): Promise<IVirtualContributor[]> {
+    return loader.load(account.id);
+  }
+
+  @ResolveField('innovationHubs', () => [IInnovationHub], {
+    nullable: false,
+    description: 'The InnovationHubs for this Account.',
+  })
+  async innovationHubs(
+    @Parent() account: Account,
+    @Loader(AccountInnovationHubsLoaderCreator, {
+      parentClassRef: Account,
+    })
+    loader: ILoader<IInnovationHub[]>
+  ): Promise<IInnovationHub[]> {
     return loader.load(account.id);
   }
 

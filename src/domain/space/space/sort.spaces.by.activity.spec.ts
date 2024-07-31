@@ -4,6 +4,7 @@ import { LatestActivitiesPerSpace } from '@services/api/me/space.membership.type
 import { ISpace } from './space.interface';
 import { sortSpacesByActivity } from './sort.spaces.by.activity';
 import { SpaceType } from '@common/enums/space.type';
+import { SpaceVisibility } from '@common/enums/space.visibility';
 
 const createTestActivity = (createdDate: Date): IActivity => {
   return {
@@ -25,6 +26,8 @@ const createTestSpace = (id: string): ISpace => {
     rowId: 1,
     nameID: 'space1',
     settingsStr: '',
+    levelZeroSpaceID: '',
+    visibility: SpaceVisibility.ACTIVE,
     profile: {
       id: '1',
       displayName: 'Space 1',
@@ -35,6 +38,7 @@ const createTestSpace = (id: string): ISpace => {
     account: {
       id: `account${id}`,
       virtualContributors: [],
+      innovationHubs: [],
       innovationPacks: [],
     },
     type: SpaceType.SPACE,
