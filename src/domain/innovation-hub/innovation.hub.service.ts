@@ -43,6 +43,13 @@ export class InnovationHubService {
       );
     }
 
+    if (!account.storageAggregator) {
+      throw new EntityNotFoundException(
+        `Unable to load storage aggregator on account for creating innovation Hub: ${account.id}`,
+        LogContext.ACCOUNT
+      );
+    }
+
     const subdomainAvailable =
       await this.namingService.isInnovationHubSubdomainAvailable(
         createData.subdomain
@@ -74,13 +81,6 @@ export class InnovationHubService {
     hub.listedInStore = true;
     hub.searchVisibility = SearchVisibility.ACCOUNT;
     hub.account = account;
-
-    if (!account.storageAggregator) {
-      throw new EntityNotFoundException(
-        `Unable to load storage aggregator on account for creating innovation Hub: ${account.id}`,
-        LogContext.ACCOUNT
-      );
-    }
 
     hub.profile = await this.profileService.createProfile(
       createData.profileData,

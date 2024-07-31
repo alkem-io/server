@@ -15,6 +15,8 @@ import { StorageAggregatorNotFoundException } from '@common/exceptions/storage.a
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Space } from '@domain/space/space/space.entity';
 import { SpaceLevel } from '@common/enums/space.level';
+import { isUUID } from 'class-validator';
+import { InvalidUUID } from '@common/exceptions/invalid.uuid';
 
 @Injectable()
 export class StorageAggregatorResolverService {
@@ -96,6 +98,10 @@ export class StorageAggregatorResolverService {
   public async getStorageAggregatorForTemplatesSet(
     templatesSetId: string
   ): Promise<IStorageAggregator> {
+    // A templateSet could be in a Space, just the templates associated to that space.
+    // Or it could come from an InnovationPack, the templates inside that IP.
+    // We handle both cases here to return the appropiate StorageAggregator
+
     const space = await this.entityManager.findOne(Space, {
       where: {
         account: {
@@ -113,6 +119,14 @@ export class StorageAggregatorResolverService {
       return await this.getStorageAggregatorOrFail(space.storageAggregator.id);
     }
 
+    if (!isUUID(templatesSetId)) {
+      throw new InvalidUUID(
+        'Invalid UUID provided to find the StorageAggregator of a templateSet',
+        LogContext.COMMUNITY,
+        { provided: templatesSetId }
+      );
+    }
+    // This is getting the StorageAggregator of the account in wich the innovationPack resides
     const query = `SELECT \`account\`.\`storageAggregatorId\` FROM \`innovation_pack\`
       JOIN \`account\` ON \`innovation_pack\`.\`accountId\`=\`account\`.\`id\`
       WHERE \`innovation_pack\`.\`templatesSetId\`='${templatesSetId}'`;
