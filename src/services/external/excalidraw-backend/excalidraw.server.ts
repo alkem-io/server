@@ -341,8 +341,10 @@ export class ExcalidrawServer {
 
     const community =
       await this.communityResolver.getCommunityFromWhiteboardOrFail(roomId);
-    const spaceID =
-      await this.communityResolver.getRootSpaceIDFromCommunityOrFail(community);
+    const levelZeroSpaceID =
+      await this.communityResolver.getLevelZeroSpaceIdForCommunity(
+        community.id
+      );
     const wb = await this.whiteboardService.getProfile(roomId);
 
     const sockets = await this.fetchSocketsSafe(roomId);
@@ -355,7 +357,7 @@ export class ExcalidrawServer {
           {
             id: roomId,
             name: wb.displayName,
-            space: spaceID,
+            space: levelZeroSpaceID,
           },
           {
             id: socket.data.agentInfo.userID,

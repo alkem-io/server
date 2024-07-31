@@ -64,7 +64,6 @@ import {
 import { UpdateCalloutTemplateInput } from '@domain/template/callout-template/dto/callout.template.dto.update';
 import { CreateCalloutTemplateInput } from '@domain/template/callout-template/dto/callout.template.dto.create';
 import { CreateContributionOnCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create.contribution';
-import { UpdateLicenseInput } from '@domain/license/license/dto/license.dto.update';
 import {
   CreateLinkInput,
   UpdateLinkInput,
@@ -133,7 +132,6 @@ export class BaseHandler extends AbstractHandler {
       UpdateSpaceInput,
       UpdateSpaceSettingsEntityInput,
       UpdateOrganizationInput,
-      UpdateLicenseInput,
       UpdateLinkInput,
       UpdateCalendarEventInput,
       UpdateInnovationFlowStateInput,

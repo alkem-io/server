@@ -392,15 +392,15 @@ export class CommunityRoleService {
         );
 
         if (triggerNewMemberEvents) {
-          const rootSpaceID = await this.communityService.getRootSpaceID(
-            community
-          );
-          const displayName = await this.communityService.getDisplayName(
-            community
-          );
+          const levelZeroSpaceID =
+            await this.communityService.getLevelZeroSpaceIdForCommunity(
+              community
+            );
+          const displayName =
+            await this.communityService.getDisplayName(community);
           await this.communityRoleEventsService.processCommunityNewMemberEvents(
             community,
-            rootSpaceID,
+            levelZeroSpaceID,
             displayName,
             agentInfo,
             contributor
@@ -526,9 +526,8 @@ export class CommunityRoleService {
       validatePolicyLimits
     );
 
-    const parentCommunity = await this.communityService.getParentCommunity(
-      community
-    );
+    const parentCommunity =
+      await this.communityService.getParentCommunity(community);
     if (role === CommunityRole.ADMIN && parentCommunity) {
       // Check if an admin anywhere else in the community
       const peerCommunities = await this.communityService.getPeerCommunites(
@@ -873,9 +872,8 @@ export class CommunityRoleService {
 
     await this.validateApplicationFromUser(user, agent, community);
 
-    const application = await this.applicationService.createApplication(
-      applicationData
-    );
+    const application =
+      await this.applicationService.createApplication(applicationData);
     application.community = community;
     return await this.applicationService.save(application);
   }

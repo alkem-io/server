@@ -71,7 +71,6 @@ export class SpaceAuthorizationService {
             },
           },
           account: {
-            license: true,
             agent: {
               credentials: true,
             },
@@ -81,7 +80,6 @@ export class SpaceAuthorizationService {
     );
     if (
       !spaceAccountLicense.account ||
-      !spaceAccountLicense.account.license ||
       !spaceAccountLicense.account.agent ||
       !spaceAccountLicense.account.agent.credentials
     ) {
@@ -91,7 +89,7 @@ export class SpaceAuthorizationService {
       );
     }
 
-    const spaceVisibility = spaceAccountLicense.account.license.visibility;
+    const spaceVisibility = spaceAccountLicense.visibility;
     const accountAgent = spaceAccountLicense.account.agent;
 
     // Allow the parent admins to also delete subspaces
@@ -182,6 +180,9 @@ export class SpaceAuthorizationService {
         parentAuthorization
       );
 
+    space.authorization = await this.extendAuthorizationPolicy(
+      space.authorization
+    );
     if (privateSpace) {
       space.authorization.anonymousReadAccess = false;
     }
@@ -453,19 +454,6 @@ export class SpaceAuthorizationService {
       newRules.push(createSubspacePrilegeRule);
     }
 
-    // Allow global admins to manage platform settings
-    const platformSettings =
-      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.PLATFORM_ADMIN],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-        ],
-        CREDENTIAL_RULE_TYPES_SPACE_PLATFORM_SETTINGS
-      );
-    platformSettings.cascade = false;
-    newRules.push(platformSettings);
-
     this.authorizationPolicyService.appendCredentialAuthorizationRules(
       authorization,
       newRules
@@ -678,5 +666,36 @@ export class SpaceAuthorizationService {
       if (parentCredential) memberCriteria.push(parentCredential);
     }
     return memberCriteria;
+  }
+
+  private async extendAuthorizationPolicy(
+    authorization: IAuthorizationPolicy | undefined
+  ): Promise<IAuthorizationPolicy> {
+    if (!authorization) {
+      throw new EntityNotInitializedException(
+        'Authorization definition not found for account',
+        LogContext.ACCOUNT
+      );
+    }
+
+    const newRules: IAuthorizationPolicyRuleCredential[] = [];
+
+    // Allow global admins to manage platform settings
+    const platformSettings =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.PLATFORM_ADMIN],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+        ],
+        CREDENTIAL_RULE_TYPES_SPACE_PLATFORM_SETTINGS
+      );
+    platformSettings.cascade = false;
+    newRules.push(platformSettings);
+
+    return this.authorizationPolicyService.appendCredentialAuthorizationRules(
+      authorization,
+      newRules
+    );
   }
 }

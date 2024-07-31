@@ -416,9 +416,11 @@ export class CommunityService {
     );
   }
 
-  public async getRootSpaceID(community: ICommunity): Promise<string> {
-    return await this.communityResolverService.getRootSpaceIDFromCommunityOrFail(
-      community
+  public async getLevelZeroSpaceIdForCommunity(
+    community: ICommunity
+  ): Promise<string> {
+    return await this.communityResolverService.getLevelZeroSpaceIdForCommunity(
+      community.id
     );
   }
 
