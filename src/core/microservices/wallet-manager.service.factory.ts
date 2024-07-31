@@ -1,4 +1,4 @@
-import { ConfigurationTypes, LogContext } from '@common/enums';
+import { LogContext } from '@common/enums';
 import { MessagingQueue } from '@common/enums/messaging.queue';
 import { LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -9,9 +9,7 @@ export async function walletManagerServiceFactory(
   logger: LoggerService,
   configService: ConfigService<AlkemioConfig, true>
 ): Promise<any> {
-  const rabbitMqOptions = configService.get(
-    ConfigurationTypes.MICROSERVICES
-  )?.rabbitmq;
+  const rabbitMqOptions = configService.get('microservices.rabbitmq', { infer: true });
   const connectionOptions = rabbitMqOptions.connection;
   const connectionString = `amqp://${connectionOptions.user}:${connectionOptions.password}@${connectionOptions.host}:${connectionOptions.port}?heartbeat=30`;
   try {

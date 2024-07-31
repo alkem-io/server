@@ -1,5 +1,4 @@
 import { LogContext, ProfileType } from '@common/enums';
-import { ConfigurationTypes } from '@common/enums/configuration.type';
 import {
   EntityNotFoundException,
   RelationshipNotFoundException,
@@ -58,9 +57,7 @@ export class UrlGeneratorService {
     private readonly logger: LoggerService,
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache
   ) {
-    this.endpoint_cluster = this.configService.get(
-      ConfigurationTypes.HOSTING
-    )?.endpoint_cluster;
+    this.endpoint_cluster = this.configService.get('hosting.endpoint_cluster', { infer: true });
   }
 
   private getUrlIdCacheKey(entityId: string): string {

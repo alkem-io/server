@@ -3,7 +3,7 @@ import { AMQPPubSub } from 'graphql-amqp-subscriptions';
 import { PubSubEngine } from 'graphql-subscriptions';
 import { LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ConfigurationTypes, LogContext } from '@common/enums';
+import { LogContext } from '@common/enums';
 import { AlkemioConfig } from '@src/types';
 
 export async function subscriptionFactory(
@@ -12,9 +12,7 @@ export async function subscriptionFactory(
   exchangeName: string,
   queueName: string
 ): Promise<PubSubEngine | undefined> {
-  const rabbitMqOptions = configService?.get(
-    ConfigurationTypes.MICROSERVICES
-  )?.rabbitmq;
+  const rabbitMqOptions = configService?.get('microservices.rabbitmq', { infer: true });
   const connectionOptions = rabbitMqOptions.connection;
   const connectionString = `amqp://${connectionOptions.user}:${connectionOptions.password}@${connectionOptions.host}:${connectionOptions.port}?heartbeat=30`;
 

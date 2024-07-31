@@ -8,7 +8,7 @@ import fs from 'fs';
 import * as defaultRoles from '@templates/authorization-bootstrap.json';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Profiling } from '@common/decorators';
-import { ConfigurationTypes, LogContext } from '@common/enums';
+import { LogContext } from '@common/enums';
 import { BootstrapException } from '@common/exceptions/bootstrap.exception';
 import { UserAuthorizationService } from '@domain/community/user/user.service.authorization';
 import {

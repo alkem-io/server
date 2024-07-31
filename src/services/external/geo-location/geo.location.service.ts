@@ -10,7 +10,7 @@ import {
   GeoServiceRequestLimitExceededException,
   GeoServiceNotAvailableException,
 } from '@common/exceptions/geo';
-import { ConfigurationTypes, LogContext } from '@common/enums';
+import { LogContext } from '@common/enums';
 import { GeoInformation } from './geo.information';
 import { GeoPluginResponse } from './geo.plugin.response';
 import { isLimitExceeded } from './utils/is.limit.exceeded';
@@ -33,7 +33,7 @@ export class GeoLocationService {
     private readonly configService: ConfigService<AlkemioConfig, true>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {
-    const config = configService.get(ConfigurationTypes.INTEGRATIONS)?.geo;
+    const config = configService.get('integrations.geo', { infer: true });
     this.endpoint = config.service_endpoint;
     this.allowedCallsToService = config.allowed_calls_to_service;
     this.allowedCallsToServiceWindow = config.allowed_calls_to_service_window;

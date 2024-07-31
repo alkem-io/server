@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { ConfigService } from '@nestjs/config';
-import { ConfigurationTypes, LogContext } from '@common/enums';
+import { LogContext } from '@common/enums';
 import { RestEndpoint } from '@common/enums/rest.endpoint';
 import { TrustRegistryCredentialMetadata } from '../trust.registry.configuration/trust.registry.dto.credential.metadata';
 import { TrustRegistryConfigurationAdapter } from '../trust.registry.configuration/trust.registry.configuration.adapter';
@@ -135,11 +135,7 @@ export class TrustRegistryAdapter {
   }
 
   private generatePublicRestApiUrl() {
-    const url = `${
-      this.configService.get(ConfigurationTypes.HOSTING)?.endpoint_cluster
-    }${
-      this.configService.get(ConfigurationTypes.HOSTING)?.path_api_public_rest
-    }`;
-    return url;
+    const { endpoint_cluster, path_api_public_rest } = this.configService.get('hosting', { infer: true });
+    return `${endpoint_cluster}${path_api_public_rest}`;
   }
 }

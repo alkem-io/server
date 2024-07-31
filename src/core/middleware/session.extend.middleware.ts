@@ -8,7 +8,7 @@ import { ConfigService } from '@nestjs/config';
 import { Request, Response, NextFunction } from 'express';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AuthenticationService } from '@core/authentication/authentication.service';
-import { ConfigurationTypes, LogContext } from '@src/common/enums';
+import { LogContext } from '@src/common/enums';
 import { getSessionFromJwt } from '@common/utils';
 import { Configuration, FrontendApi, Session } from '@ory/kratos-client';
 import { AlkemioConfig } from '@src/types';
@@ -24,17 +24,11 @@ export class SessionExtendMiddleware implements NestMiddleware {
     private readonly authService: AuthenticationService,
     private readonly configService: ConfigService<AlkemioConfig, true>
   ) {
-    this.SESSION_COOKIE_NAME = this.configService.get(
-      ConfigurationTypes.IDENTITY
-    )?.authentication.providers.ory.session_cookie_name;
+    this.SESSION_COOKIE_NAME = this.configService.get('identity.authentication.providers.ory.session_cookie_name', { infer: true });
 
-    this.enabled = this.configService.get(
-      ConfigurationTypes.IDENTITY
-    )?.authentication.providers.ory.session_extend_enabled;
+    this.enabled = this.configService.get('identity.authentication.providers.ory.session_cookie_name', { infer: true });
 
-    const kratosPublicBaseUrl = this.configService.get(
-      ConfigurationTypes.IDENTITY
-    ).authentication.providers.ory.kratos_public_base_url_server;
+    const kratosPublicBaseUrl = this.configService.get('identity.authentication.providers.ory.kratos_public_base_url_server', { infer: true });
 
     this.kratosClient = new FrontendApi(
       new Configuration({
