@@ -295,15 +295,26 @@ export class WhiteboardService {
       return whiteboardContent;
     }
 
+    const profile = await this.profileService.getProfileOrFail(
+      profileIdToCheck,
+      {
+        relations: {
+          storageBucket: {
+            documents: true,
+          },
+        },
+      }
+    );
+
     for (const [, file] of files) {
       if (!file.url) {
         continue;
       }
 
       const newDocUrl =
-        await this.profileDocumentsService.reuploadDocumentsToProfile(
+        await this.profileDocumentsService.reuploadDocumentToProfile(
           file.url,
-          profileIdToCheck
+          profile
         );
 
       if (!newDocUrl) {
