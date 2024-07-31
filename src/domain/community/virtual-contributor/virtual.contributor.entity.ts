@@ -14,7 +14,6 @@ export class VirtualContributor
     eager: false,
     onDelete: 'SET NULL',
   })
-  @JoinColumn()
   account!: Account;
 
   @OneToOne(() => AiPersona, {

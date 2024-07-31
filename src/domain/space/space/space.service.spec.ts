@@ -97,6 +97,7 @@ const getSubspacesMock = (
       account: {
         id: `account-${spaceId}.${i}`,
         virtualContributors: [],
+        innovationHubs: [],
         innovationPacks: [],
         ...getEntityMock<Account>(),
       },
@@ -188,6 +189,7 @@ const getSubsubspacesMock = (subsubspaceId: string, count: number): Space[] => {
       account: {
         id: `account-${subsubspaceId}.${i}`,
         virtualContributors: [],
+        innovationHubs: [],
         innovationPacks: [],
         ...getEntityMock<Account>(),
       },
@@ -295,6 +297,7 @@ const getSpaceMock = ({
     account: {
       id: `account-${id}`,
       virtualContributors: [],
+      innovationHubs: [],
       innovationPacks: [],
       license: {
         id,

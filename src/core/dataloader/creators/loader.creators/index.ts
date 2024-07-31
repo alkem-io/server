@@ -18,6 +18,7 @@ export * from './visual.loader.creator';
 export * from './account/account.library.loader.creator';
 export * from './account/account.defaults.loader.creator';
 export * from './account/account.virtual.contributors.loader.creator';
+export * from './account/account.innovation.hubs.loader.creator';
 export * from './account/account.innovation.pack.loader.creator';
 export * from './account/account.loader.creator';
 export * from './collaboration/collaboration.timeline.loader.creator';
