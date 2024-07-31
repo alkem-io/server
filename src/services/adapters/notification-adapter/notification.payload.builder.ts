@@ -80,9 +80,8 @@ export class NotificationPayloadBuilder {
       community,
       applicationCreatorID
     );
-    const applicantPayload = await this.getContributorPayloadOrFail(
-      applicantID
-    );
+    const applicantPayload =
+      await this.getContributorPayloadOrFail(applicantID);
     const payload: CommunityApplicationCreatedEventPayload = {
       applicant: applicantPayload,
       ...spacePayload,
@@ -101,9 +100,8 @@ export class NotificationPayloadBuilder {
       community,
       invitationCreatorID
     );
-    const inviteePayload = await this.getContributorPayloadOrFail(
-      invitedUserID
-    );
+    const inviteePayload =
+      await this.getContributorPayloadOrFail(invitedUserID);
     const payload: CommunityInvitationCreatedEventPayload = {
       invitee: inviteePayload,
       welcomeMessage,
@@ -550,14 +548,12 @@ export class NotificationPayloadBuilder {
   private async getContributorPayloadOrFail(
     contributorID: string
   ): Promise<ContributorPayload> {
-    const contributor = await this.contributorLookupService.getContributor(
-      contributorID,
-      {
+    const contributor =
+      await this.contributorLookupService.getContributorByUUID(contributorID, {
         relations: {
           profile: true,
         },
-      }
-    );
+      });
 
     if (!contributor || !contributor.profile) {
       throw new EntityNotFoundException(
@@ -569,9 +565,8 @@ export class NotificationPayloadBuilder {
     const contributorType =
       this.contributorLookupService.getContributorType(contributor);
 
-    const userURL = await this.urlGeneratorService.createUrlForContributor(
-      contributor
-    );
+    const userURL =
+      await this.urlGeneratorService.createUrlForContributor(contributor);
     const result: ContributorPayload = {
       id: contributor.id,
       nameID: contributor.nameID,
@@ -590,9 +585,8 @@ export class NotificationPayloadBuilder {
     organizationID: string
   ): Promise<CommunicationOrganizationMessageEventPayload> {
     const basePayload = this.buildBaseEventPayload(senderID);
-    const orgContribtor = await this.getContributorPayloadOrFail(
-      organizationID
-    );
+    const orgContribtor =
+      await this.getContributorPayloadOrFail(organizationID);
     const payload: CommunicationOrganizationMessageEventPayload = {
       message,
       organization: orgContribtor,
@@ -625,9 +619,8 @@ export class NotificationPayloadBuilder {
     originEntityDisplayName: string,
     commentType: RoomType
   ): Promise<CommunicationUserMentionEventPayload | undefined> {
-    const userContributor = await this.getContributorPayloadOrFail(
-      mentionedUserNameID
-    );
+    const userContributor =
+      await this.getContributorPayloadOrFail(mentionedUserNameID);
 
     const commentOriginUrl = await this.buildCommentOriginUrl(
       commentType,
