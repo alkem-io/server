@@ -29,7 +29,6 @@ import { Profile } from '@domain/common/profile/profile.entity';
 import { SpaceType } from '@common/enums/space.type';
 import { SpaceLevel } from '@common/enums/space.level';
 import { Space } from '@domain/space/space/space.entity';
-import { License } from '@domain/license/license/license.entity';
 import { RolesResultCommunity } from './dto/roles.dto.result.community';
 import { MockUserLookupService } from '@test/mocks/user.lookup.service.mock';
 import { MockVirtualContributorService } from '@test/mocks/virtual.contributor.service.mock';
@@ -257,16 +256,12 @@ const getSpaceRoleResultMock = ({
       },
       type: SpaceType.SPACE,
       level: SpaceLevel.SPACE,
+      visibility: SpaceVisibility.ACTIVE,
       account: {
         id: `account-${id}`,
         virtualContributors: [],
         innovationHubs: [],
         innovationPacks: [],
-        license: {
-          id: `license-${id}`,
-          visibility: SpaceVisibility.ACTIVE,
-          ...getEntityMock<License>(),
-        },
       },
       ...getEntityMock<Space>(),
     },
