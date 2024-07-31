@@ -1,19 +1,18 @@
 import { EntityManager, FindOneOptions, In } from 'typeorm';
+import { isUUID } from 'class-validator';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { User } from '@domain/community/user/user.entity';
 import { IUser } from '@domain/community/user/user.interface';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
-import {
-  EntityNotFoundException,
-  RelationshipNotFoundException,
-} from '@common/exceptions';
+import { EntityNotFoundException, RelationshipNotFoundException } from '@common/exceptions';
 import { AuthorizationCredential, LogContext } from '@common/enums';
 import { Credential, CredentialsSearchInput, ICredential } from '@domain/agent';
 import { VirtualContributor } from '@domain/community/virtual-contributor';
 import { IOrganization, Organization } from '@domain/community/organization';
 import { CommunityContributorType } from '@common/enums/community.contributor.type';
+import { InvalidUUID } from '@common/exceptions/invalid.uuid';
 
 export class ContributorLookupService {
   constructor(
@@ -252,6 +251,13 @@ export class ContributorLookupService {
     contributorID: string,
     options?: FindOneOptions<IContributor>
   ): Promise<IContributor | null> {
+    if (!isUUID(contributorID)) {
+      throw new InvalidUUID(
+        'Invalid UUID provided!',
+        LogContext.COMMUNITY,
+        { provided: contributorID }
+      );
+    }
     let contributor: IContributor | null = await this.entityManager.findOne(
       User,
       {
