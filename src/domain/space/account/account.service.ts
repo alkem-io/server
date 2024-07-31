@@ -465,7 +465,7 @@ export class AccountService {
     }
     const hub = await this.innovationHubService.createInnovationHub(
       innovationHubData,
-      account.storageAggregator
+      account
     );
     hub.account = account;
     return await this.innovationHubService.save(hub);

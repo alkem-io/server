@@ -23,10 +23,7 @@ import { CreateAccountInput } from './dto';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { LogContext } from '@common/enums/logging.context';
 import { SpaceLevel } from '@common/enums/space.level';
-import {
-  EntityNotFoundException,
-  EntityNotInitializedException,
-} from '@common/exceptions';
+import { EntityNotInitializedException } from '@common/exceptions';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { CreateVirtualContributorOnAccountInput } from './dto/account.dto.create.virtual.contributor';
 import { VirtualContributorAuthorizationService } from '@domain/community/virtual-contributor/virtual.contributor.service.authorization';
@@ -313,15 +310,9 @@ export class AccountResolverMutations {
       }
     );
 
-    if (!account.storageAggregator) {
-      throw new EntityNotFoundException(
-        `Unable to load storage aggregator on account for creating innovation Hub: ${account.id}`,
-        LogContext.ACCOUNT
-      );
-    }
     let innovationHub = await this.innovationHubService.createInnovationHub(
       createData,
-      account.storageAggregator
+      account
     );
     innovationHub =
       await this.innovationHubAuthorizationService.applyAuthorizationPolicyAndSave(
