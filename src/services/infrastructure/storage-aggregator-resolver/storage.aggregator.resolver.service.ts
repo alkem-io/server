@@ -60,15 +60,6 @@ export class StorageAggregatorResolverService {
     return this.getStorageAggregatorOrFail(result.storageAggregatorId);
   }
 
-  public async getLibraryStorageAggregator(): Promise<IStorageAggregator> {
-    const query = `SELECT \`storageAggregatorId\`
-    FROM \`library\` LIMIT 1`;
-    const [result]: {
-      storageAggregatorId: string;
-    }[] = await this.entityManager.connection.query(query);
-    return this.getStorageAggregatorOrFail(result.storageAggregatorId);
-  }
-
   public async getParentEntityInformation(
     storageAggregatorID: string
   ): Promise<{
@@ -122,12 +113,16 @@ export class StorageAggregatorResolverService {
       return await this.getStorageAggregatorOrFail(space.storageAggregator.id);
     }
 
-    const query = `SELECT \`id\` FROM \`innovation_pack\`
+    const query = `SELECT \`account\`.\`storageAggregatorId\` FROM \`innovation_pack\`
+      JOIN \`account\` ON \`innovation_pack\`.\`accountId\`=\`account\`.\`id\`
       WHERE \`innovation_pack\`.\`templatesSetId\`='${templatesSetId}'`;
+
     const [result] = await this.entityManager.connection.query(query);
     if (result) {
-      // use the library sorage aggregator
-      return await this.getLibraryStorageAggregator();
+      // Use the Account Storage Aggregator
+      return this.storageAggregatorRepository.findOneOrFail({
+        where: { id: result.storageAggregatorId },
+      });
     }
 
     throw new StorageAggregatorNotFoundException(
@@ -147,9 +142,8 @@ export class StorageAggregatorResolverService {
   public async getStorageAggregatorForCalendar(
     calendarID: string
   ): Promise<IStorageAggregator> {
-    const storageAggregatorId = await this.getStorageAggregatorIdForCalendar(
-      calendarID
-    );
+    const storageAggregatorId =
+      await this.getStorageAggregatorIdForCalendar(calendarID);
     return await this.getStorageAggregatorOrFail(storageAggregatorId);
   }
 
@@ -192,9 +186,8 @@ export class StorageAggregatorResolverService {
   public async getStorageAggregatorForCommunity(
     communityID: string
   ): Promise<IStorageAggregator> {
-    const storageAggregatorId = await this.getStorageAggregatorIdForCommunity(
-      communityID
-    );
+    const storageAggregatorId =
+      await this.getStorageAggregatorIdForCommunity(communityID);
     return await this.getStorageAggregatorOrFail(storageAggregatorId);
   }
 
@@ -223,9 +216,8 @@ export class StorageAggregatorResolverService {
   public async getStorageAggregatorForCallout(
     calloutID: string
   ): Promise<IStorageAggregator> {
-    const storageAggregatorId = await this.getStorageAggregatorIdForCallout(
-      calloutID
-    );
+    const storageAggregatorId =
+      await this.getStorageAggregatorIdForCallout(calloutID);
     return await this.getStorageAggregatorOrFail(storageAggregatorId);
   }
 
