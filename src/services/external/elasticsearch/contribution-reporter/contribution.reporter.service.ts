@@ -4,7 +4,7 @@ import { Client as ElasticClient } from '@elastic/elasticsearch';
 import { WriteResponseBase } from '@elastic/elasticsearch/lib/api/types';
 import { ConfigService } from '@nestjs/config';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { ConfigurationTypes, LogContext } from '@common/enums';
+import { LogContext } from '@common/enums';
 import { isElasticError, isElasticResponseError } from '../utils';
 import {
   AuthorDetails,
@@ -29,13 +29,9 @@ export class ContributionReporterService {
     @Inject(ELASTICSEARCH_CLIENT_PROVIDER)
     private readonly client: ElasticClient | undefined
   ) {
-    const elasticsearch = this.configService.get(
-      ConfigurationTypes.INTEGRATIONS
-    )?.elasticsearch;
+    const elasticsearch = this.configService.get('integrations.elasticsearch', { infer: true });
 
-    this.environment = this.configService.get(
-      ConfigurationTypes.HOSTING
-    )?.environment;
+    this.environment = this.configService.get('hosting.environment', { infer: true });
 
     this.activityIndexName = elasticsearch?.indices?.contribution;
   }

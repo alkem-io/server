@@ -1,7 +1,7 @@
 import { PubSubEngine } from 'graphql-subscriptions';
 import { SUBSCRIPTION_PROFILE_VERIFIED_CREDENTIAL } from '@common/constants';
 import { Profiling } from '@common/decorators/profiling.decorator';
-import { ConfigurationTypes, LogContext } from '@common/enums';
+import { LogContext } from '@common/enums';
 import {
   AuthenticationException,
   EntityNotFoundException,
@@ -69,9 +69,7 @@ export class AgentService {
     @Inject(SUBSCRIPTION_PROFILE_VERIFIED_CREDENTIAL)
     private subscriptionVerifiedCredentials: PubSubEngine
   ) {
-    this.cache_ttl = this.configService.get(
-      ConfigurationTypes.IDENTITY
-    ).authentication.cache_ttl;
+    this.cache_ttl = this.configService.get('identity.authentication.cache_ttl', { infer: true });
   }
 
   async createAgent(inputData: CreateAgentInput): Promise<IAgent> {
@@ -79,7 +77,7 @@ export class AgentService {
     agent.credentials = [];
     agent.authorization = new AuthorizationPolicy();
 
-    const ssiEnabled = this.configService.get(ConfigurationTypes.SSI).enabled;
+    const ssiEnabled = this.configService.get('ssi.enabled', { infer: true });
 
     if (ssiEnabled) {
       return await this.createDidOnAgent(agent);
@@ -552,9 +550,7 @@ export class AgentService {
   }
 
   validateTrustedIssuerOrFail(vcName: string, vcToBeStored: any) {
-    const trustedIssuerValidationEnabled = this.configService.get(
-      ConfigurationTypes.SSI
-    ).issuer_validation_enabled;
+    const trustedIssuerValidationEnabled = this.configService.get('ssi.issuer_validation_enabled', { infer: true });
     if (!trustedIssuerValidationEnabled) return;
 
     const trustedIssuers =

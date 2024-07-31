@@ -145,6 +145,7 @@ export type AlkemioConfig = {
         guidance_usage: string;
       };
       tls: {
+        ca_cert_path: string | 'none';
         rejectUnauthorized: boolean;
       };
       policies: {
@@ -192,6 +193,10 @@ export type AlkemioConfig = {
     guidance_engine: {
       enabled: boolean;
     };
+    vector_db: {
+      host: string;
+      port: number;
+    }
   };
   ssi: {
     enabled: boolean;

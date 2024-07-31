@@ -4,7 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { promisify } from 'util';
 import { readFile, unlink, writeFile, existsSync, mkdirSync } from 'fs';
 import { LocalStorageSaveFailedException } from '@common/exceptions/storage/local-storage/local.storage.save.failed.exception';
-import { ConfigurationTypes, LogContext } from '@common/enums';
+import { LogContext } from '@common/enums';
 import { calculateBufferHash, pathResolve } from '@common/utils';
 import {
   LocalStorageDeleteFailedException,
@@ -23,8 +23,7 @@ export class LocalStorageAdapter implements StorageService {
   private readonly storagePath: string;
 
   constructor(private configService: ConfigService<AlkemioConfig, true>) {
-    const pathFromConfig = this.configService.get(ConfigurationTypes.STORAGE)
-      ?.local_storage?.path;
+    const pathFromConfig = this.configService.get('storage.local_storage.path', { infer: true });
     this.storagePath = pathResolve(pathFromConfig);
     this.ensureStoragePathExists();
   }

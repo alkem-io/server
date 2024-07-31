@@ -5,7 +5,6 @@ import { ConfigService } from '@nestjs/config';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import {
   AlkemioErrorStatus,
-  ConfigurationTypes,
   LogContext,
 } from '@common/enums';
 import { BaseException } from '@common/exceptions/base.exception';
@@ -38,7 +37,7 @@ const factory = async (
   logger: LoggerService,
   configService: ConfigService<AlkemioConfig, true>
 ) => {
-  const { host, port } = configService.get(ConfigurationTypes.STORAGE).redis;
+  const { host, port } = configService.get('storage.redis', { infer: true });
 
   if (!host) {
     throw new BaseException(

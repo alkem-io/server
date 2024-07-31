@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { IConfig } from './config.interface';
 import { IAuthenticationProviderConfig } from './authentication/providers/authentication.provider.config.interface';
-import { ConfigurationTypes } from '@common/enums';
 import { IOryConfig } from './authentication/providers/ory/ory.config.interface';
 import { PlatformFeatureFlagName } from '@common/enums/platform.feature.flag.name';
 import { AlkemioConfig } from '@src/types';
@@ -13,7 +12,7 @@ export class KonfigService {
 
   async getConfig(): Promise<IConfig> {
     const domain = new URL(
-      this.configService.get(ConfigurationTypes.HOSTING)?.endpoint_cluster
+      this.configService.get('hosting.endpoint_cluster', { infer: true })
     ).hostname;
 
     const sentryConfig = this.configService.get(

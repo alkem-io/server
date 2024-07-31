@@ -4,7 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
-import { ConfigurationTypes, LogContext } from '@common/enums';
+import { LogContext } from '@common/enums';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { DeleteDocumentInput } from './dto/document.dto.delete';
@@ -202,9 +202,7 @@ export class DocumentService {
   }
 
   private getDocumentsBaseUrlPath(): string {
-    const { endpoint_cluster, path_api_private_rest } = this.configService.get(
-      ConfigurationTypes.HOSTING
-    );
+    const { endpoint_cluster, path_api_private_rest } = this.configService.get('hosting', { infer: true });
     return `${endpoint_cluster}${path_api_private_rest}/storage/document`;
   }
 

@@ -1,4 +1,4 @@
-import { ConfigurationTypes, LogContext } from '@common/enums';
+import { LogContext } from '@common/enums';
 import { SsiSovrhdApiException } from '@common/exceptions/ssi.sovrhd.api.exception';
 import { SsiSovrhdCredentialRequestFailure } from '@common/exceptions/ssi.sovrhd.credential.request.failure';
 import { SsiSovrhdCredentialTypeNotFoundException } from '@common/exceptions/ssi.sovrhd.credential.type.not.found.exception';
@@ -31,8 +31,7 @@ export class SsiSovrhdAdapter {
     private configService: ConfigService<AlkemioConfig, true>,
     private httpService: HttpService
   ) {
-    const sovrhdConfig = this.configService.get(ConfigurationTypes.SSI)?.issuers
-      ?.sovrhd;
+    const sovrhdConfig = this.configService.get('ssi.issuers.sovrhd', { infer: true });
     this.sovrhdApiEndpoint = sovrhdConfig.endpoint;
 
     this.credentialTypesMap = new Map();

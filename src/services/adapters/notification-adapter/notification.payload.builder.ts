@@ -1,4 +1,4 @@
-import { ConfigurationTypes, LogContext } from '@common/enums';
+import { LogContext } from '@common/enums';
 import { EntityNotFoundException } from '@common/exceptions';
 import { NotificationEventException } from '@common/exceptions/notification.event.exception';
 import { ICommunity } from '@domain/community/community';
@@ -8,32 +8,32 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
 import { Post } from '@domain/collaboration/post/post.entity';
 import {
-  CollaborationPostCreatedEventPayload,
-  CollaborationPostCommentEventPayload,
+  BaseEventPayload,
   CollaborationCalloutPublishedEventPayload,
-  PlatformUserRegistrationEventPayload,
-  PlatformUserRemovedEventPayload,
-  CommunityNewMemberPayload,
-  CommunicationUpdateEventPayload,
-  PlatformForumDiscussionCreatedEventPayload,
-  CommunicationUserMessageEventPayload,
-  CommunicationOrganizationMessageEventPayload,
-  CommunicationCommunityLeadsMessageEventPayload,
-  CommunicationUserMentionEventPayload,
-  CommunicationOrganizationMentionEventPayload,
-  CommunityApplicationCreatedEventPayload,
   CollaborationDiscussionCommentEventPayload,
-  PlatformForumDiscussionCommentEventPayload,
-  CommunityInvitationCreatedEventPayload,
+  CollaborationPostCommentEventPayload,
+  CollaborationPostCreatedEventPayload,
   CollaborationWhiteboardCreatedEventPayload,
   CommentReplyEventPayload,
-  BaseEventPayload,
-  ContributorPayload,
-  SpaceBaseEventPayload,
-  PlatformGlobalRoleChangeEventPayload,
-  RoleChangeType,
-  CommunityPlatformInvitationCreatedEventPayload,
+  CommunicationCommunityLeadsMessageEventPayload,
+  CommunicationOrganizationMentionEventPayload,
+  CommunicationOrganizationMessageEventPayload,
+  CommunicationUpdateEventPayload,
+  CommunicationUserMentionEventPayload,
+  CommunicationUserMessageEventPayload,
+  CommunityApplicationCreatedEventPayload,
+  CommunityInvitationCreatedEventPayload,
   CommunityInvitationVirtualContributorCreatedEventPayload,
+  CommunityNewMemberPayload,
+  CommunityPlatformInvitationCreatedEventPayload,
+  ContributorPayload,
+  PlatformForumDiscussionCommentEventPayload,
+  PlatformForumDiscussionCreatedEventPayload,
+  PlatformGlobalRoleChangeEventPayload,
+  PlatformUserRegistrationEventPayload,
+  PlatformUserRemovedEventPayload,
+  RoleChangeType,
+  SpaceBaseEventPayload,
   SpaceCreatedEventPayload,
 } from '@alkemio/notifications-lib';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
@@ -776,9 +776,6 @@ export class NotificationPayloadBuilder {
   }
 
   private getPlatformURL(): string {
-    const endpoint = this.configService.get(
-      ConfigurationTypes.HOSTING
-    )?.endpoint_cluster;
-    return endpoint;
+    return this.configService.get('hosting.endpoint_cluster', { infer: true });
   }
 }

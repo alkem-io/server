@@ -7,7 +7,6 @@ import { ELASTICSEARCH_CLIENT_PROVIDER } from '@constants/index';
 import { IBaseAlkemio } from '@domain/common/entity/base-entity';
 import {
   AlkemioErrorStatus,
-  ConfigurationTypes,
   LogContext,
 } from '@common/enums';
 import { BaseException } from '@common/exceptions/base.exception';
@@ -17,6 +16,7 @@ import { functionScoreFunctions } from './function.score.functions';
 import { buildSearchQuery } from './build.search.query';
 import { SearchEntityTypes } from '../../search.entity.types';
 import { AlkemioConfig } from '@src/types';
+import { getIndexPattern } from '@services/api/search/v2/ingest/get.index.pattern';
 
 type SearchEntityTypesPublic =
   | SearchEntityTypes.SPACE
@@ -44,7 +44,6 @@ const TYPE_TO_PUBLIC_INDEX = (
 });
 
 const DEFAULT_MAX_RESULTS = 25;
-const DEFAULT_INDEX_PATTERN = 'alkemio-data-';
 
 @Injectable()
 export class SearchExtractService {
@@ -57,11 +56,9 @@ export class SearchExtractService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService,
     private configService: ConfigService<AlkemioConfig, true>
   ) {
-    this.indexPattern =
-      this.configService.get(ConfigurationTypes.SEARCH)?.index_pattern ??
-      DEFAULT_INDEX_PATTERN;
+    this.indexPattern = getIndexPattern(this.configService);
     this.maxResults =
-      this.configService.get(ConfigurationTypes.SEARCH)?.max_results ??
+      this.configService.get('search.max_results', { infer: true }) ??
       DEFAULT_MAX_RESULTS;
 
     if (!client) {

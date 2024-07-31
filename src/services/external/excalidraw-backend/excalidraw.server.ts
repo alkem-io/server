@@ -9,7 +9,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ConfigurationTypes, LogContext } from '@common/enums';
+import { LogContext } from '@common/enums';
 import { APP_ID, EXCALIDRAW_SERVER, UUID_LENGTH } from '@common/constants';
 import { arrayRandomElement } from '@common/utils';
 import { AuthenticationService } from '@core/authentication/authentication.service';
@@ -100,7 +100,7 @@ export class ExcalidrawServer {
       save_timeout,
       collaborator_mode_timeout,
       max_collaborators_in_room,
-    } = this.configService.get(ConfigurationTypes.COLLABORATION)?.whiteboards;
+    } = this.configService.get('collaboration.whiteboards', { infer: true });
 
     this.contributionWindowMs =
       (contribution_window ?? defaultContributionInterval) * 1000;
@@ -128,9 +128,7 @@ export class ExcalidrawServer {
   }
 
   private async init() {
-    const kratosPublicBaseUrl = this.configService.get(
-      ConfigurationTypes.IDENTITY
-    ).authentication.providers.ory.kratos_public_base_url_server;
+    const kratosPublicBaseUrl = this.configService.get('identity.authentication.providers.ory.kratos_public_base_url_server', { infer: true });
 
     const kratosClient = new FrontendApi(
       new Configuration({

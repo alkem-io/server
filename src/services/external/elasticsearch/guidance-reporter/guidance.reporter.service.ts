@@ -4,7 +4,7 @@ import { Client as ElasticClient } from '@elastic/elasticsearch';
 import { WriteResponseBase } from '@elastic/elasticsearch/lib/api/types';
 import { ConfigService } from '@nestjs/config';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { ConfigurationTypes, LogContext } from '@common/enums';
+import { LogContext } from '@common/enums';
 import { ELASTICSEARCH_CLIENT_PROVIDER } from '@constants/index';
 import { isElasticError, isElasticResponseError } from '../utils';
 import { GuidanceUsage } from './guidance.usage';
@@ -34,13 +34,9 @@ export class GuidanceReporterService {
         LogContext.CHAT_GUIDANCE_REPORTER
       );
     }
-    const elasticsearch = this.configService.get(
-      ConfigurationTypes.INTEGRATIONS
-    )?.elasticsearch;
+    const elasticsearch = this.configService.get('integrations.elasticsearch', { infer: true });
 
-    this.environment = this.configService.get(
-      ConfigurationTypes.HOSTING
-    )?.environment;
+    this.environment = this.configService.get('hosting.environment', { infer: true });
 
     this.indexName = elasticsearch?.indices?.guidance_usage;
   }

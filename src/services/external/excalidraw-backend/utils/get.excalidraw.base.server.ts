@@ -5,7 +5,6 @@ import { ConfigService } from '@nestjs/config';
 import { LoggerService } from '@nestjs/common';
 import {
   AlkemioErrorStatus,
-  ConfigurationTypes,
   LogContext,
 } from '@common/enums';
 import { BaseException } from '@common/exceptions/base.exception';
@@ -17,7 +16,7 @@ export const getExcalidrawBaseServerOrFail = (
   logger: LoggerService,
   adapterFactory?: typeof Adapter | ((nsp: Namespace) => Adapter)
 ): SocketIoServer | never => {
-  const port = configService.get(ConfigurationTypes.HOSTING).whiteboard_rt.port;
+  const port = configService.get('hosting.whiteboard_rt.port', { infer: true });
 
   if (!port) {
     throw new BaseException(

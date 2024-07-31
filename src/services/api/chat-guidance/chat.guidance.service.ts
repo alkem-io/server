@@ -1,7 +1,6 @@
 import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { ConfigurationTypes } from '@common/enums/configuration.type';
 import { ConfigService } from '@nestjs/config';
 import { GuidanceEngineAdapter } from '@services/adapters/chat-guidance-adapter/guidance.engine.adapter';
 import { ChatGuidanceInput } from './dto/chat.guidance.dto.input';
@@ -41,9 +40,6 @@ export class ChatGuidanceService {
   }
 
   public isGuidanceEngineEnabled(): boolean {
-    const result = this.configService.get(ConfigurationTypes.PLATFORM)
-      .guidance_engine?.enabled;
-
-    return Boolean(result);
+    return this.configService.get('platform.guidance_engine.enabled', { infer: true })
   }
 }

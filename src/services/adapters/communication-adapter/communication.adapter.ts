@@ -1,6 +1,6 @@
 import { firstValueFrom, TimeoutError, Observable } from 'rxjs';
 import { catchError, retry, timeout } from 'rxjs/operators';
-import { ConfigurationTypes, LogContext } from '@common/enums';
+import { LogContext } from '@common/enums';
 import { MatrixEntityNotFoundException } from '@common/exceptions';
 import { DirectRoomResult } from '@domain/community/user/dto/user.dto.communication.room.direct.result';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
@@ -79,9 +79,7 @@ export class CommunicationAdapter {
     private configService: ConfigService<AlkemioConfig, true>,
     @Inject(MATRIX_ADAPTER_SERVICE) private matrixAdapterClient: ClientProxy
   ) {
-    const communications = this.configService.get(
-      ConfigurationTypes.COMMUNICATIONS
-    );
+    const communications = this.configService.get('communications');
     this.enabled = communications?.enabled;
     this.timeout = +communications?.matrix?.connection_timeout * 1000;
     this.retries = +communications?.matrix?.connection_retries;
