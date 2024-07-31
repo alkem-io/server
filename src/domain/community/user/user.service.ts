@@ -421,6 +421,7 @@ export class UserService {
       );
     }
     const { id } = user;
+
     await this.clearUserCache(user);
 
     if (user.profile) {

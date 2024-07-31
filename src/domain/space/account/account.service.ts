@@ -14,8 +14,6 @@ import { IAccount } from './account.interface';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { ITemplatesSet } from '@domain/template/templates-set/templates.set.interface';
 import { TemplatesSetService } from '@domain/template/templates-set/templates.set.service';
-import { ILicense } from '@domain/license/license/license.interface';
-import { LicenseService } from '@domain/license/license/license.service';
 import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
 import { UpdateAccountDefaultsInput } from './dto/account.dto.update.defaults';
 import { ISpaceDefaults } from '../space.defaults/space.defaults.interface';
@@ -24,7 +22,6 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { ISpace } from '../space/space.interface';
 import { UpdateAccountPlatformSettingsInput } from './dto/account.dto.update.platform.settings';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
-import { SpaceVisibility } from '@common/enums/space.visibility';
 import { CreateAccountInput } from './dto/account.dto.create';
 import { CreateSpaceInput } from '../space/dto/space.dto.create';
 import { LicensingService } from '@platform/licensing/licensing.service';
@@ -44,6 +41,10 @@ import { StorageAggregatorService } from '@domain/storage/storage-aggregator/sto
 import { CreateSpaceOnAccountInput } from './dto/account.dto.create.space';
 import { Space } from '../space/space.entity';
 import { LicensePlanType } from '@common/enums/license.plan.type';
+import { CreateInnovationHubOnAccountInput } from './dto/account.dto.create.innovation.hub';
+import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
+import { InnovationHubService } from '@domain/innovation-hub';
+import { SpaceLevel } from '@common/enums/space.level';
 import { InnovationPackService } from '@library/innovation-pack/innovaton.pack.service';
 import { CreateInnovationPackOnAccountInput } from './dto/account.dto.create.innovation.pack';
 import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
@@ -56,12 +57,12 @@ export class AccountService {
     private agentService: AgentService,
     private templatesSetService: TemplatesSetService,
     private spaceDefaultsService: SpaceDefaultsService,
-    private licenseService: LicenseService,
     private licensingService: LicensingService,
     private licenseEngineService: LicenseEngineService,
     private licenseIssuerService: LicenseIssuerService,
     private storageAggregatorService: StorageAggregatorService,
     private virtualContributorService: VirtualContributorService,
+    private innovationHubService: InnovationHubService,
     private innovationPackService: InnovationPackService,
     @InjectRepository(Account)
     private accountRepository: Repository<Account>,
@@ -78,9 +79,6 @@ export class AccountService {
       await this.storageAggregatorService.createStorageAggregator();
     account.library = await this.templatesSetService.createTemplatesSet();
     account.defaults = await this.spaceDefaultsService.createSpaceDefaults();
-    account.license = await this.licenseService.createLicense({
-      visibility: SpaceVisibility.ACTIVE,
-    });
 
     // And set the defaults
     account.library =
@@ -148,7 +146,7 @@ export class AccountService {
     const spaceData = spaceOnAccountData.spaceData;
     await this.validateSpaceData(spaceData);
     // Set data for the root space
-    spaceData.level = 0;
+    spaceData.level = SpaceLevel.SPACE;
     spaceData.storageAggregatorParent = account.storageAggregator;
 
     const space = await this.spaceService.createSpace(
@@ -217,28 +215,11 @@ export class AccountService {
     updateData: UpdateAccountPlatformSettingsInput
   ): Promise<IAccount> {
     const account = await this.getAccountOrFail(updateData.accountID, {
-      relations: {
-        license: true,
-        space: true,
-      },
+      relations: {},
     });
-
-    if (!account.license) {
-      throw new RelationshipNotFoundException(
-        `Unable to load license for account ${account.id} `,
-        LogContext.ACCOUNT
-      );
-    }
 
     if (updateData.hostID) {
       await this.accountHostService.setAccountHost(account, updateData.hostID);
-    }
-
-    if (updateData.license) {
-      account.license = await this.licenseService.updateLicense(
-        account.license,
-        updateData.license
-      );
     }
 
     return await this.save(account);
@@ -251,23 +232,23 @@ export class AccountService {
         agent: true,
         space: true,
         library: true,
-        license: true,
         defaults: true,
         virtualContributors: true,
         innovationPacks: true,
         storageAggregator: true,
+        innovationHubs: true,
       },
     });
 
     if (
       !account.agent ||
       !account.space ||
-      !account.license ||
       !account.defaults ||
       !account.library ||
       !account.virtualContributors ||
-      !account.innovationPacks ||
-      !account.storageAggregator
+      !account.storageAggregator ||
+      !account.innovationHubs ||
+      !account.innovationPacks
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load all entities for deletion of account ${account.id} `,
@@ -284,7 +265,6 @@ export class AccountService {
 
     await this.templatesSetService.deleteTemplatesSet(account.library.id);
 
-    await this.licenseService.delete(account.license.id);
     await this.spaceDefaultsService.deleteSpaceDefaults(account.defaults.id);
     await this.storageAggregatorService.delete(account.storageAggregator.id);
 
@@ -299,6 +279,10 @@ export class AccountService {
     }
     for (const ip of account.innovationPacks) {
       await this.innovationPackService.deleteInnovationPack({ ID: ip.id });
+    }
+
+    for (const hub of account.innovationHubs) {
+      await this.innovationHubService.delete(hub.id);
     }
 
     const result = await this.accountRepository.remove(account as Account);
@@ -383,24 +367,6 @@ export class AccountService {
     return templatesSet;
   }
 
-  async getLicenseOrFail(accountId: string): Promise<ILicense> {
-    const account = await this.getAccountOrFail(accountId, {
-      relations: {
-        license: true,
-      },
-    });
-    const license = account.license;
-
-    if (!license) {
-      throw new EntityNotFoundException(
-        `Unable to find license for account with nameID: ${accountId}`,
-        LogContext.ACCOUNT
-      );
-    }
-
-    return license;
-  }
-
   async getRootSpace(
     accountInput: IAccount,
     options?: FindOneOptions<Space>
@@ -483,6 +449,28 @@ export class AccountService {
     return await this.virtualContributorService.save(vc);
   }
 
+  public async createInnovationHubOnAccount(
+    innovationHubData: CreateInnovationHubOnAccountInput
+  ): Promise<IInnovationHub> {
+    const accountID = innovationHubData.accountID;
+    const account = await this.getAccountOrFail(accountID, {
+      relations: { storageAggregator: true },
+    });
+
+    if (!account.storageAggregator) {
+      throw new RelationshipNotFoundException(
+        `Unable to load Account with required entities for creating an InnovationHub: ${account.id} `,
+        LogContext.ACCOUNT
+      );
+    }
+    const hub = await this.innovationHubService.createInnovationHub(
+      innovationHubData,
+      account.storageAggregator
+    );
+    hub.account = account;
+    return await this.innovationHubService.save(hub);
+  }
+
   public async createInnovationPackOnAccount(
     ipData: CreateInnovationPackOnAccountInput
   ): Promise<IInnovationPack> {
@@ -497,7 +485,6 @@ export class AccountService {
         LogContext.ACCOUNT
       );
     }
-
     const ip = await this.innovationPackService.createInnovationPack(
       ipData,
       account.storageAggregator

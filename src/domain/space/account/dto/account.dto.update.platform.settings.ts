@@ -1,9 +1,7 @@
 import { UUID } from '@domain/common/scalars';
 import { UUID_NAMEID } from '@domain/common/scalars/scalar.uuid.nameid';
-import { UpdateLicenseInput } from '@domain/license/license/dto/license.dto.update';
 import { Field, InputType } from '@nestjs/graphql';
-import { Type } from 'class-transformer';
-import { IsOptional, ValidateNested } from 'class-validator';
+import { IsOptional } from 'class-validator';
 
 @InputType()
 export class UpdateAccountPlatformSettingsInput {
@@ -20,13 +18,4 @@ export class UpdateAccountPlatformSettingsInput {
   })
   @IsOptional()
   hostID?: string;
-
-  @Field(() => UpdateLicenseInput, {
-    nullable: true,
-    description: 'Update the license settings for the Account.',
-  })
-  @IsOptional()
-  @ValidateNested()
-  @Type(() => UpdateLicenseInput)
-  license?: UpdateLicenseInput;
 }

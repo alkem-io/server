@@ -9,7 +9,7 @@ import {
 } from 'typeorm';
 import { ISpace } from '@domain/space/space/space.interface';
 import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
-import { TINY_TEXT_LENGTH } from '@common/constants';
+import { TINY_TEXT_LENGTH, UUID_LENGTH } from '@common/constants';
 import { SpaceType } from '@common/enums/space.type';
 import { Collaboration } from '@domain/collaboration/collaboration';
 import { Community } from '@domain/community/community';
@@ -17,6 +17,7 @@ import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.ag
 import { Account } from '../account/account.entity';
 import { Context } from '@domain/context/context/context.entity';
 import { Agent } from '@domain/agent/agent/agent.entity';
+import { SpaceVisibility } from '@common/enums/space.visibility';
 @Entity()
 export class Space extends NameableEntity implements ISpace {
   @OneToMany(() => Space, space => space.parentSpace, {
@@ -89,8 +90,20 @@ export class Space extends NameableEntity implements ISpace {
   })
   type!: SpaceType;
 
+  @Column({
+    length: UUID_LENGTH,
+  })
+  levelZeroSpaceID!: string;
+
   @Column('int', { nullable: false })
   level!: number;
+
+  @Column('varchar', {
+    length: 36,
+    nullable: false,
+    default: SpaceVisibility.ACTIVE,
+  })
+  visibility!: SpaceVisibility;
 
   constructor() {
     super();

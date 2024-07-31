@@ -13,7 +13,7 @@ import { IAccount } from '@domain/space/account/account.interface';
 import { AccountLoaderCreator } from '@core/dataloader/creators/loader.creators/account/account.loader.creator';
 
 @Resolver(() => IInnovationHub)
-export class InnovationHubFieldResolver {
+export class InnovationHubResolverFields {
   constructor(
     private innovationHubService: InnovationHubService,
     private spaceService: SpaceService
