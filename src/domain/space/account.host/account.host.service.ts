@@ -88,7 +88,7 @@ export class AccountHostService {
   }
 
   public async getHostByID(contributorID: string): Promise<IContributor> {
-    return this.contributorService.getContributorOrFail(contributorID, {
+    return this.contributorService.getContributorByUuidOrFail(contributorID, {
       relations: {
         agent: true,
       },

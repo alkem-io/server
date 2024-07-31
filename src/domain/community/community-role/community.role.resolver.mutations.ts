@@ -414,14 +414,15 @@ export class CommunityRoleResolverMutations {
 
     const contributors: IContributor[] = [];
     for (const contributorID of invitationData.invitedContributors) {
-      const contributor = await this.contributorService.getContributorOrFail(
-        contributorID,
-        {
-          relations: {
-            agent: true,
-          },
-        }
-      );
+      const contributor =
+        await this.contributorService.getContributorByUuidOrFail(
+          contributorID,
+          {
+            relations: {
+              agent: true,
+            },
+          }
+        );
       contributors.push(contributor);
     }
 
@@ -502,9 +503,8 @@ export class CommunityRoleResolverMutations {
     invitation = await this.invitationService.save(invitation);
 
     if (invitedContributor instanceof VirtualContributor) {
-      const accountHost = await this.virtualContributorService.getAccountHost(
-        invitedContributor
-      );
+      const accountHost =
+        await this.virtualContributorService.getAccountHost(invitedContributor);
       const notificationInput: NotificationInputCommunityInvitationVirtualContributor =
         {
           triggeredBy: agentInfo.userID,
@@ -610,9 +610,8 @@ export class CommunityRoleResolverMutations {
         platformInvitation,
         community.authorization
       );
-    platformInvitation = await this.platformInvitationService.save(
-      platformInvitation
-    );
+    platformInvitation =
+      await this.platformInvitationService.save(platformInvitation);
 
     const notificationInput: NotificationInputPlatformInvitation = {
       triggeredBy: agentInfo.userID,
@@ -720,9 +719,8 @@ export class CommunityRoleResolverMutations {
     @Args({ name: 'communityID', type: () => String }) communityID: string,
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<AgentBeginVerifiedCredentialOfferOutput> {
-    const community = await this.communityService.getCommunityOrFail(
-      communityID
-    );
+    const community =
+      await this.communityService.getCommunityOrFail(communityID);
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       community.authorization,
