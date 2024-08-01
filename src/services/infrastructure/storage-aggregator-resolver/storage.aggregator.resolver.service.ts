@@ -98,26 +98,13 @@ export class StorageAggregatorResolverService {
   public async getStorageAggregatorForTemplatesSet(
     templatesSetId: string
   ): Promise<IStorageAggregator> {
-    // A templateSet could be in a Space, just the templates associated to that space.
-    // Or it could come from an InnovationPack, the templates inside that IP.
-    // We handle both cases here to return the appropiate StorageAggregator
+    // This query is a bit tricky because we have a TemplateSetId and we need to find the StorageAggregator
+    // associated to it's parent.
+    // TemplatesSets can be in a Space (the space's templates), or an InnovationPack (the templates of that IP).
+    // In practice it's just a ManyToMany relationship between Spaces/IPs and the templates associated to them.
 
-    const space = await this.entityManager.findOne(Space, {
-      where: {
-        account: {
-          library: {
-            id: templatesSetId,
-          },
-        },
-      },
-      relations: {
-        storageAggregator: true,
-      },
-    });
-
-    if (space && space.storageAggregator) {
-      return await this.getStorageAggregatorOrFail(space.storageAggregator.id);
-    }
+    // The parent of Spaces and IPs is an Account, Spaces have a StorageAggregator but Account also has a StorageAggregator.
+    // So for templatesSets in spaces we return the Space's StoreAggregator, and for templatesSets in IPs we return the Account's StorageAggregator.
 
     if (!isUUID(templatesSetId)) {
       throw new InvalidUUID(
@@ -126,17 +113,20 @@ export class StorageAggregatorResolverService {
         { provided: templatesSetId }
       );
     }
-    // This is getting the StorageAggregator of the account in wich the innovationPack resides
-    const query = `SELECT \`account\`.\`storageAggregatorId\` FROM \`innovation_pack\`
-      JOIN \`account\` ON \`innovation_pack\`.\`accountId\`=\`account\`.\`id\`
-      WHERE \`innovation_pack\`.\`templatesSetId\`='${templatesSetId}'`;
+
+    // We are doing this UNION here, but only one of them will return a result.
+    const query = `
+      SELECT space.storageAggregatorId FROM space
+        JOIN account ON space.accountId = account.id
+        WHERE space.level = 0 AND account.libraryId = '${templatesSetId}'
+      UNION
+      SELECT account.storageAggregatorId FROM innovation_pack
+        JOIN account ON innovation_pack.accountId = account.id
+        WHERE innovation_pack.templatesSetId = '${templatesSetId}'`;
 
     const [result] = await this.entityManager.connection.query(query);
     if (result) {
-      // Use the Account Storage Aggregator
-      return this.storageAggregatorRepository.findOneOrFail({
-        where: { id: result.storageAggregatorId },
-      });
+      return this.getStorageAggregatorOrFail(result.storageAggregatorId);
     }
 
     throw new StorageAggregatorNotFoundException(
