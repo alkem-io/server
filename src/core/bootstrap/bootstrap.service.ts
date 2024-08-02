@@ -64,13 +64,12 @@ export class BootstrapService {
     // this.ingestService.ingest(); // todo remove later
     try {
       this.logger.verbose?.('Bootstrapping...', LogContext.BOOTSTRAP);
-      this.logConfiguration();
 
       Profiling.logger = this.logger;
-      const profilingEnabled = this.configService.get(
-        ConfigurationTypes.MONITORING
-      )?.logging?.profiling_enabled;
-      if (profilingEnabled) Profiling.profilingEnabled = profilingEnabled;
+      const profilingEnabled = this.configService.get('monitoring.logging.profiling_enabled', { infer: true });
+      if (profilingEnabled) {
+        Profiling.profilingEnabled = profilingEnabled;
+      }
 
       await this.ensureAccountSpaceSingleton();
       await this.bootstrapProfiles();
@@ -89,38 +88,8 @@ export class BootstrapService {
     }
   }
 
-  logConfiguration() {
-    this.logger.verbose?.(
-      '==== Configuration - Start ===',
-      LogContext.BOOTSTRAP
-    );
-
-    const values = Object.values(ConfigurationTypes);
-    for (const value of values) {
-      this.logConfigLevel(value, this.configService.get(value));
-    }
-    this.logger.verbose?.('==== Configuration - End ===', LogContext.BOOTSTRAP);
-  }
-
-  logConfigLevel(key: any, value: any, indent = '', incrementalIndent = '  ') {
-    if (typeof value === 'object') {
-      const msg = `${indent}${key}:`;
-      this.logger.verbose?.(`${msg}`, LogContext.BOOTSTRAP);
-      Object.keys(value).forEach(childKey => {
-        const childValue = value[childKey];
-        const newIndent = `${indent}${incrementalIndent}`;
-        this.logConfigLevel(childKey, childValue, newIndent, incrementalIndent);
-      });
-    } else {
-      const msg = `${indent}==> ${key}: ${value}`;
-      this.logger.verbose?.(`${msg}`, LogContext.BOOTSTRAP);
-    }
-  }
-
   async bootstrapProfiles() {
-    const bootstrapAuthorizationEnabled = this.configService.get(
-      ConfigurationTypes.BOOTSTRAP
-    )?.authorization?.enabled;
+    const bootstrapAuthorizationEnabled = this.configService.get('bootstrap.authorization.enabled', { infer: true });
     if (!bootstrapAuthorizationEnabled) {
       this.logger.verbose?.(
         `Authorization Profile Loading: ${bootstrapAuthorizationEnabled}`,
@@ -129,9 +98,7 @@ export class BootstrapService {
       return;
     }
 
-    const bootstrapFilePath = this.configService.get(
-      ConfigurationTypes.BOOTSTRAP
-    )?.authorization?.file as string;
+    const bootstrapFilePath = this.configService.get('bootstrap.authorization.file', { infer: true });
 
     let bootstrapJson = {
       ...defaultRoles,
@@ -233,7 +200,7 @@ export class BootstrapService {
   }
 
   async ensureSsiPopulated() {
-    const ssiEnabled = this.configService.get(ConfigurationTypes.SSI).enabled;
+    const ssiEnabled = this.configService.get('ssi.enabled', { infer: true });
     if (ssiEnabled) {
       await this.agentService.ensureDidsCreated();
     }

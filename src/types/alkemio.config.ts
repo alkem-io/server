@@ -97,6 +97,9 @@ export type AlkemioConfig = {
     };
   };
   storage: {
+    graphql_upload: {
+      max_file_size: number;
+    },
     database: {
       host: string;
       port: number;
@@ -177,6 +180,8 @@ export type AlkemioConfig = {
     landing: string;
     blog: string;
     impact: string;
+    inspiration: string;
+    innovationLibrary: string;
     foundation: string;
     contactsupport: string;
     switchplan: string;

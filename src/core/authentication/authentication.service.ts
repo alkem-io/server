@@ -1,12 +1,7 @@
 import { ConfigService } from '@nestjs/config';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import {
-  Configuration,
-  FrontendApi,
-  IdentityApi,
-  Session,
-} from '@ory/kratos-client';
-import { ConfigurationTypes, LogContext } from '@common/enums';
+import { Configuration, FrontendApi, IdentityApi, Session } from '@ory/kratos-client';
+import { LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { UserService } from '@domain/community/user/user.service';
 import { AgentInfo } from '../authentication.agent.info/agent.info';
@@ -37,26 +32,20 @@ export class AuthenticationService {
     private agentService: AgentService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {
-    this.kratosPublicUrlServer = this.configService.get(
-      ConfigurationTypes.IDENTITY
-    ).authentication.providers.ory.kratos_public_base_url_server;
-    const kratosAdminUrlServer = this.configService.get(
-      ConfigurationTypes.IDENTITY
-    ).authentication.providers.ory.kratos_admin_base_url_server;
+    const {
+      kratos_public_base_url_server,
+      kratos_admin_base_url_server,
+      admin_service_account,
+      earliest_possible_extend
+    } = this.configService.get('identity.authentication.providers.ory', { infer: true });
+    this.kratosPublicUrlServer = kratos_public_base_url_server;
+    const kratosAdminUrlServer = kratos_admin_base_url_server
 
-    this.adminPasswordIdentifier = this.configService.get(
-      ConfigurationTypes.IDENTITY
-    ).authentication.providers.ory.admin_service_account.username;
-    this.adminPassword = this.configService.get(
-      ConfigurationTypes.IDENTITY
-    ).authentication.providers.ory.admin_service_account.password;
-
-    const earliestPossibleExtend = this.configService.get(
-      ConfigurationTypes.IDENTITY
-    ).authentication.providers.ory.earliest_possible_extend;
+    this.adminPasswordIdentifier = admin_service_account.username;
+    this.adminPassword = admin_service_account.password;
 
     this.extendSessionMinRemainingTTL = this.parseEarliestPossibleExtend(
-      earliestPossibleExtend
+      earliest_possible_extend
     );
 
     this.kratosIdentityClient = new IdentityApi(
@@ -161,7 +150,7 @@ export class AuthenticationService {
     agentInfo.communicationID = agentInfoMetadata.communicationID;
 
     // Store also retrieved verified credentials; todo: likely slow, need to evaluate other options
-    const ssiEnabled = this.configService.get(ConfigurationTypes.SSI).enabled;
+    const ssiEnabled = this.configService.get('ssi.enabled', { infer: true });
 
     if (ssiEnabled) {
       const VCs = await this.agentService.getVerifiedCredentials(

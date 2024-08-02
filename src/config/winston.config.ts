@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import * as winston from 'winston';
 import { utilities as nestWinstonModuleUtilities } from 'nest-winston';
 import { ConfigService } from '@nestjs/config';
-import { ConfigurationTypes } from '@common/enums';
 import { FileTransportOptions } from 'winston/lib/winston/transports';
 import * as logform from 'logform';
 import { AlkemioConfig } from '@src/types';
@@ -28,28 +27,23 @@ export class WinstonConfigService {
   constructor(private configService: ConfigService<AlkemioConfig, true>) {}
 
   async createWinstonModuleOptions() {
-    const consoleEnabled: boolean = this.configService.get(
-      ConfigurationTypes.MONITORING
-    )?.logging?.console_logging_enabled;
+    const consoleEnabled: boolean = this.configService.get('monitoring.logging.console_logging_enabled', { infer: true });
 
     const transports: any[] = [
       new winston.transports.Console({
         format: winston.format.combine(
-          ...(this.configService.get(ConfigurationTypes.MONITORING)?.logging
+          ...(this.configService.get('monitoring.logging', { infer: true })
             ?.json
             ? consoleLoggingProdFormat
             : consoleLoggingStandardFormat)
         ),
         level: this.configService
-          .get(ConfigurationTypes.MONITORING)
-          ?.logging?.level.toLowerCase(),
+          .get('monitoring.logging.level', { infer: true }).toLowerCase(),
         silent: !consoleEnabled,
       }),
     ];
 
-    const contextToFileConfig = this.configService.get(
-      ConfigurationTypes.MONITORING
-    )?.logging.context_to_file;
+    const contextToFileConfig = this.configService.get('monitoring.logging.context_to_file', { infer: true });
     if (contextToFileConfig.enabled) {
       const filename = contextToFileConfig.filename;
 
@@ -84,8 +78,7 @@ export class WinstonConfigService {
       const fileTransportOptions: FileTransportOptions = {
         format: myFormat,
         level: this.configService
-          .get(ConfigurationTypes.MONITORING)
-          ?.logging?.level.toLowerCase(),
+          .get('monitoring.logging.level', { infer: true }).toLowerCase(),
         silent: false,
         filename: filename,
       };

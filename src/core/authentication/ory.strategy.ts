@@ -1,6 +1,5 @@
 import {
   AlkemioErrorStatus,
-  ConfigurationTypes,
   LogContext,
 } from '@common/enums';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
@@ -24,16 +23,15 @@ export class OryStrategy extends PassportStrategy(Strategy, 'oathkeeper-jwt') {
     private readonly authService: AuthenticationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {
+
     super({
       secretOrKeyProvider: passportJwtSecret({
         cache: true,
         rateLimit: true,
         jwksRequestsPerMinute: 5,
-        jwksUri: configService.get(ConfigurationTypes.IDENTITY)?.authentication
-          ?.providers?.ory?.jwks_uri,
+        jwksUri: configService.get('identity.authentication.providers.ory.jwks_uri', { infer: true }),
       }),
-      issuer: configService.get(ConfigurationTypes.IDENTITY)?.authentication
-        ?.providers?.ory?.issuer,
+      issuer:  configService.get('identity.authentication.providers.ory.issuer', { infer: true }),
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: true,
     });
