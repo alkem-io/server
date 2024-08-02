@@ -106,9 +106,10 @@ export class InvitationService {
   }
 
   async getInvitedContributor(invitation: IInvitation): Promise<IContributor> {
-    const contributor = await this.contributorService.getContributorOrFail(
-      invitation.invitedContributor
-    );
+    const contributor =
+      await this.contributorService.getContributorByUuidOrFail(
+        invitation.invitedContributor
+      );
     if (!contributor)
       throw new RelationshipNotFoundException(
         `Unable to load contributor for invitation ${invitation.id} `,

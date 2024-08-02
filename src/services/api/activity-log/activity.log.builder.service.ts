@@ -54,7 +54,7 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
       rawActivity.parentID
     );
     const contributorJoining =
-      await this.contributorLookupService.getContributorOrFail(
+      await this.contributorLookupService.getContributorByUuidOrFail(
         rawActivity.resourceID
       );
 

@@ -266,18 +266,18 @@ export class BootstrapService {
       this.logger.verbose?.('...No account present...', LogContext.BOOTSTRAP);
       this.logger.verbose?.('........creating...', LogContext.BOOTSTRAP);
       // create a default host org
-      const hostOrganization = await this.organizationService.getOrganization(
+      let hostOrganization = await this.organizationService.getOrganization(
         DEFAULT_HOST_ORG_NAMEID
       );
       if (!hostOrganization) {
-        const hostOrg = await this.organizationService.createOrganization({
+        hostOrganization = await this.organizationService.createOrganization({
           nameID: DEFAULT_HOST_ORG_NAMEID,
           profileData: {
             displayName: DEFAULT_HOST_ORG_DISPLAY_NAME,
           },
         });
         await this.organizationAuthorizationService.applyAuthorizationPolicy(
-          hostOrg
+          hostOrganization
         );
       }
 
@@ -291,7 +291,7 @@ export class BootstrapService {
           level: SpaceLevel.SPACE,
           type: SpaceType.SPACE,
         },
-        hostID: DEFAULT_HOST_ORG_NAMEID,
+        hostID: hostOrganization.id,
       };
 
       let account = await this.accountService.createAccount(spaceInput);

@@ -247,7 +247,6 @@ export class CollaborationService {
     const space = await this.entityManager.findOne(Space, {
       where: { collaboration: { id: collaborationID } },
       relations: {
-        account: true,
         subspaces: {
           collaboration: true,
         },
@@ -259,15 +258,12 @@ export class CollaborationService {
         LogContext.COLLABORATION
       );
     }
-    const accountID = space.account.id;
 
     switch (space.level) {
       case SpaceLevel.SPACE:
         const spacesInAccount = await this.entityManager.find(Space, {
           where: {
-            account: {
-              id: accountID,
-            },
+            levelZeroSpaceID: space.id,
           },
           relations: {
             collaboration: true,

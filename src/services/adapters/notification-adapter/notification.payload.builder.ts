@@ -549,14 +549,12 @@ export class NotificationPayloadBuilder {
   private async getContributorPayloadOrFail(
     contributorID: string
   ): Promise<ContributorPayload> {
-    const contributor = await this.contributorLookupService.getContributor(
-      contributorID,
-      {
+    const contributor =
+      await this.contributorLookupService.getContributorByUUID(contributorID, {
         relations: {
           profile: true,
         },
-      }
-    );
+      });
 
     if (!contributor || !contributor.profile) {
       throw new EntityNotFoundException(

@@ -1,20 +1,18 @@
 import { EntityManager, FindOneOptions, In } from 'typeorm';
+import { isUUID } from 'class-validator';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { User } from '@domain/community/user/user.entity';
 import { IUser } from '@domain/community/user/user.interface';
-import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
-import {
-  EntityNotFoundException,
-  RelationshipNotFoundException,
-} from '@common/exceptions';
+import { EntityNotFoundException, RelationshipNotFoundException } from '@common/exceptions';
 import { AuthorizationCredential, LogContext } from '@common/enums';
 import { Credential, CredentialsSearchInput, ICredential } from '@domain/agent';
 import { VirtualContributor } from '@domain/community/virtual-contributor';
 import { IOrganization, Organization } from '@domain/community/organization';
 import { CommunityContributorType } from '@common/enums/community.contributor.type';
+import { InvalidUUID } from '@common/exceptions/invalid.uuid';
 
 export class ContributorLookupService {
   constructor(
@@ -28,18 +26,12 @@ export class ContributorLookupService {
     userID: string,
     options?: FindOneOptions<User> | undefined
   ): Promise<IUser | null> {
-    let user: IUser | null = null;
-
-    if (userID.length === UUID_LENGTH) {
-      {
-        user = await this.entityManager.findOne(User, {
-          where: {
-            id: userID,
-          },
-          ...options,
-        });
-      }
-    }
+    const user: IUser | null = await this.entityManager.findOne(User, {
+      where: {
+        id: userID,
+      },
+      ...options,
+    });
 
     return user;
   }
@@ -58,23 +50,18 @@ export class ContributorLookupService {
     return user;
   }
 
-  async getOrganization(
+  async getOrganizationByUUID(
     organizationID: string,
     options?: FindOneOptions<Organization>
   ): Promise<IOrganization | null> {
-    let organization: IOrganization | null;
-    if (organizationID.length === UUID_LENGTH) {
-      organization = await this.entityManager.findOne(Organization, {
+    const organization: IOrganization | null = await this.entityManager.findOne(
+      Organization,
+      {
         ...options,
         where: { ...options?.where, id: organizationID },
-      });
-    } else {
-      // look up based on nameID
-      organization = await this.entityManager.findOne(Organization, {
-        ...options,
-        where: { ...options?.where, nameID: organizationID },
-      });
-    }
+      }
+    );
+
     return organization;
   }
 
@@ -82,7 +69,10 @@ export class ContributorLookupService {
     organizationID: string,
     options?: FindOneOptions<Organization>
   ): Promise<IOrganization | never> {
-    const organization = await this.getOrganization(organizationID, options);
+    const organization = await this.getOrganizationByUUID(
+      organizationID,
+      options
+    );
     if (!organization)
       throw new EntityNotFoundException(
         `Unable to find Organization with ID: ${organizationID}`,
@@ -257,55 +247,45 @@ export class ContributorLookupService {
       .concat(vcContributors);
   }
 
-  async getContributor(
+  async getContributorByUUID(
     contributorID: string,
     options?: FindOneOptions<IContributor>
   ): Promise<IContributor | null> {
-    let contributor: IContributor | null;
-    if (contributorID.length === UUID_LENGTH) {
-      contributor = await this.entityManager.findOne(User, {
+    if (!isUUID(contributorID)) {
+      throw new InvalidUUID(
+        'Invalid UUID provided!',
+        LogContext.COMMUNITY,
+        { provided: contributorID }
+      );
+    }
+    let contributor: IContributor | null = await this.entityManager.findOne(
+      User,
+      {
+        ...options,
+        where: { ...options?.where, id: contributorID },
+      }
+    );
+    if (!contributor) {
+      contributor = await this.entityManager.findOne(Organization, {
         ...options,
         where: { ...options?.where, id: contributorID },
       });
-      if (!contributor) {
-        contributor = await this.entityManager.findOne(Organization, {
-          ...options,
-          where: { ...options?.where, id: contributorID },
-        });
-      }
-      if (!contributor) {
-        contributor = await this.entityManager.findOne(VirtualContributor, {
-          ...options,
-          where: { ...options?.where, id: contributorID },
-        });
-      }
-    } else {
-      // look up based on nameID
-      contributor = await this.entityManager.findOne(User, {
-        ...options,
-        where: { ...options?.where, nameID: contributorID },
-      });
-      if (!contributor) {
-        contributor = await this.entityManager.findOne(Organization, {
-          ...options,
-          where: { ...options?.where, nameID: contributorID },
-        });
-      }
-      if (!contributor) {
-        contributor = await this.entityManager.findOne(VirtualContributor, {
-          ...options,
-          where: { ...options?.where, nameID: contributorID },
-        });
-      }
     }
+    if (!contributor) {
+      contributor = await this.entityManager.findOne(VirtualContributor, {
+        ...options,
+        where: { ...options?.where, id: contributorID },
+      });
+    }
+
     return contributor;
   }
 
-  async getContributorOrFail(
+  async getContributorByUuidOrFail(
     contributorID: string,
     options?: FindOneOptions<IContributor>
   ): Promise<IContributor | never> {
-    const contributor = await this.getContributor(contributorID, options);
+    const contributor = await this.getContributorByUUID(contributorID, options);
     if (!contributor)
       throw new EntityNotFoundException(
         `Unable to find Contributor with ID: ${contributorID}`,

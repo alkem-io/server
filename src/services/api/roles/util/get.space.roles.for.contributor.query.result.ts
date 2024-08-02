@@ -34,8 +34,8 @@ export const getSpaceRolesForContributorQueryResult = (
     );
 
     if (readAccessSpace) {
-      const accountID = space.account?.id;
-      if (!accountID) {
+      const levelZeroSpaceID = space.levelZeroSpaceID;
+      if (!levelZeroSpaceID) {
         throw new RelationshipNotFoundException(
           `Unable to load account on Space in roles user: ${space.nameID}`,
           LogContext.ROLES
@@ -43,14 +43,14 @@ export const getSpaceRolesForContributorQueryResult = (
       }
       const subspaceResults: RolesResultCommunity[] = [];
       for (const subspace of subspaces) {
-        const challengeAccountID = subspace.account?.id;
-        if (!challengeAccountID) {
+        const challengeLevelZeroSpaceID = subspace.levelZeroSpaceID;
+        if (!challengeLevelZeroSpaceID) {
           throw new RelationshipNotFoundException(
-            `Unable to load account on Challenge in roles user: ${space.nameID}`,
+            `Unable to load L0 space ID on Challenge in roles user: ${space.nameID}`,
             LogContext.ROLES
           );
         }
-        if (challengeAccountID === accountID) {
+        if (challengeLevelZeroSpaceID === levelZeroSpaceID) {
           const subspaceResult = new RolesResultCommunity(
             subspace.nameID,
             subspace.id,

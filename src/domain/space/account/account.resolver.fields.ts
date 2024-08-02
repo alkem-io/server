@@ -12,11 +12,9 @@ import { IAccount } from '@domain/space/account/account.interface';
 import { ITemplatesSet } from '@domain/template/templates-set';
 import { Loader } from '@core/dataloader/decorators';
 import { ILoader } from '@core/dataloader/loader.interface';
-import { ILicense } from '@domain/license/license/license.interface';
 import { ISpaceDefaults } from '../space.defaults/space.defaults.interface';
 import {
   AccountDefaultsLoaderCreator,
-  AccountLicenseLoaderCreator,
   AccountLibraryLoaderCreator,
   AuthorizationLoaderCreator,
   AgentLoaderCreator,
@@ -107,18 +105,6 @@ export class AccountResolverFields {
       AuthorizationPrivilege.READ,
       `read defaults on account: ${account.id}`
     );
-    return loader.load(account.id);
-  }
-
-  @ResolveField('license', () => ILicense, {
-    nullable: false,
-    description:
-      'The License governing platform functionality in use by this Account',
-  })
-  async license(
-    @Parent() account: Account,
-    @Loader(AccountLicenseLoaderCreator) loader: ILoader<ILicense>
-  ): Promise<ILicense> {
     return loader.load(account.id);
   }
 
