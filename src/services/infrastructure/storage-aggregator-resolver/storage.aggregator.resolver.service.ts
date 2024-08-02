@@ -116,13 +116,17 @@ export class StorageAggregatorResolverService {
 
     // We are doing this UNION here, but only one of them will return a result.
     const query = `
-      SELECT space.storageAggregatorId FROM space
-        JOIN account ON space.accountId = account.id
-        WHERE space.level = 0 AND account.libraryId = '${templatesSetId}'
+      SELECT account.storageAggregatorId FROM account
+        WHERE account.libraryId = '${templatesSetId}'
       UNION
       SELECT account.storageAggregatorId FROM innovation_pack
         JOIN account ON innovation_pack.accountId = account.id
         WHERE innovation_pack.templatesSetId = '${templatesSetId}'`;
+
+    // If we want to get the storageAggregator of the space in the first case, we would do:
+    //  SELECT space.storageAggregatorId FROM space
+    //    JOIN account ON space.accountId = account.id
+    //    WHERE space.level = 0 AND account.libraryId = '${templatesSetId}'
 
     const [result] = await this.entityManager.connection.query(query);
     if (result) {
