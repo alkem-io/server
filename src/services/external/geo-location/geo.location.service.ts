@@ -33,7 +33,7 @@ export class GeoLocationService {
     private readonly configService: ConfigService<AlkemioConfig, true>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {
-    const config = configService.get('integrations.geo', { infer: true });
+    const config = this.configService.get('integrations.geo', { infer: true });
     this.endpoint = config.service_endpoint;
     this.allowedCallsToService = config.allowed_calls_to_service;
     this.allowedCallsToServiceWindow = config.allowed_calls_to_service_window;

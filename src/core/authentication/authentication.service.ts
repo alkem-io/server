@@ -25,6 +25,7 @@ export class AuthenticationService {
   private readonly kratosIdentityClient: IdentityApi;
   private readonly kratosFrontEndClient: FrontendApi;
 
+
   constructor(
     private agentCacheService: AgentInfoCacheService,
     private configService: ConfigService<AlkemioConfig, true>,
@@ -32,6 +33,7 @@ export class AuthenticationService {
     private agentService: AgentService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {
+    this.kratosPublicUrlServer = this.configService.get('identity.authentication.providers.ory.kratos_public_base_url_server', { infer: true });
     const {
       kratos_public_base_url_server,
       kratos_admin_base_url_server,
