@@ -61,6 +61,7 @@ import { UpdateSpaceSettingsInput } from './dto/space.dto.update.settings';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { CommunityContributorType } from '@common/enums/community.contributor.type';
 import { CommunityRoleService } from '@domain/community/community-role/community.role.service';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 
 @Injectable()
 export class SpaceService {
@@ -1157,7 +1158,9 @@ export class SpaceService {
     return context;
   }
 
-  public async getStorageAggregatorOrFail(spaceID: string): Promise<IContext> {
+  public async getStorageAggregatorOrFail(
+    spaceID: string
+  ): Promise<IStorageAggregator> {
     const space = await this.getSpaceOrFail(spaceID, {
       relations: {
         storageAggregator: true,
@@ -1167,7 +1170,7 @@ export class SpaceService {
     if (!storageAggregator)
       throw new RelationshipNotFoundException(
         `Unable to load storage aggregator for space ${spaceID} `,
-        LogContext.CONTEXT
+        LogContext.SPACES
       );
     return storageAggregator;
   }

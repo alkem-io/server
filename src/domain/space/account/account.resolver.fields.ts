@@ -28,7 +28,6 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IAgent } from '@domain/agent/agent/agent.interface';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { IAccountSubscription } from './account.license.subscription.interface';
-import { LicensingService } from '@platform/licensing/licensing.service';
 import {
   IVirtualContributor,
   VirtualContributor,
@@ -37,13 +36,13 @@ import { AccountHostService } from '../account.host/account.host.service';
 import { LicensePrivilege } from '@common/enums/license.privilege';
 import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
 import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 
 @Resolver(() => IAccount)
 export class AccountResolverFields {
   constructor(
     private accountService: AccountService,
     private accountHostService: AccountHostService,
-    private licensingService: LicensingService,
     private authorizationService: AuthorizationService
   ) {}
 
@@ -204,5 +203,17 @@ export class AccountResolverFields {
     loader: ILoader<IInnovationPack[]>
   ): Promise<IInnovationPack[]> {
     return loader.load(account.id);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('storageAggregator', () => IStorageAggregator, {
+    nullable: false,
+    description: 'The StorageAggregator in use by this Account',
+  })
+  async storageAggregator(
+    @Parent() account: Account
+  ): Promise<IStorageAggregator> {
+    return await this.accountService.getStorageAggregatorOrFail(account.id);
   }
 }

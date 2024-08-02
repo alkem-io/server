@@ -48,6 +48,7 @@ import { SpaceLevel } from '@common/enums/space.level';
 import { InnovationPackService } from '@library/innovation-pack/innovaton.pack.service';
 import { CreateInnovationPackOnAccountInput } from './dto/account.dto.create.innovation.pack';
 import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 
 @Injectable()
 export class AccountService {
@@ -516,5 +517,22 @@ export class AccountService {
       })
       .filter(item => item.plan?.type === LicensePlanType.SPACE_PLAN)
       .sort((a, b) => b.plan!.sortOrder - a.plan!.sortOrder)?.[0].subscription;
+  }
+
+  public async getStorageAggregatorOrFail(
+    accountID: string
+  ): Promise<IStorageAggregator> {
+    const space = await this.getAccountOrFail(accountID, {
+      relations: {
+        storageAggregator: true,
+      },
+    });
+    const storageAggregator = space.storageAggregator;
+    if (!storageAggregator)
+      throw new RelationshipNotFoundException(
+        `Unable to load storage aggregator for account ${accountID} `,
+        LogContext.ACCOUNT
+      );
+    return storageAggregator;
   }
 }
