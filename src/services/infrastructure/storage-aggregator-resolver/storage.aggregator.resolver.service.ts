@@ -15,6 +15,8 @@ import { StorageAggregatorNotFoundException } from '@common/exceptions/storage.a
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Space } from '@domain/space/space/space.entity';
 import { SpaceLevel } from '@common/enums/space.level';
+import { isUUID } from 'class-validator';
+import { InvalidUUID } from '@common/exceptions/invalid.uuid';
 
 @Injectable()
 export class StorageAggregatorResolverService {
@@ -60,15 +62,6 @@ export class StorageAggregatorResolverService {
     return this.getStorageAggregatorOrFail(result.storageAggregatorId);
   }
 
-  public async getLibraryStorageAggregator(): Promise<IStorageAggregator> {
-    const query = `SELECT \`storageAggregatorId\`
-    FROM \`library\` LIMIT 1`;
-    const [result]: {
-      storageAggregatorId: string;
-    }[] = await this.entityManager.connection.query(query);
-    return this.getStorageAggregatorOrFail(result.storageAggregatorId);
-  }
-
   public async getParentEntityInformation(
     storageAggregatorID: string
   ): Promise<{
@@ -105,29 +98,39 @@ export class StorageAggregatorResolverService {
   public async getStorageAggregatorForTemplatesSet(
     templatesSetId: string
   ): Promise<IStorageAggregator> {
-    const space = await this.entityManager.findOne(Space, {
-      where: {
-        account: {
-          library: {
-            id: templatesSetId,
-          },
-        },
-      },
-      relations: {
-        storageAggregator: true,
-      },
-    });
+    // This query is a bit tricky because we have a TemplateSetId and we need to find the StorageAggregator
+    // associated to it's parent.
+    // TemplatesSets can be in a Space (the space's templates), or an InnovationPack (the templates of that IP).
+    // In practice it's just a ManyToMany relationship between Spaces/IPs and the templates associated to them.
 
-    if (space && space.storageAggregator) {
-      return await this.getStorageAggregatorOrFail(space.storageAggregator.id);
+    // The parent of Spaces and IPs is an Account, Spaces have a StorageAggregator but Account also has a StorageAggregator.
+    // So for templatesSets in spaces we return the Space's StoreAggregator, and for templatesSets in IPs we return the Account's StorageAggregator.
+
+    if (!isUUID(templatesSetId)) {
+      throw new InvalidUUID(
+        'Invalid UUID provided to find the StorageAggregator of a templateSet',
+        LogContext.COMMUNITY,
+        { provided: templatesSetId }
+      );
     }
 
-    const query = `SELECT \`id\` FROM \`innovation_pack\`
-      WHERE \`innovation_pack\`.\`templatesSetId\`='${templatesSetId}'`;
+    // We are doing this UNION here, but only one of them will return a result.
+    const query = `
+      SELECT account.storageAggregatorId FROM account
+        WHERE account.libraryId = '${templatesSetId}'
+      UNION
+      SELECT account.storageAggregatorId FROM innovation_pack
+        JOIN account ON innovation_pack.accountId = account.id
+        WHERE innovation_pack.templatesSetId = '${templatesSetId}'`;
+
+    // If we want to get the storageAggregator of the space in the first case, we would do:
+    //  SELECT space.storageAggregatorId FROM space
+    //    JOIN account ON space.accountId = account.id
+    //    WHERE space.level = 0 AND account.libraryId = '${templatesSetId}'
+
     const [result] = await this.entityManager.connection.query(query);
     if (result) {
-      // use the library sorage aggregator
-      return await this.getLibraryStorageAggregator();
+      return this.getStorageAggregatorOrFail(result.storageAggregatorId);
     }
 
     throw new StorageAggregatorNotFoundException(
@@ -147,9 +150,8 @@ export class StorageAggregatorResolverService {
   public async getStorageAggregatorForCalendar(
     calendarID: string
   ): Promise<IStorageAggregator> {
-    const storageAggregatorId = await this.getStorageAggregatorIdForCalendar(
-      calendarID
-    );
+    const storageAggregatorId =
+      await this.getStorageAggregatorIdForCalendar(calendarID);
     return await this.getStorageAggregatorOrFail(storageAggregatorId);
   }
 
@@ -192,9 +194,8 @@ export class StorageAggregatorResolverService {
   public async getStorageAggregatorForCommunity(
     communityID: string
   ): Promise<IStorageAggregator> {
-    const storageAggregatorId = await this.getStorageAggregatorIdForCommunity(
-      communityID
-    );
+    const storageAggregatorId =
+      await this.getStorageAggregatorIdForCommunity(communityID);
     return await this.getStorageAggregatorOrFail(storageAggregatorId);
   }
 
@@ -223,9 +224,8 @@ export class StorageAggregatorResolverService {
   public async getStorageAggregatorForCallout(
     calloutID: string
   ): Promise<IStorageAggregator> {
-    const storageAggregatorId = await this.getStorageAggregatorIdForCallout(
-      calloutID
-    );
+    const storageAggregatorId =
+      await this.getStorageAggregatorIdForCallout(calloutID);
     return await this.getStorageAggregatorOrFail(storageAggregatorId);
   }
 
