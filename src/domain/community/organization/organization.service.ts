@@ -509,7 +509,7 @@ export class OrganizationService {
     const groups = organizationGroups.groups;
     if (!groups)
       throw new ValidationException(
-        `No groups on organization: ${organization.nameID}`,
+        `No groups on organization: ${organization.id}`,
         LogContext.COMMUNITY
       );
     return groups;
@@ -527,7 +527,7 @@ export class OrganizationService {
 
     if (!preferenceSet) {
       throw new EntityNotFoundException(
-        `Unable to find preferenceSet for organization with nameID: ${orgWithPreferences.nameID}`,
+        `Unable to find preferenceSet for organization with nameID: ${orgWithPreferences.id}`,
         LogContext.COMMUNITY
       );
     }
@@ -551,7 +551,7 @@ export class OrganizationService {
 
     if (!storageAggregator) {
       throw new EntityNotFoundException(
-        `Unable to find storageAggregator for Organization with nameID: ${organizationWithStorageAggregator.nameID}`,
+        `Unable to find storageAggregator for Organization with nameID: ${organizationWithStorageAggregator.id}`,
         LogContext.COMMUNITY
       );
     }
@@ -616,7 +616,7 @@ export class OrganizationService {
     );
     if (!organization.verification) {
       throw new EntityNotFoundException(
-        `Unable to load verification for organisation: ${organization.nameID}`,
+        `Unable to load verification for organisation: ${organization.id}`,
         LogContext.COMMUNITY
       );
     }

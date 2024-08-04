@@ -269,7 +269,7 @@ export class SpaceService {
     // Do not remove a space that has subspaces, require these to be individually first removed
     if (space.subspaces.length > 0)
       throw new OperationNotAllowedException(
-        `Unable to remove Space (${space.nameID}) as it contains ${space.subspaces.length} subspaces`,
+        `Unable to remove Space (${space.id}) as it contains ${space.subspaces.length} subspaces`,
         LogContext.SPACES
       );
 

@@ -41,7 +41,7 @@ export class OrganizationRoleResolverMutations {
       agentInfo,
       organization.authorization,
       AuthorizationPrivilege.GRANT,
-      `assign organization role to user: ${organization.nameID} - ${membershipData.role}`
+      `assign organization role to user: ${organization.id} - ${membershipData.role}`
     );
     return await this.organizationRoleService.assignOrganizationRoleToUser(
       membershipData
@@ -76,7 +76,7 @@ export class OrganizationRoleResolverMutations {
       agentInfo,
       authorization,
       AuthorizationPrivilege.GRANT,
-      `remove user organization role from user: ${organization.nameID} - ${membershipData.role}`
+      `remove user organization role from user: ${organization.id} - ${membershipData.role}`
     );
     return await this.organizationRoleService.removeOrganizationRoleFromUser(
       membershipData

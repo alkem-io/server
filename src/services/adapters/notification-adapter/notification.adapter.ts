@@ -274,7 +274,7 @@ export class NotificationAdapter {
       const entityMentionNotificationInput: NotificationInputEntityMention = {
         triggeredBy: eventData.triggeredBy,
         comment: eventData.comment,
-        mentionedEntityID: mention.nameId,
+        mentionedEntityID: mention.id,
         commentsId: eventData.roomId,
         originEntity: eventData.originEntity,
         commentType: eventData.commentType,
