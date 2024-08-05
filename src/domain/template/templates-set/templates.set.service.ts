@@ -345,9 +345,8 @@ export class TemplatesSetService {
     templatesSet: ITemplatesSet,
     whiteboardTemplateInput: CreateWhiteboardTemplateInput
   ): Promise<IWhiteboardTemplate> {
-    templatesSet.whiteboardTemplates = await this.getWhiteboardTemplates(
-      templatesSet
-    );
+    templatesSet.whiteboardTemplates =
+      await this.getWhiteboardTemplates(templatesSet);
 
     const existingWithSameName = templatesSet.whiteboardTemplates.find(
       template =>
@@ -460,19 +459,16 @@ export class TemplatesSetService {
   }
 
   async getTemplatesCount(templatesSetID: string): Promise<number> {
-    const whiteboardTemplatesCount = await this.getWhiteboardTemplatesCount(
-      templatesSetID
-    );
+    const whiteboardTemplatesCount =
+      await this.getWhiteboardTemplatesCount(templatesSetID);
 
     const postTemplatesCount = await this.getPostTemplatesCount(templatesSetID);
 
-    const innovationFlowsCount = await this.getInnovationFlowTemplatesCount(
-      templatesSetID
-    );
+    const innovationFlowsCount =
+      await this.getInnovationFlowTemplatesCount(templatesSetID);
 
-    const calloutTemplatesCount = await this.getCalloutTemplatesCount(
-      templatesSetID
-    );
+    const calloutTemplatesCount =
+      await this.getCalloutTemplatesCount(templatesSetID);
 
     const communityGuidelinesTemplatesCount =
       await this.getCommunityGuidelinesTemplatesCount(templatesSetID);

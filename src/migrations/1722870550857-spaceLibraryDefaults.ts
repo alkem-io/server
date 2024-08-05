@@ -38,6 +38,8 @@ export class SpaceLibraryDefaults1722870550857 implements MigrationInterface {
       );
     }
 
+    // TODO: update the storage aggregator hierarchy for the TemplatesSet?
+
     await queryRunner.query(
       `ALTER TABLE \`space\` ADD CONSTRAINT \`FK_9542f2ad51464f961e5b5b5b582\` FOREIGN KEY (\`defaultsId\`) REFERENCES \`space_defaults\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
