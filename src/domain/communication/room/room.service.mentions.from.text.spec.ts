@@ -92,8 +92,8 @@ describe('RoomServiceMentions', () => {
         { nameId: 'alex-org', type: 'organization' },
       ],
     ],
-  ])('%s -> %j', (text, expected) => {
-    const result = service.getMentionsFromText(text);
+  ])('%s -> %j', async (text, expected) => {
+    const result = await service.getMentionsFromText(text);
     expect(result.length).toBe(expected.length);
     expect(result).toStrictEqual(expected);
   });
