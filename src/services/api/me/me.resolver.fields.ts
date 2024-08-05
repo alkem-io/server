@@ -116,6 +116,16 @@ export class MeResolverFields {
   }
 
   @UseGuards(GraphqlGuard)
+  @ResolveField(() => [CommunityMembershipResult], {
+    description: 'The Spaces the current user is a member of as a flat list.',
+  })
+  public spaceMembershipsFlat(
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<CommunityMembershipResult[]> {
+    return this.meService.getSpaceMembershipsFlat(agentInfo);
+  }
+
+  @UseGuards(GraphqlGuard)
   @ResolveField(() => [MySpaceResults], {
     description: 'The Spaces I am contributing to',
   })

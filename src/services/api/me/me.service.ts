@@ -94,9 +94,9 @@ export class MeService {
     return results;
   }
 
-  public async getSpaceMembershipsHierarchical(
+  private async getSpacesWhereAmMember(
     agentInfo: AgentInfo
-  ): Promise<CommunityMembershipResult[]> {
+  ): Promise<ISpace[]> {
     const credentialMap = groupCredentialsByEntity(agentInfo.credentials);
     const spaceIds = Array.from(credentialMap.get('spaces')?.keys() ?? []);
 
@@ -120,17 +120,40 @@ export class MeService {
         agentInfo.userID,
         spaceMembershipCollaborationInfo
       );
-    const allSpacesSorted = sortSpacesByActivity(
-      allSpaces,
-      latestActivitiesPerSpace
-    );
-    const levelZeroSpaces = allSpacesSorted.filter(
+    return sortSpacesByActivity(allSpaces, latestActivitiesPerSpace);
+  }
+
+  public async getSpaceMembershipsFlat(
+    agentInfo: AgentInfo
+  ): Promise<CommunityMembershipResult[]> {
+    const sortedFlatListSpacesWithMembership =
+      await this.getSpacesWhereAmMember(agentInfo);
+    const spaceMemberships: CommunityMembershipResult[] = [];
+
+    for (const space of sortedFlatListSpacesWithMembership) {
+      const levelZeroMembership: CommunityMembershipResult = {
+        id: space.id,
+        space: space,
+        childMemberships: [],
+      };
+      spaceMemberships.push(levelZeroMembership);
+    }
+    return spaceMemberships;
+  }
+
+  public async getSpaceMembershipsHierarchical(
+    agentInfo: AgentInfo
+  ): Promise<CommunityMembershipResult[]> {
+    const sortedFlatListSpacesWithMembership =
+      await this.getSpacesWhereAmMember(agentInfo);
+
+    const levelZeroSpaces = sortedFlatListSpacesWithMembership.filter(
       space => space.level === SpaceLevel.SPACE
     );
-    const levelOneSpaces = allSpacesSorted.filter(
+    const levelOneSpaces = sortedFlatListSpacesWithMembership.filter(
       space => space.level === SpaceLevel.CHALLENGE
     );
-    const levelTwoSpaces = allSpacesSorted.filter(
+    const levelTwoSpaces = sortedFlatListSpacesWithMembership.filter(
       space => space.level === SpaceLevel.OPPORTUNITY
     );
     const levelZeroMemberships: CommunityMembershipResult[] = [];

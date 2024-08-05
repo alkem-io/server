@@ -11,4 +11,5 @@ export class MeQueryResults {
   invitations!: IInvitation[];
   applications!: IApplication[];
   spaceMembershipsHierarchical!: CommunityMembershipResult[];
+  spaceMembershipsFlat!: CommunityMembershipResult[];
 }
