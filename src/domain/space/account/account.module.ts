@@ -5,8 +5,6 @@ import { AccountService } from '@domain/space/account/account.service';
 import { AccountResolverFields } from '@domain/space/account/account.resolver.fields';
 import { AccountAuthorizationService } from '@domain/space/account/account.service.authorization';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
-import { TemplatesSetModule } from '@domain/template/templates-set/templates.set.module';
-import { SpaceDefaultsModule } from '../space.defaults/space.defaults.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AccountResolverMutations } from './account.resolver.mutations';
@@ -37,10 +35,8 @@ import { SpaceSettingssModule } from '../space.settings/space.settings.module';
     AuthorizationPolicyModule,
     ContributorModule,
     VirtualContributorModule,
-    TemplatesSetModule,
     SpaceModule,
     SpaceSettingssModule,
-    SpaceDefaultsModule,
     StorageAggregatorModule,
     PlatformAuthorizationPolicyModule,
     InnovationFlowTemplateModule,

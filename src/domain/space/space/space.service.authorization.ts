@@ -44,6 +44,7 @@ import { SpaceLevel } from '@common/enums/space.level';
 import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
 import { IAgent } from '@domain/agent/agent/agent.interface';
 import { ISpaceSettings } from '../space.settings/space.settings.interface';
+import { TemplatesSetAuthorizationService } from '@domain/template/templates-set/templates.set.service.authorization';
 
 @Injectable()
 export class SpaceAuthorizationService {
@@ -57,7 +58,8 @@ export class SpaceAuthorizationService {
     private communityAuthorizationService: CommunityAuthorizationService,
     private collaborationAuthorizationService: CollaborationAuthorizationService,
     private spaceService: SpaceService,
-    private spaceSettingsService: SpaceSettingsService
+    private spaceSettingsService: SpaceSettingsService,
+    private templatesSetAuthorizationService: TemplatesSetAuthorizationService
   ) {}
 
   async applyAuthorizationPolicy(spaceInput: ISpace): Promise<ISpace> {
@@ -133,6 +135,8 @@ export class SpaceAuthorizationService {
         context: true,
         profile: true,
         storageAggregator: true,
+        library: true,
+        defaults: true,
       },
     });
     if (
@@ -322,6 +326,27 @@ export class SpaceAuthorizationService {
           space.community.authorization,
           communityPolicy,
           spaceSettings
+        );
+    }
+
+    if (space.level === SpaceLevel.SPACE) {
+      if (!space.library || !space.defaults) {
+        throw new RelationshipNotFoundException(
+          `Unable to load entities on auth reset for space base ${space.id} `,
+          LogContext.SPACES
+        );
+      }
+
+      space.defaults.authorization =
+        this.authorizationPolicyService.inheritParentAuthorization(
+          space.defaults.authorization,
+          space.authorization
+        );
+
+      space.library =
+        await this.templatesSetAuthorizationService.applyAuthorizationPolicy(
+          space.library,
+          space.authorization
         );
     }
 

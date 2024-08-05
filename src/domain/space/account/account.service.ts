@@ -1,7 +1,6 @@
 import { AuthorizationCredential, LogContext } from '@common/enums';
 import {
   EntityNotFoundException,
-  NotSupportedException,
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
@@ -12,11 +11,6 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Account } from './account.entity';
 import { IAccount } from './account.interface';
 import { AgentService } from '@domain/agent/agent/agent.service';
-import { ITemplatesSet } from '@domain/template/templates-set/templates.set.interface';
-import { TemplatesSetService } from '@domain/template/templates-set/templates.set.service';
-import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
-import { UpdateAccountDefaultsInput } from './dto/account.dto.update.defaults';
-import { ISpaceDefaults } from '../space.defaults/space.defaults.interface';
 import { SpaceService } from '../space/space.service';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { ISpace } from '../space/space.interface';
@@ -56,8 +50,6 @@ export class AccountService {
     private accountHostService: AccountHostService,
     private spaceService: SpaceService,
     private agentService: AgentService,
-    private templatesSetService: TemplatesSetService,
-    private spaceDefaultsService: SpaceDefaultsService,
     private licensingService: LicensingService,
     private licenseEngineService: LicenseEngineService,
     private licenseIssuerService: LicenseIssuerService,
@@ -78,23 +70,6 @@ export class AccountService {
     account.authorization = new AuthorizationPolicy();
     account.storageAggregator =
       await this.storageAggregatorService.createStorageAggregator();
-    account.library = await this.templatesSetService.createTemplatesSet();
-    account.defaults = await this.spaceDefaultsService.createSpaceDefaults();
-
-    // And set the defaults
-    account.library =
-      await this.spaceDefaultsService.addDefaultTemplatesToSpaceLibrary(
-        account.library,
-        account.storageAggregator
-      );
-    if (
-      account.defaults &&
-      account.library &&
-      account.library.innovationFlowTemplates.length !== 0
-    ) {
-      account.defaults.innovationFlowTemplate =
-        account.library.innovationFlowTemplates[0];
-    }
 
     account.agent = await this.agentService.createAgent({
       parentDisplayID: `account-${account.id}`,
@@ -153,6 +128,7 @@ export class AccountService {
     const space = await this.spaceService.createSpace(
       spaceData,
       account,
+      undefined,
       agentInfo
     );
     account.space = space;
@@ -171,45 +147,6 @@ export class AccountService {
   }
   async save(account: IAccount): Promise<IAccount> {
     return await this.accountRepository.save(account);
-  }
-
-  public async updateAccountDefaults(
-    accountDefaultsData: UpdateAccountDefaultsInput
-  ): Promise<ISpaceDefaults> {
-    const account = await this.getAccountOrFail(accountDefaultsData.accountID, {
-      relations: {
-        defaults: true,
-        library: {
-          innovationFlowTemplates: true,
-        },
-      },
-    });
-    if (
-      !account.defaults ||
-      !account.library ||
-      !account.library.innovationFlowTemplates
-    ) {
-      throw new RelationshipNotFoundException(
-        `Unable to load all required data to update the defaults on  Account ${account.id} `,
-        LogContext.ACCOUNT
-      );
-    }
-
-    // Verify that the specified template is in the account library
-    const template = account.library.innovationFlowTemplates.find(
-      t => t.id === accountDefaultsData.flowTemplateID
-    );
-    if (!template) {
-      throw new NotSupportedException(
-        `InnovationFlowTemplate ID provided (${accountDefaultsData.flowTemplateID}) is not part of the Library for the Account ${account.id} `,
-        LogContext.ACCOUNT
-      );
-    }
-
-    return await this.spaceDefaultsService.updateSpaceDefaults(
-      account.defaults,
-      template
-    );
   }
 
   public async updateAccountPlatformSettings(
@@ -232,8 +169,6 @@ export class AccountService {
       relations: {
         agent: true,
         space: true,
-        library: true,
-        defaults: true,
         virtualContributors: true,
         innovationPacks: true,
         storageAggregator: true,
@@ -244,8 +179,6 @@ export class AccountService {
     if (
       !account.agent ||
       !account.space ||
-      !account.defaults ||
-      !account.library ||
       !account.virtualContributors ||
       !account.storageAggregator ||
       !account.innovationHubs ||
@@ -264,9 +197,6 @@ export class AccountService {
 
     await this.agentService.deleteAgent(account.agent.id);
 
-    await this.templatesSetService.deleteTemplatesSet(account.library.id);
-
-    await this.spaceDefaultsService.deleteSpaceDefaults(account.defaults.id);
     await this.storageAggregatorService.delete(account.storageAggregator.id);
 
     // Remove the account host credential
@@ -346,26 +276,6 @@ export class AccountService {
     const privileges =
       await this.licenseEngineService.getGrantedPrivileges(accountAgent);
     return privileges;
-  }
-
-  async getLibraryOrFail(accountId: string): Promise<ITemplatesSet> {
-    const accountWithTemplates = await this.getAccountOrFail(accountId, {
-      relations: {
-        library: {
-          postTemplates: true,
-        },
-      },
-    });
-    const templatesSet = accountWithTemplates.library;
-
-    if (!templatesSet) {
-      throw new EntityNotFoundException(
-        `Unable to find templatesSet for account with id: ${accountId}`,
-        LogContext.ACCOUNT
-      );
-    }
-
-    return templatesSet;
   }
 
   async getRootSpace(

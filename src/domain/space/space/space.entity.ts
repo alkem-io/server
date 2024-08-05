@@ -18,6 +18,8 @@ import { Account } from '../account/account.entity';
 import { Context } from '@domain/context/context/context.entity';
 import { Agent } from '@domain/agent/agent/agent.entity';
 import { SpaceVisibility } from '@common/enums/space.visibility';
+import { TemplatesSet } from '@domain/template/templates-set/templates.set.entity';
+import { SpaceDefaults } from '../space.defaults/space.defaults.entity';
 @Entity()
 export class Space extends NameableEntity implements ISpace {
   @OneToMany(() => Space, space => space.parentSpace, {
@@ -104,6 +106,22 @@ export class Space extends NameableEntity implements ISpace {
     default: SpaceVisibility.ACTIVE,
   })
   visibility!: SpaceVisibility;
+
+  @OneToOne(() => TemplatesSet, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  library?: TemplatesSet;
+
+  @OneToOne(() => SpaceDefaults, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  defaults?: SpaceDefaults;
 
   constructor() {
     super();
