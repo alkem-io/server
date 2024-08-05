@@ -24,6 +24,14 @@ export class SpaceLibraryDefaults1722870550857 implements MigrationInterface {
       `ALTER TABLE \`account\` DROP FOREIGN KEY \`FK_bea623a346d2e3f88dd0aeef576\``
     );
 
+    const templateTableNames = [
+      'whiteboard_template',
+      'callout_template',
+      'post_template',
+      'community_guidelines_template',
+      'innovation_flow_template',
+    ];
+
     const accounts: {
       id: string;
       spaceId: string;
@@ -36,9 +44,20 @@ export class SpaceLibraryDefaults1722870550857 implements MigrationInterface {
       await queryRunner.query(
         `UPDATE \`space\` SET defaultsId = '${account.defaultsId}', libraryId = '${account.libraryId}' WHERE id = '${account.spaceId}'`
       );
+      const storageAggregatorID = await this.getStorageAggregatorForSpace(
+        queryRunner,
+        account.spaceId
+      );
+      // Update the storage aggregator hierarchy for the TemplatesSet?
+      for (const templateTableName of templateTableNames) {
+        await this.updateStorageAggregatorForTemplates(
+          queryRunner,
+          account.libraryId,
+          templateTableName,
+          storageAggregatorID
+        );
+      }
     }
-
-    // TODO: update the storage aggregator hierarchy for the TemplatesSet?
 
     await queryRunner.query(
       `ALTER TABLE \`space\` ADD CONSTRAINT \`FK_9542f2ad51464f961e5b5b5b582\` FOREIGN KEY (\`defaultsId\`) REFERENCES \`space_defaults\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
@@ -57,4 +76,49 @@ export class SpaceLibraryDefaults1722870550857 implements MigrationInterface {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {}
+
+  private async getStorageAggregatorForSpace(
+    queryRunner: QueryRunner,
+    spaceID: string
+  ): Promise<string> {
+    const [space]: {
+      id: string;
+      storageAggregatorId: string;
+    }[] = await queryRunner.query(
+      `SELECT id, storageAggregatorId FROM space WHERE id = '${spaceID}'`
+    );
+    if (space) {
+      return space.storageAggregatorId;
+    }
+    throw new Error(
+      `Unable to retrieve storage aggregator for spaceID: ${spaceID}`
+    );
+  }
+
+  private async updateStorageAggregatorForTemplates(
+    queryRunner: QueryRunner,
+    templatesSetID: string,
+    templateTableName: string,
+    storageAggregatorId: string
+  ): Promise<void> {
+    const templates: {
+      id: string;
+      profileId: string;
+    }[] = await queryRunner.query(
+      `SELECT id, profileId  FROM \`${templateTableName}\` where templatesSetId = '${templatesSetID}'`
+    );
+    for (const template of templates) {
+      const [profile]: {
+        id: string;
+        storageBucketId: string;
+      }[] = await queryRunner.query(
+        `SELECT id, storageBucketId FROM profile WHERE id = '${template.profileId}'`
+      );
+      if (profile) {
+        await queryRunner.query(
+          `UPDATE \`storage_bucket\` SET storageAggregatorId = '${storageAggregatorId}' WHERE id = '${profile.storageBucketId}'`
+        );
+      }
+    }
+  }
 }
