@@ -53,6 +53,20 @@ export class NamingService {
     return nameIDs;
   }
 
+  public async getReservedNameIDsLevelZeroSpaces(): Promise<string[]> {
+    const subspaces = await this.entityManager.find(Space, {
+      where: {
+        level: SpaceLevel.SPACE,
+      },
+      select: {
+        nameID: true,
+      },
+    });
+    const nameIDs = subspaces.map(space => space.nameID.toLowerCase());
+    const reservedTopLevelSpaces = ['user', 'home', 'organization', 'vc'];
+    return nameIDs.concat(reservedTopLevelSpaces);
+  }
+
   public async getReservedNameIDsInForum(forumID: string): Promise<string[]> {
     const discussions = await this.entityManager.find(Discussion, {
       where: {
