@@ -54,7 +54,7 @@ export class NamingService {
   }
 
   public async getReservedNameIDsLevelZeroSpaces(): Promise<string[]> {
-    const subspaces = await this.entityManager.find(Space, {
+    const levelZeroSpaces = await this.entityManager.find(Space, {
       where: {
         level: SpaceLevel.SPACE,
       },
@@ -62,7 +62,7 @@ export class NamingService {
         nameID: true,
       },
     });
-    const nameIDs = subspaces.map(space => space.nameID.toLowerCase());
+    const nameIDs = levelZeroSpaces.map(space => space.nameID.toLowerCase());
     const reservedTopLevelSpaces = ['user', 'home', 'organization', 'vc'];
     return nameIDs.concat(reservedTopLevelSpaces);
   }
