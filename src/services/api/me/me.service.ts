@@ -1,10 +1,8 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { SpaceVisibility } from '@common/enums/space.visibility';
 import { groupCredentialsByEntity } from '@services/api/roles/util/group.credentials.by.entity';
 import { SpaceService } from '@domain/space/space/space.service';
 import { RolesService } from '../roles/roles.service';
 import { ISpace } from '@domain/space/space/space.interface';
-import { SpacesQueryArgs } from '@domain/space/space/dto/space.args.query.spaces';
 import { ActivityLogService } from '../activity-log';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { MySpaceResults } from './dto/my.journeys.results';
@@ -14,12 +12,17 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { sortSpacesByActivity } from '@domain/space/space/sort.spaces.by.activity';
 import { CommunityInvitationResult } from './dto/me.invitation.result';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
-import { EntityNotFoundException } from '@common/exceptions';
+import {
+  EntityNotFoundException,
+  RelationshipNotFoundException,
+} from '@common/exceptions';
 import { CommunityApplicationResult } from './dto/me.application.result';
-import { CommunityRoleService } from '@domain/community/community-role/community.role.service';
 import { ContributorService } from '@domain/community/contributor/contributor.service';
 import { UserService } from '@domain/community/user/user.service';
 import { compact } from 'lodash';
+import { SpaceMembershipCollaborationInfo } from './space.membership.type';
+import { CommunityMembershipResult } from './dto/me.membership.result';
+import { SpaceLevel } from '@common/enums/space.level';
 
 @Injectable()
 export class MeService {
@@ -30,7 +33,6 @@ export class MeService {
     private rolesService: RolesService,
     private activityLogService: ActivityLogService,
     private activityService: ActivityService,
-    private communityRoleService: CommunityRoleService,
     private communityResolverService: CommunityResolverService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
@@ -92,35 +94,99 @@ export class MeService {
     return results;
   }
 
-  public async getSpaceMemberships(
-    agentInfo: AgentInfo,
-    visibilities: SpaceVisibility[] = [
-      SpaceVisibility.ACTIVE,
-      SpaceVisibility.DEMO,
-    ]
-  ): Promise<ISpace[]> {
+  public async getSpaceMembershipsHierarchical(
+    agentInfo: AgentInfo
+  ): Promise<CommunityMembershipResult[]> {
     const credentialMap = groupCredentialsByEntity(agentInfo.credentials);
     const spaceIds = Array.from(credentialMap.get('spaces')?.keys() ?? []);
-    const args: SpacesQueryArgs = {
-      IDs: spaceIds,
-      filter: {
-        visibilities,
-      },
-    };
 
     // get spaces and their subspaces
-    const spaces = await this.spaceService.getSpacesWithChildJourneys(args);
-
+    const allSpaces = await this.spaceService.getSpacesInList(spaceIds);
+    for (const space of allSpaces) {
+      if (
+        (space.level !== SpaceLevel.SPACE && !space.parentSpace) ||
+        !space.collaboration
+      ) {
+        throw new RelationshipNotFoundException(
+          `Space ${space.id} is missing parent space or collaboration`,
+          LogContext.COMMUNITY
+        );
+      }
+    }
     const spaceMembershipCollaborationInfo =
-      this.spaceService.getSpaceMembershipCollaborationInfo(spaces);
-
+      this.getSpaceMembershipCollaborationInfo(allSpaces);
     const latestActivitiesPerSpace =
       await this.activityService.getLatestActivitiesPerSpaceMembership(
         agentInfo.userID,
         spaceMembershipCollaborationInfo
       );
+    const allSpacesSorted = sortSpacesByActivity(
+      allSpaces,
+      latestActivitiesPerSpace
+    );
+    const levelZeroSpaces = allSpacesSorted.filter(
+      space => space.level === SpaceLevel.SPACE
+    );
+    const levelOneSpaces = allSpacesSorted.filter(
+      space => space.level === SpaceLevel.CHALLENGE
+    );
+    const levelTwoSpaces = allSpacesSorted.filter(
+      space => space.level === SpaceLevel.OPPORTUNITY
+    );
+    const levelZeroMemberships: CommunityMembershipResult[] = [];
+    for (const levelZeroSpace of levelZeroSpaces) {
+      const levelZeroMembership: CommunityMembershipResult = {
+        id: levelZeroSpace.id,
+        space: levelZeroSpace,
+        childMemberships: [],
+      };
+      for (const levelOneSpace of levelOneSpaces) {
+        if (levelOneSpace.parentSpace?.id === levelZeroSpace.id) {
+          const levelOneMembership: CommunityMembershipResult = {
+            id: levelOneSpace.id,
+            space: levelOneSpace,
+            childMemberships: [],
+          };
+          for (const levelTwoSpace of levelTwoSpaces) {
+            if (levelTwoSpace.parentSpace?.id === levelOneSpace.id) {
+              const levelTwoMembership: CommunityMembershipResult = {
+                id: levelTwoSpace.id,
+                space: levelTwoSpace,
+                childMemberships: [],
+              };
+              levelOneMembership.childMemberships.push(levelTwoMembership);
+            }
+          }
+          levelZeroMembership.childMemberships.push(levelOneMembership);
+        }
+      }
+      levelZeroMemberships.push(levelZeroMembership);
+    }
 
-    return sortSpacesByActivity(spaces, latestActivitiesPerSpace);
+    return levelZeroMemberships;
+  }
+
+  // Returns a map of all collaboration IDs with parent space ID
+  private getSpaceMembershipCollaborationInfo(
+    spaces: ISpace[]
+  ): SpaceMembershipCollaborationInfo {
+    const spaceMembershipCollaborationInfo: SpaceMembershipCollaborationInfo =
+      new Map();
+
+    for (const space of spaces) {
+      if (!space.collaboration) {
+        throw new EntityNotFoundException(
+          `Space ${space.id} is missing collaboration`,
+          LogContext.COMMUNITY
+        );
+      }
+      spaceMembershipCollaborationInfo.set(
+        space.collaboration.id,
+        space.levelZeroSpaceID
+      );
+    }
+
+    return spaceMembershipCollaborationInfo;
   }
 
   public async getMySpaces(

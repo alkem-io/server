@@ -12,12 +12,12 @@ import {
 } from '@common/exceptions';
 import { UserService } from '@domain/community/user/user.service';
 import { ISpace } from '@domain/space/space/space.interface';
-import { SpaceVisibility } from '@common/enums/space.visibility';
 import { MeService } from './me.service';
 import { LogContext } from '@common/enums';
 import { MySpaceResults } from './dto/my.journeys.results';
 import { CommunityInvitationResult } from './dto/me.invitation.result';
 import { CommunityApplicationResult } from './dto/me.application.result';
+import { CommunityMembershipResult } from './dto/me.membership.result';
 
 @Resolver(() => MeQueryResults)
 export class MeResolverFields {
@@ -106,20 +106,13 @@ export class MeResolverFields {
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField(() => [ISpace], {
-    description: 'The applications of the current authenticated user',
+  @ResolveField(() => [CommunityMembershipResult], {
+    description: 'The hierarchy of the Spaces the current user is a member.',
   })
-  public spaceMemberships(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args({
-      name: 'visibilities',
-      nullable: true,
-      type: () => [SpaceVisibility],
-      description: 'The Space visibilities you want to filter on',
-    })
-    visibilities: SpaceVisibility[]
-  ): Promise<ISpace[]> {
-    return this.meService.getSpaceMemberships(agentInfo, visibilities);
+  public spaceMembershipsHierarchical(
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<CommunityMembershipResult[]> {
+    return this.meService.getSpaceMembershipsHierarchical(agentInfo);
   }
 
   @UseGuards(GraphqlGuard)
