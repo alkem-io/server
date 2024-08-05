@@ -6,7 +6,10 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { User } from '@domain/community/user/user.entity';
 import { IUser } from '@domain/community/user/user.interface';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
-import { EntityNotFoundException, RelationshipNotFoundException } from '@common/exceptions';
+import {
+  EntityNotFoundException,
+  RelationshipNotFoundException,
+} from '@common/exceptions';
 import { AuthorizationCredential, LogContext } from '@common/enums';
 import { Credential, CredentialsSearchInput, ICredential } from '@domain/agent';
 import { VirtualContributor } from '@domain/community/virtual-contributor';
@@ -33,6 +36,24 @@ export class ContributorLookupService {
       ...options,
     });
 
+    return user;
+  }
+  public async getUserByNameIdOrFail(
+    userNameID: string,
+    options?: FindOneOptions<User> | undefined
+  ): Promise<IUser> {
+    const user: IUser | null = await this.entityManager.findOne(User, {
+      where: {
+        nameID: userNameID,
+      },
+      ...options,
+    });
+    if (!user) {
+      throw new EntityNotFoundException(
+        `User with nameId ${userNameID} not found`,
+        LogContext.COMMUNITY
+      );
+    }
     return user;
   }
 
@@ -62,6 +83,25 @@ export class ContributorLookupService {
       }
     );
 
+    return organization;
+  }
+
+  async getOrganizationByNameIdOrFail(
+    organizationNameID: string,
+    options?: FindOneOptions<Organization>
+  ): Promise<IOrganization> {
+    const organization: IOrganization | null = await this.entityManager.findOne(
+      Organization,
+      {
+        ...options,
+        where: { ...options?.where, nameID: organizationNameID },
+      }
+    );
+    if (!organization)
+      throw new EntityNotFoundException(
+        `Unable to find Organization with NameID: ${organizationNameID}`,
+        LogContext.COMMUNITY
+      );
     return organization;
   }
 
@@ -252,11 +292,9 @@ export class ContributorLookupService {
     options?: FindOneOptions<IContributor>
   ): Promise<IContributor | null> {
     if (!isUUID(contributorID)) {
-      throw new InvalidUUID(
-        'Invalid UUID provided!',
-        LogContext.COMMUNITY,
-        { provided: contributorID }
-      );
+      throw new InvalidUUID('Invalid UUID provided!', LogContext.COMMUNITY, {
+        provided: contributorID,
+      });
     }
     let contributor: IContributor | null = await this.entityManager.findOne(
       User,
