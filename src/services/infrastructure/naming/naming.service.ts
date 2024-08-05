@@ -23,6 +23,7 @@ import { VirtualContributor } from '@domain/community/virtual-contributor';
 import { Organization } from '@domain/community/organization';
 import { Discussion } from '@platform/forum-discussion/discussion.entity';
 import { IDiscussion } from '@platform/forum-discussion/discussion.interface';
+import { SpaceReservedName } from '@common/enums/space.reserved.name';
 
 export class NamingService {
   replaceSpecialCharacters = require('replace-special-characters');
@@ -51,6 +52,21 @@ export class NamingService {
     });
     const nameIDs = subspaces.map(space => space.nameID);
     return nameIDs;
+  }
+
+  public async getReservedNameIDsLevelZeroSpaces(): Promise<string[]> {
+    const levelZeroSpaces = await this.entityManager.find(Space, {
+      where: {
+        level: SpaceLevel.SPACE,
+      },
+      select: {
+        nameID: true,
+      },
+    });
+    const nameIDs = levelZeroSpaces.map(space => space.nameID.toLowerCase());
+    const reservedTopLevelSpaces = Object.values(SpaceReservedName) as string[];
+
+    return nameIDs.concat(reservedTopLevelSpaces);
   }
 
   public async getReservedNameIDsInForum(forumID: string): Promise<string[]> {
