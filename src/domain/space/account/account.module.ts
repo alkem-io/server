@@ -26,6 +26,7 @@ import { CommunityModule } from '@domain/community/community/community.module';
 import { InnovationHubModule } from '@domain/innovation-hub';
 import { InnovationPackModule } from '@library/innovation-pack/innovation.pack.module';
 import { SpaceSettingssModule } from '../space.settings/space.settings.module';
+import { NamingModule } from '@services/infrastructure/naming/naming.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { SpaceSettingssModule } from '../space.settings/space.settings.module';
     LicenseIssuerModule,
     LicenseEngineModule,
     InnovationHubModule,
+    NamingModule,
     NameReporterModule,
     CommunityPolicyModule,
     TypeOrmModule.forFeature([Account]),

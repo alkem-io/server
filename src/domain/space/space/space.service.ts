@@ -739,8 +739,18 @@ export class SpaceService {
       space.visibility = updateData.visibility;
     }
     if (updateData.nameID && updateData.nameID !== space.nameID) {
+      let reservedNameIDs: string[] = [];
+      if (space.level === SpaceLevel.SPACE) {
+        reservedNameIDs =
+          await this.namingService.getReservedNameIDsLevelZeroSpaces();
+      } else {
+        reservedNameIDs =
+          await this.namingService.getReservedNameIDsInLevelZeroSpace(
+            space.levelZeroSpaceID
+          );
+      }
       // updating the nameID, check new value is allowed
-      const updateAllowed = await this.isNameIdAvailable(updateData.nameID);
+      const updateAllowed = reservedNameIDs.includes(updateData.nameID);
       if (!updateAllowed) {
         throw new ValidationException(
           `Unable to update Space nameID: the provided nameID is already taken: ${updateData.nameID}`,
@@ -773,19 +783,6 @@ export class SpaceService {
     settingsData: UpdateSpaceSettingsInput
   ): Promise<ISpace> {
     return await this.updateSettings(space, settingsData.settings);
-  }
-
-  async isNameIdAvailable(nameID: string): Promise<boolean> {
-    const spaceCount = await this.spaceRepository.countBy({
-      nameID: nameID,
-    });
-    if (spaceCount != 0) return false;
-
-    // check restricted space names
-    const restrictedSpaceNames = ['user', 'organization'];
-    if (restrictedSpaceNames.includes(nameID.toLowerCase())) return false;
-
-    return true;
   }
 
   async getSubspaces(
