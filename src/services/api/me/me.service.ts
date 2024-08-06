@@ -146,46 +146,72 @@ export class MeService {
     const sortedFlatListSpacesWithMembership =
       await this.getSpaceMembershipsForAgentInfo(agentInfo);
 
-    const levelZeroSpaces = sortedFlatListSpacesWithMembership.filter(
-      space => space.level === SpaceLevel.SPACE
+    const levelZeroSpaces = this.filterSpacesByLevel(
+      sortedFlatListSpacesWithMembership,
+      SpaceLevel.SPACE
     );
-    const levelOneSpaces = sortedFlatListSpacesWithMembership.filter(
-      space => space.level === SpaceLevel.CHALLENGE
+    const levelOneSpaces = this.filterSpacesByLevel(
+      sortedFlatListSpacesWithMembership,
+      SpaceLevel.CHALLENGE
     );
-    const levelTwoSpaces = sortedFlatListSpacesWithMembership.filter(
-      space => space.level === SpaceLevel.OPPORTUNITY
+    const levelTwoSpaces = this.filterSpacesByLevel(
+      sortedFlatListSpacesWithMembership,
+      SpaceLevel.OPPORTUNITY
     );
-    const levelZeroMemberships: CommunityMembershipResult[] = [];
-    for (const levelZeroSpace of levelZeroSpaces) {
+
+    const levelZeroMemberships = levelZeroSpaces.map(levelZeroSpace => {
       const levelZeroMembership: CommunityMembershipResult = {
         id: levelZeroSpace.id,
         space: levelZeroSpace,
-        childMemberships: [],
+        childMemberships: this.getChildMemberships(
+          levelZeroSpace,
+          levelOneSpaces,
+          levelTwoSpaces
+        ),
       };
-      for (const levelOneSpace of levelOneSpaces) {
-        if (levelOneSpace.parentSpace?.id === levelZeroSpace.id) {
-          const levelOneMembership: CommunityMembershipResult = {
-            id: levelOneSpace.id,
-            space: levelOneSpace,
-            childMemberships: [],
-          };
-          for (const levelTwoSpace of levelTwoSpaces) {
-            if (levelTwoSpace.parentSpace?.id === levelOneSpace.id) {
-              const levelTwoMembership: CommunityMembershipResult = {
-                id: levelTwoSpace.id,
-                space: levelTwoSpace,
-                childMemberships: [],
-              };
-              levelOneMembership.childMemberships.push(levelTwoMembership);
-            }
-          }
-          levelZeroMembership.childMemberships.push(levelOneMembership);
-        }
-      }
-      levelZeroMemberships.push(levelZeroMembership);
-    }
+      return levelZeroMembership;
+    });
 
     return levelZeroMemberships;
+  }
+
+  private filterSpacesByLevel(spaces: ISpace[], level: SpaceLevel): ISpace[] {
+    return spaces.filter(space => space.level === level);
+  }
+
+  private getChildMemberships(
+    parentSpace: ISpace,
+    childSpaces: ISpace[],
+    grandChildSpaces: ISpace[]
+  ): CommunityMembershipResult[] {
+    return childSpaces
+      .filter(childSpace => childSpace.parentSpace?.id === parentSpace.id)
+      .map(childSpace => {
+        const childMembership: CommunityMembershipResult = {
+          id: childSpace.id,
+          space: childSpace,
+          childMemberships: this.getGrandChildMemberships(
+            childSpace,
+            grandChildSpaces
+          ),
+        };
+        return childMembership;
+      });
+  }
+
+  private getGrandChildMemberships(
+    parentSpace: ISpace,
+    grandChildSpaces: ISpace[]
+  ): CommunityMembershipResult[] {
+    return grandChildSpaces
+      .filter(
+        grandChildSpace => grandChildSpace.parentSpace?.id === parentSpace.id
+      )
+      .map(grandChildSpace => ({
+        id: grandChildSpace.id,
+        space: grandChildSpace,
+        childMemberships: [],
+      }));
   }
 
   // Returns a map of all collaboration IDs with parent space ID
