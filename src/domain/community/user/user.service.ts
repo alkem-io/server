@@ -65,6 +65,7 @@ import { StorageAggregatorService } from '@domain/storage/storage-aggregator/sto
 import { AvatarService } from '@domain/common/visual/avatar.service';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { UpdateUserPlatformSettingsInput } from './dto/user.dto.update.platform.settings';
+import { AccountHostService } from '@domain/space/account.host/account.host.service';
 
 @Injectable()
 export class UserService {
@@ -79,6 +80,7 @@ export class UserService {
     private preferenceSetService: PreferenceSetService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private storageAggregatorService: StorageAggregatorService,
+    private accountHostService: AccountHostService,
     private avatarService: AvatarService,
     private documentService: DocumentService,
     @InjectRepository(User)
@@ -198,6 +200,11 @@ export class UserService {
     );
 
     await this.setUserCache(response);
+
+    // And create the account for the user
+    await this.accountHostService.createAccount({
+      host: user,
+    });
 
     return response;
   }

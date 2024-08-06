@@ -55,10 +55,12 @@ import { applyOrganizationFilter } from '@core/filtering/filters/organizationFil
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { OrganizationRoleService } from '../organization-role/organization.role.service';
+import { AccountHostService } from '@domain/space/account.host/account.host.service';
 
 @Injectable()
 export class OrganizationService {
   constructor(
+    private accountHostService: AccountHostService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private organizationVerificationService: OrganizationVerificationService,
     private organizationRoleService: OrganizationRoleService,
@@ -90,7 +92,7 @@ export class OrganizationService {
       organizationData.profileData?.displayName
     );
 
-    const organization: IOrganization = Organization.create(organizationData);
+    let organization: IOrganization = Organization.create(organizationData);
     organization.authorization = new AuthorizationPolicy();
 
     organization.storageAggregator =
@@ -157,7 +159,13 @@ export class OrganizationService {
         this.createPreferenceDefaults()
       );
 
-    return await this.organizationRepository.save(organization);
+    organization = await this.organizationRepository.save(organization);
+
+    await this.accountHostService.createAccount({
+      host: organization,
+    });
+
+    return organization;
   }
 
   async checkNameIdOrFail(nameID: string) {
