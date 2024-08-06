@@ -26,7 +26,6 @@ import {
 } from '@common/constants';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
-import { AccountAuthorizationService } from '@domain/space/account/account.service.authorization';
 
 @Injectable()
 export class OrganizationAuthorizationService {
@@ -40,8 +39,7 @@ export class OrganizationAuthorizationService {
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private profileAuthorizationService: ProfileAuthorizationService,
     private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
-    private preferenceSetAuthorizationService: PreferenceSetAuthorizationService,
-    private accountAuthorizationService: AccountAuthorizationService
+    private preferenceSetAuthorizationService: PreferenceSetAuthorizationService
   ) {}
 
   async applyAuthorizationPolicy(

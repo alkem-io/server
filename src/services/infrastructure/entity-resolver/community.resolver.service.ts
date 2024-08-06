@@ -60,74 +60,84 @@ export class CommunityResolverService {
     return space.levelZeroSpaceID;
   }
 
-  public async isCommunityAccountMatchingVcAccount(
-    communityID: string,
-    virtualContributorID: string
-  ): Promise<boolean> {
+  private async getAccountWithAgentForCommunityOrFail(communityID: string) {
     const space = await this.entityManager.findOne(Space, {
       where: {
         community: {
           id: communityID,
         },
       },
-      relations: {
-        account: true,
-      },
     });
 
-    if (!space || !space.account) {
+    if (!space) {
       throw new EntityNotFoundException(
         `Unable to find Space for given community id: ${communityID}`,
         LogContext.COMMUNITY
       );
     }
-    const accountID = space.account.id;
-    const virtualContributor = await this.entityManager.findOne(
+    const levelZeroSpaceID = space.levelZeroSpaceID;
+    const levelZeroSpace = await this.entityManager.findOne(Space, {
+      where: {
+        id: levelZeroSpaceID,
+      },
+      relations: {
+        account: {
+          agent: true,
+        },
+      },
+    });
+
+    if (
+      !levelZeroSpace ||
+      !levelZeroSpace.account ||
+      !levelZeroSpace.account.agent
+    ) {
+      throw new EntityNotFoundException(
+        `Unable to find Space for given community id: ${communityID}`,
+        LogContext.COMMUNITY
+      );
+    }
+    return levelZeroSpace.account;
+  }
+
+  public async isCommunityAccountMatchingVcAccount(
+    communityID: string,
+    virtualContributorID: string
+  ): Promise<boolean> {
+    const account =
+      await this.getAccountWithAgentForCommunityOrFail(communityID);
+
+    const virtualContributorMatches = await this.entityManager.count(
       VirtualContributor,
       {
         where: {
           id: virtualContributorID,
-        },
-        relations: {
-          account: true,
+          account: {
+            id: account.id,
+          },
         },
       }
     );
-
-    if (!virtualContributor || !virtualContributor.account) {
-      throw new EntityNotFoundException(
-        `Unable to find VirtualContributor for given id: ${virtualContributorID}`,
-        LogContext.COMMUNITY
-      );
+    if (virtualContributorMatches > 0) {
+      return true;
     }
-    return virtualContributor.account.id === accountID;
+    return false;
   }
 
   public async getAccountAgentFromCommunityOrFail(
     community: ICommunity
   ): Promise<IAgent> {
-    const space = await this.entityManager.findOne(Space, {
-      where: {
-        community: {
-          id: community.id,
-        },
-      },
-      relations: {
-        account: {
-          agent: {
-            credentials: true,
-          },
-        },
-      },
-    });
-    if (space && space.account && space.account.agent) {
-      return space.account.agent;
-    }
-
-    throw new EntityNotFoundException(
-      `Unable to find Agent for account for given community id: ${community.id}`,
-      LogContext.COLLABORATION
+    const account = await this.getAccountWithAgentForCommunityOrFail(
+      community.id
     );
+
+    if (!account.agent) {
+      throw new EntityNotFoundException(
+        `Unable to find agent for account for given community id: ${community.id}`,
+        LogContext.COMMUNITY
+      );
+    }
+    return account.agent;
   }
 
   public async getCommunityFromUpdatesOrFail(

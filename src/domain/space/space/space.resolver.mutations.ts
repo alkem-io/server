@@ -16,8 +16,6 @@ import { PubSubEngine } from 'graphql-subscriptions';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { NameReporterService } from '@services/external/elasticsearch/name-reporter/name.reporter.service';
-import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
-import { LogContext } from '@common/enums';
 import { UpdateSpacePlatformSettingsInput } from './dto/space.dto.update.platform.settings';
 import { SUBSCRIPTION_SUBSPACE_CREATED } from '@common/constants/providers';
 import { UpdateSpaceSettingsInput } from './dto/space.dto.update.settings';
@@ -174,24 +172,8 @@ export class SpaceResolverMutations {
     @Args('subspaceData') subspaceData: CreateSubspaceInput
   ): Promise<ISpace> {
     const space = await this.spaceService.getSpaceOrFail(subspaceData.spaceID, {
-      relations: {
-        account: {
-          agent: {
-            credentials: true,
-          },
-        },
-      },
+      relations: {},
     });
-    if (
-      !space.account ||
-      !space.account.agent ||
-      !space.account.agent.credentials
-    ) {
-      throw new EntityNotInitializedException(
-        `Unabl to load agent with credentials for Account for Space: ${space.id}`,
-        LogContext.SPACES
-      );
-    }
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       space.authorization,

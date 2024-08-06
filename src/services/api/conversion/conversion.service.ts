@@ -227,7 +227,6 @@ export class ConversionService {
         community: true,
         context: true,
         profile: true,
-        account: true,
         storageAggregator: true,
         collaboration: {
           callouts: {
@@ -247,7 +246,6 @@ export class ConversionService {
       !subsubspace.community ||
       !subsubspace.context ||
       !subsubspace.profile ||
-      !subsubspace.account ||
       !subsubspace.collaboration ||
       !subsubspace.storageAggregator ||
       !subsubspace.collaboration.callouts
@@ -260,7 +258,7 @@ export class ConversionService {
 
     const reservedNameIDs =
       await this.namingService.getReservedNameIDsInLevelZeroSpace(
-        subsubspace.account.id
+        subsubspace.levelZeroSpaceID
       );
     const subspaceNameID =
       this.namingService.createNameIdAvoidingReservedNameIDs(
