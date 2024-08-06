@@ -202,6 +202,11 @@ export class BootstrapService {
           user = await this.userAuthorizationService.grantCredentials(user);
           user =
             await this.userAuthorizationService.applyAuthorizationPolicy(user);
+
+          const account = await this.userService.getAccount(user);
+          await this.accountAuthorizationService.applyAuthorizationPolicy(
+            account
+          );
         }
       }
     } catch (error: any) {
