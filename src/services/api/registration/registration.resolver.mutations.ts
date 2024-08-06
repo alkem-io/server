@@ -14,6 +14,12 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { NotificationInputUserRemoved } from '@services/adapters/notification-adapter/dto/notification.dto.input.user.removed';
 import { DeleteUserInput } from '@domain/community/user/dto/user.dto.delete';
+import { CreateUserInput } from '@domain/community/user/dto/user.dto.create';
+import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
+import { CreateOrganizationInput } from '@domain/community/organization/dto/organization.dto.create';
+import { IOrganization } from '@domain/community/organization/organization.interface';
+import { OrganizationService } from '@domain/community/organization/organization.service';
+import { OrganizationAuthorizationService } from '@domain/community/organization/organization.service.authorization';
 
 @Resolver()
 export class RegistrationResolverMutations {
@@ -22,7 +28,10 @@ export class RegistrationResolverMutations {
     private notificationAdapter: NotificationAdapter,
     private registrationService: RegistrationService,
     private userService: UserService,
+    private organizationService: OrganizationService,
+    private organizationAuthorizationService: OrganizationAuthorizationService,
     private authorizationService: AuthorizationService,
+    private platformAuthorizationService: PlatformAuthorizationPolicyService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -32,7 +41,6 @@ export class RegistrationResolverMutations {
     description:
       'Creates a new User profile on the platform for a user that has a valid Authentication session.',
   })
-  @Profiling.api
   async createUserNewRegistration(
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<IUser> {
@@ -42,14 +50,74 @@ export class RegistrationResolverMutations {
 
     await this.registrationService.processPendingInvitations(user);
 
+    await this.userCreatedEvents(user, agentInfo);
+
+    return user;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IUser, {
+    description: 'Creates a new User on the platform.',
+  })
+  async createUser(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('userData') userData: CreateUserInput
+  ): Promise<IUser> {
+    const authorization =
+      await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      authorization,
+      AuthorizationPrivilege.CREATE,
+      `create new User: ${agentInfo.email}`
+    );
+    let user = await this.userService.createUser(userData);
+    user = await this.userAuthorizationService.grantCredentials(user);
+
+    const savedUser =
+      await this.userAuthorizationService.applyAuthorizationPolicy(user);
+
+    await this.registrationService.processPendingInvitations(user);
+
+    await this.userCreatedEvents(savedUser, agentInfo);
+
+    return savedUser;
+  }
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IOrganization, {
+    description: 'Creates a new Organization on the platform.',
+  })
+  @Profiling.api
+  async createOrganization(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('organizationData') organizationData: CreateOrganizationInput
+  ): Promise<IOrganization> {
+    const authorizationPolicy =
+      await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
+
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      authorizationPolicy,
+      AuthorizationPrivilege.CREATE_ORGANIZATION,
+      `create Organization: ${organizationData.nameID}`
+    );
+    const organization = await this.organizationService.createOrganization(
+      organizationData,
+      agentInfo
+    );
+
+    return await this.organizationAuthorizationService.applyAuthorizationPolicy(
+      organization
+    );
+  }
+
+  private async userCreatedEvents(user: IUser, agentInfo: AgentInfo) {
     // Send the notification
     const notificationInput: NotificationInputUserRegistered = {
       triggeredBy: agentInfo.userID,
       userID: user.id,
     };
-    this.notificationAdapter.userRegistered(notificationInput);
-
-    return user;
+    await this.notificationAdapter.userRegistered(notificationInput);
   }
 
   @UseGuards(GraphqlGuard)

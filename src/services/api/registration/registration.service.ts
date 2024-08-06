@@ -22,12 +22,14 @@ import { PlatformInvitationService } from '@platform/invitation/platform.invitat
 import { PlatformRoleService } from '@platform/platfrom.role/platform.role.service';
 import { CommunityRoleService } from '@domain/community/community-role/community.role.service';
 import { OrganizationRoleService } from '@domain/community/organization-role/organization.role.service';
+import { AccountAuthorizationService } from '@domain/space/account/account.service.authorization';
 
 export class RegistrationService {
   constructor(
     private userService: UserService,
     private organizationService: OrganizationService,
     private organizationRoleService: OrganizationRoleService,
+    private accountAuthorizationService: AccountAuthorizationService,
     private preferenceSetService: PreferenceSetService,
     private userAuthorizationService: UserAuthorizationService,
     private communityRoleService: CommunityRoleService,
@@ -49,6 +51,11 @@ export class RegistrationService {
     // If a user has a valid session, and hence email / names etc set, then they can create a User profile
     let user = await this.userService.createUserFromAgentInfo(agentInfo);
     user = await this.userAuthorizationService.grantCredentials(user);
+
+    const userAccount = await this.userService.getAccount(user);
+    await this.accountAuthorizationService.applyAuthorizationPolicy(
+      userAccount
+    );
 
     await this.assignUserToOrganizationByDomain(agentInfo, user);
     return user;

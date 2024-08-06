@@ -16,59 +16,21 @@ import { PreferenceService } from '@domain/common/preference';
 import { UpdateUserPreferenceInput } from './dto/user.dto.update.preference';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
-import { NotificationInputUserRegistered } from '@services/adapters/notification-adapter/dto/notification.dto.input.user.registered';
-import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { UpdateUserPlatformSettingsInput } from './dto/user.dto.update.platform.settings';
-import { CreateUserInput, UpdateUserInput } from './dto';
+import { UpdateUserInput } from './dto';
 
 @Resolver(() => IUser)
 export class UserResolverMutations {
   constructor(
     private communicationAdapter: CommunicationAdapter,
-    private notificationAdapter: NotificationAdapter,
     private authorizationService: AuthorizationService,
     private userService: UserService,
     private userAuthorizationService: UserAuthorizationService,
-    private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private preferenceService: PreferenceService,
     private preferenceSetService: PreferenceSetService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IUser, {
-    description: 'Creates a new User on the platform.',
-  })
-  @Profiling.api
-  async createUser(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('userData') userData: CreateUserInput
-  ): Promise<IUser> {
-    const authorization =
-      await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      authorization,
-      AuthorizationPrivilege.CREATE,
-      `create new User: ${agentInfo.email}`
-    );
-    let user = await this.userService.createUser(userData);
-    user = await this.userAuthorizationService.grantCredentials(user);
-
-    const savedUser =
-      await this.userAuthorizationService.applyAuthorizationPolicy(user);
-
-    // Send the notification
-    const notificationInput: NotificationInputUserRegistered = {
-      triggeredBy: agentInfo.userID,
-      userID: savedUser.id,
-    };
-    await this.notificationAdapter.userRegistered(notificationInput);
-
-    return savedUser;
-  }
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IUser, {
