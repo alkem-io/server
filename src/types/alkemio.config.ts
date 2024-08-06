@@ -97,9 +97,9 @@ export type AlkemioConfig = {
     };
   };
   storage: {
-    graphql_upload: {
+    file: {
       max_file_size: number;
-    },
+    };
     database: {
       host: string;
       port: number;
@@ -201,7 +201,7 @@ export type AlkemioConfig = {
     vector_db: {
       host: string;
       port: number;
-    }
+    };
   };
   ssi: {
     enabled: boolean;

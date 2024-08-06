@@ -15,8 +15,15 @@ export class KonfigService {
       this.configService.get('hosting.endpoint_cluster', { infer: true })
     ).hostname;
 
-    const { sentry, apm  } = this.configService.get('monitoring', { infer: true });
-    const geoConfig = this.configService.get('integrations.geo', { infer: true });
+    const { sentry, apm } = this.configService.get('monitoring', {
+      infer: true,
+    });
+    const geoConfig = this.configService.get('integrations.geo', {
+      infer: true,
+    });
+    const fileConfig = this.configService.get('storage.file', {
+      infer: true,
+    });
     const platform = this.configService.get('platform', { infer: true });
     return {
       authentication: {
@@ -29,36 +36,53 @@ export class KonfigService {
         },
         {
           name: PlatformFeatureFlagName.COMMUNICATIONS,
-          enabled: this.configService.get('communications.enabled', { infer: true }),
+          enabled: this.configService.get('communications.enabled', {
+            infer: true,
+          }),
         },
         {
           name: PlatformFeatureFlagName.COMMUNICATIONS_DISCUSSIONS,
-          enabled: this.configService.get('communications.discussions.enabled', { infer: true }),
+          enabled: this.configService.get(
+            'communications.discussions.enabled',
+            { infer: true }
+          ),
         },
         {
           name: PlatformFeatureFlagName.SUBSCRIPTIONS,
-          enabled: this.configService.get('hosting.subscriptions.enabled', { infer: true }),
+          enabled: this.configService.get('hosting.subscriptions.enabled', {
+            infer: true,
+          }),
         },
         {
           name: PlatformFeatureFlagName.NOTIFICATIONS,
-          enabled: this.configService.get('notifications.enabled', { infer: true }),
+          enabled: this.configService.get('notifications.enabled', {
+            infer: true,
+          }),
         },
         {
           name: PlatformFeatureFlagName.WHITEBOARDS,
-          enabled: this.configService.get('collaboration.whiteboards.enabled', { infer: true }),
+          enabled: this.configService.get('collaboration.whiteboards.enabled', {
+            infer: true,
+          }),
         },
         {
           name: PlatformFeatureFlagName.LANDING_PAGE,
-          enabled: this.configService.get('platform.landing_page.enabled', { infer: true }),
+          enabled: this.configService.get('platform.landing_page.enabled', {
+            infer: true,
+          }),
         },
         {
           name: PlatformFeatureFlagName.GUIDENCE_ENGINE,
-          enabled: this.configService.get('platform.guidance_engine.enabled', { infer: true }),
+          enabled: this.configService.get('platform.guidance_engine.enabled', {
+            infer: true,
+          }),
         },
       ],
       locations: {
         domain,
-        environment: this.configService.get('hosting.environment', { infer: true }),
+        environment: this.configService.get('hosting.environment', {
+          infer: true,
+        }),
         terms: platform.terms,
         privacy: platform.privacy,
         security: platform.security,
@@ -94,6 +118,11 @@ export class KonfigService {
       geo: {
         endpoint: geoConfig?.rest_endpoint,
       },
+      storage: {
+        file: {
+          maxFileSize: fileConfig?.max_file_size,
+        },
+      },
     };
   }
 
@@ -112,8 +141,10 @@ export class KonfigService {
   }
 
   async getOryConfig(): Promise<IOryConfig> {
-    const oryConfig =
-      this.configService.get('identity.authentication.providers.ory', { infer: true });
+    const oryConfig = this.configService.get(
+      'identity.authentication.providers.ory',
+      { infer: true }
+    );
     return {
       kratosPublicBaseURL: oryConfig.kratos_public_base_url,
       issuer: oryConfig.issuer,
