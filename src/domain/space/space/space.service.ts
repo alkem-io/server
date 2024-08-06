@@ -839,7 +839,6 @@ export class SpaceService {
   ): Promise<ISpace> {
     const space = await this.getSpaceOrFail(subspaceData.spaceID, {
       relations: {
-        account: true,
         storageAggregator: true,
         community: true,
       },
