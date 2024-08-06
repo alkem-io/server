@@ -1161,14 +1161,19 @@ export class SpaceService {
       },
     });
 
-    if (!spaceWithAccount || !spaceWithAccount.account) {
+    if (
+      !spaceWithAccount ||
+      !spaceWithAccount.account ||
+      !spaceWithAccount.account.agent ||
+      !spaceWithAccount.account.agent.credentials
+    ) {
       throw new EntityNotFoundException(
         `Unable to find account for space with ID: ${space.id}`,
         LogContext.SPACES
       );
     }
 
-    return space.account;
+    return spaceWithAccount.account;
   }
 
   public async getCommunity(spaceId: string): Promise<ICommunity> {

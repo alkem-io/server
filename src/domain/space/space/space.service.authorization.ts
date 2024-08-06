@@ -69,7 +69,7 @@ export class SpaceAuthorizationService {
     if (!account || !account.agent || !account.agent.credentials) {
       throw new RelationshipNotFoundException(
         `Unable to load Account with credentials with entities at start of auth reset: ${account.id} `,
-        LogContext.SPACES
+        LogContext.ACCOUNT
       );
     }
 
