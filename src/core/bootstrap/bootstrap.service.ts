@@ -25,25 +25,22 @@ import { PlatformService } from '@platform/platfrom/platform.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { PlatformAuthorizationService } from '@platform/platfrom/platform.service.authorization';
 import { NameReporterService } from '@services/external/elasticsearch/name-reporter/name.reporter.service';
-import { AccountAuthorizationService } from '@domain/space/account/account.service.authorization';
 import { Account } from '@domain/space/account/account.entity';
 import { SpaceType } from '@common/enums/space.type';
-import { CreateAccountInput } from '@domain/space/account/dto/account.dto.create';
 import { SpaceLevel } from '@common/enums/space.level';
 import { CreateSpaceOnAccountInput } from '@domain/space/account/dto/account.dto.create.space';
-import { AccountHostService } from '@domain/space/account.host/account.host.service';
 import { AccountService } from '@domain/space/account/account.service';
+import { SpaceAuthorizationService } from '@domain/space/space/space.service.authorization';
 
 @Injectable()
 export class BootstrapService {
   constructor(
     private accountService: AccountService,
-    private accountHostService: AccountHostService,
     private agentService: AgentService,
     private spaceService: SpaceService,
     private userService: UserService,
     private userAuthorizationService: UserAuthorizationService,
-    private accountAuthorizationService: AccountAuthorizationService,
+    private spaceAuthorizationService: SpaceAuthorizationService,
     private adminAuthorizationService: AdminAuthorizationService,
     private configService: ConfigService,
     private organizationService: OrganizationService,
@@ -279,11 +276,8 @@ export class BootstrapService {
         );
       }
 
-      // TODO: this may be done actually in the org creation...
-      const accountInput: CreateAccountInput = {
-        host: hostOrganization,
-      };
-      let account = await this.accountHostService.createAccount(accountInput);
+      const account =
+        await this.organizationService.getAccount(hostOrganization);
 
       const spaceInput: CreateSpaceOnAccountInput = {
         accountID: '',
@@ -296,12 +290,13 @@ export class BootstrapService {
         type: SpaceType.SPACE,
       };
 
-      await this.accountService.createSpaceOnAccount(account, spaceInput);
-      account =
-        await this.accountAuthorizationService.applyAuthorizationPolicy(
-          account
-        );
-      return await this.accountService.save(account);
+      let space = await this.accountService.createSpaceOnAccount(
+        account,
+        spaceInput
+      );
+      space =
+        await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
+      return await this.spaceService.save(space);
     }
   }
 }

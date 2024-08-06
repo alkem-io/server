@@ -31,7 +31,6 @@ import { ILoader } from '@core/dataloader/loader.interface';
 import { Loader } from '@core/dataloader/decorators';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { IAccount } from '@domain/space/account/account.interface';
-import { AccountHostService } from '@domain/space/account.host/account.host.service';
 
 @Resolver(() => IUser)
 export class UserResolverFields {
@@ -40,7 +39,6 @@ export class UserResolverFields {
     private userService: UserService,
     private preferenceSetService: PreferenceSetService,
     private messagingService: MessagingService,
-    private accountHostService: AccountHostService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -199,7 +197,7 @@ export class UserResolverFields {
       AuthorizationPrivilege.READ_USER_PII
     );
     if (accountsVisible) {
-      return await this.accountHostService.getAccountsHostedByContributor(user);
+      return await this.userService.getAccounts(user);
     }
     return [];
   }

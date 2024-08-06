@@ -66,6 +66,7 @@ import { AvatarService } from '@domain/common/visual/avatar.service';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { UpdateUserPlatformSettingsInput } from './dto/user.dto.update.platform.settings';
 import { AccountHostService } from '@domain/space/account.host/account.host.service';
+import { IAccount } from '@domain/space/account/account.interface';
 
 @Injectable()
 export class UserService {
@@ -463,6 +464,16 @@ export class UserService {
       ...result,
       id,
     };
+  }
+
+  public async getAccounts(user: IUser): Promise<IAccount[]> {
+    return await this.accountHostService.getAccountsHostedByContributor(user);
+  }
+
+  public async getAccount(user: IUser): Promise<IAccount> {
+    const accounts = await this.getAccounts(user);
+    // TODO: later there will be exactly one account
+    return accounts[0];
   }
 
   async getPreferenceSetOrFail(userID: string): Promise<IPreferenceSet> {

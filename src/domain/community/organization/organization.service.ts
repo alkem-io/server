@@ -55,6 +55,7 @@ import { ICredentialDefinition } from '@domain/agent/credential/credential.defin
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { OrganizationRoleService } from '../organization-role/organization.role.service';
 import { AccountHostService } from '@domain/space/account.host/account.host.service';
+import { IAccount } from '@domain/space/account/account.interface';
 
 @Injectable()
 export class OrganizationService {
@@ -341,6 +342,18 @@ export class OrganizationService {
         LogContext.COMMUNITY
       );
     return organization;
+  }
+
+  public async getAccounts(organization: IOrganization): Promise<IAccount[]> {
+    return await this.accountHostService.getAccountsHostedByContributor(
+      organization
+    );
+  }
+
+  public async getAccount(organization: IOrganization): Promise<IAccount> {
+    const accounts = await this.getAccounts(organization);
+    // TODO: later there will be exactly one account
+    return accounts[0];
   }
 
   async getOrganizationAndAgent(

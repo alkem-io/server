@@ -10,12 +10,10 @@ import { CommunicationModule } from '@domain/communication/communication/communi
 import { PlatformModule } from '@platform/platfrom/platform.module';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
-import { InnovationHubModule } from '@domain/innovation-hub';
 import { NameReporterModule } from '@services/external/elasticsearch/name-reporter/name.reporter.module';
 import { AccountModule } from '@domain/space/account/account.module';
 import { Account } from '@domain/space/account/account.entity';
 import { SearchIngestModule } from '@services/api/search/v2/ingest';
-import { AccountHostModule } from '@domain/space/account.host/account.host.module';
 
 @Module({
   imports: [
@@ -23,7 +21,6 @@ import { AccountHostModule } from '@domain/space/account.host/account.host.modul
     AuthorizationPolicyModule,
     SpaceModule,
     AccountModule,
-    AccountHostModule,
     UserModule,
     AdminAuthorizationModule,
     PlatformModule,
@@ -31,7 +28,6 @@ import { AccountHostModule } from '@domain/space/account.host/account.host.modul
     CommunicationModule,
     OrganizationModule,
     TypeOrmModule.forFeature([Account]),
-    InnovationHubModule,
     NameReporterModule,
     SearchIngestModule,
   ],
