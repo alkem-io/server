@@ -23,7 +23,6 @@ import { ISpace } from '../space/space.interface';
 import { UpdateAccountPlatformSettingsInput } from './dto/account.dto.update.platform.settings';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { CreateAccountInput } from './dto/account.dto.create';
-import { CreateSpaceInput } from '../space/dto/space.dto.create';
 import { LicensingService } from '@platform/licensing/licensing.service';
 import { ILicensePlan } from '@platform/license-plan/license.plan.interface';
 import { IAccountSubscription } from './account.license.subscription.interface';
@@ -48,6 +47,8 @@ import { SpaceLevel } from '@common/enums/space.level';
 import { InnovationPackService } from '@library/innovation-pack/innovaton.pack.service';
 import { CreateInnovationPackOnAccountInput } from './dto/account.dto.create.innovation.pack';
 import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { NamingService } from '@services/infrastructure/naming/naming.service';
 
 @Injectable()
 export class AccountService {
@@ -64,6 +65,7 @@ export class AccountService {
     private virtualContributorService: VirtualContributorService,
     private innovationHubService: InnovationHubService,
     private innovationPackService: InnovationPackService,
+    private namingService: NamingService,
     @InjectRepository(Account)
     private accountRepository: Repository<Account>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -144,7 +146,23 @@ export class AccountService {
       );
     }
     const spaceData = spaceOnAccountData.spaceData;
-    await this.validateSpaceData(spaceData);
+
+    const reservedNameIDs =
+      await this.namingService.getReservedNameIDsLevelZeroSpaces();
+    if (!spaceData.nameID) {
+      spaceData.nameID = this.namingService.createNameIdAvoidingReservedNameIDs(
+        spaceData.profileData.displayName,
+        reservedNameIDs
+      );
+    } else {
+      if (reservedNameIDs.includes(spaceData.nameID)) {
+        throw new ValidationException(
+          `Unable to create entity: the provided nameID is already taken: ${spaceData.nameID}`,
+          LogContext.SPACES
+        );
+      }
+    }
+
     // Set data for the root space
     spaceData.level = SpaceLevel.SPACE;
     spaceData.storageAggregatorParent = account.storageAggregator;
@@ -161,13 +179,6 @@ export class AccountService {
     return savedAccount;
   }
 
-  async validateSpaceData(spaceData: CreateSpaceInput) {
-    if (!(await this.spaceService.isNameIdAvailable(spaceData.nameID)))
-      throw new ValidationException(
-        `Unable to create Space: the provided nameID is already taken: ${spaceData.nameID}`,
-        LogContext.SPACES
-      );
-  }
   async save(account: IAccount): Promise<IAccount> {
     return await this.accountRepository.save(account);
   }
@@ -516,5 +527,22 @@ export class AccountService {
       })
       .filter(item => item.plan?.type === LicensePlanType.SPACE_PLAN)
       .sort((a, b) => b.plan!.sortOrder - a.plan!.sortOrder)?.[0].subscription;
+  }
+
+  public async getStorageAggregatorOrFail(
+    accountID: string
+  ): Promise<IStorageAggregator> {
+    const space = await this.getAccountOrFail(accountID, {
+      relations: {
+        storageAggregator: true,
+      },
+    });
+    const storageAggregator = space.storageAggregator;
+    if (!storageAggregator)
+      throw new RelationshipNotFoundException(
+        `Unable to load storage aggregator for account ${accountID} `,
+        LogContext.ACCOUNT
+      );
+    return storageAggregator;
   }
 }

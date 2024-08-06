@@ -620,8 +620,11 @@ export class NotificationPayloadBuilder {
     originEntityDisplayName: string,
     commentType: RoomType
   ): Promise<CommunicationUserMentionEventPayload | undefined> {
-    const userContributor =
-      await this.getContributorPayloadOrFail(mentionedUserNameID);
+    const user =
+      await this.contributorLookupService.getUserByNameIdOrFail(
+        mentionedUserNameID
+      );
+    const userContributor = await this.getContributorPayloadOrFail(user.id);
 
     const commentOriginUrl = await this.buildCommentOriginUrl(
       commentType,
@@ -651,7 +654,11 @@ export class NotificationPayloadBuilder {
     originEntityDisplayName: string,
     commentType: RoomType
   ): Promise<CommunicationOrganizationMentionEventPayload | undefined> {
-    const orgData = await this.getContributorPayloadOrFail(mentionedOrgNameID);
+    const org =
+      await this.contributorLookupService.getOrganizationByNameIdOrFail(
+        mentionedOrgNameID
+      );
+    const orgData = await this.getContributorPayloadOrFail(org.id);
 
     const commentOriginUrl = await this.buildCommentOriginUrl(
       commentType,
