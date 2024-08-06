@@ -55,10 +55,14 @@ export class AccountService {
   ) {}
 
   async createSpaceOnAccount(
-    account: IAccount,
     spaceData: CreateSpaceOnAccountInput,
     agentInfo?: AgentInfo
   ): Promise<ISpace> {
+    const account = await this.getAccountOrFail(spaceData.accountID, {
+      relations: {
+        storageAggregator: true,
+      },
+    });
     if (!account.storageAggregator) {
       throw new RelationshipNotFoundException(
         `Unable to find storage aggregator on account for creating space ${account.id} `,

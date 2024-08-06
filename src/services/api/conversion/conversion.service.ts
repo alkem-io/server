@@ -101,10 +101,8 @@ export class ConversionService {
       level: SpaceLevel.SPACE,
       type: SpaceType.SPACE,
     };
-    let space = await this.accountService.createSpaceOnAccount(
-      account,
-      createSpaceInput
-    );
+    let space =
+      await this.accountService.createSpaceOnAccount(createSpaceInput);
 
     space = await this.spaceService.getSpaceOrFail(space.id, {
       relations: {

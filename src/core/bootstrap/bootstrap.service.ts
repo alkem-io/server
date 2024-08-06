@@ -31,11 +31,13 @@ import { SpaceLevel } from '@common/enums/space.level';
 import { CreateSpaceOnAccountInput } from '@domain/space/account/dto/account.dto.create.space';
 import { AccountService } from '@domain/space/account/account.service';
 import { SpaceAuthorizationService } from '@domain/space/space/space.service.authorization';
+import { AccountAuthorizationService } from '@domain/space/account/account.service.authorization';
 
 @Injectable()
 export class BootstrapService {
   constructor(
     private accountService: AccountService,
+    private accountAuthorizationService: AccountAuthorizationService,
     private agentService: AgentService,
     private spaceService: SpaceService,
     private userService: UserService,
@@ -278,9 +280,10 @@ export class BootstrapService {
 
       const account =
         await this.organizationService.getAccount(hostOrganization);
+      await this.accountAuthorizationService.applyAuthorizationPolicy(account);
 
       const spaceInput: CreateSpaceOnAccountInput = {
-        accountID: '',
+        accountID: account.id,
         nameID: DEFAULT_SPACE_NAMEID,
         profileData: {
           displayName: DEFAULT_SPACE_DISPLAYNAME,
@@ -290,10 +293,7 @@ export class BootstrapService {
         type: SpaceType.SPACE,
       };
 
-      let space = await this.accountService.createSpaceOnAccount(
-        account,
-        spaceInput
-      );
+      let space = await this.accountService.createSpaceOnAccount(spaceInput);
       space =
         await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
       space = await this.spaceService.save(space);
