@@ -12,7 +12,7 @@ import {
 } from '@common/exceptions';
 import { LogContext } from '@common/enums/logging.context';
 import { IAgent } from '@domain/agent/agent/agent.interface';
-import { VirtualContributor } from '../virtual-contributor';
+import { VirtualContributor } from '../virtual-contributor/virtual.contributor.entity';
 import { CommunityContributorType } from '@common/enums/community.contributor.type';
 import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 

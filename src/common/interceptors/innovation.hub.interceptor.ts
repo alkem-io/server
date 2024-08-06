@@ -10,7 +10,7 @@ import { GqlExecutionContext } from '@nestjs/graphql';
 import { INNOVATION_HUB_INJECT_TOKEN } from '@common/constants';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ConfigurationTypes, LogContext } from '@common/enums';
-import { InnovationHubService } from '@domain/innovation-hub';
+import { InnovationHubService } from '@domain/innovation-hub/innovation.hub.service';
 import { DOMAIN_PATTERN, SUBDOMAIN_PATTERN } from '@core/validation';
 
 const SUBDOMAIN_GROUP = 'subdomain';

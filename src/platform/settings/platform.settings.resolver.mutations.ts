@@ -5,7 +5,7 @@ import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface'
 import { UseGuards } from '@nestjs/common';
 import { Resolver, Mutation, Args } from '@nestjs/graphql';
 import { PlatformSettingsService } from './platform.settings.service';
-import { IVirtualContributor } from '@domain/community/virtual-contributor';
+import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { UpdateInnovationHubPlatformSettingsInput } from './dto/innovation.hub.dto.update.settings';
 import { UpdateVirtualContributorPlatformSettingsInput } from './dto/virtual.contributor.dto.update.settings';
 import { UpdateOrganizationPlatformSettingsInput } from './dto/organization.dto.update.platform.settings';

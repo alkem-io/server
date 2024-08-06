@@ -8,7 +8,7 @@ import { Communication } from '@domain/communication/communication/communication
 import { Space } from '@domain/space/space/space.entity';
 import { ISpace } from '@domain/space/space/space.interface';
 import { RoomType } from '@common/enums/room.type';
-import { VirtualContributor } from '@domain/community/virtual-contributor';
+import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { IAgent } from '@domain/agent';
 
 @Injectable()

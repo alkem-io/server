@@ -20,7 +20,7 @@ import { AccountHostModule } from '../account.host/account.host.module';
 import { LicenseEngineModule } from '@core/license-engine/license.engine.module';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
-import { InnovationHubModule } from '@domain/innovation-hub';
+import { InnovationHubModule } from '@domain/innovation-hub/innovation.hub.module';
 import { InnovationPackModule } from '@library/innovation-pack/innovation.pack.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
 

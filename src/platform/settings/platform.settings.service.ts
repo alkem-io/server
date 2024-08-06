@@ -1,7 +1,7 @@
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
-import { IVirtualContributor } from '@domain/community/virtual-contributor';
+import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
-import { InnovationHubService } from '@domain/innovation-hub';
+import { InnovationHubService } from '@domain/innovation-hub/innovation.hub.service';
 import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
 import { AccountService } from '@domain/space/account/account.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';

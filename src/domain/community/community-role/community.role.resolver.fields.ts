@@ -19,7 +19,7 @@ import { UserFilterInput } from '@core/filtering';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IInvitation } from '../invitation';
-import { IVirtualContributor } from '../virtual-contributor';
+import { IVirtualContributor } from '../virtual-contributor/virtual.contributor.interface';
 import { CommunityRoleImplicit } from '@common/enums/community.role.implicit';
 import { IPlatformInvitation } from '@platform/invitation';
 import { CommunityRoleService } from './community.role.service';
@@ -82,9 +82,8 @@ export class CommunityResolverFields {
         CommunityRole.MEMBER
       );
 
-    const parentCommunity = await this.communityService.getParentCommunity(
-      community
-    );
+    const parentCommunity =
+      await this.communityService.getParentCommunity(community);
 
     const parentCommunityMemberCredentials = parentCommunity
       ? this.communityRoleService.getCredentialDefinitionForRole(

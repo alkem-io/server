@@ -40,12 +40,12 @@ export class BootstrapService {
     private spaceService: SpaceService,
     private userService: UserService,
     private userAuthorizationService: UserAuthorizationService,
+    private organizationService: OrganizationService,
+    private organizationAuthorizationService: OrganizationAuthorizationService,
     private spaceAuthorizationService: SpaceAuthorizationService,
     private adminAuthorizationService: AdminAuthorizationService,
     private configService: ConfigService,
-    private organizationService: OrganizationService,
     private platformService: PlatformService,
-    private organizationAuthorizationService: OrganizationAuthorizationService,
     private platformAuthorizationService: PlatformAuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
     @InjectRepository(Account)
@@ -209,23 +209,23 @@ export class BootstrapService {
     }
   }
 
-  // TODO: NOT USED?????
-  private async ensureSpaceNamesInElastic() {
-    const spaces = await this.spaceService.getAllSpaces({
-      relations: {
-        profile: {
-          location: true,
-        },
-      },
-    });
+  // // TODO: NOT USED?????
+  // private async ensureSpaceNamesInElastic() {
+  //   const spaces = await this.spaceService.getAllSpaces({
+  //     relations: {
+  //       profile: {
+  //         location: true,
+  //       },
+  //     },
+  //   });
 
-    const data = spaces.map(({ id, profile: { displayName: name } }) => ({
-      id,
-      name,
-    }));
+  //   const data = spaces.map(({ id, profile: { displayName: name } }) => ({
+  //     id,
+  //     name,
+  //   }));
 
-    this.nameReporter.bulkUpdateOrCreateNames(data);
-  }
+  //   this.nameReporter.bulkUpdateOrCreateNames(data);
+  // }
 
   async ensureSsiPopulated() {
     const ssiEnabled = this.configService.get(ConfigurationTypes.SSI).enabled;
@@ -296,7 +296,8 @@ export class BootstrapService {
       );
       space =
         await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
-      return await this.spaceService.save(space);
+      space = await this.spaceService.save(space);
+      return space;
     }
   }
 }

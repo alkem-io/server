@@ -21,7 +21,7 @@ import { NotificationInputSpaceCreated } from '@services/adapters/notification-a
 import { CreateSpaceOnAccountInput } from './dto/account.dto.create.space';
 import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
 import { CreateInnovationHubOnAccountInput } from './dto/account.dto.create.innovation.hub';
-import { InnovationHubService } from '@domain/innovation-hub';
+import { InnovationHubService } from '@domain/innovation-hub/innovation.hub.service';
 import { InnovationHubAuthorizationService } from '@domain/innovation-hub/innovation.hub.service.authorization';
 import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
 import { CreateInnovationPackOnAccountInput } from './dto/account.dto.create.innovation.pack';
