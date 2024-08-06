@@ -92,13 +92,7 @@ export class SpaceResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('deleteData') deleteData: DeleteSpaceInput
   ): Promise<ISpace> {
-    const space = await this.spaceService.getSpaceOrFail(deleteData.ID, {
-      relations: {
-        account: {
-          authorization: true,
-        },
-      },
-    });
+    const space = await this.spaceService.getSpaceOrFail(deleteData.ID);
 
     this.authorizationService.grantAccessOrFail(
       agentInfo,
