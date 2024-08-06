@@ -79,6 +79,7 @@ import { FileIntegrationModule } from '@services/file-integration';
 import { AdminLicensingModule } from '@platform/admin/licensing/admin.licensing.module';
 import { PlatformRoleModule } from '@platform/platfrom.role/platform.role.module';
 import { LookupByNameModule } from '@services/api/lookup-by-name';
+import { PlatformHubModule } from '@platform/platfrom.hub/platform.hub.module';
 
 @Module({
   imports: [
@@ -252,6 +253,7 @@ import { LookupByNameModule } from '@services/api/lookup-by-name';
     LibraryModule,
     PlatformModule,
     PlatformRoleModule,
+    PlatformHubModule,
     ContributionMoveModule,
     GeoLocationModule,
     ContributionReporterModule,
