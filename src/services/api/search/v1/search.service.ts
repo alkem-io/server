@@ -938,7 +938,7 @@ export class SearchService {
     let postIDsFilter: string[] | undefined = undefined;
     if (searchInSpaceID) {
       searchInSpace = await this.spaceService.getSpaceOrFail(searchInSpaceID, {
-        relations: { collaboration: true, account: true },
+        relations: { collaboration: true },
       });
       spaceIDsFilter = [searchInSpace.id];
       const levelZeroSpaceIDsFilter = [searchInSpace.levelZeroSpaceID];
@@ -980,7 +980,6 @@ export class SearchService {
       },
       relations: {
         collaboration: true,
-        account: true,
       },
     });
 
@@ -997,7 +996,6 @@ export class SearchService {
       },
       relations: {
         collaboration: true,
-        account: true,
       },
     });
 
