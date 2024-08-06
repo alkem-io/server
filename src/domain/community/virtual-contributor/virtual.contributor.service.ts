@@ -73,9 +73,6 @@ export class VirtualContributorService {
         virtualContributorData.profileData?.displayName || ''
       );
     }
-    await this.checkDisplayNameOrFail(
-      virtualContributorData.profileData?.displayName
-    );
 
     let virtualContributor: IVirtualContributor = VirtualContributor.create(
       virtualContributorData
