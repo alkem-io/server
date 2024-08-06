@@ -12,7 +12,6 @@ import { AiPersonaServiceService } from '../ai-persona-service/ai.persona.servic
 import { AiPersonaServiceAuthorizationService } from '../ai-persona-service/ai.persona.service.authorization';
 import { CreateAiPersonaServiceInput } from '../ai-persona-service/dto/ai.persona.service.dto.create';
 import { IAiPersonaService } from '../ai-persona-service/ai.persona.service.interface';
-import { ConfigurationTypes } from '@common/enums';
 import { Space } from '@domain/space/space/space.entity';
 import { ChromaClient } from 'chromadb';
 import { ConfigService } from '@nestjs/config';
@@ -20,6 +19,7 @@ import { InjectEntityManager } from '@nestjs/typeorm';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { EntityManager } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { AlkemioConfig } from '@src/types';
 
 @ObjectType('MigrateEmbeddings')
 class IMigrateEmbeddingsResponse {
@@ -38,7 +38,7 @@ export class AiServerResolverMutations {
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     @InjectEntityManager('default')
     private entityManager: EntityManager,
-    private config: ConfigService,
+    private config: ConfigService<AlkemioConfig, true>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private logger: LoggerService
   ) {}
@@ -60,7 +60,7 @@ export class AiServerResolverMutations {
       'User not authenticated to migrate embeddings'
     );
 
-    const vectorDb = this.config.get(ConfigurationTypes.PLATFORM).vector_db;
+    const vectorDb = this.config.get('platform.vector_db', { infer: true });
 
     const chroma = new ChromaClient({
       path: `http://${vectorDb.host}:${vectorDb.port}`,
