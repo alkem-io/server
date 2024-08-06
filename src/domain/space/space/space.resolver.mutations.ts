@@ -119,22 +119,9 @@ export class SpaceResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('settingsData') settingsData: UpdateSpaceSettingsInput
   ): Promise<ISpace> {
-    const space = await this.spaceService.getSpaceOrFail(settingsData.spaceID, {
-      relations: {
-        account: {
-          authorization: true,
-        },
-        parentSpace: {
-          authorization: true,
-        },
-      },
+    let space = await this.spaceService.getSpaceOrFail(settingsData.spaceID, {
+      relations: {},
     });
-    if (!space.account || !space.account.authorization) {
-      throw new EntityNotInitializedException(
-        `Unabl to load authorization for account when updating settings on space: ${space.id}`,
-        LogContext.SPACES
-      );
-    }
 
     this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -143,17 +130,12 @@ export class SpaceResolverMutations {
       `space settings update: ${space.id}`
     );
 
-    let updatedSpace = await this.spaceService.updateSpaceSettings(
-      space,
-      settingsData
-    );
+    space = await this.spaceService.updateSpaceSettings(space, settingsData);
 
     // As the settings may update the authorization for the Space, the authorization policy will need to be reset
-    updatedSpace =
-      await this.spaceAuthorizationService.applyAuthorizationPolicy(
-        updatedSpace
-      );
-    return await this.spaceService.save(updatedSpace);
+    space =
+      await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
+    return await this.spaceService.save(space);
   }
 
   @UseGuards(GraphqlGuard)
