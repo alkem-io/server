@@ -14,19 +14,13 @@ import { AgentService } from '@domain/agent/agent/agent.service';
 import { SpaceService } from '../space/space.service';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { ISpace } from '../space/space.interface';
-import { AuthorizationPolicy } from '@domain/common/authorization-policy';
-import { CreateAccountInput } from './dto/account.dto.create';
 import { LicensingService } from '@platform/licensing/licensing.service';
-import { ILicensePlan } from '@platform/license-plan/license.plan.interface';
 import { IAccountSubscription } from './account.license.subscription.interface';
 import { LicenseCredential } from '@common/enums/license.credential';
 import { CreateVirtualContributorOnAccountInput } from './dto/account.dto.create.virtual.contributor';
 import { IVirtualContributor } from '@domain/community/virtual-contributor';
 import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
-import { User } from '@domain/community/user';
-import { LicenseIssuerService } from '@platform/license-issuer/license.issuer.service';
 import { AccountHostService } from '../account.host/account.host.service';
-import { Organization } from '@domain/community/organization/organization.entity';
 import { LicensePrivilege } from '@common/enums/license.privilege';
 import { LicenseEngineService } from '@core/license-engine/license.engine.service';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
@@ -50,7 +44,6 @@ export class AccountService {
     private agentService: AgentService,
     private licensingService: LicensingService,
     private licenseEngineService: LicenseEngineService,
-    private licenseIssuerService: LicenseIssuerService,
     private storageAggregatorService: StorageAggregatorService,
     private virtualContributorService: VirtualContributorService,
     private innovationHubService: InnovationHubService,
@@ -60,52 +53,6 @@ export class AccountService {
     private accountRepository: Repository<Account>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
-
-  async createAccount(accountData: CreateAccountInput): Promise<IAccount> {
-    const licensingFramework =
-      await this.licensingService.getDefaultLicensingOrFail();
-
-    let account: IAccount = new Account();
-    account.authorization = new AuthorizationPolicy();
-    account.storageAggregator =
-      await this.storageAggregatorService.createStorageAggregator();
-
-    account.agent = await this.agentService.createAgent({
-      parentDisplayID: 'account',
-    });
-
-    const host = await this.accountHostService.getHostByID(accountData.host.id);
-
-    const licensePlansToAssign: ILicensePlan[] = [];
-    const licensePlans = await this.licensingService.getLicensePlans(
-      licensingFramework.id
-    );
-    for (const plan of licensePlans) {
-      if (host instanceof User && plan.assignToNewUserAccounts) {
-        licensePlansToAssign.push(plan);
-      } else if (
-        host instanceof Organization &&
-        plan.assignToNewOrganizationAccounts
-      ) {
-        licensePlansToAssign.push(plan);
-      }
-    }
-
-    const accountAgent = account.agent;
-    account = await this.save(account);
-
-    for (const licensePlan of licensePlansToAssign) {
-      account.agent = await this.licenseIssuerService.assignLicensePlan(
-        accountAgent,
-        licensePlan,
-        account.id
-      );
-    }
-
-    await this.accountHostService.setAccountHost(account, accountData.host.id);
-
-    return account;
-  }
 
   async createSpaceOnAccount(
     account: IAccount,

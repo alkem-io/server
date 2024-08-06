@@ -4,27 +4,90 @@ import { ContributorService } from '@domain/community/contributor/contributor.se
 import { Injectable, Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IAccount } from '../account/account.interface';
-import { AccountException, EntityNotFoundException } from '@common/exceptions';
+import {
+  AccountException,
+  EntityNotFoundException,
+  RelationshipNotFoundException,
+} from '@common/exceptions';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { User } from '@domain/community/user';
 import { Organization } from '@domain/community/organization';
 import { AgentService } from '@domain/agent/agent/agent.service';
+import { ILicensePlan } from '@platform/license-plan/license.plan.interface';
+import { LicenseIssuerService } from '@platform/license-issuer/license.issuer.service';
+import { Account } from '../account/account.entity';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
+import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
+import { CreateAccountInput } from '../account/dto/account.dto.create';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { LicensingService } from '@platform/licensing/licensing.service';
 
 @Injectable()
 export class AccountHostService {
   constructor(
     private contributorService: ContributorService,
     private agentService: AgentService,
+    private licenseIssuerService: LicenseIssuerService,
+    private licensingService: LicensingService,
+    private storageAggregatorService: StorageAggregatorService,
+    @InjectRepository(Account)
+    private accountRepository: Repository<Account>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async getHosts(account: IAccount): Promise<IContributor[]> {
-    const contributors =
-      await this.contributorService.contributorsWithCredentials({
-        type: AuthorizationCredential.ACCOUNT_HOST,
-        resourceID: account.id,
-      });
-    return contributors;
+  async createAccount(accountData: CreateAccountInput): Promise<IAccount> {
+    let account: IAccount = new Account();
+    account.authorization = new AuthorizationPolicy();
+    account.storageAggregator =
+      await this.storageAggregatorService.createStorageAggregator();
+
+    account.agent = await this.agentService.createAgent({
+      parentDisplayID: 'account',
+    });
+
+    account = await this.accountRepository.save(account);
+
+    await this.setAccountHost(account, accountData.host);
+
+    return account;
+  }
+
+  async assignLicensePlansToAccount(
+    account: IAccount,
+    host: IContributor
+  ): Promise<void> {
+    if (!account.agent) {
+      throw new RelationshipNotFoundException(
+        `Account ${account.id} has no agent`,
+        LogContext.ACCOUNT
+      );
+    }
+    const licensingFramework =
+      await this.licensingService.getDefaultLicensingOrFail();
+    const licensePlansToAssign: ILicensePlan[] = [];
+    const licensePlans = await this.licensingService.getLicensePlans(
+      licensingFramework.id
+    );
+    for (const plan of licensePlans) {
+      if (host instanceof User && plan.assignToNewUserAccounts) {
+        licensePlansToAssign.push(plan);
+      } else if (
+        host instanceof Organization &&
+        plan.assignToNewOrganizationAccounts
+      ) {
+        licensePlansToAssign.push(plan);
+      }
+    }
+
+    const accountAgent = account.agent;
+    for (const licensePlan of licensePlansToAssign) {
+      account.agent = await this.licenseIssuerService.assignLicensePlan(
+        accountAgent,
+        licensePlan,
+        account.id
+      );
+    }
   }
 
   async getHost(account: IAccount): Promise<IContributor | null> {
@@ -95,29 +158,17 @@ export class AccountHostService {
     });
   }
 
-  async setAccountHost(
+  private async setAccountHost(
     account: IAccount,
-    hostContributorID: string
+    hostContributor: IContributor
   ): Promise<IContributor> {
-    const contributor = await this.getHostByID(hostContributorID);
-
-    const existingHost = await this.getHost(account);
-
-    if (existingHost) {
-      await this.agentService.revokeCredential({
-        agentID: existingHost.agent.id,
-        type: AuthorizationCredential.ACCOUNT_HOST,
-        resourceID: account.id,
-      });
-    }
-
     // assign the credential
-    contributor.agent = await this.agentService.grantCredential({
-      agentID: contributor.agent.id,
+    hostContributor.agent = await this.agentService.grantCredential({
+      agentID: hostContributor.agent.id,
       type: AuthorizationCredential.ACCOUNT_HOST,
       resourceID: account.id,
     });
 
-    return contributor;
+    return hostContributor;
   }
 }

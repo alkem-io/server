@@ -15,6 +15,7 @@ import { NameReporterModule } from '@services/external/elasticsearch/name-report
 import { AccountModule } from '@domain/space/account/account.module';
 import { Account } from '@domain/space/account/account.entity';
 import { SearchIngestModule } from '@services/api/search/v2/ingest';
+import { AccountHostModule } from '@domain/space/account.host/account.host.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { SearchIngestModule } from '@services/api/search/v2/ingest';
     AuthorizationPolicyModule,
     SpaceModule,
     AccountModule,
+    AccountHostModule,
     UserModule,
     AdminAuthorizationModule,
     PlatformModule,

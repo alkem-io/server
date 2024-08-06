@@ -25,19 +25,20 @@ import { PlatformService } from '@platform/platfrom/platform.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { PlatformAuthorizationService } from '@platform/platfrom/platform.service.authorization';
 import { NameReporterService } from '@services/external/elasticsearch/name-reporter/name.reporter.service';
-import { AccountService } from '@domain/space/account/account.service';
 import { AccountAuthorizationService } from '@domain/space/account/account.service.authorization';
 import { Account } from '@domain/space/account/account.entity';
 import { SpaceType } from '@common/enums/space.type';
-import { SearchIngestService } from '@services/api/search/v2/ingest/search.ingest.service';
 import { CreateAccountInput } from '@domain/space/account/dto/account.dto.create';
 import { SpaceLevel } from '@common/enums/space.level';
 import { CreateSpaceOnAccountInput } from '@domain/space/account/dto/account.dto.create.space';
+import { AccountHostService } from '@domain/space/account.host/account.host.service';
+import { AccountService } from '@domain/space/account/account.service';
 
 @Injectable()
 export class BootstrapService {
   constructor(
     private accountService: AccountService,
+    private accountHostService: AccountHostService,
     private agentService: AgentService,
     private spaceService: SpaceService,
     private userService: UserService,
@@ -54,9 +55,7 @@ export class BootstrapService {
     private accountRepository: Repository<Account>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    private nameReporter: NameReporterService,
-    // todo remove later
-    private ingestService: SearchIngestService
+    private nameReporter: NameReporterService
   ) {}
 
   async bootstrap() {
@@ -284,7 +283,7 @@ export class BootstrapService {
       const accountInput: CreateAccountInput = {
         host: hostOrganization,
       };
-      let account = await this.accountService.createAccount(accountInput);
+      let account = await this.accountHostService.createAccount(accountInput);
 
       const spaceInput: CreateSpaceOnAccountInput = {
         accountID: '',
