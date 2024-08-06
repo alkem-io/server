@@ -77,7 +77,7 @@ export class ConversionService {
     }
 
     // Need to get the containing account for the space
-    const account = await this.spaceService.getAccountOrFail(subspace);
+    const account = await this.spaceService.getAccountWithAgentOrFail(subspace);
 
     // check the community is in a fit state
     const challengeCommunityLeadOrgs =

@@ -63,7 +63,19 @@ export class SpaceAuthorizationService {
   ) {}
 
   async applyAuthorizationPolicy(spaceInput: ISpace): Promise<ISpace> {
-    const spaceAccountLicense = await this.spaceService.getSpaceOrFail(
+    const account =
+      await this.spaceService.getAccountWithAgentOrFail(spaceInput);
+
+    if (!account || !account.agent || !account.agent.credentials) {
+      throw new RelationshipNotFoundException(
+        `Unable to load Account with credentials with entities at start of auth reset: ${account.id} `,
+        LogContext.SPACES
+      );
+    }
+
+    const accountAgent = account.agent;
+
+    const spaceForSettings = await this.spaceService.getSpaceOrFail(
       spaceInput.id,
       {
         relations: {
@@ -72,43 +84,27 @@ export class SpaceAuthorizationService {
               policy: true,
             },
           },
-          account: {
-            agent: {
-              credentials: true,
-            },
-          },
         },
       }
     );
-    if (
-      !spaceAccountLicense.account ||
-      !spaceAccountLicense.account.agent ||
-      !spaceAccountLicense.account.agent.credentials
-    ) {
-      throw new RelationshipNotFoundException(
-        `Unable to load Space with entities at start of auth reset: ${spaceAccountLicense.id} `,
-        LogContext.SPACES
-      );
-    }
 
-    const spaceVisibility = spaceAccountLicense.visibility;
-    const accountAgent = spaceAccountLicense.account.agent;
+    const spaceVisibility = spaceForSettings.visibility;
 
     // Allow the parent admins to also delete subspaces
     let deletionCredentialCriterias: ICredentialDefinition[] = [];
-    if (spaceAccountLicense.parentSpace) {
+    if (spaceForSettings.parentSpace) {
       if (
-        !spaceAccountLicense.parentSpace.community ||
-        !spaceAccountLicense.parentSpace.community.policy
+        !spaceForSettings.parentSpace.community ||
+        !spaceForSettings.parentSpace.community.policy
       ) {
         throw new RelationshipNotFoundException(
-          `Unable to load Space with parent community policy in auth reset: ${spaceAccountLicense.id} `,
+          `Unable to load Space with parent community policy in auth reset: ${spaceForSettings.id} `,
           LogContext.SPACES
         );
       }
 
       const parentCommunityPolicyWithSettings = this.getCommunityPolicy(
-        spaceAccountLicense.parentSpace
+        spaceForSettings.parentSpace
       );
       const spaceSettings = this.spaceSettingsService.getSettings(
         spaceInput.settingsStr
@@ -266,7 +262,7 @@ export class SpaceAuthorizationService {
     });
     if (!space.subspaces) {
       throw new RelationshipNotFoundException(
-        `Unable to load Space with subspaces at part of auth reset: ${spaceAccountLicense.id} `,
+        `Unable to load Space with subspaces at part of auth reset: ${spaceForSettings.id} `,
         LogContext.SPACES
       );
     }
