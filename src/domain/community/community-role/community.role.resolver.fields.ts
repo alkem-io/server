@@ -7,7 +7,7 @@ import {
   Profiling,
 } from '@src/common/decorators';
 import { Community, ICommunity } from '@domain/community/community';
-import { IUser } from '@domain/community/user';
+import { IUser } from '@domain/community/user/user.interface';
 import { IApplication } from '@domain/community/application';
 import { AuthorizationPrivilege } from '@common/enums';
 import { IOrganization } from '../organization';

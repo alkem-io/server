@@ -3,8 +3,8 @@ import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager, FindOneOptions } from 'typeorm';
 import { IContributor } from './contributor.interface';
-import { User } from '../user';
-import { Organization } from '../organization';
+import { User } from '../user/user.entity';
+import { Organization } from '../organization/organization.entity';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,

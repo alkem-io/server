@@ -7,7 +7,7 @@ import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { GraphqlGuard } from '@core/authorization';
 import { IAgent } from '@domain/agent/agent';
-import { IUser, User } from '@domain/community/user';
+import { IUser } from '@domain/community/user/user.interface';
 import { Inject, LoggerService, UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -31,6 +31,7 @@ import { ILoader } from '@core/dataloader/loader.interface';
 import { Loader } from '@core/dataloader/decorators';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { IAccount } from '@domain/space/account/account.interface';
+import { User } from './user.entity';
 
 @Resolver(() => IUser)
 export class UserResolverFields {

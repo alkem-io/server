@@ -26,9 +26,7 @@ import { ProfileService } from '@domain/common/profile/profile.service';
 import {
   CreateUserInput,
   DeleteUserInput,
-  IUser,
   UpdateUserInput,
-  User,
 } from '@domain/community/user';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
@@ -67,6 +65,8 @@ import { DocumentService } from '@domain/storage/document/document.service';
 import { UpdateUserPlatformSettingsInput } from './dto/user.dto.update.platform.settings';
 import { AccountHostService } from '@domain/space/account.host/account.host.service';
 import { IAccount } from '@domain/space/account/account.interface';
+import { User } from './user.entity';
+import { IUser } from './user.interface';
 
 @Injectable()
 export class UserService {

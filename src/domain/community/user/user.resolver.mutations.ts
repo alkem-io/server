@@ -2,11 +2,7 @@ import { Inject, LoggerService, UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
-import {
-  CreateUserInput,
-  IUser,
-  UpdateUserInput,
-} from '@domain/community/user';
+import { IUser } from '@domain/community/user/user.interface';
 import { UserService } from './user.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
@@ -24,6 +20,7 @@ import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/
 import { NotificationInputUserRegistered } from '@services/adapters/notification-adapter/dto/notification.dto.input.user.registered';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { UpdateUserPlatformSettingsInput } from './dto/user.dto.update.platform.settings';
+import { CreateUserInput, UpdateUserInput } from './dto';
 
 @Resolver(() => IUser)
 export class UserResolverMutations {

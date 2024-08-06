@@ -10,7 +10,7 @@ import {
   RelationshipNotFoundException,
 } from '@common/exceptions';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
-import { User } from '@domain/community/user';
+import { User } from '@domain/community/user/user.entity';
 import { Organization } from '@domain/community/organization';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { ILicensePlan } from '@platform/license-plan/license.plan.interface';

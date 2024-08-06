@@ -2,7 +2,7 @@ import { Inject, LoggerService, UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
-import { DeleteUserInput, IUser } from '@domain/community/user';
+import { IUser } from '@domain/community/user/user.interface';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { UserAuthorizationService } from '@domain/community/user/user.service.authorization';
@@ -13,6 +13,7 @@ import { UserService } from '@domain/community/user/user.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { NotificationInputUserRemoved } from '@services/adapters/notification-adapter/dto/notification.dto.input.user.removed';
+import { DeleteUserInput } from '@domain/community/user/dto/user.dto.delete';
 
 @Resolver()
 export class RegistrationResolverMutations {

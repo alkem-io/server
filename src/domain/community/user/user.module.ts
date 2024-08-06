@@ -3,7 +3,7 @@ import { UserService } from './user.service';
 import { UserResolverQueries } from './user.resolver.queries';
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { User } from '@domain/community/user';
+import { User } from '@domain/community/user/user.entity';
 import { UserResolverFields } from './user.resolver.fields';
 import { UserResolverMutations } from './user.resolver.mutations';
 import { AgentModule } from '@domain/agent/agent/agent.module';

@@ -5,7 +5,7 @@ import { CurrentUser } from '@src/common/decorators';
 import { Args, ResolveField } from '@nestjs/graphql';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { MeQueryResults } from '@services/api/me/dto';
-import { IUser } from '@domain/community/user';
+import { IUser } from '@domain/community/user/user.interface';
 import {
   AuthenticationException,
   ValidationException,
