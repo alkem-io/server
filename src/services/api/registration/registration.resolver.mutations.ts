@@ -20,6 +20,7 @@ import { CreateOrganizationInput } from '@domain/community/organization/dto/orga
 import { IOrganization } from '@domain/community/organization/organization.interface';
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { OrganizationAuthorizationService } from '@domain/community/organization/organization.service.authorization';
+import { AccountAuthorizationService } from '@domain/space/account/account.service.authorization';
 
 @Resolver()
 export class RegistrationResolverMutations {
@@ -32,6 +33,7 @@ export class RegistrationResolverMutations {
     private organizationAuthorizationService: OrganizationAuthorizationService,
     private authorizationService: AuthorizationService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
+    private accountAuthorizationService: AccountAuthorizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -44,15 +46,8 @@ export class RegistrationResolverMutations {
   async createUserNewRegistration(
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<IUser> {
-    let user = await this.registrationService.registerNewUser(agentInfo);
-
-    user = await this.userAuthorizationService.applyAuthorizationPolicy(user);
-
-    await this.registrationService.processPendingInvitations(user);
-
-    await this.userCreatedEvents(user, agentInfo);
-
-    return user;
+    const user = await this.registrationService.registerNewUser(agentInfo);
+    return await this.processCreatedUser(user, agentInfo);
   }
 
   @UseGuards(GraphqlGuard)
@@ -71,18 +66,29 @@ export class RegistrationResolverMutations {
       AuthorizationPrivilege.CREATE,
       `create new User: ${agentInfo.email}`
     );
-    let user = await this.userService.createUser(userData);
-    user = await this.userAuthorizationService.grantCredentials(user);
+    const user = await this.userService.createUser(userData);
+    return await this.processCreatedUser(user, agentInfo);
+  }
 
-    const savedUser =
-      await this.userAuthorizationService.applyAuthorizationPolicy(user);
+  private async processCreatedUser(
+    userInput: IUser,
+    agentInfo: AgentInfo
+  ): Promise<IUser> {
+    let user = await this.userAuthorizationService.grantCredentials(userInput);
+
+    user = await this.userAuthorizationService.applyAuthorizationPolicy(user);
+
+    const userAccount = await this.userService.getAccount(user);
+    await this.accountAuthorizationService.applyAuthorizationPolicy(
+      userAccount
+    );
 
     await this.registrationService.processPendingInvitations(user);
 
-    await this.userCreatedEvents(savedUser, agentInfo);
-
-    return savedUser;
+    await this.userCreatedEvents(user, agentInfo);
+    return user;
   }
+
   @UseGuards(GraphqlGuard)
   @Mutation(() => IOrganization, {
     description: 'Creates a new Organization on the platform.',
@@ -101,14 +107,22 @@ export class RegistrationResolverMutations {
       AuthorizationPrivilege.CREATE_ORGANIZATION,
       `create Organization: ${organizationData.nameID}`
     );
-    const organization = await this.organizationService.createOrganization(
+    let organization = await this.organizationService.createOrganization(
       organizationData,
       agentInfo
     );
+    organization =
+      await this.organizationAuthorizationService.applyAuthorizationPolicy(
+        organization
+      );
 
-    return await this.organizationAuthorizationService.applyAuthorizationPolicy(
-      organization
+    const organizationAccount =
+      await this.organizationService.getAccount(organization);
+    await this.accountAuthorizationService.applyAuthorizationPolicy(
+      organizationAccount
     );
+
+    return organization;
   }
 
   private async userCreatedEvents(user: IUser, agentInfo: AgentInfo) {
