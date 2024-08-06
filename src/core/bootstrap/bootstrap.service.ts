@@ -202,9 +202,8 @@ export class BootstrapService {
             });
           }
           user = await this.userAuthorizationService.grantCredentials(user);
-          user = await this.userAuthorizationService.applyAuthorizationPolicy(
-            user
-          );
+          user =
+            await this.userAuthorizationService.applyAuthorizationPolicy(user);
         }
       }
     } catch (error: any) {
@@ -281,31 +280,28 @@ export class BootstrapService {
         );
       }
 
-      const spaceInput: CreateAccountInput = {
-        spaceData: {
-          nameID: DEFAULT_SPACE_NAMEID,
-          profileData: {
-            displayName: DEFAULT_SPACE_DISPLAYNAME,
-            tagline: 'An empty space to be populated',
-          },
-          level: SpaceLevel.SPACE,
-          type: SpaceType.SPACE,
+      // TODO: this may be done actually in the org creation...
+      const accountInput: CreateAccountInput = {
+        host: hostOrganization,
+      };
+      let account = await this.accountService.createAccount(accountInput);
+
+      const spaceInput: CreateSpaceOnAccountInput = {
+        accountID: '',
+        nameID: DEFAULT_SPACE_NAMEID,
+        profileData: {
+          displayName: DEFAULT_SPACE_DISPLAYNAME,
+          tagline: 'An empty space to be populated',
         },
-        hostID: hostOrganization.id,
+        level: SpaceLevel.SPACE,
+        type: SpaceType.SPACE,
       };
 
-      let account = await this.accountService.createAccount(spaceInput);
-      const createSpaceAccountInput: CreateSpaceOnAccountInput = {
-        accountID: account.id,
-        spaceData: spaceInput.spaceData,
-      };
-      account = await this.accountService.createSpaceOnAccount(
-        account,
-        createSpaceAccountInput
-      );
-      account = await this.accountAuthorizationService.applyAuthorizationPolicy(
-        account
-      );
+      await this.accountService.createSpaceOnAccount(account, spaceInput);
+      account =
+        await this.accountAuthorizationService.applyAuthorizationPolicy(
+          account
+        );
       return await this.accountService.save(account);
     }
   }

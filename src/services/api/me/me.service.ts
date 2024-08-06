@@ -179,7 +179,7 @@ export class MeService {
       return [];
     }
 
-    return compact(accounts.map(account => account.space));
+    return compact(accounts.map(account => account.spaces)).flat();
   }
 
   public async canCreateFreeSpace(agentInfo: AgentInfo): Promise<boolean> {

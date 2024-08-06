@@ -22,6 +22,7 @@ import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/stor
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
 import { InnovationHubModule } from '@domain/innovation-hub';
 import { InnovationPackModule } from '@library/innovation-pack/innovation.pack.module';
+import { NamingModule } from '@services/infrastructure/naming/naming.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { InnovationPackModule } from '@library/innovation-pack/innovation.pack.m
     InnovationPackModule,
     VirtualContributorModule,
     NameReporterModule,
+    NamingModule,
     TypeOrmModule.forFeature([Account]),
     NotificationAdapterModule,
   ],

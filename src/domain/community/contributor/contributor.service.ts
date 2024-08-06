@@ -125,7 +125,7 @@ export class ContributorService {
 
   public async getAccountsHostedByContributor(
     contributor: IContributor,
-    includeSpace = false
+    includeSpaces = false
   ): Promise<IAccount[]> {
     let agent = contributor.agent;
     if (!agent) {
@@ -151,7 +151,7 @@ export class ContributorService {
         id: In(accountIDs),
       },
       relations: {
-        space: includeSpace,
+        spaces: includeSpaces,
       },
     });
 

@@ -141,7 +141,6 @@ export class AccountService {
 
     let space = await this.spaceService.createSpace(
       spaceData,
-      account,
       undefined,
       agentInfo
     );
