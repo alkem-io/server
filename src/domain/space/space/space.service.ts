@@ -715,8 +715,8 @@ export class SpaceService {
           );
       }
       // updating the nameID, check new value is allowed
-      const updateAllowed = reservedNameIDs.includes(updateData.nameID);
-      if (!updateAllowed) {
+      const existingNameID = reservedNameIDs.includes(updateData.nameID);
+      if (existingNameID) {
         throw new ValidationException(
           `Unable to update Space nameID: the provided nameID is already taken: ${updateData.nameID}`,
           LogContext.ACCOUNT
