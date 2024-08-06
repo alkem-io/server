@@ -94,13 +94,12 @@ export class MeService {
     return results;
   }
 
-  private async getSpacesWhereAmMember(
+  private async getSpaceMembershipsForAgentInfo(
     agentInfo: AgentInfo
   ): Promise<ISpace[]> {
     const credentialMap = groupCredentialsByEntity(agentInfo.credentials);
     const spaceIds = Array.from(credentialMap.get('spaces')?.keys() ?? []);
 
-    // get spaces and their subspaces
     const allSpaces = await this.spaceService.getSpacesInList(spaceIds);
     for (const space of allSpaces) {
       if (
@@ -127,7 +126,7 @@ export class MeService {
     agentInfo: AgentInfo
   ): Promise<CommunityMembershipResult[]> {
     const sortedFlatListSpacesWithMembership =
-      await this.getSpacesWhereAmMember(agentInfo);
+      await this.getSpaceMembershipsForAgentInfo(agentInfo);
     const spaceMemberships: CommunityMembershipResult[] = [];
 
     for (const space of sortedFlatListSpacesWithMembership) {
@@ -145,7 +144,7 @@ export class MeService {
     agentInfo: AgentInfo
   ): Promise<CommunityMembershipResult[]> {
     const sortedFlatListSpacesWithMembership =
-      await this.getSpacesWhereAmMember(agentInfo);
+      await this.getSpaceMembershipsForAgentInfo(agentInfo);
 
     const levelZeroSpaces = sortedFlatListSpacesWithMembership.filter(
       space => space.level === SpaceLevel.SPACE
