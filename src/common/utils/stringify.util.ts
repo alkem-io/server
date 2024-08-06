@@ -7,7 +7,9 @@ export function stringifyWithoutAuthorizationMetaInfo(object: any): string {
       key === 'version' ||
       key === 'allowedTypes' ||
       key === 'storageBucket' ||
-      key === 'visuals'
+      key === 'visuals' ||
+      key === 'issuer' ||
+      key === 'expires'
     ) {
       return undefined;
     }

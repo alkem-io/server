@@ -19,18 +19,16 @@ import { Space } from '@domain/space/space/space.entity';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 import { SpaceLevel } from '@common/enums/space.level';
 import { User } from '@domain/community/user/user.entity';
-import { InnovationPack } from '@library/innovation-pack/innovation.pack.entity';
 import { VirtualContributor } from '@domain/community/virtual-contributor';
 import { Organization } from '@domain/community/organization';
 import { Discussion } from '@platform/forum-discussion/discussion.entity';
 import { IDiscussion } from '@platform/forum-discussion/discussion.interface';
+import { SpaceReservedName } from '@common/enums/space.reserved.name';
 
 export class NamingService {
   replaceSpecialCharacters = require('replace-special-characters');
 
   constructor(
-    @InjectRepository(Callout)
-    private calloutRepository: Repository<Callout>,
     @InjectRepository(Discussion)
     private discussionRepository: Repository<Discussion>,
     @InjectRepository(InnovationHub)
@@ -40,14 +38,12 @@ export class NamingService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  public async getReservedNameIDsInAccount(
-    accountID: string
+  public async getReservedNameIDsInLevelZeroSpace(
+    levelZeroSpaceID: string
   ): Promise<string[]> {
     const subspaces = await this.entityManager.find(Space, {
       where: {
-        account: {
-          id: accountID,
-        },
+        levelZeroSpaceID: levelZeroSpaceID,
         level: Not(SpaceLevel.SPACE),
       },
       select: {
@@ -56,6 +52,21 @@ export class NamingService {
     });
     const nameIDs = subspaces.map(space => space.nameID);
     return nameIDs;
+  }
+
+  public async getReservedNameIDsLevelZeroSpaces(): Promise<string[]> {
+    const levelZeroSpaces = await this.entityManager.find(Space, {
+      where: {
+        level: SpaceLevel.SPACE,
+      },
+      select: {
+        nameID: true,
+      },
+    });
+    const nameIDs = levelZeroSpaces.map(space => space.nameID.toLowerCase());
+    const reservedTopLevelSpaces = Object.values(SpaceReservedName) as string[];
+
+    return nameIDs.concat(reservedTopLevelSpaces);
   }
 
   public async getReservedNameIDsInForum(forumID: string): Promise<string[]> {
@@ -104,23 +115,6 @@ export class NamingService {
       },
     });
     const nameIDs = events?.map(event => event.nameID) || [];
-    return nameIDs;
-  }
-
-  public async getReservedNameIDsInLibrary(
-    libraryID: string
-  ): Promise<string[]> {
-    const innovationPacks = await this.entityManager.find(InnovationPack, {
-      where: {
-        library: {
-          id: libraryID,
-        },
-      },
-      select: {
-        nameID: true,
-      },
-    });
-    const nameIDs = innovationPacks?.map(pack => pack.nameID) || [];
     return nameIDs;
   }
 

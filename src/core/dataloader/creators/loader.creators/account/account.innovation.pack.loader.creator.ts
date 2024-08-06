@@ -4,19 +4,19 @@ import { InjectEntityManager } from '@nestjs/typeorm';
 import { Account } from '@domain/space/account/account.entity';
 import { createTypedRelationDataLoader } from '../../../utils';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
-import { ILicense } from '@domain/license/license/license.interface';
+import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
 
 @Injectable()
-export class AccountLicenseLoaderCreator
-  implements DataLoaderCreator<ILicense[]>
+export class AccountInnovationPacksLoaderCreator
+  implements DataLoaderCreator<IInnovationPack[]>
 {
   constructor(@InjectEntityManager() private manager: EntityManager) {}
 
-  create(options?: DataLoaderCreatorOptions<ILicense[]>) {
+  create(options?: DataLoaderCreatorOptions<IInnovationPack[]>) {
     return createTypedRelationDataLoader(
       this.manager,
       Account,
-      { license: true },
+      { innovationPacks: true },
       this.constructor.name,
       options
     );

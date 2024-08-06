@@ -169,9 +169,9 @@ export class SpaceResolverFields {
     @CurrentUser() agentInfo: AgentInfo,
     @Parent() space: ISpace
   ): Promise<ISpace> {
-    const subspace = await this.spaceService.getSubspaceInAccount(
+    const subspace = await this.spaceService.getSubspaceInLevelZeroSpace(
       id,
-      space.account.id
+      space.levelZeroSpaceID
     );
     if (!subspace) {
       throw new EntityNotFoundException(

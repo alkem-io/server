@@ -12,15 +12,15 @@ import { IAccount } from '@domain/space/account/account.interface';
 import { ITemplatesSet } from '@domain/template/templates-set';
 import { Loader } from '@core/dataloader/decorators';
 import { ILoader } from '@core/dataloader/loader.interface';
-import { ILicense } from '@domain/license/license/license.interface';
 import { ISpaceDefaults } from '../space.defaults/space.defaults.interface';
 import {
   AccountDefaultsLoaderCreator,
-  AccountLicenseLoaderCreator,
   AccountLibraryLoaderCreator,
   AuthorizationLoaderCreator,
   AgentLoaderCreator,
   AccountVirtualContributorsLoaderCreator,
+  AccountInnovationHubsLoaderCreator,
+  AccountInnovationPacksLoaderCreator,
 } from '@core/dataloader/creators/loader.creators';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -28,20 +28,21 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IAgent } from '@domain/agent/agent/agent.interface';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { IAccountSubscription } from './account.license.subscription.interface';
-import { LicensingService } from '@platform/licensing/licensing.service';
 import {
   IVirtualContributor,
   VirtualContributor,
 } from '@domain/community/virtual-contributor';
 import { AccountHostService } from '../account.host/account.host.service';
 import { LicensePrivilege } from '@common/enums/license.privilege';
+import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
+import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 
 @Resolver(() => IAccount)
 export class AccountResolverFields {
   constructor(
     private accountService: AccountService,
     private accountHostService: AccountHostService,
-    private licensingService: LicensingService,
     private authorizationService: AuthorizationService
   ) {}
 
@@ -103,18 +104,6 @@ export class AccountResolverFields {
       AuthorizationPrivilege.READ,
       `read defaults on account: ${account.id}`
     );
-    return loader.load(account.id);
-  }
-
-  @ResolveField('license', () => ILicense, {
-    nullable: false,
-    description:
-      'The License governing platform functionality in use by this Account',
-  })
-  async license(
-    @Parent() account: Account,
-    @Loader(AccountLicenseLoaderCreator) loader: ILoader<ILicense>
-  ): Promise<ILicense> {
     return loader.load(account.id);
   }
 
@@ -183,8 +172,48 @@ export class AccountResolverFields {
     @Loader(AccountVirtualContributorsLoaderCreator, {
       parentClassRef: Account,
     })
-    loader: ILoader<VirtualContributor>
-  ) {
+    loader: ILoader<VirtualContributor[]>
+  ): Promise<IVirtualContributor[]> {
     return loader.load(account.id);
+  }
+
+  @ResolveField('innovationHubs', () => [IInnovationHub], {
+    nullable: false,
+    description: 'The InnovationHubs for this Account.',
+  })
+  async innovationHubs(
+    @Parent() account: Account,
+    @Loader(AccountInnovationHubsLoaderCreator, {
+      parentClassRef: Account,
+    })
+    loader: ILoader<IInnovationHub[]>
+  ): Promise<IInnovationHub[]> {
+    return loader.load(account.id);
+  }
+
+  @ResolveField('innovationPacks', () => [IInnovationPack], {
+    nullable: false,
+    description: 'The InnovationPacks for this Account.',
+  })
+  async innovationPacks(
+    @Parent() account: Account,
+    @Loader(AccountInnovationPacksLoaderCreator, {
+      parentClassRef: Account,
+    })
+    loader: ILoader<IInnovationPack[]>
+  ): Promise<IInnovationPack[]> {
+    return loader.load(account.id);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('storageAggregator', () => IStorageAggregator, {
+    nullable: false,
+    description: 'The StorageAggregator in use by this Account',
+  })
+  async storageAggregator(
+    @Parent() account: Account
+  ): Promise<IStorageAggregator> {
+    return await this.accountService.getStorageAggregatorOrFail(account.id);
   }
 }

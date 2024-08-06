@@ -1,30 +1,27 @@
 import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
-import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
-import { ValidationException } from '@common/exceptions/validation.exception';
 import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
 import { InnovationPackService } from '@library/innovation-pack/innovaton.pack.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
-import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { EntityManager, FindOneOptions, Repository } from 'typeorm';
-import { CreateInnovationPackOnLibraryInput } from './dto/library.dto.create.innovation.pack';
 import { Library } from './library.entity';
 import { ILibrary } from './library.interface';
-import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { InnovationPacksOrderBy } from '@common/enums/innovation.packs.orderBy';
 import {
   IVirtualContributor,
   VirtualContributor,
 } from '@domain/community/virtual-contributor';
 import { SearchVisibility } from '@common/enums/search.visibility';
+import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
+import { InnovationHub } from '@domain/innovation-hub/innovation.hub.entity';
+import { InnovationPack } from '@library/innovation-pack/innovation.pack.entity';
 
 @Injectable()
 export class LibraryService {
   constructor(
     private innovationPackService: InnovationPackService,
-    private namingService: NamingService,
     @InjectEntityManager('default')
     private entityManager: EntityManager,
     @InjectRepository(Library)
@@ -43,6 +40,9 @@ export class LibraryService {
       );
     return library;
   }
+  public async save(library: ILibrary): Promise<ILibrary> {
+    return await this.libraryRepository.save(library);
+  }
 
   public async getListedVirtualContributors(): Promise<IVirtualContributor[]> {
     const virtualContributors = await this.entityManager.find(
@@ -60,17 +60,29 @@ export class LibraryService {
     return virtualContributors;
   }
 
-  public async getInnovationPacks(
-    library: ILibrary,
+  public async getListedInnovationHubs(): Promise<IInnovationHub[]> {
+    const innovationHubs = await this.entityManager.find(InnovationHub, {
+      where: {
+        listedInStore: true,
+        searchVisibility: SearchVisibility.PUBLIC,
+      },
+    });
+    return innovationHubs;
+  }
+
+  public async getListedInnovationPacks(
     limit?: number,
     orderBy: InnovationPacksOrderBy = InnovationPacksOrderBy.NUMBER_OF_TEMPLATES_DESC
   ): Promise<IInnovationPack[]> {
-    const innovationPacks = library.innovationPacks;
-    if (!innovationPacks)
-      throw new EntityNotFoundException(
-        `Undefined innovation packs found: ${library.id}`,
-        LogContext.LIBRARY
-      );
+    const innovationPacks = await this.entityManager.find(InnovationPack, {
+      where: {
+        listedInStore: true,
+        searchVisibility: SearchVisibility.PUBLIC,
+      },
+      relations: {
+        templatesSet: true,
+      },
+    });
 
     // Sort based on the amount of Templates in the InnovationPacks
     const innovationPacksWithCounts = await Promise.all(
@@ -93,67 +105,5 @@ export class LibraryService {
       return 0;
     });
     return limit && limit > 0 ? sortedPacks.slice(0, limit) : sortedPacks;
-  }
-
-  public async createInnovationPack(
-    innovationPackData: CreateInnovationPackOnLibraryInput
-  ): Promise<IInnovationPack> {
-    const library = await this.getLibraryOrFail({
-      relations: {
-        storageAggregator: true,
-      },
-    });
-    if (!library.innovationPacks || !library.storageAggregator)
-      throw new EntityNotInitializedException(
-        `Library (${library}) not initialised`,
-        LogContext.LIBRARY
-      );
-
-    const reservedNameIDs =
-      await this.namingService.getReservedNameIDsInLibrary(library.id);
-    if (innovationPackData.nameID && innovationPackData.nameID.length > 0) {
-      const nameTaken = reservedNameIDs.includes(innovationPackData.nameID);
-      if (nameTaken)
-        throw new ValidationException(
-          `Unable to create InnovationPack: the provided nameID is already taken: ${innovationPackData.nameID}`,
-          LogContext.LIBRARY
-        );
-    } else {
-      innovationPackData.nameID =
-        this.namingService.createNameIdAvoidingReservedNameIDs(
-          `${innovationPackData.profileData.displayName}`,
-          reservedNameIDs
-        );
-    }
-
-    const innovationPack =
-      await this.innovationPackService.createInnovationPack(
-        innovationPackData,
-        library.storageAggregator
-      );
-    library.innovationPacks.push(innovationPack);
-    await this.libraryRepository.save(library);
-
-    return innovationPack;
-  }
-
-  async getStorageAggregator(
-    libraryInput: ILibrary
-  ): Promise<IStorageAggregator> {
-    const library = await this.getLibraryOrFail({
-      relations: {
-        storageAggregator: true,
-      },
-    });
-    const storageAggregator = library.storageAggregator;
-
-    if (!storageAggregator) {
-      throw new EntityNotFoundException(
-        `Unable to find storage aggregator for Library: ${libraryInput.id}`,
-        LogContext.STORAGE_BUCKET
-      );
-    }
-
-    return storageAggregator;
   }
 }

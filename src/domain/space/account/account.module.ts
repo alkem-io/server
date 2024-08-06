@@ -6,7 +6,6 @@ import { AccountResolverFields } from '@domain/space/account/account.resolver.fi
 import { AccountAuthorizationService } from '@domain/space/account/account.service.authorization';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { TemplatesSetModule } from '@domain/template/templates-set/templates.set.module';
-import { LicenseModule } from '@domain/license/license/license.module';
 import { SpaceDefaultsModule } from '../space.defaults/space.defaults.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
@@ -26,7 +25,10 @@ import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/stor
 import { CommunityPolicyModule } from '@domain/community/community-policy/community.policy.module';
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
 import { CommunityModule } from '@domain/community/community/community.module';
+import { InnovationHubModule } from '@domain/innovation-hub';
+import { InnovationPackModule } from '@library/innovation-pack/innovation.pack.module';
 import { SpaceSettingssModule } from '../space.settings/space.settings.module';
+import { NamingModule } from '@services/infrastructure/naming/naming.module';
 
 @Module({
   imports: [
@@ -43,15 +45,17 @@ import { SpaceSettingssModule } from '../space.settings/space.settings.module';
     StorageAggregatorModule,
     PlatformAuthorizationPolicyModule,
     InnovationFlowTemplateModule,
-    LicenseModule,
     LicensingModule,
     LicenseIssuerModule,
     LicenseEngineModule,
+    InnovationHubModule,
+    NamingModule,
     NameReporterModule,
     CommunityPolicyModule,
     TypeOrmModule.forFeature([Account]),
     NotificationAdapterModule,
     CommunityModule,
+    InnovationPackModule,
   ],
   providers: [
     AccountService,

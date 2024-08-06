@@ -2,7 +2,6 @@ import { Repository } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { IInnovationHub, InnovationHub } from './types';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
@@ -12,47 +11,61 @@ import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authoriz
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { CREDENTIAL_RULE_TYPES_INNOVATION_HUBS } from '@common/constants/authorization/credential.rule.types.constants';
+import { InnovationHubService } from './innovation.hub.service';
 
 @Injectable()
 export class InnovationHubAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
-    private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private profileAuthorizationService: ProfileAuthorizationService,
+    private innovationHubService: InnovationHubService,
     @InjectRepository(InnovationHub)
     private spaceRepository: Repository<InnovationHub>
   ) {}
 
   public async applyAuthorizationPolicyAndSave(
-    hub: IInnovationHub
+    hubInput: IInnovationHub,
+    parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<IInnovationHub> {
-    hub.authorization = this.authorizationPolicyService.reset(
-      hub.authorization
+    const hub = await this.innovationHubService.getInnovationHubOrFail(
+      hubInput.id,
+      {
+        relations: {
+          profile: true,
+        },
+      }
     );
-    hub.authorization =
-      this.platformAuthorizationService.inheritRootAuthorizationPolicy(
-        hub.authorization
+
+    if (!hub.profile) {
+      throw new EntityNotInitializedException(
+        `authorization: Unable to load InnovationHub entities for auth reset: ${hubInput.id}`,
+        LogContext.INNOVATION_HUB
       );
-    hub.authorization.anonymousReadAccess = true;
-    hub.authorization = this.extendAuthorizationPolicyRules(hub.authorization);
-
-    hub = await this.cascadeAuthorization(hub);
-
-    return this.spaceRepository.save(hub);
-  }
-
-  private async cascadeAuthorization(
-    innovationHub: IInnovationHub
-  ): Promise<IInnovationHub> {
-    if (innovationHub.profile) {
-      innovationHub.profile =
-        await this.profileAuthorizationService.applyAuthorizationPolicy(
-          innovationHub.profile,
-          innovationHub.authorization
-        );
     }
 
-    return innovationHub;
+    // Clone the authorization policy + allow anonymous read access to ensure
+    // pages are visible / loadable by all users
+    const clonedAuthorization =
+      this.authorizationPolicyService.cloneAuthorizationPolicy(
+        parentAuthorization
+      );
+    clonedAuthorization.anonymousReadAccess = true;
+
+    hub.authorization =
+      this.authorizationPolicyService.inheritParentAuthorization(
+        hub.authorization,
+        clonedAuthorization
+      );
+
+    hub.authorization = this.extendAuthorizationPolicyRules(hub.authorization);
+
+    hub.profile =
+      await this.profileAuthorizationService.applyAuthorizationPolicy(
+        hub.profile,
+        hub.authorization
+      );
+
+    return this.spaceRepository.save(hub);
   }
 
   private extendAuthorizationPolicyRules(

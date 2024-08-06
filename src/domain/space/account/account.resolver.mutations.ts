@@ -34,6 +34,14 @@ import { NotificationAdapter } from '@services/adapters/notification-adapter/not
 import { NotificationInputSpaceCreated } from '@services/adapters/notification-adapter/dto/notification.dto.input.space.created';
 import { CreateSpaceOnAccountInput } from './dto/account.dto.create.space';
 import { CommunityService } from '@domain/community/community/community.service';
+import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
+import { CreateInnovationHubOnAccountInput } from './dto/account.dto.create.innovation.hub';
+import { InnovationHubService } from '@domain/innovation-hub';
+import { InnovationHubAuthorizationService } from '@domain/innovation-hub/innovation.hub.service.authorization';
+import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
+import { CreateInnovationPackOnAccountInput } from './dto/account.dto.create.innovation.pack';
+import { InnovationPackAuthorizationService } from '@library/innovation-pack/innovation.pack.service.authorization';
+import { InnovationPackService } from '@library/innovation-pack/innovaton.pack.service';
 
 @Resolver()
 export class AccountResolverMutations {
@@ -45,6 +53,10 @@ export class AccountResolverMutations {
     private innovationFlowTemplateService: InnovationFlowTemplateService,
     private virtualContributorService: VirtualContributorService,
     private virtualContributorAuthorizationService: VirtualContributorAuthorizationService,
+    private innovationHubService: InnovationHubService,
+    private innovationHubAuthorizationService: InnovationHubAuthorizationService,
+    private innovationPackService: InnovationPackService,
+    private innovationPackAuthorizationService: InnovationPackAuthorizationService,
     private spaceDefaultsService: SpaceDefaultsService,
     private namingReporter: NameReporterService,
     private spaceService: SpaceService,
@@ -85,9 +97,8 @@ export class AccountResolverMutations {
       createSpaceOnAccountData,
       agentInfo
     );
-    account = await this.accountAuthorizationService.applyAuthorizationPolicy(
-      account
-    );
+    account =
+      await this.accountAuthorizationService.applyAuthorizationPolicy(account);
     account = await this.accountService.save(account);
 
     const rootSpace = await this.accountService.getRootSpace(account, {
@@ -214,16 +225,14 @@ export class AccountResolverMutations {
       `update platform settings on space: ${account.id}`
     );
 
-    const result = await this.accountService.updateAccountPlatformSettings(
-      updateData
-    );
+    const result =
+      await this.accountService.updateAccountPlatformSettings(updateData);
 
     await this.accountService.save(result);
 
     // Update the authorization policy as most of the changes imply auth policy updates
-    account = await this.accountAuthorizationService.applyAuthorizationPolicy(
-      result
-    );
+    account =
+      await this.accountAuthorizationService.applyAuthorizationPolicy(result);
     return await this.accountService.save(account);
   }
 
@@ -273,6 +282,44 @@ export class AccountResolverMutations {
       );
     }
     return spaceDefaults;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IInnovationHub, {
+    description: 'Create Innovation Hub.',
+  })
+  async createInnovationHub(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('createData') createData: CreateInnovationHubOnAccountInput
+  ): Promise<IInnovationHub> {
+    // InnovationHubs still require platform admin for now
+    const authorizationPolicy =
+      await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      authorizationPolicy,
+      AuthorizationPrivilege.PLATFORM_ADMIN,
+      'create innovation space'
+    );
+    const account = await this.accountService.getAccountOrFail(
+      createData.accountID,
+      {
+        relations: {
+          storageAggregator: true,
+        },
+      }
+    );
+
+    let innovationHub = await this.innovationHubService.createInnovationHub(
+      createData,
+      account
+    );
+    innovationHub =
+      await this.innovationHubAuthorizationService.applyAuthorizationPolicyAndSave(
+        innovationHub,
+        account.authorization
+      );
+    return await this.innovationHubService.save(innovationHub);
   }
 
   @UseGuards(GraphqlGuard)
@@ -338,5 +385,57 @@ export class AccountResolverMutations {
     return await this.virtualContributorService.getVirtualContributorOrFail(
       virtual.id
     );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IInnovationPack, {
+    description: 'Creates a new InnovationPack on an Account.',
+  })
+  async createInnovationPack(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('innovationPackData')
+    innovationPackData: CreateInnovationPackOnAccountInput
+  ): Promise<IInnovationPack> {
+    const account = await this.accountService.getAccountOrFail(
+      innovationPackData.accountID,
+      {
+        relations: {
+          space: {
+            community: true,
+          },
+        },
+      }
+    );
+    if (!account.space || !account.space.community) {
+      throw new EntityNotInitializedException(
+        `Account space or community is not initialized: ${account.id}`,
+        LogContext.ACCOUNT
+      );
+    }
+
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      account.authorization,
+      AuthorizationPrivilege.CREATE,
+      `create Innovation Pack on account: ${innovationPackData.nameID}`
+    );
+
+    let innovationPack =
+      await this.accountService.createInnovationPackOnAccount(
+        innovationPackData
+      );
+
+    const clonedAccountAuth =
+      await this.accountAuthorizationService.getClonedAccountAuthExtendedForChildEntities(
+        account
+      );
+
+    innovationPack =
+      await this.innovationPackAuthorizationService.applyAuthorizationPolicy(
+        innovationPack,
+        clonedAccountAuth
+      );
+
+    return await this.innovationPackService.save(innovationPack);
   }
 }

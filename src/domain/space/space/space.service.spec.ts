@@ -12,7 +12,6 @@ import { SpaceFilterService } from '@services/infrastructure/space-filter/space.
 import { MockFunctionMetadata, ModuleMocker } from 'jest-mock';
 import { InnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.entity';
 import { ProfileType } from '@common/enums';
-import { License } from '@domain/license/license/license.entity';
 import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
 import { Account } from '../account/account.entity';
 import { SpaceType } from '@common/enums/space.type';
@@ -93,13 +92,17 @@ const getSubspacesMock = (
       rowId: i,
       nameID: `challenge-${spaceId}.${i}`,
       settingsStr: JSON.stringify({}),
+      levelZeroSpaceID: spaceId,
       account: {
         id: `account-${spaceId}.${i}`,
         virtualContributors: [],
+        innovationHubs: [],
+        innovationPacks: [],
         ...getEntityMock<Account>(),
       },
       type: SpaceType.CHALLENGE,
       level: SpaceLevel.CHALLENGE,
+      visibility: SpaceVisibility.ACTIVE,
       collaboration: {
         id: '',
         groupsStr: JSON.stringify([
@@ -182,13 +185,17 @@ const getSubsubspacesMock = (subsubspaceId: string, count: number): Space[] => {
       rowId: i,
       nameID: `subsubspace-${subsubspaceId}.${i}`,
       settingsStr: JSON.stringify({}),
+      levelZeroSpaceID: subsubspaceId,
       account: {
         id: `account-${subsubspaceId}.${i}`,
         virtualContributors: [],
+        innovationHubs: [],
+        innovationPacks: [],
         ...getEntityMock<Account>(),
       },
       type: SpaceType.OPPORTUNITY,
       level: SpaceLevel.OPPORTUNITY,
+      visibility: SpaceVisibility.ACTIVE,
       collaboration: {
         id: '',
         groupsStr: JSON.stringify([
@@ -277,6 +284,7 @@ const getSpaceMock = ({
     rowId: parseInt(id),
     nameID: `space-${id}`,
     settingsStr: JSON.stringify({}),
+    levelZeroSpaceID: '',
     profile: {
       id: `profile-${id}`,
       displayName: `Space ${id}`,
@@ -287,15 +295,12 @@ const getSpaceMock = ({
     },
     type: SpaceType.SPACE,
     level: 0,
+    visibility,
     account: {
       id: `account-${id}`,
       virtualContributors: [],
-      license: {
-        id,
-        visibility,
-        ...getEntityMock<License>(),
-      },
-
+      innovationHubs: [],
+      innovationPacks: [],
       ...getEntityMock<Account>(),
     },
     authorization: getAuthorizationPolicyMock(
@@ -312,8 +317,7 @@ const getFilteredSpaces = (
   visibilities: SpaceVisibility[]
 ): Space[] => {
   return spaces.filter(space => {
-    const visibility =
-      space.account.license?.visibility || SpaceVisibility.ACTIVE;
+    const visibility = space.visibility || SpaceVisibility.ACTIVE;
     return visibilities.includes(visibility);
   });
 };
