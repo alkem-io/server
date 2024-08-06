@@ -27,6 +27,7 @@ export class PlatformSettingsService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
+  // TODO: THIS IS BASICALLY A MOVE of a resource from one account to another
   public async updateInnovationHubPlatformSettingsOrFail(
     input: UpdateInnovationHubPlatformSettingsInput
   ): Promise<IInnovationHub | never> {

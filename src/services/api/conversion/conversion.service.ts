@@ -42,7 +42,7 @@ export class ConversionService {
     conversionData: ConvertSubspaceToSpaceInput,
     agentInfo: AgentInfo
   ): Promise<ISpace> {
-    // TODO: needs to create a new ACCOUNT etc.
+    // TODO: needs to create a new ACCOUNT etc. NOT TRUE!
     const subspace = await this.spaceService.getSpaceOrFail(
       conversionData.subspaceID,
       {

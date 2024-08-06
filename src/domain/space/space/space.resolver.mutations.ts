@@ -90,7 +90,6 @@ export class SpaceResolverMutations {
   @Mutation(() => ISpace, {
     description: 'Updates one of the Setting on a Space',
   })
-  @Profiling.api
   async updateSpaceSettings(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('settingsData') settingsData: UpdateSpaceSettingsInput

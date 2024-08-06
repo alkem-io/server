@@ -991,9 +991,7 @@ export class SpaceService {
   public async update(spaceData: UpdateSpaceInput): Promise<ISpace> {
     const space = await this.getSpaceOrFail(spaceData.ID, {
       relations: {
-        account: true,
         context: true,
-        community: true,
         profile: true,
       },
     });

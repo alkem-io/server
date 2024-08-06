@@ -9,12 +9,10 @@ import { InnovationHub } from '@domain/innovation-hub/innovation.hub.entity';
 import { InnovationPack } from '@library/innovation-pack/innovation.pack.entity';
 @Entity()
 export class Account extends AuthorizableEntity implements IAccount {
-  @OneToOne(() => Space, {
+  @OneToMany(() => Space, space => space.account, {
     eager: false,
     cascade: false, // important: each space looks after saving itself! Same as space.subspaces field
-    onDelete: 'SET NULL',
   })
-  @JoinColumn()
   space?: Space;
 
   @OneToOne(() => Agent, {
