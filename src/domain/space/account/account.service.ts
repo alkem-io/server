@@ -14,7 +14,6 @@ import { AgentService } from '@domain/agent/agent/agent.service';
 import { SpaceService } from '../space/space.service';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { ISpace } from '../space/space.interface';
-import { UpdateAccountPlatformSettingsInput } from './dto/account.dto.update.platform.settings';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { CreateAccountInput } from './dto/account.dto.create';
 import { LicensingService } from '@platform/licensing/licensing.service';
@@ -32,7 +31,6 @@ import { LicensePrivilege } from '@common/enums/license.privilege';
 import { LicenseEngineService } from '@core/license-engine/license.engine.service';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { CreateSpaceOnAccountInput } from './dto/account.dto.create.space';
-import { Space } from '../space/space.entity';
 import { LicensePlanType } from '@common/enums/license.plan.type';
 import { CreateInnovationHubOnAccountInput } from './dto/account.dto.create.innovation.hub';
 import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
@@ -73,10 +71,10 @@ export class AccountService {
       await this.storageAggregatorService.createStorageAggregator();
 
     account.agent = await this.agentService.createAgent({
-      parentDisplayID: `account-${account.id}`,
+      parentDisplayID: 'account',
     });
 
-    const host = await this.accountHostService.getHostByID(accountData.hostID);
+    const host = await this.accountHostService.getHostByID(accountData.host.id);
 
     const licensePlansToAssign: ILicensePlan[] = [];
     const licensePlans = await this.licensingService.getLicensePlans(
@@ -104,23 +102,22 @@ export class AccountService {
       );
     }
 
-    await this.accountHostService.setAccountHost(account, accountData.hostID);
+    await this.accountHostService.setAccountHost(account, accountData.host.id);
 
     return account;
   }
 
   async createSpaceOnAccount(
     account: IAccount,
-    spaceOnAccountData: CreateSpaceOnAccountInput,
+    spaceData: CreateSpaceOnAccountInput,
     agentInfo?: AgentInfo
-  ): Promise<IAccount> {
+  ): Promise<ISpace> {
     if (!account.storageAggregator) {
       throw new RelationshipNotFoundException(
         `Unable to find storage aggregator on account for creating space ${account.id} `,
         LogContext.ACCOUNT
       );
     }
-    const spaceData = spaceOnAccountData.spaceData;
 
     const reservedNameIDs =
       await this.namingService.getReservedNameIDsLevelZeroSpaces();
@@ -142,35 +139,21 @@ export class AccountService {
     spaceData.level = SpaceLevel.SPACE;
     spaceData.storageAggregatorParent = account.storageAggregator;
 
-    const space = await this.spaceService.createSpace(
+    let space = await this.spaceService.createSpace(
       spaceData,
       account,
       undefined,
       agentInfo
     );
-    account.space = space;
-    const savedAccount = await this.save(account);
+    space.account = account;
+    space = await this.spaceService.save(space);
 
-    await this.spaceService.assignUserToRoles(account.space, agentInfo);
-    return savedAccount;
+    await this.spaceService.assignUserToRoles(space, agentInfo);
+    return space;
   }
 
   async save(account: IAccount): Promise<IAccount> {
     return await this.accountRepository.save(account);
-  }
-
-  public async updateAccountPlatformSettings(
-    updateData: UpdateAccountPlatformSettingsInput
-  ): Promise<IAccount> {
-    const account = await this.getAccountOrFail(updateData.accountID, {
-      relations: {},
-    });
-
-    if (updateData.hostID) {
-      await this.accountHostService.setAccountHost(account, updateData.hostID);
-    }
-
-    return await this.save(account);
   }
 
   async deleteAccount(accountInput: IAccount): Promise<IAccount> {
@@ -178,7 +161,7 @@ export class AccountService {
     const account = await this.getAccountOrFail(accountID, {
       relations: {
         agent: true,
-        space: true,
+        spaces: true,
         virtualContributors: true,
         innovationPacks: true,
         storageAggregator: true,
@@ -188,7 +171,7 @@ export class AccountService {
 
     if (
       !account.agent ||
-      !account.space ||
+      !account.spaces ||
       !account.virtualContributors ||
       !account.storageAggregator ||
       !account.innovationHubs ||
@@ -200,16 +183,12 @@ export class AccountService {
       );
     }
 
-    const host = await this.accountHostService.getHostOrFail(account);
-    await this.spaceService.deleteSpace({
-      ID: account.space.id,
-    });
-
     await this.agentService.deleteAgent(account.agent.id);
 
     await this.storageAggregatorService.delete(account.storageAggregator.id);
 
     // Remove the account host credential
+    const host = await this.accountHostService.getHostOrFail(account);
     host.agent = await this.agentService.revokeCredential({
       agentID: host.agent.id,
       type: AuthorizationCredential.ACCOUNT_HOST,
@@ -224,6 +203,10 @@ export class AccountService {
 
     for (const hub of account.innovationHubs) {
       await this.innovationHubService.delete(hub.id);
+    }
+
+    for (const space of account.spaces) {
+      await this.spaceService.deleteSpace({ ID: space.id });
     }
 
     const result = await this.accountRepository.remove(account as Account);
@@ -286,30 +269,6 @@ export class AccountService {
     const privileges =
       await this.licenseEngineService.getGrantedPrivileges(accountAgent);
     return privileges;
-  }
-
-  async getRootSpace(
-    accountInput: IAccount,
-    options?: FindOneOptions<Space>
-  ): Promise<ISpace> {
-    if (accountInput.space && accountInput.space.profile) {
-      return accountInput.space;
-    }
-    const account = await this.getAccountOrFail(accountInput.id, {
-      relations: {
-        space: {
-          profile: true,
-          ...options?.relations,
-        },
-      },
-    });
-    if (!account.space) {
-      throw new EntityNotFoundException(
-        `Unable to find space for account: ${accountInput.id}`,
-        LogContext.ACCOUNT
-      );
-    }
-    return account.space;
   }
 
   async getSubscriptions(

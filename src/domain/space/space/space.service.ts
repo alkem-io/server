@@ -89,7 +89,6 @@ export class SpaceService {
 
   async createSpace(
     spaceData: CreateSpaceInput,
-    account: IAccount,
     spaceDefaults?: ISpaceDefaults,
     agentInfo?: AgentInfo
   ): Promise<ISpace> {
@@ -126,7 +125,6 @@ export class SpaceService {
     space.visibility = SpaceVisibility.ACTIVE;
 
     space.authorization = new AuthorizationPolicy();
-    space.account = account;
     space.settingsStr = this.spaceSettingsService.serializeSettings(
       this.spaceDefaultsService.getDefaultSpaceSettings(spaceData.type)
     );
@@ -878,7 +876,6 @@ export class SpaceService {
     subspaceData.level = space.level + 1;
     let subspace = await this.createSpace(
       subspaceData,
-      space.account,
       spaceDefaults,
       agentInfo
     );

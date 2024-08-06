@@ -14,6 +14,7 @@ import {
   AccountVirtualContributorsLoaderCreator,
   AccountInnovationHubsLoaderCreator,
   AccountInnovationPacksLoaderCreator,
+  AccountSpacesLoaderCreator,
 } from '@core/dataloader/creators/loader.creators';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { IAgent } from '@domain/agent/agent/agent.interface';
@@ -28,6 +29,7 @@ import { LicensePrivilege } from '@common/enums/license.privilege';
 import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
 import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { ISpace } from '../space/space.interface';
 
 @Resolver(() => IAccount)
 export class AccountResolverFields {
@@ -69,15 +71,6 @@ export class AccountResolverFields {
     return await this.accountHostService.getHostOrFail(account);
   }
 
-  @ResolveField('spaceID', () => String, {
-    nullable: false,
-    description: 'The ID for the root space for the Account .',
-  })
-  async spaceID(@Parent() account: Account): Promise<string> {
-    const space = await this.accountService.getRootSpace(account);
-    return space.id;
-  }
-
   @ResolveField('authorization', () => IAuthorizationPolicy, {
     nullable: false,
     description: 'The Authorization for this Account.',
@@ -104,6 +97,20 @@ export class AccountResolverFields {
   })
   async subscriptions(@Parent() account: IAccount) {
     return await this.accountService.getSubscriptions(account);
+  }
+
+  @ResolveField('spaces', () => [ISpace], {
+    nullable: false,
+    description: 'The Spaces within this Account.',
+  })
+  async spaces(
+    @Parent() account: Account,
+    @Loader(AccountSpacesLoaderCreator, {
+      parentClassRef: Account,
+    })
+    loader: ILoader<ISpace[]>
+  ): Promise<ISpace[]> {
+    return loader.load(account.id);
   }
 
   @ResolveField('virtualContributors', () => [IVirtualContributor], {

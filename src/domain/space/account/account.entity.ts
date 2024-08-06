@@ -13,7 +13,7 @@ export class Account extends AuthorizableEntity implements IAccount {
     eager: false,
     cascade: false, // important: each space looks after saving itself! Same as space.subspaces field
   })
-  space?: Space;
+  spaces!: Space[];
 
   @OneToOne(() => Agent, {
     eager: false,

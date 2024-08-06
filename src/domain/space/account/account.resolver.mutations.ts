@@ -3,7 +3,6 @@ import { Resolver, Args, Mutation } from '@nestjs/graphql';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
-import { ISpace } from '../space/space.interface';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
@@ -13,23 +12,13 @@ import { AccountAuthorizationService } from './account.service.authorization';
 import { AccountService } from './account.service';
 import { IAccount } from './account.interface';
 import { SpaceService } from '../space/space.service';
-import { DeleteSpaceInput } from '../space/dto/space.dto.delete';
-import { UpdateAccountPlatformSettingsInput } from './dto/account.dto.update.platform.settings';
-import { CreateAccountInput } from './dto';
-import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
-import { LogContext } from '@common/enums/logging.context';
-import { SpaceLevel } from '@common/enums/space.level';
-import { EntityNotInitializedException } from '@common/exceptions';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { CreateVirtualContributorOnAccountInput } from './dto/account.dto.create.virtual.contributor';
 import { VirtualContributorAuthorizationService } from '@domain/community/virtual-contributor/virtual.contributor.service.authorization';
 import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
-import { CommunityContributorType } from '@common/enums/community.contributor.type';
-import { CommunityRole } from '@common/enums/community.role';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { NotificationInputSpaceCreated } from '@services/adapters/notification-adapter/dto/notification.dto.input.space.created';
 import { CreateSpaceOnAccountInput } from './dto/account.dto.create.space';
-import { CommunityService } from '@domain/community/community/community.service';
 import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
 import { CreateInnovationHubOnAccountInput } from './dto/account.dto.create.innovation.hub';
 import { InnovationHubService } from '@domain/innovation-hub';
@@ -38,6 +27,8 @@ import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interf
 import { CreateInnovationPackOnAccountInput } from './dto/account.dto.create.innovation.pack';
 import { InnovationPackAuthorizationService } from '@library/innovation-pack/innovation.pack.service.authorization';
 import { InnovationPackService } from '@library/innovation-pack/innovaton.pack.service';
+import { SpaceAuthorizationService } from '../space/space.service.authorization';
+import { ISpace } from '../space/space.interface';
 
 @Resolver()
 export class AccountResolverMutations {
@@ -54,74 +45,49 @@ export class AccountResolverMutations {
     private innovationPackAuthorizationService: InnovationPackAuthorizationService,
     private namingReporter: NameReporterService,
     private spaceService: SpaceService,
-    private notificationAdapter: NotificationAdapter,
-    private communityService: CommunityService
+    private spaceAuthorizationService: SpaceAuthorizationService,
+    private notificationAdapter: NotificationAdapter
   ) {}
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IAccount, {
-    description: 'Creates a new Account with a single root Space.',
+    description: 'Creates a new Level Zero Space within the specified Account.',
   })
-  async createAccount(
+  async createLevelZeroSpace(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('accountData') accountData: CreateAccountInput
-  ): Promise<IAccount> {
-    const authorizationPolicy =
-      await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      authorizationPolicy,
-      AuthorizationPrivilege.CREATE_SPACE,
-      `create space: ${accountData.spaceData?.nameID}`
-    );
-    let account = await this.accountService.createAccount(accountData);
-
-    const createSpaceOnAccountData: CreateSpaceOnAccountInput = {
-      accountID: account.id,
-      spaceData: accountData.spaceData,
-    };
-    const accountWithStorageAggregator =
-      await this.accountService.getAccountOrFail(account.id, {
-        relations: {
-          storageAggregator: true,
-        },
-      });
-    account = await this.accountService.createSpaceOnAccount(
-      accountWithStorageAggregator,
-      createSpaceOnAccountData,
-      agentInfo
-    );
-    account =
-      await this.accountAuthorizationService.applyAuthorizationPolicy(account);
-    account = await this.accountService.save(account);
-
-    const rootSpace = await this.accountService.getRootSpace(account, {
-      relations: {
-        community: true,
-      },
-    });
-
-    await this.namingReporter.createOrUpdateName(
-      rootSpace.id,
-      rootSpace.profile.displayName
-    );
-
-    if (!rootSpace.community?.id) {
-      throw new RelationshipNotFoundException(
-        `Unable to find community with id ${rootSpace.community?.id}`,
-        LogContext.ACCOUNT
-      );
-    }
-    const community = await this.communityService.getCommunityOrFail(
-      rootSpace.community?.id,
+    @Args('spaceData') spaceData: CreateSpaceOnAccountInput
+  ): Promise<ISpace> {
+    const account = await this.accountService.getAccountOrFail(
+      spaceData.accountID,
       {
-        relations: {
-          parentCommunity: {
-            authorization: true,
-          },
-        },
+        relations: {},
       }
     );
+
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      account.authorization,
+      AuthorizationPrivilege.CREATE_SPACE,
+      `create Space on account: ${spaceData.nameID}`
+    );
+
+    let space = await this.accountService.createSpaceOnAccount(
+      account,
+      spaceData
+    );
+
+    space =
+      await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
+
+    space = await this.spaceService.save(space);
+
+    await this.namingReporter.createOrUpdateName(
+      space.id,
+      space.profile.displayName
+    );
+
+    const community = await this.spaceService.getCommunity(space.id);
+
     const notificationInput: NotificationInputSpaceCreated = {
       triggeredBy: agentInfo.userID,
       community: community,
@@ -129,105 +95,7 @@ export class AccountResolverMutations {
     };
     await this.notificationAdapter.spaceCreated(notificationInput);
 
-    return account;
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => ISpace, {
-    description: 'Deletes the specified Space.',
-  })
-  async deleteSpace(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('deleteData') deleteData: DeleteSpaceInput
-  ): Promise<ISpace> {
-    const space = await this.spaceService.getSpaceOrFail(deleteData.ID, {
-      relations: {
-        account: {
-          authorization: true,
-        },
-      },
-    });
-
-    switch (space.level) {
-      case SpaceLevel.SPACE:
-        // delete the account
-        const account = space.account;
-        this.authorizationService.grantAccessOrFail(
-          agentInfo,
-          account.authorization,
-          AuthorizationPrivilege.DELETE,
-          `deleteSpace + account: ${space.nameID}`
-        );
-        await this.accountService.deleteAccount(account);
-        return space;
-      case SpaceLevel.CHALLENGE:
-      case SpaceLevel.OPPORTUNITY:
-        this.authorizationService.grantAccessOrFail(
-          agentInfo,
-          space.authorization,
-          AuthorizationPrivilege.DELETE,
-          `deleteSpace: ${space.nameID}`
-        );
-        return await this.spaceService.deleteSpace(deleteData);
-      default:
-        throw new EntityNotInitializedException(
-          `Invalid space level: ${space.id}`,
-          LogContext.ACCOUNT
-        );
-    }
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IAccount, {
-    description: 'Reset the Authorization Policy on the specified Account.',
-  })
-  async authorizationPolicyResetOnAccount(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('authorizationResetData')
-    authorizationResetData: AccountAuthorizationResetInput
-  ): Promise<IAccount> {
-    const account = await this.accountService.getAccountOrFail(
-      authorizationResetData.accountID
-    );
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      account.authorization,
-      AuthorizationPrivilege.AUTHORIZATION_RESET,
-      `reset authorization definition on Space: ${agentInfo.email}`
-    );
-    return this.accountAuthorizationService
-      .applyAuthorizationPolicy(account)
-      .then(account => this.accountService.save(account));
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IAccount, {
-    description:
-      'Update the platform settings, such as license, of the specified Account.',
-  })
-  async updateAccountPlatformSettings(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('updateData') updateData: UpdateAccountPlatformSettingsInput
-  ): Promise<IAccount> {
-    let account = await this.accountService.getAccountOrFail(
-      updateData.accountID
-    );
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      account.authorization,
-      AuthorizationPrivilege.PLATFORM_ADMIN,
-      `update platform settings on space: ${account.id}`
-    );
-
-    const result =
-      await this.accountService.updateAccountPlatformSettings(updateData);
-
-    await this.accountService.save(result);
-
-    // Update the authorization policy as most of the changes imply auth policy updates
-    account =
-      await this.accountAuthorizationService.applyAuthorizationPolicy(result);
-    return await this.accountService.save(account);
+    return space;
   }
 
   @UseGuards(GraphqlGuard)
@@ -280,19 +148,9 @@ export class AccountResolverMutations {
     const account = await this.accountService.getAccountOrFail(
       virtualContributorData.accountID,
       {
-        relations: {
-          space: {
-            community: true,
-          },
-        },
+        relations: {},
       }
     );
-    if (!account.space || !account.space.community) {
-      throw new EntityNotInitializedException(
-        `Account space or community is not initialized: ${account.id}`,
-        LogContext.ACCOUNT
-      );
-    }
 
     this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -319,14 +177,6 @@ export class AccountResolverMutations {
 
     virtual = await this.virtualContributorService.save(virtual);
 
-    // VC is created, now assign the contributor to the Member role on root space
-    await this.spaceService.assignContributorToRole(
-      account.space,
-      virtual,
-      CommunityRole.MEMBER,
-      CommunityContributorType.VIRTUAL
-    );
-
     // Reload to ensure the new member credential is loaded
     return await this.virtualContributorService.getVirtualContributorOrFail(
       virtual.id
@@ -345,19 +195,9 @@ export class AccountResolverMutations {
     const account = await this.accountService.getAccountOrFail(
       innovationPackData.accountID,
       {
-        relations: {
-          space: {
-            community: true,
-          },
-        },
+        relations: {},
       }
     );
-    if (!account.space || !account.space.community) {
-      throw new EntityNotInitializedException(
-        `Account space or community is not initialized: ${account.id}`,
-        LogContext.ACCOUNT
-      );
-    }
 
     this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -383,5 +223,28 @@ export class AccountResolverMutations {
       );
 
     return await this.innovationPackService.save(innovationPack);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IAccount, {
+    description: 'Reset the Authorization Policy on the specified Account.',
+  })
+  async authorizationPolicyResetOnAccount(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('authorizationResetData')
+    authorizationResetData: AccountAuthorizationResetInput
+  ): Promise<IAccount> {
+    const account = await this.accountService.getAccountOrFail(
+      authorizationResetData.accountID
+    );
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      account.authorization,
+      AuthorizationPrivilege.AUTHORIZATION_RESET,
+      `reset authorization definition on Space: ${agentInfo.email}`
+    );
+    return this.accountAuthorizationService
+      .applyAuthorizationPolicy(account)
+      .then(account => this.accountService.save(account));
   }
 }

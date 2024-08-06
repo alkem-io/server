@@ -2,7 +2,7 @@ import { Inject, UseGuards } from '@nestjs/common';
 import { Resolver, Args, Mutation } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { SpaceService } from './space.service';
-import { UpdateSpaceInput } from '@domain/space/space';
+import { DeleteSpaceInput, UpdateSpaceInput } from '@domain/space/space';
 import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -84,6 +84,31 @@ export class SpaceResolverMutations {
     }
 
     return updatedSpace;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => ISpace, {
+    description: 'Deletes the specified Space.',
+  })
+  async deleteSpace(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('deleteData') deleteData: DeleteSpaceInput
+  ): Promise<ISpace> {
+    const space = await this.spaceService.getSpaceOrFail(deleteData.ID, {
+      relations: {
+        account: {
+          authorization: true,
+        },
+      },
+    });
+
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      space.authorization,
+      AuthorizationPrivilege.DELETE,
+      `deleteSpace: ${space.nameID}`
+    );
+    return await this.spaceService.deleteSpace(deleteData);
   }
 
   @UseGuards(GraphqlGuard)

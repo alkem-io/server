@@ -26,16 +26,11 @@ import { IVirtualContributor } from '@domain/community/virtual-contributor';
 import { VirtualContributorAuthorizationService } from '@domain/community/virtual-contributor/virtual.contributor.service.authorization';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { AccountHostService } from '../account.host/account.host.service';
-import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
-import { CommunityPolicyService } from '@domain/community/community-policy/community.policy.service';
-import { CommunityRole } from '@common/enums/community.role';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { POLICY_RULE_ACCOUNT_CREATE_VC } from '@common/constants/authorization/policy.rule.constants';
 import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
 import { InnovationPackAuthorizationService } from '@library/innovation-pack/innovation.pack.service.authorization';
-import { ISpaceSettings } from '../space.settings/space.settings.interface';
-import { SpaceSettingsService } from '../space.settings/space.settings.service';
 import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
 import { InnovationHubAuthorizationService } from '@domain/innovation-hub/innovation.hub.service.authorization';
 
@@ -48,11 +43,9 @@ export class AccountAuthorizationService {
     private spaceAuthorizationService: SpaceAuthorizationService,
     private virtualContributorAuthorizationService: VirtualContributorAuthorizationService,
     private innovationPackAuthorizationService: InnovationPackAuthorizationService,
-    private communityPolicyService: CommunityPolicyService,
     private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
     private innovationHubAuthorizationService: InnovationHubAuthorizationService,
     private accountService: AccountService,
-    private spaceSettingsService: SpaceSettingsService,
     private accountHostService: AccountHostService
   ) {}
 
@@ -60,18 +53,14 @@ export class AccountAuthorizationService {
     let account = await this.accountService.getAccountOrFail(accountInput.id, {
       relations: {
         agent: true,
-        space: {
-          community: {
-            policy: true,
-          },
-        },
+        spaces: true,
         virtualContributors: true,
         innovationPacks: true,
         innovationHubs: true,
         storageAggregator: true,
       },
     });
-    if (!account.space) {
+    if (!account.storageAggregator) {
       throw new RelationshipNotFoundException(
         `Unable to load Account with entities at start of auth reset: ${account.id} `,
         LogContext.ACCOUNT
@@ -100,47 +89,25 @@ export class AccountAuthorizationService {
     const savedAccount = await this.accountService.save(account);
 
     // And cascade into the space if there is one
-    if (!account.space) {
-      throw new RelationshipNotFoundException(
-        `No space on account for resetting: ${account.id} `,
-        LogContext.ACCOUNT
-      );
+    for (const space of account.spaces) {
+      await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
     }
-    savedAccount.space =
-      await this.spaceAuthorizationService.applyAuthorizationPolicy(
-        account.space
-      );
 
     return savedAccount;
   }
   public async getClonedAccountAuthExtendedForChildEntities(
     account: IAccount
   ): Promise<IAuthorizationPolicy> {
-    if (!account.space) {
-      throw new RelationshipNotFoundException(
-        `Unable to load Account with entities at start of auth reset: ${account.id} `,
-        LogContext.ACCOUNT
-      );
-    }
     let clonedAccountAuth =
       this.authorizationPolicyService.cloneAuthorizationPolicy(
         account.authorization
       );
-
-    const communityPolicy = this.spaceAuthorizationService.getCommunityPolicy(
-      account.space
-    );
-    const spaceSettings = this.spaceSettingsService.getSettings(
-      account.space.settingsStr
-    );
 
     const hostCredentials =
       await this.accountHostService.getHostCredentials(account);
 
     clonedAccountAuth = this.extendAuthorizationPolicyForChildEntities(
       clonedAccountAuth,
-      communityPolicy,
-      spaceSettings,
       hostCredentials
     );
     return clonedAccountAuth;
@@ -151,9 +118,6 @@ export class AccountAuthorizationService {
   ): Promise<IAccount> {
     if (
       !account.agent ||
-      !account.space ||
-      !account.space.community ||
-      !account.space.community.policy ||
       !account.virtualContributors ||
       !account.innovationPacks ||
       !account.storageAggregator ||
@@ -280,8 +244,6 @@ export class AccountAuthorizationService {
 
   private extendAuthorizationPolicyForChildEntities(
     authorization: IAuthorizationPolicy | undefined,
-    communityPolicy: ICommunityPolicy,
-    spaceSettings: ISpaceSettings,
     hostCredentials: ICredentialDefinition[]
   ): IAuthorizationPolicy {
     if (!authorization) {
@@ -293,13 +255,7 @@ export class AccountAuthorizationService {
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
     // If there is a root space, then also allow the admins to manage the account for now
     const accountChildEntitiesManage = hostCredentials;
-    const spaceAdminCriterias =
-      this.communityPolicyService.getCredentialsForRole(
-        communityPolicy,
-        spaceSettings,
-        CommunityRole.ADMIN
-      );
-    accountChildEntitiesManage.push(...spaceAdminCriterias);
+
     if (accountChildEntitiesManage.length !== 0) {
       const accountChildEntities =
         this.authorizationPolicyService.createCredentialRule(
