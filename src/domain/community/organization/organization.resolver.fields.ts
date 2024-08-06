@@ -32,7 +32,7 @@ import { ILoader } from '@core/dataloader/loader.interface';
 import { OrganizationStorageAggregatorLoaderCreator } from '@core/dataloader/creators/loader.creators/community/organization.storage.aggregator.loader.creator';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { IAccount } from '@domain/space/account/account.interface';
-import { ContributorService } from '../contributor/contributor.service';
+import { AccountHostService } from '@domain/space/account.host/account.host.service';
 
 @Resolver(() => IOrganization)
 export class OrganizationResolverFields {
@@ -41,7 +41,7 @@ export class OrganizationResolverFields {
     private organizationService: OrganizationService,
     private groupService: UserGroupService,
     private preferenceSetService: PreferenceSetService,
-    private contributorService: ContributorService
+    private accountHostService: AccountHostService
   ) {}
 
   //@AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -126,7 +126,7 @@ export class OrganizationResolverFields {
       AuthorizationPrivilege.UPDATE
     );
     if (accountsVisible) {
-      return await this.contributorService.getAccountsHostedByContributor(
+      return await this.accountHostService.getAccountsHostedByContributor(
         organization
       );
     }

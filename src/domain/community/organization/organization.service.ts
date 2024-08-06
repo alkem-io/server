@@ -6,7 +6,6 @@ import {
   EntityNotFoundException,
   EntityNotInitializedException,
   ForbiddenException,
-  RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
 import {
@@ -254,10 +253,12 @@ export class OrganizationService {
         storageAggregator: true,
       },
     });
-    const isSpaceHost = await this.isAccountHost(organization);
-    if (isSpaceHost) {
+    // TODO: give additional feedback?
+    const areAcccountsEmpty =
+      await this.accountHostService.areHostedAccountsEmpty(organization);
+    if (areAcccountsEmpty) {
       throw new ForbiddenException(
-        'Unable to delete Organization: host of one or more accounts',
+        'Unable to delete Organization: accounts contain one or more resources',
         LogContext.SPACES
       );
     }
@@ -307,18 +308,6 @@ export class OrganizationService {
     );
     result.id = orgID;
     return result;
-  }
-
-  async isAccountHost(organization: IOrganization): Promise<boolean> {
-    if (!organization.agent)
-      throw new RelationshipNotFoundException(
-        `Unable to load agent for organization: ${organization.id}`,
-        LogContext.COMMUNITY
-      );
-
-    return await this.agentService.hasValidCredential(organization.agent.id, {
-      type: AuthorizationCredential.ACCOUNT_HOST,
-    });
   }
 
   async getOrganization(

@@ -420,10 +420,12 @@ export class UserService {
       },
     });
 
-    const isAccountHost = await this.isAccountHost(user);
-    if (isAccountHost) {
+    // TODO: give additional feedback?
+    const areAcccountsEmpty =
+      await this.accountHostService.areHostedAccountsEmpty(user);
+    if (areAcccountsEmpty) {
       throw new ForbiddenException(
-        'Unable to delete User: host of one or more accounts',
+        'Unable to delete User: accounts contain one or more resources',
         LogContext.SPACES
       );
     }

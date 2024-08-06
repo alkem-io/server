@@ -16,10 +16,10 @@ import { CommunityInvitationResult } from './dto/me.invitation.result';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { EntityNotFoundException } from '@common/exceptions';
 import { CommunityApplicationResult } from './dto/me.application.result';
-import { CommunityRoleService } from '@domain/community/community-role/community.role.service';
 import { ContributorService } from '@domain/community/contributor/contributor.service';
 import { UserService } from '@domain/community/user/user.service';
 import { compact } from 'lodash';
+import { AccountHostService } from '@domain/space/account.host/account.host.service';
 
 @Injectable()
 export class MeService {
@@ -30,7 +30,7 @@ export class MeService {
     private rolesService: RolesService,
     private activityLogService: ActivityLogService,
     private activityService: ActivityService,
-    private communityRoleService: CommunityRoleService,
+    private accountHostService: AccountHostService,
     private communityResolverService: CommunityResolverService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
@@ -166,7 +166,7 @@ export class MeService {
       );
     }
     const accounts = (
-      await this.contributorService.getAccountsHostedByContributor(user, true)
+      await this.accountHostService.getAccountsHostedByContributor(user, true)
     )
       .sort((a, b) =>
         a.createdDate && b.createdDate

@@ -19,9 +19,10 @@ import { Account } from '../account/account.entity';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { CreateAccountInput } from '../account/dto/account.dto.create';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
+import { EntityManager, In, Repository } from 'typeorm';
 import { LicensingService } from '@platform/licensing/licensing.service';
+import { Credential } from '@domain/agent/credential/credential.entity';
 
 @Injectable()
 export class AccountHostService {
@@ -31,6 +32,8 @@ export class AccountHostService {
     private licenseIssuerService: LicenseIssuerService,
     private licensingService: LicensingService,
     private storageAggregatorService: StorageAggregatorService,
+    @InjectEntityManager('default')
+    private entityManager: EntityManager,
     @InjectRepository(Account)
     private accountRepository: Repository<Account>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -49,11 +52,12 @@ export class AccountHostService {
     account = await this.accountRepository.save(account);
 
     await this.setAccountHost(account, accountData.host);
+    await this.assignLicensePlansToAccount(account, accountData.host);
 
     return account;
   }
 
-  async assignLicensePlansToAccount(
+  private async assignLicensePlansToAccount(
     account: IAccount,
     host: IContributor
   ): Promise<void> {
@@ -90,7 +94,7 @@ export class AccountHostService {
     }
   }
 
-  async getHost(account: IAccount): Promise<IContributor | null> {
+  public async getHost(account: IAccount): Promise<IContributor | null> {
     const contributors =
       await this.contributorService.contributorsWithCredentials({
         type: AuthorizationCredential.ACCOUNT_HOST,
@@ -106,6 +110,74 @@ export class AccountHostService {
     }
 
     return null;
+  }
+
+  public async areHostedAccountsEmpty(
+    contributor: IContributor
+  ): Promise<boolean> {
+    const hostedAccounts =
+      await this.getAccountsHostedByContributor(contributor);
+    for (const hostedAccount of hostedAccounts) {
+      const account = await this.entityManager.findOne(Account, {
+        where: {
+          id: hostedAccount.id,
+        },
+        relations: {
+          spaces: true,
+          virtualContributors: true,
+          innovationPacks: true,
+          innovationHubs: true,
+        },
+      });
+      if (!account) {
+        throw new RelationshipNotFoundException(
+          `Unable to find account with ID: ${hostedAccount.id}`,
+          LogContext.ACCOUNT
+        );
+      }
+      if (
+        account.spaces.length > 0 ||
+        account.virtualContributors.length > 0 ||
+        account.innovationPacks.length > 0 ||
+        account.innovationHubs.length > 0
+      ) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  public async getAccountsHostedByContributor(
+    contributor: IContributor,
+    includeSpaces = false
+  ): Promise<IAccount[]> {
+    let agent = contributor.agent;
+    if (!agent) {
+      const contributorWithAgent =
+        await this.contributorService.getContributorWithRelations(contributor, {
+          relations: { agent: true },
+        });
+      agent = contributorWithAgent.agent;
+    }
+    const hostedAccountCredentials = await this.entityManager.find(Credential, {
+      where: {
+        type: AuthorizationCredential.ACCOUNT_HOST,
+        agent: {
+          id: agent.id,
+        },
+      },
+    });
+    const accountIDs = hostedAccountCredentials.map(cred => cred.resourceID);
+    const accounts = await this.entityManager.find(Account, {
+      where: {
+        id: In(accountIDs),
+      },
+      relations: {
+        spaces: includeSpaces,
+      },
+    });
+
+    return accounts;
   }
 
   public async getHostCredentials(
@@ -148,14 +220,6 @@ export class AccountHostService {
         LogContext.COMMUNITY
       );
     return host;
-  }
-
-  public async getHostByID(contributorID: string): Promise<IContributor> {
-    return this.contributorService.getContributorByUuidOrFail(contributorID, {
-      relations: {
-        agent: true,
-      },
-    });
   }
 
   private async setAccountHost(
