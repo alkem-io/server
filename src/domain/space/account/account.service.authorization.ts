@@ -197,11 +197,13 @@ export class AccountAuthorizationService {
     authorization.anonymousReadAccess = true;
 
     // Allow global admins to reset authorization, manage platform settings
+    // and transfer resources
     const authorizationReset =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [
           AuthorizationPrivilege.AUTHORIZATION_RESET,
           AuthorizationPrivilege.PLATFORM_ADMIN,
+          AuthorizationPrivilege.TRANSFER_RESOURCE,
         ],
         [
           AuthorizationCredential.GLOBAL_ADMIN,
@@ -229,6 +231,7 @@ export class AccountAuthorizationService {
         AuthorizationPrivilege.READ,
         AuthorizationPrivilege.UPDATE,
         AuthorizationPrivilege.DELETE,
+        //AuthorizationPrivilege.TRANSFER_RESOURCE // Assign later once stable
       ],
       [...hostCredentials],
       CREDENTIAL_RULE_TYPES_ACCOUNT_MANAGE

@@ -43,6 +43,7 @@ export enum AuthorizationPrivilege {
   ACCESS_DASHBOARD_REFRESH = 'access-dashboard-refresh',
   UPDATE_CONTENT = 'update-content',
   SAVE_AS_TEMPLATE = 'save-as-template',
+  TRANSFER_RESOURCE = 'transfer-resource',
 }
 
 registerEnumType(AuthorizationPrivilege, {

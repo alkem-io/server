@@ -29,6 +29,12 @@ import { InnovationPackAuthorizationService } from '@library/innovation-pack/inn
 import { InnovationPackService } from '@library/innovation-pack/innovaton.pack.service';
 import { SpaceAuthorizationService } from '../space/space.service.authorization';
 import { ISpace } from '../space/space.interface';
+import { TransferAccountInnovationHubInput } from './dto/account.dto.transfer.innovation.hub';
+import { RelationshipNotFoundException } from '@common/exceptions';
+import { LogContext } from '@common/enums';
+import { TransferAccountSpaceInput } from './dto/account.dto.transfer.space';
+import { TransferAccountInnovationPackInput } from './dto/account.dto.transfer.innovation.pack';
+import { TransferAccountVirtualContributorInput } from './dto/account.dto.transfer.virtual.contributor';
 
 @Resolver()
 export class AccountResolverMutations {
@@ -243,5 +249,214 @@ export class AccountResolverMutations {
     return this.accountAuthorizationService
       .applyAuthorizationPolicy(account)
       .then(account => this.accountService.save(account));
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IInnovationHub, {
+    description: 'Transfer the specified InnovationHub to another Account.',
+  })
+  async transferInnovationHubToAccount(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('transferData') transferData: TransferAccountInnovationHubInput
+  ): Promise<IInnovationHub> {
+    let innovationHub = await this.innovationHubService.getInnovationHubOrFail(
+      transferData.innovationHubID,
+      {
+        relations: {
+          account: {
+            authorization: true,
+          },
+        },
+      }
+    );
+    const targetAccount = await this.accountService.getAccountOrFail(
+      transferData.targetAccountID
+    );
+
+    await this.validateTransferOfAccountResource(
+      innovationHub.account,
+      targetAccount,
+      agentInfo,
+      'InnovationHub',
+      transferData.innovationHubID
+    );
+
+    innovationHub.account = targetAccount;
+    // TODO: check if still needed later
+    innovationHub = await this.innovationHubService.save(innovationHub);
+    const clonedAccountAuth =
+      await this.accountAuthorizationService.getClonedAccountAuthExtendedForChildEntities(
+        targetAccount
+      );
+
+    innovationHub =
+      await this.innovationHubAuthorizationService.applyAuthorizationPolicyAndSave(
+        innovationHub,
+        clonedAccountAuth
+      );
+    // TODO: check if still needed later
+    return await this.innovationHubService.save(innovationHub);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => ISpace, {
+    description: 'Transfer the specified Space to another Account.',
+  })
+  async transferSpaceToAccount(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('transferData') transferData: TransferAccountSpaceInput
+  ): Promise<ISpace> {
+    let space = await this.spaceService.getSpaceOrFail(transferData.spaceID, {
+      relations: {
+        account: {
+          authorization: true,
+        },
+      },
+    });
+    const targetAccount = await this.accountService.getAccountOrFail(
+      transferData.targetAccountID
+    );
+
+    await this.validateTransferOfAccountResource(
+      space.account,
+      targetAccount,
+      agentInfo,
+      'Space',
+      transferData.spaceID
+    );
+
+    space.account = targetAccount;
+    // TODO: check if still needed later
+    space = await this.spaceService.save(space);
+
+    space =
+      await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
+    // TODO: check if still needed later
+    return await this.spaceService.save(space);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IInnovationPack, {
+    description: 'Transfer the specified Innovation Pack to another Account.',
+  })
+  async transferInnovationPackToAccount(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('transferData') transferData: TransferAccountInnovationPackInput
+  ): Promise<IInnovationPack> {
+    let innovationPack =
+      await this.innovationPackService.getInnovationPackOrFail(
+        transferData.innovationPackID,
+        {
+          relations: {
+            account: {
+              authorization: true,
+            },
+          },
+        }
+      );
+    const targetAccount = await this.accountService.getAccountOrFail(
+      transferData.targetAccountID
+    );
+
+    await this.validateTransferOfAccountResource(
+      innovationPack.account,
+      targetAccount,
+      agentInfo,
+      'Innovation Pack',
+      transferData.innovationPackID
+    );
+
+    innovationPack.account = targetAccount;
+    // TODO: check if still needed later
+    innovationPack = await this.innovationPackService.save(innovationPack);
+    const clonedAccountAuth =
+      await this.accountAuthorizationService.getClonedAccountAuthExtendedForChildEntities(
+        targetAccount
+      );
+    innovationPack =
+      await this.innovationPackAuthorizationService.applyAuthorizationPolicy(
+        innovationPack,
+        clonedAccountAuth
+      );
+    // TODO: check if still needed later
+    return await this.innovationPackService.save(innovationPack);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IInnovationPack, {
+    description:
+      'Transfer the specified Virtual Contributor to another Account.',
+  })
+  async transferVirtualContributorToAccount(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('transferData') transferData: TransferAccountVirtualContributorInput
+  ): Promise<IVirtualContributor> {
+    let virtualContributor =
+      await this.virtualContributorService.getVirtualContributorOrFail(
+        transferData.virtualContributorID,
+        {
+          relations: {
+            account: {
+              authorization: true,
+            },
+          },
+        }
+      );
+    const targetAccount = await this.accountService.getAccountOrFail(
+      transferData.targetAccountID
+    );
+
+    await this.validateTransferOfAccountResource(
+      virtualContributor.account,
+      targetAccount,
+      agentInfo,
+      'VirtualContributor',
+      transferData.virtualContributorID
+    );
+
+    virtualContributor.account = targetAccount;
+    // TODO: check if still needed later
+    virtualContributor =
+      await this.virtualContributorService.save(virtualContributor);
+    const clonedAccountAuth =
+      await this.accountAuthorizationService.getClonedAccountAuthExtendedForChildEntities(
+        targetAccount
+      );
+    virtualContributor =
+      await this.virtualContributorAuthorizationService.applyAuthorizationPolicy(
+        virtualContributor,
+        clonedAccountAuth
+      );
+    // TODO: check if still needed later
+    return await this.virtualContributorService.save(virtualContributor);
+  }
+
+  private async validateTransferOfAccountResource(
+    currentAccount: IAccount | undefined,
+    targetAccount: IAccount,
+    agentInfo: AgentInfo,
+    resourceName: string,
+    resourceID: string
+  ): Promise<void> {
+    if (!currentAccount) {
+      throw new RelationshipNotFoundException(
+        `Unable to find Account on ${resourceName}: ${resourceID}`,
+        LogContext.ACCOUNT
+      );
+    }
+
+    // Double authorization check: on Account where InnovationHub is, and where it it being transferred to
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      currentAccount.authorization,
+      AuthorizationPrivilege.TRANSFER_RESOURCE,
+      `transfer ${resourceName} to another Account: ${agentInfo.email}`
+    );
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      targetAccount.authorization,
+      AuthorizationPrivilege.CREATE,
+      `transfer ${resourceName} to target Account: ${agentInfo.email}`
+    );
   }
 }
