@@ -89,7 +89,7 @@ export class ConversionResolverMutations {
     );
     if (!subsubspace.account || !subsubspace.account.space) {
       throw new EntityNotInitializedException(
-        `account not found on opportunity: ${subsubspace.nameID}`,
+        `account not found on subsubspace: ${subsubspace.id}`,
         LogContext.SPACES
       );
     }

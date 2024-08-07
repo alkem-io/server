@@ -81,7 +81,7 @@ export class RegistrationService {
       ).value === 'true';
     if (!orgMatchDomain) {
       this.logger.verbose?.(
-        `Organization '${org.nameID}' preference ${OrganizationPreferenceType.AUTHORIZATION_ORGANIZATION_MATCH_DOMAIN} is disabled`,
+        `Organization '${org.id}' preference ${OrganizationPreferenceType.AUTHORIZATION_ORGANIZATION_MATCH_DOMAIN} is disabled`,
         LogContext.COMMUNITY
       );
       return false;
@@ -93,7 +93,7 @@ export class RegistrationService {
       OrganizationVerificationEnum.VERIFIED_MANUAL_ATTESTATION
     ) {
       this.logger.verbose?.(
-        `Organization '${org.nameID}' not verified`,
+        `Organization '${org.id}' not verified`,
         LogContext.COMMUNITY
       );
       return false;
@@ -106,7 +106,7 @@ export class RegistrationService {
     });
 
     this.logger.verbose?.(
-      `User ${user.nameID} successfully added to Organization '${org.nameID}'`,
+      `User ${user.id} successfully added to Organization '${org.id}'`,
       LogContext.COMMUNITY
     );
     return true;

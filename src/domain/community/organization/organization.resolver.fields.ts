@@ -64,7 +64,7 @@ export class OrganizationResolverFields {
       agentInfo,
       organization.authorization,
       AuthorizationPrivilege.READ,
-      `read user groups on org: ${organization.nameID}`
+      `read user groups on org: ${organization.id}`
     );
 
     return await this.organizationService.getUserGroups(organization);
@@ -90,7 +90,7 @@ export class OrganizationResolverFields {
       agentInfo,
       organization.authorization,
       AuthorizationPrivilege.READ,
-      `read single usergroup on org: ${organization.nameID}`
+      `read single usergroup on org: ${organization.id}`
     );
 
     const userGroup = await this.groupService.getUserGroupOrFail(groupID, {
@@ -230,7 +230,7 @@ export class OrganizationResolverFields {
       agentInfo,
       organization.authorization,
       AuthorizationPrivilege.READ,
-      `read preferences on org: ${organization.nameID}`
+      `read preferences on org: ${organization.id}`
     );
     const preferenceSet = await this.organizationService.getPreferenceSetOrFail(
       organization.id

@@ -78,7 +78,7 @@ export class AccountResolverMutations {
       agentInfo,
       authorizationPolicy,
       AuthorizationPrivilege.CREATE_SPACE,
-      `create space: ${accountData.spaceData?.nameID}`
+      `create account with space: ${accountData}`
     );
     let account = await this.accountService.createAccount(accountData);
 
@@ -168,7 +168,7 @@ export class AccountResolverMutations {
           agentInfo,
           account.authorization,
           AuthorizationPrivilege.DELETE,
-          `deleteSpace + account: ${space.nameID}`
+          `deleteSpace + account: ${space.id}`
         );
         await this.accountService.deleteAccount(account);
         return space;
@@ -178,7 +178,7 @@ export class AccountResolverMutations {
           agentInfo,
           space.authorization,
           AuthorizationPrivilege.DELETE,
-          `deleteSpace: ${space.nameID}`
+          `deleteSpace: ${space.id}`
         );
         return await this.spaceService.deleteSpace(deleteData);
       default:
@@ -358,7 +358,7 @@ export class AccountResolverMutations {
       agentInfo,
       account.authorization,
       AuthorizationPrivilege.CREATE_VIRTUAL_CONTRIBUTOR,
-      `create Virtual contributor: ${virtualContributorData.nameID}`
+      `create Virtual contributor on account: ${account.id}`
     );
 
     let virtual = await this.accountService.createVirtualContributorOnAccount(
@@ -423,7 +423,7 @@ export class AccountResolverMutations {
       agentInfo,
       account.authorization,
       AuthorizationPrivilege.CREATE,
-      `create Innovation Pack on account: ${innovationPackData.nameID}`
+      `create Innovation Pack on account: ${account.id}`
     );
 
     let innovationPack =
