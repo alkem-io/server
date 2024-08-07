@@ -24,6 +24,7 @@ import {
   serverBroadcastEventAmqpHandler,
   serverVolatileBroadcastEventAmqpHandler,
 } from './handlers';
+import { AlkemioConfig } from '@src/types';
 
 export const ExcalidrawAmqpServerFactoryProvider: FactoryProvider = {
   provide: EXCALIDRAW_SERVER,
@@ -38,7 +39,7 @@ export const ExcalidrawAmqpServerFactoryProvider: FactoryProvider = {
   useFactory: async (
     appId: string,
     logger: LoggerService,
-    configService: ConfigService,
+    configService: ConfigService<AlkemioConfig, true>,
     excalidrawEventPublisher: ExcalidrawEventPublisherService,
     excalidrawEventSubscriber: ExcalidrawEventSubscriberService
   ) =>
@@ -54,7 +55,7 @@ export const ExcalidrawAmqpServerFactoryProvider: FactoryProvider = {
 const factory = async (
   appId: string,
   logger: LoggerService,
-  configService: ConfigService,
+  configService: ConfigService<AlkemioConfig, true>,
   excalidrawEventPublisher: ExcalidrawEventPublisherService,
   excalidrawEventSubscriber: ExcalidrawEventSubscriberService
 ): Promise<SocketIoServer> | never => {

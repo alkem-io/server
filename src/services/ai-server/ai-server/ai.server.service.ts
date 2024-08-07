@@ -24,7 +24,6 @@ import {
 import { EventBus } from '@nestjs/cqrs';
 import { ConfigService } from '@nestjs/config';
 import { ChromaClient } from 'chromadb';
-import { ConfigurationTypes } from '@common/enums/configuration.type';
 import { IMessageAnswerToQuestion } from '@domain/communication/message.answer.to.question/message.answer.to.question.interface';
 import { VcInteractionService } from '@domain/communication/vc-interaction/vc.interaction.service';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
@@ -32,6 +31,7 @@ import {
   InteractionMessage,
   MessageSenderRole,
 } from '../ai-persona-service/dto/interaction.message';
+import { AlkemioConfig } from '@src/types';
 
 @Injectable()
 export class AiServerService {
@@ -40,7 +40,7 @@ export class AiServerService {
     private aiPersonaEngineAdapter: AiPersonaEngineAdapter,
     private vcInteractionService: VcInteractionService,
     private communicationAdapter: CommunicationAdapter,
-    private config: ConfigService,
+    private config: ConfigService<AlkemioConfig, true>,
     @InjectRepository(AiServer)
     private aiServerRepository: Repository<AiServer>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -153,9 +153,9 @@ export class AiServerService {
   }
 
   private async isContextLoaded(contextID: string): Promise<boolean> {
-    const { host, port } = this.config.get(
-      ConfigurationTypes.PLATFORM
-    ).vector_db;
+    const { host, port } = this.config.get('platform.vector_db', {
+      infer: true,
+    });
     const chroma = new ChromaClient({ path: `http://${host}:${port}` });
 
     const name = this.getContextCollectionID(contextID);
@@ -277,9 +277,8 @@ export class AiServerService {
       engine: aiPersonaService.engine,
       userID: '',
     };
-    const result = await this.aiPersonaEngineAdapter.sendIngest(
-      ingestAdapterInput
-    );
+    const result =
+      await this.aiPersonaEngineAdapter.sendIngest(ingestAdapterInput);
     return result;
   }
 }

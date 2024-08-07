@@ -1,5 +1,4 @@
 import { LogContext, ProfileType } from '@common/enums';
-import { ConfigurationTypes } from '@common/enums/configuration.type';
 import {
   EntityNotFoundException,
   RelationshipNotFoundException,
@@ -22,6 +21,7 @@ import { CommunityContributorType } from '@common/enums/community.contributor.ty
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { User } from '@domain/community/user/user.entity';
 import { Organization } from '@domain/community/organization/organization.entity';
+import { AlkemioConfig } from '@src/types';
 
 @Injectable()
 export class UrlGeneratorService {
@@ -50,16 +50,16 @@ export class UrlGeneratorService {
   private endpoint_cluster: string;
 
   constructor(
-    private configService: ConfigService,
+    private configService: ConfigService<AlkemioConfig, true>,
     @InjectEntityManager('default')
     private entityManager: EntityManager,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache
   ) {
-    this.endpoint_cluster = this.configService.get(
-      ConfigurationTypes.HOSTING
-    )?.endpoint_cluster;
+    this.endpoint_cluster = this.configService.get('hosting.endpoint_cluster', {
+      infer: true,
+    });
   }
 
   private getUrlIdCacheKey(entityId: string): string {

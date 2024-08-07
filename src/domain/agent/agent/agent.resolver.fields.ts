@@ -1,23 +1,19 @@
 import { UseGuards } from '@nestjs/common';
-import { Resolver } from '@nestjs/graphql';
-import { Parent, ResolveField } from '@nestjs/graphql';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { AgentService } from './agent.service';
-import {
-  AuthorizationPrivilege,
-  ConfigurationTypes,
-  LogContext,
-} from '@common/enums';
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { AuthorizationAgentPrivilege, Profiling } from '@common/decorators';
 import { Agent, IAgent } from '@domain/agent/agent';
 import { GraphqlGuard } from '@core/authorization';
 import { ConfigService } from '@nestjs/config';
 import { NotEnabledException } from '@common/exceptions/not.enabled.exception';
 import { IVerifiedCredential } from '../verified-credential/verified.credential.interface';
+import { AlkemioConfig } from '@src/types';
 
 @Resolver(() => IAgent)
 export class AgentResolverFields {
   constructor(
-    private configService: ConfigService,
+    private configService: ConfigService<AlkemioConfig, true>,
     private agentService: AgentService
   ) {}
 
@@ -28,14 +24,13 @@ export class AgentResolverFields {
     description: 'The Verfied Credentials for this Agent.',
   })
   @Profiling.api
-  async verifiedCredentials(
+  public verifiedCredentials(
     @Parent() agent: Agent
   ): Promise<IVerifiedCredential[]> {
-    const ssiEnabled = this.configService.get(ConfigurationTypes.SSI).enabled;
+    const ssiEnabled = this.configService.get('ssi.enabled', { infer: true });
     if (!ssiEnabled) {
       throw new NotEnabledException('SSI is not enabled', LogContext.SSI);
     }
-    const result = await this.agentService.getVerifiedCredentials(agent.id);
-    return result;
+    return this.agentService.getVerifiedCredentials(agent.id);
   }
 }

@@ -1,7 +1,7 @@
 import { PubSubEngine } from 'graphql-subscriptions';
 import { SUBSCRIPTION_PROFILE_VERIFIED_CREDENTIAL } from '@common/constants';
 import { Profiling } from '@common/decorators/profiling.decorator';
-import { ConfigurationTypes, LogContext } from '@common/enums';
+import { LogContext } from '@common/enums';
 import {
   AuthenticationException,
   EntityNotFoundException,
@@ -45,6 +45,7 @@ import { SsiSovrhdRegisterCallbackCredential } from '@services/adapters/ssi-sovr
 import { getRandomId } from '@src/common/utils';
 import { AgentInfoCacheService } from '../../../core/authentication.agent.info/agent.info.cache.service';
 import { GrantCredentialToAgentInput } from './dto/agent.dto.credential.grant';
+import { AlkemioConfig } from '@src/types';
 
 @Injectable()
 export class AgentService {
@@ -53,7 +54,7 @@ export class AgentService {
   constructor(
     private agentInfoCacheService: AgentInfoCacheService,
     private authorizationPolicyService: AuthorizationPolicyService,
-    private configService: ConfigService,
+    private configService: ConfigService<AlkemioConfig, true>,
     private credentialService: CredentialService,
     @InjectRepository(Agent)
     private agentRepository: Repository<Agent>,
@@ -69,8 +70,9 @@ export class AgentService {
     private subscriptionVerifiedCredentials: PubSubEngine
   ) {
     this.cache_ttl = this.configService.get(
-      ConfigurationTypes.IDENTITY
-    ).authentication.cache_ttl;
+      'identity.authentication.cache_ttl',
+      { infer: true }
+    );
   }
 
   async createAgent(inputData: CreateAgentInput): Promise<IAgent> {
@@ -78,7 +80,7 @@ export class AgentService {
     agent.credentials = [];
     agent.authorization = new AuthorizationPolicy();
 
-    const ssiEnabled = this.configService.get(ConfigurationTypes.SSI).enabled;
+    const ssiEnabled = this.configService.get('ssi.enabled', { infer: true });
 
     if (ssiEnabled) {
       return await this.createDidOnAgent(agent);
@@ -552,8 +554,9 @@ export class AgentService {
 
   validateTrustedIssuerOrFail(vcName: string, vcToBeStored: any) {
     const trustedIssuerValidationEnabled = this.configService.get(
-      ConfigurationTypes.SSI
-    ).issuer_validation_enabled;
+      'ssi.issuer_validation_enabled',
+      { infer: true }
+    );
     if (!trustedIssuerValidationEnabled) return;
 
     const trustedIssuers =

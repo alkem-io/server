@@ -35,7 +35,6 @@ import { IPaginatedType } from '@core/pagination/paginated.type';
 import { SpaceFilterInput } from '@services/infrastructure/space-filter/dto/space.filter.dto.input';
 import { PaginationArgs } from '@core/pagination';
 import { getPaginationResults } from '@core/pagination/pagination.fn';
-import { SpaceMembershipCollaborationInfo } from '@services/api/me/space.membership.type';
 import { ISpaceSettings } from '../space.settings/space.settings.interface';
 import { SpaceType } from '@common/enums/space.type';
 import { IAccount } from '../account/account.interface';
@@ -432,91 +431,23 @@ export class SpaceService {
     return spaces;
   }
 
-  public async getSpacesWithChildJourneys(
-    args: SpacesQueryArgs,
-    options?: FindManyOptions<Space>
-  ): Promise<ISpace[]> {
-    const visibilities = this.spacesFilterService.getAllowedVisibilities(
-      args.filter
-    );
-    // Load the spaces
-    let spaces: ISpace[];
-    if (args && args.IDs) {
-      spaces = await this.spaceRepository.find({
-        where: {
-          id: In(args.IDs),
-          visibility: In(visibilities),
-          level: SpaceLevel.SPACE,
-        },
-        ...options,
-        relations: {
-          ...options?.relations,
-          collaboration: true,
-          subspaces: {
-            collaboration: true,
-            subspaces: {
-              collaboration: true,
-            },
-          },
-        },
-      });
-    } else {
-      spaces = await this.spaceRepository.find({
-        where: {
-          visibility: In(visibilities),
-          level: SpaceLevel.SPACE,
-        },
-        ...options,
-        relations: {
-          ...options?.relations,
-          collaboration: true,
-          subspaces: {
-            collaboration: true,
-            subspaces: {
-              collaboration: true,
-            },
-          },
-        },
-      });
-    }
+  public async getSpacesInList(spaceIDs: string[]): Promise<ISpace[]> {
+    const visibilities = [SpaceVisibility.ACTIVE, SpaceVisibility.DEMO];
+
+    const spaces = await this.spaceRepository.find({
+      where: {
+        id: In(spaceIDs),
+        visibility: In(visibilities),
+      },
+      relations: {
+        parentSpace: true,
+        collaboration: true,
+      },
+    });
 
     if (spaces.length === 0) return [];
 
     return spaces;
-  }
-
-  // Returns a map of all collaboration IDs with parent space ID
-  public getSpaceMembershipCollaborationInfo(
-    spaces: ISpace[]
-  ): SpaceMembershipCollaborationInfo {
-    const spaceMembershipCollaborationInfo: SpaceMembershipCollaborationInfo =
-      new Map();
-
-    for (const space of spaces) {
-      if (space.collaboration?.id)
-        spaceMembershipCollaborationInfo.set(space.collaboration.id, space.id);
-
-      if (space.subspaces) {
-        for (const subspace of space.subspaces) {
-          if (subspace.collaboration?.id)
-            spaceMembershipCollaborationInfo.set(
-              subspace.collaboration.id,
-              space.id
-            );
-
-          if (subspace.subspaces) {
-            for (const subsubspace of subspace.subspaces) {
-              if (subsubspace.collaboration?.id)
-                spaceMembershipCollaborationInfo.set(
-                  subsubspace.collaboration.id,
-                  space.id
-                );
-            }
-          }
-        }
-      }
-    }
-    return spaceMembershipCollaborationInfo;
   }
 
   public async orderSpacesDefault(spaces: ISpace[]): Promise<ISpace[]> {
@@ -748,8 +679,8 @@ export class SpaceService {
           );
       }
       // updating the nameID, check new value is allowed
-      const updateAllowed = reservedNameIDs.includes(updateData.nameID);
-      if (!updateAllowed) {
+      const existingNameID = reservedNameIDs.includes(updateData.nameID);
+      if (existingNameID) {
         throw new ValidationException(
           `Unable to update Space nameID: the provided nameID is already taken: ${updateData.nameID}`,
           LogContext.ACCOUNT
