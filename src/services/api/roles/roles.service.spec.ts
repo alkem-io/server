@@ -32,7 +32,7 @@ import { Space } from '@domain/space/space/space.entity';
 import { RolesResultCommunity } from './dto/roles.dto.result.community';
 import { MockUserLookupService } from '@test/mocks/user.lookup.service.mock';
 import { MockVirtualContributorService } from '@test/mocks/virtual.contributor.service.mock';
-import { IUser } from '@domain/community/user';
+import { IUser } from '@domain/community/user/user.interface';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 
 describe('RolesService', () => {
@@ -262,6 +262,7 @@ const getSpaceRoleResultMock = ({
         virtualContributors: [],
         innovationHubs: [],
         innovationPacks: [],
+        spaces: [],
       },
       ...getEntityMock<Space>(),
     },
