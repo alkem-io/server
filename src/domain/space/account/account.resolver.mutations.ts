@@ -53,7 +53,7 @@ export class AccountResolverMutations {
   @Mutation(() => IAccount, {
     description: 'Creates a new Level Zero Space within the specified Account.',
   })
-  async createLevelZeroSpace(
+  async createSpace(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('spaceData') spaceData: CreateSpaceOnAccountInput
   ): Promise<ISpace> {
@@ -97,7 +97,7 @@ export class AccountResolverMutations {
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IInnovationHub, {
-    description: 'Create Innovation Hub.',
+    description: 'Create an Innovation Hub on the specified account',
   })
   async createInnovationHub(
     @CurrentUser() agentInfo: AgentInfo,
