@@ -61,6 +61,9 @@ import { IContributor } from '@domain/community/contributor/contributor.interfac
 import { CommunityContributorType } from '@common/enums/community.contributor.type';
 import { CommunityRoleService } from '@domain/community/community-role/community.role.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { TemplatesSetService } from '@domain/template/templates-set/templates.set.service';
+import { ITemplatesSet } from '@domain/template/templates-set/templates.set.interface';
+import { ISpaceDefaults } from '../space.defaults/space.defaults.interface';
 
 @Injectable()
 export class SpaceService {
@@ -76,6 +79,7 @@ export class SpaceService {
     private spaceSettingsService: SpaceSettingsService,
     private spaceDefaultsService: SpaceDefaultsService,
     private storageAggregatorService: StorageAggregatorService,
+    private templatesSetService: TemplatesSetService,
     private collaborationService: CollaborationService,
     @InjectRepository(Space)
     private spaceRepository: Repository<Space>,
@@ -85,6 +89,7 @@ export class SpaceService {
   async createSpace(
     spaceData: CreateSpaceInput,
     account: IAccount,
+    spaceDefaults?: ISpaceDefaults,
     agentInfo?: AgentInfo
   ): Promise<ISpace> {
     if (!spaceData.type) {
@@ -192,8 +197,8 @@ export class SpaceService {
         ...spaceData.collaborationData,
       },
       space.storageAggregator,
-      account,
-      space.type
+      space.type,
+      spaceDefaults
     );
 
     const calloutGroupDefault =
@@ -235,6 +240,10 @@ export class SpaceService {
       space.levelZeroSpaceID = space.id;
     }
 
+    if (space.level === SpaceLevel.SPACE) {
+      await this.addLevelZeroSpaceEntities(space);
+    }
+
     ////// Community
     // set immediate community parent + resourceID
     space.community.parentID = space.id;
@@ -245,6 +254,32 @@ export class SpaceService {
       );
 
     return await this.save(space);
+  }
+
+  private async addLevelZeroSpaceEntities(space: ISpace) {
+    if (!space.storageAggregator) {
+      throw new EntityNotInitializedException(
+        `'storage aggregator not set on level zero space '${space.id}'`,
+        LogContext.SPACES
+      );
+    }
+    space.library = await this.templatesSetService.createTemplatesSet();
+    space.defaults = await this.spaceDefaultsService.createSpaceDefaults();
+
+    // And set the defaults
+    space.library =
+      await this.spaceDefaultsService.addDefaultTemplatesToSpaceLibrary(
+        space.library,
+        space.storageAggregator
+      );
+    if (
+      space.defaults &&
+      space.library &&
+      space.library.innovationFlowTemplates.length !== 0
+    ) {
+      space.defaults.innovationFlowTemplate =
+        space.library.innovationFlowTemplates[0];
+    }
   }
 
   async save(space: ISpace): Promise<ISpace> {
@@ -766,6 +801,8 @@ export class SpaceService {
         );
       }
     }
+    // Get the defaults to use
+    const spaceDefaults = await this.getDefaultsOrFail(space.levelZeroSpaceID);
 
     // Update the subspace data being passed in to set the storage aggregator to use
     subspaceData.storageAggregatorParent = space.storageAggregator;
@@ -773,6 +810,7 @@ export class SpaceService {
     let subspace = await this.createSpace(
       subspaceData,
       space.account,
+      spaceDefaults,
       agentInfo
     );
 
@@ -921,6 +959,8 @@ export class SpaceService {
         agent: true,
         profile: true,
         storageAggregator: true,
+        library: true,
+        defaults: true,
       },
     });
 
@@ -946,6 +986,17 @@ export class SpaceService {
     await this.profileService.deleteProfile(space.profile.id);
     await this.agentService.deleteAgent(space.agent.id);
     await this.authorizationPolicyService.delete(space.authorization);
+
+    if (space.level === SpaceLevel.SPACE) {
+      if (!space.library || !space.defaults) {
+        throw new RelationshipNotFoundException(
+          `Unable to load entities to delete base subspace: ${space.id} `,
+          LogContext.SPACES
+        );
+      }
+      await this.templatesSetService.deleteTemplatesSet(space.library.id);
+      await this.spaceDefaultsService.deleteSpaceDefaults(space.defaults.id);
+    }
 
     await this.storageAggregatorService.delete(space.storageAggregator.id);
   }
@@ -1064,6 +1115,44 @@ export class SpaceService {
         LogContext.COMMUNITY
       );
     return community;
+  }
+
+  async getLibraryOrFail(rootSpaceID: string): Promise<ITemplatesSet> {
+    const levelZeroSpaceWithLibrary = await this.getSpaceOrFail(rootSpaceID, {
+      relations: {
+        library: {
+          postTemplates: true,
+        },
+      },
+    });
+    const templatesSet = levelZeroSpaceWithLibrary.library;
+
+    if (!templatesSet) {
+      throw new EntityNotFoundException(
+        `Unable to find templatesSet for level zero space with id: ${rootSpaceID}`,
+        LogContext.ACCOUNT
+      );
+    }
+
+    return templatesSet;
+  }
+
+  async getDefaultsOrFail(rootSpaceID: string): Promise<ISpaceDefaults> {
+    const levelZeroSpaceWithDefaults = await this.getSpaceOrFail(rootSpaceID, {
+      relations: {
+        defaults: true,
+      },
+    });
+    const defaults = levelZeroSpaceWithDefaults.defaults;
+
+    if (!defaults) {
+      throw new EntityNotFoundException(
+        `Unable to find Defaults for level zero space with id: ${rootSpaceID}`,
+        LogContext.ACCOUNT
+      );
+    }
+
+    return defaults;
   }
 
   public async getCommunityPolicy(spaceId: string): Promise<ICommunityPolicy> {

@@ -11,7 +11,6 @@ import {
 } from '@common/exceptions';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IAccount } from './account.interface';
-import { TemplatesSetAuthorizationService } from '@domain/template/templates-set/templates.set.service.authorization';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { SpaceAuthorizationService } from '../space/space.service.authorization';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
@@ -45,7 +44,6 @@ export class AccountAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private agentAuthorizationService: AgentAuthorizationService,
-    private templatesSetAuthorizationService: TemplatesSetAuthorizationService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private spaceAuthorizationService: SpaceAuthorizationService,
     private virtualContributorAuthorizationService: VirtualContributorAuthorizationService,
@@ -53,8 +51,8 @@ export class AccountAuthorizationService {
     private communityPolicyService: CommunityPolicyService,
     private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
     private innovationHubAuthorizationService: InnovationHubAuthorizationService,
-    private spaceSettingsService: SpaceSettingsService,
     private accountService: AccountService,
+    private spaceSettingsService: SpaceSettingsService,
     private accountHostService: AccountHostService
   ) {}
 
@@ -67,8 +65,6 @@ export class AccountAuthorizationService {
             policy: true,
           },
         },
-        library: true,
-        defaults: true,
         virtualContributors: true,
         innovationPacks: true,
         innovationHubs: true,
@@ -158,8 +154,6 @@ export class AccountAuthorizationService {
       !account.space ||
       !account.space.community ||
       !account.space.community.policy ||
-      !account.library ||
-      !account.defaults ||
       !account.virtualContributors ||
       !account.innovationPacks ||
       !account.storageAggregator ||
@@ -179,23 +173,10 @@ export class AccountAuthorizationService {
       account.authorization
     );
 
-    // For certain child entities allow the space admin also pretty much full control
-    account.library =
-      await this.templatesSetAuthorizationService.applyAuthorizationPolicy(
-        account.library,
-        clonedAccountAuth
-      );
-
     account.storageAggregator =
       await this.storageAggregatorAuthorizationService.applyAuthorizationPolicy(
         account.storageAggregator,
         account.authorization
-      );
-
-    account.defaults.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
-        account.defaults.authorization,
-        clonedAccountAuth
       );
 
     const updatedVCs: IVirtualContributor[] = [];

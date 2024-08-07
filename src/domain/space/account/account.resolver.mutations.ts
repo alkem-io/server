@@ -13,10 +13,6 @@ import { AccountAuthorizationService } from './account.service.authorization';
 import { AccountService } from './account.service';
 import { IAccount } from './account.interface';
 import { SpaceService } from '../space/space.service';
-import { InnovationFlowTemplateService } from '@domain/template/innovation-flow-template/innovation.flow.template.service';
-import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
-import { UpdateSpaceDefaultsInput } from '../space/dto/space.dto.update.defaults';
-import { ISpaceDefaults } from '../space.defaults/space.defaults.interface';
 import { DeleteSpaceInput } from '../space/dto/space.dto.delete';
 import { UpdateAccountPlatformSettingsInput } from './dto/account.dto.update.platform.settings';
 import { CreateAccountInput } from './dto';
@@ -50,14 +46,12 @@ export class AccountResolverMutations {
     private accountAuthorizationService: AccountAuthorizationService,
     private authorizationService: AuthorizationService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
-    private innovationFlowTemplateService: InnovationFlowTemplateService,
     private virtualContributorService: VirtualContributorService,
     private virtualContributorAuthorizationService: VirtualContributorAuthorizationService,
     private innovationHubService: InnovationHubService,
     private innovationHubAuthorizationService: InnovationHubAuthorizationService,
     private innovationPackService: InnovationPackService,
     private innovationPackAuthorizationService: InnovationPackAuthorizationService,
-    private spaceDefaultsService: SpaceDefaultsService,
     private namingReporter: NameReporterService,
     private spaceService: SpaceService,
     private notificationAdapter: NotificationAdapter,
@@ -234,54 +228,6 @@ export class AccountResolverMutations {
     account =
       await this.accountAuthorizationService.applyAuthorizationPolicy(result);
     return await this.accountService.save(account);
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => ISpaceDefaults, {
-    description: 'Updates the specified SpaceDefaults.',
-  })
-  async updateSpaceDefaults(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('spaceDefaultsData')
-    spaceDefaultsData: UpdateSpaceDefaultsInput
-  ): Promise<ISpaceDefaults> {
-    const space = await this.spaceService.getSpaceOrFail(
-      spaceDefaultsData.spaceID,
-      {
-        relations: {
-          account: {
-            defaults: {
-              authorization: true,
-            },
-          },
-        },
-      }
-    );
-    const spaceDefaults = space.account.defaults;
-    if (!spaceDefaults) {
-      throw new RelationshipNotFoundException(
-        `Unable to load defaults for space ${spaceDefaultsData.spaceID}`,
-        LogContext.ACCOUNT
-      );
-    }
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      spaceDefaults.authorization,
-      AuthorizationPrivilege.UPDATE,
-      `update spaceDefaults: ${space.id}`
-    );
-
-    if (spaceDefaultsData.flowTemplateID) {
-      const innovationFlowTemplate =
-        await this.innovationFlowTemplateService.getInnovationFlowTemplateOrFail(
-          spaceDefaultsData.flowTemplateID
-        );
-      return await this.spaceDefaultsService.updateSpaceDefaults(
-        spaceDefaults,
-        innovationFlowTemplate
-      );
-    }
-    return spaceDefaults;
   }
 
   @UseGuards(GraphqlGuard)

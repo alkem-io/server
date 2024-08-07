@@ -404,10 +404,8 @@ export class UrlGeneratorService {
 
     const space = await this.entityManager.findOne(Space, {
       where: {
-        account: {
-          library: {
-            id: templatesSetID,
-          },
+        library: {
+          id: templatesSetID,
         },
       },
     });

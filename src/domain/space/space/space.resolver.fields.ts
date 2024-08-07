@@ -31,6 +31,8 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { ISpaceSettings } from '../space.settings/space.settings.interface';
+import { ITemplatesSet } from '@domain/template/templates-set/templates.set.interface';
+import { ISpaceDefaults } from '../space.defaults/space.defaults.interface';
 
 @Resolver(() => ISpace)
 export class SpaceResolverFields {
@@ -204,7 +206,44 @@ export class SpaceResolverFields {
     nullable: false,
     description: 'The settings for this Space.',
   })
-  states(@Parent() space: ISpace): ISpaceSettings {
+  settings(@Parent() space: ISpace): ISpaceSettings {
     return this.spaceService.getSettings(space);
+  }
+
+  @ResolveField('library', () => ITemplatesSet, {
+    nullable: true,
+    description: 'The Library in use by this Space',
+  })
+  @UseGuards(GraphqlGuard)
+  async library(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Parent() space: Space
+  ): Promise<ITemplatesSet> {
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      space.authorization,
+      AuthorizationPrivilege.READ,
+      `read library on space: ${space.id}`
+    );
+
+    return await this.spaceService.getLibraryOrFail(space.levelZeroSpaceID);
+  }
+
+  @ResolveField('defaults', () => ISpaceDefaults, {
+    nullable: true,
+    description: 'The defaults in use by this Space',
+  })
+  @UseGuards(GraphqlGuard)
+  async defaults(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Parent() space: Space
+  ): Promise<ISpaceDefaults> {
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      space.authorization,
+      AuthorizationPrivilege.READ,
+      `read defaults on space: ${space.id}`
+    );
+    return await this.spaceService.getDefaultsOrFail(space.levelZeroSpaceID);
   }
 }

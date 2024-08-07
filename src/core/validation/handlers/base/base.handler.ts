@@ -77,7 +77,6 @@ import {
   CreateAccountInput,
   UpdateAccountPlatformSettingsInput,
 } from '@domain/space/account/dto';
-import { UpdateAccountDefaultsInput } from '@domain/space/account/dto/account.dto.update.defaults';
 import { UpdateCommunityGuidelinesInput } from '@domain/community/community-guidelines/dto/community.guidelines.dto.update';
 import { ForumCreateDiscussionInput } from '@platform/forum/dto/forum.dto.create.discussion';
 import { CommunityRoleApplyInput } from '@domain/community/community-role/dto/community.role.dto.apply';
@@ -119,7 +118,6 @@ export class BaseHandler extends AbstractHandler {
       DeleteDocumentInput,
       UpdateActorInput,
       UpdateAccountPlatformSettingsInput,
-      UpdateAccountDefaultsInput,
       UpdatePostInput,
       UpdateDocumentInput,
       UpdateCalloutFramingInput,
