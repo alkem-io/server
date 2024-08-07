@@ -82,7 +82,6 @@ selfservice:
             - hook: require_verified_address
 
     registration:
-      enable_legacy_one_step: true
       lifespan: 10m
       ui_url: http://localhost:3000/registration
       after:

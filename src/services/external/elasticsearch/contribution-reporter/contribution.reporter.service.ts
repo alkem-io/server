@@ -4,7 +4,7 @@ import { Client as ElasticClient } from '@elastic/elasticsearch';
 import { WriteResponseBase } from '@elastic/elasticsearch/lib/api/types';
 import { ConfigService } from '@nestjs/config';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { ConfigurationTypes, LogContext } from '@common/enums';
+import { LogContext } from '@common/enums';
 import { isElasticError, isElasticResponseError } from '../utils';
 import {
   AuthorDetails,
@@ -13,6 +13,7 @@ import {
 } from '../types';
 import { BaseContribution } from '../events';
 import { ELASTICSEARCH_CLIENT_PROVIDER } from '@constants/index';
+import { AlkemioConfig } from '@src/types';
 
 const isFromAlkemioTeam = (email: string) => /.*@alkem\.io/.test(email);
 
@@ -24,17 +25,13 @@ export class ContributionReporterService {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    private readonly configService: ConfigService,
+    private readonly configService: ConfigService<AlkemioConfig, true>,
     @Inject(ELASTICSEARCH_CLIENT_PROVIDER)
     private readonly client: ElasticClient | undefined
   ) {
-    const elasticsearch = this.configService.get(
-      ConfigurationTypes.INTEGRATIONS
-    )?.elasticsearch;
+    const elasticsearch = this.configService.get('integrations.elasticsearch', { infer: true });
 
-    this.environment = this.configService.get(
-      ConfigurationTypes.HOSTING
-    )?.environment;
+    this.environment = this.configService.get('hosting.environment', { infer: true });
 
     this.activityIndexName = elasticsearch?.indices?.contribution;
   }

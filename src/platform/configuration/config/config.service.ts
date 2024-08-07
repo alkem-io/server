@@ -2,28 +2,29 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { IConfig } from './config.interface';
 import { IAuthenticationProviderConfig } from './authentication/providers/authentication.provider.config.interface';
-import { ConfigurationTypes } from '@common/enums';
 import { IOryConfig } from './authentication/providers/ory/ory.config.interface';
 import { PlatformFeatureFlagName } from '@common/enums/platform.feature.flag.name';
+import { AlkemioConfig } from '@src/types';
 
 @Injectable()
 export class KonfigService {
-  constructor(private configService: ConfigService) {}
+  constructor(private configService: ConfigService<AlkemioConfig, true>) {}
 
   async getConfig(): Promise<IConfig> {
     const domain = new URL(
-      this.configService.get(ConfigurationTypes.HOSTING)?.endpoint_cluster
+      this.configService.get('hosting.endpoint_cluster', { infer: true })
     ).hostname;
 
-    const sentryConfig = this.configService.get(
-      ConfigurationTypes.MONITORING
-    )?.sentry;
-    const apmConfig = this.configService.get(
-      ConfigurationTypes.MONITORING
-    )?.apm;
-    const geoConfig = this.configService.get(
-      ConfigurationTypes.INTEGRATIONS
-    )?.geo;
+    const { sentry, apm } = this.configService.get('monitoring', {
+      infer: true,
+    });
+    const geoConfig = this.configService.get('integrations.geo', {
+      infer: true,
+    });
+    const fileConfig = this.configService.get('storage.file', {
+      infer: true,
+    });
+    const platform = this.configService.get('platform', { infer: true });
     return {
       authentication: {
         providers: await this.getAuthenticationProvidersConfig(),
@@ -31,90 +32,96 @@ export class KonfigService {
       featureFlags: [
         {
           name: PlatformFeatureFlagName.SSI,
-          enabled: this.configService.get(ConfigurationTypes.SSI)?.enabled,
+          enabled: this.configService.get('ssi.enabled', { infer: true }),
         },
         {
           name: PlatformFeatureFlagName.COMMUNICATIONS,
-          enabled: this.configService.get(ConfigurationTypes.COMMUNICATIONS)
-            ?.enabled,
+          enabled: this.configService.get('communications.enabled', {
+            infer: true,
+          }),
         },
         {
           name: PlatformFeatureFlagName.COMMUNICATIONS_DISCUSSIONS,
-          enabled: this.configService.get(ConfigurationTypes.COMMUNICATIONS)
-            ?.discussions?.enabled,
+          enabled: this.configService.get(
+            'communications.discussions.enabled',
+            { infer: true }
+          ),
         },
         {
           name: PlatformFeatureFlagName.SUBSCRIPTIONS,
-          enabled: this.configService.get(ConfigurationTypes.HOSTING)
-            ?.subscriptions?.enabled,
+          enabled: this.configService.get('hosting.subscriptions.enabled', {
+            infer: true,
+          }),
         },
         {
           name: PlatformFeatureFlagName.NOTIFICATIONS,
-          enabled: this.configService.get(ConfigurationTypes.NOTIFICATIONS)
-            ?.enabled,
+          enabled: this.configService.get('notifications.enabled', {
+            infer: true,
+          }),
         },
         {
           name: PlatformFeatureFlagName.WHITEBOARDS,
-          enabled: this.configService.get(ConfigurationTypes.COLLABORATION)
-            ?.whiteboards?.enabled,
+          enabled: this.configService.get('collaboration.whiteboards.enabled', {
+            infer: true,
+          }),
         },
         {
           name: PlatformFeatureFlagName.LANDING_PAGE,
-          enabled: this.configService.get(ConfigurationTypes.PLATFORM)
-            ?.landing_page?.enabled,
+          enabled: this.configService.get('platform.landing_page.enabled', {
+            infer: true,
+          }),
         },
         {
           name: PlatformFeatureFlagName.GUIDENCE_ENGINE,
-          enabled: this.configService.get(ConfigurationTypes.PLATFORM)
-            ?.guidance_engine?.enabled,
+          enabled: this.configService.get('platform.guidance_engine.enabled', {
+            infer: true,
+          }),
         },
       ],
       locations: {
         domain,
-        environment: this.configService.get(ConfigurationTypes.HOSTING)
-          ?.environment,
-        terms: this.configService.get(ConfigurationTypes.PLATFORM)?.terms,
-        privacy: this.configService.get(ConfigurationTypes.PLATFORM)?.privacy,
-        security: this.configService.get(ConfigurationTypes.PLATFORM)?.security,
-        support: this.configService.get(ConfigurationTypes.PLATFORM)?.support,
-        feedback: this.configService.get(ConfigurationTypes.PLATFORM)?.feedback,
-        forumreleases: this.configService.get(ConfigurationTypes.PLATFORM)
-          ?.forumreleases,
-        about: this.configService.get(ConfigurationTypes.PLATFORM)?.about,
-        landing: this.configService.get(ConfigurationTypes.PLATFORM)?.landing,
-        blog: this.configService.get(ConfigurationTypes.PLATFORM)?.blog,
-        impact: this.configService.get(ConfigurationTypes.PLATFORM)?.impact,
-        inspiration: this.configService.get(ConfigurationTypes.PLATFORM)
-          ?.inspiration,
-        innovationLibrary: this.configService.get(ConfigurationTypes.PLATFORM)
-          ?.innovationLibrary,
-        foundation: this.configService.get(ConfigurationTypes.PLATFORM)
-          ?.foundation,
-        contactsupport: this.configService.get(ConfigurationTypes.PLATFORM)
-          ?.contactsupport,
-        switchplan: this.configService.get(ConfigurationTypes.PLATFORM)
-          ?.switchplan,
-        opensource: this.configService.get(ConfigurationTypes.PLATFORM)
-          ?.opensource,
-        releases: this.configService.get(ConfigurationTypes.PLATFORM)?.releases,
-        help: this.configService.get(ConfigurationTypes.PLATFORM)?.help,
-        community: this.configService.get(ConfigurationTypes.PLATFORM)
-          ?.community,
-        newuser: this.configService.get(ConfigurationTypes.PLATFORM)?.newuser,
-        tips: this.configService.get(ConfigurationTypes.PLATFORM)?.tips,
-        aup: this.configService.get(ConfigurationTypes.PLATFORM)?.aup,
+        environment: this.configService.get('hosting.environment', {
+          infer: true,
+        }),
+        terms: platform.terms,
+        privacy: platform.privacy,
+        security: platform.security,
+        support: platform.support,
+        feedback: platform.feedback,
+        forumreleases: platform.forumreleases,
+        about: platform.about,
+        landing: platform.landing,
+        blog: platform.blog,
+        impact: platform.impact,
+        inspiration: platform.inspiration,
+        innovationLibrary: platform.innovationLibrary,
+        foundation: platform.foundation,
+        contactsupport: platform.contactsupport,
+        switchplan: platform.switchplan,
+        opensource: platform.opensource,
+        releases: platform.releases,
+        help: platform.help,
+        community: platform.community,
+        newuser: platform.newuser,
+        tips: platform.tips,
+        aup: platform.aup,
       },
       sentry: {
-        enabled: sentryConfig?.enabled,
-        endpoint: sentryConfig?.endpoint,
-        submitPII: sentryConfig?.submit_pii,
+        enabled: sentry?.enabled,
+        endpoint: sentry?.endpoint,
+        submitPII: sentry?.submit_pii,
       },
       apm: {
-        rumEnabled: apmConfig?.rumEnabled,
-        endpoint: apmConfig?.endpoint,
+        rumEnabled: apm?.rumEnabled,
+        endpoint: apm?.endpoint,
       },
       geo: {
         endpoint: geoConfig?.rest_endpoint,
+      },
+      storage: {
+        file: {
+          maxFileSize: fileConfig?.max_file_size,
+        },
       },
     };
   }
@@ -122,7 +129,7 @@ export class KonfigService {
   async getAuthenticationProvidersConfig(): Promise<
     IAuthenticationProviderConfig[]
   > {
-    const authProviders = [
+    return [
       {
         name: 'Ory Kratos Config',
         label: 'Ory Kratos Config',
@@ -131,18 +138,16 @@ export class KonfigService {
         config: await this.getOryConfig(),
       },
     ];
-
-    return authProviders;
   }
 
   async getOryConfig(): Promise<IOryConfig> {
-    const oryConfig = (
-      await this.configService.get(ConfigurationTypes.IDENTITY)
-    )?.authentication?.providers?.ory;
-    const res = {
+    const oryConfig = this.configService.get(
+      'identity.authentication.providers.ory',
+      { infer: true }
+    );
+    return {
       kratosPublicBaseURL: oryConfig.kratos_public_base_url,
       issuer: oryConfig.issuer,
     } as IOryConfig;
-    return res;
   }
 }
