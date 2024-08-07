@@ -12,10 +12,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { sortSpacesByActivity } from '@domain/space/space/sort.spaces.by.activity';
 import { CommunityInvitationResult } from './dto/me.invitation.result';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
-import {
-  EntityNotFoundException,
-  RelationshipNotFoundException,
-} from '@common/exceptions';
+import { EntityNotFoundException } from '@common/exceptions';
 import { CommunityApplicationResult } from './dto/me.application.result';
 import { ContributorService } from '@domain/community/contributor/contributor.service';
 import { UserService } from '@domain/community/user/user.service';
@@ -101,25 +98,40 @@ export class MeService {
     const spaceIds = Array.from(credentialMap.get('spaces')?.keys() ?? []);
 
     const allSpaces = await this.spaceService.getSpacesInList(spaceIds);
-    for (const space of allSpaces) {
-      if (
-        (space.level !== SpaceLevel.SPACE && !space.parentSpace) ||
-        !space.collaboration
-      ) {
-        throw new RelationshipNotFoundException(
-          `Space ${space.id} is missing parent space or collaboration`,
-          LogContext.COMMUNITY
-        );
-      }
-    }
+    const validSpaces = this.filterValidSpaces(allSpaces);
     const spaceMembershipCollaborationInfo =
-      this.getSpaceMembershipCollaborationInfo(allSpaces);
+      this.getSpaceMembershipCollaborationInfo(validSpaces);
     const latestActivitiesPerSpace =
       await this.activityService.getLatestActivitiesPerSpaceMembership(
         agentInfo.userID,
         spaceMembershipCollaborationInfo
       );
-    return sortSpacesByActivity(allSpaces, latestActivitiesPerSpace);
+    return sortSpacesByActivity(validSpaces, latestActivitiesPerSpace);
+  }
+
+  /**
+   * Function that returns all spaces that are valid (L1 and L2 spaces have parents)
+   * @param allSpaces all spaces to be filtered out
+   * @returns spaces that are valid (L1 and L2 spaces have parents).
+   * Orphaned spaces are logged as warnings and filtered out, also spaces without collaboration are filtered out.
+   */
+  private filterValidSpaces(allSpaces: ISpace[]) {
+    const validSpaces = [];
+
+    for (const space of allSpaces) {
+      if (
+        (space.level !== SpaceLevel.SPACE && !space.parentSpace) ||
+        !space.collaboration
+      ) {
+        this.logger.warn(
+          `Space ${space.id} is missing parent space or collaboration`,
+          LogContext.COMMUNITY
+        );
+      } else {
+        validSpaces.push(space);
+      }
+    }
+    return validSpaces;
   }
 
   public async getSpaceMembershipsFlat(

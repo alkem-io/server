@@ -1,17 +1,15 @@
-import { ConfigurationTypes, LogContext } from '@common/enums';
+import { LogContext } from '@common/enums';
 import { MessagingQueue } from '@common/enums/messaging.queue';
 import { LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ClientProxyFactory, Transport } from '@nestjs/microservices';
+import { AlkemioConfig } from '@src/types';
 
 export async function virtualContributorEngineCommunityManagerServiceFactory(
   logger: LoggerService,
-  configService: ConfigService
+  configService: ConfigService<AlkemioConfig, true>
 ): Promise<any> {
-  const rabbitMqOptions = configService.get(
-    ConfigurationTypes.MICROSERVICES
-  )?.rabbitmq;
-  const connectionOptions = rabbitMqOptions.connection;
+  const connectionOptions = configService.get('microservices.rabbitmq.connection', { infer: true });
   const connectionString = `amqp://${connectionOptions.user}:${connectionOptions.password}@${connectionOptions.host}:${connectionOptions.port}?heartbeat=30`;
   try {
     const options = {
