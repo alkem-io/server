@@ -962,7 +962,7 @@ export class CommunityRoleService {
     const isExistingMember = await this.isMember(agent, community);
     if (isExistingMember)
       throw new CommunityMembershipException(
-        `Contributor ${user.nameID} is already a member of the Community: ${community.id}.`,
+        `Contributor ${user.id} is already a member of the Community: ${community.id}.`,
         LogContext.COMMUNITY
       );
   }
@@ -998,7 +998,7 @@ export class CommunityRoleService {
     const isExistingMember = await this.isMember(agent, community);
     if (isExistingMember)
       throw new CommunityMembershipException(
-        `Contributor ${contributor.nameID} is already a member of the Community: ${community.id}.`,
+        `Contributor ${contributor.id} is already a member of the Community: ${community.id}.`,
         LogContext.COMMUNITY
       );
   }

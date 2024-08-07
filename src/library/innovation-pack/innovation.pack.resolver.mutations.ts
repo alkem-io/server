@@ -35,7 +35,7 @@ export class InnovationPackResolverMutations {
       agentInfo,
       innovationPack.authorization,
       AuthorizationPrivilege.UPDATE,
-      `updateInnovationPack: ${innovationPack.nameID}`
+      `updateInnovationPack: ${innovationPack.id}`
     );
 
     // ensure working with UUID
@@ -58,7 +58,7 @@ export class InnovationPackResolverMutations {
       agentInfo,
       innovationPack.authorization,
       AuthorizationPrivilege.DELETE,
-      `deleteInnovationPack: ${innovationPack.nameID}`
+      `deleteInnovationPack: ${innovationPack.id}`
     );
     return await this.innovationPackService.deleteInnovationPack(deleteData);
   }
