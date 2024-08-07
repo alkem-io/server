@@ -183,24 +183,23 @@ export class UserResolverFields {
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField('accounts', () => [IAccount], {
+  @ResolveField('account', () => IAccount, {
     nullable: false,
-    description: 'The accounts hosted by this User.',
+    description: 'The account hosted by this User.',
   })
-  @Profiling.api
-  async accounts(
+  async account(
     @Parent() user: User,
     @CurrentUser() agentInfo: AgentInfo
-  ): Promise<IAccount[]> {
+  ): Promise<IAccount | undefined> {
     const accountsVisible = await this.isAccessGranted(
       user,
       agentInfo,
       AuthorizationPrivilege.READ_USER_PII
     );
     if (accountsVisible) {
-      return await this.userService.getAccounts(user);
+      return await this.userService.getAccount(user);
     }
-    return [];
+    return undefined;
   }
 
   @UseGuards(GraphqlGuard)

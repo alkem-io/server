@@ -466,15 +466,18 @@ export class UserService {
     };
   }
 
-  public async getAccounts(user: IUser): Promise<IAccount[]> {
-    return await this.accountHostService.getAccountsHostedByContributor(user);
-  }
-
   public async getAccount(user: IUser): Promise<IAccount> {
-    const accounts = await this.getAccounts(user);
+    const accounts =
+      await this.accountHostService.getAccountsHostedByContributor(user);
     if (accounts.length === 0) {
       throw new EntityNotFoundException(
         `No account found for user: ${user.id}`,
+        LogContext.COMMUNITY
+      );
+    }
+    if (accounts.length > 1) {
+      throw new EntityNotFoundException(
+        `More than one account found for user: ${user.id}`,
         LogContext.COMMUNITY
       );
     }

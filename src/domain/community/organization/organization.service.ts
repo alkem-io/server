@@ -344,18 +344,20 @@ export class OrganizationService {
     return organization;
   }
 
-  public async getAccounts(organization: IOrganization): Promise<IAccount[]> {
-    return await this.accountHostService.getAccountsHostedByContributor(
-      organization
-    );
-  }
-
   public async getAccount(organization: IOrganization): Promise<IAccount> {
-    const accounts = await this.getAccounts(organization);
-    // TODO: later there will be exactly one account
+    const accounts =
+      await this.accountHostService.getAccountsHostedByContributor(
+        organization
+      );
     if (accounts.length === 0) {
       throw new EntityNotFoundException(
         `No account found for organization: ${organization.id}`,
+        LogContext.COMMUNITY
+      );
+    }
+    if (accounts.length > 1) {
+      throw new EntityNotFoundException(
+        `More than one account found for organization: ${organization.id}`,
         LogContext.COMMUNITY
       );
     }

@@ -109,24 +109,23 @@ export class OrganizationResolverFields {
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField('accounts', () => [IAccount], {
-    nullable: false,
-    description: 'The accounts hosted by this Organization.',
+  @ResolveField('account', () => IAccount, {
+    nullable: true,
+    description: 'The account hosted by this Organization.',
   })
-  @Profiling.api
-  async accounts(
+  async account(
     @Parent() organization: IOrganization,
     @CurrentUser() agentInfo: AgentInfo
-  ): Promise<IAccount[]> {
-    const accountsVisible = await this.authorizationService.isAccessGranted(
+  ): Promise<IAccount | undefined> {
+    const accountsVisible = this.authorizationService.isAccessGranted(
       agentInfo,
       organization.authorization,
       AuthorizationPrivilege.UPDATE
     );
     if (accountsVisible) {
-      return await this.organizationService.getAccounts(organization);
+      return await this.organizationService.getAccount(organization);
     }
-    return [];
+    return undefined;
   }
 
   @ResolveField('authorization', () => IAuthorizationPolicy, {
