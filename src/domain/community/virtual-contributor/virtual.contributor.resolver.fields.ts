@@ -68,7 +68,7 @@ export class VirtualContributorResolverFields {
       agentInfo,
       virtual.authorization,
       AuthorizationPrivilege.READ,
-      `virtual authorization access: ${virtual.nameID}`
+      `virtual authorization access: ${virtual.id}`
     );
 
     return virtual.authorization;

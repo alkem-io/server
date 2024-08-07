@@ -23,7 +23,7 @@ export const getSpaceRolesForContributorQueryResult = (
     // Only return children of spaces that the current user has READ access to
     if (!space.authorization) {
       throw new RelationshipNotFoundException(
-        `Unable to load authorization on Space in roles user: ${space.nameID}`,
+        `Unable to load authorization on Space in roles user: ${space.id}`,
         LogContext.ROLES
       );
     }
@@ -40,7 +40,7 @@ export const getSpaceRolesForContributorQueryResult = (
         const challengeLevelZeroSpaceID = subspace.levelZeroSpaceID;
         if (!challengeLevelZeroSpaceID) {
           throw new RelationshipNotFoundException(
-            `Unable to load L0 space ID on Challenge in roles user: ${space.nameID}`,
+            `Unable to load L0 space ID on Subspace in roles user: ${space.id}`,
             LogContext.ROLES
           );
         }

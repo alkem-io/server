@@ -77,7 +77,7 @@ export class PlatformSettingsResolverMutations {
       agentInfo,
       organization.authorization,
       AuthorizationPrivilege.PLATFORM_ADMIN,
-      `organization update platform settings: ${organization.nameID}`
+      `organization update platform settings: ${organization.id}`
     );
 
     return await this.platformSettingsService.updateOrganizationPlatformSettings(

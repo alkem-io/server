@@ -16,6 +16,7 @@ import { VirtualContributor } from '@domain/community/virtual-contributor/virtua
 import { IOrganization, Organization } from '@domain/community/organization';
 import { CommunityContributorType } from '@common/enums/community.contributor.type';
 import { InvalidUUID } from '@common/exceptions/invalid.uuid';
+import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 
 export class ContributorLookupService {
   constructor(
@@ -103,6 +104,23 @@ export class ContributorLookupService {
         LogContext.COMMUNITY
       );
     return organization;
+  }
+
+  async getVirtualContributorByNameIdOrFail(
+    virtualContributorNameID: string,
+    options?: FindOneOptions<VirtualContributor>
+  ): Promise<IVirtualContributor> {
+    const virtualContributor: IVirtualContributor | null =
+      await this.entityManager.findOne(VirtualContributor, {
+        ...options,
+        where: { ...options?.where, nameID: virtualContributorNameID },
+      });
+    if (!virtualContributor)
+      throw new EntityNotFoundException(
+        `Unable to find VirtualContributor with NameID: ${virtualContributorNameID}`,
+        LogContext.COMMUNITY
+      );
+    return virtualContributor;
   }
 
   async getOrganizationOrFail(

@@ -51,7 +51,7 @@ export class SpaceResolverMutations {
       agentInfo,
       space.authorization,
       AuthorizationPrivilege.UPDATE,
-      `updateSpace: ${space.nameID}`
+      `update Space: ${space.id}`
     );
 
     // ensure working with UUID
@@ -172,7 +172,7 @@ export class SpaceResolverMutations {
       agentInfo,
       space.authorization,
       AuthorizationPrivilege.CREATE_SUBSPACE,
-      `challengeCreate: ${space.nameID}`
+      `subspace create in: ${space.id}`
     );
 
     // For the creation based on the template from another challenge require platform admin privileges
@@ -181,7 +181,7 @@ export class SpaceResolverMutations {
         agentInfo,
         space.authorization,
         AuthorizationPrivilege.CREATE,
-        `challengeCreate using challenge template: ${space.nameID} - ${subspaceData.collaborationData.collaborationTemplateID}`
+        `subspaceCreate using space template: ${space.id} - ${subspaceData.collaborationData.collaborationTemplateID}`
       );
     }
     let subspace = await this.spaceService.createSubspace(

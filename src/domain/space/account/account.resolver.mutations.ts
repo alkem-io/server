@@ -153,7 +153,7 @@ export class AccountResolverMutations {
       agentInfo,
       account.authorization,
       AuthorizationPrivilege.CREATE_VIRTUAL_CONTRIBUTOR,
-      `create Virtual contributor: ${virtualContributorData.nameID}`
+      `create Virtual contributor on account: ${account.id}`
     );
 
     let virtual = await this.accountService.createVirtualContributorOnAccount(
@@ -200,7 +200,7 @@ export class AccountResolverMutations {
       agentInfo,
       account.authorization,
       AuthorizationPrivilege.CREATE,
-      `create Innovation Pack on account: ${innovationPackData.nameID}`
+      `create Innovation Pack on account: ${account.id}`
     );
 
     let innovationPack =

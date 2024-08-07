@@ -71,7 +71,7 @@ export class ConversionService {
       !subspace.storageAggregator
     ) {
       throw new EntityNotInitializedException(
-        `Unable to locate all entities on on subspace: ${subspace.nameID}`,
+        `Unable to locate all entities on on subspace: ${subspace.id}`,
         LogContext.CONVERSION
       );
     }
@@ -87,7 +87,7 @@ export class ConversionService {
       );
     if (challengeCommunityLeadOrgs.length !== 1) {
       throw new ValidationException(
-        `A Subspace must have exactly one Lead organization to be converted to a Space: ${subspace.nameID} has ${challengeCommunityLeadOrgs.length}`,
+        `A Subspace must have exactly one Lead organization to be converted to a Space: ${subspace.id} has ${challengeCommunityLeadOrgs.length}`,
         LogContext.CONVERSION
       );
     }
@@ -121,7 +121,7 @@ export class ConversionService {
       !space.storageAggregator
     ) {
       throw new EntityNotInitializedException(
-        `Unable to locate all entities on new Space: ${space.nameID}`,
+        `Unable to locate all entities on new Space: ${space.id}`,
         LogContext.CONVERSION
       );
     }
@@ -249,7 +249,7 @@ export class ConversionService {
       !subsubspace.collaboration.callouts
     ) {
       throw new EntityNotInitializedException(
-        `Unable to locate all entities on on Opportunity: ${subsubspace.nameID}`,
+        `Unable to locate all entities on on Opportunity: ${subsubspace.id}`,
         LogContext.CONVERSION
       );
     }
@@ -311,7 +311,7 @@ export class ConversionService {
       !subspace.storageAggregator
     ) {
       throw new EntityNotInitializedException(
-        `Unable to locate all entities on new Challenge for converting opportunity: ${subspace.nameID}`,
+        `Unable to locate all entities on new Subspace for converting subsubspace: ${subspace.id}`,
         LogContext.CONVERSION
       );
     }
@@ -437,7 +437,7 @@ export class ConversionService {
         !callout.framing.profile.tagsets
       ) {
         throw new EntityNotInitializedException(
-          `Unable to locate all child entities on callout: ${callout.nameID}`,
+          `Unable to locate all child entities on callout: ${callout.id}`,
           LogContext.CONVERSION
         );
       }
@@ -477,7 +477,7 @@ export class ConversionService {
         !callout.framing.profile.tagsets
       ) {
         throw new EntityNotInitializedException(
-          `Unable to locate all child entities on challenge callout: ${callout.nameID}`,
+          `Unable to locate all child entities on challenge callout: ${callout.id}`,
           LogContext.CONVERSION
         );
       }

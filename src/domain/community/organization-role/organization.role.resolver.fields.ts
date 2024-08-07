@@ -37,7 +37,7 @@ export class OrganizationRoleResolverFields {
       agentInfo,
       organization.authorization,
       AuthorizationPrivilege.READ,
-      `read associates on org: ${organization.nameID}`
+      `read associates on org: ${organization.id}`
     );
 
     return await this.organizationRoleService.getAssociates(organization);
@@ -60,7 +60,7 @@ export class OrganizationRoleResolverFields {
       agentInfo,
       organization.authorization,
       AuthorizationPrivilege.READ,
-      `read admins on org: ${organization.nameID}`
+      `read admins on org: ${organization.id}`
     );
 
     return await this.organizationRoleService.getAdmins(organization);
@@ -83,7 +83,7 @@ export class OrganizationRoleResolverFields {
       agentInfo,
       organization.authorization,
       AuthorizationPrivilege.READ,
-      `read owners on org: ${organization.nameID}`
+      `read owners on org: ${organization.id}`
     );
 
     return await this.organizationRoleService.getOwners(organization);

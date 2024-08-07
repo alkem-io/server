@@ -93,7 +93,7 @@ export default class SearchResultBuilderService
     );
     if (!subsubspace.parentSpace) {
       throw new RelationshipNotFoundException(
-        `Unable to find parent subspace for ${subsubspace.nameID}`,
+        `Unable to find parent subspace for ${subsubspace.id}`,
         LogContext.SEARCH
       );
     }
