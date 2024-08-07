@@ -1,3 +1,4 @@
+import { AgentType } from '@common/enums/agent.type';
 import { ICredential } from '@domain/agent/credential/credential.interface';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { DID } from '@domain/common/scalars';
@@ -22,4 +23,10 @@ export abstract class IAgent extends IAuthorizable {
 
   // used for accessing the SSI store
   password!: string;
+
+  @Field(() => AgentType, {
+    nullable: true,
+    description: 'A type of entity that this Agent is being used with.',
+  })
+  type!: string;
 }

@@ -69,13 +69,17 @@ export class AgentService {
     @Inject(SUBSCRIPTION_PROFILE_VERIFIED_CREDENTIAL)
     private subscriptionVerifiedCredentials: PubSubEngine
   ) {
-    this.cache_ttl = this.configService.get('identity.authentication.cache_ttl', { infer: true });
+    this.cache_ttl = this.configService.get(
+      'identity.authentication.cache_ttl',
+      { infer: true }
+    );
   }
 
   async createAgent(inputData: CreateAgentInput): Promise<IAgent> {
     const agent: IAgent = Agent.create(inputData);
     agent.credentials = [];
     agent.authorization = new AuthorizationPolicy();
+    agent.type = inputData.type;
 
     const ssiEnabled = this.configService.get('ssi.enabled', { infer: true });
 
@@ -550,7 +554,10 @@ export class AgentService {
   }
 
   validateTrustedIssuerOrFail(vcName: string, vcToBeStored: any) {
-    const trustedIssuerValidationEnabled = this.configService.get('ssi.issuer_validation_enabled', { infer: true });
+    const trustedIssuerValidationEnabled = this.configService.get(
+      'ssi.issuer_validation_enabled',
+      { infer: true }
+    );
     if (!trustedIssuerValidationEnabled) return;
 
     const trustedIssuers =

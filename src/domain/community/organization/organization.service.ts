@@ -55,6 +55,7 @@ import { applyOrganizationFilter } from '@core/filtering/filters/organizationFil
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { OrganizationRoleService } from '../organization-role/organization.role.service';
+import { AgentType } from '@common/enums/agent.type';
 
 @Injectable()
 export class OrganizationService {
@@ -125,7 +126,7 @@ export class OrganizationService {
     organization.groups = [];
 
     organization.agent = await this.agentService.createAgent({
-      parentDisplayID: `organization-${organization.nameID}`,
+      type: AgentType.ORGANIZATION,
     });
 
     const savedOrg = await this.organizationRepository.save(organization);

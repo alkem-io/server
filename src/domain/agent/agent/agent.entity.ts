@@ -21,6 +21,9 @@ export class Agent extends AuthorizableEntity implements IAgent {
   })
   credentials?: Credential[];
 
+  @Column('text', { nullable: false })
+  type!: string;
+
   constructor() {
     super();
     this.did = '';

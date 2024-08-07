@@ -49,6 +49,7 @@ import { CreateInnovationPackOnAccountInput } from './dto/account.dto.create.inn
 import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
+import { AgentType } from '@common/enums/agent.type';
 
 @Injectable()
 export class AccountService {
@@ -98,7 +99,7 @@ export class AccountService {
     }
 
     account.agent = await this.agentService.createAgent({
-      parentDisplayID: `account-${account.id}`,
+      type: AgentType.ACCOUNT,
     });
 
     const host = await this.accountHostService.getHostByID(accountData.hostID);

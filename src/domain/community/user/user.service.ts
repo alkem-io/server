@@ -65,6 +65,7 @@ import { StorageAggregatorService } from '@domain/storage/storage-aggregator/sto
 import { AvatarService } from '@domain/common/visual/avatar.service';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { UpdateUserPlatformSettingsInput } from './dto/user.dto.update.platform.settings';
+import { AgentType } from '@common/enums/agent.type';
 
 @Injectable()
 export class UserService {
@@ -158,7 +159,7 @@ export class UserService {
     });
 
     user.agent = await this.agentService.createAgent({
-      parentDisplayID: user.email,
+      type: AgentType.USER,
     });
 
     this.logger.verbose?.(
