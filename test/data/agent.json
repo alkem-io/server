@@ -1,6 +1,6 @@
 {
   "agent": {
-    "parentDisplayID": "organization-united-nations",
+    "type": "organization",
     "did": "",
     "password": "",
     "id": "8f5c08b1-444a-42c0-8f48-58b3ddef53b0",
