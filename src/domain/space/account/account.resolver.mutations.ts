@@ -106,6 +106,12 @@ export class AccountResolverMutations {
         community: true,
       },
     });
+    if (!rootSpace) {
+      throw new EntityNotInitializedException(
+        `Unable to load root space for account ${account.id}`,
+        LogContext.ACCOUNT
+      );
+    }
 
     await this.namingReporter.createOrUpdateName(
       rootSpace.id,
