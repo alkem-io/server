@@ -72,7 +72,7 @@ export class RoomResolverMutations {
 
     const accessVirtualContributors = this.virtualContributorsEnabled();
 
-    const mentions = this.roomServiceMentions.getMentionsFromText(
+    const mentions = await this.roomServiceMentions.getMentionsFromText(
       messageData.message
     );
 
@@ -272,9 +272,8 @@ export class RoomResolverMutations {
     );
 
     const accessVirtualContributors = this.virtualContributorsEnabled();
-    const mentions: Mention[] = this.roomServiceMentions.getMentionsFromText(
-      messageData.message
-    );
+    const mentions: Mention[] =
+      await this.roomServiceMentions.getMentionsFromText(messageData.message);
     const threadID = messageData.threadID;
 
     const messageOwnerId = await this.roomService.getUserIdForMessage(

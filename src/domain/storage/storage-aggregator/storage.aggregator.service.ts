@@ -101,15 +101,12 @@ export class StorageAggregatorService {
 
   public async size(storageAggregator: IStorageAggregator): Promise<number> {
     const directStorage = await this.getDirectStorageBucket(storageAggregator);
-    const directStorageSize = await this.storageBucketService.size(
-      directStorage
-    );
-    const childStorageAggregatorsSize = await this.sizeChildStorageAggregators(
-      storageAggregator
-    );
-    const childStorageBucketsSize = await this.sizeChildStorageBuckets(
-      storageAggregator
-    );
+    const directStorageSize =
+      await this.storageBucketService.size(directStorage);
+    const childStorageAggregatorsSize =
+      await this.sizeChildStorageAggregators(storageAggregator);
+    const childStorageBucketsSize =
+      await this.sizeChildStorageBuckets(storageAggregator);
     const totalSize =
       +directStorageSize +
       +childStorageBucketsSize +
@@ -135,9 +132,8 @@ export class StorageAggregatorService {
   public async sizeChildStorageAggregators(
     storageAggregator: IStorageAggregator
   ): Promise<number> {
-    const childStorageAggregators = await this.getChildStorageAggregators(
-      storageAggregator
-    );
+    const childStorageAggregators =
+      await this.getChildStorageAggregators(storageAggregator);
     let result = 0;
     for (const childStorageAggregator of childStorageAggregators) {
       const size = await this.size(childStorageAggregator);

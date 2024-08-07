@@ -342,7 +342,7 @@ export class ActivityAdapter {
     const collaborationID = await this.getCollaborationIdFromCommunity(
       community.id
     );
-    const description = `${eventData.contributor.nameID}`;
+    const description = `${eventData.contributor.id}`;
     const activity = await this.activityService.createActivity({
       triggeredBy: eventData.triggeredBy,
       collaborationID,
@@ -404,9 +404,8 @@ export class ActivityAdapter {
 
     const updates = eventData.updates;
     const communityID = await this.getCommunityIdFromUpdates(updates.id);
-    const collaborationID = await this.getCollaborationIdFromCommunity(
-      communityID
-    );
+    const collaborationID =
+      await this.getCollaborationIdFromCommunity(communityID);
 
     const activity = await this.activityService.createActivity({
       triggeredBy: eventData.triggeredBy,

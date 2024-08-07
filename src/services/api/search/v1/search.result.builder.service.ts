@@ -71,7 +71,7 @@ export default class SearchResultBuilderService
     );
     if (!subspace.account || !subspace.account.space) {
       throw new RelationshipNotFoundException(
-        `Unable to find account for ${subspace.nameID}`,
+        `Unable to find account for ${subspace.id}`,
         LogContext.SEARCH
       );
     }
@@ -98,14 +98,14 @@ export default class SearchResultBuilderService
     );
     if (!subsubspace.account || !subsubspace.account.space) {
       throw new RelationshipNotFoundException(
-        `Unable to find account for ${subsubspace.nameID}`,
+        `Unable to find account for ${subsubspace.id}`,
         LogContext.SEARCH
       );
     }
     const space = subsubspace.account.space;
     if (!subsubspace.parentSpace) {
       throw new RelationshipNotFoundException(
-        `Unable to find parent subspace for ${subsubspace.nameID}`,
+        `Unable to find parent subspace for ${subsubspace.id}`,
         LogContext.SEARCH
       );
     }
