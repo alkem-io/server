@@ -281,12 +281,14 @@ export class BootstrapService {
         await this.organizationAuthorizationService.applyAuthorizationPolicy(
           hostOrganization
         );
+        const account =
+          await this.organizationService.getAccount(hostOrganization);
+        await this.accountAuthorizationService.applyAuthorizationPolicy(
+          account
+        );
       }
-
       const account =
         await this.organizationService.getAccount(hostOrganization);
-      await this.accountAuthorizationService.applyAuthorizationPolicy(account);
-
       const spaceInput: CreateSpaceOnAccountInput = {
         accountID: account.id,
         nameID: DEFAULT_SPACE_NAMEID,

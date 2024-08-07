@@ -472,6 +472,12 @@ export class UserService {
 
   public async getAccount(user: IUser): Promise<IAccount> {
     const accounts = await this.getAccounts(user);
+    if (accounts.length === 0) {
+      throw new EntityNotFoundException(
+        `No account found for user: ${user.id}`,
+        LogContext.COMMUNITY
+      );
+    }
     // TODO: later there will be exactly one account
     return accounts[0];
   }

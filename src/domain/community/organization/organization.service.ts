@@ -353,6 +353,12 @@ export class OrganizationService {
   public async getAccount(organization: IOrganization): Promise<IAccount> {
     const accounts = await this.getAccounts(organization);
     // TODO: later there will be exactly one account
+    if (accounts.length === 0) {
+      throw new EntityNotFoundException(
+        `No account found for organization: ${organization.id}`,
+        LogContext.COMMUNITY
+      );
+    }
     return accounts[0];
   }
 
