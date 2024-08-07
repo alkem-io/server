@@ -1,4 +1,4 @@
-import { ConfigurationTypes, LogContext } from '@common/enums';
+import { LogContext } from '@common/enums';
 import { SsiSovrhdApiException } from '@common/exceptions/ssi.sovrhd.api.exception';
 import { SsiSovrhdCredentialRequestFailure } from '@common/exceptions/ssi.sovrhd.credential.request.failure';
 import { SsiSovrhdCredentialTypeNotFoundException } from '@common/exceptions/ssi.sovrhd.credential.type.not.found.exception';
@@ -12,6 +12,7 @@ import { SsiSovrhdRegisterCallbackCredential } from './dto/ssi.sovrhd.dto.regist
 import { SsiSovrhdRegisterResponse } from './dto/ssi.sovrhd.dto.register.response';
 import { SsiSovrhdRequest } from './dto/ssi.sovrhd.dto.request';
 import { SsiSovrhdRequestResponse } from './dto/ssi.sovrhd.dto.request.response';
+import { AlkemioConfig } from '@src/types';
 
 @Injectable()
 export class SsiSovrhdAdapter {
@@ -27,11 +28,10 @@ export class SsiSovrhdAdapter {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    private configService: ConfigService,
+    private configService: ConfigService<AlkemioConfig, true>,
     private httpService: HttpService
   ) {
-    const sovrhdConfig = this.configService.get(ConfigurationTypes.SSI)?.issuers
-      ?.sovrhd;
+    const sovrhdConfig = this.configService.get('ssi.issuers.sovrhd', { infer: true });
     this.sovrhdApiEndpoint = sovrhdConfig.endpoint;
 
     this.credentialTypesMap = new Map();
