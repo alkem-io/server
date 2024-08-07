@@ -21,6 +21,7 @@ import { VirtualContributorModule } from '@domain/community/virtual-contributor/
 import { MessageModule } from '../message/message.module';
 import { RoomServiceMentions } from './room.service.mentions';
 import { VcInteractionModule } from '../vc-interaction/vc.interaction.module';
+import { ContributorLookupModule } from '@services/infrastructure/contributor-lookup/contributor.lookup.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { VcInteractionModule } from '../vc-interaction/vc.interaction.module';
     MessageModule,
     VcInteractionModule,
     VirtualContributorModule,
+    ContributorLookupModule,
     TypeOrmModule.forFeature([Room]),
     SubscriptionServiceModule,
   ],

@@ -435,7 +435,7 @@ export class LookupResolverFields {
       agentInfo,
       whiteboard.authorization,
       AuthorizationPrivilege.READ,
-      `lookup Whiteboard: ${whiteboard.nameID}`
+      `lookup Whiteboard: ${whiteboard.id}`
     );
 
     return whiteboard;

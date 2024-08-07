@@ -567,7 +567,7 @@ export class NotificationPayloadBuilder {
       this.contributorLookupService.getContributorType(contributor);
 
     const userURL =
-      await this.urlGeneratorService.createUrlForContributor(contributor);
+      this.urlGeneratorService.createUrlForContributor(contributor);
     const result: ContributorPayload = {
       id: contributor.id,
       nameID: contributor.nameID,
@@ -614,17 +614,14 @@ export class NotificationPayloadBuilder {
 
   async buildCommunicationUserMentionNotificationPayload(
     senderID: string,
-    mentionedUserNameID: string,
+    mentionedUserUUID: string,
     comment: string,
     originEntityId: string,
     originEntityDisplayName: string,
     commentType: RoomType
   ): Promise<CommunicationUserMentionEventPayload | undefined> {
-    const user =
-      await this.contributorLookupService.getUserByNameIdOrFail(
-        mentionedUserNameID
-      );
-    const userContributor = await this.getContributorPayloadOrFail(user.id);
+    const userContributor =
+      await this.getContributorPayloadOrFail(mentionedUserUUID);
 
     const commentOriginUrl = await this.buildCommentOriginUrl(
       commentType,
@@ -648,17 +645,13 @@ export class NotificationPayloadBuilder {
 
   async buildCommunicationOrganizationMentionNotificationPayload(
     senderID: string,
-    mentionedOrgNameID: string,
+    mentionedOrgUUID: string,
     comment: string,
     originEntityId: string,
     originEntityDisplayName: string,
     commentType: RoomType
   ): Promise<CommunicationOrganizationMentionEventPayload | undefined> {
-    const org =
-      await this.contributorLookupService.getOrganizationByNameIdOrFail(
-        mentionedOrgNameID
-      );
-    const orgData = await this.getContributorPayloadOrFail(org.id);
+    const orgData = await this.getContributorPayloadOrFail(mentionedOrgUUID);
 
     const commentOriginUrl = await this.buildCommentOriginUrl(
       commentType,
