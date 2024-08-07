@@ -37,6 +37,8 @@ import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interf
 import { InnovationPackAuthorizationService } from '@library/innovation-pack/innovation.pack.service.authorization';
 import { ISpaceSettings } from '../space.settings/space.settings.interface';
 import { SpaceSettingsService } from '../space.settings/space.settings.service';
+import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
+import { InnovationHubAuthorizationService } from '@domain/innovation-hub/innovation.hub.service.authorization';
 
 @Injectable()
 export class AccountAuthorizationService {
@@ -50,6 +52,7 @@ export class AccountAuthorizationService {
     private innovationPackAuthorizationService: InnovationPackAuthorizationService,
     private communityPolicyService: CommunityPolicyService,
     private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
+    private innovationHubAuthorizationService: InnovationHubAuthorizationService,
     private spaceSettingsService: SpaceSettingsService,
     private accountService: AccountService,
     private accountHostService: AccountHostService
@@ -68,6 +71,7 @@ export class AccountAuthorizationService {
         defaults: true,
         virtualContributors: true,
         innovationPacks: true,
+        innovationHubs: true,
         storageAggregator: true,
       },
     });
@@ -158,7 +162,8 @@ export class AccountAuthorizationService {
       !account.defaults ||
       !account.virtualContributors ||
       !account.innovationPacks ||
-      !account.storageAggregator
+      !account.storageAggregator ||
+      !account.innovationHubs
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load Account with entities at start of auth reset: ${account.id} `,
@@ -214,6 +219,17 @@ export class AccountAuthorizationService {
       updatedIPs.push(updatedIP);
     }
     account.innovationPacks = updatedIPs;
+
+    const updatedInnovationHubs: IInnovationHub[] = [];
+    for (const innovationHub of account.innovationHubs) {
+      const updatedInnovationHub =
+        await this.innovationHubAuthorizationService.applyAuthorizationPolicyAndSave(
+          innovationHub,
+          clonedAccountAuth
+        );
+      updatedInnovationHubs.push(updatedInnovationHub);
+    }
+    account.innovationHubs = updatedInnovationHubs;
     return account;
   }
 

@@ -15,8 +15,8 @@ import { SpaceService } from '@domain/space/space/space.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { SearchVisibility } from '@common/enums/search.visibility';
+import { IAccount } from '@domain/space/account/account.interface';
 
 @Injectable()
 export class InnovationHubService {
@@ -31,7 +31,7 @@ export class InnovationHubService {
 
   public async createInnovationHub(
     createData: CreateInnovationHubInput,
-    storageAggregator: IStorageAggregator
+    account: IAccount
   ): Promise<IInnovationHub | never> {
     try {
       await this.validateCreateInput(createData);
@@ -40,6 +40,13 @@ export class InnovationHubService {
       throw new ValidationException(
         `Incorrect input provided: ${err.message}`,
         LogContext.INNOVATION_HUB
+      );
+    }
+
+    if (!account.storageAggregator) {
+      throw new EntityNotFoundException(
+        `Unable to load storage aggregator on account for creating innovation Hub: ${account.id}`,
+        LogContext.ACCOUNT
       );
     }
 
@@ -73,11 +80,12 @@ export class InnovationHubService {
     hub.authorization = new AuthorizationPolicy();
     hub.listedInStore = true;
     hub.searchVisibility = SearchVisibility.ACCOUNT;
+    hub.account = account;
 
     hub.profile = await this.profileService.createProfile(
       createData.profileData,
       ProfileType.INNOVATION_HUB,
-      storageAggregator
+      account.storageAggregator
     );
 
     await this.profileService.addTagsetOnProfile(hub.profile, {

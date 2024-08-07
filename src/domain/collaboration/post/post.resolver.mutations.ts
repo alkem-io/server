@@ -30,7 +30,7 @@ export class PostResolverMutations {
       agentInfo,
       post.authorization,
       AuthorizationPrivilege.DELETE,
-      `delete post: ${post.nameID}`
+      `delete post: ${post.id}`
     );
     return await this.postService.deletePost(deleteData.ID);
   }
@@ -48,7 +48,7 @@ export class PostResolverMutations {
       agentInfo,
       post.authorization,
       AuthorizationPrivilege.UPDATE,
-      `update post: ${post.nameID}`
+      `update post: ${post.id}`
     );
     return await this.postService.updatePost(postData);
   }

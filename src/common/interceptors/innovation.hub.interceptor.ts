@@ -9,9 +9,10 @@ import { ConfigService } from '@nestjs/config';
 import { GqlExecutionContext } from '@nestjs/graphql';
 import { INNOVATION_HUB_INJECT_TOKEN } from '@common/constants';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { ConfigurationTypes, LogContext } from '@common/enums';
+import { LogContext } from '@common/enums';
 import { InnovationHubService } from '@domain/innovation-hub';
 import { DOMAIN_PATTERN, SUBDOMAIN_PATTERN } from '@core/validation';
+import { AlkemioConfig } from '@src/types';
 
 const SUBDOMAIN_GROUP = 'subdomain';
 
@@ -37,13 +38,13 @@ export class InnovationHubInterceptor implements NestInterceptor {
 
   constructor(
     private readonly innovationHubService: InnovationHubService,
-    private readonly configService: ConfigService,
+    private readonly configService: ConfigService<AlkemioConfig, true>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {
-    this.innovationHubHeader = this.configService.get(
-      ConfigurationTypes.INNOVATION_HUB
-    )?.header;
+    this.innovationHubHeader = this.configService.get('innovation_hub.header', {
+      infer: true,
+    });
   }
 
   async intercept(context: ExecutionContext, next: CallHandler) {

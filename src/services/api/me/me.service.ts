@@ -1,10 +1,8 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { SpaceVisibility } from '@common/enums/space.visibility';
 import { groupCredentialsByEntity } from '@services/api/roles/util/group.credentials.by.entity';
 import { SpaceService } from '@domain/space/space/space.service';
 import { RolesService } from '../roles/roles.service';
 import { ISpace } from '@domain/space/space/space.interface';
-import { SpacesQueryArgs } from '@domain/space/space/dto/space.args.query.spaces';
 import { ActivityLogService } from '../activity-log';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { MySpaceResults } from './dto/my.journeys.results';
@@ -16,10 +14,12 @@ import { CommunityInvitationResult } from './dto/me.invitation.result';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { EntityNotFoundException } from '@common/exceptions';
 import { CommunityApplicationResult } from './dto/me.application.result';
-import { CommunityRoleService } from '@domain/community/community-role/community.role.service';
 import { ContributorService } from '@domain/community/contributor/contributor.service';
 import { UserService } from '@domain/community/user/user.service';
 import { compact } from 'lodash';
+import { SpaceMembershipCollaborationInfo } from './space.membership.type';
+import { CommunityMembershipResult } from './dto/me.membership.result';
+import { SpaceLevel } from '@common/enums/space.level';
 
 @Injectable()
 export class MeService {
@@ -30,7 +30,6 @@ export class MeService {
     private rolesService: RolesService,
     private activityLogService: ActivityLogService,
     private activityService: ActivityService,
-    private communityRoleService: CommunityRoleService,
     private communityResolverService: CommunityResolverService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
@@ -92,35 +91,162 @@ export class MeService {
     return results;
   }
 
-  public async getSpaceMemberships(
-    agentInfo: AgentInfo,
-    visibilities: SpaceVisibility[] = [
-      SpaceVisibility.ACTIVE,
-      SpaceVisibility.DEMO,
-    ]
+  private async getSpaceMembershipsForAgentInfo(
+    agentInfo: AgentInfo
   ): Promise<ISpace[]> {
     const credentialMap = groupCredentialsByEntity(agentInfo.credentials);
     const spaceIds = Array.from(credentialMap.get('spaces')?.keys() ?? []);
-    const args: SpacesQueryArgs = {
-      IDs: spaceIds,
-      filter: {
-        visibilities,
-      },
-    };
 
-    // get spaces and their subspaces
-    const spaces = await this.spaceService.getSpacesWithChildJourneys(args);
-
+    const allSpaces = await this.spaceService.getSpacesInList(spaceIds);
+    const validSpaces = this.filterValidSpaces(allSpaces);
     const spaceMembershipCollaborationInfo =
-      this.spaceService.getSpaceMembershipCollaborationInfo(spaces);
-
+      this.getSpaceMembershipCollaborationInfo(validSpaces);
     const latestActivitiesPerSpace =
       await this.activityService.getLatestActivitiesPerSpaceMembership(
         agentInfo.userID,
         spaceMembershipCollaborationInfo
       );
+    return sortSpacesByActivity(validSpaces, latestActivitiesPerSpace);
+  }
 
-    return sortSpacesByActivity(spaces, latestActivitiesPerSpace);
+  /**
+   * Function that returns all spaces that are valid (L1 and L2 spaces have parents)
+   * @param allSpaces all spaces to be filtered out
+   * @returns spaces that are valid (L1 and L2 spaces have parents).
+   * Orphaned spaces are logged as warnings and filtered out, also spaces without collaboration are filtered out.
+   */
+  private filterValidSpaces(allSpaces: ISpace[]) {
+    const validSpaces = [];
+
+    for (const space of allSpaces) {
+      if (
+        (space.level !== SpaceLevel.SPACE && !space.parentSpace) ||
+        !space.collaboration
+      ) {
+        this.logger.warn(
+          `Space ${space.id} is missing parent space or collaboration`,
+          LogContext.COMMUNITY
+        );
+      } else {
+        validSpaces.push(space);
+      }
+    }
+    return validSpaces;
+  }
+
+  public async getSpaceMembershipsFlat(
+    agentInfo: AgentInfo
+  ): Promise<CommunityMembershipResult[]> {
+    const sortedFlatListSpacesWithMembership =
+      await this.getSpaceMembershipsForAgentInfo(agentInfo);
+    const spaceMemberships: CommunityMembershipResult[] = [];
+
+    for (const space of sortedFlatListSpacesWithMembership) {
+      const levelZeroMembership: CommunityMembershipResult = {
+        id: space.id,
+        space: space,
+        childMemberships: [],
+      };
+      spaceMemberships.push(levelZeroMembership);
+    }
+    return spaceMemberships;
+  }
+
+  public async getSpaceMembershipsHierarchical(
+    agentInfo: AgentInfo
+  ): Promise<CommunityMembershipResult[]> {
+    const sortedFlatListSpacesWithMembership =
+      await this.getSpaceMembershipsForAgentInfo(agentInfo);
+
+    const levelZeroSpaces = this.filterSpacesByLevel(
+      sortedFlatListSpacesWithMembership,
+      SpaceLevel.SPACE
+    );
+    const levelOneSpaces = this.filterSpacesByLevel(
+      sortedFlatListSpacesWithMembership,
+      SpaceLevel.CHALLENGE
+    );
+    const levelTwoSpaces = this.filterSpacesByLevel(
+      sortedFlatListSpacesWithMembership,
+      SpaceLevel.OPPORTUNITY
+    );
+
+    const levelZeroMemberships = levelZeroSpaces.map(levelZeroSpace => {
+      const levelZeroMembership: CommunityMembershipResult = {
+        id: levelZeroSpace.id,
+        space: levelZeroSpace,
+        childMemberships: this.getChildMemberships(
+          levelZeroSpace,
+          levelOneSpaces,
+          levelTwoSpaces
+        ),
+      };
+      return levelZeroMembership;
+    });
+
+    return levelZeroMemberships;
+  }
+
+  private filterSpacesByLevel(spaces: ISpace[], level: SpaceLevel): ISpace[] {
+    return spaces.filter(space => space.level === level);
+  }
+
+  private getChildMemberships(
+    parentSpace: ISpace,
+    childSpaces: ISpace[],
+    grandChildSpaces: ISpace[]
+  ): CommunityMembershipResult[] {
+    return childSpaces
+      .filter(childSpace => childSpace.parentSpace?.id === parentSpace.id)
+      .map(childSpace => {
+        const childMembership: CommunityMembershipResult = {
+          id: childSpace.id,
+          space: childSpace,
+          childMemberships: this.getGrandChildMemberships(
+            childSpace,
+            grandChildSpaces
+          ),
+        };
+        return childMembership;
+      });
+  }
+
+  private getGrandChildMemberships(
+    parentSpace: ISpace,
+    grandChildSpaces: ISpace[]
+  ): CommunityMembershipResult[] {
+    return grandChildSpaces
+      .filter(
+        grandChildSpace => grandChildSpace.parentSpace?.id === parentSpace.id
+      )
+      .map(grandChildSpace => ({
+        id: grandChildSpace.id,
+        space: grandChildSpace,
+        childMemberships: [],
+      }));
+  }
+
+  // Returns a map of all collaboration IDs with parent space ID
+  private getSpaceMembershipCollaborationInfo(
+    spaces: ISpace[]
+  ): SpaceMembershipCollaborationInfo {
+    const spaceMembershipCollaborationInfo: SpaceMembershipCollaborationInfo =
+      new Map();
+
+    for (const space of spaces) {
+      if (!space.collaboration) {
+        throw new EntityNotFoundException(
+          `Space ${space.id} is missing collaboration`,
+          LogContext.COMMUNITY
+        );
+      }
+      spaceMembershipCollaborationInfo.set(
+        space.collaboration.id,
+        space.levelZeroSpaceID
+      );
+    }
+
+    return spaceMembershipCollaborationInfo;
   }
 
   public async getMySpaces(

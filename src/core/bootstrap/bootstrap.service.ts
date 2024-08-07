@@ -8,7 +8,7 @@ import fs from 'fs';
 import * as defaultRoles from '@templates/authorization-bootstrap.json';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Profiling } from '@common/decorators';
-import { ConfigurationTypes, LogContext } from '@common/enums';
+import { LogContext } from '@common/enums';
 import { BootstrapException } from '@common/exceptions/bootstrap.exception';
 import { UserAuthorizationService } from '@domain/community/user/user.service.authorization';
 import {
@@ -33,6 +33,7 @@ import { SearchIngestService } from '@services/api/search/v2/ingest/search.inges
 import { CreateAccountInput } from '@domain/space/account/dto/account.dto.create';
 import { SpaceLevel } from '@common/enums/space.level';
 import { CreateSpaceOnAccountInput } from '@domain/space/account/dto/account.dto.create.space';
+import { AlkemioConfig } from '@src/types';
 
 @Injectable()
 export class BootstrapService {
@@ -44,7 +45,7 @@ export class BootstrapService {
     private userAuthorizationService: UserAuthorizationService,
     private accountAuthorizationService: AccountAuthorizationService,
     private adminAuthorizationService: AdminAuthorizationService,
-    private configService: ConfigService,
+    private configService: ConfigService<AlkemioConfig, true>,
     private organizationService: OrganizationService,
     private platformService: PlatformService,
     private organizationAuthorizationService: OrganizationAuthorizationService,
@@ -63,13 +64,12 @@ export class BootstrapService {
     // this.ingestService.ingest(); // todo remove later
     try {
       this.logger.verbose?.('Bootstrapping...', LogContext.BOOTSTRAP);
-      this.logConfiguration();
 
       Profiling.logger = this.logger;
-      const profilingEnabled = this.configService.get(
-        ConfigurationTypes.MONITORING
-      )?.logging?.profiling_enabled;
-      if (profilingEnabled) Profiling.profilingEnabled = profilingEnabled;
+      const profilingEnabled = this.configService.get('monitoring.logging.profiling_enabled', { infer: true });
+      if (profilingEnabled) {
+        Profiling.profilingEnabled = profilingEnabled;
+      }
 
       await this.ensureAccountSpaceSingleton();
       await this.bootstrapProfiles();
@@ -88,38 +88,8 @@ export class BootstrapService {
     }
   }
 
-  logConfiguration() {
-    this.logger.verbose?.(
-      '==== Configuration - Start ===',
-      LogContext.BOOTSTRAP
-    );
-
-    const values = Object.values(ConfigurationTypes);
-    for (const value of values) {
-      this.logConfigLevel(value, this.configService.get(value));
-    }
-    this.logger.verbose?.('==== Configuration - End ===', LogContext.BOOTSTRAP);
-  }
-
-  logConfigLevel(key: any, value: any, indent = '', incrementalIndent = '  ') {
-    if (typeof value === 'object') {
-      const msg = `${indent}${key}:`;
-      this.logger.verbose?.(`${msg}`, LogContext.BOOTSTRAP);
-      Object.keys(value).forEach(childKey => {
-        const childValue = value[childKey];
-        const newIndent = `${indent}${incrementalIndent}`;
-        this.logConfigLevel(childKey, childValue, newIndent, incrementalIndent);
-      });
-    } else {
-      const msg = `${indent}==> ${key}: ${value}`;
-      this.logger.verbose?.(`${msg}`, LogContext.BOOTSTRAP);
-    }
-  }
-
   async bootstrapProfiles() {
-    const bootstrapAuthorizationEnabled = this.configService.get(
-      ConfigurationTypes.BOOTSTRAP
-    )?.authorization?.enabled;
+    const bootstrapAuthorizationEnabled = this.configService.get('bootstrap.authorization.enabled', { infer: true });
     if (!bootstrapAuthorizationEnabled) {
       this.logger.verbose?.(
         `Authorization Profile Loading: ${bootstrapAuthorizationEnabled}`,
@@ -128,9 +98,7 @@ export class BootstrapService {
       return;
     }
 
-    const bootstrapFilePath = this.configService.get(
-      ConfigurationTypes.BOOTSTRAP
-    )?.authorization?.file as string;
+    const bootstrapFilePath = this.configService.get('bootstrap.authorization.file', { infer: true });
 
     let bootstrapJson = {
       ...defaultRoles,
@@ -202,9 +170,8 @@ export class BootstrapService {
             });
           }
           user = await this.userAuthorizationService.grantCredentials(user);
-          user = await this.userAuthorizationService.applyAuthorizationPolicy(
-            user
-          );
+          user =
+            await this.userAuthorizationService.applyAuthorizationPolicy(user);
         }
       }
     } catch (error: any) {
@@ -233,7 +200,7 @@ export class BootstrapService {
   }
 
   async ensureSsiPopulated() {
-    const ssiEnabled = this.configService.get(ConfigurationTypes.SSI).enabled;
+    const ssiEnabled = this.configService.get('ssi.enabled', { infer: true });
     if (ssiEnabled) {
       await this.agentService.ensureDidsCreated();
     }
@@ -266,18 +233,18 @@ export class BootstrapService {
       this.logger.verbose?.('...No account present...', LogContext.BOOTSTRAP);
       this.logger.verbose?.('........creating...', LogContext.BOOTSTRAP);
       // create a default host org
-      const hostOrganization = await this.organizationService.getOrganization(
+      let hostOrganization = await this.organizationService.getOrganization(
         DEFAULT_HOST_ORG_NAMEID
       );
       if (!hostOrganization) {
-        const hostOrg = await this.organizationService.createOrganization({
+        hostOrganization = await this.organizationService.createOrganization({
           nameID: DEFAULT_HOST_ORG_NAMEID,
           profileData: {
             displayName: DEFAULT_HOST_ORG_DISPLAY_NAME,
           },
         });
         await this.organizationAuthorizationService.applyAuthorizationPolicy(
-          hostOrg
+          hostOrganization
         );
       }
 
@@ -291,7 +258,7 @@ export class BootstrapService {
           level: SpaceLevel.SPACE,
           type: SpaceType.SPACE,
         },
-        hostID: DEFAULT_HOST_ORG_NAMEID,
+        hostID: hostOrganization.id,
       };
 
       let account = await this.accountService.createAccount(spaceInput);
@@ -303,9 +270,10 @@ export class BootstrapService {
         account,
         createSpaceAccountInput
       );
-      account = await this.accountAuthorizationService.applyAuthorizationPolicy(
-        account
-      );
+      account =
+        await this.accountAuthorizationService.applyAuthorizationPolicy(
+          account
+        );
       return await this.accountService.save(account);
     }
   }

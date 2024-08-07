@@ -4,7 +4,7 @@ import { ILibrary } from './library.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { LibraryService } from './library.service';
 
-Injectable();
+@Injectable()
 export class LibraryAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,

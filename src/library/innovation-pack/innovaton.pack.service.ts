@@ -198,7 +198,7 @@ export class InnovationPackService {
 
     if (!templatesSet) {
       throw new EntityNotFoundException(
-        `Unable to find templatesSet for innovationPack with nameID: ${innovationPackWithTemplates.nameID}`,
+        `Unable to find templatesSet for innovationPack with nameID: ${innovationPackWithTemplates.id}`,
         LogContext.COMMUNITY
       );
     }
