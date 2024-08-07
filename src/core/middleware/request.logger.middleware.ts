@@ -7,7 +7,8 @@ import {
 import { Request, Response, NextFunction } from 'express';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ConfigService } from '@nestjs/config';
-import { ConfigurationTypes, LogContext } from '@common/enums';
+import { LogContext } from '@common/enums';
+import { AlkemioConfig } from '@src/types';
 
 @Injectable()
 export class RequestLoggerMiddleware implements NestMiddleware {
@@ -15,18 +16,14 @@ export class RequestLoggerMiddleware implements NestMiddleware {
   private requestHeadersLogging = false;
   private responseHeadersLogging = false;
   constructor(
-    private readonly configService: ConfigService,
+    private readonly configService: ConfigService<AlkemioConfig, true>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {
-    const reqLoggingConfig = this.configService.get(
-      ConfigurationTypes.MONITORING
-    )?.logging?.requests;
+    const reqLoggingConfig = this.configService.get('monitoring.logging.requests', { infer: true });
     this.requestFullLogging = reqLoggingConfig?.full_logging_enabled;
     this.requestHeadersLogging = reqLoggingConfig?.headers_logging_enabled;
 
-    const resLoggingConfig = this.configService.get(
-      ConfigurationTypes.MONITORING
-    )?.logging?.responses;
+    const resLoggingConfig = this.configService.get('monitoring.logging.responses', { infer: true });
     this.responseHeadersLogging = resLoggingConfig?.headers_logging_enabled;
   }
 

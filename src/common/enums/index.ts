@@ -1,7 +1,6 @@
 export * from './logging.context';
 export * from './alkemio.error.status';
 export * from './authentication.provider';
-export * from './configuration.type';
 export * from './authorization.credential';
 export * from './authorization.credential.global';
 export * from './authorization.privilege';
