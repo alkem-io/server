@@ -55,6 +55,7 @@ import { applyOrganizationFilter } from '@core/filtering/filters/organizationFil
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { OrganizationRoleService } from '../organization-role/organization.role.service';
+import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 
 @Injectable()
 export class OrganizationService {
@@ -94,7 +95,9 @@ export class OrganizationService {
     organization.authorization = new AuthorizationPolicy();
 
     organization.storageAggregator =
-      await this.storageAggregatorService.createStorageAggregator();
+      await this.storageAggregatorService.createStorageAggregator(
+        StorageAggregatorType.ORGANIZATION
+      );
     organization.profile = await this.profileService.createProfile(
       organizationData.profileData,
       ProfileType.ORGANIZATION,

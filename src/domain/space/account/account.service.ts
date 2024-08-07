@@ -49,6 +49,7 @@ import { CreateInnovationPackOnAccountInput } from './dto/account.dto.create.inn
 import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
+import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 
 @Injectable()
 export class AccountService {
@@ -78,7 +79,9 @@ export class AccountService {
     let account: IAccount = new Account();
     account.authorization = new AuthorizationPolicy();
     account.storageAggregator =
-      await this.storageAggregatorService.createStorageAggregator();
+      await this.storageAggregatorService.createStorageAggregator(
+        StorageAggregatorType.ACCOUNT
+      );
     account.library = await this.templatesSetService.createTemplatesSet();
     account.defaults = await this.spaceDefaultsService.createSpaceDefaults();
 

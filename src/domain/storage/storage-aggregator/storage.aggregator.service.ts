@@ -15,6 +15,7 @@ import { StorageAggregatorResolverService } from '@services/infrastructure/stora
 import { IStorageBucket } from '../storage-bucket/storage.bucket.interface';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { SpaceLevel } from '@common/enums/space.level';
+import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 @Injectable()
 export class StorageAggregatorService {
   constructor(
@@ -29,9 +30,11 @@ export class StorageAggregatorService {
   ) {}
 
   public async createStorageAggregator(
+    type: StorageAggregatorType,
     parentStorageAggregator?: IStorageAggregator
   ): Promise<IStorageAggregator> {
     const storageAggregator: IStorageAggregator = new StorageAggregator();
+    storageAggregator.type = type;
     storageAggregator.authorization = new AuthorizationPolicy();
 
     storageAggregator.parentStorageAggregator = parentStorageAggregator;
