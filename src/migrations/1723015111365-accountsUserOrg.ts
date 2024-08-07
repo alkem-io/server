@@ -5,6 +5,14 @@ export class AccountsUserOrg1723015111365 implements MigrationInterface {
   name = 'AccountsUserOrg1723015111365';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
+    // remove accountId for non-level zero spaces, otherwise they will also be updated + show up directly
+    // as children of an account
+    await queryRunner.query(
+      `UPDATE \`space\` SET accountId = '' WHERE level = '1'`
+    );
+    await queryRunner.query(
+      `UPDATE \`space\` SET accountId = '' WHERE level = '2'`
+    );
     await this.accountsMigrationContributor(queryRunner, 'user');
     await this.accountsMigrationContributor(queryRunner, 'organization');
 
@@ -61,6 +69,7 @@ export class AccountsUserOrg1723015111365 implements MigrationInterface {
           ('${credentialID}', 1, '${contributor.agentId}', 'account-host', '${accountID}')`
         );
         await this.assignLicensePlansToAgent(queryRunner, agentID);
+        await this.assignAccountHostCredential(queryRunner, agentID, accountID);
       } else if (accountHostCredentials.length === 1) {
         // Nothing to do, contributor is all setup
       } else if (accountHostCredentials.length > 1) {
@@ -112,7 +121,7 @@ export class AccountsUserOrg1723015111365 implements MigrationInterface {
       `SELECT id, authorizationId, agentId, storageAggregatorId FROM account WHERE id = '${accountID}'`
     );
     await queryRunner.query(
-      `DELETE FROM authorization WHERE id = '${account.authorizationId}'`
+      `DELETE FROM authorization_policy WHERE id = '${account.authorizationId}'`
     );
     await queryRunner.query(
       `DELETE FROM credential WHERE agentId = '${account.agentId}'`
@@ -124,6 +133,22 @@ export class AccountsUserOrg1723015111365 implements MigrationInterface {
       `DELETE FROM storage_aggregator WHERE id = '${account.storageAggregatorId}'`
     );
     await queryRunner.query(`DELETE FROM account WHERE id = '${accountID}'`);
+  }
+
+  private async assignAccountHostCredential(
+    queryRunner: QueryRunner,
+    agentID: string,
+    accountID: string
+  ): Promise<void> {
+    const credentialID = randomUUID();
+    await queryRunner.query(
+      `INSERT INTO credential (id, version, agentId, type, resourceID)
+                VALUES ('${credentialID}',
+                        '1',
+                        '${agentID}',
+                        'account-host',
+                        '${accountID}')`
+    );
   }
 
   private async createAccount(
@@ -226,20 +251,21 @@ export class AccountsUserOrg1723015111365 implements MigrationInterface {
     queryRunner: QueryRunner,
     agentID: string
   ): Promise<void> {
-    for (const licensePlan of licensePlans) {
+    for (const licensePlanType of licensePlanTypes) {
       const credentialID = randomUUID();
       await queryRunner.query(
-        `INSERT INTO credential (id, version, agentId, licensePlan)
+        `INSERT INTO credential (id, version, agentId, type, resourceID)
                 VALUES ('${credentialID}',
                         '1',
                         '${agentID}',
-                        '${licensePlan}')`
+                        '${licensePlanType}',
+                        '')`
       );
     }
   }
 }
 
-export const licensePlans = [
+export const licensePlanTypes = [
   'feature-virtual-contributors',
   'feature-callout-to-callout-template',
   'license-space-free',
