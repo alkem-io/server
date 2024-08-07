@@ -33,7 +33,7 @@ export class ConversionResolverMutations {
     this.authorizationGlobalAdminPolicy =
       this.authorizationPolicyService.createGlobalRolesAuthorizationPolicy(
         [AuthorizationRoleGlobal.GLOBAL_ADMIN],
-        [AuthorizationPrivilege.CREATE_SPACE, AuthorizationPrivilege.CREATE],
+        [AuthorizationPrivilege.PLATFORM_ADMIN],
         GLOBAL_POLICY_CONVERSION_GLOBAL_ADMINS
       );
   }
@@ -51,7 +51,7 @@ export class ConversionResolverMutations {
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       this.authorizationGlobalAdminPolicy,
-      AuthorizationPrivilege.CREATE_SPACE,
+      AuthorizationPrivilege.PLATFORM_ADMIN,
       `convert challenge to space: ${agentInfo.email}`
     );
     let space = await this.conversionService.convertChallengeToSpace(

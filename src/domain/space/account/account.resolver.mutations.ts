@@ -103,15 +103,6 @@ export class AccountResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('createData') createData: CreateInnovationHubOnAccountInput
   ): Promise<IInnovationHub> {
-    // InnovationHubs still require platform admin for now
-    const authorizationPolicy =
-      await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      authorizationPolicy,
-      AuthorizationPrivilege.PLATFORM_ADMIN,
-      'create innovation space'
-    );
     const account = await this.accountService.getAccountOrFail(
       createData.accountID,
       {
@@ -119,6 +110,13 @@ export class AccountResolverMutations {
           storageAggregator: true,
         },
       }
+    );
+
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      account.authorization,
+      AuthorizationPrivilege.CREATE_INNOVATION_HUB,
+      `create InnovationHub on account: ${account.id}`
     );
 
     let innovationHub = await this.innovationHubService.createInnovationHub(
@@ -143,10 +141,7 @@ export class AccountResolverMutations {
     virtualContributorData: CreateVirtualContributorOnAccountInput
   ): Promise<IVirtualContributor> {
     const account = await this.accountService.getAccountOrFail(
-      virtualContributorData.accountID,
-      {
-        relations: {},
-      }
+      virtualContributorData.accountID
     );
 
     this.authorizationService.grantAccessOrFail(
@@ -199,7 +194,7 @@ export class AccountResolverMutations {
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       account.authorization,
-      AuthorizationPrivilege.CREATE,
+      AuthorizationPrivilege.CREATE_INNOVATION_PACK,
       `create Innovation Pack on account: ${account.id}`
     );
 
