@@ -1,5 +1,5 @@
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
-import { Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
 import { IStorageAggregator } from './storage.aggregator.interface';
 import { StorageBucket } from '../storage-bucket/storage.bucket.entity';
 

@@ -57,7 +57,9 @@ export class UrlGeneratorService {
     private readonly logger: LoggerService,
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache
   ) {
-    this.endpoint_cluster = this.configService.get('hosting.endpoint_cluster', { infer: true });
+    this.endpoint_cluster = this.configService.get('hosting.endpoint_cluster', {
+      infer: true,
+    });
   }
 
   private getUrlIdCacheKey(entityId: string): string {
@@ -151,6 +153,10 @@ export class UrlGeneratorService {
     return `${this.endpoint_cluster}/vc/${nameID}`;
   }
 
+  public generateUrlForPlatform(): string {
+    return `${this.endpoint_cluster}/home`;
+  }
+
   async createJourneyAdminCommunityURL(space: ISpace): Promise<string> {
     const spaceNameID = space.nameID;
     const baseURL = `${this.endpoint_cluster}/admin/spaces/${spaceNameID}`;
@@ -222,7 +228,7 @@ export class UrlGeneratorService {
           this.FIELD_PROFILE_ID,
           profile.id
         );
-        return `${this.endpoint_cluster}/${this.PATH_USER}/${userEntityInfo.entityNameID}`;
+        return this.createUrlFoUserNameID(userEntityInfo.entityNameID);
       case ProfileType.VIRTUAL_CONTRIBUTOR:
         const vcEntityInfo = await this.getNameableEntityInfoOrFail(
           'virtual_contributor',
@@ -317,6 +323,10 @@ export class UrlGeneratorService {
 
   public createUrlForOrganizationNameID(organizationNameID: string): string {
     return `${this.endpoint_cluster}/${this.PATH_ORGANIZATION}/${organizationNameID}`;
+  }
+
+  public createUrlFoUserNameID(userNameID: string): string {
+    return `${this.endpoint_cluster}/${this.PATH_USER}/${userNameID}`;
   }
 
   private getContributorType(contributor: IContributor) {
