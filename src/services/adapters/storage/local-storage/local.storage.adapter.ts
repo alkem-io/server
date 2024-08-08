@@ -23,7 +23,10 @@ export class LocalStorageAdapter implements StorageService {
   private readonly storagePath: string;
 
   constructor(private configService: ConfigService<AlkemioConfig, true>) {
-    const pathFromConfig = this.configService.get('storage.local_storage.path', { infer: true });
+    const pathFromConfig = this.configService.get(
+      'storage.local_storage.path',
+      { infer: true }
+    );
     this.storagePath = pathResolve(pathFromConfig);
     this.ensureStoragePathExists();
   }

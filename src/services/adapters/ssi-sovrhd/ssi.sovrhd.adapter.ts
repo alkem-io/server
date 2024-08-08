@@ -31,7 +31,9 @@ export class SsiSovrhdAdapter {
     private configService: ConfigService<AlkemioConfig, true>,
     private httpService: HttpService
   ) {
-    const sovrhdConfig = this.configService.get('ssi.issuers.sovrhd', { infer: true });
+    const sovrhdConfig = this.configService.get('ssi.issuers.sovrhd', {
+      infer: true,
+    });
     this.sovrhdApiEndpoint = sovrhdConfig.endpoint;
 
     this.credentialTypesMap = new Map();

@@ -135,7 +135,10 @@ export class TrustRegistryAdapter {
   }
 
   private generatePublicRestApiUrl() {
-    const { endpoint_cluster, path_api_public_rest } = this.configService.get('hosting', { infer: true });
+    const { endpoint_cluster, path_api_public_rest } = this.configService.get(
+      'hosting',
+      { infer: true }
+    );
     return `${endpoint_cluster}${path_api_public_rest}`;
   }
 }
