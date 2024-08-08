@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
+import { FindManyOptions, FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -110,7 +110,7 @@ export class CalloutService {
       );
     }
 
-    return this.calloutRepository.save(callout);
+    return callout;
   }
 
   private validateCreateCalloutData(calloutData: CreateCalloutInput) {
@@ -301,45 +301,47 @@ export class CalloutService {
     return result;
   }
 
-  public async createCalloutInputFromCallout(
+  public getCallouts(options: FindManyOptions<Callout>): Promise<ICallout[]> {
+    return this.calloutRepository.find(options);
+  }
+
+  public createCalloutInputFromCallout(
     calloutInput: ICallout
-  ): Promise<CreateCalloutInput> {
-    const callout = await this.getCalloutOrFail(calloutInput.id, {
-      relations: {
-        contributionDefaults: true,
-        contributionPolicy: true,
-        framing: {
-          profile: {
-            references: true,
-            location: true,
-            tagsets: true,
-          },
-          whiteboard: {
-            profile: true,
-          },
-        },
-      },
-    });
-    const calloutGroupTagset =
-      await this.calloutFramingService.getCalloutGroupTagset(callout.framing);
+  ): CreateCalloutInput {
+    if (
+      !calloutInput.framing
+      || !calloutInput.contributionDefaults
+      || !calloutInput.contributionPolicy
+    ) {
+      throw new EntityNotInitializedException(
+        'Missing callout relation',
+        LogContext.COLLABORATION,
+        {
+          cause: 'Relation for Callout not loaded',
+          calloutId: calloutInput.id,
+        }
+      );
+    }
+
+    const calloutGroupTagset = this.calloutFramingService.getCalloutGroupTagset(calloutInput.framing);
     return {
-      nameID: callout.nameID,
-      type: callout.type,
-      visibility: callout.visibility,
+      nameID: calloutInput.nameID,
+      type: calloutInput.type,
+      visibility: calloutInput.visibility,
       groupName: calloutGroupTagset.tags[0],
       framing:
         this.calloutFramingService.createCalloutFramingInputFromCalloutFraming(
-          callout.framing
+          calloutInput.framing
         ),
       contributionDefaults:
         this.contributionDefaultsService.createCalloutContributionDefaultsInputFromCalloutContributionDefaults(
-          callout.contributionDefaults
+          calloutInput.contributionDefaults
         ),
       contributionPolicy:
         this.contributionPolicyService.createCalloutContributionPolicyInputFromCalloutContributionPolicy(
-          callout.contributionPolicy
+          calloutInput.contributionPolicy
         ),
-      sortOrder: callout.sortOrder,
+      sortOrder: calloutInput.sortOrder,
     };
   }
 

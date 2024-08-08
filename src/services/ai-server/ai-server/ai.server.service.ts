@@ -153,7 +153,9 @@ export class AiServerService {
   }
 
   private async isContextLoaded(contextID: string): Promise<boolean> {
-    const { host, port } = this.config.get('platform.vector_db', { infer: true });
+    const { host, port } = this.config.get('platform.vector_db', {
+      infer: true,
+    });
     const chroma = new ChromaClient({ path: `http://${host}:${port}` });
 
     const name = this.getContextCollectionID(contextID);
@@ -275,9 +277,8 @@ export class AiServerService {
       engine: aiPersonaService.engine,
       userID: '',
     };
-    const result = await this.aiPersonaEngineAdapter.sendIngest(
-      ingestAdapterInput
-    );
+    const result =
+      await this.aiPersonaEngineAdapter.sendIngest(ingestAdapterInput);
     return result;
   }
 }

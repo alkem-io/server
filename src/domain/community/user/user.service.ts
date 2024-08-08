@@ -143,7 +143,7 @@ export class UserService {
         user.lastName
       );
     }
-    await this.profileService.addVisualOnProfile(
+    this.profileService.addVisualOnProfile(
       user.profile,
       VisualType.AVATAR,
       avatarURL

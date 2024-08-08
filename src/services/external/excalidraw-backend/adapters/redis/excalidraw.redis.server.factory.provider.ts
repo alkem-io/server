@@ -3,10 +3,7 @@ import { createAdapter } from '@socket.io/redis-adapter';
 import { FactoryProvider, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import {
-  AlkemioErrorStatus,
-  LogContext,
-} from '@common/enums';
+import { AlkemioErrorStatus, LogContext } from '@common/enums';
 import { BaseException } from '@common/exceptions/base.exception';
 import { APP_ID, EXCALIDRAW_SERVER } from '@constants/index';
 import { AuthenticationService } from '@core/authentication/authentication.service';

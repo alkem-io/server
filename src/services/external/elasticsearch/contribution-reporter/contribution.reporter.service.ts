@@ -29,9 +29,13 @@ export class ContributionReporterService {
     @Inject(ELASTICSEARCH_CLIENT_PROVIDER)
     private readonly client: ElasticClient | undefined
   ) {
-    const elasticsearch = this.configService.get('integrations.elasticsearch', { infer: true });
+    const elasticsearch = this.configService.get('integrations.elasticsearch', {
+      infer: true,
+    });
 
-    this.environment = this.configService.get('hosting.environment', { infer: true });
+    this.environment = this.configService.get('hosting.environment', {
+      infer: true,
+    });
 
     this.activityIndexName = elasticsearch?.indices?.contribution;
   }

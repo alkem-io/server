@@ -49,12 +49,12 @@ export class CommunityGuidelinesService {
       storageAggregator
     );
 
-    await this.profileService.addVisualOnProfile(
+    this.profileService.addVisualOnProfile(
       communityGuidelines.profile,
       VisualType.CARD
     );
 
-    return await this.communityGuidelinesRepository.save(communityGuidelines);
+    return communityGuidelines;
   }
 
   async save(

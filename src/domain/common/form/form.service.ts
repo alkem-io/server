@@ -16,12 +16,12 @@ export class FormService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  public createForm(createFormData: CreateFormInput): Promise<IForm> {
+  public createForm(createFormData: CreateFormInput): IForm {
     const form: IForm = new Form();
     form.description = createFormData.description;
     form.questions = this.serializeQuestions(createFormData.questions);
 
-    return this.save(form);
+    return form;
   }
 
   public async removeForm(form: IForm): Promise<boolean> {

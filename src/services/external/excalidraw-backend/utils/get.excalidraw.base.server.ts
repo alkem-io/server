@@ -3,10 +3,7 @@ import { Namespace, Server as SocketIO } from 'socket.io';
 import { Adapter } from 'socket.io-adapter';
 import { ConfigService } from '@nestjs/config';
 import { LoggerService } from '@nestjs/common';
-import {
-  AlkemioErrorStatus,
-  LogContext,
-} from '@common/enums';
+import { AlkemioErrorStatus, LogContext } from '@common/enums';
 import { BaseException } from '@common/exceptions/base.exception';
 import { SocketIoServer } from '../types/socket.io.server';
 import { AlkemioConfig } from '@src/types';

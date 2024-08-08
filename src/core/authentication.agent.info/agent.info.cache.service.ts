@@ -25,7 +25,10 @@ export class AgentInfoCacheService {
     @InjectEntityManager('default')
     private entityManager: EntityManager
   ) {
-    this.cache_ttl = this.configService.get('identity.authentication.cache_ttl', { infer: true });
+    this.cache_ttl = this.configService.get(
+      'identity.authentication.cache_ttl',
+      { infer: true }
+    );
   }
 
   public async getAgentInfoFromCache(
