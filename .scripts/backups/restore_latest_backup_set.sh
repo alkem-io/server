@@ -68,7 +68,6 @@ fi
 
 echo $HOMESERVER_FILE_PATH
 echo $SERVER_NAME
-
 # Update the server_name in the YAML file using yq
 yq e ".server_name = \"$SERVER_NAME\"" -i $HOMESERVER_FILE_PATH
 
