@@ -60,6 +60,7 @@ export class AccountService {
   ): Promise<ISpace> {
     const account = await this.getAccountOrFail(spaceData.accountID, {
       relations: {
+        spaces: true,
         storageAggregator: true,
       },
     });
@@ -95,8 +96,8 @@ export class AccountService {
       undefined,
       agentInfo
     );
-    account.spaces.push(space);
 
+    account.spaces.push(space);
     await this.save(account);
 
     await this.spaceService.assignUserToRoles(space, agentInfo);
