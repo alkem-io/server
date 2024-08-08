@@ -78,7 +78,7 @@ export class AccountResolverMutations {
       agentInfo,
       authorizationPolicy,
       AuthorizationPrivilege.CREATE_SPACE,
-      `create account with space: ${accountData}`
+      `create account with hostID: ${accountData.hostID}`
     );
     let account = await this.accountService.createAccount(accountData);
 
