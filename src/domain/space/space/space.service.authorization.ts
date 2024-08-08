@@ -133,14 +133,12 @@ export class SpaceAuthorizationService {
         storageAggregator: true,
         library: true,
         defaults: true,
+        account: {
+          authorization: true,
+        },
       },
     });
-    if (
-      !space.authorization ||
-      !space.community ||
-      !space.community.policy ||
-      !space.account.authorization
-    )
+    if (!space.authorization || !space.community || !space.community.policy)
       throw new RelationshipNotFoundException(
         `Unable to load Space with entities at start of auth reset: ${space.id} `,
         LogContext.SPACES
@@ -156,13 +154,17 @@ export class SpaceAuthorizationService {
     );
     const privateSpace =
       spaceSettings.privacy.mode === SpacePrivacyMode.PRIVATE;
-    const accountAuthorization = space.account.authorization;
+    const accountAuthorization = space?.account?.authorization;
 
     // Choose what authorization to inherit from
-    let parentAuthorization = accountAuthorization;
+    let parentAuthorization: IAuthorizationPolicy | undefined;
     if (space.level === SpaceLevel.SPACE) {
-      parentAuthorization = accountAuthorization;
-    } else if (privateSpace) {
+      if (!accountAuthorization) {
+        throw new RelationshipNotFoundException(
+          `Coulnd't find account for Level0 space: ${space.id} `,
+          LogContext.SPACES
+        );
+      }
       parentAuthorization = accountAuthorization;
     } else {
       if (!space.parentSpace || !space.parentSpace.authorization) {
