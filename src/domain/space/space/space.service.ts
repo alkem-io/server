@@ -126,8 +126,8 @@ export class SpaceService {
     const initializedSpace = await this.initialise(
       space,
       spaceData,
-      account,
-      agentInfo
+      agentInfo,
+      spaceDefaults
     );
     return this.save(initializedSpace);
   }
@@ -135,8 +135,8 @@ export class SpaceService {
   private async initialise(
     space: ISpace,
     spaceData: CreateSpaceInput,
-    account: IAccount,
-    agentInfo: AgentInfo | undefined
+    agentInfo: AgentInfo | undefined,
+    spaceDefaults?: ISpaceDefaults
   ): Promise<ISpace> {
     space.authorization = new AuthorizationPolicy();
     space.settingsStr = this.spaceSettingsService.serializeSettings(
