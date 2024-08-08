@@ -38,7 +38,8 @@ export class SpaceLibraryDefaults1722870550857 implements MigrationInterface {
       defaultsId: string;
       libraryId: string;
     }[] = await queryRunner.query(
-      `SELECT id, spaceId, defaultsId, libraryId FROM \`account\``
+      `SELECT account.id, account.spaceId, account.defaultsId, account.libraryId FROM \`account\`
+      JOIN \`space\` ON \`account\`.spaceId = \`space\`.id` // fixes a problem with acceptance database, there were some accounts with a wrong spaceId which is just bad data and only load accounts that really have a space.
     );
     for (const account of accounts) {
       if (account.spaceId) {

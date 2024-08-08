@@ -243,6 +243,7 @@ export class AccountAuthorizationService {
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.CREATE],
         [
+          AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.BETA_TESTER,
           AuthorizationCredential.VC_CAMPAIGN,
         ],
