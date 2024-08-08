@@ -1,6 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, FindManyOptions, FindOneOptions, FindOptionsRelations, In, Repository } from 'typeorm';
+import {
+  EntityManager,
+  FindOneOptions,
+  FindOptionsRelations,
+  In,
+  Repository,
+} from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -91,7 +97,8 @@ export class CollaborationService {
     collaboration.groupsStr =
       this.calloutGroupsService.serializeGroups(calloutGroups);
 
-    collaboration.tagsetTemplateSet = this.tagsetTemplateSetService.createTagsetTemplateSet();
+    collaboration.tagsetTemplateSet =
+      this.tagsetTemplateSetService.createTagsetTemplateSet();
 
     // Rely on the logic in Space Defaults to create the right innovation flow input
     const innovationFlowInput =
@@ -111,7 +118,8 @@ export class CollaborationService {
       defaultSelectedValue:
         allowedStates.length > 0 ? allowedStates[0] : undefined,
     };
-    const statesTagsetTemplate = this.tagsetTemplateSetService.addTagsetTemplate(
+    const statesTagsetTemplate =
+      this.tagsetTemplateSetService.addTagsetTemplate(
         collaboration.tagsetTemplateSet,
         tagsetTemplateDataStates
       );
@@ -156,9 +164,9 @@ export class CollaborationService {
     }
 
     const tagsetTemplate = this.tagsetTemplateSetService.addTagsetTemplate(
-        collaboration.tagsetTemplateSet,
-        tagsetTemplateData
-      );
+      collaboration.tagsetTemplateSet,
+      tagsetTemplateData
+    );
     await this.save(collaboration); // todo remove
     return tagsetTemplate;
   }
@@ -192,8 +200,9 @@ export class CollaborationService {
   public async createCalloutInputsFromCollaboration(
     collaborationSource: ICollaboration
   ): Promise<CreateCalloutInput[]> {
-    const sourceCallouts =
-      await this.getCalloutsOnCollaboration(collaborationSource, {
+    const sourceCallouts = await this.getCalloutsOnCollaboration(
+      collaborationSource,
+      {
         relations: {
           contributionDefaults: true,
           contributionPolicy: true,
@@ -208,9 +217,12 @@ export class CollaborationService {
             },
           },
         },
-      });
+      }
+    );
 
-    return sourceCallouts.map(this.calloutService.createCalloutInputFromCallout);
+    return sourceCallouts.map(
+      this.calloutService.createCalloutInputFromCallout
+    );
   }
 
   async save(collaboration: ICollaboration): Promise<ICollaboration> {
@@ -255,7 +267,6 @@ export class CollaborationService {
     const space = await this.entityManager.findOne(Space, {
       where: { collaboration: { id: collaborationID } },
       relations: {
-        account: true,
         subspaces: {
           collaboration: true,
         },
@@ -267,15 +278,12 @@ export class CollaborationService {
         LogContext.COLLABORATION
       );
     }
-    const accountID = space.account.id;
 
     switch (space.level) {
       case SpaceLevel.SPACE:
         const spacesInAccount = await this.entityManager.find(Space, {
           where: {
-            account: {
-              id: accountID,
-            },
+            levelZeroSpaceID: space.id,
           },
           relations: {
             collaboration: true,
@@ -623,19 +631,18 @@ export class CollaborationService {
   public async getCalloutsOnCollaboration(
     collaboration: ICollaboration,
     opts: {
-      calloutIds?: string[],
-      relations?: FindOptionsRelations<Callout>
+      calloutIds?: string[];
+      relations?: FindOptionsRelations<Callout>;
     } = {}
   ): Promise<ICallout[]> {
-    const { calloutIds, relations  } = opts;
+    const { calloutIds, relations } = opts;
     const loadedCollaboration = await this.collaborationRepository.findOne({
-        where: {
-          id: collaboration.id,
-          callouts: calloutIds ? { id: In(calloutIds) } : undefined,
-        },
-        relations: { callouts: relations ?? true },
-      }
-    );
+      where: {
+        id: collaboration.id,
+        callouts: calloutIds ? { id: In(calloutIds) } : undefined,
+      },
+      relations: { callouts: relations ?? true },
+    });
 
     if (!loadedCollaboration) {
       throw new EntityNotFoundException(
@@ -652,7 +659,7 @@ export class CollaborationService {
         'Callouts not initialised on collaboration',
         LogContext.COLLABORATION,
         {
-          collaborationID: collaboration.id
+          collaborationID: collaboration.id,
         }
       );
     }

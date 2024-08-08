@@ -9,7 +9,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ConfigurationTypes, LogContext } from '@common/enums';
+import { LogContext } from '@common/enums';
 import { APP_ID, EXCALIDRAW_SERVER, UUID_LENGTH } from '@common/constants';
 import { arrayRandomElement } from '@common/utils';
 import { AuthenticationService } from '@core/authentication/authentication.service';
@@ -64,6 +64,7 @@ import {
   resetCollaboratorModeDebounceWait,
 } from './types/defaults';
 import { SaveResponse } from './types/save.reponse';
+import { AlkemioConfig } from '@src/types';
 
 type SaveMessageOpts = { timeout: number };
 type RoomTimers = Map<string, NodeJS.Timeout>;
@@ -85,7 +86,7 @@ export class ExcalidrawServer {
     @Inject(APP_ID) private appId: string,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService,
     @Inject(EXCALIDRAW_SERVER) private wsServer: SocketIoServer,
-    private configService: ConfigService,
+    private configService: ConfigService<AlkemioConfig, true>,
     private authService: AuthenticationService,
     private authorizationService: AuthorizationService,
     private whiteboardService: WhiteboardService,
@@ -99,7 +100,7 @@ export class ExcalidrawServer {
       save_timeout,
       collaborator_mode_timeout,
       max_collaborators_in_room,
-    } = this.configService.get(ConfigurationTypes.COLLABORATION)?.whiteboards;
+    } = this.configService.get('collaboration.whiteboards', { infer: true });
 
     this.contributionWindowMs =
       (contribution_window ?? defaultContributionInterval) * 1000;
@@ -128,8 +129,9 @@ export class ExcalidrawServer {
 
   private async init() {
     const kratosPublicBaseUrl = this.configService.get(
-      ConfigurationTypes.IDENTITY
-    ).authentication.providers.ory.kratos_public_base_url_server;
+      'identity.authentication.providers.ory.kratos_public_base_url_server',
+      { infer: true }
+    );
 
     const kratosClient = new FrontendApi(
       new Configuration({
@@ -341,8 +343,10 @@ export class ExcalidrawServer {
 
     const community =
       await this.communityResolver.getCommunityFromWhiteboardOrFail(roomId);
-    const spaceID =
-      await this.communityResolver.getRootSpaceIDFromCommunityOrFail(community);
+    const levelZeroSpaceID =
+      await this.communityResolver.getLevelZeroSpaceIdForCommunity(
+        community.id
+      );
     const wb = await this.whiteboardService.getProfile(roomId);
 
     const sockets = await this.fetchSocketsSafe(roomId);
@@ -355,7 +359,7 @@ export class ExcalidrawServer {
           {
             id: roomId,
             name: wb.displayName,
-            space: spaceID,
+            space: levelZeroSpaceID,
           },
           {
             id: socket.data.agentInfo.userID,

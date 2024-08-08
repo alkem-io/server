@@ -73,9 +73,6 @@ export class VirtualContributorService {
         virtualContributorData.profileData?.displayName || ''
       );
     }
-    await this.checkDisplayNameOrFail(
-      virtualContributorData.profileData?.displayName
-    );
 
     let virtualContributor: IVirtualContributor = VirtualContributor.create(
       virtualContributorData
@@ -197,10 +194,6 @@ export class VirtualContributorService {
     }
 
     if (virtualContributorData.nameID) {
-      this.logger.verbose?.(
-        `${virtualContributorData.nameID} - ${virtual.nameID}`,
-        LogContext.COMMUNICATION
-      );
       if (
         virtualContributorData.nameID.toLowerCase() !==
         virtual.nameID.toLowerCase()
@@ -485,7 +478,7 @@ export class VirtualContributorService {
 
     if (!aiPersona) {
       throw new EntityNotFoundException(
-        `Unable to find aiPersona for VirtualContributor: ${virtualContributor.nameID}`,
+        `Unable to find aiPersona for VirtualContributor: ${virtualContributor.id}`,
         LogContext.VIRTUAL_CONTRIBUTOR
       );
     }

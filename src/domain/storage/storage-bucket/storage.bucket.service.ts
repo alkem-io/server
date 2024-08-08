@@ -1,7 +1,6 @@
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
-import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -253,15 +252,7 @@ export class StorageBucketService {
     storageBucketId: string,
     document: IDocument
   ): Promise<IDocument> | never {
-    const storage = await this.getStorageBucketOrFail(storageBucketId, {
-      relations: {},
-    });
-    if (!storage.documents) {
-      throw new EntityNotInitializedException(
-        `StorageBucket (${storage}) not initialised`,
-        LogContext.STORAGE_BUCKET
-      );
-    }
+    const storage = await this.getStorageBucketOrFail(storageBucketId);
 
     this.validateMimeTypes(storage, document.mimeType);
     this.validateSize(storage, document.size);
@@ -271,7 +262,7 @@ export class StorageBucketService {
       `Added document '${document.externalID}' on storage bucket: ${storage.id}`,
       LogContext.STORAGE_BUCKET
     );
-    return await this.documentService.save(document);
+    return this.documentService.save(document);
   }
 
   public async size(storage: IStorageBucket): Promise<number> {

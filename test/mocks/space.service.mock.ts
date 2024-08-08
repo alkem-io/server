@@ -6,6 +6,5 @@ export const MockSpaceService: ValueProvider<PublicPart<SpaceService>> = {
   provide: SpaceService,
   useValue: {
     getSpaceOrFail: jest.fn(),
-    getSpaceForCommunityOrFail: jest.fn(),
   },
 };

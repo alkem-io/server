@@ -39,7 +39,7 @@ export class VirtualContributorResolverMutations {
       agentInfo,
       virtual.authorization,
       AuthorizationPrivilege.UPDATE,
-      `orgUpdate: ${virtual.nameID}`
+      `virtual contribtor Update: ${virtual.id}`
     );
 
     return await this.virtualContributorService.updateVirtualContributor(
@@ -63,7 +63,7 @@ export class VirtualContributorResolverMutations {
       agentInfo,
       virtual.authorization,
       AuthorizationPrivilege.DELETE,
-      `deleteOrg: ${virtual.nameID}`
+      `delete virtual contributor: ${virtual.id}`
     );
     return await this.virtualContributorService.deleteVirtualContributor(
       deleteData.ID
@@ -93,7 +93,7 @@ export class VirtualContributorResolverMutations {
       agentInfo,
       virtual.authorization,
       AuthorizationPrivilege.UPDATE,
-      `deleteOrg: ${virtual.nameID}`
+      `refresh body of knowledge: ${virtual.id}`
     );
     return await this.virtualContributorService.refershBodyOfKnowledge(
       virtual,

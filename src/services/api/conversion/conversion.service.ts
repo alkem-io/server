@@ -74,7 +74,7 @@ export class ConversionService {
       !subspace.storageAggregator
     ) {
       throw new EntityNotInitializedException(
-        `Unable to locate all entities on on subspace: ${subspace.nameID}`,
+        `Unable to locate all entities on on subspace: ${subspace.id}`,
         LogContext.CONVERSION
       );
     }
@@ -86,13 +86,13 @@ export class ConversionService {
       );
     if (challengeCommunityLeadOrgs.length !== 1) {
       throw new ValidationException(
-        `A Subspace must have exactly one Lead organization to be converted to a Space: ${subspace.nameID} has ${challengeCommunityLeadOrgs.length}`,
+        `A Subspace must have exactly one Lead organization to be converted to a Space: ${subspace.id} has ${challengeCommunityLeadOrgs.length}`,
         LogContext.CONVERSION
       );
     }
     const hostOrg = challengeCommunityLeadOrgs[0];
     const createAccountInput: CreateAccountInput = {
-      hostID: hostOrg.nameID,
+      hostID: hostOrg.id,
       spaceData: {
         nameID: subspace.nameID,
         profileData: {
@@ -102,9 +102,8 @@ export class ConversionService {
         type: SpaceType.SPACE,
       },
     };
-    const emptyAccount = await this.accountService.createAccount(
-      createAccountInput
-    );
+    const emptyAccount =
+      await this.accountService.createAccount(createAccountInput);
 
     if (!emptyAccount.space) {
       throw new EntityNotInitializedException(
@@ -132,7 +131,7 @@ export class ConversionService {
       !space.storageAggregator
     ) {
       throw new EntityNotInitializedException(
-        `Unable to locate all entities on new Space: ${space.nameID}`,
+        `Unable to locate all entities on new Space: ${space.id}`,
         LogContext.CONVERSION
       );
     }
@@ -261,13 +260,13 @@ export class ConversionService {
       !subsubspace.collaboration.callouts
     ) {
       throw new EntityNotInitializedException(
-        `Unable to locate all entities on on Opportunity: ${subsubspace.nameID}`,
+        `Unable to locate all entities on on Opportunity: ${subsubspace.id}`,
         LogContext.CONVERSION
       );
     }
 
     const reservedNameIDs =
-      await this.namingService.getReservedNameIDsInAccount(
+      await this.namingService.getReservedNameIDsInLevelZeroSpace(
         subsubspace.account.id
       );
     const subspaceNameID =
@@ -321,7 +320,7 @@ export class ConversionService {
       !subspace.storageAggregator
     ) {
       throw new EntityNotInitializedException(
-        `Unable to locate all entities on new Challenge for converting opportunity: ${subspace.nameID}`,
+        `Unable to locate all entities on new Subspace for converting subsubspace: ${subspace.id}`,
         LogContext.CONVERSION
       );
     }
@@ -444,7 +443,7 @@ export class ConversionService {
         !callout.framing.profile.tagsets
       ) {
         throw new EntityNotInitializedException(
-          `Unable to locate all child entities on callout: ${callout.nameID}`,
+          `Unable to locate all child entities on callout: ${callout.id}`,
           LogContext.CONVERSION
         );
       }
@@ -484,7 +483,7 @@ export class ConversionService {
         !callout.framing.profile.tagsets
       ) {
         throw new EntityNotInitializedException(
-          `Unable to locate all child entities on challenge callout: ${callout.nameID}`,
+          `Unable to locate all child entities on challenge callout: ${callout.id}`,
           LogContext.CONVERSION
         );
       }

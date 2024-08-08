@@ -4,12 +4,13 @@ import { PassportStrategy } from '@nestjs/passport';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Strategy } from 'passport-custom';
 import { Configuration, FrontendApi } from '@ory/kratos-client';
-import { ConfigurationTypes, LogContext } from '@common/enums';
+import { LogContext } from '@common/enums';
 import { ApiRestrictedAccessException } from '@common/exceptions/auth';
 import { AuthenticationService } from './authentication.service';
 import { OryDefaultIdentitySchema } from './ory.default.identity.schema';
 import { verifyIdentityIfOidcAuth } from './verify.identity.if.oidc.auth';
 import { IncomingMessage } from 'http';
+import { AlkemioConfig } from '@src/types';
 
 @Injectable()
 export class OryApiStrategy extends PassportStrategy(
@@ -18,15 +19,16 @@ export class OryApiStrategy extends PassportStrategy(
 ) {
   private readonly kratosClient: FrontendApi;
   constructor(
-    private readonly configService: ConfigService,
+    private readonly configService: ConfigService<AlkemioConfig, true>,
     private readonly authService: AuthenticationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {
     super();
 
     const kratosPublicBaseUrl = this.configService.get(
-      ConfigurationTypes.IDENTITY
-    ).authentication.providers.ory.kratos_public_base_url_server;
+      'identity.authentication.providers.ory.kratos_public_base_url_server',
+      { infer: true }
+    );
 
     this.kratosClient = new FrontendApi(
       new Configuration({
@@ -36,8 +38,10 @@ export class OryApiStrategy extends PassportStrategy(
   }
 
   async validate(payload: IncomingMessage) {
-    const apiAccessEnabled = this.configService.get(ConfigurationTypes.IDENTITY)
-      .authentication.api_access_enabled;
+    const apiAccessEnabled = this.configService.get(
+      'identity.authentication.api_access_enabled',
+      { infer: true }
+    );
 
     if (!apiAccessEnabled) {
       throw new ApiRestrictedAccessException('API access is restricted!');

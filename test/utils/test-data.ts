@@ -1,4 +1,5 @@
 import * as user from '@test/data/user.json';
+import * as virtualContributor from '@test/data/virtual-contributor.json';
 import * as agent from '@test/data/agent.json';
 import * as organization from '@test/data/organization.json';
 import * as space from '@test/data/space.json';
@@ -18,4 +19,5 @@ export const testData = {
   ...applications,
   ...userRoles,
   ...agentInfo,
+  ...virtualContributor,
 };

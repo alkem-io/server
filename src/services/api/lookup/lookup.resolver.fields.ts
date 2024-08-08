@@ -58,6 +58,8 @@ import { IVirtualContributor } from '@domain/community/virtual-contributor/virtu
 import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
+import { InnovationHubService } from '@domain/innovation-hub/innovation.hub.service';
 import { InnovationPackService } from '@library/innovation-pack/innovaton.pack.service';
 import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
 
@@ -91,7 +93,8 @@ export class LookupResolverFields {
     private userService: UserService,
     private guidelinesService: CommunityGuidelinesService,
     private guidelinesTemplateService: CommunityGuidelinesTemplateService,
-    private virtualContributorService: VirtualContributorService
+    private virtualContributorService: VirtualContributorService,
+    private innovationHubService: InnovationHubService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -257,6 +260,27 @@ export class LookupResolverFields {
   }
 
   @UseGuards(GraphqlGuard)
+  @ResolveField(() => IInnovationHub, {
+    nullable: true,
+    description: 'Lookup the specified InnovationHub',
+  })
+  async innovationHub(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('ID', { type: () => UUID }) id: string
+  ): Promise<IInnovationHub> {
+    const innovationHub =
+      await this.innovationHubService.getInnovationHubOrFail(id);
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      innovationHub.authorization,
+      AuthorizationPrivilege.READ,
+      `lookup InnovationHub: ${innovationHub.id}`
+    );
+
+    return innovationHub;
+  }
+
+  @UseGuards(GraphqlGuard)
   @ResolveField(() => IApplication, {
     nullable: true,
     description: 'Lookup the specified Application',
@@ -411,7 +435,7 @@ export class LookupResolverFields {
       agentInfo,
       whiteboard.authorization,
       AuthorizationPrivilege.READ,
-      `lookup Whiteboard: ${whiteboard.nameID}`
+      `lookup Whiteboard: ${whiteboard.id}`
     );
 
     return whiteboard;

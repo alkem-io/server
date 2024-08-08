@@ -53,7 +53,7 @@ export class SpaceResolverMutations {
       agentInfo,
       space.authorization,
       AuthorizationPrivilege.UPDATE,
-      `updateSpace: ${space.nameID}`
+      `update Space: ${space.id}`
     );
 
     // ensure working with UUID
@@ -119,15 +119,17 @@ export class SpaceResolverMutations {
       `space settings update: ${space.id}`
     );
 
-    const updatedSpace = await this.spaceService.updateSpaceSettings(
+    let updatedSpace = await this.spaceService.updateSpaceSettings(
       space,
       settingsData
     );
 
     // As the settings may update the authorization for the Space, the authorization policy will need to be reset
-    return this.spaceAuthorizationService
-      .applyAuthorizationPolicy(updatedSpace)
-      .then(space => this.spaceService.save(space));
+    updatedSpace =
+      await this.spaceAuthorizationService.applyAuthorizationPolicy(
+        updatedSpace
+      );
+    return await this.spaceService.save(updatedSpace);
   }
 
   @UseGuards(GraphqlGuard)
@@ -139,7 +141,7 @@ export class SpaceResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('updateData') updateData: UpdateSpacePlatformSettingsInput
   ): Promise<ISpace> {
-    const space = await this.spaceService.getSpaceOrFail(updateData.spaceID);
+    let space = await this.spaceService.getSpaceOrFail(updateData.spaceID);
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       space.authorization,
@@ -147,10 +149,13 @@ export class SpaceResolverMutations {
       `update platform settings on space: ${space.id}`
     );
 
-    return await this.spaceService.updateSpacePlatformSettings(
+    space = await this.spaceService.updateSpacePlatformSettings(
       space,
       updateData
     );
+    space =
+      await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
+    return await this.spaceService.save(space);
   }
 
   @UseGuards(GraphqlGuard)
@@ -185,7 +190,7 @@ export class SpaceResolverMutations {
       agentInfo,
       space.authorization,
       AuthorizationPrivilege.CREATE_SUBSPACE,
-      `challengeCreate: ${space.nameID}`
+      `subspace create in: ${space.id}`
     );
 
     // For the creation based on the template from another challenge require platform admin privileges
@@ -194,7 +199,7 @@ export class SpaceResolverMutations {
         agentInfo,
         space.authorization,
         AuthorizationPrivilege.CREATE,
-        `challengeCreate using challenge template: ${space.nameID} - ${subspaceData.collaborationData.collaborationTemplateID}`
+        `subspaceCreate using space template: ${space.id} - ${subspaceData.collaborationData.collaborationTemplateID}`
       );
     }
     let subspace = await this.spaceService.createSubspace(
@@ -204,9 +209,8 @@ export class SpaceResolverMutations {
     // Save here so can reuse it later without another load
     const displayName = subspace.profile.displayName;
 
-    subspace = await this.spaceAuthorizationService.applyAuthorizationPolicy(
-      subspace
-    );
+    subspace =
+      await this.spaceAuthorizationService.applyAuthorizationPolicy(subspace);
     subspace = await this.spaceService.save(subspace);
 
     this.activityAdapter.subspaceCreated({

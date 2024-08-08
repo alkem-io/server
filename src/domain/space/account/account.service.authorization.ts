@@ -12,7 +12,6 @@ import {
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IAccount } from './account.interface';
 import { TemplatesSetAuthorizationService } from '@domain/template/templates-set/templates.set.service.authorization';
-import { LicenseAuthorizationService } from '@domain/license/license/license.service.authorization';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { SpaceAuthorizationService } from '../space/space.service.authorization';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
@@ -38,6 +37,8 @@ import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interf
 import { InnovationPackAuthorizationService } from '@library/innovation-pack/innovation.pack.service.authorization';
 import { ISpaceSettings } from '../space.settings/space.settings.interface';
 import { SpaceSettingsService } from '../space.settings/space.settings.service';
+import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
+import { InnovationHubAuthorizationService } from '@domain/innovation-hub/innovation.hub.service.authorization';
 
 @Injectable()
 export class AccountAuthorizationService {
@@ -45,13 +46,13 @@ export class AccountAuthorizationService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private agentAuthorizationService: AgentAuthorizationService,
     private templatesSetAuthorizationService: TemplatesSetAuthorizationService,
-    private licenseAuthorizationService: LicenseAuthorizationService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private spaceAuthorizationService: SpaceAuthorizationService,
     private virtualContributorAuthorizationService: VirtualContributorAuthorizationService,
     private innovationPackAuthorizationService: InnovationPackAuthorizationService,
     private communityPolicyService: CommunityPolicyService,
     private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
+    private innovationHubAuthorizationService: InnovationHubAuthorizationService,
     private spaceSettingsService: SpaceSettingsService,
     private accountService: AccountService,
     private accountHostService: AccountHostService
@@ -66,11 +67,11 @@ export class AccountAuthorizationService {
             policy: true,
           },
         },
-        license: true,
         library: true,
         defaults: true,
         virtualContributors: true,
         innovationPacks: true,
+        innovationHubs: true,
         storageAggregator: true,
       },
     });
@@ -158,11 +159,11 @@ export class AccountAuthorizationService {
       !account.space.community ||
       !account.space.community.policy ||
       !account.library ||
-      !account.license ||
       !account.defaults ||
       !account.virtualContributors ||
       !account.innovationPacks ||
-      !account.storageAggregator
+      !account.storageAggregator ||
+      !account.innovationHubs
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load Account with entities at start of auth reset: ${account.id} `,
@@ -175,11 +176,6 @@ export class AccountAuthorizationService {
 
     account.agent = this.agentAuthorizationService.applyAuthorizationPolicy(
       account.agent,
-      account.authorization
-    );
-
-    account.license = this.licenseAuthorizationService.applyAuthorizationPolicy(
-      account.license,
       account.authorization
     );
 
@@ -223,6 +219,17 @@ export class AccountAuthorizationService {
       updatedIPs.push(updatedIP);
     }
     account.innovationPacks = updatedIPs;
+
+    const updatedInnovationHubs: IInnovationHub[] = [];
+    for (const innovationHub of account.innovationHubs) {
+      const updatedInnovationHub =
+        await this.innovationHubAuthorizationService.applyAuthorizationPolicyAndSave(
+          innovationHub,
+          clonedAccountAuth
+        );
+      updatedInnovationHubs.push(updatedInnovationHub);
+    }
+    account.innovationHubs = updatedInnovationHubs;
     return account;
   }
 

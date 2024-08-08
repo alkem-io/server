@@ -4,13 +4,14 @@ import { Client as ElasticClient } from '@elastic/elasticsearch';
 import { WriteResponseBase } from '@elastic/elasticsearch/lib/api/types';
 import { ConfigService } from '@nestjs/config';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { ConfigurationTypes, LogContext } from '@common/enums';
+import { LogContext } from '@common/enums';
 import { ELASTICSEARCH_CLIENT_PROVIDER } from '@constants/index';
 import { isElasticError, isElasticResponseError } from '../utils';
 import { GuidanceUsage } from './guidance.usage';
 import { GuidanceUsageDocument } from './guidance.usage.document';
 import { UserService } from '@domain/community/user/user.service';
 import { GuidanceEngineQueryResponse } from '@services/adapters/chat-guidance-adapter/dto/guidance.engine.dto.question.response';
+import { AlkemioConfig } from '@src/types';
 
 const isFromAlkemioTeam = (email: string) => /.*@alkem\.io/.test(email);
 
@@ -23,7 +24,7 @@ export class GuidanceReporterService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private readonly userService: UserService,
-    private readonly configService: ConfigService,
+    private readonly configService: ConfigService<AlkemioConfig, true>,
     @Inject(ELASTICSEARCH_CLIENT_PROVIDER)
     private readonly client: ElasticClient | undefined
   ) {
@@ -33,13 +34,13 @@ export class GuidanceReporterService {
         LogContext.CHAT_GUIDANCE_REPORTER
       );
     }
-    const elasticsearch = this.configService.get(
-      ConfigurationTypes.INTEGRATIONS
-    )?.elasticsearch;
+    const elasticsearch = this.configService.get('integrations.elasticsearch', {
+      infer: true,
+    });
 
-    this.environment = this.configService.get(
-      ConfigurationTypes.HOSTING
-    )?.environment;
+    this.environment = this.configService.get('hosting.environment', {
+      infer: true,
+    });
 
     this.indexName = elasticsearch?.indices?.guidance_usage;
   }

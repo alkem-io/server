@@ -294,9 +294,9 @@ export class CommunityService {
     community.parentCommunity = parentCommunity;
     // Also update the communityPolicy
     community.policy = this.communityPolicyService.inheritParentCredentials(
-        this.getCommunityPolicy(parentCommunity),
-        this.getCommunityPolicy(community)
-      );
+      this.getCommunityPolicy(parentCommunity),
+      this.getCommunityPolicy(community)
+    );
 
     return community;
   }
@@ -417,9 +417,11 @@ export class CommunityService {
     );
   }
 
-  public async getRootSpaceID(community: ICommunity): Promise<string> {
-    return await this.communityResolverService.getRootSpaceIDFromCommunityOrFail(
-      community
+  public async getLevelZeroSpaceIdForCommunity(
+    community: ICommunity
+  ): Promise<string> {
+    return await this.communityResolverService.getLevelZeroSpaceIdForCommunity(
+      community.id
     );
   }
 

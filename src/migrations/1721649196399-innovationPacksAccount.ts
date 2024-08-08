@@ -69,6 +69,12 @@ export class InnovationPacksAccount1721649196399 implements MigrationInterface {
         }
 
         const account = await this.getAccount(queryRunner, accountID);
+        if (!account) {
+          console.log(
+            `Account ${accountID} does not have a storage aggregator`
+          );
+          continue;
+        }
         const listedInStore = true;
         const searchVisibility = 'public';
         await queryRunner.query(
