@@ -40,12 +40,12 @@ export class CalendarService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  public async createCalendar(): Promise<ICalendar> {
+  public createCalendar(): ICalendar {
     const calendar: ICalendar = new Calendar();
     calendar.authorization = new AuthorizationPolicy();
     calendar.events = [];
 
-    return await this.calendarRepository.save(calendar);
+    return calendar;
   }
 
   async deleteCalendar(calendarID: string): Promise<ICalendar> {
