@@ -26,7 +26,7 @@
 # lowercase and may contain an explicit port.
 # Examples: matrix.org, localhost:8080
 #
-server_name: "alkemio.matrix.host"
+server_name: "matrix-acc.alkem.io"
 
 # When running as a daemon, the file to store the pid in
 #

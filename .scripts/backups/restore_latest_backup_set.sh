@@ -68,6 +68,9 @@ fi
 
 echo $HOMESERVER_FILE_PATH
 echo $SERVER_NAME
+echo "Server file path: $HOMESERVER_FILE_PATH"
+ls -l $HOMESERVER_FILE_PATH
+
 # Update the server_name in the YAML file using yq
 yq e ".server_name = \"$SERVER_NAME\"" -i $HOMESERVER_FILE_PATH
 
@@ -81,21 +84,21 @@ bash $SCRIPT_PATH mysql $ENV
 bash $SCRIPT_PATH postgres $ENV
 
 # Start services
-npm run start:services &
+# npm run start:services &
 
-# Wait for alkemio_dev_mysql container to be up
-while true; do
-    # Check the status of the container
-    CONTAINER_STATUS=$(docker inspect --format="{{.State.Status}}" alkemio_dev_mysql)
+# # Wait for alkemio_dev_mysql container to be up
+# while true; do
+#     # Check the status of the container
+#     CONTAINER_STATUS=$(docker inspect --format="{{.State.Status}}" alkemio_dev_mysql)
 
-    # If the container is running, break out of the loop
-    if [ "$CONTAINER_STATUS" == "running" ]; then
-        break
-    else
-        echo "Waiting for alkemio_dev_mysql to start..."
-        sleep 500
-    fi
-done
+#     # If the container is running, break out of the loop
+#     if [ "$CONTAINER_STATUS" == "running" ]; then
+#         break
+#     else
+#         echo "Waiting for alkemio_dev_mysql to start..."
+#         sleep 500
+#     fi
+# done
 
-# Once the container is running, start the application
-npm start
+# # Once the container is running, start the application
+# npm start
