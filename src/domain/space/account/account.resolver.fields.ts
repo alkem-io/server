@@ -70,12 +70,12 @@ export class AccountResolverFields {
   }
 
   @ResolveField('spaceID', () => String, {
-    nullable: false,
+    nullable: true,
     description: 'The ID for the root space for the Account .',
   })
-  async spaceID(@Parent() account: Account): Promise<string> {
+  async spaceID(@Parent() account: Account): Promise<string | undefined> {
     const space = await this.accountService.getRootSpace(account);
-    return space.id;
+    return space?.id;
   }
 
   @ResolveField('authorization', () => IAuthorizationPolicy, {
