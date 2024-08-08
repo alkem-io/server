@@ -383,20 +383,21 @@ export class CollaborationService {
       await this.namingService.getReservedNameIDsInCollaboration(
         collaboration.id
       );
-    if (calloutData.nameID && calloutData.nameID.length > 0) {
-      const nameIdAlreadyTaken = reservedNameIDs.includes(calloutData.nameID);
-      if (nameIdAlreadyTaken)
-        throw new ValidationException(
-          `Unable to create Callout: the provided nameID is already taken: ${calloutData.nameID}`,
-          LogContext.SPACES
-        );
-    } else {
-      calloutData.nameID =
-        this.namingService.createNameIdAvoidingReservedNameIDs(
-          `${calloutData.framing.profile.displayName}`,
-          reservedNameIDs
-        );
+    if (
+      calloutData.nameID &&
+      calloutData.nameID.length > 0 &&
+      reservedNameIDs.includes(calloutData.nameID)
+    ) {
+      throw new ValidationException(
+        `Unable to create Callout: the provided nameID is already taken: ${calloutData.nameID}`,
+        LogContext.SPACES
+      );
     }
+
+    calloutData.nameID = this.namingService.createNameIdAvoidingReservedNameIDs(
+      `${calloutData.framing.profile.displayName}`,
+      reservedNameIDs
+    );
 
     const tagsetTemplates = collaboration.tagsetTemplateSet.tagsetTemplates;
     const storageAggregator =
@@ -412,7 +413,7 @@ export class CollaborationService {
     // this has the effect of adding the callout to the collaboration
     callout.collaboration = collaboration;
 
-    return this.calloutService.save(callout);
+    return callout;
   }
 
   async getTimelineOrFail(collaborationID: string): Promise<ITimeline> {
