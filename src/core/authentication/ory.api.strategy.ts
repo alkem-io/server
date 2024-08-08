@@ -25,7 +25,10 @@ export class OryApiStrategy extends PassportStrategy(
   ) {
     super();
 
-    const kratosPublicBaseUrl = this.configService.get('identity.authentication.providers.ory.kratos_public_base_url_server', { infer: true });
+    const kratosPublicBaseUrl = this.configService.get(
+      'identity.authentication.providers.ory.kratos_public_base_url_server',
+      { infer: true }
+    );
 
     this.kratosClient = new FrontendApi(
       new Configuration({
@@ -35,7 +38,10 @@ export class OryApiStrategy extends PassportStrategy(
   }
 
   async validate(payload: IncomingMessage) {
-    const apiAccessEnabled = this.configService.get('identity.authentication.api_access_enabled', { infer: true });
+    const apiAccessEnabled = this.configService.get(
+      'identity.authentication.api_access_enabled',
+      { infer: true }
+    );
 
     if (!apiAccessEnabled) {
       throw new ApiRestrictedAccessException('API access is restricted!');

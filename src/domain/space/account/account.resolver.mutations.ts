@@ -78,7 +78,7 @@ export class AccountResolverMutations {
       agentInfo,
       authorizationPolicy,
       AuthorizationPrivilege.CREATE_SPACE,
-      `create account with space: ${accountData}`
+      `create account with hostID: ${accountData.hostID}`
     );
     let account = await this.accountService.createAccount(accountData);
 
@@ -106,6 +106,12 @@ export class AccountResolverMutations {
         community: true,
       },
     });
+    if (!rootSpace) {
+      throw new EntityNotInitializedException(
+        `Unable to load root space for account ${account.id}`,
+        LogContext.ACCOUNT
+      );
+    }
 
     await this.namingReporter.createOrUpdateName(
       rootSpace.id,

@@ -168,12 +168,11 @@ export class AccountService {
     spaceData.level = SpaceLevel.SPACE;
     spaceData.storageAggregatorParent = account.storageAggregator;
 
-    const space = await this.spaceService.createSpace(
+    account.space = await this.spaceService.createSpace(
       spaceData,
       account,
       agentInfo
     );
-    account.space = space;
     const savedAccount = await this.save(account);
 
     await this.spaceService.assignUserToRoles(account.space, agentInfo);
@@ -382,7 +381,7 @@ export class AccountService {
   async getRootSpace(
     accountInput: IAccount,
     options?: FindOneOptions<Space>
-  ): Promise<ISpace> {
+  ): Promise<ISpace | undefined> {
     if (accountInput.space && accountInput.space.profile) {
       return accountInput.space;
     }
@@ -394,12 +393,6 @@ export class AccountService {
         },
       },
     });
-    if (!account.space) {
-      throw new EntityNotFoundException(
-        `Unable to find space for account: ${accountInput.id}`,
-        LogContext.ACCOUNT
-      );
-    }
     return account.space;
   }
 

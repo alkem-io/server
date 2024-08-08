@@ -14,7 +14,10 @@ import { AlkemioConfig } from '@src/types';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService<AlkemioConfig, true>) => {
-        const rbmqConfig = configService.get('microservices.rabbitmq.connection', { infer: true });
+        const rbmqConfig = configService.get(
+          'microservices.rabbitmq.connection',
+          { infer: true }
+        );
 
         return {
           uri: `amqp://${rbmqConfig.user}:${rbmqConfig.password}@${rbmqConfig.host}:${rbmqConfig.port}`,

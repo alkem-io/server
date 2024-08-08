@@ -83,7 +83,7 @@ export class SpaceService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async createSpace(
+  public async createSpace(
     spaceData: CreateSpaceInput,
     account: IAccount,
     agentInfo?: AgentInfo
@@ -120,6 +120,21 @@ export class SpaceService {
     // default to demo space
     space.visibility = SpaceVisibility.ACTIVE;
 
+    const initializedSpace = await this.initialise(
+      space,
+      spaceData,
+      account,
+      agentInfo
+    );
+    return this.save(initializedSpace);
+  }
+
+  private async initialise(
+    space: ISpace,
+    spaceData: CreateSpaceInput,
+    account: IAccount,
+    agentInfo: AgentInfo | undefined
+  ): Promise<ISpace> {
     space.authorization = new AuthorizationPolicy();
     space.account = account;
     space.settingsStr = this.spaceSettingsService.serializeSettings(
@@ -156,10 +171,7 @@ export class SpaceService {
       storageAggregator
     );
 
-    if (!spaceData.context) {
-      spaceData.context = {};
-    }
-    space.context = await this.contextService.createContext(spaceData.context);
+    space.context = this.contextService.createContext(spaceData.context);
 
     const profileType = this.spaceDefaultsService.getProfileType(space.level);
     space.profile = await this.profileService.createProfile(
@@ -173,18 +185,9 @@ export class SpaceService {
     });
 
     // add the visuals
-    await this.profileService.addVisualOnProfile(
-      space.profile,
-      VisualType.AVATAR
-    );
-    await this.profileService.addVisualOnProfile(
-      space.profile,
-      VisualType.BANNER
-    );
-    await this.profileService.addVisualOnProfile(
-      space.profile,
-      VisualType.CARD
-    );
+    this.profileService.addVisualOnProfile(space.profile, VisualType.AVATAR);
+    this.profileService.addVisualOnProfile(space.profile, VisualType.BANNER);
+    this.profileService.addVisualOnProfile(space.profile, VisualType.CARD);
 
     //// Collaboration
 
@@ -211,12 +214,11 @@ export class SpaceService {
     const defaultCallouts = this.spaceDefaultsService.getDefaultCallouts(
       space.type
     );
-    const calloutInputs =
-      await this.spaceDefaultsService.getCreateCalloutInputs(
-        defaultCallouts,
-        calloutInputsFromCollaborationTemplate,
-        spaceData.collaborationData
-      );
+    const calloutInputs = this.spaceDefaultsService.getCreateCalloutInputs(
+      defaultCallouts,
+      calloutInputsFromCollaborationTemplate,
+      spaceData.collaborationData
+    );
     space.collaboration = await this.collaborationService.addDefaultCallouts(
       space.collaboration,
       calloutInputs,
@@ -240,12 +242,12 @@ export class SpaceService {
     // set immediate community parent + resourceID
     space.community.parentID = space.id;
     space.community.policy =
-      await this.communityService.updateCommunityPolicyResourceID(
+      this.communityService.updateCommunityPolicyResourceID(
         space.community,
         space.id
       );
 
-    return await this.save(space);
+    return space;
   }
 
   async save(space: ISpace): Promise<ISpace> {
@@ -777,7 +779,8 @@ export class SpaceService {
       agentInfo
     );
 
-    subspace = await this.addSubspaceToSpace(space, subspace);
+    subspace = this.addSubspaceToSpace(space, subspace);
+    subspace = await this.save(subspace);
 
     // Before assigning roles in the subspace check that the user is a member
     if (agentInfo) {
@@ -794,24 +797,25 @@ export class SpaceService {
     return subspace;
   }
 
-  async addSubspaceToSpace(space: ISpace, subspace: ISpace): Promise<ISpace> {
-    if (!space.community)
+  public addSubspaceToSpace(space: ISpace, subspace: ISpace): ISpace {
+    if (!space.community) {
       throw new ValidationException(
         `Unable to add Subspace to space, missing relations: ${space.id}`,
         LogContext.SPACES
       );
+    }
 
     // Set the parent space directly, avoiding saving the whole parent
     subspace.parentSpace = space;
     subspace.levelZeroSpaceID = space.levelZeroSpaceID;
 
     // Finally set the community relationship
-    await this.setCommunityHierarchyForSubspace(
+    subspace.community = this.setCommunityHierarchyForSubspace(
       space.community,
       subspace.community
     );
 
-    return await this.save(subspace);
+    return subspace;
   }
 
   async getSubspace(subspaceID: string, space: ISpace): Promise<ISpace> {
@@ -1005,10 +1009,10 @@ export class SpaceService {
     return this.spaceSettingsService.getSettings(space.settingsStr);
   }
 
-  public async setCommunityHierarchyForSubspace(
+  public setCommunityHierarchyForSubspace(
     parentCommunity: ICommunity,
     childCommunity: ICommunity | undefined
-  ) {
+  ): ICommunity {
     if (!childCommunity) {
       throw new RelationshipNotFoundException(
         `Unable to set subspace community relationship, child community not provied: ${parentCommunity.id}`,
@@ -1016,7 +1020,7 @@ export class SpaceService {
       );
     }
     // Finally set the community relationship
-    await this.communityService.setParentCommunity(
+    return this.communityService.setParentCommunity(
       childCommunity,
       parentCommunity
     );

@@ -83,7 +83,7 @@ export class InnovationFlowService {
       storageAggregator
     );
 
-    await this.profileService.addVisualOnProfile(
+    this.profileService.addVisualOnProfile(
       innovationFlow.profile,
       VisualType.CARD
     );
@@ -95,7 +95,7 @@ export class InnovationFlowService {
     innovationFlow.states =
       this.innovationFlowStatesService.serializeStates(convertedStates);
 
-    return await this.innovationFlowRepository.save(innovationFlow);
+    return innovationFlow;
   }
 
   async save(innovationFlow: IInnovationFlow): Promise<IInnovationFlow> {

@@ -32,17 +32,21 @@ export class VisualService {
     private visualRepository: Repository<Visual>
   ) {}
 
-  async createVisual(
+  public createVisual(
     visualInput: CreateVisualInput,
     initialUri?: string
-  ): Promise<IVisual> {
+  ): IVisual {
     const visual: IVisual = Visual.create({
       ...visualInput,
       uri: initialUri ?? '',
     });
+
     visual.authorization = new AuthorizationPolicy();
-    if (initialUri) visual.uri = initialUri;
-    await this.visualRepository.save(visual);
+
+    if (initialUri) {
+      visual.uri = initialUri;
+    }
+
     return visual;
   }
 
@@ -178,8 +182,8 @@ export class VisualService {
       );
   }
 
-  async createVisualBanner(uri?: string): Promise<IVisual> {
-    return await this.createVisual(
+  public createVisualBanner(uri?: string): IVisual {
+    return this.createVisual(
       {
         name: 'banner',
         minWidth: 384,
@@ -192,8 +196,8 @@ export class VisualService {
     );
   }
 
-  async createVisualCard(uri?: string): Promise<IVisual> {
-    return await this.createVisual(
+  public createVisualCard(uri?: string): IVisual {
+    return this.createVisual(
       {
         name: 'card',
         minWidth: 307,
@@ -206,8 +210,8 @@ export class VisualService {
     );
   }
 
-  async createVisualBannerWide(uri?: string): Promise<IVisual> {
-    return await this.createVisual(
+  public createVisualBannerWide(uri?: string): IVisual {
+    return this.createVisual(
       {
         name: 'bannerWide',
         minWidth: 640,
@@ -220,8 +224,8 @@ export class VisualService {
     );
   }
 
-  async createVisualAvatar(): Promise<IVisual> {
-    return await this.createVisual({
+  public createVisualAvatar(): IVisual {
+    return this.createVisual({
       name: 'avatar',
       minWidth: avatarMinImageSize,
       maxWidth: avatarMaxImageSize,

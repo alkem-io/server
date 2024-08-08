@@ -5,10 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { Client as ElasticClient } from '@elastic/elasticsearch';
 import { ELASTICSEARCH_CLIENT_PROVIDER } from '@constants/index';
 import { IBaseAlkemio } from '@domain/common/entity/base-entity';
-import {
-  AlkemioErrorStatus,
-  LogContext,
-} from '@common/enums';
+import { AlkemioErrorStatus, LogContext } from '@common/enums';
 import { BaseException } from '@common/exceptions/base.exception';
 import { ISearchResult, SearchInput } from '../../dto';
 import { validateSearchTerms, validateSearchParameters } from '../../util';

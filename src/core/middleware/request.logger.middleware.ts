@@ -19,11 +19,17 @@ export class RequestLoggerMiddleware implements NestMiddleware {
     private readonly configService: ConfigService<AlkemioConfig, true>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {
-    const reqLoggingConfig = this.configService.get('monitoring.logging.requests', { infer: true });
+    const reqLoggingConfig = this.configService.get(
+      'monitoring.logging.requests',
+      { infer: true }
+    );
     this.requestFullLogging = reqLoggingConfig?.full_logging_enabled;
     this.requestHeadersLogging = reqLoggingConfig?.headers_logging_enabled;
 
-    const resLoggingConfig = this.configService.get('monitoring.logging.responses', { infer: true });
+    const resLoggingConfig = this.configService.get(
+      'monitoring.logging.responses',
+      { infer: true }
+    );
     this.responseHeadersLogging = resLoggingConfig?.headers_logging_enabled;
   }
 

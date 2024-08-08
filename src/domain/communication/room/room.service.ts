@@ -44,7 +44,7 @@ export class RoomService {
     room.externalRoomID = await this.initializeCommunicationRoom(room);
     room.messagesCount = 0;
     room.vcInteractions = [];
-    return await this.roomRepository.save(room);
+    return room;
   }
 
   async getRoomOrFail(
