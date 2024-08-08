@@ -112,7 +112,7 @@ export class AccountHostService {
     return null;
   }
 
-  public async areHostedAccountsEmpty(
+  public async areResourcesInAccount(
     contributor: IContributor
   ): Promise<boolean> {
     const hostedAccounts =
@@ -141,10 +141,10 @@ export class AccountHostService {
         account.innovationPacks.length > 0 ||
         account.innovationHubs.length > 0
       ) {
-        return false;
+        return true;
       }
     }
-    return true;
+    return false;
   }
 
   public async getAccountsHostedByContributor(
