@@ -27,7 +27,10 @@ export class WinstonConfigService {
   constructor(private configService: ConfigService<AlkemioConfig, true>) {}
 
   async createWinstonModuleOptions() {
-    const consoleEnabled: boolean = this.configService.get('monitoring.logging.console_logging_enabled', { infer: true });
+    const consoleEnabled: boolean = this.configService.get(
+      'monitoring.logging.console_logging_enabled',
+      { infer: true }
+    );
 
     const transports: any[] = [
       new winston.transports.Console({
@@ -38,12 +41,16 @@ export class WinstonConfigService {
             : consoleLoggingStandardFormat)
         ),
         level: this.configService
-          .get('monitoring.logging.level', { infer: true }).toLowerCase(),
+          .get('monitoring.logging.level', { infer: true })
+          .toLowerCase(),
         silent: !consoleEnabled,
       }),
     ];
 
-    const contextToFileConfig = this.configService.get('monitoring.logging.context_to_file', { infer: true });
+    const contextToFileConfig = this.configService.get(
+      'monitoring.logging.context_to_file',
+      { infer: true }
+    );
     if (contextToFileConfig.enabled) {
       const filename = contextToFileConfig.filename;
 
@@ -78,7 +85,8 @@ export class WinstonConfigService {
       const fileTransportOptions: FileTransportOptions = {
         format: myFormat,
         level: this.configService
-          .get('monitoring.logging.level', { infer: true }).toLowerCase(),
+          .get('monitoring.logging.level', { infer: true })
+          .toLowerCase(),
         silent: false,
         filename: filename,
       };

@@ -6,10 +6,7 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { WhiteboardService } from '@domain/common/whiteboard';
 import { UserService } from '@domain/community/user/user.service';
 import { IVerifiedCredential } from '@domain/agent/verified-credential/verified.credential.interface';
-import {
-  AuthorizationPrivilege,
-  LogContext,
-} from '@common/enums';
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { AuthenticationService } from '@core/authentication/authentication.service';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
@@ -40,7 +37,10 @@ export class WhiteboardIntegrationService {
     private readonly activityAdapter: ActivityAdapter,
     private readonly configService: ConfigService<AlkemioConfig, true>
   ) {
-    this.maxCollaboratorsInRoom = this.configService.get('collaboration.whiteboards.max_collaborators_in_room', { infer: true });
+    this.maxCollaboratorsInRoom = this.configService.get(
+      'collaboration.whiteboards.max_collaborators_in_room',
+      { infer: true }
+    );
   }
 
   public async accessGranted(data: AccessGrantedInputData): Promise<boolean> {

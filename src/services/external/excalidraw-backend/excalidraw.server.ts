@@ -128,7 +128,10 @@ export class ExcalidrawServer {
   }
 
   private async init() {
-    const kratosPublicBaseUrl = this.configService.get('identity.authentication.providers.ory.kratos_public_base_url_server', { infer: true });
+    const kratosPublicBaseUrl = this.configService.get(
+      'identity.authentication.providers.ory.kratos_public_base_url_server',
+      { infer: true }
+    );
 
     const kratosClient = new FrontendApi(
       new Configuration({

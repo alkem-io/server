@@ -9,7 +9,9 @@ import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { SpaceDefaults } from './space.defaults.entity';
 import { InnovationFlowStatesService } from '@domain/collaboration/innovation-flow-states/innovaton.flow.state.service';
-import { InnovationFlowTemplateService } from '@domain/template/innovation-flow-template/innovation.flow.template.service';
+import {
+  InnovationFlowTemplateService,
+} from '@domain/template/innovation-flow-template/innovation.flow.template.service';
 import { ITemplatesSet } from '@domain/template/templates-set';
 import { TemplatesSetService } from '@domain/template/templates-set/templates.set.service';
 import { IInnovationFlowTemplate } from '@domain/template/innovation-flow-template/innovation.flow.template.interface';
@@ -33,7 +35,9 @@ import { SpaceLevel } from '@common/enums/space.level';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { SpaceType } from '@common/enums/space.type';
 import { spaceDefaultsCalloutGroupsChallenge } from './definitions/challenge/space.defaults.callout.groups.challenge';
-import { spaceDefaultsCalloutGroupsOpportunity } from './definitions/oppportunity/space.defaults.callout.groups.opportunity';
+import {
+  spaceDefaultsCalloutGroupsOpportunity,
+} from './definitions/oppportunity/space.defaults.callout.groups.opportunity';
 import { spaceDefaultsCalloutGroupsRootSpace } from './definitions/root-space/space.defaults.callout.groups.root.space';
 import { spaceDefaultsCalloutGroupsKnowledge } from './definitions/knowledge/space.defaults.callout.groups.knowledge';
 import { spaceDefaultsCalloutsOpportunity } from './definitions/oppportunity/space.defaults.callouts.opportunity';
@@ -44,15 +48,27 @@ import { spaceDefaultsSettingsRootSpace } from './definitions/root-space/space.d
 import { spaceDefaultsSettingsOpportunity } from './definitions/oppportunity/space.defaults.settings.opportunity';
 import { spaceDefaultsSettingsChallenge } from './definitions/challenge/space.defaults.settings.challenge';
 import { spaceDefaultsSettingsKnowledge } from './definitions/knowledge/space.defaults.settings.knowledge';
-import { spaceDefaultsInnovationFlowStatesChallenge } from './definitions/challenge/space.defaults.innovation.flow.challenge';
-import { spaceDefaultsInnovationFlowStatesOpportunity } from './definitions/oppportunity/space.defaults.innovation.flow.opportunity';
-import { spaceDefaultsInnovationFlowStatesRootSpace } from './definitions/root-space/space.defaults.innovation.flow.root.space';
-import { spaceDefaultsInnovationFlowStatesKnowledge } from './definitions/knowledge/space.defaults.innovation.flow.knowledge';
+import {
+  spaceDefaultsInnovationFlowStatesChallenge,
+} from './definitions/challenge/space.defaults.innovation.flow.challenge';
+import {
+  spaceDefaultsInnovationFlowStatesOpportunity,
+} from './definitions/oppportunity/space.defaults.innovation.flow.opportunity';
+import {
+  spaceDefaultsInnovationFlowStatesRootSpace,
+} from './definitions/root-space/space.defaults.innovation.flow.root.space';
+import {
+  spaceDefaultsInnovationFlowStatesKnowledge,
+} from './definitions/knowledge/space.defaults.innovation.flow.knowledge';
 import { IInnovationFlowState } from '@domain/collaboration/innovation-flow-states/innovation.flow.state.interface';
-import { spaceDefaultsCalloutGroupsBlankSlate } from './definitions/blank-slate/space.defaults.callout.groups.blank.slate';
+import {
+  spaceDefaultsCalloutGroupsBlankSlate,
+} from './definitions/blank-slate/space.defaults.callout.groups.blank.slate';
 import { spaceDefaultsCalloutsBlankSlate } from './definitions/blank-slate/space.defaults.callouts.blank.slate';
 import { spaceDefaultsSettingsBlankSlate } from './definitions/blank-slate/space.defaults.settings.blank.slate';
-import { spaceDefaultsInnovationFlowStatesBlankSlate } from './definitions/blank-slate/space.defaults.innovation.flow.blank.slate';
+import {
+  spaceDefaultsInnovationFlowStatesBlankSlate,
+} from './definitions/blank-slate/space.defaults.innovation.flow.blank.slate';
 
 @Injectable()
 export class SpaceDefaultsService {
@@ -285,14 +301,13 @@ export class SpaceDefaultsService {
           }
         );
       // Note: no profile currently present, so use the one from the template for now
-      const result: CreateInnovationFlowInput = {
+      return {
         profile: {
           displayName: template.profile.displayName,
           description: template.profile.description,
         },
         states: this.innovationFlowStatesService.getStates(template.states),
       };
-      return result;
     }
 
     // If no argument is provided, then use the default template for the space, if set
@@ -335,11 +350,11 @@ export class SpaceDefaultsService {
     return result;
   }
 
-  public async getCreateCalloutInputs(
+  public getCreateCalloutInputs(
     defaultCallouts: CreateCalloutInput[],
     calloutsFromCollaborationTemplateInput: CreateCalloutInput[],
     collaborationData?: CreateCollaborationInput
-  ): Promise<CreateCalloutInput[]> {
+  ): CreateCalloutInput[] {
     let calloutInputs: CreateCalloutInput[] = [];
     const addDefaultCallouts = collaborationData?.addDefaultCallouts;
     if (addDefaultCallouts === undefined || addDefaultCallouts) {

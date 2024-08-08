@@ -8,7 +8,9 @@ export const elasticSearchClientFactory = async (
   logger: LoggerService,
   configService: ConfigService<AlkemioConfig, true>
 ): Promise<Client | undefined> => {
-  const elasticsearch = configService.get('integrations.elasticsearch', { infer: true });
+  const elasticsearch = configService.get('integrations.elasticsearch', {
+    infer: true,
+  });
 
   const { host, retries, timeout, api_key, tls } = elasticsearch;
   const rejectUnauthorized = tls.rejectUnauthorized ?? false;

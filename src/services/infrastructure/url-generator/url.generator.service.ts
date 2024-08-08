@@ -57,7 +57,9 @@ export class UrlGeneratorService {
     private readonly logger: LoggerService,
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache
   ) {
-    this.endpoint_cluster = this.configService.get('hosting.endpoint_cluster', { infer: true });
+    this.endpoint_cluster = this.configService.get('hosting.endpoint_cluster', {
+      infer: true,
+    });
   }
 
   private getUrlIdCacheKey(entityId: string): string {

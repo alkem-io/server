@@ -69,10 +69,13 @@ export class AgentService {
     @Inject(SUBSCRIPTION_PROFILE_VERIFIED_CREDENTIAL)
     private subscriptionVerifiedCredentials: PubSubEngine
   ) {
-    this.cache_ttl = this.configService.get('identity.authentication.cache_ttl', { infer: true });
+    this.cache_ttl = this.configService.get(
+      'identity.authentication.cache_ttl',
+      { infer: true }
+    );
   }
 
-  async createAgent(inputData: CreateAgentInput): Promise<IAgent> {
+  public async createAgent(inputData: CreateAgentInput): Promise<IAgent> {
     const agent: IAgent = Agent.create(inputData);
     agent.credentials = [];
     agent.authorization = new AuthorizationPolicy();
@@ -80,10 +83,10 @@ export class AgentService {
     const ssiEnabled = this.configService.get('ssi.enabled', { infer: true });
 
     if (ssiEnabled) {
-      return await this.createDidOnAgent(agent);
+      return this.createDidOnAgent(agent);
     }
 
-    return await this.saveAgent(agent);
+    return agent;
   }
 
   async getAgentOrFail(
@@ -255,7 +258,8 @@ export class AgentService {
     agent.password = Math.random().toString(36).substr(2, 10);
 
     agent.did = await this.walletManagerAdapter.createIdentity(agent.password);
-    return await this.saveAgent(agent);
+
+    return agent;
   }
 
   async getVerifiedCredentials(
@@ -550,7 +554,10 @@ export class AgentService {
   }
 
   validateTrustedIssuerOrFail(vcName: string, vcToBeStored: any) {
-    const trustedIssuerValidationEnabled = this.configService.get('ssi.issuer_validation_enabled', { infer: true });
+    const trustedIssuerValidationEnabled = this.configService.get(
+      'ssi.issuer_validation_enabled',
+      { infer: true }
+    );
     if (!trustedIssuerValidationEnabled) return;
 
     const trustedIssuers =

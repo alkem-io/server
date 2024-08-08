@@ -34,9 +34,13 @@ export class GuidanceReporterService {
         LogContext.CHAT_GUIDANCE_REPORTER
       );
     }
-    const elasticsearch = this.configService.get('integrations.elasticsearch', { infer: true });
+    const elasticsearch = this.configService.get('integrations.elasticsearch', {
+      infer: true,
+    });
 
-    this.environment = this.configService.get('hosting.environment', { infer: true });
+    this.environment = this.configService.get('hosting.environment', {
+      infer: true,
+    });
 
     this.indexName = elasticsearch?.indices?.guidance_usage;
   }

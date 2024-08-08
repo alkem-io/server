@@ -21,9 +21,13 @@ export class NameReporterService {
     @Inject(ELASTICSEARCH_CLIENT_PROVIDER)
     private readonly client: ElasticClient | undefined
   ) {
-    const elasticsearch = this.configService.get('integrations.elasticsearch', { infer: true });
+    const elasticsearch = this.configService.get('integrations.elasticsearch', {
+      infer: true,
+    });
 
-    this.environment = this.configService.get('hosting.environment', { infer: true });
+    this.environment = this.configService.get('hosting.environment', {
+      infer: true,
+    });
 
     const { indices, policies } = elasticsearch;
     this.indexName = indices?.namings;

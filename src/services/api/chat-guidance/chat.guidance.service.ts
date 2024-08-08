@@ -40,6 +40,8 @@ export class ChatGuidanceService {
   }
 
   public isGuidanceEngineEnabled(): boolean {
-    return this.configService.get('platform.guidance_engine.enabled', { infer: true })
+    return this.configService.get('platform.guidance_engine.enabled', {
+      infer: true,
+    });
   }
 }

@@ -162,16 +162,16 @@ describe('GeoLocationService', () => {
     // incrementCacheMetadata
     expect(spySet).toHaveBeenNthCalledWith(
       1,
-        "geo-service-call-limit",
-        { start: 1, calls: 1 },
-        { ttl: 1 }
+      'geo-service-call-limit',
+      { start: 1, calls: 1 },
+      { ttl: 1 }
     );
     // set data in cache
     expect(spySet).toHaveBeenNthCalledWith(
       2,
-        'ip',
-        { latitude: 1, longitude: 2 },
-        { ttl: 1 },
+      'ip',
+      { latitude: 1, longitude: 2 },
+      { ttl: 1 }
     );
     expect(result).toStrictEqual({
       latitude: 1,
