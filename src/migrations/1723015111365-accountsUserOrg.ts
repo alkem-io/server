@@ -8,10 +8,10 @@ export class AccountsUserOrg1723015111365 implements MigrationInterface {
     // remove accountId for non-level zero spaces, otherwise they will also be updated + show up directly
     // as children of an account
     await queryRunner.query(
-      `UPDATE \`space\` SET accountId = '' WHERE level = '1'`
+      `UPDATE \`space\` SET accountId = null WHERE level = '1'`
     );
     await queryRunner.query(
-      `UPDATE \`space\` SET accountId = '' WHERE level = '2'`
+      `UPDATE \`space\` SET accountId = null WHERE level = '2'`
     );
     await this.accountsMigrationContributor(queryRunner, 'user');
     await this.accountsMigrationContributor(queryRunner, 'organization');

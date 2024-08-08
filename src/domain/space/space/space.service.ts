@@ -1143,7 +1143,11 @@ export class SpaceService {
   async getDefaultsOrFail(rootSpaceID: string): Promise<ISpaceDefaults> {
     const levelZeroSpaceWithDefaults = await this.getSpaceOrFail(rootSpaceID, {
       relations: {
-        defaults: true,
+        defaults: {
+          innovationFlowTemplate: {
+            profile: true,
+          },
+        },
       },
     });
     const defaults = levelZeroSpaceWithDefaults.defaults;
