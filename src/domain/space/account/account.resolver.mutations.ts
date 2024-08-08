@@ -29,6 +29,8 @@ import { InnovationPackAuthorizationService } from '@library/innovation-pack/inn
 import { InnovationPackService } from '@library/innovation-pack/innovaton.pack.service';
 import { SpaceAuthorizationService } from '../space/space.service.authorization';
 import { ISpace } from '../space/space.interface';
+import { RelationshipNotFoundException } from '@common/exceptions';
+import { LogContext } from '@common/enums';
 
 @Resolver()
 export class AccountResolverMutations {
@@ -78,16 +80,27 @@ export class AccountResolverMutations {
 
     space = await this.spaceService.save(space);
 
+    space = await this.spaceService.getSpaceOrFail(space.id, {
+      relations: {
+        profile: true,
+        community: true,
+      },
+    });
+    if (!space.profile || !space.community) {
+      throw new RelationshipNotFoundException(
+        `Unable to load space profile or community: ${space.id}`,
+        LogContext.ACCOUNT
+      );
+    }
+
     await this.namingReporter.createOrUpdateName(
       space.id,
       space.profile.displayName
     );
 
-    const community = await this.spaceService.getCommunity(space.id);
-
     const notificationInput: NotificationInputSpaceCreated = {
       triggeredBy: agentInfo.userID,
-      community: community,
+      community: space.community,
       account: account,
     };
     await this.notificationAdapter.spaceCreated(notificationInput);
