@@ -3,8 +3,8 @@ import { CqrsModule, EventBus } from '@nestjs/cqrs';
 import { Publisher } from './publisher';
 import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { ConfigurationTypes } from '@common/enums';
 import { IngestSpace } from './commands';
+import { AlkemioConfig } from '@src/types';
 
 @Global()
 @Module({
@@ -13,9 +13,12 @@ import { IngestSpace } from './commands';
     RabbitMQModule.forRootAsync(RabbitMQModule, {
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => {
-        const rbmqConfig = configService.get(ConfigurationTypes.MICROSERVICES)
-          .rabbitmq.connection;
+      useFactory: (configService: ConfigService<AlkemioConfig, true>) => {
+        const rbmqConfig = configService.get(
+          'microservices.rabbitmq.connection',
+          { infer: true }
+        );
+
         return {
           uri: `amqp://${rbmqConfig.user}:${rbmqConfig.password}@${rbmqConfig.host}:${rbmqConfig.port}`,
           connectionInitOptions: { wait: false },

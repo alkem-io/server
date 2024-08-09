@@ -22,6 +22,7 @@ import { SearchEntityTypes } from '../../search.entity.types';
 import { ExcalidrawContent, isExcalidrawTextElement } from '@common/interfaces';
 import { TaskService } from '@services/task';
 import { Task } from '@services/task/task.interface';
+import { AlkemioConfig } from '@src/types';
 
 const profileRelationOptions = {
   location: true,
@@ -51,6 +52,7 @@ const journeyFindOptions: FindManyOptions<Space> = {
   select: {
     id: true,
     level: true,
+    visibility: true,
     context: {
       vision: true,
       impact: true,
@@ -101,7 +103,7 @@ export class SearchIngestService {
     private elasticClient: ElasticClient | undefined,
     @InjectEntityManager() private entityManager: EntityManager,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService,
-    private configService: ConfigService,
+    private configService: ConfigService<AlkemioConfig, true>,
     private taskService: TaskService
   ) {
     this.indexPattern = getIndexPattern(this.configService);

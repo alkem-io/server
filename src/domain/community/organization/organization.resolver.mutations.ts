@@ -51,7 +51,7 @@ export class OrganizationResolverMutations {
       agentInfo,
       authorizationPolicy,
       AuthorizationPrivilege.CREATE_ORGANIZATION,
-      `create Organization: ${organizationData.nameID}`
+      `create Organization: ${organizationData.profileData.displayName}`
     );
     const organization = await this.organizationService.createOrganization(
       organizationData,
@@ -79,7 +79,7 @@ export class OrganizationResolverMutations {
       agentInfo,
       organization.authorization,
       AuthorizationPrivilege.CREATE,
-      `orgCreateGroup: ${organization.nameID}`
+      `orgCreateGroup: ${organization.id}`
     );
 
     const group = await this.organizationService.createGroup(groupData);
@@ -105,7 +105,7 @@ export class OrganizationResolverMutations {
       agentInfo,
       organization.authorization,
       AuthorizationPrivilege.UPDATE,
-      `orgUpdate: ${organization.nameID}`
+      `orgUpdate: ${organization.id}`
     );
 
     return await this.organizationService.updateOrganization(organizationData);
@@ -126,7 +126,7 @@ export class OrganizationResolverMutations {
       agentInfo,
       organization.authorization,
       AuthorizationPrivilege.DELETE,
-      `deleteOrg: ${organization.nameID}`
+      `deleteOrg: ${organization.id}`
     );
     return await this.organizationService.deleteOrganization(deleteData);
   }

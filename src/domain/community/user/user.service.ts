@@ -143,7 +143,7 @@ export class UserService {
         user.lastName
       );
     }
-    await this.profileService.addVisualOnProfile(
+    this.profileService.addVisualOnProfile(
       user.profile,
       VisualType.AVATAR,
       avatarURL
@@ -162,7 +162,7 @@ export class UserService {
     });
 
     this.logger.verbose?.(
-      `Created a new user with nameID: ${user.nameID}`,
+      `Created a new user with email: ${user.email}`,
       LogContext.COMMUNITY
     );
 
@@ -467,7 +467,7 @@ export class UserService {
 
     if (!user.preferenceSet) {
       throw new EntityNotInitializedException(
-        `User preferences not initialized or not found for user with nameID: ${user.nameID}`,
+        `User preferences not initialized or not found for user with nameID: ${user.id}`,
         LogContext.COMMUNITY
       );
     }
@@ -860,7 +860,7 @@ export class UserService {
     const profile = userWithProfile.profile;
     if (!profile)
       throw new RelationshipNotFoundException(
-        `Unable to load Profile for User: ${user.nameID} `,
+        `Unable to load Profile for User: ${user.id} `,
         LogContext.COMMUNITY
       );
 

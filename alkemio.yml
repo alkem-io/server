@@ -278,6 +278,9 @@ communications:
 ## storage ##
 # Alkemio uses multiple types of persistent storage, including SQL database and IPFS.
 storage:
+  file:
+    # 20MB
+    max_file_size: 2097152
   # MySQL database configuration for usage by the Alkemio Server.
   # The authentication method used by Alkemio Server is MySQL Native Password.
   # Note: both schema / database name are used for configuration and they need to have the same value.

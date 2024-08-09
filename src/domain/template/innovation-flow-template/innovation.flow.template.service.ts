@@ -60,11 +60,13 @@ export class InnovationFlowTemplateService {
         ...options,
       });
 
-    if (!innovationFlowTemplate)
+    if (!innovationFlowTemplate) {
       throw new EntityNotFoundException(
         `Not able to locate InnovationFlowTemplate with the specified ID: ${innovationFlowTemplateID}`,
         LogContext.COMMUNICATION
       );
+    }
+
     return innovationFlowTemplate;
   }
 

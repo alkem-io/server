@@ -40,11 +40,8 @@ export class PostService {
       ProfileType.POST,
       storageAggregator
     );
-    await this.profileService.addVisualOnProfile(
-      post.profile,
-      VisualType.BANNER
-    );
-    await this.profileService.addVisualOnProfile(post.profile, VisualType.CARD);
+    this.profileService.addVisualOnProfile(post.profile, VisualType.BANNER);
+    this.profileService.addVisualOnProfile(post.profile, VisualType.CARD);
     await this.profileService.addTagsetOnProfile(post.profile, {
       name: TagsetReservedName.DEFAULT,
       tags: postInput.tags || [],
@@ -57,7 +54,7 @@ export class PostService {
       RoomType.POST
     );
 
-    return await this.savePost(post);
+    return post;
   }
 
   public async deletePost(postId: string): Promise<IPost> {

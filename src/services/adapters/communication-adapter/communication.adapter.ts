@@ -1,6 +1,6 @@
 import { firstValueFrom, TimeoutError, Observable } from 'rxjs';
 import { catchError, retry, timeout } from 'rxjs/operators';
-import { ConfigurationTypes, LogContext } from '@common/enums';
+import { LogContext } from '@common/enums';
 import { MatrixEntityNotFoundException } from '@common/exceptions';
 import { DirectRoomResult } from '@domain/community/user/dto/user.dto.communication.room.direct.result';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
@@ -65,6 +65,7 @@ import { CommunicationRemoveRectionToMessageInput } from './dto/communication.dt
 import { CommunicationRoomResult } from '@services/adapters/communication-adapter/dto/communication.dto.room.result';
 import { IMessageReaction } from '@domain/communication/message.reaction/message.reaction.interface';
 import { RoomResult } from '@alkemio/matrix-adapter-lib/dist/types/room';
+import { AlkemioConfig } from '@src/types';
 
 @Injectable()
 export class CommunicationAdapter {
@@ -75,12 +76,10 @@ export class CommunicationAdapter {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    private configService: ConfigService,
+    private configService: ConfigService<AlkemioConfig, true>,
     @Inject(MATRIX_ADAPTER_SERVICE) private matrixAdapterClient: ClientProxy
   ) {
-    const communications = this.configService.get(
-      ConfigurationTypes.COMMUNICATIONS
-    );
+    const communications = this.configService.get('communications');
     this.enabled = communications?.enabled;
     this.timeout = +communications?.matrix?.connection_timeout * 1000;
     this.retries = +communications?.matrix?.connection_retries;
@@ -104,9 +103,8 @@ export class CommunicationAdapter {
     );
 
     try {
-      const responseData = await firstValueFrom<RoomSendMessageResponsePayload>(
-        response
-      );
+      const responseData =
+        await firstValueFrom<RoomSendMessageResponsePayload>(response);
       this.logResponsePayload(eventType, responseData, eventID);
 
       const message = responseData.message;
@@ -153,9 +151,8 @@ export class CommunicationAdapter {
     );
 
     try {
-      const responseData = await firstValueFrom<RoomSendMessageResponsePayload>(
-        response
-      );
+      const responseData =
+        await firstValueFrom<RoomSendMessageResponsePayload>(response);
       this.logResponsePayload(eventType, responseData, eventID);
 
       const message = responseData.message;
@@ -278,9 +275,8 @@ export class CommunicationAdapter {
     );
 
     try {
-      const responseData = await firstValueFrom<RoomDetailsResponsePayload>(
-        response
-      );
+      const responseData =
+        await firstValueFrom<RoomDetailsResponsePayload>(response);
       this.logResponsePayload(eventType, responseData, eventID);
       return this.convertRoomDetailsResponseToCommunicationRoomResult(
         responseData
@@ -443,9 +439,8 @@ export class CommunicationAdapter {
     );
 
     try {
-      const responseData = await firstValueFrom<RegisterNewUserResponsePayload>(
-        response
-      );
+      const responseData =
+        await firstValueFrom<RegisterNewUserResponsePayload>(response);
       this.logResponsePayload(eventType, responseData, eventID);
       return responseData.userID;
     } catch (err: any) {
@@ -478,9 +473,8 @@ export class CommunicationAdapter {
     );
 
     try {
-      const responseData = await firstValueFrom<CreateRoomResponsePayload>(
-        response
-      );
+      const responseData =
+        await firstValueFrom<CreateRoomResponsePayload>(response);
       this.logResponsePayload(eventType, responseData, eventID);
       this.logger.verbose?.(
         `Created community room:'${responseData.roomID}'`,
@@ -517,9 +511,8 @@ export class CommunicationAdapter {
     );
 
     try {
-      const responseData = await firstValueFrom<AddUserToRoomsResponsePayload>(
-        response
-      );
+      const responseData =
+        await firstValueFrom<AddUserToRoomsResponsePayload>(response);
       this.logResponsePayload(eventType, responseData, eventID);
       return responseData.success;
     } catch (err: any) {
@@ -552,9 +545,8 @@ export class CommunicationAdapter {
     );
 
     try {
-      const responseData = await firstValueFrom<RoomsUserResponsePayload>(
-        response
-      );
+      const responseData =
+        await firstValueFrom<RoomsUserResponsePayload>(response);
       this.logResponsePayload(eventType, responseData, eventID);
       return responseData.rooms.map(room => {
         return {
@@ -600,9 +592,8 @@ export class CommunicationAdapter {
     );
 
     try {
-      const responseData = await firstValueFrom<RoomsUserDirectResponsePayload>(
-        response
-      );
+      const responseData =
+        await firstValueFrom<RoomsUserDirectResponsePayload>(response);
       this.logResponsePayload(eventType, responseData, eventID);
       return responseData.rooms.map(room => {
         return {
@@ -742,9 +733,8 @@ export class CommunicationAdapter {
     );
 
     try {
-      const responseData = await firstValueFrom<AddUserToRoomResponsePayload>(
-        response
-      );
+      const responseData =
+        await firstValueFrom<AddUserToRoomResponsePayload>(response);
       this.logResponsePayload(eventType, responseData, eventID);
       return responseData.success;
     } catch (err: any) {
@@ -774,9 +764,8 @@ export class CommunicationAdapter {
     );
 
     try {
-      const responseData = await firstValueFrom<RemoveRoomResponsePayload>(
-        response
-      );
+      const responseData =
+        await firstValueFrom<RemoveRoomResponsePayload>(response);
       this.logResponsePayload(eventType, responseData, eventID);
       this.logger.verbose?.(
         `[Membership] Removed members from room: ${matrixRoomID}`,
@@ -811,9 +800,8 @@ export class CommunicationAdapter {
     );
 
     try {
-      const responseData = await firstValueFrom<RoomMembersResponsePayload>(
-        response
-      );
+      const responseData =
+        await firstValueFrom<RoomMembersResponsePayload>(response);
       this.logResponsePayload(eventType, responseData, eventID);
       userIDs = responseData.userIDs;
     } catch (err: any) {
@@ -847,9 +835,8 @@ export class CommunicationAdapter {
     );
 
     try {
-      const responseData = await firstValueFrom<RoomDetailsResponsePayload>(
-        response
-      );
+      const responseData =
+        await firstValueFrom<RoomDetailsResponsePayload>(response);
       this.logResponsePayload(eventType, responseData, eventID);
       return this.convertRoomDetailsResponseToCommunicationRoomResult(
         responseData
@@ -902,7 +889,7 @@ export class CommunicationAdapter {
 
   private makeRetryableAndPromisify<
     T extends BaseMatrixAdapterEventResponsePayload,
-    TReturnType
+    TReturnType,
   >(
     input$: Observable<T>,
     resultSelector: (result: T) => TReturnType,

@@ -34,7 +34,7 @@ export class WhiteboardResolverMutations {
       agentInfo,
       whiteboard.authorization,
       AuthorizationPrivilege.UPDATE,
-      `update Whiteboard: ${whiteboard.nameID}`
+      `update Whiteboard: ${whiteboard.id}`
     );
 
     return this.whiteboardService.updateWhiteboard(whiteboard, whiteboardData);
@@ -55,7 +55,7 @@ export class WhiteboardResolverMutations {
       agentInfo,
       whiteboard.authorization,
       AuthorizationPrivilege.UPDATE_CONTENT,
-      `update content of Whiteboard: ${whiteboard.nameID}`
+      `update content of Whiteboard: ${whiteboard.id}`
     );
     return this.whiteboardService.updateWhiteboardContent(
       whiteboard,
@@ -78,7 +78,7 @@ export class WhiteboardResolverMutations {
       agentInfo,
       whiteboard.authorization,
       AuthorizationPrivilege.DELETE,
-      `delete Whiteboard: ${whiteboard.nameID}`
+      `delete Whiteboard: ${whiteboard.id}`
     );
 
     return await this.whiteboardService.deleteWhiteboard(whiteboard.id);
