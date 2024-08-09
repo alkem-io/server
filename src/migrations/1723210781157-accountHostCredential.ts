@@ -30,7 +30,7 @@ export class AccountHostCredential1723210781157 implements MigrationInterface {
         id: string;
         resourceID: string;
       }[] = await queryRunner.query(
-        `SELECT id, resourceID FROM credential WHERE resourceID = '${contributor.agentId}' AND type = 'account-host'`
+        `SELECT id, resourceID FROM credential WHERE agentId = '${contributor.agentId}' AND type = 'account-host'`
       );
       if (accountHostCredentials.length !== 1) {
         throw new Error(
