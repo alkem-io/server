@@ -24,11 +24,20 @@ export class SessionExtendMiddleware implements NestMiddleware {
     private readonly authService: AuthenticationService,
     private readonly configService: ConfigService<AlkemioConfig, true>
   ) {
-    this.SESSION_COOKIE_NAME = this.configService.get('identity.authentication.providers.ory.session_cookie_name', { infer: true });
+    this.SESSION_COOKIE_NAME = this.configService.get(
+      'identity.authentication.providers.ory.session_cookie_name',
+      { infer: true }
+    );
 
-    this.enabled = this.configService.get('identity.authentication.providers.ory.session_cookie_name', { infer: true });
+    this.enabled = this.configService.get(
+      'identity.authentication.providers.ory.session_cookie_name',
+      { infer: true }
+    );
 
-    const kratosPublicBaseUrl = this.configService.get('identity.authentication.providers.ory.kratos_public_base_url_server', { infer: true });
+    const kratosPublicBaseUrl = this.configService.get(
+      'identity.authentication.providers.ory.kratos_public_base_url_server',
+      { infer: true }
+    );
 
     this.kratosClient = new FrontendApi(
       new Configuration({

@@ -21,12 +21,12 @@ export class TimelineService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  public async createTimeline(): Promise<ITimeline> {
+  public createTimeline(): ITimeline {
     const timeline: ITimeline = new Timeline();
     timeline.authorization = new AuthorizationPolicy();
-    timeline.calendar = await this.calendarService.createCalendar();
+    timeline.calendar = this.calendarService.createCalendar();
 
-    return await this.timelineRepository.save(timeline);
+    return timeline;
   }
 
   async deleteTimeline(timelineID: string): Promise<ITimeline> {

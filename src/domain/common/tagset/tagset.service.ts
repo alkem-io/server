@@ -6,11 +6,7 @@ import { Tagset } from './tagset.entity';
 import { ITagset } from './tagset.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums';
-import {
-  EntityNotFoundException,
-  RelationshipNotFoundException,
-  ValidationException,
-} from '@common/exceptions';
+import { EntityNotFoundException, RelationshipNotFoundException, ValidationException } from '@common/exceptions';
 import { CreateTagsetInput } from '@domain/common/tagset/dto/tagset.dto.create';
 import { UpdateTagsetInput } from '@domain/common/tagset/dto/tagset.dto.update';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
@@ -29,13 +25,14 @@ export class TagsetService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async createTagset(tagsetData: CreateTagsetInput): Promise<ITagset> {
-    if (!tagsetData.type) tagsetData.type = TagsetType.FREEFORM;
-    const tagset: ITagset = Tagset.create({ ...tagsetData });
-    tagset.authorization = new AuthorizationPolicy();
-    if (!tagset.tags) tagset.tags = [];
-    tagset.tagsetTemplate = tagsetData.tagsetTemplate;
-    return await this.tagsetRepository.save(tagset);
+  public createTagset(tagsetData: CreateTagsetInput): ITagset {
+    return Tagset.create({
+      ...tagsetData,
+      authorization: new AuthorizationPolicy(),
+      type: tagsetData.type ?? TagsetType.FREEFORM,
+      tags: tagsetData?.tags ?? [],
+      tagsetTemplate: tagsetData.tagsetTemplate,
+    });
   }
 
   async getTagsetOrFail(
@@ -233,10 +230,10 @@ export class TagsetService {
     return tagset;
   }
 
-  async createTagsetWithName(
+  public createTagsetWithName(
     existingTagsets: ITagset[],
     tagsetData: CreateTagsetInput
-  ): Promise<ITagset> {
+  ): ITagset {
     // Check if the group already exists, if so log a warning
     if (this.hasTagsetWithName(existingTagsets, tagsetData.name)) {
       throw new ValidationException(
@@ -245,7 +242,7 @@ export class TagsetService {
       );
     }
 
-    return await this.createTagset(tagsetData);
+    return this.createTagset(tagsetData);
   }
 
   async save(tagset: ITagset): Promise<ITagset> {

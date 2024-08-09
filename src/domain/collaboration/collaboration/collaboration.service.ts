@@ -1,6 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, FindOneOptions, Repository } from 'typeorm';
+import {
+  EntityManager,
+  FindOneOptions,
+  FindOptionsRelations,
+  In,
+  Repository,
+} from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -54,6 +60,7 @@ import { IAccount } from '@domain/space/account/account.interface';
 import { SpaceType } from '@common/enums/space.type';
 import { CalloutGroupName } from '@common/enums/callout.group.name';
 import { SpaceLevel } from '@common/enums/space.level';
+import { Callout } from '@domain/collaboration/callout';
 
 @Injectable()
 export class CollaborationService {
@@ -85,13 +92,13 @@ export class CollaborationService {
     collaboration.authorization = new AuthorizationPolicy();
     collaboration.relations = [];
     collaboration.callouts = [];
-    collaboration.timeline = await this.timelineService.createTimeline();
+    collaboration.timeline = this.timelineService.createTimeline();
     const calloutGroups = this.spaceDefaultsService.getCalloutGroups(spaceType);
     collaboration.groupsStr =
       this.calloutGroupsService.serializeGroups(calloutGroups);
 
     collaboration.tagsetTemplateSet =
-      await this.tagsetTemplateSetService.createTagsetTemplateSet();
+      this.tagsetTemplateSetService.createTagsetTemplateSet();
 
     // Rely on the logic in Space Defaults to create the right innovation flow input
     const innovationFlowInput =
@@ -112,7 +119,7 @@ export class CollaborationService {
         allowedStates.length > 0 ? allowedStates[0] : undefined,
     };
     const statesTagsetTemplate =
-      await this.tagsetTemplateSetService.addTagsetTemplate(
+      this.tagsetTemplateSetService.addTagsetTemplate(
         collaboration.tagsetTemplateSet,
         tagsetTemplateDataStates
       );
@@ -126,7 +133,7 @@ export class CollaborationService {
         storageAggregator
       );
 
-    return await this.save(collaboration);
+    return collaboration;
   }
 
   public getCalloutGroupNames(collaboration: ICollaboration): string[] {
@@ -150,16 +157,17 @@ export class CollaborationService {
     collaboration: ICollaboration,
     tagsetTemplateData: CreateTagsetTemplateInput
   ): Promise<ITagsetTemplate> {
-    collaboration.tagsetTemplateSet = await this.getTagsetTemplatesSet(
-      collaboration.id
-    );
-
-    const tagsetTemplate =
-      await this.tagsetTemplateSetService.addTagsetTemplate(
-        collaboration.tagsetTemplateSet,
-        tagsetTemplateData
+    if (!collaboration.tagsetTemplateSet) {
+      collaboration.tagsetTemplateSet = await this.getTagsetTemplatesSet(
+        collaboration.id
       );
-    await this.save(collaboration);
+    }
+
+    const tagsetTemplate = this.tagsetTemplateSetService.addTagsetTemplate(
+      collaboration.tagsetTemplateSet,
+      tagsetTemplateData
+    );
+    await this.save(collaboration); // todo remove
     return tagsetTemplate;
   }
 
@@ -186,23 +194,35 @@ export class CollaborationService {
       callout.visibility = CalloutVisibility.PUBLISHED;
       collaboration.callouts.push(callout);
     }
-    return await this.save(collaboration);
+    return collaboration;
   }
 
   public async createCalloutInputsFromCollaboration(
     collaborationSource: ICollaboration
   ): Promise<CreateCalloutInput[]> {
-    const calloutsData: CreateCalloutInput[] = [];
+    const sourceCallouts = await this.getCalloutsOnCollaboration(
+      collaborationSource,
+      {
+        relations: {
+          contributionDefaults: true,
+          contributionPolicy: true,
+          framing: {
+            profile: {
+              references: true,
+              location: true,
+              tagsets: true,
+            },
+            whiteboard: {
+              profile: true,
+            },
+          },
+        },
+      }
+    );
 
-    const sourceCallouts =
-      await this.getCalloutsOnCollaboration(collaborationSource);
-
-    for (const sourceCallout of sourceCallouts) {
-      const sourceCalloutInput =
-        await this.calloutService.createCalloutInputFromCallout(sourceCallout);
-      calloutsData.push(sourceCalloutInput);
-    }
-    return calloutsData;
+    return sourceCallouts.map(
+      this.calloutService.createCalloutInputFromCallout
+    );
   }
 
   async save(collaboration: ICollaboration): Promise<ICollaboration> {
@@ -383,20 +403,21 @@ export class CollaborationService {
       await this.namingService.getReservedNameIDsInCollaboration(
         collaboration.id
       );
-    if (calloutData.nameID && calloutData.nameID.length > 0) {
-      const nameIdAlreadyTaken = reservedNameIDs.includes(calloutData.nameID);
-      if (nameIdAlreadyTaken)
-        throw new ValidationException(
-          `Unable to create Callout: the provided nameID is already taken: ${calloutData.nameID}`,
-          LogContext.SPACES
-        );
-    } else {
-      calloutData.nameID =
-        this.namingService.createNameIdAvoidingReservedNameIDs(
-          `${calloutData.framing.profile.displayName}`,
-          reservedNameIDs
-        );
+    if (
+      calloutData.nameID &&
+      calloutData.nameID.length > 0 &&
+      reservedNameIDs.includes(calloutData.nameID)
+    ) {
+      throw new ValidationException(
+        `Unable to create Callout: the provided nameID is already taken: ${calloutData.nameID}`,
+        LogContext.SPACES
+      );
     }
+
+    calloutData.nameID = this.namingService.createNameIdAvoidingReservedNameIDs(
+      `${calloutData.framing.profile.displayName}`,
+      reservedNameIDs
+    );
 
     const tagsetTemplates = collaboration.tagsetTemplateSet.tagsetTemplates;
     const storageAggregator =
@@ -412,7 +433,7 @@ export class CollaborationService {
     // this has the effect of adding the callout to the collaboration
     callout.collaboration = collaboration;
 
-    return this.calloutService.save(callout);
+    return callout;
   }
 
   async getTimelineOrFail(collaborationID: string): Promise<ITimeline> {
@@ -608,19 +629,40 @@ export class CollaborationService {
   }
 
   public async getCalloutsOnCollaboration(
-    collaboration: ICollaboration
+    collaboration: ICollaboration,
+    opts: {
+      calloutIds?: string[];
+      relations?: FindOptionsRelations<Callout>;
+    } = {}
   ): Promise<ICallout[]> {
-    const loadedCollaboration = await this.getCollaborationOrFail(
-      collaboration.id,
-      {
-        relations: { callouts: true },
-      }
-    );
-    if (!loadedCollaboration.callouts)
+    const { calloutIds, relations } = opts;
+    const loadedCollaboration = await this.collaborationRepository.findOne({
+      where: {
+        id: collaboration.id,
+        callouts: calloutIds ? { id: In(calloutIds) } : undefined,
+      },
+      relations: { callouts: relations ?? true },
+    });
+
+    if (!loadedCollaboration) {
       throw new EntityNotFoundException(
-        `Callouts not initialised on collaboration: ${collaboration.id}`,
-        LogContext.CONTEXT
+        'Collaboration not found',
+        LogContext.COLLABORATION,
+        {
+          collaborationID: collaboration.id,
+        }
       );
+    }
+
+    if (!loadedCollaboration.callouts) {
+      throw new EntityNotFoundException(
+        'Callouts not initialised on collaboration',
+        LogContext.COLLABORATION,
+        {
+          collaborationID: collaboration.id,
+        }
+      );
+    }
 
     return loadedCollaboration.callouts;
   }

@@ -9,7 +9,10 @@ export async function virtualContributorEngineCommunityManagerServiceFactory(
   logger: LoggerService,
   configService: ConfigService<AlkemioConfig, true>
 ): Promise<any> {
-  const connectionOptions = configService.get('microservices.rabbitmq.connection', { infer: true });
+  const connectionOptions = configService.get(
+    'microservices.rabbitmq.connection',
+    { infer: true }
+  );
   const connectionString = `amqp://${connectionOptions.user}:${connectionOptions.password}@${connectionOptions.host}:${connectionOptions.port}?heartbeat=30`;
   try {
     const options = {

@@ -17,7 +17,9 @@ export class SearchResolverQueries {
     private searchService: SearchService,
     private search2Service: Search2Service
   ) {
-    this.useNewSearch = this.configService.get('search.use_new', { infer: true });
+    this.useNewSearch = this.configService.get('search.use_new', {
+      infer: true,
+    });
   }
 
   @UseGuards(GraphqlGuard)

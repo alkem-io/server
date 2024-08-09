@@ -1,6 +1,11 @@
 import { ConfigService } from '@nestjs/config';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { Configuration, FrontendApi, IdentityApi, Session } from '@ory/kratos-client';
+import {
+  Configuration,
+  FrontendApi,
+  IdentityApi,
+  Session,
+} from '@ory/kratos-client';
 import { LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { UserService } from '@domain/community/user/user.service';
@@ -25,7 +30,6 @@ export class AuthenticationService {
   private readonly kratosIdentityClient: IdentityApi;
   private readonly kratosFrontEndClient: FrontendApi;
 
-
   constructor(
     private agentCacheService: AgentInfoCacheService,
     private configService: ConfigService<AlkemioConfig, true>,
@@ -33,15 +37,20 @@ export class AuthenticationService {
     private agentService: AgentService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {
-    this.kratosPublicUrlServer = this.configService.get('identity.authentication.providers.ory.kratos_public_base_url_server', { infer: true });
+    this.kratosPublicUrlServer = this.configService.get(
+      'identity.authentication.providers.ory.kratos_public_base_url_server',
+      { infer: true }
+    );
     const {
       kratos_public_base_url_server,
       kratos_admin_base_url_server,
       admin_service_account,
-      earliest_possible_extend
-    } = this.configService.get('identity.authentication.providers.ory', { infer: true });
+      earliest_possible_extend,
+    } = this.configService.get('identity.authentication.providers.ory', {
+      infer: true,
+    });
     this.kratosPublicUrlServer = kratos_public_base_url_server;
-    const kratosAdminUrlServer = kratos_admin_base_url_server
+    const kratosAdminUrlServer = kratos_admin_base_url_server;
 
     this.adminPasswordIdentifier = admin_service_account.username;
     this.adminPassword = admin_service_account.password;

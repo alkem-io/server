@@ -5,10 +5,7 @@ import { TagsetTemplate } from './tagset.template.entity';
 import { ITagsetTemplate } from './tagset.template.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums';
-import {
-  EntityNotFoundException,
-  ValidationException,
-} from '@common/exceptions';
+import { EntityNotFoundException, ValidationException } from '@common/exceptions';
 import { CreateTagsetTemplateInput } from '@domain/common/tagset-template/dto/tagset.template.dto.create';
 import { UpdateTagsetTemplateDefinitionInput } from './dto/tagset.template.dto.update';
 
@@ -20,17 +17,15 @@ export class TagsetTemplateService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async createTagsetTemplate(
+  public createTagsetTemplate(
     tagsetTemplateData: CreateTagsetTemplateInput
-  ): Promise<ITagsetTemplate> {
-    const tagsetTemplate = new TagsetTemplate(
+  ): ITagsetTemplate {
+    return new TagsetTemplate(
       tagsetTemplateData.name,
       tagsetTemplateData.type,
       tagsetTemplateData.allowedValues,
       tagsetTemplateData.defaultSelectedValue
     );
-
-    return await this.tagsetTemplateRepository.save(tagsetTemplate);
   }
 
   async getTagsetTemplateOrFail(

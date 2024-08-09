@@ -66,7 +66,10 @@ export class BootstrapService {
       this.logger.verbose?.('Bootstrapping...', LogContext.BOOTSTRAP);
 
       Profiling.logger = this.logger;
-      const profilingEnabled = this.configService.get('monitoring.logging.profiling_enabled', { infer: true });
+      const profilingEnabled = this.configService.get(
+        'monitoring.logging.profiling_enabled',
+        { infer: true }
+      );
       if (profilingEnabled) {
         Profiling.profilingEnabled = profilingEnabled;
       }
@@ -89,7 +92,10 @@ export class BootstrapService {
   }
 
   async bootstrapProfiles() {
-    const bootstrapAuthorizationEnabled = this.configService.get('bootstrap.authorization.enabled', { infer: true });
+    const bootstrapAuthorizationEnabled = this.configService.get(
+      'bootstrap.authorization.enabled',
+      { infer: true }
+    );
     if (!bootstrapAuthorizationEnabled) {
       this.logger.verbose?.(
         `Authorization Profile Loading: ${bootstrapAuthorizationEnabled}`,
@@ -98,7 +104,10 @@ export class BootstrapService {
       return;
     }
 
-    const bootstrapFilePath = this.configService.get('bootstrap.authorization.file', { infer: true });
+    const bootstrapFilePath = this.configService.get(
+      'bootstrap.authorization.file',
+      { infer: true }
+    );
 
     let bootstrapJson = {
       ...defaultRoles,
