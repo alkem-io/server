@@ -18,9 +18,6 @@ export abstract class IAgent extends IAuthorizable {
   })
   credentials?: ICredential[];
 
-  // primarily used to give meaningful error messages if something goes wrong with the agent
-  parentDisplayID?: string;
-
   // used for accessing the SSI store
   password!: string;
 
