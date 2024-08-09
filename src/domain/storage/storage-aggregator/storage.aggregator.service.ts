@@ -217,7 +217,6 @@ export class StorageAggregatorService {
     const result: IStorageAggregatorParent = {
       id: '',
       displayName: '',
-      level: 0,
       url: '',
     };
     switch (storageAggregator.type) {
