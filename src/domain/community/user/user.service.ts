@@ -1,10 +1,5 @@
 import { UUID_LENGTH } from '@common/constants';
-import {
-  AuthorizationCredential,
-  LogContext,
-  ProfileType,
-  UserPreferenceType,
-} from '@common/enums';
+import { LogContext, ProfileType, UserPreferenceType } from '@common/enums';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -398,18 +393,6 @@ export class UserService {
       );
   }
 
-  private async isAccountHost(user: IUser): Promise<boolean> {
-    if (!user.agent)
-      throw new RelationshipNotFoundException(
-        `Unable to load agent for user: ${user.id}`,
-        LogContext.COMMUNITY
-      );
-
-    return await this.agentService.hasValidCredential(user.agent.id, {
-      type: AuthorizationCredential.ACCOUNT_HOST,
-    });
-  }
-
   async deleteUser(deleteData: DeleteUserInput): Promise<IUser> {
     const userID = deleteData.ID;
     const user = await this.getUserOrFail(userID, {
@@ -423,10 +406,10 @@ export class UserService {
 
     // TODO: give additional feedback?
     const accountHasResources =
-      await this.accountHostService.areResourcesInAccount(user);
+      await this.accountHostService.areResourcesInAccount(user.accountID);
     if (accountHasResources) {
       throw new ForbiddenException(
-        'Unable to delete User: accounts contain one or more resources',
+        'Unable to delete User: account contains one or more resources',
         LogContext.SPACES
       );
     }
@@ -467,22 +450,7 @@ export class UserService {
   }
 
   public async getAccount(user: IUser): Promise<IAccount> {
-    const accounts =
-      await this.accountHostService.getAccountsHostedByContributor(user);
-    if (accounts.length === 0) {
-      throw new EntityNotFoundException(
-        `No account found for user: ${user.id}`,
-        LogContext.COMMUNITY
-      );
-    }
-    if (accounts.length > 1) {
-      throw new EntityNotFoundException(
-        `More than one account found for user: ${user.id}`,
-        LogContext.COMMUNITY
-      );
-    }
-    // TODO: later there will be exactly one account
-    return accounts[0];
+    return await this.accountHostService.getAccountOrFail(user.accountID);
   }
 
   async getPreferenceSetOrFail(userID: string): Promise<IPreferenceSet> {

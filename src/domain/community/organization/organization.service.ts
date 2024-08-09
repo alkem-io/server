@@ -256,10 +256,12 @@ export class OrganizationService {
     });
     // TODO: give additional feedback?
     const accountHasResources =
-      await this.accountHostService.areResourcesInAccount(organization);
+      await this.accountHostService.areResourcesInAccount(
+        organization.accountID
+      );
     if (accountHasResources) {
       throw new ForbiddenException(
-        'Unable to delete Organization: accounts contain one or more resources',
+        'Unable to delete Organization: account contain one or more resources',
         LogContext.SPACES
       );
     }
@@ -345,23 +347,9 @@ export class OrganizationService {
   }
 
   public async getAccount(organization: IOrganization): Promise<IAccount> {
-    const accounts =
-      await this.accountHostService.getAccountsHostedByContributor(
-        organization
-      );
-    if (accounts.length === 0) {
-      throw new EntityNotFoundException(
-        `No account found for organization: ${organization.id}`,
-        LogContext.COMMUNITY
-      );
-    }
-    if (accounts.length > 1) {
-      throw new EntityNotFoundException(
-        `More than one account found for organization: ${organization.id}`,
-        LogContext.COMMUNITY
-      );
-    }
-    return accounts[0];
+    return await this.accountHostService.getAccountOrFail(
+      organization.accountID
+    );
   }
 
   async getOrganizationAndAgent(
