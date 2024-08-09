@@ -108,6 +108,7 @@ export class SearchResultService {
       'score',
       'desc'
     );
+
     return {
       contributorResults,
       contributorResultsCount: -1,
@@ -626,6 +627,8 @@ export class SearchResultService {
       select: {
         id: true,
         type: true,
+        settingsStr: true,
+        visibility: true,
         collaboration: {
           id: true,
           callouts: {
