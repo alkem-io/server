@@ -3,7 +3,6 @@ import { Args, Resolver, Mutation } from '@nestjs/graphql';
 import { OrganizationService } from './organization.service';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import {
-  CreateOrganizationInput,
   UpdateOrganizationInput,
   DeleteOrganizationInput,
 } from '@domain/community/organization/dto';
@@ -20,7 +19,6 @@ import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set
 import { UpdateOrganizationPreferenceInput } from '@domain/community/organization/dto/organization.dto.update.preference';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { CreateUserGroupInput } from '../user-group/dto';
-import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
 import { IOrganization } from './organization.interface';
 
 @Resolver(() => IOrganization)
@@ -31,37 +29,8 @@ export class OrganizationResolverMutations {
     private organizationService: OrganizationService,
     private authorizationService: AuthorizationService,
     private preferenceService: PreferenceService,
-    private preferenceSetService: PreferenceSetService,
-    private platformAuthorizationService: PlatformAuthorizationPolicyService
+    private preferenceSetService: PreferenceSetService
   ) {}
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IOrganization, {
-    description: 'Creates a new Organization on the platform.',
-  })
-  @Profiling.api
-  async createOrganization(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('organizationData') organizationData: CreateOrganizationInput
-  ): Promise<IOrganization> {
-    const authorizationPolicy =
-      await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
-
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      authorizationPolicy,
-      AuthorizationPrivilege.CREATE_ORGANIZATION,
-      `create Organization: ${organizationData.profileData.displayName}`
-    );
-    const organization = await this.organizationService.createOrganization(
-      organizationData,
-      agentInfo
-    );
-
-    return await this.organizationAuthorizationService.applyAuthorizationPolicy(
-      organization
-    );
-  }
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IUserGroup, {

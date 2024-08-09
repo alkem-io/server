@@ -50,7 +50,7 @@ import { PlatformModule } from '@platform/platfrom/platform.module';
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
 import { DataLoaderInterceptor } from '@core/dataloader/interceptors';
 import { InnovationHubInterceptor } from '@common/interceptors';
-import { InnovationHubModule } from '@domain/innovation-hub';
+import { InnovationHubModule } from '@domain/innovation-hub/innovation.hub.module';
 import { SsiCredentialFlowController } from '@services/api-rest/ssi-credential-flow/ssi.credential.flow.controller';
 import { SsiCredentialFlowModule } from '@services/api-rest/ssi-credential-flow/ssi.credential.flow.module';
 import { StorageAccessModule } from '@services/api-rest/storage-access/storage.access.module';
@@ -79,6 +79,7 @@ import { FileIntegrationModule } from '@services/file-integration';
 import { AdminLicensingModule } from '@platform/admin/licensing/admin.licensing.module';
 import { PlatformRoleModule } from '@platform/platfrom.role/platform.role.module';
 import { LookupByNameModule } from '@services/api/lookup-by-name';
+import { PlatformHubModule } from '@platform/platfrom.hub/platform.hub.module';
 
 @Module({
   imports: [
@@ -250,6 +251,7 @@ import { LookupByNameModule } from '@services/api/lookup-by-name';
     LibraryModule,
     PlatformModule,
     PlatformRoleModule,
+    PlatformHubModule,
     ContributionMoveModule,
     GeoLocationModule,
     ContributionReporterModule,

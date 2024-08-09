@@ -6,7 +6,6 @@ import {
   EntityNotFoundException,
   EntityNotInitializedException,
   ForbiddenException,
-  RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
 import {
@@ -55,10 +54,13 @@ import { applyOrganizationFilter } from '@core/filtering/filters/organizationFil
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { OrganizationRoleService } from '../organization-role/organization.role.service';
+import { AccountHostService } from '@domain/space/account.host/account.host.service';
+import { IAccount } from '@domain/space/account/account.interface';
 
 @Injectable()
 export class OrganizationService {
   constructor(
+    private accountHostService: AccountHostService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private organizationVerificationService: OrganizationVerificationService,
     private organizationRoleService: OrganizationRoleService,
@@ -90,7 +92,7 @@ export class OrganizationService {
       organizationData.profileData?.displayName
     );
 
-    const organization: IOrganization = Organization.create(organizationData);
+    let organization: IOrganization = Organization.create(organizationData);
     organization.authorization = new AuthorizationPolicy();
 
     organization.storageAggregator =
@@ -157,7 +159,13 @@ export class OrganizationService {
         this.createPreferenceDefaults()
       );
 
-    return await this.organizationRepository.save(organization);
+    organization = await this.organizationRepository.save(organization);
+
+    await this.accountHostService.createAccount({
+      host: organization,
+    });
+
+    return organization;
   }
 
   async checkNameIdOrFail(nameID: string) {
@@ -246,10 +254,12 @@ export class OrganizationService {
         storageAggregator: true,
       },
     });
-    const isSpaceHost = await this.isAccountHost(organization);
-    if (isSpaceHost) {
+    // TODO: give additional feedback?
+    const accountHasResources =
+      await this.accountHostService.areResourcesInAccount(organization);
+    if (accountHasResources) {
       throw new ForbiddenException(
-        'Unable to delete Organization: host of one or more accounts',
+        'Unable to delete Organization: accounts contain one or more resources',
         LogContext.SPACES
       );
     }
@@ -301,18 +311,6 @@ export class OrganizationService {
     return result;
   }
 
-  async isAccountHost(organization: IOrganization): Promise<boolean> {
-    if (!organization.agent)
-      throw new RelationshipNotFoundException(
-        `Unable to load agent for organization: ${organization.id}`,
-        LogContext.COMMUNITY
-      );
-
-    return await this.agentService.hasValidCredential(organization.agent.id, {
-      type: AuthorizationCredential.ACCOUNT_HOST,
-    });
-  }
-
   async getOrganization(
     organizationID: string,
     options?: FindOneOptions<Organization>
@@ -344,6 +342,26 @@ export class OrganizationService {
         LogContext.COMMUNITY
       );
     return organization;
+  }
+
+  public async getAccount(organization: IOrganization): Promise<IAccount> {
+    const accounts =
+      await this.accountHostService.getAccountsHostedByContributor(
+        organization
+      );
+    if (accounts.length === 0) {
+      throw new EntityNotFoundException(
+        `No account found for organization: ${organization.id}`,
+        LogContext.COMMUNITY
+      );
+    }
+    if (accounts.length > 1) {
+      throw new EntityNotFoundException(
+        `More than one account found for organization: ${organization.id}`,
+        LogContext.COMMUNITY
+      );
+    }
+    return accounts[0];
   }
 
   async getOrganizationAndAgent(

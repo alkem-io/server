@@ -38,24 +38,27 @@ export class SpaceLibraryDefaults1722870550857 implements MigrationInterface {
       defaultsId: string;
       libraryId: string;
     }[] = await queryRunner.query(
-      `SELECT id, spaceId, defaultsId, libraryId FROM \`account\``
+      `SELECT account.id, account.spaceId, account.defaultsId, account.libraryId FROM \`account\`
+      JOIN \`space\` ON \`account\`.spaceId = \`space\`.id` // fixes a problem with acceptance database, there were some accounts with a wrong spaceId which is just bad data and only load accounts that really have a space.
     );
     for (const account of accounts) {
-      await queryRunner.query(
-        `UPDATE \`space\` SET defaultsId = '${account.defaultsId}', libraryId = '${account.libraryId}' WHERE id = '${account.spaceId}'`
-      );
-      const storageAggregatorID = await this.getStorageAggregatorForSpace(
-        queryRunner,
-        account.spaceId
-      );
-      // Update the storage aggregator hierarchy for the TemplatesSet?
-      for (const templateTableName of templateTableNames) {
-        await this.updateStorageAggregatorForTemplates(
-          queryRunner,
-          account.libraryId,
-          templateTableName,
-          storageAggregatorID
+      if (account.spaceId) {
+        await queryRunner.query(
+          `UPDATE \`space\` SET defaultsId = '${account.defaultsId}', libraryId = '${account.libraryId}' WHERE id = '${account.spaceId}'`
         );
+        const storageAggregatorID = await this.getStorageAggregatorForSpace(
+          queryRunner,
+          account.spaceId
+        );
+        // Update the storage aggregator hierarchy for the TemplatesSet?
+        for (const templateTableName of templateTableNames) {
+          await this.updateStorageAggregatorForTemplates(
+            queryRunner,
+            account.libraryId,
+            templateTableName,
+            storageAggregatorID
+          );
+        }
       }
     }
 

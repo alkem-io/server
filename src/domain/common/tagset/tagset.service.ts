@@ -6,7 +6,11 @@ import { Tagset } from './tagset.entity';
 import { ITagset } from './tagset.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums';
-import { EntityNotFoundException, RelationshipNotFoundException, ValidationException } from '@common/exceptions';
+import {
+  EntityNotFoundException,
+  RelationshipNotFoundException,
+  ValidationException,
+} from '@common/exceptions';
 import { CreateTagsetInput } from '@domain/common/tagset/dto/tagset.dto.create';
 import { UpdateTagsetInput } from '@domain/common/tagset/dto/tagset.dto.update';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
@@ -163,14 +167,14 @@ export class TagsetService {
   ): Promise<ITagsetTemplate> {
     const tagset = await this.getTagsetOrFail(tagsetID, {
       relations: loadTagsets
-        ? ['tagsetTemplate', 'tagsetTemplate.tagsets']
-        : ['tagsetTemplate'],
+        ? { tagsetTemplate: { tagsets: true } }
+        : { tagsetTemplate: true },
     });
 
     const tagsetTemplate = tagset.tagsetTemplate;
     if (!tagsetTemplate)
       throw new RelationshipNotFoundException(
-        `Unable to load tagsetTemplate for Tagset: ${tagsetID} `,
+        `Unable to load tagsetTemplate for Tagset: ${tagsetID}`,
         LogContext.PROFILE
       );
 

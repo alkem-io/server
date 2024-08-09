@@ -88,7 +88,6 @@ export class SpaceService {
 
   public async createSpace(
     spaceData: CreateSpaceInput,
-    account: IAccount,
     spaceDefaults?: ISpaceDefaults,
     agentInfo?: AgentInfo
   ): Promise<ISpace> {
@@ -127,8 +126,8 @@ export class SpaceService {
     const initializedSpace = await this.initialise(
       space,
       spaceData,
-      account,
-      agentInfo
+      agentInfo,
+      spaceDefaults
     );
     return this.save(initializedSpace);
   }
@@ -136,11 +135,10 @@ export class SpaceService {
   private async initialise(
     space: ISpace,
     spaceData: CreateSpaceInput,
-    account: IAccount,
-    agentInfo: AgentInfo | undefined
+    agentInfo: AgentInfo | undefined,
+    spaceDefaults?: ISpaceDefaults
   ): Promise<ISpace> {
     space.authorization = new AuthorizationPolicy();
-    space.account = account;
     space.settingsStr = this.spaceSettingsService.serializeSettings(
       this.spaceDefaultsService.getDefaultSpaceSettings(spaceData.type)
     );
@@ -785,7 +783,6 @@ export class SpaceService {
   ): Promise<ISpace> {
     const space = await this.getSpaceOrFail(subspaceData.spaceID, {
       relations: {
-        account: true,
         storageAggregator: true,
         community: true,
       },
@@ -822,7 +819,6 @@ export class SpaceService {
     subspaceData.level = space.level + 1;
     let subspace = await this.createSpace(
       subspaceData,
-      space.account,
       spaceDefaults,
       agentInfo
     );
@@ -937,9 +933,7 @@ export class SpaceService {
   public async update(spaceData: UpdateSpaceInput): Promise<ISpace> {
     const space = await this.getSpaceOrFail(spaceData.ID, {
       relations: {
-        account: true,
         context: true,
-        community: true,
         profile: true,
       },
     });
@@ -1101,22 +1095,31 @@ export class SpaceService {
     return await this.save(space);
   }
 
-  public async getAccountOrFail(spaceId: string): Promise<IAccount> {
-    const space = await this.spaceRepository.findOne({
-      where: { id: spaceId },
+  public async getAccountWithAgentOrFail(space: ISpace): Promise<IAccount> {
+    const spaceWithAccount = await this.spaceRepository.findOne({
+      where: { id: space.levelZeroSpaceID },
       relations: {
-        account: true,
+        account: {
+          agent: {
+            credentials: true,
+          },
+        },
       },
     });
 
-    if (!space) {
+    if (
+      !spaceWithAccount ||
+      !spaceWithAccount.account ||
+      !spaceWithAccount.account.agent ||
+      !spaceWithAccount.account.agent.credentials
+    ) {
       throw new EntityNotFoundException(
-        `Unable to find base subspace with ID: ${spaceId}`,
+        `Unable to find account for space with ID: ${space.id}`,
         LogContext.SPACES
       );
     }
 
-    return space.account;
+    return spaceWithAccount.account;
   }
 
   public async getCommunity(spaceId: string): Promise<ICommunity> {
@@ -1155,7 +1158,11 @@ export class SpaceService {
   async getDefaultsOrFail(rootSpaceID: string): Promise<ISpaceDefaults> {
     const levelZeroSpaceWithDefaults = await this.getSpaceOrFail(rootSpaceID, {
       relations: {
-        defaults: true,
+        defaults: {
+          innovationFlowTemplate: {
+            profile: true,
+          },
+        },
       },
     });
     const defaults = levelZeroSpaceWithDefaults.defaults;

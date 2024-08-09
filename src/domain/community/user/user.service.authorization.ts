@@ -4,7 +4,7 @@ import {
   AuthorizationPrivilege,
   LogContext,
 } from '@common/enums';
-import { IUser } from '@domain/community/user';
+import { IUser } from '@domain/community/user/user.interface';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { UserService } from './user.service';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';

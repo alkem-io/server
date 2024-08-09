@@ -3,7 +3,7 @@ import { EntityManager } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { ClientProxy } from '@nestjs/microservices';
-import { User } from '@domain/community/user';
+import { User } from '@domain/community/user/user.entity';
 import { Organization } from '@domain/community/organization';
 import { AUTH_RESET_SERVICE } from '@common/constants';
 import { AlkemioErrorStatus, LogContext } from '@common/enums';

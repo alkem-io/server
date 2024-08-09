@@ -73,10 +73,7 @@ import { UpdateInnovationFlowStateInput } from '@domain/collaboration/innovation
 import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
 import { UpdateSpaceSettingsEntityInput } from '@domain/space/space.settings/dto/space.settings.dto.update';
 import { UpdateSpaceSettingsInput } from '@domain/space/space/dto/space.dto.update.settings';
-import {
-  CreateAccountInput,
-  UpdateAccountPlatformSettingsInput,
-} from '@domain/space/account/dto';
+import { CreateAccountInput } from '@domain/space/account/dto';
 import { UpdateCommunityGuidelinesInput } from '@domain/community/community-guidelines/dto/community.guidelines.dto.update';
 import { ForumCreateDiscussionInput } from '@platform/forum/dto/forum.dto.create.discussion';
 import { CommunityRoleApplyInput } from '@domain/community/community-role/dto/community.role.dto.apply';
@@ -117,7 +114,6 @@ export class BaseHandler extends AbstractHandler {
       CreateAccountInput,
       DeleteDocumentInput,
       UpdateActorInput,
-      UpdateAccountPlatformSettingsInput,
       UpdatePostInput,
       UpdateDocumentInput,
       UpdateCalloutFramingInput,

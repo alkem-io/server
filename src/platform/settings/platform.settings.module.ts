@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { PlatformSettingsService } from './platform.settings.service';
-import { InnovationHubModule } from '@domain/innovation-hub';
+import { InnovationHubModule } from '@domain/innovation-hub/innovation.hub.module';
 import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
 import { AccountModule } from '@domain/space/account/account.module';
 import { PlatformSettingsResolverMutations } from './platform.settings.resolver.mutations';

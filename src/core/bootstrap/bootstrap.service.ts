@@ -25,39 +25,36 @@ import { PlatformService } from '@platform/platfrom/platform.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { PlatformAuthorizationService } from '@platform/platfrom/platform.service.authorization';
 import { NameReporterService } from '@services/external/elasticsearch/name-reporter/name.reporter.service';
-import { AccountService } from '@domain/space/account/account.service';
-import { AccountAuthorizationService } from '@domain/space/account/account.service.authorization';
 import { Account } from '@domain/space/account/account.entity';
 import { SpaceType } from '@common/enums/space.type';
-import { SearchIngestService } from '@services/api/search/v2/ingest/search.ingest.service';
-import { CreateAccountInput } from '@domain/space/account/dto/account.dto.create';
 import { SpaceLevel } from '@common/enums/space.level';
 import { CreateSpaceOnAccountInput } from '@domain/space/account/dto/account.dto.create.space';
-import { AlkemioConfig } from '@src/types';
+import { AccountService } from '@domain/space/account/account.service';
+import { SpaceAuthorizationService } from '@domain/space/space/space.service.authorization';
+import { AccountAuthorizationService } from '@domain/space/account/account.service.authorization';
 
 @Injectable()
 export class BootstrapService {
   constructor(
     private accountService: AccountService,
+    private accountAuthorizationService: AccountAuthorizationService,
     private agentService: AgentService,
     private spaceService: SpaceService,
     private userService: UserService,
     private userAuthorizationService: UserAuthorizationService,
-    private accountAuthorizationService: AccountAuthorizationService,
-    private adminAuthorizationService: AdminAuthorizationService,
-    private configService: ConfigService<AlkemioConfig, true>,
     private organizationService: OrganizationService,
-    private platformService: PlatformService,
     private organizationAuthorizationService: OrganizationAuthorizationService,
+    private spaceAuthorizationService: SpaceAuthorizationService,
+    private adminAuthorizationService: AdminAuthorizationService,
+    private configService: ConfigService,
+    private platformService: PlatformService,
     private platformAuthorizationService: PlatformAuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
     @InjectRepository(Account)
     private accountRepository: Repository<Account>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    private nameReporter: NameReporterService,
-    // todo remove later
-    private ingestService: SearchIngestService
+    private nameReporter: NameReporterService
   ) {}
 
   async bootstrap() {
@@ -181,6 +178,11 @@ export class BootstrapService {
           user = await this.userAuthorizationService.grantCredentials(user);
           user =
             await this.userAuthorizationService.applyAuthorizationPolicy(user);
+
+          const account = await this.userService.getAccount(user);
+          await this.accountAuthorizationService.applyAuthorizationPolicy(
+            account
+          );
         }
       }
     } catch (error: any) {
@@ -190,23 +192,23 @@ export class BootstrapService {
     }
   }
 
-  // TODO: NOT USED?????
-  private async ensureSpaceNamesInElastic() {
-    const spaces = await this.spaceService.getAllSpaces({
-      relations: {
-        profile: {
-          location: true,
-        },
-      },
-    });
+  // // TODO: NOT USED?????
+  // private async ensureSpaceNamesInElastic() {
+  //   const spaces = await this.spaceService.getAllSpaces({
+  //     relations: {
+  //       profile: {
+  //         location: true,
+  //       },
+  //     },
+  //   });
 
-    const data = spaces.map(({ id, profile: { displayName: name } }) => ({
-      id,
-      name,
-    }));
+  //   const data = spaces.map(({ id, profile: { displayName: name } }) => ({
+  //     id,
+  //     name,
+  //   }));
 
-    this.nameReporter.bulkUpdateOrCreateNames(data);
-  }
+  //   this.nameReporter.bulkUpdateOrCreateNames(data);
+  // }
 
   async ensureSsiPopulated() {
     const ssiEnabled = this.configService.get('ssi.enabled', { infer: true });
@@ -255,35 +257,30 @@ export class BootstrapService {
         await this.organizationAuthorizationService.applyAuthorizationPolicy(
           hostOrganization
         );
-      }
-
-      const spaceInput: CreateAccountInput = {
-        spaceData: {
-          nameID: DEFAULT_SPACE_NAMEID,
-          profileData: {
-            displayName: DEFAULT_SPACE_DISPLAYNAME,
-            tagline: 'An empty space to be populated',
-          },
-          level: SpaceLevel.SPACE,
-          type: SpaceType.SPACE,
-        },
-        hostID: hostOrganization.id,
-      };
-
-      let account = await this.accountService.createAccount(spaceInput);
-      const createSpaceAccountInput: CreateSpaceOnAccountInput = {
-        accountID: account.id,
-        spaceData: spaceInput.spaceData,
-      };
-      account = await this.accountService.createSpaceOnAccount(
-        account,
-        createSpaceAccountInput
-      );
-      account =
+        const account =
+          await this.organizationService.getAccount(hostOrganization);
         await this.accountAuthorizationService.applyAuthorizationPolicy(
           account
         );
-      return await this.accountService.save(account);
+      }
+      const account =
+        await this.organizationService.getAccount(hostOrganization);
+      const spaceInput: CreateSpaceOnAccountInput = {
+        accountID: account.id,
+        nameID: DEFAULT_SPACE_NAMEID,
+        profileData: {
+          displayName: DEFAULT_SPACE_DISPLAYNAME,
+          tagline: 'An empty space to be populated',
+        },
+        level: SpaceLevel.SPACE,
+        type: SpaceType.SPACE,
+      };
+
+      let space = await this.accountService.createSpaceOnAccount(spaceInput);
+      space =
+        await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
+      space = await this.spaceService.save(space);
+      return space;
     }
   }
 }

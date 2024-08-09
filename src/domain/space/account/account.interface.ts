@@ -10,7 +10,7 @@ import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interf
 @ObjectType('Account')
 export class IAccount extends IAuthorizable {
   agent?: IAgent;
-  space?: ISpace;
+  spaces!: ISpace[];
   virtualContributors!: IVirtualContributor[];
   innovationHubs!: IInnovationHub[];
   innovationPacks!: IInnovationPack[];

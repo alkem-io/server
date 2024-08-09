@@ -11,7 +11,6 @@ import { AccountResolverMutations } from './account.resolver.mutations';
 import { SpaceModule } from '../space/space.module';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { NameReporterModule } from '@services/external/elasticsearch/name-reporter/name.reporter.module';
-import { InnovationFlowTemplateModule } from '@domain/template/innovation-flow-template/innovation.flow.template.module';
 import { AccountResolverQueries } from './account.resolver.queries';
 import { ContributorModule } from '@domain/community/contributor/contributor.module';
 import { LicensingModule } from '@platform/licensing/licensing.module';
@@ -20,12 +19,9 @@ import { LicenseIssuerModule } from '@platform/license-issuer/license.issuer.mod
 import { AccountHostModule } from '../account.host/account.host.module';
 import { LicenseEngineModule } from '@core/license-engine/license.engine.module';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
-import { CommunityPolicyModule } from '@domain/community/community-policy/community.policy.module';
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
-import { CommunityModule } from '@domain/community/community/community.module';
-import { InnovationHubModule } from '@domain/innovation-hub';
+import { InnovationHubModule } from '@domain/innovation-hub/innovation.hub.module';
 import { InnovationPackModule } from '@library/innovation-pack/innovation.pack.module';
-import { SpaceSettingssModule } from '../space.settings/space.settings.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
 
 @Module({
@@ -35,23 +31,19 @@ import { NamingModule } from '@services/infrastructure/naming/naming.module';
     AuthorizationModule,
     AuthorizationPolicyModule,
     ContributorModule,
-    VirtualContributorModule,
-    SpaceModule,
-    SpaceSettingssModule,
     StorageAggregatorModule,
     PlatformAuthorizationPolicyModule,
-    InnovationFlowTemplateModule,
     LicensingModule,
     LicenseIssuerModule,
     LicenseEngineModule,
+    SpaceModule,
     InnovationHubModule,
-    NamingModule,
+    InnovationPackModule,
+    VirtualContributorModule,
     NameReporterModule,
-    CommunityPolicyModule,
+    NamingModule,
     TypeOrmModule.forFeature([Account]),
     NotificationAdapterModule,
-    CommunityModule,
-    InnovationPackModule,
   ],
   providers: [
     AccountService,

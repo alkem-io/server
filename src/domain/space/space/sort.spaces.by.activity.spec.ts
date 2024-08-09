@@ -40,6 +40,7 @@ const createTestSpace = (id: string): ISpace => {
       virtualContributors: [],
       innovationHubs: [],
       innovationPacks: [],
+      spaces: [],
     },
     type: SpaceType.SPACE,
     level: 0,

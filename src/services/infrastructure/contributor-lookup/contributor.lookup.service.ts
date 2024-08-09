@@ -12,13 +12,11 @@ import {
 } from '@common/exceptions';
 import { AuthorizationCredential, LogContext } from '@common/enums';
 import { Credential, CredentialsSearchInput, ICredential } from '@domain/agent';
-import {
-  IVirtualContributor,
-  VirtualContributor,
-} from '@domain/community/virtual-contributor';
+import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { IOrganization, Organization } from '@domain/community/organization';
 import { CommunityContributorType } from '@common/enums/community.contributor.type';
 import { InvalidUUID } from '@common/exceptions/invalid.uuid';
+import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 
 export class ContributorLookupService {
   constructor(
