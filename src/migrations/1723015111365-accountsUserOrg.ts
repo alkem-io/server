@@ -64,7 +64,11 @@ export class AccountsUserOrg1723015111365 implements MigrationInterface {
         // create a new ACCOUNT_HOST credential for the contributor
         const { accountID, agentID } = await this.createAccount(queryRunner);
         await this.assignLicensePlansToAgent(queryRunner, agentID);
-        await this.assignAccountHostCredential(queryRunner, agentID, accountID);
+        await this.assignAccountHostCredential(
+          queryRunner,
+          contributor.agentId,
+          accountID
+        );
       } else if (accountHostCredentials.length === 1) {
         // Nothing to do, contributor is all setup
       } else if (accountHostCredentials.length > 1) {
