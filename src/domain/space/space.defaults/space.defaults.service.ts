@@ -285,14 +285,13 @@ export class SpaceDefaultsService {
           }
         );
       // Note: no profile currently present, so use the one from the template for now
-      const result: CreateInnovationFlowInput = {
+      return {
         profile: {
           displayName: template.profile.displayName,
           description: template.profile.description,
         },
         states: this.innovationFlowStatesService.getStates(template.states),
       };
-      return result;
     }
 
     // If no argument is provided, then use the default template for the space, if set
@@ -335,11 +334,11 @@ export class SpaceDefaultsService {
     return result;
   }
 
-  public async getCreateCalloutInputs(
+  public getCreateCalloutInputs(
     defaultCallouts: CreateCalloutInput[],
     calloutsFromCollaborationTemplateInput: CreateCalloutInput[],
     collaborationData?: CreateCollaborationInput
-  ): Promise<CreateCalloutInput[]> {
+  ): CreateCalloutInput[] {
     let calloutInputs: CreateCalloutInput[] = [];
     const addDefaultCallouts = collaborationData?.addDefaultCallouts;
     if (addDefaultCallouts === undefined || addDefaultCallouts) {

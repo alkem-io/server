@@ -146,7 +146,7 @@ export class UserService {
         user.lastName
       );
     }
-    await this.profileService.addVisualOnProfile(
+    this.profileService.addVisualOnProfile(
       user.profile,
       VisualType.AVATAR,
       avatarURL
@@ -422,9 +422,9 @@ export class UserService {
     });
 
     // TODO: give additional feedback?
-    const areAcccountsEmpty =
-      await this.accountHostService.areHostedAccountsEmpty(user);
-    if (areAcccountsEmpty) {
+    const accountHasResources =
+      await this.accountHostService.areResourcesInAccount(user);
+    if (accountHasResources) {
       throw new ForbiddenException(
         'Unable to delete User: accounts contain one or more resources',
         LogContext.SPACES

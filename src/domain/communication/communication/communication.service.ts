@@ -44,7 +44,7 @@ export class CommunicationService {
       RoomType.UPDATES
     );
 
-    return await this.communicationRepository.save(communication);
+    return communication;
   }
 
   async save(communication: ICommunication): Promise<ICommunication> {

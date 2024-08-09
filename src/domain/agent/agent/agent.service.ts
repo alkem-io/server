@@ -75,7 +75,7 @@ export class AgentService {
     );
   }
 
-  async createAgent(inputData: CreateAgentInput): Promise<IAgent> {
+  public async createAgent(inputData: CreateAgentInput): Promise<IAgent> {
     const agent: IAgent = Agent.create(inputData);
     agent.credentials = [];
     agent.authorization = new AuthorizationPolicy();
@@ -83,10 +83,10 @@ export class AgentService {
     const ssiEnabled = this.configService.get('ssi.enabled', { infer: true });
 
     if (ssiEnabled) {
-      return await this.createDidOnAgent(agent);
+      return this.createDidOnAgent(agent);
     }
 
-    return await this.saveAgent(agent);
+    return agent;
   }
 
   async getAgentOrFail(
@@ -258,7 +258,8 @@ export class AgentService {
     agent.password = Math.random().toString(36).substr(2, 10);
 
     agent.did = await this.walletManagerAdapter.createIdentity(agent.password);
-    return await this.saveAgent(agent);
+
+    return agent;
   }
 
   async getVerifiedCredentials(

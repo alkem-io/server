@@ -16,6 +16,7 @@ import { SpaceAuthorizationService } from '../space/space.service.authorization'
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
+  CREDENTIAL_RULE_PLATFORM_CREATE_SPACE,
   CREDENTIAL_RULE_TYPES_ACCOUNT_AUTHORIZATION_RESET,
   CREDENTIAL_RULE_TYPES_ACCOUNT_CHILD_ENTITIES,
   CREDENTIAL_RULE_TYPES_ACCOUNT_MANAGE,
@@ -204,6 +205,8 @@ export class AccountAuthorizationService {
           AuthorizationPrivilege.AUTHORIZATION_RESET,
           AuthorizationPrivilege.PLATFORM_ADMIN,
           AuthorizationPrivilege.TRANSFER_RESOURCE,
+          AuthorizationPrivilege.CREATE_INNOVATION_HUB,
+          AuthorizationPrivilege.CREATE_INNOVATION_PACK,
         ],
         [
           AuthorizationCredential.GLOBAL_ADMIN,
@@ -238,6 +241,19 @@ export class AccountAuthorizationService {
     );
     userHostsRule.cascade = false;
     newRules.push(userHostsRule);
+
+    const createSpace =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.CREATE],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.BETA_TESTER,
+          AuthorizationCredential.VC_CAMPAIGN,
+        ],
+        CREDENTIAL_RULE_PLATFORM_CREATE_SPACE
+      );
+    createSpace.cascade = false;
+    newRules.push(createSpace);
 
     return this.authorizationPolicyService.appendCredentialAuthorizationRules(
       authorization,
@@ -286,7 +302,10 @@ export class AccountAuthorizationService {
     const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
 
     const createVcPrivilege = new AuthorizationPolicyRulePrivilege(
-      [AuthorizationPrivilege.CREATE_VIRTUAL_CONTRIBUTOR],
+      [
+        AuthorizationPrivilege.CREATE_SPACE,
+        AuthorizationPrivilege.CREATE_VIRTUAL_CONTRIBUTOR,
+      ],
       AuthorizationPrivilege.CREATE,
       POLICY_RULE_ACCOUNT_CREATE_VC
     );

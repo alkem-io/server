@@ -255,9 +255,9 @@ export class OrganizationService {
       },
     });
     // TODO: give additional feedback?
-    const areAcccountsEmpty =
-      await this.accountHostService.areHostedAccountsEmpty(organization);
-    if (areAcccountsEmpty) {
+    const accountHasResources =
+      await this.accountHostService.areResourcesInAccount(organization);
+    if (accountHasResources) {
       throw new ForbiddenException(
         'Unable to delete Organization: accounts contain one or more resources',
         LogContext.SPACES

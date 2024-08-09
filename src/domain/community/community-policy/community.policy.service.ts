@@ -24,13 +24,12 @@ export class CommunityPolicyService {
     member: ICommunityRolePolicy,
     lead: ICommunityRolePolicy,
     admin: ICommunityRolePolicy
-  ): Promise<ICommunityPolicy> {
-    const policy: ICommunityPolicy = new CommunityPolicy(
+  ): ICommunityPolicy {
+    return new CommunityPolicy(
       this.serializeRolePolicy(member),
       this.serializeRolePolicy(lead),
       this.serializeRolePolicy(admin)
     );
-    return this.save(policy);
   }
 
   public async removeCommunityPolicy(
@@ -123,7 +122,7 @@ export class CommunityPolicyService {
   public updateCommunityPolicyResourceID(
     communityPolicy: ICommunityPolicy,
     resourceID: string
-  ): Promise<ICommunityPolicy> {
+  ): ICommunityPolicy {
     const memberPolicy = this.deserializeRolePolicy(communityPolicy.member);
     memberPolicy.credential.resourceID = resourceID;
     communityPolicy.member = this.serializeRolePolicy(memberPolicy);
@@ -136,13 +135,13 @@ export class CommunityPolicyService {
     adminPolicy.credential.resourceID = resourceID;
     communityPolicy.admin = this.serializeRolePolicy(adminPolicy);
 
-    return this.save(communityPolicy);
+    return communityPolicy;
   }
 
   public inheritParentCredentials(
     communityPolicyParent: ICommunityPolicy,
     communityPolicy: ICommunityPolicy
-  ): Promise<ICommunityPolicy> {
+  ): ICommunityPolicy {
     const memberPolicy = this.inheritParentRoleCredentials(
       communityPolicyParent.member,
       communityPolicy.member
@@ -160,7 +159,7 @@ export class CommunityPolicyService {
     communityPolicy.lead = this.serializeRolePolicy(leadPolicy);
     communityPolicy.admin = this.serializeRolePolicy(adminPolicy);
 
-    return this.save(communityPolicy);
+    return communityPolicy;
   }
 
   private save(policy: ICommunityPolicy): Promise<ICommunityPolicy> {

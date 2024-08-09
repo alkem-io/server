@@ -1,7 +1,6 @@
 import { UseGuards } from '@nestjs/common';
 import { Resolver, Args, Mutation } from '@nestjs/graphql';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
@@ -29,10 +28,10 @@ import { InnovationPackAuthorizationService } from '@library/innovation-pack/inn
 import { InnovationPackService } from '@library/innovation-pack/innovaton.pack.service';
 import { SpaceAuthorizationService } from '../space/space.service.authorization';
 import { ISpace } from '../space/space.interface';
-import { TransferAccountInnovationHubInput } from './dto/account.dto.transfer.innovation.hub';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { TransferAccountSpaceInput } from './dto/account.dto.transfer.space';
+import { TransferAccountInnovationHubInput } from './dto/account.dto.transfer.innovation.hub';
 import { TransferAccountInnovationPackInput } from './dto/account.dto.transfer.innovation.pack';
 import { TransferAccountVirtualContributorInput } from './dto/account.dto.transfer.virtual.contributor';
 
@@ -42,7 +41,6 @@ export class AccountResolverMutations {
     private accountService: AccountService,
     private accountAuthorizationService: AccountAuthorizationService,
     private authorizationService: AuthorizationService,
-    private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private virtualContributorService: VirtualContributorService,
     private virtualContributorAuthorizationService: VirtualContributorAuthorizationService,
     private innovationHubService: InnovationHubService,
@@ -84,16 +82,27 @@ export class AccountResolverMutations {
 
     space = await this.spaceService.save(space);
 
+    space = await this.spaceService.getSpaceOrFail(space.id, {
+      relations: {
+        profile: true,
+        community: true,
+      },
+    });
+    if (!space.profile || !space.community) {
+      throw new RelationshipNotFoundException(
+        `Unable to load space profile or community: ${space.id}`,
+        LogContext.ACCOUNT
+      );
+    }
+
     await this.namingReporter.createOrUpdateName(
       space.id,
       space.profile.displayName
     );
 
-    const community = await this.spaceService.getCommunity(space.id);
-
     const notificationInput: NotificationInputSpaceCreated = {
       triggeredBy: agentInfo.userID,
-      community: community,
+      community: space.community,
       account: account,
     };
     await this.notificationAdapter.spaceCreated(notificationInput);
@@ -109,15 +118,6 @@ export class AccountResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('createData') createData: CreateInnovationHubOnAccountInput
   ): Promise<IInnovationHub> {
-    // InnovationHubs still require platform admin for now
-    const authorizationPolicy =
-      await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      authorizationPolicy,
-      AuthorizationPrivilege.PLATFORM_ADMIN,
-      'create innovation space'
-    );
     const account = await this.accountService.getAccountOrFail(
       createData.accountID,
       {
@@ -125,6 +125,13 @@ export class AccountResolverMutations {
           storageAggregator: true,
         },
       }
+    );
+
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      account.authorization,
+      AuthorizationPrivilege.CREATE_INNOVATION_HUB,
+      `create InnovationHub on account: ${account.id}`
     );
 
     let innovationHub = await this.innovationHubService.createInnovationHub(
@@ -149,10 +156,7 @@ export class AccountResolverMutations {
     virtualContributorData: CreateVirtualContributorOnAccountInput
   ): Promise<IVirtualContributor> {
     const account = await this.accountService.getAccountOrFail(
-      virtualContributorData.accountID,
-      {
-        relations: {},
-      }
+      virtualContributorData.accountID
     );
 
     this.authorizationService.grantAccessOrFail(
@@ -205,7 +209,7 @@ export class AccountResolverMutations {
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       account.authorization,
-      AuthorizationPrivilege.CREATE,
+      AuthorizationPrivilege.CREATE_INNOVATION_PACK,
       `create Innovation Pack on account: ${account.id}`
     );
 

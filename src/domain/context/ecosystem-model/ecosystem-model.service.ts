@@ -32,16 +32,18 @@ export class EcosystemModelService {
     private ecosystemModelRepository: Repository<EcosystemModel>
   ) {}
 
-  async createEcosystemModel(
+  public createEcosystemModel(
     ecosystemModelData: CreateEcosystemModelInput
-  ): Promise<IEcosystemModel> {
+  ): IEcosystemModel {
     const ecosystemModel: IEcosystemModel = EcosystemModel.create({
       ...ecosystemModelData,
+      authorization: new AuthorizationPolicy(),
+      actorGroups: [],
     });
-    ecosystemModel.authorization = new AuthorizationPolicy();
-    await this.createRestrictedActorGroups(ecosystemModel);
-    ecosystemModel.actorGroups = [];
-    return await this.ecosystemModelRepository.save(ecosystemModel);
+
+    this.createRestrictedActorGroups(ecosystemModel);
+
+    return ecosystemModel;
   }
 
   async getEcosystemModelOrFail(
@@ -90,25 +92,22 @@ export class EcosystemModelService {
     );
   }
 
-  async createRestrictedActorGroups(
-    ecosystem: IEcosystemModel
-  ): Promise<boolean> {
+  public createRestrictedActorGroups(ecosystem: IEcosystemModel): void {
     if (!ecosystem.restrictedActorGroupNames) {
       throw new EntityNotInitializedException(
         'Non-initialised EcosystemModel submitted',
         LogContext.SPACES
       );
     }
+    ecosystem.actorGroups = [];
     for (const name of ecosystem.restrictedActorGroupNames) {
-      const actorGroup = await this.actorGroupService.createActorGroup({
+      const actorGroup = this.actorGroupService.createActorGroup({
         ecosystemModelID: '',
         name: name,
         description: 'Default actor group',
       });
-      ecosystem.actorGroups?.push(actorGroup);
-      await this.ecosystemModelRepository.save(ecosystem);
+      ecosystem.actorGroups.push(actorGroup);
     }
-    return true;
   }
 
   async createActorGroup(
@@ -133,9 +132,8 @@ export class EcosystemModelService {
         LogContext.SPACES
       );
 
-    const actorGroup = await this.actorGroupService.createActorGroup(
-      actorGroupData
-    );
+    const actorGroup =
+      await this.actorGroupService.createActorGroup(actorGroupData);
     if (!ecosystemModel.actorGroups)
       throw new EntityNotInitializedException(
         `Ecosystem Model (${ecosystemId}) not initialised`,
