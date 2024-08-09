@@ -18,7 +18,7 @@ import { invitationLifecycleConfig } from '@domain/community/invitation/invitati
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { asyncFilter } from '@common/utils';
-import { IUser } from '../user';
+import { IUser } from '../user/user.interface';
 import { UserService } from '../user/user.service';
 import { LogContext } from '@common/enums/logging.context';
 import { ContributorService } from '../contributor/contributor.service';

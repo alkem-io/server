@@ -6,7 +6,7 @@ import { MockContributorLookupService } from '@test/mocks/contributor.lookup.ser
 import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 import { testData } from '@test/utils/test-data';
 import { IUser } from '@domain/community/user/user.interface';
-import { IVirtualContributor } from '@domain/community/virtual-contributor';
+import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 
 describe('RoomServiceMentions', () => {
   let roomMentionsService: RoomServiceMentions;

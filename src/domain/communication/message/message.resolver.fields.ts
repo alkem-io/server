@@ -5,7 +5,7 @@ import { EntityNotFoundException } from '@common/exceptions';
 import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
-import { VirtualContributor } from '@domain/community/virtual-contributor';
+import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
@@ -47,9 +47,8 @@ export class MessageResolverFields {
           contributorOptions
         );
       if (!sender) {
-        sender = await this.virtualContributorRepository.findOne(
-          contributorOptions
-        );
+        sender =
+          await this.virtualContributorRepository.findOne(contributorOptions);
       }
 
       return sender;

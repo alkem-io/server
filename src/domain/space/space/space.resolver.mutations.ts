@@ -2,7 +2,7 @@ import { Inject, UseGuards } from '@nestjs/common';
 import { Resolver, Args, Mutation } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { SpaceService } from './space.service';
-import { UpdateSpaceInput } from '@domain/space/space';
+import { DeleteSpaceInput, UpdateSpaceInput } from '@domain/space/space';
 import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -16,8 +16,6 @@ import { PubSubEngine } from 'graphql-subscriptions';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { NameReporterService } from '@services/external/elasticsearch/name-reporter/name.reporter.service';
-import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
-import { LogContext } from '@common/enums';
 import { UpdateSpacePlatformSettingsInput } from './dto/space.dto.update.platform.settings';
 import { SUBSCRIPTION_SUBSPACE_CREATED } from '@common/constants/providers';
 import { UpdateSpaceSettingsInput } from './dto/space.dto.update.settings';
@@ -88,29 +86,34 @@ export class SpaceResolverMutations {
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => ISpace, {
+    description: 'Deletes the specified Space.',
+  })
+  async deleteSpace(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('deleteData') deleteData: DeleteSpaceInput
+  ): Promise<ISpace> {
+    const space = await this.spaceService.getSpaceOrFail(deleteData.ID);
+
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      space.authorization,
+      AuthorizationPrivilege.DELETE,
+      `deleteSpace: ${space.nameID}`
+    );
+    return await this.spaceService.deleteSpace(deleteData);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => ISpace, {
     description: 'Updates one of the Setting on a Space',
   })
-  @Profiling.api
   async updateSpaceSettings(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('settingsData') settingsData: UpdateSpaceSettingsInput
   ): Promise<ISpace> {
-    const space = await this.spaceService.getSpaceOrFail(settingsData.spaceID, {
-      relations: {
-        account: {
-          authorization: true,
-        },
-        parentSpace: {
-          authorization: true,
-        },
-      },
+    let space = await this.spaceService.getSpaceOrFail(settingsData.spaceID, {
+      relations: {},
     });
-    if (!space.account || !space.account.authorization) {
-      throw new EntityNotInitializedException(
-        `Unabl to load authorization for account when updating settings on space: ${space.id}`,
-        LogContext.SPACES
-      );
-    }
 
     this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -119,17 +122,12 @@ export class SpaceResolverMutations {
       `space settings update: ${space.id}`
     );
 
-    let updatedSpace = await this.spaceService.updateSpaceSettings(
-      space,
-      settingsData
-    );
+    space = await this.spaceService.updateSpaceSettings(space, settingsData);
 
     // As the settings may update the authorization for the Space, the authorization policy will need to be reset
-    updatedSpace =
-      await this.spaceAuthorizationService.applyAuthorizationPolicy(
-        updatedSpace
-      );
-    return await this.spaceService.save(updatedSpace);
+    space =
+      await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
+    return await this.spaceService.save(space);
   }
 
   @UseGuards(GraphqlGuard)
@@ -168,24 +166,8 @@ export class SpaceResolverMutations {
     @Args('subspaceData') subspaceData: CreateSubspaceInput
   ): Promise<ISpace> {
     const space = await this.spaceService.getSpaceOrFail(subspaceData.spaceID, {
-      relations: {
-        account: {
-          agent: {
-            credentials: true,
-          },
-        },
-      },
+      relations: {},
     });
-    if (
-      !space.account ||
-      !space.account.agent ||
-      !space.account.agent.credentials
-    ) {
-      throw new EntityNotInitializedException(
-        `Unabl to load agent with credentials for Account for Space: ${space.id}`,
-        LogContext.SPACES
-      );
-    }
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       space.authorization,

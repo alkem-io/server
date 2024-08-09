@@ -9,7 +9,7 @@ import { ErrorCause } from '@elastic/elasticsearch/lib/api/types';
 import { ELASTICSEARCH_CLIENT_PROVIDER } from '@common/constants';
 import { Space } from '@domain/space/space/space.entity';
 import { Organization } from '@domain/community/organization';
-import { User } from '@domain/community/user';
+import { User } from '@domain/community/user/user.entity';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { Tagset } from '@domain/common/tagset';
 import { LogContext } from '@common/enums';

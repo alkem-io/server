@@ -1,7 +1,6 @@
 import { AuthorizationCredential, LogContext } from '@common/enums';
 import {
   EntityNotFoundException,
-  NotSupportedException,
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
@@ -12,37 +11,24 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Account } from './account.entity';
 import { IAccount } from './account.interface';
 import { AgentService } from '@domain/agent/agent/agent.service';
-import { ITemplatesSet } from '@domain/template/templates-set/templates.set.interface';
-import { TemplatesSetService } from '@domain/template/templates-set/templates.set.service';
-import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
-import { UpdateAccountDefaultsInput } from './dto/account.dto.update.defaults';
-import { ISpaceDefaults } from '../space.defaults/space.defaults.interface';
 import { SpaceService } from '../space/space.service';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { ISpace } from '../space/space.interface';
-import { UpdateAccountPlatformSettingsInput } from './dto/account.dto.update.platform.settings';
-import { AuthorizationPolicy } from '@domain/common/authorization-policy';
-import { CreateAccountInput } from './dto/account.dto.create';
 import { LicensingService } from '@platform/licensing/licensing.service';
-import { ILicensePlan } from '@platform/license-plan/license.plan.interface';
 import { IAccountSubscription } from './account.license.subscription.interface';
 import { LicenseCredential } from '@common/enums/license.credential';
 import { CreateVirtualContributorOnAccountInput } from './dto/account.dto.create.virtual.contributor';
-import { IVirtualContributor } from '@domain/community/virtual-contributor';
+import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
-import { User } from '@domain/community/user';
-import { LicenseIssuerService } from '@platform/license-issuer/license.issuer.service';
 import { AccountHostService } from '../account.host/account.host.service';
-import { Organization } from '@domain/community/organization/organization.entity';
 import { LicensePrivilege } from '@common/enums/license.privilege';
 import { LicenseEngineService } from '@core/license-engine/license.engine.service';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { CreateSpaceOnAccountInput } from './dto/account.dto.create.space';
-import { Space } from '../space/space.entity';
 import { LicensePlanType } from '@common/enums/license.plan.type';
 import { CreateInnovationHubOnAccountInput } from './dto/account.dto.create.innovation.hub';
 import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
-import { InnovationHubService } from '@domain/innovation-hub';
+import { InnovationHubService } from '@domain/innovation-hub/innovation.hub.service';
 import { SpaceLevel } from '@common/enums/space.level';
 import { InnovationPackService } from '@library/innovation-pack/innovaton.pack.service';
 import { CreateInnovationPackOnAccountInput } from './dto/account.dto.create.innovation.pack';
@@ -56,11 +42,8 @@ export class AccountService {
     private accountHostService: AccountHostService,
     private spaceService: SpaceService,
     private agentService: AgentService,
-    private templatesSetService: TemplatesSetService,
-    private spaceDefaultsService: SpaceDefaultsService,
     private licensingService: LicensingService,
     private licenseEngineService: LicenseEngineService,
-    private licenseIssuerService: LicenseIssuerService,
     private storageAggregatorService: StorageAggregatorService,
     private virtualContributorService: VirtualContributorService,
     private innovationHubService: InnovationHubService,
@@ -71,81 +54,22 @@ export class AccountService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async createAccount(accountData: CreateAccountInput): Promise<IAccount> {
-    const licensingFramework =
-      await this.licensingService.getDefaultLicensingOrFail();
-
-    let account: IAccount = new Account();
-    account.authorization = new AuthorizationPolicy();
-    account.storageAggregator =
-      await this.storageAggregatorService.createStorageAggregator();
-    account.library = await this.templatesSetService.createTemplatesSet();
-    account.defaults = await this.spaceDefaultsService.createSpaceDefaults();
-
-    // And set the defaults
-    account.library =
-      await this.spaceDefaultsService.addDefaultTemplatesToSpaceLibrary(
-        account.library,
-        account.storageAggregator
-      );
-    if (
-      account.defaults &&
-      account.library &&
-      account.library.innovationFlowTemplates.length !== 0
-    ) {
-      account.defaults.innovationFlowTemplate =
-        account.library.innovationFlowTemplates[0];
-    }
-
-    account.agent = await this.agentService.createAgent({
-      parentDisplayID: `account-${account.id}`,
-    });
-
-    const host = await this.accountHostService.getHostByID(accountData.hostID);
-
-    const licensePlansToAssign: ILicensePlan[] = [];
-    const licensePlans = await this.licensingService.getLicensePlans(
-      licensingFramework.id
-    );
-    for (const plan of licensePlans) {
-      if (host instanceof User && plan.assignToNewUserAccounts) {
-        licensePlansToAssign.push(plan);
-      } else if (
-        host instanceof Organization &&
-        plan.assignToNewOrganizationAccounts
-      ) {
-        licensePlansToAssign.push(plan);
-      }
-    }
-
-    const accountAgent = account.agent;
-    account = await this.save(account);
-
-    for (const licensePlan of licensePlansToAssign) {
-      account.agent = await this.licenseIssuerService.assignLicensePlan(
-        accountAgent,
-        licensePlan,
-        account.id
-      );
-    }
-
-    await this.accountHostService.setAccountHost(account, accountData.hostID);
-
-    return account;
-  }
-
   async createSpaceOnAccount(
-    account: IAccount,
-    spaceOnAccountData: CreateSpaceOnAccountInput,
+    spaceData: CreateSpaceOnAccountInput,
     agentInfo?: AgentInfo
-  ): Promise<IAccount> {
+  ): Promise<ISpace> {
+    const account = await this.getAccountOrFail(spaceData.accountID, {
+      relations: {
+        spaces: true,
+        storageAggregator: true,
+      },
+    });
     if (!account.storageAggregator) {
       throw new RelationshipNotFoundException(
         `Unable to find storage aggregator on account for creating space ${account.id} `,
         LogContext.ACCOUNT
       );
     }
-    const spaceData = spaceOnAccountData.spaceData;
 
     const reservedNameIDs =
       await this.namingService.getReservedNameIDsLevelZeroSpaces();
@@ -167,72 +91,21 @@ export class AccountService {
     spaceData.level = SpaceLevel.SPACE;
     spaceData.storageAggregatorParent = account.storageAggregator;
 
-    account.space = await this.spaceService.createSpace(
+    const space = await this.spaceService.createSpace(
       spaceData,
-      account,
+      undefined,
       agentInfo
     );
-    const savedAccount = await this.save(account);
 
-    await this.spaceService.assignUserToRoles(account.space, agentInfo);
-    return savedAccount;
+    account.spaces.push(space);
+    await this.save(account);
+
+    await this.spaceService.assignUserToRoles(space, agentInfo);
+    return space;
   }
 
   async save(account: IAccount): Promise<IAccount> {
     return await this.accountRepository.save(account);
-  }
-
-  public async updateAccountDefaults(
-    accountDefaultsData: UpdateAccountDefaultsInput
-  ): Promise<ISpaceDefaults> {
-    const account = await this.getAccountOrFail(accountDefaultsData.accountID, {
-      relations: {
-        defaults: true,
-        library: {
-          innovationFlowTemplates: true,
-        },
-      },
-    });
-    if (
-      !account.defaults ||
-      !account.library ||
-      !account.library.innovationFlowTemplates
-    ) {
-      throw new RelationshipNotFoundException(
-        `Unable to load all required data to update the defaults on  Account ${account.id} `,
-        LogContext.ACCOUNT
-      );
-    }
-
-    // Verify that the specified template is in the account library
-    const template = account.library.innovationFlowTemplates.find(
-      t => t.id === accountDefaultsData.flowTemplateID
-    );
-    if (!template) {
-      throw new NotSupportedException(
-        `InnovationFlowTemplate ID provided (${accountDefaultsData.flowTemplateID}) is not part of the Library for the Account ${account.id} `,
-        LogContext.ACCOUNT
-      );
-    }
-
-    return await this.spaceDefaultsService.updateSpaceDefaults(
-      account.defaults,
-      template
-    );
-  }
-
-  public async updateAccountPlatformSettings(
-    updateData: UpdateAccountPlatformSettingsInput
-  ): Promise<IAccount> {
-    const account = await this.getAccountOrFail(updateData.accountID, {
-      relations: {},
-    });
-
-    if (updateData.hostID) {
-      await this.accountHostService.setAccountHost(account, updateData.hostID);
-    }
-
-    return await this.save(account);
   }
 
   async deleteAccount(accountInput: IAccount): Promise<IAccount> {
@@ -240,9 +113,7 @@ export class AccountService {
     const account = await this.getAccountOrFail(accountID, {
       relations: {
         agent: true,
-        space: true,
-        library: true,
-        defaults: true,
+        spaces: true,
         virtualContributors: true,
         innovationPacks: true,
         storageAggregator: true,
@@ -252,9 +123,7 @@ export class AccountService {
 
     if (
       !account.agent ||
-      !account.space ||
-      !account.defaults ||
-      !account.library ||
+      !account.spaces ||
       !account.virtualContributors ||
       !account.storageAggregator ||
       !account.innovationHubs ||
@@ -266,19 +135,12 @@ export class AccountService {
       );
     }
 
-    const host = await this.accountHostService.getHostOrFail(account);
-    await this.spaceService.deleteSpace({
-      ID: account.space.id,
-    });
-
     await this.agentService.deleteAgent(account.agent.id);
 
-    await this.templatesSetService.deleteTemplatesSet(account.library.id);
-
-    await this.spaceDefaultsService.deleteSpaceDefaults(account.defaults.id);
     await this.storageAggregatorService.delete(account.storageAggregator.id);
 
     // Remove the account host credential
+    const host = await this.accountHostService.getHostOrFail(account);
     host.agent = await this.agentService.revokeCredential({
       agentID: host.agent.id,
       type: AuthorizationCredential.ACCOUNT_HOST,
@@ -293,6 +155,10 @@ export class AccountService {
 
     for (const hub of account.innovationHubs) {
       await this.innovationHubService.delete(hub.id);
+    }
+
+    for (const space of account.spaces) {
+      await this.spaceService.deleteSpace({ ID: space.id });
     }
 
     const result = await this.accountRepository.remove(account as Account);
@@ -355,44 +221,6 @@ export class AccountService {
     const privileges =
       await this.licenseEngineService.getGrantedPrivileges(accountAgent);
     return privileges;
-  }
-
-  async getLibraryOrFail(accountId: string): Promise<ITemplatesSet> {
-    const accountWithTemplates = await this.getAccountOrFail(accountId, {
-      relations: {
-        library: {
-          postTemplates: true,
-        },
-      },
-    });
-    const templatesSet = accountWithTemplates.library;
-
-    if (!templatesSet) {
-      throw new EntityNotFoundException(
-        `Unable to find templatesSet for account with id: ${accountId}`,
-        LogContext.ACCOUNT
-      );
-    }
-
-    return templatesSet;
-  }
-
-  async getRootSpace(
-    accountInput: IAccount,
-    options?: FindOneOptions<Space>
-  ): Promise<ISpace | undefined> {
-    if (accountInput.space && accountInput.space.profile) {
-      return accountInput.space;
-    }
-    const account = await this.getAccountOrFail(accountInput.id, {
-      relations: {
-        space: {
-          profile: true,
-          ...options?.relations,
-        },
-      },
-    });
-    return account.space;
   }
 
   async getSubscriptions(

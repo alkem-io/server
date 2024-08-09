@@ -1,6 +1,6 @@
 import { ActivityEventType } from '@common/enums/activity.event.type';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
-import { IUser } from '@domain/community/user';
+import { IUser } from '@domain/community/user/user.interface';
 import { Field } from '@nestjs/graphql';
 import { NameID } from '@domain/common/scalars';
 import { SpaceType } from '@common/enums/space.type';

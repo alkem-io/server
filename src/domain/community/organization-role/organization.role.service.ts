@@ -5,7 +5,7 @@ import {
   RelationshipNotFoundException,
 } from '@common/exceptions';
 import { AuthorizationCredential, LogContext } from '@common/enums';
-import { IUser } from '@domain/community/user';
+import { IUser } from '@domain/community/user/user.interface';
 import { UserService } from '@domain/community/user/user.service';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';

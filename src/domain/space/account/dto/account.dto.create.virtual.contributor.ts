@@ -4,6 +4,9 @@ import { CreateVirtualContributorInput } from '@domain/community/virtual-contrib
 
 @InputType()
 export class CreateVirtualContributorOnAccountInput extends CreateVirtualContributorInput {
-  @Field(() => UUID, { nullable: false })
+  @Field(() => UUID, {
+    nullable: false,
+    description: 'The Account where the VirtualContributor is to be created.',
+  })
   accountID!: string;
 }

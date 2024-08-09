@@ -4,25 +4,17 @@ import { InjectEntityManager } from '@nestjs/typeorm';
 import { Account } from '@domain/space/account/account.entity';
 import { createTypedRelationDataLoader } from '../../../utils';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
-import { ISpaceDefaults } from '@domain/space/space.defaults/space.defaults.interface';
+import { ISpace } from '@domain/space/space/space.interface';
 
 @Injectable()
-export class AccountDefaultsLoaderCreator
-  implements DataLoaderCreator<ISpaceDefaults[]>
-{
+export class AccountSpacesLoaderCreator implements DataLoaderCreator<ISpace[]> {
   constructor(@InjectEntityManager() private manager: EntityManager) {}
 
-  create(options?: DataLoaderCreatorOptions<ISpaceDefaults[]>) {
+  create(options?: DataLoaderCreatorOptions<ISpace[]>) {
     return createTypedRelationDataLoader(
       this.manager,
       Account,
-      {
-        defaults: {
-          innovationFlowTemplate: {
-            profile: true,
-          },
-        },
-      },
+      { spaces: true },
       this.constructor.name,
       options
     );

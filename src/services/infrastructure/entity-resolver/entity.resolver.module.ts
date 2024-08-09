@@ -7,7 +7,7 @@ import { Community } from '@domain/community/community/community.entity';
 import { Communication } from '@domain/communication/communication/communication.entity';
 import { TimelineResolverService } from './timeline.resolver.service';
 import { ContributionResolverService } from './contribution.resolver.service';
-import { VirtualContributor } from '@domain/community/virtual-contributor';
+import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 
 @Module({
   imports: [

@@ -26,9 +26,7 @@ import { ProfileService } from '@domain/common/profile/profile.service';
 import {
   CreateUserInput,
   DeleteUserInput,
-  IUser,
   UpdateUserInput,
-  User,
 } from '@domain/community/user';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
@@ -65,6 +63,10 @@ import { StorageAggregatorService } from '@domain/storage/storage-aggregator/sto
 import { AvatarService } from '@domain/common/visual/avatar.service';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { UpdateUserPlatformSettingsInput } from './dto/user.dto.update.platform.settings';
+import { AccountHostService } from '@domain/space/account.host/account.host.service';
+import { IAccount } from '@domain/space/account/account.interface';
+import { User } from './user.entity';
+import { IUser } from './user.interface';
 
 @Injectable()
 export class UserService {
@@ -79,6 +81,7 @@ export class UserService {
     private preferenceSetService: PreferenceSetService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private storageAggregatorService: StorageAggregatorService,
+    private accountHostService: AccountHostService,
     private avatarService: AvatarService,
     private documentService: DocumentService,
     @InjectRepository(User)
@@ -198,6 +201,11 @@ export class UserService {
     );
 
     await this.setUserCache(response);
+
+    // And create the account for the user
+    await this.accountHostService.createAccount({
+      host: user,
+    });
 
     return response;
   }
@@ -413,10 +421,12 @@ export class UserService {
       },
     });
 
-    const isAccountHost = await this.isAccountHost(user);
-    if (isAccountHost) {
+    // TODO: give additional feedback?
+    const accountHasResources =
+      await this.accountHostService.areResourcesInAccount(user);
+    if (accountHasResources) {
       throw new ForbiddenException(
-        'Unable to delete User: host of one or more accounts',
+        'Unable to delete User: accounts contain one or more resources',
         LogContext.SPACES
       );
     }
@@ -454,6 +464,25 @@ export class UserService {
       ...result,
       id,
     };
+  }
+
+  public async getAccount(user: IUser): Promise<IAccount> {
+    const accounts =
+      await this.accountHostService.getAccountsHostedByContributor(user);
+    if (accounts.length === 0) {
+      throw new EntityNotFoundException(
+        `No account found for user: ${user.id}`,
+        LogContext.COMMUNITY
+      );
+    }
+    if (accounts.length > 1) {
+      throw new EntityNotFoundException(
+        `More than one account found for user: ${user.id}`,
+        LogContext.COMMUNITY
+      );
+    }
+    // TODO: later there will be exactly one account
+    return accounts[0];
   }
 
   async getPreferenceSetOrFail(userID: string): Promise<IPreferenceSet> {

@@ -38,10 +38,7 @@ import { CommunityMembershipException } from '@common/exceptions/community.membe
 import { AssignCommunityRoleToVirtualInput } from './dto/community.role.dto.role.assign.virtual';
 import { RemoveCommunityRoleFromVirtualInput } from './dto/community.role.dto.role.remove.virtual';
 import { VirtualContributorService } from '../virtual-contributor/virtual.contributor.service';
-import {
-  IVirtualContributor,
-  VirtualContributor,
-} from '../virtual-contributor';
+import { VirtualContributor } from '../virtual-contributor/virtual.contributor.entity';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { CommunityInvitationException } from '@common/exceptions/community.invitation.exception';
 import { CreateInvitationForContributorsOnCommunityInput } from './dto/community.role.dto.invite.contributor';
@@ -57,6 +54,7 @@ import { CommunityService } from '../community/community.service';
 import { CommunityAuthorizationService } from '../community/community.service.authorization';
 import { CommunityRoleInvitationLifecycleOptionsProvider } from './community.role.lifecycle.invitation.options.provider';
 import { CommunityRoleApplicationLifecycleOptionsProvider } from './community.role.lifecycle.application.options.provider';
+import { IVirtualContributor } from '../virtual-contributor/virtual.contributor.interface';
 
 @Resolver()
 export class CommunityRoleResolverMutations {

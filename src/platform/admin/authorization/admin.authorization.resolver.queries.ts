@@ -1,7 +1,7 @@
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { Args, Query, Resolver } from '@nestjs/graphql';
 import { GraphqlGuard } from '@core/authorization';
-import { IUser } from '@domain/community/user';
+import { IUser } from '@domain/community/user/user.interface';
 import { AuthorizationPrivilege } from '@common/enums';
 import { UserAuthorizationPrivilegesInput } from './dto/authorization.dto.user.authorization.privileges';
 import { UseGuards } from '@nestjs/common/decorators/core/use-guards.decorator';

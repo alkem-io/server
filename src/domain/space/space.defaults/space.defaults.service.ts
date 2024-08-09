@@ -143,28 +143,6 @@ export class SpaceDefaultsService {
     return spaceDefaults;
   }
 
-  private async getDefaultsForAccountOrFail(
-    accountID: string
-  ): Promise<ISpaceDefaults | never> {
-    let spaceDefaults: ISpaceDefaults | undefined = undefined;
-    if (accountID.length === UUID_LENGTH) {
-      const account = await this.accountRepository.findOne({
-        where: { id: accountID },
-        relations: {
-          defaults: true,
-        },
-      });
-      if (account) spaceDefaults = account?.defaults;
-    }
-
-    if (!spaceDefaults)
-      throw new EntityNotFoundException(
-        `No SpaceDefaults found for the given accountID: ${accountID}`,
-        LogContext.COLLABORATION
-      );
-    return spaceDefaults;
-  }
-
   public getCalloutGroups(spaceType: SpaceType): ICalloutGroup[] {
     switch (spaceType) {
       case SpaceType.CHALLENGE:
@@ -309,8 +287,8 @@ export class SpaceDefaultsService {
   }
 
   public async getCreateInnovationFlowInput(
-    accountID: string,
     spaceType: SpaceType,
+    spaceDefaults?: ISpaceDefaults,
     innovationFlowTemplateID?: string
   ): Promise<CreateInnovationFlowInput> {
     // Start with using the provided argument
@@ -338,8 +316,7 @@ export class SpaceDefaultsService {
       spaceType === SpaceType.CHALLENGE ||
       spaceType === SpaceType.OPPORTUNITY
     ) {
-      const spaceDefaults = await this.getDefaultsForAccountOrFail(accountID);
-      if (spaceDefaults.innovationFlowTemplate) {
+      if (spaceDefaults && spaceDefaults.innovationFlowTemplate) {
         const template =
           await this.innovationFlowTemplateService.getInnovationFlowTemplateOrFail(
             spaceDefaults.innovationFlowTemplate.id,

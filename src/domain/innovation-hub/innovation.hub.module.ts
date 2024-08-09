@@ -14,13 +14,13 @@ import { InnovationHubResolverFields } from './innovation.hub.resolver.fields';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([InnovationHub]),
     SpaceModule,
     ProfileModule,
     AuthorizationPolicyModule,
     AuthorizationModule,
     NamingModule,
     StorageAggregatorResolverModule,
+    TypeOrmModule.forFeature([InnovationHub]),
   ],
   providers: [
     InnovationHubService,

@@ -13,11 +13,13 @@ import { ActivityModule } from '@platform/activity/activity.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { CommunityRoleModule } from '@domain/community/community-role/community.role.module';
 import { ContributorModule } from '@domain/community/contributor/contributor.module';
+import { AccountHostModule } from '@domain/space/account.host/account.host.module';
 
 @Module({
   imports: [
     AuthorizationModule,
     ApplicationModule,
+    AccountHostModule,
     InvitationModule,
     UserModule,
     ContributorModule,

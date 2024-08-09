@@ -3,7 +3,7 @@ import { UserService } from './user.service';
 import { UserResolverQueries } from './user.resolver.queries';
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { User } from '@domain/community/user';
+import { User } from '@domain/community/user/user.entity';
 import { UserResolverFields } from './user.resolver.fields';
 import { UserResolverMutations } from './user.resolver.mutations';
 import { AgentModule } from '@domain/agent/agent/agent.module';
@@ -31,6 +31,7 @@ import { DocumentModule } from '@domain/storage/document/document.module';
 import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
 import { AvatarModule } from '@domain/common/visual/avatar.module';
 import { ContributorModule } from '../contributor/contributor.module';
+import { AccountHostModule } from '@domain/space/account.host/account.host.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { ContributorModule } from '../contributor/contributor.module';
     NotificationAdapterModule,
     CommunicationAdapterModule,
     AgentModule,
+    AccountHostModule,
     NamingModule,
     AuthorizationPolicyModule,
     AuthorizationModule,

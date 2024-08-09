@@ -26,6 +26,7 @@ import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { SpaceDefaultsModule } from '../space.defaults/space.defaults.module';
 import { SpaceSettingssModule } from '../space.settings/space.settings.module';
 import { CommunityRoleModule } from '@domain/community/community-role/community.role.module';
+import { TemplatesSetModule } from '@domain/template/templates-set/templates.set.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { CommunityRoleModule } from '@domain/community/community-role/community.
     NamingModule,
     PlatformAuthorizationPolicyModule,
     SpaceDefaultsModule,
+    TemplatesSetModule,
     SpaceSettingssModule,
     StorageAggregatorModule,
     ContributionReporterModule,

@@ -10,7 +10,6 @@ import { PlatformResolverMutations } from './platform.resolver.mutations';
 import { PlatformResolverQueries } from './platform.resolver.queries';
 import { PlatformService } from './platform.service';
 import { PlatformAuthorizationService } from './platform.service.authorization';
-import { InnovationHubModule } from '@domain/innovation-hub';
 import { KonfigModule } from '@platform/configuration/config/config.module';
 import { MetadataModule } from '@platform/metadata/metadata.module';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
@@ -28,7 +27,6 @@ import { PlatformInvitationModule } from '@platform/invitation/platform.invitati
     StorageAggregatorModule,
     KonfigModule,
     MetadataModule,
-    InnovationHubModule,
     LicensingModule,
     PlatformInvitationModule,
     TypeOrmModule.forFeature([Platform]),

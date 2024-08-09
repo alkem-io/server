@@ -938,16 +938,19 @@ export class SearchService {
     let postIDsFilter: string[] | undefined = undefined;
     if (searchInSpaceID) {
       searchInSpace = await this.spaceService.getSpaceOrFail(searchInSpaceID, {
-        relations: { collaboration: true, account: true },
+        relations: { collaboration: true },
       });
       spaceIDsFilter = [searchInSpace.id];
-      const accountIDsFilter = [searchInSpace.account.id];
+      const levelZeroSpaceIDsFilter = [searchInSpace.levelZeroSpaceID];
 
-      const subspacesFilter =
-        await this.getSubspacesInAccountFilter(accountIDsFilter);
+      const subspacesFilter = await this.getSubspacesInLevelZeroSpaceIDsFilter(
+        levelZeroSpaceIDsFilter
+      );
       challengeIDsFilter = subspacesFilter.map(subspace => subspace.id);
       const subsubspacesFilter =
-        await this.getSubsubspacesInAccountFilter(accountIDsFilter);
+        await this.getSubsubspacesInLevelZeroSpaceIDsFilter(
+          levelZeroSpaceIDsFilter
+        );
       opportunityIDsFilter = subsubspacesFilter.map(opp => opp.id);
       userIDsFilter = await this.getUsersFilter(searchInSpace);
       organizationIDsFilter = await this.getOrganizationsFilter(searchInSpace);
@@ -967,38 +970,32 @@ export class SearchService {
     };
   }
 
-  private async getSubspacesInAccountFilter(
-    accountIDsFilter: string[]
+  private async getSubspacesInLevelZeroSpaceIDsFilter(
+    levelZeroSpaceIDsFilter: string[]
   ): Promise<ISpace[]> {
     const subspaces = await this.spaceRepository.find({
       where: {
-        account: {
-          id: In(accountIDsFilter),
-        },
+        levelZeroSpaceID: In(levelZeroSpaceIDsFilter),
         level: SpaceLevel.CHALLENGE,
       },
       relations: {
         collaboration: true,
-        account: true,
       },
     });
 
     return subspaces;
   }
 
-  private async getSubsubspacesInAccountFilter(
-    accountIDsFilter: string[]
+  private async getSubsubspacesInLevelZeroSpaceIDsFilter(
+    levelZeroSpaceIDsFilter: string[]
   ): Promise<ISpace[]> {
     const subsubspaces = await this.spaceRepository.find({
       where: {
-        account: {
-          id: In(accountIDsFilter),
-        },
+        levelZeroSpaceID: In(levelZeroSpaceIDsFilter),
         level: SpaceLevel.OPPORTUNITY,
       },
       relations: {
         collaboration: true,
-        account: true,
       },
     });
 

@@ -4,6 +4,9 @@ import { CreateInnovationPackInput } from '@library/innovation-pack/dto/innovati
 
 @InputType()
 export class CreateInnovationPackOnAccountInput extends CreateInnovationPackInput {
-  @Field(() => UUID, { nullable: false })
+  @Field(() => UUID, {
+    nullable: false,
+    description: 'The Account where the InnovationPack is to be created.',
+  })
   accountID!: string;
 }

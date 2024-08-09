@@ -5,7 +5,7 @@ import { OrganizationRoleService } from './organization.role.service';
 import { AuthorizationPrivilege } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
 import { IOrganization, Organization } from '@domain/community/organization';
-import { IUser } from '@domain/community/user';
+import { IUser } from '@domain/community/user/user.interface';
 import { CurrentUser, Profiling } from '@common/decorators';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';

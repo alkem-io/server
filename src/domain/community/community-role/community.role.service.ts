@@ -10,7 +10,7 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { IUser } from '@domain/community/user';
+import { IUser } from '@domain/community/user/user.interface';
 import { ICommunity } from '@domain/community/community';
 import { ApplicationService } from '@domain/community/application/application.service';
 import { AgentService } from '@domain/agent/agent/agent.service';
@@ -32,7 +32,7 @@ import { CommunityResolverService } from '@services/infrastructure/entity-resolv
 import { CreateInvitationInput } from '../invitation/dto/invitation.dto.create';
 import { CommunityMembershipException } from '@common/exceptions/community.membership.exception';
 import { CommunityRoleEventsService } from './community.role.service.events';
-import { IVirtualContributor } from '../virtual-contributor';
+import { IVirtualContributor } from '../virtual-contributor/virtual.contributor.interface';
 import { VirtualContributorService } from '../virtual-contributor/virtual.contributor.service';
 import { CommunityRoleImplicit } from '@common/enums/community.role.implicit';
 import { AuthorizationCredential } from '@common/enums';

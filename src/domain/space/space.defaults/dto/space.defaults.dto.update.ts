@@ -5,10 +5,9 @@ import { UUID } from '@domain/common/scalars/scalar.uuid';
 export class UpdateSpaceDefaultsInput {
   @Field(() => UUID, {
     nullable: false,
-    description:
-      'The identifier for the Space whose Defaaults are to be updated.',
+    description: 'The identifier for the SpaceDefaults to be updated.',
   })
-  spaceID!: string;
+  spaceDefaultsID!: string;
 
   @Field(() => UUID, {
     nullable: false,

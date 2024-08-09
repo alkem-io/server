@@ -22,9 +22,11 @@ import { OrganizationStorageAggregatorLoaderCreator } from '@core/dataloader/cre
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
 import { ContributorModule } from '../contributor/contributor.module';
 import { OrganizationRoleModule } from '../organization-role/organization.role.module';
+import { AccountHostModule } from '@domain/space/account.host/account.host.module';
 
 @Module({
   imports: [
+    AccountHostModule,
     AgentModule,
     AuthorizationPolicyModule,
     AuthorizationModule,

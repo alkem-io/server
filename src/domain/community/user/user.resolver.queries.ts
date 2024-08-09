@@ -12,7 +12,7 @@ import { Profiling } from '@src/common/decorators';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { PaginatedUsers, PaginationArgs } from '@core/pagination';
 import { UserService } from './user.service';
-import { IUser } from './';
+import { IUser } from './user.interface';
 import { UserFilterInput } from '@core/filtering';
 import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
 import { UsersQueryArgs } from './dto/users.query.args';

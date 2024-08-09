@@ -17,7 +17,6 @@ import {
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
   CREDENTIAL_RULE_PLATFORM_CREATE_ORGANIZATION,
-  CREDENTIAL_RULE_PLATFORM_CREATE_SPACE,
   CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_GUIDANCE,
   CREDENTIAL_RULE_TYPES_PLATFORM_ADMINS,
   CREDENTIAL_RULE_TYPES_PLATFORM_AUTH_RESET,
@@ -321,20 +320,6 @@ export class PlatformAuthorizationService {
       );
     userNotInherited.cascade = false;
     credentialRules.push(userNotInherited);
-
-    const createSpace =
-      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.CREATE_SPACE],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-          AuthorizationCredential.BETA_TESTER,
-          AuthorizationCredential.VC_CAMPAIGN,
-        ],
-        CREDENTIAL_RULE_PLATFORM_CREATE_SPACE
-      );
-    createSpace.cascade = false;
-    credentialRules.push(createSpace);
 
     const createOrg =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
