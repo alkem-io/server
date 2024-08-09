@@ -4,7 +4,7 @@ export const functionScoreFunctions: QueryDslFunctionScoreContainer[] = [
   {
     filter: {
       term: {
-        'license.visibility': 'active',
+        visibility: 'active',
       },
     },
     weight: 2,
@@ -12,7 +12,7 @@ export const functionScoreFunctions: QueryDslFunctionScoreContainer[] = [
   {
     filter: {
       term: {
-        'license.visibility': 'demo',
+        visibility: 'demo',
       },
     },
     weight: 1,
@@ -20,7 +20,7 @@ export const functionScoreFunctions: QueryDslFunctionScoreContainer[] = [
   {
     filter: {
       term: {
-        'license.visibility': 'archived',
+        visibility: 'archived',
       },
     },
     weight: 0,
@@ -30,7 +30,7 @@ export const functionScoreFunctions: QueryDslFunctionScoreContainer[] = [
       bool: {
         must_not: {
           exists: {
-            field: 'license.visibility',
+            field: 'visibility',
           },
         },
       },
