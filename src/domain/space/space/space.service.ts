@@ -61,6 +61,7 @@ import { IContributor } from '@domain/community/contributor/contributor.interfac
 import { CommunityContributorType } from '@common/enums/community.contributor.type';
 import { CommunityRoleService } from '@domain/community/community-role/community.role.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 
 @Injectable()
 export class SpaceService {
@@ -142,6 +143,7 @@ export class SpaceService {
 
     const storageAggregator =
       await this.storageAggregatorService.createStorageAggregator(
+        StorageAggregatorType.SPACE,
         spaceData.storageAggregatorParent
       );
     space.storageAggregator = storageAggregator;

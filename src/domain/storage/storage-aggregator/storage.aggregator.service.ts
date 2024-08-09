@@ -13,15 +13,20 @@ import { StorageBucketService } from '../storage-bucket/storage.bucket.service';
 import { IStorageAggregatorParent } from './dto/storage.aggregator.dto.parent';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { IStorageBucket } from '../storage-bucket/storage.bucket.interface';
-import { EntityNotInitializedException } from '@common/exceptions';
+import {
+  EntityNotInitializedException,
+  NotSupportedException,
+} from '@common/exceptions';
 import { SpaceLevel } from '@common/enums/space.level';
+import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
+import { ISpace } from '@domain/space/space/space.interface';
 @Injectable()
 export class StorageAggregatorService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
-    private urlGeneratorService: UrlGeneratorService,
     private storageBucketService: StorageBucketService,
     private storageAggregatorResolverService: StorageAggregatorResolverService,
+    private urlGeneratorService: UrlGeneratorService,
     @InjectRepository(StorageAggregator)
     private storageAggregatorRepository: Repository<StorageAggregator>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -29,9 +34,11 @@ export class StorageAggregatorService {
   ) {}
 
   public async createStorageAggregator(
+    type: StorageAggregatorType,
     parentStorageAggregator?: IStorageAggregator
   ): Promise<IStorageAggregator> {
     const storageAggregator: IStorageAggregator = new StorageAggregator();
+    storageAggregator.type = type;
     storageAggregator.authorization = new AuthorizationPolicy();
 
     storageAggregator.parentStorageAggregator = parentStorageAggregator;
@@ -207,31 +214,86 @@ export class StorageAggregatorService {
   public async getParentEntity(
     storageAggregator: IStorageAggregator
   ): Promise<IStorageAggregatorParent> {
-    const journeyInfo =
-      await this.storageAggregatorResolverService.getParentEntityInformation(
-        storageAggregator.id
-      );
+    const result: IStorageAggregatorParent = {
+      id: '',
+      displayName: '',
+      url: '',
+    };
+    switch (storageAggregator.type) {
+      case StorageAggregatorType.SPACE:
+        const space =
+          await this.storageAggregatorResolverService.getParentSpaceForStorageAggregator(
+            storageAggregator
+          );
+        result.id = space.id;
+        result.displayName = space.profile.displayName;
+        result.level = space.level;
+        result.url = await this.getStorageAggregatorUrlForSpace(space);
+        break;
+      case StorageAggregatorType.PLATFORM:
+        result.displayName = 'platform';
+        result.url = this.urlGeneratorService.generateUrlForPlatform();
+        break;
 
+      case StorageAggregatorType.ORGANIZATION:
+        const organization =
+          await this.storageAggregatorResolverService.getParentOrganizationForStorageAggregator(
+            storageAggregator
+          );
+        result.id = organization.id;
+        result.displayName = organization.profile.displayName;
+        result.url = this.urlGeneratorService.createUrlForOrganizationNameID(
+          organization.nameID
+        );
+        break;
+      case StorageAggregatorType.USER:
+        const user =
+          await this.storageAggregatorResolverService.getParentUserForStorageAggregator(
+            storageAggregator
+          );
+        result.id = user.id;
+        result.displayName = user.profile.displayName;
+        result.url = this.urlGeneratorService.createUrlFoUserNameID(
+          user.nameID
+        );
+        break;
+      case StorageAggregatorType.ACCOUNT:
+        const account =
+          await this.storageAggregatorResolverService.getParentAccountForStorageAggregator(
+            storageAggregator
+          );
+        result.id = account.id;
+        // TODO: when account-spaces is in then can consider making these fields specific; for now
+        // to get it accurate would involve too many dependencies
+        result.displayName = 'account';
+        result.url = this.urlGeneratorService.generateUrlForPlatform();
+        break;
+      default:
+        throw new NotSupportedException(
+          `Retrieval of parent entity information for storage aggregator on ${storageAggregator.id} of type ${storageAggregator.type} not yet implemented`,
+          LogContext.STORAGE_AGGREGATOR
+        );
+    }
+    return result;
+  }
+
+  private async getStorageAggregatorUrlForSpace(
+    space: ISpace
+  ): Promise<string> {
     let url = '';
-    switch (journeyInfo.level) {
+    switch (space.level) {
       case SpaceLevel.OPPORTUNITY:
         url = await this.urlGeneratorService.generateUrlForSubsubspace(
-          journeyInfo.id
+          space.id
         );
         break;
       case SpaceLevel.CHALLENGE:
-        url = await this.urlGeneratorService.generateUrlForSubspace(
-          journeyInfo.id
-        );
+        url = await this.urlGeneratorService.generateUrlForSubspace(space.id);
         break;
       case SpaceLevel.SPACE:
-        url = this.urlGeneratorService.generateUrlForSpace(journeyInfo.nameID);
+        url = this.urlGeneratorService.generateUrlForSpace(space.nameID);
         break;
     }
-    const result: IStorageAggregatorParent = {
-      url: url,
-      ...journeyInfo,
-    };
-    return result;
+    return url;
   }
 }
