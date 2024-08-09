@@ -232,6 +232,17 @@ export class SpaceService {
       type: AgentType.SPACE,
     });
 
+    const flowStateTemplate =
+      space.collaboration.tagsetTemplateSet?.tagsetTemplates.find(
+        t => t.name === TagsetReservedName.FLOW_STATE
+      );
+    if (space.collaboration.innovationFlow?.profile.tagsets) {
+      for (const tagset of space.collaboration.innovationFlow?.profile
+        ?.tagsets) {
+        tagset.tagsetTemplate = flowStateTemplate;
+      }
+    }
+
     await this.save(space);
 
     if (spaceData.level === SpaceLevel.SPACE) {
