@@ -65,6 +65,7 @@ import { StorageAggregatorService } from '@domain/storage/storage-aggregator/sto
 import { AvatarService } from '@domain/common/visual/avatar.service';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { UpdateUserPlatformSettingsInput } from './dto/user.dto.update.platform.settings';
+import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { AgentType } from '@common/enums/agent.type';
 
 @Injectable()
@@ -129,7 +130,9 @@ export class UserService {
       userData.profileData
     );
     user.storageAggregator =
-      await this.storageAggregatorService.createStorageAggregator();
+      await this.storageAggregatorService.createStorageAggregator(
+        StorageAggregatorType.USER
+      );
     user.profile = await this.profileService.createProfile(
       profileData,
       ProfileType.USER,

@@ -23,8 +23,9 @@ export abstract class IStorageAggregatorParent {
   url!: string;
 
   @Field(() => SpaceLevel, {
-    nullable: false,
-    description: 'The level of the parent Entity.',
+    nullable: true,
+    description:
+      'If the parent entity is a Space, then the level of the Space.',
   })
-  level!: number;
+  level?: number;
 }
