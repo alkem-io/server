@@ -4,12 +4,12 @@ export class AccountHostCredential1723210781157 implements MigrationInterface {
   name = 'AccountHostCredential1723210781157';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    // await queryRunner.query(
-    //   `ALTER TABLE \`user\` ADD \`accountID\` char(36) NULL`
-    // );
-    // await queryRunner.query(
-    //   `ALTER TABLE \`organization\` ADD \`accountID\` char(36) NULL`
-    // );
+    await queryRunner.query(
+      `ALTER TABLE \`user\` ADD \`accountID\` char(36) NULL`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`organization\` ADD \`accountID\` char(36) NULL`
+    );
 
     await this.updateContributorAccount(queryRunner, 'user');
     await this.updateContributorAccount(queryRunner, 'organization');
