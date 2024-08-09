@@ -1,10 +1,10 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class StorageAggregatorType1723036109999 implements MigrationInterface {
+export class StorageAggregatorType1723121607999 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Add the type column to the storage aggregator table
     await queryRunner.query(
-      'ALTER TABLE `storage_aggregator` ADD `type` varchar(36) NULL'
+      'ALTER TABLE `storage_aggregator` ADD `type` varchar(128) NULL'
     );
     await this.updateStorageAggregatorTypeForEntity(
       queryRunner,
@@ -26,9 +26,16 @@ export class StorageAggregatorType1723036109999 implements MigrationInterface {
       'organization',
       'organization'
     );
+    await this.updateStorageAggregatorTypeForEntity(
+      queryRunner,
+      'platform',
+      'platform'
+    );
   }
 
-  public async down(queryRunner: QueryRunner): Promise<void> {}
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    console.log('No down migration for storageAggregatorType1723121607999');
+  }
 
   private async updateStorageAggregatorTypeForEntity(
     queryRunner: QueryRunner,

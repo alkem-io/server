@@ -24,6 +24,6 @@ export class StorageAggregator
   @JoinColumn()
   directStorage?: StorageBucket;
 
-  @Column('text', { nullable: false })
+  @Column('varchar', { length: 128, nullable: true })
   type!: string;
 }

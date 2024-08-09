@@ -77,7 +77,7 @@ export class StorageAggregatorResolverService {
       },
     });
     if (!account) {
-      throw new NotImplementedException(
+      throw new EntityNotFoundException(
         `Unable to retrieve Account for storage aggregator ${storageAggregator.id}`,
         LogContext.STORAGE_AGGREGATOR
       );
@@ -99,7 +99,7 @@ export class StorageAggregatorResolverService {
       },
     });
     if (!space) {
-      throw new NotImplementedException(
+      throw new EntityNotFoundException(
         `Unable to retrieve Space for storage aggregator ${storageAggregator.id}`,
         LogContext.STORAGE_AGGREGATOR
       );
@@ -121,7 +121,7 @@ export class StorageAggregatorResolverService {
       },
     });
     if (!organization) {
-      throw new NotImplementedException(
+      throw new EntityNotFoundException(
         `Unable to retrieve Organization for storage aggregator ${storageAggregator.id}`,
         LogContext.STORAGE_AGGREGATOR
       );
@@ -143,7 +143,7 @@ export class StorageAggregatorResolverService {
       },
     });
     if (!user) {
-      throw new NotImplementedException(
+      throw new EntityNotFoundException(
         `Unable to retrieve User for storage aggregator ${storageAggregator.id}`,
         LogContext.STORAGE_AGGREGATOR
       );
