@@ -92,9 +92,7 @@ export class EcosystemModelService {
     );
   }
 
-  public createRestrictedActorGroups(
-    ecosystem: IEcosystemModel
-  ): void {
+  public createRestrictedActorGroups(ecosystem: IEcosystemModel): void {
     if (!ecosystem.restrictedActorGroupNames) {
       throw new EntityNotInitializedException(
         'Non-initialised EcosystemModel submitted',
@@ -134,9 +132,8 @@ export class EcosystemModelService {
         LogContext.SPACES
       );
 
-    const actorGroup = await this.actorGroupService.createActorGroup(
-      actorGroupData
-    );
+    const actorGroup =
+      await this.actorGroupService.createActorGroup(actorGroupData);
     if (!ecosystemModel.actorGroups)
       throw new EntityNotInitializedException(
         `Ecosystem Model (${ecosystemId}) not initialised`,

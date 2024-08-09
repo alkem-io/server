@@ -2,7 +2,10 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
-import { EntityNotFoundException, ValidationException } from '@common/exceptions';
+import {
+  EntityNotFoundException,
+  ValidationException,
+} from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { TagsetTemplateSet } from './tagset.template.set.entity';
 import { TagsetTemplateService } from '../tagset-template/tagset.template.service';
@@ -108,7 +111,8 @@ export class TagsetTemplateSetService {
       );
     }
 
-    const tagsetTemplate = this.tagsetTemplateService.createTagsetTemplate(tagsetTemplateData);
+    const tagsetTemplate =
+      this.tagsetTemplateService.createTagsetTemplate(tagsetTemplateData);
     tagsetTemplateSet.tagsetTemplates.push(tagsetTemplate);
 
     return tagsetTemplate;

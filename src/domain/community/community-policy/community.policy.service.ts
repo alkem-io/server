@@ -29,7 +29,7 @@ export class CommunityPolicyService {
       this.serializeRolePolicy(member),
       this.serializeRolePolicy(lead),
       this.serializeRolePolicy(admin)
-    )
+    );
   }
 
   public async removeCommunityPolicy(

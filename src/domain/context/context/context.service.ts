@@ -26,7 +26,7 @@ export class ContextService {
       ...contextData,
       authorization: new AuthorizationPolicy(),
       ecosystemModel: this.ecosystemModelService.createEcosystemModel({}),
-    })
+    });
   }
 
   async getContextOrFail(
