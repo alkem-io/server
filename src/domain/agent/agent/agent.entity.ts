@@ -21,7 +21,7 @@ export class Agent extends AuthorizableEntity implements IAgent {
   })
   credentials?: Credential[];
 
-  @Column('text', { nullable: false })
+  @Column('varchar', { length: 128, nullable: true })
   type!: string;
 
   constructor() {

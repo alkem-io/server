@@ -1,11 +1,11 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class AgentType1723036109627 implements MigrationInterface {
-  name = 'AgentType1723036109627';
+export class AgentType1723121607799 implements MigrationInterface {
+  name = 'AgentType1723121607799';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Add the type column to the agent table
-    await queryRunner.query('ALTER TABLE `agent` ADD `type` varchar(36) NULL');
+    await queryRunner.query('ALTER TABLE `agent` ADD `type` varchar(128) NULL');
     await this.updateAgentTypeForEntity(queryRunner, 'account', 'account');
     await this.updateAgentTypeForEntity(queryRunner, 'space', 'space');
     await this.updateAgentTypeForEntity(queryRunner, 'user', 'user');
