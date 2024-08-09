@@ -169,6 +169,11 @@ export class UserService {
       this.createPreferenceDefaults()
     );
 
+    const account = await this.accountHostService.createAccount({
+      host: user,
+    });
+    user.accountID = account.id;
+
     const response = await this.save(user);
     // all users need to be registered for communications at the absolute beginning
     // there are cases where a user could be messaged before they actually log-in
@@ -196,11 +201,6 @@ export class UserService {
     );
 
     await this.setUserCache(response);
-
-    // And create the account for the user
-    await this.accountHostService.createAccount({
-      host: user,
-    });
 
     return response;
   }
