@@ -11,8 +11,6 @@ export enum AuthorizationCredential {
 
   USER_SELF_MANAGEMENT = 'user-self', // able to update a user
 
-  ACCOUNT_HOST = 'account-host',
-
   SPACE_ADMIN = 'space-admin',
   SPACE_MEMBER = 'space-member',
   SPACE_LEAD = 'space-lead',

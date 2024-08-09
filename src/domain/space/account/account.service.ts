@@ -1,4 +1,4 @@
-import { AuthorizationCredential, LogContext } from '@common/enums';
+import { LogContext } from '@common/enums';
 import {
   EntityNotFoundException,
   RelationshipNotFoundException,
@@ -20,7 +20,6 @@ import { LicenseCredential } from '@common/enums/license.credential';
 import { CreateVirtualContributorOnAccountInput } from './dto/account.dto.create.virtual.contributor';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
-import { AccountHostService } from '../account.host/account.host.service';
 import { LicensePrivilege } from '@common/enums/license.privilege';
 import { LicenseEngineService } from '@core/license-engine/license.engine.service';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
@@ -39,7 +38,6 @@ import { NamingService } from '@services/infrastructure/naming/naming.service';
 @Injectable()
 export class AccountService {
   constructor(
-    private accountHostService: AccountHostService,
     private spaceService: SpaceService,
     private agentService: AgentService,
     private licensingService: LicensingService,
@@ -139,13 +137,6 @@ export class AccountService {
 
     await this.storageAggregatorService.delete(account.storageAggregator.id);
 
-    // Remove the account host credential
-    const host = await this.accountHostService.getHostOrFail(account);
-    host.agent = await this.agentService.revokeCredential({
-      agentID: host.agent.id,
-      type: AuthorizationCredential.ACCOUNT_HOST,
-      resourceID: account.id,
-    });
     for (const vc of account.virtualContributors) {
       await this.virtualContributorService.deleteVirtualContributor(vc.id);
     }
@@ -191,6 +182,7 @@ export class AccountService {
 
     return account;
   }
+
   async getAccounts(options?: FindManyOptions<Account>): Promise<IAccount[]> {
     const accounts = await this.accountRepository.find({
       ...options,
@@ -200,6 +192,7 @@ export class AccountService {
 
     return accounts;
   }
+
   async getLicensePrivileges(account: IAccount): Promise<LicensePrivilege[]> {
     let accountAgent = account.agent;
     if (!account.agent) {

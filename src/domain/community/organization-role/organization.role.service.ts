@@ -1,9 +1,6 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import {
-  ForbiddenException,
-  RelationshipNotFoundException,
-} from '@common/exceptions';
+import { ForbiddenException } from '@common/exceptions';
 import { AuthorizationCredential, LogContext } from '@common/enums';
 import { IUser } from '@domain/community/user/user.interface';
 import { UserService } from '@domain/community/user/user.service';
@@ -58,18 +55,6 @@ export class OrganizationRoleService {
         role: OrganizationRole.ADMIN,
       });
     }
-  }
-
-  async isAccountHost(organization: IOrganization): Promise<boolean> {
-    if (!organization.agent)
-      throw new RelationshipNotFoundException(
-        `Unable to load agent for organization: ${organization.id}`,
-        LogContext.COMMUNITY
-      );
-
-    return await this.agentService.hasValidCredential(organization.agent.id, {
-      type: AuthorizationCredential.ACCOUNT_HOST,
-    });
   }
 
   private getCredentialForRole(

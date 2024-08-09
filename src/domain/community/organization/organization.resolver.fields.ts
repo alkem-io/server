@@ -117,12 +117,12 @@ export class OrganizationResolverFields {
     @Parent() organization: IOrganization,
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<IAccount | undefined> {
-    const accountsVisible = this.authorizationService.isAccessGranted(
+    const accountVisible = this.authorizationService.isAccessGranted(
       agentInfo,
       organization.authorization,
       AuthorizationPrivilege.UPDATE
     );
-    if (accountsVisible) {
+    if (accountVisible) {
       return await this.organizationService.getAccount(organization);
     }
     return undefined;

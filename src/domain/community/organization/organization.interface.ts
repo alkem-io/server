@@ -11,6 +11,8 @@ import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.a
   implements: () => [IGroupable, IContributor],
 })
 export class IOrganization extends IContributorBase implements IContributor {
+  accountID!: string;
+
   rowId!: number;
 
   groups?: IUserGroup[];

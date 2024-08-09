@@ -444,13 +444,6 @@ export class SpaceAuthorizationService {
         spaceSettings,
         CommunityRole.ADMIN
       );
-    // Note: this only works for User account hosts
-    if (space.level === SpaceLevel.SPACE) {
-      spaceAdminCriterias.push({
-        type: AuthorizationCredential.ACCOUNT_HOST,
-        resourceID: space.account.id,
-      });
-    }
     const spaceAdmin = this.authorizationPolicyService.createCredentialRule(
       [
         AuthorizationPrivilege.CREATE,
