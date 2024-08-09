@@ -27,7 +27,7 @@
     "nameID": "admin-alkemio",
     "rowId": 1,
     "agent": {
-      "parentDisplayID": "admin@alkem.io",
+      "type": "user",
       "did": "",
       "password": "",
       "id": "07c6ec54-524a-4d7f-9f58-a4c50f0c0496",

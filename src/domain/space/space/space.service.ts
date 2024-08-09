@@ -61,6 +61,7 @@ import { IContributor } from '@domain/community/contributor/contributor.interfac
 import { CommunityContributorType } from '@common/enums/community.contributor.type';
 import { CommunityRoleService } from '@domain/community/community-role/community.role.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { AgentType } from '@common/enums/agent.type';
 import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 
 @Injectable()
@@ -230,7 +231,7 @@ export class SpaceService {
     /////////// Agents
 
     space.agent = await this.agentService.createAgent({
-      parentDisplayID: `${space.nameID}`,
+      type: AgentType.SPACE,
     });
 
     const flowStateTemplate =
