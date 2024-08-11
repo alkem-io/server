@@ -64,6 +64,8 @@ import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.a
 import { TemplatesSetService } from '@domain/template/templates-set/templates.set.service';
 import { ITemplatesSet } from '@domain/template/templates-set/templates.set.interface';
 import { ISpaceDefaults } from '../space.defaults/space.defaults.interface';
+import { AgentType } from '@common/enums/agent.type';
+import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 
 @Injectable()
 export class SpaceService {
@@ -145,6 +147,7 @@ export class SpaceService {
 
     const storageAggregator =
       await this.storageAggregatorService.createStorageAggregator(
+        StorageAggregatorType.SPACE,
         spaceData.storageAggregatorParent
       );
     space.storageAggregator = storageAggregator;
@@ -231,7 +234,7 @@ export class SpaceService {
     /////////// Agents
 
     space.agent = await this.agentService.createAgent({
-      parentDisplayID: `${space.nameID}`,
+      type: AgentType.SPACE,
     });
 
     const flowStateTemplate =

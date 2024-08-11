@@ -79,6 +79,7 @@ export class AgentService {
     const agent: IAgent = Agent.create(inputData);
     agent.credentials = [];
     agent.authorization = new AuthorizationPolicy();
+    agent.type = inputData.type;
 
     const ssiEnabled = this.configService.get('ssi.enabled', { infer: true });
 
@@ -193,7 +194,7 @@ export class AgentService {
         credential.resourceID === grantCredentialData.resourceID
       ) {
         throw new ValidationException(
-          `Agent (${agent.parentDisplayID}) already has assigned credential: ${grantCredentialData.type}`,
+          `Agent (${agent.id}) already has assigned credential: ${grantCredentialData.type}`,
           LogContext.AUTH
         );
       }
@@ -462,7 +463,7 @@ export class AgentService {
     const payload: ProfileCredentialVerified = {
       eventID,
       vc: 'something something vc',
-      userEmail: agent.parentDisplayID ?? '',
+      userEmail: agent.id ?? '',
     };
 
     await this.subscriptionVerifiedCredentials.publish(
@@ -544,7 +545,7 @@ export class AgentService {
     const payload: ProfileCredentialVerified = {
       eventID,
       vc: 'something something vc',
-      userEmail: agent.parentDisplayID ?? '',
+      userEmail: agent.id ?? '', // TODO: not a flow we are maintaining at the moment
     };
 
     await this.subscriptionVerifiedCredentials.publish(

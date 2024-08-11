@@ -62,6 +62,8 @@ import { AccountHostService } from '@domain/space/account.host/account.host.serv
 import { IAccount } from '@domain/space/account/account.interface';
 import { User } from './user.entity';
 import { IUser } from './user.interface';
+import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
+import { AgentType } from '@common/enums/agent.type';
 
 @Injectable()
 export class UserService {
@@ -126,7 +128,9 @@ export class UserService {
       userData.profileData
     );
     user.storageAggregator =
-      await this.storageAggregatorService.createStorageAggregator();
+      await this.storageAggregatorService.createStorageAggregator(
+        StorageAggregatorType.USER
+      );
     user.profile = await this.profileService.createProfile(
       profileData,
       ProfileType.USER,
@@ -156,7 +160,7 @@ export class UserService {
     });
 
     user.agent = await this.agentService.createAgent({
-      parentDisplayID: user.email,
+      type: AgentType.USER,
     });
 
     this.logger.verbose?.(

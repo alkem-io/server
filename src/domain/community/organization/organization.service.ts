@@ -56,6 +56,8 @@ import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { OrganizationRoleService } from '../organization-role/organization.role.service';
 import { AccountHostService } from '@domain/space/account.host/account.host.service';
 import { IAccount } from '@domain/space/account/account.interface';
+import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
+import { AgentType } from '@common/enums/agent.type';
 
 @Injectable()
 export class OrganizationService {
@@ -96,7 +98,9 @@ export class OrganizationService {
     organization.authorization = new AuthorizationPolicy();
 
     organization.storageAggregator =
-      await this.storageAggregatorService.createStorageAggregator();
+      await this.storageAggregatorService.createStorageAggregator(
+        StorageAggregatorType.ORGANIZATION
+      );
     organization.profile = await this.profileService.createProfile(
       organizationData.profileData,
       ProfileType.ORGANIZATION,
@@ -127,7 +131,7 @@ export class OrganizationService {
     organization.groups = [];
 
     organization.agent = await this.agentService.createAgent({
-      parentDisplayID: `organization-${organization.nameID}`,
+      type: AgentType.ORGANIZATION,
     });
 
     const savedOrg = await this.organizationRepository.save(organization);
