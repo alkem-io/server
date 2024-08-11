@@ -96,11 +96,12 @@ export class CalloutAuthorizationService {
       updatedAuthorizations.push(...updatedContributionAuthorizations);
     }
 
-    callout.framing =
+    const framingAuthorizations =
       await this.calloutFramingAuthorizationService.applyAuthorizationPolicy(
         callout.framing,
         callout.authorization
       );
+    updatedAuthorizations.push(...framingAuthorizations);
 
     if (callout.comments) {
       let commentsAuthorization =

@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { InnovationFlowService } from './innovaton.flow.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IInnovationFlow } from './innovation.flow.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
@@ -16,20 +15,20 @@ import { RelationshipNotFoundException } from '@common/exceptions/relationship.n
 export class InnovationFlowAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
-    private profileAuthorizationService: ProfileAuthorizationService,
-    private innovationFlowService: InnovationFlowService
+    private profileAuthorizationService: ProfileAuthorizationService
   ) {}
 
   async applyAuthorizationPolicy(
     innovationFlow: IInnovationFlow,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): Promise<IInnovationFlow> {
+  ): Promise<IAuthorizationPolicy[]> {
     if (!innovationFlow.profile) {
       throw new RelationshipNotFoundException(
         `Unable to load entities on auth reset for innovationFlow ${innovationFlow.id} `,
         LogContext.INNOVATION_FLOW
       );
     }
+    const updatedAuthorizations: IAuthorizationPolicy[] = [];
     // Ensure always applying from a clean state
     innovationFlow.authorization = this.authorizationPolicyService.reset(
       innovationFlow.authorization
@@ -45,12 +44,16 @@ export class InnovationFlowAuthorizationService {
     innovationFlow.authorization = this.appendPrivilegeRules(
       innovationFlow.authorization
     );
+    updatedAuthorizations.push(innovationFlow.authorization);
 
-    // Cascade down
-    const innovationFlowPropagated =
-      await this.propagateAuthorizationToChildEntities(innovationFlow);
+    const profileAuthorizations =
+      await this.profileAuthorizationService.applyAuthorizationPolicy(
+        innovationFlow.profile,
+        innovationFlow.authorization
+      );
+    updatedAuthorizations.push(...profileAuthorizations);
 
-    return innovationFlowPropagated;
+    return updatedAuthorizations;
   }
 
   private appendCredentialRules(
@@ -97,17 +100,5 @@ export class InnovationFlowAuthorizationService {
       authorization,
       privilegeRules
     );
-  }
-
-  private async propagateAuthorizationToChildEntities(
-    innovationFlow: IInnovationFlow
-  ): Promise<IInnovationFlow> {
-    innovationFlow.profile =
-      await this.profileAuthorizationService.applyAuthorizationPolicy(
-        innovationFlow.profile,
-        innovationFlow.authorization
-      );
-
-    return innovationFlow;
   }
 }

@@ -340,16 +340,19 @@ export class SpaceAuthorizationService {
       );
     updatedAuthorizations.push(...collaborationAuthorizations);
 
-    space.agent = this.agentAuthorizationService.applyAuthorizationPolicy(
-      space.agent,
-      space.authorization
-    );
+    const agentAuthorization =
+      this.agentAuthorizationService.applyAuthorizationPolicy(
+        space.agent,
+        space.authorization
+      );
+    updatedAuthorizations.push(agentAuthorization);
 
-    space.profile =
+    const profileAuthorizations =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
         space.profile,
         clonedAuthorization
       );
+    updatedAuthorizations.push(...profileAuthorizations);
 
     space.context =
       await this.contextAuthorizationService.applyAuthorizationPolicy(

@@ -1,11 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { IPlatform } from './platform.interface';
-import { Platform } from './platform.entity';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
-import { LibraryAuthorizationService } from '@library/library/library.service.authorization';
 import { PlatformService } from './platform.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
@@ -31,38 +26,44 @@ import { RelationshipNotFoundException } from '@common/exceptions/relationship.n
 import { LicensingAuthorizationService } from '@platform/licensing/licensing.service.authorization';
 import { ForumAuthorizationService } from '@platform/forum/forum.service.authorization';
 import { PlatformInvitationAuthorizationService } from '@platform/invitation/platform.invitation.service.authorization';
-import { IPlatformInvitation } from '@platform/invitation';
 
 @Injectable()
 export class PlatformAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private platformAuthorizationPolicyService: PlatformAuthorizationPolicyService,
-    private libraryAuthorizationService: LibraryAuthorizationService,
     private forumAuthorizationService: ForumAuthorizationService,
     private platformService: PlatformService,
     private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
     private platformInvitationAuthorizationService: PlatformInvitationAuthorizationService,
-    private licensingAuthorizationService: LicensingAuthorizationService,
-
-    @InjectRepository(Platform)
-    private platformRepository: Repository<Platform>
+    private licensingAuthorizationService: LicensingAuthorizationService
   ) {}
 
-  async applyAuthorizationPolicy(): Promise<IPlatform> {
-    let platform = await this.platformService.getPlatformOrFail({
+  async applyAuthorizationPolicy(): Promise<IAuthorizationPolicy[]> {
+    const platform = await this.platformService.getPlatformOrFail({
       relations: {
         authorization: true,
         platformInvitations: true,
+        forum: true,
+        storageAggregator: true,
+        licensing: true,
       },
     });
 
-    if (!platform.authorization || !platform.platformInvitations)
+    if (
+      !platform.authorization ||
+      !platform.platformInvitations ||
+      !platform.library ||
+      !platform.forum ||
+      !platform.storageAggregator ||
+      !platform.licensing
+    )
       throw new RelationshipNotFoundException(
         `Unable to load entities for platform: ${platform.id} `,
         LogContext.PLATFORM
       );
 
+    const updatedAuthorizations: IAuthorizationPolicy[] = [];
     platform.authorization = await this.authorizationPolicyService.reset(
       platform.authorization
     );
@@ -73,76 +74,16 @@ export class PlatformAuthorizationService {
     platform.authorization = await this.appendCredentialRules(
       platform.authorization
     );
+    updatedAuthorizations.push(platform.authorization);
 
-    const updatedInvitations: IPlatformInvitation[] = [];
     for (const platformInvitation of platform.platformInvitations) {
       const updatedInvitation =
         await this.platformInvitationAuthorizationService.applyAuthorizationPolicy(
           platformInvitation,
           platform.authorization
         );
-      updatedInvitations.push(updatedInvitation);
+      updatedAuthorizations.push(updatedInvitation);
     }
-    platform.platformInvitations = updatedInvitations;
-
-    // const privilegeRules = this.createPlatformPrivilegeRules();
-    // platform.authorization =
-    //   this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
-    //     platform.authorization,
-    //     privilegeRules
-    //   );
-
-    // Cascade down
-    platform = await this.propagateAuthorizationToChildEntities(
-      platform.authorization
-    );
-
-    return await this.platformRepository.save(platform);
-  }
-
-  private async appendCredentialRules(
-    authorization: IAuthorizationPolicy
-  ): Promise<IAuthorizationPolicy> {
-    const credentialRules = this.createPlatformCredentialRules();
-    const credentialRuleInteractiveGuidance =
-      await this.createCredentialRuleInteractiveGuidance();
-    credentialRules.push(credentialRuleInteractiveGuidance);
-
-    return this.authorizationPolicyService.appendCredentialAuthorizationRules(
-      authorization,
-      credentialRules
-    );
-  }
-
-  private async propagateAuthorizationToChildEntities(
-    authorization: IAuthorizationPolicy
-  ): Promise<IPlatform> {
-    const platform = await this.platformService.getPlatformOrFail({
-      relations: {
-        library: true,
-        forum: true,
-        storageAggregator: true,
-        licensing: true,
-      },
-    });
-
-    if (
-      !platform.library ||
-      !platform.forum ||
-      !platform.storageAggregator ||
-      !platform.licensing
-    )
-      throw new RelationshipNotFoundException(
-        `Unable to load entities for platform auth: ${platform.id} `,
-        LogContext.PLATFORM
-      );
-
-    platform.authorization = authorization;
-    platform.library =
-      await this.libraryAuthorizationService.applyAuthorizationPolicy(
-        platform.library,
-        platform.authorization
-      );
 
     const copyPlatformAuthorization: IAuthorizationPolicy =
       this.authorizationPolicyService.cloneAuthorizationPolicy(
@@ -153,11 +94,12 @@ export class PlatformAuthorizationService {
     const extendedAuthPolicy = await this.appendCredentialRulesCommunication(
       copyPlatformAuthorization
     );
-    platform.forum =
+    const forumUpdatedAuthorizations =
       await this.forumAuthorizationService.applyAuthorizationPolicy(
         platform.forum,
         extendedAuthPolicy
       );
+    updatedAuthorizations.push(...forumUpdatedAuthorizations);
 
     let platformStorageAuth =
       this.authorizationPolicyService.cloneAuthorizationPolicy(
@@ -178,7 +120,22 @@ export class PlatformAuthorizationService {
         platform.licensing,
         platform.authorization
       );
-    return platform;
+
+    return updatedAuthorizations;
+  }
+
+  private async appendCredentialRules(
+    authorization: IAuthorizationPolicy
+  ): Promise<IAuthorizationPolicy> {
+    const credentialRules = this.createPlatformCredentialRules();
+    const credentialRuleInteractiveGuidance =
+      await this.createCredentialRuleInteractiveGuidance();
+    credentialRules.push(credentialRuleInteractiveGuidance);
+
+    return this.authorizationPolicyService.appendCredentialAuthorizationRules(
+      authorization,
+      credentialRules
+    );
   }
 
   private async appendCredentialRulesCommunication(

@@ -158,12 +158,14 @@ export class WhiteboardService {
       });
 
       if (framing) {
-        const whiteboardAuth =
+        const updatedWhiteboardAuthorizations =
           await this.whiteboardAuthService.applyAuthorizationPolicy(
             whiteboard,
             framing.authorization
           );
-        await this.save(whiteboardAuth);
+        await this.authorizationPolicyService.saveAll(
+          updatedWhiteboardAuthorizations
+        );
       } else {
         const contribution = await this.entityManager.findOne(
           CalloutContribution,
@@ -174,12 +176,14 @@ export class WhiteboardService {
           }
         );
         if (contribution) {
-          const whiteboardAuth =
+          const contributionAuthorizations =
             await this.whiteboardAuthService.applyAuthorizationPolicy(
               whiteboard,
               contribution.authorization
             );
-          await this.save(whiteboardAuth);
+          await this.authorizationPolicyService.saveAll(
+            contributionAuthorizations
+          );
         }
       }
     }

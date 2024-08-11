@@ -24,7 +24,7 @@ export class InnovationPackAuthorizationService {
   async applyAuthorizationPolicy(
     innovationPackInput: IInnovationPack,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): Promise<IInnovationPack> {
+  ): Promise<IAuthorizationPolicy[]> {
     const innovationPack =
       await this.innovationPackService.getInnovationPackOrFail(
         innovationPackInput.id,
@@ -41,6 +41,8 @@ export class InnovationPackAuthorizationService {
         LogContext.COMMUNITY
       );
     }
+    const updatedAuthorizations: IAuthorizationPolicy[] = [];
+
     // Ensure always applying from a clean state
     innovationPack.authorization = this.authorizationPolicyService.reset(
       innovationPack.authorization
@@ -50,20 +52,23 @@ export class InnovationPackAuthorizationService {
         innovationPack.authorization,
         parentAuthorization
       );
-
     innovationPack.authorization = this.appendCredentialRules(innovationPack);
-    innovationPack.profile =
+    updatedAuthorizations.push(innovationPack.authorization);
+
+    const profileAuthorizations =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
         innovationPack.profile,
         innovationPack.authorization
       );
+    updatedAuthorizations.push(...profileAuthorizations);
+
     innovationPack.templatesSet =
       await this.templatesSetAuthorizationService.applyAuthorizationPolicy(
         innovationPack.templatesSet,
         innovationPack.authorization
       );
 
-    return await this.innovationPackService.save(innovationPack);
+    return updatedAuthorizations;
   }
 
   private appendCredentialRules(

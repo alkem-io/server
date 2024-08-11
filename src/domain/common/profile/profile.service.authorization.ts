@@ -20,7 +20,7 @@ export class ProfileAuthorizationService {
   async applyAuthorizationPolicy(
     profileInput: IProfile,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): Promise<IProfile> {
+  ): Promise<IAuthorizationPolicy[]> {
     const profile = await this.profileService.getProfileOrFail(
       profileInput.id,
       {
@@ -49,6 +49,7 @@ export class ProfileAuthorizationService {
         LogContext.ACCOUNT
       );
     }
+    const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
     // Inherit from the parent
     profile.authorization =
@@ -56,6 +57,7 @@ export class ProfileAuthorizationService {
         profile.authorization,
         parentAuthorization
       );
+    updatedAuthorizations.push(profile.authorization);
 
     for (const reference of profile.references) {
       reference.authorization =
@@ -86,6 +88,6 @@ export class ProfileAuthorizationService {
         profile.authorization
       );
 
-    return profile;
+    return updatedAuthorizations;
   }
 }

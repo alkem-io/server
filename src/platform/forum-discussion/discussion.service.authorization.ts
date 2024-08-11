@@ -48,16 +48,17 @@ export class DiscussionAuthorizationService {
       );
     }
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
+
     discussion.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         discussion.authorization,
         parentAuthorization
       );
-
     discussion.authorization = this.extendAuthorizationPolicy(
       discussion.authorization
     );
     updatedAuthorizations.push(discussion.authorization);
+
     // Clone the authorization policy so can control what children get what setting
     const clonedAuthorization =
       this.authorizationPolicyService.cloneAuthorizationPolicy(
@@ -75,27 +76,27 @@ export class DiscussionAuthorizationService {
         break;
     }
 
-    discussion.profile =
+    const profileAuthorizations =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
         discussion.profile,
         discussion.authorization
       );
+    updatedAuthorizations.push(...profileAuthorizations);
 
-    const commentsAuthorization =
+    let commentsAuthorization =
       this.roomAuthorizationService.applyAuthorizationPolicy(
         discussion.comments,
         clonedAuthorization
       );
-    updatedAuthorizations.push(commentsAuthorization);
-
-    discussion.comments.authorization =
+    commentsAuthorization =
       this.roomAuthorizationService.allowContributorsToCreateMessages(
-        discussion.comments.authorization
+        commentsAuthorization
       );
-    discussion.comments.authorization =
+    commentsAuthorization =
       this.roomAuthorizationService.allowContributorsToReplyReactToMessages(
-        discussion.comments.authorization
+        commentsAuthorization
       );
+    updatedAuthorizations.push(commentsAuthorization);
 
     return updatedAuthorizations;
   }

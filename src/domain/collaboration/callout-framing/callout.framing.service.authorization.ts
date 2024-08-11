@@ -49,11 +49,12 @@ export class CalloutFramingAuthorizationService {
       );
     updatedAuthorizations.push(calloutFraming.authorization);
 
-    calloutFraming.profile =
+    const framingAuthorizations =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
         calloutFraming.profile,
         calloutFraming.authorization
       );
+    updatedAuthorizations.push(...framingAuthorizations);
 
     if (calloutFraming.whiteboard) {
       const whiteboardAuthorizations =
