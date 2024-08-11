@@ -39,6 +39,7 @@ import { IContributor } from '../contributor/contributor.interface';
 import { AccountHostService } from '@domain/space/account.host/account.host.service';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { Invitation } from '../invitation';
+import { AgentType } from '@common/enums/agent.type';
 
 @Injectable()
 export class VirtualContributorService {
@@ -125,7 +126,7 @@ export class VirtualContributorService {
     );
 
     virtualContributor.agent = await this.agentService.createAgent({
-      parentDisplayID: `virtual-${virtualContributor.nameID}`,
+      type: AgentType.VIRTUAL_CONTRIBUTOR,
     });
 
     virtualContributor = await this.save(virtualContributor);

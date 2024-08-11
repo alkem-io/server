@@ -23,6 +23,8 @@ import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, In, Repository } from 'typeorm';
 import { LicensingService } from '@platform/licensing/licensing.service';
 import { Credential } from '@domain/agent/credential/credential.entity';
+import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
+import { AgentType } from '@common/enums/agent.type';
 
 @Injectable()
 export class AccountHostService {
@@ -43,10 +45,12 @@ export class AccountHostService {
     let account: IAccount = new Account();
     account.authorization = new AuthorizationPolicy();
     account.storageAggregator =
-      await this.storageAggregatorService.createStorageAggregator();
+      await this.storageAggregatorService.createStorageAggregator(
+        StorageAggregatorType.ACCOUNT
+      );
 
     account.agent = await this.agentService.createAgent({
-      parentDisplayID: 'account',
+      type: AgentType.ACCOUNT,
     });
 
     account = await this.accountRepository.save(account);
