@@ -26,6 +26,7 @@ import { RelationshipNotFoundException } from '@common/exceptions/relationship.n
 import { LicensingAuthorizationService } from '@platform/licensing/licensing.service.authorization';
 import { ForumAuthorizationService } from '@platform/forum/forum.service.authorization';
 import { PlatformInvitationAuthorizationService } from '@platform/invitation/platform.invitation.service.authorization';
+import { LibraryAuthorizationService } from '@library/library/library.service.authorization';
 
 @Injectable()
 export class PlatformAuthorizationService {
@@ -36,6 +37,7 @@ export class PlatformAuthorizationService {
     private platformService: PlatformService,
     private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
     private platformInvitationAuthorizationService: PlatformInvitationAuthorizationService,
+    private libraryAuthorizationService: LibraryAuthorizationService,
     private licensingAuthorizationService: LicensingAuthorizationService
   ) {}
 
@@ -45,6 +47,7 @@ export class PlatformAuthorizationService {
         authorization: true,
         platformInvitations: true,
         forum: true,
+        library: true,
         storageAggregator: true,
         licensing: true,
       },
@@ -75,6 +78,13 @@ export class PlatformAuthorizationService {
       platform.authorization
     );
     updatedAuthorizations.push(platform.authorization);
+
+    const libraryUpdatedAuthorization =
+      await this.libraryAuthorizationService.applyAuthorizationPolicy(
+        platform.library,
+        platform.authorization
+      );
+    updatedAuthorizations.push(libraryUpdatedAuthorization);
 
     for (const platformInvitation of platform.platformInvitations) {
       const updatedInvitation =
