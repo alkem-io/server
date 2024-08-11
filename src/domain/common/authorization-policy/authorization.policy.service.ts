@@ -173,13 +173,14 @@ export class AuthorizationPolicyService {
   async save(
     authorizationPolicy: IAuthorizationPolicy
   ): Promise<IAuthorizationPolicy> {
-    return await this.authorizationPolicyRepository.save(authorizationPolicy);
+    return this.authorizationPolicyRepository.save(authorizationPolicy);
   }
 
   async saveAll(authorizationPolicies: IAuthorizationPolicy[]): Promise<void> {
-    for (const authorizationPolicy of authorizationPolicies) {
-      await this.authorizationPolicyRepository.save(authorizationPolicy);
-    }
+    const savePromises = authorizationPolicies.map(authorizationPolicy =>
+      this.save(authorizationPolicy)
+    );
+    await Promise.all(savePromises);
   }
 
   cloneAuthorizationPolicy(
