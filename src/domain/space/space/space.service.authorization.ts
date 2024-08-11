@@ -60,7 +60,9 @@ export class SpaceAuthorizationService {
     private spaceSettingsService: SpaceSettingsService
   ) {}
 
-  async applyAuthorizationPolicy(spaceInput: ISpace): Promise<ISpace> {
+  async applyAuthorizationPolicy(
+    spaceInput: ISpace
+  ): Promise<IAuthorizationPolicy[]> {
     const spaceAccountLicense = await this.spaceService.getSpaceOrFail(
       spaceInput.id,
       {
@@ -88,6 +90,7 @@ export class SpaceAuthorizationService {
         LogContext.SPACES
       );
     }
+    const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
     const spaceVisibility = spaceAccountLicense.visibility;
     const accountAgent = spaceAccountLicense.account.agent;
@@ -223,12 +226,13 @@ export class SpaceAuthorizationService {
 
     // Cascade down
     // propagate authorization rules for child entities
-    space = await this.propagateAuthorizationToChildEntities(
+    const childAuthorzations = await this.propagateAuthorizationToChildEntities(
       space,
       accountAgent,
       communityPolicy,
       spaceSettings
     );
+    updatedAuthorizations.push(...childAuthorzations);
 
     if (!space.community)
       throw new RelationshipNotFoundException(
@@ -273,7 +277,7 @@ export class SpaceAuthorizationService {
       await this.applyAuthorizationPolicy(subspace);
     }
 
-    return space;
+    return updatedAuthorizations;
   }
 
   public async propagateAuthorizationToChildEntities(
@@ -281,7 +285,7 @@ export class SpaceAuthorizationService {
     accountAgent: IAgent,
     communityPolicy: ICommunityPolicy,
     spaceSettings: ISpaceSettings
-  ): Promise<ISpace> {
+  ): Promise<IAuthorizationPolicy[]> {
     if (
       !space.agent ||
       !space.collaboration ||
@@ -296,6 +300,7 @@ export class SpaceAuthorizationService {
         LogContext.SPACES
       );
     }
+    const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
     // Clone the authorization policy
     const clonedAuthorization =
@@ -325,7 +330,7 @@ export class SpaceAuthorizationService {
         );
     }
 
-    space.collaboration =
+    const collaborationAuthorizations =
       await this.collaborationAuthorizationService.applyAuthorizationPolicy(
         space.collaboration,
         space.authorization,
@@ -333,6 +338,7 @@ export class SpaceAuthorizationService {
         spaceSettings,
         accountAgent
       );
+    updatedAuthorizations.push(...collaborationAuthorizations);
 
     space.agent = this.agentAuthorizationService.applyAuthorizationPolicy(
       space.agent,
@@ -357,7 +363,7 @@ export class SpaceAuthorizationService {
         space.authorization
       );
 
-    return space;
+    return updatedAuthorizations;
   }
 
   private extendPrivilegeRuleCreateSubspace(

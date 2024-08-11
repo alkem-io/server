@@ -28,13 +28,14 @@ export class WhiteboardAuthorizationService {
   async applyAuthorizationPolicy(
     whiteboard: IWhiteboard,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): Promise<IWhiteboard> {
+  ): Promise<IAuthorizationPolicy[]> {
     if (!whiteboard.profile) {
       throw new RelationshipNotFoundException(
         `Unable to load entities on whiteboard reset auth:  ${whiteboard.id} `,
         LogContext.COLLABORATION
       );
     }
+    const updatedAuthorizations: IAuthorizationPolicy[] = [];
     whiteboard.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         whiteboard.authorization,
@@ -46,6 +47,7 @@ export class WhiteboardAuthorizationService {
       whiteboard.authorization,
       whiteboard
     );
+    updatedAuthorizations.push(whiteboard.authorization);
 
     whiteboard.profile =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
@@ -53,7 +55,7 @@ export class WhiteboardAuthorizationService {
         whiteboard.authorization
       );
 
-    return whiteboard;
+    return updatedAuthorizations;
   }
 
   private appendCredentialRules(whiteboard: IWhiteboard): IAuthorizationPolicy {

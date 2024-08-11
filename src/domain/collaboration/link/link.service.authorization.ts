@@ -22,25 +22,27 @@ export class LinkAuthorizationService {
     link: ILink,
     parentAuthorization: IAuthorizationPolicy | undefined,
     createdByID?: string
-  ): Promise<ILink> {
+  ): Promise<IAuthorizationPolicy[]> {
     if (!link.profile)
       throw new RelationshipNotFoundException(
         `Unable to load entities on link:  ${link.id} `,
         LogContext.COLLABORATION
       );
+    const updatedAuthorizations: IAuthorizationPolicy[] = [];
     link.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         link.authorization,
         parentAuthorization
       );
     link.authorization = this.appendCredentialRules(link, createdByID);
+    updatedAuthorizations.push(link.authorization);
     link.profile =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
         link.profile,
         link.authorization
       );
 
-    return link;
+    return updatedAuthorizations;
   }
 
   private appendCredentialRules(
