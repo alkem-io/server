@@ -78,11 +78,12 @@ export class PostAuthorizationService {
     updatedAuthorizations.push(post.authorization);
 
     // cascade
-    post.profile =
+    const profileAuthorizations =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
         post.profile,
         post.authorization
       );
+    updatedAuthorizations.push(...profileAuthorizations);
 
     return updatedAuthorizations;
   }

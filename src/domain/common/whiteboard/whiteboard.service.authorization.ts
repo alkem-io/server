@@ -49,11 +49,12 @@ export class WhiteboardAuthorizationService {
     );
     updatedAuthorizations.push(whiteboard.authorization);
 
-    whiteboard.profile =
+    const profileAuthoriations =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
         whiteboard.profile,
         whiteboard.authorization
       );
+    updatedAuthorizations.push(...profileAuthoriations);
 
     return updatedAuthorizations;
   }

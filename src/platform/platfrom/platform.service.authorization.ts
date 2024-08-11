@@ -109,17 +109,19 @@ export class PlatformAuthorizationService {
       this.extendStorageAuthorizationPolicy(platformStorageAuth);
     platformStorageAuth.anonymousReadAccess = true;
 
-    platform.storageAggregator =
+    const storageAuthorizations =
       await this.storageAggregatorAuthorizationService.applyAuthorizationPolicy(
         platform.storageAggregator,
         platformStorageAuth
       );
+    updatedAuthorizations.push(...storageAuthorizations);
 
-    platform.licensing =
+    const platformLicensingAuthorizations =
       await this.licensingAuthorizationService.applyAuthorizationPolicy(
         platform.licensing,
         platform.authorization
       );
+    updatedAuthorizations.push(...platformLicensingAuthorizations);
 
     return updatedAuthorizations;
   }

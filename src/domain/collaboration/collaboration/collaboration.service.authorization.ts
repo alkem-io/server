@@ -59,15 +59,13 @@ export class CollaborationAuthorizationService {
               profile: true,
             },
             timeline: true,
-            relations: true,
           },
         }
       );
     if (
       !collaboration.callouts ||
       !collaboration.innovationFlow ||
-      !collaboration.timeline ||
-      !collaboration.relations
+      !collaboration.timeline
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load child entities for collaboration authorization:  ${collaboration.id}`,
@@ -119,8 +117,7 @@ export class CollaborationAuthorizationService {
       !collaboration.callouts ||
       !collaboration.innovationFlow ||
       !collaboration.innovationFlow.profile ||
-      !collaboration.timeline ||
-      !collaboration.relations
+      !collaboration.timeline
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load child entities for collaboration authorization children:  ${collaboration.id}`,
@@ -153,25 +150,19 @@ export class CollaborationAuthorizationService {
         spaceSettings
       );
 
-    collaboration.innovationFlow =
+    const flowAuthorizations =
       await this.innovationFlowAuthorizationService.applyAuthorizationPolicy(
         collaboration.innovationFlow,
         collaboration.authorization
       );
+    updatedAuthorizations.push(...flowAuthorizations);
 
-    collaboration.timeline =
+    const timelineAuthorizations =
       await this.timelineAuthorizationService.applyAuthorizationPolicy(
         collaboration.timeline,
         extendedAuthorizationContributors
       );
-
-    for (const relation of collaboration.relations) {
-      relation.authorization =
-        this.authorizationPolicyService.inheritParentAuthorization(
-          relation.authorization,
-          collaboration.authorization
-        );
-    }
+    updatedAuthorizations.push(...timelineAuthorizations);
 
     return updatedAuthorizations;
   }

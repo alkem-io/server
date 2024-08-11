@@ -65,6 +65,7 @@ export class ProfileAuthorizationService {
           reference.authorization,
           profile.authorization
         );
+      updatedAuthorizations.push(reference.authorization);
     }
 
     for (const tagset of profile.tagsets) {
@@ -73,20 +74,24 @@ export class ProfileAuthorizationService {
           tagset.authorization,
           profile.authorization
         );
+      updatedAuthorizations.push(tagset.authorization);
     }
 
     for (const visual of profile.visuals) {
-      this.visualAuthorizationService.applyAuthorizationPolicy(
-        visual,
-        profile.authorization
-      );
+      visual.authorization =
+        this.visualAuthorizationService.applyAuthorizationPolicy(
+          visual,
+          profile.authorization
+        );
+      updatedAuthorizations.push(visual.authorization);
     }
 
-    profile.storageBucket =
+    const storageBucketAuthorizations =
       this.storageBucketAuthorizationService.applyAuthorizationPolicy(
         profile.storageBucket,
         profile.authorization
       );
+    updatedAuthorizations.push(...storageBucketAuthorizations);
 
     return updatedAuthorizations;
   }

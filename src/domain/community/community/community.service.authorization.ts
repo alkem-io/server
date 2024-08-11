@@ -60,7 +60,7 @@ export class CommunityAuthorizationService {
     accountAgent: IAgent,
     communityPolicy: ICommunityPolicy,
     spaceSettings: ISpaceSettings
-  ): Promise<ICommunity> {
+  ): Promise<IAuthorizationPolicy[]> {
     const community = await this.communityService.getCommunityOrFail(
       communityInput.id,
       {
@@ -93,6 +93,8 @@ export class CommunityAuthorizationService {
         LogContext.COMMUNITY
       );
     }
+    const updatedAuthorizations: IAuthorizationPolicy[] = [];
+
     community.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         community.authorization,
@@ -116,21 +118,23 @@ export class CommunityAuthorizationService {
 
     // always false
     community.authorization.anonymousReadAccess = false;
+    updatedAuthorizations.push(community.authorization);
 
-    community.communication =
+    const communicationAuthorizations =
       await this.communicationAuthorizationService.applyAuthorizationPolicy(
         community.communication,
         community.authorization
       );
+    updatedAuthorizations.push(...communicationAuthorizations);
 
     // cascade
     for (const group of community.groups) {
-      const savedGroup =
+      const groupAuthorizations =
         await this.userGroupAuthorizationService.applyAuthorizationPolicy(
           group,
           community.authorization
         );
-      group.authorization = savedGroup.authorization;
+      updatedAuthorizations.push(...groupAuthorizations);
     }
 
     for (const application of community.applications) {
@@ -152,23 +156,24 @@ export class CommunityAuthorizationService {
     }
 
     for (const externalInvitation of community.platformInvitations) {
-      const invitationReset =
+      const platformInvitationAuthorization =
         await this.platformInvitationAuthorizationService.applyAuthorizationPolicy(
           externalInvitation,
           community.authorization
         );
-      externalInvitation.authorization = invitationReset.authorization;
+      updatedAuthorizations.push(platformInvitationAuthorization);
     }
 
     if (community.guidelines) {
-      community.guidelines =
+      const guidelineAuthorizations =
         await this.communityGuidelinesAuthorizationService.applyAuthorizationPolicy(
           community.guidelines,
           community.authorization
         );
+      updatedAuthorizations.push(...guidelineAuthorizations);
     }
 
-    return community;
+    return updatedAuthorizations;
   }
 
   private async extendAuthorizationPolicy(

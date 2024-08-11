@@ -23,9 +23,6 @@ import { Collaboration } from '@domain/collaboration/collaboration/collaboration
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { CreateCalloutOnCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create.callout';
-import { CreateRelationOnCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create.relation';
-import { IRelation } from '@domain/collaboration/relation/relation.interface';
-import { RelationService } from '@domain/collaboration/relation/relation.service';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
@@ -69,7 +66,6 @@ export class CollaborationService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private calloutService: CalloutService,
     private namingService: NamingService,
-    private relationService: RelationService,
     private tagsetTemplateSetService: TagsetTemplateSetService,
     private innovationFlowService: InnovationFlowService,
     private storageAggregatorResolverService: StorageAggregatorResolverService,
@@ -90,7 +86,6 @@ export class CollaborationService {
   ): Promise<ICollaboration> {
     const collaboration: ICollaboration = Collaboration.create();
     collaboration.authorization = new AuthorizationPolicy();
-    collaboration.relations = [];
     collaboration.callouts = [];
     collaboration.timeline = this.timelineService.createTimeline();
     const calloutGroups = this.spaceDefaultsService.getCalloutGroups(spaceType);
@@ -335,7 +330,6 @@ export class CollaborationService {
         callouts: true,
         timeline: true,
         innovationFlow: true,
-        relations: true,
         authorization: true,
       },
     });
@@ -344,7 +338,6 @@ export class CollaborationService {
       !collaboration.callouts ||
       !collaboration.timeline ||
       !collaboration.innovationFlow ||
-      !collaboration.relations ||
       !collaboration.authorization
     )
       throw new RelationshipNotFoundException(
@@ -357,10 +350,6 @@ export class CollaborationService {
     }
 
     await this.timelineService.deleteTimeline(collaboration.timeline.id);
-
-    for (const relation of collaboration.relations) {
-      await this.relationService.deleteRelation({ ID: relation.id });
-    }
 
     await this.authorizationPolicyService.delete(collaboration.authorization);
 
@@ -667,26 +656,6 @@ export class CollaborationService {
     return loadedCollaboration.callouts;
   }
 
-  public async createRelationOnCollaboration(
-    relationData: CreateRelationOnCollaborationInput
-  ): Promise<IRelation> {
-    const collaborationId = relationData.collaborationID;
-    const collaboration = await this.getCollaborationOrFail(collaborationId, {
-      relations: { relations: true },
-    });
-
-    if (!collaboration.relations)
-      throw new EntityNotInitializedException(
-        `Collaboration (${collaborationId}) not initialised`,
-        LogContext.COLLABORATION
-      );
-
-    const relation = await this.relationService.createRelation(relationData);
-    collaboration.relations.push(relation);
-    await this.collaborationRepository.save(collaboration);
-    return relation;
-  }
-
   public async getTagsetTemplatesSet(
     collaborationID: string
   ): Promise<ITagsetTemplateSet> {
@@ -702,25 +671,6 @@ export class CollaborationService {
     }
 
     return collaboration.tagsetTemplateSet;
-  }
-
-  public async getRelationsOnCollaboration(
-    collaboration: ICollaboration
-  ): Promise<IRelation[]> {
-    const loadedCollaboration = await this.getCollaborationOrFail(
-      collaboration.id,
-      {
-        relations: { relations: true },
-      }
-    );
-
-    if (!loadedCollaboration.relations)
-      throw new EntityNotInitializedException(
-        `Collaboration not initialised: ${collaboration.id}`,
-        LogContext.COLLABORATION
-      );
-
-    return loadedCollaboration.relations;
   }
 
   public async getPostsCount(collaboration: ICollaboration): Promise<number> {

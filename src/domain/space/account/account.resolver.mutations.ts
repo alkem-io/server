@@ -327,12 +327,16 @@ export class AccountResolverMutations {
       createData,
       account
     );
-    innovationHub =
+    innovationHub = await this.innovationHubService.save(innovationHub);
+    const authorizations =
       await this.innovationHubAuthorizationService.applyAuthorizationPolicyAndSave(
         innovationHub,
         account.authorization
       );
-    return await this.innovationHubService.save(innovationHub);
+    await this.authorizationPolicyService.saveAll(authorizations);
+    return await this.innovationHubService.getInnovationHubOrFail(
+      innovationHub.id
+    );
   }
 
   @UseGuards(GraphqlGuard)

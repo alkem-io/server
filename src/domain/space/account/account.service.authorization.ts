@@ -35,7 +35,6 @@ import { POLICY_RULE_ACCOUNT_CREATE_VC } from '@common/constants/authorization/p
 import { InnovationPackAuthorizationService } from '@library/innovation-pack/innovation.pack.service.authorization';
 import { ISpaceSettings } from '../space.settings/space.settings.interface';
 import { SpaceSettingsService } from '../space.settings/space.settings.service';
-import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
 import { InnovationHubAuthorizationService } from '@domain/innovation-hub/innovation.hub.service.authorization';
 
 @Injectable()
@@ -191,17 +190,19 @@ export class AccountAuthorizationService {
     updatedAuthorizations.push(agentAuthorization);
 
     // For certain child entities allow the space admin also pretty much full control
-    account.library =
+    const libraryAuthorizations =
       await this.templatesSetAuthorizationService.applyAuthorizationPolicy(
         account.library,
         clonedAccountAuth
       );
+    updatedAuthorizations.push(...libraryAuthorizations);
 
-    account.storageAggregator =
+    const storageAuthorizations =
       await this.storageAggregatorAuthorizationService.applyAuthorizationPolicy(
         account.storageAggregator,
         account.authorization
       );
+    updatedAuthorizations.push(...storageAuthorizations);
 
     account.defaults.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
@@ -227,16 +228,15 @@ export class AccountAuthorizationService {
       updatedAuthorizations.push(...innovationPackAuthorizations);
     }
 
-    const updatedInnovationHubs: IInnovationHub[] = [];
     for (const innovationHub of account.innovationHubs) {
-      const updatedInnovationHub =
+      const updatedInnovationHubAuthorizations =
         await this.innovationHubAuthorizationService.applyAuthorizationPolicyAndSave(
           innovationHub,
           clonedAccountAuth
         );
-      updatedInnovationHubs.push(updatedInnovationHub);
+      updatedAuthorizations.push(...updatedInnovationHubAuthorizations);
     }
-    account.innovationHubs = updatedInnovationHubs;
+
     return updatedAuthorizations;
   }
 

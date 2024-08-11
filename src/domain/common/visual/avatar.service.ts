@@ -8,12 +8,14 @@ import { DocumentAuthorizationService } from '@domain/storage/document/document.
 import { urlToBuffer } from '@common/utils/url.to.buffer';
 import { avatarMinImageSize, avatarMaxImageSize } from './avatar.constants';
 import { IDocument } from '@domain/storage/document';
+import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 
 export type AvatarDocument = { visual: IVisual; document: IDocument };
 
 @Injectable()
 export class AvatarService {
   constructor(
+    private authorizationPolicyService: AuthorizationPolicyService,
     private storageBucketService: StorageBucketService,
     private documentService: DocumentService,
     private documentAuthorizationsService: DocumentAuthorizationService,
@@ -32,7 +34,7 @@ export class AvatarService {
       await import('file-type')
     ).fileTypeFromBuffer(imageBuffer);
 
-    const document =
+    let document =
       await this.storageBucketService.uploadFileAsDocumentFromBuffer(
         storageBucketId,
         imageBuffer,
@@ -41,19 +43,19 @@ export class AvatarService {
         userId,
         false
       );
+    document = await this.documentService.saveDocument(document);
 
     const storageBucket =
       await this.storageBucketService.getStorageBucketOrFail(storageBucketId, {
         relations: { documents: true },
       });
     const url = this.documentService.getPubliclyAccessibleURL(document);
-    const documentAuthorized =
+    const documentAuthorizations =
       this.documentAuthorizationsService.applyAuthorizationPolicy(
         document,
         storageBucket.authorization
       );
-    const documentSaved =
-      await this.documentService.saveDocument(documentAuthorized);
+    await this.authorizationPolicyService.saveAll(documentAuthorizations);
 
     const visual = await this.visualService.createVisual(
       {
@@ -66,6 +68,6 @@ export class AvatarService {
       },
       url
     );
-    return { visual, document: documentSaved };
+    return { visual, document };
   }
 }

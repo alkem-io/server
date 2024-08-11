@@ -179,8 +179,9 @@ export class BootstrapService {
             });
           }
           user = await this.userAuthorizationService.grantCredentials(user);
-          user =
+          const authorizations =
             await this.userAuthorizationService.applyAuthorizationPolicy(user);
+          await this.authorizationPolicyService.saveAll(authorizations);
         }
       }
     } catch (error: any) {
@@ -279,11 +280,13 @@ export class BootstrapService {
         account,
         createSpaceAccountInput
       );
-      account =
+      account = await this.accountService.save(account);
+      const authorizations =
         await this.accountAuthorizationService.applyAuthorizationPolicy(
           account
         );
-      return await this.accountService.save(account);
+      await this.authorizationPolicyService.saveAll(authorizations);
+      return account;
     }
   }
 }

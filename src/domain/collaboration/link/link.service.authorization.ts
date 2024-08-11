@@ -29,6 +29,7 @@ export class LinkAuthorizationService {
         LogContext.COLLABORATION
       );
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
+
     link.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         link.authorization,
@@ -36,11 +37,13 @@ export class LinkAuthorizationService {
       );
     link.authorization = this.appendCredentialRules(link, createdByID);
     updatedAuthorizations.push(link.authorization);
-    link.profile =
+
+    const profileAuthorizations =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
         link.profile,
         link.authorization
       );
+    updatedAuthorizations.push(...profileAuthorizations);
 
     return updatedAuthorizations;
   }

@@ -222,7 +222,9 @@ export class SpaceAuthorizationService {
     }
 
     // Save before proparagating to child entities
-    space = await this.spaceService.save(space);
+    space.authorization = await this.authorizationPolicyService.save(
+      space.authorization
+    );
 
     // Cascade down
     // propagate authorization rules for child entities
@@ -255,9 +257,6 @@ export class SpaceAuthorizationService {
       case SpaceVisibility.ARCHIVED:
         break;
     }
-
-    // Save with all child entities updated with exception of subspaces as they need to look after their own saving
-    space = await this.spaceService.save(space);
 
     space = await this.spaceService.getSpaceOrFail(spaceInput.id, {
       relations: {
@@ -310,7 +309,7 @@ export class SpaceAuthorizationService {
     // To ensure that profile + context on a space are always publicly visible, even for private subspaces
     clonedAuthorization.anonymousReadAccess = true;
 
-    space.community =
+    const communityAuthorizations =
       await this.communityAuthorizationService.applyAuthorizationPolicy(
         space.community,
         space.authorization,
@@ -318,6 +317,7 @@ export class SpaceAuthorizationService {
         communityPolicy,
         spaceSettings
       );
+    updatedAuthorizations.push(...communityAuthorizations);
 
     // Subspaces to allow some membership options based on the parent space recential
     if (space.level !== SpaceLevel.SPACE) {
@@ -354,17 +354,19 @@ export class SpaceAuthorizationService {
       );
     updatedAuthorizations.push(...profileAuthorizations);
 
-    space.context =
+    const contextAuthorizations =
       await this.contextAuthorizationService.applyAuthorizationPolicy(
         space.context,
         clonedAuthorization
       );
+    updatedAuthorizations.push(...contextAuthorizations);
 
-    space.storageAggregator =
+    const storageAuthorizations =
       await this.storageAggregatorAuthorizationService.applyAuthorizationPolicy(
         space.storageAggregator,
         space.authorization
       );
+    updatedAuthorizations.push(...storageAuthorizations);
 
     return updatedAuthorizations;
   }

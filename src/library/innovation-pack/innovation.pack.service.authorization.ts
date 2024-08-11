@@ -62,11 +62,12 @@ export class InnovationPackAuthorizationService {
       );
     updatedAuthorizations.push(...profileAuthorizations);
 
-    innovationPack.templatesSet =
+    const templatesSetAuthorizations =
       await this.templatesSetAuthorizationService.applyAuthorizationPolicy(
         innovationPack.templatesSet,
         innovationPack.authorization
       );
+    updatedAuthorizations.push(...templatesSetAuthorizations);
 
     return updatedAuthorizations;
   }
