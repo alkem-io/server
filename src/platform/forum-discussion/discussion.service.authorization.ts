@@ -31,7 +31,7 @@ export class DiscussionAuthorizationService {
   async applyAuthorizationPolicy(
     discussionInput: IDiscussion,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): Promise<IDiscussion> {
+  ): Promise<IAuthorizationPolicy[]> {
     const discussion = await this.discussionService.getDiscussionOrFail(
       discussionInput.id,
       {
@@ -47,6 +47,7 @@ export class DiscussionAuthorizationService {
         LogContext.COMMUNICATION
       );
     }
+    const updatedAuthorizations: IAuthorizationPolicy[] = [];
     discussion.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         discussion.authorization,
@@ -56,6 +57,7 @@ export class DiscussionAuthorizationService {
     discussion.authorization = this.extendAuthorizationPolicy(
       discussion.authorization
     );
+    updatedAuthorizations.push(discussion.authorization);
     // Clone the authorization policy so can control what children get what setting
     const clonedAuthorization =
       this.authorizationPolicyService.cloneAuthorizationPolicy(
@@ -79,11 +81,13 @@ export class DiscussionAuthorizationService {
         discussion.authorization
       );
 
-    discussion.comments =
+    const commentsAuthorization =
       this.roomAuthorizationService.applyAuthorizationPolicy(
         discussion.comments,
         clonedAuthorization
       );
+    updatedAuthorizations.push(commentsAuthorization);
+
     discussion.comments.authorization =
       this.roomAuthorizationService.allowContributorsToCreateMessages(
         discussion.comments.authorization
@@ -93,7 +97,7 @@ export class DiscussionAuthorizationService {
         discussion.comments.authorization
       );
 
-    return await this.discussionService.save(discussion);
+    return updatedAuthorizations;
   }
 
   private extendAuthorizationPolicy(
