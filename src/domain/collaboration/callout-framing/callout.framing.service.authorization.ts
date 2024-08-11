@@ -20,7 +20,7 @@ export class CalloutFramingAuthorizationService {
   public async applyAuthorizationPolicy(
     calloutFramingInput: ICalloutFraming,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): Promise<ICalloutFraming> {
+  ): Promise<IAuthorizationPolicy[]> {
     const calloutFraming =
       await this.calloutFramingService.getCalloutFramingOrFail(
         calloutFramingInput.id,
@@ -40,12 +40,14 @@ export class CalloutFramingAuthorizationService {
         LogContext.COLLABORATION
       );
     }
+    const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
     calloutFraming.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         calloutFraming.authorization,
         parentAuthorization
       );
+    updatedAuthorizations.push(calloutFraming.authorization);
 
     calloutFraming.profile =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
@@ -54,13 +56,14 @@ export class CalloutFramingAuthorizationService {
       );
 
     if (calloutFraming.whiteboard) {
-      calloutFraming.whiteboard =
+      const whiteboardAuthorizations =
         await this.whiteboardAuthorizationService.applyAuthorizationPolicy(
           calloutFraming.whiteboard,
           calloutFraming.authorization
         );
+      updatedAuthorizations.push(...whiteboardAuthorizations);
     }
 
-    return calloutFraming;
+    return updatedAuthorizations;
   }
 }
