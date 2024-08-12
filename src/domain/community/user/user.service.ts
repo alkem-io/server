@@ -36,7 +36,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { Cache, CachingConfig } from 'cache-manager';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, In, Repository } from 'typeorm';
+import { FindOneOptions, Repository } from 'typeorm';
 import { DirectRoomResult } from './dto/user.dto.communication.room.direct.result';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
@@ -891,11 +891,11 @@ export class UserService {
       .getMany();
   }
 
-  async countUsersWithCredentials(
+  public countUsersWithCredentials(
     credentialCriteria: CredentialsSearchInput
   ): Promise<number> {
     const credResourceID = credentialCriteria.resourceID || '';
-    const userMatchesCount = await this.userRepository
+    return this.userRepository
       .createQueryBuilder('user')
       .leftJoinAndSelect('user.agent', 'agent')
       .leftJoinAndSelect('agent.credentials', 'credential')
@@ -906,8 +906,6 @@ export class UserService {
         resourceID: credResourceID,
       })
       .getCount();
-
-    return userMatchesCount;
   }
 
   async getStorageAggregatorOrFail(
@@ -930,14 +928,10 @@ export class UserService {
     return storageAggregator;
   }
 
-  private async tryRegisterUserCommunication(
+  private tryRegisterUserCommunication(
     user: IUser
   ): Promise<string | undefined> {
-    const communicationID = await this.communicationAdapter.tryRegisterNewUser(
-      user.email
-    );
-
-    return communicationID;
+    return this.communicationAdapter.tryRegisterNewUser(user.email);
   }
 
   async getCommunityRooms(user: IUser): Promise<CommunicationRoomResult[]> {
@@ -971,26 +965,6 @@ export class UserService {
       base,
       reservedNameIDs
     );
-  }
-
-  async findProfilesByBatch(userIds: string[]): Promise<(IProfile | Error)[]> {
-    const users = await this.userRepository.find({
-      where: {
-        id: In(userIds),
-      },
-      relations: { profile: true },
-      select: ['id'],
-    });
-
-    const results = users.filter((user: { id: string }) =>
-      userIds.includes(user.id)
-    );
-    const mappedResults = userIds.map(
-      id =>
-        results.find((result: { id: string }) => result.id === id)?.profile ||
-        new Error(`Could not load user ${id}`)
-    );
-    return mappedResults;
   }
 
   public async getAgentInfoMetadata(

@@ -97,8 +97,7 @@ export class NamingService {
         nameID: true,
       },
     });
-    const nameIDs = callouts?.map(callout => callout.nameID) || [];
-    return nameIDs;
+    return callouts?.map(callout => callout.nameID) ?? [];
   }
 
   public async getReservedNameIDsInCalendar(
@@ -114,8 +113,7 @@ export class NamingService {
         nameID: true,
       },
     });
-    const nameIDs = events?.map(event => event.nameID) || [];
-    return nameIDs;
+    return events?.map(event => event.nameID) ?? [];
   }
 
   public async getReservedNameIDsInHubs(): Promise<string[]> {
@@ -124,8 +122,7 @@ export class NamingService {
         nameID: true,
       },
     });
-    const nameIDs = hubs.map(hub => hub.nameID);
-    return nameIDs;
+    return hubs.map(hub => hub.nameID);
   }
 
   public async getReservedNameIDsInUsers(): Promise<string[]> {
@@ -134,8 +131,7 @@ export class NamingService {
         nameID: true,
       },
     });
-    const nameIDs = users.map(user => user.nameID);
-    return nameIDs;
+    return users.map(user => user.nameID);
   }
 
   public async getReservedNameIDsInVirtualContributors(): Promise<string[]> {
@@ -144,8 +140,7 @@ export class NamingService {
         nameID: true,
       },
     });
-    const nameIDs = vcs.map(vc => vc.nameID);
-    return nameIDs;
+    return vcs.map(vc => vc.nameID);
   }
 
   public async getReservedNameIDsInOrganizations(): Promise<string[]> {
@@ -154,8 +149,7 @@ export class NamingService {
         nameID: true,
       },
     });
-    const nameIDs = organizations.map(organization => organization.nameID);
-    return nameIDs;
+    return organizations.map(organization => organization.nameID);
   }
 
   public async getReservedNameIDsInCalloutContributions(
@@ -212,8 +206,7 @@ export class NamingService {
     const innovationHubsCount = await this.innovationHubRepository.countBy({
       subdomain: subdomain,
     });
-    if (innovationHubsCount > 0) return false;
-    return true;
+    return innovationHubsCount === 0;
   }
 
   public createNameID(base: string): string {
