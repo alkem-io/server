@@ -123,6 +123,8 @@ export class CollaborationService {
         collaboration.tagsetTemplateSet,
         tagsetTemplateDataStates
       );
+    // save the tagset template so can use it in the innovation flow as a template for it's tags
+    await this.tagsetTemplateSetService.save(collaboration.tagsetTemplateSet);
 
     // Note: need to create the innovation flow after creation of
     // tagsetTemplates on Collabration so can pass it in to the InnovationFlow
@@ -163,12 +165,10 @@ export class CollaborationService {
       );
     }
 
-    const tagsetTemplate = this.tagsetTemplateSetService.addTagsetTemplate(
+    return this.tagsetTemplateSetService.addTagsetTemplate(
       collaboration.tagsetTemplateSet,
       tagsetTemplateData
     );
-    await this.save(collaboration); // todo remove
-    return tagsetTemplate;
   }
 
   public async addDefaultCallouts(
@@ -180,9 +180,12 @@ export class CollaborationService {
     collaboration.callouts =
       await this.getCalloutsOnCollaboration(collaboration);
 
-    collaboration.tagsetTemplateSet = await this.getTagsetTemplatesSet(
-      collaboration.id
-    );
+    if (!collaboration.tagsetTemplateSet) {
+      collaboration.tagsetTemplateSet = await this.getTagsetTemplatesSet(
+        collaboration.id
+      );
+    }
+
     for (const calloutDefault of calloutsData) {
       const callout = await this.calloutService.createCallout(
         calloutDefault,
