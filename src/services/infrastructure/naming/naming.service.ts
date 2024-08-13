@@ -14,7 +14,6 @@ import { CalendarEvent, ICalendarEvent } from '@domain/timeline/event';
 import { Inject, LoggerService } from '@nestjs/common';
 import { InnovationHub } from '@domain/innovation-hub/innovation.hub.entity';
 import { ICallout } from '@domain/collaboration/callout';
-import { NAMEID_LENGTH } from '@common/constants';
 import { Space } from '@domain/space/space/space.entity';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 import { SpaceLevel } from '@common/enums/space.level';
@@ -24,10 +23,9 @@ import { Organization } from '@domain/community/organization';
 import { Discussion } from '@platform/forum-discussion/discussion.entity';
 import { IDiscussion } from '@platform/forum-discussion/discussion.interface';
 import { SpaceReservedName } from '@common/enums/space.reserved.name';
+import { generateNameId } from '@services/infrastructure/naming/generate.name.id';
 
 export class NamingService {
-  replaceSpecialCharacters = require('replace-special-characters');
-
   constructor(
     @InjectRepository(Discussion)
     private discussionRepository: Repository<Discussion>,
@@ -50,8 +48,7 @@ export class NamingService {
         nameID: true,
       },
     });
-    const nameIDs = subspaces.map(space => space.nameID);
-    return nameIDs;
+    return subspaces.map(space => space.nameID);
   }
 
   public async getReservedNameIDsLevelZeroSpaces(): Promise<string[]> {
@@ -80,8 +77,7 @@ export class NamingService {
         nameID: true,
       },
     });
-    const nameIDs = discussions?.map(discussion => discussion.nameID) || [];
-    return nameIDs;
+    return discussions?.map(discussion => discussion.nameID) || [];
   }
 
   public async getReservedNameIDsInCollaboration(
@@ -210,19 +206,7 @@ export class NamingService {
   }
 
   public createNameID(base: string): string {
-    const nameIDExcludedCharacters = /[^a-zA-Z0-9-]/g;
-
-    const baseMaxLength = base.slice(0, NAMEID_LENGTH);
-    // replace spaces + trim to NAMEID_LENGTH characters
-    const nameID = `${baseMaxLength}`.replace(/\s/g, '');
-    // replace characters with umlouts etc to normal characters
-    const nameIDNoSpecialCharacters: string =
-      this.replaceSpecialCharacters(nameID);
-    // Remove any characters that are not allowed
-    return nameIDNoSpecialCharacters
-      .replace(nameIDExcludedCharacters, '')
-      .toLowerCase()
-      .slice(0, NAMEID_LENGTH);
+    return generateNameId(base);
   }
 
   public createNameIdAvoidingReservedNameIDs(
