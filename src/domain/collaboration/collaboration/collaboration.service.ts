@@ -412,12 +412,13 @@ export class CollaborationService {
         `Unable to create Callout: the provided nameID is already taken: ${calloutData.nameID}`,
         LogContext.SPACES
       );
+    } else {
+      calloutData.nameID =
+        this.namingService.createNameIdAvoidingReservedNameIDs(
+          `${calloutData.framing.profile.displayName}`,
+          reservedNameIDs
+        );
     }
-
-    calloutData.nameID = this.namingService.createNameIdAvoidingReservedNameIDs(
-      `${calloutData.framing.profile.displayName}`,
-      reservedNameIDs
-    );
 
     const tagsetTemplates = collaboration.tagsetTemplateSet.tagsetTemplates;
     const storageAggregator =
