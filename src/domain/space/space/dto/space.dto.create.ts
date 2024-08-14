@@ -5,10 +5,10 @@ import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dt
 import { IsOptional, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { CreateContextInput } from '@domain/context/context/dto/context.dto.create';
-import { CreateNameableOptionalInput } from '@domain/common/entity/nameable-entity/dto/nameable.optional.dto.create';
+import { CreateNameableInput } from '@domain/common/entity/nameable-entity/dto/nameable.dto.create';
 
 @InputType()
-export class CreateSpaceInput extends CreateNameableOptionalInput {
+export class CreateSpaceInput extends CreateNameableInput {
   @Field(() => CreateContextInput, { nullable: true })
   @IsOptional()
   @ValidateNested()

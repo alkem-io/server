@@ -2,10 +2,10 @@ import { InputType, Field } from '@nestjs/graphql';
 import { MID_TEXT_LENGTH } from '@src/common/constants';
 import { IsDate, IsOptional, MaxLength } from 'class-validator';
 import { CalendarEventType } from '@common/enums/calendar.event.type';
-import { CreateNameableOptionalInput } from '@domain/common/entity/nameable-entity/dto/nameable.optional.dto.create';
+import { CreateNameableInput } from '@domain/common/entity/nameable-entity/dto/nameable.dto.create';
 
 @InputType()
-export class CreateCalendarEventInput extends CreateNameableOptionalInput {
+export class CreateCalendarEventInput extends CreateNameableInput {
   @Field(() => CalendarEventType, { nullable: false })
   @MaxLength(MID_TEXT_LENGTH)
   type!: string;
