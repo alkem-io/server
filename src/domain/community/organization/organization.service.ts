@@ -663,7 +663,7 @@ export class OrganizationService {
   public async createOrganizationNameID(displayName: string): Promise<string> {
     const base = `${displayName}`;
     const reservedNameIDs =
-      await this.namingService.getReservedNameIDsInVirtualContributors(); // This will need to be smarter later
+      await this.namingService.getReservedNameIDsInOrganizations(); // This will need to be smarter later
     return this.namingService.createNameIdAvoidingReservedNameIDs(
       base,
       reservedNameIDs
