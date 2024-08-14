@@ -946,8 +946,13 @@ export class UserService {
 
   private async createUserNameID(userData: CreateUserInput): Promise<string> {
     let base = '';
-    if (userData.firstName || userData.lastName) {
+    if (userData.firstName && userData.lastName) {
       base = `${userData.firstName}-${userData.lastName}`;
+    } else if (userData.firstName) {
+      base = `${userData.firstName}`;
+      K;
+    } else if (userData.lastName) {
+      base = `${userData.lastName}`;
     } else if (userData.profileData?.displayName) {
       base = userData.profileData.displayName;
     } else {
