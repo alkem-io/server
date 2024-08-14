@@ -187,11 +187,10 @@ export class AccountsUserOrg1723015111365 implements MigrationInterface {
     );
 
     await queryRunner.query(
-      `INSERT INTO agent (id, version, authorizationId, did, password, parentDisplayID)
+      `INSERT INTO agent (id, version, authorizationId, did, password)
                 VALUES ('${agentID}',
                         '1',
                         '${agentAuthID}',
-                        '',
                         '',
                         '')`
     );
