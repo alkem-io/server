@@ -86,7 +86,7 @@ export class RegistrationResolverMutations {
     await this.registrationService.processPendingInvitations(user);
 
     await this.userCreatedEvents(user, agentInfo);
-    return user;
+    return await this.userService.getUserOrFail(user.id);
   }
 
   @UseGuards(GraphqlGuard)

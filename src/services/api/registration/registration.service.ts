@@ -47,17 +47,13 @@ export class RegistrationService {
       );
     }
     // If a user has a valid session, and hence email / names etc set, then they can create a User profile
-    let user = await this.userService.createUserFromAgentInfo(agentInfo);
-    user = await this.userAuthorizationService.grantCredentials(user);
+    const user = await this.userService.createUserFromAgentInfo(agentInfo);
 
-    await this.assignUserToOrganizationByDomain(agentInfo, user);
+    await this.assignUserToOrganizationByDomain(user);
     return user;
   }
 
-  async assignUserToOrganizationByDomain(
-    agentInfo: AgentInfo,
-    user: IUser
-  ): Promise<boolean> {
+  async assignUserToOrganizationByDomain(user: IUser): Promise<boolean> {
     const userEmailDomain = getEmailDomain(user.email);
 
     const org =

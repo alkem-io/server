@@ -96,6 +96,7 @@ export class AccountAuthorizationService {
 
     return savedAccount;
   }
+
   public async getClonedAccountAuthExtendedForChildEntities(
     account: IAccount
   ): Promise<IAuthorizationPolicy> {
