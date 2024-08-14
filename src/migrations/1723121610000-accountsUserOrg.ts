@@ -1,8 +1,8 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 import { randomUUID } from 'crypto';
 
-export class AccountsUserOrg1723015111365 implements MigrationInterface {
-  name = 'AccountsUserOrg1723015111365';
+export class AccountsUserOrg1723121610000 implements MigrationInterface {
+  name = 'AccountsUserOrg1723121610000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     // remove accountId for non-level zero spaces, otherwise they will also be updated + show up directly
