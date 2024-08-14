@@ -177,10 +177,13 @@ export class AuthorizationPolicyService {
   }
 
   async saveAll(authorizationPolicies: IAuthorizationPolicy[]): Promise<void> {
-    const savePromises = authorizationPolicies.map(authorizationPolicy =>
-      this.save(authorizationPolicy)
+    this.logger.verbose?.(
+      `Saving ${authorizationPolicies.length} authorization policies`,
+      LogContext.AUTH
     );
-    await Promise.all(savePromises);
+    await this.authorizationPolicyRepository.save(authorizationPolicies, {
+      chunk: 100,
+    });
   }
 
   cloneAuthorizationPolicy(
