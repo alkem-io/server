@@ -1,4 +1,4 @@
-import { NAMEID_LENGTH } from '@common/constants';
+import { NAMEID_MAX_LENGTH, NAMEID_MIN_LENGTH } from '@common/constants';
 import replaceSpecialCharacters from 'replace-special-characters';
 
 export const generateNameId = (base: string): string => {
@@ -9,18 +9,18 @@ export const generateNameId = (base: string): string => {
     // remove all unwanted characters (consult regex for allowed characters)
     .replace(nameIDExcludedCharacters, '')
     .toLowerCase();
-  if (noSpecialCharacters.length <= 5) {
-    noSpecialCharacters = extendBaseID(noSpecialCharacters, 5);
+  if (noSpecialCharacters.length < NAMEID_MIN_LENGTH) {
+    noSpecialCharacters = extendBaseID(noSpecialCharacters, NAMEID_MIN_LENGTH);
   }
-  // Clamp to maxed allowed length
-  return noSpecialCharacters.slice(0, NAMEID_LENGTH);
+  // Clamp to max allowed length
+  return noSpecialCharacters.slice(0, NAMEID_MAX_LENGTH);
 };
-
-const extendBaseID = (base: string, minLength: number): string => {
+/** extends a string with random alphanumeric characters until it reaches the desired length */
+const extendBaseID = (base: string, desiredLength: number): string => {
   let result = base;
   const characters = 'abcdefghijklmnopqrstuvwxyz0123456789';
   const charactersLength = characters.length;
-  while (result.length < minLength) {
+  while (result.length < desiredLength) {
     result += characters.charAt(Math.floor(Math.random() * charactersLength));
   }
   return result;

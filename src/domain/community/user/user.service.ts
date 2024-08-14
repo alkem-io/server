@@ -950,7 +950,6 @@ export class UserService {
       base = `${userData.firstName}-${userData.lastName}`;
     } else if (userData.firstName) {
       base = `${userData.firstName}`;
-      K;
     } else if (userData.lastName) {
       base = `${userData.lastName}`;
     } else if (userData.profileData?.displayName) {

@@ -1,15 +1,30 @@
-const NAMEID_LENGTH = 25;
+const NAMEID_MAX_LENGTH = 25;
+const NAMEID_MIN_LENGTH = 5;
 
 // NOTE: the library that replaces diacritics, replaces ß with a single S, instead of double S
 export const generateTestData: (
-  timestamp: string
-) => { input: string; output: string }[] = (timestamp: string) => [
+  charSeed: string
+) => { input: string; output: string }[] = (charSeed: string) => [
   { input: 'ExampleName', output: 'examplename' },
-  { input: 'a'.repeat(NAMEID_LENGTH + 10), output: 'a'.repeat(NAMEID_LENGTH) },
+  {
+    input: 'a'.repeat(NAMEID_MAX_LENGTH + 10),
+    output: 'a'.repeat(NAMEID_MAX_LENGTH),
+  },
   { input: 'naïve', output: 'naive' },
   { input: 'name@123!', output: 'name123' },
   { input: 'NameWithUpperCase', output: 'namewithuppercase' },
-  { input: '', output: timestamp },
+  // min length
+  { input: '', output: charSeed.repeat(NAMEID_MIN_LENGTH) },
+  { input: '1', output: '1' + charSeed.repeat(NAMEID_MIN_LENGTH - 1) },
+  { input: '12', output: '12' + charSeed.repeat(NAMEID_MIN_LENGTH - 2) },
+  { input: '123', output: '123' + charSeed.repeat(NAMEID_MIN_LENGTH - 3) },
+  { input: '1234', output: '1234' + charSeed.repeat(NAMEID_MIN_LENGTH - 4) },
+  // special chars
+  {
+    input: '!@#$%^&*()_+`}{[]\\|\'"/.,?><',
+    output: charSeed.repeat(NAMEID_MIN_LENGTH),
+  },
+  //
   {
     input: '  leading and trailing spaces  ',
     output: 'leadingandtrailingspaces',
@@ -47,22 +62,22 @@ export const generateTestData: (
   { input: 'name`with`backticks', output: 'namewithbackticks' },
   { input: 'name"with"quotes', output: 'namewithquotes' },
   { input: '"name\'with\'singlequotes"', output: 'namewithsinglequotes' },
-  { input: 'äöüß', output: 'aous' },
-  { input: 'ÄÖÜ', output: 'aou' },
+  { input: 'äöüß-', output: 'aous-' },
+  { input: 'ÄÖÜd-', output: 'aoud-' },
   { input: 'façade', output: 'facade' },
   { input: 'crème brûlée', output: 'cremebrulee' },
-  { input: 'niño', output: 'nino' },
+  { input: 'niño-', output: 'nino-' },
   { input: 'jalapeño', output: 'jalapeno' },
   { input: 'français', output: 'francais' },
   { input: 'smörgåsbord', output: 'smorgasbord' },
-  { input: 'über', output: 'uber' },
+  { input: 'über-', output: 'uber-' },
   { input: 'mañana', output: 'manana' },
   { input: 'élève', output: 'eleve' },
   { input: 'coöperate', output: 'cooperate' },
   { input: 'naïve', output: 'naive' },
   { input: 'doppelgänger', output: 'doppelganger' },
   { input: 'straße', output: 'strase' },
-  { input: 'Тест', output: timestamp },
-  { input: 'Тест и малък тест', output: timestamp },
-  { input: 'Тест и test', output: 'test' },
+  { input: 'Тест', output: charSeed.repeat(NAMEID_MIN_LENGTH) },
+  { input: 'Тест и малък тест', output: charSeed.repeat(NAMEID_MIN_LENGTH) },
+  { input: 'Тест и test-', output: 'test-' },
 ];

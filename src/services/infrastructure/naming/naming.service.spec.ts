@@ -24,15 +24,24 @@ describe('Naming Service', () => {
 
   describe('createNameIdAvoidingReservedNameIDs', () => {
     it.each([
-      { base: 'test', reserved: ['test', 'test-1'], output: 'test-2' },
-      { base: 'test', reserved: ['test'], output: 'test-1' },
-      { base: 'test', reserved: [], output: 'test' },
-    ])('$base, $reserved - $output', async ({ base, reserved, output }) => {
-      const nameID = service.createNameIdAvoidingReservedNameIDs(
+      { base: 'mytest', reserved: [], expected: 'mytest' },
+      { base: 'mytest', reserved: ['mytest'], expected: 'mytest-1' },
+      {
+        base: 'mytest',
+        reserved: ['mytest', 'mytest-1'],
+        expected: 'mytest-2',
+      },
+      {
+        base: 'mytest',
+        reserved: ['mytest', 'mytest-1', 'mytest-3'],
+        expected: 'mytest-2',
+      },
+    ])('$base, $reserved - $output', async ({ base, reserved, expected }) => {
+      const received = service.createNameIdAvoidingReservedNameIDs(
         base,
         reserved
       );
-      expect(nameID).toEqual(output);
+      expect(received).toEqual(expected);
     });
   });
 });

@@ -1,16 +1,18 @@
 import { generateNameId } from './generate.name.id';
 import { generateTestData } from './generate.name.id.test.data';
 
-const timestamp = new Date().getTime().toString();
-
 describe('Generate name ID', () => {
   beforeAll(() => {
-    jest.spyOn(Date.prototype, 'getTime').mockReturnValue(Number(timestamp));
+    // unrandomize the characters when extending the nameID when min length is not met
+    jest.spyOn(Math, 'random').mockReturnValue(0.1); // 0.1 * 36 = 3.6 -> 3 -> d
   });
-  const testData = generateTestData(timestamp);
+  afterAll(() => {
+    jest.clearAllMocks();
+  });
+  const testData = generateTestData('d');
 
-  it.each(testData)('$input', ({ input, output }) => {
-    const result = generateNameId(input);
-    expect(result).toEqual(output);
+  it.each(testData)('$input', ({ input, output: expected }) => {
+    const received = generateNameId(input);
+    expect(received).toEqual(expected);
   });
 });
