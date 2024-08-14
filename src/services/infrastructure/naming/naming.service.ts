@@ -1,6 +1,5 @@
 import { EntityManager, Not, Repository } from 'typeorm';
 import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Post } from '@domain/collaboration/post/post.entity';
 import { LogContext } from '@common/enums';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
@@ -11,7 +10,6 @@ import {
 import { IPost } from '@domain/collaboration/post/post.interface';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { CalendarEvent, ICalendarEvent } from '@domain/timeline/event';
-import { Inject, LoggerService } from '@nestjs/common';
 import { InnovationHub } from '@domain/innovation-hub/innovation.hub.entity';
 import { ICallout } from '@domain/collaboration/callout';
 import { Space } from '@domain/space/space/space.entity';
@@ -32,8 +30,7 @@ export class NamingService {
     @InjectRepository(InnovationHub)
     private innovationHubRepository: Repository<InnovationHub>,
     @InjectEntityManager('default')
-    private entityManager: EntityManager,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
+    private entityManager: EntityManager
   ) {}
 
   public async getReservedNameIDsInLevelZeroSpace(
@@ -205,7 +202,7 @@ export class NamingService {
     return innovationHubsCount === 0;
   }
 
-  public createNameID(base: string): string {
+  private createNameID(base: string): string {
     return generateNameId(base);
   }
 

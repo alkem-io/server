@@ -3,7 +3,7 @@ import { generateTestData } from './generate.name.id.test.data';
 
 const timestamp = new Date().getTime().toString();
 
-describe.only('Generate name ID', () => {
+describe('Generate name ID', () => {
   beforeAll(() => {
     jest.spyOn(Date.prototype, 'getTime').mockReturnValue(Number(timestamp));
   });

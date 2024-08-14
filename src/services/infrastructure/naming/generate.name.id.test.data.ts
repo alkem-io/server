@@ -64,5 +64,5 @@ export const generateTestData: (
   { input: 'straße', output: 'strase' },
   { input: 'Тест', output: timestamp },
   { input: 'Тест и малък тест', output: timestamp },
-  // { input: 'Тест и test', output: 'test' },
+  { input: 'Тест и test', output: 'test' },
 ];
