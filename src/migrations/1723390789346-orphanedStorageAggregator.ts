@@ -8,7 +8,7 @@ export class OrphanedStorageAggregator1723390789346
   public async up(queryRunner: QueryRunner): Promise<void> {
     const aggregators: {
       id: string;
-      storageBucketId: string;
+      directStorageId: string;
       authorizationId: string;
     }[] = await queryRunner.query(
       `SELECT id, directStorageId, authorizationId FROM \`storage_aggregator\` where type is null`
@@ -18,7 +18,7 @@ export class OrphanedStorageAggregator1723390789346
         id: string;
         authorizationId: string;
       }[] = await queryRunner.query(
-        `SELECT id, authorizationId FROM storage_bucket WHERE id = '${aggregator.storageBucketId}'`
+        `SELECT id, authorizationId FROM storage_bucket WHERE id = '${aggregator.directStorageId}'`
       );
       if (storageBucket) {
         // Delete the orphaned direct storage bucket authorization
