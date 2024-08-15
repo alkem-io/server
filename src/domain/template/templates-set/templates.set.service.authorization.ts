@@ -41,13 +41,15 @@ export class TemplatesSetAuthorizationService {
       }
     );
 
+    const updatedAuthorizations: IAuthorizationPolicy[] = [];
+
     // Inherit from the parent
     templatesSet.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         templatesSet.authorization,
         parentAuthorization
       );
-    const updatedAuthorizations: IAuthorizationPolicy[] = [];
+    updatedAuthorizations.push(templatesSet.authorization);
 
     if (templatesSet.postTemplates) {
       for (const postTemplate of templatesSet.postTemplates) {
