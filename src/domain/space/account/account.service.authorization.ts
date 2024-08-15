@@ -210,6 +210,7 @@ export class AccountAuthorizationService {
         account.defaults.authorization,
         clonedAccountAuth
       );
+    updatedAuthorizations.push(account.defaults.authorization);
 
     for (const vc of account.virtualContributors) {
       const updatedVcAuthorizations =
