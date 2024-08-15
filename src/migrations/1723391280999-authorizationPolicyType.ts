@@ -107,6 +107,7 @@ export enum AuthorizationPolicyType {
   CALLOUT_TEMPLATE = 'template',
   INNOVATION_FLOW_TEMPLATE = 'template',
   COMMUNITY_GUIDELINES_TEMPLATE = 'template',
+  LICENSING = 'licensing',
 
   AI_PERSONA_SERVICE = 'ai-persona-service',
 }
