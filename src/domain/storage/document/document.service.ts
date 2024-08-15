@@ -20,6 +20,7 @@ import { STORAGE_SERVICE } from '@common/constants';
 import { DocumentDeleteFailedException } from '@common/exceptions/document/document.delete.failed.exception';
 import { DocumentSaveFailedException } from '@common/exceptions/document/document.save.failed.exception';
 import { AlkemioConfig } from '@src/types';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class DocumentService {
@@ -43,7 +44,9 @@ export class DocumentService {
       tags: [],
     });
 
-    document.authorization = new AuthorizationPolicy();
+    document.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.DOCUMENT
+    );
 
     return await this.documentRepository.save(document);
   }

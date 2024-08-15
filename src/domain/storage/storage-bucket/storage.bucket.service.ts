@@ -30,6 +30,7 @@ import { IStorageBucketParent } from './dto/storage.bucket.dto.parent';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { ProfileType } from '@common/enums';
 import { StorageUploadFailedException } from '@common/exceptions/storage/storage.upload.failed.exception';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class StorageBucketService {
@@ -54,7 +55,9 @@ export class StorageBucketService {
     storageBucketData: CreateStorageBucketInput
   ): Promise<IStorageBucket> {
     const storage: IStorageBucket = new StorageBucket();
-    storage.authorization = new AuthorizationPolicy();
+    storage.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.STORAGE_BUCKET
+    );
     storage.documents = [];
     storage.allowedMimeTypes =
       storageBucketData?.allowedMimeTypes || DEFAULT_ALLOWED_MIME_TYPES;

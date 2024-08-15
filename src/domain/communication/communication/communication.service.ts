@@ -17,6 +17,7 @@ import { IUser } from '@domain/community/user/user.interface';
 import { RoomService } from '../room/room.service';
 import { IRoom } from '../room/room.interface';
 import { RoomType } from '@common/enums/room.type';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class CommunicationService {
@@ -33,7 +34,9 @@ export class CommunicationService {
     spaceID: string
   ): Promise<ICommunication> {
     const communication: ICommunication = new Communication(displayName);
-    communication.authorization = new AuthorizationPolicy();
+    communication.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.COMMUNICATION
+    );
     communication.spaceID = spaceID;
 
     // save to get the id assigned

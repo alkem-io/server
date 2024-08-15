@@ -14,6 +14,7 @@ import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileType } from '@common/enums';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class LinkService {
@@ -30,7 +31,7 @@ export class LinkService {
   ): Promise<ILink> {
     const link: ILink = Link.create(linkData);
 
-    link.authorization = new AuthorizationPolicy();
+    link.authorization = new AuthorizationPolicy(AuthorizationPolicyType.LINK);
 
     link.profile = await this.profileService.createProfile(
       linkData.profile,

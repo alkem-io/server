@@ -54,6 +54,7 @@ import { AgentType } from '@common/enums/agent.type';
 import { InnovationPackAuthorizationService } from '@library/innovation-pack/innovation.pack.service.authorization';
 import { InnovationHubAuthorizationService } from '@domain/innovation-hub/innovation.hub.service.authorization';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class AccountService {
@@ -84,7 +85,9 @@ export class AccountService {
       await this.licensingService.getDefaultLicensingOrFail();
 
     let account: IAccount = new Account();
-    account.authorization = new AuthorizationPolicy();
+    account.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.ACCOUNT
+    );
     account.storageAggregator =
       await this.storageAggregatorService.createStorageAggregator(
         StorageAggregatorType.ACCOUNT
