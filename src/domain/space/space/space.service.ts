@@ -790,7 +790,8 @@ export class SpaceService {
         community: true,
       },
     });
-    if (!space.account || !space.storageAggregator || !space.community) {
+
+    if (!space.storageAggregator || !space.community) {
       throw new EntityNotFoundException(
         `Unable to retrieve entities on space for creating subspace: ${space.id}`,
         LogContext.SPACES
