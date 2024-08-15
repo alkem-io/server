@@ -28,27 +28,23 @@ jobs:
       - name: 'Checkout GitHub Action'
         uses: actions/checkout@v3.0.2
 
-      - name: 'Login via Azure CLI'
-        uses: azure/login@v1.4.7
-        with:
-          creds: ${{ secrets.AZURE_CRED_K8S_NEW }}
-
-      - uses: Azure/k8s-create-secret@v4.0
-        with:
-          container-registry-url: ${{ secrets.REGISTRY_LOGIN_SERVER }}
-          container-registry-username: ${{ secrets.REGISTRY_USERNAME }}
-          container-registry-password: ${{ secrets.REGISTRY_PASSWORD }}
-          secret-name: alkemio-server-secret
-
-      - uses: azure/setup-kubectl@v3.2
-        with:
-          version: 'v1.27.6' # default is latest stable, fixing it to a compatible version
-        id: install
-
-      - name: Set up Kubeconfig
+      - name: Set up Kubeconfig for Hetzner k3s
         run: |
           echo "${{ secrets.KUBECONFIG_SECRET_HETZNER_TEST }}" > $HOME/.kube/config
           chmod 600 $HOME/.kube/config
+
+      - name: Install Kubectl
+        uses: azure/setup-kubectl@v3.2
+        with:
+          version: 'v1.27.6' # Ensure this matches the version used in your cluster
+
+      - name: Create Image Pull Secret
+        run: |
+          kubectl create secret docker-registry alkemio-server-secret \
+            --docker-server=${{ secrets.REGISTRY_LOGIN_SERVER }} \
+            --docker-username=${{ secrets.REGISTRY_USERNAME }} \
+            --docker-password=${{ secrets.REGISTRY_PASSWORD }} \
+            --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Deploy to k3s on Hetzner
         uses: Azure/k8s-deploy@v4.10
@@ -78,29 +74,26 @@ jobs:
       - name: 'Checkout GitHub Action'
         uses: actions/checkout@v3.0.2
 
-      - name: 'Login via Azure CLI'
-        uses: azure/login@v1.4.7
-        with:
-          creds: ${{ secrets.AZURE_CRED_K8S_NEW }}
-
-      - uses: Azure/k8s-create-secret@v4.0
-        with:
-          container-registry-url: ${{ secrets.REGISTRY_LOGIN_SERVER }}
-          container-registry-username: ${{ secrets.REGISTRY_USERNAME }}
-          container-registry-password: ${{ secrets.REGISTRY_PASSWORD }}
-          secret-name: alkemio-server-secret
-
-      - uses: azure/setup-kubectl@v3.2
-        with:
-          version: 'v1.27.6' # default is latest stable, fixing it to a compatible version
-        id: install
-
-      - name: Set up Kubeconfig
+      - name: Set up Kubeconfig for Hetzner k3s
         run: |
           echo "${{ secrets.KUBECONFIG_SECRET_HETZNER_TEST }}" > $HOME/.kube/config
           chmod 600 $HOME/.kube/config
 
-      - uses: Azure/k8s-deploy@v4.10
+      - name: Install Kubectl
+        uses: azure/setup-kubectl@v3.2
+        with:
+          version: 'v1.27.6' # Ensure this matches the version used in your cluster
+
+      - name: Create Image Pull Secret
+        run: |
+          kubectl create secret docker-registry alkemio-server-secret \
+            --docker-server=${{ secrets.REGISTRY_LOGIN_SERVER }} \
+            --docker-username=${{ secrets.REGISTRY_USERNAME }} \
+            --docker-password=${{ secrets.REGISTRY_PASSWORD }} \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Deploy to k3s on Hetzner
+        uses: Azure/k8s-deploy@v4.10
         with:
           manifests: |
             manifests/25-server-deployment-dev.yaml
