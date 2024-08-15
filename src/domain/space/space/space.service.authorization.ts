@@ -28,9 +28,6 @@ import {
   CREDENTIAL_RULE_SUBSPACE_PARENT_MEMBER_JOIN,
   CREDENTIAL_RULE_COMMUNITY_ADD_MEMBER,
   CREDENTIAL_RULE_SUBSPACE_ADMINS,
-  CREDENTIAL_RULE_TYPES_SPACE_COMMUNITY_APPLY_GLOBAL_REGISTERED,
-  CREDENTIAL_RULE_TYPES_SPACE_COMMUNITY_JOIN_GLOBAL_REGISTERED,
-  CREDENTIAL_RULE_SPACE_HOST_ASSOCIATES_JOIN,
   CREDENTIAL_RULE_SPACE_ADMIN_DELETE_SUBSPACE,
   CREDENTIAL_RULE_TYPES_SPACE_PLATFORM_SETTINGS,
 } from '@common/constants';
@@ -226,13 +223,20 @@ export class SpaceAuthorizationService {
       space.authorization
     );
 
+    // Only allow community membership for non-archived spaces
+    let spaceMembershipAllowed = true;
+    if (spaceVisibility === SpaceVisibility.ARCHIVED) {
+      spaceMembershipAllowed = false;
+    }
+
     // Cascade down
     // propagate authorization rules for child entities
     const childAuthorzations = await this.propagateAuthorizationToChildEntities(
       space,
       accountAgent,
       communityPolicy,
-      spaceSettings
+      spaceSettings,
+      spaceMembershipAllowed
     );
     updatedAuthorizations.push(...childAuthorzations);
 
@@ -241,22 +245,6 @@ export class SpaceAuthorizationService {
         `Unable to load Community on space after child entities propagation: ${space.id} `,
         LogContext.SPACES
       );
-
-    // Finally update the child entities that depend on license
-    // directly after propagation
-    switch (spaceVisibility) {
-      case SpaceVisibility.ACTIVE:
-      case SpaceVisibility.DEMO:
-        space.community.authorization =
-          this.extendCommunityAuthorizationPolicySpace(
-            space.community.authorization,
-            communityPolicy,
-            spaceSettings
-          );
-        break;
-      case SpaceVisibility.ARCHIVED:
-        break;
-    }
 
     space = await this.spaceService.getSpaceOrFail(spaceInput.id, {
       relations: {
@@ -283,7 +271,8 @@ export class SpaceAuthorizationService {
     space: ISpace,
     accountAgent: IAgent,
     communityPolicy: ICommunityPolicy,
-    spaceSettings: ISpaceSettings
+    spaceSettings: ISpaceSettings,
+    spaceMembershipAllowed: boolean
   ): Promise<IAuthorizationPolicy[]> {
     if (
       !space.agent ||
@@ -315,7 +304,8 @@ export class SpaceAuthorizationService {
         space.authorization,
         accountAgent,
         communityPolicy,
-        spaceSettings
+        spaceSettings,
+        spaceMembershipAllowed
       );
     updatedAuthorizations.push(...communityAuthorizations);
 
@@ -592,67 +582,6 @@ export class SpaceAuthorizationService {
     );
 
     return authorization;
-  }
-
-  private extendCommunityAuthorizationPolicySpace(
-    communityAuthorization: IAuthorizationPolicy | undefined,
-    policy: ICommunityPolicy,
-    spaceSettings: ISpaceSettings
-  ): IAuthorizationPolicy {
-    if (!communityAuthorization)
-      throw new EntityNotInitializedException(
-        `Authorization definition not found for: ${JSON.stringify(policy)}`,
-        LogContext.SPACES
-      );
-
-    const newRules: IAuthorizationPolicyRuleCredential[] = [];
-
-    const membershipPolicy = spaceSettings.membership.policy;
-    switch (membershipPolicy) {
-      case CommunityMembershipPolicy.APPLICATIONS:
-        const anyUserCanApply =
-          this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-            [AuthorizationPrivilege.COMMUNITY_APPLY],
-            [AuthorizationCredential.GLOBAL_REGISTERED],
-            CREDENTIAL_RULE_TYPES_SPACE_COMMUNITY_APPLY_GLOBAL_REGISTERED
-          );
-        anyUserCanApply.cascade = false;
-        newRules.push(anyUserCanApply);
-        break;
-      case CommunityMembershipPolicy.OPEN:
-        const anyUserCanJoin =
-          this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-            [AuthorizationPrivilege.COMMUNITY_JOIN],
-            [AuthorizationCredential.GLOBAL_REGISTERED],
-            CREDENTIAL_RULE_TYPES_SPACE_COMMUNITY_JOIN_GLOBAL_REGISTERED
-          );
-        anyUserCanJoin.cascade = false;
-        newRules.push(anyUserCanJoin);
-        break;
-    }
-
-    // Associates of trusted organizations can join
-    const trustedOrganizationIDs: string[] = [];
-    for (const trustedOrganizationID of trustedOrganizationIDs) {
-      const hostOrgMembersCanJoin =
-        this.authorizationPolicyService.createCredentialRule(
-          [AuthorizationPrivilege.COMMUNITY_JOIN],
-          [
-            {
-              type: AuthorizationCredential.ORGANIZATION_ASSOCIATE,
-              resourceID: trustedOrganizationID,
-            },
-          ],
-          CREDENTIAL_RULE_SPACE_HOST_ASSOCIATES_JOIN
-        );
-      hostOrgMembersCanJoin.cascade = false;
-      newRules.push(hostOrgMembersCanJoin);
-    }
-
-    return this.authorizationPolicyService.appendCredentialAuthorizationRules(
-      communityAuthorization,
-      newRules
-    );
   }
 
   private getContributorCriteria(

@@ -22,6 +22,9 @@ import {
   POLICY_RULE_COMMUNITY_ADD_VC,
   POLICY_RULE_COMMUNITY_INVITE_MEMBER,
   CREDENTIAL_RULE_COMMUNITY_VIRTUAL_CONTRIBUTOR_REMOVAL,
+  CREDENTIAL_RULE_SPACE_HOST_ASSOCIATES_JOIN,
+  CREDENTIAL_RULE_TYPES_SPACE_COMMUNITY_JOIN_GLOBAL_REGISTERED,
+  CREDENTIAL_RULE_TYPES_SPACE_COMMUNITY_APPLY_GLOBAL_REGISTERED,
 } from '@common/constants';
 import { InvitationAuthorizationService } from '../invitation/invitation.service.authorization';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
@@ -37,6 +40,8 @@ import { IAgent } from '@domain/agent';
 import { PlatformInvitationAuthorizationService } from '@platform/invitation/platform.invitation.service.authorization';
 import { VirtualContributorService } from '../virtual-contributor/virtual.contributor.service';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
+import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
+import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 
 @Injectable()
 export class CommunityAuthorizationService {
@@ -59,7 +64,8 @@ export class CommunityAuthorizationService {
     parentAuthorization: IAuthorizationPolicy | undefined,
     accountAgent: IAgent,
     communityPolicy: ICommunityPolicy,
-    spaceSettings: ISpaceSettings
+    spaceSettings: ISpaceSettings,
+    spaceMembershipAllowed: boolean
   ): Promise<IAuthorizationPolicy[]> {
     const community = await this.communityService.getCommunityOrFail(
       communityInput.id,
@@ -115,6 +121,13 @@ export class CommunityAuthorizationService {
     community.authorization = this.appendVerifiedCredentialRules(
       community.authorization
     );
+    if (spaceMembershipAllowed) {
+      community.authorization = this.extendCommunityAuthorizationPolicySpace(
+        community.authorization,
+        communityPolicy,
+        spaceSettings
+      );
+    }
 
     // always false
     community.authorization.anonymousReadAccess = false;
@@ -174,6 +187,67 @@ export class CommunityAuthorizationService {
     }
 
     return updatedAuthorizations;
+  }
+
+  private extendCommunityAuthorizationPolicySpace(
+    communityAuthorization: IAuthorizationPolicy | undefined,
+    policy: ICommunityPolicy,
+    spaceSettings: ISpaceSettings
+  ): IAuthorizationPolicy {
+    if (!communityAuthorization)
+      throw new EntityNotInitializedException(
+        `Authorization definition not found for: ${JSON.stringify(policy)}`,
+        LogContext.SPACES
+      );
+
+    const newRules: IAuthorizationPolicyRuleCredential[] = [];
+
+    const membershipPolicy = spaceSettings.membership.policy;
+    switch (membershipPolicy) {
+      case CommunityMembershipPolicy.APPLICATIONS:
+        const anyUserCanApply =
+          this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+            [AuthorizationPrivilege.COMMUNITY_APPLY],
+            [AuthorizationCredential.GLOBAL_REGISTERED],
+            CREDENTIAL_RULE_TYPES_SPACE_COMMUNITY_APPLY_GLOBAL_REGISTERED
+          );
+        anyUserCanApply.cascade = false;
+        newRules.push(anyUserCanApply);
+        break;
+      case CommunityMembershipPolicy.OPEN:
+        const anyUserCanJoin =
+          this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+            [AuthorizationPrivilege.COMMUNITY_JOIN],
+            [AuthorizationCredential.GLOBAL_REGISTERED],
+            CREDENTIAL_RULE_TYPES_SPACE_COMMUNITY_JOIN_GLOBAL_REGISTERED
+          );
+        anyUserCanJoin.cascade = false;
+        newRules.push(anyUserCanJoin);
+        break;
+    }
+
+    // Associates of trusted organizations can join
+    const trustedOrganizationIDs: string[] = [];
+    for (const trustedOrganizationID of trustedOrganizationIDs) {
+      const hostOrgMembersCanJoin =
+        this.authorizationPolicyService.createCredentialRule(
+          [AuthorizationPrivilege.COMMUNITY_JOIN],
+          [
+            {
+              type: AuthorizationCredential.ORGANIZATION_ASSOCIATE,
+              resourceID: trustedOrganizationID,
+            },
+          ],
+          CREDENTIAL_RULE_SPACE_HOST_ASSOCIATES_JOIN
+        );
+      hostOrgMembersCanJoin.cascade = false;
+      newRules.push(hostOrgMembersCanJoin);
+    }
+
+    return this.authorizationPolicyService.appendCredentialAuthorizationRules(
+      communityAuthorization,
+      newRules
+    );
   }
 
   private async extendAuthorizationPolicy(
