@@ -39,6 +39,15 @@ jobs:
           echo "${{ secrets.KUBECONFIG_SECRET_HETZNER_TEST }}" > $HOME/.kube/config
           chmod 600 $HOME/.kube/config
 
+      - name: Verify Kubeconfig
+        run: |
+          echo "KUBECONFIG: $KUBECONFIG"
+          ls -la $HOME/.kube
+          cat $HOME/.kube/config
+          kubectl get nodes
+        env:
+          KUBECONFIG: $HOME/.kube/config
+
       - name: Create Image Pull Secret
         run: |
           kubectl create secret docker-registry alkemio-server-secret \
@@ -46,24 +55,9 @@ jobs:
             --docker-username=${{ secrets.REGISTRY_USERNAME }} \
             --docker-password=${{ secrets.REGISTRY_PASSWORD }} \
             --dry-run=client -o yaml | kubectl apply -f -
+        env:
+          KUBECONFIG: $HOME/.kube/config
 
-      # - name: Verify Kubeconfig
-      #   run: |
-      #     echo "KUBECONFIG: $KUBECONFIG"
-      #     ls -la $HOME/.kube
-      #     cat $HOME/.kube/config
-
-      # - name: Deploy to k3s on Hetzner
-      #   uses: Azure/k8s-deploy@v4.10
-      #   with:
-      #     manifests: |
-      #       manifests/26-server-migration.yaml
-      #     images: |
-      #       ${{ secrets.REGISTRY_LOGIN_SERVER }}/alkemio-server:${{ github.sha }}
-      #     imagepullsecrets: |
-      #       alkemio-server-secret
-      #   env:
-      #     KUBECONFIG: $HOME/.kube/config
       - name: Update manifest with the image and apply it
         run: |
           export IMAGE=${{ secrets.REGISTRY_LOGIN_SERVER }}/alkemio-server:${{ github.sha }}
