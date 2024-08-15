@@ -143,7 +143,7 @@ export class CommunityAuthorizationService {
           application,
           community.authorization
         );
-      application.authorization = applicationAuthReset.authorization;
+      application.authorization = applicationAuthReset;
     }
 
     for (const invitation of community.invitations) {
@@ -152,7 +152,7 @@ export class CommunityAuthorizationService {
           invitation,
           community.authorization
         );
-      invitation.authorization = invitationReset.authorization;
+      invitation.authorization = invitationReset;
     }
 
     for (const externalInvitation of community.platformInvitations) {
