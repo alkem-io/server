@@ -50,8 +50,6 @@ jobs:
           ls -la $HOME/.kube
           cat $HOME/.kube/config
           kubectl get nodes
-        env:
-          KUBECONFIG: $HOME/.kube/config
 
       - name: Create Image Pull Secret
         run: |
@@ -60,16 +58,12 @@ jobs:
             --docker-username=${{ secrets.REGISTRY_USERNAME }} \
             --docker-password=${{ secrets.REGISTRY_PASSWORD }} \
             --dry-run=client -o yaml | kubectl apply -f -
-        env:
-          KUBECONFIG: $HOME/.kube/config
 
       - name: Update manifest with the image and apply it
         run: |
           export IMAGE=${{ secrets.REGISTRY_LOGIN_SERVER }}/alkemio-server:${{ github.sha }}
           envsubst < manifests/28-server-migration-hetzner.yaml > /tmp/28-server-migration-hetzner.yaml
           kubectl apply -f /tmp/28-server-migration-hetzner.yaml
-        env:
-          KUBECONFIG: $HOME/.kube/config
 
       - name: Delete old job
         continue-on-error: true
