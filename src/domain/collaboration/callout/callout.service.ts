@@ -1,6 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindManyOptions, FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
+import {
+  FindManyOptions,
+  FindOneOptions,
+  FindOptionsRelations,
+  Repository,
+} from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -309,9 +314,9 @@ export class CalloutService {
     calloutInput: ICallout
   ): CreateCalloutInput {
     if (
-      !calloutInput.framing
-      || !calloutInput.contributionDefaults
-      || !calloutInput.contributionPolicy
+      !calloutInput.framing ||
+      !calloutInput.contributionDefaults ||
+      !calloutInput.contributionPolicy
     ) {
       throw new EntityNotInitializedException(
         'Missing callout relation',
@@ -323,7 +328,9 @@ export class CalloutService {
       );
     }
 
-    const calloutGroupTagset = this.calloutFramingService.getCalloutGroupTagset(calloutInput.framing);
+    const calloutGroupTagset = this.calloutFramingService.getCalloutGroupTagset(
+      calloutInput.framing
+    );
     return {
       nameID: calloutInput.nameID,
       type: calloutInput.type,
