@@ -28,16 +28,12 @@ export class ContextAuthorizationService {
     // cascade
     context.ecosystemModel =
       await this.contextService.getEcosystemModel(context);
-    context.ecosystemModel.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
-        context.ecosystemModel.authorization,
+    const ecosystemAuthorizations =
+      await this.ecosysteModelAuthorizationService.applyAuthorizationPolicy(
+        context.ecosystemModel,
         context.authorization
       );
-    const contextAuthorizations =
-      await this.ecosysteModelAuthorizationService.applyAuthorizationPolicy(
-        context.ecosystemModel
-      );
-    updatedAuthorizations.push(...contextAuthorizations);
+    updatedAuthorizations.push(...ecosystemAuthorizations);
 
     return updatedAuthorizations;
   }
