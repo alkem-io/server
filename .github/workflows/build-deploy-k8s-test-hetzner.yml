@@ -1,0 +1,106 @@
+name: Build, Migrate & Deploy to Test on Hetzner
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'Checkout GitHub Action'
+        uses: actions/checkout@v3.0.2
+
+      - name: 'Login into ACR'
+        uses: azure/docker-login@v1.0.1
+        with:
+          login-server: ${{ secrets.REGISTRY_LOGIN_SERVER }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      - name: 'Build & Push image'
+        run: |
+          docker build -f Dockerfile . -t ${{ secrets.REGISTRY_LOGIN_SERVER }}/alkemio-server:${{ github.sha }} -t ${{ secrets.REGISTRY_LOGIN_SERVER }}/alkemio-server:latest
+          docker push ${{ secrets.REGISTRY_LOGIN_SERVER }}/alkemio-server:${{ github.sha }}
+  migrate:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'Checkout GitHub Action'
+        uses: actions/checkout@v3.0.2
+
+      - name: Set up Kubeconfig for Hetzner k3s
+        run: |
+          echo "${{ secrets.KUBECONFIG_SECRET_HETZNER_TEST }}" > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config
+
+      - name: Install Kubectl
+        uses: azure/setup-kubectl@v3.2
+        with:
+          version: 'v1.27.6' # Ensure this matches the version used in your cluster
+
+      - name: Create Image Pull Secret
+        run: |
+          kubectl create secret docker-registry alkemio-server-secret \
+            --docker-server=${{ secrets.REGISTRY_LOGIN_SERVER }} \
+            --docker-username=${{ secrets.REGISTRY_USERNAME }} \
+            --docker-password=${{ secrets.REGISTRY_PASSWORD }} \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Deploy to k3s on Hetzner
+        uses: Azure/k8s-deploy@v4.10
+        with:
+          manifests: |
+            manifests/26-server-migration.yaml
+          images: |
+            ${{ secrets.REGISTRY_LOGIN_SERVER }}/alkemio-server:${{ github.sha }}
+          imagepullsecrets: |
+            alkemio-server-secret
+        env:
+          KUBECONFIG: $HOME/.kube/config
+
+      - name: Delete old job
+        continue-on-error: true
+        run: |
+          kubectl delete job alkemio-server-migration-job
+
+      - name: Create migration job
+        run: |
+          kubectl create job --from=cronjob/alkemio-server-migration alkemio-server-migration-job
+
+  deploy:
+    needs: migrate
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'Checkout GitHub Action'
+        uses: actions/checkout@v3.0.2
+
+      - name: Set up Kubeconfig for Hetzner k3s
+        run: |
+          echo "${{ secrets.KUBECONFIG_SECRET_HETZNER_TEST }}" > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config
+
+      - name: Install Kubectl
+        uses: azure/setup-kubectl@v3.2
+        with:
+          version: 'v1.27.6' # Ensure this matches the version used in your cluster
+
+      - name: Create Image Pull Secret
+        run: |
+          kubectl create secret docker-registry alkemio-server-secret \
+            --docker-server=${{ secrets.REGISTRY_LOGIN_SERVER }} \
+            --docker-username=${{ secrets.REGISTRY_USERNAME }} \
+            --docker-password=${{ secrets.REGISTRY_PASSWORD }} \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Deploy to k3s on Hetzner
+        uses: Azure/k8s-deploy@v4.10
+        with:
+          manifests: |
+            manifests/25-server-deployment-dev.yaml
+            manifests/30-server-service.yaml
+          images: |
+            ${{ secrets.REGISTRY_LOGIN_SERVER }}/alkemio-server:${{ github.sha }}
+          imagepullsecrets: |
+            alkemio-server-secret
+        env:
+          KUBECONFIG: $HOME/.kube/config
