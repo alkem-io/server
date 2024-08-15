@@ -16,7 +16,7 @@ spec:
           restartPolicy: Never
           containers:
             - name: alkemio-server
-              image: ${{ secrets.REGISTRY_LOGIN_SERVER }}/alkemio-server:${{ github.sha }}
+              image: ${IMAGE}
               command: ["npm",  "run", "migration:run"]
 
               envFrom:

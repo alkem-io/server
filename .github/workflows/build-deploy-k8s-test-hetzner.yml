@@ -42,7 +42,6 @@ jobs:
           mkdir -p $HOME/.kube  # Ensure the .kube directory exists
           echo "${{ secrets.KUBECONFIG_SECRET_HETZNER_TEST }}" > $HOME/.kube/config
           chmod 600 $HOME/.kube/config
-          kubectl get nodes
 
       - name: Verify Kubeconfig
         run: |
@@ -110,5 +109,3 @@ jobs:
             ${{ secrets.REGISTRY_LOGIN_SERVER }}/alkemio-server:${{ github.sha }}
           imagepullsecrets: |
             alkemio-server-secret
-        env:
-          KUBECONFIG: $HOME/.kube/config
