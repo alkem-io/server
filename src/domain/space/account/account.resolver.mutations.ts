@@ -329,7 +329,7 @@ export class AccountResolverMutations {
     );
     innovationHub = await this.innovationHubService.save(innovationHub);
     const authorizations =
-      await this.innovationHubAuthorizationService.applyAuthorizationPolicyAndSave(
+      await this.innovationHubAuthorizationService.applyAuthorizationPolicy(
         innovationHub,
         account.authorization
       );

@@ -230,7 +230,7 @@ export class AccountAuthorizationService {
 
     for (const innovationHub of account.innovationHubs) {
       const updatedInnovationHubAuthorizations =
-        await this.innovationHubAuthorizationService.applyAuthorizationPolicyAndSave(
+        await this.innovationHubAuthorizationService.applyAuthorizationPolicy(
           innovationHub,
           clonedAccountAuth
         );

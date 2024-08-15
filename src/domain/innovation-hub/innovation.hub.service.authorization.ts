@@ -19,7 +19,7 @@ export class InnovationHubAuthorizationService {
     private innovationHubService: InnovationHubService
   ) {}
 
-  public async applyAuthorizationPolicyAndSave(
+  public async applyAuthorizationPolicy(
     hubInput: IInnovationHub,
     parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<IAuthorizationPolicy[]> {
