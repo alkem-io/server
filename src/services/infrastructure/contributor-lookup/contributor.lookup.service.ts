@@ -161,12 +161,12 @@ export class ContributorLookupService {
     contributorsManagedByUser.push(user);
 
     // Get all the organizations managed by the User
-    const organiationOwnerCredentials =
+    const organizationOwnerCredentials =
       await this.getCredentialsByTypeHeldByAgent(user.agent.id, [
         AuthorizationCredential.ORGANIZATION_OWNER,
         AuthorizationCredential.ORGANIZATION_ADMIN,
       ]);
-    const organizationsIDs = organiationOwnerCredentials.map(
+    const organizationsIDs = organizationOwnerCredentials.map(
       credential => credential.resourceID
     );
     const organizations = await this.entityManager.find(Organization, {

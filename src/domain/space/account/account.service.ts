@@ -174,13 +174,10 @@ export class AccountService {
     accountID: string,
     options?: FindOneOptions<Account>
   ): Promise<IAccount | null> {
-    let account: IAccount | null = null;
-    account = await this.accountRepository.findOne({
+    return await this.accountRepository.findOne({
       where: { id: accountID },
       ...options,
     });
-
-    return account;
   }
 
   async getAccounts(options?: FindManyOptions<Account>): Promise<IAccount[]> {
@@ -188,7 +185,7 @@ export class AccountService {
       ...options,
     });
 
-    if (accounts.length === 0) return [];
+    if (!accounts) return [];
 
     return accounts;
   }

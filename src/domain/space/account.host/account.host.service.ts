@@ -74,13 +74,10 @@ export class AccountHostService {
     accountID: string,
     options?: FindOneOptions<Account>
   ): Promise<IAccount | null> {
-    let account: IAccount | null = null;
-    account = await this.accountRepository.findOne({
+    return await this.accountRepository.findOne({
       where: { id: accountID },
       ...options,
     });
-
-    return account;
   }
 
   private async assignLicensePlansToAccount(
