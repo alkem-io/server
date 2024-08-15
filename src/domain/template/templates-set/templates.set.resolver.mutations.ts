@@ -22,11 +22,13 @@ import { CalloutTemplateAuthorizationService } from '../callout-template/callout
 import { CommunityGuidelinesTemplateAuthorizationService } from '../community-guidelines-template/community.guidelines.template.service.authorization';
 import { CreateCommunityGuidelinesTemplateOnTemplatesSetInput } from './dto/community.guidelines.template.dto.create.on.templates.set';
 import { ICommunityGuidelinesTemplate } from '@domain/template/community-guidelines-template/community.guidelines.template.interface';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
 @Resolver()
 export class TemplatesSetResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private templatesSetService: TemplatesSetService,
     private calloutTemplateAuthorizationService: CalloutTemplateAuthorizationService,
     private postTemplateAuthorizationService: PostTemplateAuthorizationService,
@@ -65,10 +67,12 @@ export class TemplatesSetResolverMutations {
         calloutTemplateInput,
         agentInfo
       );
-    await this.calloutTemplateAuthorizationService.applyAuthorizationPolicy(
-      calloutTemplate,
-      templatesSet.authorization
-    );
+    const authorizations =
+      await this.calloutTemplateAuthorizationService.applyAuthorizationPolicy(
+        calloutTemplate,
+        templatesSet.authorization
+      );
+    await this.authorizationPolicyService.saveAll(authorizations);
     return calloutTemplate;
   }
 
@@ -97,10 +101,13 @@ export class TemplatesSetResolverMutations {
       templatesSet,
       postTemplateInput
     );
-    await this.postTemplateAuthorizationService.applyAuthorizationPolicy(
-      postTemplate,
-      templatesSet.authorization
-    );
+    const authorizations =
+      await this.postTemplateAuthorizationService.applyAuthorizationPolicy(
+        postTemplate,
+        templatesSet.authorization
+      );
+
+    await this.authorizationPolicyService.saveAll(authorizations);
     return postTemplate;
   }
 
@@ -131,10 +138,13 @@ export class TemplatesSetResolverMutations {
         templatesSet,
         whiteboardTemplateInput
       );
-    await this.whiteboardTemplateAuthorizationService.applyAuthorizationPolicy(
-      whiteboardTemplate,
-      templatesSet.authorization
-    );
+    const authorizations =
+      await this.whiteboardTemplateAuthorizationService.applyAuthorizationPolicy(
+        whiteboardTemplate,
+        templatesSet.authorization
+      );
+
+    await this.authorizationPolicyService.saveAll(authorizations);
     return whiteboardTemplate;
   }
 
@@ -165,10 +175,13 @@ export class TemplatesSetResolverMutations {
         templatesSet,
         innovationFlowTemplateInput
       );
-    await this.innovationFlowTemplateAuthorizationService.applyAuthorizationPolicy(
-      innovationFlowTemplate,
-      templatesSet.authorization
-    );
+    const authorizations =
+      await this.innovationFlowTemplateAuthorizationService.applyAuthorizationPolicy(
+        innovationFlowTemplate,
+        templatesSet.authorization
+      );
+
+    await this.authorizationPolicyService.saveAll(authorizations);
     return innovationFlowTemplate;
   }
 
@@ -196,10 +209,13 @@ export class TemplatesSetResolverMutations {
         templatesSet,
         communityGuidelinesTemplateInput
       );
-    await this.communityGuidelinesTemplateAuthorizationService.applyAuthorizationPolicy(
-      communityGuidelinesTemplate,
-      templatesSet.authorization
-    );
+    const authorizations =
+      await this.communityGuidelinesTemplateAuthorizationService.applyAuthorizationPolicy(
+        communityGuidelinesTemplate,
+        templatesSet.authorization
+      );
+
+    await this.authorizationPolicyService.saveAll(authorizations);
     return communityGuidelinesTemplate;
   }
 }
