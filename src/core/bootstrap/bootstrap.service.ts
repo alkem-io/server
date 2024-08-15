@@ -250,9 +250,11 @@ export class BootstrapService {
             displayName: DEFAULT_HOST_ORG_DISPLAY_NAME,
           },
         });
-        await this.organizationAuthorizationService.applyAuthorizationPolicy(
-          hostOrganization
-        );
+        const authorizations =
+          await this.organizationAuthorizationService.applyAuthorizationPolicy(
+            hostOrganization
+          );
+        await this.authorizationPolicyService.saveAll(authorizations);
       }
 
       const spaceInput: CreateAccountInput = {
