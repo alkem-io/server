@@ -1,5 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 import { randomUUID } from 'crypto';
+import { credentials } from 'amqplib';
 
 export class AccountsUserOrg1723121610000 implements MigrationInterface {
   name = 'AccountsUserOrg1723121610000';
@@ -45,6 +46,25 @@ export class AccountsUserOrg1723121610000 implements MigrationInterface {
     queryRunner: QueryRunner,
     contributorType: string
   ) {
+    // Clean up bad data:
+    const wrongCredentials: {
+      id: string;
+      resourceID: string;
+      agentId: string;
+      type: string;
+    }[] = await queryRunner.query(
+      `SELECT id, resourceID, type, agentId FROM credential WHERE type = 'account-host' AND resourceID NOT IN (SELECT id FROM account)`
+    );
+    if (wrongCredentials.length > 0) {
+      console.log(
+        'BAD DATA: Credentials found with invalid account-host resourceID. Deleting...',
+        wrongCredentials
+      );
+      await queryRunner.query(
+        `DELETE FROM credential WHERE id IN (${wrongCredentials.map(credential => `'${credential.id}'`).join(',')})`
+      );
+    }
+
     const contributors: {
       id: string;
       agentId: string;
@@ -53,7 +73,7 @@ export class AccountsUserOrg1723121610000 implements MigrationInterface {
     );
     for (const contributor of contributors) {
       // select all ACCOUNT_HOST credentials associated with the user
-      const accountHostCredentials: {
+      let accountHostCredentials: {
         id: string;
         resourceID: string;
         type: string;
@@ -102,6 +122,9 @@ export class AccountsUserOrg1723121610000 implements MigrationInterface {
           );
           // Delete the old accounts + associated credential
           await this.deleteAccount(queryRunner, slaveAccountID);
+          await queryRunner.query(
+            `DELETE FROM credential WHERE resourceId = '${slaveAccountID}' AND type = 'account-host'`
+          );
         }
       }
     }
@@ -119,6 +142,10 @@ export class AccountsUserOrg1723121610000 implements MigrationInterface {
     }[] = await queryRunner.query(
       `SELECT id, authorizationId, agentId, storageAggregatorId FROM account WHERE id = '${accountID}'`
     );
+    if (!account) {
+      console.log(`ACCOUNT WAS ALREADY DELETED? ${accountID}`);
+      return;
+    }
     await queryRunner.query(
       `DELETE FROM authorization_policy WHERE id = '${account.authorizationId}'`
     );
