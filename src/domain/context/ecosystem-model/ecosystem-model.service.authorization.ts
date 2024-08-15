@@ -24,6 +24,8 @@ export class EcosystemModelAuthorizationService {
         ecosystemModel.authorization,
         parentAuthorization
       );
+    updatedAuthorizations.push(ecosystemModel.authorization);
+
     for (const actorGroup of this.ecosystemModelService.getActorGroups(
       ecosystemModel
     )) {
