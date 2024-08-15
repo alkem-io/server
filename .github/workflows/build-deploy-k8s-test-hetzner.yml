@@ -8,10 +8,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 'Checkout GitHub Action'
-        uses: actions/checkout@v3.0.2
+        uses: actions/checkout@v4.1.7
 
       - name: 'Login into ACR'
-        uses: azure/docker-login@v1.0.1
+        uses: azure/docker-login@v2
         with:
           login-server: ${{ secrets.REGISTRY_LOGIN_SERVER }}
           username: ${{ secrets.REGISTRY_USERNAME }}
@@ -26,17 +26,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 'Checkout GitHub Action'
-        uses: actions/checkout@v3.0.2
+        uses: actions/checkout@v4.1.7
+
+      - name: Install Kubectl
+        uses: azure/setup-kubectl@v4.0.0
+        with:
+          version: 'v1.27.6' # Ensure this matches the version used in your cluster
 
       - name: Set up Kubeconfig for Hetzner k3s
         run: |
+          mkdir -p $HOME/.kube  # Ensure the .kube directory exists
           echo "${{ secrets.KUBECONFIG_SECRET_HETZNER_TEST }}" > $HOME/.kube/config
           chmod 600 $HOME/.kube/config
-
-      - name: Install Kubectl
-        uses: azure/setup-kubectl@v3.2
-        with:
-          version: 'v1.27.6' # Ensure this matches the version used in your cluster
 
       - name: Create Image Pull Secret
         run: |
@@ -46,8 +47,7 @@ jobs:
             --docker-password=${{ secrets.REGISTRY_PASSWORD }} \
             --dry-run=client -o yaml | kubectl apply -f -
 
-      - name: Deploy to k3s on Hetzner
-        uses: Azure/k8s-deploy@v4.10
+      - uses: azure/k8s-deploy@v5.0.0
         with:
           manifests: |
             manifests/26-server-migration.yaml
@@ -55,8 +55,6 @@ jobs:
             ${{ secrets.REGISTRY_LOGIN_SERVER }}/alkemio-server:${{ github.sha }}
           imagepullsecrets: |
             alkemio-server-secret
-        env:
-          KUBECONFIG: $HOME/.kube/config
 
       - name: Delete old job
         continue-on-error: true
@@ -72,17 +70,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 'Checkout GitHub Action'
-        uses: actions/checkout@v3.0.2
+        uses: actions/checkout@v4.1.7
+
+      - name: Install Kubectl
+        uses: azure/setup-kubectl@v4.0.0
+        with:
+          version: 'v1.27.6' # Ensure this matches the version used in your cluster
 
       - name: Set up Kubeconfig for Hetzner k3s
         run: |
+          mkdir -p $HOME/.kube  # Ensure the .kube directory exists
           echo "${{ secrets.KUBECONFIG_SECRET_HETZNER_TEST }}" > $HOME/.kube/config
           chmod 600 $HOME/.kube/config
-
-      - name: Install Kubectl
-        uses: azure/setup-kubectl@v3.2
-        with:
-          version: 'v1.27.6' # Ensure this matches the version used in your cluster
 
       - name: Create Image Pull Secret
         run: |
@@ -93,7 +92,7 @@ jobs:
             --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Deploy to k3s on Hetzner
-        uses: Azure/k8s-deploy@v4.10
+        uses: azure/k8s-deploy@v5.0.0
         with:
           manifests: |
             manifests/25-server-deployment-dev.yaml
@@ -102,5 +101,3 @@ jobs:
             ${{ secrets.REGISTRY_LOGIN_SERVER }}/alkemio-server:${{ github.sha }}
           imagepullsecrets: |
             alkemio-server-secret
-        env:
-          KUBECONFIG: $HOME/.kube/config
