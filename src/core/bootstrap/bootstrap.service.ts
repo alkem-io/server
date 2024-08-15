@@ -224,7 +224,9 @@ export class BootstrapService {
         '=== Identified that platform authorization had not been reset; resetting now ===',
         LogContext.BOOTSTRAP
       );
-      await this.platformAuthorizationService.applyAuthorizationPolicy();
+      const updatedAuthorizations =
+        await this.platformAuthorizationService.applyAuthorizationPolicy();
+      await this.authorizationPolicyService.saveAll(updatedAuthorizations);
     }
   }
 
