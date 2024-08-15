@@ -52,7 +52,7 @@ jobs:
 
       - name: Set up Kubeconfig
         run: |
-          echo "${{ secrets.KUBECONFIG_SECRET_TEST }}" > $HOME/.kube/config
+          echo "${{ secrets.KUBECONFIG_SECRET_HETZNER_TEST }}" > $HOME/.kube/config
           chmod 600 $HOME/.kube/config
 
       - name: Deploy to k3s on Hetzner
@@ -107,7 +107,7 @@ jobs:
 
       - name: Set up Kubeconfig
         run: |
-          echo "${{ secrets.KUBECONFIG_SECRET_TEST }}" > $HOME/.kube/config
+          echo "${{ secrets.KUBECONFIG_SECRET_HETZNER_TEST }}" > $HOME/.kube/config
           chmod 600 $HOME/.kube/config
 
       - uses: Azure/k8s-deploy@v4.10
