@@ -47,21 +47,28 @@ jobs:
             --docker-password=${{ secrets.REGISTRY_PASSWORD }} \
             --dry-run=client -o yaml | kubectl apply -f -
 
-      - name: Verify Kubeconfig
-        run: |
-          echo "KUBECONFIG: $KUBECONFIG"
-          ls -la $HOME/.kube
-          cat $HOME/.kube/config
+      # - name: Verify Kubeconfig
+      #   run: |
+      #     echo "KUBECONFIG: $KUBECONFIG"
+      #     ls -la $HOME/.kube
+      #     cat $HOME/.kube/config
 
-      - name: Deploy to k3s on Hetzner
-        uses: Azure/k8s-deploy@v4.10
-        with:
-          manifests: |
-            manifests/26-server-migration.yaml
-          images: |
-            ${{ secrets.REGISTRY_LOGIN_SERVER }}/alkemio-server:${{ github.sha }}
-          imagepullsecrets: |
-            alkemio-server-secret
+      # - name: Deploy to k3s on Hetzner
+      #   uses: Azure/k8s-deploy@v4.10
+      #   with:
+      #     manifests: |
+      #       manifests/26-server-migration.yaml
+      #     images: |
+      #       ${{ secrets.REGISTRY_LOGIN_SERVER }}/alkemio-server:${{ github.sha }}
+      #     imagepullsecrets: |
+      #       alkemio-server-secret
+      #   env:
+      #     KUBECONFIG: $HOME/.kube/config
+      - name: Update manifest with the image and apply it
+        run: |
+          export IMAGE=${{ secrets.REGISTRY_LOGIN_SERVER }}/alkemio-server:${{ github.sha }}
+          envsubst < manifests/28-server-migration-hetzner.yaml > /tmp/28-server-migration-hetzner.yaml
+          kubectl apply -f /tmp/28-server-migration-hetzner.yaml
         env:
           KUBECONFIG: $HOME/.kube/config
 

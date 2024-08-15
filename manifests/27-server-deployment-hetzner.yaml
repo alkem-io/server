@@ -1,0 +1,58 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  namespace: default
+  name: alkemio-server-deployment
+  labels:
+    app: alkemio-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: alkemio-server
+  template:
+    metadata:
+      labels:
+        app: alkemio-server
+    spec:
+      imagePullSecrets:
+      - name: alkemio-server-secret  # Add this line to reference the image pull secret
+      containers:
+        - name: alkemio-server
+          image: ${{ secrets.REGISTRY_LOGIN_SERVER }}/alkemio-server:${{ github.sha }}
+          env:
+            - name: RABBITMQ_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: alkemio-rabbitmq-cluster-default-user
+                  key: host
+            - name: RABBITMQ_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: alkemio-rabbitmq-cluster-default-user
+                  key: port
+            - name: RABBITMQ_USER
+              valueFrom:
+                secretKeyRef:
+                  name: alkemio-rabbitmq-cluster-default-user
+                  key: username
+            - name: RABBITMQ_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: alkemio-rabbitmq-cluster-default-user
+                  key: password
+          envFrom:
+            - secretRef:
+                name: alkemio-secrets
+            - configMapRef:
+                name: alkemio-config
+          ports:
+            - name: graphql
+              containerPort: 4000
+          volumeMounts:
+            - name: file-storage
+              mountPath: /storage
+      volumes:
+        - name: file-storage
+          persistentVolumeClaim:
+            claimName: file-storage-pvc2

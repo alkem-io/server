@@ -1,0 +1,26 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: alkemio-server-migration
+  generateName: alkemio-server-migration-
+spec:
+  schedule: "@yearly"
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          imagePullSecrets:
+            - name: alkemio-server-secret  # Add this line to reference the image pull secret
+          restartPolicy: Never
+          containers:
+            - name: alkemio-server
+              image: ${{ secrets.REGISTRY_LOGIN_SERVER }}/alkemio-server:${{ github.sha }}
+              command: ["npm",  "run", "migration:run"]
+
+              envFrom:
+                - secretRef:
+                    name: alkemio-secrets
+                - configMapRef:
+                    name: alkemio-config
