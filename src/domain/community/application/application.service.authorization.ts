@@ -17,18 +17,17 @@ export class ApplicationAuthorizationService {
   async applyAuthorizationPolicy(
     application: IApplication,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): Promise<IApplication> {
+  ): Promise<IAuthorizationPolicy> {
     application.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         application.authorization,
         parentAuthorization
       );
 
-    application.authorization = await this.extendAuthorizationPolicy(
-      application
-    );
+    application.authorization =
+      await this.extendAuthorizationPolicy(application);
 
-    return application;
+    return application.authorization;
   }
 
   private async extendAuthorizationPolicy(

@@ -368,12 +368,14 @@ export class CommunityRoleResolverMutations {
       userID: agentInfo.userID,
     });
 
-    application =
+    application = await this.applicationService.save(application);
+
+    const authorization =
       await this.applicationAuthorizationService.applyAuthorizationPolicy(
         application,
         community.authorization
       );
-    application = await this.applicationService.save(application);
+    await this.authorizationPolicyService.save(authorization);
 
     // Send the notification
     const notificationInput: NotificationInputCommunityApplication = {
@@ -503,12 +505,14 @@ export class CommunityRoleResolverMutations {
         input
       );
 
-    invitation =
+    invitation = await this.invitationService.save(invitation);
+
+    const authorization =
       await this.invitationAuthorizationService.applyAuthorizationPolicy(
         invitation,
         community.authorization
       );
-    invitation = await this.invitationService.save(invitation);
+    await this.authorizationPolicyService.save(authorization);
 
     if (invitedContributor instanceof VirtualContributor) {
       const accountHost =
