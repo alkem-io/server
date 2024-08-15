@@ -12,7 +12,7 @@ import {
 } from '@common/exceptions';
 import { UserService } from '@domain/community/user/user.service';
 import { MeService } from './me.service';
-import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { LogContext } from '@common/enums';
 import { MySpaceResults } from './dto/my.journeys.results';
 import { CommunityInvitationResult } from './dto/me.invitation.result';
 import { CommunityApplicationResult } from './dto/me.application.result';
@@ -142,23 +142,5 @@ export class MeResolverFields {
     limit: number
   ): Promise<MySpaceResults[]> {
     return this.meService.getMySpaces(agentInfo, limit);
-  }
-  @UseGuards(GraphqlGuard)
-  @ResolveField(() => Boolean, {
-    description: 'Can I create a free space?',
-  })
-  public async canCreateFreeSpace(
-    @CurrentUser() agentInfo: AgentInfo
-  ): Promise<boolean> {
-    // TODO: this needs to be re-worked to be based on license
-    const user = await this.userService.getUserOrFail(agentInfo.userID);
-    const account = await this.userService.getAccount(user);
-    const canCreateFreeSpace = this.authorizationService.isAccessGranted(
-      agentInfo,
-      account.authorization,
-      AuthorizationPrivilege.CREATE_SPACE
-    );
-
-    return canCreateFreeSpace;
   }
 }
