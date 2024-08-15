@@ -1,6 +1,5 @@
 import { EntityManager, Not, Repository } from 'typeorm';
 import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Post } from '@domain/collaboration/post/post.entity';
 import { LogContext } from '@common/enums';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
@@ -11,10 +10,8 @@ import {
 import { IPost } from '@domain/collaboration/post/post.interface';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { CalendarEvent, ICalendarEvent } from '@domain/timeline/event';
-import { Inject, LoggerService } from '@nestjs/common';
 import { InnovationHub } from '@domain/innovation-hub/innovation.hub.entity';
 import { ICallout } from '@domain/collaboration/callout';
-import { NAMEID_LENGTH } from '@common/constants';
 import { Space } from '@domain/space/space/space.entity';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 import { SpaceLevel } from '@common/enums/space.level';
@@ -24,18 +21,16 @@ import { Organization } from '@domain/community/organization';
 import { Discussion } from '@platform/forum-discussion/discussion.entity';
 import { IDiscussion } from '@platform/forum-discussion/discussion.interface';
 import { SpaceReservedName } from '@common/enums/space.reserved.name';
+import { generateNameId } from '@services/infrastructure/naming/generate.name.id';
 
 export class NamingService {
-  replaceSpecialCharacters = require('replace-special-characters');
-
   constructor(
     @InjectRepository(Discussion)
     private discussionRepository: Repository<Discussion>,
     @InjectRepository(InnovationHub)
     private innovationHubRepository: Repository<InnovationHub>,
     @InjectEntityManager('default')
-    private entityManager: EntityManager,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
+    private entityManager: EntityManager
   ) {}
 
   public async getReservedNameIDsInLevelZeroSpace(
@@ -50,8 +45,7 @@ export class NamingService {
         nameID: true,
       },
     });
-    const nameIDs = subspaces.map(space => space.nameID);
-    return nameIDs;
+    return subspaces.map(space => space.nameID);
   }
 
   public async getReservedNameIDsLevelZeroSpaces(): Promise<string[]> {
@@ -80,8 +74,7 @@ export class NamingService {
         nameID: true,
       },
     });
-    const nameIDs = discussions?.map(discussion => discussion.nameID) || [];
-    return nameIDs;
+    return discussions?.map(discussion => discussion.nameID) || [];
   }
 
   public async getReservedNameIDsInCollaboration(
@@ -97,8 +90,7 @@ export class NamingService {
         nameID: true,
       },
     });
-    const nameIDs = callouts?.map(callout => callout.nameID) || [];
-    return nameIDs;
+    return callouts?.map(callout => callout.nameID) ?? [];
   }
 
   public async getReservedNameIDsInCalendar(
@@ -114,8 +106,7 @@ export class NamingService {
         nameID: true,
       },
     });
-    const nameIDs = events?.map(event => event.nameID) || [];
-    return nameIDs;
+    return events?.map(event => event.nameID) ?? [];
   }
 
   public async getReservedNameIDsInHubs(): Promise<string[]> {
@@ -124,8 +115,7 @@ export class NamingService {
         nameID: true,
       },
     });
-    const nameIDs = hubs.map(hub => hub.nameID);
-    return nameIDs;
+    return hubs.map(hub => hub.nameID);
   }
 
   public async getReservedNameIDsInUsers(): Promise<string[]> {
@@ -134,8 +124,7 @@ export class NamingService {
         nameID: true,
       },
     });
-    const nameIDs = users.map(user => user.nameID);
-    return nameIDs;
+    return users.map(user => user.nameID);
   }
 
   public async getReservedNameIDsInVirtualContributors(): Promise<string[]> {
@@ -144,8 +133,7 @@ export class NamingService {
         nameID: true,
       },
     });
-    const nameIDs = vcs.map(vc => vc.nameID);
-    return nameIDs;
+    return vcs.map(vc => vc.nameID);
   }
 
   public async getReservedNameIDsInOrganizations(): Promise<string[]> {
@@ -154,8 +142,7 @@ export class NamingService {
         nameID: true,
       },
     });
-    const nameIDs = organizations.map(organization => organization.nameID);
-    return nameIDs;
+    return organizations.map(organization => organization.nameID);
   }
 
   public async getReservedNameIDsInCalloutContributions(
@@ -212,24 +199,11 @@ export class NamingService {
     const innovationHubsCount = await this.innovationHubRepository.countBy({
       subdomain: subdomain,
     });
-    if (innovationHubsCount > 0) return false;
-    return true;
+    return innovationHubsCount === 0;
   }
 
-  public createNameID(base: string): string {
-    const nameIDExcludedCharacters = /[^a-zA-Z0-9-]/g;
-
-    const baseMaxLength = base.slice(0, NAMEID_LENGTH);
-    // replace spaces + trim to NAMEID_LENGTH characters
-    const nameID = `${baseMaxLength}`.replace(/\s/g, '');
-    // replace characters with umlouts etc to normal characters
-    const nameIDNoSpecialCharacters: string =
-      this.replaceSpecialCharacters(nameID);
-    // Remove any characters that are not allowed
-    return nameIDNoSpecialCharacters
-      .replace(nameIDExcludedCharacters, '')
-      .toLowerCase()
-      .slice(0, NAMEID_LENGTH);
+  private createNameID(base: string): string {
+    return generateNameId(base);
   }
 
   public createNameIdAvoidingReservedNameIDs(

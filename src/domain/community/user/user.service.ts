@@ -29,7 +29,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { Cache, CachingConfig } from 'cache-manager';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, In, Repository } from 'typeorm';
+import { FindOneOptions, Repository } from 'typeorm';
 import { DirectRoomResult } from './dto/user.dto.communication.room.direct.result';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
@@ -106,20 +106,15 @@ export class UserService {
   }
 
   async createUser(userData: CreateUserInput): Promise<IUser> {
-    await this.validateUserProfileCreationRequest(userData);
-    if (!userData.nameID) {
-      if (userData.firstName && userData.lastName) {
-        userData.nameID = await this.createUserNameID(
-          userData.firstName || '',
-          userData.lastName
-        );
-      } else {
-        throw new ValidationException(
-          `User creation: NameID not provided and first/last name not available: ${userData.email}`,
-          LogContext.COMMUNITY
-        );
-      }
+    if (userData.nameID) {
+      // Convert nameID to lower case
+      userData.nameID = userData.nameID.toLowerCase();
+      await this.isUserNameIdAvailableOrFail(userData.nameID);
+    } else {
+      userData.nameID = await this.createUserNameID(userData);
     }
+
+    await this.validateUserProfileCreationRequest(userData);
 
     const user: IUser = User.create(userData);
     user.authorization = new AuthorizationPolicy();
@@ -323,12 +318,7 @@ export class UserService {
       agentInfo.avatarURL
     );
 
-    const nameID = await this.createUserNameID(
-      agentInfo.firstName,
-      agentInfo.lastName
-    );
-    const user = await this.createUser({
-      nameID,
+    const userData: CreateUserInput = {
       email: email,
       firstName: agentInfo.firstName,
       lastName: agentInfo.lastName,
@@ -337,7 +327,8 @@ export class UserService {
         avatarURL: isAlkemioDocumentURL ? agentInfo.avatarURL : undefined,
         displayName: `${agentInfo.firstName} ${agentInfo.lastName}`,
       },
-    });
+    };
+    const user = await this.createUser(userData);
 
     // Used for creating an avatar from a linkedin profile picture
     // BUG: https://github.com/alkem-io/server/issues/3944
@@ -374,7 +365,6 @@ export class UserService {
   private async validateUserProfileCreationRequest(
     userData: CreateUserInput
   ): Promise<boolean> {
-    await this.isNameIdAvailableOrFail(userData.nameID);
     const userCheck = await this.isRegisteredUser(userData.email);
     if (userCheck)
       throw new ValidationException(
@@ -386,7 +376,7 @@ export class UserService {
     return true;
   }
 
-  private async isNameIdAvailableOrFail(nameID: string) {
+  private async isUserNameIdAvailableOrFail(nameID: string) {
     const userCount = await this.userRepository.countBy({
       nameID: nameID,
     });
@@ -778,7 +768,7 @@ export class UserService {
     if (userInput.nameID) {
       if (userInput.nameID.toLowerCase() !== user.nameID.toLowerCase()) {
         // new NameID, check for uniqueness
-        await this.isNameIdAvailableOrFail(userInput.nameID);
+        await this.isUserNameIdAvailableOrFail(userInput.nameID);
         user.nameID = userInput.nameID;
       }
     }
@@ -817,7 +807,7 @@ export class UserService {
     if (updateData.nameID) {
       if (updateData.nameID !== user.nameID) {
         // updating the nameID, check new value is allowed
-        await this.isNameIdAvailableOrFail(updateData.nameID);
+        await this.isUserNameIdAvailableOrFail(updateData.nameID);
 
         user.nameID = updateData.nameID;
       }
@@ -888,11 +878,11 @@ export class UserService {
       .getMany();
   }
 
-  async countUsersWithCredentials(
+  public countUsersWithCredentials(
     credentialCriteria: CredentialsSearchInput
   ): Promise<number> {
     const credResourceID = credentialCriteria.resourceID || '';
-    const userMatchesCount = await this.userRepository
+    return this.userRepository
       .createQueryBuilder('user')
       .leftJoinAndSelect('user.agent', 'agent')
       .leftJoinAndSelect('agent.credentials', 'credential')
@@ -903,8 +893,6 @@ export class UserService {
         resourceID: credResourceID,
       })
       .getCount();
-
-    return userMatchesCount;
   }
 
   async getStorageAggregatorOrFail(
@@ -927,14 +915,10 @@ export class UserService {
     return storageAggregator;
   }
 
-  private async tryRegisterUserCommunication(
+  private tryRegisterUserCommunication(
     user: IUser
   ): Promise<string | undefined> {
-    const communicationID = await this.communicationAdapter.tryRegisterNewUser(
-      user.email
-    );
-
-    return communicationID;
+    return this.communicationAdapter.tryRegisterNewUser(user.email);
   }
 
   async getCommunityRooms(user: IUser): Promise<CommunicationRoomResult[]> {
@@ -957,37 +941,25 @@ export class UserService {
     return directRooms;
   }
 
-  public async createUserNameID(
-    firstName: string,
-    lastName: string
-  ): Promise<string> {
-    const base = `${firstName}-${lastName}`;
+  private async createUserNameID(userData: CreateUserInput): Promise<string> {
+    let base = '';
+    if (userData.firstName && userData.lastName) {
+      base = `${userData.firstName}-${userData.lastName}`;
+    } else if (userData.firstName) {
+      base = `${userData.firstName}`;
+    } else if (userData.lastName) {
+      base = `${userData.lastName}`;
+    } else if (userData.profileData?.displayName) {
+      base = userData.profileData.displayName;
+    } else {
+      base = userData.email.split('@')[0];
+    }
     const reservedNameIDs =
       await this.namingService.getReservedNameIDsInUsers(); // This will need to be smarter later
     return this.namingService.createNameIdAvoidingReservedNameIDs(
       base,
       reservedNameIDs
     );
-  }
-
-  async findProfilesByBatch(userIds: string[]): Promise<(IProfile | Error)[]> {
-    const users = await this.userRepository.find({
-      where: {
-        id: In(userIds),
-      },
-      relations: { profile: true },
-      select: ['id'],
-    });
-
-    const results = users.filter((user: { id: string }) =>
-      userIds.includes(user.id)
-    );
-    const mappedResults = userIds.map(
-      id =>
-        results.find((result: { id: string }) => result.id === id)?.profile ||
-        new Error(`Could not load user ${id}`)
-    );
-    return mappedResults;
   }
 
   public async getAgentInfoMetadata(
