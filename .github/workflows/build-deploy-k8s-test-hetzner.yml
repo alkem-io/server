@@ -1,4 +1,4 @@
-name: Build, Migrate & Deploy to Test on Azure
+name: Build, Migrate & Deploy to Test on Hetzner
 
 on:
   workflow_dispatch:
