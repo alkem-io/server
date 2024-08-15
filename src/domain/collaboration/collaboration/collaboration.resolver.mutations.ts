@@ -134,7 +134,7 @@ export class CollaborationResolverMutations {
       }
     );
 
-    return callout;
+    return await this.calloutService.getCalloutOrFail(callout.id);
   }
 
   @UseGuards(GraphqlGuard)
