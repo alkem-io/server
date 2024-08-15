@@ -27,9 +27,11 @@ import { SpaceDefaultsModule } from '../space.defaults/space.defaults.module';
 import { SpaceSettingssModule } from '../space.settings/space.settings.module';
 import { CommunityRoleModule } from '@domain/community/community-role/community.role.module';
 import { TemplatesSetModule } from '@domain/template/templates-set/templates.set.module';
+import { AccountHostModule } from '../account.host/account.host.module';
 
 @Module({
   imports: [
+    AccountHostModule,
     AgentModule,
     AuthorizationPolicyModule,
     AuthorizationModule,
