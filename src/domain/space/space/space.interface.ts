@@ -18,11 +18,7 @@ export class ISpace extends INameable {
   subspaces?: ISpace[];
   parentSpace?: ISpace;
 
-  @Field(() => IAccount, {
-    nullable: false,
-    description: 'The Account that this Space is part of.',
-  })
-  account!: IAccount;
+  account?: IAccount;
 
   @Field(() => Number, {
     description:

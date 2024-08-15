@@ -7,16 +7,13 @@ import { ActivityLogService } from '../activity-log';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { MySpaceResults } from './dto/my.journeys.results';
 import { ActivityService } from '@platform/activity/activity.service';
-import { AuthorizationCredential, LogContext } from '@common/enums';
+import { LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { sortSpacesByActivity } from '@domain/space/space/sort.spaces.by.activity';
 import { CommunityInvitationResult } from './dto/me.invitation.result';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { EntityNotFoundException } from '@common/exceptions';
 import { CommunityApplicationResult } from './dto/me.application.result';
-import { UserService } from '@domain/community/user/user.service';
-import { compact } from 'lodash';
-import { AccountHostService } from '@domain/space/account.host/account.host.service';
 import { SpaceMembershipCollaborationInfo } from './space.membership.type';
 import { CommunityMembershipResult } from './dto/me.membership.result';
 import { SpaceLevel } from '@common/enums/space.level';
@@ -25,11 +22,9 @@ import { SpaceLevel } from '@common/enums/space.level';
 export class MeService {
   constructor(
     private spaceService: SpaceService,
-    private userService: UserService,
     private rolesService: RolesService,
     private activityLogService: ActivityLogService,
     private activityService: ActivityService,
-    private accountHostService: AccountHostService,
     private communityResolverService: CommunityResolverService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
@@ -278,40 +273,5 @@ export class MeService {
     }
 
     return mySpaceResults.slice(0, limit);
-  }
-
-  public async getMyCreatedSpaces(
-    agentInfo: AgentInfo,
-    limit = 20
-  ): Promise<ISpace[]> {
-    const user = await this.userService.getUserOrFail(agentInfo.userID);
-    if (!user) {
-      throw new EntityNotFoundException(
-        `User not found ${agentInfo.userID}`,
-        LogContext.COMMUNITY
-      );
-    }
-    const accounts = (
-      await this.accountHostService.getAccountsHostedByContributor(user, true)
-    )
-      .sort((a, b) =>
-        a.createdDate && b.createdDate
-          ? b.createdDate.getTime() - a.createdDate.getTime() // Sort descending, so latest is the first
-          : 0
-      )
-      .slice(0, limit);
-
-    if (!accounts || accounts.length === 0) {
-      return [];
-    }
-
-    return compact(accounts.map(account => account.spaces)).flat();
-  }
-
-  public async canCreateFreeSpace(agentInfo: AgentInfo): Promise<boolean> {
-    const credentials = agentInfo.credentials;
-    return !credentials.some(
-      credential => credential.type === AuthorizationCredential.ACCOUNT_HOST
-    );
   }
 }

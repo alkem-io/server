@@ -11,19 +11,20 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { UserService } from '@domain/community/user/user.service';
-import { ISpace } from '@domain/space/space/space.interface';
 import { MeService } from './me.service';
 import { LogContext } from '@common/enums';
 import { MySpaceResults } from './dto/my.journeys.results';
 import { CommunityInvitationResult } from './dto/me.invitation.result';
 import { CommunityApplicationResult } from './dto/me.application.result';
 import { CommunityMembershipResult } from './dto/me.membership.result';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 
 @Resolver(() => MeQueryResults)
 export class MeResolverFields {
   constructor(
     private meService: MeService,
-    private userService: UserService
+    private userService: UserService,
+    private authorizationService: AuthorizationService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -141,33 +142,5 @@ export class MeResolverFields {
     limit: number
   ): Promise<MySpaceResults[]> {
     return this.meService.getMySpaces(agentInfo, limit);
-  }
-
-  @UseGuards(GraphqlGuard)
-  @ResolveField(() => [ISpace], {
-    description: 'The Spaces I have created',
-  })
-  public myCreatedSpaces(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args({
-      name: 'limit',
-      type: () => Float,
-      description:
-        'The number of Spaces to return; if omitted return latest 20 created spaces.',
-      nullable: true,
-    })
-    limit: number
-  ): Promise<ISpace[]> {
-    return this.meService.getMyCreatedSpaces(agentInfo, limit);
-  }
-
-  @UseGuards(GraphqlGuard)
-  @ResolveField(() => Boolean, {
-    description: 'Can I create a free space?',
-  })
-  public canCreateFreeSpace(
-    @CurrentUser() agentInfo: AgentInfo
-  ): Promise<boolean> {
-    return this.meService.canCreateFreeSpace(agentInfo);
   }
 }

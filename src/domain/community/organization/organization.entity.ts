@@ -19,6 +19,9 @@ export class Organization
   extends ContributorBase
   implements IOrganization, IGroupable
 {
+  @Column('char', { length: 36, nullable: false })
+  accountID!: string;
+
   @Column({
     unique: true,
   })

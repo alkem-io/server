@@ -161,12 +161,12 @@ export class ContributorLookupService {
     contributorsManagedByUser.push(user);
 
     // Get all the organizations managed by the User
-    const organiationOwnerCredentials =
+    const organizationOwnerCredentials =
       await this.getCredentialsByTypeHeldByAgent(user.agent.id, [
         AuthorizationCredential.ORGANIZATION_OWNER,
         AuthorizationCredential.ORGANIZATION_ADMIN,
       ]);
-    const organizationsIDs = organiationOwnerCredentials.map(
+    const organizationsIDs = organizationOwnerCredentials.map(
       credential => credential.resourceID
     );
     const organizations = await this.entityManager.find(Organization, {
@@ -183,21 +183,11 @@ export class ContributorLookupService {
 
     // Get all the Accounts from the User directly or via Organizations the user manages
     const accountIDs: string[] = [];
-    const userAccountHostCredentials =
-      await this.getCredentialsByTypeHeldByAgent(user.agent.id, [
-        AuthorizationCredential.ACCOUNT_HOST,
-      ]);
-    userAccountHostCredentials.forEach(credential =>
-      accountIDs.push(credential.resourceID)
-    );
+
+    accountIDs.push(user.accountID);
+
     for (const organization of organizations) {
-      const orgAccountHostCredentials =
-        await this.getCredentialsByTypeHeldByAgent(organization.agent.id, [
-          AuthorizationCredential.ACCOUNT_HOST,
-        ]);
-      orgAccountHostCredentials.forEach(credential =>
-        accountIDs.push(credential.resourceID)
-      );
+      accountIDs.push(organization.accountID);
     }
 
     // Finally, get all the virtual contributors managed by the accounts

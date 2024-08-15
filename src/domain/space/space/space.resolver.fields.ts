@@ -33,6 +33,7 @@ import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exc
 import { ISpaceSettings } from '../space.settings/space.settings.interface';
 import { ITemplatesSet } from '@domain/template/templates-set/templates.set.interface';
 import { ISpaceDefaults } from '../space.defaults/space.defaults.interface';
+import { IAccount } from '../account/account.interface';
 
 @Resolver(() => ISpace)
 export class SpaceResolverFields {
@@ -158,6 +159,16 @@ export class SpaceResolverFields {
       `read profile on space: ${profile.displayName}`
     );
     return profile;
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('account', () => IAccount, {
+    nullable: false,
+    description: 'The Account that this Space is part of.',
+  })
+  async account(@Parent() space: ISpace): Promise<IAccount> {
+    return await this.spaceService.getAccountWithAgentOrFail(space);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

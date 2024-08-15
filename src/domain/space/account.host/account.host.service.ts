@@ -1,6 +1,5 @@
 import { AuthorizationCredential, LogContext } from '@common/enums';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
-import { ContributorService } from '@domain/community/contributor/contributor.service';
 import { Injectable, Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IAccount } from '../account/account.interface';
@@ -20,16 +19,14 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy/authori
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { CreateAccountInput } from '../account/dto/account.dto.create';
 import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, In, Repository } from 'typeorm';
+import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import { LicensingService } from '@platform/licensing/licensing.service';
-import { Credential } from '@domain/agent/credential/credential.entity';
 import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { AgentType } from '@common/enums/agent.type';
 
 @Injectable()
 export class AccountHostService {
   constructor(
-    private contributorService: ContributorService,
     private agentService: AgentService,
     private licenseIssuerService: LicenseIssuerService,
     private licensingService: LicensingService,
@@ -55,10 +52,32 @@ export class AccountHostService {
 
     account = await this.accountRepository.save(account);
 
-    await this.setAccountHost(account, accountData.host);
     await this.assignLicensePlansToAccount(account, accountData.host);
 
     return account;
+  }
+
+  async getAccountOrFail(
+    accountID: string,
+    options?: FindOneOptions<Account>
+  ): Promise<IAccount | never> {
+    const account = await this.getAccount(accountID, options);
+    if (!account)
+      throw new EntityNotFoundException(
+        `Unable to find Account with ID: ${accountID}`,
+        LogContext.ACCOUNT
+      );
+    return account;
+  }
+
+  async getAccount(
+    accountID: string,
+    options?: FindOneOptions<Account>
+  ): Promise<IAccount | null> {
+    return await this.accountRepository.findOne({
+      where: { id: accountID },
+      ...options,
+    });
   }
 
   private async assignLicensePlansToAccount(
@@ -99,89 +118,48 @@ export class AccountHostService {
   }
 
   public async getHost(account: IAccount): Promise<IContributor | null> {
-    const contributors =
-      await this.contributorService.contributorsWithCredentials({
-        type: AuthorizationCredential.ACCOUNT_HOST,
-        resourceID: account.id,
-      });
-    if (contributors.length === 1) {
-      return contributors[0];
-    } else if (contributors.length > 1) {
-      this.logger.error(
-        `Account with ID: ${account.id} has multiple hosts. This should not happen.`,
-        LogContext.ACCOUNT
-      );
-    }
-
-    return null;
-  }
-
-  public async areResourcesInAccount(
-    contributor: IContributor
-  ): Promise<boolean> {
-    const hostedAccounts =
-      await this.getAccountsHostedByContributor(contributor);
-    for (const hostedAccount of hostedAccounts) {
-      const account = await this.entityManager.findOne(Account, {
-        where: {
-          id: hostedAccount.id,
-        },
-        relations: {
-          spaces: true,
-          virtualContributors: true,
-          innovationPacks: true,
-          innovationHubs: true,
-        },
-      });
-      if (!account) {
-        throw new RelationshipNotFoundException(
-          `Unable to find account with ID: ${hostedAccount.id}`,
-          LogContext.ACCOUNT
-        );
-      }
-      if (
-        account.spaces.length > 0 ||
-        account.virtualContributors.length > 0 ||
-        account.innovationPacks.length > 0 ||
-        account.innovationHubs.length > 0
-      ) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  public async getAccountsHostedByContributor(
-    contributor: IContributor,
-    includeSpaces = false
-  ): Promise<IAccount[]> {
-    let agent = contributor.agent;
-    if (!agent) {
-      const contributorWithAgent =
-        await this.contributorService.getContributorWithRelations(contributor, {
-          relations: { agent: true },
-        });
-      agent = contributorWithAgent.agent;
-    }
-    const hostedAccountCredentials = await this.entityManager.find(Credential, {
+    const user = await this.entityManager.findOne(User, {
       where: {
-        type: AuthorizationCredential.ACCOUNT_HOST,
-        agent: {
-          id: agent.id,
-        },
+        accountID: account.id,
       },
     });
-    const accountIDs = hostedAccountCredentials.map(cred => cred.resourceID);
-    const accounts = await this.entityManager.find(Account, {
+    if (user) {
+      return user;
+    }
+    const organization = await this.entityManager.findOne(Organization, {
       where: {
-        id: In(accountIDs),
+        accountID: account.id,
       },
+    });
+    if (organization) {
+      return organization;
+    }
+
+    throw new RelationshipNotFoundException(
+      `Unable to find contributor associated with account ${account.id}`,
+      LogContext.ACCOUNT
+    );
+  }
+
+  public async areResourcesInAccount(accountID: string): Promise<boolean> {
+    const account = await this.getAccountOrFail(accountID, {
       relations: {
-        spaces: includeSpaces,
+        spaces: true,
+        virtualContributors: true,
+        innovationPacks: true,
+        innovationHubs: true,
       },
     });
+    if (
+      account.spaces.length > 0 ||
+      account.virtualContributors.length > 0 ||
+      account.innovationPacks.length > 0 ||
+      account.innovationHubs.length > 0
+    ) {
+      return true;
+    }
 
-    return accounts;
+    return false;
   }
 
   public async getHostCredentials(
@@ -191,8 +169,8 @@ export class AccountHostService {
     const accountHostCredentials: ICredentialDefinition[] = [];
     if (accountHost instanceof User) {
       const userCriteria: ICredentialDefinition = {
-        type: AuthorizationCredential.ACCOUNT_HOST,
-        resourceID: account.id,
+        type: AuthorizationCredential.USER_SELF_MANAGEMENT,
+        resourceID: accountHost.id,
       };
       accountHostCredentials.push(userCriteria);
     } else if (accountHost instanceof Organization) {
@@ -224,19 +202,5 @@ export class AccountHostService {
         LogContext.COMMUNITY
       );
     return host;
-  }
-
-  private async setAccountHost(
-    account: IAccount,
-    hostContributor: IContributor
-  ): Promise<IContributor> {
-    // assign the credential
-    hostContributor.agent = await this.agentService.grantCredential({
-      agentID: hostContributor.agent.id,
-      type: AuthorizationCredential.ACCOUNT_HOST,
-      resourceID: account.id,
-    });
-
-    return hostContributor;
   }
 }

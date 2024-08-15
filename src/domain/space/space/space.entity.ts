@@ -34,13 +34,12 @@ export class Space extends NameableEntity implements ISpace {
   })
   parentSpace?: Space;
 
-  // Note: no counter OneToMany as this is a pre ManyToOne relationship
-  @ManyToOne(() => Account, {
-    eager: true, // TODO: really would like to drop this, not least for performance reasons...
+  @ManyToOne(() => Account, account => account.spaces, {
+    eager: false,
     cascade: false,
     onDelete: 'SET NULL',
   })
-  account!: Account;
+  account?: Account;
 
   @Column({
     unique: true,

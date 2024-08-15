@@ -191,12 +191,12 @@ export class UserResolverFields {
     @Parent() user: User,
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<IAccount | undefined> {
-    const accountsVisible = await this.isAccessGranted(
+    const accountVisible = await this.isAccessGranted(
       user,
       agentInfo,
       AuthorizationPrivilege.READ_USER_PII
     );
-    if (accountsVisible) {
+    if (accountVisible) {
       return await this.userService.getAccount(user);
     }
     return undefined;
