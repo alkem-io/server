@@ -34,6 +34,7 @@ import { ISpaceSettings } from '../space.settings/space.settings.interface';
 import { ITemplatesSet } from '@domain/template/templates-set/templates.set.interface';
 import { ISpaceDefaults } from '../space.defaults/space.defaults.interface';
 import { IAccount } from '../account/account.interface';
+import { IContributor } from '@domain/community/contributor/contributor.interface';
 
 @Resolver(() => ISpace)
 export class SpaceResolverFields {
@@ -208,19 +209,23 @@ export class SpaceResolverFields {
     nullable: true,
     description: 'The date for the creation of this Space.',
   })
+  @UseGuards(GraphqlGuard)
   async createdDate(@Parent() space: Space): Promise<Date> {
     const createdDate = (space as Space).createdDate;
     return new Date(createdDate);
   }
 
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('settings', () => ISpaceSettings, {
     nullable: false,
     description: 'The settings for this Space.',
   })
+  @UseGuards(GraphqlGuard)
   settings(@Parent() space: ISpace): ISpaceSettings {
     return this.spaceService.getSettings(space);
   }
 
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('library', () => ITemplatesSet, {
     nullable: true,
     description: 'The Library in use by this Space',
@@ -230,16 +235,10 @@ export class SpaceResolverFields {
     @CurrentUser() agentInfo: AgentInfo,
     @Parent() space: Space
   ): Promise<ITemplatesSet> {
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      space.authorization,
-      AuthorizationPrivilege.READ,
-      `read library on space: ${space.id}`
-    );
-
     return await this.spaceService.getLibraryOrFail(space.levelZeroSpaceID);
   }
 
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('defaults', () => ISpaceDefaults, {
     nullable: true,
     description: 'The defaults in use by this Space',
@@ -249,12 +248,15 @@ export class SpaceResolverFields {
     @CurrentUser() agentInfo: AgentInfo,
     @Parent() space: Space
   ): Promise<ISpaceDefaults> {
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      space.authorization,
-      AuthorizationPrivilege.READ,
-      `read defaults on space: ${space.id}`
-    );
     return await this.spaceService.getDefaultsOrFail(space.levelZeroSpaceID);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @ResolveField('provider', () => IContributor, {
+    nullable: false,
+    description: 'The Space provider.',
+  })
+  async provider(@Parent() space: ISpace): Promise<IContributor> {
+    return await this.spaceService.getProvider(space);
   }
 }

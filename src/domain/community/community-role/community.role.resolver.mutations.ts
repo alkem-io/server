@@ -501,14 +501,14 @@ export class CommunityRoleResolverMutations {
     invitation = await this.invitationService.save(invitation);
 
     if (invitedContributor instanceof VirtualContributor) {
-      const accountHost =
-        await this.virtualContributorService.getAccountHost(invitedContributor);
+      const accountProvider =
+        await this.virtualContributorService.getProvider(invitedContributor);
       const notificationInput: NotificationInputCommunityInvitationVirtualContributor =
         {
           triggeredBy: agentInfo.userID,
           community: community,
           invitedContributorID: invitedContributor.id,
-          accountHost: accountHost,
+          accountHost: accountProvider,
           welcomeMessage,
         };
 

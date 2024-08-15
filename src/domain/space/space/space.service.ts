@@ -66,10 +66,12 @@ import { ITemplatesSet } from '@domain/template/templates-set/templates.set.inte
 import { ISpaceDefaults } from '../space.defaults/space.defaults.interface';
 import { AgentType } from '@common/enums/agent.type';
 import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
+import { AccountHostService } from '../account.host/account.host.service';
 
 @Injectable()
 export class SpaceService {
   constructor(
+    private accountHostService: AccountHostService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private spacesFilterService: SpaceFilterService,
     private contextService: ContextService,
@@ -1179,6 +1181,31 @@ export class SpaceService {
     }
 
     return defaults;
+  }
+
+  public async getProvider(spaceInput: ISpace): Promise<IContributor> {
+    const space = await this.spaceRepository.findOne({
+      where: {
+        levelZeroSpaceID: spaceInput.levelZeroSpaceID,
+      },
+      relations: {
+        account: true,
+      },
+    });
+    if (!space || !space.account) {
+      throw new RelationshipNotFoundException(
+        `Unable to load Space with account to get Provider ${spaceInput.id} `,
+        LogContext.LIBRARY
+      );
+    }
+    const provider = await this.accountHostService.getHost(space.account);
+    if (!provider) {
+      throw new RelationshipNotFoundException(
+        `Unable to load provider for Space ${space.id} `,
+        LogContext.LIBRARY
+      );
+    }
+    return provider;
   }
 
   public async getCommunityPolicy(spaceId: string): Promise<ICommunityPolicy> {

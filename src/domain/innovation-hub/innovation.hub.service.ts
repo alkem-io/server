@@ -3,6 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
   EntityNotFoundException,
+  RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
 import { LogContext, ProfileType } from '@common/enums';
@@ -17,6 +18,8 @@ import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { SearchVisibility } from '@common/enums/search.visibility';
 import { IAccount } from '@domain/space/account/account.interface';
+import { IContributor } from '@domain/community/contributor/contributor.interface';
+import { AccountHostService } from '@domain/space/account.host/account.host.service';
 
 @Injectable()
 export class InnovationHubService {
@@ -26,7 +29,8 @@ export class InnovationHubService {
     private readonly profileService: ProfileService,
     private readonly authorizationPolicyService: AuthorizationPolicyService,
     private readonly spaceService: SpaceService,
-    private namingService: NamingService
+    private namingService: NamingService,
+    private accountHostService: AccountHostService
   ) {}
 
   public async createInnovationHub(
@@ -306,5 +310,30 @@ export class InnovationHubService {
     }
 
     return true;
+  }
+
+  public async getProvider(innovationHubID: string): Promise<IContributor> {
+    const innovationHub = await this.innovationHubRepository.findOne({
+      where: { id: innovationHubID },
+      relations: {
+        account: true,
+      },
+    });
+    if (!innovationHub || !innovationHub.account) {
+      throw new RelationshipNotFoundException(
+        `Unable to load innovation Hub with account to get Provider ${innovationHubID} `,
+        LogContext.LIBRARY
+      );
+    }
+    const provider = await this.accountHostService.getHost(
+      innovationHub.account
+    );
+    if (!provider) {
+      throw new RelationshipNotFoundException(
+        `Unable to load provider for InnovationHub ${innovationHubID} `,
+        LogContext.LIBRARY
+      );
+    }
+    return provider;
   }
 }
