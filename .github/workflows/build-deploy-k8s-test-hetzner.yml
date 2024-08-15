@@ -47,6 +47,12 @@ jobs:
             --docker-password=${{ secrets.REGISTRY_PASSWORD }} \
             --dry-run=client -o yaml | kubectl apply -f -
 
+      - name: Verify Kubeconfig
+        run: |
+          echo "KUBECONFIG: $KUBECONFIG"
+          ls -la $HOME/.kube
+          cat $HOME/.kube/config
+
       - name: Deploy to k3s on Hetzner
         uses: Azure/k8s-deploy@v4.10
         with:
