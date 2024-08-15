@@ -1186,7 +1186,7 @@ export class SpaceService {
   public async getProvider(spaceInput: ISpace): Promise<IContributor> {
     const space = await this.spaceRepository.findOne({
       where: {
-        levelZeroSpaceID: spaceInput.levelZeroSpaceID,
+        id: spaceInput.levelZeroSpaceID,
       },
       relations: {
         account: true,
