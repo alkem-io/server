@@ -23,6 +23,11 @@ import { CommunityGuidelinesTemplateAuthorizationService } from '../community-gu
 import { CreateCommunityGuidelinesTemplateOnTemplatesSetInput } from './dto/community.guidelines.template.dto.create.on.templates.set';
 import { ICommunityGuidelinesTemplate } from '@domain/template/community-guidelines-template/community.guidelines.template.interface';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { PostTemplateService } from '../post-template/post.template.service';
+import { WhiteboardTemplateService } from '../whiteboard-template/whiteboard.template.service';
+import { InnovationFlowTemplateService } from '../innovation-flow-template/innovation.flow.template.service';
+import { CalloutTemplateService } from '../callout-template/callout.template.service';
+import { CommunityGuidelinesTemplateService } from '../community-guidelines-template/community.guidelines.template.service';
 
 @Resolver()
 export class TemplatesSetResolverMutations {
@@ -35,6 +40,11 @@ export class TemplatesSetResolverMutations {
     private whiteboardTemplateAuthorizationService: WhiteboardTemplateAuthorizationService,
     private innovationFlowTemplateAuthorizationService: InnovationFlowTemplateAuthorizationService,
     private communityGuidelinesTemplateAuthorizationService: CommunityGuidelinesTemplateAuthorizationService,
+    private postTemplateService: PostTemplateService,
+    private whiteboardTemplateService: WhiteboardTemplateService,
+    private innovationFlowTemplateService: InnovationFlowTemplateService,
+    private communityGuidelinesTemplateService: CommunityGuidelinesTemplateService,
+    private calloutTemplateService: CalloutTemplateService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -73,7 +83,9 @@ export class TemplatesSetResolverMutations {
         templatesSet.authorization
       );
     await this.authorizationPolicyService.saveAll(authorizations);
-    return calloutTemplate;
+    return await this.calloutTemplateService.getCalloutTemplateOrFail(
+      calloutTemplate.id
+    );
   }
 
   @UseGuards(GraphqlGuard)
@@ -108,7 +120,7 @@ export class TemplatesSetResolverMutations {
       );
 
     await this.authorizationPolicyService.saveAll(authorizations);
-    return postTemplate;
+    return this.postTemplateService.getPostTemplateOrFail(postTemplate.id);
   }
 
   @UseGuards(GraphqlGuard)
@@ -145,7 +157,9 @@ export class TemplatesSetResolverMutations {
       );
 
     await this.authorizationPolicyService.saveAll(authorizations);
-    return whiteboardTemplate;
+    return this.whiteboardTemplateService.getWhiteboardTemplateOrFail(
+      whiteboardTemplate.id
+    );
   }
 
   @UseGuards(GraphqlGuard)
@@ -182,7 +196,9 @@ export class TemplatesSetResolverMutations {
       );
 
     await this.authorizationPolicyService.saveAll(authorizations);
-    return innovationFlowTemplate;
+    return this.innovationFlowTemplateService.getInnovationFlowTemplateOrFail(
+      innovationFlowTemplate.id
+    );
   }
 
   @UseGuards(GraphqlGuard)
@@ -216,6 +232,8 @@ export class TemplatesSetResolverMutations {
       );
 
     await this.authorizationPolicyService.saveAll(authorizations);
-    return communityGuidelinesTemplate;
+    return this.communityGuidelinesTemplateService.getCommunityGuidelinesTemplateOrFail(
+      communityGuidelinesTemplate.id
+    );
   }
 }
