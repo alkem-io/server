@@ -184,18 +184,20 @@ export class UserResolverFields {
 
   @UseGuards(GraphqlGuard)
   @ResolveField('account', () => IAccount, {
-    nullable: false,
+    nullable: true,
     description: 'The account hosted by this User.',
   })
   async account(
     @Parent() user: User,
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<IAccount | undefined> {
-    const accountVisible = await this.isAccessGranted(
-      user,
-      agentInfo,
-      AuthorizationPrivilege.READ_USER_PII
-    );
+    const accountVisible =
+      user.id === agentInfo.userID || // user can see their own account
+      (await this.isAccessGranted(
+        user,
+        agentInfo,
+        AuthorizationPrivilege.READ_USER_PII
+      ));
     if (accountVisible) {
       return await this.userService.getAccount(user);
     }
