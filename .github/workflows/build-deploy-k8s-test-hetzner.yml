@@ -28,15 +28,15 @@ jobs:
       - name: 'Checkout GitHub Action'
         uses: actions/checkout@v3.0.2
 
-      - name: Set up Kubeconfig for Hetzner k3s
-        run: |
-          echo "${{ secrets.KUBECONFIG_SECRET_HETZNER_TEST }}" > $HOME/.kube/config
-          chmod 600 $HOME/.kube/config
-
       - name: Install Kubectl
         uses: azure/setup-kubectl@v3.2
         with:
           version: 'v1.27.6' # Ensure this matches the version used in your cluster
+
+      - name: Set up Kubeconfig for Hetzner k3s
+        run: |
+          echo "${{ secrets.KUBECONFIG_SECRET_HETZNER_TEST }}" > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config
 
       - name: Create Image Pull Secret
         run: |
@@ -74,15 +74,15 @@ jobs:
       - name: 'Checkout GitHub Action'
         uses: actions/checkout@v3.0.2
 
-      - name: Set up Kubeconfig for Hetzner k3s
-        run: |
-          echo "${{ secrets.KUBECONFIG_SECRET_HETZNER_TEST }}" > $HOME/.kube/config
-          chmod 600 $HOME/.kube/config
-
       - name: Install Kubectl
         uses: azure/setup-kubectl@v3.2
         with:
           version: 'v1.27.6' # Ensure this matches the version used in your cluster
+
+      - name: Set up Kubeconfig for Hetzner k3s
+        run: |
+          echo "${{ secrets.KUBECONFIG_SECRET_HETZNER_TEST }}" > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config
 
       - name: Create Image Pull Secret
         run: |
