@@ -145,7 +145,7 @@ export class SpaceAuthorizationService {
 
     // Choose what authorization to inherit from
     let parentAuthorization: IAuthorizationPolicy | undefined;
-    if (space.level === SpaceLevel.SPACE) {
+    if (space.level === SpaceLevel.SPACE || privateSpace) {
       const accountAuthorization = account?.authorization;
       if (!accountAuthorization) {
         throw new RelationshipNotFoundException(
