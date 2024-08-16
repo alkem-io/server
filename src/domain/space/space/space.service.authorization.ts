@@ -37,6 +37,7 @@ import { SpaceLevel } from '@common/enums/space.level';
 import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
 import { IAgent } from '@domain/agent/agent/agent.interface';
 import { ISpaceSettings } from '../space.settings/space.settings.interface';
+import { TemplatesSetAuthorizationService } from '@domain/template/templates-set/templates.set.service.authorization';
 
 @Injectable()
 export class SpaceAuthorizationService {
@@ -49,6 +50,7 @@ export class SpaceAuthorizationService {
     private contextAuthorizationService: ContextAuthorizationService,
     private communityAuthorizationService: CommunityAuthorizationService,
     private collaborationAuthorizationService: CollaborationAuthorizationService,
+    private templatesSetAuthorizationService: TemplatesSetAuthorizationService,
     private spaceService: SpaceService,
     private spaceSettingsService: SpaceSettingsService
   ) {}
@@ -79,6 +81,8 @@ export class SpaceAuthorizationService {
         profile: true,
         storageAggregator: true,
         subspaces: true,
+        library: true,
+        defaults: true,
       },
     });
     if (
@@ -89,7 +93,9 @@ export class SpaceAuthorizationService {
       !space.authorization ||
       !space.community ||
       !space.community.policy ||
-      !space.subspaces
+      !space.subspaces ||
+      !space.library ||
+      !space.defaults
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load Space with entities at start of auth reset: ${space.id} `,
@@ -248,6 +254,8 @@ export class SpaceAuthorizationService {
       !space.community.policy ||
       !space.context ||
       !space.profile ||
+      !space.library ||
+      !space.defaults ||
       !space.storageAggregator
     ) {
       throw new RelationshipNotFoundException(
@@ -294,6 +302,20 @@ export class SpaceAuthorizationService {
         space.authorization
       );
     updatedAuthorizations.push(...storageAuthorizations);
+
+    const libraryAuthorizations =
+      await this.templatesSetAuthorizationService.applyAuthorizationPolicy(
+        space.library,
+        space.authorization
+      );
+    updatedAuthorizations.push(...libraryAuthorizations);
+
+    const defaultsAuthorizations =
+      await this.authorizationPolicyService.inheritParentAuthorization(
+        space.defaults.authorization,
+        space.authorization
+      );
+    updatedAuthorizations.push(defaultsAuthorizations);
 
     /// For fields that always should be available
     // Clone the authorization policy

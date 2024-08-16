@@ -249,7 +249,7 @@ export class BootstrapService {
     // Assume that zero rules means that the policy has not been reset
     if (aiServerCredentialRules.length == 0) {
       this.logger.verbose?.(
-        '=== Identified that platform authorization had not been reset; resetting now ===',
+        '=== Identified that AI Server authorization had not been reset; resetting now ===',
         LogContext.BOOTSTRAP
       );
       const authorizations =

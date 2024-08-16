@@ -104,12 +104,12 @@ export class UserAuthorizationService {
       );
     updatedAuthorizations.push(...profileAuthorizations);
 
-    const agentAuthoation =
+    const agentAuthorization =
       this.agentAuthorizationService.applyAuthorizationPolicy(
         user.agent,
         user.authorization
       );
-    updatedAuthorizations.push(agentAuthoation);
+    updatedAuthorizations.push(agentAuthorization);
 
     const preferenceSetAuthorizations =
       this.preferenceSetAuthorizationService.applyAuthorizationPolicy(
