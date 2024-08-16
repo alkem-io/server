@@ -50,9 +50,8 @@ export class AiPersonaServiceService {
       AiPersonaBodyOfKnowledgeType.ALKEMIO_SPACE;
     aiPersonaService.prompt = aiPersonaServiceData.prompt ?? '';
 
-    const savedAiPersonaService = await this.aiPersonaServiceRepository.save(
-      aiPersonaService
-    );
+    const savedAiPersonaService =
+      await this.aiPersonaServiceRepository.save(aiPersonaService);
     this.logger.verbose?.(
       `Created new AI Persona Service with id ${aiPersonaService.id}`,
       LogContext.PLATFORM
@@ -159,6 +158,8 @@ export class AiPersonaServiceService {
       contextID: personaQuestionInput.contextID,
       history,
       interactionID: personaQuestionInput.interactionID,
+      displayName: personaQuestionInput.displayName,
+      description: personaQuestionInput.description,
     };
 
     return this.aiPersonaEngineAdapter.sendQuery(input);

@@ -137,6 +137,7 @@ export class AiPersonaService {
 
     const input: AiServerAdapterAskQuestionInput = {
       question: question,
+      displayName: '',
       aiPersonaServiceID: aiPersona.aiPersonaServiceID,
     };
 
