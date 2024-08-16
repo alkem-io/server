@@ -1,6 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindManyOptions, FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
+import {
+  FindManyOptions,
+  FindOneOptions,
+  FindOptionsRelations,
+  Repository,
+} from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -40,6 +45,7 @@ import { ICalloutContributionDefaults } from '../callout-contribution-defaults/c
 import { CalloutContributionFilterArgs } from '../callout-contribution/dto/callout.contribution.args.filter';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class CalloutService {
@@ -70,7 +76,9 @@ export class CalloutService {
     }
 
     const callout: ICallout = Callout.create(calloutData);
-    callout.authorization = new AuthorizationPolicy();
+    callout.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.CALLOUT
+    );
     callout.createdBy = userID ?? undefined;
     callout.visibility = calloutData.visibility ?? CalloutVisibility.DRAFT;
     callout.contributions = [];
@@ -309,9 +317,9 @@ export class CalloutService {
     calloutInput: ICallout
   ): CreateCalloutInput {
     if (
-      !calloutInput.framing
-      || !calloutInput.contributionDefaults
-      || !calloutInput.contributionPolicy
+      !calloutInput.framing ||
+      !calloutInput.contributionDefaults ||
+      !calloutInput.contributionPolicy
     ) {
       throw new EntityNotInitializedException(
         'Missing callout relation',
@@ -323,7 +331,9 @@ export class CalloutService {
       );
     }
 
-    const calloutGroupTagset = this.calloutFramingService.getCalloutGroupTagset(calloutInput.framing);
+    const calloutGroupTagset = this.calloutFramingService.getCalloutGroupTagset(
+      calloutInput.framing
+    );
     return {
       nameID: calloutInput.nameID,
       type: calloutInput.type,

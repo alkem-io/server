@@ -24,6 +24,7 @@ import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/
 import { NotificationInputUserRegistered } from '@services/adapters/notification-adapter/dto/notification.dto.input.user.registered';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { UpdateUserPlatformSettingsInput } from './dto/user.dto.update.platform.settings';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
 @Resolver(() => IUser)
 export class UserResolverMutations {
@@ -31,6 +32,7 @@ export class UserResolverMutations {
     private communicationAdapter: CommunicationAdapter,
     private notificationAdapter: NotificationAdapter,
     private authorizationService: AuthorizationService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private userService: UserService,
     private userAuthorizationService: UserAuthorizationService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
@@ -59,18 +61,20 @@ export class UserResolverMutations {
     );
     let user = await this.userService.createUser(userData);
     user = await this.userAuthorizationService.grantCredentials(user);
+    user = await this.userService.save(user);
 
-    const savedUser =
+    const updatedAuthorizations =
       await this.userAuthorizationService.applyAuthorizationPolicy(user);
+    await this.authorizationPolicyService.saveAll(updatedAuthorizations);
 
     // Send the notification
     const notificationInput: NotificationInputUserRegistered = {
       triggeredBy: agentInfo.userID,
-      userID: savedUser.id,
+      userID: user.id,
     };
     await this.notificationAdapter.userRegistered(notificationInput);
 
-    return savedUser;
+    return await this.userService.getUserOrFail(user.id);
   }
 
   @UseGuards(GraphqlGuard)
@@ -168,7 +172,10 @@ export class UserResolverMutations {
       AuthorizationPrivilege.AUTHORIZATION_RESET,
       `reset authorization definition on user: ${authorizationResetData.userID}`
     );
-    return await this.userAuthorizationService.applyAuthorizationPolicy(user);
+    const updatedAuthorizations =
+      await this.userAuthorizationService.applyAuthorizationPolicy(user);
+    await this.authorizationPolicyService.saveAll(updatedAuthorizations);
+    return await this.userService.getUserOrFail(user.id);
   }
 
   @UseGuards(GraphqlGuard)

@@ -35,13 +35,14 @@ export class PostAuthorizationService {
     parentAuthorization: IAuthorizationPolicy | undefined,
     communityPolicy: ICommunityPolicy,
     spaceSettings: ISpaceSettings
-  ): Promise<IPost> {
+  ): Promise<IAuthorizationPolicy[]> {
     if (!post.profile) {
       throw new RelationshipNotFoundException(
         `Unable to load entities on post reset auth:  ${post.id} `,
         LogContext.COLLABORATION
       );
     }
+    const updatedAuthorizations: IAuthorizationPolicy[] = [];
     post.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         post.authorization,
@@ -51,19 +52,21 @@ export class PostAuthorizationService {
     // Inherit for comments before extending so that the creating user does not
     // have rights to delete comments
     if (post.comments) {
-      post.comments = this.roomAuthorizationService.applyAuthorizationPolicy(
-        post.comments,
-        post.authorization
-      );
+      let commentsAuthorization =
+        this.roomAuthorizationService.applyAuthorizationPolicy(
+          post.comments,
+          post.authorization
+        );
 
-      post.comments.authorization =
+      commentsAuthorization =
         this.roomAuthorizationService.allowContributorsToCreateMessages(
-          post.comments.authorization
+          commentsAuthorization
         );
-      post.comments.authorization =
+      commentsAuthorization =
         this.roomAuthorizationService.allowContributorsToReplyReactToMessages(
-          post.comments.authorization
+          commentsAuthorization
         );
+      updatedAuthorizations.push(commentsAuthorization);
     }
 
     // Extend to give the user creating the post more rights
@@ -72,15 +75,17 @@ export class PostAuthorizationService {
       communityPolicy,
       spaceSettings
     );
+    updatedAuthorizations.push(post.authorization);
 
     // cascade
-    post.profile =
+    const profileAuthorizations =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
         post.profile,
         post.authorization
       );
+    updatedAuthorizations.push(...profileAuthorizations);
 
-    return post;
+    return updatedAuthorizations;
   }
 
   private appendCredentialRules(

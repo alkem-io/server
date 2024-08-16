@@ -19,6 +19,7 @@ import { ValidationException } from '@common/exceptions';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { LinkService } from '../link/link.service';
 import { ILink } from '../link/link.interface';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class CalloutContributionService {
@@ -41,7 +42,9 @@ export class CalloutContributionService {
       calloutContributionData
     );
 
-    contribution.authorization = new AuthorizationPolicy();
+    contribution.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.CALLOUT_CONTRIBUTION
+    );
     contribution.createdBy = userID;
 
     const { post, whiteboard, link } = calloutContributionData;

@@ -37,6 +37,7 @@ import { LicenseEngineService } from '@core/license-engine/license.engine.servic
 import { LicensePrivilege } from '@common/enums/license.privilege';
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
 import { isEqual } from 'lodash';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class WhiteboardService {
@@ -64,7 +65,9 @@ export class WhiteboardService {
     const whiteboard: IWhiteboard = Whiteboard.create({
       ...whiteboardData,
     });
-    whiteboard.authorization = new AuthorizationPolicy();
+    whiteboard.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.WHITEBOARD
+    );
     whiteboard.createdBy = userID;
     whiteboard.contentUpdatePolicy = ContentUpdatePolicy.CONTRIBUTORS;
 
@@ -158,12 +161,14 @@ export class WhiteboardService {
       });
 
       if (framing) {
-        const whiteboardAuth =
+        const updatedWhiteboardAuthorizations =
           await this.whiteboardAuthService.applyAuthorizationPolicy(
             whiteboard,
             framing.authorization
           );
-        await this.save(whiteboardAuth);
+        await this.authorizationPolicyService.saveAll(
+          updatedWhiteboardAuthorizations
+        );
       } else {
         const contribution = await this.entityManager.findOne(
           CalloutContribution,
@@ -174,12 +179,14 @@ export class WhiteboardService {
           }
         );
         if (contribution) {
-          const whiteboardAuth =
+          const contributionAuthorizations =
             await this.whiteboardAuthService.applyAuthorizationPolicy(
               whiteboard,
               contribution.authorization
             );
-          await this.save(whiteboardAuth);
+          await this.authorizationPolicyService.saveAll(
+            contributionAuthorizations
+          );
         }
       }
     }

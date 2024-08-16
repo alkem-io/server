@@ -29,6 +29,7 @@ import { UpdateProfileSelectTagsetDefinitionInput } from './dto/profile.dto.upda
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { UpdateProfileSelectTagsetValueInput } from './dto/profile.dto.update.select.tagset.value';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class ProfileService {
@@ -58,7 +59,9 @@ export class ProfileService {
       displayName: profileData?.displayName,
       type: profileType,
     });
-    profile.authorization = new AuthorizationPolicy();
+    profile.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.PROFILE
+    );
     // the next statement fails if it's not saved
     profile.storageBucket = await this.storageBucketService.createStorageBucket(
       { storageAggregator: storageAggregator }

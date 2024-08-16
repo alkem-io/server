@@ -22,17 +22,29 @@ import { CalloutTemplateAuthorizationService } from '../callout-template/callout
 import { CommunityGuidelinesTemplateAuthorizationService } from '../community-guidelines-template/community.guidelines.template.service.authorization';
 import { CreateCommunityGuidelinesTemplateOnTemplatesSetInput } from './dto/community.guidelines.template.dto.create.on.templates.set';
 import { ICommunityGuidelinesTemplate } from '@domain/template/community-guidelines-template/community.guidelines.template.interface';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { PostTemplateService } from '../post-template/post.template.service';
+import { WhiteboardTemplateService } from '../whiteboard-template/whiteboard.template.service';
+import { InnovationFlowTemplateService } from '../innovation-flow-template/innovation.flow.template.service';
+import { CalloutTemplateService } from '../callout-template/callout.template.service';
+import { CommunityGuidelinesTemplateService } from '../community-guidelines-template/community.guidelines.template.service';
 
 @Resolver()
 export class TemplatesSetResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private templatesSetService: TemplatesSetService,
     private calloutTemplateAuthorizationService: CalloutTemplateAuthorizationService,
     private postTemplateAuthorizationService: PostTemplateAuthorizationService,
     private whiteboardTemplateAuthorizationService: WhiteboardTemplateAuthorizationService,
     private innovationFlowTemplateAuthorizationService: InnovationFlowTemplateAuthorizationService,
     private communityGuidelinesTemplateAuthorizationService: CommunityGuidelinesTemplateAuthorizationService,
+    private postTemplateService: PostTemplateService,
+    private whiteboardTemplateService: WhiteboardTemplateService,
+    private innovationFlowTemplateService: InnovationFlowTemplateService,
+    private communityGuidelinesTemplateService: CommunityGuidelinesTemplateService,
+    private calloutTemplateService: CalloutTemplateService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -65,11 +77,15 @@ export class TemplatesSetResolverMutations {
         calloutTemplateInput,
         agentInfo
       );
-    await this.calloutTemplateAuthorizationService.applyAuthorizationPolicy(
-      calloutTemplate,
-      templatesSet.authorization
+    const authorizations =
+      await this.calloutTemplateAuthorizationService.applyAuthorizationPolicy(
+        calloutTemplate,
+        templatesSet.authorization
+      );
+    await this.authorizationPolicyService.saveAll(authorizations);
+    return await this.calloutTemplateService.getCalloutTemplateOrFail(
+      calloutTemplate.id
     );
-    return calloutTemplate;
   }
 
   @UseGuards(GraphqlGuard)
@@ -97,11 +113,14 @@ export class TemplatesSetResolverMutations {
       templatesSet,
       postTemplateInput
     );
-    await this.postTemplateAuthorizationService.applyAuthorizationPolicy(
-      postTemplate,
-      templatesSet.authorization
-    );
-    return postTemplate;
+    const authorizations =
+      await this.postTemplateAuthorizationService.applyAuthorizationPolicy(
+        postTemplate,
+        templatesSet.authorization
+      );
+
+    await this.authorizationPolicyService.saveAll(authorizations);
+    return this.postTemplateService.getPostTemplateOrFail(postTemplate.id);
   }
 
   @UseGuards(GraphqlGuard)
@@ -131,11 +150,16 @@ export class TemplatesSetResolverMutations {
         templatesSet,
         whiteboardTemplateInput
       );
-    await this.whiteboardTemplateAuthorizationService.applyAuthorizationPolicy(
-      whiteboardTemplate,
-      templatesSet.authorization
+    const authorizations =
+      await this.whiteboardTemplateAuthorizationService.applyAuthorizationPolicy(
+        whiteboardTemplate,
+        templatesSet.authorization
+      );
+
+    await this.authorizationPolicyService.saveAll(authorizations);
+    return this.whiteboardTemplateService.getWhiteboardTemplateOrFail(
+      whiteboardTemplate.id
     );
-    return whiteboardTemplate;
   }
 
   @UseGuards(GraphqlGuard)
@@ -165,11 +189,16 @@ export class TemplatesSetResolverMutations {
         templatesSet,
         innovationFlowTemplateInput
       );
-    await this.innovationFlowTemplateAuthorizationService.applyAuthorizationPolicy(
-      innovationFlowTemplate,
-      templatesSet.authorization
+    const authorizations =
+      await this.innovationFlowTemplateAuthorizationService.applyAuthorizationPolicy(
+        innovationFlowTemplate,
+        templatesSet.authorization
+      );
+
+    await this.authorizationPolicyService.saveAll(authorizations);
+    return this.innovationFlowTemplateService.getInnovationFlowTemplateOrFail(
+      innovationFlowTemplate.id
     );
-    return innovationFlowTemplate;
   }
 
   @UseGuards(GraphqlGuard)
@@ -196,10 +225,15 @@ export class TemplatesSetResolverMutations {
         templatesSet,
         communityGuidelinesTemplateInput
       );
-    await this.communityGuidelinesTemplateAuthorizationService.applyAuthorizationPolicy(
-      communityGuidelinesTemplate,
-      templatesSet.authorization
+    const authorizations =
+      await this.communityGuidelinesTemplateAuthorizationService.applyAuthorizationPolicy(
+        communityGuidelinesTemplate,
+        templatesSet.authorization
+      );
+
+    await this.authorizationPolicyService.saveAll(authorizations);
+    return this.communityGuidelinesTemplateService.getCommunityGuidelinesTemplateOrFail(
+      communityGuidelinesTemplate.id
     );
-    return communityGuidelinesTemplate;
   }
 }

@@ -22,6 +22,7 @@ import { PreferenceSetService } from '@domain/common/preference-set/preference.s
 import { CreateUserGroupInput } from '../user-group/dto';
 import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
 import { IOrganization } from './organization.interface';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
 @Resolver(() => IOrganization)
 export class OrganizationResolverMutations {
@@ -30,6 +31,7 @@ export class OrganizationResolverMutations {
     private organizationAuthorizationService: OrganizationAuthorizationService,
     private organizationService: OrganizationService,
     private authorizationService: AuthorizationService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private preferenceService: PreferenceService,
     private preferenceSetService: PreferenceSetService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService
@@ -53,13 +55,19 @@ export class OrganizationResolverMutations {
       AuthorizationPrivilege.CREATE_ORGANIZATION,
       `create Organization: ${organizationData.profileData.displayName}`
     );
-    const organization = await this.organizationService.createOrganization(
+    let organization = await this.organizationService.createOrganization(
       organizationData,
       agentInfo
     );
+    organization = await this.organizationService.save(organization);
 
-    return await this.organizationAuthorizationService.applyAuthorizationPolicy(
-      organization
+    const authorizations =
+      await this.organizationAuthorizationService.applyAuthorizationPolicy(
+        organization
+      );
+    await this.authorizationPolicyService.saveAll(authorizations);
+    return await this.organizationService.getOrganizationOrFail(
+      organization.id
     );
   }
 
@@ -83,10 +91,13 @@ export class OrganizationResolverMutations {
     );
 
     const group = await this.organizationService.createGroup(groupData);
-    return await this.userGroupAuthorizationService.applyAuthorizationPolicy(
-      group,
-      organization.authorization
-    );
+    const authorizations =
+      await this.userGroupAuthorizationService.applyAuthorizationPolicy(
+        group,
+        organization.authorization
+      );
+    await this.authorizationPolicyService.saveAll(authorizations);
+    return group;
   }
 
   @UseGuards(GraphqlGuard)
@@ -158,8 +169,13 @@ export class OrganizationResolverMutations {
       AuthorizationPrivilege.AUTHORIZATION_RESET,
       `reset authorization definition on organization: ${authorizationResetData.organizationID}`
     );
-    return await this.organizationAuthorizationService.applyAuthorizationPolicy(
-      organization
+    const authorizations =
+      await this.organizationAuthorizationService.applyAuthorizationPolicy(
+        organization
+      );
+    await this.authorizationPolicyService.saveAll(authorizations);
+    return await this.organizationService.getOrganizationOrFail(
+      organization.id
     );
   }
 

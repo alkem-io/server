@@ -53,7 +53,6 @@ import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.
 import { IDiscussion } from '@platform/forum-discussion/discussion.interface';
 import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
-import { IAccount } from '@domain/space/account/account.interface';
 import { AlkemioConfig } from '@src/types';
 
 @Injectable()
@@ -422,7 +421,6 @@ export class NotificationPayloadBuilder {
 
   async buildSpaceCreatedPayload(
     triggeredBy: string,
-    account: IAccount,
     community: ICommunity
   ): Promise<SpaceCreatedEventPayload> {
     const spacePayload = await this.buildSpacePayload(community, triggeredBy);

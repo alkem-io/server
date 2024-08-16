@@ -19,6 +19,7 @@ import { TaskService } from '@services/task/task.service';
 import { AuthResetEventPayload } from '../auth-reset.payload.interface';
 import { AccountAuthorizationService } from '@domain/space/account/account.service.authorization';
 import { AccountService } from '@domain/space/account/account.service';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
 const MAX_RETRIES = 5;
 const RETRY_HEADER = 'x-retry-count';
@@ -28,6 +29,7 @@ export class AuthResetController {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private accountService: AccountService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private accountAuthorizationService: AccountAuthorizationService,
     private platformAuthorizationService: PlatformAuthorizationService,
     private organizationAuthorizationService: OrganizationAuthorizationService,
@@ -53,9 +55,11 @@ export class AuthResetController {
 
     try {
       const account = await this.accountService.getAccountOrFail(payload.id);
-      await this.accountAuthorizationService
-        .applyAuthorizationPolicy(account)
-        .then(account => this.accountService.save(account));
+      const updatedAuthorizations =
+        await this.accountAuthorizationService.applyAuthorizationPolicy(
+          account
+        );
+      await this.authorizationPolicyService.saveAll(updatedAuthorizations);
 
       const message = `Finished resetting authorization for space with id ${payload.id}.`;
       this.logger.verbose?.(message, LogContext.AUTH_POLICY);

@@ -21,6 +21,7 @@ import { LogContext } from '@common/enums';
 import { UpdateSpacePlatformSettingsInput } from './dto/space.dto.update.platform.settings';
 import { SUBSCRIPTION_SUBSPACE_CREATED } from '@common/constants/providers';
 import { UpdateSpaceSettingsInput } from './dto/space.dto.update.settings';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
 @Resolver()
 export class SpaceResolverMutations {
@@ -28,6 +29,7 @@ export class SpaceResolverMutations {
     private contributionReporter: ContributionReporterService,
     private activityAdapter: ActivityAdapter,
     private authorizationService: AuthorizationService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private spaceService: SpaceService,
     private spaceAuthorizationService: SpaceAuthorizationService,
     @Inject(SUBSCRIPTION_SUBSPACE_CREATED)
@@ -95,7 +97,7 @@ export class SpaceResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('settingsData') settingsData: UpdateSpaceSettingsInput
   ): Promise<ISpace> {
-    const space = await this.spaceService.getSpaceOrFail(settingsData.spaceID, {
+    let space = await this.spaceService.getSpaceOrFail(settingsData.spaceID, {
       relations: {
         account: {
           authorization: true,
@@ -119,17 +121,15 @@ export class SpaceResolverMutations {
       `space settings update: ${space.id}`
     );
 
-    let updatedSpace = await this.spaceService.updateSpaceSettings(
-      space,
-      settingsData
-    );
+    space = await this.spaceService.updateSpaceSettings(space, settingsData);
+    space = await this.spaceService.save(space);
 
     // As the settings may update the authorization for the Space, the authorization policy will need to be reset
-    updatedSpace =
-      await this.spaceAuthorizationService.applyAuthorizationPolicy(
-        updatedSpace
-      );
-    return await this.spaceService.save(updatedSpace);
+    const updatedAuthorizations =
+      await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
+    await this.authorizationPolicyService.saveAll(updatedAuthorizations);
+
+    return await this.spaceService.getSpaceOrFail(space.id);
   }
 
   @UseGuards(GraphqlGuard)
@@ -153,9 +153,11 @@ export class SpaceResolverMutations {
       space,
       updateData
     );
-    space =
+    space = await this.spaceService.save(space);
+    const updatedAuthorizations =
       await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
-    return await this.spaceService.save(space);
+    await this.authorizationPolicyService.saveAll(updatedAuthorizations);
+    return await this.spaceService.getSpaceOrFail(space.id);
   }
 
   @UseGuards(GraphqlGuard)
@@ -208,10 +210,10 @@ export class SpaceResolverMutations {
     );
     // Save here so can reuse it later without another load
     const displayName = subspace.profile.displayName;
-
-    subspace =
-      await this.spaceAuthorizationService.applyAuthorizationPolicy(subspace);
     subspace = await this.spaceService.save(subspace);
+    const updatedAuthorizations =
+      await this.spaceAuthorizationService.applyAuthorizationPolicy(subspace);
+    await this.authorizationPolicyService.saveAll(updatedAuthorizations);
 
     this.activityAdapter.subspaceCreated({
       triggeredBy: agentInfo.userID,
@@ -240,6 +242,6 @@ export class SpaceResolverMutations {
       subspaceCreatedEvent
     );
 
-    return subspace;
+    return this.spaceService.getSpaceOrFail(subspace.id);
   }
 }

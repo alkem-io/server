@@ -16,6 +16,7 @@ import { DeletePlatformInvitationInput } from './dto/platform.invitation.dto.del
 import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 import { IUser } from '@domain/community/user/user.interface';
 import { PlatformRole } from '@common/enums/platform.role';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class PlatformInvitationService {
@@ -47,7 +48,9 @@ export class PlatformInvitationService {
       platformInvitationData
     );
 
-    platformInvitation.authorization = new AuthorizationPolicy();
+    platformInvitation.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.INVITATION
+    );
 
     return await this.platformInvitationRepository.save(platformInvitation);
   }
@@ -56,9 +59,8 @@ export class PlatformInvitationService {
     deleteData: DeletePlatformInvitationInput
   ): Promise<IPlatformInvitation> {
     const platformInvitationID = deleteData.ID;
-    const platformInvitation = await this.getPlatformInvitationOrFail(
-      platformInvitationID
-    );
+    const platformInvitation =
+      await this.getPlatformInvitationOrFail(platformInvitationID);
 
     if (platformInvitation.authorization)
       await this.authorizationPolicyService.delete(

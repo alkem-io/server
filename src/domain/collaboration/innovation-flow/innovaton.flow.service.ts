@@ -28,6 +28,7 @@ import { UpdateInnovationFlowFromTemplateInput } from './dto/innovation.flow.dto
 import { InnovationFlowTemplateService } from '@domain/template/innovation-flow-template/innovation.flow.template.service';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { UpdateInnovationFlowSingleStateInput } from './dto/innovation.flow.dto.update.single.state';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class InnovationFlowService {
@@ -47,7 +48,9 @@ export class InnovationFlowService {
     storageAggregator: IStorageAggregator
   ): Promise<IInnovationFlow> {
     const innovationFlow: IInnovationFlow = new InnovationFlow();
-    innovationFlow.authorization = new AuthorizationPolicy();
+    innovationFlow.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.INNOVATION_FLOW
+    );
     if (innovationFlowData.states.length === 0) {
       throw new ValidationException(
         `Require at least one state to create an InnovationFlow: ${innovationFlowData}`,

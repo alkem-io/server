@@ -27,7 +27,7 @@ export class LicensingAuthorizationService {
   async applyAuthorizationPolicy(
     licensingInput: ILicensing,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): Promise<ILicensing> {
+  ): Promise<IAuthorizationPolicy[]> {
     let licensing = licensingInput;
     if (!licensing.licensePolicy) {
       licensing = await this.licensingService.getLicensingOrFail(
@@ -40,11 +40,14 @@ export class LicensingAuthorizationService {
       );
     }
 
-    if (!licensing.licensePolicy)
+    if (!licensing.licensePolicy) {
       throw new RelationshipNotFoundException(
         `Unable to load entities for license manager auth: ${licensing.id} `,
         LogContext.LICENSE
       );
+    }
+    const updatedAuthorizations: IAuthorizationPolicy[] = [];
+
     // Ensure always applying from a clean state
     licensing.authorization = this.authorizationPolicyService.reset(
       licensing.authorization
@@ -58,15 +61,17 @@ export class LicensingAuthorizationService {
     licensing.authorization = await this.appendCredentialRules(
       licensing.authorization
     );
+    updatedAuthorizations.push(licensing.authorization);
 
     // Cascade down
-    licensing.licensePolicy =
+    const policyAuthorization =
       this.licensePolicyAuthorizationService.applyAuthorizationPolicy(
         licensing.licensePolicy,
         licensing.authorization
       );
+    updatedAuthorizations.push(policyAuthorization);
 
-    return await this.licensingService.save(licensing);
+    return updatedAuthorizations;
   }
 
   private async appendCredentialRules(

@@ -18,7 +18,7 @@ export class CommunicationAuthorizationService {
   async applyAuthorizationPolicy(
     communicationInput: ICommunication,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): Promise<ICommunication> {
+  ): Promise<IAuthorizationPolicy[]> {
     const communication =
       await this.communicationService.getCommunicationOrFail(
         communicationInput.id,
@@ -37,24 +37,28 @@ export class CommunicationAuthorizationService {
         LogContext.COMMUNICATION
       );
     }
+    const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
     communication.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         communication.authorization,
         parentAuthorization
       );
+    updatedAuthorizations.push(communication.authorization);
 
-    communication.updates =
+    let roomUpdatedAuthorization =
       this.roomAuthorizationService.applyAuthorizationPolicy(
         communication.updates,
         communication.authorization
       );
     // Note: do NOT allow contributors to create new messages for updates...
-    communication.updates.authorization =
+    roomUpdatedAuthorization =
       this.roomAuthorizationService.allowContributorsToReplyReactToMessages(
-        communication.updates.authorization
+        roomUpdatedAuthorization
       );
 
-    return communication;
+    updatedAuthorizations.push(roomUpdatedAuthorization);
+
+    return updatedAuthorizations;
   }
 }

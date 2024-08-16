@@ -23,6 +23,7 @@ import { ForumDiscussionCategory } from '@common/enums/forum.discussion.category
 import { IForum } from './forum.interface';
 import { ForumDiscussionCategoryException } from '@common/exceptions/forum.discussion.category.exception';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class ForumService {
@@ -40,7 +41,9 @@ export class ForumService {
     discussionCategories: ForumDiscussionCategory[]
   ): Promise<IForum> {
     const forum: IForum = new Forum();
-    forum.authorization = new AuthorizationPolicy();
+    forum.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.FORUM
+    );
 
     forum.discussions = [];
     forum.discussionCategories = discussionCategories;

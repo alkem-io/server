@@ -1,11 +1,7 @@
-import { Repository } from 'typeorm';
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
-import { ITemplateBase } from '../template-base/template.base.interface';
-import { CommunityGuidelinesTemplate } from './community.guidelines.template.entity';
 import { ICommunityGuidelinesTemplate } from './community.guidelines.template.interface';
 import { CommunityGuidelinesAuthorizationService } from '@domain/community/community-guidelines/community.guidelines.service.authorization';
 
@@ -13,8 +9,6 @@ import { CommunityGuidelinesAuthorizationService } from '@domain/community/commu
 export class CommunityGuidelinesTemplateAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
-    @InjectRepository(CommunityGuidelinesTemplate)
-    private communityGuidelinesTemplateRepository: Repository<CommunityGuidelinesTemplate>,
     private profileAuthorizationService: ProfileAuthorizationService,
     private communityGuidelinesAuthorizationService: CommunityGuidelinesAuthorizationService
   ) {}
@@ -22,29 +16,33 @@ export class CommunityGuidelinesTemplateAuthorizationService {
   async applyAuthorizationPolicy(
     communityGuidelinesTemplate: ICommunityGuidelinesTemplate,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): Promise<ITemplateBase> {
+  ): Promise<IAuthorizationPolicy[]> {
+    const updatedAuthorizations: IAuthorizationPolicy[] = [];
+
     // Inherit from the parent
     communityGuidelinesTemplate.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         communityGuidelinesTemplate.authorization,
         parentAuthorization
       );
+    updatedAuthorizations.push(communityGuidelinesTemplate.authorization);
+
     // Cascade
-    communityGuidelinesTemplate.profile =
+    const profileAuthorizations =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
         communityGuidelinesTemplate.profile,
         communityGuidelinesTemplate.authorization
       );
+    updatedAuthorizations.push(...profileAuthorizations);
 
     // Cascade
-    communityGuidelinesTemplate.guidelines =
+    const guidelineAuthorizations =
       await this.communityGuidelinesAuthorizationService.applyAuthorizationPolicy(
         communityGuidelinesTemplate.guidelines,
         communityGuidelinesTemplate.authorization
       );
+    updatedAuthorizations.push(...guidelineAuthorizations);
 
-    return await this.communityGuidelinesTemplateRepository.save(
-      communityGuidelinesTemplate
-    );
+    return updatedAuthorizations;
   }
 }

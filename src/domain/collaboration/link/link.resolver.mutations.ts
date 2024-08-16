@@ -15,11 +15,13 @@ import { EntityNotInitializedException } from '@common/exceptions/entity.not.ini
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { DocumentAuthorizationService } from '@domain/storage/document/document.service.authorization';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
 @Resolver()
 export class LinkResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private linkService: LinkService,
     private storageBucketService: StorageBucketService,
     private documentService: DocumentService,
@@ -109,7 +111,7 @@ export class LinkResolverMutations {
 
     const readStream = createReadStream();
 
-    const document = await this.storageBucketService.uploadFileFromURI(
+    let document = await this.storageBucketService.uploadFileFromURI(
       link.uri,
       link.id,
       storageBucket,
@@ -118,19 +120,18 @@ export class LinkResolverMutations {
       mimetype,
       agentInfo.userID
     );
+    document = await this.documentService.saveDocument(document);
 
-    const documentAuthorized =
+    const documentAuthorizations =
       this.documentAuthorizationService.applyAuthorizationPolicy(
         document,
         storageBucket.authorization
       );
-    const documentSaved = await this.documentService.saveDocument(
-      documentAuthorized
-    );
+    await this.authorizationPolicyService.saveAll(documentAuthorizations);
 
     const updateData: UpdateLinkInput = {
       ID: link.id,
-      uri: this.documentService.getPubliclyAccessibleURL(documentSaved),
+      uri: this.documentService.getPubliclyAccessibleURL(document),
     };
     return await this.linkService.updateLink(updateData);
   }
