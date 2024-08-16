@@ -34,6 +34,8 @@ import { CreateAccountInput } from '@domain/space/account/dto/account.dto.create
 import { SpaceLevel } from '@common/enums/space.level';
 import { CreateSpaceOnAccountInput } from '@domain/space/account/dto/account.dto.create.space';
 import { AlkemioConfig } from '@src/types';
+import { AiServerService } from '@services/ai-server/ai-server/ai.server.service';
+import { AiServerAuthorizationService } from '@services/ai-server/ai-server/ai.server.service.authorization';
 
 @Injectable()
 export class BootstrapService {
@@ -56,6 +58,8 @@ export class BootstrapService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private nameReporter: NameReporterService,
+    private aiServer: AiServerService,
+    private aiServerAuthorizationService: AiServerAuthorizationService,
     // todo remove later
     private ingestService: SearchIngestService
   ) {}
@@ -156,12 +160,7 @@ export class BootstrapService {
           userData.email
         );
         if (!userExists) {
-          const nameID = await this.userService.createUserNameID(
-            userData.firstName,
-            userData.lastName
-          );
           let user = await this.userService.createUser({
-            nameID: nameID,
             email: userData.email,
             accountUpn: userData.email,
             firstName: userData.firstName,
@@ -179,8 +178,9 @@ export class BootstrapService {
             });
           }
           user = await this.userAuthorizationService.grantCredentials(user);
-          user =
+          const authorizations =
             await this.userAuthorizationService.applyAuthorizationPolicy(user);
+          await this.authorizationPolicyService.saveAll(authorizations);
         }
       }
     } catch (error: any) {
@@ -216,19 +216,42 @@ export class BootstrapService {
   }
 
   async ensureAuthorizationsPopulated() {
+    // For platform
     const platform = await this.platformService.getPlatformOrFail();
-    const authorization = this.authorizationPolicyService.validateAuthorization(
-      platform.authorization
-    );
-    const credentialRules =
-      this.authorizationPolicyService.getCredentialRules(authorization);
+    const platformAuthorization =
+      this.authorizationPolicyService.validateAuthorization(
+        platform.authorization
+      );
+    const platformCredentialRules =
+      this.authorizationPolicyService.getCredentialRules(platformAuthorization);
     // Assume that zero rules means that the policy has not been reset
-    if (credentialRules.length == 0) {
+    if (platformCredentialRules.length == 0) {
       this.logger.verbose?.(
         '=== Identified that platform authorization had not been reset; resetting now ===',
         LogContext.BOOTSTRAP
       );
-      await this.platformAuthorizationService.applyAuthorizationPolicy();
+      const updatedAuthorizations =
+        await this.platformAuthorizationService.applyAuthorizationPolicy();
+      await this.authorizationPolicyService.saveAll(updatedAuthorizations);
+    }
+
+    // Also do same for AI Server until it is moved out of the server
+    const aiServer = await this.aiServer.getAiServerOrFail();
+    const aiServerAuthorization =
+      this.authorizationPolicyService.validateAuthorization(
+        aiServer.authorization
+      );
+    const aiServerCredentialRules =
+      this.authorizationPolicyService.getCredentialRules(aiServerAuthorization);
+    // Assume that zero rules means that the policy has not been reset
+    if (aiServerCredentialRules.length == 0) {
+      this.logger.verbose?.(
+        '=== Identified that platform authorization had not been reset; resetting now ===',
+        LogContext.BOOTSTRAP
+      );
+      const authorizations =
+        await this.aiServerAuthorizationService.applyAuthorizationPolicy();
+      await this.authorizationPolicyService.saveAll(authorizations);
     }
   }
 
@@ -252,9 +275,11 @@ export class BootstrapService {
             displayName: DEFAULT_HOST_ORG_DISPLAY_NAME,
           },
         });
-        await this.organizationAuthorizationService.applyAuthorizationPolicy(
-          hostOrganization
-        );
+        const authorizations =
+          await this.organizationAuthorizationService.applyAuthorizationPolicy(
+            hostOrganization
+          );
+        await this.authorizationPolicyService.saveAll(authorizations);
       }
 
       const spaceInput: CreateAccountInput = {
@@ -279,11 +304,13 @@ export class BootstrapService {
         account,
         createSpaceAccountInput
       );
-      account =
+      account = await this.accountService.save(account);
+      const authorizations =
         await this.accountAuthorizationService.applyAuthorizationPolicy(
           account
         );
-      return await this.accountService.save(account);
+      await this.authorizationPolicyService.saveAll(authorizations);
+      return account;
     }
   }
 }

@@ -39,6 +39,7 @@ import { CalloutContributionAuthorizationService } from '../callout-contribution
 import { CalloutContributionService } from '../callout-contribution/callout.contribution.service';
 import { ILink } from '../link/link.interface';
 import { RelationshipNotFoundException } from '@common/exceptions';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
 @Resolver()
 export class CalloutResolverMutations {
@@ -48,6 +49,7 @@ export class CalloutResolverMutations {
     private activityAdapter: ActivityAdapter,
     private notificationAdapter: NotificationAdapter,
     private authorizationService: AuthorizationService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private calloutService: CalloutService,
     private namingService: NamingService,
     private contributionAuthorizationService: CalloutContributionAuthorizationService,
@@ -229,15 +231,16 @@ export class CalloutResolverMutations {
       await this.namingService.getCommunityPolicyAndSettingsForCallout(
         callout.id
       );
+    contribution = await this.calloutContributionService.save(contribution);
     // Ensure settings are available
-    contribution =
+    const updatedAuthorizations =
       await this.contributionAuthorizationService.applyAuthorizationPolicy(
         contribution,
         callout.authorization,
         communityPolicy,
         spaceSettings
       );
-    contribution = await this.calloutContributionService.save(contribution);
+    await this.authorizationPolicyService.saveAll(updatedAuthorizations);
 
     if (contributionData.post && contribution.post) {
       const postCreatedEvent: CalloutPostCreatedPayload = {
@@ -284,7 +287,9 @@ export class CalloutResolverMutations {
       }
     }
 
-    return await this.calloutContributionService.save(contribution);
+    return await this.calloutContributionService.getCalloutContributionOrFail(
+      contribution.id
+    );
   }
 
   private async processActivityLinkCreated(

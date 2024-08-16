@@ -15,11 +15,13 @@ import { AgentBeginVerifiedCredentialOfferOutput } from '@domain/agent/agent/dto
 import { AlkemioUserClaim } from '@services/external/trust-registry/trust.registry.claim/claim.alkemio.user';
 import { CreateUserGroupInput } from '../user-group/dto';
 import { UpdateCommunityApplicationFormInput } from './dto/community.dto.update.application.form';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
 @Resolver()
 export class CommunityResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private userGroupAuthorizationService: UserGroupAuthorizationService,
     private communityService: CommunityService,
     private agentService: AgentService
@@ -44,10 +46,13 @@ export class CommunityResolverMutations {
       `create group community: ${community.id}`
     );
     const group = await this.communityService.createGroup(groupData);
-    return await this.userGroupAuthorizationService.applyAuthorizationPolicy(
-      group,
-      community.authorization
-    );
+    const authorizations =
+      await this.userGroupAuthorizationService.applyAuthorizationPolicy(
+        group,
+        community.authorization
+      );
+    await this.authorizationPolicyService.saveAll(authorizations);
+    return group;
   }
 
   @UseGuards(GraphqlGuard)
@@ -85,9 +90,8 @@ export class CommunityResolverMutations {
     @Args({ name: 'communityID', type: () => String }) communityID: string,
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<AgentBeginVerifiedCredentialOfferOutput> {
-    const community = await this.communityService.getCommunityOrFail(
-      communityID
-    );
+    const community =
+      await this.communityService.getCommunityOrFail(communityID);
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       community.authorization,

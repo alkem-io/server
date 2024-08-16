@@ -60,10 +60,12 @@ export class ConversionResolverMutations {
       convertChallengeToSpaceData,
       agentInfo
     );
+    await this.spaceService.save(newSpace);
+    const updatedAuthorizations =
+      await this.spaceAuthorizationService.applyAuthorizationPolicy(newSpace);
+    await this.authorizationPolicyService.saveAll(updatedAuthorizations);
 
-    return this.spaceAuthorizationService
-      .applyAuthorizationPolicy(newSpace)
-      .then(space => this.spaceService.save(space));
+    return this.spaceService.getSpaceOrFail(newSpace.id);
   }
 
   @UseGuards(GraphqlGuard)
@@ -116,9 +118,13 @@ export class ConversionResolverMutations {
         },
       },
     });
-    await this.spaceAuthorizationService
-      .applyAuthorizationPolicy(parentSpace)
-      .then(space => this.spaceService.save(space));
+    newChallenge.parentSpace = parentSpace;
+    await this.spaceService.save(newChallenge);
+    const updatedAuthorizations =
+      await this.spaceAuthorizationService.applyAuthorizationPolicy(
+        newChallenge
+      );
+    await this.authorizationPolicyService.saveAll(updatedAuthorizations);
     // return the latest, after the parent has saved
     return this.spaceService.getSpaceOrFail(newChallenge.id);
   }

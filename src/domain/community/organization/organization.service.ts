@@ -55,6 +55,9 @@ import { applyOrganizationFilter } from '@core/filtering/filters/organizationFil
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { OrganizationRoleService } from '../organization-role/organization.role.service';
+import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
+import { AgentType } from '@common/enums/agent.type';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class OrganizationService {
@@ -91,10 +94,14 @@ export class OrganizationService {
     );
 
     const organization: IOrganization = Organization.create(organizationData);
-    organization.authorization = new AuthorizationPolicy();
+    organization.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.ORGANIZATION
+    );
 
     organization.storageAggregator =
-      await this.storageAggregatorService.createStorageAggregator();
+      await this.storageAggregatorService.createStorageAggregator(
+        StorageAggregatorType.ORGANIZATION
+      );
     organization.profile = await this.profileService.createProfile(
       organizationData.profileData,
       ProfileType.ORGANIZATION,
@@ -125,7 +132,7 @@ export class OrganizationService {
     organization.groups = [];
 
     organization.agent = await this.agentService.createAgent({
-      parentDisplayID: `organization-${organization.nameID}`,
+      type: AgentType.ORGANIZATION,
     });
 
     const savedOrg = await this.organizationRepository.save(organization);
@@ -641,7 +648,7 @@ export class OrganizationService {
   public async createOrganizationNameID(displayName: string): Promise<string> {
     const base = `${displayName}`;
     const reservedNameIDs =
-      await this.namingService.getReservedNameIDsInVirtualContributors(); // This will need to be smarter later
+      await this.namingService.getReservedNameIDsInOrganizations(); // This will need to be smarter later
     return this.namingService.createNameIdAvoidingReservedNameIDs(
       base,
       reservedNameIDs

@@ -1,8 +1,6 @@
-import { Repository } from 'typeorm';
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { IInnovationHub, InnovationHub } from './types';
+import { IInnovationHub } from './types';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
@@ -18,15 +16,13 @@ export class InnovationHubAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private profileAuthorizationService: ProfileAuthorizationService,
-    private innovationHubService: InnovationHubService,
-    @InjectRepository(InnovationHub)
-    private spaceRepository: Repository<InnovationHub>
+    private innovationHubService: InnovationHubService
   ) {}
 
-  public async applyAuthorizationPolicyAndSave(
+  public async applyAuthorizationPolicy(
     hubInput: IInnovationHub,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): Promise<IInnovationHub> {
+  ): Promise<IAuthorizationPolicy[]> {
     const hub = await this.innovationHubService.getInnovationHubOrFail(
       hubInput.id,
       {
@@ -42,6 +38,7 @@ export class InnovationHubAuthorizationService {
         LogContext.INNOVATION_HUB
       );
     }
+    const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
     // Clone the authorization policy + allow anonymous read access to ensure
     // pages are visible / loadable by all users
@@ -58,14 +55,16 @@ export class InnovationHubAuthorizationService {
       );
 
     hub.authorization = this.extendAuthorizationPolicyRules(hub.authorization);
+    updatedAuthorizations.push(hub.authorization);
 
-    hub.profile =
+    const profileAuthorizations =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
         hub.profile,
         hub.authorization
       );
+    updatedAuthorizations.push(...profileAuthorizations);
 
-    return this.spaceRepository.save(hub);
+    return updatedAuthorizations;
   }
 
   private extendAuthorizationPolicyRules(

@@ -18,6 +18,7 @@
       "type": "user",
       "authorization": {
         "anonymousReadAccess": false,
+        "type": "profile",
         "credentialRules": "[{\"type\":\"global-admin\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"grant\",\"read\",\"update\",\"delete\"],\"cascade\":true},{\"type\":\"global-admin-community\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"read\",\"update\",\"delete\",\"grant\"],\"cascade\":true},{\"type\":\"user-self\",\"resourceID\":\"b69f82a1-bc7d-486c-85f9-e7ac6e689f4e\",\"grantedPrivileges\":[\"create\",\"read\",\"update\"],\"cascade\":true}]",
         "verifiedCredentialRules": "[]",
         "privilegeRules": "",
@@ -27,11 +28,12 @@
     "nameID": "admin-alkemio",
     "rowId": 1,
     "agent": {
-      "parentDisplayID": "admin@alkem.io",
+      "type": "user",
       "did": "",
       "password": "",
       "id": "07c6ec54-524a-4d7f-9f58-a4c50f0c0496",
       "authorization": {
+        "type": "agent",
         "anonymousReadAccess": false,
         "credentialRules": "[{\"type\":\"global-admin\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"grant\",\"read\",\"update\",\"delete\"],\"cascade\":true},{\"type\":\"global-admin-community\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"read\",\"update\",\"delete\",\"grant\"],\"cascade\":true},{\"type\":\"user-self\",\"resourceID\":\"b69f82a1-bc7d-486c-85f9-e7ac6e689f4e\",\"grantedPrivileges\":[\"create\",\"read\",\"update\"],\"cascade\":true}]",
         "verifiedCredentialRules": "[]",
@@ -364,6 +366,7 @@
     },
     "authorization": {
       "anonymousReadAccess": false,
+      "type": "profile",
       "credentialRules": "[{\"type\":\"global-admin\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"grant\",\"read\",\"update\",\"delete\"],\"cascade\":true},{\"type\":\"global-admin-community\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"read\",\"update\",\"delete\",\"grant\"],\"cascade\":true},{\"type\":\"user-self\",\"resourceID\":\"b69f82a1-bc7d-486c-85f9-e7ac6e689f4e\",\"grantedPrivileges\":[\"create\",\"read\",\"update\"],\"cascade\":true}]",
       "verifiedCredentialRules": "[]",
       "privilegeRules": "",

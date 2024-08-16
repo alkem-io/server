@@ -46,6 +46,7 @@ import { getRandomId } from '@src/common/utils';
 import { AgentInfoCacheService } from '../../../core/authentication.agent.info/agent.info.cache.service';
 import { GrantCredentialToAgentInput } from './dto/agent.dto.credential.grant';
 import { AlkemioConfig } from '@src/types';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class AgentService {
@@ -78,7 +79,10 @@ export class AgentService {
   public async createAgent(inputData: CreateAgentInput): Promise<IAgent> {
     const agent: IAgent = Agent.create(inputData);
     agent.credentials = [];
-    agent.authorization = new AuthorizationPolicy();
+    agent.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.AGENT
+    );
+    agent.type = inputData.type;
 
     const ssiEnabled = this.configService.get('ssi.enabled', { infer: true });
 
@@ -193,7 +197,7 @@ export class AgentService {
         credential.resourceID === grantCredentialData.resourceID
       ) {
         throw new ValidationException(
-          `Agent (${agent.parentDisplayID}) already has assigned credential: ${grantCredentialData.type}`,
+          `Agent (${agent.id}) already has assigned credential: ${grantCredentialData.type}`,
           LogContext.AUTH
         );
       }
@@ -462,7 +466,7 @@ export class AgentService {
     const payload: ProfileCredentialVerified = {
       eventID,
       vc: 'something something vc',
-      userEmail: agent.parentDisplayID ?? '',
+      userEmail: agent.id ?? '',
     };
 
     await this.subscriptionVerifiedCredentials.publish(
@@ -544,7 +548,7 @@ export class AgentService {
     const payload: ProfileCredentialVerified = {
       eventID,
       vc: 'something something vc',
-      userEmail: agent.parentDisplayID ?? '',
+      userEmail: agent.id ?? '', // TODO: not a flow we are maintaining at the moment
     };
 
     await this.subscriptionVerifiedCredentials.publish(
