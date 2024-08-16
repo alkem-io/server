@@ -20,6 +20,7 @@ import { SearchVisibility } from '@common/enums/search.visibility';
 import { IAccount } from '@domain/space/account/account.interface';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { AccountHostService } from '@domain/space/account.host/account.host.service';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class InnovationHubService {
@@ -81,7 +82,9 @@ export class InnovationHubService {
     }
 
     const hub: IInnovationHub = InnovationHub.create(createData);
-    hub.authorization = new AuthorizationPolicy();
+    hub.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.INNOVATION_HUB
+    );
     hub.listedInStore = true;
     hub.searchVisibility = SearchVisibility.ACCOUNT;
     hub.account = account;

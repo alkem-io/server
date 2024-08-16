@@ -23,6 +23,7 @@ import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import { LicensingService } from '@platform/licensing/licensing.service';
 import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { AgentType } from '@common/enums/agent.type';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class AccountHostService {
@@ -40,7 +41,9 @@ export class AccountHostService {
 
   async createAccount(accountData: CreateAccountInput): Promise<IAccount> {
     let account: IAccount = new Account();
-    account.authorization = new AuthorizationPolicy();
+    account.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.ACCOUNT
+    );
     account.storageAggregator =
       await this.storageAggregatorService.createStorageAggregator(
         StorageAggregatorType.ACCOUNT

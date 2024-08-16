@@ -20,6 +20,7 @@ import {
 import { SpaceLevel } from '@common/enums/space.level';
 import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { ISpace } from '@domain/space/space/space.interface';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 @Injectable()
 export class StorageAggregatorService {
   constructor(
@@ -39,7 +40,9 @@ export class StorageAggregatorService {
   ): Promise<IStorageAggregator> {
     const storageAggregator: IStorageAggregator = new StorageAggregator();
     storageAggregator.type = type;
-    storageAggregator.authorization = new AuthorizationPolicy();
+    storageAggregator.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.STORAGE_AGGREGATOR
+    );
 
     storageAggregator.parentStorageAggregator = parentStorageAggregator;
 

@@ -18,6 +18,7 @@ import { LogContext } from '@common/enums';
 import { CreateActorInput, IActor } from '@domain/context/actor';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class ActorGroupService {
@@ -32,7 +33,9 @@ export class ActorGroupService {
   public createActorGroup(actorGroupData: CreateActorGroupInput): IActorGroup {
     return ActorGroup.create({
       ...actorGroupData,
-      authorization: new AuthorizationPolicy(),
+      authorization: new AuthorizationPolicy(
+        AuthorizationPolicyType.ACTOR_GROUP
+      ),
       actors: [],
     });
   }

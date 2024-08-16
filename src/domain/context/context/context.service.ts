@@ -10,6 +10,7 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { EcosystemModelService } from '@domain/context/ecosystem-model/ecosystem-model.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { UpdateContextInput } from './dto/context.dto.update';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class ContextService {
@@ -24,7 +25,7 @@ export class ContextService {
   public createContext(contextData?: CreateContextInput): IContext {
     return Context.create({
       ...contextData,
-      authorization: new AuthorizationPolicy(),
+      authorization: new AuthorizationPolicy(AuthorizationPolicyType.CONTEXT),
       ecosystemModel: this.ecosystemModelService.createEcosystemModel({}),
     });
   }

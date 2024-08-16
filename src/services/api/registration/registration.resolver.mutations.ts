@@ -21,6 +21,7 @@ import { IOrganization } from '@domain/community/organization/organization.inter
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { OrganizationAuthorizationService } from '@domain/community/organization/organization.service.authorization';
 import { AccountAuthorizationService } from '@domain/space/account/account.service.authorization';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
 @Resolver()
 export class RegistrationResolverMutations {
@@ -34,6 +35,7 @@ export class RegistrationResolverMutations {
     private authorizationService: AuthorizationService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private accountAuthorizationService: AccountAuthorizationService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -74,14 +76,19 @@ export class RegistrationResolverMutations {
     userInput: IUser,
     agentInfo: AgentInfo
   ): Promise<IUser> {
-    let user = await this.userAuthorizationService.grantCredentials(userInput);
+    const user =
+      await this.userAuthorizationService.grantCredentials(userInput);
 
-    user = await this.userAuthorizationService.applyAuthorizationPolicy(user);
+    const userAuthorizations =
+      await this.userAuthorizationService.applyAuthorizationPolicy(user);
+    await this.authorizationPolicyService.saveAll(userAuthorizations);
 
     const userAccount = await this.userService.getAccount(user);
-    await this.accountAuthorizationService.applyAuthorizationPolicy(
-      userAccount
-    );
+    const accountAuthorizations =
+      await this.accountAuthorizationService.applyAuthorizationPolicy(
+        userAccount
+      );
+    await this.authorizationPolicyService.saveAll(accountAuthorizations);
 
     await this.registrationService.processPendingInvitations(user);
 
@@ -107,22 +114,27 @@ export class RegistrationResolverMutations {
       AuthorizationPrivilege.CREATE_ORGANIZATION,
       `create Organization: ${organizationData.nameID}`
     );
-    let organization = await this.organizationService.createOrganization(
+    const organization = await this.organizationService.createOrganization(
       organizationData,
       agentInfo
     );
-    organization =
+    const organizationAuthorizations =
       await this.organizationAuthorizationService.applyAuthorizationPolicy(
         organization
       );
+    await this.authorizationPolicyService.saveAll(organizationAuthorizations);
 
     const organizationAccount =
       await this.organizationService.getAccount(organization);
-    await this.accountAuthorizationService.applyAuthorizationPolicy(
-      organizationAccount
-    );
+    const accountAuthorizations =
+      await this.accountAuthorizationService.applyAuthorizationPolicy(
+        organizationAccount
+      );
+    await this.authorizationPolicyService.saveAll(accountAuthorizations);
 
-    return organization;
+    return await this.organizationService.getOrganizationOrFail(
+      organization.id
+    );
   }
 
   private async userCreatedEvents(user: IUser, agentInfo: AgentInfo) {

@@ -14,9 +14,11 @@ import { NameReporterModule } from '@services/external/elasticsearch/name-report
 import { AccountModule } from '@domain/space/account/account.module';
 import { Account } from '@domain/space/account/account.entity';
 import { SearchIngestModule } from '@services/api/search/v2/ingest';
+import { AiServerModule } from '@services/ai-server/ai-server/ai.server.module';
 
 @Module({
   imports: [
+    AiServerModule,
     AgentModule,
     AuthorizationPolicyModule,
     SpaceModule,

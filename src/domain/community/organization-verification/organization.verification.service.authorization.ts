@@ -1,13 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { AuthorizationCredential, LogContext } from '@common/enums';
-import { Repository } from 'typeorm';
 import { AuthorizationPrivilege } from '@common/enums';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { IOrganizationVerification } from './organization.verification.interface';
-import { OrganizationVerification } from './organization.verification.entity';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
   CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_ADMINS_ALL,
@@ -18,17 +15,15 @@ import {
 export class OrganizationVerificationAuthorizationService {
   constructor(
     private authorizationPolicy: AuthorizationPolicyService,
-    private authorizationPolicyService: AuthorizationPolicyService,
-    @InjectRepository(OrganizationVerification)
-    private organizationVerificationRepository: Repository<OrganizationVerification>
+    private authorizationPolicyService: AuthorizationPolicyService
   ) {}
 
   async applyAuthorizationPolicy(
     organizationVerification: IOrganizationVerification,
     organizationID: string
-  ): Promise<IOrganizationVerification> {
+  ): Promise<IAuthorizationPolicy> {
     organizationVerification.authorization =
-      await this.authorizationPolicyService.reset(
+      this.authorizationPolicyService.reset(
         organizationVerification.authorization
       );
     organizationVerification.authorization = this.appendCredentialRules(
@@ -37,9 +32,7 @@ export class OrganizationVerificationAuthorizationService {
       organizationID
     );
 
-    return await this.organizationVerificationRepository.save(
-      organizationVerification
-    );
+    return organizationVerification.authorization;
   }
 
   private appendCredentialRules(

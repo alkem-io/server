@@ -20,7 +20,6 @@ import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dt
 import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
 import { ISpaceSettings } from '../space.settings/space.settings.interface';
 import { ICalloutGroup } from '@domain/collaboration/callout-groups/callout.group.interface';
-import { Account } from '../account/account.entity';
 import { subspaceCommunityPolicy } from './definitions/subspace.community.policy';
 import { spaceCommunityPolicy } from './definitions/space.community.policy';
 import { ICommunityPolicyDefinition } from '@domain/community/community-policy/community.policy.definition';
@@ -53,6 +52,7 @@ import { spaceDefaultsCalloutGroupsBlankSlate } from './definitions/blank-slate/
 import { spaceDefaultsCalloutsBlankSlate } from './definitions/blank-slate/space.defaults.callouts.blank.slate';
 import { spaceDefaultsSettingsBlankSlate } from './definitions/blank-slate/space.defaults.settings.blank.slate';
 import { spaceDefaultsInnovationFlowStatesBlankSlate } from './definitions/blank-slate/space.defaults.innovation.flow.blank.slate';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class SpaceDefaultsService {
@@ -62,14 +62,14 @@ export class SpaceDefaultsService {
     private innovationFlowTemplateService: InnovationFlowTemplateService,
     private templatesSetService: TemplatesSetService,
     @InjectRepository(SpaceDefaults)
-    private spaceDefaultsRepository: Repository<SpaceDefaults>,
-    @InjectRepository(Account)
-    private accountRepository: Repository<Account>
+    private spaceDefaultsRepository: Repository<SpaceDefaults>
   ) {}
 
   public async createSpaceDefaults(): Promise<ISpaceDefaults> {
     const spaceDefaults: ISpaceDefaults = new SpaceDefaults();
-    spaceDefaults.authorization = new AuthorizationPolicy();
+    spaceDefaults.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.SPACE_DEFAULTS
+    );
 
     return spaceDefaults;
   }

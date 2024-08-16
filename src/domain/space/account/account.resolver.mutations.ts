@@ -34,6 +34,7 @@ import { TransferAccountSpaceInput } from './dto/account.dto.transfer.space';
 import { TransferAccountInnovationHubInput } from './dto/account.dto.transfer.innovation.hub';
 import { TransferAccountInnovationPackInput } from './dto/account.dto.transfer.innovation.pack';
 import { TransferAccountVirtualContributorInput } from './dto/account.dto.transfer.virtual.contributor';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
 @Resolver()
 export class AccountResolverMutations {
@@ -41,6 +42,7 @@ export class AccountResolverMutations {
     private accountService: AccountService,
     private accountAuthorizationService: AccountAuthorizationService,
     private authorizationService: AuthorizationService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private virtualContributorService: VirtualContributorService,
     private virtualContributorAuthorizationService: VirtualContributorAuthorizationService,
     private innovationHubService: InnovationHubService,
@@ -76,11 +78,11 @@ export class AccountResolverMutations {
     );
 
     let space = await this.accountService.createSpaceOnAccount(spaceData);
-
-    space =
-      await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
-
     space = await this.spaceService.save(space);
+
+    const spaceAuthorizations =
+      await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
+    await this.authorizationPolicyService.saveAll(spaceAuthorizations);
 
     space = await this.spaceService.getSpaceOrFail(space.id, {
       relations: {
@@ -103,7 +105,6 @@ export class AccountResolverMutations {
     const notificationInput: NotificationInputSpaceCreated = {
       triggeredBy: agentInfo.userID,
       community: space.community,
-      account: account,
     };
     await this.notificationAdapter.spaceCreated(notificationInput);
 
@@ -138,12 +139,16 @@ export class AccountResolverMutations {
       createData,
       account
     );
-    innovationHub =
-      await this.innovationHubAuthorizationService.applyAuthorizationPolicyAndSave(
+    innovationHub = await this.innovationHubService.save(innovationHub);
+    const authorizations =
+      await this.innovationHubAuthorizationService.applyAuthorizationPolicy(
         innovationHub,
         account.authorization
       );
-    return await this.innovationHubService.save(innovationHub);
+    await this.authorizationPolicyService.saveAll(authorizations);
+    return await this.innovationHubService.getInnovationHubOrFail(
+      innovationHub.id
+    );
   }
 
   @UseGuards(GraphqlGuard)
@@ -166,7 +171,7 @@ export class AccountResolverMutations {
       `create Virtual contributor on account: ${account.id}`
     );
 
-    let virtual = await this.accountService.createVirtualContributorOnAccount(
+    const virtual = await this.accountService.createVirtualContributorOnAccount(
       virtualContributorData
     );
 
@@ -175,14 +180,12 @@ export class AccountResolverMutations {
         account
       );
 
-    // Need
-    virtual =
+    const updatedAuthorizations =
       await this.virtualContributorAuthorizationService.applyAuthorizationPolicy(
         virtual,
         clonedAccountAuth
       );
-
-    virtual = await this.virtualContributorService.save(virtual);
+    await this.authorizationPolicyService.saveAll(updatedAuthorizations);
 
     // Reload to ensure the new member credential is loaded
     return await this.virtualContributorService.getVirtualContributorOrFail(
@@ -213,7 +216,7 @@ export class AccountResolverMutations {
       `create Innovation Pack on account: ${account.id}`
     );
 
-    let innovationPack =
+    const innovationPack =
       await this.accountService.createInnovationPackOnAccount(
         innovationPackData
       );
@@ -222,14 +225,16 @@ export class AccountResolverMutations {
       await this.accountAuthorizationService.getClonedAccountAuthExtendedForChildEntities(
         account
       );
-
-    innovationPack =
+    const updatedAuthorizations =
       await this.innovationPackAuthorizationService.applyAuthorizationPolicy(
         innovationPack,
         clonedAccountAuth
       );
+    await this.authorizationPolicyService.saveAll(updatedAuthorizations);
 
-    return await this.innovationPackService.save(innovationPack);
+    return await this.innovationPackService.getInnovationPackOrFail(
+      innovationPack.id
+    );
   }
 
   @UseGuards(GraphqlGuard)
@@ -250,9 +255,10 @@ export class AccountResolverMutations {
       AuthorizationPrivilege.AUTHORIZATION_RESET,
       `reset authorization definition on Space: ${agentInfo.email}`
     );
-    return this.accountAuthorizationService
-      .applyAuthorizationPolicy(account)
-      .then(account => this.accountService.save(account));
+    const accountAuthorizations =
+      await this.accountAuthorizationService.applyAuthorizationPolicy(account);
+    await this.authorizationPolicyService.saveAll(accountAuthorizations);
+    return await this.accountService.getAccountOrFail(account.id);
   }
 
   @UseGuards(GraphqlGuard)
@@ -293,13 +299,17 @@ export class AccountResolverMutations {
         targetAccount
       );
 
-    innovationHub =
-      await this.innovationHubAuthorizationService.applyAuthorizationPolicyAndSave(
+    const innovationHubAuthorizations =
+      await this.innovationHubAuthorizationService.applyAuthorizationPolicy(
         innovationHub,
         clonedAccountAuth
       );
+    await this.authorizationPolicyService.saveAll(innovationHubAuthorizations);
+
     // TODO: check if still needed later
-    return await this.innovationHubService.save(innovationHub);
+    return await this.innovationHubService.getInnovationHubOrFail(
+      innovationHub.id
+    );
   }
 
   @UseGuards(GraphqlGuard)
@@ -330,13 +340,14 @@ export class AccountResolverMutations {
     );
 
     space.account = targetAccount;
-    // TODO: check if still needed later
+
     space = await this.spaceService.save(space);
 
-    space =
+    const spaceAuthorizations =
       await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
+    await this.authorizationPolicyService.saveAll(spaceAuthorizations);
     // TODO: check if still needed later
-    return await this.spaceService.save(space);
+    return await this.spaceService.getSpaceOrFail(space.id);
   }
 
   @UseGuards(GraphqlGuard)
@@ -371,19 +382,22 @@ export class AccountResolverMutations {
     );
 
     innovationPack.account = targetAccount;
-    // TODO: check if still needed later
     innovationPack = await this.innovationPackService.save(innovationPack);
+
     const clonedAccountAuth =
       await this.accountAuthorizationService.getClonedAccountAuthExtendedForChildEntities(
         targetAccount
       );
-    innovationPack =
+    const innovationPackAuthorizations =
       await this.innovationPackAuthorizationService.applyAuthorizationPolicy(
         innovationPack,
         clonedAccountAuth
       );
-    // TODO: check if still needed later
-    return await this.innovationPackService.save(innovationPack);
+    await this.authorizationPolicyService.saveAll(innovationPackAuthorizations);
+
+    return await this.innovationPackService.getInnovationPackOrFail(
+      innovationPack.id
+    );
   }
 
   @UseGuards(GraphqlGuard)
@@ -422,17 +436,24 @@ export class AccountResolverMutations {
     // TODO: check if still needed later
     virtualContributor =
       await this.virtualContributorService.save(virtualContributor);
+
     const clonedAccountAuth =
       await this.accountAuthorizationService.getClonedAccountAuthExtendedForChildEntities(
         targetAccount
       );
-    virtualContributor =
+    const virtualContributorAuthorizations =
       await this.virtualContributorAuthorizationService.applyAuthorizationPolicy(
         virtualContributor,
         clonedAccountAuth
       );
+    await this.authorizationPolicyService.saveAll(
+      virtualContributorAuthorizations
+    );
+
     // TODO: check if still needed later
-    return await this.virtualContributorService.save(virtualContributor);
+    return await this.virtualContributorService.getVirtualContributorOrFail(
+      virtualContributor.id
+    );
   }
 
   private async validateTransferOfAccountResource(

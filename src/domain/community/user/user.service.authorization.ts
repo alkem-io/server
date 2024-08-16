@@ -44,7 +44,9 @@ export class UserAuthorizationService {
     private userService: UserService
   ) {}
 
-  async applyAuthorizationPolicy(userInput: IUser): Promise<IUser> {
+  async applyAuthorizationPolicy(
+    userInput: IUser
+  ): Promise<IAuthorizationPolicy[]> {
     const user = await this.userService.getUserOrFail(userInput.id, {
       relations: {
         agent: true,
@@ -66,6 +68,9 @@ export class UserAuthorizationService {
         `Unable to load agent or profile or preferences or storage for User ${user.id} `,
         LogContext.COMMUNITY
       );
+
+    const updatedAuthorizations: IAuthorizationPolicy[] = [];
+
     // Ensure always applying from a clean state
     user.authorization = this.authorizationPolicyService.reset(
       user.authorization
@@ -81,6 +86,7 @@ export class UserAuthorizationService {
     );
 
     user.authorization = this.appendPrivilegeRules(user.authorization);
+    updatedAuthorizations.push(user.authorization);
 
     // NOTE: Clone the authorization policy to ensure the changes are local to profile
     const clonedAnonymousReadAccessAuthorization =
@@ -91,30 +97,35 @@ export class UserAuthorizationService {
     clonedAnonymousReadAccessAuthorization.anonymousReadAccess = true;
 
     // cascade
-    user.profile =
+    const profileAuthorizations =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
         user.profile,
         clonedAnonymousReadAccessAuthorization // Key that this is publicly visible
       );
+    updatedAuthorizations.push(...profileAuthorizations);
 
-    user.agent = this.agentAuthorizationService.applyAuthorizationPolicy(
-      user.agent,
-      user.authorization
-    );
+    const agentAuthoation =
+      this.agentAuthorizationService.applyAuthorizationPolicy(
+        user.agent,
+        user.authorization
+      );
+    updatedAuthorizations.push(agentAuthoation);
 
-    user.preferenceSet =
+    const preferenceSetAuthorizations =
       this.preferenceSetAuthorizationService.applyAuthorizationPolicy(
         user.preferenceSet,
         user.authorization
       );
+    updatedAuthorizations.push(...preferenceSetAuthorizations);
 
-    user.storageAggregator =
+    const storageAuthorizations =
       await this.storageAggregatorAuthorizationService.applyAuthorizationPolicy(
         user.storageAggregator,
         user.authorization
       );
+    updatedAuthorizations.push(...storageAuthorizations);
 
-    return await this.userService.save(user);
+    return updatedAuthorizations;
   }
 
   async grantCredentials(user: IUser): Promise<IUser> {

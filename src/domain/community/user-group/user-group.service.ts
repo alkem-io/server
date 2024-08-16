@@ -29,6 +29,7 @@ import {
   UpdateUserGroupInput,
 } from './dto';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class UserGroupService {
@@ -47,7 +48,9 @@ export class UserGroupService {
     storageAggregator: IStorageAggregator
   ): Promise<IUserGroup> {
     const group = UserGroup.create(userGroupData);
-    group.authorization = new AuthorizationPolicy();
+    group.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.USER_GROUP
+    );
 
     (group as IUserGroup).profile = await this.profileService.createProfile(
       userGroupData.profile,

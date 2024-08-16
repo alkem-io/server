@@ -58,6 +58,7 @@ import { AccountHostService } from '@domain/space/account.host/account.host.serv
 import { IAccount } from '@domain/space/account/account.interface';
 import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { AgentType } from '@common/enums/agent.type';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class OrganizationService {
@@ -95,7 +96,9 @@ export class OrganizationService {
     );
 
     let organization: IOrganization = Organization.create(organizationData);
-    organization.authorization = new AuthorizationPolicy();
+    organization.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.ORGANIZATION
+    );
 
     organization.storageAggregator =
       await this.storageAggregatorService.createStorageAggregator(

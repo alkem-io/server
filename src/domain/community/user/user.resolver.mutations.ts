@@ -18,12 +18,14 @@ import { PreferenceSetService } from '@domain/common/preference-set/preference.s
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { UpdateUserPlatformSettingsInput } from './dto/user.dto.update.platform.settings';
 import { UpdateUserInput } from './dto';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
 @Resolver(() => IUser)
 export class UserResolverMutations {
   constructor(
     private communicationAdapter: CommunicationAdapter,
     private authorizationService: AuthorizationService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private userService: UserService,
     private userAuthorizationService: UserAuthorizationService,
     private preferenceService: PreferenceService,
@@ -36,7 +38,6 @@ export class UserResolverMutations {
   @Mutation(() => IUser, {
     description: 'Updates the User.',
   })
-  @Profiling.api
   async updateUser(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('userData') userData: UpdateUserInput
@@ -127,7 +128,10 @@ export class UserResolverMutations {
       AuthorizationPrivilege.AUTHORIZATION_RESET,
       `reset authorization definition on user: ${authorizationResetData.userID}`
     );
-    return await this.userAuthorizationService.applyAuthorizationPolicy(user);
+    const updatedAuthorizations =
+      await this.userAuthorizationService.applyAuthorizationPolicy(user);
+    await this.authorizationPolicyService.saveAll(updatedAuthorizations);
+    return await this.userService.getUserOrFail(user.id);
   }
 
   @UseGuards(GraphqlGuard)

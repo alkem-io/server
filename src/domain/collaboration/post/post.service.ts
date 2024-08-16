@@ -17,6 +17,7 @@ import { RoomService } from '@domain/communication/room/room.service';
 import { RoomType } from '@common/enums/room.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class PostService {
@@ -46,7 +47,7 @@ export class PostService {
       name: TagsetReservedName.DEFAULT,
       tags: postInput.tags || [],
     });
-    post.authorization = new AuthorizationPolicy();
+    post.authorization = new AuthorizationPolicy(AuthorizationPolicyType.POST);
     post.createdBy = userID;
 
     post.comments = await this.roomService.createRoom(

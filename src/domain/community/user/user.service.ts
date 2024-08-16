@@ -64,6 +64,7 @@ import { User } from './user.entity';
 import { IUser } from './user.interface';
 import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { AgentType } from '@common/enums/agent.type';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class UserService {
@@ -117,7 +118,7 @@ export class UserService {
     await this.validateUserProfileCreationRequest(userData);
 
     const user: IUser = User.create(userData);
-    user.authorization = new AuthorizationPolicy();
+    user.authorization = new AuthorizationPolicy(AuthorizationPolicyType.USER);
 
     const profileData = await this.extendProfileDataWithReferences(
       userData.profileData

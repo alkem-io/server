@@ -67,6 +67,7 @@ import { ISpaceDefaults } from '../space.defaults/space.defaults.interface';
 import { AgentType } from '@common/enums/agent.type';
 import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { AccountHostService } from '../account.host/account.host.service';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class SpaceService {
@@ -127,22 +128,9 @@ export class SpaceService {
     // default to demo space
     space.visibility = SpaceVisibility.ACTIVE;
 
-    const initializedSpace = await this.initialise(
-      space,
-      spaceData,
-      agentInfo,
-      spaceDefaults
+    space.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.SPACE
     );
-    return this.save(initializedSpace);
-  }
-
-  private async initialise(
-    space: ISpace,
-    spaceData: CreateSpaceInput,
-    agentInfo: AgentInfo | undefined,
-    spaceDefaults?: ISpaceDefaults
-  ): Promise<ISpace> {
-    space.authorization = new AuthorizationPolicy();
     space.settingsStr = this.spaceSettingsService.serializeSettings(
       this.spaceDefaultsService.getDefaultSpaceSettings(spaceData.type)
     );

@@ -10,13 +10,13 @@ export class PlatformInvitationAuthorizationService {
   async applyAuthorizationPolicy(
     platformInvitation: IPlatformInvitation,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): Promise<IPlatformInvitation> {
-    platformInvitation.authorization =
+  ): Promise<IAuthorizationPolicy> {
+    const updatedPlatformAuthorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         platformInvitation.authorization,
         parentAuthorization
       );
 
-    return platformInvitation;
+    return updatedPlatformAuthorization;
   }
 }

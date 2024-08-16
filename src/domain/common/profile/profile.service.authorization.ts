@@ -20,7 +20,7 @@ export class ProfileAuthorizationService {
   async applyAuthorizationPolicy(
     profileInput: IProfile,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): Promise<IProfile> {
+  ): Promise<IAuthorizationPolicy[]> {
     const profile = await this.profileService.getProfileOrFail(
       profileInput.id,
       {
@@ -49,6 +49,7 @@ export class ProfileAuthorizationService {
         LogContext.ACCOUNT
       );
     }
+    const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
     // Inherit from the parent
     profile.authorization =
@@ -56,6 +57,7 @@ export class ProfileAuthorizationService {
         profile.authorization,
         parentAuthorization
       );
+    updatedAuthorizations.push(profile.authorization);
 
     for (const reference of profile.references) {
       reference.authorization =
@@ -63,6 +65,7 @@ export class ProfileAuthorizationService {
           reference.authorization,
           profile.authorization
         );
+      updatedAuthorizations.push(reference.authorization);
     }
 
     for (const tagset of profile.tagsets) {
@@ -71,21 +74,25 @@ export class ProfileAuthorizationService {
           tagset.authorization,
           profile.authorization
         );
+      updatedAuthorizations.push(tagset.authorization);
     }
 
     for (const visual of profile.visuals) {
-      this.visualAuthorizationService.applyAuthorizationPolicy(
-        visual,
-        profile.authorization
-      );
+      visual.authorization =
+        this.visualAuthorizationService.applyAuthorizationPolicy(
+          visual,
+          profile.authorization
+        );
+      updatedAuthorizations.push(visual.authorization);
     }
 
-    profile.storageBucket =
+    const storageBucketAuthorizations =
       this.storageBucketAuthorizationService.applyAuthorizationPolicy(
         profile.storageBucket,
         profile.authorization
       );
+    updatedAuthorizations.push(...storageBucketAuthorizations);
 
-    return profile;
+    return updatedAuthorizations;
   }
 }

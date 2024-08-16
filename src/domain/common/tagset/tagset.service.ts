@@ -19,6 +19,7 @@ import { TagsetType } from '@common/enums/tagset.type';
 import { ITagsetTemplate } from '../tagset-template';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { TagsetNotFoundException } from '@common/exceptions/tagset.not.found.exception';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class TagsetService {
@@ -32,7 +33,7 @@ export class TagsetService {
   public createTagset(tagsetData: CreateTagsetInput): ITagset {
     return Tagset.create({
       ...tagsetData,
-      authorization: new AuthorizationPolicy(),
+      authorization: new AuthorizationPolicy(AuthorizationPolicyType.TAGSET),
       type: tagsetData.type ?? TagsetType.FREEFORM,
       tags: tagsetData?.tags ?? [],
       tagsetTemplate: tagsetData.tagsetTemplate,

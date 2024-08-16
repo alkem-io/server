@@ -21,6 +21,7 @@ import { IDocument } from '@domain/storage/document/document.interface';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { StorageUploadFailedException } from '@common/exceptions/storage/storage.upload.failed.exception';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class VisualService {
@@ -41,7 +42,9 @@ export class VisualService {
       uri: initialUri ?? '',
     });
 
-    visual.authorization = new AuthorizationPolicy();
+    visual.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.VISUAL
+    );
 
     if (initialUri) {
       visual.uri = initialUri;

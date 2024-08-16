@@ -12,13 +12,14 @@ export class PreferenceSetAuthorizationService {
   applyAuthorizationPolicy(
     preferenceSet: IPreferenceSet,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): IPreferenceSet {
+  ): IAuthorizationPolicy[] {
     if (!preferenceSet.preferences) {
       throw new RelationshipNotFoundException(
         `Unable to load child entities for preference set authorization: ${preferenceSet.id} `,
         LogContext.COMMUNITY
       );
     }
+    const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
     // Inherit from the parent
     preferenceSet.authorization =
@@ -26,6 +27,7 @@ export class PreferenceSetAuthorizationService {
         preferenceSet.authorization,
         parentAuthorization
       );
+    updatedAuthorizations.push(preferenceSet.authorization);
 
     if (preferenceSet.preferences) {
       for (const preference of preferenceSet.preferences) {
@@ -34,9 +36,10 @@ export class PreferenceSetAuthorizationService {
             preference.authorization,
             preferenceSet.authorization
           );
+        updatedAuthorizations.push(preference.authorization);
       }
     }
 
-    return preferenceSet;
+    return updatedAuthorizations;
   }
 }

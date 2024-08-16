@@ -58,9 +58,12 @@ export class ConversionResolverMutations {
       convertChallengeToSpaceData,
       agentInfo
     );
-    space =
+    space = await this.spaceService.save(space);
+    const updatedAuthorizations =
       await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
-    return this.spaceService.save(space);
+    await this.authorizationPolicyService.saveAll(updatedAuthorizations);
+
+    return this.spaceService.getSpaceOrFail(space.id);
   }
 
   @UseGuards(GraphqlGuard)
@@ -84,8 +87,10 @@ export class ConversionResolverMutations {
       convertOpportunityToChallengeData.subsubspaceID,
       agentInfo
     );
-    subspace =
+    subspace = await this.spaceService.save(subspace);
+    const subspaceAuthorizations =
       await this.spaceAuthorizationService.applyAuthorizationPolicy(subspace);
-    return this.spaceService.save(subspace);
+    await this.authorizationPolicyService.saveAll(subspaceAuthorizations);
+    return await this.spaceService.getSpaceOrFail(subspace.id);
   }
 }

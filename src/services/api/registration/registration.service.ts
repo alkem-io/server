@@ -10,7 +10,6 @@ import { getEmailDomain } from '@common/utils';
 import { OrganizationVerificationEnum } from '@common/enums/organization.verification';
 import { OrganizationPreferenceType } from '@common/enums/organization.preference.type';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
-import { UserAuthorizationService } from '@domain/community/user/user.service.authorization';
 import { IInvitation } from '@domain/community/invitation/invitation.interface';
 import { InvitationAuthorizationService } from '@domain/community/invitation/invitation.service.authorization';
 import { CreateInvitationInput } from '@domain/community/invitation/dto/invitation.dto.create';
@@ -22,14 +21,15 @@ import { PlatformInvitationService } from '@platform/invitation/platform.invitat
 import { PlatformRoleService } from '@platform/platfrom.role/platform.role.service';
 import { CommunityRoleService } from '@domain/community/community-role/community.role.service';
 import { OrganizationRoleService } from '@domain/community/organization-role/organization.role.service';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
 export class RegistrationService {
   constructor(
+    private authorizationPolicyService: AuthorizationPolicyService,
     private userService: UserService,
     private organizationService: OrganizationService,
     private organizationRoleService: OrganizationRoleService,
     private preferenceSetService: PreferenceSetService,
-    private userAuthorizationService: UserAuthorizationService,
     private communityRoleService: CommunityRoleService,
     private platformInvitationService: PlatformInvitationService,
     private platformRoleService: PlatformRoleService,
@@ -132,12 +132,14 @@ export class RegistrationService {
           );
         invitation.invitedToParent =
           platformInvitation.communityInvitedToParent;
-        invitation =
+
+        invitation = await this.invitationService.save(invitation);
+        const authorization =
           await this.invitationAuthorizationService.applyAuthorizationPolicy(
             invitation,
             community.authorization
           );
-        invitation = await this.invitationService.save(invitation);
+        await this.authorizationPolicyService.save(authorization);
 
         communityInvitations.push(invitation);
       }

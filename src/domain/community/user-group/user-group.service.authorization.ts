@@ -28,7 +28,8 @@ export class UserGroupAuthorizationService {
   async applyAuthorizationPolicy(
     userGroup: IUserGroup,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): Promise<IUserGroup> {
+  ): Promise<IAuthorizationPolicy[]> {
+    const updatedAuthorizations: IAuthorizationPolicy[] = [];
     userGroup.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         userGroup.authorization,
@@ -38,17 +39,19 @@ export class UserGroupAuthorizationService {
       userGroup.authorization,
       userGroup.id
     );
+    updatedAuthorizations.push(userGroup.authorization);
 
     // cascade
     userGroup.profile = this.userGroupService.getProfile(userGroup);
 
-    userGroup.profile =
+    const profileAuthoriations =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
         userGroup.profile,
         userGroup.authorization
       );
+    updatedAuthorizations.push(...profileAuthoriations);
 
-    return await this.userGroupRepository.save(userGroup);
+    return updatedAuthorizations;
   }
 
   private extendCredentialRules(

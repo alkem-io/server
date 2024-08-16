@@ -23,16 +23,13 @@ import {
   CREDENTIAL_RULE_TYPES_GLOBAL_SPACE_READ,
 } from '@common/constants/authorization/credential.rule.types.constants';
 import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
-import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { VirtualContributorAuthorizationService } from '@domain/community/virtual-contributor/virtual.contributor.service.authorization';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { AccountHostService } from '../account.host/account.host.service';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { POLICY_RULE_ACCOUNT_CREATE_VC } from '@common/constants/authorization/policy.rule.constants';
-import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
 import { InnovationPackAuthorizationService } from '@library/innovation-pack/innovation.pack.service.authorization';
-import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
 import { InnovationHubAuthorizationService } from '@domain/innovation-hub/innovation.hub.service.authorization';
 
 @Injectable()
@@ -50,23 +47,29 @@ export class AccountAuthorizationService {
     private accountHostService: AccountHostService
   ) {}
 
-  async applyAuthorizationPolicy(accountInput: IAccount): Promise<IAccount> {
-    let account = await this.accountService.getAccountOrFail(accountInput.id, {
-      relations: {
-        agent: true,
-        spaces: true,
-        virtualContributors: true,
-        innovationPacks: true,
-        innovationHubs: true,
-        storageAggregator: true,
-      },
-    });
+  async applyAuthorizationPolicy(
+    accountInput: IAccount
+  ): Promise<IAuthorizationPolicy[]> {
+    const account = await this.accountService.getAccountOrFail(
+      accountInput.id,
+      {
+        relations: {
+          agent: true,
+          spaces: true,
+          virtualContributors: true,
+          innovationPacks: true,
+          innovationHubs: true,
+          storageAggregator: true,
+        },
+      }
+    );
     if (!account.storageAggregator) {
       throw new RelationshipNotFoundException(
         `Unable to load Account with entities at start of auth reset: ${account.id} `,
         LogContext.ACCOUNT
       );
     }
+    const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
     // Ensure always applying from a clean state
     account.authorization = this.authorizationPolicyService.reset(
@@ -83,18 +86,23 @@ export class AccountAuthorizationService {
       account.authorization
     );
     account.authorization = this.appendPrivilegeRules(account.authorization);
+    account.authorization = await this.authorizationPolicyService.save(
+      account.authorization
+    );
+    updatedAuthorizations.push(account.authorization);
 
-    account = await this.applyAuthorizationPolicyForChildEntities(account);
-
-    // Need to save as there is still a circular dependency from space auth to account auth reset
-    const savedAccount = await this.accountService.save(account);
+    const childUpdatedAuthorizations =
+      await this.applyAuthorizationPolicyForChildEntities(account);
+    updatedAuthorizations.push(...childUpdatedAuthorizations);
 
     // And cascade into the space if there is one
     for (const space of account.spaces) {
-      await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
+      const spaceAuthorizations =
+        await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
+      updatedAuthorizations.push(...spaceAuthorizations);
     }
 
-    return savedAccount;
+    return updatedAuthorizations;
   }
 
   public async getClonedAccountAuthExtendedForChildEntities(
@@ -117,7 +125,7 @@ export class AccountAuthorizationService {
 
   public async applyAuthorizationPolicyForChildEntities(
     account: IAccount
-  ): Promise<IAccount> {
+  ): Promise<IAuthorizationPolicy[]> {
     if (
       !account.agent ||
       !account.virtualContributors ||
@@ -130,54 +138,53 @@ export class AccountAuthorizationService {
         LogContext.ACCOUNT
       );
     }
+    const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
     const clonedAccountAuth =
       await this.getClonedAccountAuthExtendedForChildEntities(account);
 
-    account.agent = this.agentAuthorizationService.applyAuthorizationPolicy(
-      account.agent,
-      account.authorization
-    );
+    const agentAuthorization =
+      this.agentAuthorizationService.applyAuthorizationPolicy(
+        account.agent,
+        account.authorization
+      );
+    updatedAuthorizations.push(agentAuthorization);
 
-    account.storageAggregator =
+    const storageAggregatorAuthorizations =
       await this.storageAggregatorAuthorizationService.applyAuthorizationPolicy(
         account.storageAggregator,
         account.authorization
       );
+    updatedAuthorizations.push(...storageAggregatorAuthorizations);
 
-    const updatedVCs: IVirtualContributor[] = [];
     for (const vc of account.virtualContributors) {
-      const updatedVC =
+      const updatedVcAuthorizations =
         await this.virtualContributorAuthorizationService.applyAuthorizationPolicy(
           vc,
           clonedAccountAuth
         );
-      updatedVCs.push(updatedVC);
+      updatedAuthorizations.push(...updatedVcAuthorizations);
     }
-    account.virtualContributors = updatedVCs;
 
-    const updatedIPs: IInnovationPack[] = [];
     for (const ip of account.innovationPacks) {
-      const updatedIP =
+      const innovationPackAuthorizations =
         await this.innovationPackAuthorizationService.applyAuthorizationPolicy(
           ip,
           clonedAccountAuth
         );
-      updatedIPs.push(updatedIP);
+      updatedAuthorizations.push(...innovationPackAuthorizations);
     }
-    account.innovationPacks = updatedIPs;
 
-    const updatedInnovationHubs: IInnovationHub[] = [];
     for (const innovationHub of account.innovationHubs) {
-      const updatedInnovationHub =
-        await this.innovationHubAuthorizationService.applyAuthorizationPolicyAndSave(
+      const updatedInnovationHubAuthorizations =
+        await this.innovationHubAuthorizationService.applyAuthorizationPolicy(
           innovationHub,
           clonedAccountAuth
         );
-      updatedInnovationHubs.push(updatedInnovationHub);
+      updatedAuthorizations.push(...updatedInnovationHubAuthorizations);
     }
-    account.innovationHubs = updatedInnovationHubs;
-    return account;
+
+    return updatedAuthorizations;
   }
 
   private async extendAuthorizationPolicy(

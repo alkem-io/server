@@ -30,6 +30,7 @@ import { CalloutTemplateService } from '../callout-template/callout.template.ser
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class TemplatesSetService {
@@ -48,7 +49,9 @@ export class TemplatesSetService {
 
   async createTemplatesSet(): Promise<ITemplatesSet> {
     const templatesSet: ITemplatesSet = TemplatesSet.create();
-    templatesSet.authorization = new AuthorizationPolicy();
+    templatesSet.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.TEMPLATES_SET
+    );
     templatesSet.postTemplates = [];
     templatesSet.whiteboardTemplates = [];
     templatesSet.innovationFlowTemplates = [];

@@ -199,7 +199,7 @@ describe('RolesService', () => {
         .spyOn(organizationService, 'getOrganizationAndAgent')
         .mockResolvedValue({
           organization: testData.organization as any,
-          agent: testData.agent,
+          agent: testData.agent.authorization,
         });
 
       const roles = await rolesService.getRolesForOrganization({
