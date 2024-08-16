@@ -13,6 +13,7 @@ import { LogContext } from '@common/enums';
 import { DeleteActorInput } from './actor.dto.delete';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class ActorService {
@@ -25,7 +26,9 @@ export class ActorService {
 
   async createActor(actorData: CreateActorInput): Promise<IActor> {
     const actor = Actor.create({ ...actorData });
-    actor.authorization = new AuthorizationPolicy();
+    actor.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.ACTOR
+    );
 
     await this.actorRepository.save(actor);
     return actor;

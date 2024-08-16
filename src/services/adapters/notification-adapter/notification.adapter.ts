@@ -366,7 +366,6 @@ export class NotificationAdapter {
     const payload =
       await this.notificationPayloadBuilder.buildSpaceCreatedPayload(
         eventData.triggeredBy,
-        eventData.account,
         eventData.community
       );
     this.notificationsClient.emit<number>(event, payload);

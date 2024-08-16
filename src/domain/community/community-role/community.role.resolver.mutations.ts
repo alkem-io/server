@@ -57,11 +57,13 @@ import { CommunityService } from '../community/community.service';
 import { CommunityAuthorizationService } from '../community/community.service.authorization';
 import { CommunityRoleInvitationLifecycleOptionsProvider } from './community.role.lifecycle.invitation.options.provider';
 import { CommunityRoleApplicationLifecycleOptionsProvider } from './community.role.lifecycle.application.options.provider';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
 @Resolver()
 export class CommunityRoleResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private notificationAdapter: NotificationAdapter,
     private userService: UserService,
     private userAuthorizationService: UserAuthorizationService,
@@ -116,8 +118,11 @@ export class CommunityRoleResolverMutations {
 
     // reset the user authorization policy so that their profile is visible to other community members
     let user = await this.userService.getUserOrFail(roleData.userID);
-    user = await this.userAuthorizationService.applyAuthorizationPolicy(user);
-    return await this.userService.save(user);
+    user = await this.userService.save(user);
+    const authorizations =
+      await this.userAuthorizationService.applyAuthorizationPolicy(user);
+    await this.authorizationPolicyService.saveAll(authorizations);
+    return await this.userService.getUserOrFail(roleData.userID);
   }
 
   @UseGuards(GraphqlGuard)
@@ -241,8 +246,11 @@ export class CommunityRoleResolverMutations {
     // reset the user authorization policy so that their profile is not visible
     // to other community members
     let user = await this.userService.getUserOrFail(roleData.userID);
-    user = await this.userAuthorizationService.applyAuthorizationPolicy(user);
-    return await this.userService.save(user);
+    user = await this.userService.save(user);
+    const authorizations =
+      await this.userAuthorizationService.applyAuthorizationPolicy(user);
+    await this.authorizationPolicyService.saveAll(authorizations);
+    return await this.userService.getUserOrFail(roleData.userID);
   }
 
   @UseGuards(GraphqlGuard)
@@ -360,12 +368,14 @@ export class CommunityRoleResolverMutations {
       userID: agentInfo.userID,
     });
 
-    application =
+    application = await this.applicationService.save(application);
+
+    const authorization =
       await this.applicationAuthorizationService.applyAuthorizationPolicy(
         application,
         community.authorization
       );
-    application = await this.applicationService.save(application);
+    await this.authorizationPolicyService.save(authorization);
 
     // Send the notification
     const notificationInput: NotificationInputCommunityApplication = {
@@ -495,12 +505,14 @@ export class CommunityRoleResolverMutations {
         input
       );
 
-    invitation =
+    invitation = await this.invitationService.save(invitation);
+
+    const authorization =
       await this.invitationAuthorizationService.applyAuthorizationPolicy(
         invitation,
         community.authorization
       );
-    invitation = await this.invitationService.save(invitation);
+    await this.authorizationPolicyService.save(authorization);
 
     if (invitedContributor instanceof VirtualContributor) {
       const accountHost =
@@ -606,12 +618,13 @@ export class CommunityRoleResolverMutations {
       );
 
     platformInvitation =
+      await this.platformInvitationService.save(platformInvitation);
+    const authorizations =
       await this.platformInvitationAuthorizationService.applyAuthorizationPolicy(
         platformInvitation,
         community.authorization
       );
-    platformInvitation =
-      await this.platformInvitationService.save(platformInvitation);
+    await this.authorizationPolicyService.save(authorizations);
 
     const notificationInput: NotificationInputPlatformInvitation = {
       triggeredBy: agentInfo.userID,

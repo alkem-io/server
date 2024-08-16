@@ -9,7 +9,7 @@ import { IAiServer } from './ai.server.interface';
 import { AiServerAuthorizationService } from './ai.server.service.authorization';
 import { AiServerService } from './ai.server.service';
 import { AiPersonaServiceService } from '../ai-persona-service/ai.persona.service.service';
-import { AiPersonaServiceAuthorizationService } from '../ai-persona-service/ai.persona.service.authorization';
+import { AiPersonaServiceAuthorizationService } from '../ai-persona-service/ai.persona.service.service.authorization';
 import { CreateAiPersonaServiceInput } from '../ai-persona-service/dto/ai.persona.service.dto.create';
 import { IAiPersonaService } from '../ai-persona-service/ai.persona.service.interface';
 import { Space } from '@domain/space/space/space.entity';
@@ -20,6 +20,7 @@ import { PlatformAuthorizationPolicyService } from '@platform/authorization/plat
 import { EntityManager } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AlkemioConfig } from '@src/types';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
 @ObjectType('MigrateEmbeddings')
 class IMigrateEmbeddingsResponse {
@@ -31,6 +32,7 @@ class IMigrateEmbeddingsResponse {
 export class AiServerResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private aiServerService: AiServerService,
     private aiServerAuthorizationService: AiServerAuthorizationService,
     private aiPersonaServiceService: AiPersonaServiceService,
@@ -123,7 +125,10 @@ export class AiServerResolverMutations {
       AuthorizationPrivilege.AUTHORIZATION_RESET,
       `reset authorization on aiServer: ${agentInfo.email}`
     );
-    return await this.aiServerAuthorizationService.applyAuthorizationPolicy();
+    const authorizations =
+      await this.aiServerAuthorizationService.applyAuthorizationPolicy();
+    await this.authorizationPolicyService.saveAll(authorizations);
+    return await this.aiServerService.getAiServerOrFail();
   }
 
   @UseGuards(GraphqlGuard)
@@ -146,17 +151,19 @@ export class AiServerResolverMutations {
       await this.aiPersonaServiceService.createAiPersonaService(
         aiPersonaServiceData
       );
-
+    aiPersonaService.aiServer = aiServer;
     aiPersonaService =
+      await this.aiPersonaServiceService.save(aiPersonaService);
+
+    const authorizations =
       await this.aiPersonaServiceAuthorizationService.applyAuthorizationPolicy(
         aiPersonaService,
         aiServer.authorization
       );
+    await this.authorizationPolicyService.saveAll(authorizations);
 
-    aiPersonaService.aiServer = aiServer;
-
-    await this.aiPersonaServiceService.save(aiPersonaService);
-
-    return aiPersonaService;
+    return await this.aiPersonaServiceService.getAiPersonaServiceOrFail(
+      aiPersonaService.id
+    );
   }
 }

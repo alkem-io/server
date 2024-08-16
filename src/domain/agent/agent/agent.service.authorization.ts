@@ -11,13 +11,13 @@ export class AgentAuthorizationService {
   applyAuthorizationPolicy(
     agent: IAgent,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): IAgent {
+  ): IAuthorizationPolicy {
     agent.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         agent.authorization,
         parentAuthorization
       );
 
-    return agent;
+    return agent.authorization;
   }
 }

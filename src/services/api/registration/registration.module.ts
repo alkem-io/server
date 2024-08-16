@@ -12,10 +12,12 @@ import { PlatformInvitationModule } from '@platform/invitation/platform.invitati
 import { PlatformRoleModule } from '@platform/platfrom.role/platform.role.module';
 import { CommunityRoleModule } from '@domain/community/community-role/community.role.module';
 import { OrganizationRoleModule } from '@domain/community/organization-role/organization.role.module';
+import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 
 @Module({
   imports: [
     AuthorizationModule,
+    AuthorizationPolicyModule,
     NotificationAdapterModule,
     CommunityRoleModule,
     UserModule,

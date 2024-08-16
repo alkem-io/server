@@ -51,10 +51,15 @@ import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.a
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { AgentType } from '@common/enums/agent.type';
+import { InnovationPackAuthorizationService } from '@library/innovation-pack/innovation.pack.service.authorization';
+import { InnovationHubAuthorizationService } from '@domain/innovation-hub/innovation.hub.service.authorization';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class AccountService {
   constructor(
+    private authoriztionPolicyService: AuthorizationPolicyService,
     private accountHostService: AccountHostService,
     private spaceService: SpaceService,
     private agentService: AgentService,
@@ -66,7 +71,9 @@ export class AccountService {
     private storageAggregatorService: StorageAggregatorService,
     private virtualContributorService: VirtualContributorService,
     private innovationHubService: InnovationHubService,
+    private innovationHubAuthorizationService: InnovationHubAuthorizationService,
     private innovationPackService: InnovationPackService,
+    private innovationPackAuthorizationService: InnovationPackAuthorizationService,
     private namingService: NamingService,
     @InjectRepository(Account)
     private accountRepository: Repository<Account>,
@@ -78,7 +85,9 @@ export class AccountService {
       await this.licensingService.getDefaultLicensingOrFail();
 
     let account: IAccount = new Account();
-    account.authorization = new AuthorizationPolicy();
+    account.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.ACCOUNT
+    );
     account.storageAggregator =
       await this.storageAggregatorService.createStorageAggregator(
         StorageAggregatorType.ACCOUNT
@@ -471,12 +480,19 @@ export class AccountService {
         LogContext.ACCOUNT
       );
     }
-    const hub = await this.innovationHubService.createInnovationHub(
+    let hub = await this.innovationHubService.createInnovationHub(
       innovationHubData,
       account
     );
     hub.account = account;
-    return await this.innovationHubService.save(hub);
+    hub = await this.innovationHubService.save(hub);
+    const authorizations =
+      await this.innovationHubAuthorizationService.applyAuthorizationPolicy(
+        hub,
+        account.authorization
+      );
+    await this.authoriztionPolicyService.saveAll(authorizations);
+    return hub;
   }
 
   public async createInnovationPackOnAccount(
@@ -493,12 +509,19 @@ export class AccountService {
         LogContext.ACCOUNT
       );
     }
-    const ip = await this.innovationPackService.createInnovationPack(
+    let ip = await this.innovationPackService.createInnovationPack(
       ipData,
       account.storageAggregator
     );
     ip.account = account;
-    return await this.innovationPackService.save(ip);
+    ip = await this.innovationPackService.save(ip);
+    const authorizations =
+      await this.innovationPackAuthorizationService.applyAuthorizationPolicy(
+        ip,
+        account.authorization
+      );
+    await this.authoriztionPolicyService.saveAll(authorizations);
+    return ip;
   }
 
   public async activeSubscription(account: IAccount) {

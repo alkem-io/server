@@ -10,7 +10,6 @@ import {
   POLICY_RULE_PLATFORM_DELETE,
   POLICY_RULE_STORAGE_BUCKET_CONTRIBUTOR_FILE_UPLOAD,
 } from '@common/constants';
-import { IDocument } from '../document';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 
 @Injectable()
@@ -23,13 +22,15 @@ export class StorageBucketAuthorizationService {
   applyAuthorizationPolicy(
     storageBucket: IStorageBucket,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): IStorageBucket {
+  ): IAuthorizationPolicy[] {
     if (!storageBucket.documents) {
       throw new RelationshipNotFoundException(
         `Unable to load entities to reset auth for StorageBucket ${storageBucket.id} `,
         LogContext.STORAGE_BUCKET
       );
     }
+    const updatedAuthorizations: IAuthorizationPolicy[] = [];
+
     // Ensure always applying from a clean state
     storageBucket.authorization = this.authorizationPolicyService.reset(
       storageBucket.authorization
@@ -43,20 +44,19 @@ export class StorageBucketAuthorizationService {
     storageBucket.authorization = this.appendPrivilegeRules(
       storageBucket.authorization
     );
+    updatedAuthorizations.push(storageBucket.authorization);
 
     // Cascade down
-    const updatedDocuments: IDocument[] = [];
     for (const document of storageBucket.documents) {
-      document.authorization =
+      const documentAuthorizations =
         this.documentAuthorizationService.applyAuthorizationPolicy(
           document,
           storageBucket.authorization
-        ).authorization;
-      updatedDocuments.push(document);
+        );
+      updatedAuthorizations.push(...documentAuthorizations);
     }
-    storageBucket.documents = updatedDocuments;
 
-    return storageBucket;
+    return updatedAuthorizations;
   }
 
   private appendPrivilegeRules(

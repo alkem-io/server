@@ -36,7 +36,7 @@ export class CalloutContributionAuthorizationService {
     parentAuthorization: IAuthorizationPolicy | undefined,
     communityPolicy: ICommunityPolicy,
     spaceSettings: ISpaceSettings
-  ): Promise<ICalloutContribution> {
+  ): Promise<IAuthorizationPolicy[]> {
     const contribution =
       await this.contributionService.getCalloutContributionOrFail(
         contributionInput.id,
@@ -57,6 +57,7 @@ export class CalloutContributionAuthorizationService {
           },
         }
       );
+    const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
     contribution.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
@@ -70,34 +71,38 @@ export class CalloutContributionAuthorizationService {
       communityPolicy,
       spaceSettings
     );
+    updatedAuthorizations.push(contribution.authorization);
 
     if (contribution.post) {
-      contribution.post =
+      const postAuthorizations =
         await this.postAuthorizationService.applyAuthorizationPolicy(
           contribution.post,
           contribution.authorization,
           communityPolicy,
           spaceSettings
         );
+      updatedAuthorizations.push(...postAuthorizations);
     }
     if (contribution.whiteboard) {
-      contribution.whiteboard =
+      const whiteboardAuthorizations =
         await this.whiteboardAuthorizationService.applyAuthorizationPolicy(
           contribution.whiteboard,
           contribution.authorization
         );
+      updatedAuthorizations.push(...whiteboardAuthorizations);
     }
 
     if (contribution.link) {
-      contribution.link =
+      const linkAuthorizations =
         await this.linkAuthorizationService.applyAuthorizationPolicy(
           contribution.link,
           contribution.authorization,
           contribution.createdBy
         );
+      updatedAuthorizations.push(...linkAuthorizations);
     }
 
-    return contribution;
+    return updatedAuthorizations;
   }
 
   private appendCredentialRules(

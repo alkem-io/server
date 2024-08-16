@@ -422,7 +422,6 @@ export class NotificationPayloadBuilder {
 
   async buildSpaceCreatedPayload(
     triggeredBy: string,
-    account: IAccount,
     community: ICommunity
   ): Promise<SpaceCreatedEventPayload> {
     const spacePayload = await this.buildSpacePayload(community, triggeredBy);

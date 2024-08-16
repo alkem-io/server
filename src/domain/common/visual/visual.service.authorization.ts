@@ -13,7 +13,7 @@ export class VisualAuthorizationService {
   applyAuthorizationPolicy(
     visual: IVisual,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): IVisual {
+  ): IAuthorizationPolicy {
     visual.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         visual.authorization,
@@ -22,7 +22,7 @@ export class VisualAuthorizationService {
 
     visual.authorization = this.appendPrivilegeRules(visual.authorization);
 
-    return visual;
+    return visual.authorization;
   }
 
   private appendPrivilegeRules(

@@ -40,7 +40,7 @@ export class ActivityLogResolverQueries {
       agentInfo,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
-      `Collaboration activity query: ${agentInfo.email}`
+      `Collaboration activity query READ_USERS: ${agentInfo.email}`
     );
     // does collaboration exist
     const collaboration =

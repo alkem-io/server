@@ -35,6 +35,7 @@ import { ICommunityGuidelines } from '../community-guidelines/community.guidelin
 import { IContributor } from '../contributor/contributor.interface';
 import { PlatformInvitationService } from '@platform/invitation/platform.invitation.service';
 import { IUser } from '../user/user.interface';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class CommunityService {
@@ -60,7 +61,9 @@ export class CommunityService {
     storageAggregator: IStorageAggregator
   ): Promise<ICommunity> {
     const community: ICommunity = new Community();
-    community.authorization = new AuthorizationPolicy();
+    community.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.COMMUNITY
+    );
     const policy = communityData.policy as ICommunityPolicyDefinition;
     community.policy = this.communityPolicyService.createCommunityPolicy(
       policy.member,
