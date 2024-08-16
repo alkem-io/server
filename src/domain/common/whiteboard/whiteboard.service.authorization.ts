@@ -17,18 +17,28 @@ import {
 import { ProfileAuthorizationService } from '../profile/profile.service.authorization';
 import { IWhiteboard } from './whiteboard.interface';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
+import { WhiteboardService } from './whiteboard.service';
 
 @Injectable()
 export class WhiteboardAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
-    private profileAuthorizationService: ProfileAuthorizationService
+    private profileAuthorizationService: ProfileAuthorizationService,
+    private whiteboardService: WhiteboardService
   ) {}
 
   async applyAuthorizationPolicy(
-    whiteboard: IWhiteboard,
+    whiteboardInput: IWhiteboard,
     parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<IAuthorizationPolicy[]> {
+    const whiteboard = await this.whiteboardService.getWhiteboardOrFail(
+      whiteboardInput.id,
+      {
+        relations: {
+          profile: true,
+        },
+      }
+    );
     if (!whiteboard.profile) {
       throw new RelationshipNotFoundException(
         `Unable to load entities on whiteboard reset auth:  ${whiteboard.id} `,
