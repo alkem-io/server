@@ -218,6 +218,7 @@ export class SpaceAuthorizationService {
     space.authorization = await this.authorizationPolicyService.save(
       space.authorization
     );
+    updatedAuthorizations.push(space.authorization);
 
     // Only allow community membership for non-archived spaces
     let spaceMembershipAllowed = true;
@@ -255,9 +256,10 @@ export class SpaceAuthorizationService {
     }
 
     // Finally propagate to child spaces
-    // NOTE: each space will look after saving itself
     for (const subspace of space.subspaces) {
-      await this.applyAuthorizationPolicy(subspace);
+      const updatedSubspaceAuthorizations =
+        await this.applyAuthorizationPolicy(subspace);
+      updatedSubspaceAuthorizations.push(...updatedSubspaceAuthorizations);
     }
 
     return updatedAuthorizations;
