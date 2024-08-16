@@ -58,17 +58,24 @@ export class SpaceAuthorizationService {
   async applyAuthorizationPolicy(
     spaceInput: ISpace
   ): Promise<IAuthorizationPolicy[]> {
+    const account =
+      await this.spaceService.getAccountWithAgentOrFail(spaceInput);
+
+    if (!account || !account.agent || !account.agent.credentials) {
+      throw new RelationshipNotFoundException(
+        `Unable to load Account for Space with credentials with entities at start of auth reset: ${account.id} `,
+        LogContext.ACCOUNT
+      );
+    }
+
+    const accountAgent = account.agent;
+
     const space = await this.spaceService.getSpaceOrFail(spaceInput.id, {
       relations: {
         parentSpace: {
           authorization: true,
           community: {
             policy: true,
-          },
-        },
-        account: {
-          agent: {
-            credentials: true,
           },
         },
         authorization: true,
@@ -86,16 +93,10 @@ export class SpaceAuthorizationService {
       },
     });
     if (
-      !space.account ||
-      !space.account.authorization ||
-      !space.account.agent ||
-      !space.account.agent.credentials ||
       !space.authorization ||
       !space.community ||
       !space.community.policy ||
-      !space.subspaces ||
-      !space.library ||
-      !space.defaults
+      !space.subspaces
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load Space with entities at start of auth reset: ${space.id} `,
@@ -106,7 +107,6 @@ export class SpaceAuthorizationService {
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
     const spaceVisibility = space.visibility;
-    const accountAgent = space.account.agent;
 
     // Allow the parent admins to also delete subspaces
     let parentSpaceAdminCredentialCriterias: ICredentialDefinition[] = [];
@@ -254,8 +254,6 @@ export class SpaceAuthorizationService {
       !space.community.policy ||
       !space.context ||
       !space.profile ||
-      !space.library ||
-      !space.defaults ||
       !space.storageAggregator
     ) {
       throw new RelationshipNotFoundException(
@@ -263,6 +261,7 @@ export class SpaceAuthorizationService {
         LogContext.SPACES
       );
     }
+
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
     const isSubspaceCommunity = space.level !== SpaceLevel.SPACE;
@@ -303,19 +302,29 @@ export class SpaceAuthorizationService {
       );
     updatedAuthorizations.push(...storageAuthorizations);
 
-    const libraryAuthorizations =
-      await this.templatesSetAuthorizationService.applyAuthorizationPolicy(
-        space.library,
-        space.authorization
-      );
-    updatedAuthorizations.push(...libraryAuthorizations);
+    // Level zero space only entities
+    if (space.level === SpaceLevel.SPACE) {
+      if (!space.library || !space.defaults) {
+        throw new RelationshipNotFoundException(
+          `Unable to load space level zero entities on auth reset for space base ${space.id} `,
+          LogContext.SPACES
+        );
+      }
 
-    const defaultsAuthorizations =
-      await this.authorizationPolicyService.inheritParentAuthorization(
-        space.defaults.authorization,
-        space.authorization
-      );
-    updatedAuthorizations.push(defaultsAuthorizations);
+      const libraryAuthorizations =
+        await this.templatesSetAuthorizationService.applyAuthorizationPolicy(
+          space.library,
+          space.authorization
+        );
+      updatedAuthorizations.push(...libraryAuthorizations);
+
+      const defaultsAuthorizations =
+        this.authorizationPolicyService.inheritParentAuthorization(
+          space.defaults.authorization,
+          space.authorization
+        );
+      updatedAuthorizations.push(defaultsAuthorizations);
+    }
 
     /// For fields that always should be available
     // Clone the authorization policy
