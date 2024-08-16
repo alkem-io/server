@@ -20,7 +20,7 @@ export class AuthorizationPolicy
   @Column()
   anonymousReadAccess: boolean;
 
-  @Column('varchar', { length: 128, nullable: true })
+  @Column('varchar', { length: 128, nullable: false })
   type!: string;
 
   constructor(type: AuthorizationPolicyType) {
