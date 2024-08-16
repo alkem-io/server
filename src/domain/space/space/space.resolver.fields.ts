@@ -215,7 +215,6 @@ export class SpaceResolverFields {
     return new Date(createdDate);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('settings', () => ISpaceSettings, {
     nullable: false,
     description: 'The settings for this Space.',
@@ -231,10 +230,7 @@ export class SpaceResolverFields {
     description: 'The Library in use by this Space',
   })
   @UseGuards(GraphqlGuard)
-  async library(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Parent() space: Space
-  ): Promise<ITemplatesSet> {
+  async library(@Parent() space: Space): Promise<ITemplatesSet> {
     return await this.spaceService.getLibraryOrFail(space.levelZeroSpaceID);
   }
 

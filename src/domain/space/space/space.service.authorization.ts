@@ -183,7 +183,6 @@ export class SpaceAuthorizationService {
           space.authorization,
           communityPolicy,
           spaceSettings,
-          space,
           parentSpaceAdminCredentialCriterias
         );
 
@@ -373,7 +372,6 @@ export class SpaceAuthorizationService {
     authorization: IAuthorizationPolicy,
     policy: ICommunityPolicy,
     spaceSettings: ISpaceSettings,
-    space: ISpace,
     deletionCredentialCriterias: ICredentialDefinition[]
   ): IAuthorizationPolicy {
     this.extendPrivilegeRuleCreateSubspace(authorization);
