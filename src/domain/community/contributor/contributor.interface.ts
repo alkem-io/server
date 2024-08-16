@@ -3,14 +3,14 @@ import { RelationshipNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { UUID, NameID } from '@domain/common/scalars';
-import { IUser, User } from '../user';
-import { IOrganization, Organization } from '../organization';
-import {
-  IVirtualContributor,
-  VirtualContributor,
-} from '../virtual-contributor';
+import { IUser } from '../user/user.interface';
+import { IOrganization } from '../organization/organization.interface';
+import { IVirtualContributor } from '../virtual-contributor/virtual.contributor.interface';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { IAgent } from '@domain/agent';
+import { VirtualContributor } from '../virtual-contributor/virtual.contributor.entity';
+import { Organization } from '../organization/organization.entity';
+import { User } from '../user/user.entity';
 
 @InterfaceType('Contributor', {
   resolveType(contributor) {

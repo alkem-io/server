@@ -5,7 +5,7 @@ import { SpaceDefaults } from '../space.defaults/space.defaults.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { Space } from '../space/space.entity';
 import { Agent } from '@domain/agent/agent/agent.entity';
-import { VirtualContributor } from '@domain/community/virtual-contributor';
+import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
 import { InnovationHub } from '@domain/innovation-hub/innovation.hub.entity';
 import { InnovationPack } from '@library/innovation-pack/innovation.pack.entity';

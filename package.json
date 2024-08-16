@@ -42,6 +42,7 @@
     "migration:revert": "npm run typeorm-no-entities migration:revert",
     "migration:show": "npm run typeorm migration:show",
     "migration:validate": "./.scripts/migrations/run_validate_migration.sh",
+    "circular-dependencies": "madge --circular dist",
     "db:recreate": "ts-node .scripts/tests/recreate-db.ts",
     "db:reset": "npm run db:recreate && npm run migration:run"
   },

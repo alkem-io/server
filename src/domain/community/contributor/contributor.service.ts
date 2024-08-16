@@ -1,4 +1,3 @@
-import { CredentialsSearchInput } from '@domain/agent/credential/dto/credentials.dto.search';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager, FindOneOptions, In } from 'typeorm';
@@ -19,22 +18,43 @@ import { Credential } from '@domain/agent/credential/credential.entity';
 import { AuthorizationCredential } from '@common/enums';
 import { Account } from '@domain/space/account/account.entity';
 import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
+import { CreateProfileInput } from '@domain/common/profile/dto';
+import { AvatarCreatorService } from '@services/external/avatar-creator/avatar.creator.service';
+import { IProfile } from '@domain/common/profile/profile.interface';
+import { ProfileService } from '@domain/common/profile/profile.service';
+import { VisualType } from '@common/enums/visual.type';
 
 @Injectable()
 export class ContributorService {
   constructor(
     private contributorLookupService: ContributorLookupService,
+    private profileService: ProfileService,
     @InjectEntityManager('default')
-    private entityManager: EntityManager
+    private entityManager: EntityManager,
+    private avatarCreatorService: AvatarCreatorService
   ) {}
 
-  async contributorsWithCredentials(
-    credentialCriteria: CredentialsSearchInput,
-    limit?: number
-  ): Promise<IContributor[]> {
-    return await this.contributorLookupService.contributorsWithCredentials(
-      credentialCriteria,
-      limit
+  public addAvatarVisualToContributorProfile(
+    profile: IProfile,
+    profileData: CreateProfileInput,
+    firstName?: string,
+    lastName?: string
+  ): void {
+    let avatarURL = profileData?.avatarURL;
+    if (!avatarURL || avatarURL === '') {
+      let avatarFirstName = profileData.displayName;
+      if (firstName) {
+        avatarFirstName = firstName;
+      }
+      avatarURL = this.avatarCreatorService.generateRandomAvatarURL(
+        avatarFirstName,
+        lastName
+      );
+    }
+    this.profileService.addVisualOnProfile(
+      profile,
+      VisualType.AVATAR,
+      avatarURL
     );
   }
 

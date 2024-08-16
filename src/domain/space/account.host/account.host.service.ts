@@ -1,6 +1,5 @@
 import { AuthorizationCredential, LogContext } from '@common/enums';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
-import { ContributorService } from '@domain/community/contributor/contributor.service';
 import { Injectable, Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IAccount } from '../account/account.interface';
@@ -9,18 +8,19 @@ import { ICredentialDefinition } from '@domain/agent/credential/credential.defin
 import { User } from '@domain/community/user';
 import { Organization } from '@domain/community/organization';
 import { AgentService } from '@domain/agent/agent/agent.service';
+import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 
 @Injectable()
 export class AccountHostService {
   constructor(
-    private contributorService: ContributorService,
+    private contributorLookupService: ContributorLookupService,
     private agentService: AgentService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   async getHosts(account: IAccount): Promise<IContributor[]> {
     const contributors =
-      await this.contributorService.contributorsWithCredentials({
+      await this.contributorLookupService.contributorsWithCredentials({
         type: AuthorizationCredential.ACCOUNT_HOST,
         resourceID: account.id,
       });
@@ -29,7 +29,7 @@ export class AccountHostService {
 
   async getHost(account: IAccount): Promise<IContributor | null> {
     const contributors =
-      await this.contributorService.contributorsWithCredentials({
+      await this.contributorLookupService.contributorsWithCredentials({
         type: AuthorizationCredential.ACCOUNT_HOST,
         resourceID: account.id,
       });
@@ -88,11 +88,14 @@ export class AccountHostService {
   }
 
   public async getHostByID(contributorID: string): Promise<IContributor> {
-    return this.contributorService.getContributorByUuidOrFail(contributorID, {
-      relations: {
-        agent: true,
-      },
-    });
+    return this.contributorLookupService.getContributorByUuidOrFail(
+      contributorID,
+      {
+        relations: {
+          agent: true,
+        },
+      }
+    );
   }
 
   async setAccountHost(

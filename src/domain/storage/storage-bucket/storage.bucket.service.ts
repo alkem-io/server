@@ -30,6 +30,8 @@ import { IStorageBucketParent } from './dto/storage.bucket.dto.parent';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { ProfileType } from '@common/enums';
 import { StorageUploadFailedException } from '@common/exceptions/storage/storage.upload.failed.exception';
+import { MimeTypeVisual } from '@common/enums/mime.file.type.visual';
+import { urlToBuffer } from '@common/utils/url.to.buffer';
 
 @Injectable()
 export class StorageBucketService {
@@ -392,4 +394,70 @@ export class StorageBucketService {
 
     return null;
   }
+
+  public async storeAvatarUrlAsDocument(
+    avatarURL: string,
+    storageBucketId: string,
+    userId: string
+  ): Promise<IDocument> {
+    if (this.documentService.isAlkemioDocumentURL(avatarURL)) {
+      const document = this.documentService.getDocumentFromURL(avatarURL);
+      if (!document) {
+        throw new EntityNotFoundException(
+          `Document not found: ${avatarURL}`,
+          LogContext.STORAGE_BUCKET
+        );
+      }
+    }
+
+    const imageBuffer = await urlToBuffer(avatarURL);
+
+    // TODO: do not like the import inline here
+    const fileInfo = await (
+      await import('file-type')
+    ).fileTypeFromBuffer(imageBuffer);
+
+    const document = await this.uploadFileAsDocumentFromBuffer(
+      storageBucketId,
+      imageBuffer,
+      'avatar',
+      fileInfo?.mime ?? MimeTypeVisual.PNG,
+      userId,
+      false
+    );
+
+    const storageBucket = await this.getStorageBucketOrFail(storageBucketId);
+    document.storageBucket = storageBucket;
+
+    return await this.documentService.saveDocument(document);
+  }
+
+  // Used for creating an avatar from a linkedin profile picture
+  // BUG: https://github.com/alkem-io/server/issues/3944
+
+  // if (!isAlkemioDocumentURL) {
+  //   if (!user.profile?.storageBucket?.id) {
+  //     throw new EntityNotInitializedException(
+  //       `User profile storage bucket not initialized for user with id: ${user.id}`,
+  //       LogContext.COMMUNITY
+  //     );
+  //   }
+
+  //   if (!user.profile.visuals) {
+  //     throw new EntityNotInitializedException(
+  //       `Visuals not initialized for profile with id: ${user.profile.id}`,
+  //       LogContext.COMMUNITY
+  //     );
+  //   }
+
+  //   const { visual, document } = await this.avatarService.createAvatarFromURL(
+  //     user.profile?.storageBucket?.id,
+  //     user.id,
+  //     agentInfo.avatarURL ?? user.profile.visuals[0].uri
+  //   );
+
+  //   user.profile.visuals = [visual];
+  //   user.profile.storageBucket.documents = [document];
+  //   user = await this.save(user);
+  // }
 }

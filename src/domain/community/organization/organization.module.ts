@@ -22,6 +22,7 @@ import { OrganizationStorageAggregatorLoaderCreator } from '@core/dataloader/cre
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
 import { ContributorModule } from '../contributor/contributor.module';
 import { OrganizationRoleModule } from '../organization-role/organization.role.module';
+import { AvatarCreatorModule } from '@services/external/avatar-creator/avatar.creator.module';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { OrganizationRoleModule } from '../organization-role/organization.role.m
     ProfileModule,
     PreferenceModule,
     PreferenceSetModule,
+    AvatarCreatorModule,
     StorageAggregatorModule,
     TypeOrmModule.forFeature([Organization]),
   ],

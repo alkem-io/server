@@ -55,18 +55,16 @@ import { validateEmail } from '@common/utils';
 import { AgentInfoMetadata } from '@core/authentication.agent.info/agent.info.metadata';
 import { CommunityCredentials } from './dto/user.dto.community.credentials';
 import { CommunityMemberCredentials } from './dto/user.dto.community.member.credentials';
-import { VisualType } from '@common/enums/visual.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { userDefaults } from './user.defaults';
 import { UsersQueryArgs } from './dto/users.query.args';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
-import { AvatarService } from '@domain/common/visual/avatar.service';
-import { DocumentService } from '@domain/storage/document/document.service';
 import { UpdateUserPlatformSettingsInput } from './dto/user.dto.update.platform.settings';
 import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { AgentType } from '@common/enums/agent.type';
+import { ContributorService } from '../contributor/contributor.service';
 
 @Injectable()
 export class UserService {
@@ -81,8 +79,7 @@ export class UserService {
     private preferenceSetService: PreferenceSetService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private storageAggregatorService: StorageAggregatorService,
-    private avatarService: AvatarService,
-    private documentService: DocumentService,
+    private contributorService: ContributorService,
     @InjectRepository(User)
     private userRepository: Repository<User>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -134,19 +131,13 @@ export class UserService {
       user.storageAggregator
     );
 
-    // Set the visuals
-    let avatarURL = profileData?.avatarURL;
-    if (!avatarURL) {
-      avatarURL = this.profileService.generateRandomAvatar(
-        user.firstName,
-        user.lastName
-      );
-    }
-    this.profileService.addVisualOnProfile(
+    this.contributorService.addAvatarVisualToContributorProfile(
       user.profile,
-      VisualType.AVATAR,
-      avatarURL
+      userData.profileData,
+      userData.firstName,
+      userData.lastName
     );
+
     await this.profileService.addTagsetOnProfile(user.profile, {
       name: TagsetReservedName.SKILLS,
       tags: [],
@@ -311,52 +302,18 @@ export class UserService {
       );
     }
 
-    const isAlkemioDocumentURL = this.documentService.isAlkemioDocumentURL(
-      agentInfo.avatarURL
-    );
-
     const userData: CreateUserInput = {
       email: email,
       firstName: agentInfo.firstName,
       lastName: agentInfo.lastName,
       accountUpn: email,
       profileData: {
-        avatarURL: isAlkemioDocumentURL ? agentInfo.avatarURL : undefined,
+        avatarURL: agentInfo.avatarURL,
         displayName: `${agentInfo.firstName} ${agentInfo.lastName}`,
       },
     };
-    const user = await this.createUser(userData);
 
-    // Used for creating an avatar from a linkedin profile picture
-    // BUG: https://github.com/alkem-io/server/issues/3944
-
-    // if (!isAlkemioDocumentURL) {
-    //   if (!user.profile?.storageBucket?.id) {
-    //     throw new EntityNotInitializedException(
-    //       `User profile storage bucket not initialized for user with id: ${user.id}`,
-    //       LogContext.COMMUNITY
-    //     );
-    //   }
-
-    //   if (!user.profile.visuals) {
-    //     throw new EntityNotInitializedException(
-    //       `Visuals not initialized for profile with id: ${user.profile.id}`,
-    //       LogContext.COMMUNITY
-    //     );
-    //   }
-
-    //   const { visual, document } = await this.avatarService.createAvatarFromURL(
-    //     user.profile?.storageBucket?.id,
-    //     user.id,
-    //     agentInfo.avatarURL ?? user.profile.visuals[0].uri
-    //   );
-
-    //   user.profile.visuals = [visual];
-    //   user.profile.storageBucket.documents = [document];
-    //   user = await this.save(user);
-    // }
-
-    return user;
+    return await this.createUser(userData);
   }
 
   private async validateUserProfileCreationRequest(
