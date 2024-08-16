@@ -294,10 +294,6 @@ export class RoomResolverMutations {
       reply
     );
 
-    console.log('\n\n\n');
-    console.log(room.type);
-    console.log('\n\n\n');
-
     switch (room.type) {
       case RoomType.POST:
         const post = await this.namingService.getPostForRoom(
@@ -412,9 +408,6 @@ export class RoomResolverMutations {
         const callout = await this.namingService.getCalloutForRoom(
           messageData.roomID
         );
-        console.log('\n\n\n');
-        console.log(accessVirtualContributors);
-        console.log('\n\n\n');
 
         if (accessVirtualContributors) {
           // Check before processing so as not to reply to same message where interaction started
@@ -429,9 +422,6 @@ export class RoomResolverMutations {
             agentInfo,
             room
           );
-          console.log('\n\n\n');
-          console.log(vcInteraction);
-          console.log('\n\n\n');
 
           if (vcInteraction) {
             this.logger.verbose?.(

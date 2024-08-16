@@ -109,9 +109,6 @@ export class RoomServiceMentions {
     room: IRoom,
     vcInteraction: IVcInteraction | undefined = undefined
   ) {
-    console.log('\n\n\n');
-    console.log(threadID);
-    console.log('\n\n\n');
     const virtualContributor =
       await this.virtualContributorService.getVirtualContributor(uuid, {
         relations: {
