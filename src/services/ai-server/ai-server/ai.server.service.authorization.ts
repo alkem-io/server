@@ -10,7 +10,7 @@ import {
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { AiPersonaServiceAuthorizationService } from '../ai-persona-service/ai.persona.service.service.authorization';
-import { CREDENTIAL_RULE_TYPES_PLATFORM_GLOBAL_ADMINS } from '@common/constants/authorization/credential.rule.types.constants';
+import { CREDENTIAL_RULE_AI_SERVER_GLOBAL_ADMINS } from '@common/constants/authorization/credential.rule.types.constants';
 
 @Injectable()
 export class AiServerAuthorizationService {
@@ -81,7 +81,7 @@ export class AiServerAuthorizationService {
           AuthorizationPrivilege.GRANT,
         ],
         [AuthorizationCredential.GLOBAL_ADMIN],
-        CREDENTIAL_RULE_TYPES_PLATFORM_GLOBAL_ADMINS
+        CREDENTIAL_RULE_AI_SERVER_GLOBAL_ADMINS
       );
     credentialRules.push(globalAdmins);
 

@@ -37,6 +37,7 @@ import { LicenseEngineService } from '@core/license-engine/license.engine.servic
 import { LicensePrivilege } from '@common/enums/license.privilege';
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
 import { isEqual } from 'lodash';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class WhiteboardService {
@@ -64,7 +65,9 @@ export class WhiteboardService {
     const whiteboard: IWhiteboard = Whiteboard.create({
       ...whiteboardData,
     });
-    whiteboard.authorization = new AuthorizationPolicy();
+    whiteboard.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.WHITEBOARD
+    );
     whiteboard.createdBy = userID;
     whiteboard.contentUpdatePolicy = ContentUpdatePolicy.CONTRIBUTORS;
 

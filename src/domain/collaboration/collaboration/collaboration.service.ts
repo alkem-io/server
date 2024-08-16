@@ -58,6 +58,7 @@ import { SpaceType } from '@common/enums/space.type';
 import { CalloutGroupName } from '@common/enums/callout.group.name';
 import { SpaceLevel } from '@common/enums/space.level';
 import { Callout } from '@domain/collaboration/callout';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class CollaborationService {
@@ -85,7 +86,9 @@ export class CollaborationService {
     spaceType: SpaceType
   ): Promise<ICollaboration> {
     const collaboration: ICollaboration = Collaboration.create();
-    collaboration.authorization = new AuthorizationPolicy();
+    collaboration.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.COLLABORATION
+    );
     collaboration.callouts = [];
     collaboration.timeline = this.timelineService.createTimeline();
     const calloutGroups = this.spaceDefaultsService.getCalloutGroups(spaceType);

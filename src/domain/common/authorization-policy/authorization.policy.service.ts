@@ -24,6 +24,7 @@ import { AuthorizationPolicyRuleVerifiedCredential } from '@core/authorization/a
 import { IAuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege.interface';
 import { IAuthorizationPolicyRuleVerifiedCredential } from '@core/authorization/authorization.policy.rule.verified.credential.interface';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class AuthorizationPolicyService {
@@ -119,7 +120,9 @@ export class AuthorizationPolicyService {
     privileges: AuthorizationPrivilege[],
     name: string
   ): IAuthorizationPolicy {
-    const authorization = new AuthorizationPolicy();
+    const authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.IN_MEMORY
+    );
     const rule = this.createCredentialRuleGlobalAdmins(
       privileges,
       globalRoles,
@@ -303,7 +306,7 @@ export class AuthorizationPolicyService {
         )}`,
         LogContext.AUTH
       );
-      child = new AuthorizationPolicy();
+      child = new AuthorizationPolicy(AuthorizationPolicyType.UNKNOWN);
     }
     const parent = this.validateAuthorization(parentAuthorization);
     const resetAuthPolicy = this.reset(child);

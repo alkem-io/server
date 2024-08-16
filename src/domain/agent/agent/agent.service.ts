@@ -46,6 +46,7 @@ import { getRandomId } from '@src/common/utils';
 import { AgentInfoCacheService } from '../../../core/authentication.agent.info/agent.info.cache.service';
 import { GrantCredentialToAgentInput } from './dto/agent.dto.credential.grant';
 import { AlkemioConfig } from '@src/types';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class AgentService {
@@ -78,7 +79,9 @@ export class AgentService {
   public async createAgent(inputData: CreateAgentInput): Promise<IAgent> {
     const agent: IAgent = Agent.create(inputData);
     agent.credentials = [];
-    agent.authorization = new AuthorizationPolicy();
+    agent.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.AGENT
+    );
     agent.type = inputData.type;
 
     const ssiEnabled = this.configService.get('ssi.enabled', { infer: true });

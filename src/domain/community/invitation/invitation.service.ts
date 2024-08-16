@@ -23,6 +23,7 @@ import { UserService } from '../user/user.service';
 import { LogContext } from '@common/enums/logging.context';
 import { ContributorService } from '../contributor/contributor.service';
 import { IContributor } from '../contributor/contributor.interface';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class InvitationService {
@@ -44,7 +45,9 @@ export class InvitationService {
     invitation.contributorType =
       await this.contributorService.getContributorType(contributor);
 
-    invitation.authorization = new AuthorizationPolicy();
+    invitation.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.INVITATION
+    );
 
     // save the user to get the id assigned
     await this.invitationRepository.save(invitation);

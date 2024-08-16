@@ -12,6 +12,7 @@ import {
 } from '../reference';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class ReferenceService {
@@ -27,7 +28,9 @@ export class ReferenceService {
       referenceInput.uri || '',
       referenceInput.description
     );
-    reference.authorization = new AuthorizationPolicy();
+    reference.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.REFERENCE
+    );
 
     return reference;
   }
