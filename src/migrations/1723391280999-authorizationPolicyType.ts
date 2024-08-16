@@ -1,4 +1,5 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
+import { chunkArray } from './utils/chunk.array';
 
 export class AuthorizationPolicyType1723121607999
   implements MigrationInterface
@@ -6,7 +7,7 @@ export class AuthorizationPolicyType1723121607999
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Add the type column to the storage aggregator table
     await queryRunner.query(
-      'ALTER TABLE `authorization_policy` ADD `type` varchar(128) NULL'
+      'ALTER TABLE `authorization_policy` ADD `type` varchar(128) NOT NULL'
     );
     for (const key in AuthorizationPolicyType) {
       if (AuthorizationPolicyType.hasOwnProperty(key)) {
@@ -22,40 +23,39 @@ export class AuthorizationPolicyType1723121607999
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    console.log('No down migration for AuthorizationPolicyType1723121607999');
+    await queryRunner.query(`ALTER TABLE \`authorization_policy\` DROP COLUMN \`type\``);
   }
 
   private async updateAuthorizationPolicyTypeForEntity(
     queryRunner: QueryRunner,
-    entityType: string,
+    entityName: string,
     authorizationPolicyType: string
   ) {
+    // get all the policies for this entity
     const entities: {
-      id: string;
       authorizationId: string;
     }[] = await queryRunner.query(
-      `SELECT id, authorizationId FROM \`${entityType}\``
+      `SELECT authorizationId FROM \`${entityName}\``
     );
-    for (const entity of entities) {
-      const [authorizationPolicy]: {
-        id: string;
-      }[] = await queryRunner.query(
-        `SELECT id FROM authorization_policy WHERE id = '${entity.authorizationId}'`
+    // extract only the auth ids
+    const authIds = entities.map(entity => entity.authorizationId);
+    // convert the ids to strings with quotes
+    const authIdsStr = authIds.map(id => `'${id}'`);
+    // chunk the big array since the IN operator may have some limitations for the amount of values used with it
+    const idChunks = chunkArray(authIdsStr, 500);
+    // for every chunk, do an UPDATE with WHERE IN
+    for (const idChunk of idChunks) {
+      // join the ids in a string
+      const idChunkStr = idChunk.join(',');
+      // update
+      await queryRunner.query(
+        `UPDATE \`authorization_policy\` SET type = '${authorizationPolicyType}' WHERE id IN (${idChunkStr})`
       );
-      if (authorizationPolicy) {
-        await queryRunner.query(
-          `UPDATE \`authorization_policy\` SET type = '${authorizationPolicyType}' WHERE id = '${authorizationPolicy.id}'`
-        );
-      } else {
-        console.log(
-          `No storage_aggregator found for ${entityType}: ${entity.id}`
-        );
-      }
     }
   }
 }
 
-export enum AuthorizationPolicyType {
+enum AuthorizationPolicyType {
   AGENT = 'agent',
   CALLOUT = 'callout',
   CALLOUT_CONTRIBUTION = 'callout-contribution',
