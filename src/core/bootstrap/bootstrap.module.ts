@@ -12,9 +12,9 @@ import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platf
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { NameReporterModule } from '@services/external/elasticsearch/name-reporter/name.reporter.module';
 import { AccountModule } from '@domain/space/account/account.module';
-import { Account } from '@domain/space/account/account.entity';
 import { SearchIngestModule } from '@services/api/search/v2/ingest';
 import { AiServerModule } from '@services/ai-server/ai-server/ai.server.module';
+import { Space } from '@domain/space/space/space.entity';
 
 @Module({
   imports: [
@@ -22,14 +22,15 @@ import { AiServerModule } from '@services/ai-server/ai-server/ai.server.module';
     AgentModule,
     AuthorizationPolicyModule,
     SpaceModule,
+    OrganizationModule,
     AccountModule,
+    SpaceModule,
     UserModule,
     AdminAuthorizationModule,
     PlatformModule,
     PlatformAuthorizationPolicyModule,
     CommunicationModule,
-    OrganizationModule,
-    TypeOrmModule.forFeature([Account]),
+    TypeOrmModule.forFeature([Space]),
     NameReporterModule,
     SearchIngestModule,
   ],

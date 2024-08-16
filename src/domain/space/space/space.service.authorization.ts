@@ -142,11 +142,11 @@ export class SpaceAuthorizationService {
     );
     const privateSpace =
       spaceSettings.privacy.mode === SpacePrivacyMode.PRIVATE;
-    const accountAuthorization = space?.account?.authorization;
 
     // Choose what authorization to inherit from
     let parentAuthorization: IAuthorizationPolicy | undefined;
     if (space.level === SpaceLevel.SPACE) {
+      const accountAuthorization = account?.authorization;
       if (!accountAuthorization) {
         throw new RelationshipNotFoundException(
           `Coulnd't find account for Level0 space: ${space.id} `,

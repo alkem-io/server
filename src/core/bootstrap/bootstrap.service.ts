@@ -24,7 +24,6 @@ import { AdminAuthorizationService } from '@platform/admin/authorization/admin.a
 import { PlatformService } from '@platform/platfrom/platform.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { PlatformAuthorizationService } from '@platform/platfrom/platform.service.authorization';
-import { Account } from '@domain/space/account/account.entity';
 import { SpaceType } from '@common/enums/space.type';
 import { SpaceLevel } from '@common/enums/space.level';
 import { CreateSpaceOnAccountInput } from '@domain/space/account/dto/account.dto.create.space';
@@ -33,6 +32,7 @@ import { SpaceAuthorizationService } from '@domain/space/space/space.service.aut
 import { AccountAuthorizationService } from '@domain/space/account/account.service.authorization';
 import { AiServerAuthorizationService } from '@services/ai-server/ai-server/ai.server.service.authorization';
 import { AiServerService } from '@services/ai-server/ai-server/ai.server.service';
+import { Space } from '@domain/space/space/space.entity';
 
 @Injectable()
 export class BootstrapService {
@@ -51,8 +51,8 @@ export class BootstrapService {
     private platformService: PlatformService,
     private platformAuthorizationService: PlatformAuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
-    @InjectRepository(Account)
-    private accountRepository: Repository<Account>,
+    @InjectRepository(Space)
+    private spaceRepository: Repository<Space>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private aiServer: AiServerService,
@@ -73,7 +73,8 @@ export class BootstrapService {
         Profiling.profilingEnabled = profilingEnabled;
       }
 
-      await this.ensureAccountSpaceSingleton();
+      await this.ensureOrganizationSingleton();
+      await this.ensureSpaceSingleton();
       await this.bootstrapProfiles();
       await this.ensureSsiPopulated();
       await this.platformService.ensureForumCreated();
@@ -260,40 +261,51 @@ export class BootstrapService {
     }
   }
 
-  async ensureAccountSpaceSingleton() {
+  private async ensureOrganizationSingleton() {
+    // create a default host org
+    let hostOrganization = await this.organizationService.getOrganization(
+      DEFAULT_HOST_ORG_NAMEID
+    );
+    if (!hostOrganization) {
+      hostOrganization = await this.organizationService.createOrganization({
+        nameID: DEFAULT_HOST_ORG_NAMEID,
+        profileData: {
+          displayName: DEFAULT_HOST_ORG_DISPLAY_NAME,
+        },
+      });
+      const orgAuthorizations =
+        await this.organizationAuthorizationService.applyAuthorizationPolicy(
+          hostOrganization
+        );
+      await this.authorizationPolicyService.saveAll(orgAuthorizations);
+
+      const account =
+        await this.organizationService.getAccount(hostOrganization);
+      const accountAuthorizations =
+        await this.accountAuthorizationService.applyAuthorizationPolicy(
+          account
+        );
+      await this.authorizationPolicyService.saveAll(accountAuthorizations);
+    }
+  }
+
+  private async ensureSpaceSingleton() {
     this.logger.verbose?.(
       '=== Ensuring at least one Account with a space is present ===',
       LogContext.BOOTSTRAP
     );
-    const accountCount = await this.accountRepository.count();
-    if (accountCount == 0) {
-      this.logger.verbose?.('...No account present...', LogContext.BOOTSTRAP);
-      this.logger.verbose?.('........creating...', LogContext.BOOTSTRAP);
-      // create a default host org
-      let hostOrganization = await this.organizationService.getOrganization(
-        DEFAULT_HOST_ORG_NAMEID
+    const spaceCount = await this.spaceRepository.count();
+    if (spaceCount == 0) {
+      this.logger.verbose?.('...No space present...', LogContext.BOOTSTRAP);
+      this.logger.verbose?.(
+        '........creating on default organization',
+        LogContext.BOOTSTRAP
       );
-      if (!hostOrganization) {
-        hostOrganization = await this.organizationService.createOrganization({
-          nameID: DEFAULT_HOST_ORG_NAMEID,
-          profileData: {
-            displayName: DEFAULT_HOST_ORG_DISPLAY_NAME,
-          },
-        });
-        const orgAuthorizations =
-          await this.organizationAuthorizationService.applyAuthorizationPolicy(
-            hostOrganization
-          );
-        await this.authorizationPolicyService.saveAll(orgAuthorizations);
+      const hostOrganization =
+        await this.organizationService.getOrganizationOrFail(
+          DEFAULT_HOST_ORG_NAMEID
+        );
 
-        const account =
-          await this.organizationService.getAccount(hostOrganization);
-        const accountAuthorizations =
-          await this.accountAuthorizationService.applyAuthorizationPolicy(
-            account
-          );
-        await this.authorizationPolicyService.saveAll(accountAuthorizations);
-      }
       const account =
         await this.organizationService.getAccount(hostOrganization);
       const spaceInput: CreateSpaceOnAccountInput = {
