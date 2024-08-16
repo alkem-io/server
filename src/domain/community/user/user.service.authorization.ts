@@ -140,7 +140,8 @@ export class UserAuthorizationService {
       agentID: agent.id,
       resourceID: user.id,
     });
-    return await this.userService.save(user);
+    user.agent = await this.agentService.saveAgent(user.agent);
+    return user;
   }
 
   private appendGlobalCredentialRules(

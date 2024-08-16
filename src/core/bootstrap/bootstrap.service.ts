@@ -164,9 +164,6 @@ export class BootstrapService {
               displayName: `${userData.firstName} ${userData.lastName}`,
             },
           });
-          const userAuthorizations =
-            await this.userAuthorizationService.applyAuthorizationPolicy(user);
-          await this.authorizationPolicyService.saveAll(userAuthorizations);
 
           const credentialsData = userData.credentials;
           for (const credentialData of credentialsData) {
@@ -177,6 +174,11 @@ export class BootstrapService {
             });
           }
           user = await this.userAuthorizationService.grantCredentials(user);
+
+          // Once all is done, reset the user authorizations
+          const userAuthorizations =
+            await this.userAuthorizationService.applyAuthorizationPolicy(user);
+          await this.authorizationPolicyService.saveAll(userAuthorizations);
 
           const account = await this.userService.getAccount(user);
           const accountAuthorizations =
