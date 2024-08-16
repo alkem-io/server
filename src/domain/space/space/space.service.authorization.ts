@@ -183,6 +183,13 @@ export class SpaceAuthorizationService {
     if (privateSpace) {
       space.authorization.anonymousReadAccess = false;
     }
+    if (
+      !privateSpace &&
+      space.level === SpaceLevel.SPACE &&
+      spaceSettings.privacy.mode === SpacePrivacyMode.PUBLIC
+    ) {
+      space.authorization.anonymousReadAccess = true;
+    }
 
     if (!space.authorization) {
       throw new RelationshipNotFoundException(
