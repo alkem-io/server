@@ -182,12 +182,7 @@ export class SpaceAuthorizationService {
 
     if (privateSpace) {
       space.authorization.anonymousReadAccess = false;
-    }
-    if (
-      !privateSpace &&
-      space.level === SpaceLevel.SPACE &&
-      spaceSettings.privacy.mode === SpacePrivacyMode.PUBLIC
-    ) {
+    } else if (space.level === SpaceLevel.SPACE) {
       space.authorization.anonymousReadAccess = true;
     }
 
