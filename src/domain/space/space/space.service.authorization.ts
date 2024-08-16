@@ -24,14 +24,10 @@ import {
   CREDENTIAL_RULE_SPACE_MEMBERS_READ,
   CREDENTIAL_RULE_SPACE_ADMINS,
   CREDENTIAL_RULE_MEMBER_CREATE_SUBSPACE,
-  CREDENTIAL_RULE_SUBSPACE_PARENT_MEMBER_APPLY,
-  CREDENTIAL_RULE_SUBSPACE_PARENT_MEMBER_JOIN,
-  CREDENTIAL_RULE_COMMUNITY_ADD_MEMBER,
   CREDENTIAL_RULE_SUBSPACE_ADMINS,
   CREDENTIAL_RULE_SPACE_ADMIN_DELETE_SUBSPACE,
   CREDENTIAL_RULE_TYPES_SPACE_PLATFORM_SETTINGS,
 } from '@common/constants';
-import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
@@ -297,6 +293,7 @@ export class SpaceAuthorizationService {
       );
     // To ensure that profile + context on a space are always publicly visible, even for private subspaces
     clonedAuthorization.anonymousReadAccess = true;
+    const isSubspaceCommunity = space.level !== SpaceLevel.SPACE;
 
     const communityAuthorizations =
       await this.communityAuthorizationService.applyAuthorizationPolicy(
@@ -305,20 +302,10 @@ export class SpaceAuthorizationService {
         accountAgent,
         communityPolicy,
         spaceSettings,
-        spaceMembershipAllowed
+        spaceMembershipAllowed,
+        isSubspaceCommunity
       );
     updatedAuthorizations.push(...communityAuthorizations);
-
-    // Subspaces to allow some membership options based on the parent space recential
-    if (space.level !== SpaceLevel.SPACE) {
-      // Allow directly adding members at subspace level
-      space.community.authorization =
-        this.extendCommunityAuthorizationPolicySubspace(
-          space.community.authorization,
-          communityPolicy,
-          spaceSettings
-        );
-    }
 
     const collaborationAuthorizations =
       await this.collaborationAuthorizationService.applyAuthorizationPolicy(
@@ -472,75 +459,6 @@ export class SpaceAuthorizationService {
 
     const communityPolicyWithFlags = spaceInput.community.policy;
     return communityPolicyWithFlags;
-  }
-
-  private extendCommunityAuthorizationPolicySubspace(
-    authorization: IAuthorizationPolicy | undefined,
-    policy: ICommunityPolicy,
-    spaceSettings: ISpaceSettings
-  ): IAuthorizationPolicy {
-    if (!authorization)
-      throw new EntityNotInitializedException(
-        'Authorization definition not found',
-        LogContext.SPACES
-      );
-
-    const newRules: IAuthorizationPolicyRuleCredential[] = [];
-
-    const parentCommunityCredential =
-      this.communityPolicyService.getDirectParentCredentialForRole(
-        policy,
-        CommunityRole.MEMBER
-      );
-
-    // Allow member of the parent community to Apply
-    if (parentCommunityCredential) {
-      const membershipSettings = spaceSettings.membership;
-      switch (membershipSettings.policy) {
-        case CommunityMembershipPolicy.APPLICATIONS:
-          const spaceMemberCanApply =
-            this.authorizationPolicyService.createCredentialRule(
-              [AuthorizationPrivilege.COMMUNITY_APPLY],
-              [parentCommunityCredential],
-              CREDENTIAL_RULE_SUBSPACE_PARENT_MEMBER_APPLY
-            );
-          spaceMemberCanApply.cascade = false;
-          newRules.push(spaceMemberCanApply);
-          break;
-        case CommunityMembershipPolicy.OPEN:
-          const spaceMemberCanJoin =
-            this.authorizationPolicyService.createCredentialRule(
-              [AuthorizationPrivilege.COMMUNITY_JOIN],
-              [parentCommunityCredential],
-              CREDENTIAL_RULE_SUBSPACE_PARENT_MEMBER_JOIN
-            );
-          spaceMemberCanJoin.cascade = false;
-          newRules.push(spaceMemberCanJoin);
-          break;
-      }
-    }
-
-    const adminCredentials =
-      this.communityPolicyService.getCredentialsForRoleWithParents(
-        policy,
-        spaceSettings,
-        CommunityRole.ADMIN
-      );
-
-    const addMembers = this.authorizationPolicyService.createCredentialRule(
-      [AuthorizationPrivilege.COMMUNITY_ADD_MEMBER],
-      adminCredentials,
-      CREDENTIAL_RULE_COMMUNITY_ADD_MEMBER
-    );
-    addMembers.cascade = false;
-    newRules.push(addMembers);
-
-    this.authorizationPolicyService.appendCredentialAuthorizationRules(
-      authorization,
-      newRules
-    );
-
-    return authorization;
   }
 
   private extendPrivateSubspaceAdmins(
