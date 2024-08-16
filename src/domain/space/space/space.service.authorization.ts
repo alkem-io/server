@@ -103,7 +103,7 @@ export class SpaceAuthorizationService {
     const accountAgent = space.account.agent;
 
     // Allow the parent admins to also delete subspaces
-    let deletionCredentialCriterias: ICredentialDefinition[] = [];
+    let parentSpaceAdminCredentialCriterias: ICredentialDefinition[] = [];
     if (space.parentSpace) {
       if (!space.parentSpace.community || !space.parentSpace.community.policy) {
         throw new RelationshipNotFoundException(
@@ -118,7 +118,7 @@ export class SpaceAuthorizationService {
       const spaceSettings = this.spaceSettingsService.getSettings(
         spaceInput.settingsStr
       );
-      deletionCredentialCriterias =
+      parentSpaceAdminCredentialCriterias =
         this.communityPolicyService.getCredentialsForRole(
           parentCommunityPolicyWithSettings,
           spaceSettings,
@@ -174,7 +174,7 @@ export class SpaceAuthorizationService {
           communityPolicy,
           spaceSettings,
           space,
-          deletionCredentialCriterias
+          parentSpaceAdminCredentialCriterias
         );
 
         //
@@ -237,6 +237,7 @@ export class SpaceAuthorizationService {
     spaceMembershipAllowed: boolean
   ): Promise<IAuthorizationPolicy[]> {
     if (
+      !space.authorization ||
       !space.agent ||
       !space.collaboration ||
       !space.community ||

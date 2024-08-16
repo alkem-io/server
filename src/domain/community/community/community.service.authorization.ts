@@ -64,7 +64,7 @@ export class CommunityAuthorizationService {
 
   async applyAuthorizationPolicy(
     communityInput: ICommunity,
-    parentAuthorization: IAuthorizationPolicy | undefined,
+    parentAuthorization: IAuthorizationPolicy,
     accountAgent: IAgent,
     communityPolicy: ICommunityPolicy,
     spaceSettings: ISpaceSettings,

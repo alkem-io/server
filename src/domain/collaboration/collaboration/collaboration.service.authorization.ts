@@ -44,7 +44,7 @@ export class CollaborationAuthorizationService {
 
   public async applyAuthorizationPolicy(
     collaborationInput: ICollaboration,
-    parentAuthorization: IAuthorizationPolicy | undefined,
+    parentAuthorization: IAuthorizationPolicy,
     communityPolicy: ICommunityPolicy,
     spaceSettings: ISpaceSettings,
     accountAgent: IAgent
