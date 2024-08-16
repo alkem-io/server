@@ -137,10 +137,14 @@ export class AccountResolverMutations {
         },
       }
     );
+    // detach space account to avoid circular structure
+    if (account?.space?.account) {
+      delete account.space;
+    }
+
     const notificationInput: NotificationInputSpaceCreated = {
       triggeredBy: agentInfo.userID,
       community: community,
-      account: account,
     };
     await this.notificationAdapter.spaceCreated(notificationInput);
 
