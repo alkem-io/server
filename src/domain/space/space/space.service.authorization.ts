@@ -179,6 +179,7 @@ export class SpaceAuthorizationService {
     space.authorization = await this.extendAuthorizationPolicy(
       space.authorization
     );
+
     if (privateSpace) {
       space.authorization.anonymousReadAccess = false;
     }
@@ -288,13 +289,6 @@ export class SpaceAuthorizationService {
     }
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
-    // Clone the authorization policy
-    const clonedAuthorization =
-      this.authorizationPolicyService.cloneAuthorizationPolicy(
-        space.authorization
-      );
-    // To ensure that profile + context on a space are always publicly visible, even for private subspaces
-    clonedAuthorization.anonymousReadAccess = true;
     const isSubspaceCommunity = space.level !== SpaceLevel.SPACE;
 
     const communityAuthorizations =
@@ -326,6 +320,22 @@ export class SpaceAuthorizationService {
       );
     updatedAuthorizations.push(agentAuthorization);
 
+    const storageAuthorizations =
+      await this.storageAggregatorAuthorizationService.applyAuthorizationPolicy(
+        space.storageAggregator,
+        space.authorization
+      );
+    updatedAuthorizations.push(...storageAuthorizations);
+
+    /// For fields that always should be available
+    // Clone the authorization policy
+    const clonedAuthorization =
+      this.authorizationPolicyService.cloneAuthorizationPolicy(
+        space.authorization
+      );
+    // To ensure that profile + context on a space are always publicly visible, even for private subspaces
+    clonedAuthorization.anonymousReadAccess = true;
+
     const profileAuthorizations =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
         space.profile,
@@ -339,13 +349,6 @@ export class SpaceAuthorizationService {
         clonedAuthorization
       );
     updatedAuthorizations.push(...contextAuthorizations);
-
-    const storageAuthorizations =
-      await this.storageAggregatorAuthorizationService.applyAuthorizationPolicy(
-        space.storageAggregator,
-        space.authorization
-      );
-    updatedAuthorizations.push(...storageAuthorizations);
 
     return updatedAuthorizations;
   }
@@ -377,10 +380,6 @@ export class SpaceAuthorizationService {
     this.extendPrivilegeRuleCreateSubspace(authorization);
 
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
-
-    if (spaceSettings.privacy.mode === SpacePrivacyMode.PRIVATE) {
-      authorization.anonymousReadAccess = false;
-    }
 
     if (deletionCredentialCriterias.length !== 0) {
       const deleteSubspaces =

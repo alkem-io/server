@@ -73,6 +73,7 @@ export class CollaborationAuthorizationService {
       );
     }
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
+
     collaboration.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         collaboration.authorization,
@@ -105,6 +106,7 @@ export class CollaborationAuthorizationService {
         spaceSettings
       );
     updatedAuthorizations.push(...childUpdatedAuthorizations);
+
     return updatedAuthorizations;
   }
 
