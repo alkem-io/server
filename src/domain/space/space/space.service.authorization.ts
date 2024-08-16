@@ -78,16 +78,17 @@ export class SpaceAuthorizationService {
         context: true,
         profile: true,
         storageAggregator: true,
+        subspaces: true,
       },
     });
     if (
       !space.account ||
+      !space.account.authorization ||
       !space.account.agent ||
       !space.account.agent.credentials ||
       !space.authorization ||
       !space.community ||
       !space.community.policy ||
-      !space.account.authorization ||
       !space.subspaces
     ) {
       throw new RelationshipNotFoundException(
