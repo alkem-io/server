@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class SpaceLibraryDefaults1722870550857 implements MigrationInterface {
-  name = 'SpaceLibraryDefaults1722870550857';
+export class SpaceLibraryDefaults1723391281999 implements MigrationInterface {
+  name = 'SpaceLibraryDefaults1723391281999';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(

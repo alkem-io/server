@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class AccountHostCredential1723210781157 implements MigrationInterface {
-  name = 'AccountHostCredential1723210781157';
+export class AccountHostCredential1723391283999 implements MigrationInterface {
+  name = 'AccountHostCredential1723391283999';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(

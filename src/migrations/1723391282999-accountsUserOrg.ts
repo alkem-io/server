@@ -2,8 +2,8 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { credentials } from 'amqplib';
 
-export class AccountsUserOrg1723121610000 implements MigrationInterface {
-  name = 'AccountsUserOrg1723121610000';
+export class AccountsUserOrg1723391282999 implements MigrationInterface {
+  name = 'AccountsUserOrg1723391282999';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     // remove accountId for non-level zero spaces, otherwise they will also be updated + show up directly
