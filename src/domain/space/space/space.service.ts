@@ -890,10 +890,7 @@ export class SpaceService {
     );
   }
 
-  public async assignUserToRoles(
-    space: ISpace,
-    agentInfo: AgentInfo | undefined
-  ) {
+  public async assignUserToRoles(space: ISpace, agentInfo: AgentInfo) {
     if (!space.community) {
       throw new EntityNotInitializedException(
         `Community not initialised on Space: ${space.id}`,

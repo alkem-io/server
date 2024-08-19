@@ -104,7 +104,10 @@ export class AccountService {
 
     space = await this.spaceService.save(space);
 
-    await this.spaceService.assignUserToRoles(space, agentInfo);
+    if (agentInfo) {
+      await this.spaceService.assignUserToRoles(space, agentInfo);
+    }
+
     return space;
   }
 

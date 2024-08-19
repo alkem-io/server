@@ -77,7 +77,10 @@ export class AccountResolverMutations {
       `create Space on account: ${spaceData.nameID}`
     );
 
-    let space = await this.accountService.createSpaceOnAccount(spaceData);
+    let space = await this.accountService.createSpaceOnAccount(
+      spaceData,
+      agentInfo
+    );
     space = await this.spaceService.save(space);
 
     const spaceAuthorizations =
