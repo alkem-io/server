@@ -7,10 +7,10 @@ import { Type } from 'class-transformer';
 @InputType()
 export class CreateNameableInput {
   @Field(() => NameID, {
-    nullable: false,
+    nullable: true,
     description: 'A readable identifier, unique within the containing scope.',
   })
-  nameID!: string;
+  nameID?: string;
 
   @Field(() => CreateProfileInput, { nullable: false })
   @ValidateNested({ each: true })

@@ -13,6 +13,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Platform } from '@platform/platfrom/platform.entity';
 import { Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class PlatformAuthorizationPolicyService {
@@ -55,7 +56,9 @@ export class PlatformAuthorizationPolicyService {
   }
 
   private createRootAuthorizationPolicy(): IAuthorizationPolicy {
-    const rootAuthorization = new AuthorizationPolicy();
+    const rootAuthorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.PLATFORM
+    );
 
     const credentialRules = this.createRootCredentialRules();
 

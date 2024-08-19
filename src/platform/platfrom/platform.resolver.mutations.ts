@@ -8,11 +8,15 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { IPlatform } from './platform.interface';
 import { PlatformAuthorizationService } from './platform.service.authorization';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { PlatformService } from './platform.service';
 
 @Resolver()
 export class PlatformResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
+    private authorizationPolicyService: AuthorizationPolicyService,
+    private platformService: PlatformService,
     private platformAuthorizationService: PlatformAuthorizationService,
     private platformAuthorizationPolicyService: PlatformAuthorizationPolicyService
   ) {}
@@ -33,6 +37,9 @@ export class PlatformResolverMutations {
       AuthorizationPrivilege.PLATFORM_ADMIN, // TODO: back to authorization reset
       `reset authorization on platform: ${agentInfo.email}`
     );
-    return await this.platformAuthorizationService.applyAuthorizationPolicy();
+    const updatedAuthorizations =
+      await this.platformAuthorizationService.applyAuthorizationPolicy();
+    await this.authorizationPolicyService.saveAll(updatedAuthorizations);
+    return await this.platformService.getPlatformOrFail();
   }
 }

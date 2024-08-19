@@ -1,8 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { ActorGroupService } from '@domain/context/actor-group/actor-group.service';
-import { IActorGroup, ActorGroup } from '@domain/context/actor-group';
+import { IActorGroup } from '@domain/context/actor-group';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
@@ -10,20 +8,20 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 export class ActorGroupAuthorizationService {
   constructor(
     private actorGroupService: ActorGroupService,
-    private authorizationPolicyService: AuthorizationPolicyService,
-    @InjectRepository(ActorGroup)
-    private actorGroupRepository: Repository<ActorGroup>
+    private authorizationPolicyService: AuthorizationPolicyService
   ) {}
 
   async applyAuthorizationPolicy(
     actorGroup: IActorGroup,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): Promise<IActorGroup> {
+  ): Promise<IAuthorizationPolicy[]> {
+    const updatedAuthorizations: IAuthorizationPolicy[] = [];
     actorGroup.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         actorGroup.authorization,
         parentAuthorization
       );
+    updatedAuthorizations.push(actorGroup.authorization);
     // cascade
     for (const actor of this.actorGroupService.getActors(actorGroup)) {
       actor.authorization =
@@ -31,9 +29,9 @@ export class ActorGroupAuthorizationService {
           actor.authorization,
           actorGroup.authorization
         );
+      updatedAuthorizations.push(actor.authorization);
     }
 
-    return actorGroup;
-    // return await this.actorGroupRepository.save(actorGroup);
+    return updatedAuthorizations;
   }
 }

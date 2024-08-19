@@ -22,7 +22,7 @@ export class AiPersonaServiceAuthorizationService {
   async applyAuthorizationPolicy(
     aiPersonaServiceInput: IAiPersonaService,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): Promise<IAiPersonaService> {
+  ): Promise<IAuthorizationPolicy[]> {
     const aiPersonaService =
       await this.aiPersonaServiceService.getAiPersonaServiceOrFail(
         aiPersonaServiceInput.id,
@@ -37,11 +37,13 @@ export class AiPersonaServiceAuthorizationService {
         `Unable to load entities for AI Persona Service: ${aiPersonaService.id} `,
         LogContext.COMMUNITY
       );
+
+    const updatedAuthorizations: IAuthorizationPolicy[] = [];
+
     aiPersonaService.authorization =
       await this.authorizationPolicyService.reset(
         aiPersonaService.authorization
       );
-
     aiPersonaService.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         aiPersonaService.authorization,
@@ -51,8 +53,9 @@ export class AiPersonaServiceAuthorizationService {
       aiPersonaService.authorization,
       aiPersonaService.id
     );
+    updatedAuthorizations.push(aiPersonaService.authorization);
 
-    return aiPersonaService;
+    return updatedAuthorizations;
   }
 
   private appendCredentialRules(

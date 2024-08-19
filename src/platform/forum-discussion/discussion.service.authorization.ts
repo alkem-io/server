@@ -31,7 +31,7 @@ export class DiscussionAuthorizationService {
   async applyAuthorizationPolicy(
     discussionInput: IDiscussion,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): Promise<IDiscussion> {
+  ): Promise<IAuthorizationPolicy[]> {
     const discussion = await this.discussionService.getDiscussionOrFail(
       discussionInput.id,
       {
@@ -47,15 +47,18 @@ export class DiscussionAuthorizationService {
         LogContext.COMMUNICATION
       );
     }
+    const updatedAuthorizations: IAuthorizationPolicy[] = [];
+
     discussion.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         discussion.authorization,
         parentAuthorization
       );
-
     discussion.authorization = this.extendAuthorizationPolicy(
       discussion.authorization
     );
+    updatedAuthorizations.push(discussion.authorization);
+
     // Clone the authorization policy so can control what children get what setting
     const clonedAuthorization =
       this.authorizationPolicyService.cloneAuthorizationPolicy(
@@ -73,27 +76,29 @@ export class DiscussionAuthorizationService {
         break;
     }
 
-    discussion.profile =
+    const profileAuthorizations =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
         discussion.profile,
         discussion.authorization
       );
+    updatedAuthorizations.push(...profileAuthorizations);
 
-    discussion.comments =
+    let commentsAuthorization =
       this.roomAuthorizationService.applyAuthorizationPolicy(
         discussion.comments,
         clonedAuthorization
       );
-    discussion.comments.authorization =
+    commentsAuthorization =
       this.roomAuthorizationService.allowContributorsToCreateMessages(
-        discussion.comments.authorization
+        commentsAuthorization
       );
-    discussion.comments.authorization =
+    commentsAuthorization =
       this.roomAuthorizationService.allowContributorsToReplyReactToMessages(
-        discussion.comments.authorization
+        commentsAuthorization
       );
+    updatedAuthorizations.push(commentsAuthorization);
 
-    return await this.discussionService.save(discussion);
+    return updatedAuthorizations;
   }
 
   private extendAuthorizationPolicy(

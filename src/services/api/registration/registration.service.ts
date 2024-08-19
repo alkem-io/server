@@ -22,9 +22,11 @@ import { PlatformInvitationService } from '@platform/invitation/platform.invitat
 import { PlatformRoleService } from '@platform/platfrom.role/platform.role.service';
 import { CommunityRoleService } from '@domain/community/community-role/community.role.service';
 import { OrganizationRoleService } from '@domain/community/organization-role/organization.role.service';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
 export class RegistrationService {
   constructor(
+    private authorizationPolicyService: AuthorizationPolicyService,
     private userService: UserService,
     private organizationService: OrganizationService,
     private organizationRoleService: OrganizationRoleService,
@@ -136,12 +138,14 @@ export class RegistrationService {
           );
         invitation.invitedToParent =
           platformInvitation.communityInvitedToParent;
-        invitation =
+
+        invitation = await this.invitationService.save(invitation);
+        const authorization =
           await this.invitationAuthorizationService.applyAuthorizationPolicy(
             invitation,
             community.authorization
           );
-        invitation = await this.invitationService.save(invitation);
+        await this.authorizationPolicyService.save(authorization);
 
         communityInvitations.push(invitation);
       }

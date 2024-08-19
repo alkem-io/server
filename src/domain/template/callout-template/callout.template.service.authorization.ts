@@ -1,9 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { CalloutTemplate } from './callout.template.entity';
 import { ICalloutTemplate } from './callout.template.interface';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 import { CalloutTemplateService } from './callout.template.service';
@@ -13,8 +10,6 @@ import { CalloutFramingAuthorizationService } from '@domain/collaboration/callou
 export class CalloutTemplateAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
-    @InjectRepository(CalloutTemplate)
-    private calloutTemplateRepository: Repository<CalloutTemplate>,
     private profileAuthorizationService: ProfileAuthorizationService,
     private calloutFramingAuthorizationService: CalloutFramingAuthorizationService,
     private calloutTemplateService: CalloutTemplateService
@@ -23,7 +18,7 @@ export class CalloutTemplateAuthorizationService {
   async applyAuthorizationPolicy(
     calloutTemplateInput: ICalloutTemplate,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): Promise<ICalloutTemplate> {
+  ): Promise<IAuthorizationPolicy[]> {
     const calloutTemplate =
       await this.calloutTemplateService.getCalloutTemplateOrFail(
         calloutTemplateInput.id,
@@ -47,20 +42,23 @@ export class CalloutTemplateAuthorizationService {
         calloutTemplate.authorization,
         parentAuthorization
       );
+    const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
     // Cascade
-    calloutTemplate.profile =
+    const profileAuthorizations =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
         calloutTemplate.profile,
         calloutTemplate.authorization
       );
+    updatedAuthorizations.push(...profileAuthorizations);
 
-    calloutTemplate.framing =
+    const framingAuthorizations =
       await this.calloutFramingAuthorizationService.applyAuthorizationPolicy(
         calloutTemplate.framing,
         parentAuthorization
       );
+    updatedAuthorizations.push(...framingAuthorizations);
 
-    return this.calloutTemplateRepository.save(calloutTemplate);
+    return updatedAuthorizations;
   }
 }

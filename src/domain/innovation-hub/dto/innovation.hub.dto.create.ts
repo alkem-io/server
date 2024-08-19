@@ -1,11 +1,11 @@
 import { IsOptional, Matches, MaxLength, MinLength } from 'class-validator';
 import { Field, InputType } from '@nestjs/graphql';
 import { SpaceVisibility } from '@common/enums/space.visibility';
-import { NameID, UUID } from '@domain/common/scalars';
-import { CreateNameableInput } from '@domain/common/entity/nameable-entity';
+import { UUID } from '@domain/common/scalars';
 import { InnovationHubType } from '@domain/innovation-hub/types';
 import { SUBDOMAIN_LENGTH } from '@common/constants';
 import { SUBDOMAIN_REGEX } from '@core/validation';
+import { CreateNameableInput } from '@domain/common/entity/nameable-entity/dto/nameable.dto.create';
 
 @InputType()
 export class CreateInnovationHubInput extends CreateNameableInput {
@@ -38,10 +38,4 @@ export class CreateInnovationHubInput extends CreateNameableInput {
     description: `Spaces with which visibility this Innovation Hub will display. Only valid when type '${InnovationHubType.VISIBILITY}' is used.`,
   })
   spaceVisibilityFilter?: SpaceVisibility;
-
-  @Field(() => NameID, {
-    nullable: true,
-    description: 'A readable identifier, unique within the containing scope.',
-  })
-  nameID!: string;
 }

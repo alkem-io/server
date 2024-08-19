@@ -17,6 +17,7 @@ import { AiServerAdapterAskQuestionInput } from '@services/adapters/ai-server-ad
 import { AiPersonaDataAccessMode } from '@common/enums/ai.persona.data.access.mode';
 import { AiPersonaInteractionMode } from '@common/enums/ai.persona.interaction.mode';
 import { IMessageAnswerToQuestion } from '@domain/communication/message.answer.to.question/message.answer.to.question.interface';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class AiPersonaService {
@@ -33,7 +34,9 @@ export class AiPersonaService {
   ): Promise<IAiPersona> {
     let aiPersona: IAiPersona = new AiPersona();
     aiPersona.description = aiPersonaData.description ?? '';
-    aiPersona.authorization = new AuthorizationPolicy();
+    aiPersona.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.AI_PERSONA
+    );
     aiPersona.bodyOfKnowledge = aiPersonaData.bodyOfKnowledge ?? '';
     aiPersona.dataAccessMode =
       AiPersonaDataAccessMode.SPACE_PROFILE_AND_CONTENTS;

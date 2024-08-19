@@ -10,6 +10,7 @@ import { Whiteboard } from '@domain/common/whiteboard/types';
 import { WhiteboardTemplate } from '@domain/template/whiteboard-template/whiteboard.template.entity';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { DocumentAuthorizationService } from '@domain/storage/document/document.service.authorization';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
 @Injectable()
 export class AdminWhiteboardService {
@@ -17,6 +18,7 @@ export class AdminWhiteboardService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService,
     @InjectEntityManager() private manager: EntityManager,
     private storageBucketService: StorageBucketService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private documentService: DocumentService,
     private documentAuthorizationService: DocumentAuthorizationService
   ) {}
@@ -122,7 +124,7 @@ export class AdminWhiteboardService {
           }
 
           try {
-            const document =
+            let document =
               await this.storageBucketService.uploadFileAsDocumentFromBuffer(
                 storageBucketId,
                 imageBuffer,
@@ -131,12 +133,16 @@ export class AdminWhiteboardService {
                 uploaderId,
                 false
               );
-            const documentAuthorized =
+            document = await this.documentService.saveDocument(document);
+            const documentAuthorizations =
               this.documentAuthorizationService.applyAuthorizationPolicy(
                 document,
                 profile.storageBucket.authorization
               );
-            await this.documentService.saveDocument(documentAuthorized);
+            await this.authorizationPolicyService.saveAll(
+              documentAuthorizations
+            );
+
             file.url = this.documentService.getPubliclyAccessibleURL(document);
             file.dataURL = '';
           } catch (e) {

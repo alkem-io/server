@@ -13,6 +13,7 @@ import { UserService } from '@domain/community/user/user.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { NotificationInputUserRemoved } from '@services/adapters/notification-adapter/dto/notification.dto.input.user.removed';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
 @Resolver()
 export class RegistrationResolverMutations {
@@ -22,6 +23,7 @@ export class RegistrationResolverMutations {
     private registrationService: RegistrationService,
     private userService: UserService,
     private authorizationService: AuthorizationService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -35,11 +37,12 @@ export class RegistrationResolverMutations {
   async createUserNewRegistration(
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<IUser> {
-    let user = await this.registrationService.registerNewUser(agentInfo);
-
-    user = await this.userAuthorizationService.applyAuthorizationPolicy(user);
-
+    const user = await this.registrationService.registerNewUser(agentInfo);
     await this.registrationService.processPendingInvitations(user);
+
+    const updatedAuthorizations =
+      await this.userAuthorizationService.applyAuthorizationPolicy(user);
+    await this.authorizationPolicyService.saveAll(updatedAuthorizations);
 
     // Send the notification
     const notificationInput: NotificationInputUserRegistered = {

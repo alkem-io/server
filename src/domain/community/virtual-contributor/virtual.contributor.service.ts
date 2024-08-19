@@ -40,6 +40,7 @@ import { AccountHostService } from '@domain/space/account.host/account.host.serv
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { Invitation } from '../invitation';
 import { AgentType } from '@common/enums/agent.type';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class VirtualContributorService {
@@ -82,7 +83,9 @@ export class VirtualContributorService {
     virtualContributor.listedInStore = true;
     virtualContributor.searchVisibility = SearchVisibility.ACCOUNT;
 
-    virtualContributor.authorization = new AuthorizationPolicy();
+    virtualContributor.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.VIRTUAL_CONTRIBUTOR
+    );
     const communicationID = await this.communicationAdapter.tryRegisterNewUser(
       `virtual-contributor-${virtualContributor.nameID}@alkem.io`
     );

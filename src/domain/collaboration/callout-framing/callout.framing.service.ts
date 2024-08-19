@@ -23,6 +23,7 @@ import { TagsetType } from '@common/enums/tagset.type';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { ITagset } from '@domain/common/tagset';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class CalloutFramingService {
@@ -44,7 +45,9 @@ export class CalloutFramingService {
     const calloutFraming: ICalloutFraming =
       CalloutFraming.create(calloutFramingData);
 
-    calloutFraming.authorization = new AuthorizationPolicy();
+    calloutFraming.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.CALLOUT_FRAMING
+    );
 
     const { profile, whiteboard, tags } = calloutFramingData;
 
@@ -229,8 +232,9 @@ export class CalloutFramingService {
   ): CreateCalloutFramingInput {
     if (!calloutFraming.profile || !calloutFraming.whiteboard) {
       throw new EntityNotFoundException(
-        `CalloutFraming not fully initialised`,
-        LogContext.COLLABORATION, {
+        'CalloutFraming not fully initialised',
+        LogContext.COLLABORATION,
+        {
           cause: 'Relation for callout framing not loaded',
           calloutFramingId: calloutFraming.id,
         }

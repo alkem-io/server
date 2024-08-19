@@ -10,13 +10,13 @@ export class LicensePolicyAuthorizationService {
   applyAuthorizationPolicy(
     licensePolicy: ILicensePolicy,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): ILicensePolicy {
+  ): IAuthorizationPolicy {
     licensePolicy.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         licensePolicy.authorization,
         parentAuthorization
       );
 
-    return licensePolicy;
+    return licensePolicy.authorization;
   }
 }
