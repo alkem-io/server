@@ -21,6 +21,7 @@ import { CreatePreferenceDefinitionInput } from './dto/preference-definition.dto
 import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set';
 import { PreferenceType } from '@common/enums/preference.type';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class PreferenceService {
@@ -46,7 +47,9 @@ export class PreferenceService {
     } else {
       preference.value = this.getDefaultPreferenceValue(definition.valueType);
     }
-    preference.authorization = new AuthorizationPolicy();
+    preference.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.PREFERENCE
+    );
     return await this.preferenceRepository.save(preference);
   }
 

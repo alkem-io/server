@@ -17,11 +17,13 @@ import { StorageBucketUploadFileOnReferenceInput } from '@domain/storage/storage
 import { FileUpload, GraphQLUpload } from 'graphql-upload';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { DocumentAuthorizationService } from '@domain/storage/document/document.service.authorization';
+import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 
 @Resolver()
 export class ReferenceResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private referenceService: ReferenceService,
     private storageBucketService: StorageBucketService,
     private documentService: DocumentService,
@@ -46,9 +48,8 @@ export class ReferenceResolverMutations {
       `update Reference: ${reference.id}`
     );
 
-    const updatedReference = await this.referenceService.updateReference(
-      referenceData
-    );
+    const updatedReference =
+      await this.referenceService.updateReference(referenceData);
     return updatedReference;
   }
 
@@ -120,7 +121,7 @@ export class ReferenceResolverMutations {
 
     const readStream = createReadStream();
 
-    const document = await this.storageBucketService.uploadFileFromURI(
+    let document = await this.storageBucketService.uploadFileFromURI(
       reference.uri,
       reference.id,
       storageBucket,
@@ -129,19 +130,18 @@ export class ReferenceResolverMutations {
       mimetype,
       agentInfo.userID
     );
+    document = await this.documentService.saveDocument(document);
 
-    const documentAuthorized =
+    const documentAuthorizations =
       this.documentAuthorizationService.applyAuthorizationPolicy(
         document,
         storageBucket.authorization
       );
-    const documentSaved = await this.documentService.saveDocument(
-      documentAuthorized
-    );
+    await this.authorizationPolicyService.saveAll(documentAuthorizations);
 
     const updateData: UpdateReferenceInput = {
       ID: reference.id,
-      uri: this.documentService.getPubliclyAccessibleURL(documentSaved),
+      uri: this.documentService.getPubliclyAccessibleURL(document),
     };
     return await this.referenceService.updateReference(updateData);
   }

@@ -3,9 +3,15 @@ import { DocumentModule } from '@domain/storage/document/document.module';
 import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { ProfileDocumentsService } from './profile.documents.service';
+import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 
 @Module({
-  imports: [DocumentModule, StorageBucketModule, ProfileModule],
+  imports: [
+    DocumentModule,
+    StorageBucketModule,
+    ProfileModule,
+    AuthorizationPolicyModule,
+  ],
   providers: [ProfileDocumentsService],
   exports: [ProfileDocumentsService],
 })

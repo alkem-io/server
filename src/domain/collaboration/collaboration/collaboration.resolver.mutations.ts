@@ -6,10 +6,7 @@ import { AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { RelationAuthorizationService } from '@domain/collaboration/relation/relation.service.authorization';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
-import { IRelation } from '@domain/collaboration/relation/relation.interface';
-import { CreateRelationOnCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create.relation';
 import { CreateCalloutOnCollaborationInput } from './dto/collaboration.dto.create.callout';
 import { DeleteCollaborationInput } from './dto/collaboration.dto.delete';
 import { ICallout } from '../callout/callout.interface';
@@ -31,7 +28,6 @@ export class CollaborationResolverMutations {
   constructor(
     private communityResolverService: CommunityResolverService,
     private contributionReporter: ContributionReporterService,
-    private relationAuthorizationService: RelationAuthorizationService,
     private calloutAuthorizationService: CalloutAuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private authorizationService: AuthorizationService,
@@ -63,55 +59,6 @@ export class CollaborationResolverMutations {
   }
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => IRelation, {
-    description: 'Create a new Relation on the Collaboration.',
-  })
-  @Profiling.api
-  async createRelationOnCollaboration(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('relationData') relationData: CreateRelationOnCollaborationInput
-  ): Promise<IRelation> {
-    const collaboration =
-      await this.collaborationService.getCollaborationOrFail(
-        relationData.collaborationID
-      );
-    // Extend the authorization definition to use for creating the relation
-    const authorization =
-      this.relationAuthorizationService.localExtendAuthorizationPolicy(
-        collaboration.authorization
-      );
-    // First check if the user has read access
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      authorization,
-      AuthorizationPrivilege.READ,
-      `read relation on collaboration: ${collaboration.id}`
-    );
-    // Then check if the user can create
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      authorization,
-      AuthorizationPrivilege.CREATE,
-      `create relation on collaboration: ${collaboration.id}`
-    );
-    // Load the authorization policy again to avoid the temporary extension above
-    const collaborationAuthorizationPolicy =
-      await this.authorizationPolicyService.getAuthorizationPolicyOrFail(
-        authorization.id
-      );
-    const relation =
-      await this.collaborationService.createRelationOnCollaboration(
-        relationData
-      );
-
-    return this.relationAuthorizationService.applyAuthorizationPolicy(
-      relation,
-      collaborationAuthorizationPolicy,
-      agentInfo.userID
-    );
-  }
-
-  @UseGuards(GraphqlGuard)
   @Mutation(() => ICallout, {
     description: 'Create a new Callout on the Collaboration.',
   })
@@ -132,10 +79,11 @@ export class CollaborationResolverMutations {
       `create callout on collaboration: ${collaboration.id}`
     );
 
-    let callout = await this.collaborationService.createCalloutOnCollaboration(
-      calloutData,
-      agentInfo.userID
-    );
+    const callout =
+      await this.collaborationService.createCalloutOnCollaboration(
+        calloutData,
+        agentInfo.userID
+      );
 
     const { communityPolicy, spaceSettings } =
       await this.namingService.getCommunityPolicyAndSettingsForCollaboration(
@@ -144,14 +92,14 @@ export class CollaborationResolverMutations {
     // callout needs to be saved to apply the authorization policy
     await this.calloutService.save(callout);
 
-    callout = await this.calloutAuthorizationService.applyAuthorizationPolicy(
-      callout,
-      collaboration.authorization,
-      communityPolicy,
-      spaceSettings
-    );
-    // needs to save the authorization policy
-    callout = await this.calloutService.save(callout);
+    const authorizations =
+      await this.calloutAuthorizationService.applyAuthorizationPolicy(
+        callout,
+        collaboration.authorization,
+        communityPolicy,
+        spaceSettings
+      );
+    await this.authorizationPolicyService.saveAll(authorizations);
 
     if (callout.visibility === CalloutVisibility.PUBLISHED) {
       if (calloutData.sendNotification) {
@@ -186,7 +134,7 @@ export class CollaborationResolverMutations {
       }
     );
 
-    return callout;
+    return await this.calloutService.getCalloutOrFail(callout.id);
   }
 
   @UseGuards(GraphqlGuard)

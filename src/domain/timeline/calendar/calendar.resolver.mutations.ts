@@ -10,11 +10,13 @@ import { ICalendarEvent } from '../event/event.interface';
 import { CalendarEventAuthorizationService } from '../event/event.service.authorization';
 import { CreateCalendarEventOnCalendarInput } from './dto/calendar.dto.create.event';
 import { CalendarEventService } from '../event/event.service';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
 @Resolver()
 export class CalendarResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private calendarService: CalendarService,
     private calendarEventService: CalendarEventService,
     private calendarEventAuthorizationService: CalendarEventAuthorizationService
@@ -44,20 +46,23 @@ export class CalendarResolverMutations {
       eventData,
       agentInfo.userID
     );
+    await this.calendarEventService.save(calendarEvent);
 
-    const calendarEventAuthorized =
+    const updatedAuthorizations =
       await this.calendarEventAuthorizationService.applyAuthorizationPolicy(
         calendarEvent,
         calendar.authorization
       );
+    await this.authorizationPolicyService.saveAll(updatedAuthorizations);
 
-    await this.calendarEventService.save(calendarEventAuthorized);
     await this.calendarService.processActivityCalendarEventCreated(
       calendar,
-      calendarEventAuthorized,
+      calendarEvent,
       agentInfo
     );
 
-    return calendarEventAuthorized;
+    return await this.calendarEventService.getCalendarEventOrFail(
+      calendarEvent.id
+    );
   }
 }

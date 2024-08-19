@@ -21,6 +21,7 @@ import { ActorGroupService } from '@domain/context/actor-group/actor-group.servi
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class EcosystemModelService {
@@ -37,7 +38,9 @@ export class EcosystemModelService {
   ): IEcosystemModel {
     const ecosystemModel: IEcosystemModel = EcosystemModel.create({
       ...ecosystemModelData,
-      authorization: new AuthorizationPolicy(),
+      authorization: new AuthorizationPolicy(
+        AuthorizationPolicyType.ECOSYSTEM_MODEL
+      ),
       actorGroups: [],
     });
 
@@ -92,9 +95,7 @@ export class EcosystemModelService {
     );
   }
 
-  public createRestrictedActorGroups(
-    ecosystem: IEcosystemModel
-  ): void {
+  public createRestrictedActorGroups(ecosystem: IEcosystemModel): void {
     if (!ecosystem.restrictedActorGroupNames) {
       throw new EntityNotInitializedException(
         'Non-initialised EcosystemModel submitted',
@@ -134,9 +135,8 @@ export class EcosystemModelService {
         LogContext.SPACES
       );
 
-    const actorGroup = await this.actorGroupService.createActorGroup(
-      actorGroupData
-    );
+    const actorGroup =
+      await this.actorGroupService.createActorGroup(actorGroupData);
     if (!ecosystemModel.actorGroups)
       throw new EntityNotInitializedException(
         `Ecosystem Model (${ecosystemId}) not initialised`,

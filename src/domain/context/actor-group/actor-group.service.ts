@@ -1,7 +1,12 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ActorGroup, CreateActorGroupInput, DeleteActorGroupInput, IActorGroup } from '@domain/context/actor-group';
+import {
+  ActorGroup,
+  CreateActorGroupInput,
+  DeleteActorGroupInput,
+  IActorGroup,
+} from '@domain/context/actor-group';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ActorService } from '@domain/context/actor/actor.service';
 import {
@@ -13,6 +18,7 @@ import { LogContext } from '@common/enums';
 import { CreateActorInput, IActor } from '@domain/context/actor';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class ActorGroupService {
@@ -24,12 +30,12 @@ export class ActorGroupService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  public createActorGroup(
-    actorGroupData: CreateActorGroupInput
-  ): IActorGroup {
+  public createActorGroup(actorGroupData: CreateActorGroupInput): IActorGroup {
     return ActorGroup.create({
       ...actorGroupData,
-      authorization: new AuthorizationPolicy(),
+      authorization: new AuthorizationPolicy(
+        AuthorizationPolicyType.ACTOR_GROUP
+      ),
       actors: [],
     });
   }

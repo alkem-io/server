@@ -76,6 +76,7 @@ const getAuthorizationPolicyMock = (
   anonymousReadAccess,
   credentialRules: '',
   privilegeRules: '',
+  type: 'space',
   verifiedCredentialRules: '',
   ...getEntityMock<AuthorizationPolicy>(),
 });

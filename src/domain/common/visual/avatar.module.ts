@@ -3,9 +3,15 @@ import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.buck
 import { DocumentModule } from '@domain/storage/document/document.module';
 import { VisualModule } from './visual.module';
 import { AvatarService } from './avatar.service';
+import { AuthorizationPolicyModule } from '../authorization-policy/authorization.policy.module';
 
 @Module({
-  imports: [VisualModule, StorageBucketModule, DocumentModule],
+  imports: [
+    VisualModule,
+    StorageBucketModule,
+    DocumentModule,
+    AuthorizationPolicyModule,
+  ],
   providers: [AvatarService],
   exports: [AvatarService],
 })

@@ -17,6 +17,7 @@ import { RoomService } from '@domain/communication/room/room.service';
 import { RoomType } from '@common/enums/room.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class CalendarEventService {
@@ -45,7 +46,9 @@ export class CalendarEventService {
       name: TagsetReservedName.DEFAULT,
       tags: calendarEventInput.tags || [],
     });
-    calendarEvent.authorization = new AuthorizationPolicy();
+    calendarEvent.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.CALENDAR_EVENT
+    );
     calendarEvent.createdBy = userID;
 
     calendarEvent.comments = await this.roomService.createRoom(

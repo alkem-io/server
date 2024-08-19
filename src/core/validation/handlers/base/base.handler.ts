@@ -3,7 +3,6 @@
 
 import { CreateActorGroupInput } from '@domain/context/actor-group';
 import { UpdateSpaceInput } from '@domain/space/space/dto/space.dto.update';
-import { CreateRelationInput } from '@domain/collaboration/relation/relation.dto.create';
 import { CreateUserInput, UpdateUserInput } from '@domain/community/user/dto';
 import { ValidationException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
@@ -110,7 +109,6 @@ export class BaseHandler extends AbstractHandler {
       CreateLinkInput,
       CreateOrganizationInput,
       CreateUserGroupInput,
-      CreateRelationInput,
       CreateUserInput,
       CreateReferenceOnProfileInput,
       CreateTagsetOnProfileInput,

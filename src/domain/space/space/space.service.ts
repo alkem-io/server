@@ -63,6 +63,7 @@ import { CommunityRoleService } from '@domain/community/community-role/community
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { AgentType } from '@common/enums/agent.type';
 import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class SpaceService {
@@ -136,7 +137,9 @@ export class SpaceService {
     account: IAccount,
     agentInfo: AgentInfo | undefined
   ): Promise<ISpace> {
-    space.authorization = new AuthorizationPolicy();
+    space.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.SPACE
+    );
     space.account = account;
     space.settingsStr = this.spaceSettingsService.serializeSettings(
       this.spaceDefaultsService.getDefaultSpaceSettings(spaceData.type)

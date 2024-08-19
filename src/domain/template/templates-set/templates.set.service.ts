@@ -30,6 +30,7 @@ import { CalloutTemplateService } from '../callout-template/callout.template.ser
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class TemplatesSetService {
@@ -48,7 +49,9 @@ export class TemplatesSetService {
 
   async createTemplatesSet(): Promise<ITemplatesSet> {
     const templatesSet: ITemplatesSet = TemplatesSet.create();
-    templatesSet.authorization = new AuthorizationPolicy();
+    templatesSet.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.TEMPLATES_SET
+    );
     templatesSet.postTemplates = [];
     templatesSet.whiteboardTemplates = [];
     templatesSet.innovationFlowTemplates = [];
@@ -345,9 +348,8 @@ export class TemplatesSetService {
     templatesSet: ITemplatesSet,
     whiteboardTemplateInput: CreateWhiteboardTemplateInput
   ): Promise<IWhiteboardTemplate> {
-    templatesSet.whiteboardTemplates = await this.getWhiteboardTemplates(
-      templatesSet
-    );
+    templatesSet.whiteboardTemplates =
+      await this.getWhiteboardTemplates(templatesSet);
 
     const existingWithSameName = templatesSet.whiteboardTemplates.find(
       template =>
@@ -460,19 +462,16 @@ export class TemplatesSetService {
   }
 
   async getTemplatesCount(templatesSetID: string): Promise<number> {
-    const whiteboardTemplatesCount = await this.getWhiteboardTemplatesCount(
-      templatesSetID
-    );
+    const whiteboardTemplatesCount =
+      await this.getWhiteboardTemplatesCount(templatesSetID);
 
     const postTemplatesCount = await this.getPostTemplatesCount(templatesSetID);
 
-    const innovationFlowsCount = await this.getInnovationFlowTemplatesCount(
-      templatesSetID
-    );
+    const innovationFlowsCount =
+      await this.getInnovationFlowTemplatesCount(templatesSetID);
 
-    const calloutTemplatesCount = await this.getCalloutTemplatesCount(
-      templatesSetID
-    );
+    const calloutTemplatesCount =
+      await this.getCalloutTemplatesCount(templatesSetID);
 
     const communityGuidelinesTemplatesCount =
       await this.getCommunityGuidelinesTemplatesCount(templatesSetID);

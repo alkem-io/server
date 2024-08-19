@@ -57,6 +57,7 @@ import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { OrganizationRoleService } from '../organization-role/organization.role.service';
 import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { AgentType } from '@common/enums/agent.type';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class OrganizationService {
@@ -93,7 +94,9 @@ export class OrganizationService {
     );
 
     const organization: IOrganization = Organization.create(organizationData);
-    organization.authorization = new AuthorizationPolicy();
+    organization.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.ORGANIZATION
+    );
 
     organization.storageAggregator =
       await this.storageAggregatorService.createStorageAggregator(
@@ -645,7 +648,7 @@ export class OrganizationService {
   public async createOrganizationNameID(displayName: string): Promise<string> {
     const base = `${displayName}`;
     const reservedNameIDs =
-      await this.namingService.getReservedNameIDsInVirtualContributors(); // This will need to be smarter later
+      await this.namingService.getReservedNameIDsInOrganizations(); // This will need to be smarter later
     return this.namingService.createNameIdAvoidingReservedNameIDs(
       base,
       reservedNameIDs

@@ -11,6 +11,7 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class OrganizationVerificationService {
@@ -28,7 +29,9 @@ export class OrganizationVerificationService {
       OrganizationVerification.create({ ...organizationVerificationData });
 
     organizationVerification.status = OrganizationVerificationEnum.NOT_VERIFIED;
-    organizationVerification.authorization = new AuthorizationPolicy();
+    organizationVerification.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.ORGANIZATION_VERIFICATION
+    );
 
     // save the user to get the id assigned
     await this.organizationVerificationRepository.save(

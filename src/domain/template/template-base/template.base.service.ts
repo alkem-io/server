@@ -9,6 +9,7 @@ import { ITemplateBase } from './template.base.interface';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { ProfileType } from '@common/enums';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class TemplateBaseService {
@@ -24,7 +25,9 @@ export class TemplateBaseService {
     profileType: ProfileType,
     storageAggregator: IStorageAggregator
   ): Promise<ITemplateBase> {
-    baseTemplate.authorization = new AuthorizationPolicy();
+    baseTemplate.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.TEMPLATE
+    );
 
     baseTemplate.profile = await this.profileService.createProfile(
       baseTemplateData.profile,

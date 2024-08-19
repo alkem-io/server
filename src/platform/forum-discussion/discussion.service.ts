@@ -18,6 +18,7 @@ import { IProfile } from '@domain/common/profile/profile.interface';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { ForumCreateDiscussionInput } from '@platform/forum/dto/forum.dto.create.discussion';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class DiscussionService {
@@ -48,7 +49,9 @@ export class DiscussionService {
       tags: discussionData.tags || [],
     });
 
-    discussion.authorization = new AuthorizationPolicy();
+    discussion.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.DISCUSSION
+    );
 
     discussion.comments = await this.roomService.createRoom(
       `${communicationDisplayName}-discussion-${discussion.profile.displayName}`,
