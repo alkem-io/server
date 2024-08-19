@@ -211,7 +211,8 @@ export class SpaceService {
       space.collaboration,
       calloutGroupDefault
     );
-
+    // save the collaboration and all it's template sets
+    await this.save(space);
     const calloutInputsFromCollaborationTemplate =
       await this.collaborationService.createCalloutInputsFromCollaborationTemplate(
         spaceData.collaborationData?.collaborationTemplateID
