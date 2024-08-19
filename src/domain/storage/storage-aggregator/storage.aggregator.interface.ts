@@ -14,5 +14,5 @@ export abstract class IStorageAggregator extends IAuthorizable {
     description:
       'A type of entity that this StorageAggregator is being used with.',
   })
-  type!: string;
+  type!: StorageAggregatorType;
 }

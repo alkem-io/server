@@ -21,7 +21,7 @@ export class AuthorizationPolicy
   anonymousReadAccess: boolean;
 
   @Column('varchar', { length: 128, nullable: false })
-  type!: string;
+  type!: AuthorizationPolicyType;
 
   constructor(type: AuthorizationPolicyType) {
     super();

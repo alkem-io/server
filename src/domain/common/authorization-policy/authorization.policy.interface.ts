@@ -17,5 +17,5 @@ export abstract class IAuthorizationPolicy extends IBaseAlkemio {
     description:
       'A type of entity that this Authorization Policy is being used with.',
   })
-  type!: string;
+  type!: AuthorizationPolicyType;
 }

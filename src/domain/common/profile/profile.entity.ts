@@ -6,6 +6,7 @@ import { Visual } from '@domain/common/visual/visual.entity';
 import { Location } from '@domain/common/location/location.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { StorageBucket } from '@domain/storage/storage-bucket/storage.bucket.entity';
+import { ProfileType } from '@common/enums';
 
 @Entity()
 export class Profile extends AuthorizableEntity implements IProfile {
@@ -37,7 +38,7 @@ export class Profile extends AuthorizableEntity implements IProfile {
   description = '';
 
   @Column('text', { nullable: false })
-  type!: string;
+  type!: ProfileType;
 
   @OneToOne(() => Location, {
     eager: false,
