@@ -187,9 +187,9 @@ export class AccountsUserOrg1723391282999 implements MigrationInterface {
     const storageAggregatorID = await this.createStorageAggregator(queryRunner);
 
     await queryRunner.query(
-      `INSERT INTO authorization_policy (id, version, credentialRules, verifiedCredentialRules, anonymousReadAccess, privilegeRules) VALUES
+      `INSERT INTO authorization_policy (id, version, credentialRules, verifiedCredentialRules, anonymousReadAccess, privilegeRules, type) VALUES
           ('${accountAuthID}',
-          1, '', '', 0, '')`
+          1, '', '', 0, '', 'account')`
     );
 
     await queryRunner.query(
@@ -208,9 +208,9 @@ export class AccountsUserOrg1723391282999 implements MigrationInterface {
     const agentID = randomUUID();
     const agentAuthID = randomUUID();
     await queryRunner.query(
-      `INSERT INTO authorization_policy (id, version, credentialRules, verifiedCredentialRules, anonymousReadAccess, privilegeRules) VALUES
+      `INSERT INTO authorization_policy (id, version, credentialRules, verifiedCredentialRules, anonymousReadAccess, privilegeRules, type) VALUES
           ('${agentAuthID}',
-          1, '', '', 0, '')`
+          1, '', '', 0, '', 'agent')`
     );
 
     await queryRunner.query(
@@ -233,9 +233,9 @@ export class AccountsUserOrg1723391282999 implements MigrationInterface {
     const directStorageId = await this.createStorageBucket(queryRunner);
 
     await queryRunner.query(
-      `INSERT INTO authorization_policy (id, version, credentialRules, verifiedCredentialRules, anonymousReadAccess, privilegeRules) VALUES
+      `INSERT INTO authorization_policy (id, version, credentialRules, verifiedCredentialRules, anonymousReadAccess, privilegeRules, type) VALUES
           ('${storageAggregatorAuthID}',
-          1, '', '', 0, '')`
+          1, '', '', 0, '', 'storage-aggregator')`
     );
 
     await queryRunner.query(
@@ -254,9 +254,9 @@ export class AccountsUserOrg1723391282999 implements MigrationInterface {
     const storageBucketAuthID = randomUUID();
 
     await queryRunner.query(
-      `INSERT INTO authorization_policy (id, version, credentialRules, verifiedCredentialRules, anonymousReadAccess, privilegeRules) VALUES
+      `INSERT INTO authorization_policy (id, version, credentialRules, verifiedCredentialRules, anonymousReadAccess, privilegeRules, type) VALUES
           ('${storageBucketAuthID}',
-          1, '', '', 0, '')`
+          1, '', '', 0, '', 'storage-bucket')`
     );
 
     await queryRunner.query(
