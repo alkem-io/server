@@ -62,10 +62,13 @@ import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface'
 import { InnovationHubService } from '@domain/innovation-hub/innovation.hub.service';
 import { InnovationPackService } from '@library/innovation-pack/innovaton.pack.service';
 import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
+import { AccountService } from '@domain/space/account/account.service';
+import { IAccount } from '@domain/space/account/account.interface';
 
 @Resolver(() => LookupQueryResults)
 export class LookupResolverFields {
   constructor(
+    private accountService: AccountService,
     private authorizationService: AuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
@@ -102,10 +105,40 @@ export class LookupResolverFields {
     nullable: true,
     description: 'Lookup the specified Space',
   })
-  async space(@Args('ID', { type: () => UUID }) id: string): Promise<ISpace> {
+  async space(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('ID', { type: () => UUID }) id: string
+  ): Promise<ISpace> {
     const space = await this.spaceService.getSpaceOrFail(id);
+    // TODO: Fix this when dealing with public visibility of spaces
+    // this.authorizationService.grantAccessOrFail(
+    //   agentInfo,
+    //   space.authorization,
+    //   AuthorizationPrivilege.READ,
+    //   `lookup Space: ${space.id}`
+    // );
 
     return space;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField(() => IAccount, {
+    nullable: true,
+    description: 'Lookup the specified Account',
+  })
+  async account(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('ID', { type: () => UUID }) id: string
+  ): Promise<IAccount> {
+    const account = await this.accountService.getAccountOrFail(id);
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      account.authorization,
+      AuthorizationPrivilege.READ,
+      `lookup Account: ${account.id}`
+    );
+
+    return account;
   }
 
   @UseGuards(GraphqlGuard)
