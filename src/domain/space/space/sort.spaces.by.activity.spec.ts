@@ -5,6 +5,7 @@ import { ISpace } from './space.interface';
 import { sortSpacesByActivity } from './sort.spaces.by.activity';
 import { SpaceType } from '@common/enums/space.type';
 import { SpaceVisibility } from '@common/enums/space.visibility';
+import { ProfileType } from '@common/enums';
 
 const createTestActivity = (createdDate: Date): IActivity => {
   return {
@@ -33,7 +34,7 @@ const createTestSpace = (id: string): ISpace => {
       displayName: 'Space 1',
       description: '',
       tagline: '',
-      type: 'space',
+      type: ProfileType.SPACE,
     },
     account: {
       id: `account${id}`,
