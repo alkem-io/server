@@ -169,9 +169,7 @@ export class UserService {
       this.createPreferenceDefaults()
     );
 
-    const account = await this.accountHostService.createAccount({
-      host: user,
-    });
+    const account = await this.accountHostService.createAccount();
     user.accountID = account.id;
 
     const response = await this.save(user);

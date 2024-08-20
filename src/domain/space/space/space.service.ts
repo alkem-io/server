@@ -673,6 +673,7 @@ export class SpaceService {
 
       space.visibility = updateData.visibility;
     }
+
     if (updateData.nameID && updateData.nameID !== space.nameID) {
       let reservedNameIDs: string[] = [];
       if (space.level === SpaceLevel.SPACE) {

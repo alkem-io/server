@@ -37,10 +37,12 @@ import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { InnovationPackAuthorizationService } from '@library/innovation-pack/innovation.pack.service.authorization';
 import { InnovationHubAuthorizationService } from '@domain/innovation-hub/innovation.hub.service.authorization';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { AccountHostService } from '../account.host/account.host.service';
 
 @Injectable()
 export class AccountService {
   constructor(
+    private accountHostService: AccountHostService,
     private authoriztionPolicyService: AuthorizationPolicyService,
     private spaceService: SpaceService,
     private agentService: AgentService,
@@ -74,6 +76,8 @@ export class AccountService {
         LogContext.ACCOUNT
       );
     }
+    const accountProvider =
+      await this.accountHostService.getHostOrFail(account);
 
     const reservedNameIDs =
       await this.namingService.getReservedNameIDsLevelZeroSpaces();
@@ -107,8 +111,17 @@ export class AccountService {
     if (agentInfo) {
       await this.spaceService.assignUserToRoles(space, agentInfo);
     }
+    const spaceReloaded = await this.spaceService.getSpaceOrFail(space.id, {
+      relations: {
+        agent: true,
+      },
+    });
+    await this.accountHostService.assignLicensePlansToSpace(
+      space,
+      accountProvider
+    );
 
-    return space;
+    return spaceReloaded;
   }
 
   async save(account: IAccount): Promise<IAccount> {
