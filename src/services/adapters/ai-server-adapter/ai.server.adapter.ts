@@ -26,18 +26,16 @@ export class AiServerAdapter {
   async getPersonaServiceBodyOfKnowledgeType(
     personaServiceId: string
   ): Promise<AiPersonaBodyOfKnowledgeType> {
-    const aiPersonaService = await this.aiServer.getAiPersonaServiceOrFail(
-      personaServiceId
-    );
+    const aiPersonaService =
+      await this.aiServer.getAiPersonaServiceOrFail(personaServiceId);
     return aiPersonaService.bodyOfKnowledgeType;
   }
 
   async getPersonaServiceBodyOfKnowledgeID(
     personaServiceId: string
   ): Promise<string> {
-    const aiPersonaService = await this.aiServer.getAiPersonaServiceOrFail(
-      personaServiceId
-    );
+    const aiPersonaService =
+      await this.aiServer.getAiPersonaServiceOrFail(personaServiceId);
     return aiPersonaService.bodyOfKnowledgeID;
   }
 
