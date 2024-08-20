@@ -38,7 +38,7 @@ export class TemplateBaseService {
       name: TagsetReservedName.DEFAULT,
       tags: baseTemplateData.tags,
     });
-    await this.profileService.addVisualOnProfile(
+    this.profileService.addVisualOnProfile(
       baseTemplate.profile,
       VisualType.CARD,
       baseTemplateData.visualUri
