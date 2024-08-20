@@ -80,9 +80,15 @@ export class AiServerService {
         new IngestSpace(questionInput.contextID, SpaceIngestionPurpose.CONTEXT)
       );
     }
+    const historyLimit = parseInt(
+      this.config.get<number>('platform.virtual_contributors.history_length', {
+        infer: true,
+      })
+    );
+
     const history = await this.getLastNInteractionMessages(
       questionInput.interactionID,
-      11
+      historyLimit
     );
 
     return await this.aiPersonaServiceService.askQuestion(
