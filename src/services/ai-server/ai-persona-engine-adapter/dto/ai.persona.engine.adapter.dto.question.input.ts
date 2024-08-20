@@ -9,4 +9,6 @@ export interface AiPersonaEngineAdapterQueryInput
   bodyOfKnowledgeID: string;
   interactionID?: string;
   history?: InteractionMessage[];
+  description?: string;
+  displayName: string;
 }
