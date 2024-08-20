@@ -5,4 +5,6 @@ export class AiServerAdapterAskQuestionInput {
   userID?: string;
   threadID?: string;
   vcInteractionID?: string;
+  description?: string;
+  displayName!: string;
 }

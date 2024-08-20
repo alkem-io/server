@@ -50,7 +50,7 @@ export class VirtualContributorAuthorizationService {
       );
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
-    virtual.authorization = await this.authorizationPolicyService.reset(
+    virtual.authorization = this.authorizationPolicyService.reset(
       virtual.authorization
     );
     virtual.authorization =
@@ -85,11 +85,12 @@ export class VirtualContributorAuthorizationService {
       );
     updatedAuthorizations.push(agentAuthorization);
 
-    virtual.aiPersona =
+    const aiPersonaAuthorization =
       this.aiPersonaAuthorizationService.applyAuthorizationPolicy(
         virtual.aiPersona,
         virtual.authorization
       );
+    updatedAuthorizations.push(aiPersonaAuthorization);
 
     return updatedAuthorizations;
   }
