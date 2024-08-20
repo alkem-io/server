@@ -13,7 +13,7 @@ export abstract class IAuthorizationPolicy extends IBaseAlkemio {
   privilegeRules!: string;
 
   @Field(() => AuthorizationPolicyType, {
-    nullable: false,
+    nullable: true,
     description:
       'A type of entity that this Authorization Policy is being used with.',
   })
