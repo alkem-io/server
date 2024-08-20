@@ -19,10 +19,8 @@ import {
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { IAgent } from '@domain/agent/agent/agent.interface';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
-import { IAccountSubscription } from './account.license.subscription.interface';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { AccountHostService } from '../account.host/account.host.service';
-import { LicensePrivilege } from '@common/enums/license.privilege';
 import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
 import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
@@ -50,17 +48,6 @@ export class AccountResolverFields {
     return loader.load(account.id);
   }
 
-  @ResolveField('licensePrivileges', () => [LicensePrivilege], {
-    nullable: true,
-    description:
-      'The privileges granted based on the License credentials held by this Account.',
-  })
-  async licensePrivileges(
-    @Parent() account: IAccount
-  ): Promise<LicensePrivilege[]> {
-    return this.accountService.getLicensePrivileges(account);
-  }
-
   @ResolveField('host', () => IContributor, {
     nullable: true,
     description: 'The Account host.',
@@ -79,22 +66,6 @@ export class AccountResolverFields {
     loader: ILoader<IAuthorizationPolicy>
   ) {
     return loader.load(account.id);
-  }
-
-  @ResolveField('activeSubscription', () => IAccountSubscription, {
-    nullable: true,
-    description: 'The "highest" subscription active for this Account.',
-  })
-  async activeSubscription(@Parent() account: IAccount) {
-    return this.accountService.activeSubscription(account);
-  }
-
-  @ResolveField('subscriptions', () => [IAccountSubscription], {
-    nullable: false,
-    description: 'The subscriptions active for this Account.',
-  })
-  async subscriptions(@Parent() account: IAccount) {
-    return await this.accountService.getSubscriptions(account);
   }
 
   @ResolveField('spaces', () => [ISpace], {
