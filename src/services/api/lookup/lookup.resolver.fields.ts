@@ -110,6 +110,7 @@ export class LookupResolverFields {
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<ISpace> {
     const space = await this.spaceService.getSpaceOrFail(id);
+    // TODO: Fix this when dealing with public visibility of spaces
     // this.authorizationService.grantAccessOrFail(
     //   agentInfo,
     //   space.authorization,
