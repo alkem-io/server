@@ -18,27 +18,39 @@ export class AiPersonaServiceQuestionInput {
   @Field(() => String, {
     nullable: true,
     description:
-      'The ID of the context, the Virtual Persona is asked a question',
+      'The ID of the context, the Virtual Persona is asked a question.',
   })
-  contextID?: string | undefined = undefined;
+  contextID?: string = undefined;
 
   @Field(() => String, {
     nullable: true,
-    description: 'User identifier used internaly by the engine',
+    description: 'User identifier used internaly by the engine.',
   })
-  userID?: string | undefined = undefined;
-
-  @Field(() => String, {
-    nullable: true,
-    description:
-      'The ID of the message thread where the Virtual Contributor is asked a question if applicable',
-  })
-  threadID?: string | undefined = undefined;
+  userID?: string = undefined;
 
   @Field(() => String, {
     nullable: true,
     description:
-      'The Virtual Contributor interaciton part of which is this question',
+      'The ID of the message thread where the Virtual Contributor is asked a question if applicable.',
   })
-  interactionID: string | undefined = undefined;
+  threadID?: string = undefined;
+
+  @Field(() => String, {
+    nullable: true,
+    description:
+      'The Virtual Contributor interaciton part of which is this question.',
+  })
+  interactionID?: string = undefined;
+
+  @Field(() => String, {
+    nullable: true,
+    description: 'The Virtual Contributor description.',
+  })
+  description?: string = undefined;
+
+  @Field(() => String, {
+    nullable: false,
+    description: 'The Virtual Contributor displayName.',
+  })
+  displayName!: string;
 }

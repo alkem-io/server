@@ -80,8 +80,15 @@ export class AiServerService {
         new IngestSpace(questionInput.contextID, SpaceIngestionPurpose.CONTEXT)
       );
     }
-    const history = await this.getInteractionMessages(
-      questionInput.interactionID
+    const historyLimit = parseInt(
+      this.config.get<number>('platform.virtual_contributors.history_length', {
+        infer: true,
+      })
+    );
+
+    const history = await this.getLastNInteractionMessages(
+      questionInput.interactionID,
+      historyLimit
     );
 
     return await this.aiPersonaServiceService.askQuestion(
@@ -89,8 +96,9 @@ export class AiServerService {
       history
     );
   }
-  async getInteractionMessages(
-    interactionID: string | undefined
+  async getLastNInteractionMessages(
+    interactionID: string | undefined,
+    limit: number = 10
   ): Promise<InteractionMessage[]> {
     if (!interactionID) {
       return [];
@@ -109,7 +117,8 @@ export class AiServerService {
     );
 
     const messages: InteractionMessage[] = [];
-    for (let i = 0; i < room.messages.length; i++) {
+
+    for (let i = room.messages.length - 1; i >= 0; i--) {
       const message = room.messages[i];
       // try to skip this check and use Matrix to filter by Room and Thread
       if (
@@ -123,10 +132,13 @@ export class AiServerService {
           role = MessageSenderRole.ASSISTANT;
         }
 
-        messages.push({
+        messages.unshift({
           content: message.message,
           role,
         });
+        if (messages.length === limit) {
+          break;
+        }
       }
     }
 
