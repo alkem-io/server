@@ -6,7 +6,11 @@ import { Tagset } from './tagset.entity';
 import { ITagset } from './tagset.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums';
-import { EntityNotFoundException, RelationshipNotFoundException, ValidationException } from '@common/exceptions';
+import {
+  EntityNotFoundException,
+  RelationshipNotFoundException,
+  ValidationException,
+} from '@common/exceptions';
 import { CreateTagsetInput } from '@domain/common/tagset/dto/tagset.dto.create';
 import { UpdateTagsetInput } from '@domain/common/tagset/dto/tagset.dto.update';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
@@ -15,6 +19,7 @@ import { TagsetType } from '@common/enums/tagset.type';
 import { ITagsetTemplate } from '../tagset-template';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { TagsetNotFoundException } from '@common/exceptions/tagset.not.found.exception';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class TagsetService {
@@ -28,7 +33,7 @@ export class TagsetService {
   public createTagset(tagsetData: CreateTagsetInput): ITagset {
     return Tagset.create({
       ...tagsetData,
-      authorization: new AuthorizationPolicy(),
+      authorization: new AuthorizationPolicy(AuthorizationPolicyType.TAGSET),
       type: tagsetData.type ?? TagsetType.FREEFORM,
       tags: tagsetData?.tags ?? [],
       tagsetTemplate: tagsetData.tagsetTemplate,

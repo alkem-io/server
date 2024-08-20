@@ -10,6 +10,7 @@ import { ICalendar } from '../calendar/calendar.interface';
 import { CalendarService } from '../calendar/calendar.service';
 import { Timeline } from './timeline.entity';
 import { ITimeline } from './timeline.interface';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class TimelineService {
@@ -23,7 +24,9 @@ export class TimelineService {
 
   public createTimeline(): ITimeline {
     const timeline: ITimeline = new Timeline();
-    timeline.authorization = new AuthorizationPolicy();
+    timeline.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.TIMELINE
+    );
     timeline.calendar = this.calendarService.createCalendar();
 
     return timeline;

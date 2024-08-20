@@ -18,7 +18,7 @@ export class StorageAggregatorAuthorizationService {
   async applyAuthorizationPolicy(
     storageAggregatorInput: IStorageAggregator,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): Promise<IStorageAggregator> {
+  ): Promise<IAuthorizationPolicy[]> {
     const storageAggregator =
       await this.storageAggregatorService.getStorageAggregatorOrFail(
         storageAggregatorInput.id,
@@ -38,6 +38,7 @@ export class StorageAggregatorAuthorizationService {
         `Unable to load entities on StorageAggregator: ${storageAggregator.id} `,
         LogContext.STORAGE_BUCKET
       );
+    const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
     storageAggregator.authorization = this.authorizationPolicyService.reset(
       storageAggregator.authorization
@@ -47,13 +48,16 @@ export class StorageAggregatorAuthorizationService {
         storageAggregator.authorization,
         parentAuthorization
       );
+    storageAggregator.authorization.anonymousReadAccess = true;
+    updatedAuthorizations.push(storageAggregator.authorization);
 
-    storageAggregator.directStorage =
+    const bucketAuthorizations =
       this.storageBucketAuthorizationService.applyAuthorizationPolicy(
         storageAggregator.directStorage,
         storageAggregator.authorization
       );
+    updatedAuthorizations.push(...bucketAuthorizations);
 
-    return storageAggregator;
+    return updatedAuthorizations;
   }
 }

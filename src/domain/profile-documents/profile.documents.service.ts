@@ -5,8 +5,8 @@ import { DocumentService } from '@domain/storage/document/document.service';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { DocumentAuthorizationService } from '@domain/storage/document/document.service.authorization';
 import { EntityNotInitializedException } from '@common/exceptions';
-import { ProfileService } from '@domain/common/profile/profile.service';
 import { IProfile } from '@domain/common/profile';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
 @Injectable()
 export class ProfileDocumentsService {
@@ -14,7 +14,7 @@ export class ProfileDocumentsService {
     private documentService: DocumentService,
     private storageBucketService: StorageBucketService,
     private documentAuthorizationService: DocumentAuthorizationService,
-    private profileService: ProfileService
+    private authorizationPolicyService: AuthorizationPolicyService
   ) {}
 
   /***
@@ -81,12 +81,14 @@ export class ProfileDocumentsService {
         storageBucketToCheck.id,
         newDoc
       );
-      const docAuth =
+      await this.documentService.saveDocument(newDoc);
+
+      const authorizations =
         this.documentAuthorizationService.applyAuthorizationPolicy(
           newDoc,
           storageBucketToCheck.authorization
         );
-      await this.documentService.saveDocument(docAuth);
+      await this.authorizationPolicyService.saveAll(authorizations);
       return this.documentService.getPubliclyAccessibleURL(newDoc);
     }
 

@@ -2,19 +2,15 @@ import { Injectable } from '@nestjs/common';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ILibrary } from './library.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
-import { LibraryService } from './library.service';
 
 @Injectable()
 export class LibraryAuthorizationService {
-  constructor(
-    private authorizationPolicyService: AuthorizationPolicyService,
-    private libraryService: LibraryService
-  ) {}
+  constructor(private authorizationPolicyService: AuthorizationPolicyService) {}
 
   async applyAuthorizationPolicy(
     library: ILibrary,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): Promise<ILibrary> {
+  ): Promise<IAuthorizationPolicy> {
     // Ensure always applying from a clean state
     library.authorization = this.authorizationPolicyService.reset(
       library.authorization
@@ -27,6 +23,6 @@ export class LibraryAuthorizationService {
     // For now the library is world visible
     library.authorization.anonymousReadAccess = true;
 
-    return await this.libraryService.save(library);
+    return library.authorization;
   }
 }

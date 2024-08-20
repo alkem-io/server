@@ -13,10 +13,12 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { ActorGroupAuthorizationService } from '@domain/context/actor-group/actor-group.service.authorization';
 import { IEcosystemModel } from './ecosystem-model.interface';
 import { UpdateEcosystemModelInput } from './dto/ecosystem-model.dto.update';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 @Resolver()
 export class EcosystemModelResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private actorGroupAuthorizationService: ActorGroupAuthorizationService,
     private ecosystemModelService: EcosystemModelService
   ) {}
@@ -40,13 +42,15 @@ export class EcosystemModelResolverMutations {
       AuthorizationPrivilege.CREATE,
       `create actor group on ecosystem model: ${ecosystemModel.description}`
     );
-    const actorGroup = await this.ecosystemModelService.createActorGroup(
-      actorGroupData
-    );
-    return await this.actorGroupAuthorizationService.applyAuthorizationPolicy(
-      actorGroup,
-      ecosystemModel.authorization
-    );
+    const actorGroup =
+      await this.ecosystemModelService.createActorGroup(actorGroupData);
+    const actorGroupAuthorizations =
+      await this.actorGroupAuthorizationService.applyAuthorizationPolicy(
+        actorGroup,
+        ecosystemModel.authorization
+      );
+    await this.authorizationPolicyService.saveAll(actorGroupAuthorizations);
+    return actorGroup;
   }
 
   @UseGuards(GraphqlGuard)

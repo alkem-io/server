@@ -23,6 +23,7 @@ import {
 import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
 import { IMessageAnswerToQuestion } from '@domain/communication/message.answer.to.question/message.answer.to.question.interface';
 import { InteractionMessage } from './dto/interaction.message';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class AiPersonaServiceService {
@@ -40,7 +41,9 @@ export class AiPersonaServiceService {
   ): Promise<IAiPersonaService> {
     const aiPersonaService: IAiPersonaService = new AiPersonaService();
     // TODO: map in the data   AiPersonaService.create(aiPersonaServiceData);
-    aiPersonaService.authorization = new AuthorizationPolicy();
+    aiPersonaService.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.AI_PERSONA_SERVICE
+    );
 
     aiPersonaService.bodyOfKnowledgeID = aiPersonaServiceData.bodyOfKnowledgeID;
     aiPersonaService.engine =

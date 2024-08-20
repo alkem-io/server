@@ -6,10 +6,12 @@ import { PlatformModule } from '@platform/platfrom/platform.module';
 import { OrganizationModule } from '@domain/community/organization/organization.module';
 import { TaskModule } from '@services/task/task.module';
 import { AccountModule } from '@domain/space/account/account.module';
+import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 
 @Global()
 @Module({
   imports: [
+    AuthorizationPolicyModule,
     AccountModule,
     SpaceModule,
     UserModule,

@@ -12,11 +12,13 @@ import { AdminLicensingService } from './admin.licensing.service';
 import { IAccount } from '@domain/space/account/account.interface';
 import { RevokeLicensePlanFromAccount } from './dto/admin.licensing.dto.revoke.license.plan.from.account';
 import { AccountAuthorizationService } from '@domain/space/account/account.service.authorization';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
 @Resolver()
 export class AdminLicensingResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private accountAuthorizationService: AccountAuthorizationService,
     private licensingService: LicensingService,
     private adminLicensingService: AdminLicensingService
@@ -52,9 +54,11 @@ export class AdminLicensingResolverMutations {
       licensing.id
     );
     // Need to trigger an authorization reset as some license credentials are used in auth policy e.g. VCs feature flag
-    return await this.accountAuthorizationService.applyAuthorizationPolicy(
-      account
-    );
+    const updatedAuthorizations =
+      await this.accountAuthorizationService.applyAuthorizationPolicy(account);
+    await this.authorizationPolicyService.saveAll(updatedAuthorizations);
+
+    return account;
   }
 
   @UseGuards(GraphqlGuard)

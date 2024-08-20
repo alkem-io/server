@@ -29,7 +29,7 @@ export class CreateCalloutInput {
     nullable: true,
     description: 'A readable identifier, unique within the containing scope.',
   })
-  nameID!: string;
+  nameID?: string;
 
   @Field(() => CalloutType, {
     description: 'Callout type.',

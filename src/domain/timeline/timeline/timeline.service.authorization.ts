@@ -18,7 +18,7 @@ export class TimelineAuthorizationService {
   async applyAuthorizationPolicy(
     timelineInput: ITimeline,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): Promise<ITimeline> {
+  ): Promise<IAuthorizationPolicy[]> {
     const timeline = await this.timelineService.getTimelineOrFail(
       timelineInput.id,
       {
@@ -31,20 +31,23 @@ export class TimelineAuthorizationService {
         LogContext.CALENDAR
       );
     }
+    const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
     timeline.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         timeline.authorization,
         parentAuthorization
       );
+    updatedAuthorizations.push(timeline.authorization);
 
     // Cascade down
-    timeline.calendar =
+    const calendarAuthorizations =
       await this.calendarAuthorizationService.applyAuthorizationPolicy(
         timeline.calendar,
         timeline.authorization
       );
+    updatedAuthorizations.push(...calendarAuthorizations);
 
-    return timeline;
+    return updatedAuthorizations;
   }
 }
