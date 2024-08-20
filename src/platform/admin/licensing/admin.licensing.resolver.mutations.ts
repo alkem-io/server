@@ -9,7 +9,6 @@ import { AssignLicensePlanToSpace } from './dto/admin.licensing.dto.assign.licen
 import { LicensingService } from '@platform/licensing/licensing.service';
 import { ILicensing } from '@platform/licensing/licensing.interface';
 import { AdminLicensingService } from './admin.licensing.service';
-import { IAccount } from '@domain/space/account/account.interface';
 import { RevokeLicensePlanFromSpace } from './dto/admin.licensing.dto.revoke.license.plan.from.account';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ISpace } from '@domain/space/space/space.interface';
@@ -26,7 +25,7 @@ export class AdminLicensingResolverMutations {
   ) {}
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => IAccount, {
+  @Mutation(() => ISpace, {
     description: 'Assign the specified LicensePlan to a Space.',
   })
   @Profiling.api
@@ -63,7 +62,7 @@ export class AdminLicensingResolverMutations {
   }
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => IAccount, {
+  @Mutation(() => ISpace, {
     description: 'Revokes the specified LicensePlan on a Space.',
   })
   @Profiling.api
