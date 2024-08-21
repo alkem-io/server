@@ -48,8 +48,8 @@ export enum AuthorizationPolicyType {
   CALENDAR = 'calendar',
   CALENDAR_EVENT = 'calendar-event',
   TIMELINE = 'timeline',
-
   IN_MEMORY = 'in-memory',
+  LICENSING = 'licensing',
   UNKNOWN = 'unknown',
   AI_PERSONA_SERVICE = 'ai-persona-service',
 }
