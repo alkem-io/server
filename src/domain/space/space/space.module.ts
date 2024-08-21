@@ -26,9 +26,15 @@ import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { SpaceDefaultsModule } from '../space.defaults/space.defaults.module';
 import { SpaceSettingssModule } from '../space.settings/space.settings.module';
 import { CommunityRoleModule } from '@domain/community/community-role/community.role.module';
+import { TemplatesSetModule } from '@domain/template/templates-set/templates.set.module';
+import { AccountHostModule } from '../account.host/account.host.module';
+import { LicensingModule } from '@platform/licensing/licensing.module';
+import { LicenseEngineModule } from '@core/license-engine/license.engine.module';
+import { LicenseIssuerModule } from '@platform/license-issuer/license.issuer.module';
 
 @Module({
   imports: [
+    AccountHostModule,
     AgentModule,
     AuthorizationPolicyModule,
     AuthorizationModule,
@@ -37,9 +43,13 @@ import { CommunityRoleModule } from '@domain/community/community-role/community.
     CommunityRoleModule,
     CommunityPolicyModule,
     ProfileModule,
+    LicensingModule,
+    LicenseIssuerModule,
+    LicenseEngineModule,
     NamingModule,
     PlatformAuthorizationPolicyModule,
     SpaceDefaultsModule,
+    TemplatesSetModule,
     SpaceSettingssModule,
     StorageAggregatorModule,
     ContributionReporterModule,

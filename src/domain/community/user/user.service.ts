@@ -1,10 +1,5 @@
 import { UUID_LENGTH } from '@common/constants';
-import {
-  AuthorizationCredential,
-  LogContext,
-  ProfileType,
-  UserPreferenceType,
-} from '@common/enums';
+import { LogContext, ProfileType, UserPreferenceType } from '@common/enums';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -26,9 +21,7 @@ import { ProfileService } from '@domain/common/profile/profile.service';
 import {
   CreateUserInput,
   DeleteUserInput,
-  IUser,
   UpdateUserInput,
-  User,
 } from '@domain/community/user';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
@@ -65,6 +58,10 @@ import { StorageAggregatorService } from '@domain/storage/storage-aggregator/sto
 import { AvatarService } from '@domain/common/visual/avatar.service';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { UpdateUserPlatformSettingsInput } from './dto/user.dto.update.platform.settings';
+import { AccountHostService } from '@domain/space/account.host/account.host.service';
+import { IAccount } from '@domain/space/account/account.interface';
+import { User } from './user.entity';
+import { IUser } from './user.interface';
 import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { AgentType } from '@common/enums/agent.type';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
@@ -82,6 +79,7 @@ export class UserService {
     private preferenceSetService: PreferenceSetService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private storageAggregatorService: StorageAggregatorService,
+    private accountHostService: AccountHostService,
     private avatarService: AvatarService,
     private documentService: DocumentService,
     @InjectRepository(User)
@@ -170,6 +168,9 @@ export class UserService {
       PreferenceDefinitionSet.USER,
       this.createPreferenceDefaults()
     );
+
+    const account = await this.accountHostService.createAccount();
+    user.accountID = account.id;
 
     const response = await this.save(user);
     // all users need to be registered for communications at the absolute beginning
@@ -385,18 +386,6 @@ export class UserService {
       );
   }
 
-  private async isAccountHost(user: IUser): Promise<boolean> {
-    if (!user.agent)
-      throw new RelationshipNotFoundException(
-        `Unable to load agent for user: ${user.id}`,
-        LogContext.COMMUNITY
-      );
-
-    return await this.agentService.hasValidCredential(user.agent.id, {
-      type: AuthorizationCredential.ACCOUNT_HOST,
-    });
-  }
-
   async deleteUser(deleteData: DeleteUserInput): Promise<IUser> {
     const userID = deleteData.ID;
     const user = await this.getUserOrFail(userID, {
@@ -408,10 +397,12 @@ export class UserService {
       },
     });
 
-    const isAccountHost = await this.isAccountHost(user);
-    if (isAccountHost) {
+    // TODO: give additional feedback?
+    const accountHasResources =
+      await this.accountHostService.areResourcesInAccount(user.accountID);
+    if (accountHasResources) {
       throw new ForbiddenException(
-        'Unable to delete User: host of one or more accounts',
+        'Unable to delete User: account contains one or more resources',
         LogContext.SPACES
       );
     }
@@ -449,6 +440,10 @@ export class UserService {
       ...result,
       id,
     };
+  }
+
+  public async getAccount(user: IUser): Promise<IAccount> {
+    return await this.accountHostService.getAccountOrFail(user.accountID);
   }
 
   async getPreferenceSetOrFail(userID: string): Promise<IPreferenceSet> {

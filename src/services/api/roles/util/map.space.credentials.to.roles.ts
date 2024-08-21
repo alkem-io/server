@@ -17,11 +17,10 @@ export const mapSpaceCredentialsToRoles = async (
   const credentialMap = groupCredentialsByEntity(credentials);
 
   const spaceIds = Array.from(credentialMap.get('spaces')?.keys() ?? []);
-  const accountIds = Array.from(credentialMap.get('accounts')?.keys() ?? []);
 
   const { spaces, subspaces } = await getSpaceRolesForContributorEntityData(
     entityManager,
-    spaceIds.concat(accountIds), // For now merge accounts with spaces
+    spaceIds, // TODO: this used to merge in the account IDs for some reason, WHY?
     allowedVisibilities
   );
 

@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '@domain/community/user/user.entity';
-import { VirtualContributor } from '@domain/community/virtual-contributor';
+import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 
 @Injectable()
 export class IdentityResolverService {

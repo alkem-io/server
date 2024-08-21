@@ -5,15 +5,12 @@ import { AccountService } from '@domain/space/account/account.service';
 import { AccountResolverFields } from '@domain/space/account/account.resolver.fields';
 import { AccountAuthorizationService } from '@domain/space/account/account.service.authorization';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
-import { TemplatesSetModule } from '@domain/template/templates-set/templates.set.module';
-import { SpaceDefaultsModule } from '../space.defaults/space.defaults.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AccountResolverMutations } from './account.resolver.mutations';
 import { SpaceModule } from '../space/space.module';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { NameReporterModule } from '@services/external/elasticsearch/name-reporter/name.reporter.module';
-import { InnovationFlowTemplateModule } from '@domain/template/innovation-flow-template/innovation.flow.template.module';
 import { AccountResolverQueries } from './account.resolver.queries';
 import { ContributorModule } from '@domain/community/contributor/contributor.module';
 import { LicensingModule } from '@platform/licensing/licensing.module';
@@ -22,12 +19,9 @@ import { LicenseIssuerModule } from '@platform/license-issuer/license.issuer.mod
 import { AccountHostModule } from '../account.host/account.host.module';
 import { LicenseEngineModule } from '@core/license-engine/license.engine.module';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
-import { CommunityPolicyModule } from '@domain/community/community-policy/community.policy.module';
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
-import { CommunityModule } from '@domain/community/community/community.module';
-import { InnovationHubModule } from '@domain/innovation-hub';
+import { InnovationHubModule } from '@domain/innovation-hub/innovation.hub.module';
 import { InnovationPackModule } from '@library/innovation-pack/innovation.pack.module';
-import { SpaceSettingssModule } from '../space.settings/space.settings.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
 
 @Module({
@@ -37,25 +31,19 @@ import { NamingModule } from '@services/infrastructure/naming/naming.module';
     AuthorizationModule,
     AuthorizationPolicyModule,
     ContributorModule,
-    VirtualContributorModule,
-    TemplatesSetModule,
-    SpaceModule,
-    SpaceSettingssModule,
-    SpaceDefaultsModule,
     StorageAggregatorModule,
     PlatformAuthorizationPolicyModule,
-    InnovationFlowTemplateModule,
     LicensingModule,
     LicenseIssuerModule,
     LicenseEngineModule,
+    SpaceModule,
     InnovationHubModule,
-    NamingModule,
+    InnovationPackModule,
+    VirtualContributorModule,
     NameReporterModule,
-    CommunityPolicyModule,
+    NamingModule,
     TypeOrmModule.forFeature([Account]),
     NotificationAdapterModule,
-    CommunityModule,
-    InnovationPackModule,
   ],
   providers: [
     AccountService,

@@ -1,8 +1,8 @@
 import { LicenseCredential } from '@common/enums/license.credential';
 import { Field, ObjectType } from '@nestjs/graphql';
 
-@ObjectType('AccountSubscription')
-export abstract class IAccountSubscription {
+@ObjectType('SpaceSubscription')
+export abstract class ISpaceSubscription {
   @Field(() => LicenseCredential, {
     description: 'The name of the Subscription.',
   })
