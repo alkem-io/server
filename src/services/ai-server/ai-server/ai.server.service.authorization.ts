@@ -28,15 +28,16 @@ export class AiServerAuthorizationService {
       },
     });
 
-    if (!aiServer.authorization || !aiServer.aiPersonaServices)
+    if (!aiServer.authorization || !aiServer.aiPersonaServices) {
       throw new RelationshipNotFoundException(
         `Unable to load entities for aiServer: ${aiServer.id} `,
         LogContext.AI_SERVER
       );
+    }
 
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
-    aiServer.authorization = await this.authorizationPolicyService.reset(
+    aiServer.authorization = this.authorizationPolicyService.reset(
       aiServer.authorization
     );
 
