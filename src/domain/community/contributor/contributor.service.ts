@@ -53,7 +53,7 @@ export class ContributorService {
       );
     } else {
       if (agentInfo) {
-        await this.ensureAvatarIsCreated(profile, agentInfo);
+        await this.uploadAvatarFromExternalURL(profile, agentInfo);
       }
     }
     this.profileService.addVisualOnProfile(
@@ -63,7 +63,7 @@ export class ContributorService {
     );
   }
 
-  private async ensureAvatarIsCreated(
+  private async uploadAvatarFromExternalURL(
     profile: IProfile,
     agentInfo: AgentInfo
   ): Promise<IDocument> {
