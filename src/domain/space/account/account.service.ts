@@ -14,17 +14,11 @@ import { AgentService } from '@domain/agent/agent/agent.service';
 import { SpaceService } from '../space/space.service';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { ISpace } from '../space/space.interface';
-import { LicensingService } from '@platform/licensing/licensing.service';
-import { IAccountSubscription } from './account.license.subscription.interface';
-import { LicenseCredential } from '@common/enums/license.credential';
 import { CreateVirtualContributorOnAccountInput } from './dto/account.dto.create.virtual.contributor';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
-import { LicensePrivilege } from '@common/enums/license.privilege';
-import { LicenseEngineService } from '@core/license-engine/license.engine.service';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { CreateSpaceOnAccountInput } from './dto/account.dto.create.space';
-import { LicensePlanType } from '@common/enums/license.plan.type';
 import { CreateInnovationHubOnAccountInput } from './dto/account.dto.create.innovation.hub';
 import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
 import { InnovationHubService } from '@domain/innovation-hub/innovation.hub.service';
@@ -37,15 +31,15 @@ import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { InnovationPackAuthorizationService } from '@library/innovation-pack/innovation.pack.service.authorization';
 import { InnovationHubAuthorizationService } from '@domain/innovation-hub/innovation.hub.service.authorization';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { AccountHostService } from '../account.host/account.host.service';
 
 @Injectable()
 export class AccountService {
   constructor(
+    private accountHostService: AccountHostService,
     private authoriztionPolicyService: AuthorizationPolicyService,
     private spaceService: SpaceService,
     private agentService: AgentService,
-    private licensingService: LicensingService,
-    private licenseEngineService: LicenseEngineService,
     private storageAggregatorService: StorageAggregatorService,
     private virtualContributorService: VirtualContributorService,
     private innovationHubService: InnovationHubService,
@@ -74,6 +68,8 @@ export class AccountService {
         LogContext.ACCOUNT
       );
     }
+    const accountProvider =
+      await this.accountHostService.getHostOrFail(account);
 
     const reservedNameIDs =
       await this.namingService.getReservedNameIDsLevelZeroSpaces();
@@ -107,8 +103,17 @@ export class AccountService {
     if (agentInfo) {
       await this.spaceService.assignUserToRoles(space, agentInfo);
     }
+    const spaceReloaded = await this.spaceService.getSpaceOrFail(space.id, {
+      relations: {
+        agent: true,
+      },
+    });
+    await this.accountHostService.assignLicensePlansToSpace(
+      space,
+      accountProvider
+    );
 
-    return space;
+    return spaceReloaded;
   }
 
   async save(account: IAccount): Promise<IAccount> {
@@ -199,61 +204,6 @@ export class AccountService {
     return accounts;
   }
 
-  async getLicensePrivileges(account: IAccount): Promise<LicensePrivilege[]> {
-    let accountAgent = account.agent;
-    if (!account.agent) {
-      const accountWithAgent = await this.getAccountOrFail(account.id, {
-        relations: {
-          agent: {
-            credentials: true,
-          },
-        },
-      });
-      accountAgent = accountWithAgent.agent;
-    }
-    if (!accountAgent) {
-      throw new EntityNotFoundException(
-        `Unable to find agent with credentials for account: ${account.id}`,
-        LogContext.ACCOUNT
-      );
-    }
-    const privileges =
-      await this.licenseEngineService.getGrantedPrivileges(accountAgent);
-    return privileges;
-  }
-
-  async getSubscriptions(
-    accountInput: IAccount
-  ): Promise<IAccountSubscription[]> {
-    const account = await this.getAccountOrFail(accountInput.id, {
-      relations: {
-        agent: {
-          credentials: true,
-        },
-      },
-    });
-    if (!account.agent || !account.agent.credentials) {
-      throw new EntityNotFoundException(
-        `Unable to find agent with credentials for account: ${accountInput.id}`,
-        LogContext.ACCOUNT
-      );
-    }
-    const subscriptions: IAccountSubscription[] = [];
-    for (const credential of account.agent.credentials) {
-      if (
-        Object.values(LicenseCredential).includes(
-          credential.type as LicenseCredential
-        )
-      ) {
-        subscriptions.push({
-          name: credential.type as LicenseCredential,
-          expires: credential.expires,
-        });
-      }
-    }
-    return subscriptions;
-  }
-
   public async createVirtualContributorOnAccount(
     vcData: CreateVirtualContributorOnAccountInput
   ): Promise<IVirtualContributor> {
@@ -336,31 +286,6 @@ export class AccountService {
       );
     await this.authoriztionPolicyService.saveAll(authorizations);
     return ip;
-  }
-
-  public async activeSubscription(account: IAccount) {
-    const licensingFramework =
-      await this.licensingService.getDefaultLicensingOrFail();
-
-    const today = new Date();
-    const plans = await this.licensingService.getLicensePlans(
-      licensingFramework.id
-    );
-
-    return (await this.getSubscriptions(account))
-      .filter(
-        subscription => !subscription.expires || subscription.expires > today
-      )
-      .map(subscription => {
-        return {
-          subscription,
-          plan: plans.find(
-            plan => plan.licenseCredential === subscription.name
-          ),
-        };
-      })
-      .filter(item => item.plan?.type === LicensePlanType.SPACE_PLAN)
-      .sort((a, b) => b.plan!.sortOrder - a.plan!.sortOrder)?.[0].subscription;
   }
 
   public async getStorageAggregatorOrFail(

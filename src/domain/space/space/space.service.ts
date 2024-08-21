@@ -37,7 +37,6 @@ import { PaginationArgs } from '@core/pagination';
 import { getPaginationResults } from '@core/pagination/pagination.fn';
 import { ISpaceSettings } from '../space.settings/space.settings.interface';
 import { SpaceType } from '@common/enums/space.type';
-import { IAccount } from '../account/account.interface';
 import { UpdateSpacePlatformSettingsInput } from './dto/space.dto.update.platform.settings';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { VisualType } from '@common/enums/visual.type';
@@ -68,6 +67,13 @@ import { AgentType } from '@common/enums/agent.type';
 import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { AccountHostService } from '../account.host/account.host.service';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { LicenseCredential } from '@common/enums/license.credential';
+import { LicensePrivilege } from '@common/enums/license.privilege';
+import { LicenseEngineService } from '@core/license-engine/license.engine.service';
+import { ISpaceSubscription } from './space.license.subscription.interface';
+import { IAccount } from '../account/account.interface';
+import { LicensingService } from '@platform/licensing/licensing.service';
+import { LicensePlanType } from '@common/enums/license.plan.type';
 
 @Injectable()
 export class SpaceService {
@@ -86,6 +92,8 @@ export class SpaceService {
     private storageAggregatorService: StorageAggregatorService,
     private templatesSetService: TemplatesSetService,
     private collaborationService: CollaborationService,
+    private licensingService: LicensingService,
+    private licenseEngineService: LicenseEngineService,
     @InjectRepository(Space)
     private spaceRepository: Repository<Space>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -663,6 +671,7 @@ export class SpaceService {
 
       space.visibility = updateData.visibility;
     }
+
     if (updateData.nameID && updateData.nameID !== space.nameID) {
       let reservedNameIDs: string[] = [];
       if (space.level === SpaceLevel.SPACE) {
@@ -758,6 +767,59 @@ export class SpaceService {
         : -1
     );
     return sortedSubspaces;
+  }
+
+  async getLicensePrivileges(space: ISpace): Promise<LicensePrivilege[]> {
+    let spaceAgent = space.agent;
+    if (!space.agent) {
+      const accountWithAgent = await this.getSpaceOrFail(space.id, {
+        relations: {
+          agent: {
+            credentials: true,
+          },
+        },
+      });
+      spaceAgent = accountWithAgent.agent;
+    }
+    if (!spaceAgent) {
+      throw new EntityNotFoundException(
+        `Unable to find agent with credentials for Space: ${space.id}`,
+        LogContext.ACCOUNT
+      );
+    }
+    const privileges =
+      await this.licenseEngineService.getGrantedPrivileges(spaceAgent);
+    return privileges;
+  }
+
+  async getSubscriptions(spaceInput: ISpace): Promise<ISpaceSubscription[]> {
+    const space = await this.getSpaceOrFail(spaceInput.id, {
+      relations: {
+        agent: {
+          credentials: true,
+        },
+      },
+    });
+    if (!space.agent || !space.agent.credentials) {
+      throw new EntityNotFoundException(
+        `Unable to find agent with credentials for space: ${spaceInput.id}`,
+        LogContext.ACCOUNT
+      );
+    }
+    const subscriptions: ISpaceSubscription[] = [];
+    for (const credential of space.agent.credentials) {
+      if (
+        Object.values(LicenseCredential).includes(
+          credential.type as LicenseCredential
+        )
+      ) {
+        subscriptions.push({
+          name: credential.type as LicenseCredential,
+          expires: credential.expires,
+        });
+      }
+    }
+    return subscriptions;
   }
 
   async createSubspace(
@@ -1134,6 +1196,31 @@ export class SpaceService {
     }
 
     return templatesSet;
+  }
+
+  public async activeSubscription(space: ISpace): Promise<ISpaceSubscription> {
+    const licensingFramework =
+      await this.licensingService.getDefaultLicensingOrFail();
+
+    const today = new Date();
+    const plans = await this.licensingService.getLicensePlans(
+      licensingFramework.id
+    );
+
+    return (await this.getSubscriptions(space))
+      .filter(
+        subscription => !subscription.expires || subscription.expires > today
+      )
+      .map(subscription => {
+        return {
+          subscription,
+          plan: plans.find(
+            plan => plan.licenseCredential === subscription.name
+          ),
+        };
+      })
+      .filter(item => item.plan?.type === LicensePlanType.SPACE_PLAN)
+      .sort((a, b) => b.plan!.sortOrder - a.plan!.sortOrder)?.[0].subscription;
   }
 
   async getDefaultsOrFail(rootSpaceID: string): Promise<ISpaceDefaults> {

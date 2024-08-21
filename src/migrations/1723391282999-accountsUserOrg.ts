@@ -1,13 +1,11 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 import { randomUUID } from 'crypto';
-import { credentials } from 'amqplib';
+import { query } from 'express';
 
 export class AccountsUserOrg1723391282999 implements MigrationInterface {
   name = 'AccountsUserOrg1723391282999';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    // remove accountId for non-level zero spaces, otherwise they will also be updated + show up directly
-    // as children of an account
     await queryRunner.query(
       `UPDATE \`space\` SET accountId = null WHERE level = '1'`
     );
@@ -81,21 +79,26 @@ export class AccountsUserOrg1723391282999 implements MigrationInterface {
         `SELECT id, resourceID, type FROM \`credential\` WHERE agentId = '${contributor.agentId}' AND type = 'account-host'`
       );
       if (accountHostCredentials.length === 0) {
-        // create a new ACCOUNT_HOST credential for the contributor
-        const { accountID, agentID } = await this.createAccount(queryRunner);
-        await this.assignLicensePlansToAgent(queryRunner, agentID);
+        // create a new and associated credential for the contributor
+        const accountID = await this.createAccount(queryRunner);
         await this.assignAccountHostCredential(
           queryRunner,
           contributor.agentId,
           accountID
         );
       } else if (accountHostCredentials.length === 1) {
-        // Nothing to do, contributor is all setup
+        // Move the account licensing credentials to the space agent
+        await this.moveAccountCredentialsToSpace(
+          queryRunner,
+          accountHostCredentials[0].resourceID
+        );
       } else if (accountHostCredentials.length > 1) {
         // Pick the first one, and merge them all into it
         const masterAccountID = accountHostCredentials[0].resourceID;
         for (let i = 1; i < accountHostCredentials.length; i++) {
           const slaveAccountID = accountHostCredentials[i].resourceID;
+          await this.moveAccountCredentialsToSpace(queryRunner, slaveAccountID);
+
           await this.moveAccountResources(
             queryRunner,
             'virtual_contributor',
@@ -128,6 +131,40 @@ export class AccountsUserOrg1723391282999 implements MigrationInterface {
         }
       }
     }
+  }
+
+  private async moveAccountCredentialsToSpace(
+    queryRunner: QueryRunner,
+    accountID: string
+  ) {
+    const [account]: {
+      id: string;
+      spaceId: string;
+      agentId: string;
+    }[] = await queryRunner.query(
+      `SELECT id, spaceId, agentId FROM account WHERE id = '${accountID}'`
+    );
+    if (!account) {
+      console.log(`ACCOUNT for credential does not exist? ${accountID}`);
+      return;
+    }
+    const spaceID = account.spaceId;
+    const [space]: {
+      id: string;
+      agentId: string;
+    }[] = await queryRunner.query(
+      `SELECT id, agentId FROM space WHERE id = '${spaceID}'`
+    );
+    if (!space) {
+      console.log(`Space for account? ${accountID}`);
+      return;
+    }
+    const accountAgentID = account.agentId;
+    const spaceAgentID = space.agentId;
+    // Move all credentials from account agent to space agent
+    await queryRunner.query(
+      `UPDATE credential SET agentId = '${spaceAgentID}', resourceId = '${spaceID}' WHERE agentId = '${accountAgentID}' AND resourceId = '${accountID}'`
+    );
   }
 
   private async deleteAccount(
@@ -177,9 +214,7 @@ export class AccountsUserOrg1723391282999 implements MigrationInterface {
     );
   }
 
-  private async createAccount(
-    queryRunner: QueryRunner
-  ): Promise<{ accountID: string; agentID: string }> {
+  private async createAccount(queryRunner: QueryRunner): Promise<string> {
     const accountID = randomUUID();
     const accountAuthID = randomUUID();
 
@@ -201,7 +236,7 @@ export class AccountsUserOrg1723391282999 implements MigrationInterface {
                         '${storageAggregatorID}')`
     );
 
-    return { accountID, agentID };
+    return accountID;
   }
 
   private async createAgent(queryRunner: QueryRunner): Promise<string> {
@@ -316,3 +351,13 @@ export const allowedTypes = [
 ];
 
 export const maxAllowedFileSize = 15728640;
+
+export enum LicenseCredential {
+  LICENSE_SPACE_FREE = 'license-space-free',
+  LICENSE_SPACE_PLUS = 'license-space-plus',
+  LICENSE_SPACE_PREMIUM = 'license-space-premium',
+  LICENSE_SPACE_ENTERPRISE = 'license-space-enterprise',
+  FEATURE_CALLOUT_TO_CALLOUT_TEMPLATE = 'feature-callout-to-callout-template',
+  FEATURE_VIRTUAL_CONTRIBUTORS = 'feature-virtual-contributors',
+  FEATURE_WHITEBOARD_MULTI_USER = 'feature-whiteboard-multi-user',
+}

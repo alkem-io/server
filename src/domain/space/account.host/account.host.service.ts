@@ -17,13 +17,13 @@ import { LicenseIssuerService } from '@platform/license-issuer/license.issuer.se
 import { Account } from '../account/account.entity';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
-import { CreateAccountInput } from '../account/dto/account.dto.create';
 import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import { LicensingService } from '@platform/licensing/licensing.service';
 import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { AgentType } from '@common/enums/agent.type';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { ISpace } from '../space/space.interface';
 
 @Injectable()
 export class AccountHostService {
@@ -39,8 +39,8 @@ export class AccountHostService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async createAccount(accountData: CreateAccountInput): Promise<IAccount> {
-    let account: IAccount = new Account();
+  async createAccount(): Promise<IAccount> {
+    const account: IAccount = new Account();
     account.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.ACCOUNT
     );
@@ -53,11 +53,7 @@ export class AccountHostService {
       type: AgentType.ACCOUNT,
     });
 
-    account = await this.accountRepository.save(account);
-
-    await this.assignLicensePlansToAccount(account, accountData.host);
-
-    return account;
+    return await this.accountRepository.save(account);
   }
 
   async getAccountOrFail(
@@ -83,13 +79,13 @@ export class AccountHostService {
     });
   }
 
-  private async assignLicensePlansToAccount(
-    account: IAccount,
+  public async assignLicensePlansToSpace(
+    space: ISpace,
     host: IContributor
   ): Promise<void> {
-    if (!account.agent) {
+    if (!space.agent) {
       throw new RelationshipNotFoundException(
-        `Account ${account.id} has no agent`,
+        `Space ${space.id} has no agent`,
         LogContext.ACCOUNT
       );
     }
@@ -110,12 +106,12 @@ export class AccountHostService {
       }
     }
 
-    const accountAgent = account.agent;
+    const spaceAgent = space.agent;
     for (const licensePlan of licensePlansToAssign) {
-      account.agent = await this.licenseIssuerService.assignLicensePlan(
-        accountAgent,
+      space.agent = await this.licenseIssuerService.assignLicensePlan(
+        spaceAgent,
         licensePlan,
-        account.id
+        space.id
       );
     }
   }

@@ -35,6 +35,8 @@ import { ITemplatesSet } from '@domain/template/templates-set/templates.set.inte
 import { ISpaceDefaults } from '../space.defaults/space.defaults.interface';
 import { IAccount } from '../account/account.interface';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
+import { LicensePrivilege } from '@common/enums/license.privilege';
+import { ISpaceSubscription } from './space.license.subscription.interface';
 
 @Resolver(() => ISpace)
 export class SpaceResolverFields {
@@ -88,6 +90,22 @@ export class SpaceResolverFields {
     return context;
   }
 
+  @ResolveField('subscriptions', () => [ISpaceSubscription], {
+    nullable: false,
+    description: 'The subscriptions active for this Space.',
+  })
+  async subscriptions(@Parent() space: ISpace) {
+    return await this.spaceService.getSubscriptions(space);
+  }
+
+  @ResolveField('activeSubscription', () => ISpaceSubscription, {
+    nullable: true,
+    description: 'The "highest" subscription active for this Space.',
+  })
+  async activeSubscription(@Parent() space: ISpace) {
+    return this.spaceService.activeSubscription(space);
+  }
+
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('collaboration', () => ICollaboration, {
@@ -100,6 +118,17 @@ export class SpaceResolverFields {
     loader: ILoader<ICollaboration>
   ): Promise<ICollaboration> {
     return loader.load(space.id);
+  }
+
+  @ResolveField('licensePrivileges', () => [LicensePrivilege], {
+    nullable: true,
+    description:
+      'The privileges granted based on the License credentials held by this Space.',
+  })
+  async licensePrivileges(
+    @Parent() space: ISpace
+  ): Promise<LicensePrivilege[]> {
+    return this.spaceService.getLicensePrivileges(space);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

@@ -166,9 +166,7 @@ export class OrganizationService {
         this.createPreferenceDefaults()
       );
 
-    const account = await this.accountHostService.createAccount({
-      host: organization,
-    });
+    const account = await this.accountHostService.createAccount();
     organization.accountID = account.id;
 
     organization = await this.save(organization);
