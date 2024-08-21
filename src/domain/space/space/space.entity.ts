@@ -11,13 +11,15 @@ import { ISpace } from '@domain/space/space/space.interface';
 import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
 import { TINY_TEXT_LENGTH, UUID_LENGTH } from '@common/constants';
 import { SpaceType } from '@common/enums/space.type';
-import { Collaboration } from '@domain/collaboration/collaboration';
-import { Community } from '@domain/community/community';
+import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
+import { Community } from '@domain/community/community/community.entity';
 import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
 import { Account } from '../account/account.entity';
 import { Context } from '@domain/context/context/context.entity';
 import { Agent } from '@domain/agent/agent/agent.entity';
 import { SpaceVisibility } from '@common/enums/space.visibility';
+import { TemplatesSet } from '@domain/template/templates-set/templates.set.entity';
+import { SpaceDefaults } from '../space.defaults/space.defaults.entity';
 @Entity()
 export class Space extends NameableEntity implements ISpace {
   @OneToMany(() => Space, space => space.parentSpace, {
@@ -32,13 +34,12 @@ export class Space extends NameableEntity implements ISpace {
   })
   parentSpace?: Space;
 
-  // Note: no counter OneToMany as this is a pre ManyToOne relationship
-  @ManyToOne(() => Account, {
-    eager: true, // TODO: really would like to drop this, not least for performance reasons...
+  @ManyToOne(() => Account, account => account.spaces, {
+    eager: false,
     cascade: false,
     onDelete: 'SET NULL',
   })
-  account!: Account;
+  account?: Account;
 
   @Column({
     unique: true,
@@ -104,6 +105,22 @@ export class Space extends NameableEntity implements ISpace {
     default: SpaceVisibility.ACTIVE,
   })
   visibility!: SpaceVisibility;
+
+  @OneToOne(() => TemplatesSet, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  library?: TemplatesSet;
+
+  @OneToOne(() => SpaceDefaults, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  defaults?: SpaceDefaults;
 
   constructor() {
     super();

@@ -16,6 +16,7 @@ import { Collaboration } from '@domain/collaboration/collaboration/collaboration
 import { Account } from '../account/account.entity';
 import { SpaceType } from '@common/enums/space.type';
 import { SpaceLevel } from '@common/enums/space.level';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 const moduleMocker = new ModuleMocker(global);
 
@@ -76,7 +77,7 @@ const getAuthorizationPolicyMock = (
   anonymousReadAccess,
   credentialRules: '',
   privilegeRules: '',
-  type: 'space',
+  type: AuthorizationPolicyType.SPACE,
   verifiedCredentialRules: '',
   ...getEntityMock<AuthorizationPolicy>(),
 });
@@ -99,6 +100,7 @@ const getSubspacesMock = (
         virtualContributors: [],
         innovationHubs: [],
         innovationPacks: [],
+        spaces: [],
         ...getEntityMock<Account>(),
       },
       type: SpaceType.CHALLENGE,
@@ -192,6 +194,7 @@ const getSubsubspacesMock = (subsubspaceId: string, count: number): Space[] => {
         virtualContributors: [],
         innovationHubs: [],
         innovationPacks: [],
+        spaces: [],
         ...getEntityMock<Account>(),
       },
       type: SpaceType.OPPORTUNITY,
@@ -302,6 +305,7 @@ const getSpaceMock = ({
       virtualContributors: [],
       innovationHubs: [],
       innovationPacks: [],
+      spaces: [],
       ...getEntityMock<Account>(),
     },
     authorization: getAuthorizationPolicyMock(

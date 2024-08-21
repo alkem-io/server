@@ -3,7 +3,7 @@ import { Resolver } from '@nestjs/graphql';
 import { Args, Mutation } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 
-import { IUser } from '@domain/community/user';
+import { IUser } from '@domain/community/user/user.interface';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationPrivilege, AuthorizationRoleGlobal } from '@common/enums';
@@ -63,9 +63,10 @@ export class AdminAuthorizationResolverMutations {
       `grant credential: ${agentInfo.email}`
     );
 
-    const user = await this.adminAuthorizationService.grantCredentialToUser(
-      grantCredentialData
-    );
+    const user =
+      await this.adminAuthorizationService.grantCredentialToUser(
+        grantCredentialData
+      );
 
     // Send the notification
     this.notifyPlatformGlobalRoleChange(
@@ -93,9 +94,10 @@ export class AdminAuthorizationResolverMutations {
       AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
       `revoke credential: ${agentInfo.email}`
     );
-    const user = await this.adminAuthorizationService.revokeCredentialFromUser(
-      credentialRemoveData
-    );
+    const user =
+      await this.adminAuthorizationService.revokeCredentialFromUser(
+        credentialRemoveData
+      );
     this.notifyPlatformGlobalRoleChange(
       agentInfo.userID,
       user,

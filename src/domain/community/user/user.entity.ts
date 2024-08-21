@@ -15,6 +15,9 @@ import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.ag
 
 @Entity()
 export class User extends ContributorBase implements IUser {
+  @Column('char', { length: 36, nullable: false })
+  accountID!: string;
+
   @Column({
     unique: true,
   })

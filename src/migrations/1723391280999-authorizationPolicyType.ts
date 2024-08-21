@@ -23,7 +23,9 @@ export class AuthorizationPolicyType1723121607999
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`ALTER TABLE \`authorization_policy\` DROP COLUMN \`type\``);
+    await queryRunner.query(
+      `ALTER TABLE \`authorization_policy\` DROP COLUMN \`type\``
+    );
   }
 
   private async updateAuthorizationPolicyTypeForEntity(

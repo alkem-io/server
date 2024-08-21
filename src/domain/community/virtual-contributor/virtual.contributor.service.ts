@@ -432,7 +432,7 @@ export class VirtualContributorService {
     return agent;
   }
 
-  public async getAccountHost(
+  public async getProvider(
     virtualContributor: IVirtualContributor
   ): Promise<IContributor> {
     const virtualContributorWithAccount =

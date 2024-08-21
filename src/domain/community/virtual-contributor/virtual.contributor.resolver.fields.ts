@@ -21,6 +21,7 @@ import { ILoader } from '@core/dataloader/loader.interface';
 import { IVirtualContributor } from './virtual.contributor.interface';
 import { IAccount } from '@domain/space/account/account.interface';
 import { IAiPersona } from '../ai-persona';
+import { IContributor } from '../contributor/contributor.interface';
 
 @Resolver(() => IVirtualContributor)
 export class VirtualContributorResolverFields {
@@ -97,6 +98,7 @@ export class VirtualContributorResolverFields {
     return profile;
   }
 
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('agent', () => IAgent, {
     nullable: false,
     description: 'The Agent representing this User.',
@@ -121,5 +123,16 @@ export class VirtualContributorResolverFields {
     return this.virtualContributorService.getAiPersonaOrFail(
       virtualContributor
     );
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @ResolveField('provider', () => IContributor, {
+    nullable: false,
+    description: 'The Virtual Contributor provider.',
+  })
+  async provider(
+    @Parent() virtualContributor: IVirtualContributor
+  ): Promise<IContributor> {
+    return await this.virtualContributorService.getProvider(virtualContributor);
   }
 }
