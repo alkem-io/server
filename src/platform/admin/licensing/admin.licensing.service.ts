@@ -2,10 +2,10 @@ import { LogContext } from '@common/enums/logging.context';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { AssignLicensePlanToSpace } from './dto/admin.licensing.dto.assign.license.plan.to.account';
+import { AssignLicensePlanToSpace } from './dto/admin.licensing.dto.assign.license.plan.to.space';
 import { LicensingService } from '@platform/licensing/licensing.service';
 import { LicenseIssuerService } from '@platform/license-issuer/license.issuer.service';
-import { RevokeLicensePlanFromSpace } from './dto/admin.licensing.dto.revoke.license.plan.from.account';
+import { RevokeLicensePlanFromSpace } from './dto/admin.licensing.dto.revoke.license.plan.from.space';
 import { SpaceService } from '@domain/space/space/space.service';
 import { ISpace } from '@domain/space/space/space.interface';
 
