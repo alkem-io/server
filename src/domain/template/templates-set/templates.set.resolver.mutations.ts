@@ -83,7 +83,7 @@ export class TemplatesSetResolverMutations {
         templatesSet.authorization
       );
     await this.authorizationPolicyService.saveAll(authorizations);
-    return await this.calloutTemplateService.getCalloutTemplateOrFail(
+    return this.calloutTemplateService.getCalloutTemplateOrFail(
       calloutTemplate.id
     );
   }

@@ -32,11 +32,15 @@ import {
   MessageSenderRole,
 } from '../ai-persona-service/dto/interaction.message';
 import { AlkemioConfig } from '@src/types';
+import { AiPersonaServiceAuthorizationService } from '@services/ai-server/ai-persona-service/ai.persona.service.service.authorization';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
 @Injectable()
 export class AiServerService {
   constructor(
+    private authorizationPolicyService: AuthorizationPolicyService,
     private aiPersonaServiceService: AiPersonaServiceService,
+    private aiPersonaServiceAuthorizationService: AiPersonaServiceAuthorizationService,
     private aiPersonaEngineAdapter: AiPersonaEngineAdapter,
     private vcInteractionService: VcInteractionService,
     private communicationAdapter: CommunicationAdapter,
@@ -190,9 +194,17 @@ export class AiServerService {
       await this.aiPersonaServiceService.createAiPersonaService(
         personaServiceData
       );
-    server.aiPersonaServices = server.aiPersonaServices ?? [];
-    server.aiPersonaServices.push(aiPersonaService);
-    await this.saveAiServer(server);
+    aiPersonaService.aiServer = server;
+
+    await this.aiPersonaServiceService.save(aiPersonaService);
+
+    const updatedAuthorizations =
+      await this.aiPersonaServiceAuthorizationService.applyAuthorizationPolicy(
+        aiPersonaService,
+        server.authorization
+      );
+    await this.authorizationPolicyService.saveAll(updatedAuthorizations);
+
     return aiPersonaService;
   }
 

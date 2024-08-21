@@ -42,7 +42,9 @@ export class CalloutTemplateAuthorizationService {
         calloutTemplate.authorization,
         parentAuthorization
       );
-    const updatedAuthorizations: IAuthorizationPolicy[] = [];
+    const updatedAuthorizations: IAuthorizationPolicy[] = [
+      calloutTemplate.authorization,
+    ];
 
     // Cascade
     const profileAuthorizations =
