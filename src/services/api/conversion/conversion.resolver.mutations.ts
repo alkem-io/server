@@ -16,8 +16,6 @@ import { SpaceAuthorizationService } from '@domain/space/space/space.service.aut
 import { ConvertSubsubspaceToSubspaceInput } from './dto/convert.dto.subsubspace.to.subspace.input';
 import { SpaceService } from '@domain/space/space/space.service';
 import { GLOBAL_POLICY_CONVERSION_GLOBAL_ADMINS } from '@common/constants/authorization/global.policy.constants';
-import { LogContext } from '@common/enums/logging.context';
-import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 
 @Resolver()
 export class ConversionResolverMutations {
@@ -35,7 +33,7 @@ export class ConversionResolverMutations {
     this.authorizationGlobalAdminPolicy =
       this.authorizationPolicyService.createGlobalRolesAuthorizationPolicy(
         [AuthorizationRoleGlobal.GLOBAL_ADMIN],
-        [AuthorizationPrivilege.CREATE_SPACE, AuthorizationPrivilege.CREATE],
+        [AuthorizationPrivilege.PLATFORM_ADMIN],
         GLOBAL_POLICY_CONVERSION_GLOBAL_ADMINS
       );
   }
@@ -53,19 +51,19 @@ export class ConversionResolverMutations {
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       this.authorizationGlobalAdminPolicy,
-      AuthorizationPrivilege.CREATE_SPACE,
+      AuthorizationPrivilege.PLATFORM_ADMIN,
       `convert challenge to space: ${agentInfo.email}`
     );
-    const newSpace = await this.conversionService.convertChallengeToSpace(
+    let space = await this.conversionService.convertChallengeToSpace(
       convertChallengeToSpaceData,
       agentInfo
     );
-    await this.spaceService.save(newSpace);
+    space = await this.spaceService.save(space);
     const updatedAuthorizations =
-      await this.spaceAuthorizationService.applyAuthorizationPolicy(newSpace);
+      await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);
 
-    return this.spaceService.getSpaceOrFail(newSpace.id);
+    return this.spaceService.getSpaceOrFail(space.id);
   }
 
   @UseGuards(GraphqlGuard)
@@ -79,53 +77,20 @@ export class ConversionResolverMutations {
     @Args('convertData')
     convertOpportunityToChallengeData: ConvertSubsubspaceToSubspaceInput
   ): Promise<ISpace> {
-    const subsubspace = await this.spaceService.getSpaceOrFail(
-      convertOpportunityToChallengeData.subsubspaceID,
-      {
-        relations: {
-          account: {
-            space: true,
-          },
-        },
-      }
-    );
-    if (!subsubspace.account || !subsubspace.account.space) {
-      throw new EntityNotInitializedException(
-        `account not found on subsubspace: ${subsubspace.id}`,
-        LogContext.SPACES
-      );
-    }
-    const spaceID = subsubspace.account.space.id;
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       this.authorizationGlobalAdminPolicy,
       AuthorizationPrivilege.CREATE,
       `convert opportunity to challenge: ${agentInfo.email}`
     );
-    const spaceStorageAggregator =
-      await this.spaceService.getStorageAggregatorOrFail(spaceID);
-    const newChallenge =
-      await this.conversionService.convertOpportunityToChallenge(
-        convertOpportunityToChallengeData.subsubspaceID,
-        spaceID,
-        agentInfo,
-        spaceStorageAggregator
-      );
-    const parentSpace = await this.spaceService.getSpaceOrFail(spaceID, {
-      relations: {
-        account: {
-          authorization: true,
-        },
-      },
-    });
-    newChallenge.parentSpace = parentSpace;
-    await this.spaceService.save(newChallenge);
-    const updatedAuthorizations =
-      await this.spaceAuthorizationService.applyAuthorizationPolicy(
-        newChallenge
-      );
-    await this.authorizationPolicyService.saveAll(updatedAuthorizations);
-    // return the latest, after the parent has saved
-    return this.spaceService.getSpaceOrFail(newChallenge.id);
+    let subspace = await this.conversionService.convertOpportunityToChallenge(
+      convertOpportunityToChallengeData.subsubspaceID,
+      agentInfo
+    );
+    subspace = await this.spaceService.save(subspace);
+    const subspaceAuthorizations =
+      await this.spaceAuthorizationService.applyAuthorizationPolicy(subspace);
+    await this.authorizationPolicyService.saveAll(subspaceAuthorizations);
+    return await this.spaceService.getSpaceOrFail(subspace.id);
   }
 }

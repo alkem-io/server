@@ -2,7 +2,7 @@ import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { Field, InputType } from '@nestjs/graphql';
 
 @InputType()
-export class AssignLicensePlanToAccount {
+export class RevokeLicensePlanFromSpace {
   @Field(() => UUID, {
     nullable: false,
     description: 'The ID of the LicensePlan to assign.',
@@ -11,9 +11,9 @@ export class AssignLicensePlanToAccount {
 
   @Field(() => UUID, {
     nullable: false,
-    description: 'The ID of the Account to assign the LicensePlan to.',
+    description: 'The ID of the Space to assign the LicensePlan to.',
   })
-  accountID!: string;
+  spaceID!: string;
 
   @Field(() => UUID, {
     nullable: true,

@@ -161,6 +161,8 @@ export class AiPersonaServiceService {
       contextID: personaQuestionInput.contextID,
       history,
       interactionID: personaQuestionInput.interactionID,
+      displayName: personaQuestionInput.displayName,
+      description: personaQuestionInput.description,
     };
 
     return this.aiPersonaEngineAdapter.sendQuery(input);

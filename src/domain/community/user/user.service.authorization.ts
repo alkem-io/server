@@ -4,7 +4,7 @@ import {
   AuthorizationPrivilege,
   LogContext,
 } from '@common/enums';
-import { IUser } from '@domain/community/user';
+import { IUser } from '@domain/community/user/user.interface';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { UserService } from './user.service';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
@@ -104,12 +104,12 @@ export class UserAuthorizationService {
       );
     updatedAuthorizations.push(...profileAuthorizations);
 
-    const agentAuthoation =
+    const agentAuthorization =
       this.agentAuthorizationService.applyAuthorizationPolicy(
         user.agent,
         user.authorization
       );
-    updatedAuthorizations.push(agentAuthoation);
+    updatedAuthorizations.push(agentAuthorization);
 
     const preferenceSetAuthorizations =
       this.preferenceSetAuthorizationService.applyAuthorizationPolicy(
@@ -140,7 +140,8 @@ export class UserAuthorizationService {
       agentID: agent.id,
       resourceID: user.id,
     });
-    return await this.userService.save(user);
+    user.agent = await this.agentService.saveAgent(user.agent);
+    return user;
   }
 
   private appendGlobalCredentialRules(

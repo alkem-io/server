@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
-import { EntityManager, FindOneOptions, In } from 'typeorm';
+import { EntityManager, FindOneOptions } from 'typeorm';
 import { IContributor } from './contributor.interface';
-import { User } from '../user';
-import { Organization } from '../organization';
+import { User } from '../user/user.entity';
+import { Organization } from '../organization/organization.entity';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -11,12 +11,8 @@ import {
 } from '@common/exceptions';
 import { LogContext } from '@common/enums/logging.context';
 import { IAgent } from '@domain/agent/agent/agent.interface';
-import { VirtualContributor } from '../virtual-contributor';
+import { VirtualContributor } from '../virtual-contributor/virtual.contributor.entity';
 import { CommunityContributorType } from '@common/enums/community.contributor.type';
-import { IAccount } from '@domain/space/account/account.interface';
-import { Credential } from '@domain/agent/credential/credential.entity';
-import { AuthorizationCredential } from '@common/enums';
-import { Account } from '@domain/space/account/account.entity';
 import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 import { CreateProfileInput } from '@domain/common/profile/dto';
 import { AvatarCreatorService } from '@services/external/avatar-creator/avatar.creator.service';
@@ -174,40 +170,5 @@ export class ContributorService {
       );
     }
     return contributorWithRelations;
-  }
-
-  public async getAccountsHostedByContributor(
-    contributor: IContributor,
-    includeSpace = false
-  ): Promise<IAccount[]> {
-    let agent = contributor.agent;
-    if (!agent) {
-      const contributorWithAgent = await this.getContributorWithRelations(
-        contributor,
-        {
-          relations: { agent: true },
-        }
-      );
-      agent = contributorWithAgent.agent;
-    }
-    const hostedAccountCredentials = await this.entityManager.find(Credential, {
-      where: {
-        type: AuthorizationCredential.ACCOUNT_HOST,
-        agent: {
-          id: agent.id,
-        },
-      },
-    });
-    const accountIDs = hostedAccountCredentials.map(cred => cred.resourceID);
-    const accounts = await this.entityManager.find(Account, {
-      where: {
-        id: In(accountIDs),
-      },
-      relations: {
-        space: includeSpace,
-      },
-    });
-
-    return accounts;
   }
 }

@@ -5,12 +5,12 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { UUID, NameID } from '@domain/common/scalars';
 import { IUser } from '../user/user.interface';
 import { IOrganization } from '../organization/organization.interface';
-import { IVirtualContributor } from '../virtual-contributor/virtual.contributor.interface';
-import { IProfile } from '@domain/common/profile/profile.interface';
-import { IAgent } from '@domain/agent';
 import { VirtualContributor } from '../virtual-contributor/virtual.contributor.entity';
-import { Organization } from '../organization/organization.entity';
+import { IProfile } from '@domain/common/profile/profile.interface';
+import { IAgent } from '@domain/agent/agent/agent.interface';
+import { IVirtualContributor } from '../virtual-contributor/virtual.contributor.interface';
 import { User } from '../user/user.entity';
+import { Organization } from '../organization/organization.entity';
 
 @InterfaceType('Contributor', {
   resolveType(contributor) {

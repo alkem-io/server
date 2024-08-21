@@ -342,6 +342,7 @@ export class VirtualContributorService {
           authorization: true,
           aiPersona: true,
           agent: true,
+          profile: true,
         },
       }
     );
@@ -362,6 +363,8 @@ export class VirtualContributorService {
       userID: vcQuestionInput.userID,
       threadID: vcQuestionInput.threadID,
       vcInteractionID: vcQuestionInput.vcInteractionID,
+      description: virtualContributor.profile.description,
+      displayName: virtualContributor.profile.displayName,
     };
 
     return await this.aiServerAdapter.askQuestion(aiServerAdapterQuestionInput);
@@ -422,7 +425,7 @@ export class VirtualContributorService {
     return agent;
   }
 
-  public async getAccountHost(
+  public async getProvider(
     virtualContributor: IVirtualContributor
   ): Promise<IContributor> {
     const virtualContributorWithAccount =
