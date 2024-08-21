@@ -162,6 +162,9 @@ export class UserService {
     const response = await this.save(user);
 
     if (agentInfo) {
+      // this code is a bit tricky, as the user is cached by email, and if the cache has not expired
+      // and the user tries to register again, the user will be found in the cache, resulting in a messed up
+      // lookup in createdBy in the document, failing a constraint and the whole flow...
       const updatedAgentInfo =
         agentInfo.userID && agentInfo.userID !== ''
           ? agentInfo
