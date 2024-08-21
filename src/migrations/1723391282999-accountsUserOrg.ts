@@ -163,7 +163,7 @@ export class AccountsUserOrg1723391282999 implements MigrationInterface {
     const spaceAgentID = space.agentId;
     // Move all credentials from account agent to space agent
     await queryRunner.query(
-      `UPDATE credential SET agentId = '${spaceAgentID}' WHERE agentId = '${accountAgentID}'`
+      `UPDATE credential SET agentId = '${spaceAgentID}', resourceId = '${spaceID}' WHERE agentId = '${accountAgentID}' AND resourceId = '${accountID}'`
     );
   }
 
