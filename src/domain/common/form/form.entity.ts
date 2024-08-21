@@ -4,9 +4,9 @@ import { IForm } from './form.interface';
 
 @Entity()
 export class Form extends BaseAlkemioEntity implements IForm {
-  @Column('text')
+  @Column('text', { nullable: false })
   questions!: string;
 
   @Column('text', { nullable: true })
-  description = '';
+  description?: string;
 }

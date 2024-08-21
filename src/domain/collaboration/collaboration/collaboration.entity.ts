@@ -40,6 +40,6 @@ export class Collaboration
   @JoinColumn()
   innovationFlow?: InnovationFlow;
 
-  @Column('text')
-  groupsStr: string = '[]';
+  @Column('text', { nullable: false })
+  groupsStr!: string;
 }

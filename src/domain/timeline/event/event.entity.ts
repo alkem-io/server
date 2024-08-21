@@ -3,14 +3,15 @@ import { ICalendarEvent } from './event.interface';
 import { Calendar } from '../calendar/calendar.entity';
 import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
 import { Room } from '@domain/communication/room/room.entity';
+import { UUID_LENGTH } from '@common/constants';
 
 @Entity()
 export class CalendarEvent extends NameableEntity implements ICalendarEvent {
   @Column('text')
   type!: string;
 
-  @Column('char', { length: 36, nullable: true })
-  createdBy!: string;
+  @Column('char', { length: UUID_LENGTH, nullable: true })
+  createdBy?: string;
 
   @OneToOne(() => Room, {
     eager: true,
@@ -27,19 +28,19 @@ export class CalendarEvent extends NameableEntity implements ICalendarEvent {
   })
   calendar?: Calendar;
 
-  @Column('datetime')
+  @Column('datetime', { nullable: false })
   startDate!: Date;
 
-  @Column('boolean', { default: true })
-  wholeDay = true;
+  @Column('boolean', { nullable: false })
+  wholeDay!: boolean;
 
-  @Column('boolean', { default: true })
+  @Column('boolean', { nullable: false })
   multipleDays = true;
 
-  @Column('int')
+  @Column('int', { nullable: false })
   durationMinutes!: number;
 
-  @Column('int')
+  @Column('int', { nullable: true })
   durationDays!: number;
 
   constructor() {

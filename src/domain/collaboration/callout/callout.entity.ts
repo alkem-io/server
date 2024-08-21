@@ -16,6 +16,7 @@ import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity/au
 import { CalloutContributionPolicy } from '../callout-contribution-policy/callout.contribution.policy.entity';
 import { CalloutContributionDefaults } from '../callout-contribution-defaults/callout.contribution.defaults.entity';
 import { CalloutContribution } from '../callout-contribution/callout.contribution.entity';
+import { ENUM_LENGTH, UUID_LENGTH } from '@common/constants';
 
 @Entity()
 export class Callout extends AuthorizableEntity implements ICallout {
@@ -25,10 +26,10 @@ export class Callout extends AuthorizableEntity implements ICallout {
   @Column('text', { nullable: false })
   type!: CalloutType;
 
-  @Column('char', { length: 36, nullable: true })
-  createdBy!: string;
+  @Column('char', { length: UUID_LENGTH, nullable: true })
+  createdBy?: string;
 
-  @Column('text', { nullable: false, default: CalloutVisibility.DRAFT })
+  @Column('varchar', { length: ENUM_LENGTH, nullable: false })
   visibility!: CalloutVisibility;
 
   @OneToOne(() => CalloutFraming, {
@@ -76,16 +77,16 @@ export class Callout extends AuthorizableEntity implements ICallout {
   })
   collaboration?: Collaboration;
 
-  @Column('int', { default: 10 })
+  @Column('int', { nullable: false })
   sortOrder!: number;
 
   activity!: number;
 
-  @Column('char', { length: 36, nullable: true })
-  publishedBy!: string;
+  @Column('char', { length: UUID_LENGTH, nullable: true })
+  publishedBy?: string;
 
-  @Column('datetime')
-  publishedDate!: Date;
+  @Column('datetime', { nullable: true })
+  publishedDate?: Date;
 
   constructor() {
     super();

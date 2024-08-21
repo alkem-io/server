@@ -2,6 +2,8 @@ import { Column, Entity, OneToMany } from 'typeorm';
 import { IAgent } from '@domain/agent/agent/agent.interface';
 import { Credential } from '@domain/agent/credential/credential.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
+import { ENUM_LENGTH } from '@common/constants';
+import { AgentType } from '@common/enums/agent.type';
 
 @Entity()
 export class Agent extends AuthorizableEntity implements IAgent {
@@ -18,8 +20,8 @@ export class Agent extends AuthorizableEntity implements IAgent {
   })
   credentials?: Credential[];
 
-  @Column('varchar', { length: 128, nullable: true })
-  type!: string;
+  @Column('varchar', { length: ENUM_LENGTH, nullable: false })
+  type!: AgentType;
 
   constructor() {
     super();

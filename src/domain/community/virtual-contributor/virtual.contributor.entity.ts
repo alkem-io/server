@@ -4,6 +4,7 @@ import { ContributorBase } from '../contributor/contributor.base.entity';
 import { Account } from '@domain/space/account/account.entity';
 import { SearchVisibility } from '@common/enums/search.visibility';
 import { AiPersona } from '../ai-persona';
+import { MINI_TEXT_LENGTH } from '@common/constants';
 
 @Entity()
 export class VirtualContributor
@@ -13,12 +14,14 @@ export class VirtualContributor
   @ManyToOne(() => Account, account => account.virtualContributors, {
     eager: false,
     onDelete: 'SET NULL',
+    nullable: false,
   })
   account!: Account;
 
   @OneToOne(() => AiPersona, {
     eager: false,
     cascade: true,
+    nullable: false,
   })
   @JoinColumn()
   aiPersona!: AiPersona;
@@ -27,7 +30,7 @@ export class VirtualContributor
   listedInStore!: boolean;
 
   @Column('varchar', {
-    length: 36,
+    length: MINI_TEXT_LENGTH,
     nullable: false,
     default: SearchVisibility.ACCOUNT,
   })

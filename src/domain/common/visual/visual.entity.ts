@@ -9,7 +9,7 @@ export class Visual extends AuthorizableEntity implements IVisual {
   @Column()
   name!: string;
 
-  @Column('text', { default: '' })
+  @Column('text', { nullable: false })
   uri!: string;
 
   @Column('int')

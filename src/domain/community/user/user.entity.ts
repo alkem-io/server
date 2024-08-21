@@ -12,10 +12,11 @@ import { Application } from '@domain/community/application/application.entity';
 import { PreferenceSet } from '@domain/common/preference-set/preference.set.entity';
 import { ContributorBase } from '../contributor/contributor.base.entity';
 import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
+import { UUID_LENGTH } from '@common/constants';
 
 @Entity()
 export class User extends ContributorBase implements IUser {
-  @Column('char', { length: 36, nullable: false })
+  @Column('char', { length: UUID_LENGTH, nullable: false })
   accountID!: string;
 
   @Column({
@@ -25,22 +26,22 @@ export class User extends ContributorBase implements IUser {
   rowId!: number;
 
   @Column()
-  accountUpn: string = '';
+  accountUpn!: string;
 
   @Column()
-  firstName: string = '';
+  firstName!: string;
 
   @Column()
-  lastName: string = '';
+  lastName!: string;
 
   @Column()
-  email: string = '';
+  email!: string;
 
   @Column()
-  phone: string = '';
+  phone!: string;
 
   @Column({ type: 'boolean' })
-  serviceProfile: boolean = false;
+  serviceProfile!: boolean;
 
   @OneToMany(() => Application, application => application.id, {
     eager: false,

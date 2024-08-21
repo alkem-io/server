@@ -1,6 +1,10 @@
 import { Column, Entity, OneToMany } from 'typeorm';
 import { PreferenceValueType } from '@common/enums';
-import { SMALL_TEXT_LENGTH, TINY_TEXT_LENGTH } from '@src/common/constants';
+import {
+  ENUM_LENGTH,
+  SMALL_TEXT_LENGTH,
+  TINY_TEXT_LENGTH,
+} from '@src/common/constants';
 import { IPreferenceDefinition as IPreferenceDefinition } from './preference.definition.interface';
 import { Preference } from './preference.entity';
 import { BaseAlkemioEntity } from '@domain/common/entity/base-entity/base.alkemio.entity';
@@ -36,7 +40,7 @@ export class PreferenceDefinition
   valueType!: PreferenceValueType;
 
   @Column({
-    length: SMALL_TEXT_LENGTH,
+    length: ENUM_LENGTH,
   })
   type!: PreferenceType;
 
