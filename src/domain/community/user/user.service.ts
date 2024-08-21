@@ -164,11 +164,9 @@ export class UserService {
     if (agentInfo) {
       // this code is a bit tricky, as the user is cached by email, and if the cache has not expired
       // and the user tries to register again, the user will be found in the cache, resulting in a messed up
-      // lookup in createdBy in the document, failing a constraint and the whole flow...
-      const updatedAgentInfo =
-        agentInfo.userID && agentInfo.userID !== ''
-          ? agentInfo
-          : { ...agentInfo, userID: response.id };
+      // lookup in createdBy in the document, failing a constraint and the whole flow... That's why I am hacking
+      // it a bit, providing the userID for the current user, not the agent, when creating the avatar (99% of the cases it will be the same)
+      const updatedAgentInfo = { ...agentInfo, userID: response.id };
       await this.contributorService.addAvatarVisualToContributorProfile(
         user.profile,
         userData.profileData,
