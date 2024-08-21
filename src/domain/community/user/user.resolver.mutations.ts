@@ -2,11 +2,7 @@ import { Inject, LoggerService, UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
-import {
-  CreateUserInput,
-  IUser,
-  UpdateUserInput,
-} from '@domain/community/user';
+import { IUser } from '@domain/community/user/user.interface';
 import { UserService } from './user.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
@@ -20,22 +16,18 @@ import { PreferenceService } from '@domain/common/preference';
 import { UpdateUserPreferenceInput } from './dto/user.dto.update.preference';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
-import { NotificationInputUserRegistered } from '@services/adapters/notification-adapter/dto/notification.dto.input.user.registered';
-import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { UpdateUserPlatformSettingsInput } from './dto/user.dto.update.platform.settings';
+import { UpdateUserInput } from './dto';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
 @Resolver(() => IUser)
 export class UserResolverMutations {
   constructor(
     private communicationAdapter: CommunicationAdapter,
-    private notificationAdapter: NotificationAdapter,
     private authorizationService: AuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private userService: UserService,
     private userAuthorizationService: UserAuthorizationService,
-    private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private preferenceService: PreferenceService,
     private preferenceSetService: PreferenceSetService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -44,44 +36,8 @@ export class UserResolverMutations {
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IUser, {
-    description: 'Creates a new User on the platform.',
-  })
-  @Profiling.api
-  async createUser(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('userData') userData: CreateUserInput
-  ): Promise<IUser> {
-    const authorization =
-      await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      authorization,
-      AuthorizationPrivilege.CREATE,
-      `create new User: ${agentInfo.email}`
-    );
-    let user = await this.userService.createUser(userData);
-    user = await this.userAuthorizationService.grantCredentials(user);
-    user = await this.userService.save(user);
-
-    const updatedAuthorizations =
-      await this.userAuthorizationService.applyAuthorizationPolicy(user);
-    await this.authorizationPolicyService.saveAll(updatedAuthorizations);
-
-    // Send the notification
-    const notificationInput: NotificationInputUserRegistered = {
-      triggeredBy: agentInfo.userID,
-      userID: user.id,
-    };
-    await this.notificationAdapter.userRegistered(notificationInput);
-
-    return await this.userService.getUserOrFail(user.id);
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IUser, {
     description: 'Updates the User.',
   })
-  @Profiling.api
   async updateUser(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('userData') userData: UpdateUserInput

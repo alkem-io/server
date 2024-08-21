@@ -1,15 +1,8 @@
-import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { ILibrary } from '@library/library/library.interface';
-import {
-  InnovationHub as InnovationHubDecorator,
-  Profiling,
-} from '@src/common/decorators';
-import { InnovationHubArgsQuery } from '@domain/innovation-hub/dto';
-import { InnovationHubService } from '@domain/innovation-hub';
-import { IInnovationHub } from '@domain/innovation-hub/types';
+import { Profiling } from '@src/common/decorators';
 import { IPlatform } from './platform.interface';
 import { PlatformService } from './platform.service';
-import { InnovationHub } from '@domain/innovation-hub/innovation.hub.entity';
 import { IConfig } from '@platform/configuration/config/config.interface';
 import { KonfigService } from '@platform/configuration/config/config.service';
 import { IMetadata } from '@platform/metadata/metadata.interface';
@@ -27,8 +20,7 @@ export class PlatformResolverFields {
   constructor(
     private platformService: PlatformService,
     private configService: KonfigService,
-    private metadataService: MetadataService,
-    private innovationHubService: InnovationHubService
+    private metadataService: MetadataService
   ) {}
 
   @ResolveField('authorization', () => IAuthorizationPolicy, {
@@ -74,29 +66,6 @@ export class PlatformResolverFields {
   })
   licensing(@Parent() platform: IPlatform): Promise<ILicensing> {
     return this.platformService.getLicensing(platform);
-  }
-
-  @ResolveField(() => IInnovationHub, {
-    description: 'Details about the current Innovation Hub you are in.',
-    nullable: true,
-  })
-  public innovationHub(
-    @Args({
-      nullable: true,
-      description: 'Returns a matching Innovation Hub.',
-    })
-    args: InnovationHubArgsQuery,
-    @InnovationHubDecorator() innovationHub?: InnovationHub
-  ): Promise<IInnovationHub | undefined> {
-    // if no arguments are provided, return the current ISpace
-    if (!Object.keys(args).length) {
-      return Promise.resolve(innovationHub as IInnovationHub);
-    }
-
-    return this.innovationHubService.getInnovationHubFlexOrFail({
-      subdomain: args.subdomain,
-      idOrNameId: args.id,
-    });
   }
 
   @ResolveField(() => IConfig, {

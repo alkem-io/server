@@ -463,6 +463,10 @@ platform:
   vector_db:
     host: ${VECTOR_DB_HOST}:localhost
     port: ${VECTOR_DB_PORT}:8765
+
+  virtual_contributors:
+    history_length: ${VC_HISTORY_LENGTH}:10
+
 ssi:
   # Jolocom SDK is used for providing SSI capabilities on the platform.
   # Note: NOT FOR PRODUCTION USAGE, experimental functionality,

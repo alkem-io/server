@@ -8,6 +8,8 @@ import { IContext } from '@domain/context/context/context.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { IAccount } from '../account/account.interface';
 import { SpaceVisibility } from '@common/enums/space.visibility';
+import { ITemplatesSet } from '@domain/template/templates-set/templates.set.interface';
+import { ISpaceDefaults } from '../space.defaults/space.defaults.interface';
 
 @ObjectType('Space')
 export class ISpace extends INameable {
@@ -16,11 +18,7 @@ export class ISpace extends INameable {
   subspaces?: ISpace[];
   parentSpace?: ISpace;
 
-  @Field(() => IAccount, {
-    nullable: false,
-    description: 'The Account that this Space is part of.',
-  })
-  account!: IAccount;
+  account?: IAccount;
 
   @Field(() => Number, {
     description:
@@ -55,4 +53,7 @@ export class ISpace extends INameable {
     description: 'The ID of the level zero space for this tree.',
   })
   levelZeroSpaceID!: string;
+
+  library?: ITemplatesSet;
+  defaults?: ISpaceDefaults;
 }

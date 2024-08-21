@@ -9,14 +9,12 @@ import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import { Library } from './library.entity';
 import { ILibrary } from './library.interface';
 import { InnovationPacksOrderBy } from '@common/enums/innovation.packs.orderBy';
-import {
-  IVirtualContributor,
-  VirtualContributor,
-} from '@domain/community/virtual-contributor';
+import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { SearchVisibility } from '@common/enums/search.visibility';
 import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
 import { InnovationHub } from '@domain/innovation-hub/innovation.hub.entity';
 import { InnovationPack } from '@library/innovation-pack/innovation.pack.entity';
+import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 
 @Injectable()
 export class LibraryService {

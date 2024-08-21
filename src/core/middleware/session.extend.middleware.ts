@@ -30,7 +30,7 @@ export class SessionExtendMiddleware implements NestMiddleware {
     );
 
     this.enabled = this.configService.get(
-      'identity.authentication.providers.ory.session_cookie_name',
+      'identity.authentication.providers.ory.session_extend_enabled',
       { infer: true }
     );
 

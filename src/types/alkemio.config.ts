@@ -202,6 +202,9 @@ export type AlkemioConfig = {
       host: string;
       port: number;
     };
+    virtual_contributors: {
+      history_length: number;
+    };
   };
   ssi: {
     enabled: boolean;

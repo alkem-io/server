@@ -8,6 +8,7 @@ import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.a
   implements: () => [IContributor],
 })
 export class IUser extends IContributorBase implements IContributor {
+  accountID!: string;
   rowId!: number;
 
   @Field(() => String, {

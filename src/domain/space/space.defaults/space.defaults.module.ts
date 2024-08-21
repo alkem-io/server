@@ -8,6 +8,7 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { TemplatesSetModule } from '@domain/template/templates-set/templates.set.module';
 import { Account } from '../account/account.entity';
+import { SpaceDefaultsResolverMutations } from './space.defaults.resolver.mutations';
 
 @Module({
   imports: [
@@ -19,7 +20,7 @@ import { Account } from '../account/account.entity';
     TypeOrmModule.forFeature([SpaceDefaults]),
     TypeOrmModule.forFeature([Account]),
   ],
-  providers: [SpaceDefaultsService],
+  providers: [SpaceDefaultsService, SpaceDefaultsResolverMutations],
   exports: [SpaceDefaultsService],
 })
 export class SpaceDefaultsModule {}
