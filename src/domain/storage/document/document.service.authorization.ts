@@ -42,6 +42,7 @@ export class DocumentAuthorizationService {
         document.tagset.authorization,
         document.authorization
       );
+    updatedAuthorizations.push(document.tagset.authorization);
 
     return updatedAuthorizations;
   }
