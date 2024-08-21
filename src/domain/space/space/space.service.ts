@@ -211,7 +211,8 @@ export class SpaceService {
       space.collaboration,
       calloutGroupDefault
     );
-
+    // save the collaboration and all it's template sets
+    await this.save(space);
     const calloutInputsFromCollaborationTemplate =
       await this.collaborationService.createCalloutInputsFromCollaborationTemplate(
         spaceData.collaborationData?.collaborationTemplateID
@@ -236,17 +237,6 @@ export class SpaceService {
     space.agent = await this.agentService.createAgent({
       type: AgentType.SPACE,
     });
-
-    const flowStateTemplate =
-      space.collaboration.tagsetTemplateSet?.tagsetTemplates.find(
-        t => t.name === TagsetReservedName.FLOW_STATE
-      );
-    if (space.collaboration.innovationFlow?.profile.tagsets) {
-      for (const tagset of space.collaboration.innovationFlow?.profile
-        ?.tagsets) {
-        tagset.tagsetTemplate = flowStateTemplate;
-      }
-    }
 
     await this.save(space);
 
