@@ -1198,7 +1198,9 @@ export class SpaceService {
     return templatesSet;
   }
 
-  public async activeSubscription(space: ISpace): Promise<ISpaceSubscription> {
+  public async activeSubscription(
+    space: ISpace
+  ): Promise<ISpaceSubscription | undefined> {
     const licensingFramework =
       await this.licensingService.getDefaultLicensingOrFail();
 
@@ -1220,7 +1222,7 @@ export class SpaceService {
         };
       })
       .filter(item => item.plan?.type === LicensePlanType.SPACE_PLAN)
-      .sort((a, b) => b.plan!.sortOrder - a.plan!.sortOrder)?.[0].subscription;
+      .sort((a, b) => b.plan!.sortOrder - a.plan!.sortOrder)?.[0]?.subscription;
   }
 
   async getDefaultsOrFail(rootSpaceID: string): Promise<ISpaceDefaults> {
