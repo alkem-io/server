@@ -64,7 +64,8 @@ export class VirtualContributorService {
 
   async createVirtualContributor(
     virtualContributorData: CreateVirtualContributorInput,
-    storageAggregator: IStorageAggregator
+    storageAggregator: IStorageAggregator,
+    agentInfo?: AgentInfo
   ): Promise<IVirtualContributor> {
     if (virtualContributorData.nameID) {
       // Convert nameID to lower case
@@ -126,6 +127,15 @@ export class VirtualContributorService {
     });
 
     virtualContributor = await this.save(virtualContributor);
+
+    await this.contributorService.ensureAvatarIsStoredInLocalStorageBucket(
+      virtualContributor.profile,
+      agentInfo
+    );
+    // Reload to ensure have the updated avatar URL
+    virtualContributor = await this.getVirtualContributorOrFail(
+      virtualContributor.id
+    );
     this.logger.verbose?.(
       `Created new virtual with id ${virtualContributor.id}`,
       LogContext.COMMUNITY

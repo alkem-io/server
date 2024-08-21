@@ -1,6 +1,7 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import axios, { AxiosResponse } from 'axios';
+import { LogContext } from '@common/enums';
 
 @Injectable()
 export class AvatarCreatorService {
@@ -17,6 +18,10 @@ export class AvatarCreatorService {
   }
 
   public async urlToBuffer(imageUrl: string): Promise<Buffer> {
+    this.logger.verbose?.(
+      `Retrieving external image from URL: ${imageUrl}`,
+      LogContext.USER
+    );
     try {
       const { data, status }: AxiosResponse<Buffer> = await axios.get(
         imageUrl,
@@ -29,11 +34,13 @@ export class AvatarCreatorService {
       if (status === 200) {
         return data;
       } else {
-        throw new Error(`Failed to fetch image. Status code: ${status}`);
+        throw new Error(
+          `Failed to fetch image using URL ${imageUrl}. Status code: ${status}`
+        );
       }
     } catch (error: any) {
       throw new Error(
-        `Error fetching or processing the image: ${error.message}`
+        `Error fetching or processing the image at URL ${imageUrl}: ${error.message}`
       );
     }
   }

@@ -192,7 +192,13 @@ export class ProfileService {
     profile: IProfile,
     visualType: VisualType,
     url?: string
-  ) {
+  ): IProfile {
+    if (!profile.visuals) {
+      throw new EntityNotInitializedException(
+        `No visuals found on profile: ${profile.id}`,
+        LogContext.COMMUNITY
+      );
+    }
     let visual: IVisual;
     switch (visualType) {
       case VisualType.AVATAR:
@@ -216,13 +222,9 @@ export class ProfileService {
     if (url) {
       visual.uri = url;
     }
-    if (!profile.visuals) {
-      throw new EntityNotInitializedException(
-        `No visuals found on profile: ${profile.id}`,
-        LogContext.COMMUNITY
-      );
-    }
+
     profile.visuals.push(visual);
+    return profile;
   }
 
   async addTagsetOnProfile(

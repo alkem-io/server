@@ -175,7 +175,8 @@ export class AccountResolverMutations {
     );
 
     const virtual = await this.accountService.createVirtualContributorOnAccount(
-      virtualContributorData
+      virtualContributorData,
+      agentInfo
     );
 
     const clonedAccountAuth =

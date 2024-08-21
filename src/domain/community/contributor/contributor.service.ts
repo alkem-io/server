@@ -21,7 +21,7 @@ import { ProfileService } from '@domain/common/profile/profile.service';
 import { VisualType } from '@common/enums/visual.type';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { IDocument } from '@domain/storage/document';
+import { DocumentService } from '@domain/storage/document/document.service';
 
 @Injectable()
 export class ContributorService {
@@ -31,7 +31,8 @@ export class ContributorService {
     @InjectEntityManager('default')
     private entityManager: EntityManager,
     private avatarCreatorService: AvatarCreatorService,
-    private storageBucketService: StorageBucketService
+    private storageBucketService: StorageBucketService,
+    private documentService: DocumentService
   ) {}
 
   public async addAvatarVisualToContributorProfile(
@@ -41,8 +42,15 @@ export class ContributorService {
     firstName?: string,
     lastName?: string
   ): Promise<void> {
-    let avatarURL = profileData?.avatarURL;
-    if (!avatarURL || avatarURL === '') {
+    let avatarURL: string | undefined = undefined;
+    if (profileData.avatarURL && profileData.avatarURL !== '') {
+      // Avatar has been explicitly set
+      avatarURL = profileData.avatarURL;
+    } else if (agentInfo && agentInfo.avatarURL !== '') {
+      // Pick up the avatar from the user request context
+      avatarURL = agentInfo.avatarURL;
+    } else {
+      // Generate a random avatar
       let avatarFirstName = profileData.displayName;
       if (firstName) {
         avatarFirstName = firstName;
@@ -51,10 +59,6 @@ export class ContributorService {
         avatarFirstName,
         lastName
       );
-    } else {
-      if (agentInfo) {
-        await this.uploadAvatarFromExternalURL(profile, agentInfo);
-      }
     }
     this.profileService.addVisualOnProfile(
       profile,
@@ -63,28 +67,46 @@ export class ContributorService {
     );
   }
 
-  private async uploadAvatarFromExternalURL(
-    profile: IProfile,
-    agentInfo: AgentInfo
-  ): Promise<IDocument> {
-    if (!profile.visuals) {
-      throw new EntityNotInitializedException(
-        `Visuals not initialized for profile with id: ${profile.id}`,
-        LogContext.COMMUNITY
-      );
-    }
-    if (!profile.storageBucket) {
-      throw new EntityNotInitializedException(
-        `StorageBucket not initialized for profile with id: ${profile.id}`,
-        LogContext.COMMUNITY
-      );
-    }
-    const uri = agentInfo.avatarURL ?? profile.visuals[0].uri;
-    return this.storageBucketService.storeAvatarUrlAsDocument(
-      uri,
-      profile.storageBucket.id,
-      agentInfo.userID
+  public async ensureAvatarIsStoredInLocalStorageBucket(
+    profileInput: IProfile,
+    agentInfo?: AgentInfo
+  ): Promise<IProfile> {
+    const profile = await this.profileService.getProfileOrFail(
+      profileInput.id,
+      {
+        relations: {
+          visuals: true,
+          storageBucket: true,
+        },
+      }
     );
+    if (!profile.visuals || !profile.storageBucket) {
+      throw new EntityNotInitializedException(
+        `Profile could not be loaded with all entities for avatar check: ${profile.id}`,
+        LogContext.COMMUNITY
+      );
+    }
+    const avatarVisual = profile.visuals.find(
+      visual => visual.name === VisualType.AVATAR
+    );
+    if (!avatarVisual) {
+      throw new EntityNotFoundException(
+        `Unable to load avatar visual on profile: ${profile.id}`,
+        LogContext.COMMUNITY
+      );
+    }
+
+    const uri = avatarVisual.uri;
+    const avatarDocument =
+      await this.storageBucketService.ensureAvatarUrlIsDocument(
+        uri,
+        profile.storageBucket.id,
+        agentInfo?.userID
+      );
+    const avatartURI =
+      this.documentService.getPubliclyAccessibleURL(avatarDocument);
+    avatarVisual.uri = avatartURI;
+    return await this.profileService.save(profile);
   }
 
   async getContributor(

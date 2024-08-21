@@ -205,7 +205,8 @@ export class AccountService {
   }
 
   public async createVirtualContributorOnAccount(
-    vcData: CreateVirtualContributorOnAccountInput
+    vcData: CreateVirtualContributorOnAccountInput,
+    agentInfo?: AgentInfo
   ): Promise<IVirtualContributor> {
     const accountID = vcData.accountID;
     const account = await this.getAccountOrFail(accountID, {
@@ -224,7 +225,8 @@ export class AccountService {
 
     const vc = await this.virtualContributorService.createVirtualContributor(
       vcData,
-      account.storageAggregator
+      account.storageAggregator,
+      agentInfo
     );
     vc.account = account;
     return await this.virtualContributorService.save(vc);

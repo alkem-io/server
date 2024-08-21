@@ -132,7 +132,7 @@ export class OrganizationService {
       type: AgentType.ORGANIZATION,
     });
 
-    const savedOrg = await this.organizationRepository.save(organization);
+    const savedOrg = await this.save(organization);
     this.logger.verbose?.(
       `Created new organization with id ${organization.id}`,
       LogContext.COMMUNITY
@@ -166,7 +166,12 @@ export class OrganizationService {
 
     organization = await this.save(organization);
 
-    return organization;
+    await this.contributorService.ensureAvatarIsStoredInLocalStorageBucket(
+      organization.profile,
+      agentInfo
+    );
+
+    return await this.getOrganizationOrFail(organization.id);
   }
 
   async checkNameIdOrFail(nameID: string) {

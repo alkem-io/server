@@ -117,7 +117,7 @@ export class UserService {
 
     await this.validateUserProfileCreationRequest(userData);
 
-    const user: IUser = User.create(userData);
+    let user: IUser = User.create(userData);
     user.authorization = new AuthorizationPolicy(AuthorizationPolicyType.USER);
 
     const profileData = await this.extendProfileDataWithReferences(
@@ -141,6 +141,13 @@ export class UserService {
       name: TagsetReservedName.KEYWORDS,
       tags: [],
     });
+    await this.contributorService.addAvatarVisualToContributorProfile(
+      user.profile,
+      userData.profileData,
+      agentInfo,
+      userData.firstName,
+      userData.lastName
+    );
 
     user.agent = await this.agentService.createAgent({
       type: AgentType.USER,
@@ -159,22 +166,14 @@ export class UserService {
     const account = await this.accountHostService.createAccount();
     user.accountID = account.id;
 
-    const response = await this.save(user);
+    user = await this.save(user);
 
-    if (agentInfo) {
-      // this code is a bit tricky, as the user is cached by email, and if the cache has not expired
-      // and the user tries to register again, the user will be found in the cache, resulting in a messed up
-      // lookup in createdBy in the document, failing a constraint and the whole flow... That's why I am hacking
-      // it a bit, providing the userID for the current user, not the agent, when creating the avatar (99% of the cases it will be the same)
-      const updatedAgentInfo = { ...agentInfo, userID: response.id };
-      await this.contributorService.addAvatarVisualToContributorProfile(
-        user.profile,
-        userData.profileData,
-        updatedAgentInfo,
-        userData.firstName,
-        userData.lastName
-      );
-    }
+    await this.contributorService.ensureAvatarIsStoredInLocalStorageBucket(
+      user.profile,
+      agentInfo
+    );
+    // Reload to ensure have the updated avatar URL
+    user = await this.getUserOrFail(user.id);
 
     // all users need to be registered for communications at the absolute beginning
     // there are cases where a user could be messaged before they actually log-in
@@ -190,10 +189,10 @@ export class UserService {
             return user;
           }
 
-          response.communicationID = communicationID;
+          user.communicationID = communicationID;
 
-          await this.save(response);
-          await this.setUserCache(response);
+          await this.save(user);
+          await this.setUserCache(user);
         } catch (e: any) {
           this.logger.error(e, e?.stack, LogContext.USER);
         }
@@ -201,9 +200,9 @@ export class UserService {
       error => this.logger.error(error, error?.stack, LogContext.USER)
     );
 
-    await this.setUserCache(response);
+    await this.setUserCache(user);
 
-    return response;
+    return user;
   }
 
   private async extendProfileDataWithReferences(
