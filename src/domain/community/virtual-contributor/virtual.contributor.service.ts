@@ -122,7 +122,7 @@ export class VirtualContributorService {
         ''
       );
     }
-    await this.profileService.addVisualOnProfile(
+    this.profileService.addVisualOnProfile(
       virtualContributor.profile,
       VisualType.AVATAR,
       avatarURL
