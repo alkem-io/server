@@ -4,13 +4,15 @@ import { InnovationHubService } from '@domain/innovation-hub/innovation.hub.serv
 import { ISpace } from '@domain/space/space/space.interface';
 import { SpaceService } from '@domain/space/space/space.service';
 import { IProfile } from '@domain/common/profile';
-import { Profiling } from '@common/decorators';
+import { AuthorizationAgentPrivilege, Profiling } from '@common/decorators';
 import { Loader } from '@core/dataloader/decorators';
 import { ProfileLoaderCreator } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { InnovationHub } from '@domain/innovation-hub/innovation.hub.entity';
 import { IAccount } from '@domain/space/account/account.interface';
 import { AccountLoaderCreator } from '@core/dataloader/creators/loader.creators/account/account.loader.creator';
+import { IContributor } from '@domain/community/contributor/contributor.interface';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 
 @Resolver(() => IInnovationHub)
 export class InnovationHubResolverFields {
@@ -55,6 +57,7 @@ export class InnovationHubResolverFields {
     return loader.load(innovationHub.id);
   }
 
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('account', () => IAccount, {
     nullable: false,
     description: 'The Innovation Hub account.',
@@ -66,5 +69,17 @@ export class InnovationHubResolverFields {
     loader: ILoader<IAccount>
   ) {
     return loader.load(innovationHub.id);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @ResolveField('provider', () => IContributor, {
+    nullable: false,
+    description: 'The InnovationHub provider.',
+  })
+  @Profiling.api
+  async provider(
+    @Parent() innovationHub: IInnovationHub
+  ): Promise<IContributor> {
+    return await this.innovationHubService.getProvider(innovationHub.id);
   }
 }

@@ -6,7 +6,7 @@ import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { IProfile } from '@domain/common/profile/profile.interface';
-import { IUser } from '@domain/community/user';
+import { IUser } from '@domain/community/user/user.interface';
 import { ICalendarEvent } from './event.interface';
 import { CalendarEventService } from './event.service';
 import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';

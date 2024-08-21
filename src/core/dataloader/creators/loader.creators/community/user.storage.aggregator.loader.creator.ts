@@ -4,7 +4,7 @@ import { InjectEntityManager } from '@nestjs/typeorm';
 import { createTypedRelationDataLoader } from '../../../utils';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { User } from '@domain/community/user';
+import { User } from '@domain/community/user/user.entity';
 
 @Injectable()
 export class UserStorageAggregatorLoaderCreator

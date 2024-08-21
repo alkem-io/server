@@ -1,5 +1,5 @@
 import { InputType, Field } from '@nestjs/graphql';
-import { IUser } from '@src/domain/community/user';
+import { IUser } from '@src/domain/community/user/user.interface';
 
 @InputType()
 export class UserFilterInput implements Partial<IUser> {

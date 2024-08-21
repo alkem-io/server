@@ -4,6 +4,9 @@ import { CreateInnovationHubInput } from '@domain/innovation-hub/dto';
 
 @InputType()
 export class CreateInnovationHubOnAccountInput extends CreateInnovationHubInput {
-  @Field(() => UUID, { nullable: false })
+  @Field(() => UUID, {
+    nullable: false,
+    description: 'The Account where the InnovationHub is to be created.',
+  })
   accountID!: string;
 }

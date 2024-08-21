@@ -175,7 +175,7 @@ export class TagsetService {
     const tagsetTemplate = tagset.tagsetTemplate;
     if (!tagsetTemplate)
       throw new RelationshipNotFoundException(
-        `Unable to load tagsetTemplate for Tagset: ${tagsetID} `,
+        `Unable to load tagsetTemplate for Tagset: ${tagsetID}`,
         LogContext.PROFILE
       );
 

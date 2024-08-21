@@ -10,7 +10,6 @@ import { getEmailDomain } from '@common/utils';
 import { OrganizationVerificationEnum } from '@common/enums/organization.verification';
 import { OrganizationPreferenceType } from '@common/enums/organization.preference.type';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
-import { UserAuthorizationService } from '@domain/community/user/user.service.authorization';
 import { IInvitation } from '@domain/community/invitation/invitation.interface';
 import { InvitationAuthorizationService } from '@domain/community/invitation/invitation.service.authorization';
 import { CreateInvitationInput } from '@domain/community/invitation/dto/invitation.dto.create';
@@ -31,7 +30,6 @@ export class RegistrationService {
     private organizationService: OrganizationService,
     private organizationRoleService: OrganizationRoleService,
     private preferenceSetService: PreferenceSetService,
-    private userAuthorizationService: UserAuthorizationService,
     private communityRoleService: CommunityRoleService,
     private platformInvitationService: PlatformInvitationService,
     private platformRoleService: PlatformRoleService,
@@ -49,17 +47,13 @@ export class RegistrationService {
       );
     }
     // If a user has a valid session, and hence email / names etc set, then they can create a User profile
-    let user = await this.userService.createUserFromAgentInfo(agentInfo);
-    user = await this.userAuthorizationService.grantCredentials(user);
+    const user = await this.userService.createUserFromAgentInfo(agentInfo);
 
-    await this.assignUserToOrganizationByDomain(agentInfo, user);
+    await this.assignUserToOrganizationByDomain(user);
     return user;
   }
 
-  async assignUserToOrganizationByDomain(
-    agentInfo: AgentInfo,
-    user: IUser
-  ): Promise<boolean> {
+  async assignUserToOrganizationByDomain(user: IUser): Promise<boolean> {
     const userEmailDomain = getEmailDomain(user.email);
 
     const org =

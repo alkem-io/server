@@ -1,0 +1,24 @@
+{
+  "rolesVirtualContributor": {
+    "space": {
+      "displayName": "UN Sustainable Development Goals",
+      "nameID": "un-sdgs",
+      "id": "00655835-4d15-4546-801e-1ab80ac3078a",
+      "roles": ["member"],
+      "subspaces": [
+        {
+          "displayName": "Food security and nutrition and sustainable agriculture",
+          "nameID": "food-sec",
+          "id": "d3c76102-087b-4b40-8aa5-b5e6023784d0",
+          "roles": ["member"]
+        },
+        {
+          "displayName": "Rural Development",
+          "nameID": "rural",
+          "id": "ed5b344e-72d1-4256-a385-f3b6e4aaaabf",
+          "roles": ["member"]
+        }
+      ]
+    }
+  }
+}
