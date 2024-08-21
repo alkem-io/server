@@ -103,17 +103,20 @@ export class AccountService {
     if (agentInfo) {
       await this.spaceService.assignUserToRoles(space, agentInfo);
     }
-    const spaceReloaded = await this.spaceService.getSpaceOrFail(space.id, {
+    const spaceWithAgent = await this.spaceService.getSpaceOrFail(space.id, {
       relations: {
         agent: true,
       },
     });
     await this.accountHostService.assignLicensePlansToSpace(
-      space,
+      spaceWithAgent,
       accountProvider
     );
-
-    return spaceReloaded;
+    return await this.spaceService.getSpaceOrFail(space.id, {
+      relations: {
+        agent: true,
+      },
+    });
   }
 
   async save(account: IAccount): Promise<IAccount> {

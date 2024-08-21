@@ -28,13 +28,18 @@ import { InnovationPackAuthorizationService } from '@library/innovation-pack/inn
 import { InnovationPackService } from '@library/innovation-pack/innovaton.pack.service';
 import { SpaceAuthorizationService } from '../space/space.service.authorization';
 import { ISpace } from '../space/space.interface';
-import { RelationshipNotFoundException } from '@common/exceptions';
+import {
+  RelationshipNotFoundException,
+  ValidationException,
+} from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { TransferAccountSpaceInput } from './dto/account.dto.transfer.space';
 import { TransferAccountInnovationHubInput } from './dto/account.dto.transfer.innovation.hub';
 import { TransferAccountInnovationPackInput } from './dto/account.dto.transfer.innovation.pack';
 import { TransferAccountVirtualContributorInput } from './dto/account.dto.transfer.virtual.contributor';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
+import { INameable } from '@domain/common/entity/nameable-entity';
 
 @Resolver()
 export class AccountResolverMutations {
@@ -55,6 +60,11 @@ export class AccountResolverMutations {
     private notificationAdapter: NotificationAdapter
   ) {}
 
+  SOFT_LIMIT_SPACE = 3;
+  SOFT_LIMIT_INNOVATION_HUB = 0;
+  SOFT_LIMIT_INNOVATION_PACK = 3;
+  SOFT_LIMIT_VIRTUAL_CONTRIBUTOR = 3;
+
   @UseGuards(GraphqlGuard)
   @Mutation(() => IAccount, {
     description: 'Creates a new Level Zero Space within the specified Account.',
@@ -66,15 +76,21 @@ export class AccountResolverMutations {
     const account = await this.accountService.getAccountOrFail(
       spaceData.accountID,
       {
-        relations: {},
+        relations: {
+          spaces: true,
+        },
       }
     );
 
-    this.authorizationService.grantAccessOrFail(
+    this.validateSoftLicenseLimitOrFail(
       agentInfo,
       account.authorization,
+      'Space',
+      account.id,
       AuthorizationPrivilege.CREATE_SPACE,
-      `create Space on account: ${spaceData.nameID}`
+      AuthorizationPrivilege.PLATFORM_ADMIN,
+      this.SOFT_LIMIT_SPACE,
+      account.spaces
     );
 
     let space = await this.accountService.createSpaceOnAccount(
@@ -114,6 +130,38 @@ export class AccountResolverMutations {
     return space;
   }
 
+  private validateSoftLicenseLimitOrFail(
+    agentInfo: AgentInfo,
+    authorization: IAuthorizationPolicy | undefined,
+    resourceType: string,
+    accountID: string,
+    hardPrivilege: AuthorizationPrivilege,
+    softPrivilege: AuthorizationPrivilege,
+    softLimit: number,
+    nameableResouces: INameable[]
+  ) {
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      authorization,
+      hardPrivilege,
+      `create ${resourceType} on account: ${accountID}`
+    );
+    const isPlatformAdmin = this.authorizationService.isAccessGranted(
+      agentInfo,
+      authorization,
+      softPrivilege
+    );
+    if (!isPlatformAdmin) {
+      const resourceCount = nameableResouces.length;
+      if (resourceCount >= softLimit) {
+        throw new ValidationException(
+          `Unable to create ${resourceType} on account: ${accountID}. Soft limit of ${softLimit} reached`,
+          LogContext.ACCOUNT
+        );
+      }
+    }
+  }
+
   @UseGuards(GraphqlGuard)
   @Mutation(() => IInnovationHub, {
     description: 'Create an Innovation Hub on the specified account',
@@ -127,15 +175,20 @@ export class AccountResolverMutations {
       {
         relations: {
           storageAggregator: true,
+          innovationHubs: true,
         },
       }
     );
 
-    this.authorizationService.grantAccessOrFail(
+    this.validateSoftLicenseLimitOrFail(
       agentInfo,
       account.authorization,
-      AuthorizationPrivilege.CREATE_INNOVATION_HUB,
-      `create InnovationHub on account: ${account.id}`
+      'Innovation Hub',
+      account.id,
+      AuthorizationPrivilege.PLATFORM_ADMIN, // Hard requirement for now
+      AuthorizationPrivilege.PLATFORM_ADMIN,
+      this.SOFT_LIMIT_INNOVATION_HUB,
+      account.innovationHubs
     );
 
     let innovationHub = await this.innovationHubService.createInnovationHub(
@@ -164,14 +217,23 @@ export class AccountResolverMutations {
     virtualContributorData: CreateVirtualContributorOnAccountInput
   ): Promise<IVirtualContributor> {
     const account = await this.accountService.getAccountOrFail(
-      virtualContributorData.accountID
+      virtualContributorData.accountID,
+      {
+        relations: {
+          virtualContributors: true,
+        },
+      }
     );
 
-    this.authorizationService.grantAccessOrFail(
+    this.validateSoftLicenseLimitOrFail(
       agentInfo,
       account.authorization,
+      'Virtual Contributor',
+      account.id,
       AuthorizationPrivilege.CREATE_VIRTUAL_CONTRIBUTOR,
-      `create Virtual contributor on account: ${account.id}`
+      AuthorizationPrivilege.PLATFORM_ADMIN,
+      this.SOFT_LIMIT_VIRTUAL_CONTRIBUTOR,
+      account.virtualContributors
     );
 
     const virtual = await this.accountService.createVirtualContributorOnAccount(
@@ -209,15 +271,21 @@ export class AccountResolverMutations {
     const account = await this.accountService.getAccountOrFail(
       innovationPackData.accountID,
       {
-        relations: {},
+        relations: {
+          innovationPacks: true,
+        },
       }
     );
 
-    this.authorizationService.grantAccessOrFail(
+    this.validateSoftLicenseLimitOrFail(
       agentInfo,
       account.authorization,
+      'Innovation Pack',
+      account.id,
       AuthorizationPrivilege.CREATE_INNOVATION_PACK,
-      `create Innovation Pack on account: ${account.id}`
+      AuthorizationPrivilege.PLATFORM_ADMIN,
+      this.SOFT_LIMIT_INNOVATION_PACK,
+      account.innovationPacks
     );
 
     const innovationPack =
