@@ -105,7 +105,10 @@ export class UserService {
     );
   }
 
-  async createUser(userData: CreateUserInput): Promise<IUser> {
+  async createUser(
+    userData: CreateUserInput,
+    agentInfo?: AgentInfo
+  ): Promise<IUser> {
     if (userData.nameID) {
       // Convert nameID to lower case
       userData.nameID = userData.nameID.toLowerCase();
@@ -132,13 +135,6 @@ export class UserService {
       user.storageAggregator
     );
 
-    this.contributorService.addAvatarVisualToContributorProfile(
-      user.profile,
-      userData.profileData,
-      userData.firstName,
-      userData.lastName
-    );
-
     await this.profileService.addTagsetOnProfile(user.profile, {
       name: TagsetReservedName.SKILLS,
       tags: [],
@@ -163,6 +159,21 @@ export class UserService {
     );
 
     const response = await this.save(user);
+
+    if (agentInfo) {
+      const updatedAgentInfo =
+        agentInfo.userID && agentInfo.userID !== ''
+          ? agentInfo
+          : { ...agentInfo, userID: response.id };
+      await this.contributorService.addAvatarVisualToContributorProfile(
+        user.profile,
+        userData.profileData,
+        updatedAgentInfo,
+        userData.firstName,
+        userData.lastName
+      );
+    }
+
     // all users need to be registered for communications at the absolute beginning
     // there are cases where a user could be messaged before they actually log-in
     // which will result in failure in communication (either missing user or unsent messages)
@@ -314,7 +325,7 @@ export class UserService {
       },
     };
 
-    return await this.createUser(userData);
+    return await this.createUser(userData, agentInfo);
   }
 
   private async validateUserProfileCreationRequest(

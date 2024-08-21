@@ -120,6 +120,7 @@ export class OrganizationService {
     this.contributorService.addAvatarVisualToContributorProfile(
       organization.profile,
       organizationData.profileData,
+      agentInfo,
       organizationData.profileData.displayName
     );
 

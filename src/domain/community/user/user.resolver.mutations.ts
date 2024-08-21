@@ -59,7 +59,7 @@ export class UserResolverMutations {
       AuthorizationPrivilege.CREATE,
       `create new User: ${agentInfo.email}`
     );
-    let user = await this.userService.createUser(userData);
+    let user = await this.userService.createUser(userData, agentInfo);
     user = await this.userAuthorizationService.grantCredentials(user);
     user = await this.userService.save(user);
 

@@ -33,7 +33,6 @@ import { StorageUploadFailedException } from '@common/exceptions/storage/storage
 import { MimeTypeVisual } from '@common/enums/mime.file.type.visual';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { AvatarCreatorService } from '@services/external/avatar-creator/avatar.creator.service';
-
 @Injectable()
 export class StorageBucketService {
   DEFAULT_MAX_ALLOWED_FILE_SIZE = 15728640;
@@ -418,16 +417,11 @@ export class StorageBucketService {
     // Not stored on Alkemio, download + store
     const imageBuffer = await this.avatarCreatorService.urlToBuffer(avatarURL);
 
-    // TODO: do not like the import inline here
-    const fileInfo = await (
-      await import('file-type')
-    ).fileTypeFromBuffer(imageBuffer);
-
     const document = await this.uploadFileAsDocumentFromBuffer(
       storageBucketId,
       imageBuffer,
       'avatar',
-      fileInfo?.mime ?? MimeTypeVisual.PNG,
+      MimeTypeVisual.PNG,
       userId,
       false
     );
@@ -437,33 +431,4 @@ export class StorageBucketService {
 
     return await this.documentService.saveDocument(document);
   }
-
-  // Used for creating an avatar from a linkedin profile picture
-  // BUG: https://github.com/alkem-io/server/issues/3944
-
-  // if (!isAlkemioDocumentURL) {
-  //   if (!user.profile?.storageBucket?.id) {
-  //     throw new EntityNotInitializedException(
-  //       `User profile storage bucket not initialized for user with id: ${user.id}`,
-  //       LogContext.COMMUNITY
-  //     );
-  //   }
-
-  //   if (!user.profile.visuals) {
-  //     throw new EntityNotInitializedException(
-  //       `Visuals not initialized for profile with id: ${user.profile.id}`,
-  //       LogContext.COMMUNITY
-  //     );
-  //   }
-
-  //   const { visual, document } = await this.avatarService.createAvatarFromURL(
-  //     user.profile?.storageBucket?.id,
-  //     user.id,
-  //     agentInfo.avatarURL ?? user.profile.visuals[0].uri
-  //   );
-
-  //   user.profile.visuals = [visual];
-  //   user.profile.storageBucket.documents = [document];
-  //   user = await this.save(user);
-  // }
 }

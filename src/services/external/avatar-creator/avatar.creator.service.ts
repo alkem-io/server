@@ -8,7 +8,7 @@ export class AvatarCreatorService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  generateRandomAvatarURL(firstName: string, lastName?: string): string {
+  public generateRandomAvatarURL(firstName: string, lastName?: string): string {
     const randomColor = Math.floor(Math.random() * 16777215).toString(16);
     if (!lastName) {
       return `https://eu.ui-avatars.com/api/?name=${firstName}&background=${randomColor}&color=ffffff`;
@@ -16,7 +16,7 @@ export class AvatarCreatorService {
     return `https://eu.ui-avatars.com/api/?name=${firstName}+${lastName}&background=${randomColor}&color=ffffff`;
   }
 
-  urlToBuffer = async (imageUrl: string): Promise<Buffer> => {
+  public async urlToBuffer(imageUrl: string): Promise<Buffer> {
     try {
       const { data, status }: AxiosResponse<Buffer> = await axios.get(
         imageUrl,
@@ -36,5 +36,5 @@ export class AvatarCreatorService {
         `Error fetching or processing the image: ${error.message}`
       );
     }
-  };
+  }
 }

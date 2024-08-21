@@ -23,6 +23,9 @@ import { AvatarCreatorService } from '@services/external/avatar-creator/avatar.c
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { VisualType } from '@common/enums/visual.type';
+import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { IDocument } from '@domain/storage/document';
 
 @Injectable()
 export class ContributorService {
@@ -31,15 +34,17 @@ export class ContributorService {
     private profileService: ProfileService,
     @InjectEntityManager('default')
     private entityManager: EntityManager,
-    private avatarCreatorService: AvatarCreatorService
+    private avatarCreatorService: AvatarCreatorService,
+    private storageBucketService: StorageBucketService
   ) {}
 
-  public addAvatarVisualToContributorProfile(
+  public async addAvatarVisualToContributorProfile(
     profile: IProfile,
     profileData: CreateProfileInput,
+    agentInfo?: AgentInfo,
     firstName?: string,
     lastName?: string
-  ): void {
+  ): Promise<void> {
     let avatarURL = profileData?.avatarURL;
     if (!avatarURL || avatarURL === '') {
       let avatarFirstName = profileData.displayName;
@@ -50,11 +55,39 @@ export class ContributorService {
         avatarFirstName,
         lastName
       );
+    } else {
+      if (agentInfo) {
+        await this.ensureAvatarIsCreated(profile, agentInfo);
+      }
     }
     this.profileService.addVisualOnProfile(
       profile,
       VisualType.AVATAR,
       avatarURL
+    );
+  }
+
+  private async ensureAvatarIsCreated(
+    profile: IProfile,
+    agentInfo: AgentInfo
+  ): Promise<IDocument> {
+    if (!profile.visuals) {
+      throw new EntityNotInitializedException(
+        `Visuals not initialized for profile with id: ${profile.id}`,
+        LogContext.COMMUNITY
+      );
+    }
+    if (!profile.storageBucket) {
+      throw new EntityNotInitializedException(
+        `StorageBucket not initialized for profile with id: ${profile.id}`,
+        LogContext.COMMUNITY
+      );
+    }
+    const uri = agentInfo.avatarURL ?? profile.visuals[0].uri;
+    return this.storageBucketService.storeAvatarUrlAsDocument(
+      uri,
+      profile.storageBucket.id,
+      agentInfo.userID
     );
   }
 
