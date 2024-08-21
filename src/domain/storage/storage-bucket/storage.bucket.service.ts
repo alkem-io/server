@@ -401,7 +401,7 @@ export class StorageBucketService {
   public async ensureAvatarUrlIsDocument(
     avatarURL: string,
     storageBucketId: string,
-    userId?: string
+    userId: string
   ): Promise<IDocument> {
     if (this.documentService.isAlkemioDocumentURL(avatarURL)) {
       const document = await this.documentService.getDocumentFromURL(avatarURL);
@@ -422,7 +422,7 @@ export class StorageBucketService {
       imageBuffer,
       'avatar',
       MimeTypeVisual.PNG,
-      userId || '',
+      userId,
       false
     );
 

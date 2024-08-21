@@ -69,7 +69,7 @@ export class ContributorService {
 
   public async ensureAvatarIsStoredInLocalStorageBucket(
     profileInput: IProfile,
-    agentInfo?: AgentInfo
+    userID: string
   ): Promise<IProfile> {
     const profile = await this.profileService.getProfileOrFail(
       profileInput.id,
@@ -101,7 +101,7 @@ export class ContributorService {
       await this.storageBucketService.ensureAvatarUrlIsDocument(
         uri,
         profile.storageBucket.id,
-        agentInfo?.userID
+        userID
       );
     const avatartURI =
       this.documentService.getPubliclyAccessibleURL(avatarDocument);

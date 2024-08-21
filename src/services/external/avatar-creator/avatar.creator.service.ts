@@ -32,6 +32,10 @@ export class AvatarCreatorService {
 
       // Check if the response status is OK
       if (status === 200) {
+        this.logger.verbose?.(
+          `...image retrieved from: ${imageUrl}`,
+          LogContext.USER
+        );
         return data;
       } else {
         throw new Error(

@@ -168,7 +168,7 @@ export class OrganizationService {
 
     await this.contributorService.ensureAvatarIsStoredInLocalStorageBucket(
       organization.profile,
-      agentInfo
+      organization.id
     );
 
     return await this.getOrganizationOrFail(organization.id);
