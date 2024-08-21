@@ -1,5 +1,6 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import axios, { AxiosResponse } from 'axios';
 
 @Injectable()
 export class AvatarCreatorService {
@@ -14,4 +15,26 @@ export class AvatarCreatorService {
     }
     return `https://eu.ui-avatars.com/api/?name=${firstName}+${lastName}&background=${randomColor}&color=ffffff`;
   }
+
+  urlToBuffer = async (imageUrl: string): Promise<Buffer> => {
+    try {
+      const { data, status }: AxiosResponse<Buffer> = await axios.get(
+        imageUrl,
+        {
+          responseType: 'arraybuffer',
+        }
+      );
+
+      // Check if the response status is OK
+      if (status === 200) {
+        return data;
+      } else {
+        throw new Error(`Failed to fetch image. Status code: ${status}`);
+      }
+    } catch (error: any) {
+      throw new Error(
+        `Error fetching or processing the image: ${error.message}`
+      );
+    }
+  };
 }

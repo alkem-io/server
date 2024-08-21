@@ -31,8 +31,8 @@ import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.
 import { ProfileType } from '@common/enums';
 import { StorageUploadFailedException } from '@common/exceptions/storage/storage.upload.failed.exception';
 import { MimeTypeVisual } from '@common/enums/mime.file.type.visual';
-import { urlToBuffer } from '@common/utils/url.to.buffer';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { AvatarCreatorService } from '@services/external/avatar-creator/avatar.creator.service';
 
 @Injectable()
 export class StorageBucketService {
@@ -40,6 +40,7 @@ export class StorageBucketService {
 
   constructor(
     private documentService: DocumentService,
+    private avatarCreatorService: AvatarCreatorService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private authorizationService: AuthorizationService,
     private urlGeneratorService: UrlGeneratorService,
@@ -404,16 +405,18 @@ export class StorageBucketService {
     userId: string
   ): Promise<IDocument> {
     if (this.documentService.isAlkemioDocumentURL(avatarURL)) {
-      const document = this.documentService.getDocumentFromURL(avatarURL);
+      const document = await this.documentService.getDocumentFromURL(avatarURL);
       if (!document) {
         throw new EntityNotFoundException(
           `Document not found: ${avatarURL}`,
           LogContext.STORAGE_BUCKET
         );
       }
+      return document;
     }
 
-    const imageBuffer = await urlToBuffer(avatarURL);
+    // Not stored on Alkemio, download + store
+    const imageBuffer = await this.avatarCreatorService.urlToBuffer(avatarURL);
 
     // TODO: do not like the import inline here
     const fileInfo = await (
