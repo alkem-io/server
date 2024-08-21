@@ -55,7 +55,6 @@ export class AiPersonaService {
           aiPersonaData.aiPersonaService
         );
       aiPersona.aiPersonaServiceID = aiPersonaService.id;
-      // apply auth
     }
 
     aiPersona = await this.aiPersonaRepository.save(aiPersona);
