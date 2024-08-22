@@ -398,15 +398,14 @@ export class CollaborationService {
       await this.namingService.getReservedNameIDsInCollaboration(
         collaboration.id
       );
-    if (
-      calloutData.nameID &&
-      calloutData.nameID.length > 0 &&
-      reservedNameIDs.includes(calloutData.nameID)
-    ) {
-      throw new ValidationException(
-        `Unable to create Callout: the provided nameID is already taken: ${calloutData.nameID}`,
-        LogContext.SPACES
-      );
+    if (calloutData.nameID && calloutData.nameID.length > 0) {
+      if (reservedNameIDs.includes(calloutData.nameID)) {
+        throw new ValidationException(
+          `Unable to create Callout: the provided nameID is already taken: ${calloutData.nameID}`,
+          LogContext.SPACES
+        );
+      }
+      // Just use the provided nameID
     } else {
       calloutData.nameID =
         this.namingService.createNameIdAvoidingReservedNameIDs(
