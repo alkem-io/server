@@ -22,4 +22,10 @@ export class CreateCalloutContributionInput {
   @ValidateNested({ each: true })
   @Type(() => CreateLinkInput)
   link?: CreateLinkInput;
+
+  @Field(() => Number, {
+    nullable: true,
+    description: 'The sort order to assign to this Contribution.',
+  })
+  sortOrder!: number;
 }
