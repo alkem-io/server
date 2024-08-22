@@ -466,7 +466,7 @@ export class CalloutService {
   ): Promise<ICalloutContribution> {
     const calloutID = contributionData.calloutID;
     const callout = await this.getCalloutOrFail(calloutID, {
-      relations: { contributionPolicy: true },
+      relations: { contributionPolicy: true, contributions: true },
     });
     if (!callout.contributionPolicy)
       throw new EntityNotInitializedException(
@@ -501,7 +501,13 @@ export class CalloutService {
         userID
       );
     contribution.callout = callout;
-    return await this.contributionService.save(contribution);
+
+    const sortOrders =
+      callout.contributions?.map(contribution => contribution.sortOrder) ?? [];
+    const maxSortOrder = Math.max(...sortOrders, 0);
+
+    contribution.sortOrder = 1 + maxSortOrder;
+    return this.contributionService.save(contribution);
   }
 
   public async getCalloutFraming(
