@@ -12,9 +12,9 @@ export class AvatarCreatorService {
   public generateRandomAvatarURL(firstName: string, lastName?: string): string {
     const randomColor = Math.floor(Math.random() * 16777215).toString(16);
     if (!lastName) {
-      return `https://eu.ui-avatars.com/api/?name=${firstName}&background=${randomColor}&color=ffffff`;
+      return `https://eu.ui-avatars.com/api/?name=${firstName}&background=${randomColor}&color=ffffff&size=200`;
     }
-    return `https://eu.ui-avatars.com/api/?name=${firstName}+${lastName}&background=${randomColor}&color=ffffff`;
+    return `https://eu.ui-avatars.com/api/?name=${firstName}+${lastName}&background=${randomColor}&color=ffffff&size=200`;
   }
 
   public async urlToBuffer(imageUrl: string): Promise<Buffer> {

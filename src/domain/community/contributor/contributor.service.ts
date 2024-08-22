@@ -35,6 +35,18 @@ export class ContributorService {
     private documentService: DocumentService
   ) {}
 
+  private isValidHttpUrl(urlString: string): boolean {
+    let url;
+
+    try {
+      url = new URL(urlString);
+    } catch (_) {
+      return false;
+    }
+
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  }
+
   public async addAvatarVisualToContributorProfile(
     profile: IProfile,
     profileData: CreateProfileInput,
@@ -43,10 +55,10 @@ export class ContributorService {
     lastName?: string
   ): Promise<void> {
     let avatarURL: string | undefined = undefined;
-    if (profileData.avatarURL && profileData.avatarURL !== '') {
+    if (profileData.avatarURL && this.isValidHttpUrl(profileData.avatarURL)) {
       // Avatar has been explicitly set
       avatarURL = profileData.avatarURL;
-    } else if (agentInfo && agentInfo.avatarURL !== '') {
+    } else if (agentInfo && this.isValidHttpUrl(agentInfo.avatarURL)) {
       // Pick up the avatar from the user request context
       avatarURL = agentInfo.avatarURL;
     } else {
