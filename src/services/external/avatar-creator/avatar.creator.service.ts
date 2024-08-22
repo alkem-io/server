@@ -2,6 +2,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import axios, { AxiosResponse } from 'axios';
 import { LogContext } from '@common/enums';
+import replaceSpecialCharacters from 'replace-special-characters';
 
 @Injectable()
 export class AvatarCreatorService {
@@ -11,10 +12,27 @@ export class AvatarCreatorService {
 
   public generateRandomAvatarURL(firstName: string, lastName?: string): string {
     const randomColor = Math.floor(Math.random() * 16777215).toString(16);
+    const size = 200;
     if (!lastName) {
-      return `https://eu.ui-avatars.com/api/?name=${firstName}&background=${randomColor}&color=ffffff&size=200`;
+      const lastNameNoSpecialCharacters =
+        this.removeSpecialCharacters(firstName);
+      return `https://eu.ui-avatars.com/api/?name=${lastNameNoSpecialCharacters}&background=${randomColor}&color=ffffff&size=${size}`;
     }
-    return `https://eu.ui-avatars.com/api/?name=${firstName}+${lastName}&background=${randomColor}&color=ffffff&size=200`;
+    const firstNameNoSpecialCharacters =
+      this.removeSpecialCharacters(firstName);
+    const lastNameNoSpecialCharacters = this.removeSpecialCharacters(lastName);
+    return `https://eu.ui-avatars.com/api/?name=${firstNameNoSpecialCharacters}+${lastNameNoSpecialCharacters}&background=${randomColor}&color=ffffff&size=${size}`;
+  }
+
+  private removeSpecialCharacters(base: string): string {
+    // only allow alphanumeric characters and hyphens
+    const nameIDExcludedCharacters = /[^a-zA-Z0-9-]/g;
+    // replace characters with umlouts etc. to normal characters
+    const noSpecialCharacters: string = replaceSpecialCharacters(base)
+      // remove all unwanted characters (consult regex for allowed characters)
+      .replace(nameIDExcludedCharacters, '')
+      .toLowerCase();
+    return noSpecialCharacters;
   }
 
   public async urlToBuffer(imageUrl: string): Promise<Buffer> {
