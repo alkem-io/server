@@ -162,7 +162,7 @@ export class AiServerResolverMutations {
       );
     await this.authorizationPolicyService.saveAll(authorizations);
 
-    return await this.aiPersonaServiceService.getAiPersonaServiceOrFail(
+    return this.aiPersonaServiceService.getAiPersonaServiceOrFail(
       aiPersonaService.id
     );
   }
