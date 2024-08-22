@@ -15,39 +15,24 @@ export class PreferenceDefinition
   extends BaseAlkemioEntity
   implements IPreferenceDefinition
 {
-  @Column({
-    length: SMALL_TEXT_LENGTH,
-  })
+  @Column({ length: SMALL_TEXT_LENGTH })
   definitionSet!: string;
 
-  @Column({
-    name: 'groupName',
-    length: SMALL_TEXT_LENGTH,
-  })
+  @Column({ name: 'groupName', length: SMALL_TEXT_LENGTH })
   group!: string;
 
-  @Column({
-    length: SMALL_TEXT_LENGTH,
-  })
+  @Column({ length: SMALL_TEXT_LENGTH })
   displayName!: string;
 
   @Column()
   description!: string;
 
-  @Column({
-    length: TINY_TEXT_LENGTH,
-  })
+  @Column({ length: TINY_TEXT_LENGTH })
   valueType!: PreferenceValueType;
 
-  @Column({
-    length: ENUM_LENGTH,
-  })
+  @Column({ length: ENUM_LENGTH })
   type!: PreferenceType;
 
   @OneToMany(() => Preference, pref => pref.preferenceDefinition)
   preference?: Preference;
-
-  constructor() {
-    super();
-  }
 }

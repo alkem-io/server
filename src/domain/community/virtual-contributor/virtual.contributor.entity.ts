@@ -4,7 +4,7 @@ import { ContributorBase } from '../contributor/contributor.base.entity';
 import { Account } from '@domain/space/account/account.entity';
 import { SearchVisibility } from '@common/enums/search.visibility';
 import { AiPersona } from '../ai-persona';
-import { MINI_TEXT_LENGTH } from '@common/constants';
+import { ENUM_LENGTH } from '@common/constants';
 
 @Entity()
 export class VirtualContributor
@@ -30,9 +30,8 @@ export class VirtualContributor
   listedInStore!: boolean;
 
   @Column('varchar', {
-    length: MINI_TEXT_LENGTH,
+    length: ENUM_LENGTH,
     nullable: false,
-    default: SearchVisibility.ACCOUNT,
   })
   searchVisibility!: SearchVisibility;
 }

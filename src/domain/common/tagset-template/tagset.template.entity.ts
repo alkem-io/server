@@ -4,7 +4,7 @@ import { TagsetTemplateSet } from '@domain/common/tagset-template-set/tagset.tem
 import { BaseAlkemioEntity } from '../entity/base-entity';
 import { TagsetType } from '@common/enums/tagset.type';
 import { Tagset } from '../tagset/tagset.entity';
-import { ENUM_LENGTH } from '@common/constants';
+import { ENUM_LENGTH, SMALL_TEXT_LENGTH } from '@common/constants';
 
 export enum RestrictedTagsetTemplateNames {
   DEFAULT = 'default',
@@ -19,7 +19,7 @@ export class TagsetTemplate
   implements ITagsetTemplate
 {
   @Column('varchar', {
-    length: ENUM_LENGTH,
+    length: SMALL_TEXT_LENGTH,
     nullable: false,
   })
   name!: string;
@@ -30,10 +30,7 @@ export class TagsetTemplate
   })
   type!: TagsetType;
 
-  @Column('simple-array', {
-    nullable: false,
-    default: [], // todo check value
-  })
+  @Column('simple-array', { nullable: false })
   allowedValues!: string[];
 
   @Column('varchar', {

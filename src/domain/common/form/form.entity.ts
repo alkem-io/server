@@ -7,6 +7,6 @@ export class Form extends BaseAlkemioEntity implements IForm {
   @Column('text', { nullable: false })
   questions!: string;
 
-  @Column('text', { nullable: true })
-  description?: string;
+  @Column('text', { nullable: false })
+  description!: string;
 }

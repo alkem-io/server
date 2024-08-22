@@ -3,6 +3,7 @@ import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
 import { IActivity } from './activity.interface';
 import {
   MESSAGEID_LENGTH,
+  MID_TEXT_LENGTH,
   TINY_TEXT_LENGTH,
   UUID_LENGTH,
 } from '@common/constants';
@@ -34,10 +35,7 @@ export class Activity extends BaseAlkemioEntity implements IActivity {
   @Column('boolean', { nullable: false })
   visibility!: boolean;
 
-  @Column({
-    length: 255, // already 255 in db
-    nullable: true,
-  })
+  @Column('varchar', { length: MID_TEXT_LENGTH, nullable: true })
   description?: string;
 
   @Column({

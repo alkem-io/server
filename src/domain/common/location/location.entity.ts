@@ -22,8 +22,4 @@ export class Location extends BaseAlkemioEntity implements ILocation {
 
   @Column('varchar', { length: SMALL_TEXT_LENGTH, nullable: true })
   postalCode?: string;
-
-  constructor() {
-    super();
-  }
 }
