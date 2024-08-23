@@ -120,6 +120,8 @@ export class UserService {
     let user: IUser = User.create(userData);
     user.authorization = new AuthorizationPolicy(AuthorizationPolicyType.USER);
 
+    if (!user.phone) user.phone = '';
+
     const profileData = await this.extendProfileDataWithReferences(
       userData.profileData
     );

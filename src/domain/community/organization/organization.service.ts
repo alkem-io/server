@@ -132,6 +132,9 @@ export class OrganizationService {
       type: AgentType.ORGANIZATION,
     });
 
+    const account = await this.accountHostService.createAccount();
+    organization.accountID = account.id;
+
     const savedOrg = await this.save(organization);
     this.logger.verbose?.(
       `Created new organization with id ${organization.id}`,
@@ -160,9 +163,6 @@ export class OrganizationService {
         PreferenceDefinitionSet.ORGANIZATION,
         this.createPreferenceDefaults()
       );
-
-    const account = await this.accountHostService.createAccount();
-    organization.accountID = account.id;
 
     organization = await this.save(organization);
 

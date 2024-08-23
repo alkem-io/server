@@ -68,8 +68,4 @@ export class User extends ContributorBase implements IUser {
   })
   @JoinColumn()
   storageAggregator?: StorageAggregator;
-
-  constructor() {
-    super();
-  }
 }

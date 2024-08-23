@@ -70,8 +70,4 @@ export class Organization
   })
   @JoinColumn()
   storageAggregator?: StorageAggregator;
-
-  constructor() {
-    super();
-  }
 }

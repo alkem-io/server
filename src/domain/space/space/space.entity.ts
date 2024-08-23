@@ -9,7 +9,7 @@ import {
 } from 'typeorm';
 import { ISpace } from '@domain/space/space/space.interface';
 import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
-import { ENUM_LENGTH, TINY_TEXT_LENGTH, UUID_LENGTH } from '@common/constants';
+import { ENUM_LENGTH, UUID_LENGTH } from '@common/constants';
 import { SpaceType } from '@common/enums/space.type';
 import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
 import { Community } from '@domain/community/community/community.entity';
