@@ -198,7 +198,7 @@ export class SpaceResolverFields {
     description: 'The Account that this Space is part of.',
   })
   async account(@Parent() space: ISpace): Promise<IAccount> {
-    return await this.spaceService.getAccountWithAgentOrFail(space);
+    return await this.spaceService.getAccountForLevelZeroSpaceOrFail(space);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
