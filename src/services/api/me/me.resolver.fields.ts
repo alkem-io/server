@@ -17,14 +17,12 @@ import { MySpaceResults } from './dto/my.journeys.results';
 import { CommunityInvitationResult } from './dto/me.invitation.result';
 import { CommunityApplicationResult } from './dto/me.application.result';
 import { CommunityMembershipResult } from './dto/me.membership.result';
-import { AuthorizationService } from '@core/authorization/authorization.service';
 
 @Resolver(() => MeQueryResults)
 export class MeResolverFields {
   constructor(
     private meService: MeService,
-    private userService: UserService,
-    private authorizationService: AuthorizationService
+    private userService: UserService
   ) {}
 
   @UseGuards(GraphqlGuard)

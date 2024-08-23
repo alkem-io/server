@@ -15,12 +15,14 @@ import { AccountModule } from '@domain/space/account/account.module';
 import { SearchIngestModule } from '@services/api/search/v2/ingest';
 import { AiServerModule } from '@services/ai-server/ai-server/ai.server.module';
 import { Space } from '@domain/space/space/space.entity';
+import { ContributorModule } from '@domain/community/contributor/contributor.module';
 
 @Module({
   imports: [
     AiServerModule,
     AgentModule,
     AuthorizationPolicyModule,
+    ContributorModule,
     SpaceModule,
     OrganizationModule,
     AccountModule,

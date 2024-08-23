@@ -30,14 +30,17 @@ import { IStorageBucketParent } from './dto/storage.bucket.dto.parent';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { ProfileType } from '@common/enums';
 import { StorageUploadFailedException } from '@common/exceptions/storage/storage.upload.failed.exception';
+import { MimeTypeVisual } from '@common/enums/mime.file.type.visual';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-
+import { AvatarCreatorService } from '@services/external/avatar-creator/avatar.creator.service';
+import { VisualType } from '@common/enums/visual.type';
 @Injectable()
 export class StorageBucketService {
   DEFAULT_MAX_ALLOWED_FILE_SIZE = 15728640;
 
   constructor(
     private documentService: DocumentService,
+    private avatarCreatorService: AvatarCreatorService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private authorizationService: AuthorizationService,
     private urlGeneratorService: UrlGeneratorService,
@@ -394,5 +397,43 @@ export class StorageBucketService {
     }
 
     return null;
+  }
+
+  public async ensureAvatarUrlIsDocument(
+    avatarURL: string,
+    storageBucketId: string,
+    userId: string
+  ): Promise<IDocument> {
+    if (this.documentService.isAlkemioDocumentURL(avatarURL)) {
+      const document = await this.documentService.getDocumentFromURL(avatarURL);
+      if (!document) {
+        throw new EntityNotFoundException(
+          `Document not found: ${avatarURL}`,
+          LogContext.STORAGE_BUCKET
+        );
+      }
+      return document;
+    }
+
+    // Not stored on Alkemio, download + store
+    const imageBuffer = await this.avatarCreatorService.urlToBuffer(avatarURL);
+    let fileType = await this.avatarCreatorService.getFileType(imageBuffer);
+    if (!fileType) {
+      fileType = MimeTypeVisual.PNG;
+    }
+
+    const document = await this.uploadFileAsDocumentFromBuffer(
+      storageBucketId,
+      imageBuffer,
+      VisualType.AVATAR,
+      fileType,
+      userId,
+      false
+    );
+
+    const storageBucket = await this.getStorageBucketOrFail(storageBucketId);
+    document.storageBucket = storageBucket;
+
+    return await this.documentService.saveDocument(document);
   }
 }

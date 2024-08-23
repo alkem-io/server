@@ -33,12 +33,14 @@ import { AccountAuthorizationService } from '@domain/space/account/account.servi
 import { AiServerAuthorizationService } from '@services/ai-server/ai-server/ai.server.service.authorization';
 import { AiServerService } from '@services/ai-server/ai-server/ai.server.service';
 import { Space } from '@domain/space/space/space.entity';
+import { ContributorService } from '@domain/community/contributor/contributor.service';
 
 @Injectable()
 export class BootstrapService {
   constructor(
     private accountService: AccountService,
     private accountAuthorizationService: AccountAuthorizationService,
+    private contributorService: ContributorService,
     private agentService: AgentService,
     private spaceService: SpaceService,
     private userService: UserService,
