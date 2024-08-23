@@ -127,10 +127,10 @@ export class VirtualContributorService {
 
     virtualContributor = await this.save(virtualContributor);
 
-    await this.contributorService.ensureAvatarIsStoredInLocalStorageBucket(
-      virtualContributor.profile,
-      virtualContributor.id
-    );
+    // await this.contributorService.ensureAvatarIsStoredInLocalStorageBucket(
+    //   virtualContributor.profile,
+    //   virtualContributor.id
+    // );
     // Reload to ensure have the updated avatar URL
     virtualContributor = await this.getVirtualContributorOrFail(
       virtualContributor.id
