@@ -1,4 +1,3 @@
-import { CredentialsSearchInput } from '@domain/agent/credential/dto/credentials.dto.search';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager, FindOneOptions } from 'typeorm';
@@ -15,23 +14,111 @@ import { IAgent } from '@domain/agent/agent/agent.interface';
 import { VirtualContributor } from '../virtual-contributor/virtual.contributor.entity';
 import { CommunityContributorType } from '@common/enums/community.contributor.type';
 import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
+import { CreateProfileInput } from '@domain/common/profile/dto';
+import { AvatarCreatorService } from '@services/external/avatar-creator/avatar.creator.service';
+import { IProfile } from '@domain/common/profile/profile.interface';
+import { ProfileService } from '@domain/common/profile/profile.service';
+import { VisualType } from '@common/enums/visual.type';
+import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { DocumentService } from '@domain/storage/document/document.service';
 
 @Injectable()
 export class ContributorService {
   constructor(
     private contributorLookupService: ContributorLookupService,
+    private profileService: ProfileService,
     @InjectEntityManager('default')
-    private entityManager: EntityManager
+    private entityManager: EntityManager,
+    private avatarCreatorService: AvatarCreatorService,
+    private storageBucketService: StorageBucketService,
+    private documentService: DocumentService
   ) {}
 
-  async contributorsWithCredentials(
-    credentialCriteria: CredentialsSearchInput,
-    limit?: number
-  ): Promise<IContributor[]> {
-    return await this.contributorLookupService.contributorsWithCredentials(
-      credentialCriteria,
-      limit
+  private isValidHttpUrl(urlString: string): boolean {
+    let url;
+
+    try {
+      url = new URL(urlString);
+    } catch (_) {
+      return false;
+    }
+
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  }
+
+  public async addAvatarVisualToContributorProfile(
+    profile: IProfile,
+    profileData: CreateProfileInput,
+    agentInfo?: AgentInfo,
+    firstName?: string,
+    lastName?: string
+  ): Promise<void> {
+    let avatarURL: string | undefined = undefined;
+    if (profileData.avatarURL && this.isValidHttpUrl(profileData.avatarURL)) {
+      // Avatar has been explicitly set
+      avatarURL = profileData.avatarURL;
+    } else if (agentInfo && this.isValidHttpUrl(agentInfo.avatarURL)) {
+      // Pick up the avatar from the user request context
+      avatarURL = agentInfo.avatarURL;
+    } else {
+      // Generate a random avatar
+      let avatarFirstName = profileData.displayName;
+      if (firstName) {
+        avatarFirstName = firstName;
+      }
+      avatarURL = this.avatarCreatorService.generateRandomAvatarURL(
+        avatarFirstName,
+        lastName
+      );
+    }
+    this.profileService.addVisualOnProfile(
+      profile,
+      VisualType.AVATAR,
+      avatarURL
     );
+  }
+
+  public async ensureAvatarIsStoredInLocalStorageBucket(
+    profileInput: IProfile,
+    userID: string
+  ): Promise<IProfile> {
+    const profile = await this.profileService.getProfileOrFail(
+      profileInput.id,
+      {
+        relations: {
+          visuals: true,
+          storageBucket: true,
+        },
+      }
+    );
+    if (!profile.visuals || !profile.storageBucket) {
+      throw new EntityNotInitializedException(
+        `Profile could not be loaded with all entities for avatar check: ${profile.id}`,
+        LogContext.COMMUNITY
+      );
+    }
+    const avatarVisual = profile.visuals.find(
+      visual => visual.name === VisualType.AVATAR
+    );
+    if (!avatarVisual) {
+      throw new EntityNotFoundException(
+        `Unable to load avatar visual on profile: ${profile.id}`,
+        LogContext.COMMUNITY
+      );
+    }
+
+    const uri = avatarVisual.uri;
+    const avatarDocument =
+      await this.storageBucketService.ensureAvatarUrlIsDocument(
+        uri,
+        profile.storageBucket.id,
+        userID
+      );
+    const avatartURI =
+      this.documentService.getPubliclyAccessibleURL(avatarDocument);
+    avatarVisual.uri = avatartURI;
+    return await this.profileService.save(profile);
   }
 
   async getContributor(

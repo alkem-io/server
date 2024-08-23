@@ -29,7 +29,6 @@ import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/stor
 import { UserStorageAggregatorLoaderCreator } from '@core/dataloader/creators/loader.creators/community/user.storage.aggregator.loader.creator';
 import { DocumentModule } from '@domain/storage/document/document.module';
 import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
-import { AvatarModule } from '@domain/common/visual/avatar.module';
 import { ContributorModule } from '../contributor/contributor.module';
 import { AccountHostModule } from '@domain/space/account.host/account.host.module';
 
@@ -54,7 +53,6 @@ import { AccountHostModule } from '@domain/space/account.host/account.host.modul
     StorageAggregatorModule,
     StorageBucketModule,
     DocumentModule,
-    AvatarModule,
     ContributorModule,
     TypeOrmModule.forFeature([User]),
   ],

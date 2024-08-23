@@ -208,7 +208,8 @@ export class AccountService {
   }
 
   public async createVirtualContributorOnAccount(
-    vcData: CreateVirtualContributorOnAccountInput
+    vcData: CreateVirtualContributorOnAccountInput,
+    agentInfo?: AgentInfo
   ): Promise<IVirtualContributor> {
     const accountID = vcData.accountID;
     const account = await this.getAccountOrFail(accountID, {
@@ -220,7 +221,7 @@ export class AccountService {
 
     if (!account.virtualContributors || !account.storageAggregator) {
       throw new RelationshipNotFoundException(
-        `Unable to load Account with required entities for creating VC: ${account.id} `,
+        `Unable to load Account with required entities for creating VC: ${account.id} by user ${agentInfo?.userID}`,
         LogContext.ACCOUNT
       );
     }
