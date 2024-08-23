@@ -66,4 +66,11 @@ export class AvatarCreatorService {
       );
     }
   }
+
+  public async getFileType(imageBuffer: Buffer): Promise<string | undefined> {
+    // Dynamic import required to avoid CS Common require issue
+    const { fileTypeFromBuffer } = await import('file-type');
+    const fileInfo = await fileTypeFromBuffer(imageBuffer);
+    return fileInfo?.mime;
+  }
 }

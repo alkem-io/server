@@ -33,6 +33,7 @@ import { StorageUploadFailedException } from '@common/exceptions/storage/storage
 import { MimeTypeVisual } from '@common/enums/mime.file.type.visual';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { AvatarCreatorService } from '@services/external/avatar-creator/avatar.creator.service';
+import { VisualType } from '@common/enums/visual.type';
 @Injectable()
 export class StorageBucketService {
   DEFAULT_MAX_ALLOWED_FILE_SIZE = 15728640;
@@ -416,12 +417,16 @@ export class StorageBucketService {
 
     // Not stored on Alkemio, download + store
     const imageBuffer = await this.avatarCreatorService.urlToBuffer(avatarURL);
+    let fileType = await this.avatarCreatorService.getFileType(imageBuffer);
+    if (!fileType) {
+      fileType = MimeTypeVisual.PNG;
+    }
 
     const document = await this.uploadFileAsDocumentFromBuffer(
       storageBucketId,
       imageBuffer,
-      'avatar',
-      MimeTypeVisual.PNG,
+      VisualType.AVATAR,
+      fileType,
       userId,
       false
     );
