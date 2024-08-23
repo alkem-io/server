@@ -1143,11 +1143,14 @@ export class SpaceService {
   ): Promise<IAccount> {
     const spaceWithAccount = await this.spaceRepository.findOne({
       where: { id: space.levelZeroSpaceID },
+      relations: {
+        account: true,
+      },
     });
 
     if (!spaceWithAccount || !spaceWithAccount.account) {
       throw new EntityNotFoundException(
-        `Unable to find account for space with ID: ${space.id}`,
+        `Unable to find account for space with ID: ${space.id} + level zero space ID: ${space.levelZeroSpaceID}`,
         LogContext.SPACES
       );
     }
