@@ -60,7 +60,9 @@ export class Convergance1724417095448 implements MigrationInterface {
     await queryRunner.query(
       'ALTER TABLE `storage_bucket` CHANGE `maxFileSize` `maxFileSize` int NOT NULL'
     );
-    await queryRunner.query('ALTER TABLE `profile` CHANGE `tagline` `tagline` text NULL');
+    await queryRunner.query(
+      'ALTER TABLE `profile` CHANGE `tagline` `tagline` text NULL'
+    );
     await queryRunner.query(
       'ALTER TABLE `profile` CHANGE `type` `type` varchar(128) NOT NULL'
     );
@@ -73,7 +75,9 @@ export class Convergance1724417095448 implements MigrationInterface {
     await queryRunner.query(
       'ALTER TABLE `whiteboard` CHANGE `contentUpdatePolicy` `contentUpdatePolicy` varchar(128) NOT NULL'
     );
-    await queryRunner.query('ALTER TABLE \`whiteboard\` CHANGE `nameID` `nameID` varchar(36) NOT NULL');
+    await queryRunner.query(
+      'ALTER TABLE `whiteboard` CHANGE `nameID` `nameID` varchar(36) NOT NULL'
+    );
     await queryRunner.query(
       'ALTER TABLE `whiteboard` ADD UNIQUE INDEX `IDX_d3b86160bb7d704212382b0ca4` (`authorizationId`)'
     );
@@ -140,7 +144,7 @@ export class Convergance1724417095448 implements MigrationInterface {
       'ALTER TABLE `organization_verification` CHANGE `organizationID` `organizationID` varchar(36) NOT NULL'
     );
     await queryRunner.query(
-      'ALTER TABLE `organization_verification` CHANGE `status` `status` varchar(128) NOT NULL DEFAULT \'not-verified\''
+      "ALTER TABLE `organization_verification` CHANGE `status` `status` varchar(128) NOT NULL DEFAULT 'not-verified'"
     );
     await queryRunner.query(
       'ALTER TABLE `credential` CHANGE `resourceID` `resourceID` varchar(36) NOT NULL'
@@ -385,7 +389,7 @@ export class Convergance1724417095448 implements MigrationInterface {
       'ALTER TABLE `innovation_hub` CHANGE `listedInStore` `listedInStore` tinyint NOT NULL'
     );
     await queryRunner.query(
-      'ALTER TABLE `innovation_hub` CHANGE `searchVisibility` `searchVisibility` varchar(128) NOT NULL DEFAULT \'account\''
+      "ALTER TABLE `innovation_hub` CHANGE `searchVisibility` `searchVisibility` varchar(128) NOT NULL DEFAULT 'account'"
     );
     await queryRunner.query(
       'ALTER TABLE `innovation_hub` DROP FOREIGN KEY `FK_156fd30246eb151b9d17716abf5`'
@@ -645,8 +649,12 @@ export class Convergance1724417095448 implements MigrationInterface {
     await queryRunner.query(
       'CREATE UNIQUE INDEX `REL_950221e932175dc7cf7c006488` ON `account` (`storageAggregatorId`)'
     );
-    await queryRunner.query(`CREATE UNIQUE INDEX \`REL_4fbd109f9bb84f58b7a3c60649\` ON \`visual\` (\`authorizationId\`)`);
-    await queryRunner.query(`CREATE UNIQUE INDEX \`REL_f2f48b57269987b13b415a0058\` ON \`storage_bucket\` (\`authorizationId\`)`);
+    await queryRunner.query(
+      `CREATE UNIQUE INDEX \`REL_4fbd109f9bb84f58b7a3c60649\` ON \`visual\` (\`authorizationId\`)`
+    );
+    await queryRunner.query(
+      `CREATE UNIQUE INDEX \`REL_f2f48b57269987b13b415a0058\` ON \`storage_bucket\` (\`authorizationId\`)`
+    );
     await queryRunner.query(
       'ALTER TABLE `tagset_template` ADD CONSTRAINT `FK_96f23f044acf305c1699e0319d2` FOREIGN KEY (`tagsetTemplateSetId`) REFERENCES `tagset_template_set`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
     );
@@ -698,14 +706,27 @@ export class Convergance1724417095448 implements MigrationInterface {
     /////
     /////
     // these are very questionable - only the update and cascade are changed;
-    await queryRunner.query(`ALTER TABLE \`application_questions\` DROP FOREIGN KEY \`FK_8495fae86f13836b0745642baa8\``);
-    await queryRunner.query(`ALTER TABLE \`application_questions\` ADD CONSTRAINT \`FK_8495fae86f13836b0745642baa8\` FOREIGN KEY (\`applicationId\`) REFERENCES \`application\`(\`id\`) ON DELETE CASCADE ON UPDATE CASCADE`);
+    await queryRunner.query(
+      `ALTER TABLE \`application_questions\` DROP FOREIGN KEY \`FK_8495fae86f13836b0745642baa8\``
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`application_questions\` ADD CONSTRAINT \`FK_8495fae86f13836b0745642baa8\` FOREIGN KEY (\`applicationId\`) REFERENCES \`application\`(\`id\`) ON DELETE CASCADE ON UPDATE CASCADE`
+    );
     // these are very questionable - only the update and cascade are changed;
-    await queryRunner.query(`ALTER TABLE \`application_questions\` DROP FOREIGN KEY \`FK_fe50118fd82e7fe2f74f986a195\``);
-    await queryRunner.query(`ALTER TABLE \`application_questions\` ADD CONSTRAINT \`FK_fe50118fd82e7fe2f74f986a195\` FOREIGN KEY (\`nvpId\`) REFERENCES \`nvp\`(\`id\`) ON DELETE CASCADE ON UPDATE CASCADE`);
+    await queryRunner.query(
+      `ALTER TABLE \`application_questions\` DROP FOREIGN KEY \`FK_fe50118fd82e7fe2f74f986a195\``
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`application_questions\` ADD CONSTRAINT \`FK_fe50118fd82e7fe2f74f986a195\` FOREIGN KEY (\`nvpId\`) REFERENCES \`nvp\`(\`id\`) ON DELETE CASCADE ON UPDATE CASCADE`
+    );
     ///// some constraints and keys are probably not needed
-    await queryRunner.query(`ALTER TABLE \`community_guidelines\` ADD CONSTRAINT \`FK_3d60fe4fa40d54bad7d51bb4bd1\` FOREIGN KEY (\`profileId\`) REFERENCES \`profile\`(\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION`);
-    await queryRunner.query(`ALTER TABLE \`community_guidelines\` ADD CONSTRAINT \`FK_3d60fe4fa40d54bad7d51bb4bd1\` FOREIGN KEY (\`profileId\`) REFERENCES \`profile\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`);
+    await queryRunner.query(
+      `ALTER TABLE \`community_guidelines\` DROP FOREIGN KEY \`FK_3d60fe4fa40d54bad7d51bb4bd1\``
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`community_guidelines\` ADD CONSTRAINT \`FK_3d60fe4fa40d54bad7d51bb4bd1\` FOREIGN KEY (\`profileId\`) REFERENCES \`profile\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    );
+
     await queryRunner.query(
       'ALTER TABLE `calendar_event` ADD CONSTRAINT `FK_8ee86afa2808a4ab523b9ee6c5e` FOREIGN KEY (`authorizationId`) REFERENCES `authorization_policy`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
     );
