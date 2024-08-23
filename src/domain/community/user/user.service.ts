@@ -121,6 +121,7 @@ export class UserService {
     user.authorization = new AuthorizationPolicy(AuthorizationPolicyType.USER);
 
     if (!user.phone) user.phone = '';
+    if (!user.serviceProfile) user.serviceProfile = false;
 
     const profileData = await this.extendProfileDataWithReferences(
       userData.profileData
