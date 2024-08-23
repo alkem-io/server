@@ -16,12 +16,14 @@ import { AiPersonaModule } from '../ai-persona/ai.persona.module';
 import { AiServerAdapterModule } from '@services/adapters/ai-server-adapter/ai.server.adapter.module';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { AccountHostModule } from '@domain/space/account.host/account.host.module';
+import { ContributorModule } from '../contributor/contributor.module';
 
 @Module({
   imports: [
     AgentModule,
     AuthorizationPolicyModule,
     AuthorizationModule,
+    ContributorModule,
     ProfileModule,
     NamingModule,
     AiPersonaModule,

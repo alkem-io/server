@@ -11,9 +11,11 @@ import { StorageBucketAuthorizationService } from './storage.bucket.service.auth
 import { Document } from '../document/document.entity';
 import { Profile } from '@domain/common/profile/profile.entity';
 import { UrlGeneratorModule } from '@services/infrastructure/url-generator';
+import { AvatarCreatorModule } from '@services/external/avatar-creator/avatar.creator.module';
 
 @Module({
   imports: [
+    AvatarCreatorModule,
     DocumentModule,
     AuthorizationModule,
     AuthorizationPolicyModule,

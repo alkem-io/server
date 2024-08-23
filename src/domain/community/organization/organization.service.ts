@@ -45,7 +45,6 @@ import { CreateUserGroupInput } from '../user-group/dto/user-group.dto.create';
 import { ContributorQueryArgs } from '../contributor/dto/contributor.query.args';
 import { Organization } from './organization.entity';
 import { IOrganization } from './organization.interface';
-import { VisualType } from '@common/enums/visual.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { OrganizationRole } from '@common/enums/organization.role';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
@@ -58,6 +57,7 @@ import { AccountHostService } from '@domain/space/account.host/account.host.serv
 import { IAccount } from '@domain/space/account/account.interface';
 import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { AgentType } from '@common/enums/agent.type';
+import { ContributorService } from '../contributor/contributor.service';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
@@ -73,6 +73,7 @@ export class OrganizationService {
     private namingService: NamingService,
     private preferenceSetService: PreferenceSetService,
     private storageAggregatorService: StorageAggregatorService,
+    private contributorService: ContributorService,
     @InjectRepository(Organization)
     private organizationRepository: Repository<Organization>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -117,18 +118,12 @@ export class OrganizationService {
       name: TagsetReservedName.CAPABILITIES,
       tags: [],
     });
-    // Set the visuals
-    let avatarURL = organizationData.profileData?.avatarURL;
-    if (!avatarURL) {
-      avatarURL = this.profileService.generateRandomAvatar(
-        organization.profile.displayName,
-        ''
-      );
-    }
-    await this.profileService.addVisualOnProfile(
+
+    this.contributorService.addAvatarVisualToContributorProfile(
       organization.profile,
-      VisualType.AVATAR,
-      avatarURL
+      organizationData.profileData,
+      agentInfo,
+      organizationData.profileData.displayName
     );
 
     organization.groups = [];
@@ -137,7 +132,7 @@ export class OrganizationService {
       type: AgentType.ORGANIZATION,
     });
 
-    const savedOrg = await this.organizationRepository.save(organization);
+    const savedOrg = await this.save(organization);
     this.logger.verbose?.(
       `Created new organization with id ${organization.id}`,
       LogContext.COMMUNITY
@@ -171,7 +166,12 @@ export class OrganizationService {
 
     organization = await this.save(organization);
 
-    return organization;
+    // await this.contributorService.ensureAvatarIsStoredInLocalStorageBucket(
+    //   organization.profile,
+    //   organization.id
+    // );
+
+    return await this.getOrganizationOrFail(organization.id);
   }
 
   async checkNameIdOrFail(nameID: string) {
