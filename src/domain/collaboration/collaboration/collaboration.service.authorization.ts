@@ -47,7 +47,7 @@ export class CollaborationAuthorizationService {
     parentAuthorization: IAuthorizationPolicy,
     communityPolicy: ICommunityPolicy,
     spaceSettings: ISpaceSettings,
-    accountAgent: IAgent
+    spaceAgent: IAgent
   ): Promise<IAuthorizationPolicy[]> {
     const collaboration =
       await this.collaborationService.getCollaborationOrFail(
@@ -84,7 +84,7 @@ export class CollaborationAuthorizationService {
       collaboration.authorization,
       communityPolicy,
       spaceSettings,
-      accountAgent
+      spaceAgent
     );
     collaboration.authorization = this.appendCredentialRulesForContributors(
       collaboration.authorization,
@@ -95,7 +95,7 @@ export class CollaborationAuthorizationService {
     collaboration.authorization = await this.appendPrivilegeRules(
       collaboration.authorization,
       spaceSettings,
-      accountAgent
+      spaceAgent
     );
     updatedAuthorizations.push(collaboration.authorization);
 
@@ -201,7 +201,7 @@ export class CollaborationAuthorizationService {
     authorization: IAuthorizationPolicy | undefined,
     policy: ICommunityPolicy,
     spaceSettings: ISpaceSettings,
-    accountAgent: IAgent
+    spaceAgent: IAgent
   ): Promise<IAuthorizationPolicy> {
     if (!authorization)
       throw new EntityNotInitializedException(
@@ -216,7 +216,7 @@ export class CollaborationAuthorizationService {
     const saveAsTemplateEnabled =
       await this.licenseEngineService.isAccessGranted(
         LicensePrivilege.CALLOUT_SAVE_AS_TEMPLATE,
-        accountAgent
+        spaceAgent
       );
     if (saveAsTemplateEnabled) {
       const adminCriterias = this.communityPolicyService.getCredentialsForRole(
@@ -279,7 +279,7 @@ export class CollaborationAuthorizationService {
   private async appendPrivilegeRules(
     authorization: IAuthorizationPolicy,
     spaceSettings: ISpaceSettings,
-    accountAgent: IAgent
+    spaceAgent: IAgent
   ): Promise<IAuthorizationPolicy> {
     const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
 
@@ -292,7 +292,7 @@ export class CollaborationAuthorizationService {
 
     const whiteboardRtEnabled = await this.licenseEngineService.isAccessGranted(
       LicensePrivilege.WHITEBOARD_MULTI_USER,
-      accountAgent
+      spaceAgent
     );
     if (whiteboardRtEnabled) {
       const createWhiteboardRtPrivilege = new AuthorizationPolicyRulePrivilege(

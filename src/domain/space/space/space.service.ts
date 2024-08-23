@@ -1138,24 +1138,14 @@ export class SpaceService {
     return await this.save(space);
   }
 
-  public async getAccountWithAgentOrFail(space: ISpace): Promise<IAccount> {
+  public async getAccountForLevelZeroSpaceOrFail(
+    space: ISpace
+  ): Promise<IAccount> {
     const spaceWithAccount = await this.spaceRepository.findOne({
       where: { id: space.levelZeroSpaceID },
-      relations: {
-        account: {
-          agent: {
-            credentials: true,
-          },
-        },
-      },
     });
 
-    if (
-      !spaceWithAccount ||
-      !spaceWithAccount.account ||
-      !spaceWithAccount.account.agent ||
-      !spaceWithAccount.account.agent.credentials
-    ) {
+    if (!spaceWithAccount || !spaceWithAccount.account) {
       throw new EntityNotFoundException(
         `Unable to find account for space with ID: ${space.id}`,
         LogContext.SPACES

@@ -65,7 +65,7 @@ export class CommunityAuthorizationService {
   async applyAuthorizationPolicy(
     communityInput: ICommunity,
     parentAuthorization: IAuthorizationPolicy,
-    accountAgent: IAgent,
+    spaceAgent: IAgent,
     communityPolicy: ICommunityPolicy,
     spaceSettings: ISpaceSettings,
     spaceMembershipAllowed: boolean,
@@ -118,7 +118,7 @@ export class CommunityAuthorizationService {
     community.authorization = await this.extendAuthorizationPolicy(
       community.authorization,
       parentAuthorization?.anonymousReadAccess,
-      accountAgent,
+      spaceAgent,
       communityPolicy,
       spaceSettings
     );
@@ -265,7 +265,7 @@ export class CommunityAuthorizationService {
   private async extendAuthorizationPolicy(
     authorization: IAuthorizationPolicy | undefined,
     allowGlobalRegisteredReadAccess: boolean | undefined,
-    accountAgent: IAgent,
+    spaceAgent: IAgent,
     policy: ICommunityPolicy,
     spaceSettings: ISpaceSettings
   ): Promise<IAuthorizationPolicy> {
@@ -324,7 +324,7 @@ export class CommunityAuthorizationService {
     const accessVirtualContributors =
       await this.licenseEngineService.isAccessGranted(
         LicensePrivilege.VIRTUAL_CONTRIBUTOR_ACCESS,
-        accountAgent
+        spaceAgent
       );
     if (accessVirtualContributors) {
       const criterias: ICredentialDefinition[] =
