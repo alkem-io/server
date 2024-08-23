@@ -46,6 +46,8 @@ import { CalloutContributionFilterArgs } from '../callout-contribution/dto/callo
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { UpdateContributionCalloutsSortOrderInput } from '../callout-contribution/dto/callout.contribution.dto.update.callouts.sort.order';
+import { keyBy } from 'lodash';
 
 @Injectable()
 export class CalloutService {
@@ -508,6 +510,34 @@ export class CalloutService {
 
     contribution.sortOrder = 1 + maxSortOrder;
     return this.contributionService.save(contribution);
+  }
+
+  public async updateContributionCalloutsSortOrder(
+    contributionData: ICalloutContribution,
+    sortOrderData: UpdateContributionCalloutsSortOrderInput
+  ): Promise<ICalloutContribution[]> {
+    const callout = await this.getCalloutOrFail(contributionData.id, {
+      relations: { contributionPolicy: true, contributions: true },
+    });
+
+    const callouts = keyBy(callout.contributions, 'id');
+
+    const calloutsInOrder: ICalloutContribution[] = [];
+    let index = 0;
+    for (const calloutID of sortOrderData.contributionIDs) {
+      const callout = callouts[calloutID];
+      if (!callout) {
+        throw new EntityNotFoundException(
+          `Callout with requested ID (${calloutID}) not located within current Contribution: ${contributionData.id}`,
+          LogContext.COLLABORATION
+        );
+      }
+      callout.sortOrder = index;
+      calloutsInOrder.push(callout);
+      index++;
+    }
+
+    return calloutsInOrder;
   }
 
   public async getCalloutFraming(

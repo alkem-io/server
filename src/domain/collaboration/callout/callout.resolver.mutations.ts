@@ -40,6 +40,7 @@ import { CalloutContributionService } from '../callout-contribution/callout.cont
 import { ILink } from '../link/link.interface';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { UpdateContributionCalloutsSortOrderInput } from '../callout-contribution/dto/callout.contribution.dto.update.callouts.sort.order';
 
 @Resolver()
 export class CalloutResolverMutations {
@@ -384,6 +385,34 @@ export class CalloutResolverMutations {
         id: agentInfo.userID,
         email: agentInfo.email,
       }
+    );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => ICalloutContribution, {
+    description:
+      'Update the sortOrder field of the Contributions of s Callout.',
+  })
+  @Profiling.api
+  async updateContributionsSortOrder(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('sortOrderData')
+    sortOrderData: UpdateContributionCalloutsSortOrderInput
+  ): Promise<ICalloutContribution[]> {
+    const callout = await this.calloutService.getCalloutOrFail(
+      sortOrderData.calloutID
+    );
+
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      callout.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `update contribution sort order on callout: ${callout.id}`
+    );
+
+    return this.calloutService.updateContributionCalloutsSortOrder(
+      callout,
+      sortOrderData
     );
   }
 }

@@ -15,5 +15,3 @@ export class ContributionSortOrder1724319295054 implements MigrationInterface {
     );
   }
 }
-
-// TODO: sort existing by last activity
