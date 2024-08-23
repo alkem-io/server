@@ -14,9 +14,9 @@ export class VirtualContributor
   @ManyToOne(() => Account, account => account.virtualContributors, {
     eager: false,
     onDelete: 'SET NULL',
-    nullable: false,
+    nullable: true,
   })
-  account!: Account;
+  account?: Account;
 
   @OneToOne(() => AiPersona, {
     eager: false,
