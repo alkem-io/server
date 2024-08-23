@@ -12,8 +12,8 @@ export class CalloutContribution
   extends AuthorizableEntity
   implements ICalloutContribution
 {
-  @Column('char', { length: UUID_LENGTH, nullable: true })
-  createdBy?: string;
+  @Column('char', { length: UUID_LENGTH, nullable: false })
+  createdBy!: string;
 
   @OneToOne(() => Whiteboard, {
     eager: false,

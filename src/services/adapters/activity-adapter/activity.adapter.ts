@@ -206,7 +206,7 @@ export class ActivityAdapter {
     const profile = eventData.calendarEvent.profile;
     const description = `[${
       profile.displayName
-    }] - ${profile.description.substring(1, 100)}`;
+    }] - ${profile.description?.substring(1, 100) ?? ''}`;
     const collaborationID =
       await this.timelineResolverService.getCollaborationIdForCalendar(
         eventData.calendar.id

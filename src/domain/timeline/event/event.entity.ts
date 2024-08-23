@@ -3,16 +3,16 @@ import { ICalendarEvent } from './event.interface';
 import { Calendar } from '../calendar/calendar.entity';
 import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
 import { Room } from '@domain/communication/room/room.entity';
-import { UUID_LENGTH } from '@common/constants';
+import { ENUM_LENGTH, UUID_LENGTH } from '@common/constants';
 import { CalendarEventType } from '@common/enums/calendar.event.type';
 
 @Entity()
 export class CalendarEvent extends NameableEntity implements ICalendarEvent {
-  @Column('text')
+  @Column('varchar', { nullable: false, length: ENUM_LENGTH })
   type!: CalendarEventType;
 
-  @Column('char', { length: UUID_LENGTH, nullable: true })
-  createdBy?: string;
+  @Column('char', { length: UUID_LENGTH, nullable: false })
+  createdBy!: string;
 
   @OneToOne(() => Room, {
     eager: true,

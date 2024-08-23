@@ -2,32 +2,32 @@ import { Column, Entity, ManyToOne } from 'typeorm';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { IVisual } from './visual.interface';
 import { Profile } from '@domain/common/profile/profile.entity';
-import { ALT_TEXT_LENGTH } from '@common/constants';
+import { ALT_TEXT_LENGTH, URI_LENGTH } from '@common/constants';
 
 @Entity()
 export class Visual extends AuthorizableEntity implements IVisual {
   @Column()
   name!: string;
 
-  @Column('text', { nullable: false })
+  @Column('varchar', { nullable: false, length: URI_LENGTH })
   uri!: string;
 
-  @Column('int')
+  @Column('int', { nullable: false })
   minWidth!: number;
 
-  @Column('int')
+  @Column('int', { nullable: false })
   maxWidth!: number;
 
-  @Column('int')
+  @Column('int', { nullable: false })
   minHeight!: number;
 
-  @Column('int')
+  @Column('int', { nullable: false })
   maxHeight!: number;
 
-  @Column({ type: 'decimal', precision: 2, scale: 1 })
+  @Column('decimal', { nullable: false, precision: 2, scale: 1 })
   aspectRatio!: number;
 
-  @Column('simple-array')
+  @Column('simple-array', { nullable: false })
   allowedTypes: string[];
 
   @Column('varchar', { length: ALT_TEXT_LENGTH, nullable: true })

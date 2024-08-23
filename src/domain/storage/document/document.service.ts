@@ -39,7 +39,7 @@ export class DocumentService {
     documentInput: CreateDocumentInput
   ): Promise<IDocument> {
     const document: IDocument = Document.create({ ...documentInput });
-    document.tagset = await this.tagsetService.createTagset({
+    document.tagset = this.tagsetService.createTagset({
       name: TagsetReservedName.DEFAULT,
       tags: [],
     });

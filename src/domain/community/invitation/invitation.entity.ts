@@ -25,9 +25,9 @@ export class Invitation extends AuthorizableEntity implements IInvitation {
 
   @Column('char', { length: UUID_LENGTH, nullable: false })
   invitedContributor!: string;
-  // todo: can we create an invite without a creator?
-  @Column('char', { length: UUID_LENGTH, nullable: true })
-  createdBy?: string;
+
+  @Column('char', { length: UUID_LENGTH, nullable: false })
+  createdBy!: string;
 
   @Column('varchar', { length: MID_TEXT_LENGTH, nullable: true })
   welcomeMessage?: string;

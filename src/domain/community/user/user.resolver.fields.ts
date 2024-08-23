@@ -58,7 +58,7 @@ export class UserResolverFields {
     const profile = await loader.load(user.id);
     // Note: the user profile is public.
     // Check if the user can read the profile entity, not the actual User entity
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       profile.authorization,
       AuthorizationPrivilege.READ,

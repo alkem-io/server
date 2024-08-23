@@ -12,7 +12,11 @@ import { Application } from '@domain/community/application/application.entity';
 import { PreferenceSet } from '@domain/common/preference-set/preference.set.entity';
 import { ContributorBase } from '../contributor/contributor.base.entity';
 import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
-import { UUID_LENGTH } from '@common/constants';
+import {
+  MID_TEXT_LENGTH,
+  SMALL_TEXT_LENGTH,
+  UUID_LENGTH,
+} from '@common/constants';
 
 @Entity()
 export class User extends ContributorBase implements IUser {
@@ -25,22 +29,22 @@ export class User extends ContributorBase implements IUser {
   @Generated('increment')
   rowId!: number;
 
-  @Column()
+  @Column('varchar', { length: SMALL_TEXT_LENGTH, nullable: false })
   accountUpn!: string;
 
-  @Column()
+  @Column('varchar', { length: SMALL_TEXT_LENGTH, nullable: false })
   firstName!: string;
 
-  @Column()
+  @Column('varchar', { length: SMALL_TEXT_LENGTH, nullable: false })
   lastName!: string;
 
-  @Column()
+  @Column('varchar', { length: MID_TEXT_LENGTH, nullable: false })
   email!: string;
 
-  @Column()
+  @Column('varchar', { length: SMALL_TEXT_LENGTH, nullable: false })
   phone!: string;
 
-  @Column({ type: 'boolean' })
+  @Column({ type: 'boolean', nullable: false })
   serviceProfile!: boolean;
 
   @OneToMany(() => Application, application => application.id, {

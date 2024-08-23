@@ -4,6 +4,7 @@ import { IActivity } from './activity.interface';
 import {
   MESSAGEID_LENGTH,
   MID_TEXT_LENGTH,
+  SMALL_TEXT_LENGTH,
   TINY_TEXT_LENGTH,
   UUID_LENGTH,
 } from '@common/constants';
@@ -38,8 +39,6 @@ export class Activity extends BaseAlkemioEntity implements IActivity {
   @Column('varchar', { length: MID_TEXT_LENGTH, nullable: true })
   description?: string;
 
-  @Column({
-    length: TINY_TEXT_LENGTH,
-  })
+  @Column('varchar', { length: SMALL_TEXT_LENGTH, nullable: false })
   type!: ActivityEventType;
 }

@@ -27,11 +27,11 @@ export class AiPersonaService
   @Column('text', { nullable: false })
   prompt!: string;
 
-  @Column('varchar', { length: ENUM_LENGTH, nullable: true })
-  bodyOfKnowledgeType?: AiPersonaBodyOfKnowledgeType;
+  @Column('varchar', { length: ENUM_LENGTH, nullable: false })
+  bodyOfKnowledgeType!: AiPersonaBodyOfKnowledgeType;
 
-  @Column('varchar', { length: SMALL_TEXT_LENGTH, nullable: true })
-  bodyOfKnowledgeID?: string;
+  @Column('varchar', { length: SMALL_TEXT_LENGTH, nullable: false })
+  bodyOfKnowledgeID!: string;
 
   // TODO: last updated embeddings
 }

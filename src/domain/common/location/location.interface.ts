@@ -8,20 +8,30 @@ export abstract class ILocation extends IBaseAlkemio {
     nullable: true,
     description: 'City of the location.',
   })
-  city!: string;
+  city?: string;
 
-  @Field(() => String)
-  country!: string;
+  @Field(() => String, {
+    nullable: true,
+  })
+  country?: string;
 
-  @Field(() => String)
-  addressLine1!: string;
+  @Field(() => String, {
+    nullable: true,
+  })
+  addressLine1?: string;
 
-  @Field(() => String)
-  addressLine2!: string;
+  @Field(() => String, {
+    nullable: true,
+  })
+  addressLine2?: string;
 
-  @Field(() => String)
-  stateOrProvince!: string;
+  @Field(() => String, {
+    nullable: true,
+  })
+  stateOrProvince?: string;
 
-  @Field(() => String)
-  postalCode!: string;
+  @Field(() => String, {
+    nullable: true,
+  })
+  postalCode?: string;
 }

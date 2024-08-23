@@ -10,9 +10,11 @@ export const HUGE_TEXT_LENGTH = 65568;
 export const UUID_LENGTH = 36;
 export const MESSAGEID_LENGTH = 44;
 // nameID
+export const NAMEID_MAX_LENGTH_SCHEMA = 36;
 export const NAMEID_MAX_LENGTH = 25;
 export const NAMEID_MIN_LENGTH = 5;
 // others
 export const ENUM_LENGTH = 128;
 // https://www.rfc-editor.org/rfc/rfc1034#section-3.1
 export const SUBDOMAIN_LENGTH = 63;
+export const URI_LENGTH = 2048;

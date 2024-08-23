@@ -16,11 +16,15 @@ import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity/au
 import { CalloutContributionPolicy } from '../callout-contribution-policy/callout.contribution.policy.entity';
 import { CalloutContributionDefaults } from '../callout-contribution-defaults/callout.contribution.defaults.entity';
 import { CalloutContribution } from '../callout-contribution/callout.contribution.entity';
-import { ENUM_LENGTH, UUID_LENGTH } from '@common/constants';
+import {
+  ENUM_LENGTH,
+  NAMEID_MAX_LENGTH_SCHEMA,
+  UUID_LENGTH,
+} from '@common/constants';
 
 @Entity()
 export class Callout extends AuthorizableEntity implements ICallout {
-  @Column()
+  @Column('varchar', { length: NAMEID_MAX_LENGTH_SCHEMA, nullable: false })
   nameID!: string;
 
   @Column('text', { nullable: false })

@@ -87,7 +87,7 @@ export class BootstrapService {
         error?.stack,
         LogContext.BOOTSTRAP
       );
-      throw new BootstrapException(error.message);
+      throw new BootstrapException(error.message, { originalException: error });
     }
   }
 

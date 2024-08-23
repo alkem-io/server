@@ -86,9 +86,7 @@ export class Space extends NameableEntity implements ISpace {
   @JoinColumn()
   storageAggregator?: StorageAggregator;
 
-  @Column({
-    length: TINY_TEXT_LENGTH,
-  })
+  @Column('varchar', { length: ENUM_LENGTH })
   type!: SpaceType;
 
   @Column({

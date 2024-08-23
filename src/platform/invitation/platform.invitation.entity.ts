@@ -41,7 +41,7 @@ export class PlatformInvitation
   platformRole?: PlatformRole;
 
   @Column('varchar', { length: SMALL_TEXT_LENGTH, nullable: false })
-  email?: string;
+  email!: string;
 
   @Column('varchar', { length: SMALL_TEXT_LENGTH, nullable: true })
   firstName?: string;
@@ -49,8 +49,8 @@ export class PlatformInvitation
   @Column('varchar', { length: SMALL_TEXT_LENGTH, nullable: true })
   lastName?: string;
 
-  @Column('char', { length: UUID_LENGTH, nullable: true })
-  createdBy?: string;
+  @Column('char', { length: UUID_LENGTH, nullable: false })
+  createdBy!: string;
 
   @Column('varchar', { length: MID_TEXT_LENGTH, nullable: true })
   welcomeMessage?: string;

@@ -13,7 +13,7 @@ export abstract class ICalloutContribution extends IAuthorizable {
 
   post?: IPost;
 
-  createdBy?: string;
+  createdBy!: string;
 
   callout?: ICallout;
 }

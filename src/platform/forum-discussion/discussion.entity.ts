@@ -19,8 +19,8 @@ export class Discussion extends NameableEntity implements IDiscussion {
   @JoinColumn()
   comments!: Room;
 
-  @Column('char', { length: UUID_LENGTH, nullable: true })
-  createdBy?: string;
+  @Column('char', { length: UUID_LENGTH, nullable: false })
+  createdBy!: string;
 
   @ManyToOne(() => Forum, communication => communication.discussions, {
     eager: false,

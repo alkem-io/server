@@ -15,8 +15,8 @@ import {
 export class Document extends AuthorizableEntity implements IDocument {
   // omitting OneToOne decorator for createdBy to avoid circular dependency
   // needs a redesign to avoid circular dependency
-  @Column('char', { length: UUID_LENGTH, nullable: true })
-  createdBy?: string;
+  @Column('char', { length: UUID_LENGTH, nullable: false })
+  createdBy!: string;
 
   @ManyToOne(() => StorageBucket, storage => storage.documents, {
     eager: false,
