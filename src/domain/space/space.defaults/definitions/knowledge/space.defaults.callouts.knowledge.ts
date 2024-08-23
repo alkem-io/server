@@ -195,7 +195,6 @@ export const spaceDefaultsCalloutsKnowledge: CreateCalloutInput[] = [
         displayName: 'Example 3: Links and Documents',
         description:
           'Aside from inserting text, you can also upload documents and add links to expand the Body of Knowledge. Click on the plus below to add a link or (PDF) document and click on the ⚙️ at the top right of this post, and click EDIT to update this text.\n',
-
         tagsets: [
           {
             name: TagsetReservedName.FLOW_STATE,
@@ -217,7 +216,7 @@ export const spaceDefaultsCalloutsKnowledge: CreateCalloutInput[] = [
       profile: {
         displayName: 'Where to find the Virtual Contributor Profile',
         description:
-          'You can find the profile of your VC in your account page. \n\n1. Go to your profile (by clicking on your profile picture in the top right of your screen and selecting MY PROFILE in the dropdown menu).\n2. Go to the settings by clicking on the gear icon right of your name.\n3. Go to the ACCOUNT tab.\n Here you can see a list of all your VC's and go to their profile by clicking on their name.',
+          'You can find the profile of your VC in your account page. \n\n1. Go to your profile (by clicking on your profile picture in the top right of your screen and selecting MY PROFILE in the dropdown menu).\n2. Go to the settings by clicking on the gear icon right of your name.\n3. Go to the ACCOUNT tab.\n Here you can see a list of all your VC\'s and go to their profile by clicking on their name.',
         tagsets: [
           {
             name: TagsetReservedName.FLOW_STATE,
@@ -227,7 +226,7 @@ export const spaceDefaultsCalloutsKnowledge: CreateCalloutInput[] = [
       },
     },
   },
-   {
+  {
     nameID: 'activate',
     type: CalloutType.POST,
     contributionPolicy: {
@@ -248,5 +247,5 @@ export const spaceDefaultsCalloutsKnowledge: CreateCalloutInput[] = [
         ],
       },
     },
-  }, 
+  },
 ];
