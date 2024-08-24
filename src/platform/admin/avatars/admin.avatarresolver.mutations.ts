@@ -49,7 +49,7 @@ export class AdminSearchContributorsMutations {
       if (user.profile) {
         await this.contributorService.ensureAvatarIsStoredInLocalStorageBucket(
           user.profile,
-          user.id
+          agentInfo.userID
         );
       }
     }
@@ -62,7 +62,7 @@ export class AdminSearchContributorsMutations {
       if (organization.profile) {
         await this.contributorService.ensureAvatarIsStoredInLocalStorageBucket(
           organization.profile,
-          organization.id
+          agentInfo.userID
         );
       }
     }
@@ -79,7 +79,7 @@ export class AdminSearchContributorsMutations {
       if (virtualContributor.profile) {
         await this.contributorService.ensureAvatarIsStoredInLocalStorageBucket(
           virtualContributor.profile,
-          virtualContributor.id
+          agentInfo.userID
         );
       }
     }
