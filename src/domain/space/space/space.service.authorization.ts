@@ -70,7 +70,6 @@ export class SpaceAuthorizationService {
         community: {
           policy: true,
         },
-        agent: true,
         collaboration: true,
         context: true,
         profile: true,
@@ -81,7 +80,6 @@ export class SpaceAuthorizationService {
       },
     });
     if (
-      !space.agent ||
       !space.authorization ||
       !space.community ||
       !space.community.policy ||
@@ -93,7 +91,10 @@ export class SpaceAuthorizationService {
       );
     }
 
-    const spaceAgent = space.agent;
+    // Get the root space agent for licensing related logic
+    const levelZeroSpaceAgent =
+      await this.spaceService.getLevelZeroSpaceAgent(space);
+
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
     const spaceVisibility = space.visibility;
@@ -205,7 +206,7 @@ export class SpaceAuthorizationService {
     // propagate authorization rules for child entities
     const childAuthorzations = await this.propagateAuthorizationToChildEntities(
       space,
-      spaceAgent,
+      levelZeroSpaceAgent,
       communityPolicy,
       spaceSettings,
       spaceMembershipAllowed
