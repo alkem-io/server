@@ -66,6 +66,7 @@ export class SpaceAuthorizationService {
             policy: true,
           },
         },
+        agent: true,
         authorization: true,
         community: {
           policy: true,
