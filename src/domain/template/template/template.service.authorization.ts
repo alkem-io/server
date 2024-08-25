@@ -9,6 +9,7 @@ import { RelationshipNotFoundException } from '@common/exceptions/relationship.n
 import { TemplateService } from './template.service';
 import { LogContext } from '@common/enums/logging.context';
 import { CalloutAuthorizationService } from '@domain/collaboration/callout/callout.service.authorization';
+import { WhiteboardAuthorizationService } from '@domain/common/whiteboard/whiteboard.service.authorization';
 
 @Injectable()
 export class TemplateAuthorizationService {
@@ -17,7 +18,8 @@ export class TemplateAuthorizationService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private profileAuthorizationService: ProfileAuthorizationService,
     private communityGuidelinesAuthorizationService: CommunityGuidelinesAuthorizationService,
-    private calloutAuthorizationService: CalloutAuthorizationService
+    private calloutAuthorizationService: CalloutAuthorizationService,
+    private whiteboardAuthorizationService: WhiteboardAuthorizationService
   ) {}
 
   async applyAuthorizationPolicy(
@@ -100,6 +102,22 @@ export class TemplateAuthorizationService {
           template.authorization
         );
       updatedAuthorizations.push(...calloutAuthorizations);
+    }
+
+    if (template.type == TemplateType.WHITEBOARD) {
+      if (!template.whiteboard) {
+        throw new RelationshipNotFoundException(
+          `Unable to load Whiteboard on Template of that type: ${template.id} `,
+          LogContext.TEMPLATES
+        );
+      }
+      // Cascade
+      const whiteboardAuthorizations =
+        await this.whiteboardAuthorizationService.applyAuthorizationPolicy(
+          template.whiteboard,
+          template.authorization
+        );
+      updatedAuthorizations.push(...whiteboardAuthorizations);
     }
 
     return updatedAuthorizations;

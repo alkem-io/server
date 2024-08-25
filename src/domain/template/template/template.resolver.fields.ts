@@ -5,6 +5,7 @@ import { TemplateService } from './template.service';
 import { TemplateType } from '@common/enums/template.type';
 import { ICommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.interface';
 import { ICallout } from '@domain/collaboration/callout';
+import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 
 @Resolver(() => ITemplate)
 export class TemplateResolverFields {
@@ -45,5 +46,18 @@ export class TemplateResolverFields {
       return undefined;
     }
     return this.templateService.getCallout(template.id);
+  }
+
+  @ResolveField('whiteboard', () => IWhiteboard, {
+    nullable: true,
+    description: 'The Whiteboard for this Template.',
+  })
+  async whiteboard(
+    @Parent() template: ITemplate
+  ): Promise<IWhiteboard | undefined> {
+    if (template.type !== TemplateType.WHITEBOARD) {
+      return undefined;
+    }
+    return this.templateService.getWhiteboard(template.id);
   }
 }

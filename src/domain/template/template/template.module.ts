@@ -10,6 +10,7 @@ import { TemplateAuthorizationService } from './template.service.authorization';
 import { InnovationFlowStatesModule } from '@domain/collaboration/innovation-flow-states/innovation.flow.state.module';
 import { CommunityGuidelinesModule } from '@domain/community/community-guidelines/community.guidelines.module';
 import { CalloutModule } from '@domain/collaboration/callout/callout.module';
+import { WhiteboardModule } from '@domain/common/whiteboard';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { CalloutModule } from '@domain/collaboration/callout/callout.module';
     ProfileModule,
     CommunityGuidelinesModule,
     CalloutModule,
+    WhiteboardModule,
     TypeOrmModule.forFeature([Template]),
   ],
   providers: [

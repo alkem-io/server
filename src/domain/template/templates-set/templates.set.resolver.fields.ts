@@ -7,7 +7,6 @@ import { ITemplate } from '../template/template.interface';
 import { TemplatesSetService } from './templates.set.service';
 import { ITemplatesSet } from './templates.set.interface';
 import { TemplatesSet } from './templates.set.entity';
-import { IWhiteboardTemplate } from '../whiteboard-template/whiteboard.template.interface';
 import { TemplateType } from '@common/enums/template.type';
 
 @Resolver(() => ITemplatesSet)
@@ -81,14 +80,14 @@ export class TemplatesSetResolverFields {
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField('whiteboardTemplates', () => [IWhiteboardTemplate], {
+  @ResolveField('whiteboardTemplates', () => [ITemplate], {
     nullable: false,
     description: 'The WhiteboardTemplates in this TemplatesSet.',
   })
   @Profiling.api
   async whiteboardTemplates(
     @Parent() templatesSet: ITemplatesSet
-  ): Promise<IWhiteboardTemplate[]> {
+  ): Promise<ITemplate[]> {
     return this.templatesSetService.getWhiteboardTemplates(templatesSet);
   }
 
@@ -102,28 +101,10 @@ export class TemplatesSetResolverFields {
   async whiteboardTemplatesCount(
     @Parent() templatesSet: ITemplatesSet
   ): Promise<number> {
-    return this.templatesSetService.getWhiteboardTemplatesCount(
-      templatesSet.id
+    return this.templatesSetService.getTemplatesCountForType(
+      templatesSet.id,
+      TemplateType.WHITEBOARD
     );
-  }
-
-  @UseGuards(GraphqlGuard)
-  @ResolveField('whiteboardTemplate', () => IWhiteboardTemplate, {
-    nullable: true,
-    description: 'A single WhiteboardTemplate',
-  })
-  @Profiling.api
-  public whiteboardTemplate(
-    @Parent() templatesSet: TemplatesSet,
-    @Args({
-      name: 'ID',
-      nullable: false,
-      type: () => UUID,
-      description: 'The ID of the Template',
-    })
-    ID: string
-  ): Promise<IWhiteboardTemplate> {
-    return this.templatesSetService.getWhiteboardTemplate(ID, templatesSet.id);
   }
 
   @UseGuards(GraphqlGuard)

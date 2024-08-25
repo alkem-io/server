@@ -61,7 +61,7 @@ export class TemplateResolverMutations {
       agentInfo,
       template.authorization,
       AuthorizationPrivilege.DELETE,
-      `post template delete: ${template.id}`
+      `template delete: ${template.id}`
     );
     return await this.templateService.delete(template);
   }

@@ -26,6 +26,8 @@ import { CreateCommunityGuidelinesInput } from '@domain/community/community-guid
 import { ICommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.interface';
 import { ICallout } from '@domain/collaboration/callout';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
+import { WhiteboardService } from '@domain/common/whiteboard';
+import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 
 @Injectable()
 export class TemplateService {
@@ -34,6 +36,7 @@ export class TemplateService {
     private innovationFlowStatesService: InnovationFlowStatesService,
     private communityGuidelinesService: CommunityGuidelinesService,
     private calloutService: CalloutService,
+    private whiteboardService: WhiteboardService,
     @InjectRepository(Template)
     private templateRepository: Repository<Template>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -51,7 +54,7 @@ export class TemplateService {
 
     template.profile = await this.profileService.createProfile(
       templateData.profile,
-      ProfileType.POST_TEMPLATE,
+      ProfileType.TEMPLATE,
       storageAggregator
     );
     await this.profileService.addTagsetOnProfile(template.profile, {
@@ -118,6 +121,11 @@ export class TemplateService {
         [],
         storageAggregator
       );
+    } else if (template.type === TemplateType.WHITEBOARD) {
+      template.whiteboard = await this.whiteboardService.createWhiteboard(
+        templateData.whiteboard!,
+        storageAggregator
+      );
     }
 
     return await this.templateRepository.save(template);
@@ -151,6 +159,7 @@ export class TemplateService {
         profile: true,
         communityGuidelines: true,
         callout: true,
+        whiteboard: true,
       },
     });
 
@@ -213,6 +222,19 @@ export class TemplateService {
       );
     }
 
+    if (template.type === TemplateType.WHITEBOARD && templateData.whiteboard) {
+      if (!template.whiteboard) {
+        throw new RelationshipNotFoundException(
+          `Unable to load Whiteboard on Template: ${templateInput.id} `,
+          LogContext.TEMPLATES
+        );
+      }
+      template.whiteboard = await this.whiteboardService.updateWhiteboard(
+        template.whiteboard,
+        templateData.whiteboard
+      );
+    }
+
     return await this.templateRepository.save(template);
   }
 
@@ -222,6 +244,7 @@ export class TemplateService {
         profile: true,
         communityGuidelines: true,
         callout: true,
+        whiteboard: true,
       },
     });
 
@@ -251,6 +274,16 @@ export class TemplateService {
         );
       }
       await this.calloutService.deleteCallout(template.callout.id);
+    }
+
+    if (template.type === TemplateType.WHITEBOARD) {
+      if (!template.whiteboard) {
+        throw new RelationshipNotFoundException(
+          `Unable to load Callout on Template: ${templateInput.id} `,
+          LogContext.TEMPLATES
+        );
+      }
+      await this.whiteboardService.deleteWhiteboard(template.whiteboard.id);
     }
 
     const templateId: string = template.id;
@@ -324,6 +357,21 @@ export class TemplateService {
       );
     }
     return template.callout;
+  }
+
+  async getWhiteboard(templateID: string): Promise<IWhiteboard> {
+    const template = await this.getTemplateOrFail(templateID, {
+      relations: {
+        whiteboard: true,
+      },
+    });
+    if (!template.whiteboard) {
+      throw new RelationshipNotFoundException(
+        `Unable to load Template with Whiteboard: ${template.id} `,
+        LogContext.TEMPLATES
+      );
+    }
+    return template.whiteboard;
   }
 
   public getInnovationFlowStates(template: ITemplate): IInnovationFlowState[] {

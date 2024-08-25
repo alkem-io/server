@@ -4,7 +4,6 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
-  EntityNotInitializedException,
   ValidationException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
@@ -15,9 +14,6 @@ import { ITemplatesSet } from './templates.set.interface';
 import { TemplateService } from '../template/template.service';
 import { ITemplate } from '../template/template.interface';
 import { CreateTemplateInput } from '../template/dto/template.dto.create';
-import { WhiteboardTemplateService } from '../whiteboard-template/whiteboard.template.service';
-import { IWhiteboardTemplate } from '../whiteboard-template/whiteboard.template.interface';
-import { CreateWhiteboardTemplateInput } from '../whiteboard-template/dto/whiteboard.template.dto.create';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
@@ -31,7 +27,6 @@ export class TemplatesSetService {
     private templatesSetRepository: Repository<TemplatesSet>,
     private storageAggregatorResolverService: StorageAggregatorResolverService,
     private templateService: TemplateService,
-    private whiteboardTemplateService: WhiteboardTemplateService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -41,7 +36,6 @@ export class TemplatesSetService {
       AuthorizationPolicyType.TEMPLATES_SET
     );
     templatesSet.templates = [];
-    templatesSet.whiteboardTemplates = [];
 
     return await this.templatesSetRepository.save(templatesSet);
   }
@@ -67,7 +61,6 @@ export class TemplatesSetService {
       relations: {
         authorization: true,
         templates: true,
-        whiteboardTemplates: true,
       },
     });
 
@@ -77,13 +70,6 @@ export class TemplatesSetService {
     if (templatesSet.templates) {
       for (const template of templatesSet.templates) {
         await this.templateService.delete(template);
-      }
-    }
-    if (templatesSet.whiteboardTemplates) {
-      for (const whiteboardTemplate of templatesSet.whiteboardTemplates) {
-        await this.whiteboardTemplateService.deleteWhiteboardTemplate(
-          whiteboardTemplate
-        );
       }
     }
 
@@ -121,19 +107,6 @@ export class TemplatesSetService {
       where: { templatesSet: { id: templatesSetId } },
       relations: { templatesSet: true, profile: true },
     });
-  }
-
-  public getWhiteboardTemplate(
-    templateId: string,
-    templatesSetId: string
-  ): Promise<IWhiteboardTemplate> {
-    return this.whiteboardTemplateService.getWhiteboardTemplateOrFail(
-      templateId,
-      {
-        relations: { templatesSet: true, profile: true },
-        where: { templatesSet: { id: templatesSetId } },
-      }
-    );
   }
 
   async createPostTemplate(
@@ -199,52 +172,13 @@ export class TemplatesSetService {
 
   async getWhiteboardTemplates(
     templatesSet: ITemplatesSet
-  ): Promise<IWhiteboardTemplate[]> {
-    const templatesSetPopulated = await this.getTemplatesSetOrFail(
-      templatesSet.id,
-      {
-        relations: {
-          whiteboardTemplates: {
-            profile: true,
-          },
-        },
-      }
-    );
-    if (!templatesSetPopulated.whiteboardTemplates) {
-      throw new EntityNotInitializedException(
-        `TemplatesSet not initialized: ${templatesSetPopulated.id}`,
-        LogContext.TEMPLATES
+  ): Promise<ITemplate[]> {
+    const whiteboardTemplatesCount =
+      await this.templateService.getTemplateTypeInTemplatesSet(
+        templatesSet.id,
+        TemplateType.WHITEBOARD
       );
-    }
-    return templatesSetPopulated.whiteboardTemplates;
-  }
-
-  async createWhiteboardTemplate(
-    templatesSet: ITemplatesSet,
-    whiteboardTemplateInput: CreateWhiteboardTemplateInput
-  ): Promise<IWhiteboardTemplate> {
-    templatesSet.whiteboardTemplates =
-      await this.getWhiteboardTemplates(templatesSet);
-
-    const existingWithSameName = templatesSet.whiteboardTemplates.find(
-      template =>
-        template.profile.displayName ===
-        whiteboardTemplateInput.profile.displayName
-    );
-    if (existingWithSameName) {
-      throw new ValidationException(
-        `Whiteboard Template with the provided name already exists: ${existingWithSameName.profile.displayName}`,
-        LogContext.CONTEXT
-      );
-    }
-    const storageAggregator = await this.getStorageAggregator(templatesSet);
-    const whiteboardTemplate =
-      await this.whiteboardTemplateService.createWhiteboardTemplate(
-        whiteboardTemplateInput,
-        storageAggregator
-      );
-    whiteboardTemplate.templatesSet = templatesSet;
-    return await this.whiteboardTemplateService.save(whiteboardTemplate);
+    return whiteboardTemplatesCount;
   }
 
   async getInnovationFlowTemplates(
@@ -281,7 +215,10 @@ export class TemplatesSetService {
 
   async getTemplatesCount(templatesSetID: string): Promise<number> {
     const whiteboardTemplatesCount =
-      await this.getWhiteboardTemplatesCount(templatesSetID);
+      await this.templateService.getCountInTemplatesSet(
+        templatesSetID,
+        TemplateType.WHITEBOARD
+      );
 
     const postTemplatesCount =
       await this.templateService.getCountInTemplatesSet(
@@ -313,12 +250,6 @@ export class TemplatesSetService {
       innovationFlowsCount +
       calloutTemplatesCount +
       communityGuidelinesTemplatesCount
-    );
-  }
-
-  getWhiteboardTemplatesCount(templatesSetID: string): Promise<number> {
-    return this.whiteboardTemplateService.getCountInTemplatesSet(
-      templatesSetID
     );
   }
 }

@@ -5,7 +5,6 @@ import { LookupResolverQueries } from './lookup.resolver.queries';
 import { LookupResolverFields } from './lookup.resolver.fields';
 import { CommunityModule } from '@domain/community/community/community.module';
 import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
-import { WhiteboardTemplateModule } from '@domain/template/whiteboard-template/whiteboard.template.module';
 import { InnovationFlowModule } from '@domain/collaboration/innovation-flow/innovation.flow.module';
 import { PostModule } from '@domain/collaboration/post/post.module';
 import { CalloutModule } from '@domain/collaboration/callout/callout.module';
@@ -41,7 +40,6 @@ import { TemplateModule } from '@domain/template/template/template.module';
     ContextModule,
     TemplateModule,
     WhiteboardModule,
-    WhiteboardTemplateModule,
     InnovationFlowModule,
     InnovationPackModule,
     PostModule,

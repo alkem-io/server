@@ -14,13 +14,11 @@ import { ICommunity } from '@domain/community/community/community.interface';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { IContext } from '@domain/context/context/context.interface';
 import { ContextService } from '@domain/context/context/context.service';
-import { WhiteboardTemplateService } from '@domain/template/whiteboard-template/whiteboard.template.service';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { PostService } from '@domain/collaboration/post/post.service';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovaton.flow.service';
 import { RoomService } from '@domain/communication/room/room.service';
-import { IWhiteboardTemplate } from '@domain/template/whiteboard-template/whiteboard.template.interface';
 import { IProfile } from '@domain/common/profile';
 import { ICallout } from '@domain/collaboration/callout';
 import { IPost } from '@domain/collaboration/post/post.interface';
@@ -74,7 +72,6 @@ export class LookupResolverFields {
     private collaborationService: CollaborationService,
     private contextService: ContextService,
     private whiteboardService: WhiteboardService,
-    private whiteboardTemplateService: WhiteboardTemplateService,
     private innovationPackService: InnovationPackService,
     private profileService: ProfileService,
     private postService: PostService,
@@ -466,27 +463,6 @@ export class LookupResolverFields {
     );
 
     return whiteboard;
-  }
-
-  @UseGuards(GraphqlGuard)
-  @ResolveField(() => IWhiteboardTemplate, {
-    nullable: true,
-    description: 'Lookup the specified Whiteboard Template',
-  })
-  async whiteboardTemplate(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('ID', { type: () => UUID }) id: string
-  ): Promise<IWhiteboardTemplate> {
-    const whiteboardTemplate =
-      await this.whiteboardTemplateService.getWhiteboardTemplateOrFail(id);
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      whiteboardTemplate.authorization,
-      AuthorizationPrivilege.READ,
-      `lookup Whiteboard template: ${whiteboardTemplate.id}`
-    );
-
-    return whiteboardTemplate;
   }
 
   @UseGuards(GraphqlGuard)

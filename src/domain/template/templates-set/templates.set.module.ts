@@ -3,8 +3,6 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { TemplateModule } from '../template/template.module';
-import { WhiteboardTemplateModule } from '../whiteboard-template/whiteboard.template.module';
-import { TemplateBaseModule } from '../template-base/template.base.module';
 import { TemplatesSet } from './templates.set.entity';
 import { TemplatesSetResolverFields } from './templates.set.resolver.fields';
 import { TemplatesSetResolverMutations } from './templates.set.resolver.mutations';
@@ -17,8 +15,6 @@ import { StorageAggregatorResolverModule } from '@services/infrastructure/storag
     AuthorizationPolicyModule,
     AuthorizationModule,
     TemplateModule,
-    WhiteboardTemplateModule,
-    TemplateBaseModule,
     StorageAggregatorResolverModule,
     TypeOrmModule.forFeature([TemplatesSet]),
   ],

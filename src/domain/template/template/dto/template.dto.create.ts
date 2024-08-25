@@ -7,6 +7,7 @@ import { CreateCalloutInput } from '@domain/collaboration/callout';
 import { UpdateInnovationFlowStateInput } from '@domain/collaboration/innovation-flow-states/dto/innovation.flow.state.dto.update';
 import { CreateProfileInput } from '@domain/common/profile/dto/profile.dto.create';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
+import { CreateWhiteboardInput } from '@domain/common/whiteboard/dto/whiteboard.dto.create';
 import { CreateCommunityGuidelinesInput } from '@domain/community/community-guidelines/dto/community.guidelines.dto.create';
 import { Field, InputType } from '@nestjs/graphql';
 import { Type } from 'class-transformer';
@@ -70,4 +71,11 @@ export class CreateTemplateInput {
   })
   @IsOptional()
   callout?: CreateCalloutInput;
+
+  @Field(() => CreateWhiteboardInput, {
+    nullable: true,
+    description: 'The Whiteboard to associate with this template.',
+  })
+  @IsOptional()
+  whiteboard?: CreateWhiteboardInput;
 }

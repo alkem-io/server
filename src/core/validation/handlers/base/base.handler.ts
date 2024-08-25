@@ -37,9 +37,7 @@ import { CreateCalendarEventOnCalendarInput } from '@domain/timeline/calendar/dt
 import { UpdateCalendarEventInput } from '@domain/timeline/event';
 import { UpdateCommunityApplicationFormInput } from '@domain/community/community/dto/community.dto.update.application.form';
 import { CreateTemplateOnTemplatesSetInput } from '@domain/template/templates-set/dto/templates.set.dto.create.template';
-import { CreateWhiteboardTemplateOnTemplatesSetInput } from '@domain/template/templates-set/dto/whiteboard.template.dto.create.on.templates.set';
 import { UpdateTemplateInput } from '@domain/template/template/dto/template.dto.update';
-import { UpdateWhiteboardTemplateInput } from '@domain/template/whiteboard-template/dto/whiteboard.template.dto.update';
 import { CreateDocumentInput } from '@domain/storage/document/dto/document.dto.create';
 import {
   DeleteDocumentInput,
@@ -95,7 +93,6 @@ export class BaseHandler extends AbstractHandler {
       CreateCollaborationInput,
       CreateDocumentInput,
       CreateTemplateOnTemplatesSetInput,
-      CreateWhiteboardTemplateOnTemplatesSetInput,
       CreateSubspaceInput,
       CreateLinkInput,
       CreateOrganizationInput,
@@ -126,7 +123,6 @@ export class BaseHandler extends AbstractHandler {
       UpdateUserPlatformSettingsInput,
       UpdateProfileInput,
       UpdateWhiteboardDirectInput,
-      UpdateWhiteboardTemplateInput,
       UpdateDiscussionInput,
       UpdateEcosystemModelInput,
       UpdateSpaceSettingsEntityInput,

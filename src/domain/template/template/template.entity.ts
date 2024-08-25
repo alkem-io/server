@@ -6,6 +6,7 @@ import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity/au
 import { Profile } from '@domain/common/profile/profile.entity';
 import { CommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.entity';
 import { Callout } from '@domain/collaboration/callout';
+import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
 
 @Entity()
 export class Template extends AuthorizableEntity implements ITemplate {
@@ -48,4 +49,12 @@ export class Template extends AuthorizableEntity implements ITemplate {
   })
   @JoinColumn()
   callout?: Callout;
+
+  @OneToOne(() => Whiteboard, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  whiteboard?: Whiteboard;
 }

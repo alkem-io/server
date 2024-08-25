@@ -259,23 +259,10 @@ export class UrlGeneratorService {
         );
       case ProfileType.INNOVATION_FLOW:
         return await this.getInnovationFlowUrlPathOrFail(profile.id);
-      case ProfileType.WHITEBOARD_TEMPLATE:
-        return await this.getTemplateUrlPathOrFail(
-          'whiteboard_template',
-          profile.id
-        );
-      case ProfileType.POST_TEMPLATE:
+      case ProfileType.TEMPLATE:
+        return await this.getTemplateUrlPathOrFail('template', profile.id);
+      case ProfileType.TEMPLATE:
         return await this.getTemplateUrlPathOrFail('post_template', profile.id);
-      case ProfileType.CALLOUT_TEMPLATE:
-        return await this.getTemplateUrlPathOrFail(
-          'callout_template',
-          profile.id
-        );
-      case ProfileType.INNOVATION_FLOW_TEMPLATE:
-        return await this.getTemplateUrlPathOrFail(
-          'innovation_flow_template',
-          profile.id
-        );
       case ProfileType.INNOVATION_PACK:
         return await this.getInnovationPackUrlPath(profile.id);
       case ProfileType.CALENDAR_EVENT:

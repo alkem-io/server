@@ -4,6 +4,7 @@ import { UpdateInnovationFlowStateInput } from '@domain/collaboration/innovation
 import { UpdateBaseAlkemioInput } from '@domain/common/entity/base-entity/dto/base.alkemio.dto.update';
 import { UpdateProfileInput } from '@domain/common/profile/dto/profile.dto.update';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
+import { UpdateWhiteboardInput } from '@domain/common/whiteboard/dto/whiteboard.dto.update';
 import { UpdateCommunityGuidelinesInput } from '@domain/community/community-guidelines/dto/community.guidelines.dto.update';
 import { Field, InputType } from '@nestjs/graphql';
 import { Type } from 'class-transformer';
@@ -48,4 +49,12 @@ export class UpdateTemplateInput extends UpdateBaseAlkemioInput {
   @IsOptional()
   @Type(() => UpdateCalloutInput)
   callout?: UpdateCalloutInput;
+
+  @Field(() => UpdateWhiteboardInput, {
+    nullable: true,
+    description: 'The Whiteboard for this template.',
+  })
+  @IsOptional()
+  @Type(() => UpdateWhiteboardInput)
+  whiteboard?: UpdateWhiteboardInput;
 }
