@@ -3,14 +3,14 @@ import { Args, Float, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common/decorators/core/use-guards.decorator';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { UUID } from '@domain/common/scalars';
-import { IPostTemplate } from '../post-template/post.template.interface';
+import { ITemplate } from '../template/template.interface';
 import { TemplatesSetService } from './templates.set.service';
 import { ITemplatesSet } from './templates.set.interface';
 import { TemplatesSet } from './templates.set.entity';
 import { IWhiteboardTemplate } from '../whiteboard-template/whiteboard.template.interface';
-import { IInnovationFlowTemplate } from '../innovation-flow-template/innovation.flow.template.interface';
 import { ICalloutTemplate } from '../callout-template/callout.template.interface';
 import { ICommunityGuidelinesTemplate } from '@domain/template/community-guidelines-template/community.guidelines.template.interface';
+import { TemplateType } from '@common/enums/template.type';
 
 @Resolver(() => ITemplatesSet)
 export class TemplatesSetResolverFields {
@@ -41,36 +41,32 @@ export class TemplatesSetResolverFields {
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField('postTemplates', () => [IPostTemplate], {
+  @ResolveField('templates', () => [ITemplate], {
     nullable: false,
-    description: 'The PostTemplates in this TemplatesSet.',
+    description: 'The Templates for Posts in this TemplatesSet.',
   })
   @Profiling.api
-  async postTemplates(
-    @Parent() templatesSet: ITemplatesSet
-  ): Promise<IPostTemplate[]> {
+  async templates(@Parent() templatesSet: ITemplatesSet): Promise<ITemplate[]> {
     return this.templatesSetService.getPostTemplates(templatesSet);
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField('postTemplatesCount', () => Float, {
+  @ResolveField('templatesCount', () => Float, {
     nullable: false,
     description: 'The total number of PostTemplates in this TemplatesSet.',
   })
   @Profiling.api
-  async postTemplatesCount(
-    @Parent() templatesSet: ITemplatesSet
-  ): Promise<number> {
-    return this.templatesSetService.getPostTemplatesCount(templatesSet.id);
+  async templatesCount(@Parent() templatesSet: ITemplatesSet): Promise<number> {
+    return this.templatesSetService.getTemplatesCount(templatesSet.id);
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField('postTemplate', () => IPostTemplate, {
+  @ResolveField('template', () => ITemplate, {
     nullable: true,
-    description: 'A single PostTemplate',
+    description: 'A single Post Template',
   })
   @Profiling.api
-  public postTemplate(
+  public template(
     @Parent() templatesSet: TemplatesSet,
     @Args({
       name: 'ID',
@@ -79,7 +75,7 @@ export class TemplatesSetResolverFields {
       description: 'The ID of the Template',
     })
     ID: string
-  ): Promise<IPostTemplate> {
+  ): Promise<ITemplate> {
     return this.templatesSetService.getPostTemplate(ID, templatesSet.id);
   }
 
@@ -130,14 +126,14 @@ export class TemplatesSetResolverFields {
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField('innovationFlowTemplates', () => [IInnovationFlowTemplate], {
+  @ResolveField('innovationFlowTemplates', () => [ITemplate], {
     nullable: false,
     description: 'The InnovationFlowTemplates in this TemplatesSet.',
   })
   @Profiling.api
   async innovationFlowTemplates(
     @Parent() templatesSet: ITemplatesSet
-  ): Promise<IInnovationFlowTemplate[]> {
+  ): Promise<ITemplate[]> {
     return this.templatesSetService.getInnovationFlowTemplates(templatesSet);
   }
 
@@ -151,30 +147,9 @@ export class TemplatesSetResolverFields {
   async innovationFlowTemplatesCount(
     @Parent() templatesSet: ITemplatesSet
   ): Promise<number> {
-    return this.templatesSetService.getInnovationFlowTemplatesCount(
-      templatesSet.id
-    );
-  }
-
-  @UseGuards(GraphqlGuard)
-  @ResolveField('innovationFlowTemplate', () => IInnovationFlowTemplate, {
-    nullable: true,
-    description: 'A single InnovationFlowTemplate',
-  })
-  @Profiling.api
-  public innovationFlowTemplate(
-    @Parent() templatesSet: TemplatesSet,
-    @Args({
-      name: 'ID',
-      nullable: false,
-      type: () => UUID,
-      description: 'The ID of the Template',
-    })
-    ID: string
-  ): Promise<IInnovationFlowTemplate> {
-    return this.templatesSetService.getInnovationFlowTemplate(
-      ID,
-      templatesSet.id
+    return this.templatesSetService.getTemplatesCountForType(
+      templatesSet.id,
+      TemplateType.INNOVATION_FLOW
     );
   }
 

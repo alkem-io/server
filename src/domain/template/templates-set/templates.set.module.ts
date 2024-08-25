@@ -2,9 +2,8 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { PostTemplateModule } from '../post-template/post.template.module';
+import { TemplateModule } from '../template/template.module';
 import { WhiteboardTemplateModule } from '../whiteboard-template/whiteboard.template.module';
-import { InnovationFlowTemplateModule } from '../innovation-flow-template/innovation.flow.template.module';
 import { CommunityGuidelinesTemplateModule } from '../community-guidelines-template/community.guidelines.template.module';
 import { TemplateBaseModule } from '../template-base/template.base.module';
 import { TemplatesSet } from './templates.set.entity';
@@ -20,9 +19,8 @@ import { StorageAggregatorResolverModule } from '@services/infrastructure/storag
     AuthorizationPolicyModule,
     AuthorizationModule,
     CalloutTemplateModule,
-    PostTemplateModule,
+    TemplateModule,
     WhiteboardTemplateModule,
-    InnovationFlowTemplateModule,
     CommunityGuidelinesTemplateModule,
     TemplateBaseModule,
     StorageAggregatorResolverModule,

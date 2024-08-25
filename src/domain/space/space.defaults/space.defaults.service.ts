@@ -9,10 +9,8 @@ import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { SpaceDefaults } from './space.defaults.entity';
 import { InnovationFlowStatesService } from '@domain/collaboration/innovation-flow-states/innovaton.flow.state.service';
-import { InnovationFlowTemplateService } from '@domain/template/innovation-flow-template/innovation.flow.template.service';
 import { ITemplatesSet } from '@domain/template/templates-set';
 import { TemplatesSetService } from '@domain/template/templates-set/templates.set.service';
-import { IInnovationFlowTemplate } from '@domain/template/innovation-flow-template/innovation.flow.template.interface';
 import { CreateInnovationFlowInput } from '@domain/collaboration/innovation-flow/dto';
 import { templatesSetDefaults } from './definitions/space.defaults.templates';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
@@ -53,13 +51,15 @@ import { spaceDefaultsCalloutsBlankSlate } from './definitions/blank-slate/space
 import { spaceDefaultsSettingsBlankSlate } from './definitions/blank-slate/space.defaults.settings.blank.slate';
 import { spaceDefaultsInnovationFlowStatesBlankSlate } from './definitions/blank-slate/space.defaults.innovation.flow.blank.slate';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { TemplateService } from '@domain/template/template/template.service';
+import { ITemplate } from '@domain/template/template/template.interface';
 
 @Injectable()
 export class SpaceDefaultsService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private innovationFlowStatesService: InnovationFlowStatesService,
-    private innovationFlowTemplateService: InnovationFlowTemplateService,
+    private templateService: TemplateService,
     private templatesSetService: TemplatesSetService,
     @InjectRepository(SpaceDefaults)
     private spaceDefaultsRepository: Repository<SpaceDefaults>
@@ -76,7 +76,7 @@ export class SpaceDefaultsService {
 
   public async updateSpaceDefaults(
     spaceDefaults: ISpaceDefaults,
-    innovationFlowTemplate: IInnovationFlowTemplate
+    innovationFlowTemplate: ITemplate
   ): Promise<ISpaceDefaults> {
     spaceDefaults.innovationFlowTemplate = innovationFlowTemplate;
 
@@ -224,7 +224,7 @@ export class SpaceDefaultsService {
 
   public getDefaultInnovationFlowTemplate(
     spaceDefaults: ISpaceDefaults
-  ): IInnovationFlowTemplate | undefined {
+  ): ITemplate | undefined {
     return spaceDefaults.innovationFlowTemplate;
   }
 
@@ -277,20 +277,27 @@ export class SpaceDefaultsService {
   ): Promise<CreateInnovationFlowInput> {
     // Start with using the provided argument
     if (innovationFlowTemplateID) {
-      const template =
-        await this.innovationFlowTemplateService.getInnovationFlowTemplateOrFail(
-          innovationFlowTemplateID,
-          {
-            relations: { profile: true },
-          }
-        );
+      const template = await this.templateService.getTemplateOrFail(
+        innovationFlowTemplateID,
+        {
+          relations: { profile: true },
+        }
+      );
       // Note: no profile currently present, so use the one from the template for now
+      if (!template.innovationFlowStates) {
+        throw new EntityNotInitializedException(
+          `Template ${template.id} does not have innovation flow states`,
+          LogContext.TEMPLATES
+        );
+      }
       return {
         profile: {
           displayName: template.profile.displayName,
           description: template.profile.description,
         },
-        states: this.innovationFlowStatesService.getStates(template.states),
+        states: this.innovationFlowStatesService.getStates(
+          template.innovationFlowStates
+        ),
       };
     }
 
@@ -301,21 +308,28 @@ export class SpaceDefaultsService {
       spaceType === SpaceType.OPPORTUNITY
     ) {
       if (spaceDefaults && spaceDefaults.innovationFlowTemplate) {
-        const template =
-          await this.innovationFlowTemplateService.getInnovationFlowTemplateOrFail(
-            spaceDefaults.innovationFlowTemplate.id,
-            {
-              relations: { profile: true },
-            }
-          );
+        const template = await this.templateService.getTemplateOrFail(
+          spaceDefaults.innovationFlowTemplate.id,
+          {
+            relations: { profile: true },
+          }
+        );
         spaceDefaults.innovationFlowTemplate;
+        if (!template.innovationFlowStates) {
+          throw new EntityNotInitializedException(
+            `Template ${template.id} does not have innovation flow states`,
+            LogContext.TEMPLATES
+          );
+        }
         // Note: no profile currently present, so use the one from the template for now
         const result: CreateInnovationFlowInput = {
           profile: {
             displayName: template.profile.displayName,
             description: template.profile.description,
           },
-          states: this.innovationFlowStatesService.getStates(template.states),
+          states: this.innovationFlowStatesService.getStates(
+            template.innovationFlowStates
+          ),
         };
         return result;
       }

@@ -37,9 +37,9 @@ import { CreateCalendarEventOnCalendarInput } from '@domain/timeline/calendar/dt
 import { UpdateCalendarEventInput } from '@domain/timeline/event';
 import { UpdateCommunityApplicationFormInput } from '@domain/community/community/dto/community.dto.update.application.form';
 import { CreateCalloutTemplateOnTemplatesSetInput } from '@domain/template/templates-set/dto/callout.template.dto.create.on.templates.set';
-import { CreatePostTemplateOnTemplatesSetInput } from '@domain/template/templates-set/dto/post.template.dto.create.on.templates.set';
+import { CreateTemplateOnTemplatesSetInput } from '@domain/template/templates-set/dto/templates.set.dto.create.template';
 import { CreateWhiteboardTemplateOnTemplatesSetInput } from '@domain/template/templates-set/dto/whiteboard.template.dto.create.on.templates.set';
-import { UpdatePostTemplateInput } from '@domain/template/post-template/dto/post.template.dto.update';
+import { UpdateTemplateInput } from '@domain/template/template/dto/template.dto.update';
 import { UpdateWhiteboardTemplateInput } from '@domain/template/whiteboard-template/dto/whiteboard.template.dto.update';
 import { CreateDocumentInput } from '@domain/storage/document/dto/document.dto.create';
 import {
@@ -99,7 +99,7 @@ export class BaseHandler extends AbstractHandler {
       CreateDocumentInput,
       CreateCalloutTemplateInput,
       CreateCalloutTemplateOnTemplatesSetInput,
-      CreatePostTemplateOnTemplatesSetInput,
+      CreateTemplateOnTemplatesSetInput,
       CreateWhiteboardTemplateOnTemplatesSetInput,
       CreateSubspaceInput,
       CreateLinkInput,
@@ -118,7 +118,7 @@ export class BaseHandler extends AbstractHandler {
       UpdateCalloutContributionDefaultsInput,
       UpdateCalloutContributionPolicyInput,
       UpdateCalloutTemplateInput,
-      UpdatePostTemplateInput,
+      UpdateTemplateInput,
       UpdateCommunityApplicationFormInput,
       UpdateCommunityGuidelinesInput,
       UpdateSpaceInput,

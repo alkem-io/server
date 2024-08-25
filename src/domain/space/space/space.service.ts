@@ -74,6 +74,7 @@ import { ISpaceSubscription } from './space.license.subscription.interface';
 import { IAccount } from '../account/account.interface';
 import { LicensingService } from '@platform/licensing/licensing.service';
 import { LicensePlanType } from '@common/enums/license.plan.type';
+import { TemplateType } from '@common/enums/template.type';
 
 @Injectable()
 export class SpaceService {
@@ -274,13 +275,13 @@ export class SpaceService {
         space.library,
         space.storageAggregator
       );
-    if (
-      space.defaults &&
-      space.library &&
-      space.library.innovationFlowTemplates.length !== 0
-    ) {
-      space.defaults.innovationFlowTemplate =
-        space.library.innovationFlowTemplates[0];
+    if (space.defaults && space.library && space.library.templates) {
+      const innovationFlowTemplates = space.library.templates.filter(
+        template => template.type === TemplateType.INNOVATION_FLOW
+      );
+      if (innovationFlowTemplates.length > 0) {
+        space.defaults.innovationFlowTemplate = innovationFlowTemplates[0];
+      }
     }
   }
 
@@ -1174,9 +1175,7 @@ export class SpaceService {
   async getLibraryOrFail(rootSpaceID: string): Promise<ITemplatesSet> {
     const levelZeroSpaceWithLibrary = await this.getSpaceOrFail(rootSpaceID, {
       relations: {
-        library: {
-          postTemplates: true,
-        },
+        library: true,
       },
     });
     const templatesSet = levelZeroSpaceWithLibrary.library;

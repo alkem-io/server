@@ -19,14 +19,12 @@ import { ProfileService } from '@domain/common/profile/profile.service';
 import { PostService } from '@domain/collaboration/post/post.service';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovaton.flow.service';
-import { InnovationFlowTemplateService } from '@domain/template/innovation-flow-template/innovation.flow.template.service';
 import { RoomService } from '@domain/communication/room/room.service';
 import { IWhiteboardTemplate } from '@domain/template/whiteboard-template/whiteboard.template.interface';
 import { IProfile } from '@domain/common/profile';
 import { ICallout } from '@domain/collaboration/callout';
 import { IPost } from '@domain/collaboration/post/post.interface';
 import { IInnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.interface';
-import { IInnovationFlowTemplate } from '@domain/template/innovation-flow-template/innovation.flow.template.interface';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { CalendarEventService } from '@domain/timeline/event/event.service';
 import { ICalendarEvent } from '@domain/timeline/event';
@@ -64,6 +62,8 @@ import { InnovationPackService } from '@library/innovation-pack/innovaton.pack.s
 import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
 import { AccountService } from '@domain/space/account/account.service';
 import { IAccount } from '@domain/space/account/account.interface';
+import { TemplateService } from '@domain/template/template/template.service';
+import { ITemplate } from '@domain/template/template/template.interface';
 
 @Resolver(() => LookupQueryResults)
 export class LookupResolverFields {
@@ -89,7 +89,7 @@ export class LookupResolverFields {
     private calendarEventService: CalendarEventService,
     private calendarService: CalendarService,
     private documentService: DocumentService,
-    private innovationFlowTemplateService: InnovationFlowTemplateService,
+    private templateService: TemplateService,
     private storageAggregatorService: StorageAggregatorService,
     private storageBucketService: StorageBucketService,
     private spaceService: SpaceService,
@@ -618,26 +618,23 @@ export class LookupResolverFields {
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField(() => IInnovationFlowTemplate, {
+  @ResolveField(() => ITemplate, {
     nullable: true,
-    description: 'Lookup the specified InnovationFlow Template',
+    description: 'Lookup the specified Template',
   })
-  async innovationFlowTemplate(
+  async template(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID }) id: string
-  ): Promise<IInnovationFlowTemplate> {
-    const innovationFlowTemplate =
-      await this.innovationFlowTemplateService.getInnovationFlowTemplateOrFail(
-        id
-      );
+  ): Promise<ITemplate> {
+    const template = await this.templateService.getTemplateOrFail(id);
     this.authorizationService.grantAccessOrFail(
       agentInfo,
-      innovationFlowTemplate.authorization,
+      template.authorization,
       AuthorizationPrivilege.READ,
-      `lookup InnovationFlow Template: ${innovationFlowTemplate.id}`
+      `lookup Template: ${template.id}`
     );
 
-    return innovationFlowTemplate;
+    return template;
   }
 
   @UseGuards(GraphqlGuard)

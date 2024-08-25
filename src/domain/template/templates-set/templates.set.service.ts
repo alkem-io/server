@@ -14,16 +14,13 @@ import { ICommunityGuidelinesTemplate } from '@domain/template/community-guideli
 import { CreateCommunityGuidelinesTemplateInput } from '@domain/template/community-guidelines-template/dto/community.guidelines.template.dto.create';
 import { TemplatesSet } from './templates.set.entity';
 import { ITemplatesSet } from './templates.set.interface';
-import { PostTemplateService } from '../post-template/post.template.service';
+import { TemplateService } from '../template/template.service';
+import { ITemplate } from '../template/template.interface';
+import { CreateTemplateInput } from '../template/dto/template.dto.create';
 import { WhiteboardTemplateService } from '../whiteboard-template/whiteboard.template.service';
-import { InnovationFlowTemplateService } from '../innovation-flow-template/innovation.flow.template.service';
 import { CommunityGuidelinesTemplateService } from '../community-guidelines-template/community.guidelines.template.service';
-import { IPostTemplate } from '../post-template/post.template.interface';
 import { IWhiteboardTemplate } from '../whiteboard-template/whiteboard.template.interface';
-import { IInnovationFlowTemplate } from '../innovation-flow-template/innovation.flow.template.interface';
-import { CreatePostTemplateInput } from '../post-template/dto/post.template.dto.create';
 import { CreateWhiteboardTemplateInput } from '../whiteboard-template/dto/whiteboard.template.dto.create';
-import { CreateInnovationFlowTemplateInput } from '../innovation-flow-template/dto/innovation.flow.template.dto.create';
 import { ICalloutTemplate } from '../callout-template/callout.template.interface';
 import { CreateCalloutTemplateInput } from '../callout-template/dto/callout.template.dto.create';
 import { CalloutTemplateService } from '../callout-template/callout.template.service';
@@ -31,6 +28,7 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { TemplateType } from '@common/enums/template.type';
 
 @Injectable()
 export class TemplatesSetService {
@@ -40,9 +38,8 @@ export class TemplatesSetService {
     private templatesSetRepository: Repository<TemplatesSet>,
     private storageAggregatorResolverService: StorageAggregatorResolverService,
     private calloutTemplateService: CalloutTemplateService,
-    private postTemplateService: PostTemplateService,
+    private templateService: TemplateService,
     private whiteboardTemplateService: WhiteboardTemplateService,
-    private innovationFlowTemplateService: InnovationFlowTemplateService,
     private communityGuidelinesTemplateService: CommunityGuidelinesTemplateService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -52,9 +49,8 @@ export class TemplatesSetService {
     templatesSet.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.TEMPLATES_SET
     );
-    templatesSet.postTemplates = [];
+    templatesSet.templates = [];
     templatesSet.whiteboardTemplates = [];
-    templatesSet.innovationFlowTemplates = [];
     templatesSet.communityGuidelinesTemplates = [];
 
     return await this.templatesSetRepository.save(templatesSet);
@@ -80,9 +76,8 @@ export class TemplatesSetService {
     const templatesSet = await this.getTemplatesSetOrFail(templatesSetID, {
       relations: {
         authorization: true,
-        postTemplates: true,
+        templates: true,
         whiteboardTemplates: true,
-        innovationFlowTemplates: true,
         communityGuidelinesTemplates: true,
         calloutTemplates: true,
       },
@@ -91,9 +86,9 @@ export class TemplatesSetService {
     if (templatesSet.authorization)
       await this.authorizationPolicyService.delete(templatesSet.authorization);
 
-    if (templatesSet.postTemplates) {
-      for (const postTemplate of templatesSet.postTemplates) {
-        await this.postTemplateService.deletePostTemplate(postTemplate);
+    if (templatesSet.templates) {
+      for (const template of templatesSet.templates) {
+        await this.templateService.delete(template);
       }
     }
     if (templatesSet.whiteboardTemplates) {
@@ -103,13 +98,7 @@ export class TemplatesSetService {
         );
       }
     }
-    if (templatesSet.innovationFlowTemplates) {
-      for (const innovationFlowTemplate of templatesSet.innovationFlowTemplates) {
-        await this.innovationFlowTemplateService.deleteInnovationFlowTemplate(
-          innovationFlowTemplate
-        );
-      }
-    }
+
     if (templatesSet.calloutTemplates) {
       for (const calloutTemplate of templatesSet.calloutTemplates) {
         await this.calloutTemplateService.deleteCalloutTemplate(
@@ -127,28 +116,6 @@ export class TemplatesSetService {
     return await this.templatesSetRepository.remove(
       templatesSet as TemplatesSet
     );
-  }
-
-  async getPostTemplates(
-    templatesSet: ITemplatesSet
-  ): Promise<IPostTemplate[]> {
-    const templatesSetPopulated = await this.getTemplatesSetOrFail(
-      templatesSet.id,
-      {
-        relations: {
-          postTemplates: {
-            profile: true,
-          },
-        },
-      }
-    );
-    if (!templatesSetPopulated.postTemplates) {
-      throw new EntityNotInitializedException(
-        `TemplatesSet not initialized: ${templatesSetPopulated.id}`,
-        LogContext.TEMPLATES
-      );
-    }
-    return templatesSetPopulated.postTemplates;
   }
 
   async getCalloutTemplates(
@@ -210,8 +177,8 @@ export class TemplatesSetService {
   public getPostTemplate(
     templateId: string,
     templatesSetId: string
-  ): Promise<IPostTemplate> {
-    return this.postTemplateService.getPostTemplateOrFail(templateId, {
+  ): Promise<ITemplate> {
+    return this.templateService.getTemplateOrFail(templateId, {
       relations: { templatesSet: true, profile: true },
       where: { templatesSet: { id: templatesSetId } },
     });
@@ -230,27 +197,14 @@ export class TemplatesSetService {
     );
   }
 
-  public getInnovationFlowTemplate(
-    templateId: string,
-    templatesSetId: string
-  ): Promise<IInnovationFlowTemplate> {
-    return this.innovationFlowTemplateService.getInnovationFlowTemplateOrFail(
-      templateId,
-      {
-        relations: { templatesSet: true, profile: true },
-        where: { templatesSet: { id: templatesSetId } },
-      }
-    );
-  }
-
   async createPostTemplate(
     templatesSet: ITemplatesSet,
-    postTemplateInput: CreatePostTemplateInput
-  ): Promise<IPostTemplate> {
-    const newTemplateType = postTemplateInput.type;
-    templatesSet.postTemplates = await this.getPostTemplates(templatesSet);
+    templateInput: CreateTemplateInput
+  ): Promise<ITemplate> {
+    const newTemplateType = templateInput.type;
+    templatesSet.templates = await this.getPostTemplates(templatesSet);
 
-    const existingType = templatesSet.postTemplates.find(
+    const existingType = templatesSet.templates.find(
       template => template.type === newTemplateType
     );
     if (existingType) {
@@ -260,35 +214,34 @@ export class TemplatesSetService {
       );
     }
     const storageAggregator = await this.getStorageAggregator(templatesSet);
-    const postTemplate = await this.postTemplateService.createPostTemplate(
-      postTemplateInput,
+    const template = await this.templateService.createTemplate(
+      templateInput,
       storageAggregator
     );
-    postTemplate.templatesSet = templatesSet;
-    return await this.postTemplateService.save(postTemplate);
+    template.templatesSet = templatesSet;
+    return await this.templateService.save(template);
   }
 
   async addTemplates(
     templatesSet: ITemplatesSet,
-    postTemplateInputs: CreatePostTemplateInput[],
-    innovationFlowTemplateInputs: CreateInnovationFlowTemplateInput[],
+    templateInputs: CreateTemplateInput[],
+    innovationFlowTemplateInputs: CreateTemplateInput[],
     storageAggregator: IStorageAggregator
   ): Promise<ITemplatesSet> {
-    for (const postTemplateDefault of postTemplateInputs) {
-      const postTemplate = await this.postTemplateService.createPostTemplate(
-        postTemplateDefault,
+    for (const templateDefault of templateInputs) {
+      const template = await this.templateService.createTemplate(
+        templateDefault,
         storageAggregator
       );
-      templatesSet.postTemplates.push(postTemplate);
+      templatesSet.templates.push(template);
     }
 
     for (const innovationFlowTemplateDefault of innovationFlowTemplateInputs) {
-      const innovationFlowTemplate =
-        await this.innovationFlowTemplateService.createInnovationFlowTemplate(
-          innovationFlowTemplateDefault,
-          storageAggregator
-        );
-      templatesSet.innovationFlowTemplates.push(innovationFlowTemplate);
+      const innovationFlowTemplate = await this.templateService.createTemplate(
+        innovationFlowTemplateDefault,
+        storageAggregator
+      );
+      templatesSet.templates.push(innovationFlowTemplate);
     }
     return await this.save(templatesSet);
   }
@@ -403,61 +356,33 @@ export class TemplatesSetService {
 
   async getInnovationFlowTemplates(
     templatesSet: ITemplatesSet
-  ): Promise<IInnovationFlowTemplate[]> {
-    const templatesSetPopulated = await this.getTemplatesSetOrFail(
-      templatesSet.id,
-      {
-        relations: {
-          innovationFlowTemplates: {
-            profile: true,
-          },
-        },
-      }
-    );
-    if (!templatesSetPopulated.innovationFlowTemplates) {
-      throw new EntityNotInitializedException(
-        `TemplatesSet not initialized with innovation flow templates: ${templatesSetPopulated.id}`,
-        LogContext.TEMPLATES
+  ): Promise<ITemplate[]> {
+    const innovationFlowTemplates =
+      await this.templateService.getTemplateTypeInTemplatesSet(
+        templatesSet.id,
+        TemplateType.INNOVATION_FLOW
       );
-    }
-    return templatesSetPopulated.innovationFlowTemplates;
+
+    return innovationFlowTemplates;
   }
 
-  async deleteInnovationFlowTemplate(
-    innovationFlowTemplate: IInnovationFlowTemplate
-  ): Promise<IInnovationFlowTemplate> {
-    return await this.innovationFlowTemplateService.deleteInnovationFlowTemplate(
-      innovationFlowTemplate
-    );
+  async getPostTemplates(templatesSet: ITemplatesSet): Promise<ITemplate[]> {
+    const innovationFlowTemplates =
+      await this.templateService.getTemplateTypeInTemplatesSet(
+        templatesSet.id,
+        TemplateType.POST
+      );
+
+    return innovationFlowTemplates;
   }
 
-  async createInnovationFlowTemplate(
-    templatesSet: ITemplatesSet,
-    innovationFlowTemplateInput: CreateInnovationFlowTemplateInput
-  ): Promise<IInnovationFlowTemplate> {
-    templatesSet.innovationFlowTemplates =
-      await this.getInnovationFlowTemplates(templatesSet);
-    const existingWithSameName = templatesSet.innovationFlowTemplates.find(
-      template =>
-        template.profile.displayName ===
-        innovationFlowTemplateInput.profile.displayName
-    );
-    if (existingWithSameName) {
-      throw new ValidationException(
-        `InnovationFlow Template with the provided name already exists: ${existingWithSameName.profile.displayName}`,
-        LogContext.CONTEXT
-      );
-    }
-    const storageAggregator = await this.getStorageAggregator(templatesSet);
-    const innovationFlowTemplate =
-      await this.innovationFlowTemplateService.createInnovationFlowTemplate(
-        innovationFlowTemplateInput,
-        storageAggregator
-      );
-
-    innovationFlowTemplate.templatesSet = templatesSet;
-    return await this.innovationFlowTemplateService.save(
-      innovationFlowTemplate
+  async getTemplatesCountForType(
+    templatesSetID: string,
+    type: TemplateType
+  ): Promise<number> {
+    return await this.templateService.getCountInTemplatesSet(
+      templatesSetID,
+      type
     );
   }
 
@@ -465,10 +390,17 @@ export class TemplatesSetService {
     const whiteboardTemplatesCount =
       await this.getWhiteboardTemplatesCount(templatesSetID);
 
-    const postTemplatesCount = await this.getPostTemplatesCount(templatesSetID);
+    const postTemplatesCount =
+      await this.templateService.getCountInTemplatesSet(
+        templatesSetID,
+        TemplateType.POST
+      );
 
     const innovationFlowsCount =
-      await this.getInnovationFlowTemplatesCount(templatesSetID);
+      await this.templateService.getCountInTemplatesSet(
+        templatesSetID,
+        TemplateType.INNOVATION_FLOW
+      );
 
     const calloutTemplatesCount =
       await this.getCalloutTemplatesCount(templatesSetID);
@@ -487,16 +419,6 @@ export class TemplatesSetService {
 
   getWhiteboardTemplatesCount(templatesSetID: string): Promise<number> {
     return this.whiteboardTemplateService.getCountInTemplatesSet(
-      templatesSetID
-    );
-  }
-
-  getPostTemplatesCount(templatesSetID: string): Promise<number> {
-    return this.postTemplateService.getCountInTemplatesSet(templatesSetID);
-  }
-
-  getInnovationFlowTemplatesCount(templatesSetID: string): Promise<number> {
-    return this.innovationFlowTemplateService.getCountInTemplatesSet(
       templatesSetID
     );
   }

@@ -1,9 +1,9 @@
 import { UUID } from '@domain/common/scalars/scalar.uuid';
-import { CreatePostTemplateInput } from '@domain/template/post-template/dto/post.template.dto.create';
+import { CreateTemplateInput } from '@domain/template/template/dto/template.dto.create';
 import { Field, InputType } from '@nestjs/graphql';
 
 @InputType()
-export class CreatePostTemplateOnTemplatesSetInput extends CreatePostTemplateInput {
+export class CreateTemplateOnTemplatesSetInput extends CreateTemplateInput {
   @Field(() => UUID, { nullable: false })
   templatesSetID!: string;
 }

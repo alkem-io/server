@@ -8,14 +8,14 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ISpaceDefaults } from './space.defaults.interface';
 import { UpdateSpaceDefaultsInput } from './dto/space.defaults.dto.update';
 import { SpaceDefaultsService } from './space.defaults.service';
-import { InnovationFlowTemplateService } from '@domain/template/innovation-flow-template/innovation.flow.template.service';
+import { TemplateService } from '@domain/template/template/template.service';
 
 @Resolver()
 export class SpaceDefaultsResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
     private spaceDefaultsService: SpaceDefaultsService,
-    private innovationFlowTemplateService: InnovationFlowTemplateService
+    private templateService: TemplateService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -42,7 +42,7 @@ export class SpaceDefaultsResolverMutations {
 
     if (spaceDefaultsData.flowTemplateID) {
       const innovationFlowTemplate =
-        await this.innovationFlowTemplateService.getInnovationFlowTemplateOrFail(
+        await this.templateService.getTemplateOrFail(
           spaceDefaultsData.flowTemplateID
         );
       return await this.spaceDefaultsService.updateSpaceDefaults(

@@ -9,7 +9,7 @@ import { IRoom } from '@domain/communication/room/room.interface';
 import { IInnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.interface';
 import { IPost } from '@domain/collaboration/post/post.interface';
 import { IWhiteboardTemplate } from '@domain/template/whiteboard-template/whiteboard.template.interface';
-import { IInnovationFlowTemplate } from '@domain/template/innovation-flow-template/innovation.flow.template.interface';
+import { ITemplate } from '@domain/template/template/template.interface';
 
 @ObjectType()
 export class LookupQueryResults {
@@ -22,7 +22,7 @@ export class LookupQueryResults {
   post!: IPost;
   room!: IRoom;
   innovationFlow!: IInnovationFlow;
-  InnovationFlowTemplate!: IInnovationFlowTemplate;
+  template!: ITemplate;
   whiteboard!: IWhiteboard;
   whiteboardTemplate!: IWhiteboardTemplate;
 }
