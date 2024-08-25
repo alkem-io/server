@@ -28,7 +28,7 @@ import { ApplicationEventInput } from '@domain/community/application/dto/applica
 import { OrganizationVerificationEventInput } from '@domain/community/organization-verification/dto/organization.verification.dto.event';
 import { RoomSendMessageInput } from '@domain/communication/room/dto/room.dto.send.message';
 import { UpdatePostInput } from '@domain/collaboration/post/dto/post.dto.update';
-import { UpdateWhiteboardDirectInput } from '@domain/common/whiteboard/types';
+import { UpdateWhiteboardEntityInput } from '@domain/common/whiteboard/types';
 import { UpdateDiscussionInput } from '@platform/forum-discussion/dto/discussion.dto.update';
 import { UpdateEcosystemModelInput } from '@domain/context/ecosystem-model/dto/ecosystem-model.dto.update';
 import { SendMessageOnCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.message.created';
@@ -122,7 +122,7 @@ export class BaseHandler extends AbstractHandler {
       UpdateUserInput,
       UpdateUserPlatformSettingsInput,
       UpdateProfileInput,
-      UpdateWhiteboardDirectInput,
+      UpdateWhiteboardEntityInput,
       UpdateDiscussionInput,
       UpdateEcosystemModelInput,
       UpdateSpaceSettingsEntityInput,

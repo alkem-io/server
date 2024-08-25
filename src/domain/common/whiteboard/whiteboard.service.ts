@@ -17,7 +17,7 @@ import { VisualType } from '@common/enums/visual.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
-import { UpdateWhiteboardContentInput } from './dto/whiteboard.dto.update.content';
+import { UpdateWhiteboardVisualContentInput } from './dto/whiteboard.dto.update.visual.content';
 import { ExcalidrawContent } from '@common/interfaces';
 import { IProfile } from '@domain/common/profile';
 import { ProfileDocumentsService } from '@domain/profile-documents/profile.documents.service';
@@ -196,7 +196,7 @@ export class WhiteboardService {
 
   async updateWhiteboardContent(
     whiteboardInput: IWhiteboard,
-    updateWhiteboardContentData: UpdateWhiteboardContentInput
+    updateWhiteboardContentData: UpdateWhiteboardVisualContentInput
   ): Promise<IWhiteboard> {
     const whiteboard = await this.getWhiteboardOrFail(whiteboardInput.id, {
       relations: {

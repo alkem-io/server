@@ -16,10 +16,7 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
-import {
-  CreateCalloutInput,
-  UpdateCalloutInput,
-} from '@domain/collaboration/callout/dto/index';
+import { CreateCalloutInput } from '@domain/collaboration/callout/dto/index';
 import { limitAndShuffle } from '@common/utils';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
@@ -46,6 +43,7 @@ import { CalloutContributionFilterArgs } from '../callout-contribution/dto/callo
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { UpdateCalloutInput } from './dto/callout.dto.update';
 
 @Injectable()
 export class CalloutService {
@@ -209,9 +207,10 @@ export class CalloutService {
   }
 
   public async updateCallout(
+    calloutInput: ICallout,
     calloutUpdateData: UpdateCalloutInput
   ): Promise<ICallout> {
-    const callout = await this.getCalloutOrFail(calloutUpdateData.ID, {
+    const callout = await this.getCalloutOrFail(calloutInput.id, {
       relations: {
         contributionDefaults: true,
         contributionPolicy: true,

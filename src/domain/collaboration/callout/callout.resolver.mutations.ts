@@ -10,7 +10,7 @@ import { IPost } from '@domain/collaboration/post/post.interface';
 import {
   CalloutPostCreatedPayload,
   DeleteCalloutInput,
-  UpdateCalloutInput,
+  UpdateCalloutEntityInput,
 } from '@domain/collaboration/callout/dto';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
@@ -84,7 +84,7 @@ export class CalloutResolverMutations {
   @Profiling.api
   async updateCallout(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('calloutData') calloutData: UpdateCalloutInput
+    @Args('calloutData') calloutData: UpdateCalloutEntityInput
   ): Promise<ICallout> {
     const callout = await this.calloutService.getCalloutOrFail(calloutData.ID);
     this.authorizationService.grantAccessOrFail(
@@ -93,7 +93,7 @@ export class CalloutResolverMutations {
       AuthorizationPrivilege.UPDATE,
       `update callout: ${callout.id}`
     );
-    return await this.calloutService.updateCallout(calloutData);
+    return await this.calloutService.updateCallout(callout, calloutData);
   }
 
   @UseGuards(GraphqlGuard)

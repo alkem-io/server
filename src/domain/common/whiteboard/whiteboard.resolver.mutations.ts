@@ -8,7 +8,10 @@ import { IWhiteboard } from './whiteboard.interface';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { UpdateWhiteboardContentInput, UpdateWhiteboardInput } from './types';
+import {
+  UpdateWhiteboardVisualContentInput,
+  UpdateWhiteboardEntityInput,
+} from './types';
 import { DeleteWhiteboardInput } from './dto/whiteboard.dto.delete';
 
 @Resolver(() => IWhiteboard)
@@ -25,7 +28,7 @@ export class WhiteboardResolverMutations {
   })
   async updateWhiteboard(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('whiteboardData') whiteboardData: UpdateWhiteboardInput
+    @Args('whiteboardData') whiteboardData: UpdateWhiteboardEntityInput
   ): Promise<IWhiteboard> {
     const whiteboard = await this.whiteboardService.getWhiteboardOrFail(
       whiteboardData.ID
@@ -46,7 +49,7 @@ export class WhiteboardResolverMutations {
   })
   async updateWhiteboardContent(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('whiteboardData') whiteboardData: UpdateWhiteboardContentInput
+    @Args('whiteboardData') whiteboardData: UpdateWhiteboardVisualContentInput
   ): Promise<IWhiteboard> {
     const whiteboard = await this.whiteboardService.getWhiteboardOrFail(
       whiteboardData.ID

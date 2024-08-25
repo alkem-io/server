@@ -218,6 +218,7 @@ export class TemplateService {
         );
       }
       template.callout = await this.calloutService.updateCallout(
+        template.callout,
         templateData.callout
       );
     }

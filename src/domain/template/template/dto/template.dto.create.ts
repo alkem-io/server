@@ -31,7 +31,7 @@ export class CreateTemplateInput {
   @IsOptional()
   visualUri?: string;
 
-  @Field({
+  @Field(() => TemplateType, {
     nullable: false,
     description: 'The type of the Template to be created.',
   })

@@ -3,7 +3,7 @@ import { InputType, Field } from '@nestjs/graphql';
 import { UpdateWhiteboardInput } from './whiteboard.dto.update';
 
 @InputType()
-export class UpdateWhiteboardDirectInput extends UpdateWhiteboardInput {
+export class UpdateWhiteboardEntityInput extends UpdateWhiteboardInput {
   @Field(() => UUID, { nullable: false })
   ID!: string;
 }
