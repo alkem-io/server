@@ -25,7 +25,6 @@ import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platf
 import { UserModule } from '@domain/community/user/user.module';
 import { SpaceModule } from '@domain/space/space/space.module';
 import { CommunityGuidelinesModule } from '@domain/community/community-guidelines/community.guidelines.module';
-import { CommunityGuidelinesTemplateModule } from '@domain/template/community-guidelines-template/community.guidelines.template.module';
 import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
 import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
 import { InnovationHubModule } from '@domain/innovation-hub/innovation.hub.module';
@@ -63,7 +62,6 @@ import { TemplateModule } from '@domain/template/template/template.module';
     UserModule,
     SpaceModule,
     CommunityGuidelinesModule,
-    CommunityGuidelinesTemplateModule,
     VirtualContributorModule,
   ],
   providers: [LookupService, LookupResolverQueries, LookupResolverFields],

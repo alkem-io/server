@@ -10,15 +10,12 @@ import {
 import { LogContext } from '@common/enums';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { ICommunityGuidelinesTemplate } from '@domain/template/community-guidelines-template/community.guidelines.template.interface';
-import { CreateCommunityGuidelinesTemplateInput } from '@domain/template/community-guidelines-template/dto/community.guidelines.template.dto.create';
 import { TemplatesSet } from './templates.set.entity';
 import { ITemplatesSet } from './templates.set.interface';
 import { TemplateService } from '../template/template.service';
 import { ITemplate } from '../template/template.interface';
 import { CreateTemplateInput } from '../template/dto/template.dto.create';
 import { WhiteboardTemplateService } from '../whiteboard-template/whiteboard.template.service';
-import { CommunityGuidelinesTemplateService } from '../community-guidelines-template/community.guidelines.template.service';
 import { IWhiteboardTemplate } from '../whiteboard-template/whiteboard.template.interface';
 import { CreateWhiteboardTemplateInput } from '../whiteboard-template/dto/whiteboard.template.dto.create';
 import { ICalloutTemplate } from '../callout-template/callout.template.interface';
@@ -40,7 +37,6 @@ export class TemplatesSetService {
     private calloutTemplateService: CalloutTemplateService,
     private templateService: TemplateService,
     private whiteboardTemplateService: WhiteboardTemplateService,
-    private communityGuidelinesTemplateService: CommunityGuidelinesTemplateService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -51,7 +47,6 @@ export class TemplatesSetService {
     );
     templatesSet.templates = [];
     templatesSet.whiteboardTemplates = [];
-    templatesSet.communityGuidelinesTemplates = [];
 
     return await this.templatesSetRepository.save(templatesSet);
   }
@@ -78,7 +73,6 @@ export class TemplatesSetService {
         authorization: true,
         templates: true,
         whiteboardTemplates: true,
-        communityGuidelinesTemplates: true,
         calloutTemplates: true,
       },
     });
@@ -106,13 +100,7 @@ export class TemplatesSetService {
         );
       }
     }
-    if (templatesSet.communityGuidelinesTemplates) {
-      for (const communityGuidelinesTemplate of templatesSet.communityGuidelinesTemplates) {
-        await this.communityGuidelinesTemplateService.deleteCommunityGuidelinesTemplate(
-          communityGuidelinesTemplate
-        );
-      }
-    }
+
     return await this.templatesSetRepository.remove(
       templatesSet as TemplatesSet
     );
@@ -140,38 +128,16 @@ export class TemplatesSetService {
     return templatesSetPopulated.calloutTemplates;
   }
 
-  public getCommunityGuidelinesTemplate(
-    templateId: string,
-    templatesSetId: string
-  ): Promise<ICommunityGuidelinesTemplate> {
-    return this.communityGuidelinesTemplateService.getCommunityGuidelinesTemplateOrFail(
-      templateId,
-      {
-        where: { templatesSet: { id: templatesSetId } },
-      }
-    );
-  }
-
   async getCommunityGuidelinesTemplates(
     templatesSet: ITemplatesSet
-  ): Promise<ICommunityGuidelinesTemplate[]> {
-    const templatesSetPopulated = await this.getTemplatesSetOrFail(
-      templatesSet.id,
-      {
-        relations: {
-          communityGuidelinesTemplates: {
-            profile: true,
-          },
-        },
-      }
-    );
-    if (!templatesSetPopulated.communityGuidelinesTemplates) {
-      throw new EntityNotInitializedException(
-        `TemplatesSet not initialized: ${templatesSetPopulated.id}`,
-        LogContext.TEMPLATES
+  ): Promise<ITemplate[]> {
+    const innovationFlowTemplates =
+      await this.templateService.getTemplateTypeInTemplatesSet(
+        templatesSet.id,
+        TemplateType.COMMUNITY_GUIDELINES
       );
-    }
-    return templatesSetPopulated.communityGuidelinesTemplates;
+
+    return innovationFlowTemplates;
   }
 
   public getPostTemplate(
@@ -325,35 +291,6 @@ export class TemplatesSetService {
     return await this.whiteboardTemplateService.save(whiteboardTemplate);
   }
 
-  async createCommunityGuidelinesTemplate(
-    templatesSet: ITemplatesSet,
-    communityGuidelinesTemplateInput: CreateCommunityGuidelinesTemplateInput
-  ): Promise<ICommunityGuidelinesTemplate> {
-    if (
-      !communityGuidelinesTemplateInput.communityGuidelinesID &&
-      !communityGuidelinesTemplateInput.communityGuidelines
-    ) {
-      throw new ValidationException(
-        'A Community Guidelines ID or a Community Guidelines input must be provided',
-        LogContext.CONTEXT
-      );
-    }
-
-    templatesSet.communityGuidelinesTemplates =
-      await this.getCommunityGuidelinesTemplates(templatesSet);
-
-    const storageAggregator = await this.getStorageAggregator(templatesSet);
-    const communityGuidelinesTemplate =
-      await this.communityGuidelinesTemplateService.createCommunityGuidelinesTemplate(
-        communityGuidelinesTemplateInput,
-        storageAggregator
-      );
-    communityGuidelinesTemplate.templatesSet = templatesSet;
-    return await this.communityGuidelinesTemplateService.save(
-      communityGuidelinesTemplate
-    );
-  }
-
   async getInnovationFlowTemplates(
     templatesSet: ITemplatesSet
   ): Promise<ITemplate[]> {
@@ -406,7 +343,10 @@ export class TemplatesSetService {
       await this.getCalloutTemplatesCount(templatesSetID);
 
     const communityGuidelinesTemplatesCount =
-      await this.getCommunityGuidelinesTemplatesCount(templatesSetID);
+      await this.templateService.getCountInTemplatesSet(
+        templatesSetID,
+        TemplateType.COMMUNITY_GUIDELINES
+      );
 
     return (
       whiteboardTemplatesCount +
@@ -425,13 +365,5 @@ export class TemplatesSetService {
 
   getCalloutTemplatesCount(templatesSetID: string): Promise<number> {
     return this.calloutTemplateService.getCountInTemplatesSet(templatesSetID);
-  }
-
-  getCommunityGuidelinesTemplatesCount(
-    templatesSetID: string
-  ): Promise<number> {
-    return this.communityGuidelinesTemplateService.getCountInTemplatesSet(
-      templatesSetID
-    );
   }
 }

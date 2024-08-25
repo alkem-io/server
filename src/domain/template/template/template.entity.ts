@@ -4,6 +4,7 @@ import { TemplateType } from '@common/enums/template.type';
 import { ITemplate } from './template.interface';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity/authorizable.entity';
 import { Profile } from '@domain/common/profile/profile.entity';
+import { CommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.entity';
 
 @Entity()
 export class Template extends AuthorizableEntity implements ITemplate {
@@ -30,4 +31,12 @@ export class Template extends AuthorizableEntity implements ITemplate {
 
   @Column('text', { nullable: true })
   innovationFlowState: string = '[]';
+
+  @OneToOne(() => CommunityGuidelines, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  guidelines?: CommunityGuidelines;
 }

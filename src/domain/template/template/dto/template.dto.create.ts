@@ -6,6 +6,7 @@ import { TemplateType } from '@common/enums/template.type';
 import { UpdateInnovationFlowStateInput } from '@domain/collaboration/innovation-flow-states/dto/innovation.flow.state.dto.update';
 import { CreateProfileInput } from '@domain/common/profile/dto/profile.dto.create';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
+import { CreateCommunityGuidelinesInput } from '@domain/community/community-guidelines/dto/community.guidelines.dto.create';
 import { Field, InputType } from '@nestjs/graphql';
 import { Type } from 'class-transformer';
 import { IsOptional, MaxLength, ValidateNested } from 'class-validator';
@@ -46,4 +47,19 @@ export class CreateTemplateInput {
   @ValidateNested({ each: true })
   @Type(() => UpdateInnovationFlowStateInput)
   innovationFlowStates!: UpdateInnovationFlowStateInput[];
+
+  @Field(() => String, {
+    nullable: true,
+    description:
+      'The ID of the Community guidelines to associate with this template.',
+  })
+  @IsOptional()
+  communityGuidelinesID?: string;
+
+  @Field(() => CreateCommunityGuidelinesInput, {
+    nullable: true,
+    description: 'The Community guidelines to associate with this template.',
+  })
+  @IsOptional()
+  communityGuidelines?: CreateCommunityGuidelinesInput;
 }

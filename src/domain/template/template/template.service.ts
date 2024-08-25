@@ -21,12 +21,15 @@ import { TemplateType } from '@common/enums/template.type';
 import { InnovationFlowStatesService } from '@domain/collaboration/innovation-flow-states/innovaton.flow.state.service';
 import { IInnovationFlowState } from '@domain/collaboration/innovation-flow-states/innovation.flow.state.interface';
 import { InvalidTemplateTypeException } from '@common/exceptions/invalid.template.type.exception';
+import { CommunityGuidelinesService } from '@domain/community/community-guidelines/community.guidelines.service';
+import { CreateCommunityGuidelinesInput } from '@domain/community/community-guidelines/dto/community.guidelines.dto.create';
 
 @Injectable()
 export class TemplateService {
   constructor(
     private profileService: ProfileService,
     private innovationFlowStatesService: InnovationFlowStatesService,
+    private communityGuidelinesService: CommunityGuidelinesService,
     @InjectRepository(Template)
     private templateRepository: Repository<Template>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -67,6 +70,44 @@ export class TemplateService {
 
       template.innovationFlowStates =
         this.innovationFlowStatesService.serializeStates(convertedStates);
+    } else if (template.type === TemplateType.COMMUNITY_GUIDELINES) {
+      let guidelinesInput: CreateCommunityGuidelinesInput;
+
+      if (templateData.communityGuidelinesID) {
+        // get the data from the existing guidelines
+        const guidelines =
+          await this.communityGuidelinesService.getCommunityGuidelinesOrFail(
+            templateData.communityGuidelinesID,
+            {
+              relations: { profile: true },
+            }
+          );
+        guidelinesInput = {
+          profile: {
+            displayName: guidelines.profile.displayName,
+            description: guidelines.profile.description,
+            tagsets: guidelines.profile.tagsets,
+            referencesData: guidelines.profile.references,
+          },
+        };
+      } else {
+        // get the data from the input
+        const guidelinesFromInput = templateData.communityGuidelines!;
+        guidelinesInput = {
+          profile: {
+            displayName: guidelinesFromInput.profile.displayName,
+            description: guidelinesFromInput.profile.description,
+            tagsets: guidelinesFromInput.profile.tagsets,
+            referencesData: guidelinesFromInput.profile.referencesData,
+          },
+        };
+      }
+
+      template.guidelines =
+        await this.communityGuidelinesService.createCommunityGuidelines(
+          guidelinesInput,
+          storageAggregator
+        );
     }
 
     return await this.templateRepository.save(template);
@@ -96,7 +137,7 @@ export class TemplateService {
     templateData: UpdateTemplateInput
   ): Promise<ITemplate> {
     const template = await this.getTemplateOrFail(templateInput.id, {
-      relations: { profile: true },
+      relations: { profile: true, guidelines: true },
     });
 
     if (templateData.profile) {
@@ -125,6 +166,24 @@ export class TemplateService {
         );
       template.innovationFlowStates =
         this.innovationFlowStatesService.serializeStates(convertedStates);
+    }
+
+    if (
+      template.type === TemplateType.COMMUNITY_GUIDELINES &&
+      templateData.communityGuidelines
+    ) {
+      if (!template.guidelines) {
+        throw new RelationshipNotFoundException(
+          `Unable to load Guidelines on Template: ${templateInput.id} `,
+          LogContext.TEMPLATES
+        );
+      }
+
+      const guidelinesInput = templateData.communityGuidelines;
+      template.guidelines = await this.communityGuidelinesService.update(
+        template.guidelines,
+        guidelinesInput
+      );
     }
 
     return await this.templateRepository.save(template);

@@ -8,6 +8,7 @@ import { TemplateResolverMutations } from './template.resolver.mutations';
 import { TemplateService } from './template.service';
 import { TemplateAuthorizationService } from './template.service.authorization';
 import { InnovationFlowStatesModule } from '@domain/collaboration/innovation-flow-states/innovation.flow.state.module';
+import { CommunityGuidelinesModule } from '@domain/community/community-guidelines/community.guidelines.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { InnovationFlowStatesModule } from '@domain/collaboration/innovation-flo
     AuthorizationPolicyModule,
     InnovationFlowStatesModule,
     ProfileModule,
+    CommunityGuidelinesModule,
     TypeOrmModule.forFeature([Template]),
   ],
   providers: [

@@ -4,6 +4,7 @@ import { ITemplatesSet } from '../templates-set/templates.set.interface';
 import { TemplateType } from '@common/enums/template.type';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { IProfile } from '@domain/common/profile/profile.interface';
+import { ICommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.interface';
 
 @ObjectType('Template')
 export abstract class ITemplate extends IAuthorizable {
@@ -27,6 +28,12 @@ export abstract class ITemplate extends IAuthorizable {
       'The description for Post Templates to users filling out a new Post based on this Template.',
   })
   postDefaultDescription?: string;
+
+  @Field(() => ICommunityGuidelines, {
+    nullable: false,
+    description: 'The community guidelines.',
+  })
+  guidelines?: ICommunityGuidelines;
 
   innovationFlowStates?: string;
 }

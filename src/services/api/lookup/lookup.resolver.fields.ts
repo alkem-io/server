@@ -50,8 +50,6 @@ import { ISpace } from '@domain/space/space/space.interface';
 import { SpaceService } from '@domain/space/space/space.service';
 import { ICommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.interface';
 import { CommunityGuidelinesService } from '@domain/community/community-guidelines/community.guidelines.service';
-import { CommunityGuidelinesTemplateService } from '@domain/template/community-guidelines-template/community.guidelines.template.service';
-import { ICommunityGuidelinesTemplate } from '@domain/template/community-guidelines-template/community.guidelines.template.interface';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
@@ -95,7 +93,6 @@ export class LookupResolverFields {
     private spaceService: SpaceService,
     private userService: UserService,
     private guidelinesService: CommunityGuidelinesService,
-    private guidelinesTemplateService: CommunityGuidelinesTemplateService,
     private virtualContributorService: VirtualContributorService,
     private innovationHubService: InnovationHubService
   ) {}
@@ -656,28 +653,5 @@ export class LookupResolverFields {
     );
 
     return guidelines;
-  }
-
-  @UseGuards(GraphqlGuard)
-  @ResolveField(() => ICommunityGuidelinesTemplate, {
-    nullable: true,
-    description: 'Lookup the specified InnovationFlow Template',
-  })
-  async communityGuidelinesTemplate(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('ID', { type: () => UUID }) id: string
-  ): Promise<ICommunityGuidelinesTemplate> {
-    const guidelinesTemplate =
-      await this.guidelinesTemplateService.getCommunityGuidelinesTemplateOrFail(
-        id
-      );
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      guidelinesTemplate.authorization,
-      AuthorizationPrivilege.READ,
-      `lookup Community guidelines Template: ${guidelinesTemplate.id}`
-    );
-
-    return guidelinesTemplate;
   }
 }

@@ -4,7 +4,6 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { TemplateModule } from '../template/template.module';
 import { WhiteboardTemplateModule } from '../whiteboard-template/whiteboard.template.module';
-import { CommunityGuidelinesTemplateModule } from '../community-guidelines-template/community.guidelines.template.module';
 import { TemplateBaseModule } from '../template-base/template.base.module';
 import { TemplatesSet } from './templates.set.entity';
 import { TemplatesSetResolverFields } from './templates.set.resolver.fields';
@@ -21,7 +20,6 @@ import { StorageAggregatorResolverModule } from '@services/infrastructure/storag
     CalloutTemplateModule,
     TemplateModule,
     WhiteboardTemplateModule,
-    CommunityGuidelinesTemplateModule,
     TemplateBaseModule,
     StorageAggregatorResolverModule,
     TypeOrmModule.forFeature([TemplatesSet]),

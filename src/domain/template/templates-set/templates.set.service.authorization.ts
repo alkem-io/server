@@ -5,7 +5,6 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy/author
 import { ITemplatesSet } from '.';
 import { WhiteboardTemplateAuthorizationService } from '../whiteboard-template/whiteboard.template.service.authorization';
 import { TemplateAuthorizationService } from '../template/template.service.authorization';
-import { CommunityGuidelinesTemplateAuthorizationService } from '../community-guidelines-template/community.guidelines.template.service.authorization';
 
 @Injectable()
 export class TemplatesSetAuthorizationService {
@@ -13,8 +12,7 @@ export class TemplatesSetAuthorizationService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private templatesSetService: TemplatesSetService,
     private templateAuthorizationService: TemplateAuthorizationService,
-    private whiteboardTemplateAuthorizationService: WhiteboardTemplateAuthorizationService,
-    private communityGuidelinesTemplateAuthorizationService: CommunityGuidelinesTemplateAuthorizationService
+    private whiteboardTemplateAuthorizationService: WhiteboardTemplateAuthorizationService
   ) {}
 
   async applyAuthorizationPolicy(
@@ -27,13 +25,6 @@ export class TemplatesSetAuthorizationService {
         relations: {
           templates: true,
           whiteboardTemplates: true,
-          communityGuidelinesTemplates: {
-            guidelines: {
-              profile: {
-                authorization: true,
-              },
-            },
-          },
         },
       }
     );
@@ -67,17 +58,6 @@ export class TemplatesSetAuthorizationService {
             parentAuthorization
           );
         updatedAuthorizations.push(...whiteboardAuthorizations);
-      }
-    }
-
-    if (templatesSet.communityGuidelinesTemplates) {
-      for (const communityGuidelinesTemplate of templatesSet.communityGuidelinesTemplates) {
-        const guidelinesAuthorizations =
-          await this.communityGuidelinesTemplateAuthorizationService.applyAuthorizationPolicy(
-            communityGuidelinesTemplate,
-            parentAuthorization
-          );
-        updatedAuthorizations.push(...guidelinesAuthorizations);
       }
     }
 

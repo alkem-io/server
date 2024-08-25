@@ -3,6 +3,7 @@ import { UpdateInnovationFlowStateInput } from '@domain/collaboration/innovation
 import { UpdateBaseAlkemioInput } from '@domain/common/entity/base-entity/dto/base.alkemio.dto.update';
 import { UpdateProfileInput } from '@domain/common/profile/dto/profile.dto.update';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
+import { UpdateCommunityGuidelinesInput } from '@domain/community/community-guidelines/dto/community.guidelines.dto.update';
 import { Field, InputType } from '@nestjs/graphql';
 import { Type } from 'class-transformer';
 import { IsOptional, MaxLength, ValidateNested } from 'class-validator';
@@ -30,4 +31,12 @@ export class UpdateTemplateInput extends UpdateBaseAlkemioInput {
   @ValidateNested({ each: true })
   @Type(() => UpdateInnovationFlowStateInput)
   innovationFlowStates!: UpdateInnovationFlowStateInput[];
+
+  @Field(() => UpdateCommunityGuidelinesInput, {
+    nullable: true,
+    description: 'The Community guidelines to associate with this template.',
+  })
+  @IsOptional()
+  @Type(() => UpdateCommunityGuidelinesInput)
+  communityGuidelines?: UpdateCommunityGuidelinesInput;
 }
