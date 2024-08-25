@@ -3,7 +3,7 @@ import { WhiteboardContent } from '@domain/common/scalars/scalar.whiteboard.cont
 import { InputType, Field } from '@nestjs/graphql';
 
 @InputType()
-export class UpdateWhiteboardVisualContentInput extends UpdateBaseAlkemioInput {
+export class UpdateWhiteboardContentInput extends UpdateBaseAlkemioInput {
   @Field(() => WhiteboardContent)
   content!: string;
 }

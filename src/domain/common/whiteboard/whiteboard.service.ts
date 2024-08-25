@@ -17,7 +17,7 @@ import { VisualType } from '@common/enums/visual.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
-import { UpdateWhiteboardVisualContentInput } from './dto/whiteboard.dto.update.visual.content';
+import { UpdateWhiteboardContentInput } from './dto/whiteboard.dto.update.content';
 import { ExcalidrawContent } from '@common/interfaces';
 import { IProfile } from '@domain/common/profile';
 import { ProfileDocumentsService } from '@domain/profile-documents/profile.documents.service';
@@ -138,7 +138,7 @@ export class WhiteboardService {
     whiteboardInput: IWhiteboard,
     updateWhiteboardData: UpdateWhiteboardInput
   ): Promise<IWhiteboard> {
-    const whiteboard = await this.getWhiteboardOrFail(whiteboardInput.id, {
+    let whiteboard = await this.getWhiteboardOrFail(whiteboardInput.id, {
       relations: {
         profile: true,
       },
@@ -190,13 +190,22 @@ export class WhiteboardService {
         }
       }
     }
+    whiteboard = await this.save(whiteboard);
 
-    return this.save(whiteboard);
+    if (updateWhiteboardData.content) {
+      const input: UpdateWhiteboardContentInput = {
+        ID: whiteboard.id,
+        content: updateWhiteboardData.content,
+      };
+      return await this.updateWhiteboardContent(whiteboard, input);
+    }
+
+    return whiteboard;
   }
 
   async updateWhiteboardContent(
     whiteboardInput: IWhiteboard,
-    updateWhiteboardContentData: UpdateWhiteboardVisualContentInput
+    updateWhiteboardContentData: UpdateWhiteboardContentInput
   ): Promise<IWhiteboard> {
     const whiteboard = await this.getWhiteboardOrFail(whiteboardInput.id, {
       relations: {

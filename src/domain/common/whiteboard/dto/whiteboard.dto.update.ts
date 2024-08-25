@@ -2,6 +2,7 @@ import { SMALL_TEXT_LENGTH } from '@common/constants';
 import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
 import { UpdateProfileInput } from '@domain/common/profile/dto/profile.dto.update';
 import { NameID } from '@domain/common/scalars/scalar.nameid';
+import { WhiteboardContent } from '@domain/common/scalars/scalar.whiteboard.content';
 import { Field, InputType } from '@nestjs/graphql';
 import { Type } from 'class-transformer';
 import { IsOptional, MaxLength, ValidateNested } from 'class-validator';
@@ -28,4 +29,11 @@ export class UpdateWhiteboardInput {
   @ValidateNested()
   @Type(() => UpdateProfileInput)
   profileData?: UpdateProfileInput;
+
+  @Field(() => WhiteboardContent, {
+    nullable: true,
+    description: 'The new content to be used.',
+  })
+  @IsOptional()
+  content?: string;
 }
