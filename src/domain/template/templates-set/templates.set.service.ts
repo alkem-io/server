@@ -2,10 +2,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
-import {
-  EntityNotFoundException,
-  ValidationException,
-} from '@common/exceptions';
+import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -109,22 +106,11 @@ export class TemplatesSetService {
     });
   }
 
-  async createPostTemplate(
+  async createTemplate(
     templatesSet: ITemplatesSet,
     templateInput: CreateTemplateInput
   ): Promise<ITemplate> {
-    const newTemplateType = templateInput.type;
-    templatesSet.templates = await this.getPostTemplates(templatesSet);
-
-    const existingType = templatesSet.templates.find(
-      template => template.type === newTemplateType
-    );
-    if (existingType) {
-      throw new ValidationException(
-        `PostTemplate with the provided type already exists: ${newTemplateType}`,
-        LogContext.CONTEXT
-      );
-    }
+    // TODO: validate nameID uniqueness?
     const storageAggregator = await this.getStorageAggregator(templatesSet);
     const template = await this.templateService.createTemplate(
       templateInput,

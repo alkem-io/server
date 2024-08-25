@@ -38,12 +38,12 @@ export class TemplatesSetAuthorizationService {
 
     if (templatesSet.templates) {
       for (const template of templatesSet.templates) {
-        const postAuthorizations =
+        const templateAuthorizations =
           await this.templateAuthorizationService.applyAuthorizationPolicy(
             template,
             parentAuthorization
           );
-        updatedAuthorizations.push(...postAuthorizations);
+        updatedAuthorizations.push(...templateAuthorizations);
       }
     }
 

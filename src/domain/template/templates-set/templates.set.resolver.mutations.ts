@@ -26,28 +26,25 @@ export class TemplatesSetResolverMutations {
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => ITemplate, {
-    description: 'Creates a new PostTemplate on the specified TemplatesSet.',
+    description: 'Creates a new Template on the specified TemplatesSet.',
   })
-  async createPostTemplate(
+  async createTemplate(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('templateInput')
-    templateInput: CreateTemplateOnTemplatesSetInput
+    @Args('templateData')
+    templateData: CreateTemplateOnTemplatesSetInput
   ): Promise<ITemplate> {
     const templatesSet = await this.templatesSetService.getTemplatesSetOrFail(
-      templateInput.templatesSetID,
-      {
-        relations: { templates: true },
-      }
+      templateData.templatesSetID
     );
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       templatesSet.authorization,
       AuthorizationPrivilege.CREATE,
-      `templates set create post template: ${templatesSet.id}`
+      `templates set create template: ${templatesSet.id}`
     );
-    const template = await this.templatesSetService.createPostTemplate(
+    const template = await this.templatesSetService.createTemplate(
       templatesSet,
-      templateInput
+      templateData
     );
     const authorizations =
       await this.templateAuthorizationService.applyAuthorizationPolicy(

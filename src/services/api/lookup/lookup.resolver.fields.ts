@@ -58,6 +58,8 @@ import { AccountService } from '@domain/space/account/account.service';
 import { IAccount } from '@domain/space/account/account.interface';
 import { TemplateService } from '@domain/template/template/template.service';
 import { ITemplate } from '@domain/template/template/template.interface';
+import { ITemplatesSet } from '@domain/template/templates-set/templates.set.interface';
+import { TemplatesSetService } from '@domain/template/templates-set/templates.set.service';
 
 @Resolver(() => LookupQueryResults)
 export class LookupResolverFields {
@@ -82,6 +84,7 @@ export class LookupResolverFields {
     private calendarService: CalendarService,
     private documentService: DocumentService,
     private templateService: TemplateService,
+    private templatesSetService: TemplatesSetService,
     private storageAggregatorService: StorageAggregatorService,
     private storageBucketService: StorageBucketService,
     private spaceService: SpaceService,
@@ -584,6 +587,27 @@ export class LookupResolverFields {
     );
 
     return template;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField(() => ITemplatesSet, {
+    nullable: true,
+    description: 'Lookup the specified TemplatesSet',
+  })
+  async templatesSet(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('ID', { type: () => UUID }) id: string
+  ): Promise<ITemplatesSet> {
+    const templatesSet =
+      await this.templatesSetService.getTemplatesSetOrFail(id);
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      templatesSet.authorization,
+      AuthorizationPrivilege.READ,
+      `lookup TemplatesSet: ${templatesSet.id}`
+    );
+
+    return templatesSet;
   }
 
   @UseGuards(GraphqlGuard)

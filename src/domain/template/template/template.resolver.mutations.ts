@@ -25,11 +25,11 @@ export class TemplateResolverMutations {
   })
   async updateTemplate(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('templateInput')
-    templateInput: UpdateTemplateInput
+    @Args('updateData')
+    updateData: UpdateTemplateInput
   ): Promise<ITemplate> {
     const template = await this.templateService.getTemplateOrFail(
-      templateInput.ID,
+      updateData.ID,
       {
         relations: { profile: true },
       }
@@ -40,7 +40,7 @@ export class TemplateResolverMutations {
       AuthorizationPrivilege.UPDATE,
       `update template: ${template.id}`
     );
-    return await this.templateService.updateTemplate(template, templateInput);
+    return await this.templateService.updateTemplate(template, updateData);
   }
 
   @UseGuards(GraphqlGuard)

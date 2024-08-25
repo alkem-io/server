@@ -11,6 +11,7 @@ import { InnovationFlowStatesModule } from '@domain/collaboration/innovation-flo
 import { CommunityGuidelinesModule } from '@domain/community/community-guidelines/community.guidelines.module';
 import { CalloutModule } from '@domain/collaboration/callout/callout.module';
 import { WhiteboardModule } from '@domain/common/whiteboard';
+import { TemplateResolverFields } from './template.resolver.fields';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { WhiteboardModule } from '@domain/common/whiteboard';
     TemplateService,
     TemplateAuthorizationService,
     TemplateResolverMutations,
+    TemplateResolverFields,
   ],
   exports: [TemplateService, TemplateAuthorizationService],
 })
