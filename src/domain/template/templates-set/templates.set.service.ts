@@ -18,10 +18,6 @@ import { CreateTemplateInput } from '../template/dto/template.dto.create';
 import { WhiteboardTemplateService } from '../whiteboard-template/whiteboard.template.service';
 import { IWhiteboardTemplate } from '../whiteboard-template/whiteboard.template.interface';
 import { CreateWhiteboardTemplateInput } from '../whiteboard-template/dto/whiteboard.template.dto.create';
-import { ICalloutTemplate } from '../callout-template/callout.template.interface';
-import { CreateCalloutTemplateInput } from '../callout-template/dto/callout.template.dto.create';
-import { CalloutTemplateService } from '../callout-template/callout.template.service';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
@@ -34,7 +30,6 @@ export class TemplatesSetService {
     @InjectRepository(TemplatesSet)
     private templatesSetRepository: Repository<TemplatesSet>,
     private storageAggregatorResolverService: StorageAggregatorResolverService,
-    private calloutTemplateService: CalloutTemplateService,
     private templateService: TemplateService,
     private whiteboardTemplateService: WhiteboardTemplateService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -73,7 +68,6 @@ export class TemplatesSetService {
         authorization: true,
         templates: true,
         whiteboardTemplates: true,
-        calloutTemplates: true,
       },
     });
 
@@ -93,39 +87,18 @@ export class TemplatesSetService {
       }
     }
 
-    if (templatesSet.calloutTemplates) {
-      for (const calloutTemplate of templatesSet.calloutTemplates) {
-        await this.calloutTemplateService.deleteCalloutTemplate(
-          calloutTemplate
-        );
-      }
-    }
-
     return await this.templatesSetRepository.remove(
       templatesSet as TemplatesSet
     );
   }
 
-  async getCalloutTemplates(
-    templatesSet: ITemplatesSet
-  ): Promise<ICalloutTemplate[]> {
-    const templatesSetPopulated = await this.getTemplatesSetOrFail(
-      templatesSet.id,
-      {
-        relations: {
-          calloutTemplates: {
-            profile: true,
-          },
-        },
-      }
-    );
-    if (!templatesSetPopulated.calloutTemplates) {
-      throw new EntityNotInitializedException(
-        `TemplatesSet not initialized as no calloutTemplates: ${templatesSetPopulated.id}`,
-        LogContext.TEMPLATES
+  async getCalloutTemplates(templatesSet: ITemplatesSet): Promise<ITemplate[]> {
+    const calloutTemplates =
+      await this.templateService.getTemplateTypeInTemplatesSet(
+        templatesSet.id,
+        TemplateType.CALLOUT
       );
-    }
-    return templatesSetPopulated.calloutTemplates;
+    return calloutTemplates;
   }
 
   async getCommunityGuidelinesTemplates(
@@ -140,13 +113,13 @@ export class TemplatesSetService {
     return innovationFlowTemplates;
   }
 
-  public getPostTemplate(
+  public getTemplate(
     templateId: string,
     templatesSetId: string
   ): Promise<ITemplate> {
     return this.templateService.getTemplateOrFail(templateId, {
-      relations: { templatesSet: true, profile: true },
       where: { templatesSet: { id: templatesSetId } },
+      relations: { templatesSet: true, profile: true },
     });
   }
 
@@ -218,23 +191,6 @@ export class TemplatesSetService {
     return await this.storageAggregatorResolverService.getStorageAggregatorForTemplatesSet(
       templatesSet.id
     );
-  }
-
-  async createCalloutTemplate(
-    templatesSet: ITemplatesSet,
-    calloutTemplateInput: CreateCalloutTemplateInput,
-    agentInfo: AgentInfo
-  ): Promise<ICalloutTemplate> {
-    const storageAggregator = await this.getStorageAggregator(templatesSet);
-    const calloutTemplate =
-      await this.calloutTemplateService.createCalloutTemplate(
-        calloutTemplateInput,
-        storageAggregator,
-        agentInfo
-      );
-    calloutTemplate.templatesSet = templatesSet;
-
-    return await this.calloutTemplateService.save(calloutTemplate);
   }
 
   public async save(templatesSet: ITemplatesSet): Promise<ITemplatesSet> {
@@ -340,7 +296,10 @@ export class TemplatesSetService {
       );
 
     const calloutTemplatesCount =
-      await this.getCalloutTemplatesCount(templatesSetID);
+      await this.templateService.getCountInTemplatesSet(
+        templatesSetID,
+        TemplateType.CALLOUT
+      );
 
     const communityGuidelinesTemplatesCount =
       await this.templateService.getCountInTemplatesSet(
@@ -361,9 +320,5 @@ export class TemplatesSetService {
     return this.whiteboardTemplateService.getCountInTemplatesSet(
       templatesSetID
     );
-  }
-
-  getCalloutTemplatesCount(templatesSetID: string): Promise<number> {
-    return this.calloutTemplateService.getCountInTemplatesSet(templatesSetID);
   }
 }

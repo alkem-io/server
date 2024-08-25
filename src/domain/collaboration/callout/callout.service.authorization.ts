@@ -37,8 +37,8 @@ export class CalloutAuthorizationService {
   public async applyAuthorizationPolicy(
     calloutInput: ICallout,
     parentAuthorization: IAuthorizationPolicy | undefined,
-    communityPolicy: ICommunityPolicy,
-    spaceSettings: ISpaceSettings
+    communityPolicy?: ICommunityPolicy,
+    spaceSettings?: ISpaceSettings
   ): Promise<IAuthorizationPolicy[]> {
     const callout = await this.calloutService.getCalloutOrFail(
       calloutInput.id,

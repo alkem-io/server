@@ -13,13 +13,9 @@ import { TemplateAuthorizationService } from '../template/template.service.autho
 import { WhiteboardTemplateAuthorizationService } from '../whiteboard-template/whiteboard.template.service.authorization';
 import { CreateWhiteboardTemplateOnTemplatesSetInput } from './dto/whiteboard.template.dto.create.on.templates.set';
 import { CreateTemplateOnTemplatesSetInput } from './dto/templates.set.dto.create.template';
-import { ICalloutTemplate } from '../callout-template/callout.template.interface';
-import { CreateCalloutTemplateOnTemplatesSetInput } from './dto/callout.template.dto.create.on.templates.set';
-import { CalloutTemplateAuthorizationService } from '../callout-template/callout.template.service.authorization';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { TemplateService } from '../template/template.service';
 import { WhiteboardTemplateService } from '../whiteboard-template/whiteboard.template.service';
-import { CalloutTemplateService } from '../callout-template/callout.template.service';
 
 @Resolver()
 export class TemplatesSetResolverMutations {
@@ -27,54 +23,12 @@ export class TemplatesSetResolverMutations {
     private authorizationService: AuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private templatesSetService: TemplatesSetService,
-    private calloutTemplateAuthorizationService: CalloutTemplateAuthorizationService,
     private templateAuthorizationService: TemplateAuthorizationService,
     private whiteboardTemplateAuthorizationService: WhiteboardTemplateAuthorizationService,
     private templateService: TemplateService,
     private whiteboardTemplateService: WhiteboardTemplateService,
-    private calloutTemplateService: CalloutTemplateService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => ICalloutTemplate, {
-    description: 'Creates a new CalloutTemplate on the specified TemplatesSet.',
-  })
-  async createCalloutTemplate(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('calloutTemplateInput')
-    calloutTemplateInput: CreateCalloutTemplateOnTemplatesSetInput
-  ): Promise<ICalloutTemplate> {
-    const templatesSet = await this.templatesSetService.getTemplatesSetOrFail(
-      calloutTemplateInput.templatesSetID,
-      {
-        relations: {
-          calloutTemplates: true,
-        },
-      }
-    );
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      templatesSet.authorization,
-      AuthorizationPrivilege.CREATE,
-      `templates set create callout template: ${templatesSet.id}`
-    );
-    const calloutTemplate =
-      await this.templatesSetService.createCalloutTemplate(
-        templatesSet,
-        calloutTemplateInput,
-        agentInfo
-      );
-    const authorizations =
-      await this.calloutTemplateAuthorizationService.applyAuthorizationPolicy(
-        calloutTemplate,
-        templatesSet.authorization
-      );
-    await this.authorizationPolicyService.saveAll(authorizations);
-    return this.calloutTemplateService.getCalloutTemplateOrFail(
-      calloutTemplate.id
-    );
-  }
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => ITemplate, {

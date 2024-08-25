@@ -16,7 +16,6 @@ import { CalendarEventModule } from '@domain/timeline/event/event.module';
 import { CalendarModule } from '@domain/timeline/calendar/calendar.module';
 import { ApplicationModule } from '@domain/community/application/application.module';
 import { InvitationModule } from '@domain/community/invitation/invitation.module';
-import { CalloutTemplateModule } from '@domain/template/callout-template/callout.template.module';
 import { WhiteboardModule } from '@domain/common/whiteboard';
 import { DocumentModule } from '@domain/storage/document/document.module';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
@@ -41,7 +40,6 @@ import { TemplateModule } from '@domain/template/template/template.module';
     CollaborationModule,
     ContextModule,
     TemplateModule,
-    CalloutTemplateModule,
     WhiteboardModule,
     WhiteboardTemplateModule,
     InnovationFlowModule,

@@ -13,7 +13,6 @@ import { EntityManager } from 'typeorm';
 import { Cache, CachingConfig } from 'cache-manager';
 import { Space } from '@domain/space/space/space.entity';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
-import { CalloutTemplate } from '@domain/template/callout-template/callout.template.entity';
 import { ISpace } from '@domain/space/space/space.interface';
 import { SpaceLevel } from '@common/enums/space.level';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
@@ -22,6 +21,7 @@ import { VirtualContributor } from '@domain/community/virtual-contributor/virtua
 import { User } from '@domain/community/user/user.entity';
 import { Organization } from '@domain/community/organization/organization.entity';
 import { AlkemioConfig } from '@src/types';
+import { Template } from '@domain/template/template/template.entity';
 
 @Injectable()
 export class UrlGeneratorService {
@@ -770,21 +770,20 @@ export class UrlGeneratorService {
       });
     }
     if (!callout) {
-      const calloutTemplate = await this.entityManager.findOne(
-        CalloutTemplate,
-        {
-          where: {
+      const calloutTemplate = await this.entityManager.findOne(Template, {
+        where: {
+          callout: {
             framing: {
               whiteboard: {
                 id: whiteboard.id,
               },
             },
           },
-          relations: {
-            profile: true,
-          },
-        }
-      );
+        },
+        relations: {
+          profile: true,
+        },
+      });
       if (calloutTemplate) {
         return await this.getTemplateUrlPathOrFail(
           'callout_template',

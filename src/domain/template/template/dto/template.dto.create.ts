@@ -3,6 +3,7 @@ import {
   VERY_LONG_TEXT_LENGTH,
 } from '@common/constants/entity.field.length.constants';
 import { TemplateType } from '@common/enums/template.type';
+import { CreateCalloutInput } from '@domain/collaboration/callout';
 import { UpdateInnovationFlowStateInput } from '@domain/collaboration/innovation-flow-states/dto/innovation.flow.state.dto.update';
 import { CreateProfileInput } from '@domain/common/profile/dto/profile.dto.create';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
@@ -62,4 +63,11 @@ export class CreateTemplateInput {
   })
   @IsOptional()
   communityGuidelines?: CreateCommunityGuidelinesInput;
+
+  @Field(() => CreateCalloutInput, {
+    nullable: true,
+    description: 'The Callout to associate with this template.',
+  })
+  @IsOptional()
+  callout?: CreateCalloutInput;
 }

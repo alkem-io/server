@@ -10,14 +10,12 @@ import { TemplatesSetResolverFields } from './templates.set.resolver.fields';
 import { TemplatesSetResolverMutations } from './templates.set.resolver.mutations';
 import { TemplatesSetService } from './templates.set.service';
 import { TemplatesSetAuthorizationService } from './templates.set.service.authorization';
-import { CalloutTemplateModule } from '../callout-template/callout.template.module';
 import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
 
 @Module({
   imports: [
     AuthorizationPolicyModule,
     AuthorizationModule,
-    CalloutTemplateModule,
     TemplateModule,
     WhiteboardTemplateModule,
     TemplateBaseModule,

@@ -5,6 +5,7 @@ import { ITemplate } from './template.interface';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity/authorizable.entity';
 import { Profile } from '@domain/common/profile/profile.entity';
 import { CommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.entity';
+import { Callout } from '@domain/collaboration/callout';
 
 @Entity()
 export class Template extends AuthorizableEntity implements ITemplate {
@@ -38,5 +39,13 @@ export class Template extends AuthorizableEntity implements ITemplate {
     onDelete: 'SET NULL',
   })
   @JoinColumn()
-  guidelines?: CommunityGuidelines;
+  communityGuidelines?: CommunityGuidelines;
+
+  @OneToOne(() => Callout, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  callout?: Callout;
 }

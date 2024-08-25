@@ -8,6 +8,7 @@ import { TemplateType } from '@common/enums/template.type';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { TemplateService } from './template.service';
 import { LogContext } from '@common/enums/logging.context';
+import { CalloutAuthorizationService } from '@domain/collaboration/callout/callout.service.authorization';
 
 @Injectable()
 export class TemplateAuthorizationService {
@@ -15,7 +16,8 @@ export class TemplateAuthorizationService {
     private templateService: TemplateService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private profileAuthorizationService: ProfileAuthorizationService,
-    private communityGuidelinesAuthorizationService: CommunityGuidelinesAuthorizationService
+    private communityGuidelinesAuthorizationService: CommunityGuidelinesAuthorizationService,
+    private calloutAuthorizationService: CalloutAuthorizationService
   ) {}
 
   async applyAuthorizationPolicy(
@@ -27,8 +29,18 @@ export class TemplateAuthorizationService {
       {
         relations: {
           profile: true,
-          guidelines: {
+          communityGuidelines: {
             profile: true,
+          },
+          callout: {
+            framing: {
+              profile: true,
+              whiteboard: {
+                profile: true,
+              },
+            },
+            contributionPolicy: true,
+            contributionDefaults: true,
           },
         },
       }
@@ -59,7 +71,7 @@ export class TemplateAuthorizationService {
     updatedAuthorizations.push(...profileAuthorizations);
 
     if (template.type == TemplateType.COMMUNITY_GUIDELINES) {
-      if (!template.guidelines) {
+      if (!template.communityGuidelines) {
         throw new RelationshipNotFoundException(
           `Unable to load Community Guidelines on Template of that type: ${template.id} `,
           LogContext.TEMPLATES
@@ -68,10 +80,26 @@ export class TemplateAuthorizationService {
       // Cascade
       const guidelineAuthorizations =
         await this.communityGuidelinesAuthorizationService.applyAuthorizationPolicy(
-          template.guidelines,
+          template.communityGuidelines,
           template.authorization
         );
       updatedAuthorizations.push(...guidelineAuthorizations);
+    }
+
+    if (template.type == TemplateType.CALLOUT) {
+      if (!template.callout) {
+        throw new RelationshipNotFoundException(
+          `Unable to load Callout on Template of that type: ${template.id} `,
+          LogContext.TEMPLATES
+        );
+      }
+      // Cascade
+      const calloutAuthorizations =
+        await this.calloutAuthorizationService.applyAuthorizationPolicy(
+          template.callout,
+          template.authorization
+        );
+      updatedAuthorizations.push(...calloutAuthorizations);
     }
 
     return updatedAuthorizations;

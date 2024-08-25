@@ -36,7 +36,6 @@ import { CreateCalloutOnCollaborationInput } from '@domain/collaboration/collabo
 import { CreateCalendarEventOnCalendarInput } from '@domain/timeline/calendar/dto/calendar.dto.create.event';
 import { UpdateCalendarEventInput } from '@domain/timeline/event';
 import { UpdateCommunityApplicationFormInput } from '@domain/community/community/dto/community.dto.update.application.form';
-import { CreateCalloutTemplateOnTemplatesSetInput } from '@domain/template/templates-set/dto/callout.template.dto.create.on.templates.set';
 import { CreateTemplateOnTemplatesSetInput } from '@domain/template/templates-set/dto/templates.set.dto.create.template';
 import { CreateWhiteboardTemplateOnTemplatesSetInput } from '@domain/template/templates-set/dto/whiteboard.template.dto.create.on.templates.set';
 import { UpdateTemplateInput } from '@domain/template/template/dto/template.dto.update';
@@ -60,8 +59,6 @@ import {
   CreateCalloutContributionDefaultsInput,
   UpdateCalloutContributionDefaultsInput,
 } from '@domain/collaboration/callout-contribution-defaults/dto';
-import { UpdateCalloutTemplateInput } from '@domain/template/callout-template/dto/callout.template.dto.update';
-import { CreateCalloutTemplateInput } from '@domain/template/callout-template/dto/callout.template.dto.create';
 import { CreateContributionOnCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create.contribution';
 import {
   CreateLinkInput,
@@ -97,8 +94,6 @@ export class BaseHandler extends AbstractHandler {
       CreateContributionOnCalloutInput,
       CreateCollaborationInput,
       CreateDocumentInput,
-      CreateCalloutTemplateInput,
-      CreateCalloutTemplateOnTemplatesSetInput,
       CreateTemplateOnTemplatesSetInput,
       CreateWhiteboardTemplateOnTemplatesSetInput,
       CreateSubspaceInput,
@@ -117,7 +112,6 @@ export class BaseHandler extends AbstractHandler {
       UpdateCalloutFramingInput,
       UpdateCalloutContributionDefaultsInput,
       UpdateCalloutContributionPolicyInput,
-      UpdateCalloutTemplateInput,
       UpdateTemplateInput,
       UpdateCommunityApplicationFormInput,
       UpdateCommunityGuidelinesInput,

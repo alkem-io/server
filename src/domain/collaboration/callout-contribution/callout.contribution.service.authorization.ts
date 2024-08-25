@@ -19,6 +19,7 @@ import {
 } from '@common/constants';
 import { LinkAuthorizationService } from '../link/link.service.authorization';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
+import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 
 @Injectable()
 export class CalloutContributionAuthorizationService {
@@ -34,8 +35,8 @@ export class CalloutContributionAuthorizationService {
   public async applyAuthorizationPolicy(
     contributionInput: ICalloutContribution,
     parentAuthorization: IAuthorizationPolicy | undefined,
-    communityPolicy: ICommunityPolicy,
-    spaceSettings: ISpaceSettings
+    communityPolicy?: ICommunityPolicy,
+    spaceSettings?: ISpaceSettings
   ): Promise<IAuthorizationPolicy[]> {
     const contribution =
       await this.contributionService.getCalloutContributionOrFail(
@@ -107,8 +108,8 @@ export class CalloutContributionAuthorizationService {
 
   private appendCredentialRules(
     contribution: ICalloutContribution,
-    communityPolicy: ICommunityPolicy,
-    spaceSettings: ISpaceSettings
+    communityPolicy?: ICommunityPolicy,
+    spaceSettings?: ISpaceSettings
   ): IAuthorizationPolicy {
     const authorization = contribution.authorization;
     if (!authorization)
@@ -153,16 +154,21 @@ export class CalloutContributionAuthorizationService {
     }
 
     // Allow space admins to move post
-    const credentials =
-      this.communityPolicyService.getCredentialsForRoleWithParents(
-        communityPolicy,
-        spaceSettings,
-        CommunityRole.ADMIN
-      );
-    credentials.push({
-      type: AuthorizationCredential.GLOBAL_ADMIN,
-      resourceID: '',
-    });
+    const credentials: ICredentialDefinition[] = [
+      {
+        type: AuthorizationCredential.GLOBAL_ADMIN,
+        resourceID: '',
+      },
+    ];
+    if (communityPolicy && spaceSettings) {
+      const roleCredentials =
+        this.communityPolicyService.getCredentialsForRoleWithParents(
+          communityPolicy,
+          spaceSettings,
+          CommunityRole.ADMIN
+        );
+      credentials.push(...roleCredentials);
+    }
     const adminsMoveContributionRule =
       this.authorizationPolicyService.createCredentialRule(
         [AuthorizationPrivilege.MOVE_CONTRIBUTION],

@@ -1,4 +1,5 @@
 import { VERY_LONG_TEXT_LENGTH } from '@common/constants/entity.field.length.constants';
+import { UpdateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.update';
 import { UpdateInnovationFlowStateInput } from '@domain/collaboration/innovation-flow-states/dto/innovation.flow.state.dto.update';
 import { UpdateBaseAlkemioInput } from '@domain/common/entity/base-entity/dto/base.alkemio.dto.update';
 import { UpdateProfileInput } from '@domain/common/profile/dto/profile.dto.update';
@@ -39,4 +40,12 @@ export class UpdateTemplateInput extends UpdateBaseAlkemioInput {
   @IsOptional()
   @Type(() => UpdateCommunityGuidelinesInput)
   communityGuidelines?: UpdateCommunityGuidelinesInput;
+
+  @Field(() => UpdateCalloutInput, {
+    nullable: true,
+    description: 'The Callout for this template.',
+  })
+  @IsOptional()
+  @Type(() => UpdateCalloutInput)
+  callout?: UpdateCalloutInput;
 }

@@ -34,8 +34,6 @@ import { ApplicationService } from '@domain/community/application/application.se
 import { InvitationService } from '@domain/community/invitation/invitation.service';
 import { IApplication } from '@domain/community/application';
 import { IInvitation } from '@domain/community/invitation';
-import { CalloutTemplateService } from '@domain/template/callout-template/callout.template.service';
-import { ICalloutTemplate } from '@domain/template/callout-template/callout.template.interface';
 import { WhiteboardService } from '@domain/common/whiteboard';
 import { IWhiteboard } from '@domain/common/whiteboard/types';
 import { DocumentService } from '@domain/storage/document/document.service';
@@ -77,7 +75,6 @@ export class LookupResolverFields {
     private contextService: ContextService,
     private whiteboardService: WhiteboardService,
     private whiteboardTemplateService: WhiteboardTemplateService,
-    private calloutTemplateService: CalloutTemplateService,
     private innovationPackService: InnovationPackService,
     private profileService: ProfileService,
     private postService: PostService,
@@ -490,27 +487,6 @@ export class LookupResolverFields {
     );
 
     return whiteboardTemplate;
-  }
-
-  @UseGuards(GraphqlGuard)
-  @ResolveField(() => ICalloutTemplate, {
-    nullable: true,
-    description: 'Lookup the specified Callout Template',
-  })
-  async calloutTemplate(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('ID', { type: () => UUID }) id: string
-  ): Promise<ICalloutTemplate> {
-    const calloutTemplate =
-      await this.calloutTemplateService.getCalloutTemplateOrFail(id);
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      calloutTemplate.authorization,
-      AuthorizationPrivilege.READ,
-      `lookup Callout template: ${calloutTemplate.id}`
-    );
-
-    return calloutTemplate;
   }
 
   @UseGuards(GraphqlGuard)

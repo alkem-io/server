@@ -23,6 +23,9 @@ import { IInnovationFlowState } from '@domain/collaboration/innovation-flow-stat
 import { InvalidTemplateTypeException } from '@common/exceptions/invalid.template.type.exception';
 import { CommunityGuidelinesService } from '@domain/community/community-guidelines/community.guidelines.service';
 import { CreateCommunityGuidelinesInput } from '@domain/community/community-guidelines/dto/community.guidelines.dto.create';
+import { ICommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.interface';
+import { ICallout } from '@domain/collaboration/callout';
+import { CalloutService } from '@domain/collaboration/callout/callout.service';
 
 @Injectable()
 export class TemplateService {
@@ -30,6 +33,7 @@ export class TemplateService {
     private profileService: ProfileService,
     private innovationFlowStatesService: InnovationFlowStatesService,
     private communityGuidelinesService: CommunityGuidelinesService,
+    private calloutService: CalloutService,
     @InjectRepository(Template)
     private templateRepository: Repository<Template>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -103,11 +107,17 @@ export class TemplateService {
         };
       }
 
-      template.guidelines =
+      template.communityGuidelines =
         await this.communityGuidelinesService.createCommunityGuidelines(
           guidelinesInput,
           storageAggregator
         );
+    } else if (template.type === TemplateType.CALLOUT) {
+      template.callout = await this.calloutService.createCallout(
+        templateData.callout!,
+        [],
+        storageAggregator
+      );
     }
 
     return await this.templateRepository.save(template);
@@ -137,7 +147,11 @@ export class TemplateService {
     templateData: UpdateTemplateInput
   ): Promise<ITemplate> {
     const template = await this.getTemplateOrFail(templateInput.id, {
-      relations: { profile: true, guidelines: true },
+      relations: {
+        profile: true,
+        communityGuidelines: true,
+        callout: true,
+      },
     });
 
     if (templateData.profile) {
@@ -172,7 +186,7 @@ export class TemplateService {
       template.type === TemplateType.COMMUNITY_GUIDELINES &&
       templateData.communityGuidelines
     ) {
-      if (!template.guidelines) {
+      if (!template.communityGuidelines) {
         throw new RelationshipNotFoundException(
           `Unable to load Guidelines on Template: ${templateInput.id} `,
           LogContext.TEMPLATES
@@ -180,9 +194,22 @@ export class TemplateService {
       }
 
       const guidelinesInput = templateData.communityGuidelines;
-      template.guidelines = await this.communityGuidelinesService.update(
-        template.guidelines,
-        guidelinesInput
+      template.communityGuidelines =
+        await this.communityGuidelinesService.update(
+          template.communityGuidelines,
+          guidelinesInput
+        );
+    }
+
+    if (template.type === TemplateType.CALLOUT && templateData.callout) {
+      if (!template.callout) {
+        throw new RelationshipNotFoundException(
+          `Unable to load Callout on Template: ${templateInput.id} `,
+          LogContext.TEMPLATES
+        );
+      }
+      template.callout = await this.calloutService.updateCallout(
+        templateData.callout
       );
     }
 
@@ -191,7 +218,11 @@ export class TemplateService {
 
   async delete(templateInput: ITemplate): Promise<ITemplate> {
     const template = await this.getTemplateOrFail(templateInput.id, {
-      relations: { profile: true },
+      relations: {
+        profile: true,
+        communityGuidelines: true,
+        callout: true,
+      },
     });
 
     if (!template.profile || !template.authorization) {
@@ -199,6 +230,27 @@ export class TemplateService {
         `Unable to load Template with entities at start of delete: ${templateInput.id} `,
         LogContext.SPACES
       );
+    }
+    if (template.type === TemplateType.COMMUNITY_GUIDELINES) {
+      if (!template.communityGuidelines) {
+        throw new RelationshipNotFoundException(
+          `Unable to load Guidelines on Template: ${templateInput.id} `,
+          LogContext.TEMPLATES
+        );
+      }
+      await this.communityGuidelinesService.deleteCommunityGuidelines(
+        template.communityGuidelines.id
+      );
+    }
+
+    if (template.type === TemplateType.CALLOUT) {
+      if (!template.callout) {
+        throw new RelationshipNotFoundException(
+          `Unable to load Callout on Template: ${templateInput.id} `,
+          LogContext.TEMPLATES
+        );
+      }
+      await this.calloutService.deleteCallout(template.callout.id);
     }
 
     const templateId: string = template.id;
@@ -240,6 +292,38 @@ export class TemplateService {
         profile: true,
       },
     });
+  }
+
+  async getCommunityGuidelines(
+    templateID: string
+  ): Promise<ICommunityGuidelines> {
+    const template = await this.getTemplateOrFail(templateID, {
+      relations: {
+        communityGuidelines: true,
+      },
+    });
+    if (!template.communityGuidelines) {
+      throw new RelationshipNotFoundException(
+        `Unable to load Template with Community Guidelines: ${template.id} `,
+        LogContext.TEMPLATES
+      );
+    }
+    return template.communityGuidelines;
+  }
+
+  async getCallout(templateID: string): Promise<ICallout> {
+    const template = await this.getTemplateOrFail(templateID, {
+      relations: {
+        callout: true,
+      },
+    });
+    if (!template.callout) {
+      throw new RelationshipNotFoundException(
+        `Unable to load Template with Callout: ${template.id} `,
+        LogContext.TEMPLATES
+      );
+    }
+    return template.callout;
   }
 
   public getInnovationFlowStates(template: ITemplate): IInnovationFlowState[] {

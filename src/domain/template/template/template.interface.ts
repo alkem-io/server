@@ -5,6 +5,7 @@ import { TemplateType } from '@common/enums/template.type';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ICommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.interface';
+import { ICallout } from '@domain/collaboration/callout';
 
 @ObjectType('Template')
 export abstract class ITemplate extends IAuthorizable {
@@ -29,11 +30,8 @@ export abstract class ITemplate extends IAuthorizable {
   })
   postDefaultDescription?: string;
 
-  @Field(() => ICommunityGuidelines, {
-    nullable: false,
-    description: 'The community guidelines.',
-  })
-  guidelines?: ICommunityGuidelines;
+  communityGuidelines?: ICommunityGuidelines;
+  callout?: ICallout;
 
   innovationFlowStates?: string;
 }

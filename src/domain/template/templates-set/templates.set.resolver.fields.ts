@@ -8,7 +8,6 @@ import { TemplatesSetService } from './templates.set.service';
 import { ITemplatesSet } from './templates.set.interface';
 import { TemplatesSet } from './templates.set.entity';
 import { IWhiteboardTemplate } from '../whiteboard-template/whiteboard.template.interface';
-import { ICalloutTemplate } from '../callout-template/callout.template.interface';
 import { TemplateType } from '@common/enums/template.type';
 
 @Resolver(() => ITemplatesSet)
@@ -16,14 +15,14 @@ export class TemplatesSetResolverFields {
   constructor(private templatesSetService: TemplatesSetService) {}
 
   @UseGuards(GraphqlGuard)
-  @ResolveField('calloutTemplates', () => [ICalloutTemplate], {
+  @ResolveField('calloutTemplates', () => [ITemplate], {
     nullable: false,
     description: 'The CalloutTemplates in this TemplatesSet.',
   })
   @Profiling.api
   async calloutTemplates(
     @Parent() templatesSet: ITemplatesSet
-  ): Promise<ICalloutTemplate[]> {
+  ): Promise<ITemplate[]> {
     return this.templatesSetService.getCalloutTemplates(templatesSet);
   }
 
@@ -36,7 +35,10 @@ export class TemplatesSetResolverFields {
   calloutTemplatesCount(
     @Parent() templatesSet: ITemplatesSet
   ): Promise<number> {
-    return this.templatesSetService.getCalloutTemplatesCount(templatesSet.id);
+    return this.templatesSetService.getTemplatesCountForType(
+      templatesSet.id,
+      TemplateType.CALLOUT
+    );
   }
 
   @UseGuards(GraphqlGuard)
@@ -52,7 +54,7 @@ export class TemplatesSetResolverFields {
   @UseGuards(GraphqlGuard)
   @ResolveField('templatesCount', () => Float, {
     nullable: false,
-    description: 'The total number of PostTemplates in this TemplatesSet.',
+    description: 'The total number of Templates in this TemplatesSet.',
   })
   @Profiling.api
   async templatesCount(@Parent() templatesSet: ITemplatesSet): Promise<number> {
@@ -75,7 +77,7 @@ export class TemplatesSetResolverFields {
     })
     ID: string
   ): Promise<ITemplate> {
-    return this.templatesSetService.getPostTemplate(ID, templatesSet.id);
+    return this.templatesSetService.getTemplate(ID, templatesSet.id);
   }
 
   @UseGuards(GraphqlGuard)
