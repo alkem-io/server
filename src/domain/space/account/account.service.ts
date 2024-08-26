@@ -228,7 +228,8 @@ export class AccountService {
 
     const vc = await this.virtualContributorService.createVirtualContributor(
       vcData,
-      account.storageAggregator
+      account.storageAggregator,
+      agentInfo
     );
     vc.account = account;
     return await this.virtualContributorService.save(vc);

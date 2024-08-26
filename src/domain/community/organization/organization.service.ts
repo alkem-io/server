@@ -166,10 +166,11 @@ export class OrganizationService {
 
     organization = await this.save(organization);
 
-    // await this.contributorService.ensureAvatarIsStoredInLocalStorageBucket(
-    //   organization.profile,
-    //   organization.id
-    // );
+    const userID = agentInfo ? agentInfo.userID : '';
+    await this.contributorService.ensureAvatarIsStoredInLocalStorageBucket(
+      organization.profile.id,
+      userID
+    );
 
     return await this.getOrganizationOrFail(organization.id);
   }

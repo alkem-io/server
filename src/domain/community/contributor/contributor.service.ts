@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager, FindOneOptions } from 'typeorm';
 import { IContributor } from './contributor.interface';
@@ -22,6 +22,7 @@ import { VisualType } from '@common/enums/visual.type';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { DocumentService } from '@domain/storage/document/document.service';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Injectable()
 export class ContributorService {
@@ -32,7 +33,9 @@ export class ContributorService {
     private entityManager: EntityManager,
     private avatarCreatorService: AvatarCreatorService,
     private storageBucketService: StorageBucketService,
-    private documentService: DocumentService
+    private documentService: DocumentService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService
   ) {}
 
   private isValidHttpUrl(urlString: string): boolean {
@@ -80,44 +83,49 @@ export class ContributorService {
   }
 
   public async ensureAvatarIsStoredInLocalStorageBucket(
-    profileInput: IProfile,
+    profileID: string,
     userID: string
   ): Promise<IProfile> {
-    const profile = await this.profileService.getProfileOrFail(
-      profileInput.id,
-      {
-        relations: {
-          visuals: true,
-          storageBucket: true,
-        },
+    const profile = await this.profileService.getProfileOrFail(profileID, {
+      relations: {
+        visuals: true,
+        storageBucket: true,
+      },
+    });
+    try {
+      if (!profile.visuals || !profile.storageBucket) {
+        throw new EntityNotInitializedException(
+          `Profile could not be loaded with all entities for avatar check: ${profile.id}`,
+          LogContext.COMMUNITY
+        );
       }
-    );
-    if (!profile.visuals || !profile.storageBucket) {
-      throw new EntityNotInitializedException(
-        `Profile could not be loaded with all entities for avatar check: ${profile.id}`,
-        LogContext.COMMUNITY
+      const avatarVisual = profile.visuals.find(
+        visual => visual.name === VisualType.AVATAR
       );
-    }
-    const avatarVisual = profile.visuals.find(
-      visual => visual.name === VisualType.AVATAR
-    );
-    if (!avatarVisual) {
-      throw new EntityNotFoundException(
-        `Unable to load avatar visual on profile: ${profile.id}`,
-        LogContext.COMMUNITY
-      );
-    }
+      if (!avatarVisual) {
+        throw new EntityNotFoundException(
+          `Unable to load avatar visual on profile: ${profile.id}`,
+          LogContext.COMMUNITY
+        );
+      }
 
-    const uri = avatarVisual.uri;
-    const avatarDocument =
-      await this.storageBucketService.ensureAvatarUrlIsDocument(
-        uri,
-        profile.storageBucket.id,
-        userID
+      const uri = avatarVisual.uri;
+      const avatarDocument =
+        await this.storageBucketService.ensureAvatarUrlIsDocument(
+          uri,
+          profile.storageBucket.id,
+          userID
+        );
+      const avatartURI =
+        this.documentService.getPubliclyAccessibleURL(avatarDocument);
+      avatarVisual.uri = avatartURI;
+    } catch (error) {
+      // This method should never stop the creation of a contributor
+      this.logger.error(
+        `Unable to ensure Avatar for profile ${profile.id} is stored in local storage bucket: ${error}`,
+        LogContext.COMMUNITY
       );
-    const avatartURI =
-      this.documentService.getPubliclyAccessibleURL(avatarDocument);
-    avatarVisual.uri = avatartURI;
+    }
     return await this.profileService.save(profile);
   }
 
