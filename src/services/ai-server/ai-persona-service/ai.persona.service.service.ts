@@ -60,13 +60,14 @@ export class AiPersonaServiceService {
       LogContext.PLATFORM
     );
 
-    if (aiPersonaServiceData.bodyOfKnowledgeID)
+    if (aiPersonaServiceData.bodyOfKnowledgeID) {
       this.eventBus.publish(
         new IngestSpace(
           aiPersonaServiceData.bodyOfKnowledgeID,
           SpaceIngestionPurpose.KNOWLEDGE
         )
       );
+    }
 
     return savedAiPersonaService;
   }

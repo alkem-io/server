@@ -23,6 +23,7 @@ import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/stor
 import { ContributorModule } from '../contributor/contributor.module';
 import { OrganizationRoleModule } from '../organization-role/organization.role.module';
 import { AccountHostModule } from '@domain/space/account.host/account.host.module';
+import { AvatarCreatorModule } from '@services/external/avatar-creator/avatar.creator.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { AccountHostModule } from '@domain/space/account.host/account.host.modul
     ProfileModule,
     PreferenceModule,
     PreferenceSetModule,
+    AvatarCreatorModule,
     StorageAggregatorModule,
     TypeOrmModule.forFeature([Organization]),
   ],

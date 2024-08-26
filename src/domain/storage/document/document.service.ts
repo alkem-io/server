@@ -182,7 +182,7 @@ export class DocumentService {
   public async getDocumentFromURL(url: string): Promise<IDocument | undefined> {
     const documentsBaseUrlPath = this.getDocumentsBaseUrlPath();
 
-    if (!url.startsWith(documentsBaseUrlPath)) {
+    if (!this.isAlkemioDocumentURL(url)) {
       return undefined;
     }
 

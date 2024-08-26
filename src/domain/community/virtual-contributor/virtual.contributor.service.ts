@@ -18,7 +18,6 @@ import { CredentialsSearchInput } from '@domain/agent/credential/dto/credentials
 import { ContributorQueryArgs } from '../contributor/dto/contributor.query.args';
 import { VirtualContributor } from './virtual.contributor.entity';
 import { IVirtualContributor } from './virtual.contributor.interface';
-import { VisualType } from '@common/enums/visual.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { CreateVirtualContributorInput } from './dto/virtual.contributor.dto.create';
@@ -40,6 +39,7 @@ import { AccountHostService } from '@domain/space/account.host/account.host.serv
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { Invitation } from '../invitation';
 import { AgentType } from '@common/enums/agent.type';
+import { ContributorService } from '../contributor/contributor.service';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
@@ -48,6 +48,7 @@ export class VirtualContributorService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private agentService: AgentService,
     private profileService: ProfileService,
+    private contributorService: ContributorService,
     private communicationAdapter: CommunicationAdapter,
     private namingService: NamingService,
     private aiPersonaService: AiPersonaService,
@@ -114,18 +115,10 @@ export class VirtualContributorService {
       name: TagsetReservedName.CAPABILITIES,
       tags: [],
     });
-    // Set the visuals
-    let avatarURL = virtualContributorData.profileData?.avatarURL;
-    if (!avatarURL) {
-      avatarURL = this.profileService.generateRandomAvatar(
-        virtualContributor.profile.displayName,
-        ''
-      );
-    }
-    await this.profileService.addVisualOnProfile(
+
+    this.contributorService.addAvatarVisualToContributorProfile(
       virtualContributor.profile,
-      VisualType.AVATAR,
-      avatarURL
+      virtualContributorData.profileData
     );
 
     virtualContributor.agent = await this.agentService.createAgent({
@@ -133,6 +126,15 @@ export class VirtualContributorService {
     });
 
     virtualContributor = await this.save(virtualContributor);
+
+    // await this.contributorService.ensureAvatarIsStoredInLocalStorageBucket(
+    //   virtualContributor.profile,
+    //   virtualContributor.id
+    // );
+    // Reload to ensure have the updated avatar URL
+    virtualContributor = await this.getVirtualContributorOrFail(
+      virtualContributor.id
+    );
     this.logger.verbose?.(
       `Created new virtual with id ${virtualContributor.id}`,
       LogContext.COMMUNITY
