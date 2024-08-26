@@ -17,6 +17,7 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy/author
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
   CREDENTIAL_RULE_PLATFORM_CREATE_SPACE,
+  CREDENTIAL_RULE_PLATFORM_CREATE_VC,
   CREDENTIAL_RULE_TYPES_ACCOUNT_AUTHORIZATION_RESET,
   CREDENTIAL_RULE_TYPES_ACCOUNT_CHILD_ENTITIES,
   CREDENTIAL_RULE_TYPES_ACCOUNT_MANAGE,
@@ -90,7 +91,11 @@ export class AccountAuthorizationService {
       account.authorization,
       hostCredentials
     );
-    account.authorization = this.appendPrivilegeRules(account.authorization);
+
+    // TODO: Removed for now the privilege to create a space and a VC.
+    // Only users in Beta Testers and VC Campaigns can create spaces
+    // account.authorization = this.appendPrivilegeRules(account.authorization);
+
     account.authorization = await this.authorizationPolicyService.save(
       account.authorization
     );
@@ -264,7 +269,7 @@ export class AccountAuthorizationService {
 
     const createSpace =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.CREATE],
+        [AuthorizationPrivilege.CREATE_SPACE],
         [
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.BETA_TESTER,
@@ -274,6 +279,19 @@ export class AccountAuthorizationService {
       );
     createSpace.cascade = false;
     newRules.push(createSpace);
+
+    const createVC =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.CREATE_VIRTUAL_CONTRIBUTOR],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.BETA_TESTER,
+          AuthorizationCredential.VC_CAMPAIGN,
+        ],
+        CREDENTIAL_RULE_PLATFORM_CREATE_VC
+      );
+    createVC.cascade = false;
+    newRules.push(createVC);
 
     return this.authorizationPolicyService.appendCredentialAuthorizationRules(
       authorization,
