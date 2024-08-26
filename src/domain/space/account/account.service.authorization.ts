@@ -20,6 +20,7 @@ import {
   CREDENTIAL_RULE_TYPES_ACCOUNT_AUTHORIZATION_RESET,
   CREDENTIAL_RULE_TYPES_ACCOUNT_CHILD_ENTITIES,
   CREDENTIAL_RULE_TYPES_ACCOUNT_MANAGE,
+  CREDENTIAL_RULE_TYPES_ACCOUNT_RESOURCES_MANAGE,
   CREDENTIAL_RULE_TYPES_GLOBAL_SPACE_READ,
 } from '@common/constants/authorization/credential.rule.types.constants';
 import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
@@ -71,6 +72,10 @@ export class AccountAuthorizationService {
     }
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
+    // Get the host credentials
+    const hostCredentials =
+      await this.accountHostService.getHostCredentials(account);
+
     // Ensure always applying from a clean state
     account.authorization = this.authorizationPolicyService.reset(
       account.authorization
@@ -82,8 +87,8 @@ export class AccountAuthorizationService {
       );
 
     account.authorization = await this.extendAuthorizationPolicy(
-      account,
-      account.authorization
+      account.authorization,
+      hostCredentials
     );
     account.authorization = this.appendPrivilegeRules(account.authorization);
     account.authorization = await this.authorizationPolicyService.save(
@@ -112,7 +117,7 @@ export class AccountAuthorizationService {
       this.authorizationPolicyService.cloneAuthorizationPolicy(
         account.authorization
       );
-
+    // Get the host credentials
     const hostCredentials =
       await this.accountHostService.getHostCredentials(account);
 
@@ -188,8 +193,8 @@ export class AccountAuthorizationService {
   }
 
   private async extendAuthorizationPolicy(
-    account: IAccount,
-    authorization: IAuthorizationPolicy | undefined
+    authorization: IAuthorizationPolicy | undefined,
+    hostCredentials: ICredentialDefinition[]
   ): Promise<IAuthorizationPolicy> {
     if (!authorization) {
       throw new EntityNotInitializedException(
@@ -197,9 +202,6 @@ export class AccountAuthorizationService {
         LogContext.ACCOUNT
       );
     }
-
-    const hostCredentials =
-      await this.accountHostService.getHostCredentials(account);
 
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
     // By default it is world visible. TODO: work through the logic on this
@@ -236,19 +238,29 @@ export class AccountAuthorizationService {
     newRules.push(globalSpacesReader);
 
     // Allow hosts (users = self mgmt, org = org admin) to manage their own account
-    const userHostsRule = this.authorizationPolicyService.createCredentialRule(
-      [
-        AuthorizationPrivilege.CREATE,
-        AuthorizationPrivilege.READ,
-        AuthorizationPrivilege.UPDATE,
-        AuthorizationPrivilege.DELETE,
-        //AuthorizationPrivilege.TRANSFER_RESOURCE // Assign later once stable
-      ],
-      [...hostCredentials],
-      CREDENTIAL_RULE_TYPES_ACCOUNT_MANAGE
-    );
-    userHostsRule.cascade = false;
-    newRules.push(userHostsRule);
+    const accountResourcesManage =
+      this.authorizationPolicyService.createCredentialRule(
+        [AuthorizationPrivilege.TRANSFER_RESOURCE],
+        [...hostCredentials],
+        CREDENTIAL_RULE_TYPES_ACCOUNT_RESOURCES_MANAGE
+      );
+    accountResourcesManage.cascade = false;
+    newRules.push(accountResourcesManage);
+
+    // Allow hosts (users = self mgmt, org = org admin) to manage resources in their account in a way that cascades
+    const accountHostManage =
+      this.authorizationPolicyService.createCredentialRule(
+        [
+          AuthorizationPrivilege.CREATE,
+          AuthorizationPrivilege.READ,
+          AuthorizationPrivilege.UPDATE,
+          AuthorizationPrivilege.DELETE,
+        ],
+        [...hostCredentials],
+        CREDENTIAL_RULE_TYPES_ACCOUNT_MANAGE
+      );
+    accountHostManage.cascade = true;
+    newRules.push(accountHostManage);
 
     const createSpace =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
