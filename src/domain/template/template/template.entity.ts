@@ -25,7 +25,7 @@ export class Template extends AuthorizableEntity implements ITemplate {
   @JoinColumn()
   profile!: Profile;
 
-  @Column('varchar', { length: 255, nullable: false })
+  @Column('varchar', { length: 128, nullable: false })
   type!: TemplateType;
 
   @Column('text', { nullable: true })

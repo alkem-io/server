@@ -109,7 +109,7 @@ export class CalloutService {
         policyData
       );
 
-    if (calloutData.type === CalloutType.POST) {
+    if (calloutData.type === CalloutType.POST && calloutData.enableComments) {
       callout.comments = await this.roomService.createRoom(
         `callout-comments-${callout.nameID}`,
         RoomType.CALLOUT

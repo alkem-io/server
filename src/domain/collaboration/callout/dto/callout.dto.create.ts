@@ -60,4 +60,11 @@ export class CreateCalloutInput {
       'Send notification if this flag is true and visibility is PUBLISHED. Defaults to false.',
   })
   sendNotification?: boolean;
+
+  @Field(() => Boolean, {
+    nullable: true,
+    description:
+      'Controls if the comments are enabled for this Callout. Defaults to false.',
+  })
+  enableComments?: boolean;
 }
