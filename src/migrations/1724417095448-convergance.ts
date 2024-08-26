@@ -503,9 +503,9 @@ export class Convergance1724417095448 implements MigrationInterface {
     await queryRunner.query(
       'CREATE UNIQUE INDEX `REL_a6e050daa4c7a3ab1e411c3651` ON `innovation_flow` (`authorizationId`)'
     );
-    await queryRunner.query(
-      'CREATE UNIQUE INDEX `REL_96a8cbe1706f459fd7d883be9b` ON `innovation_flow` (`profileId`)'
-    );
+    // await queryRunner.query(
+    //   'CREATE UNIQUE INDEX `REL_96a8cbe1706f459fd7d883be9b` ON `innovation_flow` (`profileId`)'
+    // );
     await queryRunner.query(
       'CREATE UNIQUE INDEX `REL_b7ece56376ac7ca0b9a56c33b3` ON `collaboration` (`tagsetTemplateSetId`)'
     );
@@ -754,9 +754,9 @@ export class Convergance1724417095448 implements MigrationInterface {
     await queryRunner.query(
       'ALTER TABLE `innovation_flow` ADD CONSTRAINT `FK_a6e050daa4c7a3ab1e411c36517` FOREIGN KEY (`authorizationId`) REFERENCES `authorization_policy`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
     );
-    await queryRunner.query(
-      'ALTER TABLE `innovation_flow` ADD CONSTRAINT `FK_96a8cbe1706f459fd7d883be9bd` FOREIGN KEY (`profileId`) REFERENCES `profile`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
-    );
+    // await queryRunner.query(
+    //   'ALTER TABLE `innovation_flow` ADD CONSTRAINT `FK_96a8cbe1706f459fd7d883be9bd` FOREIGN KEY (`profileId`) REFERENCES `profile`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
+    // );
     await queryRunner.query(
       'ALTER TABLE `collaboration` ADD CONSTRAINT `FK_b7ece56376ac7ca0b9a56c33b3a` FOREIGN KEY (`tagsetTemplateSetId`) REFERENCES `tagset_template_set`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
     );
