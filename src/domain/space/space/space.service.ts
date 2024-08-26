@@ -942,6 +942,21 @@ export class SpaceService {
     );
   }
 
+  public async getLevelZeroSpaceAgent(space: ISpace): Promise<IAgent> {
+    const levelZeroSpace = await this.getSpaceOrFail(space.levelZeroSpaceID, {
+      relations: {
+        agent: true,
+      },
+    });
+    if (!levelZeroSpace.agent) {
+      throw new RelationshipNotFoundException(
+        `Agent not initialised on Level Zero Space: ${levelZeroSpace.id}`,
+        LogContext.SPACES
+      );
+    }
+    return levelZeroSpace.agent;
+  }
+
   public async assignUserToRoles(space: ISpace, agentInfo: AgentInfo) {
     if (!space.community) {
       throw new EntityNotInitializedException(
@@ -1138,26 +1153,19 @@ export class SpaceService {
     return await this.save(space);
   }
 
-  public async getAccountWithAgentOrFail(space: ISpace): Promise<IAccount> {
+  public async getAccountForLevelZeroSpaceOrFail(
+    space: ISpace
+  ): Promise<IAccount> {
     const spaceWithAccount = await this.spaceRepository.findOne({
       where: { id: space.levelZeroSpaceID },
       relations: {
-        account: {
-          agent: {
-            credentials: true,
-          },
-        },
+        account: true,
       },
     });
 
-    if (
-      !spaceWithAccount ||
-      !spaceWithAccount.account ||
-      !spaceWithAccount.account.agent ||
-      !spaceWithAccount.account.agent.credentials
-    ) {
+    if (!spaceWithAccount || !spaceWithAccount.account) {
       throw new EntityNotFoundException(
-        `Unable to find account for space with ID: ${space.id}`,
+        `Unable to find account for space with ID: ${space.id} + level zero space ID: ${space.levelZeroSpaceID}`,
         LogContext.SPACES
       );
     }

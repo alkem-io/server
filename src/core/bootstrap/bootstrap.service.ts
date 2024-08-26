@@ -33,9 +33,13 @@ import { AccountAuthorizationService } from '@domain/space/account/account.servi
 import { AiServerAuthorizationService } from '@services/ai-server/ai-server/ai.server.service.authorization';
 import { AiServerService } from '@services/ai-server/ai-server/ai.server.service';
 import { Space } from '@domain/space/space/space.entity';
+import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { IUser } from '@domain/community/user/user.interface';
 
 @Injectable()
 export class BootstrapService {
+  private adminAgentInfo?: AgentInfo;
+
   constructor(
     private accountService: AccountService,
     private accountAuthorizationService: AccountAuthorizationService,
@@ -73,9 +77,9 @@ export class BootstrapService {
         Profiling.profilingEnabled = profilingEnabled;
       }
 
+      await this.bootstrapUserProfiles();
       await this.ensureOrganizationSingleton();
       await this.ensureSpaceSingleton();
-      await this.bootstrapProfiles();
       await this.ensureSsiPopulated();
       await this.platformService.ensureForumCreated();
       // reset auth as last in the actions
@@ -91,7 +95,7 @@ export class BootstrapService {
     }
   }
 
-  async bootstrapProfiles() {
+  async bootstrapUserProfiles() {
     const bootstrapAuthorizationEnabled = this.configService.get(
       'bootstrap.authorization.enabled',
       { infer: true }
@@ -187,6 +191,16 @@ export class BootstrapService {
               account
             );
           await this.authorizationPolicyService.saveAll(accountAuthorizations);
+          if (!this.adminAgentInfo) {
+            this.adminAgentInfo = await this.createSystemAgentInfo(user);
+          }
+        } else {
+          if (!this.adminAgentInfo) {
+            const user = await this.userService.getUserByEmail(userData.email);
+            if (user) {
+              this.adminAgentInfo = await this.createSystemAgentInfo(user);
+            }
+          }
         }
       }
     } catch (error: any) {
@@ -261,18 +275,36 @@ export class BootstrapService {
     }
   }
 
+  private async createSystemAgentInfo(user: IUser): Promise<AgentInfo> {
+    return {
+      userID: user.id,
+      email: user.email,
+      emailVerified: true,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      avatarURL: '',
+      credentials: user.agent?.credentials || [],
+      agentID: user.agent?.id,
+      verifiedCredentials: [],
+      communicationID: user.communicationID,
+    };
+  }
+
   private async ensureOrganizationSingleton() {
     // create a default host org
     let hostOrganization = await this.organizationService.getOrganization(
       DEFAULT_HOST_ORG_NAMEID
     );
     if (!hostOrganization) {
-      hostOrganization = await this.organizationService.createOrganization({
-        nameID: DEFAULT_HOST_ORG_NAMEID,
-        profileData: {
-          displayName: DEFAULT_HOST_ORG_DISPLAY_NAME,
+      hostOrganization = await this.organizationService.createOrganization(
+        {
+          nameID: DEFAULT_HOST_ORG_NAMEID,
+          profileData: {
+            displayName: DEFAULT_HOST_ORG_DISPLAY_NAME,
+          },
         },
-      });
+        this.adminAgentInfo
+      );
       const orgAuthorizations =
         await this.organizationAuthorizationService.applyAuthorizationPolicy(
           hostOrganization

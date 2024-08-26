@@ -58,18 +58,6 @@ export class SpaceAuthorizationService {
   async applyAuthorizationPolicy(
     spaceInput: ISpace
   ): Promise<IAuthorizationPolicy[]> {
-    const account =
-      await this.spaceService.getAccountWithAgentOrFail(spaceInput);
-
-    if (!account || !account.agent || !account.agent.credentials) {
-      throw new RelationshipNotFoundException(
-        `Unable to load Account for Space with credentials with entities at start of auth reset: ${account.id} `,
-        LogContext.ACCOUNT
-      );
-    }
-
-    const accountAgent = account.agent;
-
     const space = await this.spaceService.getSpaceOrFail(spaceInput.id, {
       relations: {
         parentSpace: {
@@ -78,11 +66,11 @@ export class SpaceAuthorizationService {
             policy: true,
           },
         },
+        agent: true,
         authorization: true,
         community: {
           policy: true,
         },
-        agent: true,
         collaboration: true,
         context: true,
         profile: true,
@@ -103,6 +91,10 @@ export class SpaceAuthorizationService {
         LogContext.SPACES
       );
     }
+
+    // Get the root space agent for licensing related logic
+    const levelZeroSpaceAgent =
+      await this.spaceService.getLevelZeroSpaceAgent(space);
 
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
@@ -146,13 +138,7 @@ export class SpaceAuthorizationService {
     // Choose what authorization to inherit from
     let parentAuthorization: IAuthorizationPolicy | undefined;
     if (space.level === SpaceLevel.SPACE || privateSpace) {
-      const accountAuthorization = account?.authorization;
-      if (!accountAuthorization) {
-        throw new RelationshipNotFoundException(
-          `Coulnd't find account for Level0 space: ${space.id} `,
-          LogContext.SPACES
-        );
-      }
+      const accountAuthorization = await this.getAccountAuthorization(space);
       parentAuthorization = accountAuthorization;
     } else {
       if (!space.parentSpace || !space.parentSpace.authorization) {
@@ -221,7 +207,7 @@ export class SpaceAuthorizationService {
     // propagate authorization rules for child entities
     const childAuthorzations = await this.propagateAuthorizationToChildEntities(
       space,
-      accountAgent,
+      levelZeroSpaceAgent,
       communityPolicy,
       spaceSettings,
       spaceMembershipAllowed
@@ -238,9 +224,24 @@ export class SpaceAuthorizationService {
     return updatedAuthorizations;
   }
 
+  private async getAccountAuthorization(
+    space: ISpace
+  ): Promise<IAuthorizationPolicy> {
+    const account =
+      await this.spaceService.getAccountForLevelZeroSpaceOrFail(space);
+    const accountAuthorization = account?.authorization;
+    if (!accountAuthorization) {
+      throw new RelationshipNotFoundException(
+        `Coulnd't find authorization for space: ${space.id} `,
+        LogContext.SPACES
+      );
+    }
+    return accountAuthorization;
+  }
+
   public async propagateAuthorizationToChildEntities(
     space: ISpace,
-    accountAgent: IAgent,
+    spaceAgent: IAgent,
     communityPolicy: ICommunityPolicy,
     spaceSettings: ISpaceSettings,
     spaceMembershipAllowed: boolean
@@ -269,7 +270,7 @@ export class SpaceAuthorizationService {
       await this.communityAuthorizationService.applyAuthorizationPolicy(
         space.community,
         space.authorization,
-        accountAgent,
+        spaceAgent,
         communityPolicy,
         spaceSettings,
         spaceMembershipAllowed,
@@ -283,7 +284,7 @@ export class SpaceAuthorizationService {
         space.authorization,
         communityPolicy,
         spaceSettings,
-        accountAgent
+        spaceAgent
       );
     updatedAuthorizations.push(...collaborationAuthorizations);
 
