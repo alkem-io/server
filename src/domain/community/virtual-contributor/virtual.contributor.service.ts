@@ -130,7 +130,7 @@ export class VirtualContributorService {
 
     const userID = agentInfo ? agentInfo.userID : '';
     await this.contributorService.ensureAvatarIsStoredInLocalStorageBucket(
-      virtualContributor.profile,
+      virtualContributor.profile.id,
       userID
     );
     // Reload to ensure have the updated avatar URL

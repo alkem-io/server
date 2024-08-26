@@ -169,7 +169,7 @@ export class UserService {
     user = await this.save(user);
 
     await this.contributorService.ensureAvatarIsStoredInLocalStorageBucket(
-      user.profile,
+      user.profile.id,
       user.id
     );
     // Reload to ensure have the updated avatar URL
