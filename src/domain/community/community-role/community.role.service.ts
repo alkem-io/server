@@ -945,7 +945,7 @@ export class CommunityRoleService {
     );
     if (openApplication) {
       throw new CommunityMembershipException(
-        `An open application (ID: ${openApplication.id}) already exists for contributor ${openApplication.user?.id} on Community: ${community.id}.`,
+        `Application not possible: An open application (ID: ${openApplication.id}) already exists for contributor ${openApplication.user?.id} on Community: ${community.id}.`,
         LogContext.COMMUNITY
       );
     }
@@ -953,7 +953,7 @@ export class CommunityRoleService {
     const openInvitation = await this.findOpenInvitation(user.id, community.id);
     if (openInvitation) {
       throw new CommunityMembershipException(
-        `An open invitation (ID: ${openInvitation.id}) already exists for contributor ${openInvitation.invitedContributor} (${openInvitation.contributorType}) on Community: ${community.id}.`,
+        `Application not possible: An open invitation (ID: ${openInvitation.id}) already exists for contributor ${openInvitation.invitedContributor} (${openInvitation.contributorType}) on Community: ${community.id}.`,
         LogContext.COMMUNITY
       );
     }
@@ -962,7 +962,7 @@ export class CommunityRoleService {
     const isExistingMember = await this.isMember(agent, community);
     if (isExistingMember)
       throw new CommunityMembershipException(
-        `Contributor ${user.id} is already a member of the Community: ${community.id}.`,
+        `Application not possible: Contributor ${user.id} is already a member of the Community: ${community.id}.`,
         LogContext.COMMUNITY
       );
   }
@@ -978,7 +978,7 @@ export class CommunityRoleService {
     );
     if (openInvitation) {
       throw new CommunityMembershipException(
-        `An open invitation (ID: ${openInvitation.id}) already exists for contributor ${openInvitation.invitedContributor} (${openInvitation.contributorType}) on Community: ${community.id}.`,
+        `Invitation not possible: An open invitation (ID: ${openInvitation.id}) already exists for contributor ${openInvitation.invitedContributor} (${openInvitation.contributorType}) on Community: ${community.id}.`,
         LogContext.COMMUNITY
       );
     }
@@ -989,7 +989,7 @@ export class CommunityRoleService {
     );
     if (openApplication) {
       throw new CommunityMembershipException(
-        `An open application (ID: ${openApplication.id}) already exists for contributor ${openApplication.user?.id} on Community: ${community.id}.`,
+        `Invitation not possible: An open application (ID: ${openApplication.id}) already exists for contributor ${openApplication.user?.id} on Community: ${community.id}.`,
         LogContext.COMMUNITY
       );
     }
@@ -998,7 +998,7 @@ export class CommunityRoleService {
     const isExistingMember = await this.isMember(agent, community);
     if (isExistingMember)
       throw new CommunityMembershipException(
-        `Contributor ${contributor.id} is already a member of the Community: ${community.id}.`,
+        `Invitation not possible: Contributor ${contributor.id} is already a member of the Community: ${community.id}.`,
         LogContext.COMMUNITY
       );
   }
