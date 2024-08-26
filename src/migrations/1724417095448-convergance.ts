@@ -22,7 +22,7 @@ export class Convergance1724417095448 implements MigrationInterface {
       'ALTER TABLE `visual` CHANGE `uri` `uri` varchar(2048) NOT NULL'
     );
     await queryRunner.query(
-      'ALTER TABLE `visual` CHANGE `aspectRatio` `aspectRatio` decimal(2,1) NOT NULL'
+      'ALTER TABLE `visual` CHANGE `aspectRatio` `aspectRatio` decimal(3,1) NOT NULL'
     );
     await queryRunner.query(
       'ALTER TABLE `location` CHANGE `city` `city` varchar(128) NULL'
@@ -98,7 +98,7 @@ export class Convergance1724417095448 implements MigrationInterface {
       'ALTER TABLE `post` CHANGE `createdBy` `createdBy` char(36) NOT NULL'
     );
     await queryRunner.query(
-      'ALTER TABLE `callout_contribution` CHANGE `createdBy` `createdBy` char(36) NOT NULL'
+      'ALTER TABLE `callout_contribution` CHANGE `createdBy` `createdBy` char(36) NULL'
     );
     await queryRunner.query(
       'ALTER TABLE `callout` CHANGE `nameID` `nameID` varchar(36) NOT NULL'
@@ -153,7 +153,7 @@ export class Convergance1724417095448 implements MigrationInterface {
       'ALTER TABLE `credential` CHANGE `type` `type` varchar(128) NOT NULL'
     );
     await queryRunner.query(
-      'ALTER TABLE `agent` CHANGE `type` `type` varchar(128) NOT NULL'
+      'ALTER TABLE `agent` CHANGE `type` `type` varchar(128) NULL'
     );
     await queryRunner.query(
       'ALTER TABLE `organization` CHANGE `nameID` `nameID` varchar(36) NOT NULL'
@@ -181,7 +181,7 @@ export class Convergance1724417095448 implements MigrationInterface {
       'ALTER TABLE `user` CHANGE `email` `email` varchar(512) NOT NULL'
     );
     await queryRunner.query(
-      'ALTER TABLE `user` CHANGE `phone` `phone` varchar(128) NOT NULL'
+      'ALTER TABLE `user` CHANGE `phone` `phone` varchar(128) NULL'
     );
 
     await queryRunner.query(
@@ -204,7 +204,7 @@ export class Convergance1724417095448 implements MigrationInterface {
     await queryRunner.query(
       'ALTER TABLE `form` CHANGE `description` `description` text NOT NULL'
     );
-    // todo: will this work varchar on ID
+
     await queryRunner.query(
       'ALTER TABLE `invitation` DROP FOREIGN KEY `FK_b132226941570cb650a4023d493`'
     ); // authorizationId
@@ -225,7 +225,7 @@ export class Convergance1724417095448 implements MigrationInterface {
     await queryRunner.query(
       'ALTER TABLE `invitation` CHANGE `contributorType` `contributorType` varchar(128) NOT NULL'
     );
-    // todo: will this work varchar on ID
+
     await queryRunner.query(
       'DROP INDEX `REL_b132226941570cb650a4023d49` ON `invitation`'
     ); // authorizationId
@@ -337,11 +337,12 @@ export class Convergance1724417095448 implements MigrationInterface {
       'ALTER TABLE `space` CHANGE `type` `type` varchar(128) NOT NULL'
     );
     await queryRunner.query(
-      'ALTER TABLE `space` CHANGE `levelZeroSpaceID` `levelZeroSpaceID` varchar(36) NOT NULL'
+      'ALTER TABLE `space` CHANGE `levelZeroSpaceID` `levelZeroSpaceID` char(36) NULL'
     );
-    await queryRunner.query(
-      'ALTER TABLE `space` CHANGE `visibility` `visibility` varchar(128) NOT NULL'
-    );
+    // gives WARN_DATA_TRUNCATED when there is a null value
+    // await queryRunner.query(
+    //   'ALTER TABLE `space` CHANGE `visibility` `visibility` varchar(128) NOT NULL'
+    // );
 
     await queryRunner.query(
       'ALTER TABLE `ai_persona` CHANGE `dataAccessMode` `dataAccessMode` varchar(128) NOT NULL'
@@ -429,7 +430,7 @@ export class Convergance1724417095448 implements MigrationInterface {
       'ALTER TABLE `ai_persona_service` CHANGE `bodyOfKnowledgeType` `bodyOfKnowledgeType` varchar(128) NOT NULL'
     );
     await queryRunner.query(
-      'ALTER TABLE `ai_persona_service` CHANGE `bodyOfKnowledgeID` `bodyOfKnowledgeID` varchar(128) NOT NULL'
+      'ALTER TABLE `ai_persona_service` CHANGE `bodyOfKnowledgeID` `bodyOfKnowledgeID` varchar(128) NULL'
     );
     //
     //
@@ -703,21 +704,23 @@ export class Convergance1724417095448 implements MigrationInterface {
     await queryRunner.query(
       'ALTER TABLE `post` ADD CONSTRAINT `FK_042b9825d770d6b3009ae206c2f` FOREIGN KEY (`commentsId`) REFERENCES `room`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
     );
-    /////
-    /////
+    ///
+    ///
+    // these are very questionable - only the update and cascade are changed;
+    await queryRunner.query(
+      `ALTER TABLE \`application_questions\` DROP FOREIGN KEY \`FK_fe50118fd82e7fe2f74f986a195\``
+    );
+    // nvpId is NOT NULL, meaning on delete you cannot set it to null
+    await queryRunner.query(
+      `ALTER TABLE \`application_questions\` ADD CONSTRAINT \`FK_fe50118fd82e7fe2f74f986a195\` FOREIGN KEY (\`nvpId\`) REFERENCES \`nvp\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
+    );
+    // applicationId is NOT NULL, meaning on delete you cannot set it to null
     // these are very questionable - only the update and cascade are changed;
     await queryRunner.query(
       `ALTER TABLE \`application_questions\` DROP FOREIGN KEY \`FK_8495fae86f13836b0745642baa8\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`application_questions\` ADD CONSTRAINT \`FK_8495fae86f13836b0745642baa8\` FOREIGN KEY (\`applicationId\`) REFERENCES \`application\`(\`id\`) ON DELETE CASCADE ON UPDATE CASCADE`
-    );
-    // these are very questionable - only the update and cascade are changed;
-    await queryRunner.query(
-      `ALTER TABLE \`application_questions\` DROP FOREIGN KEY \`FK_fe50118fd82e7fe2f74f986a195\``
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`application_questions\` ADD CONSTRAINT \`FK_fe50118fd82e7fe2f74f986a195\` FOREIGN KEY (\`nvpId\`) REFERENCES \`nvp\`(\`id\`) ON DELETE CASCADE ON UPDATE CASCADE`
+      `ALTER TABLE \`application_questions\` ADD CONSTRAINT \`FK_8495fae86f13836b0745642baa8\` FOREIGN KEY (\`applicationId\`) REFERENCES \`application\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
     );
     ///// some constraints and keys are probably not needed
     await queryRunner.query(
@@ -898,9 +901,11 @@ export class Convergance1724417095448 implements MigrationInterface {
     await queryRunner.query(
       'ALTER TABLE `space` ADD CONSTRAINT `FK_b4250035291aac1329d59224a96` FOREIGN KEY (`profileId`) REFERENCES `profile`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
     );
-    await queryRunner.query(
-      'ALTER TABLE `space` ADD CONSTRAINT `FK_ef1ff4ac7f613cc0677e2295b30` FOREIGN KEY (`parentSpaceId`) REFERENCES `space`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
-    );
+    // gives error
+    // await queryRunner.query(
+    //   'ALTER TABLE `space` ADD CONSTRAINT `FK_ef1ff4ac7f613cc0677e2295b30` FOREIGN KEY (`parentSpaceId`) REFERENCES `space`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
+    // );
+
     await queryRunner.query(
       'ALTER TABLE `space` ADD CONSTRAINT `FK_6bdeffaf6ea6159b4672a2aed70` FOREIGN KEY (`accountId`) REFERENCES `account`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
     );

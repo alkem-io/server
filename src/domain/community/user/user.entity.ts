@@ -41,8 +41,8 @@ export class User extends ContributorBase implements IUser {
   @Column('varchar', { length: MID_TEXT_LENGTH, nullable: false })
   email!: string;
 
-  @Column('varchar', { length: SMALL_TEXT_LENGTH, nullable: false })
-  phone!: string;
+  @Column('varchar', { length: SMALL_TEXT_LENGTH, nullable: true })
+  phone?: string;
 
   @Column({ type: 'boolean', nullable: false })
   serviceProfile!: boolean;

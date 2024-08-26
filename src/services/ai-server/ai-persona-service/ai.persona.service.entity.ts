@@ -30,7 +30,7 @@ export class AiPersonaService
   @Column('varchar', { length: ENUM_LENGTH, nullable: false })
   bodyOfKnowledgeType!: AiPersonaBodyOfKnowledgeType;
 
-  @Column('varchar', { length: SMALL_TEXT_LENGTH, nullable: false })
+  @Column('varchar', { length: SMALL_TEXT_LENGTH, nullable: true })
   bodyOfKnowledgeID!: string;
 
   // TODO: last updated embeddings

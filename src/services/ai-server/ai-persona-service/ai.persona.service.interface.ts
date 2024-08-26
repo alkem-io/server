@@ -35,7 +35,7 @@ export class IAiPersonaService extends IAuthorizable {
   bodyOfKnowledgeType!: AiPersonaBodyOfKnowledgeType;
 
   @Field(() => UUID, {
-    nullable: false,
+    nullable: true,
     description: 'The body of knowledge ID used for the AI Persona Service',
   })
   bodyOfKnowledgeID!: string;

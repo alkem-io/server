@@ -89,9 +89,7 @@ export class Space extends NameableEntity implements ISpace {
   @Column('varchar', { length: ENUM_LENGTH })
   type!: SpaceType;
 
-  @Column({
-    length: UUID_LENGTH,
-  })
+  @Column('char', { length: UUID_LENGTH, nullable: true })
   levelZeroSpaceID!: string;
 
   @Column('int', { nullable: false })

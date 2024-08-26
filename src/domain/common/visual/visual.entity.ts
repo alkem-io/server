@@ -24,7 +24,7 @@ export class Visual extends AuthorizableEntity implements IVisual {
   @Column('int', { nullable: false })
   maxHeight!: number;
 
-  @Column('decimal', { nullable: false, precision: 2, scale: 1 })
+  @Column('decimal', { nullable: false, precision: 3, scale: 1 }) // < 99.9, > -99.9
   aspectRatio!: number;
 
   @Column('simple-array', { nullable: false })
