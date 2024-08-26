@@ -36,5 +36,6 @@ export class AiPersonaService
   @Column({ length: 255, nullable: true })
   bodyOfKnowledgeID!: string;
 
-  // TODO: last updated embeddings
+  @Column({ type: 'datetime', nullable: true })
+  bodyOfKnowledgeLastUpdated?: Date;
 }

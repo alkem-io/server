@@ -22,6 +22,7 @@ import { IVirtualContributor } from './virtual.contributor.interface';
 import { IAccount } from '@domain/space/account/account.interface';
 import { IAiPersona } from '../ai-persona';
 import { IContributor } from '../contributor/contributor.interface';
+import { VirtualContributorStatus } from '@common/enums/virtual.contributor.status.enum';
 
 @Resolver(() => IVirtualContributor)
 export class VirtualContributorResolverFields {
@@ -134,5 +135,24 @@ export class VirtualContributorResolverFields {
     @Parent() virtualContributor: IVirtualContributor
   ): Promise<IContributor> {
     return await this.virtualContributorService.getProvider(virtualContributor);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @ResolveField('status', () => VirtualContributorStatus, {
+    nullable: false,
+    description: 'The status of the virtual contributor',
+  })
+  async status(
+    @Parent() virtualContributor: IVirtualContributor
+  ): Promise<VirtualContributorStatus> {
+    const lastUpdated =
+      await this.virtualContributorService.getBodyOfKnowledgeLastUpdated(
+        virtualContributor
+      );
+
+    if (!!lastUpdated) {
+      return VirtualContributorStatus.READY;
+    }
+    return VirtualContributorStatus.NITIALIZING;
   }
 }

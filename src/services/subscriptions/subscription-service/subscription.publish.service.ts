@@ -3,6 +3,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import {
   SUBSCRIPTION_ACTIVITY_CREATED,
   SUBSCRIPTION_ROOM_EVENT,
+  SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED,
   SUBSCRIPTION_WHITEBOARD_SAVED,
 } from '@src/common/constants';
 import { SubscriptionType } from '@common/enums/subscription.type';
@@ -14,8 +15,10 @@ import {
   ActivityCreatedSubscriptionPayload,
   RoomEventSubscriptionPayload,
   WhiteboardSavedSubscriptionPayload,
+  VirtualContributorUpdatedSubscriptionPayload,
 } from './dto';
 import { IRoom } from '@domain/communication/room/room.interface';
+import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 
 @Injectable()
 export class SubscriptionPublishService {
@@ -25,7 +28,9 @@ export class SubscriptionPublishService {
     @Inject(SUBSCRIPTION_ROOM_EVENT)
     private roomEventsSubscription: PubSubEngine,
     @Inject(SUBSCRIPTION_WHITEBOARD_SAVED)
-    private whiteboardSavedSubscription: PubSubEngine
+    private whiteboardSavedSubscription: PubSubEngine,
+    @Inject(SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED)
+    private virtualContributorUpdatedSubscription: PubSubEngine
   ) {}
 
   public publishActivity(
@@ -87,6 +92,20 @@ export class SubscriptionPublishService {
 
     return this.whiteboardSavedSubscription.publish(
       SubscriptionType.WHITEBOARD_SAVED,
+      payload
+    );
+  }
+
+  public publishVirtualContributorUpdated(
+    virtualContributor: IVirtualContributor
+  ): Promise<void> {
+    const payload: VirtualContributorUpdatedSubscriptionPayload = {
+      eventID: `virtual-contributor-updated${randomInt()}`,
+      virtualContributor,
+    };
+
+    return this.virtualContributorUpdatedSubscription.publish(
+      SubscriptionType.VIRTUAL_CONTRIBUTOR_UPDATED,
       payload
     );
   }

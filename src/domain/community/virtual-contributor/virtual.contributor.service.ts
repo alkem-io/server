@@ -554,6 +554,13 @@ export class VirtualContributorService {
     return virtualContributorMatchesCount;
   }
 
+  async getBodyOfKnowledgeLastUpdated(virtualContributor: IVirtualContributor) {
+    const aiPersona = await this.getAiPersonaOrFail(virtualContributor);
+    return this.aiServerAdapter.getBodyOfKnowledgeLastUpdated(
+      aiPersona.aiPersonaServiceID
+    );
+  }
+
   //adding this to avoid circular dependency between VirtualContributor, Room, and Invitation
   private async deleteVCInvitations(contributorID: string) {
     const invitations = await this.entityManager.find(Invitation, {

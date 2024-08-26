@@ -15,6 +15,12 @@ export class AiServerAdapter {
     private readonly logger: LoggerService
   ) {}
 
+  async getBodyOfKnowledgeLastUpdated(
+    personaServiceId: string
+  ): Promise<Date | undefined> {
+    return this.aiServer.getBodyOfKnowledgeLastUpdated(personaServiceId);
+  }
+
   async refreshBodyOfKnowlege(personaServiceId: string): Promise<boolean> {
     return this.aiServer.ensurePersonaIsUsable(personaServiceId);
   }

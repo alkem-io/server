@@ -74,7 +74,7 @@ export class RoomEventResolverSubscription {
     );
 
     const room = await this.roomService.getRoomOrFail(roomID);
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       room.authorization,
       AuthorizationPrivilege.READ,
