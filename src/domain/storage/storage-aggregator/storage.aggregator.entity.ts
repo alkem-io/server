@@ -2,6 +2,7 @@ import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
 import { IStorageAggregator } from './storage.aggregator.interface';
 import { StorageBucket } from '../storage-bucket/storage.bucket.entity';
+import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 
 @Entity()
 export class StorageAggregator
@@ -25,5 +26,5 @@ export class StorageAggregator
   directStorage?: StorageBucket;
 
   @Column('varchar', { length: 128, nullable: true })
-  type!: string;
+  type!: StorageAggregatorType;
 }

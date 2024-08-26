@@ -29,11 +29,13 @@ import { CommunityGuidelinesModule } from '@domain/community/community-guideline
 import { CommunityGuidelinesTemplateModule } from '@domain/template/community-guidelines-template/community.guidelines.template.module';
 import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
 import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
-import { InnovationHubModule } from '@domain/innovation-hub';
+import { InnovationHubModule } from '@domain/innovation-hub/innovation.hub.module';
 import { InnovationPackModule } from '@library/innovation-pack/innovation.pack.module';
+import { AccountModule } from '@domain/space/account/account.module';
 
 @Module({
   imports: [
+    AccountModule,
     AuthorizationModule,
     AuthorizationPolicyModule,
     CommunityModule,

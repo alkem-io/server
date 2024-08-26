@@ -1,10 +1,5 @@
 import { UUID_LENGTH } from '@common/constants';
-import {
-  AuthorizationCredential,
-  LogContext,
-  ProfileType,
-  UserPreferenceType,
-} from '@common/enums';
+import { LogContext, ProfileType, UserPreferenceType } from '@common/enums';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -26,9 +21,7 @@ import { ProfileService } from '@domain/common/profile/profile.service';
 import {
   CreateUserInput,
   DeleteUserInput,
-  IUser,
   UpdateUserInput,
-  User,
 } from '@domain/community/user';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
@@ -55,18 +48,20 @@ import { validateEmail } from '@common/utils';
 import { AgentInfoMetadata } from '@core/authentication.agent.info/agent.info.metadata';
 import { CommunityCredentials } from './dto/user.dto.community.credentials';
 import { CommunityMemberCredentials } from './dto/user.dto.community.member.credentials';
-import { VisualType } from '@common/enums/visual.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { userDefaults } from './user.defaults';
 import { UsersQueryArgs } from './dto/users.query.args';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
-import { AvatarService } from '@domain/common/visual/avatar.service';
-import { DocumentService } from '@domain/storage/document/document.service';
 import { UpdateUserPlatformSettingsInput } from './dto/user.dto.update.platform.settings';
+import { AccountHostService } from '@domain/space/account.host/account.host.service';
+import { IAccount } from '@domain/space/account/account.interface';
+import { User } from './user.entity';
+import { IUser } from './user.interface';
 import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { AgentType } from '@common/enums/agent.type';
+import { ContributorService } from '../contributor/contributor.service';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
@@ -82,8 +77,8 @@ export class UserService {
     private preferenceSetService: PreferenceSetService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private storageAggregatorService: StorageAggregatorService,
-    private avatarService: AvatarService,
-    private documentService: DocumentService,
+    private accountHostService: AccountHostService,
+    private contributorService: ContributorService,
     @InjectRepository(User)
     private userRepository: Repository<User>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -108,7 +103,10 @@ export class UserService {
     );
   }
 
-  async createUser(userData: CreateUserInput): Promise<IUser> {
+  async createUser(
+    userData: CreateUserInput,
+    agentInfo?: AgentInfo
+  ): Promise<IUser> {
     if (userData.nameID) {
       // Convert nameID to lower case
       userData.nameID = userData.nameID.toLowerCase();
@@ -119,7 +117,7 @@ export class UserService {
 
     await this.validateUserProfileCreationRequest(userData);
 
-    const user: IUser = User.create(userData);
+    let user: IUser = User.create(userData);
     user.authorization = new AuthorizationPolicy(AuthorizationPolicyType.USER);
 
     const profileData = await this.extendProfileDataWithReferences(
@@ -135,19 +133,6 @@ export class UserService {
       user.storageAggregator
     );
 
-    // Set the visuals
-    let avatarURL = profileData?.avatarURL;
-    if (!avatarURL) {
-      avatarURL = this.profileService.generateRandomAvatar(
-        user.firstName,
-        user.lastName
-      );
-    }
-    this.profileService.addVisualOnProfile(
-      user.profile,
-      VisualType.AVATAR,
-      avatarURL
-    );
     await this.profileService.addTagsetOnProfile(user.profile, {
       name: TagsetReservedName.SKILLS,
       tags: [],
@@ -156,6 +141,13 @@ export class UserService {
       name: TagsetReservedName.KEYWORDS,
       tags: [],
     });
+    await this.contributorService.addAvatarVisualToContributorProfile(
+      user.profile,
+      userData.profileData,
+      agentInfo,
+      userData.firstName,
+      userData.lastName
+    );
 
     user.agent = await this.agentService.createAgent({
       type: AgentType.USER,
@@ -171,7 +163,18 @@ export class UserService {
       this.createPreferenceDefaults()
     );
 
-    const response = await this.save(user);
+    const account = await this.accountHostService.createAccount();
+    user.accountID = account.id;
+
+    user = await this.save(user);
+
+    await this.contributorService.ensureAvatarIsStoredInLocalStorageBucket(
+      user.profile.id,
+      user.id
+    );
+    // Reload to ensure have the updated avatar URL
+    user = await this.getUserOrFail(user.id);
+
     // all users need to be registered for communications at the absolute beginning
     // there are cases where a user could be messaged before they actually log-in
     // which will result in failure in communication (either missing user or unsent messages)
@@ -186,10 +189,10 @@ export class UserService {
             return user;
           }
 
-          response.communicationID = communicationID;
+          user.communicationID = communicationID;
 
-          await this.save(response);
-          await this.setUserCache(response);
+          await this.save(user);
+          await this.setUserCache(user);
         } catch (e: any) {
           this.logger.error(e, e?.stack, LogContext.USER);
         }
@@ -197,9 +200,9 @@ export class UserService {
       error => this.logger.error(error, error?.stack, LogContext.USER)
     );
 
-    await this.setUserCache(response);
+    await this.setUserCache(user);
 
-    return response;
+    return user;
   }
 
   private async extendProfileDataWithReferences(
@@ -312,52 +315,18 @@ export class UserService {
       );
     }
 
-    const isAlkemioDocumentURL = this.documentService.isAlkemioDocumentURL(
-      agentInfo.avatarURL
-    );
-
     const userData: CreateUserInput = {
       email: email,
       firstName: agentInfo.firstName,
       lastName: agentInfo.lastName,
       accountUpn: email,
       profileData: {
-        avatarURL: isAlkemioDocumentURL ? agentInfo.avatarURL : undefined,
+        avatarURL: agentInfo.avatarURL,
         displayName: `${agentInfo.firstName} ${agentInfo.lastName}`,
       },
     };
-    const user = await this.createUser(userData);
 
-    // Used for creating an avatar from a linkedin profile picture
-    // BUG: https://github.com/alkem-io/server/issues/3944
-
-    // if (!isAlkemioDocumentURL) {
-    //   if (!user.profile?.storageBucket?.id) {
-    //     throw new EntityNotInitializedException(
-    //       `User profile storage bucket not initialized for user with id: ${user.id}`,
-    //       LogContext.COMMUNITY
-    //     );
-    //   }
-
-    //   if (!user.profile.visuals) {
-    //     throw new EntityNotInitializedException(
-    //       `Visuals not initialized for profile with id: ${user.profile.id}`,
-    //       LogContext.COMMUNITY
-    //     );
-    //   }
-
-    //   const { visual, document } = await this.avatarService.createAvatarFromURL(
-    //     user.profile?.storageBucket?.id,
-    //     user.id,
-    //     agentInfo.avatarURL ?? user.profile.visuals[0].uri
-    //   );
-
-    //   user.profile.visuals = [visual];
-    //   user.profile.storageBucket.documents = [document];
-    //   user = await this.save(user);
-    // }
-
-    return user;
+    return await this.createUser(userData, agentInfo);
   }
 
   private async validateUserProfileCreationRequest(
@@ -385,18 +354,6 @@ export class UserService {
       );
   }
 
-  private async isAccountHost(user: IUser): Promise<boolean> {
-    if (!user.agent)
-      throw new RelationshipNotFoundException(
-        `Unable to load agent for user: ${user.id}`,
-        LogContext.COMMUNITY
-      );
-
-    return await this.agentService.hasValidCredential(user.agent.id, {
-      type: AuthorizationCredential.ACCOUNT_HOST,
-    });
-  }
-
   async deleteUser(deleteData: DeleteUserInput): Promise<IUser> {
     const userID = deleteData.ID;
     const user = await this.getUserOrFail(userID, {
@@ -408,10 +365,12 @@ export class UserService {
       },
     });
 
-    const isAccountHost = await this.isAccountHost(user);
-    if (isAccountHost) {
+    // TODO: give additional feedback?
+    const accountHasResources =
+      await this.accountHostService.areResourcesInAccount(user.accountID);
+    if (accountHasResources) {
       throw new ForbiddenException(
-        'Unable to delete User: host of one or more accounts',
+        'Unable to delete User: account contains one or more resources',
         LogContext.SPACES
       );
     }
@@ -449,6 +408,10 @@ export class UserService {
       ...result,
       id,
     };
+  }
+
+  public async getAccount(user: IUser): Promise<IAccount> {
+    return await this.accountHostService.getAccountOrFail(user.accountID);
   }
 
   async getPreferenceSetOrFail(userID: string): Promise<IPreferenceSet> {

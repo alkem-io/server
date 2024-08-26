@@ -20,7 +20,6 @@ import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dt
 import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
 import { ISpaceSettings } from '../space.settings/space.settings.interface';
 import { ICalloutGroup } from '@domain/collaboration/callout-groups/callout.group.interface';
-import { Account } from '../account/account.entity';
 import { subspaceCommunityPolicy } from './definitions/subspace.community.policy';
 import { spaceCommunityPolicy } from './definitions/space.community.policy';
 import { ICommunityPolicyDefinition } from '@domain/community/community-policy/community.policy.definition';
@@ -63,9 +62,7 @@ export class SpaceDefaultsService {
     private innovationFlowTemplateService: InnovationFlowTemplateService,
     private templatesSetService: TemplatesSetService,
     @InjectRepository(SpaceDefaults)
-    private spaceDefaultsRepository: Repository<SpaceDefaults>,
-    @InjectRepository(Account)
-    private accountRepository: Repository<Account>
+    private spaceDefaultsRepository: Repository<SpaceDefaults>
   ) {}
 
   public async createSpaceDefaults(): Promise<ISpaceDefaults> {
@@ -125,28 +122,6 @@ export class SpaceDefaultsService {
     if (!spaceDefaults)
       throw new EntityNotFoundException(
         `No SpaceDefaults found with the given id: ${spaceDefaultsID}`,
-        LogContext.COLLABORATION
-      );
-    return spaceDefaults;
-  }
-
-  private async getDefaultsForAccountOrFail(
-    accountID: string
-  ): Promise<ISpaceDefaults | never> {
-    let spaceDefaults: ISpaceDefaults | undefined = undefined;
-    if (accountID.length === UUID_LENGTH) {
-      const account = await this.accountRepository.findOne({
-        where: { id: accountID },
-        relations: {
-          defaults: true,
-        },
-      });
-      if (account) spaceDefaults = account?.defaults;
-    }
-
-    if (!spaceDefaults)
-      throw new EntityNotFoundException(
-        `No SpaceDefaults found for the given accountID: ${accountID}`,
         LogContext.COLLABORATION
       );
     return spaceDefaults;
@@ -296,8 +271,8 @@ export class SpaceDefaultsService {
   }
 
   public async getCreateInnovationFlowInput(
-    accountID: string,
     spaceType: SpaceType,
+    spaceDefaults?: ISpaceDefaults,
     innovationFlowTemplateID?: string
   ): Promise<CreateInnovationFlowInput> {
     // Start with using the provided argument
@@ -325,8 +300,7 @@ export class SpaceDefaultsService {
       spaceType === SpaceType.CHALLENGE ||
       spaceType === SpaceType.OPPORTUNITY
     ) {
-      const spaceDefaults = await this.getDefaultsForAccountOrFail(accountID);
-      if (spaceDefaults.innovationFlowTemplate) {
+      if (spaceDefaults && spaceDefaults.innovationFlowTemplate) {
         const template =
           await this.innovationFlowTemplateService.getInnovationFlowTemplateOrFail(
             spaceDefaults.innovationFlowTemplate.id,

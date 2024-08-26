@@ -17,7 +17,7 @@ import { CommunityPolicy } from '../community-policy/community.policy.entity';
 import { Form } from '@domain/common/form/form.entity';
 import { Invitation } from '../invitation/invitation.entity';
 import { CommunityGuidelines } from '../community-guidelines/community.guidelines.entity';
-import { PlatformInvitation } from '@platform/invitation';
+import { PlatformInvitation } from '@platform/invitation/platform.invitation.entity';
 
 @Entity()
 export class Community

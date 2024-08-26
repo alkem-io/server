@@ -1,9 +1,7 @@
 import { UseGuards } from '@nestjs/common';
 import { Resolver, Args, Mutation } from '@nestjs/graphql';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
-import { ISpace } from '../space/space.interface';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
@@ -13,36 +11,35 @@ import { AccountAuthorizationService } from './account.service.authorization';
 import { AccountService } from './account.service';
 import { IAccount } from './account.interface';
 import { SpaceService } from '../space/space.service';
-import { InnovationFlowTemplateService } from '@domain/template/innovation-flow-template/innovation.flow.template.service';
-import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
-import { UpdateSpaceDefaultsInput } from '../space/dto/space.dto.update.defaults';
-import { ISpaceDefaults } from '../space.defaults/space.defaults.interface';
-import { DeleteSpaceInput } from '../space/dto/space.dto.delete';
-import { UpdateAccountPlatformSettingsInput } from './dto/account.dto.update.platform.settings';
-import { CreateAccountInput } from './dto';
-import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
-import { LogContext } from '@common/enums/logging.context';
-import { SpaceLevel } from '@common/enums/space.level';
-import { EntityNotInitializedException } from '@common/exceptions';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { CreateVirtualContributorOnAccountInput } from './dto/account.dto.create.virtual.contributor';
 import { VirtualContributorAuthorizationService } from '@domain/community/virtual-contributor/virtual.contributor.service.authorization';
 import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
-import { CommunityContributorType } from '@common/enums/community.contributor.type';
-import { CommunityRole } from '@common/enums/community.role';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { NotificationInputSpaceCreated } from '@services/adapters/notification-adapter/dto/notification.dto.input.space.created';
 import { CreateSpaceOnAccountInput } from './dto/account.dto.create.space';
-import { CommunityService } from '@domain/community/community/community.service';
 import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
 import { CreateInnovationHubOnAccountInput } from './dto/account.dto.create.innovation.hub';
-import { InnovationHubService } from '@domain/innovation-hub';
+import { InnovationHubService } from '@domain/innovation-hub/innovation.hub.service';
 import { InnovationHubAuthorizationService } from '@domain/innovation-hub/innovation.hub.service.authorization';
 import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
 import { CreateInnovationPackOnAccountInput } from './dto/account.dto.create.innovation.pack';
 import { InnovationPackAuthorizationService } from '@library/innovation-pack/innovation.pack.service.authorization';
 import { InnovationPackService } from '@library/innovation-pack/innovaton.pack.service';
+import { SpaceAuthorizationService } from '../space/space.service.authorization';
+import { ISpace } from '../space/space.interface';
+import {
+  RelationshipNotFoundException,
+  ValidationException,
+} from '@common/exceptions';
+import { LogContext } from '@common/enums';
+import { TransferAccountSpaceInput } from './dto/account.dto.transfer.space';
+import { TransferAccountInnovationHubInput } from './dto/account.dto.transfer.innovation.hub';
+import { TransferAccountInnovationPackInput } from './dto/account.dto.transfer.innovation.pack';
+import { TransferAccountVirtualContributorInput } from './dto/account.dto.transfer.virtual.contributor';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
+import { INameable } from '@domain/common/entity/nameable-entity';
 
 @Resolver()
 export class AccountResolverMutations {
@@ -51,280 +48,147 @@ export class AccountResolverMutations {
     private accountAuthorizationService: AccountAuthorizationService,
     private authorizationService: AuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
-    private platformAuthorizationService: PlatformAuthorizationPolicyService,
-    private innovationFlowTemplateService: InnovationFlowTemplateService,
     private virtualContributorService: VirtualContributorService,
     private virtualContributorAuthorizationService: VirtualContributorAuthorizationService,
     private innovationHubService: InnovationHubService,
     private innovationHubAuthorizationService: InnovationHubAuthorizationService,
     private innovationPackService: InnovationPackService,
     private innovationPackAuthorizationService: InnovationPackAuthorizationService,
-    private spaceDefaultsService: SpaceDefaultsService,
     private namingReporter: NameReporterService,
     private spaceService: SpaceService,
-    private notificationAdapter: NotificationAdapter,
-    private communityService: CommunityService
+    private spaceAuthorizationService: SpaceAuthorizationService,
+    private notificationAdapter: NotificationAdapter
   ) {}
+
+  SOFT_LIMIT_SPACE = 3;
+  SOFT_LIMIT_INNOVATION_HUB = 0;
+  SOFT_LIMIT_INNOVATION_PACK = 3;
+  SOFT_LIMIT_VIRTUAL_CONTRIBUTOR = 3;
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IAccount, {
-    description: 'Creates a new Account with a single root Space.',
+    description: 'Creates a new Level Zero Space within the specified Account.',
   })
-  async createAccount(
+  async createSpace(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('accountData') accountData: CreateAccountInput
-  ): Promise<IAccount> {
-    const authorizationPolicy =
-      await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      authorizationPolicy,
-      AuthorizationPrivilege.CREATE_SPACE,
-      `create account with hostID: ${accountData.hostID}`
-    );
-    let account = await this.accountService.createAccount(accountData);
-
-    const createSpaceOnAccountData: CreateSpaceOnAccountInput = {
-      accountID: account.id,
-      spaceData: accountData.spaceData,
-    };
-    const accountWithStorageAggregator =
-      await this.accountService.getAccountOrFail(account.id, {
+    @Args('spaceData') spaceData: CreateSpaceOnAccountInput
+  ): Promise<ISpace> {
+    const account = await this.accountService.getAccountOrFail(
+      spaceData.accountID,
+      {
         relations: {
-          storageAggregator: true,
+          spaces: true,
         },
-      });
-    account = await this.accountService.createSpaceOnAccount(
-      accountWithStorageAggregator,
-      createSpaceOnAccountData,
+      }
+    );
+
+    this.validateSoftLicenseLimitOrFail(
+      agentInfo,
+      account.authorization,
+      'Space',
+      account.id,
+      AuthorizationPrivilege.CREATE_SPACE,
+      AuthorizationPrivilege.PLATFORM_ADMIN,
+      this.SOFT_LIMIT_SPACE,
+      account.spaces
+    );
+
+    let space = await this.accountService.createSpaceOnAccount(
+      spaceData,
       agentInfo
     );
-    account = await this.accountService.save(account);
-    const updatedAuthorizations =
-      await this.accountAuthorizationService.applyAuthorizationPolicy(account);
-    await this.authorizationPolicyService.saveAll(updatedAuthorizations);
+    space = await this.spaceService.save(space);
 
-    const rootSpace = await this.accountService.getRootSpace(account, {
+    const spaceAuthorizations =
+      await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
+    await this.authorizationPolicyService.saveAll(spaceAuthorizations);
+
+    space = await this.spaceService.getSpaceOrFail(space.id, {
       relations: {
+        profile: true,
         community: true,
       },
     });
-    if (!rootSpace) {
-      throw new EntityNotInitializedException(
-        `Unable to load root space for account ${account.id}`,
+    if (!space.profile || !space.community) {
+      throw new RelationshipNotFoundException(
+        `Unable to load space profile or community: ${space.id}`,
         LogContext.ACCOUNT
       );
     }
 
     await this.namingReporter.createOrUpdateName(
-      rootSpace.id,
-      rootSpace.profile.displayName
+      space.id,
+      space.profile.displayName
     );
-
-    if (!rootSpace.community?.id) {
-      throw new RelationshipNotFoundException(
-        `Unable to find community with id ${rootSpace.community?.id}`,
-        LogContext.ACCOUNT
-      );
-    }
-    const community = await this.communityService.getCommunityOrFail(
-      rootSpace.community?.id,
-      {
-        relations: {
-          parentCommunity: {
-            authorization: true,
-          },
-        },
-      }
-    );
-    // detach space account to avoid circular structure
-    if (account?.space?.account) {
-      delete account.space;
-    }
 
     const notificationInput: NotificationInputSpaceCreated = {
       triggeredBy: agentInfo.userID,
-      community: community,
+      community: space.community,
     };
     await this.notificationAdapter.spaceCreated(notificationInput);
 
-    return account;
+    return space;
   }
 
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => ISpace, {
-    description: 'Deletes the specified Space.',
-  })
-  async deleteSpace(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('deleteData') deleteData: DeleteSpaceInput
-  ): Promise<ISpace> {
-    const space = await this.spaceService.getSpaceOrFail(deleteData.ID, {
-      relations: {
-        account: {
-          authorization: true,
-        },
-      },
-    });
-
-    switch (space.level) {
-      case SpaceLevel.SPACE:
-        // delete the account
-        const account = space.account;
-        this.authorizationService.grantAccessOrFail(
-          agentInfo,
-          account.authorization,
-          AuthorizationPrivilege.DELETE,
-          `deleteSpace + account: ${space.id}`
-        );
-        await this.accountService.deleteAccount(account);
-        return space;
-      case SpaceLevel.CHALLENGE:
-      case SpaceLevel.OPPORTUNITY:
-        this.authorizationService.grantAccessOrFail(
-          agentInfo,
-          space.authorization,
-          AuthorizationPrivilege.DELETE,
-          `deleteSpace: ${space.id}`
-        );
-        return await this.spaceService.deleteSpace(deleteData);
-      default:
-        throw new EntityNotInitializedException(
-          `Invalid space level: ${space.id}`,
+  private validateSoftLicenseLimitOrFail(
+    agentInfo: AgentInfo,
+    authorization: IAuthorizationPolicy | undefined,
+    resourceType: string,
+    accountID: string,
+    hardPrivilege: AuthorizationPrivilege,
+    softPrivilege: AuthorizationPrivilege,
+    softLimit: number,
+    nameableResouces: INameable[]
+  ) {
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      authorization,
+      hardPrivilege,
+      `create ${resourceType} on account: ${accountID}`
+    );
+    const isPlatformAdmin = this.authorizationService.isAccessGranted(
+      agentInfo,
+      authorization,
+      softPrivilege
+    );
+    if (!isPlatformAdmin) {
+      const resourceCount = nameableResouces.length;
+      if (resourceCount >= softLimit) {
+        throw new ValidationException(
+          `Unable to create ${resourceType} on account: ${accountID}. Soft limit of ${softLimit} reached`,
           LogContext.ACCOUNT
         );
-    }
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IAccount, {
-    description: 'Reset the Authorization Policy on the specified Account.',
-  })
-  async authorizationPolicyResetOnAccount(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('authorizationResetData')
-    authorizationResetData: AccountAuthorizationResetInput
-  ): Promise<IAccount> {
-    const account = await this.accountService.getAccountOrFail(
-      authorizationResetData.accountID
-    );
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      account.authorization,
-      AuthorizationPrivilege.AUTHORIZATION_RESET,
-      `reset authorization definition on Space: ${agentInfo.email}`
-    );
-
-    const updatedAuthorizations =
-      await this.accountAuthorizationService.applyAuthorizationPolicy(account);
-    await this.authorizationPolicyService.saveAll(updatedAuthorizations);
-    return await this.accountService.getAccountOrFail(account.id);
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IAccount, {
-    description:
-      'Update the platform settings, such as license, of the specified Account.',
-  })
-  async updateAccountPlatformSettings(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('updateData') updateData: UpdateAccountPlatformSettingsInput
-  ): Promise<IAccount> {
-    const account = await this.accountService.getAccountOrFail(
-      updateData.accountID
-    );
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      account.authorization,
-      AuthorizationPrivilege.PLATFORM_ADMIN,
-      `update platform settings on space: ${account.id}`
-    );
-
-    const result =
-      await this.accountService.updateAccountPlatformSettings(updateData);
-
-    await this.accountService.save(result);
-
-    // Update the authorization policy as most of the changes imply auth policy updates
-    const updatedAuthorizations =
-      await this.accountAuthorizationService.applyAuthorizationPolicy(result);
-    await this.authorizationPolicyService.saveAll(updatedAuthorizations);
-
-    return await this.accountService.getAccountOrFail(account.id);
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => ISpaceDefaults, {
-    description: 'Updates the specified SpaceDefaults.',
-  })
-  async updateSpaceDefaults(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('spaceDefaultsData')
-    spaceDefaultsData: UpdateSpaceDefaultsInput
-  ): Promise<ISpaceDefaults> {
-    const space = await this.spaceService.getSpaceOrFail(
-      spaceDefaultsData.spaceID,
-      {
-        relations: {
-          account: {
-            defaults: {
-              authorization: true,
-            },
-          },
-        },
       }
-    );
-    const spaceDefaults = space.account.defaults;
-    if (!spaceDefaults) {
-      throw new RelationshipNotFoundException(
-        `Unable to load defaults for space ${spaceDefaultsData.spaceID}`,
-        LogContext.ACCOUNT
-      );
     }
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      spaceDefaults.authorization,
-      AuthorizationPrivilege.UPDATE,
-      `update spaceDefaults: ${space.id}`
-    );
-
-    if (spaceDefaultsData.flowTemplateID) {
-      const innovationFlowTemplate =
-        await this.innovationFlowTemplateService.getInnovationFlowTemplateOrFail(
-          spaceDefaultsData.flowTemplateID
-        );
-      return await this.spaceDefaultsService.updateSpaceDefaults(
-        spaceDefaults,
-        innovationFlowTemplate
-      );
-    }
-    return spaceDefaults;
   }
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IInnovationHub, {
-    description: 'Create Innovation Hub.',
+    description: 'Create an Innovation Hub on the specified account',
   })
   async createInnovationHub(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('createData') createData: CreateInnovationHubOnAccountInput
   ): Promise<IInnovationHub> {
-    // InnovationHubs still require platform admin for now
-    const authorizationPolicy =
-      await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      authorizationPolicy,
-      AuthorizationPrivilege.PLATFORM_ADMIN,
-      'create innovation space'
-    );
     const account = await this.accountService.getAccountOrFail(
       createData.accountID,
       {
         relations: {
           storageAggregator: true,
+          innovationHubs: true,
         },
       }
+    );
+
+    this.validateSoftLicenseLimitOrFail(
+      agentInfo,
+      account.authorization,
+      'Innovation Hub',
+      account.id,
+      AuthorizationPrivilege.PLATFORM_ADMIN, // Hard requirement for now
+      AuthorizationPrivilege.PLATFORM_ADMIN,
+      this.SOFT_LIMIT_INNOVATION_HUB,
+      account.innovationHubs
     );
 
     let innovationHub = await this.innovationHubService.createInnovationHub(
@@ -356,28 +220,25 @@ export class AccountResolverMutations {
       virtualContributorData.accountID,
       {
         relations: {
-          space: {
-            community: true,
-          },
+          virtualContributors: true,
         },
       }
     );
-    if (!account.space || !account.space.community) {
-      throw new EntityNotInitializedException(
-        `Account space or community is not initialized: ${account.id}`,
-        LogContext.ACCOUNT
-      );
-    }
 
-    this.authorizationService.grantAccessOrFail(
+    this.validateSoftLicenseLimitOrFail(
       agentInfo,
       account.authorization,
+      'Virtual Contributor',
+      account.id,
       AuthorizationPrivilege.CREATE_VIRTUAL_CONTRIBUTOR,
-      `create Virtual contributor on account: ${account.id}`
+      AuthorizationPrivilege.PLATFORM_ADMIN,
+      this.SOFT_LIMIT_VIRTUAL_CONTRIBUTOR,
+      account.virtualContributors
     );
 
     const virtual = await this.accountService.createVirtualContributorOnAccount(
-      virtualContributorData
+      virtualContributorData,
+      agentInfo
     );
 
     const clonedAccountAuth =
@@ -391,14 +252,6 @@ export class AccountResolverMutations {
         clonedAccountAuth
       );
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);
-
-    // VC is created, now assign the contributor to the Member role on root space
-    await this.spaceService.assignContributorToRole(
-      account.space,
-      virtual,
-      CommunityRole.MEMBER,
-      CommunityContributorType.VIRTUAL
-    );
 
     // Reload to ensure the new member credential is loaded
     return await this.virtualContributorService.getVirtualContributorOrFail(
@@ -419,24 +272,20 @@ export class AccountResolverMutations {
       innovationPackData.accountID,
       {
         relations: {
-          space: {
-            community: true,
-          },
+          innovationPacks: true,
         },
       }
     );
-    if (!account.space || !account.space.community) {
-      throw new EntityNotInitializedException(
-        `Account space or community is not initialized: ${account.id}`,
-        LogContext.ACCOUNT
-      );
-    }
 
-    this.authorizationService.grantAccessOrFail(
+    this.validateSoftLicenseLimitOrFail(
       agentInfo,
       account.authorization,
-      AuthorizationPrivilege.CREATE,
-      `create Innovation Pack on account: ${account.id}`
+      'Innovation Pack',
+      account.id,
+      AuthorizationPrivilege.CREATE_INNOVATION_PACK,
+      AuthorizationPrivilege.PLATFORM_ADMIN,
+      this.SOFT_LIMIT_INNOVATION_PACK,
+      account.innovationPacks
     );
 
     const innovationPack =
@@ -457,6 +306,254 @@ export class AccountResolverMutations {
 
     return await this.innovationPackService.getInnovationPackOrFail(
       innovationPack.id
+    );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IAccount, {
+    description: 'Reset the Authorization Policy on the specified Account.',
+  })
+  async authorizationPolicyResetOnAccount(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('authorizationResetData')
+    authorizationResetData: AccountAuthorizationResetInput
+  ): Promise<IAccount> {
+    const account = await this.accountService.getAccountOrFail(
+      authorizationResetData.accountID
+    );
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      account.authorization,
+      AuthorizationPrivilege.AUTHORIZATION_RESET,
+      `reset authorization definition on Space: ${agentInfo.email}`
+    );
+    const accountAuthorizations =
+      await this.accountAuthorizationService.applyAuthorizationPolicy(account);
+    await this.authorizationPolicyService.saveAll(accountAuthorizations);
+    return await this.accountService.getAccountOrFail(account.id);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IInnovationHub, {
+    description: 'Transfer the specified InnovationHub to another Account.',
+  })
+  async transferInnovationHubToAccount(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('transferData') transferData: TransferAccountInnovationHubInput
+  ): Promise<IInnovationHub> {
+    let innovationHub = await this.innovationHubService.getInnovationHubOrFail(
+      transferData.innovationHubID,
+      {
+        relations: {
+          account: {
+            authorization: true,
+          },
+        },
+      }
+    );
+    const targetAccount = await this.accountService.getAccountOrFail(
+      transferData.targetAccountID
+    );
+
+    await this.validateTransferOfAccountResource(
+      innovationHub.account,
+      targetAccount,
+      agentInfo,
+      'InnovationHub',
+      transferData.innovationHubID
+    );
+
+    innovationHub.account = targetAccount;
+    // TODO: check if still needed later
+    innovationHub = await this.innovationHubService.save(innovationHub);
+    const clonedAccountAuth =
+      await this.accountAuthorizationService.getClonedAccountAuthExtendedForChildEntities(
+        targetAccount
+      );
+
+    const innovationHubAuthorizations =
+      await this.innovationHubAuthorizationService.applyAuthorizationPolicy(
+        innovationHub,
+        clonedAccountAuth
+      );
+    await this.authorizationPolicyService.saveAll(innovationHubAuthorizations);
+
+    // TODO: check if still needed later
+    return await this.innovationHubService.getInnovationHubOrFail(
+      innovationHub.id
+    );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => ISpace, {
+    description: 'Transfer the specified Space to another Account.',
+  })
+  async transferSpaceToAccount(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('transferData') transferData: TransferAccountSpaceInput
+  ): Promise<ISpace> {
+    let space = await this.spaceService.getSpaceOrFail(transferData.spaceID, {
+      relations: {
+        account: {
+          authorization: true,
+        },
+      },
+    });
+    const targetAccount = await this.accountService.getAccountOrFail(
+      transferData.targetAccountID
+    );
+
+    await this.validateTransferOfAccountResource(
+      space.account,
+      targetAccount,
+      agentInfo,
+      'Space',
+      transferData.spaceID
+    );
+
+    space.account = targetAccount;
+
+    space = await this.spaceService.save(space);
+
+    const spaceAuthorizations =
+      await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
+    await this.authorizationPolicyService.saveAll(spaceAuthorizations);
+    // TODO: check if still needed later
+    return await this.spaceService.getSpaceOrFail(space.id);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IInnovationPack, {
+    description: 'Transfer the specified Innovation Pack to another Account.',
+  })
+  async transferInnovationPackToAccount(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('transferData') transferData: TransferAccountInnovationPackInput
+  ): Promise<IInnovationPack> {
+    let innovationPack =
+      await this.innovationPackService.getInnovationPackOrFail(
+        transferData.innovationPackID,
+        {
+          relations: {
+            account: {
+              authorization: true,
+            },
+          },
+        }
+      );
+    const targetAccount = await this.accountService.getAccountOrFail(
+      transferData.targetAccountID
+    );
+
+    await this.validateTransferOfAccountResource(
+      innovationPack.account,
+      targetAccount,
+      agentInfo,
+      'Innovation Pack',
+      transferData.innovationPackID
+    );
+
+    innovationPack.account = targetAccount;
+    innovationPack = await this.innovationPackService.save(innovationPack);
+
+    const clonedAccountAuth =
+      await this.accountAuthorizationService.getClonedAccountAuthExtendedForChildEntities(
+        targetAccount
+      );
+    const innovationPackAuthorizations =
+      await this.innovationPackAuthorizationService.applyAuthorizationPolicy(
+        innovationPack,
+        clonedAccountAuth
+      );
+    await this.authorizationPolicyService.saveAll(innovationPackAuthorizations);
+
+    return await this.innovationPackService.getInnovationPackOrFail(
+      innovationPack.id
+    );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IInnovationPack, {
+    description:
+      'Transfer the specified Virtual Contributor to another Account.',
+  })
+  async transferVirtualContributorToAccount(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('transferData') transferData: TransferAccountVirtualContributorInput
+  ): Promise<IVirtualContributor> {
+    let virtualContributor =
+      await this.virtualContributorService.getVirtualContributorOrFail(
+        transferData.virtualContributorID,
+        {
+          relations: {
+            account: {
+              authorization: true,
+            },
+          },
+        }
+      );
+    const targetAccount = await this.accountService.getAccountOrFail(
+      transferData.targetAccountID
+    );
+
+    await this.validateTransferOfAccountResource(
+      virtualContributor.account,
+      targetAccount,
+      agentInfo,
+      'VirtualContributor',
+      transferData.virtualContributorID
+    );
+
+    virtualContributor.account = targetAccount;
+    // TODO: check if still needed later
+    virtualContributor =
+      await this.virtualContributorService.save(virtualContributor);
+
+    const clonedAccountAuth =
+      await this.accountAuthorizationService.getClonedAccountAuthExtendedForChildEntities(
+        targetAccount
+      );
+    const virtualContributorAuthorizations =
+      await this.virtualContributorAuthorizationService.applyAuthorizationPolicy(
+        virtualContributor,
+        clonedAccountAuth
+      );
+    await this.authorizationPolicyService.saveAll(
+      virtualContributorAuthorizations
+    );
+
+    // TODO: check if still needed later
+    return await this.virtualContributorService.getVirtualContributorOrFail(
+      virtualContributor.id
+    );
+  }
+
+  private async validateTransferOfAccountResource(
+    currentAccount: IAccount | undefined,
+    targetAccount: IAccount,
+    agentInfo: AgentInfo,
+    resourceName: string,
+    resourceID: string
+  ): Promise<void> {
+    if (!currentAccount) {
+      throw new RelationshipNotFoundException(
+        `Unable to find Account on ${resourceName}: ${resourceID}`,
+        LogContext.ACCOUNT
+      );
+    }
+
+    // Double authorization check: on Account where InnovationHub is, and where it it being transferred to
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      currentAccount.authorization,
+      AuthorizationPrivilege.TRANSFER_RESOURCE,
+      `transfer ${resourceName} to another Account: ${agentInfo.email}`
+    );
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      targetAccount.authorization,
+      AuthorizationPrivilege.CREATE,
+      `transfer ${resourceName} to target Account: ${agentInfo.email}`
     );
   }
 }

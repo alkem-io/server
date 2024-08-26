@@ -22,6 +22,8 @@ export enum AuthorizationPrivilege {
   CREATE_SUBSPACE = 'create-subspace',
   CREATE_ORGANIZATION = 'create-organization',
   CREATE_VIRTUAL_CONTRIBUTOR = 'create-virtual-contributor',
+  CREATE_INNOVATION_PACK = 'create-innovation-pack',
+  CREATE_INNOVATION_HUB = 'create-innovation-hub',
   FILE_UPLOAD = 'file-upload',
   FILE_DELETE = 'file-delete',
   UPDATE_WHITEBOARD = 'update-whiteboard',
@@ -43,6 +45,7 @@ export enum AuthorizationPrivilege {
   ACCESS_DASHBOARD_REFRESH = 'access-dashboard-refresh',
   UPDATE_CONTENT = 'update-content',
   SAVE_AS_TEMPLATE = 'save-as-template',
+  TRANSFER_RESOURCE = 'transfer-resource',
 }
 
 registerEnumType(AuthorizationPrivilege, {

@@ -5,13 +5,12 @@ import { CurrentUser } from '@src/common/decorators';
 import { Args, ResolveField } from '@nestjs/graphql';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { MeQueryResults } from '@services/api/me/dto';
-import { IUser } from '@domain/community/user';
+import { IUser } from '@domain/community/user/user.interface';
 import {
   AuthenticationException,
   ValidationException,
 } from '@common/exceptions';
 import { UserService } from '@domain/community/user/user.service';
-import { ISpace } from '@domain/space/space/space.interface';
 import { MeService } from './me.service';
 import { LogContext } from '@common/enums';
 import { MySpaceResults } from './dto/my.journeys.results';
@@ -141,33 +140,5 @@ export class MeResolverFields {
     limit: number
   ): Promise<MySpaceResults[]> {
     return this.meService.getMySpaces(agentInfo, limit);
-  }
-
-  @UseGuards(GraphqlGuard)
-  @ResolveField(() => [ISpace], {
-    description: 'The Spaces I have created',
-  })
-  public myCreatedSpaces(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args({
-      name: 'limit',
-      type: () => Float,
-      description:
-        'The number of Spaces to return; if omitted return latest 20 created spaces.',
-      nullable: true,
-    })
-    limit: number
-  ): Promise<ISpace[]> {
-    return this.meService.getMyCreatedSpaces(agentInfo, limit);
-  }
-
-  @UseGuards(GraphqlGuard)
-  @ResolveField(() => Boolean, {
-    description: 'Can I create a free space?',
-  })
-  public canCreateFreeSpace(
-    @CurrentUser() agentInfo: AgentInfo
-  ): Promise<boolean> {
-    return this.meService.canCreateFreeSpace(agentInfo);
   }
 }

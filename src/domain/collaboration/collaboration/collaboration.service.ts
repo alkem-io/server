@@ -53,10 +53,10 @@ import { CreateCollaborationInput } from './dto/collaboration.dto.create';
 import { Space } from '@domain/space/space/space.entity';
 import { ICalloutGroup } from '../callout-groups/callout.group.interface';
 import { CalloutGroupsService } from '../callout-groups/callout.group.service';
-import { IAccount } from '@domain/space/account/account.interface';
 import { SpaceType } from '@common/enums/space.type';
 import { CalloutGroupName } from '@common/enums/callout.group.name';
 import { SpaceLevel } from '@common/enums/space.level';
+import { ISpaceDefaults } from '@domain/space/space.defaults/space.defaults.interface';
 import { Callout } from '@domain/collaboration/callout';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
@@ -82,8 +82,8 @@ export class CollaborationService {
   async createCollaboration(
     collaborationData: CreateCollaborationInput,
     storageAggregator: IStorageAggregator,
-    account: IAccount,
-    spaceType: SpaceType
+    spaceType: SpaceType,
+    spaceDefaults?: ISpaceDefaults
   ): Promise<ICollaboration> {
     const collaboration: ICollaboration = Collaboration.create();
     collaboration.authorization = new AuthorizationPolicy(
@@ -101,8 +101,8 @@ export class CollaborationService {
     // Rely on the logic in Space Defaults to create the right innovation flow input
     const innovationFlowInput =
       await this.spaceDefaultsService.getCreateInnovationFlowInput(
-        account.id,
         spaceType,
+        spaceDefaults,
         collaborationData.innovationFlowTemplateID
       );
     const allowedStates = innovationFlowInput.states.map(
@@ -121,6 +121,8 @@ export class CollaborationService {
         collaboration.tagsetTemplateSet,
         tagsetTemplateDataStates
       );
+    // save the tagset template so can use it in the innovation flow as a template for it's tags
+    await this.tagsetTemplateSetService.save(collaboration.tagsetTemplateSet);
 
     // Note: need to create the innovation flow after creation of
     // tagsetTemplates on Collabration so can pass it in to the InnovationFlow
@@ -161,12 +163,10 @@ export class CollaborationService {
       );
     }
 
-    const tagsetTemplate = this.tagsetTemplateSetService.addTagsetTemplate(
+    return this.tagsetTemplateSetService.addTagsetTemplate(
       collaboration.tagsetTemplateSet,
       tagsetTemplateData
     );
-    await this.save(collaboration); // todo remove
-    return tagsetTemplate;
   }
 
   public async addDefaultCallouts(
@@ -178,9 +178,12 @@ export class CollaborationService {
     collaboration.callouts =
       await this.getCalloutsOnCollaboration(collaboration);
 
-    collaboration.tagsetTemplateSet = await this.getTagsetTemplatesSet(
-      collaboration.id
-    );
+    if (!collaboration.tagsetTemplateSet) {
+      collaboration.tagsetTemplateSet = await this.getTagsetTemplatesSet(
+        collaboration.id
+      );
+    }
+
     for (const calloutDefault of calloutsData) {
       const callout = await this.calloutService.createCallout(
         calloutDefault,
@@ -395,15 +398,14 @@ export class CollaborationService {
       await this.namingService.getReservedNameIDsInCollaboration(
         collaboration.id
       );
-    if (
-      calloutData.nameID &&
-      calloutData.nameID.length > 0 &&
-      reservedNameIDs.includes(calloutData.nameID)
-    ) {
-      throw new ValidationException(
-        `Unable to create Callout: the provided nameID is already taken: ${calloutData.nameID}`,
-        LogContext.SPACES
-      );
+    if (calloutData.nameID && calloutData.nameID.length > 0) {
+      if (reservedNameIDs.includes(calloutData.nameID)) {
+        throw new ValidationException(
+          `Unable to create Callout: the provided nameID is already taken: ${calloutData.nameID}`,
+          LogContext.SPACES
+        );
+      }
+      // Just use the provided nameID
     } else {
       calloutData.nameID =
         this.namingService.createNameIdAvoidingReservedNameIDs(

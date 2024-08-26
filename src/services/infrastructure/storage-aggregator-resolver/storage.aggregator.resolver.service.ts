@@ -11,16 +11,17 @@ import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.a
 import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { TimelineResolverService } from '../entity-resolver/timeline.resolver.service';
-import { StorageAggregatorNotFoundException } from '@common/exceptions/storage.aggregator.not.found.exception';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Space } from '@domain/space/space/space.entity';
 import { isUUID } from 'class-validator';
 import { InvalidUUID } from '@common/exceptions/invalid.uuid';
+import { InnovationPack } from '@library/innovation-pack/innovation.pack.entity';
 import { ISpace } from '@domain/space/space/space.interface';
 import { IOrganization, Organization } from '@domain/community/organization';
-import { IUser, User } from '@domain/community/user';
+import { IUser } from '@domain/community/user/user.interface';
 import { Account } from '@domain/space/account/account.entity';
 import { IAccount } from '@domain/space/account/account.interface';
+import { User } from '@domain/community/user/user.entity';
 
 @Injectable()
 export class StorageAggregatorResolverService {
@@ -154,14 +155,6 @@ export class StorageAggregatorResolverService {
   public async getStorageAggregatorForTemplatesSet(
     templatesSetId: string
   ): Promise<IStorageAggregator> {
-    // This query is a bit tricky because we have a TemplateSetId and we need to find the StorageAggregator
-    // associated to it's parent.
-    // TemplatesSets can be in a Space (the space's templates), or an InnovationPack (the templates of that IP).
-    // In practice it's just a ManyToMany relationship between Spaces/IPs and the templates associated to them.
-
-    // The parent of Spaces and IPs is an Account, Spaces have a StorageAggregator but Account also has a StorageAggregator.
-    // So for templatesSets in spaces we return the Space's StoreAggregator, and for templatesSets in IPs we return the Account's StorageAggregator.
-
     if (!isUUID(templatesSetId)) {
       throw new InvalidUUID(
         'Invalid UUID provided to find the StorageAggregator of a templateSet',
@@ -170,27 +163,46 @@ export class StorageAggregatorResolverService {
       );
     }
 
-    // We are doing this UNION here, but only one of them will return a result.
-    const query = `
-      SELECT account.storageAggregatorId FROM account
-        WHERE account.libraryId = '${templatesSetId}'
-      UNION
-      SELECT account.storageAggregatorId FROM innovation_pack
-        JOIN account ON innovation_pack.accountId = account.id
-        WHERE innovation_pack.templatesSetId = '${templatesSetId}'`;
-
-    // If we want to get the storageAggregator of the space in the first case, we would do:
-    //  SELECT space.storageAggregatorId FROM space
-    //    JOIN account ON space.accountId = account.id
-    //    WHERE space.level = 0 AND account.libraryId = '${templatesSetId}'
-
-    const [result] = await this.entityManager.connection.query(query);
-    if (result) {
-      return this.getStorageAggregatorOrFail(result.storageAggregatorId);
+    // First try on Space
+    const space = await this.entityManager.findOne(Space, {
+      where: {
+        library: {
+          id: templatesSetId,
+        },
+      },
+      relations: {
+        storageAggregator: true,
+      },
+    });
+    if (space && space.storageAggregator) {
+      return this.getStorageAggregatorOrFail(space.storageAggregator.id);
     }
 
-    throw new StorageAggregatorNotFoundException(
-      `Could not find storage aggregator for templatesSet with id: ${templatesSetId}`,
+    // Then on InnovationPack
+    const innovationPack = await this.entityManager.findOne(InnovationPack, {
+      where: {
+        templatesSet: {
+          id: templatesSetId,
+        },
+      },
+      relations: {
+        account: {
+          storageAggregator: true,
+        },
+      },
+    });
+    if (
+      innovationPack &&
+      innovationPack.account &&
+      innovationPack.account.storageAggregator
+    ) {
+      return this.getStorageAggregatorOrFail(
+        innovationPack.account.storageAggregator.id
+      );
+    }
+
+    throw new NotImplementedException(
+      `Unable to retrieve storage aggregator to use for TemplatesSet ${templatesSetId}`,
       LogContext.STORAGE_AGGREGATOR
     );
   }

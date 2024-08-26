@@ -6,7 +6,6 @@ import {
   EntityNotFoundException,
   EntityNotInitializedException,
   ForbiddenException,
-  RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
 import {
@@ -46,7 +45,6 @@ import { CreateUserGroupInput } from '../user-group/dto/user-group.dto.create';
 import { ContributorQueryArgs } from '../contributor/dto/contributor.query.args';
 import { Organization } from './organization.entity';
 import { IOrganization } from './organization.interface';
-import { VisualType } from '@common/enums/visual.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { OrganizationRole } from '@common/enums/organization.role';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
@@ -55,13 +53,17 @@ import { applyOrganizationFilter } from '@core/filtering/filters/organizationFil
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { OrganizationRoleService } from '../organization-role/organization.role.service';
+import { AccountHostService } from '@domain/space/account.host/account.host.service';
+import { IAccount } from '@domain/space/account/account.interface';
 import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { AgentType } from '@common/enums/agent.type';
+import { ContributorService } from '../contributor/contributor.service';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class OrganizationService {
   constructor(
+    private accountHostService: AccountHostService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private organizationVerificationService: OrganizationVerificationService,
     private organizationRoleService: OrganizationRoleService,
@@ -71,6 +73,7 @@ export class OrganizationService {
     private namingService: NamingService,
     private preferenceSetService: PreferenceSetService,
     private storageAggregatorService: StorageAggregatorService,
+    private contributorService: ContributorService,
     @InjectRepository(Organization)
     private organizationRepository: Repository<Organization>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -93,7 +96,7 @@ export class OrganizationService {
       organizationData.profileData?.displayName
     );
 
-    const organization: IOrganization = Organization.create(organizationData);
+    let organization: IOrganization = Organization.create(organizationData);
     organization.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.ORGANIZATION
     );
@@ -115,18 +118,12 @@ export class OrganizationService {
       name: TagsetReservedName.CAPABILITIES,
       tags: [],
     });
-    // Set the visuals
-    let avatarURL = organizationData.profileData?.avatarURL;
-    if (!avatarURL) {
-      avatarURL = this.profileService.generateRandomAvatar(
-        organization.profile.displayName,
-        ''
-      );
-    }
-    await this.profileService.addVisualOnProfile(
+
+    this.contributorService.addAvatarVisualToContributorProfile(
       organization.profile,
-      VisualType.AVATAR,
-      avatarURL
+      organizationData.profileData,
+      agentInfo,
+      organizationData.profileData.displayName
     );
 
     organization.groups = [];
@@ -135,7 +132,7 @@ export class OrganizationService {
       type: AgentType.ORGANIZATION,
     });
 
-    const savedOrg = await this.organizationRepository.save(organization);
+    const savedOrg = await this.save(organization);
     this.logger.verbose?.(
       `Created new organization with id ${organization.id}`,
       LogContext.COMMUNITY
@@ -164,7 +161,18 @@ export class OrganizationService {
         this.createPreferenceDefaults()
       );
 
-    return await this.organizationRepository.save(organization);
+    const account = await this.accountHostService.createAccount();
+    organization.accountID = account.id;
+
+    organization = await this.save(organization);
+
+    const userID = agentInfo ? agentInfo.userID : '';
+    await this.contributorService.ensureAvatarIsStoredInLocalStorageBucket(
+      organization.profile.id,
+      userID
+    );
+
+    return await this.getOrganizationOrFail(organization.id);
   }
 
   async checkNameIdOrFail(nameID: string) {
@@ -253,10 +261,14 @@ export class OrganizationService {
         storageAggregator: true,
       },
     });
-    const isSpaceHost = await this.isAccountHost(organization);
-    if (isSpaceHost) {
+    // TODO: give additional feedback?
+    const accountHasResources =
+      await this.accountHostService.areResourcesInAccount(
+        organization.accountID
+      );
+    if (accountHasResources) {
       throw new ForbiddenException(
-        'Unable to delete Organization: host of one or more accounts',
+        'Unable to delete Organization: account contain one or more resources',
         LogContext.SPACES
       );
     }
@@ -308,18 +320,6 @@ export class OrganizationService {
     return result;
   }
 
-  async isAccountHost(organization: IOrganization): Promise<boolean> {
-    if (!organization.agent)
-      throw new RelationshipNotFoundException(
-        `Unable to load agent for organization: ${organization.id}`,
-        LogContext.COMMUNITY
-      );
-
-    return await this.agentService.hasValidCredential(organization.agent.id, {
-      type: AuthorizationCredential.ACCOUNT_HOST,
-    });
-  }
-
   async getOrganization(
     organizationID: string,
     options?: FindOneOptions<Organization>
@@ -351,6 +351,12 @@ export class OrganizationService {
         LogContext.COMMUNITY
       );
     return organization;
+  }
+
+  public async getAccount(organization: IOrganization): Promise<IAccount> {
+    return await this.accountHostService.getAccountOrFail(
+      organization.accountID
+    );
   }
 
   async getOrganizationAndAgent(

@@ -20,7 +20,6 @@ export const getSpaceRolesForContributorEntityData = async (
     };
 
     let relations: any = {
-      account: true,
       profile: true,
     };
 
@@ -32,7 +31,6 @@ export const getSpaceRolesForContributorEntityData = async (
       };
       relations = {
         profile: true,
-        account: true,
       };
     }
     const results = entityManager.find(ref, {
@@ -42,7 +40,6 @@ export const getSpaceRolesForContributorEntityData = async (
         profile: {
           displayName: true,
         },
-        account: true,
       },
     } as FindManyOptions);
     return results;

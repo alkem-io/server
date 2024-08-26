@@ -41,5 +41,5 @@ export abstract class IProfile extends IAuthorizable {
     nullable: true,
     description: 'A type of entity that this Profile is being used with.',
   })
-  type!: string;
+  type!: ProfileType;
 }

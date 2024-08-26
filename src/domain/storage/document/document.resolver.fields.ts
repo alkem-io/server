@@ -13,7 +13,7 @@ export class DocumentResolverFields {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    private userLookupService: ContributorLookupService,
+    private contributorLookupService: ContributorLookupService,
     private documentService: DocumentService
   ) {}
 
@@ -28,7 +28,7 @@ export class DocumentResolverFields {
     }
 
     try {
-      return await this.userLookupService.getUserByUUID(createdBy);
+      return await this.contributorLookupService.getUserByUUID(createdBy);
     } catch (e: unknown) {
       if (e instanceof EntityNotFoundException) {
         this.logger?.warn(

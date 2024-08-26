@@ -40,10 +40,9 @@ export class AiPersonaServiceAuthorizationService {
 
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
-    aiPersonaService.authorization =
-      await this.authorizationPolicyService.reset(
-        aiPersonaService.authorization
-      );
+    aiPersonaService.authorization = this.authorizationPolicyService.reset(
+      aiPersonaService.authorization
+    );
     aiPersonaService.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         aiPersonaService.authorization,

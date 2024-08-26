@@ -37,6 +37,7 @@ import { SpaceLevel } from '@common/enums/space.level';
 import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
 import { IAgent } from '@domain/agent/agent/agent.interface';
 import { ISpaceSettings } from '../space.settings/space.settings.interface';
+import { TemplatesSetAuthorizationService } from '@domain/template/templates-set/templates.set.service.authorization';
 
 @Injectable()
 export class SpaceAuthorizationService {
@@ -49,6 +50,7 @@ export class SpaceAuthorizationService {
     private contextAuthorizationService: ContextAuthorizationService,
     private communityAuthorizationService: CommunityAuthorizationService,
     private collaborationAuthorizationService: CollaborationAuthorizationService,
+    private templatesSetAuthorizationService: TemplatesSetAuthorizationService,
     private spaceService: SpaceService,
     private spaceSettingsService: SpaceSettingsService
   ) {}
@@ -64,28 +66,21 @@ export class SpaceAuthorizationService {
             policy: true,
           },
         },
-        account: {
-          agent: {
-            credentials: true,
-          },
-        },
+        agent: true,
         authorization: true,
         community: {
           policy: true,
         },
-        agent: true,
         collaboration: true,
         context: true,
         profile: true,
         storageAggregator: true,
         subspaces: true,
+        library: true,
+        defaults: true,
       },
     });
     if (
-      !space.account ||
-      !space.account.authorization ||
-      !space.account.agent ||
-      !space.account.agent.credentials ||
       !space.authorization ||
       !space.community ||
       !space.community.policy ||
@@ -97,10 +92,13 @@ export class SpaceAuthorizationService {
       );
     }
 
+    // Get the root space agent for licensing related logic
+    const levelZeroSpaceAgent =
+      await this.spaceService.getLevelZeroSpaceAgent(space);
+
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
     const spaceVisibility = space.visibility;
-    const accountAgent = space.account.agent;
 
     // Allow the parent admins to also delete subspaces
     let parentSpaceAdminCredentialCriterias: ICredentialDefinition[] = [];
@@ -136,13 +134,11 @@ export class SpaceAuthorizationService {
     );
     const privateSpace =
       spaceSettings.privacy.mode === SpacePrivacyMode.PRIVATE;
-    const accountAuthorization = space.account.authorization;
 
     // Choose what authorization to inherit from
-    let parentAuthorization = accountAuthorization;
-    if (space.level === SpaceLevel.SPACE) {
-      parentAuthorization = accountAuthorization;
-    } else if (privateSpace) {
+    let parentAuthorization: IAuthorizationPolicy | undefined;
+    if (space.level === SpaceLevel.SPACE || privateSpace) {
+      const accountAuthorization = await this.getAccountAuthorization(space);
       parentAuthorization = accountAuthorization;
     } else {
       if (!space.parentSpace || !space.parentSpace.authorization) {
@@ -173,7 +169,6 @@ export class SpaceAuthorizationService {
           space.authorization,
           communityPolicy,
           spaceSettings,
-          space,
           parentSpaceAdminCredentialCriterias
         );
 
@@ -212,7 +207,7 @@ export class SpaceAuthorizationService {
     // propagate authorization rules for child entities
     const childAuthorzations = await this.propagateAuthorizationToChildEntities(
       space,
-      accountAgent,
+      levelZeroSpaceAgent,
       communityPolicy,
       spaceSettings,
       spaceMembershipAllowed
@@ -229,9 +224,24 @@ export class SpaceAuthorizationService {
     return updatedAuthorizations;
   }
 
+  private async getAccountAuthorization(
+    space: ISpace
+  ): Promise<IAuthorizationPolicy> {
+    const account =
+      await this.spaceService.getAccountForLevelZeroSpaceOrFail(space);
+    const accountAuthorization = account?.authorization;
+    if (!accountAuthorization) {
+      throw new RelationshipNotFoundException(
+        `Coulnd't find authorization for space: ${space.id} `,
+        LogContext.SPACES
+      );
+    }
+    return accountAuthorization;
+  }
+
   public async propagateAuthorizationToChildEntities(
     space: ISpace,
-    accountAgent: IAgent,
+    spaceAgent: IAgent,
     communityPolicy: ICommunityPolicy,
     spaceSettings: ISpaceSettings,
     spaceMembershipAllowed: boolean
@@ -251,6 +261,7 @@ export class SpaceAuthorizationService {
         LogContext.SPACES
       );
     }
+
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
     const isSubspaceCommunity = space.level !== SpaceLevel.SPACE;
@@ -259,7 +270,7 @@ export class SpaceAuthorizationService {
       await this.communityAuthorizationService.applyAuthorizationPolicy(
         space.community,
         space.authorization,
-        accountAgent,
+        spaceAgent,
         communityPolicy,
         spaceSettings,
         spaceMembershipAllowed,
@@ -273,7 +284,7 @@ export class SpaceAuthorizationService {
         space.authorization,
         communityPolicy,
         spaceSettings,
-        accountAgent
+        spaceAgent
       );
     updatedAuthorizations.push(...collaborationAuthorizations);
 
@@ -290,6 +301,30 @@ export class SpaceAuthorizationService {
         space.authorization
       );
     updatedAuthorizations.push(...storageAuthorizations);
+
+    // Level zero space only entities
+    if (space.level === SpaceLevel.SPACE) {
+      if (!space.library || !space.defaults) {
+        throw new RelationshipNotFoundException(
+          `Unable to load space level zero entities on auth reset for space base ${space.id} `,
+          LogContext.SPACES
+        );
+      }
+
+      const libraryAuthorizations =
+        await this.templatesSetAuthorizationService.applyAuthorizationPolicy(
+          space.library,
+          space.authorization
+        );
+      updatedAuthorizations.push(...libraryAuthorizations);
+
+      const defaultsAuthorizations =
+        this.authorizationPolicyService.inheritParentAuthorization(
+          space.defaults.authorization,
+          space.authorization
+        );
+      updatedAuthorizations.push(defaultsAuthorizations);
+    }
 
     /// For fields that always should be available
     // Clone the authorization policy
@@ -338,7 +373,6 @@ export class SpaceAuthorizationService {
     authorization: IAuthorizationPolicy,
     policy: ICommunityPolicy,
     spaceSettings: ISpaceSettings,
-    space: ISpace,
     deletionCredentialCriterias: ICredentialDefinition[]
   ): IAuthorizationPolicy {
     this.extendPrivilegeRuleCreateSubspace(authorization);
@@ -374,13 +408,6 @@ export class SpaceAuthorizationService {
         spaceSettings,
         CommunityRole.ADMIN
       );
-    // Note: this only works for User account hosts
-    if (space.level === SpaceLevel.SPACE) {
-      spaceAdminCriterias.push({
-        type: AuthorizationCredential.ACCOUNT_HOST,
-        resourceID: space.account.id,
-      });
-    }
     const spaceAdmin = this.authorizationPolicyService.createCredentialRule(
       [
         AuthorizationPrivilege.CREATE,

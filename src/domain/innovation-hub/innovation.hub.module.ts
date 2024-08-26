@@ -11,16 +11,18 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
 import { InnovationHubResolverFields } from './innovation.hub.resolver.fields';
+import { AccountHostModule } from '@domain/space/account.host/account.host.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([InnovationHub]),
+    AccountHostModule,
     SpaceModule,
     ProfileModule,
     AuthorizationPolicyModule,
     AuthorizationModule,
     NamingModule,
     StorageAggregatorResolverModule,
+    TypeOrmModule.forFeature([InnovationHub]),
   ],
   providers: [
     InnovationHubService,
