@@ -3,6 +3,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import axios, { AxiosResponse } from 'axios';
 import { LogContext } from '@common/enums';
 import replaceSpecialCharacters from 'replace-special-characters';
+import { MimeFileType } from '@common/enums/mime.file.type';
 
 @Injectable()
 export class AvatarCreatorService {
@@ -68,9 +69,17 @@ export class AvatarCreatorService {
   }
 
   public async getFileType(imageBuffer: Buffer): Promise<string | undefined> {
+    this.logger.verbose?.(
+      `Not determining file type from buffer: ${imageBuffer.byteLength}, using hard coded PNG response`,
+      LogContext.COMMUNITY
+    );
+    // TODO: implement proper file type detection based on the buffer contents.
+    // However the package 'file-type' is causing issues with the CS Common package setup
+    // https://github.com/alkem-io/server/issues/4459
     // Dynamic import required to avoid CS Common require issue
-    const { fileTypeFromBuffer } = await import('file-type');
-    const fileInfo = await fileTypeFromBuffer(imageBuffer);
-    return fileInfo?.mime;
+    // const { fileTypeFromBuffer } = await import('file-type');
+    // const fileInfo = await fileTypeFromBuffer(imageBuffer);
+    // return fileInfo?.mime;
+    return MimeFileType.PNG;
   }
 }

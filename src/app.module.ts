@@ -80,6 +80,7 @@ import { AdminLicensingModule } from '@platform/admin/licensing/admin.licensing.
 import { PlatformRoleModule } from '@platform/platfrom.role/platform.role.module';
 import { LookupByNameModule } from '@services/api/lookup-by-name';
 import { PlatformHubModule } from '@platform/platfrom.hub/platform.hub.module';
+import { AdminContributorsModule } from '@platform/admin/avatars/admin.avatar.module';
 
 @Module({
   imports: [
@@ -239,6 +240,7 @@ import { PlatformHubModule } from '@platform/platfrom.hub/platform.hub.module';
     ActivityLogModule,
     RolesModule,
     KonfigModule,
+    AdminContributorsModule,
     AdminCommunicationModule,
     AdminSearchIngestModule,
     AdminLicensingModule,
