@@ -52,7 +52,7 @@ export class InnovationHubResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       innovationHub.authorization,
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      AuthorizationPrivilege.DELETE,
       'delete innovation hub'
     );
     return await this.innovationHubService.delete(deleteData.ID);
