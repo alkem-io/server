@@ -4,6 +4,7 @@ import { FindOneOptions, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   RelationshipNotFoundException,
+  ValidationException,
 } from '@common/exceptions';
 import { LogContext, ProfileType } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -68,8 +69,20 @@ export class TemplateService {
     );
 
     if (template.type === TemplateType.POST) {
+      if (!templateData.postDefaultDescription) {
+        throw new ValidationException(
+          `Post Template requires default description input: ${JSON.stringify(templateData)}`,
+          LogContext.TEMPLATES
+        );
+      }
       template.postDefaultDescription = templateData.postDefaultDescription;
     } else if (template.type === TemplateType.INNOVATION_FLOW) {
+      if (!templateData.innovationFlowStates) {
+        throw new ValidationException(
+          `InnovationFlow Template requires states input: ${JSON.stringify(templateData)}`,
+          LogContext.TEMPLATES
+        );
+      }
       const convertedStates =
         this.innovationFlowStatesService.convertInputsToStates(
           templateData.innovationFlowStates
@@ -78,6 +91,15 @@ export class TemplateService {
       template.innovationFlowStates =
         this.innovationFlowStatesService.serializeStates(convertedStates);
     } else if (template.type === TemplateType.COMMUNITY_GUIDELINES) {
+      if (
+        !templateData.communityGuidelinesID &&
+        !templateData.communityGuidelines
+      ) {
+        throw new ValidationException(
+          `Community Guidelines Template requires one of the two community guidelines input: ${JSON.stringify(templateData)}`,
+          LogContext.TEMPLATES
+        );
+      }
       let guidelinesInput: CreateCommunityGuidelinesInput;
 
       if (templateData.communityGuidelinesID) {
@@ -116,14 +138,28 @@ export class TemplateService {
           storageAggregator
         );
     } else if (template.type === TemplateType.CALLOUT) {
+      if (!templateData.callout) {
+        throw new ValidationException(
+          `Callout Template requires callout input: ${JSON.stringify(templateData)}`,
+          LogContext.TEMPLATES
+        );
+      }
+      // Ensure no comments are created on the callout
+      templateData.callout.enableComments = false;
       template.callout = await this.calloutService.createCallout(
         templateData.callout!,
         [],
         storageAggregator
       );
     } else if (template.type === TemplateType.WHITEBOARD) {
+      if (!templateData.whiteboard) {
+        throw new ValidationException(
+          `Whiteboard Template requires whitebboard input: ${JSON.stringify(templateData)}`,
+          LogContext.TEMPLATES
+        );
+      }
       template.whiteboard = await this.whiteboardService.createWhiteboard(
-        templateData.whiteboard!,
+        templateData.whiteboard,
         storageAggregator
       );
     }

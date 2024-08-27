@@ -22,6 +22,7 @@ export abstract class ICallout extends IAuthorizable {
   nameID!: string;
 
   @Field(() => CalloutType, {
+    nullable: false,
     description: 'The Callout type, e.g. Post, Whiteboard, Discussion',
   })
   type!: CalloutType;
