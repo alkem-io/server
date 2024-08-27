@@ -81,7 +81,8 @@ export class AccountHostService {
 
   public async assignLicensePlansToSpace(
     space: ISpace,
-    host: IContributor
+    host: IContributor,
+    licensePlanID?: string
   ): Promise<void> {
     if (!space.agent) {
       throw new RelationshipNotFoundException(
@@ -103,6 +104,17 @@ export class AccountHostService {
         plan.assignToNewOrganizationAccounts
       ) {
         licensePlansToAssign.push(plan);
+      }
+    }
+    if (licensePlanID) {
+      const licensePlan = licensePlans.find(plan => plan.id === licensePlanID);
+      if (!licensePlan) {
+        const additionalPlan = await this.licensingService.getLicensePlanOrFail(
+          licensingFramework.id,
+          licensePlanID
+        );
+
+        licensePlansToAssign.push(additionalPlan);
       }
     }
 
