@@ -95,6 +95,10 @@ export class AccountsUserOrg1723391282999 implements MigrationInterface {
       } else if (accountHostCredentials.length > 1) {
         // Pick the first one, and merge them all into it
         const masterAccountID = accountHostCredentials[0].resourceID;
+        await this.moveAccountCredentialsToSpace(
+          queryRunner,
+          accountHostCredentials[0].resourceID
+        );
         for (let i = 1; i < accountHostCredentials.length; i++) {
           const slaveAccountID = accountHostCredentials[i].resourceID;
           await this.moveAccountCredentialsToSpace(queryRunner, slaveAccountID);
