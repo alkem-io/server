@@ -69,7 +69,7 @@ export class RegistrationResolverMutations {
       `create new User: ${agentInfo.email}`
     );
     const user = await this.userService.createUser(userData);
-    return await this.processCreatedUser(user, agentInfo);
+    return this.processCreatedUser(user, agentInfo);
   }
 
   private async processCreatedUser(
