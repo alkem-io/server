@@ -29,8 +29,6 @@ import { VirtualContributorAuthorizationService } from '@domain/community/virtua
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { AccountHostService } from '../account.host/account.host.service';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
-import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
-import { POLICY_RULE_ACCOUNT_CREATE_VC } from '@common/constants/authorization/policy.rule.constants';
 import { InnovationPackAuthorizationService } from '@library/innovation-pack/innovation.pack.service.authorization';
 import { InnovationHubAuthorizationService } from '@domain/innovation-hub/innovation.hub.service.authorization';
 
@@ -92,10 +90,6 @@ export class AccountAuthorizationService {
       hostCredentials
     );
 
-    // TODO: Removed for now the privilege to create a space and a VC.
-    // Only users in Beta Testers and VC Campaigns can create spaces
-    // account.authorization = this.appendPrivilegeRules(account.authorization);
-
     account.authorization = await this.authorizationPolicyService.save(
       account.authorization
     );
@@ -104,13 +98,6 @@ export class AccountAuthorizationService {
     const childUpdatedAuthorizations =
       await this.applyAuthorizationPolicyForChildEntities(account);
     updatedAuthorizations.push(...childUpdatedAuthorizations);
-
-    // And cascade into the space if there is one
-    for (const space of account.spaces) {
-      const spaceAuthorizations =
-        await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
-      updatedAuthorizations.push(...spaceAuthorizations);
-    }
 
     return updatedAuthorizations;
   }
@@ -138,6 +125,7 @@ export class AccountAuthorizationService {
   ): Promise<IAuthorizationPolicy[]> {
     if (
       !account.agent ||
+      !account.spaces ||
       !account.virtualContributors ||
       !account.innovationPacks ||
       !account.storageAggregator ||
@@ -152,6 +140,12 @@ export class AccountAuthorizationService {
 
     const clonedAccountAuth =
       await this.getClonedAccountAuthExtendedForChildEntities(account);
+
+    for (const space of account.spaces) {
+      const spaceAuthorizations =
+        await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
+      updatedAuthorizations.push(...spaceAuthorizations);
+    }
 
     const agentAuthorization =
       this.agentAuthorizationService.applyAuthorizationPolicy(
@@ -331,27 +325,6 @@ export class AccountAuthorizationService {
     return this.authorizationPolicyService.appendCredentialAuthorizationRules(
       authorization,
       newRules
-    );
-  }
-
-  private appendPrivilegeRules(
-    authorization: IAuthorizationPolicy
-  ): IAuthorizationPolicy {
-    const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
-
-    const createVcPrivilege = new AuthorizationPolicyRulePrivilege(
-      [
-        AuthorizationPrivilege.CREATE_SPACE,
-        AuthorizationPrivilege.CREATE_VIRTUAL_CONTRIBUTOR,
-      ],
-      AuthorizationPrivilege.CREATE,
-      POLICY_RULE_ACCOUNT_CREATE_VC
-    );
-    privilegeRules.push(createVcPrivilege);
-
-    return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
-      authorization,
-      privilegeRules
     );
   }
 }
