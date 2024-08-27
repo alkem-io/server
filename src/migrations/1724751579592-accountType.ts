@@ -23,7 +23,7 @@ export class AccountType1724751579592 implements MigrationInterface {
         `UPDATE \`credential\` SET type = '${credentialUpdate.newCredentialName}' WHERE type = '${credentialUpdate.oldCredentialName}'`
       );
       await queryRunner.query(
-        `UPDATE \`license_plan\` SET licenseCredential = '${credentialUpdate.newCredentialName}', name='${credentialUpdate.newPlanName}' WHERE type = '${credentialUpdate.oldCredentialName}'`
+        `UPDATE \`license_plan\` SET licenseCredential = '${credentialUpdate.newCredentialName}', name='${credentialUpdate.newPlanName}' WHERE licenseCredential = '${credentialUpdate.oldCredentialName}'`
       );
     }
 
