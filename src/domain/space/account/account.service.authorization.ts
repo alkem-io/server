@@ -224,6 +224,7 @@ export class AccountAuthorizationService {
           AuthorizationPrivilege.CREATE_SPACE,
           AuthorizationPrivilege.CREATE_INNOVATION_HUB,
           AuthorizationPrivilege.CREATE_INNOVATION_PACK,
+          AuthorizationPrivilege.CREATE_VIRTUAL_CONTRIBUTOR,
         ],
         [
           AuthorizationCredential.GLOBAL_ADMIN,

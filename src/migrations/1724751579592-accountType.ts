@@ -198,8 +198,8 @@ const credentialUpdates: CredentialUpdate[] = [
   },
   {
     oldCredentialName: 'feature-callout-to-callout-template',
-    newCredentialName: 'space-feature-create-template',
-    newPlanName: 'SPACE_FEATURE_CREATE_TEMPLATE',
+    newCredentialName: 'space-feature-save-as-template',
+    newPlanName: 'SPACE_FEATURE_SAVE_AS_TEMPLATE',
   },
   {
     oldCredentialName: 'feature-whiteboard-multi-user',
