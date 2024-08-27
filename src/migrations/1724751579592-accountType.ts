@@ -28,7 +28,6 @@ export class AccountType1724751579592 implements MigrationInterface {
     }
 
     // Create new license plans for accounts
-    // Create a new plan for each of the planDefinitions
     const [platform]: {
       id: string;
       licensingId: string;
@@ -84,7 +83,7 @@ export class AccountType1724751579592 implements MigrationInterface {
 
     // Update the credential rules in the license policy
     await queryRunner.query(
-      `UPDATE \`license_policy\` SET rules = '${JSON.stringify(licenseCredentialRules)}' WHERE id = '${licensing.licensePolicyId}'`
+      `UPDATE \`license_policy\` SET credentialRulesStr = '${JSON.stringify(licenseCredentialRules)}' WHERE id = '${licensing.licensePolicyId}'`
     );
 
     // Update all accounts associated with users that are a) beta testers or b) part of the VC campaign and assign the appropriate license plan

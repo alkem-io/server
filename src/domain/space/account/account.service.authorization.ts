@@ -21,7 +21,6 @@ import {
   CREDENTIAL_RULE_TYPES_ACCOUNT_MANAGE_GLOBAL_ROLES,
   CREDENTIAL_RULE_TYPES_ACCOUNT_CHILD_ENTITIES,
   CREDENTIAL_RULE_TYPES_ACCOUNT_MANAGE,
-  CREDENTIAL_RULE_TYPES_ACCOUNT_RESOURCES_CREATE,
   CREDENTIAL_RULE_TYPES_ACCOUNT_RESOURCES_MANAGE,
   CREDENTIAL_RULE_TYPES_GLOBAL_SPACE_READ,
   CREDENTIAL_RULE_PLATFORM_CREATE_INNOVATION_PACK,
@@ -269,19 +268,6 @@ export class AccountAuthorizationService {
       );
     accountHostManage.cascade = true;
     newRules.push(accountHostManage);
-
-    const accountHostCreate =
-      this.authorizationPolicyService.createCredentialRule(
-        [
-          AuthorizationPrivilege.CREATE_SPACE,
-          AuthorizationPrivilege.CREATE_INNOVATION_PACK,
-          AuthorizationPrivilege.CREATE_VIRTUAL_CONTRIBUTOR,
-        ],
-        [...hostCredentials],
-        CREDENTIAL_RULE_TYPES_ACCOUNT_RESOURCES_CREATE
-      );
-    accountHostCreate.cascade = false;
-    newRules.push(accountHostCreate);
 
     const createSpace = await this.licenseEngineService.isAccessGranted(
       LicensePrivilege.ACCOUNT_CREATE_SPACE,
