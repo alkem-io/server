@@ -107,8 +107,10 @@ export class AccountHostService {
       }
     }
     if (licensePlanID) {
-      const licensePlan = licensePlans.find(plan => plan.id === licensePlanID);
-      if (!licensePlan) {
+      const licensePlanAlreadyAssigned = licensePlansToAssign.find(
+        plan => plan.id === licensePlanID
+      );
+      if (!licensePlanAlreadyAssigned) {
         const additionalPlan = await this.licensingService.getLicensePlanOrFail(
           licensingFramework.id,
           licensePlanID
