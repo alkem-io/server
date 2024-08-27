@@ -420,58 +420,58 @@ services:
       - AI_MODEL_TEMPERATURE
       - LOG_LEVEL=DEBUG
       - AZURE_OPENAI_ENDPOINT=https://alkemio-gpt.openai.azure.com
-      - AZURE_OPENAI_API_KEY
+      - AZURE_OPENAI_API_KEY=4b262af068ff4546a69b996bea9e41cb
       - LLM_DEPLOYMENT_NAME=deploy-gpt-35-turbo
       - EMBEDDINGS_DEPLOYMENT_NAME=embedding
       - LANGCHAIN_TRACING_V2
       - LANGCHAIN_ENDPOINT
-      - LANGCHAIN_API_KEY
+      - LANGCHAIN_API_KEY = ls__1b4c37c4102e4c7fa015c56595526fac
       - LANGCHAIN_PROJECT=virtual-contributor-engine-expert
       - VECTOR_DB_PORT
       - VECTOR_DB_HOST
 
-  virtual_contributor_ingest_space:
-    # the space-ingest service needs to download files from the server running on the host
-    # for that to work the container needs to run in network_mode: host and refer to other
-    # services trough localhost
-    network_mode: host
-    extra_hosts:
-      - 'host.docker.internal:host-gateway'
-    container_name: alkemio_dev_virtual-contributor-ingest-space
-    hostname: virtual-contributor-ingest-space
-    image: alkemio/virtual-contributor-ingest-space:v0.8.1
-    platform: linux/x86_64
-    restart: always
-    volumes:
-       - /dev/shm:/dev/shm
-       - ~/alkemio/data:${AI_LOCAL_PATH:-/home/alkemio/data}
-    depends_on:
-      rabbitmq:
-        condition: "service_healthy"
-    environment:
-      - RABBITMQ_HOST=localhost
-      - RABBITMQ_USER
-      - RABBITMQ_PASSWORD
-      - RABBITMQ_PORT
-      - RABBITMQ_QUEUE=virtual-contributor-ingest-space
-      - ENVIRONMENT=dev
-      - LOG_LEVEL=debug
-      - EMBEDDINGS_DEPLOYMENT_NAME
-      - AZURE_OPENAI_API_KEY
-      - AZURE_OPENAI_ENDPOINT
-      - OPENAI_API_VERSION
-      - AI_MODEL_TEMPERATURE
-      - AI_LOCAL_PATH
-      - LLM_DEPLOYMENT_NAME
-      - LANGCHAIN_TRACING_V2
-      - LANGCHAIN_ENDPOINT
-      - LANGCHAIN_API_KEY
-      - LANGCHAIN_PROJECT=virtual-contributor-ingest-space
-      - VECTOR_DB_HOST=localhost
-      - VECTOR_DB_PORT=8765
-      - AUTH_ADMIN_EMAIL
-      - AUTH_ADMIN_PASSWORD
-      - API_ENDPOINT_PRIVATE_GRAPHQL=http://localhost:3000/api/private/non-interactive/graphql
-      - AUTH_ORY_KRATOS_PUBLIC_BASE_URL=http://localhost:3000/ory/kratos/public
-      - CHUNK_SIZE=1000
-      - CHUNK_OVERLAP=100
+  # virtual_contributor_ingest_space:
+  #   # the space-ingest service needs to download files from the server running on the host
+  #   # for that to work the container needs to run in network_mode: host and refer to other
+  #   # services trough localhost
+  #   network_mode: host
+  #   extra_hosts:
+  #     - 'host.docker.internal:host-gateway'
+  #   container_name: alkemio_dev_virtual-contributor-ingest-space
+  #   hostname: virtual-contributor-ingest-space
+  #   image: alkemio/virtual-contributor-ingest-space:v0.8.1
+  #   platform: linux/x86_64
+  #   restart: always
+  #   volumes:
+  #      - /dev/shm:/dev/shm
+  #      - ~/alkemio/data:${AI_LOCAL_PATH:-/home/alkemio/data}
+  #   depends_on:
+  #     rabbitmq:
+  #       condition: "service_healthy"
+  #   environment:
+  #     - RABBITMQ_HOST=localhost
+  #     - RABBITMQ_USER
+  #     - RABBITMQ_PASSWORD
+  #     - RABBITMQ_PORT
+  #     - RABBITMQ_QUEUE=virtual-contributor-ingest-space
+  #     - ENVIRONMENT=dev
+  #     - LOG_LEVEL=debug
+  #     - EMBEDDINGS_DEPLOYMENT_NAME
+  #     - AZURE_OPENAI_API_KEY=4b262af068ff4546a69b996bea9e41cb
+  #     - AZURE_OPENAI_ENDPOINT
+  #     - OPENAI_API_VERSION
+  #     - AI_MODEL_TEMPERATURE
+  #     - AI_LOCAL_PATH
+  #     - LLM_DEPLOYMENT_NAME
+  #     - LANGCHAIN_TRACING_V2
+  #     - LANGCHAIN_ENDPOINT
+  #     - LANGCHAIN_API_KEY=ls__1b4c37c4102e4c7fa015c56595526fac
+  #     - LANGCHAIN_PROJECT=virtual-contributor-ingest-space
+  #     - VECTOR_DB_HOST=localhost
+  #     - VECTOR_DB_PORT=8765
+  #     - AUTH_ADMIN_EMAIL
+  #     - AUTH_ADMIN_PASSWORD
+  #     - API_ENDPOINT_PRIVATE_GRAPHQL=http://localhost:3000/api/private/non-interactive/graphql
+  #     - AUTH_ORY_KRATOS_PUBLIC_BASE_URL=http://localhost:3000/ory/kratos/public
+  #     - CHUNK_SIZE=1000
+  #     - CHUNK_OVERLAP=100

@@ -61,7 +61,7 @@ export class AccountType1724751579592 implements MigrationInterface {
             \`assignToNewUserAccounts\`,
             \`type\`)
           VALUES
-          (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+          (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
         `,
         [
           planID, // id
