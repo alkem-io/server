@@ -1,9 +1,11 @@
-export const CREDENTIAL_RULE_TYPES_ACCOUNT_AUTHORIZATION_RESET =
-  'credentialRuleTypes-accountAuthorizationReset';
+export const CREDENTIAL_RULE_TYPES_ACCOUNT_MANAGE_GLOBAL_ROLES =
+  'credentialRuleTypes-accountManageGlobalRoles';
 export const CREDENTIAL_RULE_TYPES_ACCOUNT_MANAGE =
   'credentialRuleTypes-accountManage';
 export const CREDENTIAL_RULE_TYPES_ACCOUNT_RESOURCES_MANAGE =
   'credentialRuleTypes-accountResourcesManage';
+export const CREDENTIAL_RULE_TYPES_ACCOUNT_RESOURCES_CREATE =
+  'credentialRuleTypes-accountResourcesCreate';
 export const CREDENTIAL_RULE_TYPES_ACCOUNT_CHILD_ENTITIES =
   'credentialRuleTypes-accountChildEntities';
 export const CREDENTIAL_RULE_TYPES_SPACE_GLOBAL_COMMUNITY_READ =
@@ -76,6 +78,8 @@ export const CREDENTIAL_RULE_PLATFORM_CREATE_SPACE =
   'credentialRuleTypes-platformCreateSpace';
 export const CREDENTIAL_RULE_PLATFORM_CREATE_VC =
   'credentialRuleTypes-platformCreateVC';
+export const CREDENTIAL_RULE_PLATFORM_CREATE_INNOVATION_PACK =
+  'credentialRuleTypes-platformCreateInnovationPack';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_GUIDANCE =
   'credentialRuleTypes-platformAccessGuidance';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_DASHBOARD =

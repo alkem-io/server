@@ -215,7 +215,7 @@ export class CollaborationAuthorizationService {
 
     const saveAsTemplateEnabled =
       await this.licenseEngineService.isAccessGranted(
-        LicensePrivilege.CALLOUT_SAVE_AS_TEMPLATE,
+        LicensePrivilege.SPACE_SAVE_AS_TEMPLATE,
         spaceAgent
       );
     if (saveAsTemplateEnabled) {
@@ -291,7 +291,7 @@ export class CollaborationAuthorizationService {
     privilegeRules.push(createPrivilege);
 
     const whiteboardRtEnabled = await this.licenseEngineService.isAccessGranted(
-      LicensePrivilege.WHITEBOARD_MULTI_USER,
+      LicensePrivilege.SPACE_WHITEBOARD_MULTI_USER,
       spaceAgent
     );
     if (whiteboardRtEnabled) {

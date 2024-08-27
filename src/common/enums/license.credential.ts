@@ -2,13 +2,13 @@ import { registerEnumType } from '@nestjs/graphql';
 
 // Credentials to be added later:
 export enum LicenseCredential {
-  LICENSE_SPACE_FREE = 'license-space-free',
-  LICENSE_SPACE_PLUS = 'license-space-plus',
-  LICENSE_SPACE_PREMIUM = 'license-space-premium',
-  LICENSE_SPACE_ENTERPRISE = 'license-space-enterprise',
-  FEATURE_CALLOUT_TO_CALLOUT_TEMPLATE = 'feature-callout-to-callout-template',
-  FEATURE_VIRTUAL_CONTRIBUTORS = 'feature-virtual-contributors',
-  FEATURE_WHITEBOARD_MULTI_USER = 'feature-whiteboard-multi-user',
+  SPACE_LICENSE_FREE = 'space-license-free',
+  SPACE_LICENSE_PLUS = 'space-license-plus',
+  SPACE_LICENSE_PREMIUM = 'space-license-space-premium',
+  SPACE_FEATURE_SAVE_AS_TEMPLATE = 'space-feature-save-as-template',
+  SPACE_FEATURE_VIRTUAL_CONTRIBUTORS = 'space-feature-virtual-contributors',
+  SPACE_FEATURE_WHITEBOARD_MULTI_USER = 'space-feature-whiteboard-multi-user',
+  ACCOUNT_LICENSE_PLUS = 'account-license-plus',
 }
 
 registerEnumType(LicenseCredential, {
