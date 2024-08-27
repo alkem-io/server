@@ -74,6 +74,8 @@ export const CREDENTIAL_RULE_PLATFORM_CREATE_ORGANIZATION =
   'credentialRuleTypes-platformCreateOrganization';
 export const CREDENTIAL_RULE_PLATFORM_CREATE_SPACE =
   'credentialRuleTypes-platformCreateSpace';
+export const CREDENTIAL_RULE_PLATFORM_CREATE_VC =
+  'credentialRuleTypes-platformCreateVC';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_GUIDANCE =
   'credentialRuleTypes-platformAccessGuidance';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_DASHBOARD =
