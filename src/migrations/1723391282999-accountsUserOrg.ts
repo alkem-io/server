@@ -222,7 +222,7 @@ export class AccountsUserOrg1723391282999 implements MigrationInterface {
     const accountID = randomUUID();
     const accountAuthID = randomUUID();
 
-    const agentID = await this.createAgent(queryRunner);
+    const agentID = await this.createAgentForAccount(queryRunner);
     const storageAggregatorID = await this.createStorageAggregator(queryRunner);
 
     await queryRunner.query(
@@ -243,7 +243,9 @@ export class AccountsUserOrg1723391282999 implements MigrationInterface {
     return accountID;
   }
 
-  private async createAgent(queryRunner: QueryRunner): Promise<string> {
+  private async createAgentForAccount(
+    queryRunner: QueryRunner
+  ): Promise<string> {
     const agentID = randomUUID();
     const agentAuthID = randomUUID();
     await queryRunner.query(
@@ -253,12 +255,13 @@ export class AccountsUserOrg1723391282999 implements MigrationInterface {
     );
 
     await queryRunner.query(
-      `INSERT INTO agent (id, version, authorizationId, did, password)
+      `INSERT INTO agent (id, version, authorizationId, did, password, type)
                 VALUES ('${agentID}',
                         '1',
                         '${agentAuthID}',
                         '',
-                        '')`
+                        '',
+                        'account')`
     );
     return agentID;
   }
