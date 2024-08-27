@@ -95,6 +95,10 @@ export class AccountsUserOrg1723391282999 implements MigrationInterface {
       } else if (accountHostCredentials.length > 1) {
         // Pick the first one, and merge them all into it
         const masterAccountID = accountHostCredentials[0].resourceID;
+        await this.moveAccountCredentialsToSpace(
+          queryRunner,
+          accountHostCredentials[0].resourceID
+        );
         for (let i = 1; i < accountHostCredentials.length; i++) {
           const slaveAccountID = accountHostCredentials[i].resourceID;
           await this.moveAccountCredentialsToSpace(queryRunner, slaveAccountID);
@@ -218,7 +222,7 @@ export class AccountsUserOrg1723391282999 implements MigrationInterface {
     const accountID = randomUUID();
     const accountAuthID = randomUUID();
 
-    const agentID = await this.createAgent(queryRunner);
+    const agentID = await this.createAgentForAccount(queryRunner);
     const storageAggregatorID = await this.createStorageAggregator(queryRunner);
 
     await queryRunner.query(
@@ -239,7 +243,9 @@ export class AccountsUserOrg1723391282999 implements MigrationInterface {
     return accountID;
   }
 
-  private async createAgent(queryRunner: QueryRunner): Promise<string> {
+  private async createAgentForAccount(
+    queryRunner: QueryRunner
+  ): Promise<string> {
     const agentID = randomUUID();
     const agentAuthID = randomUUID();
     await queryRunner.query(
@@ -249,12 +255,13 @@ export class AccountsUserOrg1723391282999 implements MigrationInterface {
     );
 
     await queryRunner.query(
-      `INSERT INTO agent (id, version, authorizationId, did, password)
+      `INSERT INTO agent (id, version, authorizationId, did, password, type)
                 VALUES ('${agentID}',
                         '1',
                         '${agentAuthID}',
                         '',
-                        '')`
+                        '',
+                        'account')`
     );
     return agentID;
   }
