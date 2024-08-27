@@ -58,7 +58,8 @@ export class AccountType1724751579592 implements MigrationInterface {
             \`requiresContactSupport\`,
             \`licenseCredential\`,
             \`assignToNewOrganizationAccounts\`,
-            \`assignToNewUserAccounts\`)
+            \`assignToNewUserAccounts\`,
+            \`type\`)
           VALUES
           (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
         `,
@@ -77,6 +78,7 @@ export class AccountType1724751579592 implements MigrationInterface {
           plan.credential,
           plan.assignToNewOrganizationAccounts,
           plan.assignToNewUserAccounts,
+          plan.type,
         ]
       );
     }
@@ -228,6 +230,7 @@ const plans = [
     requiresContactSupport: true,
     assignToNewOrganizationAccounts: false,
     assignToNewUserAccounts: false,
+    type: 'account-plan',
   },
 ];
 

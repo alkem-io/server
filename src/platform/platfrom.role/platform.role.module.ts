@@ -10,11 +10,13 @@ import { UserModule } from '@domain/community/user/user.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
 import { PlatformInvitationModule } from '@platform/invitation/platform.invitation.module';
 import { AccountModule } from '@domain/space/account/account.module';
+import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 
 @Module({
   imports: [
     AccountModule,
     AuthorizationModule,
+    AuthorizationPolicyModule,
     PlatformModule,
     PlatformAuthorizationPolicyModule,
     PlatformInvitationModule,

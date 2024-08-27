@@ -97,6 +97,7 @@ export class PlatformRoleService {
     ) {
       // Also assign the user account a license plan
       const accountAgent = await this.accountService.getAgent(user.accountID);
+
       const accountLicenseCredential: ICredentialDefinition = {
         type: LicenseCredential.ACCOUNT_LICENSE_PLUS,
         resourceID: user.accountID,
@@ -149,7 +150,7 @@ export class PlatformRoleService {
         type: LicenseCredential.ACCOUNT_LICENSE_PLUS,
         resourceID: user.accountID,
       };
-      await this.agentService.grantCredential({
+      await this.agentService.revokeCredential({
         agentID: accountAgent.id,
         ...accountLicenseCredential,
       });
