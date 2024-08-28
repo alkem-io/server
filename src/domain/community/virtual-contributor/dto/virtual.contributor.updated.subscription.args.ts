@@ -7,5 +7,5 @@ export class VirtualContributorUpdatedSubscriptionArgs {
     description: 'The Virtual Contributor to receive the events for.',
     nullable: false,
   })
-  virtualContributorId!: string;
+  virtualContributorID!: string;
 }

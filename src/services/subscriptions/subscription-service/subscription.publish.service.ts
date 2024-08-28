@@ -1,5 +1,5 @@
 import { PubSubEngine } from 'graphql-subscriptions';
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import {
   SUBSCRIPTION_ACTIVITY_CREATED,
   SUBSCRIPTION_ROOM_EVENT,
@@ -19,6 +19,8 @@ import {
 } from './dto';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { LogContext } from '@common/enums';
 
 @Injectable()
 export class SubscriptionPublishService {
@@ -30,7 +32,9 @@ export class SubscriptionPublishService {
     @Inject(SUBSCRIPTION_WHITEBOARD_SAVED)
     private whiteboardSavedSubscription: PubSubEngine,
     @Inject(SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED)
-    private virtualContributorUpdatedSubscription: PubSubEngine
+    private virtualContributorUpdatedSubscription: PubSubEngine,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService
   ) {}
 
   public publishActivity(
@@ -98,15 +102,20 @@ export class SubscriptionPublishService {
 
   public publishVirtualContributorUpdated(
     virtualContributor: IVirtualContributor
-  ): Promise<void> {
+  ): void {
     const payload: VirtualContributorUpdatedSubscriptionPayload = {
       eventID: `virtual-contributor-updated${randomInt()}`,
       virtualContributor,
     };
 
-    return this.virtualContributorUpdatedSubscription.publish(
+    this.virtualContributorUpdatedSubscription.publish(
       SubscriptionType.VIRTUAL_CONTRIBUTOR_UPDATED,
       payload
+    );
+
+    this.logger.verbose?.(
+      `VirtualContributorUpdated published. VC id: ${virtualContributor.id}`,
+      LogContext.SUBSCRIPTION_PUBLISH
     );
   }
 }

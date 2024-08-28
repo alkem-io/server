@@ -12,11 +12,11 @@ export enum SpaceIngestionResult {
 
 export class IngestSpaceResult implements IEvent {
   constructor(
-    public readonly spaceId?: string,
-    public readonly purpose?: SpaceIngestionPurpose,
-    public readonly personaServiceId?: string,
-    public readonly timestamp?: number,
-    public result?: SpaceIngestionResult,
+    public readonly spaceId: string,
+    public readonly purpose: SpaceIngestionPurpose,
+    public readonly personaServiceId: string,
+    public readonly timestamp: number,
+    public result: SpaceIngestionResult,
     public error?: string
   ) {}
 }

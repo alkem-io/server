@@ -4,7 +4,7 @@ import { Publisher } from './publisher';
 import { Subscriber } from './subscriber';
 import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { Messages } from './messages';
+import { HandleMessages } from './messages';
 import { AlkemioConfig } from '@src/types';
 import { Handlers } from './handlers';
 import { AiServerModule } from '@services/ai-server/ai-server/ai.server.module';
@@ -51,7 +51,7 @@ import { AiServerModule } from '@services/ai-server/ai-server/ai.server.module';
   providers: [
     Publisher,
     Subscriber,
-    { provide: 'EVENTS', useValue: Messages },
+    { provide: 'HANDLE_EVENTS', useValue: HandleMessages },
     EventBus,
     ...Handlers,
   ],

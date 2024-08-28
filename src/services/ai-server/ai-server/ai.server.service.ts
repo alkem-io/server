@@ -68,15 +68,25 @@ export class AiServerService {
   }
 
   async ensurePersonaIsUsable(personaServiceId: string): Promise<boolean> {
+    this.logger.verbose?.(
+      `AI server ensurePersonaIsUsable for AI Persona service ${personaServiceId} invoked`,
+      LogContext.AI_SERVER
+    );
+
     const aiPersonaService =
       await this.aiPersonaServiceService.getAiPersonaServiceOrFail(
         personaServiceId
       );
+    this.logger.verbose?.(
+      `AI Persona service ${personaServiceId} found for BOK refresh`,
+      LogContext.AI_SERVER
+    );
+
     await this.ensureSpaceBoNIsIngested(aiPersonaService);
     return true;
   }
 
-  public async updatePersonaBoKLastUpdate(
+  public async updatePersonaBoKLastUpdated(
     personaServiceId: string,
     lastUpdated: Date
   ) {
@@ -88,6 +98,11 @@ export class AiServerService {
     personaService.bodyOfKnowledgeLastUpdated = lastUpdated;
 
     await this.aiPersonaServiceService.save(personaService);
+
+    this.logger.verbose?.(
+      `AI Persona service ${personaServiceId} bodyOfKnowledgeLastUpdated set tot ${lastUpdated}`,
+      LogContext.AI_SERVER
+    );
 
     // we shouldn't use the repository here but down the road this will e graphql call
     // from the AI to the Collaboration servers
@@ -101,8 +116,18 @@ export class AiServerService {
     });
 
     if (virtualContributor) {
+      this.logger.verbose?.(
+        `VC for Persona service ${personaServiceId} loaded. Publishing to VirtualContributorUpdated subscription.`,
+        LogContext.AI_SERVER
+      );
+
       await this.subscriptionPublishService.publishVirtualContributorUpdated(
         virtualContributor
+      );
+    } else {
+      this.logger.verbose?.(
+        `VC for Persona service ${personaServiceId} not found.`,
+        LogContext.AI_SERVER
       );
     }
   }
@@ -110,6 +135,10 @@ export class AiServerService {
   public async ensureSpaceBoNIsIngested(
     persona: IAiPersonaService
   ): Promise<void> {
+    this.logger.verbose?.(
+      `AI Persona service ${persona.id} found for BOK refresh`,
+      LogContext.AI_SERVER
+    );
     this.eventBus.publish(
       new IngestSpace(
         persona.bodyOfKnowledgeID,

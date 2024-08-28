@@ -6,6 +6,7 @@ import { CreateAiPersonaServiceInput } from '@services/ai-server/ai-persona-serv
 import { IAiPersonaService } from '@services/ai-server/ai-persona-service';
 import { IMessageAnswerToQuestion } from '@domain/communication/message.answer.to.question/message.answer.to.question.interface';
 import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
+import { LogContext } from '@common/enums';
 
 @Injectable()
 export class AiServerAdapter {
@@ -22,6 +23,10 @@ export class AiServerAdapter {
   }
 
   async refreshBodyOfKnowlege(personaServiceId: string): Promise<boolean> {
+    this.logger.verbose?.(
+      `Refresh body of knowledge mutation invoked for AI Persona service ${personaServiceId}`,
+      LogContext.AI_SERVER_ADAPTER
+    );
     return this.aiServer.ensurePersonaIsUsable(personaServiceId);
   }
 

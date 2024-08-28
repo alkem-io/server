@@ -153,6 +153,6 @@ export class VirtualContributorResolverFields {
     if (!!lastUpdated) {
       return VirtualContributorStatus.READY;
     }
-    return VirtualContributorStatus.NITIALIZING;
+    return VirtualContributorStatus.INITIALIZING;
   }
 }

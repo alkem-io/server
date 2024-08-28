@@ -1,7 +1,7 @@
 import { registerEnumType } from '@nestjs/graphql';
 
 export enum VirtualContributorStatus {
-  NITIALIZING = 'initializing',
+  INITIALIZING = 'initializing',
   READY = 'ready',
 }
 

@@ -1,5 +1,5 @@
-import { Args, Resolver, Subscription } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
+import { Args, Resolver } from '@nestjs/graphql';
+import { CurrentUser, TypedSubscription } from '@src/common/decorators';
 import { VirtualContributorService } from './virtual.contributor.service';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -11,6 +11,7 @@ import { SubscriptionReadService } from '@services/subscriptions/subscription-se
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { VirtualContributorUpdatedSubscriptionArgs } from './dto/virtual.contributor.updated.subscription.args';
 import { VirtualContributorUpdatedSubscriptionResult } from './dto/virtual.contributor.updated.subscription.result';
+import { VirtualContributorUpdatedSubscriptionPayload } from '@services/subscriptions/subscription-service/dto';
 
 @Resolver()
 export class VirtualContributorResolverSubscriptions {
@@ -24,16 +25,21 @@ export class VirtualContributorResolverSubscriptions {
   ) {}
 
   @UseGuards(GraphqlGuard)
-  @Subscription(() => VirtualContributorUpdatedSubscriptionResult, {
-    nullable: false,
+  @TypedSubscription<
+    VirtualContributorUpdatedSubscriptionPayload,
+    VirtualContributorUpdatedSubscriptionArgs
+  >(() => VirtualContributorUpdatedSubscriptionResult, {
     description: 'Receive updates on virtual contributors',
+    resolve(this: VirtualContributorResolverSubscriptions, payload) {
+      return payload;
+    },
     async filter(
       this: VirtualContributorResolverSubscriptions,
       payload,
       variables
     ) {
       const isMatch =
-        variables.virtualContributorId === payload.virtualContributor.nameID;
+        variables.virtualContributorID === payload.virtualContributor.nameID;
 
       this.logger.verbose?.(
         `[Filtering VirtualContribuor updated event id '${payload.eventID}'; VC id ${payload.virtualContributor.nameID}- match=${isMatch}`,
@@ -44,24 +50,12 @@ export class VirtualContributorResolverSubscriptions {
   })
   async virtualContributorUpdated(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args({ nullable: true })
-    { virtualContributorId }: VirtualContributorUpdatedSubscriptionArgs
+    @Args({ nullable: false })
+    { virtualContributorID }: VirtualContributorUpdatedSubscriptionArgs
   ) {
-    const platformPolicy =
-      await this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();
-
-    const hasAccess = this.authorizationService.isAccessGranted(
-      agentInfo,
-      platformPolicy,
-      AuthorizationPrivilege.PLATFORM_ADMIN
-    );
-
-    if (!hasAccess) {
-      return {};
-    }
     const vc =
       await this.virtualContributorService.getVirtualContributorOrFail(
-        virtualContributorId
+        virtualContributorID
       );
 
     this.authorizationService.grantAccessOrFail(
@@ -69,6 +63,11 @@ export class VirtualContributorResolverSubscriptions {
       vc.authorization,
       AuthorizationPrivilege.READ,
       `subscription to Virtual Contributor updates on: ${vc.id}`
+    );
+
+    this.logger.verbose?.(
+      `Subscribing for updates for VC ${virtualContributorID}`,
+      LogContext.SUBSCRIPTIONS
     );
 
     return this.subscriptionService.subscribeToVirtualContributorUpdated();
