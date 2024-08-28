@@ -19,7 +19,6 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { UpdateUserPlatformSettingsInput } from './dto/user.dto.update.platform.settings';
 import { UpdateUserInput } from './dto';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { LogContext } from '@common/enums';
 
 @Resolver(() => IUser)
 export class UserResolverMutations {
@@ -120,8 +119,6 @@ export class UserResolverMutations {
     @Args('authorizationResetData')
     authorizationResetData: UserAuthorizationResetInput
   ): Promise<IUser> {
-    const start = performance.now();
-
     const user = await this.userService.getUserOrFail(
       authorizationResetData.userID
     );
@@ -134,11 +131,7 @@ export class UserResolverMutations {
     const updatedAuthorizations =
       await this.userAuthorizationService.applyAuthorizationPolicy(user);
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);
-    const elapsed = (performance.now() - start).toFixed(3);
-    this.logger.verbose?.(
-      `authorizationPolicyResetOnUser took ${elapsed}ms`,
-      LogContext.COMMUNITY
-    );
+
     return await this.userService.getUserOrFail(user.id);
   }
 
