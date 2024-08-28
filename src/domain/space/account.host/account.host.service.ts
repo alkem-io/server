@@ -83,7 +83,8 @@ export class AccountHostService {
 
   public async assignLicensePlansToSpace(
     space: ISpace,
-    accountType: AccountType
+    type: AccountType,
+    licensePlanID?: string
   ): Promise<void> {
     if (!space.agent) {
       throw new RelationshipNotFoundException(
@@ -98,50 +99,26 @@ export class AccountHostService {
       licensingFramework.id
     );
     for (const plan of licensePlans) {
-      if (accountType === AccountType.USER && plan.assignToNewUserAccounts) {
+      if (type === AccountType.USER && plan.assignToNewUserAccounts) {
         licensePlansToAssign.push(plan);
       } else if (
-        accountType === AccountType.ORGANIZATION &&
+        type === AccountType.ORGANIZATION &&
         plan.assignToNewOrganizationAccounts
       ) {
         licensePlansToAssign.push(plan);
       }
     }
-
-    const spaceAgent = space.agent;
-    for (const licensePlan of licensePlansToAssign) {
-      space.agent = await this.licenseIssuerService.assignLicensePlan(
-        spaceAgent,
-        licensePlan,
-        space.id
+    if (licensePlanID) {
+      const licensePlanAlreadyAssigned = licensePlansToAssign.find(
+        plan => plan.id === licensePlanID
       );
-    }
-  }
+      if (!licensePlanAlreadyAssigned) {
+        const additionalPlan = await this.licensingService.getLicensePlanOrFail(
+          licensingFramework.id,
+          licensePlanID
+        );
 
-  public async assignLicensePlansToAccount(
-    space: ISpace,
-    host: IContributor
-  ): Promise<void> {
-    if (!space.agent) {
-      throw new RelationshipNotFoundException(
-        `Space ${space.id} has no agent`,
-        LogContext.ACCOUNT
-      );
-    }
-    const licensingFramework =
-      await this.licensingService.getDefaultLicensingOrFail();
-    const licensePlansToAssign: ILicensePlan[] = [];
-    const licensePlans = await this.licensingService.getLicensePlans(
-      licensingFramework.id
-    );
-    for (const plan of licensePlans) {
-      if (host instanceof User && plan.assignToNewUserAccounts) {
-        licensePlansToAssign.push(plan);
-      } else if (
-        host instanceof Organization &&
-        plan.assignToNewOrganizationAccounts
-      ) {
-        licensePlansToAssign.push(plan);
+        licensePlansToAssign.push(additionalPlan);
       }
     }
 
