@@ -254,7 +254,7 @@ export class WhiteboardService {
       );
 
     const enabled = await this.licenseEngineService.isAccessGranted(
-      LicensePrivilege.WHITEBOARD_MULTI_USER,
+      LicensePrivilege.SPACE_WHITEBOARD_MULTI_USER,
       license
     );
 
