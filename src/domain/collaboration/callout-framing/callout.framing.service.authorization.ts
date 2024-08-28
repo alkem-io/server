@@ -31,6 +31,15 @@ export class CalloutFramingAuthorizationService {
             },
             profile: true,
           },
+          select: {
+            id: true,
+            profile: {
+              id: true,
+              authorization: {
+                id: true,
+              },
+            },
+          },
         }
       );
 
