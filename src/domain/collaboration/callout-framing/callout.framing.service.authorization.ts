@@ -25,19 +25,28 @@ export class CalloutFramingAuthorizationService {
       await this.calloutFramingService.getCalloutFramingOrFail(
         calloutFramingInput.id,
         {
+          loadEagerRelations: false,
           relations: {
+            authorization: true,
             whiteboard: {
+              authorization: true,
               profile: true,
             },
             profile: true,
           },
           select: {
             id: true,
+            authorization:
+              this.authorizationPolicyService.authorizationSelectOptions,
             profile: {
               id: true,
-              authorization: {
-                id: true,
-              },
+              authorization:
+                this.authorizationPolicyService.authorizationSelectOptions,
+            },
+            whiteboard: {
+              id: true,
+              authorization:
+                this.authorizationPolicyService.authorizationSelectOptions,
             },
           },
         }

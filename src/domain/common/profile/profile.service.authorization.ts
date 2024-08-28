@@ -7,13 +7,6 @@ import { StorageBucketAuthorizationService } from '@domain/storage/storage-bucke
 import { LogContext } from '@common/enums/logging.context';
 import { RelationshipNotFoundException } from '@common/exceptions';
 
-const authorizationSelectOptions = {
-  id: true, // ?
-  anonymousReadAccess: true,
-  credentialRules: true,
-  privilegeRules: true,
-  verifiedCredentialRules: true,
-};
 @Injectable()
 export class ProfileAuthorizationService {
   constructor(
@@ -38,27 +31,33 @@ export class ProfileAuthorizationService {
           id: true,
           uri: false,
           description: false,
-          authorization: authorizationSelectOptions,
+          authorization:
+            this.authorizationPolicyService.authorizationSelectOptions,
         },
         tagsets: {
           id: true,
           tags: false,
-          authorization: authorizationSelectOptions,
+          authorization:
+            this.authorizationPolicyService.authorizationSelectOptions,
         },
         visuals: {
           id: true,
           uri: false,
-          authorization: authorizationSelectOptions,
+          authorization:
+            this.authorizationPolicyService.authorizationSelectOptions,
         },
         storageBucket: {
           id: true,
-          authorization: authorizationSelectOptions,
+          authorization:
+            this.authorizationPolicyService.authorizationSelectOptions,
           documents: {
             id: true,
-            authorization: authorizationSelectOptions,
+            authorization:
+              this.authorizationPolicyService.authorizationSelectOptions,
             tagset: {
               id: true,
-              authorization: authorizationSelectOptions,
+              authorization:
+                this.authorizationPolicyService.authorizationSelectOptions,
             },
           },
         },

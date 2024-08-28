@@ -36,6 +36,14 @@ export class AuthorizationPolicyService {
     private readonly logger: LoggerService
   ) {}
 
+  public authorizationSelectOptions = {
+    id: true,
+    anonymousReadAccess: true,
+    credentialRules: true,
+    privilegeRules: true,
+    verifiedCredentialRules: true,
+  };
+
   createCredentialRule(
     grantedPrivileges: AuthorizationPrivilege[],
     criterias: ICredentialDefinition[],
