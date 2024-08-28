@@ -63,6 +63,7 @@ import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { AgentType } from '@common/enums/agent.type';
 import { ContributorService } from '../contributor/contributor.service';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { AccountType } from '@common/enums/account.type';
 
 @Injectable()
 export class UserService {
@@ -163,7 +164,9 @@ export class UserService {
       this.createPreferenceDefaults()
     );
 
-    const account = await this.accountHostService.createAccount();
+    const account = await this.accountHostService.createAccount(
+      AccountType.USER
+    );
     user.accountID = account.id;
 
     user = await this.save(user);
