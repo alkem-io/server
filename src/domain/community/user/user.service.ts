@@ -1,4 +1,3 @@
-import { UUID_LENGTH } from '@common/constants';
 import { LogContext, ProfileType, UserPreferenceType } from '@common/enums';
 import {
   EntityNotFoundException,
@@ -63,6 +62,7 @@ import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { AgentType } from '@common/enums/agent.type';
 import { ContributorService } from '../contributor/contributor.service';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { AccountType } from '@common/enums/account.type';
 
 @Injectable()
 export class UserService {
@@ -163,15 +163,17 @@ export class UserService {
       this.createPreferenceDefaults()
     );
 
-    const account = await this.accountHostService.createAccount();
+    const account = await this.accountHostService.createAccount(
+      AccountType.USER
+    );
     user.accountID = account.id;
 
     user = await this.save(user);
 
-    // await this.contributorService.ensureAvatarIsStoredInLocalStorageBucket(
-    //   user.profile,
-    //   user.id
-    // );
+    await this.contributorService.ensureAvatarIsStoredInLocalStorageBucket(
+      user.profile.id,
+      user.id
+    );
     // Reload to ensure have the updated avatar URL
     user = await this.getUserOrFail(user.id);
 
@@ -179,26 +181,25 @@ export class UserService {
     // there are cases where a user could be messaged before they actually log-in
     // which will result in failure in communication (either missing user or unsent messages)
     // register the user asynchronously - we don't want to block the creation operation
-    this.communicationAdapter.tryRegisterNewUser(user.email).then(
-      async communicationID => {
-        try {
-          if (!communicationID) {
-            this.logger.warn(
-              `User registration failed on user creation ${user.id}.`
-            );
-            return user;
-          }
-
-          user.communicationID = communicationID;
-
-          await this.save(user);
-          await this.setUserCache(user);
-        } catch (e: any) {
-          this.logger.error(e, e?.stack, LogContext.USER);
-        }
-      },
-      error => this.logger.error(error, error?.stack, LogContext.USER)
+    const communicationID = await this.communicationAdapter.tryRegisterNewUser(
+      user.email
     );
+
+    try {
+      if (!communicationID) {
+        this.logger.warn(
+          `User registration failed on user creation ${user.id}.`
+        );
+        return user;
+      }
+
+      user.communicationID = communicationID;
+
+      await this.save(user);
+      await this.setUserCache(user);
+    } catch (e: any) {
+      this.logger.error(e, e?.stack, LogContext.USER);
+    }
 
     await this.setUserCache(user);
 
@@ -452,28 +453,6 @@ export class UserService {
       );
     }
 
-    // check if the user is registered for communications
-    // should go through this block only once
-    // we want this to happen synchronously
-    if (!Boolean(user.communicationID)) {
-      const communicationID = await this.tryRegisterUserCommunication(user);
-
-      if (!communicationID) {
-        this.logger.warn(
-          `Unable to register user for communication: ${user.email}`,
-          LogContext.COMMUNICATION
-        );
-        return user;
-      }
-
-      user.communicationID = communicationID;
-
-      await this.save(user);
-      // need to update the cache in case the user is already in it
-      // but the previous registration attempt has failed
-      await this.setUserCache(user);
-    }
-
     return user;
   }
 
@@ -481,40 +460,10 @@ export class UserService {
     userID: string,
     options: FindOneOptions<User> | undefined
   ): Promise<IUser | null> {
-    let user: IUser | null = null;
-
-    if (await this.isUserIdEmail(userID)) {
-      user = await this.userRepository.findOne({
-        where: {
-          email: userID,
-        },
-        ...options,
-      });
-    } else if (userID.length === UUID_LENGTH) {
-      {
-        user = await this.userRepository.findOne({
-          where: {
-            id: userID,
-          },
-          ...options,
-        });
-      }
-    }
-
-    if (!user)
-      user = await this.userRepository.findOne({
-        where: {
-          nameID: userID,
-        },
-        ...options,
-      });
-
-    return user;
-  }
-
-  private async isUserIdEmail(userId: string): Promise<boolean> {
-    if (userId.includes('@')) return true;
-    return false;
+    return this.userRepository.findOne({
+      where: [{ id: userID }, { nameID: userID }, { email: userID }],
+      ...options,
+    });
   }
 
   async getUserByEmail(
@@ -528,30 +477,10 @@ export class UserService {
       );
     }
 
-    const user = await this.userRepository.findOne({
+    return this.userRepository.findOne({
       where: { email: email },
       ...options,
     });
-
-    // same as in getUserOrFail
-    if (user && !Boolean(user?.communicationID)) {
-      const communicationID = await this.tryRegisterUserCommunication(user);
-
-      if (!communicationID) {
-        this.logger.warn(
-          `User could not be registered for communication ${user.id}`,
-          LogContext.COMMUNICATION
-        );
-        return user;
-      }
-
-      user.communicationID = communicationID;
-
-      await this.save(user);
-      await this.setUserCache(user);
-    }
-
-    return user;
   }
 
   async save(user: IUser): Promise<IUser> {

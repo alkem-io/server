@@ -241,7 +241,7 @@ export class SpaceAuthorizationService {
 
   public async propagateAuthorizationToChildEntities(
     space: ISpace,
-    spaceAgent: IAgent,
+    levelZeroSpaceAgent: IAgent,
     communityPolicy: ICommunityPolicy,
     spaceSettings: ISpaceSettings,
     spaceMembershipAllowed: boolean
@@ -270,7 +270,7 @@ export class SpaceAuthorizationService {
       await this.communityAuthorizationService.applyAuthorizationPolicy(
         space.community,
         space.authorization,
-        spaceAgent,
+        levelZeroSpaceAgent,
         communityPolicy,
         spaceSettings,
         spaceMembershipAllowed,
@@ -284,7 +284,7 @@ export class SpaceAuthorizationService {
         space.authorization,
         communityPolicy,
         spaceSettings,
-        spaceAgent
+        levelZeroSpaceAgent
       );
     updatedAuthorizations.push(...collaborationAuthorizations);
 

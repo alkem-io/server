@@ -59,6 +59,7 @@ import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { AgentType } from '@common/enums/agent.type';
 import { ContributorService } from '../contributor/contributor.service';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { AccountType } from '@common/enums/account.type';
 
 @Injectable()
 export class OrganizationService {
@@ -161,15 +162,18 @@ export class OrganizationService {
         this.createPreferenceDefaults()
       );
 
-    const account = await this.accountHostService.createAccount();
+    const account = await this.accountHostService.createAccount(
+      AccountType.ORGANIZATION
+    );
     organization.accountID = account.id;
 
     organization = await this.save(organization);
 
-    // await this.contributorService.ensureAvatarIsStoredInLocalStorageBucket(
-    //   organization.profile,
-    //   organization.id
-    // );
+    const userID = agentInfo ? agentInfo.userID : '';
+    await this.contributorService.ensureAvatarIsStoredInLocalStorageBucket(
+      organization.profile.id,
+      userID
+    );
 
     return await this.getOrganizationOrFail(organization.id);
   }
