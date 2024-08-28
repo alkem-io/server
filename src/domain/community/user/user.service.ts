@@ -1,4 +1,3 @@
-import { UUID_LENGTH } from '@common/constants';
 import { LogContext, ProfileType, UserPreferenceType } from '@common/enums';
 import {
   EntityNotFoundException,
