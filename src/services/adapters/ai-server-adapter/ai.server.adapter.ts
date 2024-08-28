@@ -18,7 +18,7 @@ export class AiServerAdapter {
 
   async getBodyOfKnowledgeLastUpdated(
     personaServiceId: string
-  ): Promise<Date | undefined> {
+  ): Promise<Date | null> {
     return this.aiServer.getBodyOfKnowledgeLastUpdated(personaServiceId);
   }
 

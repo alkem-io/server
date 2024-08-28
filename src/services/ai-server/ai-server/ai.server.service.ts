@@ -59,7 +59,7 @@ export class AiServerService {
 
   async getBodyOfKnowledgeLastUpdated(
     personaServiceId: string
-  ): Promise<Date | undefined> {
+  ): Promise<Date | null> {
     const aiPersonaService =
       await this.aiPersonaServiceService.getAiPersonaServiceOrFail(
         personaServiceId
@@ -88,7 +88,7 @@ export class AiServerService {
 
   public async updatePersonaBoKLastUpdated(
     personaServiceId: string,
-    lastUpdated: Date
+    lastUpdated: Date | null
   ) {
     const personaService =
       await this.aiPersonaServiceService.getAiPersonaServiceOrFail(
@@ -100,7 +100,7 @@ export class AiServerService {
     await this.aiPersonaServiceService.save(personaService);
 
     this.logger.verbose?.(
-      `AI Persona service ${personaServiceId} bodyOfKnowledgeLastUpdated set tot ${lastUpdated}`,
+      `AI Persona service ${personaServiceId} bodyOfKnowledgeLastUpdated set to ${lastUpdated}`,
       LogContext.AI_SERVER
     );
 

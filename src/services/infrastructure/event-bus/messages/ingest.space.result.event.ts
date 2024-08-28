@@ -10,6 +10,15 @@ export enum SpaceIngestionResult {
   FAILURE = 'failure',
 }
 
+export enum ErrorCode {
+  VECTOR_INSERT = 'vector_insert',
+}
+
+type IngestError = {
+  code?: ErrorCode;
+  message: string;
+};
+
 export class IngestSpaceResult implements IEvent {
   constructor(
     public readonly spaceId: string,
@@ -17,6 +26,6 @@ export class IngestSpaceResult implements IEvent {
     public readonly personaServiceId: string,
     public readonly timestamp: number,
     public result: SpaceIngestionResult,
-    public error?: string
+    public error?: IngestError
   ) {}
 }

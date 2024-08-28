@@ -44,5 +44,5 @@ export class IAiPersonaService extends IAuthorizable {
     nullable: true,
     description: 'When wat the body of knowledge of the VC last updated.',
   })
-  bodyOfKnowledgeLastUpdated?: Date;
+  bodyOfKnowledgeLastUpdated!: Date | null;
 }

@@ -37,5 +37,5 @@ export class AiPersonaService
   bodyOfKnowledgeID!: string;
 
   @Column({ type: 'datetime', nullable: true })
-  bodyOfKnowledgeLastUpdated?: Date;
+  bodyOfKnowledgeLastUpdated: Date | null = null;
 }
