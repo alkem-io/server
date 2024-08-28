@@ -16,11 +16,17 @@ import { PlatformRole } from '@common/enums/platform.role';
 import { CreatePlatformInvitationForRoleInput } from '@platform/platfrom/dto/platform.invitation.dto.global.role';
 import { IPlatformInvitation } from '@platform/invitation/platform.invitation.interface';
 import { PlatformRoleService } from './platform.role.service';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { AccountService } from '@domain/space/account/account.service';
+import { AccountAuthorizationService } from '@domain/space/account/account.service.authorization';
 
 @Resolver()
 export class PlatformRoleResolverMutations {
   constructor(
+    private accountService: AccountService,
+    private accountAuthorizationService: AccountAuthorizationService,
     private authorizationService: AuthorizationService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private notificationAdapter: NotificationAdapter,
     private platformRoleService: PlatformRoleService,
     private platformAuthorizationPolicyService: PlatformAuthorizationPolicyService
@@ -49,9 +55,15 @@ export class PlatformRoleResolverMutations {
       privilegeRequired,
       `assign user platform role admin: ${membershipData.userID} - ${membershipData.role}`
     );
-    const user = await this.platformRoleService.assignPlatformRoleToUser(
-      membershipData
-    );
+    const user =
+      await this.platformRoleService.assignPlatformRoleToUser(membershipData);
+
+    if (
+      membershipData.role === PlatformRole.BETA_TESTER ||
+      membershipData.role === PlatformRole.VC_CAMPAIGN
+    ) {
+      await this.resetAuthorizationForUserAccount(user);
+    }
 
     this.notifyPlatformGlobalRoleChange(
       agentInfo.userID,
@@ -83,9 +95,16 @@ export class PlatformRoleResolverMutations {
       privilegeRequired,
       `remove user platform role: ${membershipData.userID} - ${membershipData.role}`
     );
-    const user = await this.platformRoleService.removePlatformRoleFromUser(
-      membershipData
-    );
+    const user =
+      await this.platformRoleService.removePlatformRoleFromUser(membershipData);
+
+    if (
+      membershipData.role === PlatformRole.BETA_TESTER ||
+      membershipData.role === PlatformRole.VC_CAMPAIGN
+    ) {
+      await this.resetAuthorizationForUserAccount(user);
+    }
+
     this.notifyPlatformGlobalRoleChange(
       agentInfo.userID,
       user,
@@ -93,6 +112,13 @@ export class PlatformRoleResolverMutations {
       membershipData.role
     );
     return user;
+  }
+
+  private async resetAuthorizationForUserAccount(user: IUser) {
+    const account = await this.accountService.getAccountOrFail(user.accountID);
+    const authorizations =
+      await this.accountAuthorizationService.applyAuthorizationPolicy(account);
+    await this.authorizationPolicyService.saveAll(authorizations);
   }
 
   @UseGuards(GraphqlGuard)

@@ -32,6 +32,7 @@ import { InnovationPackAuthorizationService } from '@library/innovation-pack/inn
 import { InnovationHubAuthorizationService } from '@domain/innovation-hub/innovation.hub.service.authorization';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { AccountHostService } from '../account.host/account.host.service';
+import { IAgent } from '@domain/agent/agent/agent.interface';
 
 @Injectable()
 export class AccountService {
@@ -68,8 +69,6 @@ export class AccountService {
         LogContext.ACCOUNT
       );
     }
-    const accountProvider =
-      await this.accountHostService.getHostOrFail(account);
 
     const reservedNameIDs =
       await this.namingService.getReservedNameIDsLevelZeroSpaces();
@@ -110,7 +109,8 @@ export class AccountService {
     });
     await this.accountHostService.assignLicensePlansToSpace(
       spaceWithAgent,
-      accountProvider
+      account.type,
+      spaceData.licensePlanID
     );
     return await this.spaceService.getSpaceOrFail(space.id, {
       relations: {
@@ -308,5 +308,22 @@ export class AccountService {
         LogContext.ACCOUNT
       );
     return storageAggregator;
+  }
+
+  public async getAgent(accountID: string): Promise<IAgent> {
+    const account = await this.getAccountOrFail(accountID, {
+      relations: {
+        agent: true,
+      },
+    });
+
+    if (!account.agent) {
+      throw new RelationshipNotFoundException(
+        `Unable to retrieve Agent for Account: ${account.id}`,
+        LogContext.PLATFORM
+      );
+    }
+
+    return account.agent;
   }
 }
