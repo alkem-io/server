@@ -17,6 +17,7 @@ import { Account } from '../account/account.entity';
 import { SpaceType } from '@common/enums/space.type';
 import { SpaceLevel } from '@common/enums/space.level';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { AccountType } from '@common/enums/account.type';
 
 const moduleMocker = new ModuleMocker(global);
 
@@ -101,6 +102,7 @@ const getSubspacesMock = (
         innovationHubs: [],
         innovationPacks: [],
         spaces: [],
+        type: AccountType.ORGANIZATION,
         ...getEntityMock<Account>(),
       },
       type: SpaceType.CHALLENGE,
@@ -195,6 +197,7 @@ const getSubsubspacesMock = (subsubspaceId: string, count: number): Space[] => {
         innovationHubs: [],
         innovationPacks: [],
         spaces: [],
+        type: AccountType.ORGANIZATION,
         ...getEntityMock<Account>(),
       },
       type: SpaceType.OPPORTUNITY,
@@ -306,6 +309,7 @@ const getSpaceMock = ({
       innovationHubs: [],
       innovationPacks: [],
       spaces: [],
+      type: AccountType.ORGANIZATION,
       ...getEntityMock<Account>(),
     },
     authorization: getAuthorizationPolicyMock(
