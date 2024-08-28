@@ -22,9 +22,12 @@ import { PlatformRoleService } from '@platform/platfrom.role/platform.role.servi
 import { CommunityRoleService } from '@domain/community/community-role/community.role.service';
 import { OrganizationRoleService } from '@domain/community/organization-role/organization.role.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { AccountService } from '@domain/space/account/account.service';
+import { IOrganization } from '@domain/community/organization';
 
 export class RegistrationService {
   constructor(
+    private accountService: AccountService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private userService: UserService,
     private organizationService: OrganizationService,
@@ -176,6 +179,35 @@ export class RegistrationService {
       await this.applicationService.deleteApplication({ ID: application.id });
     }
 
-    return await this.userService.deleteUser(deleteData);
+    let user = await this.userService.getUserOrFail(userID);
+    const account = await this.userService.getAccount(user);
+
+    user = await this.userService.deleteUser(deleteData);
+    await this.accountService.deleteAccount(account);
+    return user;
+  }
+
+  async deleteOrganizationWithPendingMemberships(
+    deleteData: DeleteUserInput
+  ): Promise<IOrganization> {
+    const organizationID = deleteData.ID;
+
+    const invitations =
+      await this.invitationService.findInvitationsForContributor(
+        organizationID
+      );
+    for (const invitation of invitations) {
+      await this.invitationService.deleteInvitation({ ID: invitation.id });
+    }
+
+    let organization =
+      await this.organizationService.getOrganizationOrFail(organizationID);
+    const account = await this.organizationService.getAccount(organization);
+
+    organization =
+      await this.organizationService.deleteOrganization(deleteData);
+    await this.accountService.deleteAccount(account);
+    organization.id = organizationID;
+    return organization;
   }
 }

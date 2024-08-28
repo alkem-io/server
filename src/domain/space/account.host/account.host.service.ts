@@ -24,6 +24,7 @@ import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { AgentType } from '@common/enums/agent.type';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { ISpace } from '../space/space.interface';
+import { AccountType } from '@common/enums/account.type';
 
 @Injectable()
 export class AccountHostService {
@@ -39,8 +40,9 @@ export class AccountHostService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async createAccount(): Promise<IAccount> {
+  async createAccount(accountType: AccountType): Promise<IAccount> {
     const account: IAccount = new Account();
+    account.type = accountType;
     account.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.ACCOUNT
     );
@@ -81,7 +83,8 @@ export class AccountHostService {
 
   public async assignLicensePlansToSpace(
     space: ISpace,
-    host: IContributor
+    type: AccountType,
+    licensePlanID?: string
   ): Promise<void> {
     if (!space.agent) {
       throw new RelationshipNotFoundException(
@@ -96,13 +99,26 @@ export class AccountHostService {
       licensingFramework.id
     );
     for (const plan of licensePlans) {
-      if (host instanceof User && plan.assignToNewUserAccounts) {
+      if (type === AccountType.USER && plan.assignToNewUserAccounts) {
         licensePlansToAssign.push(plan);
       } else if (
-        host instanceof Organization &&
+        type === AccountType.ORGANIZATION &&
         plan.assignToNewOrganizationAccounts
       ) {
         licensePlansToAssign.push(plan);
+      }
+    }
+    if (licensePlanID) {
+      const licensePlanAlreadyAssigned = licensePlansToAssign.find(
+        plan => plan.id === licensePlanID
+      );
+      if (!licensePlanAlreadyAssigned) {
+        const additionalPlan = await this.licensingService.getLicensePlanOrFail(
+          licensingFramework.id,
+          licensePlanID
+        );
+
+        licensePlansToAssign.push(additionalPlan);
       }
     }
 

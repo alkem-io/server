@@ -17,27 +17,31 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy/author
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
   CREDENTIAL_RULE_PLATFORM_CREATE_SPACE,
-  CREDENTIAL_RULE_TYPES_ACCOUNT_AUTHORIZATION_RESET,
+  CREDENTIAL_RULE_PLATFORM_CREATE_VC,
+  CREDENTIAL_RULE_TYPES_ACCOUNT_MANAGE_GLOBAL_ROLES,
   CREDENTIAL_RULE_TYPES_ACCOUNT_CHILD_ENTITIES,
   CREDENTIAL_RULE_TYPES_ACCOUNT_MANAGE,
   CREDENTIAL_RULE_TYPES_ACCOUNT_RESOURCES_MANAGE,
   CREDENTIAL_RULE_TYPES_GLOBAL_SPACE_READ,
+  CREDENTIAL_RULE_PLATFORM_CREATE_INNOVATION_PACK,
 } from '@common/constants/authorization/credential.rule.types.constants';
 import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
 import { VirtualContributorAuthorizationService } from '@domain/community/virtual-contributor/virtual.contributor.service.authorization';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { AccountHostService } from '../account.host/account.host.service';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
-import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
-import { POLICY_RULE_ACCOUNT_CREATE_VC } from '@common/constants/authorization/policy.rule.constants';
 import { InnovationPackAuthorizationService } from '@library/innovation-pack/innovation.pack.service.authorization';
 import { InnovationHubAuthorizationService } from '@domain/innovation-hub/innovation.hub.service.authorization';
+import { LicenseEngineService } from '@core/license-engine/license.engine.service';
+import { LicensePrivilege } from '@common/enums/license.privilege';
+import { IAgent } from '@domain/agent/agent/agent.interface';
 
 @Injectable()
 export class AccountAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private agentAuthorizationService: AgentAuthorizationService,
+    private licenseEngineService: LicenseEngineService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private spaceAuthorizationService: SpaceAuthorizationService,
     private virtualContributorAuthorizationService: VirtualContributorAuthorizationService,
@@ -64,7 +68,7 @@ export class AccountAuthorizationService {
         },
       }
     );
-    if (!account.storageAggregator) {
+    if (!account.storageAggregator || !account.agent) {
       throw new RelationshipNotFoundException(
         `Unable to load Account with entities at start of auth reset: ${account.id} `,
         LogContext.ACCOUNT
@@ -88,9 +92,10 @@ export class AccountAuthorizationService {
 
     account.authorization = await this.extendAuthorizationPolicy(
       account.authorization,
+      account.agent,
       hostCredentials
     );
-    account.authorization = this.appendPrivilegeRules(account.authorization);
+
     account.authorization = await this.authorizationPolicyService.save(
       account.authorization
     );
@@ -99,13 +104,6 @@ export class AccountAuthorizationService {
     const childUpdatedAuthorizations =
       await this.applyAuthorizationPolicyForChildEntities(account);
     updatedAuthorizations.push(...childUpdatedAuthorizations);
-
-    // And cascade into the space if there is one
-    for (const space of account.spaces) {
-      const spaceAuthorizations =
-        await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
-      updatedAuthorizations.push(...spaceAuthorizations);
-    }
 
     return updatedAuthorizations;
   }
@@ -133,6 +131,7 @@ export class AccountAuthorizationService {
   ): Promise<IAuthorizationPolicy[]> {
     if (
       !account.agent ||
+      !account.spaces ||
       !account.virtualContributors ||
       !account.innovationPacks ||
       !account.storageAggregator ||
@@ -147,6 +146,12 @@ export class AccountAuthorizationService {
 
     const clonedAccountAuth =
       await this.getClonedAccountAuthExtendedForChildEntities(account);
+
+    for (const space of account.spaces) {
+      const spaceAuthorizations =
+        await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
+      updatedAuthorizations.push(...spaceAuthorizations);
+    }
 
     const agentAuthorization =
       this.agentAuthorizationService.applyAuthorizationPolicy(
@@ -194,6 +199,7 @@ export class AccountAuthorizationService {
 
   private async extendAuthorizationPolicy(
     authorization: IAuthorizationPolicy | undefined,
+    accountAgent: IAgent,
     hostCredentials: ICredentialDefinition[]
   ): Promise<IAuthorizationPolicy> {
     if (!authorization) {
@@ -215,15 +221,17 @@ export class AccountAuthorizationService {
           AuthorizationPrivilege.AUTHORIZATION_RESET,
           AuthorizationPrivilege.PLATFORM_ADMIN,
           AuthorizationPrivilege.TRANSFER_RESOURCE,
+          AuthorizationPrivilege.CREATE_SPACE,
           AuthorizationPrivilege.CREATE_INNOVATION_HUB,
           AuthorizationPrivilege.CREATE_INNOVATION_PACK,
+          AuthorizationPrivilege.CREATE_VIRTUAL_CONTRIBUTOR,
         ],
         [
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
           AuthorizationCredential.GLOBAL_SUPPORT,
         ],
-        CREDENTIAL_RULE_TYPES_ACCOUNT_AUTHORIZATION_RESET
+        CREDENTIAL_RULE_TYPES_ACCOUNT_MANAGE_GLOBAL_ROLES
       );
     authorizationReset.cascade = false;
     newRules.push(authorizationReset);
@@ -262,18 +270,50 @@ export class AccountAuthorizationService {
     accountHostManage.cascade = true;
     newRules.push(accountHostManage);
 
-    const createSpace =
-      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.CREATE],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.BETA_TESTER,
-          AuthorizationCredential.VC_CAMPAIGN,
-        ],
+    const createSpace = await this.licenseEngineService.isAccessGranted(
+      LicensePrivilege.ACCOUNT_CREATE_SPACE,
+      accountAgent
+    );
+    if (createSpace) {
+      // If the user is a beta tester or part of VC campaign then can create the resources
+      const createSpace = this.authorizationPolicyService.createCredentialRule(
+        [AuthorizationPrivilege.CREATE_SPACE],
+        [...hostCredentials],
         CREDENTIAL_RULE_PLATFORM_CREATE_SPACE
       );
-    createSpace.cascade = false;
-    newRules.push(createSpace);
+      createSpace.cascade = false;
+      newRules.push(createSpace);
+    }
+
+    const createVirtualContributor =
+      await this.licenseEngineService.isAccessGranted(
+        LicensePrivilege.ACCOUNT_CREATE_VIRTUAL_CONTRIBUTOR,
+        accountAgent
+      );
+    if (createVirtualContributor) {
+      const createVC = this.authorizationPolicyService.createCredentialRule(
+        [AuthorizationPrivilege.CREATE_VIRTUAL_CONTRIBUTOR],
+        [...hostCredentials],
+        CREDENTIAL_RULE_PLATFORM_CREATE_VC
+      );
+      createVC.cascade = false;
+      newRules.push(createVC);
+    }
+
+    const createInnovationPack =
+      await this.licenseEngineService.isAccessGranted(
+        LicensePrivilege.ACCOUNT_CREATE_INNOVATION_PACK,
+        accountAgent
+      );
+    if (createInnovationPack) {
+      const createVC = this.authorizationPolicyService.createCredentialRule(
+        [AuthorizationPrivilege.CREATE_INNOVATION_PACK],
+        [...hostCredentials],
+        CREDENTIAL_RULE_PLATFORM_CREATE_INNOVATION_PACK
+      );
+      createVC.cascade = false;
+      newRules.push(createVC);
+    }
 
     return this.authorizationPolicyService.appendCredentialAuthorizationRules(
       authorization,
@@ -313,27 +353,6 @@ export class AccountAuthorizationService {
     return this.authorizationPolicyService.appendCredentialAuthorizationRules(
       authorization,
       newRules
-    );
-  }
-
-  private appendPrivilegeRules(
-    authorization: IAuthorizationPolicy
-  ): IAuthorizationPolicy {
-    const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
-
-    const createVcPrivilege = new AuthorizationPolicyRulePrivilege(
-      [
-        AuthorizationPrivilege.CREATE_SPACE,
-        AuthorizationPrivilege.CREATE_VIRTUAL_CONTRIBUTOR,
-      ],
-      AuthorizationPrivilege.CREATE,
-      POLICY_RULE_ACCOUNT_CREATE_VC
-    );
-    privilegeRules.push(createVcPrivilege);
-
-    return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
-      authorization,
-      privilegeRules
     );
   }
 }
