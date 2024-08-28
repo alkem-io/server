@@ -24,6 +24,7 @@ import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { AgentType } from '@common/enums/agent.type';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { ISpace } from '../space/space.interface';
+import { AccountType } from '@common/enums/account.type';
 
 @Injectable()
 export class AccountHostService {
@@ -39,8 +40,9 @@ export class AccountHostService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async createAccount(): Promise<IAccount> {
+  async createAccount(accountType: AccountType): Promise<IAccount> {
     const account: IAccount = new Account();
+    account.type = accountType;
     account.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.ACCOUNT
     );
@@ -80,6 +82,43 @@ export class AccountHostService {
   }
 
   public async assignLicensePlansToSpace(
+    space: ISpace,
+    accountType: AccountType
+  ): Promise<void> {
+    if (!space.agent) {
+      throw new RelationshipNotFoundException(
+        `Space ${space.id} has no agent`,
+        LogContext.ACCOUNT
+      );
+    }
+    const licensingFramework =
+      await this.licensingService.getDefaultLicensingOrFail();
+    const licensePlansToAssign: ILicensePlan[] = [];
+    const licensePlans = await this.licensingService.getLicensePlans(
+      licensingFramework.id
+    );
+    for (const plan of licensePlans) {
+      if (accountType === AccountType.USER && plan.assignToNewUserAccounts) {
+        licensePlansToAssign.push(plan);
+      } else if (
+        accountType === AccountType.ORGANIZATION &&
+        plan.assignToNewOrganizationAccounts
+      ) {
+        licensePlansToAssign.push(plan);
+      }
+    }
+
+    const spaceAgent = space.agent;
+    for (const licensePlan of licensePlansToAssign) {
+      space.agent = await this.licenseIssuerService.assignLicensePlan(
+        spaceAgent,
+        licensePlan,
+        space.id
+      );
+    }
+  }
+
+  public async assignLicensePlansToAccount(
     space: ISpace,
     host: IContributor
   ): Promise<void> {
