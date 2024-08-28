@@ -99,7 +99,7 @@ export class UserAuthorizationService {
     // cascade
     const profileAuthorizations =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
-        user.profile,
+        user.profile.id,
         clonedAnonymousReadAccessAuthorization // Key that this is publicly visible
       );
     updatedAuthorizations.push(...profileAuthorizations);

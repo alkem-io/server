@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { IProfile } from '@domain/common/profile';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ProfileService } from './profile.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
@@ -8,6 +7,13 @@ import { StorageBucketAuthorizationService } from '@domain/storage/storage-bucke
 import { LogContext } from '@common/enums/logging.context';
 import { RelationshipNotFoundException } from '@common/exceptions';
 
+const authorizationSelectOptions = {
+  id: true, // ?
+  anonymousReadAccess: true,
+  credentialRules: true,
+  privilegeRules: true,
+  verifiedCredentialRules: true,
+};
 @Injectable()
 export class ProfileAuthorizationService {
   constructor(
@@ -18,25 +24,67 @@ export class ProfileAuthorizationService {
   ) {}
 
   async applyAuthorizationPolicy(
-    profileInput: IProfile,
+    profileID: string,
     parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<IAuthorizationPolicy[]> {
-    const profile = await this.profileService.getProfileOrFail(
-      profileInput.id,
-      {
-        relations: {
-          references: true,
-          tagsets: true,
-          authorization: true,
-          visuals: true,
-          storageBucket: {
-            documents: {
-              tagset: true,
+    const profile = await this.profileService.getProfileOrFail(profileID, {
+      loadEagerRelations: false,
+      select: {
+        id: true,
+        displayName: false,
+        tagline: false,
+        description: false,
+        references: {
+          id: true,
+          uri: false,
+          description: false,
+          authorization: authorizationSelectOptions,
+        },
+        tagsets: {
+          id: true,
+          tags: false,
+          authorization: authorizationSelectOptions,
+        },
+        visuals: {
+          id: true,
+          uri: false,
+          authorization: authorizationSelectOptions,
+        },
+        storageBucket: {
+          id: true,
+          authorization: authorizationSelectOptions,
+          documents: {
+            id: true,
+            authorization: authorizationSelectOptions,
+            tagset: {
+              id: true,
+              authorization: authorizationSelectOptions,
             },
           },
         },
-      }
-    );
+      },
+      relations: {
+        authorization: true,
+        tagsets: {
+          authorization: true,
+        },
+        references: {
+          authorization: true,
+        },
+        visuals: {
+          authorization: true,
+        },
+        storageBucket: {
+          authorization: true,
+          documents: {
+            authorization: true,
+            tagset: {
+              authorization: true,
+            },
+          },
+        },
+      },
+    });
     if (
       !profile.references ||
       !profile.tagsets ||
@@ -45,7 +93,7 @@ export class ProfileAuthorizationService {
       !profile.storageBucket
     ) {
       throw new RelationshipNotFoundException(
-        `Unable to load Profile with entities at start of auth reset: ${profileInput.id} `,
+        `Unable to load Profile with entities at start of auth reset: ${profileID} `,
         LogContext.ACCOUNT
       );
     }

@@ -51,7 +51,7 @@ export class CalloutFramingAuthorizationService {
 
     const framingAuthorizations =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
-        calloutFraming.profile,
+        calloutFraming.profile.id,
         calloutFraming.authorization
       );
     updatedAuthorizations.push(...framingAuthorizations);

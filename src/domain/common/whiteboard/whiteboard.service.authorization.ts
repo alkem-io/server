@@ -51,7 +51,7 @@ export class WhiteboardAuthorizationService {
 
     const profileAuthoriations =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
-        whiteboard.profile,
+        whiteboard.profile.id,
         whiteboard.authorization
       );
     updatedAuthorizations.push(...profileAuthoriations);
