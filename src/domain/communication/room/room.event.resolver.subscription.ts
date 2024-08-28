@@ -34,7 +34,7 @@ export class RoomEventResolverSubscription {
       async resolve(
         this: RoomEventResolverSubscription,
         payload,
-        args,
+        _args,
         context
       ) {
         const agentInfo = context.req?.user;

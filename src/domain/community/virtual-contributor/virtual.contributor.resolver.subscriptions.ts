@@ -4,7 +4,6 @@ import { VirtualContributorService } from './virtual.contributor.service';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
-import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { Inject, LoggerService, UseGuards } from '@nestjs/common';
 import { GraphqlGuard } from '@core/authorization';
 import { SubscriptionReadService } from '@services/subscriptions/subscription-service';
@@ -18,7 +17,6 @@ export class VirtualContributorResolverSubscriptions {
   constructor(
     private virtualContributorService: VirtualContributorService,
     private authorizationService: AuthorizationService,
-    private platformAuthorizationPolicyService: PlatformAuthorizationPolicyService,
     private subscriptionService: SubscriptionReadService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
