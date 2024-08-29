@@ -49,31 +49,51 @@ export class UserAuthorizationService {
   ): Promise<IAuthorizationPolicy[]> {
     const user = await this.userService.getUserOrFail(userInput.id, {
       loadEagerRelations: false,
-      select: {
-        id: true,
-        profile: {
-          id: true,
-          authorization: {
-            id: true,
-          },
-        },
-      },
       relations: {
         authorization: true,
-        agent: {
-          authorization: true,
-        },
-        profile: true,
+        agent: { authorization: true },
+        profile: { authorization: true },
         preferenceSet: {
           authorization: true,
-          preferences: {
-            authorization: true,
-          },
+          preferences: { authorization: true },
         },
         storageAggregator: {
           authorization: true,
+          directStorage: { authorization: true },
+        },
+      },
+      select: {
+        id: true,
+        authorization:
+          this.authorizationPolicyService.authorizationSelectOptions,
+        agent: {
+          id: true,
+          authorization:
+            this.authorizationPolicyService.authorizationSelectOptions,
+        },
+        profile: {
+          id: true,
+          authorization:
+            this.authorizationPolicyService.authorizationSelectOptions,
+        },
+        preferenceSet: {
+          id: true,
+          authorization:
+            this.authorizationPolicyService.authorizationSelectOptions,
+          preferences: {
+            id: true,
+            authorization:
+              this.authorizationPolicyService.authorizationSelectOptions,
+          },
+        },
+        storageAggregator: {
+          id: true,
+          authorization:
+            this.authorizationPolicyService.authorizationSelectOptions,
           directStorage: {
-            authorization: true,
+            id: true,
+            authorization:
+              this.authorizationPolicyService.authorizationSelectOptions,
           },
         },
       },
