@@ -28,10 +28,14 @@ export class CalloutFramingAuthorizationService {
           loadEagerRelations: false,
           relations: {
             authorization: true,
-            profile: true,
+            profile: {
+              authorization: true,
+            },
             whiteboard: {
               authorization: true,
-              profile: true,
+              profile: {
+                authorization: true,
+              },
             },
           },
           select: {
@@ -47,6 +51,11 @@ export class CalloutFramingAuthorizationService {
               id: true,
               authorization:
                 this.authorizationPolicyService.authorizationSelectOptions,
+              profile: {
+                id: true,
+                authorization:
+                  this.authorizationPolicyService.authorizationSelectOptions,
+              },
             },
           },
         }

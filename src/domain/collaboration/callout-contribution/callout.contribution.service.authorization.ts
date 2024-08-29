@@ -46,18 +46,24 @@ export class CalloutContributionAuthorizationService {
             authorization: true,
             post: {
               authorization: true,
-              profile: true,
+              profile: {
+                authorization: true,
+              },
               comments: {
                 authorization: true,
               },
             },
             whiteboard: {
               authorization: true,
-              profile: true,
+              profile: {
+                authorization: true,
+              },
             },
             link: {
               authorization: true,
-              profile: true,
+              profile: {
+                authorization: true,
+              },
             },
           },
           select: {
@@ -70,6 +76,13 @@ export class CalloutContributionAuthorizationService {
                 this.authorizationPolicyService.authorizationSelectOptions,
               profile: {
                 id: true,
+                authorization:
+                  this.authorizationPolicyService.authorizationSelectOptions,
+              },
+              comments: {
+                id: true,
+                authorization:
+                  this.authorizationPolicyService.authorizationSelectOptions,
               },
             },
             whiteboard: {
@@ -78,6 +91,8 @@ export class CalloutContributionAuthorizationService {
                 this.authorizationPolicyService.authorizationSelectOptions,
               profile: {
                 id: true,
+                authorization:
+                  this.authorizationPolicyService.authorizationSelectOptions,
               },
             },
             link: {
@@ -86,6 +101,8 @@ export class CalloutContributionAuthorizationService {
                 this.authorizationPolicyService.authorizationSelectOptions,
               profile: {
                 id: true,
+                authorization:
+                  this.authorizationPolicyService.authorizationSelectOptions,
               },
             },
           },

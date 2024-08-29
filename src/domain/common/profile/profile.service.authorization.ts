@@ -24,8 +24,8 @@ export class ProfileAuthorizationService {
       loadEagerRelations: false,
       relations: {
         authorization: true,
-        tagsets: { authorization: true },
         references: { authorization: true },
+        tagsets: { authorization: true },
         visuals: { authorization: true },
         storageBucket: {
           authorization: true,
@@ -39,12 +39,12 @@ export class ProfileAuthorizationService {
         id: true,
         authorization:
           this.authorizationPolicyService.authorizationSelectOptions,
-        tagsets: {
+        references: {
           id: true,
           authorization:
             this.authorizationPolicyService.authorizationSelectOptions,
         },
-        references: {
+        tagsets: {
           id: true,
           authorization:
             this.authorizationPolicyService.authorizationSelectOptions,
