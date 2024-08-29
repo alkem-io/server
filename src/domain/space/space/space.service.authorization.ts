@@ -337,7 +337,7 @@ export class SpaceAuthorizationService {
 
     const profileAuthorizations =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
-        space.profile,
+        space.profile.id,
         clonedAuthorization
       );
     updatedAuthorizations.push(...profileAuthorizations);

@@ -131,6 +131,7 @@ export class UserResolverMutations {
     const updatedAuthorizations =
       await this.userAuthorizationService.applyAuthorizationPolicy(user);
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);
+
     return await this.userService.getUserOrFail(user.id);
   }
 

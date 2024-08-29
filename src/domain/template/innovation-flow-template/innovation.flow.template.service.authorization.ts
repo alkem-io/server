@@ -26,7 +26,7 @@ export class InnovationFlowTemplateAuthorizationService {
 
     const profileAuthorizations =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
-        innovationFlowTemplate.profile,
+        innovationFlowTemplate.profile.id,
         innovationFlowTemplate.authorization
       );
     updatedAuthorizations.push(...profileAuthorizations);

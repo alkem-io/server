@@ -57,7 +57,7 @@ export class InnovationPackAuthorizationService {
 
     const profileAuthorizations =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
-        innovationPack.profile,
+        innovationPack.profile.id,
         innovationPack.authorization
       );
     updatedAuthorizations.push(...profileAuthorizations);

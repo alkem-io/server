@@ -32,7 +32,7 @@ export class CommunityGuidelinesAuthorizationService {
 
     const profileAuthorizations =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
-        communityGuidelines.profile,
+        communityGuidelines.profile.id,
         communityGuidelines.authorization
       );
     updatedAuthorizations.push(...profileAuthorizations);

@@ -46,7 +46,7 @@ export class UserGroupAuthorizationService {
 
     const profileAuthoriations =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
-        userGroup.profile,
+        userGroup.profile.id,
         userGroup.authorization
       );
     updatedAuthorizations.push(...profileAuthoriations);

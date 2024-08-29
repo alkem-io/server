@@ -235,7 +235,7 @@ export class CalloutResolverMutations {
     // Ensure settings are available
     const updatedAuthorizations =
       await this.contributionAuthorizationService.applyAuthorizationPolicy(
-        contribution,
+        contribution.id,
         callout.authorization,
         communityPolicy,
         spaceSettings
