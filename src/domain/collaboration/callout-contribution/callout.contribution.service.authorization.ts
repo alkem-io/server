@@ -68,10 +68,12 @@ export class CalloutContributionAuthorizationService {
           },
           select: {
             id: true,
+            createdBy: true,
             authorization:
               this.authorizationPolicyService.authorizationSelectOptions,
             post: {
               id: true,
+              createdBy: true,
               authorization:
                 this.authorizationPolicyService.authorizationSelectOptions,
               profile: {
@@ -87,6 +89,7 @@ export class CalloutContributionAuthorizationService {
             },
             whiteboard: {
               id: true,
+              createdBy: true,
               authorization:
                 this.authorizationPolicyService.authorizationSelectOptions,
               profile: {
