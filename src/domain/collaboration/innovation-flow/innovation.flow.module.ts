@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { InnovationFlow } from './innovation.flow.entity';
 import { InnovationFlowService } from './innovaton.flow.service';
@@ -21,7 +21,7 @@ import { TemplateModule } from '@domain/template/template/template.module';
     ProfileModule,
     TagsetModule,
     TagsetTemplateModule,
-    TemplateModule,
+    forwardRef(() => TemplateModule),
     TypeOrmModule.forFeature([InnovationFlow]),
   ],
   providers: [

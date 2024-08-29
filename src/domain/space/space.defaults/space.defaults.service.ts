@@ -284,7 +284,7 @@ export class SpaceDefaultsService {
         }
       );
       // Note: no profile currently present, so use the one from the template for now
-      if (!template.innovationFlowStates) {
+      if (!template.innovationFlow?.states) {
         throw new EntityNotInitializedException(
           `Template ${template.id} does not have innovation flow states`,
           LogContext.TEMPLATES
@@ -296,7 +296,7 @@ export class SpaceDefaultsService {
           description: template.profile.description,
         },
         states: this.innovationFlowStatesService.getStates(
-          template.innovationFlowStates
+          template.innovationFlow.states
         ),
       };
     }
@@ -315,7 +315,7 @@ export class SpaceDefaultsService {
           }
         );
         spaceDefaults.innovationFlowTemplate;
-        if (!template.innovationFlowStates) {
+        if (!template.innovationFlow?.states) {
           throw new EntityNotInitializedException(
             `Template ${template.id} does not have innovation flow states`,
             LogContext.TEMPLATES
@@ -328,7 +328,7 @@ export class SpaceDefaultsService {
             description: template.profile.description,
           },
           states: this.innovationFlowStatesService.getStates(
-            template.innovationFlowStates
+            template.innovationFlow.states
           ),
         };
         return result;

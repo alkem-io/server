@@ -15,13 +15,13 @@ export class TemplateResolverFields {
     nullable: true,
     description: 'The set of States in use for an Innovation Flow.',
   })
-  innovationFlowStates(
+  async innovationFlowStates(
     @Parent() template: ITemplate
-  ): IInnovationFlowState[] | undefined {
+  ): Promise<IInnovationFlowState[] | undefined> {
     if (template.type !== TemplateType.INNOVATION_FLOW) {
       return undefined;
     }
-    return this.templateService.getInnovationFlowStates(template);
+    return await this.templateService.getInnovationFlowStates(template);
   }
 
   @ResolveField('communityGuidelines', () => ICommunityGuidelines, {

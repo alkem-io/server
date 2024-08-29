@@ -4,7 +4,7 @@ import {
   EntityNotFoundException,
   ValidationException,
 } from '@common/exceptions';
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { forwardRef, Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -36,6 +36,7 @@ export class InnovationFlowService {
     private profileService: ProfileService,
     private tagsetService: TagsetService,
     private innovationFlowStatesService: InnovationFlowStatesService,
+    @Inject(forwardRef(() => TemplateService))
     private templateService: TemplateService,
     @InjectRepository(InnovationFlow)
     private innovationFlowRepository: Repository<InnovationFlow>,
@@ -164,7 +165,7 @@ export class InnovationFlowService {
       innovationFlowData.innovationFlowTemplateID
     );
 
-    const newStates = this.templateService.getInnovationFlowStates(
+    const newStates = await this.templateService.getInnovationFlowStates(
       innovationFlowTemplate
     );
 

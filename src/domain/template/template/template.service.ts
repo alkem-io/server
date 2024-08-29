@@ -1,4 +1,4 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { forwardRef, Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, Repository } from 'typeorm';
 import {
@@ -19,7 +19,7 @@ import { ProfileService } from '@domain/common/profile/profile.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { TemplateType } from '@common/enums/template.type';
-import { InnovationFlowStatesService } from '@domain/collaboration/innovation-flow-states/innovaton.flow.state.service';
+import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovaton.flow.service';
 import { IInnovationFlowState } from '@domain/collaboration/innovation-flow-states/innovation.flow.state.interface';
 import { InvalidTemplateTypeException } from '@common/exceptions/invalid.template.type.exception';
 import { CommunityGuidelinesService } from '@domain/community/community-guidelines/community.guidelines.service';
@@ -34,7 +34,8 @@ import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 export class TemplateService {
   constructor(
     private profileService: ProfileService,
-    private innovationFlowStatesService: InnovationFlowStatesService,
+    @Inject(forwardRef(() => InnovationFlowService))
+    private innovationFlowService: InnovationFlowService,
     private communityGuidelinesService: CommunityGuidelinesService,
     private calloutService: CalloutService,
     private whiteboardService: WhiteboardService,
@@ -83,13 +84,16 @@ export class TemplateService {
           LogContext.TEMPLATES
         );
       }
-      const convertedStates =
-        this.innovationFlowStatesService.convertInputsToStates(
-          templateData.innovationFlowStates
-        );
-
-      template.innovationFlowStates =
-        this.innovationFlowStatesService.serializeStates(convertedStates);
+      this.innovationFlowService.createInnovationFlow(
+        {
+          profile: {
+            displayName: 'template',
+          },
+          states: templateData.innovationFlowStates,
+        },
+        [],
+        storageAggregator
+      );
     } else if (template.type === TemplateType.COMMUNITY_GUIDELINES) {
       if (
         !templateData.communityGuidelinesID &&
@@ -214,17 +218,13 @@ export class TemplateService {
 
     if (
       template.type === TemplateType.INNOVATION_FLOW &&
+      template.innovationFlow &&
       templateData.innovationFlowStates
     ) {
-      this.innovationFlowStatesService.validateDefinition(
-        templateData.innovationFlowStates
-      );
-      const convertedStates =
-        this.innovationFlowStatesService.convertInputsToStates(
-          templateData.innovationFlowStates
-        );
-      template.innovationFlowStates =
-        this.innovationFlowStatesService.serializeStates(convertedStates);
+      this.innovationFlowService.update({
+        innovationFlowID: template.innovationFlow.id,
+        states: templateData.innovationFlowStates,
+      });
     }
 
     if (
@@ -411,18 +411,22 @@ export class TemplateService {
     return template.whiteboard;
   }
 
-  public getInnovationFlowStates(template: ITemplate): IInnovationFlowState[] {
-    if (template.type !== TemplateType.INNOVATION_FLOW) {
+  public async getInnovationFlowStates(
+    template: ITemplate
+  ): Promise<IInnovationFlowState[]> {
+    if (
+      template.type !== TemplateType.INNOVATION_FLOW ||
+      !template.innovationFlow
+    ) {
       throw new InvalidTemplateTypeException(
         `Template is not of type Innovation Flow: ${template.id}`,
         LogContext.TEMPLATES
       );
     }
-    if (!template.innovationFlowStates) {
-      return [];
-    }
-    return this.innovationFlowStatesService.getStates(
-      template.innovationFlowStates
+    return this.innovationFlowService.getStates(
+      await this.innovationFlowService.getInnovationFlowOrFail(
+        template.innovationFlow.id
+      )
     );
   }
 }

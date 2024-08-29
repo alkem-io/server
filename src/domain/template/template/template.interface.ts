@@ -7,6 +7,7 @@ import { IProfile } from '@domain/common/profile/profile.interface';
 import { ICommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.interface';
 import { ICallout } from '@domain/collaboration/callout';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
+import { IInnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.interface';
 
 @ObjectType('Template')
 export abstract class ITemplate extends IAuthorizable {
@@ -34,6 +35,5 @@ export abstract class ITemplate extends IAuthorizable {
   communityGuidelines?: ICommunityGuidelines;
   callout?: ICallout;
   whiteboard?: IWhiteboard;
-
-  innovationFlowStates?: string;
+  innovationFlow?: IInnovationFlow;
 }
