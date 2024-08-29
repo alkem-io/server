@@ -22,6 +22,7 @@ import { OrganizationService } from '@domain/community/organization/organization
 import { OrganizationAuthorizationService } from '@domain/community/organization/organization.service.authorization';
 import { AccountAuthorizationService } from '@domain/space/account/account.service.authorization';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { DeleteOrganizationInput } from '@domain/community/organization/dto/organization.dto.delete';
 
 @Resolver()
 export class RegistrationResolverMutations {
@@ -175,5 +176,27 @@ export class RegistrationResolverMutations {
     };
     await this.notificationAdapter.userRemoved(notificationInput);
     return userDeleted;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IOrganization, {
+    description: 'Deletes the specified Organization.',
+  })
+  async deleteOrganization(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('deleteData') deleteData: DeleteOrganizationInput
+  ): Promise<IOrganization> {
+    const organization = await this.organizationService.getOrganizationOrFail(
+      deleteData.ID
+    );
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      organization.authorization,
+      AuthorizationPrivilege.DELETE,
+      `deleteOrg: ${organization.id}`
+    );
+    return await this.registrationService.deleteOrganizationWithPendingMemberships(
+      deleteData
+    );
   }
 }

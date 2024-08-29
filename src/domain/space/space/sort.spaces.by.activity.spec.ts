@@ -6,6 +6,7 @@ import { sortSpacesByActivity } from './sort.spaces.by.activity';
 import { SpaceType } from '@common/enums/space.type';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { ProfileType } from '@common/enums';
+import { AccountType } from '@common/enums/account.type';
 
 const createTestActivity = (createdDate: Date): IActivity => {
   return {
@@ -42,6 +43,7 @@ const createTestSpace = (id: string): ISpace => {
       innovationHubs: [],
       innovationPacks: [],
       spaces: [],
+      type: AccountType.ORGANIZATION,
     },
     type: SpaceType.SPACE,
     level: 0,

@@ -2,10 +2,7 @@ import { UseGuards } from '@nestjs/common';
 import { Args, Resolver, Mutation } from '@nestjs/graphql';
 import { OrganizationService } from './organization.service';
 import { CurrentUser, Profiling } from '@src/common/decorators';
-import {
-  UpdateOrganizationInput,
-  DeleteOrganizationInput,
-} from '@domain/community/organization/dto';
+import { UpdateOrganizationInput } from '@domain/community/organization/dto';
 import { IUserGroup } from '@domain/community/user-group';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege } from '@common/enums';
@@ -82,26 +79,6 @@ export class OrganizationResolverMutations {
     );
 
     return await this.organizationService.updateOrganization(organizationData);
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IOrganization, {
-    description: 'Deletes the specified Organization.',
-  })
-  async deleteOrganization(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('deleteData') deleteData: DeleteOrganizationInput
-  ): Promise<IOrganization> {
-    const organization = await this.organizationService.getOrganizationOrFail(
-      deleteData.ID
-    );
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      organization.authorization,
-      AuthorizationPrivilege.DELETE,
-      `deleteOrg: ${organization.id}`
-    );
-    return await this.organizationService.deleteOrganization(deleteData);
   }
 
   @UseGuards(GraphqlGuard)
