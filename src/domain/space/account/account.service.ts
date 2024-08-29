@@ -109,7 +109,8 @@ export class AccountService {
     });
     await this.accountHostService.assignLicensePlansToSpace(
       spaceWithAgent,
-      account.type
+      account.type,
+      spaceData.licensePlanID
     );
     return await this.spaceService.getSpaceOrFail(space.id, {
       relations: {
