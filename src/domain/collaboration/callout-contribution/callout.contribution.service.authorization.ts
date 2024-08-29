@@ -64,29 +64,29 @@ export class CalloutContributionAuthorizationService {
             id: true,
             authorization:
               this.authorizationPolicyService.authorizationSelectOptions,
-            whiteboard: {
-              id: true,
-              profile: {
-                id: true,
-              },
-              authorization:
-                this.authorizationPolicyService.authorizationSelectOptions,
-            },
             post: {
               id: true,
+              authorization:
+                this.authorizationPolicyService.authorizationSelectOptions,
               profile: {
                 id: true,
               },
+            },
+            whiteboard: {
+              id: true,
               authorization:
                 this.authorizationPolicyService.authorizationSelectOptions,
+              profile: {
+                id: true,
+              },
             },
             link: {
               id: true,
+              authorization:
+                this.authorizationPolicyService.authorizationSelectOptions,
               profile: {
                 id: true,
               },
-              authorization:
-                this.authorizationPolicyService.authorizationSelectOptions,
             },
           },
         }

@@ -22,46 +22,6 @@ export class ProfileAuthorizationService {
   ): Promise<IAuthorizationPolicy[]> {
     const profile = await this.profileService.getProfileOrFail(profileID, {
       loadEagerRelations: false,
-      select: {
-        id: true,
-        displayName: false,
-        tagline: false,
-        description: false,
-        references: {
-          id: true,
-          uri: false,
-          description: false,
-          authorization:
-            this.authorizationPolicyService.authorizationSelectOptions,
-        },
-        tagsets: {
-          id: true,
-          tags: false,
-          authorization:
-            this.authorizationPolicyService.authorizationSelectOptions,
-        },
-        visuals: {
-          id: true,
-          uri: false,
-          authorization:
-            this.authorizationPolicyService.authorizationSelectOptions,
-        },
-        storageBucket: {
-          id: true,
-          authorization:
-            this.authorizationPolicyService.authorizationSelectOptions,
-          documents: {
-            id: true,
-            authorization:
-              this.authorizationPolicyService.authorizationSelectOptions,
-            tagset: {
-              id: true,
-              authorization:
-                this.authorizationPolicyService.authorizationSelectOptions,
-            },
-          },
-        },
-      },
       relations: {
         authorization: true,
         tagsets: {
@@ -79,6 +39,39 @@ export class ProfileAuthorizationService {
             authorization: true,
             tagset: {
               authorization: true,
+            },
+          },
+        },
+      },
+      select: {
+        id: true,
+        tagsets: {
+          id: true,
+          authorization:
+            this.authorizationPolicyService.authorizationSelectOptions,
+        },
+        references: {
+          id: true,
+          authorization:
+            this.authorizationPolicyService.authorizationSelectOptions,
+        },
+        visuals: {
+          id: true,
+          authorization:
+            this.authorizationPolicyService.authorizationSelectOptions,
+        },
+        storageBucket: {
+          id: true,
+          authorization:
+            this.authorizationPolicyService.authorizationSelectOptions,
+          documents: {
+            id: true,
+            authorization:
+              this.authorizationPolicyService.authorizationSelectOptions,
+            tagset: {
+              id: true,
+              authorization:
+                this.authorizationPolicyService.authorizationSelectOptions,
             },
           },
         },
