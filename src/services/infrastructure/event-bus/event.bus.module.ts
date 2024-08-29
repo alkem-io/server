@@ -22,24 +22,32 @@ import { AiServerModule } from '@services/ai-server/ai-server/ai.server.module';
           { infer: true }
         );
 
+        const eventBusConfig = configService.get(
+          'microservices.rabbitmq.event_bus',
+          { infer: true }
+        );
+
+        console.log(eventBusConfig);
+
         return {
           uri: `amqp://${rbmqConfig.user}:${rbmqConfig.password}@${rbmqConfig.host}:${rbmqConfig.port}`,
           connectionInitOptions: { wait: false },
           exchanges: [
             {
-              name: 'event-bus',
+              name: eventBusConfig.exchange,
               type: 'direct',
             },
           ],
           queues: [
             {
-              name: 'virtual-contributor-ingest-space',
-              exchange: 'event-bus',
+              name: eventBusConfig.ingest_space_queue,
+              exchange: eventBusConfig.exchange,
+              //TODO dynamically map queue names to events for the routing
               routingKey: 'IngestSpace',
             },
             {
-              name: 'virtual-contributor-ingest-space-result',
-              exchange: 'event-bus',
+              name: eventBusConfig.ingest_space_result_queue,
+              exchange: eventBusConfig.exchange,
               routingKey: 'IngestSpaceResult',
             },
           ],

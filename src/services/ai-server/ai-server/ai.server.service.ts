@@ -104,7 +104,7 @@ export class AiServerService {
       LogContext.AI_SERVER
     );
 
-    // we shouldn't use the repository here but down the road this will e graphql call
+    //TODO we shouldn't use the repository here but down the road this will e graphql call
     // from the AI to the Collaboration servers
     const virtualContributor = await this.vcRespository.findOne({
       where: {
