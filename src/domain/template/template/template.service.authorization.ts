@@ -67,7 +67,7 @@ export class TemplateAuthorizationService {
     // Cascade
     const profileAuthorizations =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
-        template.profile,
+        template.profile.id,
         template.authorization
       );
     updatedAuthorizations.push(...profileAuthorizations);
