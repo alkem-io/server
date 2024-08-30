@@ -161,8 +161,12 @@ export class Convergance1724417095448 implements MigrationInterface {
     await queryRunner.query(
       'ALTER TABLE `organization` CHANGE `accountID` `accountID` char(36) NOT NULL'
     );
+
     await queryRunner.query(
-      'ALTER TABLE `nvp` CHANGE `value` `value` varchar(255) NOT NULL'
+      'ALTER TABLE `nvp` CHANGE `name` `name` varchar(128) NOT NULL'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `nvp` CHANGE `value` `value` varchar(512) NOT NULL'
     );
 
     await queryRunner.query(
