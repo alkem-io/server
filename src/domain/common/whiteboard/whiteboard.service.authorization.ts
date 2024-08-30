@@ -26,35 +26,37 @@ export class WhiteboardAuthorizationService {
   ) {}
 
   async applyAuthorizationPolicy(
-    whiteboard: IWhiteboard,
+    whiteboardWithProfile: IWhiteboard,
     parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<IAuthorizationPolicy[]> {
-    if (!whiteboard.profile) {
+    if (!whiteboardWithProfile.profile) {
       throw new RelationshipNotFoundException(
-        `Unable to load entities on whiteboard reset auth:  ${whiteboard.id} `,
+        `Unable to load entities on whiteboard reset auth:  ${whiteboardWithProfile.id} `,
         LogContext.COLLABORATION
       );
     }
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
-    whiteboard.authorization =
+    whiteboardWithProfile.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
-        whiteboard.authorization,
+        whiteboardWithProfile.authorization,
         parentAuthorization
       );
 
-    whiteboard.authorization = this.appendCredentialRules(whiteboard);
-    whiteboard.authorization = this.appendPrivilegeRules(
-      whiteboard.authorization,
-      whiteboard
+    whiteboardWithProfile.authorization = this.appendCredentialRules(
+      whiteboardWithProfile
     );
-    updatedAuthorizations.push(whiteboard.authorization);
+    whiteboardWithProfile.authorization = this.appendPrivilegeRules(
+      whiteboardWithProfile.authorization,
+      whiteboardWithProfile
+    );
+    updatedAuthorizations.push(whiteboardWithProfile.authorization);
 
-    const profileAuthoriations =
+    const profileAuthorizations =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
-        whiteboard.profile,
-        whiteboard.authorization
+        whiteboardWithProfile.profile.id,
+        whiteboardWithProfile.authorization
       );
-    updatedAuthorizations.push(...profileAuthoriations);
+    updatedAuthorizations.push(...profileAuthorizations);
 
     return updatedAuthorizations;
   }

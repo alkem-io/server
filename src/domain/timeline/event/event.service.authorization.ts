@@ -77,7 +77,7 @@ export class CalendarEventAuthorizationService {
 
     const profileAuthorizations =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
-        calendarEvent.profile,
+        calendarEvent.profile.id,
         calendarEvent.authorization
       );
     updatedAuthorizations.push(...profileAuthorizations);
