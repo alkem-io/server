@@ -48,13 +48,54 @@ export class UserAuthorizationService {
     userInput: IUser
   ): Promise<IAuthorizationPolicy[]> {
     const user = await this.userService.getUserOrFail(userInput.id, {
+      loadEagerRelations: false,
       relations: {
-        agent: true,
-        profile: true,
+        authorization: true,
+        agent: { authorization: true },
+        profile: { authorization: true },
         preferenceSet: {
-          preferences: true,
+          authorization: true,
+          preferences: { authorization: true },
         },
-        storageAggregator: true,
+        storageAggregator: {
+          authorization: true,
+          directStorage: { authorization: true },
+        },
+      },
+      select: {
+        id: true,
+        authorization:
+          this.authorizationPolicyService.authorizationSelectOptions,
+        agent: {
+          id: true,
+          authorization:
+            this.authorizationPolicyService.authorizationSelectOptions,
+        },
+        profile: {
+          id: true,
+          authorization:
+            this.authorizationPolicyService.authorizationSelectOptions,
+        },
+        preferenceSet: {
+          id: true,
+          authorization:
+            this.authorizationPolicyService.authorizationSelectOptions,
+          preferences: {
+            id: true,
+            authorization:
+              this.authorizationPolicyService.authorizationSelectOptions,
+          },
+        },
+        storageAggregator: {
+          id: true,
+          authorization:
+            this.authorizationPolicyService.authorizationSelectOptions,
+          directStorage: {
+            id: true,
+            authorization:
+              this.authorizationPolicyService.authorizationSelectOptions,
+          },
+        },
       },
     });
     if (
@@ -99,7 +140,7 @@ export class UserAuthorizationService {
     // cascade
     const profileAuthorizations =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
-        user.profile,
+        user.profile.id,
         clonedAnonymousReadAccessAuthorization // Key that this is publicly visible
       );
     updatedAuthorizations.push(...profileAuthorizations);
