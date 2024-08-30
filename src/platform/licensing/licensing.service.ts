@@ -82,7 +82,7 @@ export class LicensingService {
     const plan = licensePlans.find(plan => plan.id === planID);
     if (!plan) {
       throw new EntityNotFoundException(
-        `Unable to load License Plan of the provided ID: ${planID}`,
+        `Licensing (${licensingID}): Unable to load License Plan of the provided ID: ${planID}`,
         LogContext.LICENSE
       );
     }
@@ -107,9 +107,8 @@ export class LicensingService {
         LogContext.LICENSE
       );
 
-    const licensePlan = await this.licensePlanService.createLicensePlan(
-      licensePlanData
-    );
+    const licensePlan =
+      await this.licensePlanService.createLicensePlan(licensePlanData);
     licensing.plans.push(licensePlan);
     await this.licensingRepository.save(licensing);
 

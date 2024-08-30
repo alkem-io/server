@@ -58,6 +58,7 @@ export class WhiteboardResolverMutations {
         },
         relations: {
           authorization: true,
+          profile: true,
         },
       });
 

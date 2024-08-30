@@ -30,7 +30,7 @@ export class CommunityGuidelinesTemplateAuthorizationService {
     // Cascade
     const profileAuthorizations =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
-        communityGuidelinesTemplate.profile,
+        communityGuidelinesTemplate.profile.id,
         communityGuidelinesTemplate.authorization
       );
     updatedAuthorizations.push(...profileAuthorizations);

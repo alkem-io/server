@@ -49,7 +49,7 @@ export class CalloutTemplateAuthorizationService {
     // Cascade
     const profileAuthorizations =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
-        calloutTemplate.profile,
+        calloutTemplate.profile.id,
         calloutTemplate.authorization
       );
     updatedAuthorizations.push(...profileAuthorizations);
