@@ -261,8 +261,6 @@ export class UrlGeneratorService {
         return await this.getInnovationFlowUrlPathOrFail(profile.id);
       case ProfileType.TEMPLATE:
         return await this.getTemplateUrlPathOrFail('template', profile.id);
-      case ProfileType.TEMPLATE:
-        return await this.getTemplateUrlPathOrFail('post_template', profile.id);
       case ProfileType.INNOVATION_PACK:
         return await this.getInnovationPackUrlPath(profile.id);
       case ProfileType.CALENDAR_EVENT:
