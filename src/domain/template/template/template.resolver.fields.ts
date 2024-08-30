@@ -1,27 +1,27 @@
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { IInnovationFlowState } from '@domain/collaboration/innovation-flow-states/innovation.flow.state.interface';
 import { ITemplate } from './template.interface';
 import { TemplateService } from './template.service';
 import { TemplateType } from '@common/enums/template.type';
 import { ICommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.interface';
 import { ICallout } from '@domain/collaboration/callout';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
+import { IInnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.interface';
 
 @Resolver(() => ITemplate)
 export class TemplateResolverFields {
   constructor(private templateService: TemplateService) {}
 
-  @ResolveField('innovationFlowStates', () => [IInnovationFlowState], {
+  @ResolveField('innovationFlow', () => IInnovationFlow, {
     nullable: true,
-    description: 'The set of States in use for an Innovation Flow.',
+    description: 'The Innovation Flow.',
   })
-  async innovationFlowStates(
+  async innovationFlow(
     @Parent() template: ITemplate
-  ): Promise<IInnovationFlowState[] | undefined> {
+  ): Promise<IInnovationFlow | undefined> {
     if (template.type !== TemplateType.INNOVATION_FLOW) {
       return undefined;
     }
-    return await this.templateService.getInnovationFlowStates(template);
+    return this.templateService.getInnovationFlow(template.id);
   }
 
   @ResolveField('communityGuidelines', () => ICommunityGuidelines, {

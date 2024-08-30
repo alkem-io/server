@@ -75,27 +75,6 @@ export class TemplatesSetService {
     );
   }
 
-  async getCalloutTemplates(templatesSet: ITemplatesSet): Promise<ITemplate[]> {
-    const calloutTemplates =
-      await this.templateService.getTemplateTypeInTemplatesSet(
-        templatesSet.id,
-        TemplateType.CALLOUT
-      );
-    return calloutTemplates;
-  }
-
-  async getCommunityGuidelinesTemplates(
-    templatesSet: ITemplatesSet
-  ): Promise<ITemplate[]> {
-    const innovationFlowTemplates =
-      await this.templateService.getTemplateTypeInTemplatesSet(
-        templatesSet.id,
-        TemplateType.COMMUNITY_GUIDELINES
-      );
-
-    return innovationFlowTemplates;
-  }
-
   public getTemplate(
     templateId: string,
     templatesSetId: string
@@ -104,6 +83,20 @@ export class TemplatesSetService {
       where: { templatesSet: { id: templatesSetId } },
       relations: { templatesSet: true, profile: true },
     });
+  }
+
+  public getTemplatesOfType(
+    templatesSet: ITemplatesSet,
+    templateType: TemplateType | undefined = undefined
+  ): Promise<ITemplate[]> {
+    if (templateType) {
+      return this.templateService.getTemplateTypeInTemplatesSet(
+        templatesSet.id,
+        templateType
+      );
+    } else {
+      return this.templateService.getTemplatesInTemplatesSet(templatesSet.id);
+    }
   }
 
   async createTemplate(
@@ -154,39 +147,6 @@ export class TemplatesSetService {
 
   public async save(templatesSet: ITemplatesSet): Promise<ITemplatesSet> {
     return await this.templatesSetRepository.save(templatesSet);
-  }
-
-  async getWhiteboardTemplates(
-    templatesSet: ITemplatesSet
-  ): Promise<ITemplate[]> {
-    const whiteboardTemplatesCount =
-      await this.templateService.getTemplateTypeInTemplatesSet(
-        templatesSet.id,
-        TemplateType.WHITEBOARD
-      );
-    return whiteboardTemplatesCount;
-  }
-
-  async getInnovationFlowTemplates(
-    templatesSet: ITemplatesSet
-  ): Promise<ITemplate[]> {
-    const innovationFlowTemplates =
-      await this.templateService.getTemplateTypeInTemplatesSet(
-        templatesSet.id,
-        TemplateType.INNOVATION_FLOW
-      );
-
-    return innovationFlowTemplates;
-  }
-
-  async getPostTemplates(templatesSet: ITemplatesSet): Promise<ITemplate[]> {
-    const innovationFlowTemplates =
-      await this.templateService.getTemplateTypeInTemplatesSet(
-        templatesSet.id,
-        TemplateType.POST
-      );
-
-    return innovationFlowTemplates;
   }
 
   async getTemplatesCountForType(

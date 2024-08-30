@@ -11,12 +11,24 @@ export class TemplatesSetResolverFields {
   constructor(private templatesSetService: TemplatesSetService) {}
 
   @UseGuards(GraphqlGuard)
-  @ResolveField('templates', () => [ITemplate], {
+  @ResolveField('allTemplates', () => [ITemplate], {
     nullable: false,
     description: 'The Templates in this TemplatesSet.',
   })
-  async templates(@Parent() templatesSet: ITemplatesSet): Promise<ITemplate[]> {
-    return this.templatesSetService.getPostTemplates(templatesSet);
+  async allTemplates(
+    @Parent() templatesSet: ITemplatesSet
+  ): Promise<ITemplate[]> {
+    return this.templatesSetService.getTemplatesOfType(templatesSet);
+  }
+  @UseGuards(GraphqlGuard)
+  @ResolveField('allTemplatesCount', () => Float, {
+    nullable: false,
+    description: 'The total number of Templates in this TemplatesSet.',
+  })
+  async allTemplatesCount(
+    @Parent() templatesSet: ITemplatesSet
+  ): Promise<number> {
+    return this.templatesSetService.getTemplatesCount(templatesSet.id);
   }
 
   @UseGuards(GraphqlGuard)
@@ -27,18 +39,23 @@ export class TemplatesSetResolverFields {
   async calloutTemplates(
     @Parent() templatesSet: ITemplatesSet
   ): Promise<ITemplate[]> {
-    return this.templatesSetService.getCalloutTemplates(templatesSet);
+    return this.templatesSetService.getTemplatesOfType(
+      templatesSet,
+      TemplateType.CALLOUT
+    );
   }
-
   @UseGuards(GraphqlGuard)
-  @ResolveField('whiteboardTemplates', () => [ITemplate], {
+  @ResolveField('calloutTemplatesCount', () => Float, {
     nullable: false,
-    description: 'The WhiteboardTemplates in this TemplatesSet.',
+    description: 'The total number of CalloutTemplates in this TemplatesSet.',
   })
-  async whiteboardTemplates(
+  calloutTemplatesCount(
     @Parent() templatesSet: ITemplatesSet
-  ): Promise<ITemplate[]> {
-    return this.templatesSetService.getWhiteboardTemplates(templatesSet);
+  ): Promise<number> {
+    return this.templatesSetService.getTemplatesCountForType(
+      templatesSet.id,
+      TemplateType.CALLOUT
+    );
   }
 
   @UseGuards(GraphqlGuard)
@@ -49,33 +66,11 @@ export class TemplatesSetResolverFields {
   async innovationFlowTemplates(
     @Parent() templatesSet: ITemplatesSet
   ): Promise<ITemplate[]> {
-    return this.templatesSetService.getInnovationFlowTemplates(templatesSet);
-  }
-
-  @UseGuards(GraphqlGuard)
-  @ResolveField('communityGuidelinesTemplates', () => [ITemplate], {
-    nullable: false,
-    description: 'The CommunityGuidelines in this TemplatesSet.',
-  })
-  async communityGuidelinesTemplates(
-    @Parent() templatesSet: ITemplatesSet
-  ): Promise<ITemplate[]> {
-    return this.templatesSetService.getCommunityGuidelinesTemplates(
-      templatesSet
+    return this.templatesSetService.getTemplatesOfType(
+      templatesSet,
+      TemplateType.INNOVATION_FLOW
     );
   }
-
-  @UseGuards(GraphqlGuard)
-  @ResolveField('postTemplates', () => [ITemplate], {
-    nullable: false,
-    description: 'The Post Templates in this TemplatesSet.',
-  })
-  async postTemplates(
-    @Parent() templatesSet: ITemplatesSet
-  ): Promise<ITemplate[]> {
-    return this.templatesSetService.getPostTemplates(templatesSet);
-  }
-
   @UseGuards(GraphqlGuard)
   @ResolveField('innovationFlowTemplatesCount', () => Float, {
     nullable: false,
@@ -92,20 +87,18 @@ export class TemplatesSetResolverFields {
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField('whiteboardTemplatesCount', () => Float, {
+  @ResolveField('communityGuidelinesTemplates', () => [ITemplate], {
     nullable: false,
-    description:
-      'The total number of WhiteboardTemplates in this TemplatesSet.',
+    description: 'The CommunityGuidelines in this TemplatesSet.',
   })
-  async whiteboardTemplatesCount(
+  async communityGuidelinesTemplates(
     @Parent() templatesSet: ITemplatesSet
-  ): Promise<number> {
-    return this.templatesSetService.getTemplatesCountForType(
-      templatesSet.id,
-      TemplateType.WHITEBOARD
+  ): Promise<ITemplate[]> {
+    return this.templatesSetService.getTemplatesOfType(
+      templatesSet,
+      TemplateType.COMMUNITY_GUIDELINES
     );
   }
-
   @UseGuards(GraphqlGuard)
   @ResolveField('communityGuidelinesTemplatesCount', () => Float, {
     nullable: false,
@@ -122,19 +115,18 @@ export class TemplatesSetResolverFields {
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField('calloutTemplatesCount', () => Float, {
+  @ResolveField('postTemplates', () => [ITemplate], {
     nullable: false,
-    description: 'The total number of CalloutTemplates in this TemplatesSet.',
+    description: 'The Post Templates in this TemplatesSet.',
   })
-  calloutTemplatesCount(
+  async postTemplates(
     @Parent() templatesSet: ITemplatesSet
-  ): Promise<number> {
-    return this.templatesSetService.getTemplatesCountForType(
-      templatesSet.id,
-      TemplateType.CALLOUT
+  ): Promise<ITemplate[]> {
+    return this.templatesSetService.getTemplatesOfType(
+      templatesSet,
+      TemplateType.POST
     );
   }
-
   @UseGuards(GraphqlGuard)
   @ResolveField('postTemplatesCount', () => Float, {
     nullable: false,
@@ -148,11 +140,30 @@ export class TemplatesSetResolverFields {
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField('templatesCount', () => Float, {
+  @ResolveField('whiteboardTemplates', () => [ITemplate], {
     nullable: false,
-    description: 'The total number of Templates in this TemplatesSet.',
+    description: 'The WhiteboardTemplates in this TemplatesSet.',
   })
-  async templatesCount(@Parent() templatesSet: ITemplatesSet): Promise<number> {
-    return this.templatesSetService.getTemplatesCount(templatesSet.id);
+  async whiteboardTemplates(
+    @Parent() templatesSet: ITemplatesSet
+  ): Promise<ITemplate[]> {
+    return this.templatesSetService.getTemplatesOfType(
+      templatesSet,
+      TemplateType.WHITEBOARD
+    );
+  }
+  @UseGuards(GraphqlGuard)
+  @ResolveField('whiteboardTemplatesCount', () => Float, {
+    nullable: false,
+    description:
+      'The total number of WhiteboardTemplates in this TemplatesSet.',
+  })
+  async whiteboardTemplatesCount(
+    @Parent() templatesSet: ITemplatesSet
+  ): Promise<number> {
+    return this.templatesSetService.getTemplatesCountForType(
+      templatesSet.id,
+      TemplateType.WHITEBOARD
+    );
   }
 }

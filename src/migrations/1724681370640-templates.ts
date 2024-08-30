@@ -51,15 +51,28 @@ export class Templates1724681370640 implements MigrationInterface {
       authorizationId: string;
       profileId: string;
       templatesSetId: string;
+      storageBucketId: string;
     }[] = await queryRunner.query(
-      `SELECT id, createdDate, updatedDate, version, authorizationId, profileId, templatesSetId FROM \`innovation_flow_template\``
+      `SELECT
+        innovation_flow_template.id,
+        innovation_flow_template.createdDate,
+        innovation_flow_template.updatedDate,
+        innovation_flow_template.version,
+        innovation_flow_template.authorizationId,
+        innovation_flow_template.profileId,
+        innovation_flow_template.templatesSetId,
+        profile.storageBucketId
+      FROM \`innovation_flow_template\`
+        LEFT OUTER JOIN \`profile\` ON \`profile\`.id = \`innovation_flow_template\`.profileId
+      `
     );
     for (const innovationFlowTemplate of innovationFlowTemplates) {
       // Create a new InnovationFlow entity for each InnovationFlow
       const innovationFlowID =
         await this.createInnovationFlowFromInnovationFlowTemplate(
           queryRunner,
-          innovationFlowTemplate.id
+          innovationFlowTemplate.id,
+          innovationFlowTemplate.storageBucketId
         );
       await queryRunner.query(
         `INSERT INTO \`template\` (id, createdDate, updatedDate, version, authorizationId, profileId, templatesSetId, type, innovationFlowId)
@@ -86,14 +99,27 @@ export class Templates1724681370640 implements MigrationInterface {
       authorizationId: string;
       profileId: string;
       templatesSetId: string;
+      storageBucketId: string;
     }[] = await queryRunner.query(
-      `SELECT id, createdDate, updatedDate, version, authorizationId, profileId, templatesSetId FROM \`whiteboard_template\``
+      `SELECT
+        whiteboard_template.id,
+        whiteboard_template.createdDate,
+        whiteboard_template.updatedDate,
+        whiteboard_template.version,
+        whiteboard_template.authorizationId,
+        whiteboard_template.profileId,
+        whiteboard_template.templatesSetId,
+        profile.storageBucketId
+      FROM \`whiteboard_template\`
+        LEFT OUTER JOIN \`profile\` ON \`profile\`.id = \`whiteboard_template\`.profileId
+      `
     );
     for (const whiteboardTemplate of whiteboardTemplates) {
       // Create a new Whiteboard entity for each WhiteboardTemplate
       const whiteboardID = await this.createWhiteboardFromWhiteboardTemplate(
         queryRunner,
-        whiteboardTemplate.id
+        whiteboardTemplate.id,
+        whiteboardTemplate.storageBucketId
       );
       await queryRunner.query(
         `INSERT INTO \`template\` (id, createdDate, updatedDate, version, authorizationId, profileId, templatesSetId, type, whiteboardId)
@@ -179,19 +205,24 @@ export class Templates1724681370640 implements MigrationInterface {
 
   private async createInnovationFlowFromInnovationFlowTemplate(
     queryRunner: QueryRunner,
-    innovationFlowTemplateId: string
+    innovationFlowTemplateId: string,
+    storageBucketId: string
   ): Promise<string> {
     const innovationFlowID = randomUUID();
-    const innovationFlowAuthID = randomUUID();
+    const authID = await createAuthorizationPolicy(
+      queryRunner,
+      'innovation-flow'
+    );
+    const profileID = await createProfile(
+      queryRunner,
+      'Innovation Flow',
+      storageBucketId,
+      'innovation-flow-template-innovation-flow'
+    );
 
     await queryRunner.query(
-      `INSERT INTO authorization_policy (id, version, credentialRules, verifiedCredentialRules, anonymousReadAccess, privilegeRules, type) VALUES
-            ('${innovationFlowAuthID}',
-            1, '', '', 0, '', 'innovation-flow')`
-    );
-    await queryRunner.query(
       `INSERT INTO innovation_flow (id, createdDate, updatedDate, version, authorizationId, states)
-        SELECT '${innovationFlowID}' as \`id\`, createdDate, updatedDate, version, '${innovationFlowAuthID}' as authorizationId, states
+        SELECT '${innovationFlowID}' as \`id\`, createdDate, updatedDate, version, '${authID}' as authorizationId, states
         FROM innovation_flow_template WHERE id = '${innovationFlowTemplateId}'`
     );
     return innovationFlowID;
@@ -199,20 +230,22 @@ export class Templates1724681370640 implements MigrationInterface {
 
   private async createWhiteboardFromWhiteboardTemplate(
     queryRunner: QueryRunner,
-    whiteboardTemplateId: string
+    whiteboardTemplateId: string,
+    storageBucketId: string
   ): Promise<string> {
     const whiteboardID = randomUUID();
-    const whiteboardAuthID = randomUUID();
     const nameID = `template-${whiteboardID.slice(0, 8)}`;
+    const authID = await createAuthorizationPolicy(queryRunner, 'whiteboard');
+    const profileID = await createProfile(
+      queryRunner,
+      'Whiteboard',
+      storageBucketId,
+      'whiteboard-template-whiteboard'
+    );
 
     await queryRunner.query(
-      `INSERT INTO authorization_policy (id, version, credentialRules, verifiedCredentialRules, anonymousReadAccess, privilegeRules, type) VALUES
-            ('${whiteboardAuthID}',
-            1, '', '', 0, '', 'whiteboard')`
-    );
-    await queryRunner.query(
-      `INSERT INTO whiteboard (id, createdDate, updatedDate, version, authorizationId, content, nameID)
-        SELECT '${whiteboardID}' as \`id\`, createdDate, updatedDate, version, '${whiteboardAuthID}' as authorizationId, content, '${nameID}' as nameID
+      `INSERT INTO whiteboard (id, createdDate, updatedDate, version, authorizationId, profileID, content, nameID)
+        SELECT '${whiteboardID}' as \`id\`, createdDate, updatedDate, version, '${authID}' as authorizationId, '${profileID}' as profileID, content, '${nameID}' as nameID
         FROM whiteboard_template WHERE id = '${whiteboardTemplateId}'`
     );
     return whiteboardID;
@@ -246,17 +279,12 @@ export class Templates1724681370640 implements MigrationInterface {
     calloutTemplateId: string
   ): Promise<string> {
     const calloutID = randomUUID();
-    const calloutAuthID = randomUUID();
     const nameID = `template-${calloutID.slice(0, 8)}`;
+    const authID = await createAuthorizationPolicy(queryRunner, 'callout');
 
     await queryRunner.query(
-      `INSERT INTO authorization_policy (id, version, credentialRules, verifiedCredentialRules, anonymousReadAccess, privilegeRules, type) VALUES
-            ('${calloutAuthID}',
-            1, '', '', 0, '', 'callout')`
-    );
-    await queryRunner.query(
       `INSERT INTO callout (id, createdDate, updatedDate, version, authorizationId, framingId, contributionDefaultsId, contributionPolicyId, type, visibility, sortOrder, nameID)
-        SELECT '${calloutID}' as \`id\`, createdDate, updatedDate, version, '${calloutAuthID}' as authorizationId,
+        SELECT '${calloutID}' as \`id\`, createdDate, updatedDate, version, '${authID}' as authorizationId,
           framingId,
           contributionDefaultsId,
           contributionPolicyId,
@@ -270,6 +298,55 @@ export class Templates1724681370640 implements MigrationInterface {
     return calloutID;
   }
 }
+
+const createProfile = async (
+  queryRunner: QueryRunner,
+  entityName: string,
+  templateStorageBucketId: string,
+  profileType: string
+) => {
+  const profileID = randomUUID();
+  const authID = await createAuthorizationPolicy(queryRunner, 'profile');
+  const profileStorageBucketId = await createStorageBucket(
+    queryRunner,
+    templateStorageBucketId
+  );
+  await queryRunner.query(
+    `INSERT INTO profile (id, version, authorizationId, locationId, displayName, tagline, storageBucketId, type) VALUES
+    ('${profileID}', 1, '${authID}', null, '${entityName} Template', '', '${profileStorageBucketId}', '${profileType}')`
+  );
+
+  return profileID;
+};
+
+const createStorageBucket = async (
+  queryRunner: QueryRunner,
+  storageBucketId: string
+) => {
+  const newStorageBucketId = randomUUID();
+  const authID = await createAuthorizationPolicy(queryRunner, 'storage-bucket');
+
+  await queryRunner.query(
+    `INSERT INTO storage_bucket (id, version, authorizationId, allowedMimeTypes, maxFileSize, storageAggregatorId)
+      SELECT '${newStorageBucketId}' as id, 1 as version, '${authID}' as authorizationId, allowedMimeTypes, maxFileSize, storageAggregatorId
+        FROM storage_bucket WHERE id = '${storageBucketId}'`
+  );
+
+  return newStorageBucketId;
+};
+
+const createAuthorizationPolicy = async (
+  queryRunner: QueryRunner,
+  policyType: string
+) => {
+  const authID = randomUUID();
+  await queryRunner.query(
+    `INSERT INTO authorization_policy (id, version, credentialRules, verifiedCredentialRules, anonymousReadAccess, privilegeRules, type) VALUES
+          ('${authID}',
+          1, '', '', 0, '', '${policyType}')`
+  );
+  return authID;
+};
 
 const formatDate = (date: Date) =>
   date.toISOString().replace('T', ' ').substring(0, 19);

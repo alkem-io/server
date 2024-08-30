@@ -165,8 +165,9 @@ export class InnovationFlowService {
       innovationFlowData.innovationFlowTemplateID
     );
 
-    const newStates = await this.templateService.getInnovationFlowStates(
-      innovationFlowTemplate
+    const newStates = this.innovationFlowStatesService.getStates(
+      (await this.templateService.getInnovationFlow(innovationFlowTemplate.id))
+        .states
     );
 
     const newStateNames = newStates.map(state => state.displayName);
