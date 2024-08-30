@@ -1,6 +1,6 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { FindOptionsSelect, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   ForbiddenException,
@@ -35,6 +35,14 @@ export class AuthorizationPolicyService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
+
+  public authorizationSelectOptions: FindOptionsSelect<AuthorizationPolicy> = {
+    id: true,
+    anonymousReadAccess: true,
+    credentialRules: true,
+    privilegeRules: true,
+    verifiedCredentialRules: true,
+  };
 
   createCredentialRule(
     grantedPrivileges: AuthorizationPrivilege[],

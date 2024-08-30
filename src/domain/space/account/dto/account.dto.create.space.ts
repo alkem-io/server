@@ -9,4 +9,11 @@ export class CreateSpaceOnAccountInput extends CreateSpaceInput {
     description: 'The Account where the Space is to be created.',
   })
   accountID!: string;
+
+  @Field(() => UUID, {
+    nullable: true,
+    description:
+      'The license plan the user wishes to use when creating the space.',
+  })
+  licensePlanID?: string;
 }

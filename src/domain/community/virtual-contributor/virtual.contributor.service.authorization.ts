@@ -73,7 +73,7 @@ export class VirtualContributorAuthorizationService {
     clonedVirtualAuthorizationAnonymousAccess.anonymousReadAccess = true;
     const profileAuthorizations =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
-        virtual.profile,
+        virtual.profile.id,
         clonedVirtualAuthorizationAnonymousAccess
       );
     updatedAuthorizations.push(...profileAuthorizations);

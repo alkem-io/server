@@ -98,7 +98,7 @@ export class OrganizationAuthorizationService {
     clonedOrganizationAuthorizationAnonymousAccess.anonymousReadAccess = true;
     const profileAuthorizations =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
-        organization.profile,
+        organization.profile.id,
         clonedOrganizationAuthorizationAnonymousAccess
       );
     updatedAuthorizations.push(...profileAuthorizations);

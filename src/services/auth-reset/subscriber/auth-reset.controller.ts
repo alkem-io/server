@@ -45,7 +45,7 @@ export class AuthResetController {
     @Ctx() context: RmqContext
   ) {
     this.logger.verbose?.(
-      `Starting reset of authorization for space with id ${payload.id}.`,
+      `Starting reset of authorization for account with id ${payload.id}.`,
       LogContext.AUTH_POLICY
     );
     const channel: Channel = context.getChannelRef();
@@ -61,7 +61,7 @@ export class AuthResetController {
         );
       await this.authorizationPolicyService.saveAll(updatedAuthorizations);
 
-      const message = `Finished resetting authorization for space with id ${payload.id}.`;
+      const message = `Finished resetting authorization for account with id ${payload.id}.`;
       this.logger.verbose?.(message, LogContext.AUTH_POLICY);
       this.taskService.updateTaskResults(payload.task, message);
       channel.ack(originalMsg);
@@ -74,7 +74,7 @@ export class AuthResetController {
         channel.reject(originalMsg, false); // Reject and don't requeue
       } else {
         this.logger.warn(
-          `Processing  authorization reset for space with id ${
+          `Processing  authorization reset for account with id ${
             payload.id
           } failed. Retrying (${retryCount + 1}/${MAX_RETRIES})`,
           LogContext.AUTH

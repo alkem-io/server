@@ -88,7 +88,7 @@ export class CalloutAuthorizationService {
     for (const contribution of callout.contributions) {
       const updatedContributionAuthorizations =
         await this.contributionAuthorizationService.applyAuthorizationPolicy(
-          contribution,
+          contribution.id,
           callout.authorization,
           communityPolicy,
           spaceSettings
