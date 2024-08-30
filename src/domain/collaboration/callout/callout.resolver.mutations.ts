@@ -389,7 +389,7 @@ export class CalloutResolverMutations {
   }
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => ICalloutContribution, {
+  @Mutation(() => [ICalloutContribution], {
     description:
       'Update the sortOrder field of the Contributions of s Callout.',
   })
@@ -407,11 +407,11 @@ export class CalloutResolverMutations {
       agentInfo,
       callout.authorization,
       AuthorizationPrivilege.UPDATE,
-      `update contribution sort order on callout: ${callout.id}`
+      `update contribution sort order on callout: ${sortOrderData.calloutID}`
     );
 
     return this.calloutService.updateContributionCalloutsSortOrder(
-      callout,
+      sortOrderData.calloutID,
       sortOrderData
     );
   }

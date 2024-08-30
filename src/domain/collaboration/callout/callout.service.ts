@@ -468,7 +468,7 @@ export class CalloutService {
   ): Promise<ICalloutContribution> {
     const calloutID = contributionData.calloutID;
     const callout = await this.getCalloutOrFail(calloutID, {
-      relations: { contributionPolicy: true, contributions: true },
+      relations: { contributions: true },
     });
     if (!callout.contributionPolicy)
       throw new EntityNotInitializedException(
@@ -504,40 +504,47 @@ export class CalloutService {
       );
     contribution.callout = callout;
 
-    const sortOrders =
-      callout.contributions?.map(contribution => contribution.sortOrder) ?? [];
-    const maxSortOrder = Math.max(...sortOrders, 0);
-
-    contribution.sortOrder = 1 + maxSortOrder;
-    return this.contributionService.save(contribution);
+    return await this.contributionService.save(contribution);
   }
 
   public async updateContributionCalloutsSortOrder(
-    contributionData: ICalloutContribution,
+    calloutId: string,
     sortOrderData: UpdateContributionCalloutsSortOrderInput
   ): Promise<ICalloutContribution[]> {
-    const callout = await this.getCalloutOrFail(contributionData.id, {
+    const callout = await this.getCalloutOrFail(calloutId, {
       relations: { contributionPolicy: true, contributions: true },
     });
 
-    const callouts = keyBy(callout.contributions, 'id');
+    if (!callout.contributions)
+      throw new EntityNotFoundException(
+        `No collaborations found: ${calloutId}`,
+        LogContext.COLLABORATION
+      );
 
-    const calloutsInOrder: ICalloutContribution[] = [];
-    let index = 0;
-    for (const calloutID of sortOrderData.contributionIDs) {
-      const callout = callouts[calloutID];
-      if (!callout) {
+    const contributionsById = keyBy(callout.contributions, 'id');
+
+    const contributionsInOrder: ICalloutContribution[] = [];
+    let index = 1;
+    for (const id of sortOrderData.contributionIDs) {
+      const contribution = contributionsById[id];
+      if (!contribution || !contribution.id) {
         throw new EntityNotFoundException(
-          `Callout with requested ID (${calloutID}) not located within current Contribution: ${contributionData.id}`,
+          `Callout with requested ID (${id}) not located within current Contribution: ${calloutId}`,
           LogContext.COLLABORATION
         );
       }
-      callout.sortOrder = index;
-      calloutsInOrder.push(callout);
+      contribution.sortOrder = index;
+      contributionsInOrder.push(contribution);
       index++;
     }
 
-    return calloutsInOrder;
+    await Promise.all(
+      contributionsInOrder.map(
+        async c => await this.contributionService.save(c)
+      )
+    );
+
+    return contributionsInOrder;
   }
 
   public async getCalloutFraming(

@@ -18,8 +18,8 @@ export abstract class ICalloutContribution extends IAuthorizable {
   callout?: ICallout;
 
   @Field(() => Number, {
-    nullable: false,
+    nullable: true,
     description: 'The sorting order for this Contribution.',
   })
-  sortOrder!: number;
+  sortOrder?: number;
 }
