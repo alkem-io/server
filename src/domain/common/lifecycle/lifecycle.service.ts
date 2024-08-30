@@ -74,7 +74,7 @@ export class LifecycleService {
       })
     ) {
       throw new InvalidStateTransitionException(
-        `Unable to update state: provided event (${eventName}) not in valid set of next events: ${nextStates}`,
+        `Unable to update state: provided event (${eventName}) not in valid set of next events: ${nextStates} for lifecycle: ${lifecycle.id}, context: ${JSON.stringify(lifecycleEventData)}`,
         LogContext.LIFECYCLE
       );
     }
