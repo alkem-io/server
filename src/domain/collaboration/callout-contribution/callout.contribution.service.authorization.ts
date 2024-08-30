@@ -33,27 +33,81 @@ export class CalloutContributionAuthorizationService {
   ) {}
 
   public async applyAuthorizationPolicy(
-    contributionInput: ICalloutContribution,
+    contributionID: string,
     parentAuthorization: IAuthorizationPolicy | undefined,
     communityPolicy?: ICommunityPolicy,
     spaceSettings?: ISpaceSettings
   ): Promise<IAuthorizationPolicy[]> {
     const contribution =
       await this.contributionService.getCalloutContributionOrFail(
-        contributionInput.id,
+        contributionID,
         {
+          loadEagerRelations: false,
           relations: {
+            authorization: true,
             post: {
-              profile: true,
+              authorization: true,
+              profile: {
+                authorization: true,
+              },
               comments: {
                 authorization: true,
               },
             },
             whiteboard: {
-              profile: true,
+              authorization: true,
+              profile: {
+                authorization: true,
+              },
             },
             link: {
-              profile: true,
+              authorization: true,
+              profile: {
+                authorization: true,
+              },
+            },
+          },
+          select: {
+            id: true,
+            createdBy: true,
+            authorization:
+              this.authorizationPolicyService.authorizationSelectOptions,
+            post: {
+              id: true,
+              createdBy: true,
+              authorization:
+                this.authorizationPolicyService.authorizationSelectOptions,
+              profile: {
+                id: true,
+                authorization:
+                  this.authorizationPolicyService.authorizationSelectOptions,
+              },
+              comments: {
+                id: true,
+                authorization:
+                  this.authorizationPolicyService.authorizationSelectOptions,
+              },
+            },
+            whiteboard: {
+              id: true,
+              createdBy: true,
+              authorization:
+                this.authorizationPolicyService.authorizationSelectOptions,
+              profile: {
+                id: true,
+                authorization:
+                  this.authorizationPolicyService.authorizationSelectOptions,
+              },
+            },
+            link: {
+              id: true,
+              authorization:
+                this.authorizationPolicyService.authorizationSelectOptions,
+              profile: {
+                id: true,
+                authorization:
+                  this.authorizationPolicyService.authorizationSelectOptions,
+              },
             },
           },
         }

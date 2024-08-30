@@ -81,7 +81,7 @@ export class PostAuthorizationService {
     // cascade
     const profileAuthorizations =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
-        post.profile,
+        post.profile.id,
         post.authorization
       );
     updatedAuthorizations.push(...profileAuthorizations);

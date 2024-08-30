@@ -40,7 +40,7 @@ export class LinkAuthorizationService {
 
     const profileAuthorizations =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
-        link.profile,
+        link.profile.id,
         link.authorization
       );
     updatedAuthorizations.push(...profileAuthorizations);

@@ -1,9 +1,13 @@
 import { registerEnumType } from '@nestjs/graphql';
 
 export enum LicensePrivilege {
-  VIRTUAL_CONTRIBUTOR_ACCESS = 'virtual-contributor-access',
-  WHITEBOARD_MULTI_USER = 'whiteboard-multi-user',
-  CALLOUT_SAVE_AS_TEMPLATE = 'callout-save-as-template',
+  SPACE_VIRTUAL_CONTRIBUTOR_ACCESS = 'space-virtual-contributor-access',
+  SPACE_WHITEBOARD_MULTI_USER = 'space-whiteboard-multi-user',
+  SPACE_SAVE_AS_TEMPLATE = 'space-save-as-template',
+
+  ACCOUNT_CREATE_SPACE = 'account-create-space',
+  ACCOUNT_CREATE_VIRTUAL_CONTRIBUTOR = 'account-create-virtual-contributor',
+  ACCOUNT_CREATE_INNOVATION_PACK = 'account-create-innovation-pack',
 }
 
 registerEnumType(LicensePrivilege, {
