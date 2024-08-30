@@ -185,7 +185,6 @@ export class NotificationPayloadBuilder {
         createdBy: post.createdBy,
         displayName: post.profile.displayName,
         nameID: post.nameID,
-        type: post.type,
         url: postURL,
       },
       ...spacePayload,

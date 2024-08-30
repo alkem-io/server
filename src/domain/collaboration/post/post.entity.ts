@@ -5,9 +5,6 @@ import { Room } from '@domain/communication/room/room.entity';
 
 @Entity()
 export class Post extends NameableEntity implements IPost {
-  @Column('text')
-  type!: string;
-
   @Column('char', { length: 36, nullable: true })
   createdBy!: string;
 
