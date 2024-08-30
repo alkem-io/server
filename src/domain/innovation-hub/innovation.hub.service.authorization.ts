@@ -59,7 +59,7 @@ export class InnovationHubAuthorizationService {
 
     const profileAuthorizations =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
-        hub.profile,
+        hub.profile.id,
         hub.authorization
       );
     updatedAuthorizations.push(...profileAuthorizations);

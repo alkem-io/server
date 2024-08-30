@@ -13,6 +13,10 @@ import { RevokeLicensePlanFromSpace } from './dto/admin.licensing.dto.revoke.lic
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ISpace } from '@domain/space/space/space.interface';
 import { SpaceAuthorizationService } from '@domain/space/space/space.service.authorization';
+import { IAccount } from '@domain/space/account/account.interface';
+import { AssignLicensePlanToAccount } from './dto/admin.licensing.dto.assign.license.plan.to.account';
+import { AccountAuthorizationService } from '@domain/space/account/account.service.authorization';
+import { RevokeLicensePlanFromAccount } from './dto/admin.licensing.dto.revoke.license.plan.from.account';
 
 @Resolver()
 export class AdminLicensingResolverMutations {
@@ -20,9 +24,47 @@ export class AdminLicensingResolverMutations {
     private authorizationService: AuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private spaceAuthorizationService: SpaceAuthorizationService,
+    private accountAuthorizationService: AccountAuthorizationService,
     private licensingService: LicensingService,
     private adminLicensingService: AdminLicensingService
   ) {}
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IAccount, {
+    description: 'Assign the specified LicensePlan to an Account.',
+  })
+  @Profiling.api
+  async assignLicensePlanToAccount(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('planData') planData: AssignLicensePlanToAccount
+  ): Promise<IAccount> {
+    let licensing: ILicensing | undefined;
+    if (planData.licensingID) {
+      licensing = await this.licensingService.getLicensingOrFail(
+        planData.licensingID
+      );
+    } else {
+      licensing = await this.licensingService.getDefaultLicensingOrFail();
+    }
+
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      licensing.authorization,
+      AuthorizationPrivilege.GRANT,
+      `assign licensePlan (${planData.licensePlanID}) on account (${planData.accountID})`
+    );
+
+    const account = await this.adminLicensingService.assignLicensePlanToAccount(
+      planData,
+      licensing.id
+    );
+    // Need to trigger an authorization reset as some license credentials are used in auth policy e.g. VCs feature flag
+    const updatedAuthorizations =
+      await this.accountAuthorizationService.applyAuthorizationPolicy(account);
+    await this.authorizationPolicyService.saveAll(updatedAuthorizations);
+
+    return account;
+  }
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => ISpace, {
@@ -46,7 +88,7 @@ export class AdminLicensingResolverMutations {
       agentInfo,
       licensing.authorization,
       AuthorizationPrivilege.GRANT,
-      `assign licensePlan on licensing: ${licensing.id}`
+      `assign licensePlan (${planData.licensePlanID}) on account (${planData.spaceID})`
     );
 
     const account = await this.adminLicensingService.assignLicensePlanToSpace(
@@ -59,6 +101,37 @@ export class AdminLicensingResolverMutations {
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);
 
     return account;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IAccount, {
+    description: 'Revokes the specified LicensePlan on an Account.',
+  })
+  @Profiling.api
+  async revokeLicensePlanFromAccount(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('planData') planData: RevokeLicensePlanFromAccount
+  ): Promise<IAccount> {
+    let licensing: ILicensing | undefined;
+    if (planData.licensingID) {
+      licensing = await this.licensingService.getLicensingOrFail(
+        planData.licensingID
+      );
+    } else {
+      licensing = await this.licensingService.getDefaultLicensingOrFail();
+    }
+
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      licensing.authorization,
+      AuthorizationPrivilege.GRANT,
+      `revoke licensePlan (${planData.licensePlanID}) on account (${planData.accountID})`
+    );
+
+    return await this.adminLicensingService.revokeLicensePlanFromAccount(
+      planData,
+      licensing.id
+    );
   }
 
   @UseGuards(GraphqlGuard)
@@ -83,7 +156,7 @@ export class AdminLicensingResolverMutations {
       agentInfo,
       licensing.authorization,
       AuthorizationPrivilege.GRANT,
-      `revoke licensePlan on licensing: ${licensing.id}`
+      `revoke licensePlan (${planData.licensePlanID}) on account (${planData.spaceID})`
     );
 
     return await this.adminLicensingService.revokeLicensePlanFromSpace(
