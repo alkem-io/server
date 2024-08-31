@@ -199,6 +199,7 @@ export class Templates1724832530055 implements MigrationInterface {
     await queryRunner.query(`DROP TABLE \`community_guidelines_template\``);
     await queryRunner.query(`DROP TABLE \`innovation_flow_template\``);
     await queryRunner.query(`DROP TABLE \`callout_template\``);
+    await queryRunner.query(`ALTER TABLE \`post\` DROP COLUMN \`type\``);
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {}
