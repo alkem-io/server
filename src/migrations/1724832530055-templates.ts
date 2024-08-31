@@ -2,8 +2,8 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { escapeString } from './utils/escape-string';
 
-export class Templates1724681370640 implements MigrationInterface {
-  name = 'Templates1724681370640';
+export class Templates1724832530055 implements MigrationInterface {
+  name = 'Templates1724832530055';
   // TODO: PENDING ::
   // Create a profile for new entities like IFs and Whiteboards
 
