@@ -29,28 +29,17 @@ export class CalloutFramingAuthorizationService {
           relations: {
             authorization: true,
             profile: true,
-            whiteboard: {
-              authorization: true,
-              profile: {
-                authorization: true,
-              },
-            },
+            whiteboard: true,
           },
           select: {
             id: true,
             authorization:
               this.authorizationPolicyService.authorizationSelectOptions,
-            profile: { id: true },
+            profile: {
+              id: true,
+            },
             whiteboard: {
               id: true,
-              createdBy: true,
-              authorization:
-                this.authorizationPolicyService.authorizationSelectOptions,
-              profile: {
-                id: true,
-                authorization:
-                  this.authorizationPolicyService.authorizationSelectOptions,
-              },
             },
           },
         }
@@ -81,7 +70,7 @@ export class CalloutFramingAuthorizationService {
     if (calloutFraming.whiteboard) {
       const whiteboardAuthorizations =
         await this.whiteboardAuthorizationService.applyAuthorizationPolicy(
-          calloutFraming.whiteboard,
+          calloutFraming.whiteboard.id,
           calloutFraming.authorization
         );
       updatedAuthorizations.push(...whiteboardAuthorizations);

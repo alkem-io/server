@@ -58,14 +58,13 @@ export class WhiteboardResolverMutations {
         },
         relations: {
           authorization: true,
-          profile: true,
         },
       });
 
       if (framing) {
         const updatedWhiteboardAuthorizations =
           await this.whiteboardAuthService.applyAuthorizationPolicy(
-            whiteboard,
+            whiteboard.id,
             framing.authorization
           );
         await this.authorizationPolicyService.saveAll(
@@ -86,7 +85,7 @@ export class WhiteboardResolverMutations {
         if (contribution) {
           const contributionAuthorizations =
             await this.whiteboardAuthService.applyAuthorizationPolicy(
-              whiteboard,
+              whiteboard.id,
               contribution.authorization
             );
           await this.authorizationPolicyService.saveAll(
