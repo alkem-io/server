@@ -38,7 +38,7 @@ export class Templates1724832530055 implements MigrationInterface {
 
     await queryRunner.query(
       `INSERT INTO \`template\` (id, createdDate, updatedDate, version, type, authorizationId, profileId, templatesSetId, postDefaultDescription)
-        SELECT id, createdDate, updatedDate, version, 'post' as \`type\`, authorizationId, profileId, templatesSetId, \`type\` as defaultDescription as postDefaultDescription
+        SELECT id, createdDate, updatedDate, version, 'post' as \`type\`, authorizationId, profileId, templatesSetId, defaultDescription as postDefaultDescription
           FROM \`post_template\`;`
     );
 
