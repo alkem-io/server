@@ -85,11 +85,12 @@ export class TemplateService {
           LogContext.TEMPLATES
         );
       }
-      this.innovationFlowService.createInnovationFlow(
-        templateData.innovationFlowData,
-        [],
-        storageAggregator
-      );
+      template.innovationFlow =
+        await this.innovationFlowService.createInnovationFlow(
+          templateData.innovationFlowData,
+          [],
+          storageAggregator
+        );
     } else if (template.type === TemplateType.COMMUNITY_GUIDELINES) {
       if (
         !templateData.communityGuidelinesID &&
