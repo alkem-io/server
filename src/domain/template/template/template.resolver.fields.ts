@@ -3,7 +3,7 @@ import { ITemplate } from './template.interface';
 import { TemplateService } from './template.service';
 import { TemplateType } from '@common/enums/template.type';
 import { ICommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.interface';
-import { ICallout } from '@domain/collaboration/callout';
+import { CreateCalloutInput, ICallout } from '@domain/collaboration/callout';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 import { IInnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.interface';
 import { CreateInnovationFlowInput } from '@domain/collaboration/innovation-flow/dto';
@@ -29,7 +29,7 @@ export class TemplateResolverFields {
     return this.templateService.getInnovationFlow(template.id);
   }
 
-  @ResolveField('innovationFlow', () => CreateInnovationFlowInput, {
+  @ResolveField('innovationFlowInput', () => CreateInnovationFlowInput, {
     nullable: true,
     description:
       'Craete the input for a new Innovation Flow based on the supplied Template.',
@@ -70,6 +70,23 @@ export class TemplateResolverFields {
       return undefined;
     }
     return this.templateService.getCallout(template.id);
+  }
+
+  @ResolveField('calloutInput', () => CreateCalloutInput, {
+    nullable: true,
+    description:
+      'Build the input for creating a new Callout from this Template.',
+  })
+  async calloutInput(
+    @Parent() template: ITemplate
+  ): Promise<CreateCalloutInput | undefined> {
+    if (template.type !== TemplateType.CALLOUT) {
+      return undefined;
+    }
+    const callout = await this.templateService.getCallout(template.id);
+    return this.collaborationFactoryService.buildCreateCalloutInputFromCallout(
+      callout
+    );
   }
 
   @ResolveField('whiteboard', () => IWhiteboard, {
