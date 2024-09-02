@@ -1,4 +1,4 @@
-import { forwardRef, Inject, Injectable, LoggerService } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, Repository } from 'typeorm';
 import {
@@ -28,13 +28,14 @@ import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { WhiteboardService } from '@domain/common/whiteboard';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 import { IInnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.interface';
+import { CollaborationFactoryService } from '@domain/collaboration/collaboration-factory/collaboration.factory.service';
 
 @Injectable()
 export class TemplateService {
   constructor(
     private profileService: ProfileService,
-    @Inject(forwardRef(() => InnovationFlowService))
     private innovationFlowService: InnovationFlowService,
+    private collaborationFactoryService: CollaborationFactoryService,
     private communityGuidelinesService: CommunityGuidelinesService,
     private calloutService: CalloutService,
     private whiteboardService: WhiteboardService,
@@ -103,7 +104,8 @@ export class TemplateService {
           LogContext.TEMPLATES
         );
       }
-      let guidelinesInput: CreateCommunityGuidelinesInput;
+      let guidelinesInput: CreateCommunityGuidelinesInput =
+        templateData.communityGuidelines!;
 
       if (templateData.communityGuidelinesID) {
         // get the data from the existing guidelines
@@ -114,25 +116,10 @@ export class TemplateService {
               relations: { profile: true },
             }
           );
-        guidelinesInput = {
-          profile: {
-            displayName: guidelines.profile.displayName,
-            description: guidelines.profile.description,
-            tagsets: guidelines.profile.tagsets,
-            referencesData: guidelines.profile.references,
-          },
-        };
-      } else {
-        // get the data from the input
-        const guidelinesFromInput = templateData.communityGuidelines!;
-        guidelinesInput = {
-          profile: {
-            displayName: guidelinesFromInput.profile.displayName,
-            description: guidelinesFromInput.profile.description,
-            tagsets: guidelinesFromInput.profile.tagsets,
-            referencesData: guidelinesFromInput.profile.referencesData,
-          },
-        };
+        guidelinesInput =
+          await this.collaborationFactoryService.buildCreateCommunityGuidelinesInputFromCommunityGuidelines(
+            guidelines
+          );
       }
 
       template.communityGuidelines =

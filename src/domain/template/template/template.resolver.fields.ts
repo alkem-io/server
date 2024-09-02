@@ -8,6 +8,7 @@ import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 import { IInnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.interface';
 import { CreateInnovationFlowInput } from '@domain/collaboration/innovation-flow/dto';
 import { CollaborationFactoryService } from '@domain/collaboration/collaboration-factory/collaboration.factory.service';
+import { CreateCommunityGuidelinesInput } from '@domain/community/community-guidelines';
 
 @Resolver(() => ITemplate)
 export class TemplateResolverFields {
@@ -59,6 +60,28 @@ export class TemplateResolverFields {
       return undefined;
     }
     return this.templateService.getCommunityGuidelines(template.id);
+  }
+
+  @ResolveField(
+    'communityGuidelinesInput',
+    () => CreateCommunityGuidelinesInput,
+    {
+      nullable: true,
+      description:
+        'Build the input for a new Community Guidelins using the Community Guidelines for this Template.',
+    }
+  )
+  async communityGuidelinesInput(
+    @Parent() template: ITemplate
+  ): Promise<CreateCommunityGuidelinesInput | undefined> {
+    if (template.type !== TemplateType.COMMUNITY_GUIDELINES) {
+      return undefined;
+    }
+    const communityGuidelines =
+      await this.templateService.getCommunityGuidelines(template.id);
+    return this.collaborationFactoryService.buildCreateCommunityGuidelinesInputFromCommunityGuidelines(
+      communityGuidelines
+    );
   }
 
   @ResolveField('callout', () => ICallout, {

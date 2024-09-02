@@ -1,7 +1,7 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
-import { forwardRef, Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Template } from './template.entity';
 import { TemplateResolverMutations } from './template.resolver.mutations';
@@ -12,16 +12,16 @@ import { CommunityGuidelinesModule } from '@domain/community/community-guideline
 import { CalloutModule } from '@domain/collaboration/callout/callout.module';
 import { WhiteboardModule } from '@domain/common/whiteboard';
 import { TemplateResolverFields } from './template.resolver.fields';
-import { InnovationFlowModule } from '@domain/collaboration/innovation-flow/innovation.flow.module';
+import { CollaborationFactoryModule } from '@domain/collaboration/collaboration-factory/collaboration.factory.module';
 
 @Module({
   imports: [
     AuthorizationModule,
     AuthorizationPolicyModule,
-    forwardRef(() => InnovationFlowModule),
     InnovationFlowStatesModule,
     ProfileModule,
     CommunityGuidelinesModule,
+    CollaborationFactoryModule,
     CalloutModule,
     WhiteboardModule,
     TypeOrmModule.forFeature([Template]),

@@ -25,6 +25,8 @@ import { IReference } from '@domain/common/reference/reference.interface';
 import { CreateReferenceInput } from '@domain/common/reference/dto/reference.dto.create';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { CreateTagsetInput } from '@domain/common/tagset/dto/tagset.dto.create';
+import { CreateCommunityGuidelinesInput } from '@domain/community/community-guidelines/dto/community.guidelines.dto.create';
+import { ICommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.interface';
 
 @Injectable()
 export class CollaborationFactoryService {
@@ -96,6 +98,17 @@ export class CollaborationFactoryService {
     return sourceCallouts.map(this.buildCreateCalloutInputFromCallout);
   }
 
+  public async buildCreateCommunityGuidelinesInputFromCommunityGuidelines(
+    communityGuidelines: ICommunityGuidelines
+  ): Promise<CreateCommunityGuidelinesInput> {
+    const result: CreateCommunityGuidelinesInput = {
+      profile: this.buildCreateProfileInputFromProfile(
+        communityGuidelines.profile
+      ),
+    };
+    return result;
+  }
+
   public buildCreateCalloutInputFromCallout(
     calloutInput: ICallout
   ): CreateCalloutInput {
@@ -122,22 +135,22 @@ export class CollaborationFactoryService {
       type: calloutInput.type,
       visibility: calloutInput.visibility,
       groupName: calloutGroupTagset.tags[0],
-      framing: this.createCalloutFramingInputFromCalloutFraming(
+      framing: this.buildCreateCalloutFramingInputFromCalloutFraming(
         calloutInput.framing
       ),
       contributionDefaults:
-        this.createCalloutContributionDefaultsInputFromCalloutContributionDefaults(
+        this.buildCreateCalloutContributionDefaultsInputFromCalloutContributionDefaults(
           calloutInput.contributionDefaults
         ),
       contributionPolicy:
-        this.createCalloutContributionPolicyInputFromCalloutContributionPolicy(
+        this.buildCreateCalloutContributionPolicyInputFromCalloutContributionPolicy(
           calloutInput.contributionPolicy
         ),
       sortOrder: calloutInput.sortOrder,
     };
   }
 
-  private createCalloutFramingInputFromCalloutFraming(
+  private buildCreateCalloutFramingInputFromCalloutFraming(
     calloutFraming: ICalloutFraming
   ): CreateCalloutFramingInput {
     if (!calloutFraming.profile || !calloutFraming.whiteboard) {
@@ -151,14 +164,14 @@ export class CollaborationFactoryService {
       );
     }
     return {
-      profile: this.createProfileInputFromProfile(calloutFraming.profile),
-      whiteboard: this.createWhiteboardInputFromWhiteboard(
+      profile: this.buildCreateProfileInputFromProfile(calloutFraming.profile),
+      whiteboard: this.buildCreateWhiteboardInputFromWhiteboard(
         calloutFraming.whiteboard
       ),
     };
   }
 
-  private createCalloutContributionDefaultsInputFromCalloutContributionDefaults(
+  private buildCreateCalloutContributionDefaultsInputFromCalloutContributionDefaults(
     calloutContributionDefaults?: ICalloutContributionDefaults
   ): CreateCalloutContributionDefaultsInput | undefined {
     if (!calloutContributionDefaults) {
@@ -171,7 +184,7 @@ export class CollaborationFactoryService {
     return result;
   }
 
-  private createCalloutContributionPolicyInputFromCalloutContributionPolicy(
+  private buildCreateCalloutContributionPolicyInputFromCalloutContributionPolicy(
     calloutContributionPolicy: ICalloutContributionPolicy
   ): CreateCalloutContributionPolicyInput {
     return {
@@ -181,31 +194,33 @@ export class CollaborationFactoryService {
     };
   }
 
-  public createWhiteboardInputFromWhiteboard(
+  public buildCreateWhiteboardInputFromWhiteboard(
     whiteboard?: IWhiteboard
   ): CreateWhiteboardInput | undefined {
     if (!whiteboard) return undefined;
     return {
-      profileData: this.createProfileInputFromProfile(whiteboard.profile),
+      profileData: this.buildCreateProfileInputFromProfile(whiteboard.profile),
       content: whiteboard.content,
       nameID: whiteboard.nameID,
     };
   }
 
-  private createProfileInputFromProfile(profile: IProfile): CreateProfileInput {
+  private buildCreateProfileInputFromProfile(
+    profile: IProfile
+  ): CreateProfileInput {
     return {
       description: profile.description,
       displayName: profile.displayName,
-      location: this.createLocationInputFromLocation(profile.location),
-      referencesData: this.createReferencesInputFromReferences(
+      location: this.buildCreateLocationInputFromLocation(profile.location),
+      referencesData: this.buildCreateReferencesInputFromReferences(
         profile.references
       ),
       tagline: profile.tagline,
-      tagsets: this.createTagsetsInputFromTagsets(profile.tagsets),
+      tagsets: this.buildCreateTagsetsInputFromTagsets(profile.tagsets),
     };
   }
 
-  private createLocationInputFromLocation(
+  private buildCreateLocationInputFromLocation(
     location?: ILocation
   ): CreateLocationInput | undefined {
     if (!location) return undefined;
@@ -219,18 +234,18 @@ export class CollaborationFactoryService {
     };
   }
 
-  private createReferencesInputFromReferences(
+  private buildCreateReferencesInputFromReferences(
     references?: IReference[]
   ): CreateReferenceInput[] {
     const result: CreateReferenceInput[] = [];
     if (!references) return result;
     for (const reference of references) {
-      result.push(this.createReferenceInputFromReference(reference));
+      result.push(this.buildCreateReferenceInputFromReference(reference));
     }
     return result;
   }
 
-  private createReferenceInputFromReference(
+  private buildCreateReferenceInputFromReference(
     reference: IReference
   ): CreateReferenceInput {
     return {
@@ -240,7 +255,7 @@ export class CollaborationFactoryService {
     };
   }
 
-  public createTagsetInputFromTagset(tagset: ITagset): CreateTagsetInput {
+  public buildCreateTagsetInputFromTagset(tagset: ITagset): CreateTagsetInput {
     return {
       name: tagset.name,
       tags: tagset.tags,
@@ -249,13 +264,13 @@ export class CollaborationFactoryService {
     };
   }
 
-  public createTagsetsInputFromTagsets(
+  public buildCreateTagsetsInputFromTagsets(
     tagsets?: ITagset[]
   ): CreateTagsetInput[] {
     const tagsetInputs: CreateTagsetInput[] = [];
     if (!tagsets) return tagsetInputs;
     for (const tagset of tagsets) {
-      tagsetInputs.push(this.createTagsetInputFromTagset(tagset));
+      tagsetInputs.push(this.buildCreateTagsetInputFromTagset(tagset));
     }
     return tagsetInputs;
   }
