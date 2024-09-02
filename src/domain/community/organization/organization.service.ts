@@ -137,6 +137,11 @@ export class OrganizationService {
     );
     organization.accountID = account.id;
 
+    const account = await this.accountHostService.createAccount(
+      AccountType.ORGANIZATION
+    );
+    organization.accountID = account.id;
+
     const savedOrg = await this.save(organization);
     this.logger.verbose?.(
       `Created new organization with id ${organization.id}`,
