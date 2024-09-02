@@ -312,48 +312,6 @@ export class CalloutService {
     return this.calloutRepository.find(options);
   }
 
-  public createCalloutInputFromCallout(
-    calloutInput: ICallout
-  ): CreateCalloutInput {
-    if (
-      !calloutInput.framing ||
-      !calloutInput.contributionDefaults ||
-      !calloutInput.contributionPolicy
-    ) {
-      throw new EntityNotInitializedException(
-        'Missing callout relation',
-        LogContext.COLLABORATION,
-        {
-          cause: 'Relation for Callout not loaded',
-          calloutId: calloutInput.id,
-        }
-      );
-    }
-
-    const calloutGroupTagset = this.calloutFramingService.getCalloutGroupTagset(
-      calloutInput.framing
-    );
-    return {
-      nameID: calloutInput.nameID,
-      type: calloutInput.type,
-      visibility: calloutInput.visibility,
-      groupName: calloutGroupTagset.tags[0],
-      framing:
-        this.calloutFramingService.createCalloutFramingInputFromCalloutFraming(
-          calloutInput.framing
-        ),
-      contributionDefaults:
-        this.contributionDefaultsService.createCalloutContributionDefaultsInputFromCalloutContributionDefaults(
-          calloutInput.contributionDefaults
-        ),
-      contributionPolicy:
-        this.contributionPolicyService.createCalloutContributionPolicyInputFromCalloutContributionPolicy(
-          calloutInput.contributionPolicy
-        ),
-      sortOrder: calloutInput.sortOrder,
-    };
-  }
-
   public async getActivityCount(callout: ICallout): Promise<number> {
     const result = 0;
     switch (callout.type) {

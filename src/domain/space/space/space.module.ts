@@ -31,6 +31,7 @@ import { AccountHostModule } from '../account.host/account.host.module';
 import { LicensingModule } from '@platform/licensing/licensing.module';
 import { LicenseEngineModule } from '@core/license-engine/license.engine.module';
 import { LicenseIssuerModule } from '@platform/license-issuer/license.issuer.module';
+import { CollaborationFactoryModule } from '@domain/collaboration/collaboration-factory/collaboration.factory.module';
 
 @Module({
   imports: [
@@ -54,6 +55,7 @@ import { LicenseIssuerModule } from '@platform/license-issuer/license.issuer.mod
     StorageAggregatorModule,
     ContributionReporterModule,
     CollaborationModule,
+    CollaborationFactoryModule,
     SpaceFilterModule,
     ActivityAdapterModule,
     LoaderCreatorModule,

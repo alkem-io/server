@@ -75,6 +75,8 @@ import { IAccount } from '../account/account.interface';
 import { LicensingService } from '@platform/licensing/licensing.service';
 import { LicensePlanType } from '@common/enums/license.plan.type';
 import { TemplateType } from '@common/enums/template.type';
+import { CollaborationFactoryService } from '@domain/collaboration/collaboration-factory/collaboration.factory.service';
+import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
 
 @Injectable()
 export class SpaceService {
@@ -93,6 +95,7 @@ export class SpaceService {
     private storageAggregatorService: StorageAggregatorService,
     private templatesSetService: TemplatesSetService,
     private collaborationService: CollaborationService,
+    private collaborationFactoryService: CollaborationFactoryService,
     private licensingService: LicensingService,
     private licenseEngineService: LicenseEngineService,
     @InjectRepository(Space)
@@ -194,26 +197,21 @@ export class SpaceService {
     this.profileService.addVisualOnProfile(space.profile, VisualType.CARD);
 
     //// Collaboration
-
-    space.collaboration = await this.collaborationService.createCollaboration(
-      {
-        ...spaceData.collaborationData,
-      },
-      space.storageAggregator,
-      space.type,
-      spaceDefaults
+    const calloutGroups = this.spaceDefaultsService.getCalloutGroups(
+      space.type
     );
-
     const calloutGroupDefault =
       this.spaceDefaultsService.getCalloutGroupDefault(space.type);
-    await this.collaborationService.addCalloutGroupTagsetTemplate(
-      space.collaboration,
-      calloutGroupDefault
-    );
-    // save the collaboration and all it's template sets
-    await this.save(space);
+
+    const innovationFlowInput =
+      await this.spaceDefaultsService.getCreateInnovationFlowInput(
+        space.type,
+        spaceDefaults,
+        spaceData.collaborationData?.innovationFlowTemplateID
+      );
+
     const calloutInputsFromCollaborationTemplate =
-      await this.collaborationService.createCalloutInputsFromCollaborationTemplate(
+      await this.collaborationFactoryService.buildCreateCalloutInputsFromCollaborationTemplate(
         spaceData.collaborationData?.collaborationTemplateID
       );
     const defaultCallouts = this.spaceDefaultsService.getDefaultCallouts(
@@ -224,12 +222,21 @@ export class SpaceService {
       calloutInputsFromCollaborationTemplate,
       spaceData.collaborationData
     );
-    space.collaboration = await this.collaborationService.addDefaultCallouts(
-      space.collaboration,
-      calloutInputs,
+
+    const collaborationData: CreateCollaborationInput = {
+      innovationFlowData: innovationFlowInput,
+      calloutsData: calloutInputs,
+      calloutGroups: calloutGroups,
+      defaultCalloutGroupName: calloutGroupDefault,
+    };
+    space.collaboration = await this.collaborationService.createCollaboration(
+      collaborationData,
       space.storageAggregator,
-      agentInfo?.userID
+      agentInfo
     );
+
+    // save the collaboration and all it's template sets
+    await this.save(space);
 
     /////////// Agents
 

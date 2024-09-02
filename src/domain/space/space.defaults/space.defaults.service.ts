@@ -15,7 +15,6 @@ import { CreateInnovationFlowInput } from '@domain/collaboration/innovation-flow
 import { templatesSetDefaults } from './definitions/space.defaults.templates';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
-import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
 import { ISpaceSettings } from '../space.settings/space.settings.interface';
 import { ICalloutGroup } from '@domain/collaboration/callout-groups/callout.group.interface';
 import { subspaceCommunityPolicy } from './definitions/subspace.community.policy';
@@ -53,6 +52,7 @@ import { spaceDefaultsInnovationFlowStatesBlankSlate } from './definitions/blank
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { TemplateService } from '@domain/template/template/template.service';
 import { ITemplate } from '@domain/template/template/template.interface';
+import { CreateCollaborationOnSpaceInput } from '../space/dto/space.dto.create.collaboration';
 
 @Injectable()
 export class SpaceDefaultsService {
@@ -351,7 +351,7 @@ export class SpaceDefaultsService {
   public getCreateCalloutInputs(
     defaultCallouts: CreateCalloutInput[],
     calloutsFromCollaborationTemplateInput: CreateCalloutInput[],
-    collaborationData?: CreateCollaborationInput
+    collaborationData?: CreateCollaborationOnSpaceInput
   ): CreateCalloutInput[] {
     let calloutInputs: CreateCalloutInput[] = [];
     const addDefaultCallouts = collaborationData?.addDefaultCallouts;
