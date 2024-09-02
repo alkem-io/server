@@ -32,9 +32,6 @@ export class Template extends AuthorizableEntity implements ITemplate {
   @Column('text', { nullable: true })
   postDefaultDescription?: string;
 
-  @Column('text', { nullable: true })
-  postType?: string;
-
   @OneToOne(() => InnovationFlow, {
     eager: false,
     cascade: true,

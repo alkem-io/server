@@ -20,7 +20,6 @@ export class Templates1724832530055 implements MigrationInterface {
                                   \`calloutId\` char(36) NULL,
                                   \`communityGuidelinesId\` char(36) NULL,
                                   \`innovationFlowId\` char(36) NULL,
-                                  \`postType\` text NULL,
                                   \`postDefaultDescription\` text NULL,
                                   \`whiteboardId\` char(36) NULL,
                                   UNIQUE INDEX \`REL_4318f97beabd362a8a09e9d320\` (\`authorizationId\`),
@@ -38,8 +37,8 @@ export class Templates1724832530055 implements MigrationInterface {
     );
 
     await queryRunner.query(
-      `INSERT INTO \`template\` (id, createdDate, updatedDate, version, type, authorizationId, profileId, templatesSetId, postType, postDefaultDescription)
-        SELECT id, createdDate, updatedDate, version, 'post' as \`type\`, authorizationId, profileId, templatesSetId, \`type\` as postType, defaultDescription as postDefaultDescription
+      `INSERT INTO \`template\` (id, createdDate, updatedDate, version, type, authorizationId, profileId, templatesSetId, postDefaultDescription)
+        SELECT id, createdDate, updatedDate, version, 'post' as \`type\`, authorizationId, profileId, templatesSetId, \`type\` as defaultDescription as postDefaultDescription
           FROM \`post_template\`;`
     );
 
