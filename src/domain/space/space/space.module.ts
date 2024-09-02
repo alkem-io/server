@@ -32,6 +32,7 @@ import { LicensingModule } from '@platform/licensing/licensing.module';
 import { LicenseEngineModule } from '@core/license-engine/license.engine.module';
 import { LicenseIssuerModule } from '@platform/license-issuer/license.issuer.module';
 import { CollaborationFactoryModule } from '@domain/collaboration/collaboration-factory/collaboration.factory.module';
+import { TemplateModule } from '@domain/template/template/template.module';
 
 @Module({
   imports: [
@@ -59,6 +60,7 @@ import { CollaborationFactoryModule } from '@domain/collaboration/collaboration-
     SpaceFilterModule,
     ActivityAdapterModule,
     LoaderCreatorModule,
+    TemplateModule,
     NameReporterModule,
     TypeOrmModule.forFeature([Space]),
   ],

@@ -15,13 +15,17 @@ import { ICalloutContributionPolicy } from '../callout-contribution-policy/callo
 import { CreateCalloutContributionPolicyInput } from '../callout-contribution-policy/dto/callout.contribution.policy.dto.create';
 import { CreateWhiteboardInput } from '@domain/common/whiteboard/dto/whiteboard.dto.create';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
+import { IInnovationFlow } from '../innovation-flow/innovation.flow.interface';
+import { CreateInnovationFlowInput } from '../innovation-flow/dto';
+import { InnovationFlowStatesService } from '../innovation-flow-states/innovaton.flow.state.service';
 
 @Injectable()
 export class CollaborationFactoryService {
   constructor(
     private collaborationService: CollaborationService,
     private calloutFramingService: CalloutFramingService,
-    private profileService: ProfileService
+    private profileService: ProfileService,
+    private innovationFlowStatesService: InnovationFlowStatesService
   ) {}
 
   public async buildCreateCalloutInputsFromCollaborationTemplate(
@@ -37,6 +41,26 @@ export class CollaborationFactoryService {
       );
     }
     return [];
+  }
+
+  public buildCreateInnovationFlowInputFromInnovationFlow(
+    innovationFlow: IInnovationFlow
+  ): CreateInnovationFlowInput {
+    if (!innovationFlow.states) {
+      throw new EntityNotInitializedException(
+        `Template ${innovationFlow.id} does not have innovation flow states`,
+        LogContext.TEMPLATES
+      );
+    }
+    // Note: no profile currently present, so use the one from the template for now
+    const result: CreateInnovationFlowInput = {
+      profile: {
+        displayName: innovationFlow.profile.displayName,
+        description: innovationFlow.profile.description,
+      },
+      states: this.innovationFlowStatesService.getStates(innovationFlow.states),
+    };
+    return result;
   }
 
   public async buildCreateCalloutInputsFromCollaboration(

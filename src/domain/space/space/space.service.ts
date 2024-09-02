@@ -77,6 +77,8 @@ import { LicensePlanType } from '@common/enums/license.plan.type';
 import { TemplateType } from '@common/enums/template.type';
 import { CollaborationFactoryService } from '@domain/collaboration/collaboration-factory/collaboration.factory.service';
 import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
+import { CreateInnovationFlowInput } from '@domain/collaboration/innovation-flow/dto/innovation.flow.dto.create';
+import { TemplateService } from '@domain/template/template/template.service';
 
 @Injectable()
 export class SpaceService {
@@ -98,6 +100,7 @@ export class SpaceService {
     private collaborationFactoryService: CollaborationFactoryService,
     private licensingService: LicensingService,
     private licenseEngineService: LicenseEngineService,
+    private templateService: TemplateService,
     @InjectRepository(Space)
     private spaceRepository: Repository<Space>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -203,12 +206,11 @@ export class SpaceService {
     const calloutGroupDefault =
       this.spaceDefaultsService.getCalloutGroupDefault(space.type);
 
-    const innovationFlowInput =
-      await this.spaceDefaultsService.getCreateInnovationFlowInput(
-        space.type,
-        spaceDefaults,
-        spaceData.collaborationData?.innovationFlowTemplateID
-      );
+    const innovationFlowInput = await this.getCreateInnovationFlowInput(
+      space.type,
+      spaceDefaults,
+      spaceData.collaborationData?.innovationFlowTemplateID
+    );
 
     const calloutInputsFromCollaborationTemplate =
       await this.collaborationFactoryService.buildCreateCalloutInputsFromCollaborationTemplate(
@@ -321,6 +323,57 @@ export class SpaceService {
 
     const result = await this.spaceRepository.remove(space as Space);
     result.id = deleteData.ID;
+    return result;
+  }
+
+  private async getCreateInnovationFlowInput(
+    spaceType: SpaceType,
+    spaceDefaults?: ISpaceDefaults,
+    innovationFlowTemplateIdInput?: string
+  ): Promise<CreateInnovationFlowInput> {
+    let innovationFlowTemplateID: string | undefined =
+      innovationFlowTemplateIdInput;
+    if (
+      !innovationFlowTemplateID &&
+      spaceDefaults &&
+      (spaceType === SpaceType.CHALLENGE || spaceType === SpaceType.OPPORTUNITY)
+    ) {
+      // If no argument is provided, then use the default template for the space, if set
+      // for spaces of type challenge or opportunity
+      innovationFlowTemplateID = spaceDefaults.innovationFlowTemplate?.id;
+    }
+
+    if (innovationFlowTemplateID) {
+      const template = await this.templateService.getTemplateOrFail(
+        innovationFlowTemplateID,
+        {
+          relations: {
+            innovationFlow: true,
+            profile: true,
+          },
+        }
+      );
+      if (!template.innovationFlow) {
+        throw new EntityNotInitializedException(
+          `Template ${template.id} does not have innovation flow`,
+          LogContext.TEMPLATES
+        );
+      }
+      return this.collaborationFactoryService.buildCreateInnovationFlowInputFromInnovationFlow(
+        template.innovationFlow
+      );
+    }
+
+    // If no default template is set, then pick up the default based on the specified type
+    const innovationFlowStatesDefault =
+      this.spaceDefaultsService.getDefaultInnovationFlowStates(spaceType);
+    const result: CreateInnovationFlowInput = {
+      profile: {
+        displayName: 'default',
+        description: 'default flow',
+      },
+      states: innovationFlowStatesDefault,
+    };
     return result;
   }
 
