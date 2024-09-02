@@ -249,7 +249,7 @@ export class NotificationPayloadBuilder {
       callout: {
         id: callout.id,
         displayName: callout.framing.profile.displayName,
-        description: callout.framing.profile.description,
+        description: callout.framing.profile.description ?? '',
         nameID: callout.nameID,
         type: callout.type,
         url: calloutURL,

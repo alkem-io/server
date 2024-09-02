@@ -211,6 +211,12 @@ export class SpaceService {
       spaceDefaults,
       spaceData.collaborationData?.innovationFlowTemplateID
     );
+    space.levelZeroSpaceID = '';
+    // save the collaboration and all it's template sets
+    await this.save(space);
+    if (spaceData.level === SpaceLevel.SPACE) {
+      space.levelZeroSpaceID = space.id;
+    }
 
     const calloutInputsFromCollaborationTemplate =
       await this.collaborationFactoryService.buildCreateCalloutInputsFromCollaborationTemplate(
@@ -247,10 +253,6 @@ export class SpaceService {
     });
 
     await this.save(space);
-
-    if (spaceData.level === SpaceLevel.SPACE) {
-      space.levelZeroSpaceID = space.id;
-    }
 
     if (space.level === SpaceLevel.SPACE) {
       await this.addLevelZeroSpaceEntities(space);

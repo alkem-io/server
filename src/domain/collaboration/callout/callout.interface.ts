@@ -63,8 +63,8 @@ export abstract class ICallout extends IAuthorizable {
   activity!: number;
 
   createdBy?: string;
-  publishedBy!: string;
-  publishedDate!: Date;
+  publishedBy?: string;
+  publishedDate?: Date;
 
   collaboration?: ICollaboration;
 }

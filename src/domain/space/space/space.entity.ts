@@ -9,7 +9,7 @@ import {
 } from 'typeorm';
 import { ISpace } from '@domain/space/space/space.interface';
 import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
-import { TINY_TEXT_LENGTH, UUID_LENGTH } from '@common/constants';
+import { ENUM_LENGTH, UUID_LENGTH } from '@common/constants';
 import { SpaceType } from '@common/enums/space.type';
 import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
 import { Community } from '@domain/community/community/community.entity';
@@ -86,23 +86,18 @@ export class Space extends NameableEntity implements ISpace {
   @JoinColumn()
   storageAggregator?: StorageAggregator;
 
-  @Column({
-    length: TINY_TEXT_LENGTH,
-  })
+  @Column('varchar', { length: ENUM_LENGTH })
   type!: SpaceType;
 
-  @Column({
-    length: UUID_LENGTH,
-  })
+  @Column('char', { length: UUID_LENGTH, nullable: true })
   levelZeroSpaceID!: string;
 
   @Column('int', { nullable: false })
   level!: number;
 
   @Column('varchar', {
-    length: 36,
+    length: ENUM_LENGTH,
     nullable: false,
-    default: SpaceVisibility.ACTIVE,
   })
   visibility!: SpaceVisibility;
 

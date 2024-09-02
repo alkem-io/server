@@ -20,7 +20,6 @@ import {
   IngestSpace,
   SpaceIngestionPurpose,
 } from '@services/infrastructure/event-bus/commands';
-import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
 import { IMessageAnswerToQuestion } from '@domain/communication/message.answer.to.question/message.answer.to.question.interface';
 import { InteractionMessage } from './dto/interaction.message';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
@@ -46,12 +45,10 @@ export class AiPersonaServiceService {
     );
 
     aiPersonaService.bodyOfKnowledgeID = aiPersonaServiceData.bodyOfKnowledgeID;
-    aiPersonaService.engine =
-      aiPersonaServiceData.engine ?? AiPersonaEngine.EXPERT;
+    aiPersonaService.engine = aiPersonaServiceData.engine;
     aiPersonaService.bodyOfKnowledgeType =
-      aiPersonaServiceData.bodyOfKnowledgeType ??
-      AiPersonaBodyOfKnowledgeType.ALKEMIO_SPACE;
-    aiPersonaService.prompt = aiPersonaServiceData.prompt ?? '';
+      aiPersonaServiceData.bodyOfKnowledgeType;
+    aiPersonaService.prompt = aiPersonaServiceData.prompt;
 
     const savedAiPersonaService =
       await this.aiPersonaServiceRepository.save(aiPersonaService);

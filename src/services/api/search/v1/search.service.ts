@@ -406,8 +406,8 @@ export class SearchService {
         return (
           space.nameID.toLowerCase().includes(lowerCasedTerm) ||
           space.profile.displayName.toLowerCase().includes(lowerCasedTerm) ||
-          space.profile.tagline.toLowerCase().includes(lowerCasedTerm) ||
-          space.profile.description.toLowerCase().includes(lowerCasedTerm) ||
+          space.profile.tagline?.toLowerCase().includes(lowerCasedTerm) ||
+          space.profile.description?.toLowerCase().includes(lowerCasedTerm) ||
           space.profile.tagsets?.some(tagset =>
             tagset.tags.map(tag => tag.toLowerCase()).includes(lowerCasedTerm)
           ) ||
@@ -415,9 +415,9 @@ export class SearchService {
           space.context?.vision?.toLowerCase().includes(lowerCasedTerm) ||
           space.context?.who?.toLowerCase().includes(lowerCasedTerm) ||
           space.profile.location?.country
-            .toLowerCase()
+            ?.toLowerCase()
             .includes(lowerCasedTerm) ||
-          space.profile.location?.city.toLowerCase().includes(lowerCasedTerm)
+          space.profile.location?.city?.toLowerCase().includes(lowerCasedTerm)
         );
       });
 
@@ -499,8 +499,10 @@ export class SearchService {
         return (
           subspace.nameID.toLowerCase().includes(lowerCasedTerm) ||
           subspace.profile.displayName.toLowerCase().includes(lowerCasedTerm) ||
-          subspace.profile.tagline.toLowerCase().includes(lowerCasedTerm) ||
-          subspace.profile.description.toLowerCase().includes(lowerCasedTerm) ||
+          subspace.profile.tagline?.toLowerCase().includes(lowerCasedTerm) ||
+          subspace.profile.description
+            ?.toLowerCase()
+            .includes(lowerCasedTerm) ||
           subspace.profile.tagsets?.some(tagset =>
             tagset.tags.map(tag => tag.toLowerCase()).includes(lowerCasedTerm)
           ) ||
@@ -508,9 +510,11 @@ export class SearchService {
           subspace.context?.vision?.toLowerCase().includes(lowerCasedTerm) ||
           subspace.context?.who?.toLowerCase().includes(lowerCasedTerm) ||
           subspace.profile.location?.country
-            .toLowerCase()
+            ?.toLowerCase()
             .includes(lowerCasedTerm) ||
-          subspace.profile.location?.city.toLowerCase().includes(lowerCasedTerm)
+          subspace.profile.location?.city
+            ?.toLowerCase()
+            .includes(lowerCasedTerm)
         );
       });
 
@@ -573,9 +577,9 @@ export class SearchService {
           subsubspace.profile.displayName
             .toLowerCase()
             .includes(lowerCasedTerm) ||
-          subsubspace.profile.tagline.toLowerCase().includes(lowerCasedTerm) ||
+          subsubspace.profile.tagline?.toLowerCase().includes(lowerCasedTerm) ||
           subsubspace.profile.description
-            .toLowerCase()
+            ?.toLowerCase()
             .includes(lowerCasedTerm) ||
           subsubspace.profile.tagsets?.some(tagset =>
             tagset.tags.map(tag => tag.toLowerCase()).includes(lowerCasedTerm)
@@ -584,10 +588,10 @@ export class SearchService {
           subsubspace.context?.vision?.toLowerCase().includes(lowerCasedTerm) ||
           subsubspace.context?.who?.toLowerCase().includes(lowerCasedTerm) ||
           subsubspace.profile.location?.country
-            .toLowerCase()
+            ?.toLowerCase()
             .includes(lowerCasedTerm) ||
           subsubspace.profile.location?.city
-            .toLowerCase()
+            ?.toLowerCase()
             .includes(lowerCasedTerm)
         );
       });

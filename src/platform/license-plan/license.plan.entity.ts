@@ -4,6 +4,7 @@ import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
 import { Licensing } from '@platform/licensing/licensing.entity';
 import { LicenseCredential } from '@common/enums/license.credential';
 import { LicensePlanType } from '@common/enums/license.plan.type';
+import { ENUM_LENGTH } from '@common/constants';
 
 @Entity()
 export class LicensePlan extends BaseAlkemioEntity implements ILicensePlan {
@@ -41,7 +42,7 @@ export class LicensePlan extends BaseAlkemioEntity implements ILicensePlan {
   @Column('text', { nullable: false })
   licenseCredential!: LicenseCredential;
 
-  @Column('text', { nullable: false })
+  @Column('varchar', { nullable: false, length: ENUM_LENGTH })
   type!: LicensePlanType;
 
   @Column('boolean', { nullable: false, default: false })

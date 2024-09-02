@@ -211,14 +211,14 @@ export class WhiteboardService {
       await this.communityResolverService.getCommunityFromWhiteboardOrFail(
         whiteboardId
       );
-    const license =
-      await this.communityResolverService.getAccountAgentFromCommunityOrFail(
-        community
+    const levelZeroSpaceAgent =
+      await this.communityResolverService.getLevelZeroSpaceAgentForCommunityOrFail(
+        community.id
       );
 
     const enabled = await this.licenseEngineService.isAccessGranted(
       LicensePrivilege.SPACE_WHITEBOARD_MULTI_USER,
-      license
+      levelZeroSpaceAgent
     );
 
     return enabled;
