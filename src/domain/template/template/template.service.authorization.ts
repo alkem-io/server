@@ -114,7 +114,7 @@ export class TemplateAuthorizationService {
       // Cascade
       const whiteboardAuthorizations =
         await this.whiteboardAuthorizationService.applyAuthorizationPolicy(
-          template.whiteboard,
+          template.whiteboard.id,
           template.authorization
         );
       updatedAuthorizations.push(...whiteboardAuthorizations);
