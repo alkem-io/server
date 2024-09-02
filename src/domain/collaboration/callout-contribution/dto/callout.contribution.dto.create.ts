@@ -27,5 +27,5 @@ export class CreateCalloutContributionInput {
     nullable: true,
     description: 'The sort order to assign to this Contribution.',
   })
-  sortOrder!: number;
+  sortOrder?: number;
 }

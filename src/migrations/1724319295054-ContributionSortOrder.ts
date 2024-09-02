@@ -5,7 +5,7 @@ export class ContributionSortOrder1724319295054 implements MigrationInterface {
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
-      `ALTER TABLE \`callout_contribution\` ADD \`sortOrder\` int NOT NULL DEFAULT (0)`
+      `ALTER TABLE \`callout_contribution\` ADD \`sortOrder\` int NOT NULL`
     );
     // Add a default sort order to all existing contributions:
     const contributions: {

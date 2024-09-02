@@ -538,13 +538,7 @@ export class CalloutService {
       index++;
     }
 
-    await Promise.all(
-      contributionsInOrder.map(
-        async c => await this.contributionService.save(c)
-      )
-    );
-
-    return contributionsInOrder;
+    return this.contributionService.save(contributionsInOrder);
   }
 
   public async getCalloutFraming(

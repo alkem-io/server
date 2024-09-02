@@ -247,6 +247,8 @@ export class CalloutResolverMutations {
       const postCreatedEvent: CalloutPostCreatedPayload = {
         eventID: `callout-post-created-${Math.round(Math.random() * 100)}`,
         calloutID: callout.id,
+        contributionID: contribution.id,
+        sortOrder: contribution.sortOrder,
         post: contribution.post,
       };
       await this.postCreatedSubscription.publish(
