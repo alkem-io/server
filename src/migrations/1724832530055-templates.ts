@@ -188,6 +188,10 @@ export class Templates1724832530055 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE \`template\` ADD CONSTRAINT \`FK_f09090a77e07377eefb3f731d9f\` FOREIGN KEY (\`whiteboardId\`) REFERENCES \`whiteboard\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
+    // drop the old constraint on space_defaults
+    await queryRunner.query(
+      `ALTER TABLE \`space_defaults\` DROP FOREIGN KEY \`FK_592a23e68922853bae6ebecd85e\``
+    );
 
     await queryRunner.query(
       `ALTER TABLE \`space_defaults\` ADD CONSTRAINT \`FK_592a23e68922853bae6ebecd85e\` FOREIGN KEY (\`innovationFlowTemplateId\`) REFERENCES \`template\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
