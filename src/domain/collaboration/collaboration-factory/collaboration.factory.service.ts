@@ -8,7 +8,6 @@ import { LogContext } from '@common/enums/logging.context';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { ICalloutFraming } from '../callout-framing/callout.framing.interface';
 import { CreateCalloutFramingInput } from '../callout-framing/dto/callout.framing.dto.create';
-import { ProfileService } from '@domain/common/profile/profile.service';
 import { ICalloutContributionDefaults } from '../callout-contribution-defaults/callout.contribution.defaults.interface';
 import { CreateCalloutContributionDefaultsInput } from '../callout-contribution-defaults/dto/callout.contribution.defaults.dto.create';
 import { ICalloutContributionPolicy } from '../callout-contribution-policy/callout.contribution.policy.interface';
@@ -18,13 +17,20 @@ import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 import { IInnovationFlow } from '../innovation-flow/innovation.flow.interface';
 import { CreateInnovationFlowInput } from '../innovation-flow/dto';
 import { InnovationFlowStatesService } from '../innovation-flow-states/innovaton.flow.state.service';
+import { CreateProfileInput } from '@domain/common/profile/dto/profile.dto.create';
+import { IProfile } from '@domain/common/profile/profile.interface';
+import { ILocation } from '@domain/common/location/location.interface';
+import { CreateLocationInput } from '@domain/common/location/dto/location.dto.create';
+import { IReference } from '@domain/common/reference/reference.interface';
+import { CreateReferenceInput } from '@domain/common/reference/dto/reference.dto.create';
+import { ITagset } from '@domain/common/tagset/tagset.interface';
+import { CreateTagsetInput } from '@domain/common/tagset/dto/tagset.dto.create';
 
 @Injectable()
 export class CollaborationFactoryService {
   constructor(
     private collaborationService: CollaborationService,
     private calloutFramingService: CalloutFramingService,
-    private profileService: ProfileService,
     private innovationFlowStatesService: InnovationFlowStatesService
   ) {}
 
@@ -145,9 +151,7 @@ export class CollaborationFactoryService {
       );
     }
     return {
-      profile: this.profileService.createProfileInputFromProfile(
-        calloutFraming.profile
-      ),
+      profile: this.createProfileInputFromProfile(calloutFraming.profile),
       whiteboard: this.createWhiteboardInputFromWhiteboard(
         calloutFraming.whiteboard
       ),
@@ -182,11 +186,77 @@ export class CollaborationFactoryService {
   ): CreateWhiteboardInput | undefined {
     if (!whiteboard) return undefined;
     return {
-      profileData: this.profileService.createProfileInputFromProfile(
-        whiteboard.profile
-      ),
+      profileData: this.createProfileInputFromProfile(whiteboard.profile),
       content: whiteboard.content,
       nameID: whiteboard.nameID,
     };
+  }
+
+  private createProfileInputFromProfile(profile: IProfile): CreateProfileInput {
+    return {
+      description: profile.description,
+      displayName: profile.displayName,
+      location: this.createLocationInputFromLocation(profile.location),
+      referencesData: this.createReferencesInputFromReferences(
+        profile.references
+      ),
+      tagline: profile.tagline,
+      tagsets: this.createTagsetsInputFromTagsets(profile.tagsets),
+    };
+  }
+
+  private createLocationInputFromLocation(
+    location?: ILocation
+  ): CreateLocationInput | undefined {
+    if (!location) return undefined;
+    return {
+      city: location.city,
+      country: location.country,
+      addressLine1: location.addressLine1,
+      addressLine2: location.addressLine2,
+      postalCode: location.postalCode,
+      stateOrProvince: location.stateOrProvince,
+    };
+  }
+
+  private createReferencesInputFromReferences(
+    references?: IReference[]
+  ): CreateReferenceInput[] {
+    const result: CreateReferenceInput[] = [];
+    if (!references) return result;
+    for (const reference of references) {
+      result.push(this.createReferenceInputFromReference(reference));
+    }
+    return result;
+  }
+
+  private createReferenceInputFromReference(
+    reference: IReference
+  ): CreateReferenceInput {
+    return {
+      name: reference.name,
+      uri: reference.uri,
+      description: reference.description,
+    };
+  }
+
+  public createTagsetInputFromTagset(tagset: ITagset): CreateTagsetInput {
+    return {
+      name: tagset.name,
+      tags: tagset.tags,
+      type: tagset.type,
+      tagsetTemplate: tagset.tagsetTemplate,
+    };
+  }
+
+  public createTagsetsInputFromTagsets(
+    tagsets?: ITagset[]
+  ): CreateTagsetInput[] {
+    const tagsetInputs: CreateTagsetInput[] = [];
+    if (!tagsets) return tagsetInputs;
+    for (const tagset of tagsets) {
+      tagsetInputs.push(this.createTagsetInputFromTagset(tagset));
+    }
+    return tagsetInputs;
   }
 }
