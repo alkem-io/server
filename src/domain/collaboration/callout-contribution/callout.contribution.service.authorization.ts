@@ -78,8 +78,6 @@ export class CalloutContributionAuthorizationService {
                 this.authorizationPolicyService.authorizationSelectOptions,
               profile: {
                 id: true,
-                authorization:
-                  this.authorizationPolicyService.authorizationSelectOptions,
               },
               comments: {
                 id: true,
@@ -89,14 +87,6 @@ export class CalloutContributionAuthorizationService {
             },
             whiteboard: {
               id: true,
-              createdBy: true,
-              authorization:
-                this.authorizationPolicyService.authorizationSelectOptions,
-              profile: {
-                id: true,
-                authorization:
-                  this.authorizationPolicyService.authorizationSelectOptions,
-              },
             },
             link: {
               id: true,
@@ -104,8 +94,6 @@ export class CalloutContributionAuthorizationService {
                 this.authorizationPolicyService.authorizationSelectOptions,
               profile: {
                 id: true,
-                authorization:
-                  this.authorizationPolicyService.authorizationSelectOptions,
               },
             },
           },
@@ -140,7 +128,7 @@ export class CalloutContributionAuthorizationService {
     if (contribution.whiteboard) {
       const whiteboardAuthorizations =
         await this.whiteboardAuthorizationService.applyAuthorizationPolicy(
-          contribution.whiteboard,
+          contribution.whiteboard.id,
           contribution.authorization
         );
       updatedAuthorizations.push(...whiteboardAuthorizations);
