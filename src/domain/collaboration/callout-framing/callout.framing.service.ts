@@ -212,29 +212,6 @@ export class CalloutFramingService {
     return calloutFraming.whiteboard;
   }
 
-  public createCalloutFramingInputFromCalloutFraming(
-    calloutFraming: ICalloutFraming
-  ): CreateCalloutFramingInput {
-    if (!calloutFraming.profile || !calloutFraming.whiteboard) {
-      throw new EntityNotFoundException(
-        'CalloutFraming not fully initialised',
-        LogContext.COLLABORATION,
-        {
-          cause: 'Relation for callout framing not loaded',
-          calloutFramingId: calloutFraming.id,
-        }
-      );
-    }
-    return {
-      profile: this.profileService.createProfileInputFromProfile(
-        calloutFraming.profile
-      ),
-      whiteboard: this.whiteboardService.createWhiteboardInputFromWhiteboard(
-        calloutFraming.whiteboard
-      ),
-    };
-  }
-
   updateCalloutGroupTagsetValue(
     framing: ICalloutFraming,
     groupName: string

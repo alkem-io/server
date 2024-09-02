@@ -6,10 +6,15 @@ import { ICommunityGuidelines } from '@domain/community/community-guidelines/com
 import { ICallout } from '@domain/collaboration/callout';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 import { IInnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.interface';
+import { CreateInnovationFlowInput } from '@domain/collaboration/innovation-flow/dto';
+import { CollaborationFactoryService } from '@domain/collaboration/collaboration-factory/collaboration.factory.service';
 
 @Resolver(() => ITemplate)
 export class TemplateResolverFields {
-  constructor(private templateService: TemplateService) {}
+  constructor(
+    private templateService: TemplateService,
+    private collaborationFactoryService: CollaborationFactoryService
+  ) {}
 
   @ResolveField('innovationFlow', () => IInnovationFlow, {
     nullable: true,
@@ -22,6 +27,25 @@ export class TemplateResolverFields {
       return undefined;
     }
     return this.templateService.getInnovationFlow(template.id);
+  }
+
+  @ResolveField('innovationFlow', () => CreateInnovationFlowInput, {
+    nullable: true,
+    description:
+      'Craete the input for a new Innovation Flow based on the supplied Template.',
+  })
+  async innovationFlowInput(
+    @Parent() template: ITemplate
+  ): Promise<CreateInnovationFlowInput | undefined> {
+    if (template.type !== TemplateType.INNOVATION_FLOW) {
+      return undefined;
+    }
+    const innovationFlow = await this.templateService.getInnovationFlow(
+      template.id
+    );
+    return this.collaborationFactoryService.buildCreateInnovationFlowInputFromInnovationFlow(
+      innovationFlow
+    );
   }
 
   @ResolveField('communityGuidelines', () => ICommunityGuidelines, {

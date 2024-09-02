@@ -75,6 +75,10 @@ import { IAccount } from '../account/account.interface';
 import { LicensingService } from '@platform/licensing/licensing.service';
 import { LicensePlanType } from '@common/enums/license.plan.type';
 import { TemplateType } from '@common/enums/template.type';
+import { CollaborationFactoryService } from '@domain/collaboration/collaboration-factory/collaboration.factory.service';
+import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
+import { CreateInnovationFlowInput } from '@domain/collaboration/innovation-flow/dto/innovation.flow.dto.create';
+import { TemplateService } from '@domain/template/template/template.service';
 
 @Injectable()
 export class SpaceService {
@@ -93,8 +97,10 @@ export class SpaceService {
     private storageAggregatorService: StorageAggregatorService,
     private templatesSetService: TemplatesSetService,
     private collaborationService: CollaborationService,
+    private collaborationFactoryService: CollaborationFactoryService,
     private licensingService: LicensingService,
     private licenseEngineService: LicenseEngineService,
+    private templateService: TemplateService,
     @InjectRepository(Space)
     private spaceRepository: Repository<Space>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -194,26 +200,20 @@ export class SpaceService {
     this.profileService.addVisualOnProfile(space.profile, VisualType.CARD);
 
     //// Collaboration
-
-    space.collaboration = await this.collaborationService.createCollaboration(
-      {
-        ...spaceData.collaborationData,
-      },
-      space.storageAggregator,
-      space.type,
-      spaceDefaults
+    const calloutGroups = this.spaceDefaultsService.getCalloutGroups(
+      space.type
     );
-
     const calloutGroupDefault =
       this.spaceDefaultsService.getCalloutGroupDefault(space.type);
-    await this.collaborationService.addCalloutGroupTagsetTemplate(
-      space.collaboration,
-      calloutGroupDefault
+
+    const innovationFlowInput = await this.getCreateInnovationFlowInput(
+      space.type,
+      spaceDefaults,
+      spaceData.collaborationData?.innovationFlowTemplateID
     );
-    // save the collaboration and all it's template sets
-    await this.save(space);
+
     const calloutInputsFromCollaborationTemplate =
-      await this.collaborationService.createCalloutInputsFromCollaborationTemplate(
+      await this.collaborationFactoryService.buildCreateCalloutInputsFromCollaborationTemplate(
         spaceData.collaborationData?.collaborationTemplateID
       );
     const defaultCallouts = this.spaceDefaultsService.getDefaultCallouts(
@@ -224,12 +224,21 @@ export class SpaceService {
       calloutInputsFromCollaborationTemplate,
       spaceData.collaborationData
     );
-    space.collaboration = await this.collaborationService.addDefaultCallouts(
-      space.collaboration,
-      calloutInputs,
+
+    const collaborationData: CreateCollaborationInput = {
+      innovationFlowData: innovationFlowInput,
+      calloutsData: calloutInputs,
+      calloutGroups: calloutGroups,
+      defaultCalloutGroupName: calloutGroupDefault,
+    };
+    space.collaboration = await this.collaborationService.createCollaboration(
+      collaborationData,
       space.storageAggregator,
-      agentInfo?.userID
+      agentInfo
     );
+
+    // save the collaboration and all it's template sets
+    await this.save(space);
 
     /////////// Agents
 
@@ -314,6 +323,57 @@ export class SpaceService {
 
     const result = await this.spaceRepository.remove(space as Space);
     result.id = deleteData.ID;
+    return result;
+  }
+
+  private async getCreateInnovationFlowInput(
+    spaceType: SpaceType,
+    spaceDefaults?: ISpaceDefaults,
+    innovationFlowTemplateIdInput?: string
+  ): Promise<CreateInnovationFlowInput> {
+    let innovationFlowTemplateID: string | undefined =
+      innovationFlowTemplateIdInput;
+    if (
+      !innovationFlowTemplateID &&
+      spaceDefaults &&
+      (spaceType === SpaceType.CHALLENGE || spaceType === SpaceType.OPPORTUNITY)
+    ) {
+      // If no argument is provided, then use the default template for the space, if set
+      // for spaces of type challenge or opportunity
+      innovationFlowTemplateID = spaceDefaults.innovationFlowTemplate?.id;
+    }
+
+    if (innovationFlowTemplateID) {
+      const template = await this.templateService.getTemplateOrFail(
+        innovationFlowTemplateID,
+        {
+          relations: {
+            innovationFlow: true,
+            profile: true,
+          },
+        }
+      );
+      if (!template.innovationFlow) {
+        throw new EntityNotInitializedException(
+          `Template ${template.id} does not have innovation flow`,
+          LogContext.TEMPLATES
+        );
+      }
+      return this.collaborationFactoryService.buildCreateInnovationFlowInputFromInnovationFlow(
+        template.innovationFlow
+      );
+    }
+
+    // If no default template is set, then pick up the default based on the specified type
+    const innovationFlowStatesDefault =
+      this.spaceDefaultsService.getDefaultInnovationFlowStates(spaceType);
+    const result: CreateInnovationFlowInput = {
+      profile: {
+        displayName: 'default',
+        description: 'default flow',
+      },
+      states: innovationFlowStatesDefault,
+    };
     return result;
   }
 

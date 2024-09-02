@@ -73,6 +73,7 @@ import { ForumCreateDiscussionInput } from '@platform/forum/dto/forum.dto.create
 import { CommunityRoleApplyInput } from '@domain/community/community-role/dto/community.role.dto.apply';
 import { CreateInvitationForContributorsOnCommunityInput } from '@domain/community/community-role/dto/community.role.dto.invite.contributor';
 import { CreatePlatformInvitationOnCommunityInput } from '@domain/community/community-role/dto/community.role.dto.platform.invitation.community';
+import { CreateCollaborationOnSpaceInput } from '@domain/space/space/dto/space.dto.create.collaboration';
 
 export class BaseHandler extends AbstractHandler {
   public async handle(
@@ -91,6 +92,7 @@ export class BaseHandler extends AbstractHandler {
       CreateActorInput,
       CreateContributionOnCalloutInput,
       CreateCollaborationInput,
+      CreateCollaborationOnSpaceInput,
       CreateDocumentInput,
       CreateTemplateOnTemplatesSetInput,
       CreateSubspaceInput,
