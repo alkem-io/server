@@ -11,6 +11,7 @@ export class CommunityGuidelines
   @OneToOne(() => Profile, {
     eager: true,
     cascade: true,
+    onDelete: 'SET NULL',
   })
   @JoinColumn()
   profile!: Profile;

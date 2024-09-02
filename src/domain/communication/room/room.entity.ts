@@ -3,6 +3,7 @@ import { IRoom } from './room.interface';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { RoomType } from '@common/enums/room.type';
 import { VcInteraction } from '../vc-interaction/vc.interaction.entity';
+import { ENUM_LENGTH } from '@common/constants';
 
 @Entity()
 export class Room extends AuthorizableEntity implements IRoom {
@@ -12,8 +13,8 @@ export class Room extends AuthorizableEntity implements IRoom {
   @Column('int', { nullable: false })
   messagesCount!: number;
 
-  @Column('text', { nullable: false })
-  type!: string;
+  @Column('varchar', { length: ENUM_LENGTH, nullable: false })
+  type!: RoomType;
 
   @Column()
   displayName!: string;

@@ -29,7 +29,7 @@ export class IAiPersonaService extends IAuthorizable {
   dataAccessMode!: AiPersonaDataAccessMode;
 
   @Field(() => AiPersonaBodyOfKnowledgeType, {
-    nullable: true,
+    nullable: false,
     description: 'The body of knowledge type used for the AI Persona Service',
   })
   bodyOfKnowledgeType!: AiPersonaBodyOfKnowledgeType;

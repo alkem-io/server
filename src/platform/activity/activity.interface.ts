@@ -24,7 +24,7 @@ export abstract class IActivity extends IBaseAlkemio {
     description:
       'The id of the parent of the entity within which the Activity was generated.',
   })
-  parentID!: string;
+  parentID?: string;
 
   @Field(() => UUID, {
     nullable: false,

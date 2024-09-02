@@ -32,7 +32,7 @@ export class Application extends AuthorizableEntity implements IApplication {
     cascade: false,
     onDelete: 'CASCADE',
   })
-  user!: User;
+  user?: User;
 
   @ManyToOne(() => Community, community => community.applications, {
     eager: false,
