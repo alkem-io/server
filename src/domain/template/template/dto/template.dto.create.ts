@@ -4,7 +4,7 @@ import {
 } from '@common/constants/entity.field.length.constants';
 import { TemplateType } from '@common/enums/template.type';
 import { CreateCalloutInput } from '@domain/collaboration/callout';
-import { UpdateInnovationFlowStateInput } from '@domain/collaboration/innovation-flow-states/dto/innovation.flow.state.dto.update';
+import { CreateInnovationFlowInput } from '@domain/collaboration/innovation-flow/dto/innovation.flow.dto.create';
 import { CreateProfileInput } from '@domain/common/profile/dto/profile.dto.create';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
 import { CreateWhiteboardInput } from '@domain/common/whiteboard/dto/whiteboard.dto.create';
@@ -42,13 +42,15 @@ export class CreateTemplateInput {
     nullable: true,
     description: 'Post Template: The default description to be pre-filled.',
   })
+  @IsOptional()
   @MaxLength(VERY_LONG_TEXT_LENGTH)
   postDefaultDescription?: string;
 
-  @Field(() => [UpdateInnovationFlowStateInput], { nullable: true })
-  @ValidateNested({ each: true })
-  @Type(() => UpdateInnovationFlowStateInput)
-  innovationFlowStates!: UpdateInnovationFlowStateInput[];
+  @Field(() => CreateInnovationFlowInput, { nullable: true })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CreateInnovationFlowInput)
+  innovationFlowData?: CreateInnovationFlowInput;
 
   @Field(() => String, {
     nullable: true,
@@ -63,19 +65,25 @@ export class CreateTemplateInput {
     description: 'The Community guidelines to associate with this template.',
   })
   @IsOptional()
-  communityGuidelines?: CreateCommunityGuidelinesInput;
+  @ValidateNested()
+  @Type(() => CreateCommunityGuidelinesInput)
+  communityGuidelinesData?: CreateCommunityGuidelinesInput;
 
   @Field(() => CreateCalloutInput, {
     nullable: true,
     description: 'The Callout to associate with this template.',
   })
   @IsOptional()
-  callout?: CreateCalloutInput;
+  @ValidateNested()
+  @Type(() => CreateCalloutInput)
+  calloutData?: CreateCalloutInput;
 
   @Field(() => CreateWhiteboardInput, {
     nullable: true,
     description: 'The Whiteboard to associate with this template.',
   })
   @IsOptional()
+  @ValidateNested()
+  @Type(() => CreateWhiteboardInput)
   whiteboard?: CreateWhiteboardInput;
 }

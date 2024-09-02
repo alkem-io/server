@@ -79,26 +79,21 @@ export class TemplateService {
       }
       template.postDefaultDescription = templateData.postDefaultDescription;
     } else if (template.type === TemplateType.INNOVATION_FLOW) {
-      if (!templateData.innovationFlowStates) {
+      if (!templateData.innovationFlowData) {
         throw new ValidationException(
-          `InnovationFlow Template requires states input: ${JSON.stringify(templateData)}`,
+          `InnovationFlow Template requires create innovation flow input: ${JSON.stringify(templateData)}`,
           LogContext.TEMPLATES
         );
       }
       this.innovationFlowService.createInnovationFlow(
-        {
-          profile: {
-            displayName: 'template',
-          },
-          states: templateData.innovationFlowStates,
-        },
+        templateData.innovationFlowData,
         [],
         storageAggregator
       );
     } else if (template.type === TemplateType.COMMUNITY_GUIDELINES) {
       if (
         !templateData.communityGuidelinesID &&
-        !templateData.communityGuidelines
+        !templateData.communityGuidelinesData
       ) {
         throw new ValidationException(
           `Community Guidelines Template requires one of the two community guidelines input: ${JSON.stringify(templateData)}`,
@@ -106,7 +101,7 @@ export class TemplateService {
         );
       }
       let guidelinesInput: CreateCommunityGuidelinesInput =
-        templateData.communityGuidelines!;
+        templateData.communityGuidelinesData!;
 
       if (templateData.communityGuidelinesID) {
         // get the data from the existing guidelines
@@ -129,16 +124,16 @@ export class TemplateService {
           storageAggregator
         );
     } else if (template.type === TemplateType.CALLOUT) {
-      if (!templateData.callout) {
+      if (!templateData.calloutData) {
         throw new ValidationException(
           `Callout Template requires callout input: ${JSON.stringify(templateData)}`,
           LogContext.TEMPLATES
         );
       }
       // Ensure no comments are created on the callout
-      templateData.callout.enableComments = false;
+      templateData.calloutData.enableComments = false;
       template.callout = await this.calloutService.createCallout(
-        templateData.callout!,
+        templateData.calloutData!,
         [],
         storageAggregator
       );

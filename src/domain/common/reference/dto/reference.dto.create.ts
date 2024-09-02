@@ -1,4 +1,4 @@
-import { InputType, Field } from '@nestjs/graphql';
+import { InputType, Field, ObjectType } from '@nestjs/graphql';
 import {
   LONG_TEXT_LENGTH,
   MID_TEXT_LENGTH,
@@ -7,6 +7,7 @@ import {
 import { IsOptional, MaxLength } from 'class-validator';
 
 @InputType()
+@ObjectType()
 export class CreateReferenceInput {
   @Field({ nullable: false })
   @MaxLength(SMALL_TEXT_LENGTH)
