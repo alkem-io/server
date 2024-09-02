@@ -29,6 +29,7 @@ import { WhiteboardService } from '@domain/common/whiteboard';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 import { IInnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.interface';
 import { CollaborationFactoryService } from '@domain/collaboration/collaboration-factory/collaboration.factory.service';
+import { UpdateInnovationFlowFromTemplateInput } from './dto/template.dto.update.innovation.flow';
 
 @Injectable()
 export class TemplateService {
@@ -321,6 +322,20 @@ export class TemplateService {
 
   async save(template: ITemplate): Promise<ITemplate> {
     return await this.templateRepository.save(template);
+  }
+
+  async updateInnovationFlowStatesFromTemplate(
+    innovationFlowData: UpdateInnovationFlowFromTemplateInput
+  ): Promise<IInnovationFlow> {
+    const innovationFlowFromTemplate = await this.getInnovationFlow(
+      innovationFlowData.innovationFlowTemplateID
+    );
+    const newStatesStr = innovationFlowFromTemplate.states;
+    const result = await this.innovationFlowService.updateInnovationFlowStates(
+      innovationFlowData.innovationFlowID,
+      newStatesStr
+    );
+    return result;
   }
 
   async getCountInTemplatesSet(

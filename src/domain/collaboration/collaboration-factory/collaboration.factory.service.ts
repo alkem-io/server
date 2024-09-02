@@ -1,7 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { CollaborationService } from '../collaboration/collaboration.service';
 import { CreateCalloutInput } from '../callout/dto/callout.dto.create';
-import { ICollaboration } from '../collaboration/collaboration.interface';
 import { CalloutFramingService } from '../callout-framing/callout.framing.service';
 import { ICallout } from '../callout/callout.interface';
 import { LogContext } from '@common/enums/logging.context';
@@ -31,82 +29,14 @@ import { ICommunityGuidelines } from '@domain/community/community-guidelines/com
 @Injectable()
 export class CollaborationFactoryService {
   constructor(
-    private collaborationService: CollaborationService,
     private calloutFramingService: CalloutFramingService,
     private innovationFlowStatesService: InnovationFlowStatesService
   ) {}
 
-  public async buildCreateCalloutInputsFromCollaborationTemplate(
-    collaborationTemplateID?: string
+  public async buildCreateCalloutInputsFromCallouts(
+    callouts: ICallout[]
   ): Promise<CreateCalloutInput[]> {
-    if (collaborationTemplateID) {
-      const collaboration =
-        await this.collaborationService.getCollaborationOrFail(
-          collaborationTemplateID
-        );
-      return await this.buildCreateCalloutInputsFromCollaboration(
-        collaboration
-      );
-    }
-    return [];
-  }
-
-  public buildCreateInnovationFlowInputFromInnovationFlow(
-    innovationFlow: IInnovationFlow
-  ): CreateInnovationFlowInput {
-    if (!innovationFlow.states) {
-      throw new EntityNotInitializedException(
-        `Template ${innovationFlow.id} does not have innovation flow states`,
-        LogContext.TEMPLATES
-      );
-    }
-    // Note: no profile currently present, so use the one from the template for now
-    const result: CreateInnovationFlowInput = {
-      profile: {
-        displayName: innovationFlow.profile.displayName,
-        description: innovationFlow.profile.description,
-      },
-      states: this.innovationFlowStatesService.getStates(innovationFlow.states),
-    };
-    return result;
-  }
-
-  public async buildCreateCalloutInputsFromCollaboration(
-    collaborationSource: ICollaboration
-  ): Promise<CreateCalloutInput[]> {
-    const sourceCallouts =
-      await this.collaborationService.getCalloutsOnCollaboration(
-        collaborationSource,
-        {
-          relations: {
-            contributionDefaults: true,
-            contributionPolicy: true,
-            framing: {
-              profile: {
-                references: true,
-                location: true,
-                tagsets: true,
-              },
-              whiteboard: {
-                profile: true,
-              },
-            },
-          },
-        }
-      );
-
-    return sourceCallouts.map(this.buildCreateCalloutInputFromCallout);
-  }
-
-  public async buildCreateCommunityGuidelinesInputFromCommunityGuidelines(
-    communityGuidelines: ICommunityGuidelines
-  ): Promise<CreateCommunityGuidelinesInput> {
-    const result: CreateCommunityGuidelinesInput = {
-      profile: this.buildCreateProfileInputFromProfile(
-        communityGuidelines.profile
-      ),
-    };
-    return result;
+    return callouts.map(this.buildCreateCalloutInputFromCallout);
   }
 
   public buildCreateCalloutInputFromCallout(
@@ -148,6 +78,64 @@ export class CollaborationFactoryService {
         ),
       sortOrder: calloutInput.sortOrder,
     };
+  }
+
+  public buildCreateInnovationFlowInputFromInnovationFlow(
+    innovationFlow: IInnovationFlow
+  ): CreateInnovationFlowInput {
+    if (!innovationFlow.states) {
+      throw new EntityNotInitializedException(
+        `Template ${innovationFlow.id} does not have innovation flow states`,
+        LogContext.TEMPLATES
+      );
+    }
+    // Note: no profile currently present, so use the one from the template for now
+    const result: CreateInnovationFlowInput = {
+      profile: {
+        displayName: innovationFlow.profile.displayName,
+        description: innovationFlow.profile.description,
+      },
+      states: this.innovationFlowStatesService.getStates(innovationFlow.states),
+    };
+    return result;
+  }
+
+  // private async buildxxxCreateCalloutInputsFromCollaboration(
+  //   collaborationSource: ICollaboration
+  // ): Promise<CreateCalloutInput[]> {
+  //   const sourceCallouts =
+  //     await this.collaborationService.getCalloutsOnCollaboration(
+  //       collaborationSource,
+  //       {
+  //         relations: {
+  //           contributionDefaults: true,
+  //           contributionPolicy: true,
+  //           framing: {
+  //             profile: {
+  //               references: true,
+  //               location: true,
+  //               tagsets: true,
+  //             },
+  //             whiteboard: {
+  //               profile: true,
+  //             },
+  //           },
+  //         },
+  //       }
+  //     );
+
+  //   return sourceCallouts.map(this.buildCreateCalloutInputFromCallout);
+  // }
+
+  public async buildCreateCommunityGuidelinesInputFromCommunityGuidelines(
+    communityGuidelines: ICommunityGuidelines
+  ): Promise<CreateCommunityGuidelinesInput> {
+    const result: CreateCommunityGuidelinesInput = {
+      profile: this.buildCreateProfileInputFromProfile(
+        communityGuidelines.profile
+      ),
+    };
+    return result;
   }
 
   private buildCreateCalloutFramingInputFromCalloutFraming(

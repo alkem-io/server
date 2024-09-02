@@ -4,7 +4,7 @@ import {
   EntityNotFoundException,
   ValidationException,
 } from '@common/exceptions';
-import { forwardRef, Inject, Injectable, LoggerService } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -24,11 +24,9 @@ import { UpdateInnovationFlowSelectedStateInput } from './dto/innovation.flow.dt
 import { UpdateProfileSelectTagsetValueInput } from '@domain/common/profile/dto/profile.dto.update.select.tagset.value';
 import { InnovationFlowStatesService } from '../innovation-flow-states/innovaton.flow.state.service';
 import { IInnovationFlowState } from '../innovation-flow-states/innovation.flow.state.interface';
-import { UpdateInnovationFlowFromTemplateInput } from './dto/innovation.flow.dto.update.from.template';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { UpdateInnovationFlowSingleStateInput } from './dto/innovation.flow.dto.update.single.state';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { TemplateService } from '@domain/template/template/template.service';
 
 @Injectable()
 export class InnovationFlowService {
@@ -36,8 +34,6 @@ export class InnovationFlowService {
     private profileService: ProfileService,
     private tagsetService: TagsetService,
     private innovationFlowStatesService: InnovationFlowStatesService,
-    @Inject(forwardRef(() => TemplateService))
-    private templateService: TemplateService,
     @InjectRepository(InnovationFlow)
     private innovationFlowRepository: Repository<InnovationFlow>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -152,23 +148,17 @@ export class InnovationFlowService {
     return await this.innovationFlowRepository.save(innovationFlow);
   }
 
-  async updateStatesFromTemplate(
-    innovationFlowData: UpdateInnovationFlowFromTemplateInput
-  ): Promise<IInnovationFlow> {
+  public async updateInnovationFlowStates(
+    innovationFlowID: string,
+    statesStr: string
+  ) {
     const innovationFlow = await this.getInnovationFlowOrFail(
-      innovationFlowData.innovationFlowID,
+      innovationFlowID,
       {
         relations: { profile: true },
       }
     );
-    const innovationFlowTemplate = await this.templateService.getTemplateOrFail(
-      innovationFlowData.innovationFlowTemplateID
-    );
-
-    const newStates = this.innovationFlowStatesService.getStates(
-      (await this.templateService.getInnovationFlow(innovationFlowTemplate.id))
-        .states
-    );
+    const newStates = this.innovationFlowStatesService.getStates(statesStr);
 
     const newStateNames = newStates.map(state => state.displayName);
 
@@ -185,7 +175,7 @@ export class InnovationFlowService {
     innovationFlow.states =
       this.innovationFlowStatesService.serializeStates(newStates);
 
-    return await this.innovationFlowRepository.save(innovationFlow);
+    return await this.save(innovationFlow);
   }
 
   async updateSelectedState(

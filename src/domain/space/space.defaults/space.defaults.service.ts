@@ -8,10 +8,6 @@ import { LogContext } from '@common/enums/logging.context';
 import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { SpaceDefaults } from './space.defaults.entity';
-import { ITemplatesSet } from '@domain/template/templates-set';
-import { TemplatesSetService } from '@domain/template/templates-set/templates.set.service';
-import { templatesSetDefaults } from './definitions/space.defaults.templates';
-import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
 import { ISpaceSettings } from '../space.settings/space.settings.interface';
 import { ICalloutGroup } from '@domain/collaboration/callout-groups/callout.group.interface';
@@ -55,7 +51,6 @@ import { CreateCollaborationOnSpaceInput } from '../space/dto/space.dto.create.c
 export class SpaceDefaultsService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
-    private templatesSetService: TemplatesSetService,
     @InjectRepository(SpaceDefaults)
     private spaceDefaultsRepository: Repository<SpaceDefaults>
   ) {}
@@ -282,17 +277,5 @@ export class SpaceDefaultsService {
       }
     }
     return calloutInputs;
-  }
-
-  public async addDefaultTemplatesToSpaceLibrary(
-    templatesSet: ITemplatesSet,
-    storageAggregator: IStorageAggregator
-  ): Promise<ITemplatesSet> {
-    return await this.templatesSetService.addTemplates(
-      templatesSet,
-      templatesSetDefaults.posts,
-      templatesSetDefaults.innovationFlows,
-      storageAggregator
-    );
   }
 }

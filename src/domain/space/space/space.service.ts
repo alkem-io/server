@@ -79,6 +79,8 @@ import { CollaborationFactoryService } from '@domain/collaboration/collaboration
 import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
 import { CreateInnovationFlowInput } from '@domain/collaboration/innovation-flow/dto/innovation.flow.dto.create';
 import { TemplateService } from '@domain/template/template/template.service';
+import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
+import { templatesSetDefaults } from '../space.defaults/definitions/space.defaults.templates';
 
 @Injectable()
 export class SpaceService {
@@ -219,7 +221,7 @@ export class SpaceService {
     }
 
     const calloutInputsFromCollaborationTemplate =
-      await this.collaborationFactoryService.buildCreateCalloutInputsFromCollaborationTemplate(
+      await this.buildCreateCalloutInputsFromCollaborationTemplate(
         spaceData.collaborationData?.collaborationTemplateID
       );
     const defaultCallouts = this.spaceDefaultsService.getDefaultCallouts(
@@ -270,6 +272,51 @@ export class SpaceService {
     return space;
   }
 
+  private async addDefaultTemplatesToSpaceLibrary(
+    templatesSet: ITemplatesSet,
+    storageAggregator: IStorageAggregator
+  ): Promise<ITemplatesSet> {
+    return await this.templatesSetService.addTemplates(
+      templatesSet,
+      templatesSetDefaults.posts,
+      templatesSetDefaults.innovationFlows,
+      storageAggregator
+    );
+  }
+
+  private async buildCreateCalloutInputsFromCollaborationTemplate(
+    templateID: string | undefined
+  ): Promise<CreateCalloutInput[]> {
+    const result: CreateCalloutInput[] = [];
+    if (!templateID) return result;
+    const collaborationSource =
+      await this.collaborationService.getCollaborationOrFail(templateID);
+    const sourceCallouts =
+      await this.collaborationService.getCalloutsOnCollaboration(
+        collaborationSource,
+        {
+          relations: {
+            contributionDefaults: true,
+            contributionPolicy: true,
+            framing: {
+              profile: {
+                references: true,
+                location: true,
+                tagsets: true,
+              },
+              whiteboard: {
+                profile: true,
+              },
+            },
+          },
+        }
+      );
+
+    return sourceCallouts.map(
+      this.collaborationFactoryService.buildCreateCalloutInputFromCallout
+    );
+  }
+
   private async addLevelZeroSpaceEntities(space: ISpace) {
     if (!space.storageAggregator) {
       throw new EntityNotInitializedException(
@@ -281,11 +328,10 @@ export class SpaceService {
     space.defaults = await this.spaceDefaultsService.createSpaceDefaults();
 
     // And set the defaults
-    space.library =
-      await this.spaceDefaultsService.addDefaultTemplatesToSpaceLibrary(
-        space.library,
-        space.storageAggregator
-      );
+    space.library = await this.addDefaultTemplatesToSpaceLibrary(
+      space.library,
+      space.storageAggregator
+    );
     if (space.defaults && space.library && space.library.templates) {
       const innovationFlowTemplates = space.library.templates.filter(
         template => template.type === TemplateType.INNOVATION_FLOW

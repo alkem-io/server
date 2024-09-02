@@ -1,4 +1,4 @@
-import { forwardRef, Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { InnovationFlow } from './innovation.flow.entity';
 import { InnovationFlowService } from './innovaton.flow.service';
@@ -11,7 +11,6 @@ import { ProfileModule } from '@domain/common/profile/profile.module';
 import { TagsetModule } from '@domain/common/tagset/tagset.module';
 import { TagsetTemplateModule } from '@domain/common/tagset-template/tagset.template.module';
 import { InnovationFlowStatesModule } from '../innovation-flow-states/innovation.flow.state.module';
-import { TemplateModule } from '@domain/template/template/template.module';
 
 @Module({
   imports: [
@@ -21,7 +20,6 @@ import { TemplateModule } from '@domain/template/template/template.module';
     ProfileModule,
     TagsetModule,
     TagsetTemplateModule,
-    forwardRef(() => TemplateModule),
     TypeOrmModule.forFeature([InnovationFlow]),
   ],
   providers: [

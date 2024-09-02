@@ -7,23 +7,23 @@ import { Template } from './template.entity';
 import { TemplateResolverMutations } from './template.resolver.mutations';
 import { TemplateService } from './template.service';
 import { TemplateAuthorizationService } from './template.service.authorization';
-import { InnovationFlowStatesModule } from '@domain/collaboration/innovation-flow-states/innovation.flow.state.module';
 import { CommunityGuidelinesModule } from '@domain/community/community-guidelines/community.guidelines.module';
 import { CalloutModule } from '@domain/collaboration/callout/callout.module';
 import { WhiteboardModule } from '@domain/common/whiteboard';
 import { TemplateResolverFields } from './template.resolver.fields';
 import { CollaborationFactoryModule } from '@domain/collaboration/collaboration-factory/collaboration.factory.module';
+import { InnovationFlowModule } from '@domain/collaboration/innovation-flow/innovation.flow.module';
 
 @Module({
   imports: [
     AuthorizationModule,
     AuthorizationPolicyModule,
-    InnovationFlowStatesModule,
     ProfileModule,
     CommunityGuidelinesModule,
-    CollaborationFactoryModule,
     CalloutModule,
     WhiteboardModule,
+    InnovationFlowModule,
+    CollaborationFactoryModule,
     TypeOrmModule.forFeature([Template]),
   ],
   providers: [
