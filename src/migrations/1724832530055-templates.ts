@@ -214,7 +214,7 @@ export class Templates1724832530055 implements MigrationInterface {
       queryRunner,
       'innovation-flow'
     );
-    const profileID = await createProfile(
+    const profileId = await createProfile(
       queryRunner,
       'Innovation Flow',
       storageBucketId,
@@ -222,8 +222,8 @@ export class Templates1724832530055 implements MigrationInterface {
     );
 
     await queryRunner.query(
-      `INSERT INTO innovation_flow (id, createdDate, updatedDate, version, authorizationId, states)
-        SELECT '${innovationFlowID}' as \`id\`, createdDate, updatedDate, version, '${authID}' as authorizationId, states
+      `INSERT INTO innovation_flow (id, createdDate, updatedDate, version, authorizationId, profileId, states)
+        SELECT '${innovationFlowID}' as \`id\`, createdDate, updatedDate, version, '${authID}' as authorizationId, '${profileId}' as profileId, states
         FROM innovation_flow_template WHERE id = '${innovationFlowTemplateId}'`
     );
     return innovationFlowID;
@@ -237,7 +237,7 @@ export class Templates1724832530055 implements MigrationInterface {
     const whiteboardID = randomUUID();
     const nameID = `template-${whiteboardID.slice(0, 8)}`;
     const authID = await createAuthorizationPolicy(queryRunner, 'whiteboard');
-    const profileID = await createProfile(
+    const profileId = await createProfile(
       queryRunner,
       'Whiteboard',
       storageBucketId,
@@ -245,8 +245,8 @@ export class Templates1724832530055 implements MigrationInterface {
     );
 
     await queryRunner.query(
-      `INSERT INTO whiteboard (id, createdDate, updatedDate, version, authorizationId, profileID, content, nameID)
-        SELECT '${whiteboardID}' as \`id\`, createdDate, updatedDate, version, '${authID}' as authorizationId, '${profileID}' as profileID, content, '${nameID}' as nameID
+      `INSERT INTO whiteboard (id, createdDate, updatedDate, version, authorizationId, profileId, content, nameID, contentUpdatePolicy)
+        SELECT '${whiteboardID}' as \`id\`, createdDate, updatedDate, version, '${authID}' as authorizationId, '${profileId}' as profileId, content, '${nameID}' as nameID, 'admins' as contentUpdatePolicy
         FROM whiteboard_template WHERE id = '${whiteboardTemplateId}'`
     );
     return whiteboardID;
@@ -306,7 +306,7 @@ const createProfile = async (
   templateStorageBucketId: string,
   profileType: string
 ) => {
-  const profileID = randomUUID();
+  const profileId = randomUUID();
   const authID = await createAuthorizationPolicy(queryRunner, 'profile');
   const profileStorageBucketId = await createStorageBucket(
     queryRunner,
@@ -314,10 +314,10 @@ const createProfile = async (
   );
   await queryRunner.query(
     `INSERT INTO profile (id, version, authorizationId, locationId, displayName, tagline, storageBucketId, type) VALUES
-    ('${profileID}', 1, '${authID}', null, '${entityName} Template', '', '${profileStorageBucketId}', '${profileType}')`
+    ('${profileId}', 1, '${authID}', null, '${entityName} Template', '', '${profileStorageBucketId}', '${profileType}')`
   );
 
-  return profileID;
+  return profileId;
 };
 
 const createStorageBucket = async (
