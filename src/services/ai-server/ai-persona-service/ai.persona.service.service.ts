@@ -19,7 +19,7 @@ import { EventBus } from '@nestjs/cqrs';
 import {
   IngestSpace,
   SpaceIngestionPurpose,
-} from '@services/infrastructure/event-bus/commands';
+} from '@services/infrastructure/event-bus/messages';
 import { AiPersonaBodyOfKnowledgeType } from '@common/enums/ai.persona.body.of.knowledge.type';
 import { IMessageAnswerToQuestion } from '@domain/communication/message.answer.to.question/message.answer.to.question.interface';
 import { InteractionMessage } from './dto/interaction.message';
@@ -61,8 +61,9 @@ export class AiPersonaServiceService {
     if (aiPersonaServiceData.bodyOfKnowledgeID) {
       this.eventBus.publish(
         new IngestSpace(
-          aiPersonaServiceData.bodyOfKnowledgeID,
-          SpaceIngestionPurpose.KNOWLEDGE
+          savedAiPersonaService.bodyOfKnowledgeID,
+          SpaceIngestionPurpose.KNOWLEDGE,
+          savedAiPersonaService.id
         )
       );
     }

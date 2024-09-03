@@ -33,5 +33,6 @@ export class AiPersonaService
   @Column('varchar', { length: SMALL_TEXT_LENGTH, nullable: true })
   bodyOfKnowledgeID!: string;
 
-  // TODO: last updated embeddings
+  @Column({ type: 'datetime', nullable: true })
+  bodyOfKnowledgeLastUpdated: Date | null = null;
 }
