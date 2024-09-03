@@ -103,7 +103,8 @@ export class InnovationFlowService {
   }
 
   async update(
-    innovationFlowData: UpdateInnovationFlowEntityInput
+    innovationFlowData: UpdateInnovationFlowEntityInput,
+    isTemplate: boolean = false
   ): Promise<IInnovationFlow> {
     const innovationFlow = await this.getInnovationFlowOrFail(
       innovationFlowData.innovationFlowID,
@@ -120,14 +121,17 @@ export class InnovationFlowService {
         state => state.displayName
       );
 
-      const defaultSelectedState = newStateNames[0]; // default to first in the list
-      const updateData: UpdateProfileSelectTagsetDefinitionInput = {
-        profileID: innovationFlow.profile.id,
-        allowedValues: newStateNames,
-        defaultSelectedValue: defaultSelectedState,
-        tagsetName: TagsetReservedName.FLOW_STATE.valueOf(),
-      };
-      await this.profileService.updateSelectTagsetDefinition(updateData);
+      // InnovationFlow templates don't have a tagset
+      if (!isTemplate) {
+        const defaultSelectedState = newStateNames[0]; // default to first in the list
+        const updateData: UpdateProfileSelectTagsetDefinitionInput = {
+          profileID: innovationFlow.profile.id,
+          allowedValues: newStateNames,
+          defaultSelectedValue: defaultSelectedState,
+          tagsetName: TagsetReservedName.FLOW_STATE.valueOf(),
+        };
+        await this.profileService.updateSelectTagsetDefinition(updateData);
+      }
 
       const convertedStates =
         this.innovationFlowStatesService.convertInputsToStates(
