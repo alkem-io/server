@@ -16,13 +16,13 @@ import { AiPersonaEngineAdapterQueryInput } from '@services/ai-server/ai-persona
 import { AiPersonaEngineAdapter } from '@services/ai-server/ai-persona-engine-adapter/ai.persona.engine.adapter';
 import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
 import { EventBus } from '@nestjs/cqrs';
-import {
-  IngestSpace,
-  SpaceIngestionPurpose,
-} from '@services/infrastructure/event-bus/commands';
 import { IMessageAnswerToQuestion } from '@domain/communication/message.answer.to.question/message.answer.to.question.interface';
 import { InteractionMessage } from './dto/interaction.message';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import {
+  IngestSpace,
+  SpaceIngestionPurpose,
+} from '@services/infrastructure/event-bus/messages/ingest.space.command';
 
 @Injectable()
 export class AiPersonaServiceService {
@@ -60,8 +60,9 @@ export class AiPersonaServiceService {
     if (aiPersonaServiceData.bodyOfKnowledgeID) {
       this.eventBus.publish(
         new IngestSpace(
-          aiPersonaServiceData.bodyOfKnowledgeID,
-          SpaceIngestionPurpose.KNOWLEDGE
+          savedAiPersonaService.bodyOfKnowledgeID,
+          SpaceIngestionPurpose.KNOWLEDGE,
+          savedAiPersonaService.id
         )
       );
     }

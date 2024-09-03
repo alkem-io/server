@@ -3,6 +3,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import {
   SUBSCRIPTION_ACTIVITY_CREATED,
   SUBSCRIPTION_ROOM_EVENT,
+  SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED,
   SUBSCRIPTION_WHITEBOARD_SAVED,
 } from '@src/common/constants';
 import { SubscriptionType } from '@common/enums/subscription.type';
@@ -15,7 +16,9 @@ export class SubscriptionReadService {
     @Inject(SUBSCRIPTION_ROOM_EVENT)
     private roomEventsSubscription: PubSubEngine,
     @Inject(SUBSCRIPTION_WHITEBOARD_SAVED)
-    private whiteboardSavedSubscription: PubSubEngine
+    private whiteboardSavedSubscription: PubSubEngine,
+    @Inject(SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED)
+    private subscriptionVirtualContributorUpdated: PubSubEngine
   ) {}
 
   public subscribeToActivities() {
@@ -33,6 +36,12 @@ export class SubscriptionReadService {
   public subscribeToWhiteboardSavedEvents() {
     return this.whiteboardSavedSubscription.asyncIterator(
       SubscriptionType.WHITEBOARD_SAVED
+    );
+  }
+
+  public subscribeToVirtualContributorUpdated() {
+    return this.subscriptionVirtualContributorUpdated.asyncIterator(
+      SubscriptionType.VIRTUAL_CONTRIBUTOR_UPDATED
     );
   }
 }

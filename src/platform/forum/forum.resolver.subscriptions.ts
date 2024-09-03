@@ -48,6 +48,7 @@ export class ForumResolverSubscriptions {
         payload.discussionID
       );
     },
+
     async filter(
       this: ForumResolverSubscriptions,
       payload: ForumDiscussionUpdated,

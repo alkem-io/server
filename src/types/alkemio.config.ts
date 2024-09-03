@@ -127,6 +127,11 @@ export type AlkemioConfig = {
         user: string;
         password: string;
       };
+      event_bus: {
+        exchange: string;
+        ingest_space_queue: string;
+        ingest_space_result_queue: string;
+      };
     };
   };
   integrations: {

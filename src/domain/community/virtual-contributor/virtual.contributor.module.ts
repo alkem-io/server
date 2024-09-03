@@ -17,6 +17,8 @@ import { AiServerAdapterModule } from '@services/adapters/ai-server-adapter/ai.s
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { AccountHostModule } from '@domain/space/account.host/account.host.module';
 import { ContributorModule } from '../contributor/contributor.module';
+import { VirtualContributorResolverSubscriptions } from './virtual.contributor.resolver.subscriptions';
+import { SubscriptionServiceModule } from '@services/subscriptions/subscription-service';
 
 @Module({
   imports: [
@@ -32,6 +34,7 @@ import { ContributorModule } from '../contributor/contributor.module';
     AccountHostModule,
     TypeOrmModule.forFeature([VirtualContributor]),
     PlatformAuthorizationPolicyModule,
+    SubscriptionServiceModule,
   ],
   providers: [
     VirtualContributorService,
@@ -39,6 +42,7 @@ import { ContributorModule } from '../contributor/contributor.module';
     VirtualContributorResolverMutations,
     VirtualContributorResolverQueries,
     VirtualContributorResolverFields,
+    VirtualContributorResolverSubscriptions,
   ],
   exports: [VirtualContributorService, VirtualContributorAuthorizationService],
 })
