@@ -3,6 +3,7 @@ import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
 import { CalloutState } from '@common/enums/callout.state';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 import { ICalloutContributionPolicy } from './callout.contribution.policy.interface';
+import { ENUM_LENGTH } from '@common/constants';
 
 @Entity()
 export class CalloutContributionPolicy
@@ -13,9 +14,8 @@ export class CalloutContributionPolicy
   allowedContributionTypes!: CalloutContributionType[];
 
   @Column('varchar', {
-    length: 255,
+    length: ENUM_LENGTH,
     nullable: false,
-    default: CalloutState.OPEN,
   })
   state!: CalloutState;
 }

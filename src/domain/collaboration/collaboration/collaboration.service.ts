@@ -380,11 +380,12 @@ export class CollaborationService {
     const collaboration = await this.getCollaborationOrFail(collaborationID, {
       relations: { callouts: true, tagsetTemplateSet: true },
     });
-    if (!collaboration.callouts || !collaboration.tagsetTemplateSet)
+    if (!collaboration.callouts || !collaboration.tagsetTemplateSet) {
       throw new EntityNotInitializedException(
         `Collaboration (${collaborationID}) not initialised`,
         LogContext.CONTEXT
       );
+    }
     if (!calloutData.sortOrder) {
       calloutData.sortOrder =
         1 +

@@ -8,7 +8,7 @@ import { CreateNameableInput } from '@domain/common/entity/nameable-entity/dto/n
 export class CreateCalendarEventInput extends CreateNameableInput {
   @Field(() => CalendarEventType, { nullable: false })
   @MaxLength(MID_TEXT_LENGTH)
-  type!: string;
+  type!: CalendarEventType;
 
   @Field(() => [String], { nullable: true })
   @IsOptional()

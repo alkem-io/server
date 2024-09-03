@@ -43,7 +43,7 @@ export class InvitationService {
   ): Promise<IInvitation> {
     const invitation: IInvitation = Invitation.create(invitationData);
     invitation.contributorType =
-      await this.contributorService.getContributorType(contributor);
+      this.contributorService.getContributorType(contributor);
 
     invitation.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.INVITATION

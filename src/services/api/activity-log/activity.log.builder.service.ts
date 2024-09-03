@@ -50,6 +50,17 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
   ) {}
 
   async [ActivityEventType.MEMBER_JOINED](rawActivity: IActivity) {
+    if (!rawActivity.parentID) {
+      throw new EntityNotFoundException(
+        `ParentID not set on ${rawActivity.type} activity`,
+        LogContext.ACTIVITY,
+        {
+          activityId: rawActivity.id,
+          type: rawActivity.type,
+        }
+      );
+    }
+
     const community = await this.communityService.getCommunityOrFail(
       rawActivity.parentID
     );
@@ -81,6 +92,17 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
   }
 
   async [ActivityEventType.CALLOUT_POST_CREATED](rawActivity: IActivity) {
+    if (!rawActivity.parentID) {
+      throw new EntityNotFoundException(
+        `ParentID not set on ${rawActivity.type} activity`,
+        LogContext.ACTIVITY,
+        {
+          activityId: rawActivity.id,
+          type: rawActivity.type,
+        }
+      );
+    }
+
     const calloutPostCreated = await this.calloutService.getCalloutOrFail(
       rawActivity.parentID
     );
@@ -96,6 +118,17 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
   }
 
   async [ActivityEventType.CALLOUT_LINK_CREATED](rawActivity: IActivity) {
+    if (!rawActivity.parentID) {
+      throw new EntityNotFoundException(
+        `ParentID not set on ${rawActivity.type} activity`,
+        LogContext.ACTIVITY,
+        {
+          activityId: rawActivity.id,
+          type: rawActivity.type,
+        }
+      );
+    }
+
     const calloutPostCreated = await this.calloutService.getCalloutOrFail(
       rawActivity.parentID
     );
@@ -111,6 +144,17 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
   }
 
   async [ActivityEventType.CALLOUT_WHITEBOARD_CREATED](rawActivity: IActivity) {
+    if (!rawActivity.parentID) {
+      throw new EntityNotFoundException(
+        `ParentID not set on ${rawActivity.type} activity`,
+        LogContext.ACTIVITY,
+        {
+          activityId: rawActivity.id,
+          type: rawActivity.type,
+        }
+      );
+    }
+
     const calloutWhiteboardCreated = await this.calloutService.getCalloutOrFail(
       rawActivity.parentID
     );
@@ -129,6 +173,17 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
   async [ActivityEventType.CALLOUT_WHITEBOARD_CONTENT_MODIFIED](
     rawActivity: IActivity
   ) {
+    if (!rawActivity.parentID) {
+      throw new EntityNotFoundException(
+        `ParentID not set on ${rawActivity.type} activity`,
+        LogContext.ACTIVITY,
+        {
+          activityId: rawActivity.id,
+          type: rawActivity.type,
+        }
+      );
+    }
+
     const parentCallout = await this.calloutService.getCalloutOrFail(
       rawActivity.parentID
     );
@@ -145,6 +200,17 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
   }
 
   async [ActivityEventType.CALLOUT_POST_COMMENT](rawActivity: IActivity) {
+    if (!rawActivity.parentID) {
+      throw new EntityNotFoundException(
+        `ParentID not set on ${rawActivity.type} activity`,
+        LogContext.ACTIVITY,
+        {
+          activityId: rawActivity.id,
+          type: rawActivity.type,
+        }
+      );
+    }
+
     const calloutPostComment = await this.calloutService.getCalloutOrFail(
       rawActivity.parentID
     );
@@ -230,6 +296,17 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
   }
 
   async [ActivityEventType.CALENDAR_EVENT_CREATED](rawActivity: IActivity) {
+    if (!rawActivity.parentID) {
+      throw new EntityNotFoundException(
+        `ParentID not set on ${rawActivity.type} activity`,
+        LogContext.ACTIVITY,
+        {
+          activityId: rawActivity.id,
+          type: rawActivity.type,
+        }
+      );
+    }
+
     const calendar = await this.calendarService.getCalendarOrFail(
       rawActivity.parentID
     );

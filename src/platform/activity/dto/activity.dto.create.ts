@@ -8,5 +8,5 @@ export class CreateActivityInput extends ActivityInputBase {
   parentID!: string;
   type!: ActivityEventType;
   messageID?: string;
-  visibility? = true;
+  visibility!: boolean;
 }

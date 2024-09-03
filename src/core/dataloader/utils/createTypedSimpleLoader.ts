@@ -13,7 +13,7 @@ export const createTypedSimpleDataLoader = <TResult extends { id: string }>(
   options?: DataLoaderCreatorOptions<TResult, TResult>
 ): ILoader<TResult> => {
   const { fields, ...restOptions } = options ?? {};
-
+  // if fields ia specified, select specific fields, otherwise select all fields
   const selectOptions = fields
     ? Array.isArray(fields)
       ? {
@@ -21,7 +21,7 @@ export const createTypedSimpleDataLoader = <TResult extends { id: string }>(
           ...selectOptionsFromFields(fields),
         }
       : fields
-    : { id: true };
+    : undefined;
 
   return new DataLoader<string, TResult>(
     keys =>

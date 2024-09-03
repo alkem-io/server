@@ -77,7 +77,8 @@ export class AgentService {
   }
 
   public async createAgent(inputData: CreateAgentInput): Promise<IAgent> {
-    const agent: IAgent = Agent.create(inputData);
+    // a very weird type error is resolved by spreading the input
+    const agent: IAgent = Agent.create({ ...inputData });
     agent.credentials = [];
     agent.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.AGENT
@@ -666,8 +667,8 @@ export class AgentService {
     );
 
     return await this.walletManagerAdapter.completeCredentialOfferInteraction(
-      agent?.did,
-      agent?.password,
+      agent.did,
+      agent.password,
       interactionId,
       token,
       offeredCredentials.map(c => c.metadata)
