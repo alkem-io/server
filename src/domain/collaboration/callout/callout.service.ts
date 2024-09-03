@@ -504,7 +504,7 @@ export class CalloutService {
 
     // set default sort order as the minimum of the existing contributions
     // we want the new one to be first
-    if (!contributionData.sortOrder) {
+    if (contributionData.sortOrder !== undefined) {
       const contributionsSortOrder = callout.contributions.map(
         c => c.sortOrder
       );
