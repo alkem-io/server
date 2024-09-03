@@ -150,10 +150,13 @@ export class CalloutContributionService {
   async save(
     calloutContribution: ICalloutContribution | ICalloutContribution[]
   ): Promise<ICalloutContribution | ICalloutContribution[]> {
-    const contributionsArray = Array.isArray(calloutContribution)
+    const isParamArray = Array.isArray(calloutContribution);
+    const contributionsArray = isParamArray
       ? calloutContribution
       : [calloutContribution];
-    return this.contributionRepository.save(contributionsArray);
+    const results = await this.contributionRepository.save(contributionsArray);
+
+    return isParamArray ? results : results[0];
   }
 
   public async getCalloutContributionOrFail(
