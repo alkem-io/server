@@ -24,6 +24,9 @@ import { AlkemioConfig } from '@src/types';
 import { Template } from '@domain/template/template/template.entity';
 import { InnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.entity';
 import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
+import { Community } from '@domain/community/community';
+import { CommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.entity';
+import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
 
 @Injectable()
 export class UrlGeneratorService {
@@ -249,6 +252,8 @@ export class UrlGeneratorService {
         );
       case ProfileType.CALLOUT_FRAMING:
         return await this.getCalloutFramingUrlPathOrFail(profile.id);
+      case ProfileType.COMMUNITY_GUIDELINES:
+        return await this.getCommunityGuidelinesUrlPathOrFail(profile.id);
       case ProfileType.POST:
         return await this.getPostUrlPathByField(
           this.FIELD_PROFILE_ID,
@@ -286,7 +291,7 @@ export class UrlGeneratorService {
         return `${this.endpoint_cluster}/admin/innovation-hubs/${innovationHubEntityInfo.entityNameID}`;
       case ProfileType.USER_GROUP:
         // to do: implement and decide what to do with user groups
-        return '';
+        return `${this.endpoint_cluster}`;
     }
     return '';
   }
@@ -547,6 +552,57 @@ export class UrlGeneratorService {
     );
   }
 
+  private async getCommunityGuidelinesUrlPathOrFail(
+    profileID: string
+  ): Promise<string> {
+    const communityGuidelines = await this.entityManager.findOne(
+      CommunityGuidelines,
+      {
+        where: {
+          profile: {
+            id: profileID,
+          },
+        },
+      }
+    );
+
+    if (!communityGuidelines) {
+      throw new EntityNotFoundException(
+        `Unable to find community guidelines for profile: ${profileID}`,
+        LogContext.URL_GENERATOR
+      );
+    }
+
+    const community = await this.entityManager.findOne(Community, {
+      where: {
+        guidelines: {
+          id: communityGuidelines.id,
+        },
+      },
+    });
+    if (community) {
+      return await this.getJourneyUrlPath('communityId', community.id);
+    }
+
+    const template = await this.entityManager.findOne(Template, {
+      where: {
+        communityGuidelines: {
+          id: communityGuidelines.id,
+        },
+      },
+      relations: {
+        profile: true,
+      },
+    });
+    if (template) {
+      return await this.getTemplateUrlPathOrFail(template.profile.id);
+    }
+    throw new EntityNotFoundException(
+      `Unable to find community guidelines for profile: ${profileID}, communityguidelines: ${communityGuidelines.id}`,
+      LogContext.URL_GENERATOR
+    );
+  }
+
   private async getCalloutFramingUrlPathOrFail(
     profileID: string
   ): Promise<string> {
@@ -673,23 +729,27 @@ export class UrlGeneratorService {
       );
     }
 
-    const [contributionResult]: {
-      calloutId: string;
-    }[] = await this.entityManager.connection.query(
-      `
-        SELECT callout_contribution.calloutId as calloutId FROM callout_contribution
-        WHERE callout_contribution.postId = '${result.postId}'
-      `
-    );
-    if (!contributionResult) {
+    const contribution = await this.entityManager.findOne(CalloutContribution, {
+      where: {
+        post: {
+          id: result.postId,
+        },
+      },
+      relations: {
+        callout: true,
+        post: true,
+      },
+    });
+
+    if (!contribution || !contribution.callout) {
       throw new EntityNotFoundException(
-        `Unable to contribution for post where postID: ${result.postId}`,
+        `Unable to contribution callout for post where postID: ${result.postId}`,
         LogContext.URL_GENERATOR
       );
     }
 
     const calloutUrlPath = await this.getCalloutUrlPath(
-      contributionResult.calloutId
+      contribution.callout.id
     );
     return `${calloutUrlPath}/${this.PATH_POSTS}/${result.postNameId}`;
   }
@@ -830,39 +890,26 @@ export class UrlGeneratorService {
       );
     }
 
-    const [timelineInfo]: {
-      entityID: string;
-    }[] = await this.entityManager.connection.query(
-      `
-        SELECT timeline.id as entityID FROM timeline
-        WHERE timeline.calendarId = '${calendarEventInfo.calendarID}'
-      `
-    );
-    if (!timelineInfo) {
-      throw new EntityNotFoundException(
-        `Unable to find timeline with calendar: ${calendarEventInfo.calendarID}`,
-        LogContext.URL_GENERATOR
-      );
-    }
+    const collaboration = await this.entityManager.findOne(Collaboration, {
+      where: {
+        timeline: {
+          calendar: {
+            id: calendarEventInfo.calendarID,
+          },
+        },
+      },
+    });
 
-    const [collaborationInfo]: {
-      entityID: string;
-    }[] = await this.entityManager.connection.query(
-      `
-        SELECT collaboration.id as entityID FROM collaboration
-        WHERE collaboration.timelineId = '${timelineInfo.entityID}'
-      `
-    );
-    if (!collaborationInfo) {
+    if (!collaboration) {
       throw new EntityNotFoundException(
-        `Unable to find collaboration with timeline: ${timelineInfo.entityID}`,
+        `Unable to find collaboration timeline with calendar: ${calendarEventInfo.calendarID}`,
         LogContext.URL_GENERATOR
       );
     }
 
     const journeyUrlPath = await this.getJourneyUrlPath(
       'collaborationId',
-      collaborationInfo.entityID
+      collaboration.id
     );
     return `${journeyUrlPath}/${this.PATH_CALENDAR}/${calendarEventInfo.entityNameID}`;
   }
