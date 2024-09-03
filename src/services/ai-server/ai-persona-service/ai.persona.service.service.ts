@@ -46,12 +46,10 @@ export class AiPersonaServiceService {
     );
 
     aiPersonaService.bodyOfKnowledgeID = aiPersonaServiceData.bodyOfKnowledgeID;
-    aiPersonaService.engine =
-      aiPersonaServiceData.engine ?? AiPersonaEngine.EXPERT;
+    aiPersonaService.engine = aiPersonaServiceData.engine;
     aiPersonaService.bodyOfKnowledgeType =
-      aiPersonaServiceData.bodyOfKnowledgeType ??
-      AiPersonaBodyOfKnowledgeType.ALKEMIO_SPACE;
-    aiPersonaService.prompt = aiPersonaServiceData.prompt ?? '';
+      aiPersonaServiceData.bodyOfKnowledgeType;
+    aiPersonaService.prompt = aiPersonaServiceData.prompt;
 
     const savedAiPersonaService =
       await this.aiPersonaServiceRepository.save(aiPersonaService);

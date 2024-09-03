@@ -886,10 +886,7 @@ export class CommunityRoleService {
         invitationData.invitedContributor
       );
     const community = await this.communityService.getCommunityOrFail(
-      invitationData.communityID,
-      {
-        relations: {},
-      }
+      invitationData.communityID
     );
 
     await this.validateInvitationToExistingContributor(

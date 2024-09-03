@@ -12,10 +12,15 @@ import { Application } from '@domain/community/application/application.entity';
 import { PreferenceSet } from '@domain/common/preference-set/preference.set.entity';
 import { ContributorBase } from '../contributor/contributor.base.entity';
 import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
+import {
+  MID_TEXT_LENGTH,
+  SMALL_TEXT_LENGTH,
+  UUID_LENGTH,
+} from '@common/constants';
 
 @Entity()
 export class User extends ContributorBase implements IUser {
-  @Column('char', { length: 36, nullable: false })
+  @Column('char', { length: UUID_LENGTH, nullable: false })
   accountID!: string;
 
   @Column({
@@ -24,23 +29,23 @@ export class User extends ContributorBase implements IUser {
   @Generated('increment')
   rowId!: number;
 
-  @Column()
-  accountUpn: string = '';
+  @Column('varchar', { length: SMALL_TEXT_LENGTH, nullable: false })
+  accountUpn!: string;
 
-  @Column()
-  firstName: string = '';
+  @Column('varchar', { length: SMALL_TEXT_LENGTH, nullable: false })
+  firstName!: string;
 
-  @Column()
-  lastName: string = '';
+  @Column('varchar', { length: SMALL_TEXT_LENGTH, nullable: false })
+  lastName!: string;
 
-  @Column()
-  email: string = '';
+  @Column('varchar', { length: MID_TEXT_LENGTH, nullable: false })
+  email!: string;
 
-  @Column()
-  phone: string = '';
+  @Column('varchar', { length: SMALL_TEXT_LENGTH, nullable: true })
+  phone?: string;
 
-  @Column({ type: 'boolean' })
-  serviceProfile: boolean = false;
+  @Column({ type: 'boolean', nullable: false })
+  serviceProfile!: boolean;
 
   @OneToMany(() => Application, application => application.id, {
     eager: false,
@@ -63,8 +68,4 @@ export class User extends ContributorBase implements IUser {
   })
   @JoinColumn()
   storageAggregator?: StorageAggregator;
-
-  constructor() {
-    super();
-  }
 }

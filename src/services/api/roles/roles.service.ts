@@ -248,7 +248,7 @@ export class RolesService {
     invitationResult.contributorID = invitation.invitedContributor;
     invitationResult.contributorType = invitation.contributorType;
 
-    invitationResult.createdBy = invitation.createdBy;
+    invitationResult.createdBy = invitation.createdBy ?? '';
     invitationResult.welcomeMessage = invitation.welcomeMessage;
 
     return invitationResult;

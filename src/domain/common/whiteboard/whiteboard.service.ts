@@ -1,12 +1,7 @@
 import EventEmitter = require('node:events');
 import { Injectable } from '@nestjs/common';
-import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
-import {
-  EntityManager,
-  FindOneOptions,
-  FindOptionsRelations,
-  Repository,
-} from 'typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
+import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -21,7 +16,6 @@ import { UpdateWhiteboardContentInput } from './dto/whiteboard.dto.update.conten
 import { ExcalidrawContent } from '@common/interfaces';
 import { IProfile } from '@domain/common/profile';
 import { ProfileDocumentsService } from '@domain/profile-documents/profile.documents.service';
-import { CalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.entity';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { AuthorizationPolicy } from '../authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
@@ -30,9 +24,7 @@ import { Whiteboard } from './whiteboard.entity';
 import { IWhiteboard } from './whiteboard.interface';
 import { CreateWhiteboardInput } from './dto/whiteboard.dto.create';
 import { UpdateWhiteboardInput } from './dto/whiteboard.dto.update';
-import { WhiteboardAuthorizationService } from './whiteboard.service.authorization';
 import { WHITEBOARD_CONTENT_UPDATE } from './events/event.names';
-import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
 import { LicenseEngineService } from '@core/license-engine/license.engine.service';
 import { LicensePrivilege } from '@common/enums/license.privilege';
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
@@ -51,10 +43,8 @@ export class WhiteboardService {
     private licenseEngineService: LicenseEngineService,
     private profileService: ProfileService,
     private profileDocumentsService: ProfileDocumentsService,
-    private whiteboardAuthService: WhiteboardAuthorizationService,
     private subscriptionPublishService: SubscriptionPublishService,
-    private communityResolverService: CommunityResolverService,
-    @InjectEntityManager() private entityManager: EntityManager
+    private communityResolverService: CommunityResolverService
   ) {}
 
   async createWhiteboard(
@@ -153,42 +143,6 @@ export class WhiteboardService {
 
     if (updateWhiteboardData.contentUpdatePolicy) {
       whiteboard.contentUpdatePolicy = updateWhiteboardData.contentUpdatePolicy;
-
-      const framing = await this.entityManager.findOne(CalloutFraming, {
-        where: {
-          whiteboard: { id: whiteboard.id },
-        },
-      });
-
-      if (framing) {
-        const updatedWhiteboardAuthorizations =
-          await this.whiteboardAuthService.applyAuthorizationPolicy(
-            whiteboard,
-            framing.authorization
-          );
-        await this.authorizationPolicyService.saveAll(
-          updatedWhiteboardAuthorizations
-        );
-      } else {
-        const contribution = await this.entityManager.findOne(
-          CalloutContribution,
-          {
-            where: {
-              whiteboard: { id: whiteboard.id },
-            },
-          }
-        );
-        if (contribution) {
-          const contributionAuthorizations =
-            await this.whiteboardAuthService.applyAuthorizationPolicy(
-              whiteboard,
-              contribution.authorization
-            );
-          await this.authorizationPolicyService.saveAll(
-            contributionAuthorizations
-          );
-        }
-      }
     }
 
     return this.save(whiteboard);
@@ -248,14 +202,14 @@ export class WhiteboardService {
       await this.communityResolverService.getCommunityFromWhiteboardOrFail(
         whiteboardId
       );
-    const license =
-      await this.communityResolverService.getAccountAgentFromCommunityOrFail(
-        community
+    const levelZeroSpaceAgent =
+      await this.communityResolverService.getLevelZeroSpaceAgentForCommunityOrFail(
+        community.id
       );
 
     const enabled = await this.licenseEngineService.isAccessGranted(
       LicensePrivilege.SPACE_WHITEBOARD_MULTI_USER,
-      license
+      levelZeroSpaceAgent
     );
 
     return enabled;

@@ -5,6 +5,7 @@ import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { TagsetType } from '@common/enums/tagset.type';
 import { TagsetTemplate } from '../tagset-template/tagset.template.entity';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { ENUM_LENGTH } from '@common/constants';
 
 @Entity()
 export class Tagset extends AuthorizableEntity implements ITagset {
@@ -16,8 +17,7 @@ export class Tagset extends AuthorizableEntity implements ITagset {
   name!: string;
 
   @Column('varchar', {
-    default: TagsetType.FREEFORM,
-    length: 255,
+    length: ENUM_LENGTH,
     nullable: false,
   })
   type!: TagsetType;

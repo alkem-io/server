@@ -9,7 +9,7 @@ export class UpdateCalendarEventInput extends UpdateNameableInput {
   @Field(() => CalendarEventType, { nullable: true })
   @IsOptional()
   @MaxLength(MID_TEXT_LENGTH)
-  type?: string;
+  type?: CalendarEventType;
 
   @Field(() => Date, {
     nullable: false,
