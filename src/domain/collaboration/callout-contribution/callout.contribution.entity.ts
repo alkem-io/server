@@ -45,4 +45,7 @@ export class CalloutContribution
     onDelete: 'CASCADE',
   })
   callout?: Callout;
+
+  @Column('int')
+  sortOrder!: number;
 }
