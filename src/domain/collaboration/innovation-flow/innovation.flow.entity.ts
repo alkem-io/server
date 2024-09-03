@@ -15,6 +15,6 @@ export class InnovationFlow
   @JoinColumn()
   profile!: Profile;
 
-  @Column('text')
-  states: string = '[]';
+  @Column('simple-array', { nullable: false })
+  states!: string;
 }

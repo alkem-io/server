@@ -4,12 +4,18 @@ import { StorageBucket } from '../storage-bucket/storage.bucket.entity';
 import { MimeFileType } from '@common/enums/mime.file.type';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { Tagset } from '@domain/common/tagset';
+import {
+  ENUM_LENGTH,
+  MID_TEXT_LENGTH,
+  SMALL_TEXT_LENGTH,
+  UUID_LENGTH,
+} from '@common/constants';
 
 @Entity()
 export class Document extends AuthorizableEntity implements IDocument {
   // omitting OneToOne decorator for createdBy to avoid circular dependency
   // needs a redesign to avoid circular dependency
-  @Column('char', { length: 36, nullable: true })
+  @Column('char', { length: UUID_LENGTH, nullable: true })
   createdBy!: string;
 
   @ManyToOne(() => StorageBucket, storage => storage.documents, {
@@ -27,15 +33,15 @@ export class Document extends AuthorizableEntity implements IDocument {
   @JoinColumn()
   tagset!: Tagset;
 
-  @Column('text', { nullable: true })
-  displayName = '';
+  @Column('varchar', { length: MID_TEXT_LENGTH, nullable: false })
+  displayName!: string;
 
-  @Column('varchar', { length: 128, default: '' })
+  @Column('varchar', { length: ENUM_LENGTH, nullable: false })
   mimeType!: MimeFileType;
 
-  @Column('int')
+  @Column('int', { nullable: false })
   size!: number;
 
-  @Column('varchar', { length: 128, default: '' })
+  @Column('varchar', { length: SMALL_TEXT_LENGTH, nullable: false })
   externalID!: string;
 }

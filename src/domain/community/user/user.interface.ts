@@ -33,5 +33,5 @@ export class IUser extends IContributorBase implements IContributor {
 
   // Protected via field access for gdpr reasons
   email!: string;
-  phone!: string;
+  phone?: string;
 }

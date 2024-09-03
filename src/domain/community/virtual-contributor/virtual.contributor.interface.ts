@@ -12,7 +12,7 @@ export class IVirtualContributor
   extends IContributorBase
   implements IContributor
 {
-  account!: IAccount;
+  account?: IAccount;
 
   aiPersona!: IAiPersona;
 

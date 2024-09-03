@@ -5,14 +5,15 @@ import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
 import { Post } from '../post';
 import { Callout } from '../callout/callout.entity';
 import { Link } from '../link/link.entity';
+import { UUID_LENGTH } from '@common/constants';
 
 @Entity()
 export class CalloutContribution
   extends AuthorizableEntity
   implements ICalloutContribution
 {
-  @Column('char', { length: 36, nullable: true })
-  createdBy!: string;
+  @Column('char', { length: UUID_LENGTH, nullable: true })
+  createdBy?: string;
 
   @OneToOne(() => Whiteboard, {
     eager: false,

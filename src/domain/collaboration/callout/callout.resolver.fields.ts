@@ -139,7 +139,10 @@ export class CalloutResolverFields {
     nullable: true,
     description: 'The timestamp for the publishing of this Callout.',
   })
-  async publishedDate(@Parent() callout: ICallout): Promise<number> {
+  async publishedDate(@Parent() callout: ICallout): Promise<number | null> {
+    if (!callout.publishedDate) {
+      return null;
+    }
     const createdDate = callout.publishedDate;
     const date = new Date(createdDate);
     return date.getTime();

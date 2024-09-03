@@ -117,8 +117,15 @@ export class UserService {
 
     await this.validateUserProfileCreationRequest(userData);
 
-    let user: IUser = User.create(userData);
+    let user: IUser = User.create({
+      ...userData,
+      accountUpn: userData.accountUpn ?? userData.email,
+    });
     user.authorization = new AuthorizationPolicy(AuthorizationPolicyType.USER);
+
+    if (!user.serviceProfile) {
+      user.serviceProfile = false;
+    }
 
     const profileData = await this.extendProfileDataWithReferences(
       userData.profileData

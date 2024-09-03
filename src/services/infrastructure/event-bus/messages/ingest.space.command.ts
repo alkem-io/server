@@ -11,6 +11,7 @@ registerEnumType(SpaceIngestionPurpose, { name: 'SpaceIngestionPurpose' });
 export class IngestSpace implements IEvent {
   constructor(
     public readonly spaceId: string,
-    public readonly purpose: SpaceIngestionPurpose
+    public readonly purpose: SpaceIngestionPurpose,
+    public readonly personaServiceId?: string
   ) {}
 }
