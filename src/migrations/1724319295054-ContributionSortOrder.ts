@@ -12,7 +12,7 @@ export class ContributionSortOrder1724319295054 implements MigrationInterface {
       id: string;
       calloutId: string;
     }[] = await queryRunner.query(
-      `SELECT \`id\`, \`calloutId\` FROM \`callout_contribution\` ORDER BY \`calloutId\``
+      `SELECT \`id\`, \`calloutId\` FROM \`callout_contribution\` ORDER BY \`calloutId\`, \`createdDate\` DESC`
     );
 
     let lastCalloutId = '';
