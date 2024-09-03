@@ -146,7 +146,13 @@ export class TemplateService {
         );
       }
       template.whiteboard = await this.whiteboardService.createWhiteboard(
-        templateData.whiteboard,
+        {
+          profileData: {
+            displayName: 'Whiteboard Template',
+          },
+          nameID: 'whiteboard-template',
+          content: templateData.whiteboard.content,
+        },
         storageAggregator
       );
     }
@@ -203,12 +209,15 @@ export class TemplateService {
     if (
       template.type === TemplateType.INNOVATION_FLOW &&
       template.innovationFlow &&
-      templateData.innovationFlowStates
+      templateData.innovationFlow.states
     ) {
-      this.innovationFlowService.update({
-        innovationFlowID: template.innovationFlow.id,
-        states: templateData.innovationFlowStates,
-      });
+      this.innovationFlowService.update(
+        {
+          innovationFlowID: template.innovationFlow.id,
+          states: templateData.innovationFlow.states,
+        },
+        true // isTemplate
+      );
     }
 
     if (

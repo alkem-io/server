@@ -10,7 +10,7 @@ import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { InnovationFlow } from './innovation.flow.entity';
 import { IInnovationFlow } from './innovation.flow.interface';
-import { UpdateInnovationFlowInput } from './dto/innovation.flow.dto.update';
+import { UpdateInnovationFlowEntityInput } from './dto/innovation.flow.dto.update.entity';
 import { CreateInnovationFlowInput } from './dto/innovation.flow.dto.create';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { IProfile } from '@domain/common/profile/profile.interface';
@@ -103,7 +103,8 @@ export class InnovationFlowService {
   }
 
   async update(
-    innovationFlowData: UpdateInnovationFlowInput
+    innovationFlowData: UpdateInnovationFlowEntityInput,
+    isTemplate: boolean = false
   ): Promise<IInnovationFlow> {
     const innovationFlow = await this.getInnovationFlowOrFail(
       innovationFlowData.innovationFlowID,
@@ -120,14 +121,17 @@ export class InnovationFlowService {
         state => state.displayName
       );
 
-      const defaultSelectedState = newStateNames[0]; // default to first in the list
-      const updateData: UpdateProfileSelectTagsetDefinitionInput = {
-        profileID: innovationFlow.profile.id,
-        allowedValues: newStateNames,
-        defaultSelectedValue: defaultSelectedState,
-        tagsetName: TagsetReservedName.FLOW_STATE.valueOf(),
-      };
-      await this.profileService.updateSelectTagsetDefinition(updateData);
+      // InnovationFlow templates don't have a tagset
+      if (!isTemplate) {
+        const defaultSelectedState = newStateNames[0]; // default to first in the list
+        const updateData: UpdateProfileSelectTagsetDefinitionInput = {
+          profileID: innovationFlow.profile.id,
+          allowedValues: newStateNames,
+          defaultSelectedValue: defaultSelectedState,
+          tagsetName: TagsetReservedName.FLOW_STATE.valueOf(),
+        };
+        await this.profileService.updateSelectTagsetDefinition(updateData);
+      }
 
       const convertedStates =
         this.innovationFlowStatesService.convertInputsToStates(

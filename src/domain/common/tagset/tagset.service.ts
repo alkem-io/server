@@ -226,7 +226,7 @@ export class TagsetService {
     const tagset = this.getTagsetByName(tagsets, name);
     if (!tagset) {
       throw new TagsetNotFoundException(
-        `Unable to find tagset with the name: + ${name} in provided tagsets: ${JSON.stringify(
+        `Unable to find tagset with the name: '${name}' in provided tagsets: ${JSON.stringify(
           tagsets
         )}`,
         LogContext.PROFILE

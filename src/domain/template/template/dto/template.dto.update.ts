@@ -1,6 +1,6 @@
 import { VERY_LONG_TEXT_LENGTH } from '@common/constants/entity.field.length.constants';
 import { UpdateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.update';
-import { UpdateInnovationFlowStateInput } from '@domain/collaboration/innovation-flow-states/dto/innovation.flow.state.dto.update';
+import { UpdateInnovationFlowInput } from '@domain/collaboration/innovation-flow/dto/innovation.flow.dto.update';
 import { UpdateBaseAlkemioInput } from '@domain/common/entity/base-entity/dto/base.alkemio.dto.update';
 import { UpdateProfileInput } from '@domain/common/profile/dto/profile.dto.update';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
@@ -26,13 +26,14 @@ export class UpdateTemplateInput extends UpdateBaseAlkemioInput {
     description:
       'The default description to be pre-filled when users create Posts based on this template.',
   })
+  @IsOptional()
   @MaxLength(VERY_LONG_TEXT_LENGTH)
   postDefaultDescription!: string;
 
-  @Field(() => [UpdateInnovationFlowStateInput], { nullable: true })
+  @Field(() => UpdateInnovationFlowInput, { nullable: true })
   @ValidateNested({ each: true })
-  @Type(() => UpdateInnovationFlowStateInput)
-  innovationFlowStates!: UpdateInnovationFlowStateInput[];
+  @Type(() => UpdateInnovationFlowInput)
+  innovationFlow!: UpdateInnovationFlowInput;
 
   @Field(() => UpdateCommunityGuidelinesInput, {
     nullable: true,
