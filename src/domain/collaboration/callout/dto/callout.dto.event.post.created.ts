@@ -19,7 +19,7 @@ export class CalloutPostCreated {
 
   @Field(() => Number, {
     nullable: false,
-    description: 'he sorting order for this Contribution.',
+    description: 'The sorting order for this Contribution.',
   })
   sortOrder!: number;
 
