@@ -146,10 +146,10 @@ export class CalloutService {
   }
 
   private async getStorageAggregator(
-    callout: ICallout
+    calloutID: string
   ): Promise<IStorageAggregator> {
     return await this.storageAggregatorResolverService.getStorageAggregatorForCallout(
-      callout.id
+      calloutID
     );
   }
 
@@ -494,7 +494,28 @@ export class CalloutService {
       );
     }
 
-    const storageAggregator = await this.getStorageAggregator(callout);
+    if (!callout.contributions) {
+      throw new EntityNotInitializedException(
+        'Not able to load Contributions for this callout',
+        LogContext.COLLABORATION,
+        { calloutId: calloutID }
+      );
+    }
+
+    // set default sort order as the minimum of the existing contributions
+    // we want the new one to be first
+    if (!contributionData.sortOrder) {
+      const contributionsSortOrder = callout.contributions.map(
+        c => c.sortOrder
+      );
+      const minOrder = Math.min(...contributionsSortOrder);
+      // first contribution
+      contributionData.sortOrder = !contributionsSortOrder.length
+        ? 1
+        : minOrder - 1;
+    }
+
+    const storageAggregator = await this.getStorageAggregator(callout.id);
     const contribution =
       await this.contributionService.createCalloutContribution(
         contributionData,
