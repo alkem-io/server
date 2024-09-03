@@ -74,6 +74,7 @@ import { CommunityRoleApplyInput } from '@domain/community/community-role/dto/co
 import { CreateInvitationForContributorsOnCommunityInput } from '@domain/community/community-role/dto/community.role.dto.invite.contributor';
 import { CreatePlatformInvitationOnCommunityInput } from '@domain/community/community-role/dto/community.role.dto.platform.invitation.community';
 import { CreateCollaborationOnSpaceInput } from '@domain/space/space/dto/space.dto.create.collaboration';
+import { UpdateInnovationFlowEntityInput } from '@domain/collaboration/innovation-flow/dto/innovation.flow.dto.update.entity';
 
 export class BaseHandler extends AbstractHandler {
   public async handle(

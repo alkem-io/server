@@ -203,11 +203,11 @@ export class TemplateService {
     if (
       template.type === TemplateType.INNOVATION_FLOW &&
       template.innovationFlow &&
-      templateData.innovationFlowStates
+      templateData.innovationFlow.states
     ) {
       this.innovationFlowService.update({
         innovationFlowID: template.innovationFlow.id,
-        states: templateData.innovationFlowStates,
+        states: templateData.innovationFlow.states,
       });
     }
 

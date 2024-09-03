@@ -7,7 +7,7 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { IInnovationFlow } from './innovation.flow.interface';
-import { UpdateInnovationFlowInput } from './dto/innovation.flow.dto.update';
+import { UpdateInnovationFlowEntityInput } from './dto/innovation.flow.dto.update.entity';
 import { UpdateInnovationFlowSelectedStateInput } from './dto/innovation.flow.dto.update.selected.state';
 import { UpdateInnovationFlowSingleStateInput } from './dto/innovation.flow.dto.update.single.state';
 
@@ -24,7 +24,8 @@ export class InnovationFlowResolverMutations {
   })
   async updateInnovationFlow(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('innovationFlowData') innovationFlowData: UpdateInnovationFlowInput
+    @Args('innovationFlowData')
+    innovationFlowData: UpdateInnovationFlowEntityInput
   ): Promise<IInnovationFlow> {
     const innovationFlow =
       await this.innovationFlowService.getInnovationFlowOrFail(

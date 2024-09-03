@@ -10,7 +10,7 @@ import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { InnovationFlow } from './innovation.flow.entity';
 import { IInnovationFlow } from './innovation.flow.interface';
-import { UpdateInnovationFlowInput } from './dto/innovation.flow.dto.update';
+import { UpdateInnovationFlowEntityInput } from './dto/innovation.flow.dto.update.entity';
 import { CreateInnovationFlowInput } from './dto/innovation.flow.dto.create';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { IProfile } from '@domain/common/profile/profile.interface';
@@ -103,7 +103,7 @@ export class InnovationFlowService {
   }
 
   async update(
-    innovationFlowData: UpdateInnovationFlowInput
+    innovationFlowData: UpdateInnovationFlowEntityInput
   ): Promise<IInnovationFlow> {
     const innovationFlow = await this.getInnovationFlowOrFail(
       innovationFlowData.innovationFlowID,
