@@ -216,7 +216,10 @@ export class CalloutService {
       relations: {
         contributionDefaults: true,
         contributionPolicy: true,
-        framing: true,
+        framing: {
+          profile: true,
+          whiteboard: true,
+        },
       },
     });
 

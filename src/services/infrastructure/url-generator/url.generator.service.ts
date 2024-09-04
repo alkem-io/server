@@ -666,7 +666,7 @@ export class UrlGeneratorService {
         LogContext.URL_GENERATOR
       );
     }
-    return await this.getTemplateUrlPathOrFail(template.templatesSet.id);
+    return await this.getTemplateUrlPathOrFail(template.profile.id);
   }
 
   private async getJourneyUrlPath(
