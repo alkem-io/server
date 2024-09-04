@@ -1,5 +1,5 @@
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity/authorizable.interface';
-import { ObjectType } from '@nestjs/graphql';
+import { Field, ObjectType } from '@nestjs/graphql';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 import { IPost } from '../post/post.interface';
 import { ILink } from '../link/link.interface';
@@ -16,4 +16,10 @@ export abstract class ICalloutContribution extends IAuthorizable {
   createdBy?: string;
 
   callout?: ICallout;
+
+  @Field(() => Number, {
+    nullable: false,
+    description: 'The sorting order for this Contribution.',
+  })
+  sortOrder!: number;
 }
