@@ -49,6 +49,7 @@ export class AiPersonaServiceService {
     aiPersonaService.bodyOfKnowledgeType =
       aiPersonaServiceData.bodyOfKnowledgeType;
     aiPersonaService.prompt = aiPersonaServiceData.prompt;
+    aiPersonaService.dataAccessMode = aiPersonaServiceData.dataAccessMode;
 
     const savedAiPersonaService =
       await this.aiPersonaServiceRepository.save(aiPersonaService);
