@@ -48,11 +48,11 @@ export class ProfileService {
 
   // Create an empty profile, that the creating entity then has to
   // add tagets / visuals to.
-  async createProfile(
+  public createProfile(
     profileData: CreateProfileInput,
     profileType: ProfileType,
     storageAggregator: IStorageAggregator
-  ): Promise<IProfile> {
+  ): IProfile {
     const profile: IProfile = Profile.create({
       description: profileData?.description,
       tagline: profileData?.tagline,
@@ -63,9 +63,9 @@ export class ProfileService {
       AuthorizationPolicyType.PROFILE
     );
     // the next statement fails if it's not saved
-    profile.storageBucket = await this.storageBucketService.createStorageBucket(
-      { storageAggregator: storageAggregator }
-    );
+    profile.storageBucket = this.storageBucketService.createStorageBucket({
+      storageAggregator: storageAggregator,
+    });
 
     profile.visuals = [];
     profile.location = this.locationService.createLocation(

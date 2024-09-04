@@ -49,7 +49,7 @@ export class StorageAggregatorService {
     // Do not set the storage aggregator on direct storage buckets as this causes
     // a circular loop
     storageAggregator.directStorage =
-      await this.storageBucketService.createStorageBucket({});
+      this.storageBucketService.createStorageBucket({});
     return await this.save(storageAggregator);
   }
 
