@@ -13,17 +13,20 @@ import { AiPersonaEngineAdapterModule } from '../ai-persona-engine-adapter/ai.pe
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { VcInteractionModule } from '@domain/communication/vc-interaction/vc.interaction.module';
 import { CommunicationAdapterModule } from '@services/adapters/communication-adapter/communication-adapter.module';
+import { SubscriptionServiceModule } from '@services/subscriptions/subscription-service';
+import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 
 @Module({
   imports: [
     AuthorizationModule,
     AuthorizationPolicyModule,
     AiPersonaServiceModule,
-    TypeOrmModule.forFeature([AiServer]),
+    TypeOrmModule.forFeature([AiServer, VirtualContributor]),
     AiPersonaEngineAdapterModule,
     PlatformAuthorizationPolicyModule,
     VcInteractionModule,
     CommunicationAdapterModule,
+    SubscriptionServiceModule,
   ],
   providers: [
     AiServerResolverQueries,

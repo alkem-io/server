@@ -8,4 +8,5 @@ export enum SubscriptionType {
   SUBSPACE_CREATED = 'subspaceCreated',
   ACTIVITY_CREATED = 'activityCreated',
   ROOM_EVENTS = 'roomEvents',
+  VIRTUAL_CONTRIBUTOR_UPDATED = 'virtualContributorUpdated',
 }

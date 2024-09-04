@@ -78,7 +78,7 @@ export class DiscussionAuthorizationService {
 
     const profileAuthorizations =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
-        discussion.profile,
+        discussion.profile.id,
         discussion.authorization
       );
     updatedAuthorizations.push(...profileAuthorizations);

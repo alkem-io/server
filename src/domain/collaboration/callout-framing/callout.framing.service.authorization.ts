@@ -25,11 +25,22 @@ export class CalloutFramingAuthorizationService {
       await this.calloutFramingService.getCalloutFramingOrFail(
         calloutFramingInput.id,
         {
+          loadEagerRelations: false,
           relations: {
-            whiteboard: {
-              profile: true,
-            },
+            authorization: true,
             profile: true,
+            whiteboard: true,
+          },
+          select: {
+            id: true,
+            authorization:
+              this.authorizationPolicyService.authorizationSelectOptions,
+            profile: {
+              id: true,
+            },
+            whiteboard: {
+              id: true,
+            },
           },
         }
       );
@@ -51,7 +62,7 @@ export class CalloutFramingAuthorizationService {
 
     const framingAuthorizations =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
-        calloutFraming.profile,
+        calloutFraming.profile.id,
         calloutFraming.authorization
       );
     updatedAuthorizations.push(...framingAuthorizations);
@@ -59,7 +70,7 @@ export class CalloutFramingAuthorizationService {
     if (calloutFraming.whiteboard) {
       const whiteboardAuthorizations =
         await this.whiteboardAuthorizationService.applyAuthorizationPolicy(
-          calloutFraming.whiteboard,
+          calloutFraming.whiteboard.id,
           calloutFraming.authorization
         );
       updatedAuthorizations.push(...whiteboardAuthorizations);

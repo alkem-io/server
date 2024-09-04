@@ -17,11 +17,15 @@ import { PlatformInvitationService } from '@platform/invitation/platform.invitat
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { IAgent } from '@domain/agent/agent/agent.interface';
 import { PlatformService } from '@platform/platfrom/platform.service';
+import { RelationshipNotFoundException } from '@common/exceptions';
+import { AccountService } from '@domain/space/account/account.service';
+import { LicenseCredential } from '@common/enums/license.credential';
 
 @Injectable()
 export class PlatformRoleService {
   constructor(
     private userService: UserService,
+    private accountService: AccountService,
     private agentService: AgentService,
     private platformService: PlatformService,
     private platformInvitationService: PlatformInvitationService,
@@ -66,15 +70,43 @@ export class PlatformRoleService {
   public async assignPlatformRoleToUser(
     assignData: AssignPlatformRoleToUserInput
   ): Promise<IUser> {
-    const agent = await this.userService.getAgent(assignData.userID);
+    const user = await this.userService.getUserOrFail(assignData.userID, {
+      relations: {
+        agent: true,
+      },
+    });
+
+    if (!user.agent) {
+      throw new RelationshipNotFoundException(
+        `Unable to retrieve Agent for User: ${user.id}`,
+        LogContext.PLATFORM
+      );
+    }
 
     const credential = this.getCredentialForRole(assignData.role);
 
     // assign the credential
     await this.agentService.grantCredential({
-      agentID: agent.id,
+      agentID: user.agent.id,
       ...credential,
     });
+
+    if (
+      assignData.role === PlatformRole.BETA_TESTER ||
+      assignData.role === PlatformRole.VC_CAMPAIGN
+    ) {
+      // Also assign the user account a license plan
+      const accountAgent = await this.accountService.getAgent(user.accountID);
+
+      const accountLicenseCredential: ICredentialDefinition = {
+        type: LicenseCredential.ACCOUNT_LICENSE_PLUS,
+        resourceID: user.accountID,
+      };
+      await this.agentService.grantCredential({
+        agentID: accountAgent.id,
+        ...accountLicenseCredential,
+      });
+    }
 
     return await this.userService.getUserWithAgent(assignData.userID);
   }
@@ -82,7 +114,18 @@ export class PlatformRoleService {
   public async removePlatformRoleFromUser(
     removeData: RemovePlatformRoleFromUserInput
   ): Promise<IUser> {
-    const agent = await this.userService.getAgent(removeData.userID);
+    const user = await this.userService.getUserOrFail(removeData.userID, {
+      relations: {
+        agent: true,
+      },
+    });
+
+    if (!user.agent) {
+      throw new RelationshipNotFoundException(
+        `Unable to retrieve Agent for User: ${user.id}`,
+        LogContext.PLATFORM
+      );
+    }
 
     // Validation logic
     if (removeData.role === PlatformRole.GLOBAL_ADMIN) {
@@ -93,9 +136,25 @@ export class PlatformRoleService {
     const credential = this.getCredentialForRole(removeData.role);
 
     await this.agentService.revokeCredential({
-      agentID: agent.id,
+      agentID: user.agent.id,
       ...credential,
     });
+
+    if (
+      removeData.role === PlatformRole.BETA_TESTER ||
+      removeData.role === PlatformRole.VC_CAMPAIGN
+    ) {
+      // Also assign the user account a license plan
+      const accountAgent = await this.accountService.getAgent(user.accountID);
+      const accountLicenseCredential: ICredentialDefinition = {
+        type: LicenseCredential.ACCOUNT_LICENSE_PLUS,
+        resourceID: user.accountID,
+      };
+      await this.agentService.revokeCredential({
+        agentID: accountAgent.id,
+        ...accountLicenseCredential,
+      });
+    }
 
     return await this.userService.getUserWithAgent(removeData.userID);
   }

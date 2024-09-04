@@ -1,6 +1,6 @@
 import { InputType, Field } from '@nestjs/graphql';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
-import { SpaceIngestionPurpose } from '@services/infrastructure/event-bus/commands';
+import { SpaceIngestionPurpose } from '@services/infrastructure/event-bus/messages';
 
 @InputType()
 export class IngestSpaceInput {

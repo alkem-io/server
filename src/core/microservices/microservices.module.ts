@@ -18,6 +18,7 @@ import {
   VIRTUAL_CONTRIBUTOR_ENGINE_EXPERT,
   VIRTUAL_CONTRIBUTOR_ENGINE_GUIDANCE,
   SUBSCRIPTION_WHITEBOARD_SAVED,
+  SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED,
 } from '@common/constants/providers';
 import { MessagingQueue } from '@common/enums/messaging.queue';
 import {
@@ -61,6 +62,10 @@ const subscriptionConfig: { provide: string; queueName: MessagingQueue }[] = [
   {
     provide: SUBSCRIPTION_WHITEBOARD_SAVED,
     queueName: MessagingQueue.SUBSCRIPTION_WHITEBOARD_SAVED,
+  },
+  {
+    provide: SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED,
+    queueName: MessagingQueue.SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED,
   },
 ];
 

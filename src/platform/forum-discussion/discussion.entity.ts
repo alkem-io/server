@@ -4,6 +4,7 @@ import { Room } from '../../domain/communication/room/room.entity';
 import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
 import { Forum } from '@platform/forum/forum.entity';
 import { ForumDiscussionPrivacy } from '@common/enums/forum.discussion.privacy';
+import { UUID_LENGTH } from '@common/constants';
 
 @Entity()
 export class Discussion extends NameableEntity implements IDiscussion {
@@ -18,7 +19,7 @@ export class Discussion extends NameableEntity implements IDiscussion {
   @JoinColumn()
   comments!: Room;
 
-  @Column('char', { length: 36, nullable: true })
+  @Column('char', { length: UUID_LENGTH, nullable: false })
   createdBy!: string;
 
   @ManyToOne(() => Forum, communication => communication.discussions, {

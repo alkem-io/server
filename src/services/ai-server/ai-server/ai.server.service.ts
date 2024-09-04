@@ -20,7 +20,7 @@ import { AiPersonaServiceQuestionInput } from '../ai-persona-service/dto/ai.pers
 import {
   IngestSpace,
   SpaceIngestionPurpose,
-} from '@services/infrastructure/event-bus/commands';
+} from '@services/infrastructure/event-bus/messages';
 import { EventBus } from '@nestjs/cqrs';
 import { ConfigService } from '@nestjs/config';
 import { ChromaClient } from 'chromadb';
@@ -34,6 +34,8 @@ import {
 import { AlkemioConfig } from '@src/types';
 import { AiPersonaServiceAuthorizationService } from '@services/ai-server/ai-persona-service/ai.persona.service.service.authorization';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
+import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 
 @Injectable()
 export class AiServerService {
@@ -44,26 +46,105 @@ export class AiServerService {
     private aiPersonaEngineAdapter: AiPersonaEngineAdapter,
     private vcInteractionService: VcInteractionService,
     private communicationAdapter: CommunicationAdapter,
+    private subscriptionPublishService: SubscriptionPublishService,
     private config: ConfigService<AlkemioConfig, true>,
     @InjectRepository(AiServer)
     private aiServerRepository: Repository<AiServer>,
+    @InjectRepository(VirtualContributor)
+    private vcRespository: Repository<VirtualContributor>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private eventBus: EventBus
   ) {}
 
-  async ensurePersonaIsUsable(personaServiceId: string): Promise<boolean> {
+  async getBodyOfKnowledgeLastUpdated(
+    personaServiceId: string
+  ): Promise<Date | null> {
     const aiPersonaService =
       await this.aiPersonaServiceService.getAiPersonaServiceOrFail(
         personaServiceId
       );
-    await this.ensureSpaceBoNIsIngested(aiPersonaService.bodyOfKnowledgeID);
+    return aiPersonaService.bodyOfKnowledgeLastUpdated;
+  }
+
+  async ensurePersonaIsUsable(personaServiceId: string): Promise<boolean> {
+    this.logger.verbose?.(
+      `AI server ensurePersonaIsUsable for AI Persona service ${personaServiceId} invoked`,
+      LogContext.AI_SERVER
+    );
+
+    const aiPersonaService =
+      await this.aiPersonaServiceService.getAiPersonaServiceOrFail(
+        personaServiceId
+      );
+    this.logger.verbose?.(
+      `AI Persona service ${personaServiceId} found for BOK refresh`,
+      LogContext.AI_SERVER
+    );
+
+    await this.ensureSpaceBoNIsIngested(aiPersonaService);
     return true;
   }
 
-  public async ensureSpaceBoNIsIngested(spaceID: string): Promise<void> {
+  public async updatePersonaBoKLastUpdated(
+    personaServiceId: string,
+    lastUpdated: Date | null
+  ) {
+    const personaService =
+      await this.aiPersonaServiceService.getAiPersonaServiceOrFail(
+        personaServiceId
+      );
+
+    personaService.bodyOfKnowledgeLastUpdated = lastUpdated;
+
+    await this.aiPersonaServiceService.save(personaService);
+
+    this.logger.verbose?.(
+      `AI Persona service ${personaServiceId} bodyOfKnowledgeLastUpdated set to ${lastUpdated}`,
+      LogContext.AI_SERVER
+    );
+
+    //TODO we shouldn't use the repository here but down the road this will e graphql call
+    // from the AI to the Collaboration servers
+    const virtualContributor = await this.vcRespository.findOne({
+      where: {
+        aiPersona: {
+          aiPersonaServiceID: personaService.id,
+        },
+      },
+      relations: { aiPersona: true },
+    });
+
+    if (virtualContributor) {
+      this.logger.verbose?.(
+        `VC for Persona service ${personaServiceId} loaded. Publishing to VirtualContributorUpdated subscription.`,
+        LogContext.AI_SERVER
+      );
+
+      await this.subscriptionPublishService.publishVirtualContributorUpdated(
+        virtualContributor
+      );
+    } else {
+      this.logger.verbose?.(
+        `VC for Persona service ${personaServiceId} not found.`,
+        LogContext.AI_SERVER
+      );
+    }
+  }
+
+  public async ensureSpaceBoNIsIngested(
+    persona: IAiPersonaService
+  ): Promise<void> {
+    this.logger.verbose?.(
+      `AI Persona service ${persona.id} found for BOK refresh`,
+      LogContext.AI_SERVER
+    );
     this.eventBus.publish(
-      new IngestSpace(spaceID, SpaceIngestionPurpose.KNOWLEDGE)
+      new IngestSpace(
+        persona.bodyOfKnowledgeID,
+        SpaceIngestionPurpose.KNOWLEDGE,
+        persona.id
+      )
     );
   }
 

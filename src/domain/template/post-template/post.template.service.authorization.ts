@@ -28,7 +28,7 @@ export class PostTemplateAuthorizationService {
     // Cascade
     const profileAuthorizations =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
-        postTemplate.profile,
+        postTemplate.profile.id,
         postTemplate.authorization
       );
     updatedAuthorizations.push(...profileAuthorizations);

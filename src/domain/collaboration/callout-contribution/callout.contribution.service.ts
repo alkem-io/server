@@ -46,6 +46,7 @@ export class CalloutContributionService {
       AuthorizationPolicyType.CALLOUT_CONTRIBUTION
     );
     contribution.createdBy = userID;
+    contribution.sortOrder = calloutContributionData.sortOrder ?? 0;
 
     const { post, whiteboard, link } = calloutContributionData;
 
@@ -142,8 +143,20 @@ export class CalloutContributionService {
 
   async save(
     calloutContribution: ICalloutContribution
-  ): Promise<ICalloutContribution> {
-    return await this.contributionRepository.save(calloutContribution);
+  ): Promise<ICalloutContribution>;
+  async save(
+    calloutContribution: ICalloutContribution[]
+  ): Promise<ICalloutContribution[]>;
+  async save(
+    calloutContribution: ICalloutContribution | ICalloutContribution[]
+  ): Promise<ICalloutContribution | ICalloutContribution[]> {
+    const isParamArray = Array.isArray(calloutContribution);
+    const contributionsArray = isParamArray
+      ? calloutContribution
+      : [calloutContribution];
+    const results = await this.contributionRepository.save(contributionsArray);
+
+    return isParamArray ? results : results[0];
   }
 
   public async getCalloutContributionOrFail(

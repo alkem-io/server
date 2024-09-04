@@ -34,6 +34,7 @@ import { MockUserLookupService } from '@test/mocks/user.lookup.service.mock';
 import { MockVirtualContributorService } from '@test/mocks/virtual.contributor.service.mock';
 import { IUser } from '@domain/community/user/user.interface';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
+import { AccountType } from '@common/enums/account.type';
 
 describe('RolesService', () => {
   let rolesService: RolesService;
@@ -199,8 +200,8 @@ describe('RolesService', () => {
         .spyOn(organizationService, 'getOrganizationAndAgent')
         .mockResolvedValue({
           organization: testData.organization as any,
-          agent: testData.agent.authorization,
-        });
+          agent: testData.agent,
+        } as any);
 
       const roles = await rolesService.getRolesForOrganization({
         organizationID: testData.organization.id,
@@ -263,6 +264,7 @@ const getSpaceRoleResultMock = ({
         innovationHubs: [],
         innovationPacks: [],
         spaces: [],
+        type: AccountType.ORGANIZATION,
       },
       ...getEntityMock<Space>(),
     },

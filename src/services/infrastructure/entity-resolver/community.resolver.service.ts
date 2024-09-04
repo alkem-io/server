@@ -10,6 +10,7 @@ import { ISpace } from '@domain/space/space/space.interface';
 import { RoomType } from '@common/enums/room.type';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { IAgent } from '@domain/agent';
+import { IAccount } from '@domain/space/account/account.interface';
 
 @Injectable()
 export class CommunityResolverService {
@@ -60,40 +61,46 @@ export class CommunityResolverService {
     return space.levelZeroSpaceID;
   }
 
-  private async getAccountWithAgentForCommunityOrFail(communityID: string) {
-    const space = await this.entityManager.findOne(Space, {
-      where: {
-        community: {
-          id: communityID,
-        },
-      },
-    });
-
-    if (!space) {
-      throw new EntityNotFoundException(
-        `Unable to find Space for given community id: ${communityID}`,
-        LogContext.COMMUNITY
-      );
-    }
-    const levelZeroSpaceID = space.levelZeroSpaceID;
+  public async getLevelZeroSpaceAgentForCommunityOrFail(
+    communityID: string
+  ): Promise<IAgent> {
+    const levelZeroSpaceID =
+      await this.getLevelZeroSpaceIdForCommunity(communityID);
     const levelZeroSpace = await this.entityManager.findOne(Space, {
       where: {
         id: levelZeroSpaceID,
       },
       relations: {
-        account: {
-          agent: true,
-        },
+        agent: true,
       },
     });
 
-    if (
-      !levelZeroSpace ||
-      !levelZeroSpace.account ||
-      !levelZeroSpace.account.agent
-    ) {
+    if (!levelZeroSpace || !levelZeroSpace.agent) {
       throw new EntityNotFoundException(
         `Unable to find Space for given community id: ${communityID}`,
+        LogContext.COMMUNITY
+      );
+    }
+    return levelZeroSpace.agent;
+  }
+
+  private async getAccountForCommunityOrFail(
+    communityID: string
+  ): Promise<IAccount> {
+    const levelZeroSpaceID =
+      await this.getLevelZeroSpaceIdForCommunity(communityID);
+    const levelZeroSpace = await this.entityManager.findOne(Space, {
+      where: {
+        id: levelZeroSpaceID,
+      },
+      relations: {
+        account: true,
+      },
+    });
+
+    if (!levelZeroSpace || !levelZeroSpace.account) {
+      throw new EntityNotFoundException(
+        `Unable to find Account for given community id: ${communityID}`,
         LogContext.COMMUNITY
       );
     }
@@ -104,8 +111,7 @@ export class CommunityResolverService {
     communityID: string,
     virtualContributorID: string
   ): Promise<boolean> {
-    const account =
-      await this.getAccountWithAgentForCommunityOrFail(communityID);
+    const account = await this.getAccountForCommunityOrFail(communityID);
 
     const virtualContributorMatches = await this.entityManager.count(
       VirtualContributor,
@@ -122,22 +128,6 @@ export class CommunityResolverService {
       return true;
     }
     return false;
-  }
-
-  public async getAccountAgentFromCommunityOrFail(
-    community: ICommunity
-  ): Promise<IAgent> {
-    const account = await this.getAccountWithAgentForCommunityOrFail(
-      community.id
-    );
-
-    if (!account.agent) {
-      throw new EntityNotFoundException(
-        `Unable to find agent for account for given community id: ${community.id}`,
-        LogContext.COMMUNITY
-      );
-    }
-    return account.agent;
   }
 
   public async getCommunityFromUpdatesOrFail(

@@ -44,6 +44,7 @@ export class DiscussionResolverFields {
         `createdBy '${createdBy}' unable to be resolved when resolving discussion '${discussion.id}'`,
         LogContext.COLLABORATION
       );
+      return null;
     }
 
     return createdBy;

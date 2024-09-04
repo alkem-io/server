@@ -4,6 +4,12 @@ import { IPlatformInvitation } from './platform.invitation.interface';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { PlatformRole } from '@common/enums/platform.role';
 import { Platform } from '@platform/platfrom/platform.entity';
+import {
+  ENUM_LENGTH,
+  MID_TEXT_LENGTH,
+  SMALL_TEXT_LENGTH,
+  UUID_LENGTH,
+} from '@common/constants';
 @Entity()
 export class PlatformInvitation
   extends AuthorizableEntity
@@ -29,24 +35,25 @@ export class PlatformInvitation
   platform?: Platform;
 
   @Column('varchar', {
-    length: 255,
+    length: ENUM_LENGTH,
+    nullable: true,
   })
   platformRole?: PlatformRole;
 
-  @Column('varchar', { length: 255, nullable: false })
-  email = '';
+  @Column('varchar', { length: SMALL_TEXT_LENGTH, nullable: false })
+  email!: string;
 
-  @Column('varchar', { length: 255, nullable: true })
-  firstName = '';
+  @Column('varchar', { length: SMALL_TEXT_LENGTH, nullable: true })
+  firstName?: string;
 
-  @Column('varchar', { length: 255, nullable: true })
-  lastName = '';
+  @Column('varchar', { length: SMALL_TEXT_LENGTH, nullable: true })
+  lastName?: string;
 
-  @Column('char', { length: 36, nullable: true })
+  @Column('char', { length: UUID_LENGTH, nullable: false })
   createdBy!: string;
 
-  @Column('varchar', { length: 512, nullable: true })
-  welcomeMessage!: string;
+  @Column('varchar', { length: MID_TEXT_LENGTH, nullable: true })
+  welcomeMessage?: string;
 
   @Column('boolean', { default: false })
   profileCreated!: boolean;
