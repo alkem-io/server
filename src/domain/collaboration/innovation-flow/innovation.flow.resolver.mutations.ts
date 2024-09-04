@@ -38,7 +38,9 @@ export class InnovationFlowResolverMutations {
       `updateInnovationFlow: ${innovationFlow.id}`
     );
 
-    return await this.innovationFlowService.update(innovationFlowData);
+    return await this.innovationFlowService.updateInnovationFlow(
+      innovationFlowData
+    );
   }
 
   @UseGuards(GraphqlGuard)

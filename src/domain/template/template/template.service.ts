@@ -30,6 +30,7 @@ import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 import { IInnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.interface';
 import { CollaborationFactoryService } from '@domain/collaboration/collaboration-factory/collaboration.factory.service';
 import { UpdateInnovationFlowFromTemplateInput } from './dto/template.dto.update.innovation.flow';
+import { randomUUID } from 'crypto';
 
 @Injectable()
 export class TemplateService {
@@ -89,7 +90,8 @@ export class TemplateService {
         await this.innovationFlowService.createInnovationFlow(
           templateData.innovationFlowData,
           [],
-          storageAggregator
+          storageAggregator,
+          true
         );
     } else if (template.type === TemplateType.COMMUNITY_GUIDELINES) {
       if (
@@ -133,6 +135,7 @@ export class TemplateService {
       }
       // Ensure no comments are created on the callout
       templateData.calloutData.enableComments = false;
+      templateData.calloutData.nameID = randomUUID().slice(0, 8);
       template.callout = await this.calloutService.createCallout(
         templateData.calloutData!,
         [],
@@ -150,7 +153,7 @@ export class TemplateService {
           profileData: {
             displayName: 'Whiteboard Template',
           },
-          nameID: 'whiteboard-template',
+          nameID: randomUUID().slice(0, 8),
           content: templateData.whiteboard.content,
         },
         storageAggregator
@@ -211,7 +214,7 @@ export class TemplateService {
       template.innovationFlow &&
       templateData.innovationFlow.states
     ) {
-      this.innovationFlowService.update(
+      this.innovationFlowService.updateInnovationFlow(
         {
           innovationFlowID: template.innovationFlow.id,
           states: templateData.innovationFlow.states,
