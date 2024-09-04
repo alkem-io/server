@@ -28,7 +28,7 @@ export class AdminSearchContributorsMutations {
   ) {}
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => String, {
+  @Mutation(() => IProfile, {
     description:
       'Update the Avatar on the Profile with the spedified profileID to be stored as a Document.',
   })
@@ -52,21 +52,34 @@ export class AdminSearchContributorsMutations {
       );
     profile = await this.profileService.getProfileOrFail(profile.id, {
       relations: {
-        storageBucket: true,
+        storageBucket: {
+          documents: true,
+        },
+        authorization: true,
       },
     });
+
     if (!profile.storageBucket) {
       throw new RelationshipNotFoundException(
         `Unable to find StorageBucket for Profile ${profile.id}`,
-        LogContext.USER
+        LogContext.PROFILE
       );
     }
+
+    if (!profile.authorization) {
+      throw new RelationshipNotFoundException(
+        `Profile ${profile.id} does not have authorization information.`,
+        LogContext.PROFILE
+      );
+    }
+
     const authorizations =
       this.storageBucketAuthorizationService.applyAuthorizationPolicy(
         profile.storageBucket,
         profile.authorization
       );
     await this.authorizationPolicyService.saveAll(authorizations);
-    return await this.profileService.getProfileOrFail(profile.id);
+
+    return profile;
   }
 }
