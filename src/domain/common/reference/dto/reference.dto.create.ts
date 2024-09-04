@@ -7,7 +7,7 @@ import {
 import { IsOptional, MaxLength } from 'class-validator';
 
 @InputType()
-@ObjectType()
+@ObjectType('CreateReferenceData')
 export class CreateReferenceInput {
   @Field({ nullable: false })
   @MaxLength(SMALL_TEXT_LENGTH)

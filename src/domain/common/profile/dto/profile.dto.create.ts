@@ -1,4 +1,4 @@
-import { InputType, Field } from '@nestjs/graphql';
+import { InputType, Field, ObjectType } from '@nestjs/graphql';
 import {
   IsOptional,
   MaxLength,
@@ -17,6 +17,7 @@ import { Markdown } from '@domain/common/scalars/scalar.markdown';
 import { CreateTagsetInput } from '@domain/common/tagset';
 
 @InputType()
+@ObjectType('CreateProfileData')
 export class CreateProfileInput {
   @Field({
     nullable: false,
