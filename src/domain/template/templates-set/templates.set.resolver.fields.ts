@@ -11,23 +11,20 @@ export class TemplatesSetResolverFields {
   constructor(private templatesSetService: TemplatesSetService) {}
 
   @UseGuards(GraphqlGuard)
-  @ResolveField('allTemplates', () => [ITemplate], {
+  @ResolveField('templates', () => [ITemplate], {
     nullable: false,
     description: 'The Templates in this TemplatesSet.',
   })
-  async allTemplates(
-    @Parent() templatesSet: ITemplatesSet
-  ): Promise<ITemplate[]> {
-    return this.templatesSetService.getTemplatesOfType(templatesSet);
+  async templates(@Parent() templatesSet: ITemplatesSet): Promise<ITemplate[]> {
+    return this.templatesSetService.getTemplates(templatesSet);
   }
+
   @UseGuards(GraphqlGuard)
-  @ResolveField('allTemplatesCount', () => Float, {
+  @ResolveField('templatesCount', () => Float, {
     nullable: false,
     description: 'The total number of Templates in this TemplatesSet.',
   })
-  async allTemplatesCount(
-    @Parent() templatesSet: ITemplatesSet
-  ): Promise<number> {
+  async templatesCount(@Parent() templatesSet: ITemplatesSet): Promise<number> {
     return this.templatesSetService.getTemplatesCount(templatesSet.id);
   }
 

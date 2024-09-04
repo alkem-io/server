@@ -85,18 +85,18 @@ export class TemplatesSetService {
     });
   }
 
+  public getTemplates(templatesSet: ITemplatesSet): Promise<ITemplate[]> {
+    return this.templateService.getTemplatesInTemplatesSet(templatesSet.id);
+  }
+
   public getTemplatesOfType(
     templatesSet: ITemplatesSet,
-    templateType: TemplateType | undefined = undefined
+    templateType: TemplateType
   ): Promise<ITemplate[]> {
-    if (templateType) {
-      return this.templateService.getTemplateTypeInTemplatesSet(
-        templatesSet.id,
-        templateType
-      );
-    } else {
-      return this.templateService.getTemplatesInTemplatesSet(templatesSet.id);
-    }
+    return this.templateService.getTemplateTypeInTemplatesSet(
+      templatesSet.id,
+      templateType
+    );
   }
 
   async createTemplate(
