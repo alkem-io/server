@@ -46,6 +46,8 @@ import { CalloutContributionFilterArgs } from '../callout-contribution/dto/callo
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { UpdateContributionCalloutsSortOrderInput } from '../callout-contribution/dto/callout.contribution.dto.update.callouts.sort.order';
+import { keyBy } from 'lodash';
 
 @Injectable()
 export class CalloutService {
@@ -144,10 +146,10 @@ export class CalloutService {
   }
 
   private async getStorageAggregator(
-    callout: ICallout
+    calloutID: string
   ): Promise<IStorageAggregator> {
     return await this.storageAggregatorResolverService.getStorageAggregatorForCallout(
-      callout.id
+      calloutID
     );
   }
 
@@ -466,7 +468,7 @@ export class CalloutService {
   ): Promise<ICalloutContribution> {
     const calloutID = contributionData.calloutID;
     const callout = await this.getCalloutOrFail(calloutID, {
-      relations: { contributionPolicy: true },
+      relations: { contributions: true },
     });
     if (!callout.contributionPolicy)
       throw new EntityNotInitializedException(
@@ -492,7 +494,28 @@ export class CalloutService {
       );
     }
 
-    const storageAggregator = await this.getStorageAggregator(callout);
+    if (!callout.contributions) {
+      throw new EntityNotInitializedException(
+        'Not able to load Contributions for this callout',
+        LogContext.COLLABORATION,
+        { calloutId: calloutID }
+      );
+    }
+
+    // set default sort order as the minimum of the existing contributions
+    // we want the new one to be first
+    if (contributionData.sortOrder === undefined) {
+      const contributionsSortOrder = callout.contributions.map(
+        c => c.sortOrder
+      );
+      const minOrder = Math.min(...contributionsSortOrder);
+      // first contribution
+      contributionData.sortOrder = !contributionsSortOrder.length
+        ? 1
+        : minOrder - 1;
+    }
+
+    const storageAggregator = await this.getStorageAggregator(callout.id);
     const contribution =
       await this.contributionService.createCalloutContribution(
         contributionData,
@@ -501,7 +524,42 @@ export class CalloutService {
         userID
       );
     contribution.callout = callout;
+
     return await this.contributionService.save(contribution);
+  }
+
+  public async updateContributionCalloutsSortOrder(
+    calloutId: string,
+    sortOrderData: UpdateContributionCalloutsSortOrderInput
+  ): Promise<ICalloutContribution[]> {
+    const callout = await this.getCalloutOrFail(calloutId, {
+      relations: { contributionPolicy: true, contributions: true },
+    });
+
+    if (!callout.contributions)
+      throw new EntityNotFoundException(
+        `No collaborations found: ${calloutId}`,
+        LogContext.COLLABORATION
+      );
+
+    const contributionsById = keyBy(callout.contributions, 'id');
+
+    const contributionsInOrder: ICalloutContribution[] = [];
+    let index = 1;
+    for (const id of sortOrderData.contributionIDs) {
+      const contribution = contributionsById[id];
+      if (!contribution || !contribution.id) {
+        throw new EntityNotFoundException(
+          `Callout with requested ID (${id}) not located within current Contribution: ${calloutId}`,
+          LogContext.COLLABORATION
+        );
+      }
+      contribution.sortOrder = index;
+      contributionsInOrder.push(contribution);
+      index++;
+    }
+
+    return this.contributionService.save(contributionsInOrder);
   }
 
   public async getCalloutFraming(
