@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# The storage is the first argument passed to the script. Default to 'mariadb' if not provided.
+# The storage is the first argument passed to the script. Default to 'mysql' if not provided.
 STORAGE=${1:-mysql}
 
 # Validate the storage
 if [[ "$STORAGE" != "mysql" && "$STORAGE" != "postgres" ]]; then
-    echo "Invalid storage '$STORAGE'. Please specify 'mysql', or 'postgres'."
+    echo "Invalid storage '$STORAGE'. Please specify 'mysql' or 'postgres'."
     exit 1
 fi
 
@@ -18,21 +18,34 @@ if [[ "$ENV" != "acc" && "$ENV" != "dev" && "$ENV" != "sandbox" && "$ENV" != "pr
     exit 1
 fi
 
+# Determine the S3 bucket based on the environment
+if [[ "$ENV" == "prod" ]]; then
+    S3_BUCKET="alkemio-s3-backups-prod"
+    S3_PATH="s3://$S3_BUCKET/storage/$STORAGE/backups/"
+else
+    S3_BUCKET="alkemio-s3-backups-dev"
+    S3_PATH="s3://$S3_BUCKET/storage/$STORAGE/backups/$ENV/"
+fi
+
+echo "Using S3 bucket: $S3_BUCKET"
+echo "Using S3 path: $S3_PATH"
+
 # Source environment variables from .env file
 source .env
 
 # Get the latest file in the S3 bucket
 if [[ $STORAGE == "mysql" ]]; then
-    latest_file=$(aws s3 ls s3://alkemio-backups/storage/$STORAGE/backups/$ENV/ --recursive | grep $MYSQL_DATABASE | sort | tail -n 1 | awk '{print $4}')
+    latest_file=$(aws s3 ls $S3_PATH --recursive | grep $MYSQL_DATABASE | sort | tail -n 1 | awk '{print $4}')
 elif [[ $STORAGE == "postgres" ]]; then
-    latest_file=$(aws s3 ls s3://alkemio-backups/storage/$STORAGE/backups/$ENV/ --recursive | sort | tail -n 1 | awk '{print $4}')
+    latest_file=$(aws s3 ls $S3_PATH --recursive | sort | tail -n 1 | awk '{print $4}')
 fi
-echo $latest_file
+
+echo "Latest file: $latest_file"
 
 # Download the latest file
-aws s3 cp s3://alkemio-backups/$latest_file .
+aws s3 cp s3://$S3_BUCKET/$latest_file .
 
-echo "Downloaded $latest_file from alkemio-backups/storage/$STORAGE/backups/$ENV"
+echo "Downloaded $latest_file from $S3_PATH"
 
 # Get the local filename
 local_file=${latest_file##*/}
