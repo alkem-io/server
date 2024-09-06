@@ -5,7 +5,7 @@ import { Type } from 'class-transformer';
 import { ValidateNested } from 'class-validator';
 
 @InputType()
-@ObjectType()
+@ObjectType('CreateInnovationFlowData')
 export class CreateInnovationFlowInput {
   @Field(() => CreateProfileInput, { nullable: false })
   @ValidateNested()

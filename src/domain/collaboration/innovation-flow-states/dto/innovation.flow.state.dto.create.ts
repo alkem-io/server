@@ -1,9 +1,10 @@
 import { LONG_TEXT_LENGTH, SMALL_TEXT_LENGTH } from '@common/constants';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
-import { Field, InputType } from '@nestjs/graphql';
+import { Field, InputType, ObjectType } from '@nestjs/graphql';
 import { MaxLength } from 'class-validator';
 
 @InputType()
+@ObjectType('CreateInnovationFlowStateData')
 export class CreateInnovationFlowStateInput {
   @Field(() => String, {
     nullable: false,

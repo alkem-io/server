@@ -15,6 +15,7 @@ import { CollaborationService } from '@domain/collaboration/collaboration/collab
 import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovaton.flow.service';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
+import { CreateInnovationFlowInput } from '@domain/collaboration/innovation-flow/dto/innovation.flow.dto.create';
 
 @Resolver(() => InputCreatorQueryResults)
 export class InputCreatorResolverFields {
@@ -51,28 +52,28 @@ export class InputCreatorResolverFields {
     );
   }
 
-  // @UseGuards(GraphqlGuard)
-  // @ResolveField(() => CreateInnovationFlowInput, {
-  //   nullable: true,
-  //   description: 'Create an input based on the provided InnovationFlow',
-  // })
-  // async innovationFlow(
-  //   @CurrentUser() agentInfo: AgentInfo,
-  //   @Args('ID', { type: () => UUID }) id: string
-  // ): Promise<CreateInnovationFlowInput> {
-  //   const innovationFlow =
-  //     await this.innovationFlowService.getInnovationFlowOrFail(id);
-  //   this.authorizationService.grantAccessOrFail(
-  //     agentInfo,
-  //     innovationFlow.authorization,
-  //     AuthorizationPrivilege.READ,
-  //     `inputCreator InnovationFlow: ${innovationFlow.id}`
-  //   );
+  @UseGuards(GraphqlGuard)
+  @ResolveField(() => CreateInnovationFlowInput, {
+    nullable: true,
+    description: 'Create an input based on the provided InnovationFlow',
+  })
+  async innovationFlow(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('ID', { type: () => UUID }) id: string
+  ): Promise<CreateInnovationFlowInput> {
+    const innovationFlow =
+      await this.innovationFlowService.getInnovationFlowOrFail(id);
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      innovationFlow.authorization,
+      AuthorizationPrivilege.READ,
+      `inputCreator InnovationFlow: ${innovationFlow.id}`
+    );
 
-  //   return await this.inputCreatorService.buildCreateInnovationFlowInputFromInnovationFlow(
-  //     innovationFlow
-  //   );
-  // }
+    return await this.inputCreatorService.buildCreateInnovationFlowInputFromInnovationFlow(
+      innovationFlow
+    );
+  }
 
   // @UseGuards(GraphqlGuard)
   // @ResolveField(() => CreateCalloutInput, {
