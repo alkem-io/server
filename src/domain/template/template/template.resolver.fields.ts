@@ -6,6 +6,7 @@ import { ICommunityGuidelines } from '@domain/community/community-guidelines/com
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 import { IInnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.interface';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
+import { ICollaboration } from '@domain/collaboration/collaboration';
 
 @Resolver(() => ITemplate)
 export class TemplateResolverFields {
@@ -59,5 +60,18 @@ export class TemplateResolverFields {
       return undefined;
     }
     return this.templateService.getWhiteboard(template.id);
+  }
+
+  @ResolveField('collaboration', () => ICollaboration, {
+    nullable: true,
+    description: 'The Collaboration for this Template.',
+  })
+  async collaboration(
+    @Parent() template: ITemplate
+  ): Promise<ICollaboration | undefined> {
+    if (template.type !== TemplateType.COLLABORATION) {
+      return undefined;
+    }
+    return this.templateService.getCollaboration(template.id);
   }
 }

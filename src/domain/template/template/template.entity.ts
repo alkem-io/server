@@ -8,6 +8,7 @@ import { CommunityGuidelines } from '@domain/community/community-guidelines/comm
 import { Callout } from '@domain/collaboration/callout';
 import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
 import { InnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.entity';
+import { Collaboration } from '@domain/collaboration/collaboration';
 
 @Entity()
 export class Template extends AuthorizableEntity implements ITemplate {
@@ -63,4 +64,12 @@ export class Template extends AuthorizableEntity implements ITemplate {
   })
   @JoinColumn()
   whiteboard?: Whiteboard;
+
+  @OneToOne(() => Collaboration, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  collaboration?: Collaboration;
 }

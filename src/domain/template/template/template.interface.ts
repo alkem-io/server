@@ -8,6 +8,7 @@ import { ICommunityGuidelines } from '@domain/community/community-guidelines/com
 import { ICallout } from '@domain/collaboration/callout';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 import { IInnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.interface';
+import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 
 @ObjectType('Template')
 export abstract class ITemplate extends IAuthorizable {
@@ -36,4 +37,5 @@ export abstract class ITemplate extends IAuthorizable {
   callout?: ICallout;
   whiteboard?: IWhiteboard;
   innovationFlow?: IInnovationFlow;
+  collaboration?: ICollaboration;
 }

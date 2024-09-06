@@ -30,6 +30,7 @@ import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 import { IInnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.interface';
 import { UpdateInnovationFlowFromTemplateInput } from './dto/template.dto.update.innovation.flow';
 import { randomUUID } from 'crypto';
+import { ICollaboration } from '@domain/collaboration/collaboration';
 
 @Injectable()
 export class TemplateService {
@@ -414,6 +415,21 @@ export class TemplateService {
       );
     }
     return template.whiteboard;
+  }
+
+  async getCollaboration(templateID: string): Promise<ICollaboration> {
+    const template = await this.getTemplateOrFail(templateID, {
+      relations: {
+        collaboration: true,
+      },
+    });
+    if (!template.collaboration) {
+      throw new RelationshipNotFoundException(
+        `Unable to load Template with Collaboration: ${template.id} `,
+        LogContext.TEMPLATES
+      );
+    }
+    return template.collaboration;
   }
 
   public async getInnovationFlow(templateID: string): Promise<IInnovationFlow> {

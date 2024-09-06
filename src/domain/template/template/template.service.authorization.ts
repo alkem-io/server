@@ -10,6 +10,7 @@ import { TemplateService } from './template.service';
 import { LogContext } from '@common/enums/logging.context';
 import { CalloutAuthorizationService } from '@domain/collaboration/callout/callout.service.authorization';
 import { WhiteboardAuthorizationService } from '@domain/common/whiteboard/whiteboard.service.authorization';
+import { CollaborationAuthorizationService } from '@domain/collaboration/collaboration/collaboration.service.authorization';
 
 @Injectable()
 export class TemplateAuthorizationService {
@@ -19,7 +20,8 @@ export class TemplateAuthorizationService {
     private profileAuthorizationService: ProfileAuthorizationService,
     private communityGuidelinesAuthorizationService: CommunityGuidelinesAuthorizationService,
     private calloutAuthorizationService: CalloutAuthorizationService,
-    private whiteboardAuthorizationService: WhiteboardAuthorizationService
+    private whiteboardAuthorizationService: WhiteboardAuthorizationService,
+    private collaborationAuthorizationService: CollaborationAuthorizationService
   ) {}
 
   async applyAuthorizationPolicy(
@@ -45,6 +47,9 @@ export class TemplateAuthorizationService {
             contributionDefaults: true,
           },
           whiteboard: true,
+          collaboration: {
+            authorization: true,
+          },
         },
       }
     );
@@ -119,6 +124,22 @@ export class TemplateAuthorizationService {
           template.authorization
         );
       updatedAuthorizations.push(...whiteboardAuthorizations);
+    }
+
+    if (template.type == TemplateType.COLLABORATION) {
+      if (!template.collaboration) {
+        throw new RelationshipNotFoundException(
+          `Unable to load Collaboration on Template of that type: ${template.id} `,
+          LogContext.TEMPLATES
+        );
+      }
+      // Cascade
+      const collaborationAuthorizations =
+        await this.collaborationAuthorizationService.applyAuthorizationPolicy(
+          template.collaboration,
+          template.authorization
+        );
+      updatedAuthorizations.push(...collaborationAuthorizations);
     }
 
     return updatedAuthorizations;

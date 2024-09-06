@@ -18,6 +18,7 @@ export class Templates1724832530055 implements MigrationInterface {
                                   \`templatesSetId\` char(36) NULL,
                                   \`type\` varchar(128) NOT NULL,
                                   \`calloutId\` char(36) NULL,
+                                  \`collaborationId\` char(36) NULL,
                                   \`communityGuidelinesId\` char(36) NULL,
                                   \`innovationFlowId\` char(36) NULL,
                                   \`postDefaultDescription\` text NULL,
@@ -26,6 +27,7 @@ export class Templates1724832530055 implements MigrationInterface {
                                   UNIQUE INDEX \`REL_f58c3b144b6e010969e199beef\` (\`profileId\`),
                                   UNIQUE INDEX \`REL_eedeae5e63f9a9c3a0161541e9\` (\`communityGuidelinesId\`),
                                   UNIQUE INDEX \`REL_c6e4d1a07781a809ad3b3ee826\` (\`calloutId\`),
+                                  UNIQUE INDEX \`REL_7777d1a07781a809ad3b3ee826\` (\`collaborationId\`),
                                   UNIQUE INDEX \`REL_a68a76b795cd5a976c9a7c5b08\` (\`innovationFlowId\`),
                                   UNIQUE INDEX \`REL_f09090a77e07377eefb3f731d9\` (\`whiteboardId\`),
                                   PRIMARY KEY (\`id\`)) ENGINE=InnoDB`);

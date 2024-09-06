@@ -4,6 +4,7 @@ import {
 } from '@common/constants/entity.field.length.constants';
 import { TemplateType } from '@common/enums/template.type';
 import { CreateCalloutInput } from '@domain/collaboration/callout';
+import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
 import { CreateInnovationFlowInput } from '@domain/collaboration/innovation-flow/dto/innovation.flow.dto.create';
 import { CreateProfileInput } from '@domain/common/profile/dto/profile.dto.create';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
@@ -78,4 +79,13 @@ export class CreateTemplateInput {
   @ValidateNested()
   @Type(() => CreateWhiteboardInput)
   whiteboard?: CreateWhiteboardInput;
+
+  @Field(() => CreateCollaborationInput, {
+    nullable: true,
+    description: 'The Collaboration to associate with this template.',
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CreateCollaborationInput)
+  collaborationData?: CreateCollaborationInput;
 }

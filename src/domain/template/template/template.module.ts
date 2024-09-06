@@ -12,6 +12,7 @@ import { CalloutModule } from '@domain/collaboration/callout/callout.module';
 import { WhiteboardModule } from '@domain/common/whiteboard';
 import { TemplateResolverFields } from './template.resolver.fields';
 import { InnovationFlowModule } from '@domain/collaboration/innovation-flow/innovation.flow.module';
+import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { InnovationFlowModule } from '@domain/collaboration/innovation-flow/inno
     CalloutModule,
     WhiteboardModule,
     InnovationFlowModule,
+    CollaborationModule,
     TypeOrmModule.forFeature([Template]),
   ],
   providers: [
