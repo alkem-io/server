@@ -134,10 +134,10 @@ export class WhiteboardService {
       },
     });
 
-    if (updateWhiteboardData.profileData) {
+    if (updateWhiteboardData.profile) {
       whiteboard.profile = await this.profileService.updateProfile(
         whiteboard.profile,
-        updateWhiteboardData.profileData
+        updateWhiteboardData.profile
       );
     }
 

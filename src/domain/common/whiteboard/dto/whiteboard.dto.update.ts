@@ -28,7 +28,7 @@ export class UpdateWhiteboardInput {
   @IsOptional()
   @ValidateNested()
   @Type(() => UpdateProfileInput)
-  profileData?: UpdateProfileInput;
+  profile?: UpdateProfileInput;
 
   @Field(() => WhiteboardContent, {
     nullable: true,
