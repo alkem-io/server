@@ -52,14 +52,6 @@ export class CreateTemplateInput {
   @Type(() => CreateInnovationFlowInput)
   innovationFlowData?: CreateInnovationFlowInput;
 
-  @Field(() => String, {
-    nullable: true,
-    description:
-      'The ID of the Community guidelines to associate with this template.',
-  })
-  @IsOptional()
-  communityGuidelinesID?: string;
-
   @Field(() => CreateCommunityGuidelinesInput, {
     nullable: true,
     description: 'The Community guidelines to associate with this template.',

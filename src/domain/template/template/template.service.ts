@@ -28,7 +28,6 @@ import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { WhiteboardService } from '@domain/common/whiteboard';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 import { IInnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.interface';
-import { CollaborationFactoryService } from '@domain/collaboration/collaboration-factory/collaboration.factory.service';
 import { UpdateInnovationFlowFromTemplateInput } from './dto/template.dto.update.innovation.flow';
 import { randomUUID } from 'crypto';
 
@@ -37,7 +36,6 @@ export class TemplateService {
   constructor(
     private profileService: ProfileService,
     private innovationFlowService: InnovationFlowService,
-    private collaborationFactoryService: CollaborationFactoryService,
     private communityGuidelinesService: CommunityGuidelinesService,
     private calloutService: CalloutService,
     private whiteboardService: WhiteboardService,
@@ -94,32 +92,14 @@ export class TemplateService {
           true
         );
     } else if (template.type === TemplateType.COMMUNITY_GUIDELINES) {
-      if (
-        !templateData.communityGuidelinesID &&
-        !templateData.communityGuidelinesData
-      ) {
+      if (!templateData.communityGuidelinesData) {
         throw new ValidationException(
-          `Community Guidelines Template requires one of the two community guidelines input: ${JSON.stringify(templateData)}`,
+          `Community Guidelines Template requiresthe community guidelines input: ${JSON.stringify(templateData)}`,
           LogContext.TEMPLATES
         );
       }
-      let guidelinesInput: CreateCommunityGuidelinesInput =
+      const guidelinesInput: CreateCommunityGuidelinesInput =
         templateData.communityGuidelinesData!;
-
-      if (templateData.communityGuidelinesID) {
-        // get the data from the existing guidelines
-        const guidelines =
-          await this.communityGuidelinesService.getCommunityGuidelinesOrFail(
-            templateData.communityGuidelinesID,
-            {
-              relations: { profile: true },
-            }
-          );
-        guidelinesInput =
-          await this.collaborationFactoryService.buildCreateCommunityGuidelinesInputFromCommunityGuidelines(
-            guidelines
-          );
-      }
 
       template.communityGuidelines =
         await this.communityGuidelinesService.createCommunityGuidelines(

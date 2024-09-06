@@ -75,12 +75,12 @@ import { IAccount } from '../account/account.interface';
 import { LicensingService } from '@platform/licensing/licensing.service';
 import { LicensePlanType } from '@common/enums/license.plan.type';
 import { TemplateType } from '@common/enums/template.type';
-import { CollaborationFactoryService } from '@domain/collaboration/collaboration-factory/collaboration.factory.service';
 import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
 import { CreateInnovationFlowInput } from '@domain/collaboration/innovation-flow/dto/innovation.flow.dto.create';
 import { TemplateService } from '@domain/template/template/template.service';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
 import { templatesSetDefaults } from '../space.defaults/definitions/space.defaults.templates';
+import { InputCreatorService } from '@services/api/input-creator/input.creator.service';
 
 @Injectable()
 export class SpaceService {
@@ -99,7 +99,7 @@ export class SpaceService {
     private storageAggregatorService: StorageAggregatorService,
     private templatesSetService: TemplatesSetService,
     private collaborationService: CollaborationService,
-    private collaborationFactoryService: CollaborationFactoryService,
+    private inputCreatorService: InputCreatorService,
     private licensingService: LicensingService,
     private licenseEngineService: LicenseEngineService,
     private templateService: TemplateService,
@@ -313,7 +313,7 @@ export class SpaceService {
       );
 
     return sourceCallouts.map(
-      this.collaborationFactoryService.buildCreateCalloutInputFromCallout
+      this.inputCreatorService.buildCreateCalloutInputFromCallout
     );
   }
 
@@ -407,7 +407,7 @@ export class SpaceService {
           LogContext.TEMPLATES
         );
       }
-      return this.collaborationFactoryService.buildCreateInnovationFlowInputFromInnovationFlow(
+      return this.inputCreatorService.buildCreateInnovationFlowInputFromInnovationFlow(
         template.innovationFlow
       );
     }

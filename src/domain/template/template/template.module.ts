@@ -11,7 +11,6 @@ import { CommunityGuidelinesModule } from '@domain/community/community-guideline
 import { CalloutModule } from '@domain/collaboration/callout/callout.module';
 import { WhiteboardModule } from '@domain/common/whiteboard';
 import { TemplateResolverFields } from './template.resolver.fields';
-import { CollaborationFactoryModule } from '@domain/collaboration/collaboration-factory/collaboration.factory.module';
 import { InnovationFlowModule } from '@domain/collaboration/innovation-flow/innovation.flow.module';
 
 @Module({
@@ -23,7 +22,6 @@ import { InnovationFlowModule } from '@domain/collaboration/innovation-flow/inno
     CalloutModule,
     WhiteboardModule,
     InnovationFlowModule,
-    CollaborationFactoryModule,
     TypeOrmModule.forFeature([Template]),
   ],
   providers: [

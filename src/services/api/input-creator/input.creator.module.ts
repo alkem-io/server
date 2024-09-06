@@ -9,6 +9,8 @@ import { CommunityGuidelinesModule } from '@domain/community/community-guideline
 import { InputCreatorService } from './input.creator.service';
 import { InputCreatorResolverQueries } from './input.creator.resolver.queries';
 import { InputCreatorResolverFields } from './input.creator.resolver.fields';
+import { InnovationFlowStatesModule } from '@domain/collaboration/innovation-flow-states/innovation.flow.state.module';
+import { CalloutFramingModule } from '@domain/collaboration/callout-framing/callout.framing.module';
 
 @Module({
   imports: [
@@ -16,8 +18,10 @@ import { InputCreatorResolverFields } from './input.creator.resolver.fields';
     CollaborationModule,
     WhiteboardModule,
     InnovationFlowModule,
+    InnovationFlowStatesModule,
     PostModule,
     CalloutModule,
+    CalloutFramingModule,
     CommunityGuidelinesModule,
   ],
   providers: [

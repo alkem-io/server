@@ -8,33 +8,27 @@ import { InputCreatorQueryResults } from './dto/input.creator.query.results';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { PostService } from '@domain/collaboration/post/post.service';
-import { CalloutService } from '@domain/collaboration/callout/callout.service';
-import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovaton.flow.service';
-import { WhiteboardService } from '@domain/common/whiteboard';
-import { ICommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.interface';
 import { CommunityGuidelinesService } from '@domain/community/community-guidelines/community.guidelines.service';
+import { InputCreatorService } from './input.creator.service';
+import { CreateCommunityGuidelinesInput } from '@domain/community/community-guidelines/dto/community.guidelines.dto.create';
 
 @Resolver(() => InputCreatorQueryResults)
 export class InputCreatorResolverFields {
   constructor(
+    private inputCreatorService: InputCreatorService,
     private authorizationService: AuthorizationService,
-    private whiteboardService: WhiteboardService,
-    private postService: PostService,
-    private calloutService: CalloutService,
-    private innovationFlowService: InnovationFlowService,
     private communityGuidelinesService: CommunityGuidelinesService
   ) {}
 
   @UseGuards(GraphqlGuard)
-  @ResolveField(() => ICommunityGuidelines, {
+  @ResolveField(() => CreateCommunityGuidelinesInput, {
     nullable: true,
-    description: 'InputCreator the specified Community guidelines',
+    description: 'Create an input based on the provided Community Guidelines',
   })
   async communityGuidelines(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID }) id: string
-  ): Promise<ICommunityGuidelines> {
+  ): Promise<CreateCommunityGuidelinesInput> {
     const guidelines =
       await this.communityGuidelinesService.getCommunityGuidelinesOrFail(id);
     this.authorizationService.grantAccessOrFail(
@@ -44,6 +38,44 @@ export class InputCreatorResolverFields {
       `inputCreator Community guidelines: ${guidelines.id}`
     );
 
-    return guidelines;
+    return await this.inputCreatorService.buildCreateCommunityGuidelinesInputFromCommunityGuidelines(
+      guidelines
+    );
   }
+
+  // @ResolveField('innovationFlowInput', () => CreateInnovationFlowInput, {
+  //   nullable: true,
+  //   description:
+  //     'Craete the input for a new Innovation Flow based on the supplied Template.',
+  // })
+  // async innovationFlowInput(
+  //   @Parent() template: ITemplate
+  // ): Promise<CreateInnovationFlowInput | undefined> {
+  //   if (template.type !== TemplateType.INNOVATION_FLOW) {
+  //     return undefined;
+  //   }
+  //   const innovationFlow = await this.templateService.getInnovationFlow(
+  //     template.id
+  //   );
+  //   return this.inputCreatorService.buildCreateInnovationFlowInputFromInnovationFlow(
+  //     innovationFlow
+  //   );
+  // }
+
+  // @ResolveField('calloutInput', () => CreateCalloutInput, {
+  //   nullable: true,
+  //   description:
+  //     'Build the input for creating a new Callout from this Template.',
+  // })
+  // async calloutInput(
+  //   @Parent() template: ITemplate
+  // ): Promise<CreateCalloutInput | undefined> {
+  //   if (template.type !== TemplateType.CALLOUT) {
+  //     return undefined;
+  //   }
+  //   const callout = await this.templateService.getCallout(template.id);
+  //   return this.inputCreatorService.buildCreateCalloutInputFromCallout(
+  //     callout
+  //   );
+  // }
 }
