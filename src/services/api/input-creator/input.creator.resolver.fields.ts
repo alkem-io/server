@@ -17,6 +17,10 @@ import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service'
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { CreateInnovationFlowInput } from '@domain/collaboration/innovation-flow/dto/innovation.flow.dto.create';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
+import { CreateWhiteboardInput } from '@domain/common/whiteboard/dto/whiteboard.dto.create';
+import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
+import { LogContext } from '@common/enums';
+import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
 
 @Resolver(() => InputCreatorQueryResults)
 export class InputCreatorResolverFields {
@@ -98,80 +102,80 @@ export class InputCreatorResolverFields {
     );
   }
 
-  // @UseGuards(GraphqlGuard)
-  // @ResolveField(() => CreateWhiteboardInput, {
-  //   nullable: true,
-  //   description: 'Create an input based on the provided Whiteboard',
-  // })
-  // async whiteboard(
-  //   @CurrentUser() agentInfo: AgentInfo,
-  //   @Args('ID', { type: () => UUID }) id: string
-  // ): Promise<CreateWhiteboardInput> {
-  //   const whiteboard = await this.whiteboardService.getWhiteboardOrFail(id);
-  //   this.authorizationService.grantAccessOrFail(
-  //     agentInfo,
-  //     whiteboard.authorization,
-  //     AuthorizationPrivilege.READ,
-  //     `inputCreator whiteboard: ${whiteboard.id}`
-  //   );
+  @UseGuards(GraphqlGuard)
+  @ResolveField(() => CreateWhiteboardInput, {
+    nullable: true,
+    description: 'Create an input based on the provided Whiteboard',
+  })
+  async whiteboard(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('ID', { type: () => UUID }) id: string
+  ): Promise<CreateWhiteboardInput> {
+    const whiteboard = await this.whiteboardService.getWhiteboardOrFail(id);
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      whiteboard.authorization,
+      AuthorizationPrivilege.READ,
+      `inputCreator whiteboard: ${whiteboard.id}`
+    );
 
-  //   const whiteboardInput =
-  //     this.inputCreatorService.buildCreateWhiteboardInputFromWhiteboard(
-  //       whiteboard
-  //     );
-  //   if (!whiteboardInput) {
-  //     throw new RelationshipNotFoundException(
-  //       `Unable to create input for whiteboard: ${whiteboard.id}`,
-  //       LogContext.INPUT_CREATOR
-  //     );
-  //   }
-  //   return whiteboardInput;
-  // }
+    const whiteboardInput =
+      this.inputCreatorService.buildCreateWhiteboardInputFromWhiteboard(
+        whiteboard
+      );
+    if (!whiteboardInput) {
+      throw new RelationshipNotFoundException(
+        `Unable to create input for whiteboard: ${whiteboard.id}`,
+        LogContext.INPUT_CREATOR
+      );
+    }
+    return whiteboardInput;
+  }
 
-  // @UseGuards(GraphqlGuard)
-  // @ResolveField(() => CreateCollaborationInput, {
-  //   nullable: true,
-  //   description: 'Create an input based on the provided Collaboration',
-  // })
-  // async collaboration(
-  //   @CurrentUser() agentInfo: AgentInfo,
-  //   @Args('ID', { type: () => UUID }) id: string
-  // ): Promise<CreateCollaborationInput> {
-  //   const collaboration =
-  //     await this.collaborationService.getCollaborationOrFail(id, {
-  //       relations: {
-  //         authorization: true,
-  //         callouts: {
-  //           contributionDefaults: true,
-  //           contributionPolicy: true,
-  //           framing: {
-  //             profile: {
-  //               references: true,
-  //               location: true,
-  //               tagsets: true,
-  //             },
-  //             whiteboard: {
-  //               profile: true,
-  //             },
-  //           },
-  //         },
-  //       },
-  //     });
-  //   this.authorizationService.grantAccessOrFail(
-  //     agentInfo,
-  //     collaboration.authorization,
-  //     AuthorizationPrivilege.READ,
-  //     `inputCreator Collaboration: ${collaboration.id}`
-  //   );
+  @UseGuards(GraphqlGuard)
+  @ResolveField(() => CreateCollaborationInput, {
+    nullable: true,
+    description: 'Create an input based on the provided Collaboration',
+  })
+  async collaboration(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('ID', { type: () => UUID }) id: string
+  ): Promise<CreateCollaborationInput> {
+    const collaboration =
+      await this.collaborationService.getCollaborationOrFail(id, {
+        relations: {
+          authorization: true,
+          callouts: {
+            contributionDefaults: true,
+            contributionPolicy: true,
+            framing: {
+              profile: {
+                references: true,
+                location: true,
+                tagsets: true,
+              },
+              whiteboard: {
+                profile: true,
+              },
+            },
+          },
+        },
+      });
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      collaboration.authorization,
+      AuthorizationPrivilege.READ,
+      `inputCreator Collaboration: ${collaboration.id}`
+    );
 
-  //   const calloutInputs =
-  //     await this.inputCreatorService.buildCreateCalloutInputsFromCollaboration(
-  //       collaboration
-  //     );
-  //   // TODO: Not yet fully cloning, but from here should be easy enough
-  //   const result: CreateCollaborationInput = {
-  //     calloutsData: calloutInputs,
-  //   };
-  //   return result;
-  // }
+    const calloutInputs =
+      await this.inputCreatorService.buildCreateCalloutInputsFromCollaboration(
+        collaboration
+      );
+    // TODO: Not yet fully cloning, but from here should be easy enough
+    const result: CreateCollaborationInput = {
+      calloutsData: calloutInputs,
+    };
+    return result;
+  }
 }

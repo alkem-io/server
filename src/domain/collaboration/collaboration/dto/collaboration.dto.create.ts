@@ -1,4 +1,4 @@
-import { InputType, Field } from '@nestjs/graphql';
+import { InputType, Field, ObjectType } from '@nestjs/graphql';
 import { CreateInnovationFlowInput } from '@domain/collaboration/innovation-flow/dto';
 import { CreateCalloutInput } from '@domain/collaboration/callout';
 import { ICalloutGroup } from '@domain/collaboration/callout-groups/callout.group.interface';
@@ -7,6 +7,7 @@ import { IsOptional, ValidateNested } from 'class-validator';
 import { CalloutGroupName } from '@common/enums/callout.group.name';
 
 @InputType()
+@ObjectType('CreateCollaborationData')
 export class CreateCollaborationInput {
   @Field(() => CreateInnovationFlowInput, {
     nullable: true,
@@ -14,7 +15,7 @@ export class CreateCollaborationInput {
   })
   @ValidateNested()
   @IsOptional()
-  @Type(() => CreateCollaborationInput)
+  @Type(() => CreateInnovationFlowInput)
   innovationFlowData?: CreateInnovationFlowInput;
 
   @Field(() => [CreateCalloutInput], {

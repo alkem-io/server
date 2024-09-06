@@ -51,7 +51,7 @@ export class InputCreatorService {
     ) {
       throw new EntityNotInitializedException(
         'Missing callout relation',
-        LogContext.COLLABORATION,
+        LogContext.INPUT_CREATOR,
         {
           cause: 'Relation for Callout not loaded',
           calloutId: calloutInput.id,
@@ -101,7 +101,7 @@ export class InputCreatorService {
     if (!innovationFlow.states) {
       throw new EntityNotInitializedException(
         `Template ${innovationFlow.id} does not have innovation flow states`,
-        LogContext.TEMPLATES
+        LogContext.INPUT_CREATOR
       );
     }
     // Note: no profile currently present, so use the one from the template for now
@@ -132,7 +132,7 @@ export class InputCreatorService {
     if (!calloutFraming.profile || !calloutFraming.whiteboard) {
       throw new EntityNotInitializedException(
         'CalloutFraming not fully initialised',
-        LogContext.COLLABORATION,
+        LogContext.INPUT_CREATOR,
         {
           cause: 'Relation for callout framing not loaded',
           calloutFramingId: calloutFraming.id,
