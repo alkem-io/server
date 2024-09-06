@@ -44,7 +44,16 @@ export class InputCreatorResolverFields {
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<CreateCommunityGuidelinesInput> {
     const guidelines =
-      await this.communityGuidelinesService.getCommunityGuidelinesOrFail(id);
+      await this.communityGuidelinesService.getCommunityGuidelinesOrFail(id, {
+        relations: {
+          authorization: true,
+          profile: {
+            references: true,
+            location: true,
+            tagsets: true,
+          },
+        },
+      });
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       guidelines.authorization,
@@ -67,7 +76,16 @@ export class InputCreatorResolverFields {
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<CreateInnovationFlowInput> {
     const innovationFlow =
-      await this.innovationFlowService.getInnovationFlowOrFail(id);
+      await this.innovationFlowService.getInnovationFlowOrFail(id, {
+        relations: {
+          authorization: true,
+          profile: {
+            references: true,
+            location: true,
+            tagsets: true,
+          },
+        },
+      });
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       innovationFlow.authorization,
@@ -89,7 +107,23 @@ export class InputCreatorResolverFields {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<CreateCalloutInput> {
-    const callout = await this.calloutService.getCalloutOrFail(id);
+    const callout = await this.calloutService.getCalloutOrFail(id, {
+      relations: {
+        authorization: true,
+        framing: {
+          profile: {
+            references: true,
+            location: true,
+            tagsets: true,
+          },
+          whiteboard: {
+            profile: true,
+          },
+        },
+        contributionDefaults: true,
+        contributionPolicy: true,
+      },
+    });
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       callout.authorization,

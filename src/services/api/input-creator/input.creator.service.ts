@@ -111,9 +111,9 @@ export class InputCreatorService {
   public buildCreateInnovationFlowInputFromInnovationFlow(
     innovationFlow: IInnovationFlow
   ): CreateInnovationFlowInput {
-    if (!innovationFlow.states) {
+    if (!innovationFlow.states || !innovationFlow.profile) {
       throw new EntityNotInitializedException(
-        `Template ${innovationFlow.id} does not have innovation flow states`,
+        `Template ${innovationFlow.id} is missing relation`,
         LogContext.INPUT_CREATOR
       );
     }
