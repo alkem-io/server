@@ -1,9 +1,10 @@
-import { InputType, Field } from '@nestjs/graphql';
+import { InputType, Field, ObjectType } from '@nestjs/graphql';
 import { IsOptional } from 'class-validator';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
 import { WhiteboardContent } from '@domain/common/scalars/scalar.whiteboard.content';
 
 @InputType()
+@ObjectType('CreateCalloutContributionDefaultsData')
 export class CreateCalloutContributionDefaultsInput {
   @Field(() => Markdown, {
     nullable: true,

@@ -16,6 +16,7 @@ import { InnovationFlowService } from '@domain/collaboration/innovation-flow/inn
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { CreateInnovationFlowInput } from '@domain/collaboration/innovation-flow/dto/innovation.flow.dto.create';
+import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
 
 @Resolver(() => InputCreatorQueryResults)
 export class InputCreatorResolverFields {
@@ -75,27 +76,27 @@ export class InputCreatorResolverFields {
     );
   }
 
-  // @UseGuards(GraphqlGuard)
-  // @ResolveField(() => CreateCalloutInput, {
-  //   nullable: true,
-  //   description: 'Create an input based on the provided Callout',
-  // })
-  // async callout(
-  //   @CurrentUser() agentInfo: AgentInfo,
-  //   @Args('ID', { type: () => UUID }) id: string
-  // ): Promise<CreateCalloutInput> {
-  //   const callout = await this.calloutService.getCalloutOrFail(id);
-  //   this.authorizationService.grantAccessOrFail(
-  //     agentInfo,
-  //     callout.authorization,
-  //     AuthorizationPrivilege.READ,
-  //     `inputCreator callout: ${callout.id}`
-  //   );
+  @UseGuards(GraphqlGuard)
+  @ResolveField(() => CreateCalloutInput, {
+    nullable: true,
+    description: 'Create an input based on the provided Callout',
+  })
+  async callout(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('ID', { type: () => UUID }) id: string
+  ): Promise<CreateCalloutInput> {
+    const callout = await this.calloutService.getCalloutOrFail(id);
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      callout.authorization,
+      AuthorizationPrivilege.READ,
+      `inputCreator callout: ${callout.id}`
+    );
 
-  //   return await this.inputCreatorService.buildCreateCalloutInputFromCallout(
-  //     callout
-  //   );
-  // }
+    return await this.inputCreatorService.buildCreateCalloutInputFromCallout(
+      callout
+    );
+  }
 
   // @UseGuards(GraphqlGuard)
   // @ResolveField(() => CreateWhiteboardInput, {
