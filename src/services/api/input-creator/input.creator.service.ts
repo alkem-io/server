@@ -11,6 +11,7 @@ import { CreateCalloutFramingInput } from '@domain/collaboration/callout-framing
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
+import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
 import { InnovationFlowStatesService } from '@domain/collaboration/innovation-flow-states/innovaton.flow.state.service';
 import { CreateInnovationFlowInput } from '@domain/collaboration/innovation-flow/dto/innovation.flow.dto.create';
 import { IInnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.interface';
@@ -82,17 +83,29 @@ export class InputCreatorService {
     };
   }
 
-  public async buildCreateCalloutInputsFromCollaboration(
+  public async buildCreateCollaborationInputFromCollaboration(
     collaboration: ICollaboration
-  ): Promise<CreateCalloutInput[]> {
-    if (!collaboration.callouts) {
+  ): Promise<CreateCollaborationInput> {
+    if (!collaboration.callouts || !collaboration.innovationFlow) {
       throw new RelationshipNotFoundException(
         `Collaboration ${collaboration.id} is missing a relation`,
         LogContext.INPUT_CREATOR
       );
     }
 
-    return collaboration.callouts.map(this.buildCreateCalloutInputFromCallout);
+    const calloutInputs: CreateCalloutInput[] = [];
+    for (const callout of collaboration.callouts) {
+      calloutInputs.push(this.buildCreateCalloutInputFromCallout(callout));
+    }
+
+    const result: CreateCollaborationInput = {
+      calloutsData: calloutInputs,
+      innovationFlowData: this.buildCreateInnovationFlowInputFromInnovationFlow(
+        collaboration.innovationFlow
+      ),
+    };
+
+    return result;
   }
 
   public buildCreateInnovationFlowInputFromInnovationFlow(
@@ -126,10 +139,20 @@ export class InputCreatorService {
     return result;
   }
 
+  public buildCreateWhiteboardInputFromWhiteboard(
+    whiteboard?: IWhiteboard
+  ): CreateWhiteboardInput | undefined {
+    if (!whiteboard) return undefined;
+    return {
+      profileData: this.buildCreateProfileInputFromProfile(whiteboard.profile),
+      content: whiteboard.content,
+      nameID: whiteboard.nameID,
+    };
+  }
   private buildCreateCalloutFramingInputFromCalloutFraming(
     calloutFraming: ICalloutFraming
   ): CreateCalloutFramingInput {
-    if (!calloutFraming.profile || !calloutFraming.whiteboard) {
+    if (!calloutFraming.profile) {
       throw new EntityNotInitializedException(
         'CalloutFraming not fully initialised',
         LogContext.INPUT_CREATOR,
@@ -167,17 +190,6 @@ export class InputCreatorService {
       state: calloutContributionPolicy.state,
       allowedContributionTypes:
         calloutContributionPolicy.allowedContributionTypes,
-    };
-  }
-
-  public buildCreateWhiteboardInputFromWhiteboard(
-    whiteboard?: IWhiteboard
-  ): CreateWhiteboardInput | undefined {
-    if (!whiteboard) return undefined;
-    return {
-      profileData: this.buildCreateProfileInputFromProfile(whiteboard.profile),
-      content: whiteboard.content,
-      nameID: whiteboard.nameID,
     };
   }
 

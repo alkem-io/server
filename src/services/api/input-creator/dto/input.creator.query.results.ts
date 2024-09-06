@@ -2,7 +2,6 @@ import { ObjectType } from '@nestjs/graphql';
 import { CreateWhiteboardInput } from '@domain/common/whiteboard/types';
 import { CreateCalloutInput } from '@domain/collaboration/callout';
 import { CreateCommunityGuidelinesInput } from '@domain/community/community-guidelines';
-import { CreatePostInput } from '@domain/collaboration/post/dto/post.dto.create';
 import { CreateInnovationFlowInput } from '@domain/collaboration/innovation-flow/dto';
 
 @ObjectType()
@@ -10,7 +9,6 @@ export class InputCreatorQueryResults {
   // exposed through the field resolver
   communityGuidelinesInput!: CreateCommunityGuidelinesInput;
   callout!: CreateCalloutInput;
-  post!: CreatePostInput;
   innovationFlow!: CreateInnovationFlowInput;
   whiteboard!: CreateWhiteboardInput;
 }

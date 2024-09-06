@@ -145,6 +145,13 @@ export class InputCreatorResolverFields {
       await this.collaborationService.getCollaborationOrFail(id, {
         relations: {
           authorization: true,
+          innovationFlow: {
+            profile: {
+              references: true,
+              location: true,
+              tagsets: true,
+            },
+          },
           callouts: {
             contributionDefaults: true,
             contributionPolicy: true,
@@ -168,14 +175,8 @@ export class InputCreatorResolverFields {
       `inputCreator Collaboration: ${collaboration.id}`
     );
 
-    const calloutInputs =
-      await this.inputCreatorService.buildCreateCalloutInputsFromCollaboration(
-        collaboration
-      );
-    // TODO: Not yet fully cloning, but from here should be easy enough
-    const result: CreateCollaborationInput = {
-      calloutsData: calloutInputs,
-    };
-    return result;
+    return await this.inputCreatorService.buildCreateCollaborationInputFromCollaboration(
+      collaboration
+    );
   }
 }
