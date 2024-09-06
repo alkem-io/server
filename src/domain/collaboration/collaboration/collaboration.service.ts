@@ -78,6 +78,17 @@ export class CollaborationService {
     storageAggregator: IStorageAggregator,
     agentInfo?: AgentInfo
   ): Promise<ICollaboration> {
+    if (
+      !collaborationData.calloutGroups ||
+      !collaborationData.calloutsData ||
+      !collaborationData.innovationFlowData ||
+      !collaborationData.defaultCalloutGroupName
+    ) {
+      throw new RelationshipNotFoundException(
+        'Unable to create Collaboration: missing required data',
+        LogContext.COLLABORATION
+      );
+    }
     const collaboration: ICollaboration = Collaboration.create();
     collaboration.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.COLLABORATION

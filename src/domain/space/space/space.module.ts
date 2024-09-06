@@ -61,6 +61,7 @@ import { InputCreatorModule } from '@services/api/input-creator/input.creator.mo
     ActivityAdapterModule,
     LoaderCreatorModule,
     TemplateModule,
+    InputCreatorModule,
     NameReporterModule,
     TypeOrmModule.forFeature([Space]),
   ],

@@ -1,4 +1,5 @@
 import { LogContext } from '@common/enums/logging.context';
+import { RelationshipNotFoundException } from '@common/exceptions';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { ICalloutContributionDefaults } from '@domain/collaboration/callout-contribution-defaults/callout.contribution.defaults.interface';
 import { CreateCalloutContributionDefaultsInput } from '@domain/collaboration/callout-contribution-defaults/dto/callout.contribution.defaults.dto.create';
@@ -9,6 +10,7 @@ import { CalloutFramingService } from '@domain/collaboration/callout-framing/cal
 import { CreateCalloutFramingInput } from '@domain/collaboration/callout-framing/dto/callout.framing.dto.create';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
+import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { InnovationFlowStatesService } from '@domain/collaboration/innovation-flow-states/innovaton.flow.state.service';
 import { CreateInnovationFlowInput } from '@domain/collaboration/innovation-flow/dto/innovation.flow.dto.create';
 import { IInnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.interface';
@@ -80,6 +82,19 @@ export class InputCreatorService {
     };
   }
 
+  public async buildCreateCalloutInputsFromCollaboration(
+    collaboration: ICollaboration
+  ): Promise<CreateCalloutInput[]> {
+    if (!collaboration.callouts) {
+      throw new RelationshipNotFoundException(
+        `Collaboration ${collaboration.id} is missing a relation`,
+        LogContext.INPUT_CREATOR
+      );
+    }
+
+    return collaboration.callouts.map(this.buildCreateCalloutInputFromCallout);
+  }
+
   public buildCreateInnovationFlowInputFromInnovationFlow(
     innovationFlow: IInnovationFlow
   ): CreateInnovationFlowInput {
@@ -99,33 +114,6 @@ export class InputCreatorService {
     };
     return result;
   }
-
-  // private async buildxxxCreateCalloutInputsFromCollaboration(
-  //   collaborationSource: ICollaboration
-  // ): Promise<CreateCalloutInput[]> {
-  //   const sourceCallouts =
-  //     await this.collaborationService.getCalloutsOnCollaboration(
-  //       collaborationSource,
-  //       {
-  //         relations: {
-  //           contributionDefaults: true,
-  //           contributionPolicy: true,
-  //           framing: {
-  //             profile: {
-  //               references: true,
-  //               location: true,
-  //               tagsets: true,
-  //             },
-  //             whiteboard: {
-  //               profile: true,
-  //             },
-  //           },
-  //         },
-  //       }
-  //     );
-
-  //   return sourceCallouts.map(this.buildCreateCalloutInputFromCallout);
-  // }
 
   public async buildCreateCommunityGuidelinesInputFromCommunityGuidelines(
     communityGuidelines: ICommunityGuidelines

@@ -349,6 +349,7 @@ export class BootstrapService {
         },
         level: SpaceLevel.SPACE,
         type: SpaceType.SPACE,
+        collaborationData: {},
       };
 
       const space = await this.accountService.createSpaceOnAccount(spaceInput);

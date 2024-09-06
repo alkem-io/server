@@ -187,15 +187,6 @@ export class SpaceResolverMutations {
       `subspace create in: ${space.id}`
     );
 
-    // For the creation based on the template from another challenge require platform admin privileges
-    if (subspaceData.collaborationData?.collaborationTemplateID) {
-      this.authorizationService.grantAccessOrFail(
-        agentInfo,
-        space.authorization,
-        AuthorizationPrivilege.CREATE,
-        `subspaceCreate using space template: ${space.id} - ${subspaceData.collaborationData.collaborationTemplateID}`
-      );
-    }
     let subspace = await this.spaceService.createSubspace(
       subspaceData,
       agentInfo

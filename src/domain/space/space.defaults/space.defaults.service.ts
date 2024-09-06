@@ -45,7 +45,6 @@ import { spaceDefaultsSettingsBlankSlate } from './definitions/blank-slate/space
 import { spaceDefaultsInnovationFlowStatesBlankSlate } from './definitions/blank-slate/space.defaults.innovation.flow.blank.slate';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { ITemplate } from '@domain/template/template/template.interface';
-import { CreateCollaborationOnSpaceInput } from '../space/dto/space.dto.create.collaboration';
 
 @Injectable()
 export class SpaceDefaultsService {
@@ -258,24 +257,5 @@ export class SpaceDefaultsService {
           LogContext.ROLES
         );
     }
-  }
-
-  public getCreateCalloutInputs(
-    defaultCallouts: CreateCalloutInput[],
-    calloutsFromCollaborationTemplateInput: CreateCalloutInput[],
-    collaborationData?: CreateCollaborationOnSpaceInput
-  ): CreateCalloutInput[] {
-    let calloutInputs: CreateCalloutInput[] = [];
-    const addDefaultCallouts = collaborationData?.addDefaultCallouts;
-    if (addDefaultCallouts === undefined || addDefaultCallouts) {
-      const collaborationTemplateID =
-        collaborationData?.collaborationTemplateID;
-      if (collaborationTemplateID) {
-        calloutInputs = calloutsFromCollaborationTemplateInput;
-      } else {
-        calloutInputs = defaultCallouts;
-      }
-    }
-    return calloutInputs;
   }
 }

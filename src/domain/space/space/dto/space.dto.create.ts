@@ -19,11 +19,10 @@ export class CreateSpaceInput extends CreateNameableInput {
   @IsOptional()
   tags?: string[];
 
-  @Field(() => CreateCollaborationOnSpaceInput, { nullable: true })
-  @IsOptional()
+  @Field(() => CreateCollaborationOnSpaceInput, { nullable: false })
   @ValidateNested()
   @Type(() => CreateCollaborationOnSpaceInput)
-  collaborationData?: CreateCollaborationOnSpaceInput;
+  collaborationData!: CreateCollaborationOnSpaceInput;
 
   // For passing on the hierarchy of storage aggregators
   storageAggregatorParent?: IStorageAggregator;

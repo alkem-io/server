@@ -11,12 +11,20 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { CommunityGuidelinesService } from '@domain/community/community-guidelines/community.guidelines.service';
 import { InputCreatorService } from './input.creator.service';
 import { CreateCommunityGuidelinesInput } from '@domain/community/community-guidelines/dto/community.guidelines.dto.create';
+import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
+import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovaton.flow.service';
+import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
+import { CalloutService } from '@domain/collaboration/callout/callout.service';
 
 @Resolver(() => InputCreatorQueryResults)
 export class InputCreatorResolverFields {
   constructor(
     private inputCreatorService: InputCreatorService,
+    private collaborationService: CollaborationService,
     private authorizationService: AuthorizationService,
+    private innovationFlowService: InnovationFlowService,
+    private whiteboardService: WhiteboardService,
+    private calloutService: CalloutService,
     private communityGuidelinesService: CommunityGuidelinesService
   ) {}
 
@@ -43,39 +51,125 @@ export class InputCreatorResolverFields {
     );
   }
 
-  // @ResolveField('innovationFlowInput', () => CreateInnovationFlowInput, {
+  // @UseGuards(GraphqlGuard)
+  // @ResolveField(() => CreateInnovationFlowInput, {
   //   nullable: true,
-  //   description:
-  //     'Craete the input for a new Innovation Flow based on the supplied Template.',
+  //   description: 'Create an input based on the provided InnovationFlow',
   // })
-  // async innovationFlowInput(
-  //   @Parent() template: ITemplate
-  // ): Promise<CreateInnovationFlowInput | undefined> {
-  //   if (template.type !== TemplateType.INNOVATION_FLOW) {
-  //     return undefined;
-  //   }
-  //   const innovationFlow = await this.templateService.getInnovationFlow(
-  //     template.id
+  // async innovationFlow(
+  //   @CurrentUser() agentInfo: AgentInfo,
+  //   @Args('ID', { type: () => UUID }) id: string
+  // ): Promise<CreateInnovationFlowInput> {
+  //   const innovationFlow =
+  //     await this.innovationFlowService.getInnovationFlowOrFail(id);
+  //   this.authorizationService.grantAccessOrFail(
+  //     agentInfo,
+  //     innovationFlow.authorization,
+  //     AuthorizationPrivilege.READ,
+  //     `inputCreator InnovationFlow: ${innovationFlow.id}`
   //   );
-  //   return this.inputCreatorService.buildCreateInnovationFlowInputFromInnovationFlow(
+
+  //   return await this.inputCreatorService.buildCreateInnovationFlowInputFromInnovationFlow(
   //     innovationFlow
   //   );
   // }
 
-  // @ResolveField('calloutInput', () => CreateCalloutInput, {
+  // @UseGuards(GraphqlGuard)
+  // @ResolveField(() => CreateCalloutInput, {
   //   nullable: true,
-  //   description:
-  //     'Build the input for creating a new Callout from this Template.',
+  //   description: 'Create an input based on the provided Callout',
   // })
-  // async calloutInput(
-  //   @Parent() template: ITemplate
-  // ): Promise<CreateCalloutInput | undefined> {
-  //   if (template.type !== TemplateType.CALLOUT) {
-  //     return undefined;
-  //   }
-  //   const callout = await this.templateService.getCallout(template.id);
-  //   return this.inputCreatorService.buildCreateCalloutInputFromCallout(
+  // async callout(
+  //   @CurrentUser() agentInfo: AgentInfo,
+  //   @Args('ID', { type: () => UUID }) id: string
+  // ): Promise<CreateCalloutInput> {
+  //   const callout = await this.calloutService.getCalloutOrFail(id);
+  //   this.authorizationService.grantAccessOrFail(
+  //     agentInfo,
+  //     callout.authorization,
+  //     AuthorizationPrivilege.READ,
+  //     `inputCreator callout: ${callout.id}`
+  //   );
+
+  //   return await this.inputCreatorService.buildCreateCalloutInputFromCallout(
   //     callout
   //   );
+  // }
+
+  // @UseGuards(GraphqlGuard)
+  // @ResolveField(() => CreateWhiteboardInput, {
+  //   nullable: true,
+  //   description: 'Create an input based on the provided Whiteboard',
+  // })
+  // async whiteboard(
+  //   @CurrentUser() agentInfo: AgentInfo,
+  //   @Args('ID', { type: () => UUID }) id: string
+  // ): Promise<CreateWhiteboardInput> {
+  //   const whiteboard = await this.whiteboardService.getWhiteboardOrFail(id);
+  //   this.authorizationService.grantAccessOrFail(
+  //     agentInfo,
+  //     whiteboard.authorization,
+  //     AuthorizationPrivilege.READ,
+  //     `inputCreator whiteboard: ${whiteboard.id}`
+  //   );
+
+  //   const whiteboardInput =
+  //     this.inputCreatorService.buildCreateWhiteboardInputFromWhiteboard(
+  //       whiteboard
+  //     );
+  //   if (!whiteboardInput) {
+  //     throw new RelationshipNotFoundException(
+  //       `Unable to create input for whiteboard: ${whiteboard.id}`,
+  //       LogContext.INPUT_CREATOR
+  //     );
+  //   }
+  //   return whiteboardInput;
+  // }
+
+  // @UseGuards(GraphqlGuard)
+  // @ResolveField(() => CreateCollaborationInput, {
+  //   nullable: true,
+  //   description: 'Create an input based on the provided Collaboration',
+  // })
+  // async collaboration(
+  //   @CurrentUser() agentInfo: AgentInfo,
+  //   @Args('ID', { type: () => UUID }) id: string
+  // ): Promise<CreateCollaborationInput> {
+  //   const collaboration =
+  //     await this.collaborationService.getCollaborationOrFail(id, {
+  //       relations: {
+  //         authorization: true,
+  //         callouts: {
+  //           contributionDefaults: true,
+  //           contributionPolicy: true,
+  //           framing: {
+  //             profile: {
+  //               references: true,
+  //               location: true,
+  //               tagsets: true,
+  //             },
+  //             whiteboard: {
+  //               profile: true,
+  //             },
+  //           },
+  //         },
+  //       },
+  //     });
+  //   this.authorizationService.grantAccessOrFail(
+  //     agentInfo,
+  //     collaboration.authorization,
+  //     AuthorizationPrivilege.READ,
+  //     `inputCreator Collaboration: ${collaboration.id}`
+  //   );
+
+  //   const calloutInputs =
+  //     await this.inputCreatorService.buildCreateCalloutInputsFromCollaboration(
+  //       collaboration
+  //     );
+  //   // TODO: Not yet fully cloning, but from here should be easy enough
+  //   const result: CreateCollaborationInput = {
+  //     calloutsData: calloutInputs,
+  //   };
+  //   return result;
   // }
 }
