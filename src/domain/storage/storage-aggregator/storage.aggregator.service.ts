@@ -46,10 +46,12 @@ export class StorageAggregatorService {
 
     storageAggregator.parentStorageAggregator = parentStorageAggregator;
 
-    // Do not set the storage aggregator on direct storage buckets as this causes
-    // a circular loop
     storageAggregator.directStorage =
       this.storageBucketService.createStorageBucket({});
+    // Need to save the storage bucket to avoid a TypeORM saving circular dependency
+    storageAggregator.directStorage = await this.storageBucketService.save(
+      storageAggregator.directStorage
+    );
     return await this.save(storageAggregator);
   }
 

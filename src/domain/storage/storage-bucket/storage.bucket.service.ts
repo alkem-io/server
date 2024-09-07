@@ -94,6 +94,10 @@ export class StorageBucketService {
     return result;
   }
 
+  public async save(storage: IStorageBucket): Promise<IStorageBucket> {
+    return this.storageBucketRepository.save(storage);
+  }
+
   async getStorageBucketOrFail(
     storageBucketID: string,
     options?: FindOneOptions<StorageBucket>
