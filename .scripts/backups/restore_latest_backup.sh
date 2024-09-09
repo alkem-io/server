@@ -169,24 +169,37 @@ fi
 
 echo "Latest file: $latest_file"
 
-# Download the latest file
-aws s3 cp "s3://$S3_BUCKET/$latest_file" .
-
-echo "Downloaded $latest_file from $S3_PATH"
-
 # Get the local filename
 local_file=${latest_file##*/}
-echo "Local filename: $local_file"
+
+# Check if the local file already exists
+if [[ -f "$local_file" ]]; then
+    echo "The backup file $local_file already exists."
+    read -p "Do you want to overwrite it by downloading a new copy? (y/n) " overwrite_choice
+    if [[ "$overwrite_choice" != "y" && "$overwrite_choice" != "Y" ]]; then
+        echo "Skipping download and using the existing file."
+    else
+        echo "Downloading and overwriting the existing file."
+        aws s3 cp "s3://$S3_BUCKET/$latest_file" .
+    fi
+else
+    # Download the latest file if it doesn't exist
+    echo "Downloading the backup file."
+    aws s3 cp "s3://$S3_BUCKET/$latest_file" .
+fi
+
+echo "Using local file: $local_file"
 
 # Restore snapshot using the correct docker container and command based on storage
 if [[ "$STORAGE" == "mariadb" || "$STORAGE" == "mysql" ]]; then
+    # Drop and recreate the alkemio schema
+    docker exec -i alkemio_dev_mysql /usr/bin/mysql -u root -p${MYSQL_ROOT_PASSWORD} -e "DROP SCHEMA IF EXISTS ${MYSQL_DATABASE}; CREATE SCHEMA ${MYSQL_DATABASE};"
+    # Restore the backup
     docker exec -i alkemio_dev_mysql /usr/bin/mysql -u root -p${MYSQL_ROOT_PASSWORD} ${MYSQL_DATABASE} < $local_file
     echo "Backup restored successfully!"
 elif [[ "$STORAGE" == "postgres" ]]; then
-    docker exec -i alkemio_dev_postgres psql -U ${POSTGRES_USER} -d postgres -c "SELECT pg_terminate_backend(pg_stat_activity.pid)
-    FROM pg_stat_activity WHERE pg_stat_activity.datname = '${POSTGRES_DB}' AND pid <> pg_backend_pid();"
-    docker exec -i alkemio_dev_postgres psql -U ${POSTGRES_USER} -d postgres -c "DROP DATABASE IF EXISTS ${POSTGRES_DB};"
-    docker exec -i alkemio_dev_postgres psql -U ${POSTGRES_USER} -d postgres -c "CREATE DATABASE ${POSTGRES_DB};"
+    docker exec -i alkemio_dev_postgres psql -U ${POSTGRES_USER} -d postgres -c "SELECT pg_terminate_backend(pg_stat_activity.pid) FROM pg_stat_activity WHERE pg_stat_activity.datname = '${POSTGRES_DB}' AND pid <> pg_backend_pid();"
+    docker exec -i alkemio_dev_postgres psql -U ${POSTGRES_USER} -d postgres -c "DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public;"
     docker exec -i alkemio_dev_postgres psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} < $local_file
     echo "Backup restored successfully!"
 else
