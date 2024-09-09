@@ -19,7 +19,7 @@ export class DocumentAuthorizationService {
     document: IDocument,
     parentAuthorization: IAuthorizationPolicy | undefined
   ): IAuthorizationPolicy[] {
-    if (!document.tagset) {
+    if (!document.tagset || !document.tagset.authorization) {
       throw new RelationshipNotFoundException(
         `Unable to find entities required to reset auth for Document ${document.id} `,
         LogContext.STORAGE_BUCKET

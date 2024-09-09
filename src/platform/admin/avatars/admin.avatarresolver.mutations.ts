@@ -53,7 +53,11 @@ export class AdminSearchContributorsMutations {
     profile = await this.profileService.getProfileOrFail(profile.id, {
       relations: {
         storageBucket: {
-          documents: true,
+          documents: {
+            tagset: {
+              authorization: true,
+            },
+          },
         },
         authorization: true,
       },
@@ -80,6 +84,6 @@ export class AdminSearchContributorsMutations {
       );
     await this.authorizationPolicyService.saveAll(authorizations);
 
-    return profile;
+    return await this.profileService.getProfileOrFail(profile.id);
   }
 }
