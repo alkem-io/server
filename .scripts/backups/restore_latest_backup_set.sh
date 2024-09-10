@@ -10,20 +10,30 @@ if ! command -v yq &> /dev/null; then
     # For macOS, use brew for installation
     if [ "$PLATFORM" == "darwin" ]; then
     # For macOS, download the macOS binary for yq
-      sudo wget https://github.com/mikefarah/yq/releases/download/v4.34.2/yq_darwin_amd64 -O /usr/local/bin/yq &&\
-      chmod +x /usr/local/bin/yq
+        sudo wget https://github.com/mikefarah/yq/releases/download/v4.34.2/yq_darwin_amd64 -O /usr/local/bin/yq &&\
+        chmod +x /usr/local/bin/yq
     # For Linux, use apt to install yq
     elif [ "$PLATFORM" == "linux" ]; then
-      wget https://github.com/mikefarah/yq/releases/download/v4.34.2/yq_linux_amd64 -O /usr/bin/yq &&\
-      chmod +x /usr/bin/yq
+        wget https://github.com/mikefarah/yq/releases/download/v4.34.2/yq_linux_amd64 -O /usr/bin/yq &&\
+        chmod +x /usr/bin/yq
     else
         echo "Unsupported platform. Please install yq manually."
         exit 1
     fi
 fi
 
+# Check yq version (only versions >= 4 are supported)
+YQ_VERSION=$(yq --version | awk '{print $4}' | sed 's/v\([0-9]*\).*/\1/')
+if [[ "$YQ_VERSION" -lt 4 ]]; then
+    echo "yq version is lower than 4. Please upgrade yq to version 4 or higher."
+    exit 1
+fi
+
 # The environment is the first argument passed to the script.
 ENV=${1:-prod}
+
+# Optional parameter to restart services (default is true)
+RESTART_SERVICES=${2:-true}
 
 # The path to the .env.docker file is the second argument.
 ENV_FILE_PATH=../../.env.docker
@@ -80,22 +90,28 @@ bash $SCRIPT_PATH mysql $ENV
 # Call the existing script for postgres
 bash $SCRIPT_PATH postgres $ENV
 
-# Start services
-npm run start:services &
+# Conditionally restart services based on the RESTART_SERVICES flag
+if [[ "$RESTART_SERVICES" == "true" ]]; then
+    echo "Restarting services..."
+    # Start services
+    npm run start:services &
 
-# Wait for alkemio_dev_mysql container to be up
-while true; do
-    # Check the status of the container
-    CONTAINER_STATUS=$(docker inspect --format="{{.State.Status}}" alkemio_dev_mysql)
+    # Wait for alkemio_dev_mysql container to be up
+    while true; do
+        # Check the status of the container
+        CONTAINER_STATUS=$(docker inspect --format="{{.State.Status}}" alkemio_dev_mysql)
 
-    # If the container is running, break out of the loop
-    if [ "$CONTAINER_STATUS" == "running" ]; then
-        break
-    else
-        echo "Waiting for alkemio_dev_mysql to start..."
+        # If the container is running, break out of the loop
+        if [ "$CONTAINER_STATUS" == "running" ]; then
+            break
+        else
+            echo "Waiting for alkemio_dev_mysql to start..."
         sleep 500
-    fi
-done
+        fi
+    done
 
-# Once the container is running, start the application
-npm start
+    # Once the container is running, start the application
+    npm start
+else
+    echo "Skipping service restart as per user request."
+fi
