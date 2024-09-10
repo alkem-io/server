@@ -75,6 +75,7 @@ export class ProfileDocumentsService {
         externalID: docInContent.externalID,
         mimeType: docInContent.mimeType,
         size: docInContent.size,
+        temporaryLocation: false,
       });
       await this.storageBucketService.addDocumentToBucketOrFail(
         storageBucketToCheck.id,

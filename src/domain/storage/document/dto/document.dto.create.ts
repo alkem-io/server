@@ -13,5 +13,5 @@ export class CreateDocumentInput {
 
   // Whether this is a temporarily created Document that can be moved to
   // another StorageBucket
-  temporaryLocation?: boolean;
+  temporaryLocation!: boolean;
 }

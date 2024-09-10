@@ -38,9 +38,6 @@ export class DocumentService {
   public async createDocument(
     documentInput: CreateDocumentInput
   ): Promise<IDocument> {
-    if (documentInput.temporaryLocation === undefined) {
-      documentInput.temporaryLocation = false;
-    }
     const document: IDocument = Document.create({ ...documentInput });
     document.tagset = this.tagsetService.createTagset({
       name: TagsetReservedName.DEFAULT,
