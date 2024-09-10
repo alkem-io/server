@@ -345,7 +345,14 @@ export class SpaceService {
       const innovationFlowTemplateID = spaceDefaults.innovationFlowTemplate?.id;
       if (innovationFlowTemplateID) {
         const template = await this.templateService.getTemplateOrFail(
-          innovationFlowTemplateID
+          innovationFlowTemplateID,
+          {
+            relations: {
+              innovationFlow: {
+                profile: true,
+              },
+            },
+          }
         );
         const innovationFlow = template.innovationFlow;
         if (!innovationFlow) {
