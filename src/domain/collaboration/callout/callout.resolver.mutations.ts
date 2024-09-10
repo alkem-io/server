@@ -41,6 +41,7 @@ import { ILink } from '../link/link.interface';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { UpdateContributionCalloutsSortOrderInput } from '../callout-contribution/dto/callout.contribution.dto.update.callouts.sort.order';
+import { TemporaryStorageService } from '@services/infrastructure/temporary-storage/temporary.storage.service';
 
 @Resolver()
 export class CalloutResolverMutations {
@@ -55,6 +56,7 @@ export class CalloutResolverMutations {
     private namingService: NamingService,
     private contributionAuthorizationService: CalloutContributionAuthorizationService,
     private calloutContributionService: CalloutContributionService,
+    private temporaryStorageService: TemporaryStorageService,
     @Inject(SUBSCRIPTION_CALLOUT_POST_CREATED)
     private postCreatedSubscription: PubSubEngine
   ) {}
@@ -223,17 +225,29 @@ export class CalloutResolverMutations {
         );
     }
 
-    let contribution = await this.calloutService.createContributionOnCallout(
+    const contribution = await this.calloutService.createContributionOnCallout(
       contributionData,
       agentInfo.userID
     );
 
+    await this.calloutContributionService.save(contribution);
+    const destinationStorageBucket =
+      await this.calloutContributionService.getStorageBucketForContribution(
+        contribution.id
+      );
+    // Now the contribution is saved, we can look to move any temporary documents
+    // to be stored in the storage bucket of the profile.
+    // Note: important to do before auth reset is done
+    await this.temporaryStorageService.moveTemporaryDocuments(
+      contributionData,
+      destinationStorageBucket
+    );
+
+    // Ensure settings are available
     const { communityPolicy, spaceSettings } =
       await this.namingService.getCommunityPolicyAndSettingsForCallout(
         callout.id
       );
-    contribution = await this.calloutContributionService.save(contribution);
-    // Ensure settings are available
     const updatedAuthorizations =
       await this.contributionAuthorizationService.applyAuthorizationPolicy(
         contribution.id,

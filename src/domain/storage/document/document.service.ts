@@ -207,19 +207,7 @@ export class DocumentService {
     return url.startsWith(this.getDocumentsBaseUrlPath());
   }
 
-  // Get an array of documents that are mentioned in the
-  // provided input
-  public getDocumentsFromString(serializedJSON: string): IDocument[] {
-    // Regex to pick up documents
-    if (serializedJSON.length > 0) {
-      return [];
-    }
-
-    const results: IDocument[] = [];
-    return results;
-  }
-
-  private getDocumentsBaseUrlPath(): string {
+  public getDocumentsBaseUrlPath(): string {
     const { endpoint_cluster, path_api_private_rest } = this.configService.get(
       'hosting',
       { infer: true }

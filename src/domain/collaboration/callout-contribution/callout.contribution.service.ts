@@ -15,11 +15,16 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { IPost } from '../post';
 import { ICalloutContributionPolicy } from '../callout-contribution-policy/callout.contribution.policy.interface';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
-import { ValidationException } from '@common/exceptions';
+import {
+  RelationshipNotFoundException,
+  ValidationException,
+} from '@common/exceptions';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { LinkService } from '../link/link.service';
 import { ILink } from '../link/link.interface';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { IProfile } from '@domain/common/profile/profile.interface';
 
 @Injectable()
 export class CalloutContributionService {
@@ -238,5 +243,48 @@ export class CalloutContributionService {
     }
 
     return calloutContribution.post;
+  }
+
+  public async getStorageBucketForContribution(
+    contributionID: string
+  ): Promise<IStorageBucket> {
+    const contribution = await this.getCalloutContributionOrFail(
+      contributionID,
+      {
+        relations: {
+          post: {
+            profile: {
+              storageBucket: true,
+            },
+          },
+          link: {
+            profile: {
+              storageBucket: true,
+            },
+          },
+          whiteboard: {
+            profile: {
+              storageBucket: true,
+            },
+          },
+        },
+      }
+    );
+
+    let profile: IProfile | undefined = undefined;
+    if (contribution.post) {
+      profile = contribution.post.profile;
+    } else if (contribution.link) {
+      profile = contribution.link.profile;
+    } else if (contribution.whiteboard) {
+      profile = contribution.whiteboard.profile;
+    }
+    if (!profile || !profile.storageBucket) {
+      throw new RelationshipNotFoundException(
+        `Unable to find profile with storage bucket for callout contribution: ${contributionID}`,
+        LogContext.COLLABORATION
+      );
+    }
+    return profile.storageBucket;
   }
 }

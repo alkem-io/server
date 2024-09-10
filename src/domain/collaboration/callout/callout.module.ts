@@ -24,6 +24,7 @@ import { CalloutContributionDefaultsModule } from '../callout-contribution-defau
 import { CalloutContributionPolicyModule } from '../callout-contribution-policy/callout.contribution.policy.module';
 import { CalloutContributionModule } from '../callout-contribution/callout.contribution.module';
 import { PostModule } from '../post/post.module';
+import { TemporaryStorageModule } from '@services/infrastructure/temporary-storage/temporary.storage.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { PostModule } from '../post/post.module';
     CalloutContributionPolicyModule,
     StorageAggregatorResolverModule,
     PostModule,
+    TemporaryStorageModule,
     TypeOrmModule.forFeature([Callout]),
   ],
   providers: [
