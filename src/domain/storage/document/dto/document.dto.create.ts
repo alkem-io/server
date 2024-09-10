@@ -11,5 +11,7 @@ export class CreateDocumentInput {
 
   externalID!: string;
 
-  anonymousReadAccess!: boolean;
+  // Whether this is a temporarily created Document that can be moved to
+  // another StorageBucket
+  temporaryLocation?: boolean;
 }

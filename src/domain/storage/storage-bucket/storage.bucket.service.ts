@@ -154,8 +154,7 @@ export class StorageBucketService {
     buffer: Buffer,
     filename: string,
     mimeType: string,
-    userID: string,
-    anonymousReadAccess = false
+    userID: string
   ): Promise<IDocument | never> {
     const storage = await this.getStorageBucketOrFail(storageBucketId, {
       relations: {},
@@ -174,7 +173,6 @@ export class StorageBucketService {
       displayName: filename,
       size: size,
       createdBy: userID,
-      anonymousReadAccess,
     };
 
     try {
@@ -427,8 +425,7 @@ export class StorageBucketService {
       imageBuffer,
       VisualType.AVATAR,
       fileType,
-      userId,
-      false
+      userId
     );
 
     const storageBucket = await this.getStorageBucketOrFail(storageBucketId);

@@ -38,6 +38,9 @@ export class DocumentService {
   public async createDocument(
     documentInput: CreateDocumentInput
   ): Promise<IDocument> {
+    if (documentInput.temporaryLocation === undefined) {
+      documentInput.temporaryLocation = false;
+    }
     const document: IDocument = Document.create({ ...documentInput });
     document.tagset = this.tagsetService.createTagset({
       name: TagsetReservedName.DEFAULT,
@@ -202,6 +205,18 @@ export class DocumentService {
   public isAlkemioDocumentURL(url: string): boolean {
     if (!url) return false;
     return url.startsWith(this.getDocumentsBaseUrlPath());
+  }
+
+  // Get an array of documents that are mentioned in the
+  // provided input
+  public getDocumentsFromString(serializedJSON: string): IDocument[] {
+    // Regex to pick up documents
+    if (serializedJSON.length > 0) {
+      return [];
+    }
+
+    const results: IDocument[] = [];
+    return results;
   }
 
   private getDocumentsBaseUrlPath(): string {
