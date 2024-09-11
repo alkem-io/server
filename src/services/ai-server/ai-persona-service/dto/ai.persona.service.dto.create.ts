@@ -9,25 +9,32 @@ import { AiPersonaDataAccessMode } from '@common/enums/ai.persona.data.access.mo
 
 @InputType()
 export class CreateAiPersonaServiceInput {
-  @Field(() => AiPersonaEngine, { nullable: true })
+  @Field(() => AiPersonaEngine, {
+    nullable: true,
+    defaultValue: AiPersonaEngine.EXPERT,
+  })
   @MaxLength(SMALL_TEXT_LENGTH)
-  engine?: AiPersonaEngine = AiPersonaEngine.EXPERT;
+  engine!: AiPersonaEngine;
 
-  @Field(() => JSON, { nullable: true })
+  @Field(() => JSON, { nullable: true, defaultValue: '' })
   @MaxLength(LONG_TEXT_LENGTH)
-  prompt?: string = '';
+  prompt!: string;
 
-  @Field(() => AiPersonaDataAccessMode, { nullable: true })
+  @Field(() => AiPersonaDataAccessMode, {
+    nullable: true,
+    defaultValue: AiPersonaDataAccessMode.SPACE_PROFILE_AND_CONTENTS,
+  })
   @MaxLength(SMALL_TEXT_LENGTH)
-  dataAccessMode?: AiPersonaDataAccessMode =
-    AiPersonaDataAccessMode.SPACE_PROFILE_AND_CONTENTS;
+  dataAccessMode!: AiPersonaDataAccessMode;
 
-  @Field(() => AiPersonaBodyOfKnowledgeType, { nullable: true })
+  @Field(() => AiPersonaBodyOfKnowledgeType, {
+    nullable: true,
+    defaultValue: AiPersonaBodyOfKnowledgeType.ALKEMIO_SPACE,
+  })
   @MaxLength(SMALL_TEXT_LENGTH)
-  bodyOfKnowledgeType?: AiPersonaBodyOfKnowledgeType =
-    AiPersonaBodyOfKnowledgeType.ALKEMIO_SPACE;
+  bodyOfKnowledgeType!: AiPersonaBodyOfKnowledgeType;
 
   @Field(() => UUID, { nullable: true })
   @MaxLength(SMALL_TEXT_LENGTH)
-  bodyOfKnowledgeID: string = '';
+  bodyOfKnowledgeID: string = ''; // cannot default to a valid UUID
 }

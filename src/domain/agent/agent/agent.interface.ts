@@ -25,5 +25,5 @@ export abstract class IAgent extends IAuthorizable {
     nullable: false,
     description: 'A type of entity that this Agent is being used with.',
   })
-  type!: string;
+  type!: AgentType;
 }

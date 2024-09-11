@@ -58,7 +58,7 @@ export class UserResolverFields {
     const profile = await loader.load(user.id);
     // Note: the user profile is public.
     // Check if the user can read the profile entity, not the actual User entity
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       profile.authorization,
       AuthorizationPrivilege.READ,
@@ -162,14 +162,14 @@ export class UserResolverFields {
 
   @UseGuards(GraphqlGuard)
   @ResolveField('phone', () => String, {
-    nullable: false,
+    nullable: true,
     description: 'The phone number for this User.',
   })
   @Profiling.api
   async phone(
     @Parent() user: User,
     @CurrentUser() agentInfo: AgentInfo
-  ): Promise<string | 'not accessible'> {
+  ): Promise<string | null | 'not accessible'> {
     if (
       await this.isAccessGranted(
         user,
@@ -177,7 +177,7 @@ export class UserResolverFields {
         AuthorizationPrivilege.READ_USER_PII
       )
     ) {
-      return user.phone;
+      return user.phone ?? null;
     }
     return 'not accessible';
   }

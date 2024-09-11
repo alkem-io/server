@@ -7,7 +7,7 @@ export abstract class INVP extends IBaseAlkemio {
   name!: string;
 
   @Field(() => String)
-  value?: string;
+  value!: string;
 
   sortOrder!: number;
 }
