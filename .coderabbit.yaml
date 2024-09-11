@@ -1,0 +1,21 @@
+# This is a basic configuration file for CodeRabbit.
+# For more options and details, see https://docs.coderabbit.ai/configuration/
+
+language: en
+early_access: false
+reviews:
+  high_level_summary: true
+  poem: true
+  review_status: true
+  collapse_walkthrough: false
+  path_filters:
+    - "!**/.github/workflows/*"
+  path_instructions:
+    - path: "**/*.{js,ts,jsx,tsx}"
+      instructions: "Review the JavaScript/TypeScript code for best practices, potential bugs, and adherence to modern standards."
+    - path: "**/*.{css,scss}"
+      instructions: "Check the styling code for consistency, responsiveness, and any potential improvements."
+    - path: "**/*.md"
+      instructions: "Ensure the documentation is clear, concise, and up-to-date."
+chat:
+  auto_reply: true
