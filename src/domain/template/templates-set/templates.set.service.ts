@@ -2,7 +2,10 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
-import { EntityNotFoundException } from '@common/exceptions';
+import {
+  EntityNotFoundException,
+  ValidationException,
+} from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -15,6 +18,7 @@ import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.a
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { TemplateType } from '@common/enums/template.type';
+import { NamingService } from '@services/infrastructure/naming/naming.service';
 
 @Injectable()
 export class TemplatesSetService {
@@ -24,6 +28,7 @@ export class TemplatesSetService {
     private templatesSetRepository: Repository<TemplatesSet>,
     private storageAggregatorResolverService: StorageAggregatorResolverService,
     private templateService: TemplateService,
+    private namingService: NamingService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -103,8 +108,29 @@ export class TemplatesSetService {
     templatesSet: ITemplatesSet,
     templateInput: CreateTemplateInput
   ): Promise<ITemplate> {
-    // TODO: validate nameID uniqueness?
+    const reservedNameIDs =
+      await this.namingService.getReservedNameIDsInTemplatesSet(
+        templatesSet.id
+      );
+
+    if (templateInput.nameID && templateInput.nameID.length > 0) {
+      if (reservedNameIDs.includes(templateInput.nameID)) {
+        throw new ValidationException(
+          `Unable to create Template: the provided nameID is already taken: ${templateInput.nameID}`,
+          LogContext.SPACES
+        );
+      }
+      // Just use the provided nameID
+    } else {
+      templateInput.nameID =
+        this.namingService.createNameIdAvoidingReservedNameIDs(
+          `${templateInput.profile.displayName}`,
+          reservedNameIDs
+        );
+    }
+
     const storageAggregator = await this.getStorageAggregator(templatesSet);
+
     const template = await this.templateService.createTemplate(
       templateInput,
       storageAggregator

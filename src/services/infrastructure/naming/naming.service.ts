@@ -22,6 +22,7 @@ import { Discussion } from '@platform/forum-discussion/discussion.entity';
 import { IDiscussion } from '@platform/forum-discussion/discussion.interface';
 import { SpaceReservedName } from '@common/enums/space.reserved.name';
 import { generateNameId } from '@services/infrastructure/naming/generate.name.id';
+import { Template } from '@domain/template/template/template.entity';
 
 export class NamingService {
   constructor(
@@ -91,6 +92,22 @@ export class NamingService {
       },
     });
     return callouts?.map(callout => callout.nameID) ?? [];
+  }
+
+  public async getReservedNameIDsInTemplatesSet(
+    templatesSetID: string
+  ): Promise<string[]> {
+    const templates = await this.entityManager.find(Template, {
+      where: {
+        templatesSet: {
+          id: templatesSetID,
+        },
+      },
+      select: {
+        nameID: true,
+      },
+    });
+    return templates?.map(template => template.nameID) ?? [];
   }
 
   public async getReservedNameIDsInCalendar(

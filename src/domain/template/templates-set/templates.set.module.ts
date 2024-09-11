@@ -9,12 +9,14 @@ import { TemplatesSetResolverMutations } from './templates.set.resolver.mutation
 import { TemplatesSetService } from './templates.set.service';
 import { TemplatesSetAuthorizationService } from './templates.set.service.authorization';
 import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
+import { NamingModule } from '@services/infrastructure/naming/naming.module';
 
 @Module({
   imports: [
     AuthorizationPolicyModule,
     AuthorizationModule,
     TemplateModule,
+    NamingModule,
     StorageAggregatorResolverModule,
     TypeOrmModule.forFeature([TemplatesSet]),
   ],
