@@ -1,4 +1,4 @@
-import { Column, Entity, ManyToOne } from 'typeorm';
+import { Column, Entity, Index, ManyToOne } from 'typeorm';
 import { Community } from '@domain/community/community/community.entity';
 import { IPlatformInvitation } from './platform.invitation.interface';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
@@ -15,6 +15,7 @@ export class PlatformInvitation
   extends AuthorizableEntity
   implements IPlatformInvitation
 {
+  @Index('FK_2a985f774bd4de2a9aead6bd5b1')
   // Platform invitations for Community
   @ManyToOne(() => Community, community => community.platformInvitations, {
     eager: false,

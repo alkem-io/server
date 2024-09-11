@@ -1,6 +1,7 @@
 import {
   Column,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   OneToMany,
@@ -40,6 +41,7 @@ export class Community
   @JoinColumn()
   guidelines?: CommunityGuidelines;
 
+  @Index('FK_25543901817dd09d5906537e088')
   @OneToOne(() => Form, {
     eager: false,
     cascade: true,

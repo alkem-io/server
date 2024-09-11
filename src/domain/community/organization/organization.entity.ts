@@ -2,6 +2,7 @@ import {
   Column,
   Entity,
   Generated,
+  Index,
   JoinColumn,
   OneToMany,
   OneToOne,
@@ -63,6 +64,7 @@ export class Organization
   @JoinColumn()
   preferenceSet?: PreferenceSet;
 
+  @Index('FK_3334d59c0b805c9c1ecb0070e16')
   @OneToOne(() => StorageAggregator, {
     eager: false,
     cascade: true,
