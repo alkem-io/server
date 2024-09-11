@@ -21,6 +21,7 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 
 @Entity()
 export class Document extends AuthorizableEntity implements IDocument {
+  // toDo fix createdBy circular dependency https://app.zenhub.com/workspaces/alkemio-development-5ecb98b262ebd9f4aec4194c/issues/gh/alkem-io/server/4529
   // omitting OneToOne decorator for createdBy to avoid circular dependency
   // needs a redesign to avoid circular dependency
   // @Index('FK_3337f26ca267009fcf514e0e726')
