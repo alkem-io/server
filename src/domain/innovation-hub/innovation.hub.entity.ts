@@ -1,4 +1,4 @@
-import { Column, Entity, ManyToOne } from 'typeorm';
+import { Column, Entity, Index, ManyToOne } from 'typeorm';
 import { NameableEntity } from '@domain/common/entity/nameable-entity';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
@@ -13,6 +13,7 @@ import { SearchVisibility } from '@common/enums/search.visibility';
 
 @Entity()
 export class InnovationHub extends NameableEntity implements IInnovationHub {
+  @Index('REL_156fd30246eb151b9d17716abf')
   @ManyToOne(() => Account, account => account.innovationHubs, {
     eager: false,
     onDelete: 'SET NULL',

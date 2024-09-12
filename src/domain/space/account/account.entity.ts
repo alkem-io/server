@@ -1,4 +1,11 @@
-import { Column, Entity, JoinColumn, OneToMany, OneToOne } from 'typeorm';
+import {
+  Column,
+  Entity,
+  Index,
+  JoinColumn,
+  OneToMany,
+  OneToOne,
+} from 'typeorm';
 import { IAccount } from '@domain/space/account/account.interface';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { Space } from '../space/space.entity';
@@ -27,6 +34,7 @@ export class Account extends AuthorizableEntity implements IAccount {
   @JoinColumn()
   agent?: Agent;
 
+  @Index('FK_99998853c1ee793f61bda7eff79')
   @OneToOne(() => StorageAggregator, {
     eager: false,
     cascade: true,
