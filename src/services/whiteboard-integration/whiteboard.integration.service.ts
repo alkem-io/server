@@ -16,12 +16,23 @@ import {
   ContentModifiedInputData,
   ContributionInputData,
   InfoInputData,
+  SaveInputData,
   WhoInputData,
 } from './inputs';
 import { ContributionReporterService } from '../external/elasticsearch/contribution-reporter';
 import { minCollaboratorsInRoom } from '../external/excalidraw-backend/types/defaults';
 import { InfoOutputData } from './outputs/info.output.data';
 import { AlkemioConfig } from '@src/types';
+import {
+  FetchContentData,
+  FetchErrorData,
+  FetchOutputData,
+  SaveContentData,
+  SaveErrorData,
+  SaveOutputData,
+} from './outputs';
+import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
+import { FetchInputData } from '@services/whiteboard-integration/inputs/fetch.input.data';
 
 @Injectable()
 export class WhiteboardIntegrationService {
@@ -96,6 +107,53 @@ export class WhiteboardIntegrationService {
 
   public who(data: WhoInputData): Promise<AgentInfo> {
     return this.authenticationService.getAgentInfo(data.auth);
+  }
+
+  public async save(data: SaveInputData): Promise<SaveOutputData> {
+    // does it exist?
+    let whiteboard: IWhiteboard;
+    try {
+      whiteboard = await this.whiteboardService.getWhiteboardOrFail(
+        data.whiteboardId,
+        {
+          select: { id: true },
+        }
+      );
+    } catch (e: any) {
+      this.logger.error(e?.message, e?.stack, LogContext.EXCALIDRAW_SERVER);
+      return new SaveOutputData(
+        new SaveErrorData(e?.message ?? JSON.stringify(e))
+      );
+    }
+    // try saving
+    try {
+      whiteboard.content = data.content;
+      await this.whiteboardService.save(whiteboard);
+    } catch (e: any) {
+      this.logger.error(e?.message, e?.stack, LogContext.EXCALIDRAW_SERVER);
+      return new SaveOutputData(
+        new SaveErrorData(e?.message ?? JSON.stringify(e))
+      );
+    }
+    // return success on successful save
+    return new SaveOutputData(new SaveContentData());
+  }
+
+  public async fetch(data: FetchInputData): Promise<FetchOutputData> {
+    try {
+      const whiteboard = await this.whiteboardService.getWhiteboardOrFail(
+        data.whiteboardId,
+        {
+          select: { id: true, content: true },
+        }
+      );
+      return new FetchOutputData(new FetchContentData(whiteboard.content));
+    } catch (e: any) {
+      this.logger.error(e?.message, e?.stack, LogContext.EXCALIDRAW_SERVER);
+      return new FetchOutputData(
+        new FetchErrorData(e?.message ?? JSON.stringify(e))
+      );
+    }
   }
 
   public async contribution({
