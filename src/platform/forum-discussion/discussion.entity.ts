@@ -1,11 +1,4 @@
-import {
-  Column,
-  Entity,
-  Index,
-  JoinColumn,
-  ManyToOne,
-  OneToOne,
-} from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
 import { IDiscussion } from './discussion.interface';
 import { Room } from '../../domain/communication/room/room.entity';
 import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
@@ -18,7 +11,6 @@ export class Discussion extends NameableEntity implements IDiscussion {
   @Column('text', { nullable: false })
   category!: string;
 
-  @Index('FK_345655450cf75dc486700ca034c6')
   @OneToOne(() => Room, {
     eager: true,
     cascade: true,

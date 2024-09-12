@@ -1,4 +1,4 @@
-import { Column, Entity, Index, ManyToOne } from 'typeorm';
+import { Column, Entity, ManyToOne } from 'typeorm';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { Profile } from '@domain/common/profile/profile.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
@@ -32,7 +32,6 @@ export class Tagset extends AuthorizableEntity implements ITagset {
   })
   profile?: Profile;
 
-  @Index('FK_7ab35130cde781b69259eec7d85')
   @ManyToOne(() => TagsetTemplate, tagsetTemplate => tagsetTemplate.tagsets, {
     eager: false,
     cascade: false,
