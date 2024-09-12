@@ -21,7 +21,7 @@ export class Templates1724832530055 implements MigrationInterface {
                                   \`innovationFlowId\` char(36) NULL,
                                   \`postDefaultDescription\` text NULL,
                                   \`whiteboardId\` char(36) NULL,
-                                  UNIQUE INDEX \`REL_e4b3a69d8f2c571b9462c4b3f0\` (\`nameID\`),
+                                  UNIQUE INDEX \`IDX_e4b3a69d8f2c571b9462c4b3f0\` (\`nameID\`, \`templatesSetId\`),
                                   UNIQUE INDEX \`REL_4318f97beabd362a8a09e9d320\` (\`authorizationId\`),
                                   UNIQUE INDEX \`REL_f58c3b144b6e010969e199beef\` (\`profileId\`),
                                   UNIQUE INDEX \`REL_eedeae5e63f9a9c3a0161541e9\` (\`communityGuidelinesId\`),
