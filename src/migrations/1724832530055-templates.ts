@@ -4,15 +4,13 @@ import { escapeString } from './utils/escape-string';
 
 export class Templates1724832530055 implements MigrationInterface {
   name = 'Templates1724832530055';
-  // TODO: PENDING ::
-  // Create a profile for new entities like IFs and Whiteboards
-
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`CREATE TABLE \`template\` (
                                   \`id\` char(36) NOT NULL,
                                   \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
                                   \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
                                   \`version\` int NOT NULL,
+                                  \`nameID\` varchar(36) NOT NULL,
                                   \`authorizationId\` char(36) NULL,
                                   \`profileId\` char(36) NULL,
                                   \`templatesSetId\` char(36) NULL,
@@ -23,6 +21,7 @@ export class Templates1724832530055 implements MigrationInterface {
                                   \`innovationFlowId\` char(36) NULL,
                                   \`postDefaultDescription\` text NULL,
                                   \`whiteboardId\` char(36) NULL,
+                                  UNIQUE INDEX \`REL_e4b3a69d8f2c571b9462c4b3f0\` (\`nameID\`),
                                   UNIQUE INDEX \`REL_4318f97beabd362a8a09e9d320\` (\`authorizationId\`),
                                   UNIQUE INDEX \`REL_f58c3b144b6e010969e199beef\` (\`profileId\`),
                                   UNIQUE INDEX \`REL_eedeae5e63f9a9c3a0161541e9\` (\`communityGuidelinesId\`),
@@ -33,14 +32,14 @@ export class Templates1724832530055 implements MigrationInterface {
                                   PRIMARY KEY (\`id\`)) ENGINE=InnoDB`);
 
     await queryRunner.query(
-      `INSERT INTO \`template\` (id, createdDate, updatedDate, version, type, authorizationId, profileId, templatesSetId, communityGuidelinesId)
-        SELECT id, createdDate, updatedDate, version, 'community-guidelines' as \`type\`, authorizationId, profileId, templatesSetId, guidelinesId as communityGuidelinesId
+      `INSERT INTO \`template\` (id, createdDate, updatedDate, version, nameID, type, authorizationId, profileId, templatesSetId, communityGuidelinesId)
+        SELECT id, createdDate, updatedDate, version, CONCAT('template-cg', SUBSTRING(id, 1, 8)) as \`nameID\`, 'community-guidelines' as \`type\`, authorizationId, profileId, templatesSetId, guidelinesId as communityGuidelinesId
           FROM \`community_guidelines_template\`;`
     );
 
     await queryRunner.query(
-      `INSERT INTO \`template\` (id, createdDate, updatedDate, version, type, authorizationId, profileId, templatesSetId, postDefaultDescription)
-        SELECT id, createdDate, updatedDate, version, 'post' as \`type\`, authorizationId, profileId, templatesSetId, defaultDescription as postDefaultDescription
+      `INSERT INTO \`template\` (id, createdDate, updatedDate, version, nameID, type, authorizationId, profileId, templatesSetId, postDefaultDescription)
+        SELECT id, createdDate, updatedDate, version, CONCAT('template-po', SUBSTRING(id, 1, 8)) as \`nameID\`, 'post' as \`type\`, authorizationId, profileId, templatesSetId, defaultDescription as postDefaultDescription
           FROM \`post_template\`;`
     );
 
@@ -49,6 +48,7 @@ export class Templates1724832530055 implements MigrationInterface {
       createdDate: Date;
       updatedDate: Date;
       version: number;
+      nameID: string;
       authorizationId: string;
       profileId: string;
       templatesSetId: string;
@@ -59,6 +59,7 @@ export class Templates1724832530055 implements MigrationInterface {
         innovation_flow_template.createdDate,
         innovation_flow_template.updatedDate,
         innovation_flow_template.version,
+        CONCAT('template-if', SUBSTRING(innovation_flow_template.id, 1, 8)) as \`nameID\`,
         innovation_flow_template.authorizationId,
         innovation_flow_template.profileId,
         innovation_flow_template.templatesSetId,
@@ -76,12 +77,13 @@ export class Templates1724832530055 implements MigrationInterface {
           innovationFlowTemplate.storageBucketId
         );
       await queryRunner.query(
-        `INSERT INTO \`template\` (id, createdDate, updatedDate, version, authorizationId, profileId, templatesSetId, type, innovationFlowId)
+        `INSERT INTO \`template\` (id, createdDate, updatedDate, version, nameID, authorizationId, profileId, templatesSetId, type, innovationFlowId)
               VALUES (
               '${innovationFlowTemplate.id}',
               '${formatDate(innovationFlowTemplate.createdDate)}',
               '${formatDate(innovationFlowTemplate.updatedDate)}',
               ${innovationFlowTemplate.version},
+              '${innovationFlowTemplate.nameID}',
               '${innovationFlowTemplate.authorizationId}',
               '${innovationFlowTemplate.profileId}',
               '${innovationFlowTemplate.templatesSetId}',
@@ -97,6 +99,7 @@ export class Templates1724832530055 implements MigrationInterface {
       createdDate: Date;
       updatedDate: Date;
       version: number;
+      nameID: string;
       authorizationId: string;
       profileId: string;
       templatesSetId: string;
@@ -107,6 +110,7 @@ export class Templates1724832530055 implements MigrationInterface {
         whiteboard_template.createdDate,
         whiteboard_template.updatedDate,
         whiteboard_template.version,
+        CONCAT('template-wb', SUBSTRING(whiteboard_template.id, 1, 8)) as \`nameID\`,
         whiteboard_template.authorizationId,
         whiteboard_template.profileId,
         whiteboard_template.templatesSetId,
@@ -123,12 +127,13 @@ export class Templates1724832530055 implements MigrationInterface {
         whiteboardTemplate.storageBucketId
       );
       await queryRunner.query(
-        `INSERT INTO \`template\` (id, createdDate, updatedDate, version, authorizationId, profileId, templatesSetId, type, whiteboardId)
+        `INSERT INTO \`template\` (id, createdDate, updatedDate, version, nameID, authorizationId, profileId, templatesSetId, type, whiteboardId)
               VALUES (
               '${whiteboardTemplate.id}',
               '${formatDate(whiteboardTemplate.createdDate)}',
               '${formatDate(whiteboardTemplate.updatedDate)}',
               ${whiteboardTemplate.version},
+              '${whiteboardTemplate.nameID}',
               '${whiteboardTemplate.authorizationId}',
               '${whiteboardTemplate.profileId}',
               '${whiteboardTemplate.templatesSetId}',
@@ -142,11 +147,25 @@ export class Templates1724832530055 implements MigrationInterface {
       createdDate: Date;
       updatedDate: Date;
       version: number;
+      nameID: string;
       authorizationId: string;
       profileId: string;
       templatesSetId: string;
     }[] = await queryRunner.query(
-      `SELECT id, createdDate, updatedDate, version, authorizationId, profileId, templatesSetId, framingId, contributionDefaultsId, contributionPolicyId, type FROM \`callout_template\``
+      `SELECT
+        id,
+        createdDate,
+        updatedDate,
+        version,
+        CONCAT('template-ca', SUBSTRING(callout_template.id, 1, 8)) as \`nameID\`,
+        authorizationId,
+        profileId,
+        templatesSetId,
+        framingId,
+        contributionDefaultsId,
+        contributionPolicyId,
+        type
+      FROM \`callout_template\``
     );
     for (const calloutTemplate of calloutTemplates) {
       const calloutID = await this.createCalloutFromCalloutTemplate(
@@ -154,12 +173,13 @@ export class Templates1724832530055 implements MigrationInterface {
         calloutTemplate.id
       );
       await queryRunner.query(
-        `INSERT INTO \`template\` (id, createdDate, updatedDate, version, authorizationId, profileId, templatesSetId, type, calloutId)
+        `INSERT INTO \`template\` (id, createdDate, updatedDate, version, nameID, authorizationId, profileId, templatesSetId, type, calloutId)
               VALUES (
               '${calloutTemplate.id}',
               '${formatDate(calloutTemplate.createdDate)}',
               '${formatDate(calloutTemplate.updatedDate)}',
               ${calloutTemplate.version},
+              '${calloutTemplate.nameID}',
               '${calloutTemplate.authorizationId}',
               '${calloutTemplate.profileId}',
               '${calloutTemplate.templatesSetId}',
