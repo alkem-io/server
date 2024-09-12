@@ -101,29 +101,6 @@ export class WhiteboardResolverMutations {
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IWhiteboard, {
-    description: 'Updates the specified Whiteboard content.',
-  })
-  async updateWhiteboardContent(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('whiteboardData') whiteboardData: UpdateWhiteboardContentInput
-  ): Promise<IWhiteboard> {
-    const whiteboard = await this.whiteboardService.getWhiteboardOrFail(
-      whiteboardData.ID
-    );
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      whiteboard.authorization,
-      AuthorizationPrivilege.UPDATE_CONTENT,
-      `update content of Whiteboard: ${whiteboard.id}`
-    );
-    return this.whiteboardService.updateWhiteboardContent(
-      whiteboard,
-      whiteboardData
-    );
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IWhiteboard, {
     description: 'Deletes the specified Whiteboard.',
   })
   async deleteWhiteboard(
