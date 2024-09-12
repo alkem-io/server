@@ -56,7 +56,7 @@ export class TemplateService {
     );
 
     template.profile = await this.profileService.createProfile(
-      templateData.profile,
+      templateData.profileData,
       ProfileType.TEMPLATE,
       storageAggregator
     );

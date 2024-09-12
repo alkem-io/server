@@ -124,7 +124,7 @@ export class TemplatesSetService {
     } else {
       templateInput.nameID =
         this.namingService.createNameIdAvoidingReservedNameIDs(
-          `${templateInput.profile.displayName}`,
+          `${templateInput.profileData.displayName}`,
           reservedNameIDs
         );
     }

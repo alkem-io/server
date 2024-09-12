@@ -7,7 +7,6 @@ import { CreateCalloutInput } from '@domain/collaboration/callout';
 import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
 import { CreateInnovationFlowInput } from '@domain/collaboration/innovation-flow/dto/innovation.flow.dto.create';
 import { CreateNameableInput } from '@domain/common/entity/nameable-entity';
-import { CreateProfileInput } from '@domain/common/profile/dto/profile.dto.create';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
 import { CreateWhiteboardInput } from '@domain/common/whiteboard/dto/whiteboard.dto.create';
 import { CreateCommunityGuidelinesInput } from '@domain/community/community-guidelines/dto/community.guidelines.dto.create';
@@ -17,14 +16,6 @@ import { IsOptional, MaxLength, ValidateNested } from 'class-validator';
 
 @InputType()
 export class CreateTemplateInput extends CreateNameableInput {
-  @Field(() => CreateProfileInput, {
-    nullable: false,
-    description: 'The profile of the template.',
-  })
-  @ValidateNested({ each: true })
-  @Type(() => CreateProfileInput)
-  profile!: CreateProfileInput;
-
   @Field(() => [String], { nullable: true })
   @IsOptional()
   tags?: string[];

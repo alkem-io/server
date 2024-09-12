@@ -4,7 +4,7 @@ import { CreateTemplateInput } from '@domain/template/template/dto/template.dto.
 
 const posts: CreateTemplateInput[] = [
   {
-    profile: {
+    profileData: {
       displayName: '📝 Meeting Notes',
       description:
         'A sample post template for capturing the **results of meetings** is a structured format designed to efficiently document key outcomes, decisions, and 👉 action items from a meeting. This template provides a systematic approach to ensure that important information is recorded comprehensively and can be easily referenced later. 📝\n',
@@ -15,7 +15,7 @@ const posts: CreateTemplateInput[] = [
       '## 💭 Your meeting insights\n\n📅 **Date:**\n\n*Lets note the date of your interaction for context.*\n\n👥 **Present:**\n\n*Mention who attended or participated in the community activity.*\n\n📝 **Notes:**\n\n*Capture your observations or key takeaways from the community interaction.*\n\n🔁 **Next steps:**\n\n*Describe the specific actions or initiatives you plan to take based on the insights gained during the community interaction, propelling the community forward!*\n',
   },
   {
-    profile: {
+    profileData: {
       displayName: '👀 Related Initiative',
       description:
         'Utilize this template to collect information about other **relevant initiatives**. Whether they are similar in nature, provide support, or simply need to be acknowledged, this template helps you keep track of them.\n',
@@ -26,7 +26,7 @@ const posts: CreateTemplateInput[] = [
       '👀 **Name of the related initiative**:\n\n*Name/title*\n\n🤝 **Description of the related initiative:**\n\n*Description*\n\n🗻 **Describe the relevane of the related initiative:**\n\n*Explore how these initiatives align with this initiative*\n\n✏️ **Additional information**\n\n*Provide any extra information or context relevant to the initiative*\n',
   },
   {
-    profile: {
+    profileData: {
       displayName: 'Community Needs 👥',
       description:
         'Progress needs people and so do we! Gather the knowledge, activities or other blockers that are needed to start making impact by using this template. Ask people if they are you someone that can help you or if they know someone who can !💬\n\nTogether, transform challenges into opportunities and propel your space forward! 🚀💪\n',
@@ -40,7 +40,7 @@ const posts: CreateTemplateInput[] = [
 
 const innovationFlows: CreateTemplateInput[] = [
   {
-    profile: {
+    profileData: {
       displayName: 'Default innovationFlow',
       description: 'Default innovationFlow',
     },
@@ -55,7 +55,7 @@ const innovationFlows: CreateTemplateInput[] = [
     },
   },
   {
-    profile: {
+    profileData: {
       displayName: 'Coordination Flow',
       description:
         'This flow helps you to quickly structure your Challenge when using it for Coordination purposes',
