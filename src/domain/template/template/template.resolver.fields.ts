@@ -7,11 +7,32 @@ import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 import { IInnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.interface';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { ICollaboration } from '@domain/collaboration/collaboration';
+import { IProfile } from '@domain/common/profile';
+import { Loader } from '@core/dataloader/decorators';
+import { ProfileLoaderCreator } from '@core/dataloader/creators';
+import { Template } from './template.entity';
+import { ILoader } from '@core/dataloader/loader.interface';
+import { UseGuards } from '@nestjs/common';
+import { GraphqlGuard } from '@core/authorization';
 
 @Resolver(() => ITemplate)
 export class TemplateResolverFields {
   constructor(private templateService: TemplateService) {}
 
+  @UseGuards(GraphqlGuard)
+  @ResolveField('profile', () => IProfile, {
+    nullable: false,
+    description: 'The Profile for this InnovationFlow.',
+  })
+  async profile(
+    @Parent() template: ITemplate,
+    @Loader(ProfileLoaderCreator, { parentClassRef: Template })
+    loader: ILoader<IProfile>
+  ): Promise<IProfile> {
+    return loader.load(template.id);
+  }
+
+  @UseGuards(GraphqlGuard)
   @ResolveField('innovationFlow', () => IInnovationFlow, {
     nullable: true,
     description: 'The Innovation Flow.',
@@ -25,6 +46,7 @@ export class TemplateResolverFields {
     return this.templateService.getInnovationFlow(template.id);
   }
 
+  @UseGuards(GraphqlGuard)
   @ResolveField('communityGuidelines', () => ICommunityGuidelines, {
     nullable: true,
     description: 'The Community Guidelines for this Template.',
@@ -38,6 +60,7 @@ export class TemplateResolverFields {
     return this.templateService.getCommunityGuidelines(template.id);
   }
 
+  @UseGuards(GraphqlGuard)
   @ResolveField('callout', () => ICallout, {
     nullable: true,
     description: 'The Callout for this Template.',
@@ -49,6 +72,7 @@ export class TemplateResolverFields {
     return this.templateService.getCallout(template.id);
   }
 
+  @UseGuards(GraphqlGuard)
   @ResolveField('whiteboard', () => IWhiteboard, {
     nullable: true,
     description: 'The Whiteboard for this Template.',
@@ -62,6 +86,7 @@ export class TemplateResolverFields {
     return this.templateService.getWhiteboard(template.id);
   }
 
+  @UseGuards(GraphqlGuard)
   @ResolveField('collaboration', () => ICollaboration, {
     nullable: true,
     description: 'The Collaboration for this Template.',

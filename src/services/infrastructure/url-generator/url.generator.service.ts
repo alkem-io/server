@@ -84,6 +84,7 @@ export class UrlGeneratorService {
   }
 
   public async getUrlFromCache(entityId: string): Promise<string | undefined> {
+    return undefined; //!!
     const url = await this.cacheManager.get<string>(
       this.getUrlIdCacheKey(entityId)
     );
@@ -267,6 +268,11 @@ export class UrlGeneratorService {
       case ProfileType.INNOVATION_FLOW:
         return await this.getInnovationFlowUrlPathOrFail(profile.id);
       case ProfileType.TEMPLATE:
+      case ProfileType.CALLOUT_TEMPLATE:
+      case ProfileType.COMMUNITY_GUIDELINES_TEMPLATE:
+      case ProfileType.INNOVATION_FLOW_TEMPLATE:
+      case ProfileType.POST_TEMPLATE:
+      case ProfileType.WHITEBOARD_TEMPLATE:
         return await this.getTemplateUrlPathOrFail(profile.id);
       case ProfileType.INNOVATION_PACK:
         return await this.getInnovationPackUrlPath(profile.id);
@@ -391,7 +397,10 @@ export class UrlGeneratorService {
         LogContext.URL_GENERATOR
       );
     }
-    return await this.getTemplatesSetUrlPathOrFail(template.templatesSet.id);
+    const templatesSetUrl = await this.getTemplatesSetUrlPathOrFail(
+      template.templatesSet.id
+    );
+    return `${templatesSetUrl}/${template.nameID}`;
   }
 
   private async getTemplatesSetUrlPathOrFail(
