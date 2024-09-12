@@ -1,17 +1,17 @@
-import { Column, Entity, Generated } from 'typeorm';
+import { Column, Entity, Generated, Index } from 'typeorm';
 import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
 import { IActivity } from './activity.interface';
 import {
   MESSAGEID_LENGTH,
   MID_TEXT_LENGTH,
   SMALL_TEXT_LENGTH,
-  TINY_TEXT_LENGTH,
   UUID_LENGTH,
 } from '@common/constants';
 import { ActivityEventType } from '@common/enums/activity.event.type';
 
 @Entity()
 export class Activity extends BaseAlkemioEntity implements IActivity {
+  @Index('IDX_0f03c61020ea0dfa0198c60304')
   @Column({
     unique: true,
   })

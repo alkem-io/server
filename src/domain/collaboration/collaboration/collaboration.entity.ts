@@ -1,4 +1,11 @@
-import { Column, Entity, JoinColumn, OneToMany, OneToOne } from 'typeorm';
+import {
+  Column,
+  Entity,
+  Index,
+  JoinColumn,
+  OneToMany,
+  OneToOne,
+} from 'typeorm';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
@@ -17,6 +24,7 @@ export class Collaboration
   })
   callouts?: Callout[];
 
+  @Index('FK_1a135130cde781b69259eec7d85')
   @OneToOne(() => TagsetTemplateSet, {
     eager: false,
     cascade: true,
@@ -24,6 +32,7 @@ export class Collaboration
   @JoinColumn()
   tagsetTemplateSet?: TagsetTemplateSet;
 
+  @Index('FK_3005ed9ce3f57c250c59d6d5065')
   @OneToOne(() => Timeline, {
     eager: false,
     cascade: true,

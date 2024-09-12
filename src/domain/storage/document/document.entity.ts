@@ -1,4 +1,11 @@
-import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
+import {
+  Column,
+  Entity,
+  Index,
+  JoinColumn,
+  ManyToOne,
+  OneToOne,
+} from 'typeorm';
 import { IDocument } from './document.interface';
 import { StorageBucket } from '../storage-bucket/storage.bucket.entity';
 import { MimeFileType } from '@common/enums/mime.file.type';
@@ -10,14 +17,33 @@ import {
   SMALL_TEXT_LENGTH,
   UUID_LENGTH,
 } from '@common/constants';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 
 @Entity()
 export class Document extends AuthorizableEntity implements IDocument {
+  // toDo fix createdBy circular dependency https://app.zenhub.com/workspaces/alkemio-development-5ecb98b262ebd9f4aec4194c/issues/gh/alkem-io/server/4529
   // omitting OneToOne decorator for createdBy to avoid circular dependency
   // needs a redesign to avoid circular dependency
+  // @Index('FK_3337f26ca267009fcf514e0e726')
+  // @OneToOne(() => User, {
+  //   eager: false,
+  //   cascade: true,
+  //   onDelete: 'SET NULL',
+  // })
+  // @JoinColumn()
   @Column('char', { length: UUID_LENGTH, nullable: true })
   createdBy!: string;
 
+  @Index('FK_11155901817dd09d5906537e088')
+  @OneToOne(() => AuthorizationPolicy, {
+    eager: true,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  authorization?: AuthorizationPolicy;
+
+  @Index('FK_11155450cf75dc486700ca034c6')
   @ManyToOne(() => StorageBucket, storage => storage.documents, {
     eager: false,
     cascade: false,
@@ -25,6 +51,7 @@ export class Document extends AuthorizableEntity implements IDocument {
   })
   storageBucket!: StorageBucket;
 
+  @Index('FK_222838434c7198a323ea6f475fb')
   @OneToOne(() => Tagset, {
     eager: true,
     cascade: true,
