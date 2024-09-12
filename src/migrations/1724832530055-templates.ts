@@ -187,6 +187,9 @@ export class Templates1724832530055 implements MigrationInterface {
               '${calloutID}')`
       );
     }
+    await queryRunner.query(
+      `UPDATE \`profile\` SET type = 'template' WHERE type IN ('innovation-flow-template', 'post-template', 'callout-template', 'whiteboard-template', 'community-guidelines-template')`
+    );
 
     await queryRunner.query(
       `ALTER TABLE \`template\` ADD CONSTRAINT \`FK_4318f97beabd362a8a09e9d3203\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
@@ -243,7 +246,7 @@ export class Templates1724832530055 implements MigrationInterface {
       queryRunner,
       'Innovation Flow',
       storageBucketId,
-      'innovation-flow-template-innovation-flow'
+      'innovation-flow'
     );
 
     await queryRunner.query(
@@ -266,7 +269,7 @@ export class Templates1724832530055 implements MigrationInterface {
       queryRunner,
       'Whiteboard',
       storageBucketId,
-      'whiteboard-template-whiteboard'
+      'whiteboard'
     );
 
     await queryRunner.query(

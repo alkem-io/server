@@ -370,6 +370,37 @@ export class TemplateService {
     });
   }
 
+  async getTemplateInTemplatesSetOrFail(
+    templatesSetID: string,
+    templateIdOrNameId: string
+  ): Promise<ITemplate> {
+    let template = await this.templateRepository.findOne({
+      where: {
+        templatesSet: {
+          id: templatesSetID,
+        },
+        nameID: templateIdOrNameId,
+      },
+    });
+    if (!template) {
+      template = await this.templateRepository.findOne({
+        where: {
+          templatesSet: {
+            id: templatesSetID,
+          },
+          id: templateIdOrNameId,
+        },
+      });
+    }
+    if (!template) {
+      throw new EntityNotFoundException(
+        `Templates with ID/NameId(${templatesSetID}) not found!`,
+        LogContext.TEMPLATES
+      );
+    }
+    return template;
+  }
+
   async getCommunityGuidelines(
     templateID: string
   ): Promise<ICommunityGuidelines> {
