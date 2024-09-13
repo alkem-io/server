@@ -2,8 +2,8 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { escapeString } from './utils/escape-string';
 
-export class Templates1724832530055 implements MigrationInterface {
-  name = 'Templates1724832530055';
+export class Templates1726217001134 implements MigrationInterface {
+  name = 'Templates1726217001134';
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
       'CREATE TABLE `template` (`id` char(36) NOT NULL, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `nameID` varchar(36) NOT NULL, `type` varchar(128) NOT NULL, `postDefaultDescription` text NULL, `authorizationId` char(36) NULL, `profileId` char(36) NULL, `templatesSetId` char(36) NULL, `innovationFlowId` char(36) NULL, `communityGuidelinesId` char(36) NULL, `calloutId` char(36) NULL, `whiteboardId` char(36) NULL, `collaborationId` char(36) NULL, UNIQUE INDEX `REL_4318f97beabd362a8a09e9d320` (`authorizationId`), UNIQUE INDEX `REL_f58c3b144b6e010969e199beef` (`profileId`), UNIQUE INDEX `REL_45cf273f30c1fa509456b6b0dd` (`innovationFlowId`), UNIQUE INDEX `REL_eedeae5e63f9a9c3a0161541e9` (`communityGuidelinesId`), UNIQUE INDEX `REL_c6e4d1a07781a809ad3b3ee826` (`calloutId`), UNIQUE INDEX `REL_f09090a77e07377eefb3f731d9` (`whiteboardId`), UNIQUE INDEX `REL_21fdaf6dc88bdd6e8839e29b0b` (`collaborationId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
