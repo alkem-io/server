@@ -20,8 +20,17 @@ import { Agent } from '@domain/agent/agent/agent.entity';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { TemplatesSet } from '@domain/template/templates-set/templates.set.entity';
 import { SpaceDefaults } from '../space.defaults/space.defaults.entity';
+import { Profile } from '@domain/common/profile';
 @Entity()
 export class Space extends NameableEntity implements ISpace {
+  @OneToOne(() => Profile, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  profile!: Profile;
+
   @OneToMany(() => Space, space => space.parentSpace, {
     eager: false,
     cascade: false,

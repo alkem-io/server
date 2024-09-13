@@ -11,6 +11,7 @@ export class InnovationFlow
   @OneToOne(() => Profile, {
     eager: false,
     cascade: true,
+    onDelete: 'SET NULL',
   })
   @JoinColumn()
   profile!: Profile;
