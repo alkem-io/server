@@ -4,6 +4,7 @@ import { CreateTemplateInput } from '@domain/template/template/dto/template.dto.
 
 const posts: CreateTemplateInput[] = [
   {
+    nameID: 'meeting-notes',
     profileData: {
       displayName: '📝 Meeting Notes',
       description:
@@ -15,6 +16,7 @@ const posts: CreateTemplateInput[] = [
       '## 💭 Your meeting insights\n\n📅 **Date:**\n\n*Lets note the date of your interaction for context.*\n\n👥 **Present:**\n\n*Mention who attended or participated in the community activity.*\n\n📝 **Notes:**\n\n*Capture your observations or key takeaways from the community interaction.*\n\n🔁 **Next steps:**\n\n*Describe the specific actions or initiatives you plan to take based on the insights gained during the community interaction, propelling the community forward!*\n',
   },
   {
+    nameID: 'related-initiative',
     profileData: {
       displayName: '👀 Related Initiative',
       description:
@@ -26,6 +28,7 @@ const posts: CreateTemplateInput[] = [
       '👀 **Name of the related initiative**:\n\n*Name/title*\n\n🤝 **Description of the related initiative:**\n\n*Description*\n\n🗻 **Describe the relevane of the related initiative:**\n\n*Explore how these initiatives align with this initiative*\n\n✏️ **Additional information**\n\n*Provide any extra information or context relevant to the initiative*\n',
   },
   {
+    nameID: 'community-needs',
     profileData: {
       displayName: 'Community Needs 👥',
       description:
@@ -40,6 +43,7 @@ const posts: CreateTemplateInput[] = [
 
 const innovationFlows: CreateTemplateInput[] = [
   {
+    nameID: 'default-innovation-flow',
     profileData: {
       displayName: 'Default innovationFlow',
       description: 'Default innovationFlow',
@@ -55,6 +59,7 @@ const innovationFlows: CreateTemplateInput[] = [
     },
   },
   {
+    nameID: 'coordination-flow',
     profileData: {
       displayName: 'Coordination Flow',
       description:
