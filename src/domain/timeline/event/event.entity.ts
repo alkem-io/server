@@ -1,11 +1,4 @@
-import {
-  Column,
-  Entity,
-  Index,
-  JoinColumn,
-  ManyToOne,
-  OneToOne,
-} from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
 import { ICalendarEvent } from './event.interface';
 import { Calendar } from '../calendar/calendar.entity';
 import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
@@ -37,7 +30,6 @@ export class CalendarEvent extends NameableEntity implements ICalendarEvent {
   @JoinColumn()
   comments!: Room;
 
-  @Index('FK_77755450cf75dc486700ca034c6')
   @ManyToOne(() => Calendar, calendar => calendar.events, {
     eager: false,
     cascade: false,

@@ -1,11 +1,4 @@
-import {
-  Column,
-  Entity,
-  Index,
-  JoinColumn,
-  ManyToOne,
-  OneToOne,
-} from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
 import { TemplateBase } from '@domain/template/template-base/template.base.entity';
 import { TemplatesSet } from '@domain/template/templates-set/templates.set.entity';
 import { IInnovationFlowTemplate } from './innovation.flow.template.interface';
@@ -16,7 +9,6 @@ export class InnovationFlowTemplate
   extends TemplateBase
   implements IInnovationFlowTemplate
 {
-  @Index('FK_76546450cf75dc486700ca034c6')
   @ManyToOne(
     () => TemplatesSet,
     templatesSet => templatesSet.innovationFlowTemplates,
@@ -28,7 +20,6 @@ export class InnovationFlowTemplate
   )
   templatesSet?: TemplatesSet;
 
-  @Index('FK_79991450cf75dc486700ca034c6')
   @OneToOne(() => Profile, {
     eager: true,
     cascade: true,
