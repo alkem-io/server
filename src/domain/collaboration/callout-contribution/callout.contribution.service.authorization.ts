@@ -10,7 +10,7 @@ import { EntityNotInitializedException } from '@common/exceptions';
 import { LogContext } from '@common/enums/logging.context';
 import { CommunityPolicyService } from '@domain/community/community-policy/community.policy.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
-import { CommunityRole } from '@common/enums/community.role';
+import { CommunityRoleType } from '@common/enums/community.role';
 import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 import {
   CREDENTIAL_RULE_CONTRIBUTION_ADMINS_MOVE,
@@ -207,7 +207,7 @@ export class CalloutContributionAuthorizationService {
         this.communityPolicyService.getCredentialsForRoleWithParents(
           communityPolicy,
           spaceSettings,
-          CommunityRole.ADMIN
+          CommunityRoleType.ADMIN
         );
       credentials.push(...roleCredentials);
     }

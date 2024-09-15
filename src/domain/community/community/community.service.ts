@@ -17,7 +17,7 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { CommunicationService } from '@domain/communication/communication/communication.service';
 import { ICommunication } from '@domain/communication/communication';
 import { LogContext } from '@common/enums/logging.context';
-import { CommunityRole } from '@common/enums/community.role';
+import { CommunityRoleType } from '@common/enums/community.role';
 import { ICommunityRolePolicy } from '../community-policy/community.policy.role.interface';
 import { ICommunityPolicy } from '../community-policy/community.policy.interface';
 import { CommunityPolicyService } from '../community-policy/community.policy.service';
@@ -430,7 +430,7 @@ export class CommunityService {
 
   public getCommunityPolicyForRole(
     community: ICommunity,
-    role: CommunityRole
+    role: CommunityRoleType
   ): ICommunityRolePolicy {
     const policy = this.getCommunityPolicy(community);
     return this.communityPolicyService.getCommunityRolePolicy(policy, role);

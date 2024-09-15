@@ -22,6 +22,7 @@ export enum AuthorizationPolicyType {
   ROOM = 'room',
   AI_PERSONA = 'ai-persona',
   APPLICATION = 'application',
+  ROLE_MANAGER = 'role-manager',
   COMMUNITY = 'community',
   COMMUNITY_GUIDELINES = 'community-guidelines',
   INVITATION = 'invitation',

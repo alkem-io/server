@@ -10,6 +10,7 @@ import {
   SMALL_TEXT_LENGTH,
   UUID_LENGTH,
 } from '@common/constants';
+import { RoleManager } from '@domain/access/role-manager/role.manager.entity';
 @Entity()
 export class PlatformInvitation
   extends AuthorizableEntity
@@ -22,6 +23,13 @@ export class PlatformInvitation
     onDelete: 'CASCADE',
   })
   community?: Community;
+
+  @ManyToOne(() => RoleManager, manager => manager.platformInvitations, {
+    eager: false,
+    cascade: false,
+    onDelete: 'CASCADE',
+  })
+  roleManager?: RoleManager;
 
   @Column('boolean', { default: false })
   communityInvitedToParent!: boolean;

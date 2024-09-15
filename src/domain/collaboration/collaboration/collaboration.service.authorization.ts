@@ -21,7 +21,7 @@ import {
   CREDENTIAL_RULE_TYPES_CALLOUT_SAVE_AS_TEMPLATE,
   POLICY_RULE_COLLABORATION_WHITEBOARD_CONTRIBUTORS_CREATE,
 } from '@common/constants';
-import { CommunityRole } from '@common/enums/community.role';
+import { CommunityRoleType } from '@common/enums/community.role';
 import { TimelineAuthorizationService } from '@domain/timeline/timeline/timeline.service.authorization';
 import { InnovationFlowAuthorizationService } from '../innovation-flow/innovation.flow.service.authorization';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
@@ -181,7 +181,7 @@ export class CollaborationAuthorizationService {
       this.communityPolicyService.getCredentialsForRole(
         policy,
         spaceSettings,
-        CommunityRole.MEMBER
+        CommunityRoleType.MEMBER
       );
     // optionally add space members
     if (spaceSettings.collaboration.inheritMembershipRights) {
@@ -189,7 +189,7 @@ export class CollaborationAuthorizationService {
         this.communityPolicyService.getCredentialsForRoleWithParents(
           policy,
           spaceSettings,
-          CommunityRole.MEMBER
+          CommunityRoleType.MEMBER
         );
     }
 
@@ -229,7 +229,7 @@ export class CollaborationAuthorizationService {
       const adminCriterias = this.communityPolicyService.getCredentialsForRole(
         policy,
         spaceSettings,
-        CommunityRole.ADMIN
+        CommunityRoleType.ADMIN
       );
       adminCriterias.push({
         type: AuthorizationCredential.GLOBAL_ADMIN,

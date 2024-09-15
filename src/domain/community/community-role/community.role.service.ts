@@ -19,7 +19,7 @@ import { OrganizationService } from '../organization/organization.service';
 import { IOrganization } from '../organization/organization.interface';
 import { IAgent } from '@domain/agent/agent/agent.interface';
 import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
-import { CommunityRole } from '@common/enums/community.role';
+import { CommunityRoleType } from '@common/enums/community.role';
 import { CommunityContributorsUpdateType } from '@common/enums/community.contributors.update.type';
 import { CommunityContributorType } from '@common/enums/community.contributor.type';
 import { ICommunityRolePolicy } from '../community-policy/community.policy.role.interface';
@@ -64,7 +64,7 @@ export class CommunityRoleService {
 
   public async removeAllCommunityRoles(community: ICommunity) {
     // Remove all issued role credentials for contributors
-    for (const role of Object.values(CommunityRole)) {
+    for (const role of Object.values(CommunityRoleType)) {
       const users = await this.getUsersWithRole(community, role);
       for (const user of users) {
         await this.removeUserFromRole(community, user.id, role, false);
@@ -120,12 +120,12 @@ export class CommunityRoleService {
   async getCommunityRoles(
     agentInfo: AgentInfo,
     community: ICommunity
-  ): Promise<CommunityRole[]> {
-    const result: CommunityRole[] = [];
+  ): Promise<CommunityRoleType[]> {
+    const result: CommunityRoleType[] = [];
     const agent = await this.agentService.getAgentOrFail(agentInfo.agentID);
-    const roles: CommunityRole[] = Object.values(
-      CommunityRole
-    ) as CommunityRole[];
+    const roles: CommunityRoleType[] = Object.values(
+      CommunityRoleType
+    ) as CommunityRoleType[];
     for (const role of roles) {
       const hasAgentRole = await this.isInRole(agent, community, role);
       if (hasAgentRole) {
@@ -195,7 +195,7 @@ export class CommunityRoleService {
 
   async getUsersWithRole(
     community: ICommunity,
-    role: CommunityRole,
+    role: CommunityRoleType,
     limit?: number
   ): Promise<IUser[]> {
     const membershipCredential = this.getCredentialDefinitionForRole(
@@ -213,7 +213,7 @@ export class CommunityRoleService {
 
   async getVirtualContributorsWithRole(
     community: ICommunity,
-    role: CommunityRole
+    role: CommunityRoleType
   ): Promise<IVirtualContributor[]> {
     const membershipCredential = this.getCredentialDefinitionForRole(
       community,
@@ -229,7 +229,7 @@ export class CommunityRoleService {
 
   async getOrganizationsWithRole(
     community: ICommunity,
-    role: CommunityRole
+    role: CommunityRoleType
   ): Promise<IOrganization[]> {
     const membershipCredential = this.getCredentialDefinitionForRole(
       community,
@@ -243,7 +243,7 @@ export class CommunityRoleService {
 
   async countContributorsPerRole(
     community: ICommunity,
-    role: CommunityRole,
+    role: CommunityRoleType,
     contributorType: CommunityContributorType
   ): Promise<number> {
     const membershipCredential = this.getCredentialDefinitionForRole(
@@ -270,7 +270,7 @@ export class CommunityRoleService {
 
   getCredentialDefinitionForRole(
     community: ICommunity,
-    role: CommunityRole
+    role: CommunityRoleType
   ): CredentialDefinition {
     const policyRole = this.communityService.getCommunityPolicyForRole(
       community,
@@ -282,7 +282,7 @@ export class CommunityRoleService {
   async assignContributorToRole(
     community: ICommunity,
     contributorID: string,
-    role: CommunityRole,
+    role: CommunityRoleType,
     contributorType: CommunityContributorType,
     agentInfo?: AgentInfo,
     triggerNewMemberEvents = false
@@ -321,7 +321,7 @@ export class CommunityRoleService {
   async assignUserToRole(
     community: ICommunity,
     userID: string,
-    role: CommunityRole,
+    role: CommunityRoleType,
     agentInfo?: AgentInfo,
     triggerNewMemberEvents = false
   ): Promise<IUser> {
@@ -346,7 +346,7 @@ export class CommunityRoleService {
       role,
       CommunityContributorType.USER
     );
-    if (role === CommunityRole.ADMIN && parentCommunity) {
+    if (role === CommunityRoleType.ADMIN && parentCommunity) {
       // also assign as subspace admin in parent community if there is a parent community
       const credential = this.getCredentialForImplicitRole(
         parentCommunity,
@@ -377,11 +377,11 @@ export class CommunityRoleService {
   private async contributorAddedToRole(
     contributor: IContributor,
     community: ICommunity,
-    role: CommunityRole,
+    role: CommunityRoleType,
     agentInfo?: AgentInfo,
     triggerNewMemberEvents = false
   ) {
-    if (role === CommunityRole.MEMBER) {
+    if (role === CommunityRoleType.MEMBER) {
       this.communityService.addMemberToCommunication(contributor, community);
 
       if (agentInfo) {
@@ -413,7 +413,7 @@ export class CommunityRoleService {
   async assignVirtualToRole(
     community: ICommunity,
     virtualContributorID: string,
-    role: CommunityRole,
+    role: CommunityRoleType,
     agentInfo?: AgentInfo,
     triggerNewMemberEvents = false
   ): Promise<IVirtualContributor> {
@@ -495,7 +495,7 @@ export class CommunityRoleService {
   async assignOrganizationToRole(
     community: ICommunity,
     organizationID: string,
-    role: CommunityRole
+    role: CommunityRoleType
   ): Promise<IOrganization> {
     const { organization, agent } =
       await this.organizationService.getOrganizationAndAgent(organizationID);
@@ -513,7 +513,7 @@ export class CommunityRoleService {
   async removeUserFromRole(
     community: ICommunity,
     userID: string,
-    role: CommunityRole,
+    role: CommunityRoleType,
     validatePolicyLimits = true
   ): Promise<IUser> {
     const { user, agent } = await this.userService.getUserAndAgent(userID);
@@ -528,14 +528,14 @@ export class CommunityRoleService {
 
     const parentCommunity =
       await this.communityService.getParentCommunity(community);
-    if (role === CommunityRole.ADMIN && parentCommunity) {
+    if (role === CommunityRoleType.ADMIN && parentCommunity) {
       // Check if an admin anywhere else in the community
       const peerCommunities = await this.communityService.getPeerCommunites(
         parentCommunity,
         community
       );
       const hasAnotherAdminRole = peerCommunities.some(pc =>
-        this.isInRole(agent, pc, CommunityRole.ADMIN)
+        this.isInRole(agent, pc, CommunityRoleType.ADMIN)
       );
 
       if (!hasAnotherAdminRole) {
@@ -547,7 +547,7 @@ export class CommunityRoleService {
       }
     }
 
-    if (role === CommunityRole.MEMBER) {
+    if (role === CommunityRoleType.MEMBER) {
       await this.communityService.removeMemberFromCommunication(
         community,
         user
@@ -560,7 +560,7 @@ export class CommunityRoleService {
   async removeOrganizationFromRole(
     community: ICommunity,
     organizationID: string,
-    role: CommunityRole,
+    role: CommunityRoleType,
     validatePolicyLimits = true
   ): Promise<IOrganization> {
     const { organization, agent } =
@@ -580,7 +580,7 @@ export class CommunityRoleService {
   async removeVirtualFromRole(
     community: ICommunity,
     virtualContributorID: string,
-    role: CommunityRole,
+    role: CommunityRoleType,
     validatePolicyLimits = true
   ): Promise<IVirtualContributor> {
     const { virtualContributor, agent } =
@@ -612,7 +612,7 @@ export class CommunityRoleService {
   private async validateUserCommunityPolicy(
     community: ICommunity,
     communityPolicyRole: ICommunityRolePolicy,
-    role: CommunityRole,
+    role: CommunityRoleType,
     action: CommunityContributorsUpdateType
   ) {
     const userMembersCount = await this.countContributorsPerRole(
@@ -643,7 +643,7 @@ export class CommunityRoleService {
   private async validateOrganizationCommunityPolicy(
     community: ICommunity,
     communityPolicyRole: ICommunityRolePolicy,
-    role: CommunityRole,
+    role: CommunityRoleType,
     action: CommunityContributorsUpdateType
   ) {
     const orgMemberCount = await this.countContributorsPerRole(
@@ -674,7 +674,7 @@ export class CommunityRoleService {
   private async validateCommunityPolicyLimits(
     community: ICommunity,
     communityPolicyRole: ICommunityRolePolicy,
-    role: CommunityRole,
+    role: CommunityRoleType,
     action: CommunityContributorsUpdateType,
     contributorType: CommunityContributorType
   ) {
@@ -698,7 +698,7 @@ export class CommunityRoleService {
   public async assignContributorAgentToRole(
     community: ICommunity,
     agent: IAgent,
-    role: CommunityRole,
+    role: CommunityRoleType,
     contributorType: CommunityContributorType
   ): Promise<IAgent> {
     const communityPolicyRole = this.communityService.getCommunityPolicyForRole(
@@ -755,7 +755,7 @@ export class CommunityRoleService {
     // Use the admin credential to get the resourceID
     const adminCredential = this.getCredentialDefinitionForRole(
       community,
-      CommunityRole.ADMIN
+      CommunityRoleType.ADMIN
     );
     const resourceID = adminCredential.resourceID;
     switch (role) {
@@ -776,7 +776,7 @@ export class CommunityRoleService {
   private async removeContributorFromRole(
     community: ICommunity,
     agent: IAgent,
-    role: CommunityRole,
+    role: CommunityRoleType,
     contributorType: CommunityContributorType,
     validatePolicyLimits: boolean
   ): Promise<IAgent> {
@@ -804,7 +804,7 @@ export class CommunityRoleService {
   async isMember(agent: IAgent, community: ICommunity): Promise<boolean> {
     const membershipCredential = this.getCredentialDefinitionForRole(
       community,
-      CommunityRole.MEMBER
+      CommunityRoleType.MEMBER
     );
 
     const validCredential = await this.agentService.hasValidCredential(
@@ -820,7 +820,7 @@ export class CommunityRoleService {
   async isInRole(
     agent: IAgent,
     community: ICommunity,
-    role: CommunityRole
+    role: CommunityRoleType
   ): Promise<boolean> {
     const membershipCredential = this.getCredentialDefinitionForRole(
       community,
@@ -1065,7 +1065,7 @@ export class CommunityRoleService {
   async getMembersCount(community: ICommunity): Promise<number> {
     const membershipCredential = this.getCredentialDefinitionForRole(
       community,
-      CommunityRole.MEMBER
+      CommunityRoleType.MEMBER
     );
 
     const credentialMatches =

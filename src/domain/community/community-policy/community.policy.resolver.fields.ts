@@ -1,5 +1,5 @@
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { CommunityRole } from '@common/enums/community.role';
+import { CommunityRoleType } from '@common/enums/community.role';
 import { ICommunityPolicy } from './community.policy.interface';
 import { CommunityPolicyService } from './community.policy.service';
 import { ICommunityRolePolicy } from './community.policy.role.interface';
@@ -15,7 +15,7 @@ export class CommunityPolicyResolverFields {
   member(@Parent() communityPolicy: ICommunityPolicy): ICommunityRolePolicy {
     return this.communityPolicyService.getCommunityRolePolicy(
       communityPolicy,
-      CommunityRole.MEMBER
+      CommunityRoleType.MEMBER
     );
   }
 
@@ -26,7 +26,7 @@ export class CommunityPolicyResolverFields {
   lead(@Parent() communityPolicy: ICommunityPolicy): ICommunityRolePolicy {
     return this.communityPolicyService.getCommunityRolePolicy(
       communityPolicy,
-      CommunityRole.LEAD
+      CommunityRoleType.LEAD
     );
   }
 
@@ -37,7 +37,7 @@ export class CommunityPolicyResolverFields {
   admin(@Parent() communityPolicy: ICommunityPolicy): ICommunityRolePolicy {
     return this.communityPolicyService.getCommunityRolePolicy(
       communityPolicy,
-      CommunityRole.ADMIN
+      CommunityRoleType.ADMIN
     );
   }
 }

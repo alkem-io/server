@@ -21,7 +21,7 @@ import { AgentBeginVerifiedCredentialOfferOutput } from '@domain/agent/agent/dto
 import { AlkemioUserClaim } from '@services/external/trust-registry/trust.registry.claim/claim.alkemio.user';
 import { RemoveCommunityRoleFromOrganizationInput } from './dto/community.role.dto.role.remove.organization';
 import { AssignCommunityRoleToOrganizationInput } from './dto/community.role.dto.role.assign.organization';
-import { CommunityRole } from '@common/enums/community.role';
+import { CommunityRoleType } from '@common/enums/community.role';
 import { AssignCommunityRoleToUserInput } from './dto/community.role.dto.role.assign.user';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { NotificationInputCommunityApplication } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.application';
@@ -95,7 +95,7 @@ export class CommunityRoleResolverMutations {
     );
 
     let requiredPrivilege = AuthorizationPrivilege.GRANT;
-    if (roleData.role === CommunityRole.MEMBER) {
+    if (roleData.role === CommunityRoleType.MEMBER) {
       requiredPrivilege = AuthorizationPrivilege.COMMUNITY_ADD_MEMBER;
     }
 
@@ -164,7 +164,7 @@ export class CommunityRoleResolverMutations {
     );
 
     let requiredPrivilege = AuthorizationPrivilege.GRANT;
-    if (roleData.role === CommunityRole.MEMBER) {
+    if (roleData.role === CommunityRoleType.MEMBER) {
       const sameAccount =
         await this.communityRoleService.isCommunityAccountMatchingVcAccount(
           community.id,
@@ -348,7 +348,7 @@ export class CommunityRoleResolverMutations {
       const userIsMemberInParent = await this.communityRoleService.isInRole(
         agent,
         community.parentCommunity,
-        CommunityRole.MEMBER
+        CommunityRoleType.MEMBER
       );
       if (!userIsMemberInParent) {
         throw new CommunityMembershipException(
@@ -664,7 +664,7 @@ export class CommunityRoleResolverMutations {
     await this.communityRoleService.assignUserToRole(
       community,
       agentInfo.userID,
-      CommunityRole.MEMBER,
+      CommunityRoleType.MEMBER,
       agentInfo,
       true
     );

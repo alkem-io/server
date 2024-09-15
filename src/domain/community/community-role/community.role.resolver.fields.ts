@@ -11,7 +11,7 @@ import { IUser } from '@domain/community/user/user.interface';
 import { IApplication } from '@domain/community/application';
 import { AuthorizationPrivilege } from '@common/enums';
 import { IOrganization } from '../organization';
-import { CommunityRole } from '@common/enums/community.role';
+import { CommunityRoleType } from '@common/enums/community.role';
 import { PaginationArgs, PaginatedUsers } from '@core/pagination';
 import { PaginationInputOutOfBoundException } from '@common/exceptions';
 import { UserService } from '../user/user.service';
@@ -59,7 +59,7 @@ export class CommunityResolverFields {
 
     return await this.communityRoleService.getUsersWithRole(
       community,
-      CommunityRole.MEMBER,
+      CommunityRoleType.MEMBER,
       limit
     );
   }
@@ -79,7 +79,7 @@ export class CommunityResolverFields {
     const memberRoleCredentials =
       this.communityRoleService.getCredentialDefinitionForRole(
         community,
-        CommunityRole.MEMBER
+        CommunityRoleType.MEMBER
       );
 
     const parentCommunity =
@@ -88,7 +88,7 @@ export class CommunityResolverFields {
     const parentCommunityMemberCredentials = parentCommunity
       ? this.communityRoleService.getCredentialDefinitionForRole(
           parentCommunity,
-          CommunityRole.MEMBER
+          CommunityRoleType.MEMBER
         )
       : undefined;
 
@@ -113,8 +113,8 @@ export class CommunityResolverFields {
   @Profiling.api
   async usersInRole(
     @Parent() community: Community,
-    @Args('role', { type: () => CommunityRole, nullable: false })
-    role: CommunityRole
+    @Args('role', { type: () => CommunityRoleType, nullable: false })
+    role: CommunityRoleType
   ) {
     return await this.communityRoleService.getUsersWithRole(community, role);
   }
@@ -129,8 +129,8 @@ export class CommunityResolverFields {
   @Profiling.api
   async organizationsInRole(
     @Parent() community: Community,
-    @Args('role', { type: () => CommunityRole, nullable: false })
-    role: CommunityRole
+    @Args('role', { type: () => CommunityRoleType, nullable: false })
+    role: CommunityRoleType
   ): Promise<IOrganization[]> {
     return await this.communityRoleService.getOrganizationsWithRole(
       community,
@@ -147,8 +147,8 @@ export class CommunityResolverFields {
   @Profiling.api
   async virtualsInRole(
     @Parent() community: Community,
-    @Args('role', { type: () => CommunityRole, nullable: false })
-    role: CommunityRole
+    @Args('role', { type: () => CommunityRoleType, nullable: false })
+    role: CommunityRoleType
   ) {
     return await this.communityRoleService.getVirtualContributorsWithRole(
       community,
@@ -172,13 +172,13 @@ export class CommunityResolverFields {
     const memberRoleCredentials =
       this.communityRoleService.getCredentialDefinitionForRole(
         community,
-        CommunityRole.MEMBER
+        CommunityRoleType.MEMBER
       );
 
     const leadRoleCredential =
       this.communityRoleService.getCredentialDefinitionForRole(
         community,
-        CommunityRole.LEAD
+        CommunityRoleType.LEAD
       );
 
     const credentialCriteria = {
@@ -243,7 +243,7 @@ export class CommunityResolverFields {
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField('myRoles', () => [CommunityRole], {
+  @ResolveField('myRoles', () => [CommunityRoleType], {
     nullable: false,
     description:
       'The roles on this community for the currently logged in user.',
@@ -251,7 +251,7 @@ export class CommunityResolverFields {
   async myRoles(
     @CurrentUser() agentInfo: AgentInfo,
     @Parent() community: ICommunity
-  ): Promise<CommunityRole[]> {
+  ): Promise<CommunityRoleType[]> {
     return this.communityRoleService.getCommunityRoles(agentInfo, community);
   }
 

@@ -8,7 +8,7 @@ import {
   EntityNotInitializedException,
   ValidationException,
 } from '@common/exceptions';
-import { CommunityRole } from '@common/enums/community.role';
+import { CommunityRoleType } from '@common/enums/community.role';
 import { IOrganization } from '@domain/community/organization/organization.interface';
 import { IUser } from '@domain/community/user/user.interface';
 import { ICommunity } from '@domain/community/community/community.interface';
@@ -84,7 +84,7 @@ export class ConversionService {
     const challengeCommunityLeadOrgs =
       await this.communityRoleService.getOrganizationsWithRole(
         subspace.community,
-        CommunityRole.LEAD
+        CommunityRoleType.LEAD
       );
     if (challengeCommunityLeadOrgs.length !== 1) {
       throw new ValidationException(
@@ -130,15 +130,15 @@ export class ConversionService {
 
     const userMembers = await this.communityRoleService.getUsersWithRole(
       space.community,
-      CommunityRole.MEMBER
+      CommunityRoleType.MEMBER
     );
     const userLeads = await this.communityRoleService.getUsersWithRole(
       space.community,
-      CommunityRole.LEAD
+      CommunityRoleType.LEAD
     );
     const orgMembers = await this.communityRoleService.getOrganizationsWithRole(
       space.community,
-      CommunityRole.MEMBER
+      CommunityRoleType.MEMBER
     );
 
     // Remove the contributors from old roles
@@ -153,7 +153,7 @@ export class ConversionService {
     await this.communityRoleService.removeUserFromRole(
       space.community,
       agentInfo.userID,
-      CommunityRole.MEMBER
+      CommunityRoleType.MEMBER
     );
 
     // Swap the communications
@@ -307,19 +307,19 @@ export class ConversionService {
 
     const userMembers = await this.communityRoleService.getUsersWithRole(
       subsubspace.community,
-      CommunityRole.MEMBER
+      CommunityRoleType.MEMBER
     );
     const userLeads = await this.communityRoleService.getUsersWithRole(
       subsubspace.community,
-      CommunityRole.LEAD
+      CommunityRoleType.LEAD
     );
     const orgMembers = await this.communityRoleService.getOrganizationsWithRole(
       subsubspace.community,
-      CommunityRole.MEMBER
+      CommunityRoleType.MEMBER
     );
     const orgLeads = await this.communityRoleService.getOrganizationsWithRole(
       subsubspace.community,
-      CommunityRole.LEAD
+      CommunityRoleType.LEAD
     );
 
     // Remove the contributors from old roles
@@ -335,12 +335,12 @@ export class ConversionService {
     await this.communityRoleService.removeUserFromRole(
       subspace.community,
       agentInfo.userID,
-      CommunityRole.MEMBER
+      CommunityRoleType.MEMBER
     );
     await this.communityRoleService.removeUserFromRole(
       subspace.community,
       agentInfo.userID,
-      CommunityRole.LEAD
+      CommunityRoleType.LEAD
     );
 
     // Swap the communication
@@ -528,28 +528,28 @@ export class ConversionService {
       await this.communityRoleService.removeUserFromRole(
         community,
         userMember.id,
-        CommunityRole.MEMBER
+        CommunityRoleType.MEMBER
       );
     }
     for (const userLead of userLeads) {
       await this.communityRoleService.removeUserFromRole(
         community,
         userLead.id,
-        CommunityRole.LEAD
+        CommunityRoleType.LEAD
       );
     }
     for (const orgMember of orgMembers) {
       await this.communityRoleService.removeOrganizationFromRole(
         community,
         orgMember.id,
-        CommunityRole.MEMBER
+        CommunityRoleType.MEMBER
       );
     }
     for (const orgLead of orgLeads) {
       await this.communityRoleService.removeOrganizationFromRole(
         community,
         orgLead.id,
-        CommunityRole.LEAD
+        CommunityRoleType.LEAD
       );
     }
   }
@@ -565,21 +565,21 @@ export class ConversionService {
       await this.communityRoleService.assignUserToRole(
         community,
         userMember.id,
-        CommunityRole.MEMBER
+        CommunityRoleType.MEMBER
       );
     }
     for (const userLead of userLeads) {
       await this.communityRoleService.assignUserToRole(
         community,
         userLead.id,
-        CommunityRole.LEAD
+        CommunityRoleType.LEAD
       );
     }
     for (const orgMember of orgMembers) {
       await this.communityRoleService.assignOrganizationToRole(
         community,
         orgMember.id,
-        CommunityRole.MEMBER
+        CommunityRoleType.MEMBER
       );
     }
     if (orgLeads) {
@@ -587,7 +587,7 @@ export class ConversionService {
         await this.communityRoleService.assignOrganizationToRole(
           community,
           orgLead.id,
-          CommunityRole.LEAD
+          CommunityRoleType.LEAD
         );
       }
     }

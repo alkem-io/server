@@ -7,7 +7,7 @@ import { EntityNotInitializedException } from '@common/exceptions';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
-import { CommunityRole } from '@common/enums/community.role';
+import { CommunityRoleType } from '@common/enums/community.role';
 import { InvitationService } from '../invitation/invitation.service';
 import { InvitationEventInput } from '../invitation/dto/invitation.dto.event';
 import { IInvitation } from '../invitation';
@@ -28,9 +28,8 @@ export class CommunityRoleInvitationLifecycleOptionsProvider {
     agentInfo: AgentInfo
   ): Promise<IInvitation> {
     const invitationID = invitationEventData.invitationID;
-    const invitation = await this.invitationService.getInvitationOrFail(
-      invitationID
-    );
+    const invitation =
+      await this.invitationService.getInvitationOrFail(invitationID);
 
     if (!invitation.lifecycle)
       throw new EntityNotInitializedException(
@@ -114,7 +113,7 @@ export class CommunityRoleInvitationLifecycleOptionsProvider {
               await this.communityRoleService.assignContributorToRole(
                 community.parentCommunity,
                 contributorID,
-                CommunityRole.MEMBER,
+                CommunityRoleType.MEMBER,
                 invitation.contributorType,
                 event.agentInfo,
                 true
@@ -123,7 +122,7 @@ export class CommunityRoleInvitationLifecycleOptionsProvider {
             await this.communityRoleService.assignContributorToRole(
               community,
               contributorID,
-              CommunityRole.MEMBER,
+              CommunityRoleType.MEMBER,
               invitation.contributorType,
               event.agentInfo,
               true

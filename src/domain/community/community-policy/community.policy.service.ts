@@ -1,4 +1,4 @@
-import { CommunityRole } from '@common/enums/community.role';
+import { CommunityRoleType } from '@common/enums/community.role';
 import { LogContext } from '@common/enums/logging.context';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
@@ -43,14 +43,14 @@ export class CommunityPolicyService {
 
   public getCommunityRolePolicy(
     policy: ICommunityPolicy,
-    role: CommunityRole
+    role: CommunityRoleType
   ): ICommunityRolePolicy {
     switch (role) {
-      case CommunityRole.MEMBER:
+      case CommunityRoleType.MEMBER:
         return this.deserializeRolePolicy(policy.member);
-      case CommunityRole.LEAD:
+      case CommunityRoleType.LEAD:
         return this.deserializeRolePolicy(policy.lead);
-      case CommunityRole.ADMIN:
+      case CommunityRoleType.ADMIN:
         return this.deserializeRolePolicy(policy.admin);
       default:
         throw new EntityNotInitializedException(
@@ -62,7 +62,7 @@ export class CommunityPolicyService {
 
   getDirectParentCredentialForRole(
     policy: ICommunityPolicy,
-    role: CommunityRole
+    role: CommunityRoleType
   ): ICredentialDefinition | undefined {
     const rolePolicy = this.getCommunityRolePolicy(policy, role);
 
@@ -76,7 +76,7 @@ export class CommunityPolicyService {
 
   public getParentCredentialsForRole(
     policy: ICommunityPolicy,
-    role: CommunityRole
+    role: CommunityRoleType
   ): ICredentialDefinition[] {
     const rolePolicy = this.getCommunityRolePolicy(policy, role);
 
@@ -86,7 +86,7 @@ export class CommunityPolicyService {
   public getCredentialsForRoleWithParents(
     policy: ICommunityPolicy,
     spaceSettings: ISpaceSettings,
-    role: CommunityRole
+    role: CommunityRoleType
   ): ICredentialDefinition[] {
     const result = this.getCredentialsForRole(policy, spaceSettings, role);
     return result.concat(this.getParentCredentialsForRole(policy, role));
@@ -95,11 +95,11 @@ export class CommunityPolicyService {
   public getCredentialsForRole(
     policy: ICommunityPolicy,
     spaceSettings: ISpaceSettings,
-    role: CommunityRole
+    role: CommunityRoleType
   ): ICredentialDefinition[] {
     const result = [this.getCredentialForRole(policy, role)];
     if (
-      role === CommunityRole.ADMIN &&
+      role === CommunityRoleType.ADMIN &&
       spaceSettings.privacy.allowPlatformSupportAsAdmin
     ) {
       result.push({
@@ -112,7 +112,7 @@ export class CommunityPolicyService {
 
   public getCredentialForRole(
     policy: ICommunityPolicy,
-    role: CommunityRole
+    role: CommunityRoleType
   ): ICredentialDefinition {
     const rolePolicy = this.getCommunityRolePolicy(policy, role);
     return rolePolicy.credential;

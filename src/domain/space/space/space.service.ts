@@ -53,7 +53,7 @@ import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
 import { SpaceSettingsService } from '../space.settings/space.settings.service';
 import { UpdateSpaceSettingsEntityInput } from '../space.settings/dto/space.settings.dto.update';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { CommunityRole } from '@common/enums/community.role';
+import { CommunityRoleType } from '@common/enums/community.role';
 import { SpaceLevel } from '@common/enums/space.level';
 import { UpdateSpaceSettingsInput } from './dto/space.dto.update.settings';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
@@ -982,7 +982,7 @@ export class SpaceService {
   public async assignContributorToRole(
     space: ISpace,
     contributor: IContributor,
-    role: CommunityRole,
+    role: CommunityRoleType,
     type: CommunityContributorType
   ) {
     if (!space.community) {
@@ -1032,21 +1032,21 @@ export class SpaceService {
       await this.communityRoleService.assignUserToRole(
         space.community,
         agentInfo.userID,
-        CommunityRole.MEMBER,
+        CommunityRoleType.MEMBER,
         agentInfo
       );
 
       await this.communityRoleService.assignUserToRole(
         space.community,
         agentInfo.userID,
-        CommunityRole.LEAD,
+        CommunityRoleType.LEAD,
         agentInfo
       );
 
       await this.communityRoleService.assignUserToRole(
         space.community,
         agentInfo.userID,
-        CommunityRole.ADMIN,
+        CommunityRoleType.ADMIN,
         agentInfo
       );
     }

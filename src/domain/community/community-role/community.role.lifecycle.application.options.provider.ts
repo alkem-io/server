@@ -12,7 +12,7 @@ import { EntityNotInitializedException } from '@common/exceptions';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
-import { CommunityRole } from '@common/enums/community.role';
+import { CommunityRoleType } from '@common/enums/community.role';
 import { CommunityRoleService } from './community.role.service';
 
 @Injectable()
@@ -30,9 +30,8 @@ export class CommunityRoleApplicationLifecycleOptionsProvider {
     agentInfo: AgentInfo
   ): Promise<IApplication> {
     const applicationID = applicationEventData.applicationID;
-    const application = await this.applicationService.getApplicationOrFail(
-      applicationID
-    );
+    const application =
+      await this.applicationService.getApplicationOrFail(applicationID);
 
     if (!application.lifecycle)
       throw new EntityNotInitializedException(
@@ -80,7 +79,7 @@ export class CommunityRoleApplicationLifecycleOptionsProvider {
         await this.communityRoleService.assignUserToRole(
           community,
           userID,
-          CommunityRole.MEMBER,
+          CommunityRoleType.MEMBER,
           event.agentInfo,
           true
         );

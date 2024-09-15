@@ -18,7 +18,7 @@ import { CollaborationAuthorizationService } from '@domain/collaboration/collabo
 import { ContextAuthorizationService } from '@domain/context/context/context.service.authorization';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
-import { CommunityRole } from '@common/enums/community.role';
+import { CommunityRoleType } from '@common/enums/community.role';
 import {
   POLICY_RULE_SPACE_CREATE_SUBSPACE,
   CREDENTIAL_RULE_SPACE_MEMBERS_READ,
@@ -120,7 +120,7 @@ export class SpaceAuthorizationService {
         this.communityPolicyService.getCredentialsForRole(
           parentCommunityPolicyWithSettings,
           spaceSettings,
-          CommunityRole.ADMIN
+          CommunityRoleType.ADMIN
         );
     }
 
@@ -393,7 +393,7 @@ export class SpaceAuthorizationService {
     const memberCriteras = this.communityPolicyService.getCredentialsForRole(
       policy,
       spaceSettings,
-      CommunityRole.MEMBER
+      CommunityRoleType.MEMBER
     );
     const spaceMember = this.authorizationPolicyService.createCredentialRule(
       [AuthorizationPrivilege.READ],
@@ -406,7 +406,7 @@ export class SpaceAuthorizationService {
       this.communityPolicyService.getCredentialsForRole(
         policy,
         spaceSettings,
-        CommunityRole.ADMIN
+        CommunityRoleType.ADMIN
       );
     const spaceAdmin = this.authorizationPolicyService.createCredentialRule(
       [
@@ -460,7 +460,7 @@ export class SpaceAuthorizationService {
     const memberCriteria = this.communityPolicyService.getCredentialsForRole(
       policy,
       spaceSettings,
-      CommunityRole.MEMBER
+      CommunityRoleType.MEMBER
     );
     const collaborationSettings = spaceSettings.collaboration;
     if (
@@ -470,7 +470,7 @@ export class SpaceAuthorizationService {
       const parentCredential =
         this.communityPolicyService.getDirectParentCredentialForRole(
           policy,
-          CommunityRole.MEMBER
+          CommunityRoleType.MEMBER
         );
       if (parentCredential) memberCriteria.push(parentCredential);
     }
@@ -493,7 +493,7 @@ export class SpaceAuthorizationService {
       ...this.communityPolicyService.getCredentialsForRoleWithParents(
         policy,
         spaceSettings,
-        CommunityRole.ADMIN
+        CommunityRoleType.ADMIN
       ),
     ];
     const subspaceSpaceAdmins =

@@ -17,7 +17,7 @@ import {
 } from '@common/constants';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 import { RoomAuthorizationService } from '@domain/communication/room/room.service.authorization';
-import { CommunityRole } from '@common/enums/community.role';
+import { CommunityRoleType } from '@common/enums/community.role';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
@@ -129,7 +129,7 @@ export class PostAuthorizationService {
         this.communityPolicyService.getCredentialsForRoleWithParents(
           communityPolicy,
           spaceSettings,
-          CommunityRole.ADMIN
+          CommunityRoleType.ADMIN
         );
       credentials.push(...roleCredentials);
     }
