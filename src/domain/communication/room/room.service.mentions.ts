@@ -51,7 +51,7 @@ export class RoomServiceMentions {
 
     // The ID of the actual community where the question is being asked
     const space =
-      await this.communityResolverService.getSpaceForCommunityOrFail(
+      await this.communityResolverService.getSpaceForRoleManagerOrFail(
         community.id
       );
     return space.id;

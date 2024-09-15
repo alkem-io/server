@@ -27,7 +27,6 @@ import { SpacesQueryArgs } from './dto/space.args.query.spaces';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { SpaceFilterService } from '@services/infrastructure/space-filter/space.filter.service';
 import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
-import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { InnovationHub, InnovationHubType } from '@domain/innovation-hub/types';
 import { OperationNotAllowedException } from '@common/exceptions/operation.not.allowed.exception';
@@ -80,6 +79,7 @@ import { CreateInnovationFlowInput } from '@domain/collaboration/innovation-flow
 import { TemplateService } from '@domain/template/template/template.service';
 import { templatesSetDefaults } from '../space.defaults/definitions/space.defaults.templates';
 import { InputCreatorService } from '@services/api/input-creator/input.creator.service';
+import { RoleManagerService } from '@domain/access/role-manager/role.manager.service';
 
 @Injectable()
 export class SpaceService {
@@ -101,6 +101,7 @@ export class SpaceService {
     private licensingService: LicensingService,
     private licenseEngineService: LicenseEngineService,
     private templateService: TemplateService,
+    private roleManagerService: RoleManagerService,
     private inputCreatorService: InputCreatorService,
     @InjectRepository(Space)
     private spaceRepository: Repository<Space>,
@@ -158,16 +159,19 @@ export class SpaceService {
       );
     space.storageAggregator = storageAggregator;
 
-    const communityPolicy = this.spaceDefaultsService.getCommunityPolicy(
-      space.level
-    );
+    const roleManagerRolesData =
+      this.spaceDefaultsService.getRoleManagerCommunityRoles(space.level);
     const applicationFormData =
-      this.spaceDefaultsService.getCommunityApplicationForm(space.level);
+      this.spaceDefaultsService.getRoleManagerCommunityApplicationForm(
+        space.level
+      );
 
     const communityData: CreateCommunityInput = {
       name: spaceData.profileData.displayName,
-      policy: communityPolicy,
-      applicationForm: applicationFormData,
+      roleManagerData: {
+        roles: roleManagerRolesData,
+        applicationForm: applicationFormData,
+      },
       guidelines: {
         // TODO: get this from defaults service
         profile: {
@@ -253,12 +257,17 @@ export class SpaceService {
 
     ////// Community
     // set immediate community parent + resourceID
-    space.community.parentID = space.id;
-    space.community.policy =
-      this.communityService.updateCommunityPolicyResourceID(
-        space.community,
-        space.id
+    if (!space.community || !space.community.roleManager) {
+      throw new RelationshipNotFoundException(
+        `Unable to load community with role manager: ${space.id}`,
+        LogContext.SPACES
       );
+    }
+    space.community.parentID = space.id;
+    space.community.roleManager = this.roleManagerService.updateRoleResourceID(
+      space.community.roleManager,
+      space.id
+    );
 
     return space;
   }
@@ -1000,8 +1009,8 @@ export class SpaceService {
 
     await this.communityRoleService.assignContributorAgentToRole(
       space.community,
-      contributor.agent,
       role,
+      contributor.agent,
       type
     );
   }
@@ -1031,22 +1040,22 @@ export class SpaceService {
     if (agentInfo) {
       await this.communityRoleService.assignUserToRole(
         space.community,
-        agentInfo.userID,
         CommunityRoleType.MEMBER,
+        agentInfo.userID,
         agentInfo
       );
 
       await this.communityRoleService.assignUserToRole(
         space.community,
-        agentInfo.userID,
         CommunityRoleType.LEAD,
+        agentInfo.userID,
         agentInfo
       );
 
       await this.communityRoleService.assignUserToRole(
         space.community,
-        agentInfo.userID,
         CommunityRoleType.ADMIN,
+        agentInfo.userID,
         agentInfo
       );
     }
@@ -1340,11 +1349,6 @@ export class SpaceService {
       );
     }
     return provider;
-  }
-
-  public async getCommunityPolicy(spaceId: string): Promise<ICommunityPolicy> {
-    const community = await this.getCommunity(spaceId);
-    return this.communityService.getCommunityPolicy(community);
   }
 
   public async getContext(spaceID: string): Promise<IContext> {

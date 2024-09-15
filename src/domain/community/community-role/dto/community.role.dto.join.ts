@@ -7,5 +7,5 @@ import { UUID_LENGTH } from '@common/constants';
 export class CommunityJoinInput {
   @Field(() => UUID, { nullable: false })
   @MaxLength(UUID_LENGTH)
-  communityID!: string;
+  roleManagerID!: string;
 }

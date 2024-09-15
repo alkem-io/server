@@ -7,7 +7,7 @@ import { MID_TEXT_LENGTH, UUID_LENGTH } from '@common/constants';
 export class CreateInvitationForContributorsOnCommunityInput {
   @Field(() => UUID, { nullable: false })
   @MaxLength(UUID_LENGTH)
-  communityID!: string;
+  roleManagerID!: string;
 
   @Field(() => [UUID], {
     nullable: false,

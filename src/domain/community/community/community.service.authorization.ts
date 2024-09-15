@@ -10,7 +10,6 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
 import { CommunicationAuthorizationService } from '@domain/communication/communication/communication.service.authorization';
-import { ApplicationAuthorizationService } from '../application/application.service.authorization';
 import { AuthorizationPolicyRuleVerifiedCredential } from '@core/authorization/authorization.policy.rule.verified.credential';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
@@ -29,22 +28,21 @@ import {
   CREDENTIAL_RULE_SUBSPACE_PARENT_MEMBER_JOIN,
   CREDENTIAL_RULE_COMMUNITY_ADD_MEMBER,
 } from '@common/constants';
-import { InvitationAuthorizationService } from '../invitation/invitation.service.authorization';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { CommunityGuidelinesAuthorizationService } from '../community-guidelines/community.guidelines.service.authorization';
-import { CommunityPolicyService } from '../community-policy/community.policy.service';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
-import { ICommunityPolicy } from '../community-policy/community.policy.interface';
 import { CommunityRoleType } from '@common/enums/community.role';
 import { LicenseEngineService } from '@core/license-engine/license.engine.service';
 import { LicensePrivilege } from '@common/enums/license.privilege';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { IAgent } from '@domain/agent';
-import { PlatformInvitationAuthorizationService } from '@platform/invitation/platform.invitation.service.authorization';
 import { VirtualContributorService } from '../virtual-contributor/virtual.contributor.service';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
+import { RoleManagerAuthorizationService } from '@domain/access/role-manager/role.manager.service.authorization';
+import { RoleManagerService } from '@domain/access/role-manager/role.manager.service';
+import { IRoleManager } from '@domain/access/role-manager';
 
 @Injectable()
 export class CommunityAuthorizationService {
@@ -54,35 +52,29 @@ export class CommunityAuthorizationService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private userGroupAuthorizationService: UserGroupAuthorizationService,
     private communicationAuthorizationService: CommunicationAuthorizationService,
-    private applicationAuthorizationService: ApplicationAuthorizationService,
-    private invitationAuthorizationService: InvitationAuthorizationService,
-    private communityPolicyService: CommunityPolicyService,
     private virtualContributorService: VirtualContributorService,
-    private platformInvitationAuthorizationService: PlatformInvitationAuthorizationService,
+    private roleManagerService: RoleManagerService,
+    private roleManagerAuthorizationService: RoleManagerAuthorizationService,
     private communityGuidelinesAuthorizationService: CommunityGuidelinesAuthorizationService
   ) {}
 
   async applyAuthorizationPolicy(
-    communityInput: ICommunity,
+    communityID: string,
     parentAuthorization: IAuthorizationPolicy,
     levelZeroSpaceAgent: IAgent,
-    communityPolicy: ICommunityPolicy,
     spaceSettings: ISpaceSettings,
     spaceMembershipAllowed: boolean,
     isSubspace: boolean
   ): Promise<IAuthorizationPolicy[]> {
     const community = await this.communityService.getCommunityOrFail(
-      communityInput.id,
+      communityID,
       {
         relations: {
           communication: {
             updates: true,
           },
-          policy: true,
+          roleManager: true,
           groups: true,
-          applications: true,
-          invitations: true,
-          platformInvitations: true,
           guidelines: {
             profile: true,
           },
@@ -92,11 +84,8 @@ export class CommunityAuthorizationService {
     if (
       !community.communication ||
       !community.communication.updates ||
-      !community.policy ||
-      !community.groups ||
-      !community.applications ||
-      !community.invitations ||
-      !community.platformInvitations
+      !community.roleManager ||
+      !community.groups
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load child entities for community authorization: ${community.id} `,
@@ -119,7 +108,7 @@ export class CommunityAuthorizationService {
       community.authorization,
       parentAuthorization?.anonymousReadAccess,
       levelZeroSpaceAgent,
-      communityPolicy,
+      community.roleManager,
       spaceSettings
     );
     community.authorization = this.appendVerifiedCredentialRules(
@@ -128,14 +117,14 @@ export class CommunityAuthorizationService {
     if (spaceMembershipAllowed) {
       community.authorization = this.extendCommunityAuthorizationPolicySpace(
         community.authorization,
-        communityPolicy,
+        community.roleManager,
         spaceSettings
       );
     }
     if (isSubspace) {
       community.authorization = this.extendAuthorizationPolicySubspace(
         community.authorization,
-        communityPolicy,
+        community.roleManager,
         spaceSettings
       );
     }
@@ -162,32 +151,16 @@ export class CommunityAuthorizationService {
       updatedAuthorizations.push(...groupAuthorizations);
     }
 
-    for (const application of community.applications) {
-      const applicationAuthReset =
-        await this.applicationAuthorizationService.applyAuthorizationPolicy(
-          application,
-          community.authorization
-        );
-      application.authorization = applicationAuthReset;
-    }
-
-    for (const invitation of community.invitations) {
-      const invitationReset =
-        await this.invitationAuthorizationService.applyAuthorizationPolicy(
-          invitation,
-          community.authorization
-        );
-      invitation.authorization = invitationReset;
-    }
-
-    for (const externalInvitation of community.platformInvitations) {
-      const platformInvitationAuthorization =
-        await this.platformInvitationAuthorizationService.applyAuthorizationPolicy(
-          externalInvitation,
-          community.authorization
-        );
-      updatedAuthorizations.push(platformInvitationAuthorization);
-    }
+    const roleManagerAuthorizations =
+      await this.roleManagerAuthorizationService.applyAuthorizationPolicy(
+        community.roleManager.id,
+        community.authorization,
+        levelZeroSpaceAgent,
+        spaceSettings,
+        spaceMembershipAllowed,
+        isSubspace
+      );
+    updatedAuthorizations.push(...roleManagerAuthorizations);
 
     if (community.guidelines) {
       const guidelineAuthorizations =
@@ -203,12 +176,12 @@ export class CommunityAuthorizationService {
 
   private extendCommunityAuthorizationPolicySpace(
     communityAuthorization: IAuthorizationPolicy | undefined,
-    policy: ICommunityPolicy,
+    roleManager: IRoleManager,
     spaceSettings: ISpaceSettings
   ): IAuthorizationPolicy {
     if (!communityAuthorization)
       throw new EntityNotInitializedException(
-        `Authorization definition not found for: ${JSON.stringify(policy)}`,
+        `Authorization definition not found for: ${JSON.stringify(roleManager)}`,
         LogContext.SPACES
       );
 
@@ -266,7 +239,7 @@ export class CommunityAuthorizationService {
     authorization: IAuthorizationPolicy | undefined,
     allowGlobalRegisteredReadAccess: boolean | undefined,
     levelZeroSpaceAgent: IAgent,
-    policy: ICommunityPolicy,
+    roleManager: IRoleManager,
     spaceSettings: ISpaceSettings
   ): Promise<IAuthorizationPolicy> {
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
@@ -283,16 +256,16 @@ export class CommunityAuthorizationService {
     newRules.push(globalAdminAddMembers);
 
     const inviteMembersCriterias: ICredentialDefinition[] =
-      this.communityPolicyService.getCredentialsForRoleWithParents(
-        policy,
-        spaceSettings,
-        CommunityRoleType.ADMIN
+      this.roleManagerService.getCredentialsForRoleWithParents(
+        roleManager,
+        CommunityRoleType.ADMIN,
+        spaceSettings
       );
     if (spaceSettings.membership.allowSubspaceAdminsToInviteMembers) {
       // use the member credential to create subspace admin credential
       const subspaceAdminCredential: ICredentialDefinition =
-        this.communityPolicyService.getCredentialForRole(
-          policy,
+        this.roleManagerService.getCredentialForRole(
+          roleManager,
           CommunityRoleType.MEMBER
         );
       subspaceAdminCredential.type =
@@ -328,10 +301,10 @@ export class CommunityAuthorizationService {
       );
     if (accessVirtualContributors) {
       const criterias: ICredentialDefinition[] =
-        this.communityPolicyService.getCredentialsForRoleWithParents(
-          policy,
-          spaceSettings,
-          CommunityRoleType.ADMIN
+        this.roleManagerService.getCredentialsForRoleWithParents(
+          roleManager,
+          CommunityRoleType.ADMIN,
+          spaceSettings
         );
       criterias.push({
         type: AuthorizationCredential.GLOBAL_ADMIN,
@@ -359,7 +332,7 @@ export class CommunityAuthorizationService {
 
   private extendAuthorizationPolicySubspace(
     authorization: IAuthorizationPolicy | undefined,
-    policy: ICommunityPolicy,
+    roleManager: IRoleManager,
     spaceSettings: ISpaceSettings
   ): IAuthorizationPolicy {
     if (!authorization)
@@ -371,8 +344,8 @@ export class CommunityAuthorizationService {
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
     const parentCommunityCredential =
-      this.communityPolicyService.getDirectParentCredentialForRole(
-        policy,
+      this.roleManagerService.getDirectParentCredentialForRole(
+        roleManager,
         CommunityRoleType.MEMBER
       );
 
@@ -404,10 +377,10 @@ export class CommunityAuthorizationService {
     }
 
     const adminCredentials =
-      this.communityPolicyService.getCredentialsForRoleWithParents(
-        policy,
-        spaceSettings,
-        CommunityRoleType.ADMIN
+      this.roleManagerService.getCredentialsForRoleWithParents(
+        roleManager,
+        CommunityRoleType.ADMIN,
+        spaceSettings
       );
 
     const addMembers = this.authorizationPolicyService.createCredentialRule(

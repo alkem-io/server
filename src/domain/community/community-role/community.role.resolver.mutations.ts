@@ -56,6 +56,8 @@ import { CommunityRoleInvitationLifecycleOptionsProvider } from './community.rol
 import { CommunityRoleApplicationLifecycleOptionsProvider } from './community.role.lifecycle.application.options.provider';
 import { IVirtualContributor } from '../virtual-contributor/virtual.contributor.interface';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { RoleManagerService } from '@domain/access/role-manager/role.manager.service';
+import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 
 @Resolver()
 export class CommunityRoleResolverMutations {
@@ -68,6 +70,8 @@ export class CommunityRoleResolverMutations {
     private virtualContributorService: VirtualContributorService,
     private communityRoleService: CommunityRoleService,
     private communityService: CommunityService,
+    private roleManagerService: RoleManagerService,
+    private communityResolverService: CommunityResolverService,
     private communityAuthorizationService: CommunityAuthorizationService,
     private communityLifecycleApplicationOptionsProvider: CommunityRoleApplicationLifecycleOptionsProvider,
     private communityLifecycleInvitationOptionsProvider: CommunityRoleInvitationLifecycleOptionsProvider,
@@ -90,8 +94,8 @@ export class CommunityRoleResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('roleData') roleData: AssignCommunityRoleToUserInput
   ): Promise<IUser> {
-    const community = await this.communityService.getCommunityOrFail(
-      roleData.communityID
+    const roleManager = await this.roleManagerService.getRoleManagerOrFail(
+      roleData.roleManagerID
     );
 
     let requiredPrivilege = AuthorizationPrivilege.GRANT;
@@ -101,15 +105,15 @@ export class CommunityRoleResolverMutations {
 
     this.authorizationService.grantAccessOrFail(
       agentInfo,
-      community.authorization,
+      roleManager.authorization,
       requiredPrivilege,
-      `assign user community role: ${community.id}`
+      `assign user community role: ${roleManager.id}`
     );
 
     await this.communityRoleService.assignUserToRole(
-      community,
-      roleData.userID,
+      roleManager,
       roleData.role,
+      roleData.userID,
       agentInfo,
       true
     );
@@ -132,20 +136,20 @@ export class CommunityRoleResolverMutations {
     @Args('roleData')
     roleData: AssignCommunityRoleToOrganizationInput
   ): Promise<IOrganization> {
-    const community = await this.communityService.getCommunityOrFail(
-      roleData.communityID
+    const roleManager = await this.roleManagerService.getRoleManagerOrFail(
+      roleData.roleManagerID
     );
 
     this.authorizationService.grantAccessOrFail(
       agentInfo,
-      community.authorization,
+      roleManager.authorization,
       AuthorizationPrivilege.GRANT,
-      `assign organization community role: ${community.id}`
+      `assign organization community role: ${roleManager.id}`
     );
     return await this.communityRoleService.assignOrganizationToRole(
-      community,
-      roleData.organizationID,
-      roleData.role
+      roleManager,
+      roleData.role,
+      roleData.organizationID
     );
   }
 
@@ -159,15 +163,15 @@ export class CommunityRoleResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('roleData') roleData: AssignCommunityRoleToVirtualInput
   ): Promise<IVirtualContributor> {
-    const community = await this.communityService.getCommunityOrFail(
-      roleData.communityID
+    const roleManager = await this.roleManagerService.getRoleManagerOrFail(
+      roleData.roleManagerID
     );
 
     let requiredPrivilege = AuthorizationPrivilege.GRANT;
     if (roleData.role === CommunityRoleType.MEMBER) {
       const sameAccount =
         await this.communityRoleService.isCommunityAccountMatchingVcAccount(
-          community.id,
+          roleManager.id,
           roleData.virtualContributorID
         );
       if (sameAccount) {
@@ -180,23 +184,23 @@ export class CommunityRoleResolverMutations {
 
     this.authorizationService.grantAccessOrFail(
       agentInfo,
-      community.authorization,
+      roleManager.authorization,
       requiredPrivilege,
-      `assign virtual community role: ${community.id}`
+      `assign virtual community role: ${roleManager.id}`
     );
 
     // Also require ACCESS_VIRTUAL_CONTRIBUTORS to assign a virtual contributor
     this.authorizationService.grantAccessOrFail(
       agentInfo,
-      community.authorization,
+      roleManager.authorization,
       AuthorizationPrivilege.ACCESS_VIRTUAL_CONTRIBUTOR,
-      `assign virtual community role VC privilege: ${community.id}`
+      `assign virtual community role VC privilege: ${roleManager.id}`
     );
 
     await this.communityRoleService.assignVirtualToRole(
-      community,
-      roleData.virtualContributorID,
+      roleManager,
       roleData.role,
+      roleData.virtualContributorID,
       agentInfo,
       true
     );
@@ -215,13 +219,18 @@ export class CommunityRoleResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('roleData') roleData: RemoveCommunityRoleFromUserInput
   ): Promise<IUser> {
-    const community = await this.communityService.getCommunityOrFail(
-      roleData.communityID
+    const roleManager = await this.roleManagerService.getRoleManagerOrFail(
+      roleData.roleManagerID
     );
 
     // Extend the authorization policy with a credential rule to assign the GRANT privilege
     // to the user specified in the incoming mutation. Then if it is the same user as is logged
     // in then the user will have the GRANT privilege + so can carry out the mutation
+    const community =
+      await this.communityResolverService.getCommunityForRoleManager(
+        roleManager.id
+      );
+
     const extendedAuthorization =
       this.communityAuthorizationService.extendAuthorizationPolicyForSelfRemoval(
         community,
@@ -232,13 +241,13 @@ export class CommunityRoleResolverMutations {
       agentInfo,
       extendedAuthorization,
       AuthorizationPrivilege.GRANT,
-      `remove user from community role: ${community.id}`
+      `remove user from community role: ${roleManager.id}`
     );
 
     await this.communityRoleService.removeUserFromRole(
-      community,
-      roleData.userID,
-      roleData.role
+      roleManager,
+      roleData.role,
+      roleData.userID
     );
     // reset the user authorization policy so that their profile is not visible
     // to other community members
@@ -259,20 +268,20 @@ export class CommunityRoleResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('roleData') roleData: RemoveCommunityRoleFromOrganizationInput
   ): Promise<IOrganization> {
-    const community = await this.communityService.getCommunityOrFail(
-      roleData.communityID
+    const roleManager = await this.roleManagerService.getRoleManagerOrFail(
+      roleData.roleManagerID
     );
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      community.authorization,
+      roleManager.authorization,
       AuthorizationPrivilege.GRANT,
-      `remove community role organization: ${community.id}`
+      `remove community role organization: ${roleManager.id}`
     );
 
     return await this.communityRoleService.removeOrganizationFromRole(
-      community,
-      roleData.organizationID,
-      roleData.role
+      roleManager,
+      roleData.role,
+      roleData.organizationID
     );
   }
 
@@ -286,7 +295,7 @@ export class CommunityRoleResolverMutations {
     @Args('roleData') roleData: RemoveCommunityRoleFromVirtualInput
   ): Promise<IVirtualContributor> {
     const community = await this.communityService.getCommunityOrFail(
-      roleData.communityID
+      roleData.roleManagerID
     );
 
     // Extend the authorization policy with a credential rule to assign the GRANT privilege
@@ -307,8 +316,8 @@ export class CommunityRoleResolverMutations {
 
     await this.communityRoleService.removeVirtualFromRole(
       community,
-      roleData.virtualContributorID,
-      roleData.role
+      roleData.role,
+      roleData.virtualContributorID
     );
 
     return await this.virtualContributorService.getVirtualContributorOrFail(
@@ -326,7 +335,7 @@ export class CommunityRoleResolverMutations {
     @Args('applicationData') applicationData: CommunityRoleApplyInput
   ): Promise<IApplication> {
     const community = await this.communityService.getCommunityOrFail(
-      applicationData.communityID,
+      applicationData.roleManagerID,
       {
         relations: {
           parentCommunity: true,
@@ -359,7 +368,7 @@ export class CommunityRoleResolverMutations {
     }
 
     let application = await this.communityRoleService.createApplication({
-      parentID: community.id,
+      roleManagerID: community.id,
       questions: applicationData.questions,
       userID: agentInfo.userID,
     });
@@ -395,7 +404,7 @@ export class CommunityRoleResolverMutations {
     invitationData: CreateInvitationForContributorsOnCommunityInput
   ): Promise<IInvitation[]> {
     const community = await this.communityService.getCommunityOrFail(
-      invitationData.communityID,
+      invitationData.roleManagerID,
       {
         relations: {
           parentCommunity: {
@@ -489,7 +498,7 @@ export class CommunityRoleResolverMutations {
     welcomeMessage?: string
   ): Promise<IInvitation> {
     const input: CreateInvitationInput = {
-      communityID: community.id,
+      roleManagerID: community.id,
       invitedContributor: invitedContributor.id,
       createdBy: agentInfo.userID,
       invitedToParent,
@@ -552,7 +561,7 @@ export class CommunityRoleResolverMutations {
     invitationData: CreatePlatformInvitationOnCommunityInput
   ): Promise<IPlatformInvitation> {
     const community = await this.communityService.getCommunityOrFail(
-      invitationData.communityID,
+      invitationData.roleManagerID,
       {
         relations: {
           parentCommunity: {
@@ -643,7 +652,7 @@ export class CommunityRoleResolverMutations {
     @Args('joinCommunityData') joiningData: CommunityJoinInput
   ): Promise<ICommunity> {
     const community = await this.communityService.getCommunityOrFail(
-      joiningData.communityID
+      joiningData.roleManagerID
     );
     const membershipStatus =
       await this.communityRoleService.getMembershipStatus(agentInfo, community);
@@ -663,8 +672,8 @@ export class CommunityRoleResolverMutations {
 
     await this.communityRoleService.assignUserToRole(
       community,
-      agentInfo.userID,
       CommunityRoleType.MEMBER,
+      agentInfo.userID,
       agentInfo,
       true
     );

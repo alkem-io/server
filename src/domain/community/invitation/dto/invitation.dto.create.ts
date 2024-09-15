@@ -20,6 +20,6 @@ export class CreateInvitationInput {
 
   createdBy!: string;
 
-  communityID!: string;
+  roleManagerID!: string;
   invitedToParent!: boolean;
 }

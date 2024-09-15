@@ -50,7 +50,7 @@ export class CommunityRoleEventsService {
 
     // Record the contribution events
     const space =
-      await this.communityResolverService.getSpaceForCommunityOrFail(
+      await this.communityResolverService.getSpaceForRoleManagerOrFail(
         community.id
       );
     switch (space.type) {

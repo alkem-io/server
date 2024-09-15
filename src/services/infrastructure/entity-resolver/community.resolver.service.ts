@@ -42,6 +42,23 @@ export class CommunityResolverService {
     return space.levelZeroSpaceID;
   }
 
+  async getCommunityForRoleManager(roleManagerID: string): Promise<ICommunity> {
+    const community = await this.entityManager.findOne(Community, {
+      where: {
+        roleManager: {
+          id: roleManagerID,
+        },
+      },
+    });
+    if (!community) {
+      throw new EntityNotFoundException(
+        `Unable to find Community for given RoleManager id: ${roleManagerID}`,
+        LogContext.COMMUNITY
+      );
+    }
+    return community;
+  }
+
   public async getLevelZeroSpaceIdForCollaboration(
     collaborationID: string
   ): Promise<string> {
@@ -271,13 +288,15 @@ export class CommunityResolverService {
     return community;
   }
 
-  public async getSpaceForCommunityOrFail(
-    communityId: string
+  public async getSpaceForRoleManagerOrFail(
+    roleManagerID: string
   ): Promise<ISpace> {
     const space = await this.entityManager.findOne(Space, {
       where: {
         community: {
-          id: communityId,
+          roleManager: {
+            id: roleManagerID,
+          },
         },
       },
       relations: {
@@ -286,7 +305,7 @@ export class CommunityResolverService {
     });
     if (!space) {
       throw new EntityNotFoundException(
-        `Unable to find space for community: ${communityId}`,
+        `Unable to find space for community: ${roleManagerID}`,
         LogContext.URL_GENERATOR
       );
     }
@@ -317,10 +336,10 @@ export class CommunityResolverService {
     return space;
   }
 
-  public async getDisplayNameForCommunityOrFail(
-    communityId: string
+  public async getDisplayNameForRoleManagerOrFail(
+    roleManagerID: string
   ): Promise<string> {
-    const space = await this.getSpaceForCommunityOrFail(communityId);
+    const space = await this.getSpaceForRoleManagerOrFail(roleManagerID);
     return space.profile.displayName;
   }
 

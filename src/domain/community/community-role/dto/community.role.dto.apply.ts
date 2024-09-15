@@ -9,7 +9,7 @@ import { UUID_LENGTH } from '@common/constants';
 export class CommunityRoleApplyInput {
   @Field(() => UUID, { nullable: false })
   @MaxLength(UUID_LENGTH)
-  communityID!: string;
+  roleManagerID!: string;
 
   @Field(() => [CreateNVPInput], { nullable: false })
   @ValidateNested({ each: true })

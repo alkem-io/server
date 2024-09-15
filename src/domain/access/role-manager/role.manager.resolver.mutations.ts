@@ -6,18 +6,14 @@ import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AgentService } from '@domain/agent/agent/agent.service';
 import { UpdateRoleManagerApplicationFormInput } from './dto/role.manager.dto.update.application.form';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IRoleManager } from './role.manager.interface';
 
 @Resolver()
 export class RoleManagerResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
-    private authorizationPolicyService: AuthorizationPolicyService,
-    private roleManagerService: RoleManagerService,
-    private agentService: AgentService
+    private roleManagerService: RoleManagerService
   ) {}
 
   @UseGuards(GraphqlGuard)

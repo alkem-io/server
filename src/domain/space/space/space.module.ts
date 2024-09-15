@@ -18,7 +18,6 @@ import { ContextModule } from '@domain/context/context/context.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
 import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
-import { CommunityPolicyModule } from '@domain/community/community-policy/community.policy.module';
 import { CommunityModule } from '@domain/community/community/community.module';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
@@ -33,6 +32,7 @@ import { LicenseEngineModule } from '@core/license-engine/license.engine.module'
 import { LicenseIssuerModule } from '@platform/license-issuer/license.issuer.module';
 import { TemplateModule } from '@domain/template/template/template.module';
 import { InputCreatorModule } from '@services/api/input-creator/input.creator.module';
+import { RoleManagerModule } from '@domain/access/role-manager/role.manager.module';
 
 @Module({
   imports: [
@@ -43,7 +43,6 @@ import { InputCreatorModule } from '@services/api/input-creator/input.creator.mo
     ContextModule,
     CommunityModule,
     CommunityRoleModule,
-    CommunityPolicyModule,
     ProfileModule,
     LicensingModule,
     LicenseIssuerModule,
@@ -61,6 +60,7 @@ import { InputCreatorModule } from '@services/api/input-creator/input.creator.mo
     ActivityAdapterModule,
     LoaderCreatorModule,
     TemplateModule,
+    RoleManagerModule,
     InputCreatorModule,
     NameReporterModule,
     TypeOrmModule.forFeature([Space]),

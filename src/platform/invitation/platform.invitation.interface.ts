@@ -1,8 +1,8 @@
-import { ICommunity } from '@domain/community/community/community.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { PlatformRole } from '@common/enums/platform.role';
 import { IPlatform } from '@platform/platfrom/platform.interface';
+import { IRoleManager } from '@domain/access/role-manager';
 
 @ObjectType('PlatformInvitation')
 export class IPlatformInvitation extends IAuthorizable {
@@ -31,7 +31,7 @@ export class IPlatformInvitation extends IAuthorizable {
 
   createdBy!: string;
 
-  community?: ICommunity;
+  roleManager?: IRoleManager;
 
   platform?: IPlatform;
 

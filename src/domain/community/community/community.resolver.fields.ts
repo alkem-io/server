@@ -7,10 +7,9 @@ import { CommunityService } from './community.service';
 import { IUserGroup } from '@domain/community/user-group';
 import { AuthorizationPrivilege } from '@common/enums';
 import { ICommunication } from '@domain/communication/communication/communication.interface';
-import { ICommunityPolicy } from '../community-policy/community.policy.interface';
-import { IForm } from '@domain/common/form/form.interface';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { ICommunityGuidelines } from '../community-guidelines/community.guidelines.interface';
+import { IRoleManager } from '@domain/access/role-manager';
 
 @Resolver(() => ICommunity)
 export class CommunityResolverFields {
@@ -40,16 +39,6 @@ export class CommunityResolverFields {
     return await this.communityService.getUserGroup(community, groupID);
   }
 
-  @UseGuards(GraphqlGuard)
-  @ResolveField('applicationForm', () => IForm, {
-    nullable: false,
-    description: 'The Form used for Applications to this community.',
-  })
-  @Profiling.api
-  async applicationForm(@Parent() community: Community): Promise<IForm> {
-    return await this.communityService.getApplicationForm(community);
-  }
-
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('communication', () => ICommunication, {
@@ -65,12 +54,12 @@ export class CommunityResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('policy', () => ICommunityPolicy, {
+  @ResolveField('roleManager', () => IRoleManager, {
     nullable: false,
-    description: 'The policy that defines the roles for this Community.',
+    description: 'The RoleManager for this Community.',
   })
-  async policy(@Parent() community: Community): Promise<ICommunityPolicy> {
-    return this.communityService.getCommunityPolicy(community);
+  async policy(@Parent() community: Community): Promise<IRoleManager> {
+    return this.communityService.getRoleManager(community);
   }
 
   @UseGuards(GraphqlGuard)

@@ -1,5 +1,4 @@
 import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
-import { Community } from '@domain/community/community/community.entity';
 import { Lifecycle } from '@domain/common/lifecycle/lifecycle.entity';
 import { IInvitation } from './invitation.interface';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
@@ -16,13 +15,6 @@ export class Invitation extends AuthorizableEntity implements IInvitation {
   })
   @JoinColumn()
   lifecycle!: Lifecycle;
-
-  @ManyToOne(() => Community, community => community.invitations, {
-    eager: false,
-    cascade: false,
-    onDelete: 'CASCADE',
-  })
-  community?: Community;
 
   @Column('char', { length: UUID_LENGTH, nullable: false })
   invitedContributor!: string;

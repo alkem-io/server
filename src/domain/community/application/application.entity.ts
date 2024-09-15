@@ -6,7 +6,6 @@ import {
   ManyToOne,
   OneToOne,
 } from 'typeorm';
-import { Community } from '@domain/community/community/community.entity';
 import { Lifecycle } from '@domain/common/lifecycle/lifecycle.entity';
 import { IApplication } from './application.interface';
 import { NVP } from '@domain/common/nvp/nvp.entity';
@@ -34,13 +33,6 @@ export class Application extends AuthorizableEntity implements IApplication {
     onDelete: 'CASCADE',
   })
   user?: User;
-
-  @ManyToOne(() => Community, community => community.applications, {
-    eager: false,
-    cascade: false,
-    onDelete: 'CASCADE',
-  })
-  community?: Community;
 
   @ManyToOne(() => RoleManager, manager => manager.applications, {
     eager: false,

@@ -25,6 +25,7 @@ import { SpaceLevel } from '@common/enums/space.level';
 import { CommunityRoleService } from '@domain/community/community-role/community.role.service';
 import { CommunityService } from '@domain/community/community/community.service';
 import { CreateSpaceOnAccountInput } from '@domain/space/account/dto/account.dto.create.space';
+import { IRoleManager } from '@domain/access/role-manager';
 
 export class ConversionService {
   constructor(
@@ -127,23 +128,24 @@ export class ConversionService {
         LogContext.CONVERSION
       );
     }
+    const spaceRoleManager = space.community.roleManager;
 
     const userMembers = await this.communityRoleService.getUsersWithRole(
-      space.community,
+      spaceRoleManager,
       CommunityRoleType.MEMBER
     );
     const userLeads = await this.communityRoleService.getUsersWithRole(
-      space.community,
+      spaceRoleManager,
       CommunityRoleType.LEAD
     );
     const orgMembers = await this.communityRoleService.getOrganizationsWithRole(
-      space.community,
+      spaceRoleManager,
       CommunityRoleType.MEMBER
     );
 
     // Remove the contributors from old roles
     await this.removeContributors(
-      space.community,
+      spaceRoleManager,
       userMembers,
       userLeads,
       orgMembers,
@@ -151,9 +153,9 @@ export class ConversionService {
     );
 
     await this.communityRoleService.removeUserFromRole(
-      space.community,
-      agentInfo.userID,
-      CommunityRoleType.MEMBER
+      spaceRoleManager,
+      CommunityRoleType.MEMBER,
+      agentInfo.userID
     );
 
     // Swap the communications
@@ -305,26 +307,27 @@ export class ConversionService {
       );
     }
 
+    const roleManager = subsubspace.community.roleManager;
     const userMembers = await this.communityRoleService.getUsersWithRole(
-      subsubspace.community,
+      roleManager,
       CommunityRoleType.MEMBER
     );
     const userLeads = await this.communityRoleService.getUsersWithRole(
-      subsubspace.community,
+      roleManager,
       CommunityRoleType.LEAD
     );
     const orgMembers = await this.communityRoleService.getOrganizationsWithRole(
-      subsubspace.community,
+      roleManager,
       CommunityRoleType.MEMBER
     );
     const orgLeads = await this.communityRoleService.getOrganizationsWithRole(
-      subsubspace.community,
+      roleManager,
       CommunityRoleType.LEAD
     );
 
     // Remove the contributors from old roles
     await this.removeContributors(
-      subsubspace.community,
+      subsubspace.community.roleManager,
       userMembers,
       userLeads,
       orgMembers,
@@ -333,14 +336,14 @@ export class ConversionService {
 
     // also remove the current user from the members of the newly created Challenge, otherwise will end up re-assigning
     await this.communityRoleService.removeUserFromRole(
-      subspace.community,
-      agentInfo.userID,
-      CommunityRoleType.MEMBER
+      subspace.community.roleManager,
+      CommunityRoleType.MEMBER,
+      agentInfo.userID
     );
     await this.communityRoleService.removeUserFromRole(
-      subspace.community,
-      agentInfo.userID,
-      CommunityRoleType.LEAD
+      subspace.community.roleManager,
+      CommunityRoleType.LEAD,
+      agentInfo.userID
     );
 
     // Swap the communication
@@ -518,7 +521,7 @@ export class ConversionService {
   }
 
   private async removeContributors(
-    community: ICommunity,
+    roleManager: IRoleManager,
     userMembers: IUser[],
     userLeads: IUser[],
     orgMembers: IOrganization[],
@@ -526,36 +529,36 @@ export class ConversionService {
   ) {
     for (const userMember of userMembers) {
       await this.communityRoleService.removeUserFromRole(
-        community,
-        userMember.id,
-        CommunityRoleType.MEMBER
+        roleManager,
+        CommunityRoleType.MEMBER,
+        userMember.id
       );
     }
     for (const userLead of userLeads) {
       await this.communityRoleService.removeUserFromRole(
-        community,
-        userLead.id,
-        CommunityRoleType.LEAD
+        roleManager,
+        CommunityRoleType.LEAD,
+        userLead.id
       );
     }
     for (const orgMember of orgMembers) {
       await this.communityRoleService.removeOrganizationFromRole(
-        community,
-        orgMember.id,
-        CommunityRoleType.MEMBER
+        roleManager,
+        CommunityRoleType.MEMBER,
+        orgMember.id
       );
     }
     for (const orgLead of orgLeads) {
       await this.communityRoleService.removeOrganizationFromRole(
-        community,
-        orgLead.id,
-        CommunityRoleType.LEAD
+        roleManager,
+        CommunityRoleType.LEAD,
+        orgLead.id
       );
     }
   }
 
   private async assignContributors(
-    community: ICommunity,
+    roleManager: IRoleManager,
     userMembers: IUser[],
     userLeads: IUser[],
     orgMembers: IOrganization[],
@@ -563,31 +566,31 @@ export class ConversionService {
   ) {
     for (const userMember of userMembers) {
       await this.communityRoleService.assignUserToRole(
-        community,
-        userMember.id,
-        CommunityRoleType.MEMBER
+        roleManager,
+        CommunityRoleType.MEMBER,
+        userMember.id
       );
     }
     for (const userLead of userLeads) {
       await this.communityRoleService.assignUserToRole(
-        community,
-        userLead.id,
-        CommunityRoleType.LEAD
+        roleManager,
+        CommunityRoleType.LEAD,
+        userLead.id
       );
     }
     for (const orgMember of orgMembers) {
       await this.communityRoleService.assignOrganizationToRole(
-        community,
-        orgMember.id,
-        CommunityRoleType.MEMBER
+        roleManager,
+        CommunityRoleType.MEMBER,
+        orgMember.id
       );
     }
     if (orgLeads) {
       for (const orgLead of orgLeads) {
         await this.communityRoleService.assignOrganizationToRole(
-          community,
-          orgLead.id,
-          CommunityRoleType.LEAD
+          roleManager,
+          CommunityRoleType.LEAD,
+          orgLead.id
         );
       }
     }

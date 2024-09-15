@@ -11,21 +11,11 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
 import { CreateUserGroupInput } from '@domain/community/user-group/dto';
 import { Community, ICommunity } from '@domain/community/community';
-import { ApplicationService } from '@domain/community/application/application.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CommunicationService } from '@domain/communication/communication/communication.service';
 import { ICommunication } from '@domain/communication/communication';
 import { LogContext } from '@common/enums/logging.context';
-import { CommunityRoleType } from '@common/enums/community.role';
-import { ICommunityRolePolicy } from '../community-policy/community.policy.role.interface';
-import { ICommunityPolicy } from '../community-policy/community.policy.interface';
-import { CommunityPolicyService } from '../community-policy/community.policy.service';
-import { ICommunityPolicyDefinition } from '../community-policy/community.policy.definition';
-import { IForm } from '@domain/common/form/form.interface';
-import { FormService } from '@domain/common/form/form.service';
-import { UpdateFormInput } from '@domain/common/form/dto/form.dto.update';
-import { InvitationService } from '../invitation/invitation.service';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { CommunityGuidelinesService } from '../community-guidelines/community.guidelines.service';
@@ -33,23 +23,20 @@ import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.a
 import { CreateCommunityInput } from './dto/community.dto.create';
 import { ICommunityGuidelines } from '../community-guidelines/community.guidelines.interface';
 import { IContributor } from '../contributor/contributor.interface';
-import { PlatformInvitationService } from '@platform/invitation/platform.invitation.service';
 import { IUser } from '../user/user.interface';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { RoleManagerService } from '@domain/access/role-manager/role.manager.service';
+import { IRoleManager } from '@domain/access/role-manager';
 
 @Injectable()
 export class CommunityService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private userGroupService: UserGroupService,
-    private applicationService: ApplicationService,
-    private invitationService: InvitationService,
-    private platformInvitationService: PlatformInvitationService,
     private communicationService: CommunicationService,
     private communityResolverService: CommunityResolverService,
     private communityGuidelinesService: CommunityGuidelinesService,
-    private formService: FormService,
-    private communityPolicyService: CommunityPolicyService,
+    private roleManagerService: RoleManagerService,
     private storageAggregatorResolverService: StorageAggregatorResolverService,
     @InjectRepository(Community)
     private communityRepository: Repository<Community>,
@@ -64,11 +51,8 @@ export class CommunityService {
     community.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.COMMUNITY
     );
-    const policy = communityData.policy as ICommunityPolicyDefinition;
-    community.policy = this.communityPolicyService.createCommunityPolicy(
-      policy.member,
-      policy.lead,
-      policy.admin
+    community.roleManager = await this.roleManagerService.createRoleManager(
+      communityData.roleManagerData
     );
 
     community.guidelines =
@@ -76,13 +60,6 @@ export class CommunityService {
         communityData.guidelines,
         storageAggregator
       );
-    community.applicationForm = this.formService.createForm(
-      communityData.applicationForm
-    );
-
-    community.applications = [];
-    community.invitations = [];
-    community.platformInvitations = [];
 
     community.groups = [];
     community.communication =
@@ -137,7 +114,7 @@ export class CommunityService {
 
   // Loads the group into the Community entity if not already present
   async getUserGroup(
-    community: ICommunity,
+    community: IRoleManager,
     groupID: string
   ): Promise<IUserGroup> {
     const communityWithGroups = await this.getCommunityOrFail(community.id, {
@@ -182,25 +159,18 @@ export class CommunityService {
     // Note need to load it in with all contained entities so can remove fully
     const community = await this.getCommunityOrFail(communityID, {
       relations: {
-        applications: true,
-        invitations: true,
-        platformInvitations: true,
+        roleManager: true,
         groups: true,
         communication: true,
-        applicationForm: true,
         guidelines: true,
       },
     });
     if (
       !community.communication ||
       !community.communication.updates ||
-      !community.policy ||
+      !community.roleManager ||
       !community.groups ||
-      !community.applications ||
-      !community.invitations ||
-      !community.platformInvitations ||
-      !community.guidelines ||
-      !community.applicationForm
+      !community.guidelines
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load child entities for community for deletion: ${community.id} `,
@@ -218,33 +188,11 @@ export class CommunityService {
     if (community.authorization)
       await this.authorizationPolicyService.delete(community.authorization);
 
-    // Remove all applications
-    for (const application of community.applications) {
-      await this.applicationService.deleteApplication({
-        ID: application.id,
-      });
-    }
-
-    // Remove all invitations
-    for (const invitation of community.invitations) {
-      await this.invitationService.deleteInvitation({
-        ID: invitation.id,
-      });
-    }
-
-    for (const externalInvitation of community.platformInvitations) {
-      await this.platformInvitationService.deletePlatformInvitation({
-        ID: externalInvitation.id,
-      });
-    }
-
     await this.communicationService.removeCommunication(
       community.communication.id
     );
 
-    await this.formService.removeForm(community.applicationForm);
-
-    await this.communityPolicyService.removeCommunityPolicy(community.policy);
+    await this.roleManagerService.removeRoleManager(community.roleManager.id);
 
     await this.communityGuidelinesService.deleteCommunityGuidelines(
       community.guidelines.id
@@ -254,7 +202,7 @@ export class CommunityService {
     return true;
   }
 
-  async save(community: ICommunity): Promise<ICommunity> {
+  async save(community: IRoleManager): Promise<IRoleManager> {
     return await this.communityRepository.save(community);
   }
 
@@ -272,18 +220,6 @@ export class CommunityService {
     return undefined;
   }
 
-  async updateApplicationForm(
-    community: ICommunity,
-    formData: UpdateFormInput
-  ): Promise<ICommunity> {
-    const applicationForm = await this.getApplicationForm(community);
-    community.applicationForm = await this.formService.updateForm(
-      applicationForm,
-      formData
-    );
-    return await this.save(community);
-  }
-
   public setParentCommunity(
     community?: ICommunity,
     parentCommunity?: ICommunity
@@ -296,16 +232,15 @@ export class CommunityService {
     }
     community.parentCommunity = parentCommunity;
     // Also update the communityPolicy
-    community.policy = this.communityPolicyService.inheritParentCredentials(
-      this.getCommunityPolicy(parentCommunity),
-      this.getCommunityPolicy(community)
+    community.roleManager = this.roleManagerService.inheritParentCredentials(
+      community.roleManager
     );
 
     return community;
   }
 
   public async getDisplayName(community: ICommunity): Promise<string> {
-    return await this.communityResolverService.getDisplayNameForCommunityOrFail(
+    return await this.communityResolverService.getDisplayNameForRoleManagerOrFail(
       community.id
     );
   }
@@ -346,15 +281,21 @@ export class CommunityService {
       );
   }
 
-  public getCommunityPolicy(community: ICommunity): ICommunityPolicy {
-    const policy = community.policy;
-    if (!policy) {
+  public async getRoleManager(community: ICommunity): Promise<IRoleManager> {
+    const communityWithRoleManager = await this.getCommunityOrFail(
+      community.id,
+      {
+        relations: { roleManager: true },
+      }
+    );
+
+    if (!communityWithRoleManager.roleManager) {
       throw new EntityNotInitializedException(
-        `Unable to locate policy for community: ${community.id}`,
+        `Unable to locate Role Manager for community: ${community.id}`,
         LogContext.COMMUNITY
       );
     }
-    return policy;
+    return communityWithRoleManager.roleManager;
   }
 
   public async getCommunityGuidelines(
@@ -394,22 +335,6 @@ export class CommunityService {
     return communication;
   }
 
-  public async getPeerCommunites(
-    parentCommunity: ICommunity,
-    childCommunity: ICommunity
-  ): Promise<ICommunity[]> {
-    const peerCommunities = await this.communityRepository.find({
-      where: {
-        parentCommunity: {
-          id: parentCommunity.id,
-        },
-      },
-    });
-    return peerCommunities.filter(
-      community => community.id !== childCommunity.id
-    );
-  }
-
   public async isCommunityAccountMatchingVcAccount(
     communityID: string,
     virtualContributorID: string
@@ -421,44 +346,11 @@ export class CommunityService {
   }
 
   public async getLevelZeroSpaceIdForCommunity(
-    community: ICommunity
+    community: IRoleManager
   ): Promise<string> {
     return await this.communityResolverService.getLevelZeroSpaceIdForCommunity(
       community.id
     );
-  }
-
-  public getCommunityPolicyForRole(
-    community: ICommunity,
-    role: CommunityRoleType
-  ): ICommunityRolePolicy {
-    const policy = this.getCommunityPolicy(community);
-    return this.communityPolicyService.getCommunityRolePolicy(policy, role);
-  }
-
-  public updateCommunityPolicyResourceID(
-    community: ICommunity,
-    resourceID: string
-  ): ICommunityPolicy {
-    const policy = this.getCommunityPolicy(community);
-    return this.communityPolicyService.updateCommunityPolicyResourceID(
-      policy,
-      resourceID
-    );
-  }
-
-  async getApplicationForm(community: ICommunity): Promise<IForm> {
-    const communityForm = await this.getCommunityOrFail(community.id, {
-      relations: { applicationForm: true },
-    });
-    const applicationForm = communityForm.applicationForm;
-    if (!applicationForm) {
-      throw new EntityNotFoundException(
-        `Unable to find Application Form for Community with ID: ${community.id}`,
-        LogContext.COMMUNITY
-      );
-    }
-    return applicationForm;
   }
 
   async isSpaceCommunity(community: ICommunity): Promise<boolean> {

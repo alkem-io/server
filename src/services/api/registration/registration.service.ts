@@ -119,13 +119,13 @@ export class RegistrationService {
 
     const communityInvitations: IInvitation[] = [];
     for (const platformInvitation of platformInvitations) {
-      const community = platformInvitation.community;
+      const roleManager = platformInvitation.roleManager;
 
       // Process community invitations
-      if (community) {
+      if (roleManager) {
         const invitationInput: CreateInvitationInput = {
           invitedContributor: user.id,
-          communityID: community.id,
+          roleManagerID: roleManager.id,
           createdBy: platformInvitation.createdBy,
           invitedToParent: platformInvitation.communityInvitedToParent,
         };
@@ -140,7 +140,7 @@ export class RegistrationService {
         const authorization =
           await this.invitationAuthorizationService.applyAuthorizationPolicy(
             invitation,
-            community.authorization
+            roleManager.authorization
           );
         await this.authorizationPolicyService.save(authorization);
 

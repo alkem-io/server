@@ -17,6 +17,7 @@ import { PlatformInvitationModule } from '@platform/invitation/platform.invitati
 import { InvitationModule } from '@domain/community/invitation/invitation.module';
 import { ApplicationModule } from '@domain/community/application/application.module';
 import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
+import { RoleModule } from '../role/role.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { VirtualContributorModule } from '@domain/community/virtual-contributor/
     AgentModule,
     StorageAggregatorResolverModule,
     FormModule,
+    RoleModule,
     InvitationModule,
     ApplicationModule,
     PlatformInvitationModule,

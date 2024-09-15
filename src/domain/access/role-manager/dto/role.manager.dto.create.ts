@@ -3,7 +3,7 @@ import { CreateFormInput } from '@domain/common/form/dto/form.dto.create';
 import { IRoleManager } from '../role.manager.interface';
 
 export class CreateRoleManagerInput {
-  parentRoleManager!: IRoleManager;
+  parentRoleManager?: IRoleManager;
   roles!: CreateRoleInput[];
   applicationForm!: CreateFormInput;
 }

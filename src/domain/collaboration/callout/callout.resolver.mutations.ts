@@ -228,10 +228,8 @@ export class CalloutResolverMutations {
       agentInfo.userID
     );
 
-    const { communityPolicy, spaceSettings } =
-      await this.namingService.getCommunityPolicyAndSettingsForCallout(
-        callout.id
-      );
+    const { roleManager: communityPolicy, spaceSettings } =
+      await this.namingService.getRoleManagerAndSettingsForCallout(callout.id);
     contribution = await this.calloutContributionService.save(contribution);
     // Ensure settings are available
     const updatedAuthorizations =

@@ -10,7 +10,6 @@ import {
 } from '@common/enums';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
-import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { CalloutType } from '@common/enums/callout.type';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
@@ -23,6 +22,7 @@ import { RoomAuthorizationService } from '@domain/communication/room/room.servic
 import { CalloutFramingAuthorizationService } from '../callout-framing/callout.framing.service.authorization';
 import { CalloutContributionAuthorizationService } from '../callout-contribution/callout.contribution.service.authorization';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
+import { IRoleManager } from '@domain/access/role-manager/role.manager.interface';
 
 @Injectable()
 export class CalloutAuthorizationService {
@@ -37,7 +37,7 @@ export class CalloutAuthorizationService {
   public async applyAuthorizationPolicy(
     calloutInput: ICallout,
     parentAuthorization: IAuthorizationPolicy | undefined,
-    communityPolicy?: ICommunityPolicy,
+    roleManager?: IRoleManager,
     spaceSettings?: ISpaceSettings
   ): Promise<IAuthorizationPolicy[]> {
     const callout = await this.calloutService.getCalloutOrFail(
@@ -90,7 +90,7 @@ export class CalloutAuthorizationService {
         await this.contributionAuthorizationService.applyAuthorizationPolicy(
           contribution.id,
           callout.authorization,
-          communityPolicy,
+          roleManager,
           spaceSettings
         );
       updatedAuthorizations.push(...updatedContributionAuthorizations);

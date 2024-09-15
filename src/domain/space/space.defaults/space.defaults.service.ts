@@ -11,12 +11,11 @@ import { SpaceDefaults } from './space.defaults.entity';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
 import { ISpaceSettings } from '../space.settings/space.settings.interface';
 import { ICalloutGroup } from '@domain/collaboration/callout-groups/callout.group.interface';
-import { subspaceCommunityPolicy } from './definitions/subspace.community.policy';
-import { spaceCommunityPolicy } from './definitions/space.community.policy';
-import { ICommunityPolicyDefinition } from '@domain/community/community-policy/community.policy.definition';
+import { subspaceCommunityRoles } from './definitions/subspace.role.manager.roles';
+import { spaceCommunityRoles } from './definitions/space.role.manager.roles';
 import { CreateFormInput } from '@domain/common/form/dto/form.dto.create';
-import { subspceCommunityApplicationForm } from './definitions/subspace.community.application.form';
-import { spaceCommunityApplicationForm } from './definitions/space.community.application.form';
+import { subspceCommunityApplicationForm } from './definitions/subspace.role.manager.application.form';
+import { spaceCommunityApplicationForm } from './definitions/space.role.manager.application.form';
 import { ProfileType } from '@common/enums';
 import { CalloutGroupName } from '@common/enums/callout.group.name';
 import { SpaceLevel } from '@common/enums/space.level';
@@ -45,6 +44,7 @@ import { spaceDefaultsSettingsBlankSlate } from './definitions/blank-slate/space
 import { spaceDefaultsInnovationFlowStatesBlankSlate } from './definitions/blank-slate/space.defaults.innovation.flow.blank.slate';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { ITemplate } from '@domain/template/template/template.interface';
+import { CreateRoleInput } from '@domain/access/role/dto/role.dto.create';
 
 @Injectable()
 export class SpaceDefaultsService {
@@ -153,15 +153,15 @@ export class SpaceDefaultsService {
     }
   }
 
-  public getCommunityPolicy(
+  public getRoleManagerCommunityRoles(
     spaceLevel: SpaceLevel
-  ): ICommunityPolicyDefinition {
+  ): CreateRoleInput[] {
     switch (spaceLevel) {
       case SpaceLevel.CHALLENGE:
       case SpaceLevel.OPPORTUNITY:
-        return subspaceCommunityPolicy;
+        return subspaceCommunityRoles;
       case SpaceLevel.SPACE:
-        return spaceCommunityPolicy;
+        return spaceCommunityRoles;
       default:
         throw new EntityNotInitializedException(
           `Invalid space level: ${spaceLevel}`,
@@ -181,7 +181,9 @@ export class SpaceDefaultsService {
     }
   }
 
-  public getCommunityApplicationForm(spaceLevel: SpaceLevel): CreateFormInput {
+  public getRoleManagerCommunityApplicationForm(
+    spaceLevel: SpaceLevel
+  ): CreateFormInput {
     switch (spaceLevel) {
       case SpaceLevel.CHALLENGE:
       case SpaceLevel.OPPORTUNITY:

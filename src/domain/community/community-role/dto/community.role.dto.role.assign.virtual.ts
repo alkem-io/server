@@ -5,7 +5,7 @@ import { Field, InputType } from '@nestjs/graphql';
 @InputType()
 export class AssignCommunityRoleToVirtualInput {
   @Field(() => UUID, { nullable: false })
-  communityID!: string;
+  roleManagerID!: string;
 
   @Field(() => UUID_NAMEID, { nullable: false })
   virtualContributorID!: string;

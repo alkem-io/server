@@ -5,10 +5,8 @@ import { CalloutContributionService } from './callout.contribution.service';
 import { ICalloutContribution } from './callout.contribution.interface';
 import { WhiteboardAuthorizationService } from '@domain/common/whiteboard';
 import { PostAuthorizationService } from '../post/post.service.authorization';
-import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { LogContext } from '@common/enums/logging.context';
-import { CommunityPolicyService } from '@domain/community/community-policy/community.policy.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { CommunityRoleType } from '@common/enums/community.role';
 import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
@@ -20,6 +18,8 @@ import {
 import { LinkAuthorizationService } from '../link/link.service.authorization';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { IRoleManager } from '@domain/access/role-manager/role.manager.interface';
+import { RoleManagerService } from '@domain/access/role-manager/role.manager.service';
 
 @Injectable()
 export class CalloutContributionAuthorizationService {
@@ -29,13 +29,13 @@ export class CalloutContributionAuthorizationService {
     private postAuthorizationService: PostAuthorizationService,
     private whiteboardAuthorizationService: WhiteboardAuthorizationService,
     private linkAuthorizationService: LinkAuthorizationService,
-    private communityPolicyService: CommunityPolicyService
+    private roleManagerService: RoleManagerService
   ) {}
 
   public async applyAuthorizationPolicy(
     contributionID: string,
     parentAuthorization: IAuthorizationPolicy | undefined,
-    communityPolicy?: ICommunityPolicy,
+    roleManager?: IRoleManager,
     spaceSettings?: ISpaceSettings
   ): Promise<IAuthorizationPolicy[]> {
     const contribution =
@@ -111,7 +111,7 @@ export class CalloutContributionAuthorizationService {
     // Extend to give the user creating the contribution more rights
     contribution.authorization = this.appendCredentialRules(
       contribution,
-      communityPolicy,
+      roleManager,
       spaceSettings
     );
     updatedAuthorizations.push(contribution.authorization);
@@ -121,7 +121,7 @@ export class CalloutContributionAuthorizationService {
         await this.postAuthorizationService.applyAuthorizationPolicy(
           contribution.post,
           contribution.authorization,
-          communityPolicy,
+          roleManager,
           spaceSettings
         );
       updatedAuthorizations.push(...postAuthorizations);
@@ -150,7 +150,7 @@ export class CalloutContributionAuthorizationService {
 
   private appendCredentialRules(
     contribution: ICalloutContribution,
-    communityPolicy?: ICommunityPolicy,
+    communityPolicy?: IRoleManager,
     spaceSettings?: ISpaceSettings
   ): IAuthorizationPolicy {
     const authorization = contribution.authorization;
@@ -204,10 +204,10 @@ export class CalloutContributionAuthorizationService {
     ];
     if (communityPolicy && spaceSettings) {
       const roleCredentials =
-        this.communityPolicyService.getCredentialsForRoleWithParents(
+        this.roleManagerService.getCredentialsForRoleWithParents(
           communityPolicy,
-          spaceSettings,
-          CommunityRoleType.ADMIN
+          CommunityRoleType.ADMIN,
+          spaceSettings
         );
       credentials.push(...roleCredentials);
     }

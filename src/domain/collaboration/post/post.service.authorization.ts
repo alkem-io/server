@@ -8,8 +8,6 @@ import {
   AuthorizationPrivilege,
   LogContext,
 } from '@common/enums';
-import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
-import { CommunityPolicyService } from '@domain/community/community-policy/community.policy.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
   CREDENTIAL_RULE_POST_CREATED_BY,
@@ -21,20 +19,22 @@ import { CommunityRoleType } from '@common/enums/community.role';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { IRoleManager } from '@domain/access/role-manager/role.manager.interface';
+import { RoleManagerService } from '@domain/access/role-manager/role.manager.service';
 
 @Injectable()
 export class PostAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private roomAuthorizationService: RoomAuthorizationService,
-    private communityPolicyService: CommunityPolicyService,
+    private roleManagerService: RoleManagerService,
     private profileAuthorizationService: ProfileAuthorizationService
   ) {}
 
   async applyAuthorizationPolicy(
     post: IPost,
     parentAuthorization: IAuthorizationPolicy | undefined,
-    communityPolicy?: ICommunityPolicy,
+    roleManager?: IRoleManager,
     spaceSettings?: ISpaceSettings
   ): Promise<IAuthorizationPolicy[]> {
     if (!post.profile) {
@@ -73,7 +73,7 @@ export class PostAuthorizationService {
     // Extend to give the user creating the post more rights
     post.authorization = this.appendCredentialRules(
       post,
-      communityPolicy,
+      roleManager,
       spaceSettings
     );
     updatedAuthorizations.push(post.authorization);
@@ -91,7 +91,7 @@ export class PostAuthorizationService {
 
   private appendCredentialRules(
     post: IPost,
-    communityPolicy?: ICommunityPolicy,
+    roleManager?: IRoleManager,
     spaceSettings?: ISpaceSettings
   ): IAuthorizationPolicy {
     const authorization = post.authorization;
@@ -124,12 +124,12 @@ export class PostAuthorizationService {
       },
     ];
 
-    if (communityPolicy && spaceSettings) {
+    if (roleManager && spaceSettings) {
       const roleCredentials =
-        this.communityPolicyService.getCredentialsForRoleWithParents(
-          communityPolicy,
-          spaceSettings,
-          CommunityRoleType.ADMIN
+        this.roleManagerService.getCredentialsForRoleWithParents(
+          roleManager,
+          CommunityRoleType.ADMIN,
+          spaceSettings
         );
       credentials.push(...roleCredentials);
     }

@@ -200,6 +200,27 @@ export class RoleManagerService {
     return roleManager;
   }
 
+  public async getPeerRoleManagers(
+    parentRoleManager: IRoleManager,
+    childRoleManager: IRoleManager
+  ): Promise<IRoleManager[]> {
+    const peerRoleManagers: IRoleManager[] =
+      await this.roleManagerRepository.find({
+        where: {
+          parentRoleManager: {
+            id: parentRoleManager.id,
+          },
+        },
+      });
+    const result: IRoleManager[] = [];
+    for (const roleManager of peerRoleManagers) {
+      if (roleManager && !(roleManager.id === childRoleManager.id)) {
+        result.push(roleManager);
+      }
+    }
+    return result;
+  }
+
   public inheritParentCredentials(roleManager: IRoleManager): IRoleManager {
     const roleManagerParent = roleManager.parentRoleManager;
     if (!roleManagerParent) {

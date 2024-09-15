@@ -1,5 +1,4 @@
 import { Column, Entity, ManyToOne } from 'typeorm';
-import { Community } from '@domain/community/community/community.entity';
 import { IPlatformInvitation } from './platform.invitation.interface';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { PlatformRole } from '@common/enums/platform.role';
@@ -16,14 +15,6 @@ export class PlatformInvitation
   extends AuthorizableEntity
   implements IPlatformInvitation
 {
-  // Platform invitations for Community
-  @ManyToOne(() => Community, community => community.platformInvitations, {
-    eager: false,
-    cascade: false,
-    onDelete: 'CASCADE',
-  })
-  community?: Community;
-
   @ManyToOne(() => RoleManager, manager => manager.platformInvitations, {
     eager: false,
     cascade: false,

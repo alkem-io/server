@@ -26,7 +26,6 @@ import { CreateCalloutOnCollaborationInput } from '@domain/collaboration/collabo
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
-import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { CollaborationArgsCallouts } from './dto/collaboration.args.callouts';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -54,6 +53,7 @@ import { SpaceLevel } from '@common/enums/space.level';
 import { Callout } from '@domain/collaboration/callout';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { CreateInnovationFlowInput } from '../innovation-flow/dto/innovation.flow.dto.create';
+import { IRoleManager } from '@domain/access/role-manager';
 
 @Injectable()
 export class CollaborationService {
@@ -690,14 +690,12 @@ export class CollaborationService {
     return result.whiteboardsCount;
   }
 
-  public async getCommunityPolicy(
-    collaborationID: string
-  ): Promise<ICommunityPolicy> {
-    const { communityPolicy } =
-      await this.namingService.getCommunityPolicyAndSettingsForCollaboration(
+  public async getRoleManager(collaborationID: string): Promise<IRoleManager> {
+    const { roleManager } =
+      await this.namingService.getRoleManagerAndSettingsForCollaboration(
         collaborationID
       );
-    return communityPolicy;
+    return roleManager;
   }
 
   public async updateCalloutsSortOrder(
