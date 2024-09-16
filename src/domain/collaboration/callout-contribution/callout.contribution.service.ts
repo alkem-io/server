@@ -245,6 +245,12 @@ export class CalloutContributionService {
     return calloutContribution.post;
   }
 
+  /**
+   * Retrieves the storage bucket associated with a specific contribution.
+   * @param contributionID The ID of the contribution.
+   * @returns The storage bucket associated with the contribution.
+   * @throws RelationshipNotFoundException if no profile with a storage bucket is found for the contribution.
+   */
   public async getStorageBucketForContribution(
     contributionID: string
   ): Promise<IStorageBucket> {
@@ -271,14 +277,7 @@ export class CalloutContributionService {
       }
     );
 
-    let profile: IProfile | undefined = undefined;
-    if (contribution.post) {
-      profile = contribution.post.profile;
-    } else if (contribution.link) {
-      profile = contribution.link.profile;
-    } else if (contribution.whiteboard) {
-      profile = contribution.whiteboard.profile;
-    }
+    const profile = this.getProfileFromContribution(contribution);
     if (!profile || !profile.storageBucket) {
       throw new RelationshipNotFoundException(
         `Unable to find profile with storage bucket for callout contribution: ${contributionID}`,
@@ -286,5 +285,18 @@ export class CalloutContributionService {
       );
     }
     return profile.storageBucket;
+  }
+
+  private getProfileFromContribution(
+    contribution: ICalloutContribution
+  ): IProfile | undefined {
+    if (contribution.post) {
+      return contribution.post.profile;
+    } else if (contribution.link) {
+      return contribution.link.profile;
+    } else if (contribution.whiteboard) {
+      return contribution.whiteboard.profile;
+    }
+    return undefined;
   }
 }
