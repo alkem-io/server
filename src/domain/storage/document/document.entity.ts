@@ -62,6 +62,6 @@ export class Document extends AuthorizableEntity implements IDocument {
   @Column('varchar', { length: SMALL_TEXT_LENGTH, nullable: false })
   externalID!: string;
 
-  @Column('tinyint', { nullable: false })
+  @Column('boolean', { nullable: false, default: false })
   temporaryLocation!: boolean;
 }
