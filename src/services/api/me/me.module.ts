@@ -11,7 +11,6 @@ import { RolesModule } from '../roles/roles.module';
 import { ActivityLogModule } from '../activity-log/activity.log.module';
 import { ActivityModule } from '@platform/activity/activity.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
-import { CommunityRoleModule } from '@domain/community/community-role/community.role.module';
 import { ContributorModule } from '@domain/community/contributor/contributor.module';
 
 @Module({
@@ -25,7 +24,6 @@ import { ContributorModule } from '@domain/community/contributor/contributor.mod
     RolesModule,
     ActivityLogModule,
     ActivityModule,
-    CommunityRoleModule,
     EntityResolverModule,
   ],
   providers: [MeService, MeResolverQueries, MeResolverFields],

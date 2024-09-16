@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { CommunityService } from './community.service';
-import { ICommunity } from '@domain/community/community';
 import {
   AuthorizationCredential,
   AuthorizationPrivilege,
@@ -14,13 +13,11 @@ import { AuthorizationPolicyRuleVerifiedCredential } from '@core/authorization/a
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
   CREDENTIAL_RULE_TYPES_COMMUNITY_READ_GLOBAL_REGISTERED,
-  CREDENTIAL_RULE_COMMUNITY_SELF_REMOVAL,
   CREDENTIAL_RULE_TYPES_ACCESS_VIRTUAL_CONTRIBUTORS,
   CREDENTIAL_RULE_TYPES_COMMUNITY_ADD_MEMBERS,
   CREDENTIAL_RULE_TYPES_COMMUNITY_INVITE_MEMBERS,
   POLICY_RULE_COMMUNITY_ADD_VC,
   POLICY_RULE_COMMUNITY_INVITE_MEMBER,
-  CREDENTIAL_RULE_COMMUNITY_VIRTUAL_CONTRIBUTOR_REMOVAL,
   CREDENTIAL_RULE_SPACE_HOST_ASSOCIATES_JOIN,
   CREDENTIAL_RULE_TYPES_SPACE_COMMUNITY_JOIN_GLOBAL_REGISTERED,
   CREDENTIAL_RULE_TYPES_SPACE_COMMUNITY_APPLY_GLOBAL_REGISTERED,
@@ -409,72 +406,6 @@ export class CommunityAuthorizationService {
       authorization,
       verifiedCredentialRules
     );
-  }
-
-  public extendAuthorizationPolicyForSelfRemoval(
-    community: ICommunity,
-    userToBeRemovedID: string
-  ): IAuthorizationPolicy {
-    const newRules: IAuthorizationPolicyRuleCredential[] = [];
-
-    const userSelfRemovalRule =
-      this.authorizationPolicyService.createCredentialRule(
-        [AuthorizationPrivilege.GRANT],
-        [
-          {
-            type: AuthorizationCredential.USER_SELF_MANAGEMENT,
-            resourceID: userToBeRemovedID,
-          },
-        ],
-        CREDENTIAL_RULE_COMMUNITY_SELF_REMOVAL
-      );
-    newRules.push(userSelfRemovalRule);
-
-    const clonedCommunityAuthorization =
-      this.authorizationPolicyService.cloneAuthorizationPolicy(
-        community.authorization
-      );
-
-    const updatedAuthorization =
-      this.authorizationPolicyService.appendCredentialAuthorizationRules(
-        clonedCommunityAuthorization,
-        newRules
-      );
-
-    return updatedAuthorization;
-  }
-
-  public async extendAuthorizationPolicyForVirtualContributorRemoval(
-    community: ICommunity,
-    virtualContributorToBeRemoved: string
-  ): Promise<IAuthorizationPolicy> {
-    const newRules: IAuthorizationPolicyRuleCredential[] = [];
-
-    const accountHostCredentials =
-      await this.virtualContributorService.getAccountHostCredentials(
-        virtualContributorToBeRemoved
-      );
-
-    const userSelfRemovalRule =
-      this.authorizationPolicyService.createCredentialRule(
-        [AuthorizationPrivilege.GRANT],
-        accountHostCredentials,
-        CREDENTIAL_RULE_COMMUNITY_VIRTUAL_CONTRIBUTOR_REMOVAL
-      );
-    newRules.push(userSelfRemovalRule);
-
-    const clonedCommunityAuthorization =
-      this.authorizationPolicyService.cloneAuthorizationPolicy(
-        community.authorization
-      );
-
-    const updatedAuthorization =
-      this.authorizationPolicyService.appendCredentialAuthorizationRules(
-        clonedCommunityAuthorization,
-        newRules
-      );
-
-    return updatedAuthorization;
   }
 
   private appendPrivilegeRules(

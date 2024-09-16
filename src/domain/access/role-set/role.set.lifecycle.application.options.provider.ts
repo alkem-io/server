@@ -13,15 +13,15 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { CommunityRoleType } from '@common/enums/community.role';
-import { CommunityRoleService } from './community.role.service';
+import { RoleSetService } from './role.set.service';
 
 @Injectable()
-export class CommunityRoleApplicationLifecycleOptionsProvider {
+export class RoleSetApplicationLifecycleOptionsProvider {
   constructor(
     private lifecycleService: LifecycleService,
-    private communityRoleService: CommunityRoleService,
     private authorizationService: AuthorizationService,
     private applicationService: ApplicationService,
+    private roleSetService: RoleSetService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -76,7 +76,7 @@ export class CommunityRoleApplicationLifecycleOptionsProvider {
             LogContext.COMMUNITY
           );
 
-        await this.communityRoleService.assignUserToRole(
+        await this.roleSetService.assignUserToRole(
           roleSet,
           CommunityRoleType.MEMBER,
           userID,

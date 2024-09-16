@@ -7,8 +7,8 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
 import { CommunicationModule } from '@domain/communication/communication/communication.module';
 import { AccountModule } from '@domain/space/account/account.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
-import { CommunityRoleModule } from '@domain/community/community-role/community.role.module';
 import { CommunityModule } from '@domain/community/community/community.module';
+import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 
 @Module({
   imports: [
@@ -16,7 +16,7 @@ import { CommunityModule } from '@domain/community/community/community.module';
     AccountModule,
     SpaceModule,
     CommunityModule,
-    CommunityRoleModule,
+    RoleSetModule,
     AuthorizationModule,
     AuthorizationPolicyModule,
     NamingModule,

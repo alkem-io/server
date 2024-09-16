@@ -24,7 +24,6 @@ import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platf
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { SpaceDefaultsModule } from '../space.defaults/space.defaults.module';
 import { SpaceSettingssModule } from '../space.settings/space.settings.module';
-import { CommunityRoleModule } from '@domain/community/community-role/community.role.module';
 import { TemplatesSetModule } from '@domain/template/templates-set/templates.set.module';
 import { AccountHostModule } from '../account.host/account.host.module';
 import { LicensingModule } from '@platform/licensing/licensing.module';
@@ -42,7 +41,6 @@ import { RoleSetModule } from '@domain/access/role-set/role.set.module';
     AuthorizationModule,
     ContextModule,
     CommunityModule,
-    CommunityRoleModule,
     ProfileModule,
     LicensingModule,
     LicenseIssuerModule,

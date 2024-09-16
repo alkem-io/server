@@ -70,11 +70,11 @@ import { UpdateSpaceSettingsInput } from '@domain/space/space/dto/space.dto.upda
 import { CreateAccountInput } from '@domain/space/account/dto';
 import { UpdateCommunityGuidelinesInput } from '@domain/community/community-guidelines/dto/community.guidelines.dto.update';
 import { ForumCreateDiscussionInput } from '@platform/forum/dto/forum.dto.create.discussion';
-import { CommunityRoleApplyInput } from '@domain/community/community-role/dto/community.role.dto.apply';
-import { CreateInvitationForContributorsOnCommunityInput } from '@domain/community/community-role/dto/community.role.dto.invite.contributor';
-import { CreatePlatformInvitationOnCommunityInput } from '@domain/community/community-role/dto/community.role.dto.platform.invitation.community';
 import { CreateCollaborationOnSpaceInput } from '@domain/space/space/dto/space.dto.create.collaboration';
 import { UpdateInnovationFlowEntityInput } from '@domain/collaboration/innovation-flow/dto/innovation.flow.dto.update.entity';
+import { CommunityRoleApplyInput } from '@domain/access/role-set/dto/role.set.dto.apply';
+import { CreateInvitationForContributorsOnCommunityInput } from '@domain/access/role-set/dto/role.set.dto.invite.contributor';
+import { CreatePlatformInvitationOnCommunityInput } from '@domain/access/role-set/dto/role.set.dto.platform.invitation.community';
 
 export class BaseHandler extends AbstractHandler {
   public async handle(

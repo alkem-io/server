@@ -8,18 +8,18 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { CommunityRoleType } from '@common/enums/community.role';
-import { CommunityRoleService } from './community.role.service';
 import { InvitationEventInput } from '@domain/access/invitation/dto/invitation.dto.event';
 import { IInvitation } from '@domain/access/invitation/invitation.interface';
 import { InvitationService } from '@domain/access/invitation/invitation.service';
+import { RoleSetService } from './role.set.service';
 
 @Injectable()
-export class CommunityRoleInvitationLifecycleOptionsProvider {
+export class RoleSetInvitationLifecycleOptionsProvider {
   constructor(
     private lifecycleService: LifecycleService,
-    private communityRoleService: CommunityRoleService,
     private authorizationService: AuthorizationService,
     private invitationService: InvitationService,
+    private roleSetService: RoleSetService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -110,7 +110,7 @@ export class CommunityRoleInvitationLifecycleOptionsProvider {
                   LogContext.COMMUNITY
                 );
               }
-              await this.communityRoleService.assignContributorToRole(
+              await this.roleSetService.assignContributorToRole(
                 roleSet.parentRoleSet,
                 CommunityRoleType.MEMBER,
                 contributorID,
@@ -119,7 +119,7 @@ export class CommunityRoleInvitationLifecycleOptionsProvider {
                 true
               );
             }
-            await this.communityRoleService.assignContributorToRole(
+            await this.roleSetService.assignContributorToRole(
               roleSet,
               CommunityRoleType.MEMBER,
               contributorID,

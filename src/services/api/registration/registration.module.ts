@@ -10,11 +10,11 @@ import { ApplicationModule } from '@domain/access/application/application.module
 import { PreferenceSetModule } from '@domain/common/preference-set/preference.set.module';
 import { PlatformInvitationModule } from '@platform/invitation/platform.invitation.module';
 import { PlatformRoleModule } from '@platform/platfrom.role/platform.role.module';
-import { CommunityRoleModule } from '@domain/community/community-role/community.role.module';
 import { OrganizationRoleModule } from '@domain/community/organization-role/organization.role.module';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { AccountModule } from '@domain/space/account/account.module';
+import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 
 @Module({
   imports: [
@@ -22,7 +22,7 @@ import { AccountModule } from '@domain/space/account/account.module';
     AuthorizationModule,
     AuthorizationPolicyModule,
     NotificationAdapterModule,
-    CommunityRoleModule,
+    RoleSetModule,
     UserModule,
     PreferenceSetModule,
     OrganizationModule,

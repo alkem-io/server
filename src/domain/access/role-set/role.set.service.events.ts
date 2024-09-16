@@ -6,12 +6,12 @@ import { NotificationInputCommunityNewMember } from '@services/adapters/notifica
 import { ActivityInputMemberJoined } from '@services/adapters/activity-adapter/dto/activity.dto.input.member.joined';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { SpaceType } from '@common/enums/space.type';
-import { IContributor } from '../contributor/contributor.interface';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
-import { ICommunity } from '../community/community.interface';
+import { IRoleSet } from './role.set.interface';
+import { IContributor } from '@domain/community/contributor/contributor.interface';
 
 @Injectable()
-export class CommunityRoleEventsService {
+export class RoleSetEventsService {
   constructor(
     private contributionReporter: ContributionReporterService,
     private notificationAdapter: NotificationAdapter,
@@ -20,37 +20,42 @@ export class CommunityRoleEventsService {
   ) {}
 
   public async registerCommunityNewMemberActivity(
-    community: ICommunity,
+    roleSet: IRoleSet,
     newContributor: IContributor,
     agentInfo: AgentInfo
   ) {
+    const community =
+      await this.communityResolverService.getCommunityForRoleSet(roleSet.id);
+
     const activityLogInput: ActivityInputMemberJoined = {
       triggeredBy: agentInfo.userID,
-      community: community,
+      community,
       contributor: newContributor,
     };
     await this.activityAdapter.memberJoined(activityLogInput);
   }
 
   public async processCommunityNewMemberEvents(
-    community: ICommunity,
+    roleSet: IRoleSet,
     levelZeroSpaceID: string,
     displayName: string,
     agentInfo: AgentInfo,
     newContributor: IContributor
   ) {
+    const community =
+      await this.communityResolverService.getCommunityForRoleSet(roleSet.id);
     // TODO: community just needs to know the level, not the type
     // Send the notification
     const notificationInput: NotificationInputCommunityNewMember = {
       contributorID: newContributor.id,
       triggeredBy: agentInfo.userID,
-      community: community,
+      community,
     };
     await this.notificationAdapter.communityNewMember(notificationInput);
 
     // Record the contribution events
     const space = await this.communityResolverService.getSpaceForRoleSetOrFail(
-      community.id
+      roleSet.id
     );
     switch (space.type) {
       case SpaceType.SPACE:
