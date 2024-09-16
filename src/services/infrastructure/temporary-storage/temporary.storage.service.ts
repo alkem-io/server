@@ -4,7 +4,14 @@ import { LogContext } from '@common/enums/logging.context';
 import { IDocument } from '@domain/storage/document/document.interface';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { CreateContributionOnCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create.contribution';
+import { CreateCalloutOnCollaborationInput } from '@domain/collaboration/collaboration/dto';
+import { CreateVirtualContributorOnAccountInput } from '@domain/space/account/dto/account.dto.create.virtual.contributor';
 
+export type temporaryDocumentDTO =
+  | CreateContributionOnCalloutInput
+  | CreateCalloutOnCollaborationInput
+  | CreateVirtualContributorOnAccountInput;
 export class TemporaryStorageService {
   private sampleDocumentURL =
     'https://alkem.io/api/private/rest/storage/document/0d4564f7-2194-42e4-b4c1-60314765a3e0';
@@ -20,7 +27,7 @@ export class TemporaryStorageService {
   // NOTE: documents are diretly modified so important that any callers of this
   // method reload the Documents afterwards
   public async moveTemporaryDocuments(
-    inputDTO: any, // Note: had considered using a common input DTO type but did not find a suitable one
+    inputDTO: temporaryDocumentDTO,
     destinationStorageBucket: IStorageBucket
   ): Promise<void> {
     const serializedJSON = JSON.stringify(inputDTO);
