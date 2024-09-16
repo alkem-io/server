@@ -130,8 +130,7 @@ export class AdminWhiteboardService {
                 imageBuffer,
                 `${className}-${profile.displayName}-${id}`, // we can't really infer the name
                 file.mimeType,
-                uploaderId,
-                false
+                uploaderId
               );
             document = await this.documentService.saveDocument(document);
             const documentAuthorizations =

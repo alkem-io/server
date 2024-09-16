@@ -54,7 +54,8 @@ export class StorageBucketResolverMutations {
       readStream,
       filename,
       mimetype,
-      agentInfo.userID
+      agentInfo.userID,
+      uploadData.temporaryLocation
     );
     document = await this.documentService.saveDocument(document);
 

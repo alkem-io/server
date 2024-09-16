@@ -136,7 +136,8 @@ export class StorageBucketService {
     readStream: ReadStream,
     filename: string,
     mimeType: string,
-    userID: string
+    userID: string,
+    temporaryDocument = false
   ): Promise<IDocument> {
     const buffer = await streamToBuffer(readStream);
 
@@ -145,7 +146,8 @@ export class StorageBucketService {
       buffer,
       filename,
       mimeType,
-      userID
+      userID,
+      temporaryDocument
     );
   }
 
@@ -155,7 +157,7 @@ export class StorageBucketService {
     filename: string,
     mimeType: string,
     userID: string,
-    anonymousReadAccess = false
+    temporaryLocation = false
   ): Promise<IDocument | never> {
     const storage = await this.getStorageBucketOrFail(storageBucketId, {
       relations: {},
@@ -174,7 +176,7 @@ export class StorageBucketService {
       displayName: filename,
       size: size,
       createdBy: userID,
-      anonymousReadAccess,
+      temporaryLocation: temporaryLocation,
     };
 
     try {
@@ -427,8 +429,7 @@ export class StorageBucketService {
       imageBuffer,
       VisualType.AVATAR,
       fileType,
-      userId,
-      false
+      userId
     );
 
     const storageBucket = await this.getStorageBucketOrFail(storageBucketId);

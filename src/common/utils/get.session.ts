@@ -120,9 +120,14 @@ export const getSessionFromJwt = (token: string): Session | never => {
   }
 
   let session: Session | null;
+  const isBearerToken = token.startsWith('Bearer ');
+  if (isBearerToken) {
+    throw new Error('Bearer token found, not decodable as JWT');
+  }
 
   try {
-    session = jwt_decode<KratosPayload>(token).session;
+    const decodedKatosPaylod = jwt_decode<KratosPayload>(token);
+    session = decodedKatosPaylod.session;
   } catch (error: any) {
     throw new Error(error?.message ?? 'Token is not a valid JWT token!');
   }
