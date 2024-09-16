@@ -3,7 +3,7 @@ import { IUser } from '@domain/community/user/user.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { IQuestion } from '@domain/common/question/question.interface';
-import { IRoleSet } from '@domain/access/role-set';
+import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 
 @ObjectType('Application')
 export abstract class IApplication extends IAuthorizable {

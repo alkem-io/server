@@ -2,7 +2,7 @@ import { CommunityRoleType } from '@common/enums/community.role';
 import { IBaseAlkemio } from '@domain/common/entity/base-entity';
 import { Field, ObjectType } from '@nestjs/graphql';
 
-@ObjectType('Role2')
+@ObjectType('Role')
 export abstract class IRole extends IBaseAlkemio {
   @Field(() => CommunityRoleType, {
     nullable: false,

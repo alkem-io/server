@@ -12,7 +12,7 @@ import { NVP } from '@domain/common/nvp/nvp.entity';
 import { User } from '@domain/community/user/user.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { IQuestion } from '@domain/common/question/question.interface';
-import { RoleSet } from '@domain/access/role-set';
+import { RoleSet } from '@domain/access/role-set/role.set.entity';
 @Entity()
 export class Application extends AuthorizableEntity implements IApplication {
   @OneToOne(() => Lifecycle, {

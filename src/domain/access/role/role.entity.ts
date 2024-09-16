@@ -3,7 +3,7 @@ import { Column, Entity, ManyToOne } from 'typeorm';
 import { IRole } from './role.interface';
 import { CommunityRoleType } from '@common/enums/community.role';
 import { ENUM_LENGTH } from '@common/constants/entity.field.length.constants';
-import { RoleSet } from '../role-set';
+import { RoleSet } from '../role-set/role.set.entity';
 
 @Entity()
 export class Role extends BaseAlkemioEntity implements IRole {
