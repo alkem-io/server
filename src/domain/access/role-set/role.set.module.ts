@@ -14,6 +14,19 @@ import { InvitationModule } from '@domain/access/invitation/invitation.module';
 import { ApplicationModule } from '@domain/access/application/application.module';
 import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
 import { RoleModule } from '../role/role.module';
+import { AgentModule } from '@domain/agent/agent/agent.module';
+import { UserModule } from '@domain/community/user/user.module';
+import { OrganizationModule } from '@domain/community/organization/organization.module';
+import { ContributorModule } from '@domain/community/contributor/contributor.module';
+import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
+import { RoleSetEventsService } from './role.set.service.events';
+import { AiServerAdapterModule } from '@services/adapters/ai-server-adapter/ai.server.adapter.module';
+import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
+import { RoleSetApplicationLifecycleOptionsProvider } from './role.set.lifecycle.application.options.provider';
+import { RoleSetInvitationLifecycleOptionsProvider } from './role.set.lifecycle.invitation.options.provider';
+import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
+import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
+import { LifecycleModule } from '@domain/common/lifecycle/lifecycle.module';
 
 @Module({
   imports: [
@@ -21,11 +34,21 @@ import { RoleModule } from '../role/role.module';
     AuthorizationPolicyModule,
     LicenseEngineModule,
     FormModule,
+    AgentModule,
+    UserModule,
+    OrganizationModule,
+    ContributorModule,
     RoleModule,
     InvitationModule,
+    EntityResolverModule,
     ApplicationModule,
     PlatformInvitationModule,
     VirtualContributorModule,
+    AiServerAdapterModule,
+    NotificationAdapterModule,
+    ContributionReporterModule,
+    ActivityAdapterModule,
+    LifecycleModule,
     TypeOrmModule.forFeature([RoleSet]),
   ],
   providers: [
@@ -33,6 +56,9 @@ import { RoleModule } from '../role/role.module';
     RoleSetAuthorizationService,
     RoleSetResolverMutations,
     RoleSetResolverFields,
+    RoleSetEventsService,
+    RoleSetApplicationLifecycleOptionsProvider,
+    RoleSetInvitationLifecycleOptionsProvider,
   ],
   exports: [RoleSetService, RoleSetAuthorizationService],
 })
