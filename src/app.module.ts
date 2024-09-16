@@ -1,5 +1,5 @@
 import { MiddlewareConsumer, Module } from '@nestjs/common';
-import { CacheModule } from '@nestjs/cache-manager';
+import { Cache, CacheModule } from '@nestjs/cache-manager';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_FILTER, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { GraphQLModule } from '@nestjs/graphql';
@@ -8,12 +8,6 @@ import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { CloseCode } from 'graphql-ws';
 import { ValidationPipe } from '@common/pipes/validation.pipe';
 import configuration from '@config/configuration';
-import {
-  configQuery,
-  spacesQuery,
-  meQuery,
-  platformMetadataQuery,
-} from '@config/graphql';
 import { AuthenticationModule } from '@core/authentication/authentication.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { BootstrapModule } from '@core/bootstrap/bootstrap.module';
@@ -27,7 +21,6 @@ import { WinstonConfigService } from '@src/config/winston.config';
 import { MetadataModule } from '@src/platform/metadata/metadata.module';
 import { SearchModule } from '@services/api/search/v1/search.module';
 import { KonfigModule } from '@src/platform/configuration/config/config.module';
-import { print } from 'graphql/language/printer';
 import { WinstonModule } from 'nest-winston';
 import { join } from 'path';
 import {
@@ -81,7 +74,9 @@ import { PlatformRoleModule } from '@platform/platfrom.role/platform.role.module
 import { LookupByNameModule } from '@services/api/lookup-by-name';
 import { PlatformHubModule } from '@platform/platfrom.hub/platform.hub.module';
 import { AdminContributorsModule } from '@platform/admin/avatars/admin.avatar.module';
-
+import renderGraphiQL from 'graphiql'; // Official GraphiQL package
+import { Request, Response } from 'express';
+import { ExecutionResult } from 'graphql';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -134,47 +129,31 @@ import { AdminContributorsModule } from '@platform/admin/avatars/admin.avatar.mo
     }),
     GraphQLModule.forRootAsync<ApolloDriverConfig>({
       driver: ApolloDriver,
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: async (configService: ConfigService<AlkemioConfig, true>) => {
-        const endpointCluster = configService.get('hosting.endpoint_cluster', {
-          infer: true,
-        });
+      imports: [],
+      inject: [Cache],
+      useFactory: async (cache: Cache) => {
         return {
           cors: false, // this is to avoid a duplicate cors origin header being created when behind the oathkeeper reverse proxy
           uploads: false,
           autoSchemaFile: true,
           introspection: true,
-          playground: {
-            settings: {
-              'request.credentials': 'include',
-            },
-            tabs: [
-              {
-                name: 'Me',
-                endpoint: `${endpointCluster}/api/private/graphql`,
-                query: print(meQuery),
-              },
-              {
-                name: 'Spaces',
-                endpoint: `${endpointCluster}/api/private/graphql`,
-                query: print(spacesQuery),
-              },
-              {
-                name: 'Configuration',
-                endpoint: `${endpointCluster}/api/public/graphql`,
-                query: print(configQuery),
-              },
-              {
-                name: 'Server Metadata',
-                endpoint: `${endpointCluster}/api/public/graphql`,
-                query: print(platformMetadataQuery),
-              },
-            ],
-          },
+          graphiql: true,
+          playground: false,
           fieldResolverEnhancers: ['guards', 'filters'],
           sortSchema: true,
-          persistedQueries: false,
+          persistedQueries: {
+            cache: {
+              get: async (key: string) => {
+                return await cache.get(key); // Retrieve persisted query from Redis
+              },
+              set: async (key: string, value: any) => {
+                await cache.set(key, value, { ttl: 60 * 60 * 24 * 7 }); // 7 days TTL for persisted queries
+              },
+              delete: async (key: string) => {
+                await cache.del(key); // Delete persisted query from Redis
+              },
+            },
+          },
           /***
            * graphql-ws requires passing the request object through the context method
            * !!! this is graphql-ws ONLY
@@ -308,11 +287,31 @@ import { AdminContributorsModule } from '@platform/admin/avatars/admin.avatar.mo
 })
 export class AppModule {
   configure(consumer: MiddlewareConsumer) {
+    // Apply your existing middlewares and GraphiQL middleware
     consumer
       .apply(RequestLoggerMiddleware, SessionExtendMiddleware)
       .forRoutes('/');
+
+    // Serve GraphiQL at /graphiql
+    consumer
+      .apply((req: Request, res: Response, _next: any) => {
+        res.send(
+          renderGraphiQL({
+            defaultQuery: '', // Optionally add a default query
+            fetcher: async graphQLParams => {
+              const response = await fetch('http://localhost:3000/graphql', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(graphQLParams),
+              });
+              const result = (await response.json()) as ExecutionResult; // Ensure the result matches the ExecutionResult type
+              return result;
+            },
+          })
+        );
+      })
+      .forRoutes('/graphiql'); // Serve GraphiQL at this route
   }
 }
-
 const isWebsocketContext = (context: unknown): context is WebsocketContext =>
   !!(context as WebsocketContext)?.extra;
