@@ -47,7 +47,7 @@ import { CommunityContributorsUpdateType } from '@common/enums/community.contrib
 import { RoleSetMembershipException } from '@common/exceptions/role.set.membership.exception';
 import { CreateApplicationInput } from '../application/dto/application.dto.create';
 import { CreateInvitationInput } from '../invitation/dto/invitation.dto.create';
-import { CreatePlatformInvitationOnCommunityInput } from './dto/role.set.dto.platform.invitation.community';
+import { InviteNewContributorForRoleOnRoleSetInput } from './dto/role.set.dto.platform.invitation.community';
 import { IPlatformInvitation } from '@platform/invitation/platform.invitation.interface';
 import { CreatePlatformInvitationInput } from '@platform/invitation/dto/platform.invitation.dto.create';
 import { ContributorService } from '@domain/community/contributor/contributor.service';
@@ -1030,7 +1030,7 @@ export class RoleSetService {
   }
 
   async createPlatformInvitation(
-    invitationData: CreatePlatformInvitationOnCommunityInput,
+    invitationData: InviteNewContributorForRoleOnRoleSetInput,
     agentInfo: AgentInfo
   ): Promise<IPlatformInvitation> {
     await this.validateInvitationToExternalUser(

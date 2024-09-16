@@ -6,7 +6,7 @@ import { Type } from 'class-transformer';
 import { UUID_LENGTH } from '@common/constants';
 
 @InputType()
-export class CommunityRoleApplyInput {
+export class ApplyForRoleOnRoleSetInput {
   @Field(() => UUID, { nullable: false })
   @MaxLength(UUID_LENGTH)
   roleSetID!: string;

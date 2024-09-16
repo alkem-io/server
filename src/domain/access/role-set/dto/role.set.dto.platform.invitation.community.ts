@@ -5,7 +5,7 @@ import { UUID_LENGTH } from '@common/constants';
 import { CreatePlatformInvitationInput } from '@platform/invitation/dto/platform.invitation.dto.create';
 
 @InputType()
-export class CreatePlatformInvitationOnCommunityInput extends CreatePlatformInvitationInput {
+export class InviteNewContributorForRoleOnRoleSetInput extends CreatePlatformInvitationInput {
   @Field(() => UUID, { nullable: false })
   @MaxLength(UUID_LENGTH)
   roleSetID!: string;

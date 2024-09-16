@@ -6,7 +6,7 @@ import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { UpdateRoleSetApplicationFormInput } from './dto/role.set.dto.update.application.form';
+import { UpdateApplicationFormOnRoleSetInput } from './dto/role.set.dto.update.application.form';
 import { IRoleSet } from './role.set.interface';
 import { IInvitation } from '../invitation/invitation.interface';
 import { InvitationEventInput } from '../invitation/dto/invitation.dto.event';
@@ -14,7 +14,7 @@ import { ApplicationEventInput } from '../application/dto/application.dto.event'
 import { IApplication } from '../application/application.interface';
 import { CommunityRoleType } from '@common/enums/community.role';
 import { RoleSetMembershipException } from '@common/exceptions/role.set.membership.exception';
-import { CommunityJoinInput } from './dto/role.set.dto.join';
+import { JoinAsBaseRoleOnRoleSetInput } from './dto/role.set.dto.join';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 import { NotificationInputPlatformInvitation } from '@services/adapters/notification-adapter/dto/notification.dto.input.platform.invitation';
 import { ApplicationService } from '../application/application.service';
@@ -32,18 +32,18 @@ import { CommunityResolverService } from '@services/infrastructure/entity-resolv
 import { RoleSetApplicationLifecycleOptionsProvider } from './role.set.lifecycle.application.options.provider';
 import { RoleSetInvitationLifecycleOptionsProvider } from './role.set.lifecycle.invitation.options.provider';
 import { PlatformInvitationService } from '@platform/invitation/platform.invitation.service';
-import { AssignCommunityRoleToUserInput } from './dto/role.set.dto.role.assign.user';
+import { AssignRoleOnRoleSetToUserInput } from './dto/role.set.dto.role.assign.user';
 import { IUser } from '@domain/community/user/user.interface';
 import { IOrganization } from '@domain/community/organization/organization.interface';
-import { AssignCommunityRoleToOrganizationInput } from './dto/role.set.dto.role.assign.organization';
+import { AssignRoleOnRoleSetToOrganizationInput } from './dto/role.set.dto.role.assign.organization';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
-import { AssignCommunityRoleToVirtualInput } from './dto/role.set.dto.role.assign.virtual';
-import { RemoveCommunityRoleFromUserInput } from './dto/role.set.dto.role.remove.user';
-import { RemoveCommunityRoleFromOrganizationInput } from './dto/role.set.dto.role.remove.organization';
-import { RemoveCommunityRoleFromVirtualInput } from './dto/role.set.dto.role.remove.virtual';
-import { CommunityRoleApplyInput } from './dto/role.set.dto.apply';
+import { AssignRoleOnRoleSetToVirtualContributorInput } from './dto/role.set.dto.role.assign.virtual';
+import { RemoveRoleOnRoleSetFromUserInput } from './dto/role.set.dto.role.remove.user';
+import { RemoveRoleOnRoleSetFromOrganizationInput } from './dto/role.set.dto.role.remove.organization';
+import { RemoveRoleOnRoleSetFromVirtualContributorInput } from './dto/role.set.dto.role.remove.virtual';
+import { ApplyForRoleOnRoleSetInput } from './dto/role.set.dto.apply';
 import { NotificationInputCommunityApplication } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.application';
-import { CreateInvitationForContributorsOnCommunityInput } from './dto/role.set.dto.invite.contributor';
+import { InviteContributorForRoleOnRoleSetInput } from './dto/role.set.dto.invite.contributor';
 import { RoleSetInvitationException } from '@common/exceptions/role.set.invitation.exception';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
@@ -51,7 +51,7 @@ import { CreateInvitationInput } from '../invitation/dto/invitation.dto.create';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { NotificationInputCommunityInvitationVirtualContributor } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.invitation.vc';
 import { IPlatformInvitation } from '@platform/invitation/platform.invitation.interface';
-import { CreatePlatformInvitationOnCommunityInput } from './dto/role.set.dto.platform.invitation.community';
+import { InviteNewContributorForRoleOnRoleSetInput } from './dto/role.set.dto.platform.invitation.community';
 import { NotificationInputCommunityInvitation } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.invitation';
 import { RoleSetAuthorizationService } from './role.set.service.authorization';
 
@@ -85,7 +85,7 @@ export class RoleSetResolverMutations {
   @Profiling.api
   async assignCommunityRoleToUser(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('roleData') roleData: AssignCommunityRoleToUserInput
+    @Args('roleData') roleData: AssignRoleOnRoleSetToUserInput
   ): Promise<IUser> {
     const roleSet = await this.roleSetService.getRoleSetOrFail(
       roleData.roleSetID
@@ -127,7 +127,7 @@ export class RoleSetResolverMutations {
   async assignCommunityRoleToOrganization(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('roleData')
-    roleData: AssignCommunityRoleToOrganizationInput
+    roleData: AssignRoleOnRoleSetToOrganizationInput
   ): Promise<IOrganization> {
     const roleSet = await this.roleSetService.getRoleSetOrFail(
       roleData.roleSetID
@@ -154,7 +154,7 @@ export class RoleSetResolverMutations {
   @Profiling.api
   async assignCommunityRoleToVirtual(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('roleData') roleData: AssignCommunityRoleToVirtualInput
+    @Args('roleData') roleData: AssignRoleOnRoleSetToVirtualContributorInput
   ): Promise<IVirtualContributor> {
     const roleSet = await this.roleSetService.getRoleSetOrFail(
       roleData.roleSetID
@@ -210,7 +210,7 @@ export class RoleSetResolverMutations {
   @Profiling.api
   async removeCommunityRoleFromUser(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('roleData') roleData: RemoveCommunityRoleFromUserInput
+    @Args('roleData') roleData: RemoveRoleOnRoleSetFromUserInput
   ): Promise<IUser> {
     const roleSet = await this.roleSetService.getRoleSetOrFail(
       roleData.roleSetID
@@ -257,7 +257,7 @@ export class RoleSetResolverMutations {
   @Profiling.api
   async removeCommunityRoleFromOrganization(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('roleData') roleData: RemoveCommunityRoleFromOrganizationInput
+    @Args('roleData') roleData: RemoveRoleOnRoleSetFromOrganizationInput
   ): Promise<IOrganization> {
     const roleSet = await this.roleSetService.getRoleSetOrFail(
       roleData.roleSetID
@@ -283,7 +283,7 @@ export class RoleSetResolverMutations {
   @Profiling.api
   async removeCommunityRoleFromVirtual(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('roleData') roleData: RemoveCommunityRoleFromVirtualInput
+    @Args('roleData') roleData: RemoveRoleOnRoleSetFromVirtualContributorInput
   ): Promise<IVirtualContributor> {
     const roleSet = await this.roleSetService.getRoleSetOrFail(
       roleData.roleSetID
@@ -323,7 +323,7 @@ export class RoleSetResolverMutations {
   @Profiling.api
   async applyForCommunityMembership(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('applicationData') applicationData: CommunityRoleApplyInput
+    @Args('applicationData') applicationData: ApplyForRoleOnRoleSetInput
   ): Promise<IApplication> {
     const roleSet = await this.roleSetService.getRoleSetOrFail(
       applicationData.roleSetID,
@@ -395,7 +395,7 @@ export class RoleSetResolverMutations {
   async inviteContributorsForCommunityMembership(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('invitationData')
-    invitationData: CreateInvitationForContributorsOnCommunityInput
+    invitationData: InviteContributorForRoleOnRoleSetInput
   ): Promise<IInvitation[]> {
     const roleSet = await this.roleSetService.getRoleSetOrFail(
       invitationData.roleSetID,
@@ -552,7 +552,7 @@ export class RoleSetResolverMutations {
   async inviteUserToPlatformAndCommunity(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('invitationData')
-    invitationData: CreatePlatformInvitationOnCommunityInput
+    invitationData: InviteNewContributorForRoleOnRoleSetInput
   ): Promise<IPlatformInvitation> {
     const roleSet = await this.roleSetService.getRoleSetOrFail(
       invitationData.roleSetID,
@@ -644,7 +644,7 @@ export class RoleSetResolverMutations {
   @Profiling.api
   async joinRoleSet(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('joinCommunityData') joiningData: CommunityJoinInput
+    @Args('joinCommunityData') joiningData: JoinAsBaseRoleOnRoleSetInput
   ): Promise<IRoleSet> {
     const roleSet = await this.roleSetService.getRoleSetOrFail(
       joiningData.roleSetID
@@ -734,7 +734,7 @@ export class RoleSetResolverMutations {
   async updateRoleSetApplicationForm(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('applicationFormData')
-    applicationFormData: UpdateRoleSetApplicationFormInput
+    applicationFormData: UpdateApplicationFormOnRoleSetInput
   ): Promise<IRoleSet> {
     const roleSet = await this.roleSetService.getRoleSetOrFail(
       applicationFormData.roleSetID

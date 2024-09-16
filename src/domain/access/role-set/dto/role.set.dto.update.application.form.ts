@@ -5,7 +5,7 @@ import { UpdateFormInput } from '@domain/common/form/dto/form.dto.update';
 import { UUID } from '@domain/common/scalars';
 
 @InputType()
-export class UpdateRoleSetApplicationFormInput {
+export class UpdateApplicationFormOnRoleSetInput {
   @Field(() => UUID, { nullable: false })
   roleSetID!: string;
 
