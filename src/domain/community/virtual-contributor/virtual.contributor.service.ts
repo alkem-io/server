@@ -5,6 +5,7 @@ import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
+  RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
 import { LogContext, ProfileType } from '@common/enums';
@@ -41,6 +42,7 @@ import { Invitation } from '../invitation';
 import { AgentType } from '@common/enums/agent.type';
 import { ContributorService } from '../contributor/contributor.service';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 
 @Injectable()
 export class VirtualContributorService {
@@ -319,6 +321,29 @@ export class VirtualContributorService {
       virtualContributor: virtualContributor,
       agent: virtualContributor.agent,
     };
+  }
+
+  public async getStorageBucket(
+    virtualContributorID: string
+  ): Promise<IStorageBucket> {
+    const virtualContributor = await this.getVirtualContributorOrFail(
+      virtualContributorID,
+      {
+        relations: {
+          profile: {
+            storageBucket: true,
+          },
+        },
+      }
+    );
+    const storageBucket = virtualContributor?.profile?.storageBucket;
+    if (!storageBucket) {
+      throw new RelationshipNotFoundException(
+        `Unable to find storage bucket to use for Virtual Contributor: ${virtualContributorID}`,
+        LogContext.VIRTUAL_CONTRIBUTOR
+      );
+    }
+    return storageBucket;
   }
 
   public async refershBodyOfKnowledge(
