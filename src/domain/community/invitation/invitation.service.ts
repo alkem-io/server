@@ -133,14 +133,14 @@ export class InvitationService {
 
   async findExistingInvitations(
     contributorID: string,
-    roleManagerID: string
+    roleSetID: string
   ): Promise<IInvitation[]> {
     const existingInvitations = await this.invitationRepository.find({
       where: {
         invitedContributor: contributorID,
-        roleManager: { id: roleManagerID },
+        roleSet: { id: roleSetID },
       },
-      relations: { roleManager: true },
+      relations: { roleSet: true },
     });
 
     if (existingInvitations.length > 0) return existingInvitations;
@@ -152,7 +152,7 @@ export class InvitationService {
     states: string[] = []
   ): Promise<IInvitation[]> {
     const findOpts: FindManyOptions<Invitation> = {
-      relations: { roleManager: true },
+      relations: { roleSet: true },
       where: { invitedContributor: contributorID },
     };
 

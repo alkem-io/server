@@ -717,10 +717,9 @@ export class NotificationPayloadBuilder {
     triggeredBy: string
   ): Promise<SpaceBaseEventPayload> {
     const basePayload = this.buildBaseEventPayload(triggeredBy);
-    const space =
-      await this.communityResolverService.getSpaceForRoleManagerOrFail(
-        community.id
-      );
+    const space = await this.communityResolverService.getSpaceForRoleSetOrFail(
+      community.id
+    );
     const url = await this.urlGeneratorService.generateUrlForProfile(
       space.profile
     );

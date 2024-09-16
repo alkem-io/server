@@ -16,7 +16,7 @@ import { CommunityGuidelinesModule } from '../community-guidelines/community.gui
 import { LicenseEngineModule } from '@core/license-engine/license.engine.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { VirtualContributorModule } from '../virtual-contributor/virtual.contributor.module';
-import { RoleManagerModule } from '@domain/access/role-manager/role.manager.module';
+import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 
 @Module({
   imports: [
@@ -25,7 +25,7 @@ import { RoleManagerModule } from '@domain/access/role-manager/role.manager.modu
     AgentModule,
     EntityResolverModule,
     UserGroupModule,
-    RoleManagerModule,
+    RoleSetModule,
     CommunicationModule,
     CommunityGuidelinesModule,
     LicenseEngineModule,

@@ -20,7 +20,7 @@ export abstract class IRole extends IBaseAlkemio {
   @Field(() => Boolean, {
     nullable: false,
     description:
-      'Flag to indicate if this Role requires having the same role in the Parent RoleManager.',
+      'Flag to indicate if this Role requires having the same role in the Parent RoleSet.',
   })
   requiresParentRole!: boolean;
 

@@ -22,7 +22,7 @@ import { InnovationFlowModule } from '../innovation-flow/innovation.flow.module'
 import { SpaceDefaultsModule } from '@domain/space/space.defaults/space.defaults.module';
 import { CalloutGroupsModule } from '../callout-groups/callout.group.module';
 import { LicenseEngineModule } from '@core/license-engine/license.engine.module';
-import { RoleManagerModule } from '@domain/access/role-manager/role.manager.module';
+import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 
 @Module({
   imports: [
@@ -32,7 +32,7 @@ import { RoleManagerModule } from '@domain/access/role-manager/role.manager.modu
     AuthorizationPolicyModule,
     AuthorizationModule,
     CalloutModule,
-    RoleManagerModule,
+    RoleSetModule,
     NamingModule,
     EntityResolverModule,
     StorageAggregatorResolverModule,

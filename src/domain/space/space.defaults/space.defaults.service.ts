@@ -11,11 +11,11 @@ import { SpaceDefaults } from './space.defaults.entity';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
 import { ISpaceSettings } from '../space.settings/space.settings.interface';
 import { ICalloutGroup } from '@domain/collaboration/callout-groups/callout.group.interface';
-import { subspaceCommunityRoles } from './definitions/subspace.role.manager.roles';
-import { spaceCommunityRoles } from './definitions/space.role.manager.roles';
+import { subspaceCommunityRoles } from './definitions/subspace.community.roles';
+import { spaceCommunityRoles } from './definitions/space.community.roles';
 import { CreateFormInput } from '@domain/common/form/dto/form.dto.create';
-import { subspceCommunityApplicationForm } from './definitions/subspace.role.manager.application.form';
-import { spaceCommunityApplicationForm } from './definitions/space.role.manager.application.form';
+import { subspceCommunityApplicationForm } from './definitions/subspace.community.role.application.form';
+import { spaceCommunityApplicationForm } from './definitions/space.community.role.application.form';
 import { ProfileType } from '@common/enums';
 import { CalloutGroupName } from '@common/enums/callout.group.name';
 import { SpaceLevel } from '@common/enums/space.level';
@@ -153,9 +153,7 @@ export class SpaceDefaultsService {
     }
   }
 
-  public getRoleManagerCommunityRoles(
-    spaceLevel: SpaceLevel
-  ): CreateRoleInput[] {
+  public getRoleSetCommunityRoles(spaceLevel: SpaceLevel): CreateRoleInput[] {
     switch (spaceLevel) {
       case SpaceLevel.CHALLENGE:
       case SpaceLevel.OPPORTUNITY:
@@ -181,7 +179,7 @@ export class SpaceDefaultsService {
     }
   }
 
-  public getRoleManagerCommunityApplicationForm(
+  public getRoleSetCommunityApplicationForm(
     spaceLevel: SpaceLevel
   ): CreateFormInput {
     switch (spaceLevel) {

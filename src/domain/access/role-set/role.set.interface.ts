@@ -6,8 +6,8 @@ import { IApplication } from '@domain/community/application/application.interfac
 import { IInvitation } from '@domain/community/invitation/invitation.interface';
 import { IRole } from '../role/role.interface';
 
-@ObjectType('RoleManager')
-export abstract class IRoleManager extends IAuthorizable {
+@ObjectType('RoleSet')
+export abstract class IRoleSet extends IAuthorizable {
   roles?: IRole[];
   applications?: IApplication[];
   invitations?: IInvitation[];
@@ -15,5 +15,5 @@ export abstract class IRoleManager extends IAuthorizable {
 
   applicationForm?: IForm;
 
-  parentRoleManager?: IRoleManager;
+  parentRoleSet?: IRoleSet;
 }

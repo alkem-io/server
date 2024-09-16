@@ -5,7 +5,7 @@ import { Field, InputType } from '@nestjs/graphql';
 @InputType()
 export class AssignCommunityRoleToUserInput {
   @Field(() => UUID, { nullable: false })
-  roleManagerID!: string;
+  roleSetID!: string;
 
   @Field(() => UUID_NAMEID_EMAIL, { nullable: false })
   userID!: string;

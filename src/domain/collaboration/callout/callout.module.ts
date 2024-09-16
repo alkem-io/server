@@ -23,7 +23,7 @@ import { CalloutContributionDefaultsModule } from '../callout-contribution-defau
 import { CalloutContributionPolicyModule } from '../callout-contribution-policy/callout.contribution.policy.module';
 import { CalloutContributionModule } from '../callout-contribution/callout.contribution.module';
 import { PostModule } from '../post/post.module';
-import { RoleManagerModule } from '@domain/access/role-manager/role.manager.module';
+import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 
 @Module({
   imports: [
@@ -34,7 +34,7 @@ import { RoleManagerModule } from '@domain/access/role-manager/role.manager.modu
     AuthorizationPolicyModule,
     AuthorizationModule,
     RoomModule,
-    RoleManagerModule,
+    RoleSetModule,
     EntityResolverModule,
     ContributorLookupModule,
     NamingModule,

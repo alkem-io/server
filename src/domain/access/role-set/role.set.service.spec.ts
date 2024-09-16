@@ -1,19 +1,19 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { RoleManager } from './role.manager.entity';
-import { RoleManagerService } from './role.manager.service';
+import { RoleSet } from './role.set.entity';
+import { RoleSetService } from './role.set.service';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 
-describe('RoleManagerService', () => {
-  let service: RoleManagerService;
+describe('RoleSetService', () => {
+  let service: RoleSetService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        RoleManagerService,
-        repositoryProviderMockFactory(RoleManager),
+        RoleSetService,
+        repositoryProviderMockFactory(RoleSet),
         MockCacheManager,
         MockWinstonProvider,
       ],
@@ -21,7 +21,7 @@ describe('RoleManagerService', () => {
       .useMocker(defaultMockerFactory)
       .compile();
 
-    service = module.get<RoleManagerService>(RoleManagerService);
+    service = module.get<RoleSetService>(RoleSetService);
   });
 
   it('should be defined', () => {

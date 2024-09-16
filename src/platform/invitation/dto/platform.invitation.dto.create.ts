@@ -29,7 +29,7 @@ export class CreatePlatformInvitationInput {
 
   createdBy!: string;
 
-  roleManagerID?: string;
+  roleSetID?: string;
   communityInvitedToParent!: boolean;
   platformRole?: PlatformRole;
 }

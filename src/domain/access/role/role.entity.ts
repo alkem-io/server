@@ -3,16 +3,16 @@ import { Column, Entity, ManyToOne } from 'typeorm';
 import { IRole } from './role.interface';
 import { CommunityRoleType } from '@common/enums/community.role';
 import { ENUM_LENGTH } from '@common/constants/entity.field.length.constants';
-import { RoleManager } from '../role-manager';
+import { RoleSet } from '../role-set';
 
 @Entity()
 export class Role extends BaseAlkemioEntity implements IRole {
-  @ManyToOne(() => RoleManager, manager => manager.roles, {
+  @ManyToOne(() => RoleSet, manager => manager.roles, {
     eager: false,
     cascade: false,
     onDelete: 'CASCADE',
   })
-  manager?: RoleManager;
+  roleSet?: RoleSet;
 
   @Column('varchar', { length: ENUM_LENGTH, nullable: false })
   type!: CommunityRoleType;

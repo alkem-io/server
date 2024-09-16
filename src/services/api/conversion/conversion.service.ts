@@ -25,7 +25,7 @@ import { SpaceLevel } from '@common/enums/space.level';
 import { CommunityRoleService } from '@domain/community/community-role/community.role.service';
 import { CommunityService } from '@domain/community/community/community.service';
 import { CreateSpaceOnAccountInput } from '@domain/space/account/dto/account.dto.create.space';
-import { IRoleManager } from '@domain/access/role-manager';
+import { IRoleSet } from '@domain/access/role-set';
 
 export class ConversionService {
   constructor(
@@ -128,24 +128,24 @@ export class ConversionService {
         LogContext.CONVERSION
       );
     }
-    const spaceRoleManager = space.community.roleManager;
+    const spaceRoleSet = space.community.roleSet;
 
     const userMembers = await this.communityRoleService.getUsersWithRole(
-      spaceRoleManager,
+      spaceRoleSet,
       CommunityRoleType.MEMBER
     );
     const userLeads = await this.communityRoleService.getUsersWithRole(
-      spaceRoleManager,
+      spaceRoleSet,
       CommunityRoleType.LEAD
     );
     const orgMembers = await this.communityRoleService.getOrganizationsWithRole(
-      spaceRoleManager,
+      spaceRoleSet,
       CommunityRoleType.MEMBER
     );
 
     // Remove the contributors from old roles
     await this.removeContributors(
-      spaceRoleManager,
+      spaceRoleSet,
       userMembers,
       userLeads,
       orgMembers,
@@ -153,7 +153,7 @@ export class ConversionService {
     );
 
     await this.communityRoleService.removeUserFromRole(
-      spaceRoleManager,
+      spaceRoleSet,
       CommunityRoleType.MEMBER,
       agentInfo.userID
     );
@@ -307,27 +307,27 @@ export class ConversionService {
       );
     }
 
-    const roleManager = subsubspace.community.roleManager;
+    const roleSet = subsubspace.community.roleSet;
     const userMembers = await this.communityRoleService.getUsersWithRole(
-      roleManager,
+      roleSet,
       CommunityRoleType.MEMBER
     );
     const userLeads = await this.communityRoleService.getUsersWithRole(
-      roleManager,
+      roleSet,
       CommunityRoleType.LEAD
     );
     const orgMembers = await this.communityRoleService.getOrganizationsWithRole(
-      roleManager,
+      roleSet,
       CommunityRoleType.MEMBER
     );
     const orgLeads = await this.communityRoleService.getOrganizationsWithRole(
-      roleManager,
+      roleSet,
       CommunityRoleType.LEAD
     );
 
     // Remove the contributors from old roles
     await this.removeContributors(
-      subsubspace.community.roleManager,
+      subsubspace.community.roleSet,
       userMembers,
       userLeads,
       orgMembers,
@@ -336,12 +336,12 @@ export class ConversionService {
 
     // also remove the current user from the members of the newly created Challenge, otherwise will end up re-assigning
     await this.communityRoleService.removeUserFromRole(
-      subspace.community.roleManager,
+      subspace.community.roleSet,
       CommunityRoleType.MEMBER,
       agentInfo.userID
     );
     await this.communityRoleService.removeUserFromRole(
-      subspace.community.roleManager,
+      subspace.community.roleSet,
       CommunityRoleType.LEAD,
       agentInfo.userID
     );
@@ -521,7 +521,7 @@ export class ConversionService {
   }
 
   private async removeContributors(
-    roleManager: IRoleManager,
+    roleSet: IRoleSet,
     userMembers: IUser[],
     userLeads: IUser[],
     orgMembers: IOrganization[],
@@ -529,28 +529,28 @@ export class ConversionService {
   ) {
     for (const userMember of userMembers) {
       await this.communityRoleService.removeUserFromRole(
-        roleManager,
+        roleSet,
         CommunityRoleType.MEMBER,
         userMember.id
       );
     }
     for (const userLead of userLeads) {
       await this.communityRoleService.removeUserFromRole(
-        roleManager,
+        roleSet,
         CommunityRoleType.LEAD,
         userLead.id
       );
     }
     for (const orgMember of orgMembers) {
       await this.communityRoleService.removeOrganizationFromRole(
-        roleManager,
+        roleSet,
         CommunityRoleType.MEMBER,
         orgMember.id
       );
     }
     for (const orgLead of orgLeads) {
       await this.communityRoleService.removeOrganizationFromRole(
-        roleManager,
+        roleSet,
         CommunityRoleType.LEAD,
         orgLead.id
       );
@@ -558,7 +558,7 @@ export class ConversionService {
   }
 
   private async assignContributors(
-    roleManager: IRoleManager,
+    roleSet: IRoleSet,
     userMembers: IUser[],
     userLeads: IUser[],
     orgMembers: IOrganization[],
@@ -566,21 +566,21 @@ export class ConversionService {
   ) {
     for (const userMember of userMembers) {
       await this.communityRoleService.assignUserToRole(
-        roleManager,
+        roleSet,
         CommunityRoleType.MEMBER,
         userMember.id
       );
     }
     for (const userLead of userLeads) {
       await this.communityRoleService.assignUserToRole(
-        roleManager,
+        roleSet,
         CommunityRoleType.LEAD,
         userLead.id
       );
     }
     for (const orgMember of orgMembers) {
       await this.communityRoleService.assignOrganizationToRole(
-        roleManager,
+        roleSet,
         CommunityRoleType.MEMBER,
         orgMember.id
       );
@@ -588,7 +588,7 @@ export class ConversionService {
     if (orgLeads) {
       for (const orgLead of orgLeads) {
         await this.communityRoleService.assignOrganizationToRole(
-          roleManager,
+          roleSet,
           CommunityRoleType.LEAD,
           orgLead.id
         );

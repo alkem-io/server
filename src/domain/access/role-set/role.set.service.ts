@@ -12,13 +12,13 @@ import { LogContext } from '@common/enums/logging.context';
 import { IForm } from '@domain/common/form/form.interface';
 import { FormService } from '@domain/common/form/form.service';
 import { UpdateFormInput } from '@domain/common/form/dto/form.dto.update';
-import { CreateRoleManagerInput } from './dto/role.manager.dto.create';
+import { CreateRoleSetInput } from './dto/role.set.dto.create';
 import { PlatformInvitationService } from '@platform/invitation/platform.invitation.service';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { ApplicationService } from '@domain/community/application/application.service';
 import { InvitationService } from '@domain/community/invitation/invitation.service';
-import { RoleManager } from './role.manager.entity';
-import { IRoleManager } from './role.manager.interface';
+import { RoleSet } from './role.set.entity';
+import { IRoleSet } from './role.set.interface';
 import { RoleService } from '../role/role.service';
 import { CommunityRoleType } from '@common/enums/community.role';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
@@ -27,7 +27,7 @@ import { AuthorizationCredential } from '@common/enums/authorization.credential'
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 
 @Injectable()
-export class RoleManagerService {
+export class RoleSetService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private applicationService: ApplicationService,
@@ -35,56 +35,54 @@ export class RoleManagerService {
     private platformInvitationService: PlatformInvitationService,
     private formService: FormService,
     private roleService: RoleService,
-    @InjectRepository(RoleManager)
-    private roleManagerRepository: Repository<RoleManager>,
+    @InjectRepository(RoleSet)
+    private roleSetRepository: Repository<RoleSet>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async createRoleManager(
-    roleManagerData: CreateRoleManagerInput
-  ): Promise<IRoleManager> {
-    const roleManager: IRoleManager = new RoleManager();
-    roleManager.authorization = new AuthorizationPolicy(
+  async createRoleSet(roleSetData: CreateRoleSetInput): Promise<IRoleSet> {
+    const roleSet: IRoleSet = new RoleSet();
+    roleSet.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.ROLE_MANAGER
     );
-    roleManager.roles = [];
-    roleManager.applications = [];
-    roleManager.invitations = [];
-    roleManager.platformInvitations = [];
+    roleSet.roles = [];
+    roleSet.applications = [];
+    roleSet.invitations = [];
+    roleSet.platformInvitations = [];
 
-    roleManager.parentRoleManager = roleManagerData.parentRoleManager;
+    roleSet.parentRoleSet = roleSetData.parentRoleSet;
 
-    for (const roleData of roleManagerData.roles) {
+    for (const roleData of roleSetData.roles) {
       const role = this.roleService.createRole(roleData);
-      roleManager.roles.push(role);
+      roleSet.roles.push(role);
     }
 
-    roleManager.applicationForm = this.formService.createForm(
-      roleManagerData.applicationForm
+    roleSet.applicationForm = this.formService.createForm(
+      roleSetData.applicationForm
     );
 
-    return roleManager;
+    return roleSet;
   }
 
-  async getRoleManagerOrFail(
-    roleManagerID: string,
-    options?: FindOneOptions<RoleManager>
-  ): Promise<IRoleManager | never> {
-    const roleManager = await this.roleManagerRepository.findOne({
-      where: { id: roleManagerID },
+  async getRoleSetOrFail(
+    roleSetID: string,
+    options?: FindOneOptions<RoleSet>
+  ): Promise<IRoleSet | never> {
+    const roleSet = await this.roleSetRepository.findOne({
+      where: { id: roleSetID },
       ...options,
     });
-    if (!roleManager)
+    if (!roleSet)
       throw new EntityNotFoundException(
-        `Unable to find RoleManager with ID: ${roleManagerID}`,
+        `Unable to find RoleSet with ID: ${roleSetID}`,
         LogContext.COMMUNITY
       );
-    return roleManager;
+    return roleSet;
   }
 
-  async removeRoleManager(roleManagerID: string): Promise<boolean> {
+  async removeRoleSet(roleSetID: string): Promise<boolean> {
     // Note need to load it in with all contained entities so can remove fully
-    const roleManager = await this.getRoleManagerOrFail(roleManagerID, {
+    const roleSet = await this.getRoleSetOrFail(roleSetID, {
       relations: {
         roles: true,
         applications: true,
@@ -94,92 +92,87 @@ export class RoleManagerService {
       },
     });
     if (
-      !roleManager.roles ||
-      !roleManager.applications ||
-      !roleManager.invitations ||
-      !roleManager.platformInvitations ||
-      !roleManager.applicationForm
+      !roleSet.roles ||
+      !roleSet.applications ||
+      !roleSet.invitations ||
+      !roleSet.platformInvitations ||
+      !roleSet.applicationForm
     ) {
       throw new RelationshipNotFoundException(
-        `Unable to load child entities for roleManager for deletion: ${roleManager.id} `,
+        `Unable to load child entities for roleSet for deletion: ${roleSet.id} `,
         LogContext.COMMUNITY
       );
     }
 
-    for (const role of roleManager.roles) {
+    for (const role of roleSet.roles) {
       await this.roleService.removeRole(role);
     }
 
-    if (roleManager.authorization)
-      await this.authorizationPolicyService.delete(roleManager.authorization);
+    if (roleSet.authorization)
+      await this.authorizationPolicyService.delete(roleSet.authorization);
 
     // Remove all applications
-    for (const application of roleManager.applications) {
+    for (const application of roleSet.applications) {
       await this.applicationService.deleteApplication({
         ID: application.id,
       });
     }
 
     // Remove all invitations
-    for (const invitation of roleManager.invitations) {
+    for (const invitation of roleSet.invitations) {
       await this.invitationService.deleteInvitation({
         ID: invitation.id,
       });
     }
 
-    for (const externalInvitation of roleManager.platformInvitations) {
+    for (const externalInvitation of roleSet.platformInvitations) {
       await this.platformInvitationService.deletePlatformInvitation({
         ID: externalInvitation.id,
       });
     }
 
-    await this.formService.removeForm(roleManager.applicationForm);
+    await this.formService.removeForm(roleSet.applicationForm);
 
-    await this.roleManagerRepository.remove(roleManager as RoleManager);
+    await this.roleSetRepository.remove(roleSet as RoleSet);
     return true;
   }
 
-  async save(roleManager: IRoleManager): Promise<IRoleManager> {
-    return await this.roleManagerRepository.save(roleManager);
+  async save(roleSet: IRoleSet): Promise<IRoleSet> {
+    return await this.roleSetRepository.save(roleSet);
   }
 
-  async getParentRoleManager(
-    roleManager: IRoleManager
-  ): Promise<IRoleManager | undefined> {
-    const roleManagerWithParent = await this.getRoleManagerOrFail(
-      roleManager.id,
-      {
-        relations: { parentRoleManager: true },
-      }
-    );
+  async getParentRoleSet(roleSet: IRoleSet): Promise<IRoleSet | undefined> {
+    const roleSetWithParent = await this.getRoleSetOrFail(roleSet.id, {
+      relations: { parentRoleSet: true },
+    });
 
-    const parentRoleManager = roleManagerWithParent?.parentRoleManager;
-    if (parentRoleManager) {
-      return await this.getRoleManagerOrFail(parentRoleManager.id);
+    const parentRoleSet = roleSetWithParent?.parentRoleSet;
+    if (parentRoleSet) {
+      return await this.getRoleSetOrFail(parentRoleSet.id);
     }
     return undefined;
   }
 
   async updateApplicationForm(
-    roleManager: IRoleManager,
+    roleSet: IRoleSet,
     formData: UpdateFormInput
-  ): Promise<IRoleManager> {
-    const applicationForm = await this.getApplicationForm(roleManager);
-    roleManager.applicationForm = await this.formService.updateForm(
+  ): Promise<IRoleSet> {
+    const applicationForm = await this.getApplicationForm(roleSet);
+    roleSet.applicationForm = await this.formService.updateForm(
       applicationForm,
       formData
     );
-    return await this.save(roleManager);
+    return await this.save(roleSet);
   }
 
-  async getApplicationForm(roleManager: IRoleManager): Promise<IForm> {
-    const roleManagerForm = await this.getRoleManagerOrFail(roleManager.id, {
+  async getApplicationForm(roleSet: IRoleSet): Promise<IForm> {
+    const roleSetForm = await this.getRoleSetOrFail(roleSet.id, {
       relations: { applicationForm: true },
     });
-    const applicationForm = roleManagerForm.applicationForm;
+    const applicationForm = roleSetForm.applicationForm;
     if (!applicationForm) {
       throw new EntityNotFoundException(
-        `Unable to find Application Form for RoleManager with ID: ${roleManager.id}`,
+        `Unable to find Application Form for RoleSet with ID: ${roleSet.id}`,
         LogContext.COMMUNITY
       );
     }
@@ -187,53 +180,49 @@ export class RoleManagerService {
   }
 
   // Update the Community policy to have the right resource ID
-  public updateRoleResourceID(
-    roleManager: IRoleManager,
-    resourceID: string
-  ): IRoleManager {
-    const roleDefinitions = this.getRoleDefinitions(roleManager);
+  public updateRoleResourceID(roleSet: IRoleSet, resourceID: string): IRoleSet {
+    const roleDefinitions = this.getRoleDefinitions(roleSet);
     for (const roleDefinition of roleDefinitions) {
       const credential = this.roleService.getCredentialForRole(roleDefinition);
       credential.resourceID = resourceID;
     }
 
-    return roleManager;
+    return roleSet;
   }
 
-  public async getPeerRoleManagers(
-    parentRoleManager: IRoleManager,
-    childRoleManager: IRoleManager
-  ): Promise<IRoleManager[]> {
-    const peerRoleManagers: IRoleManager[] =
-      await this.roleManagerRepository.find({
-        where: {
-          parentRoleManager: {
-            id: parentRoleManager.id,
-          },
+  public async getPeerRoleSets(
+    parentRoleSet: IRoleSet,
+    childRoleSet: IRoleSet
+  ): Promise<IRoleSet[]> {
+    const peerRoleSets: IRoleSet[] = await this.roleSetRepository.find({
+      where: {
+        parentRoleSet: {
+          id: parentRoleSet.id,
         },
-      });
-    const result: IRoleManager[] = [];
-    for (const roleManager of peerRoleManagers) {
-      if (roleManager && !(roleManager.id === childRoleManager.id)) {
-        result.push(roleManager);
+      },
+    });
+    const result: IRoleSet[] = [];
+    for (const roleSet of peerRoleSets) {
+      if (roleSet && !(roleSet.id === childRoleSet.id)) {
+        result.push(roleSet);
       }
     }
     return result;
   }
 
-  public inheritParentCredentials(roleManager: IRoleManager): IRoleManager {
-    const roleManagerParent = roleManager.parentRoleManager;
-    if (!roleManagerParent) {
+  public inheritParentCredentials(roleSet: IRoleSet): IRoleSet {
+    const roleSetParent = roleSet.parentRoleSet;
+    if (!roleSetParent) {
       throw new RelationshipNotFoundException(
-        `Unable to inherit parent credentials for role Manager ${roleManager.id}`,
+        `Unable to inherit parent credentials for role Manager ${roleSet.id}`,
         LogContext.ROLES
       );
     }
-    const roleDefinitions = this.getRoleDefinitions(roleManager);
+    const roleDefinitions = this.getRoleDefinitions(roleSet);
 
     for (const roleDefinition of roleDefinitions) {
       const parentRoleDefinition = this.getRoleDefinition(
-        roleManagerParent,
+        roleSetParent,
         roleDefinition.type
       );
       const parentCredentials: ICredentialDefinition[] = [];
@@ -248,15 +237,15 @@ export class RoleManagerService {
       roleDefinition.parentCredentials = JSON.stringify(parentCredentials);
     }
 
-    return roleManager;
+    return roleSet;
   }
 
   getDirectParentCredentialForRole(
-    roleManager: IRoleManager,
+    roleSet: IRoleSet,
     roleType: CommunityRoleType
   ): ICredentialDefinition | undefined {
     const parentCredentials = this.getParentCredentialsForRole(
-      roleManager,
+      roleSet,
       roleType
     );
 
@@ -269,34 +258,28 @@ export class RoleManagerService {
   }
 
   public getParentCredentialsForRole(
-    roleManager: IRoleManager,
+    roleSet: IRoleSet,
     roleType: CommunityRoleType
   ): ICredentialDefinition[] {
-    const roleDefinition = this.getRoleDefinition(roleManager, roleType);
+    const roleDefinition = this.getRoleDefinition(roleSet, roleType);
     return this.roleService.getParentCredentialsForRole(roleDefinition);
   }
 
   public getCredentialsForRoleWithParents(
-    roleManager: IRoleManager,
+    roleSet: IRoleSet,
     roleType: CommunityRoleType,
     spaceSettings: ISpaceSettings
   ): ICredentialDefinition[] {
-    const result = this.getCredentialsForRole(
-      roleManager,
-      roleType,
-      spaceSettings
-    );
-    return result.concat(
-      this.getParentCredentialsForRole(roleManager, roleType)
-    );
+    const result = this.getCredentialsForRole(roleSet, roleType, spaceSettings);
+    return result.concat(this.getParentCredentialsForRole(roleSet, roleType));
   }
 
   public getCredentialsForRole(
-    roleManager: IRoleManager,
+    roleSet: IRoleSet,
     roleType: CommunityRoleType,
     spaceSettings: ISpaceSettings // TODO: would like not to have this here; for later
   ): ICredentialDefinition[] {
-    const result = [this.getCredentialForRole(roleManager, roleType)];
+    const result = [this.getCredentialForRole(roleSet, roleType)];
     if (
       roleType === CommunityRoleType.ADMIN &&
       spaceSettings.privacy.allowPlatformSupportAsAdmin
@@ -310,18 +293,18 @@ export class RoleManagerService {
   }
 
   public getCredentialForRole(
-    roleManager: IRoleManager,
+    roleSet: IRoleSet,
     roleType: CommunityRoleType
   ): ICredentialDefinition {
-    const roleDefinition = this.getRoleDefinition(roleManager, roleType);
+    const roleDefinition = this.getRoleDefinition(roleSet, roleType);
     return this.roleService.getCredentialForRole(roleDefinition);
   }
 
-  public getRoleDefinitions(roleManager: IRoleManager): IRole[] {
-    const roleDefinitions = roleManager.roles;
+  public getRoleDefinitions(roleSet: IRoleSet): IRole[] {
+    const roleDefinitions = roleSet.roles;
     if (!roleDefinitions) {
       throw new RelationshipNotFoundException(
-        `Unable to load roles for RoleManager: ${roleManager.id}`,
+        `Unable to load roles for RoleSet: ${roleSet.id}`,
         LogContext.COMMUNITY
       );
     }
@@ -329,14 +312,14 @@ export class RoleManagerService {
   }
 
   public getRoleDefinition(
-    roleManager: IRoleManager,
+    roleSet: IRoleSet,
     roleType: CommunityRoleType
   ): IRole {
-    const roleDefinitions = this.getRoleDefinitions(roleManager);
+    const roleDefinitions = this.getRoleDefinitions(roleSet);
     const role = roleDefinitions.find(rd => rd.type === roleType);
     if (!role) {
       throw new RelationshipNotFoundException(
-        `Unable to find Role for type ${roleType} for RoleManager: ${roleManager.id}`,
+        `Unable to find Role for type ${roleType} for RoleSet: ${roleSet.id}`,
         LogContext.COMMUNITY
       );
     }

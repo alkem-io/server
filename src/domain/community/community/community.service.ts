@@ -25,8 +25,8 @@ import { ICommunityGuidelines } from '../community-guidelines/community.guidelin
 import { IContributor } from '../contributor/contributor.interface';
 import { IUser } from '../user/user.interface';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { RoleManagerService } from '@domain/access/role-manager/role.manager.service';
-import { IRoleManager } from '@domain/access/role-manager';
+import { RoleSetService } from '@domain/access/role-set/role.set.service';
+import { IRoleSet } from '@domain/access/role-set';
 
 @Injectable()
 export class CommunityService {
@@ -36,7 +36,7 @@ export class CommunityService {
     private communicationService: CommunicationService,
     private communityResolverService: CommunityResolverService,
     private communityGuidelinesService: CommunityGuidelinesService,
-    private roleManagerService: RoleManagerService,
+    private roleSetService: RoleSetService,
     private storageAggregatorResolverService: StorageAggregatorResolverService,
     @InjectRepository(Community)
     private communityRepository: Repository<Community>,
@@ -51,8 +51,8 @@ export class CommunityService {
     community.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.COMMUNITY
     );
-    community.roleManager = await this.roleManagerService.createRoleManager(
-      communityData.roleManagerData
+    community.roleSet = await this.roleSetService.createRoleSet(
+      communityData.roleSetData
     );
 
     community.guidelines =
@@ -114,7 +114,7 @@ export class CommunityService {
 
   // Loads the group into the Community entity if not already present
   async getUserGroup(
-    community: IRoleManager,
+    community: IRoleSet,
     groupID: string
   ): Promise<IUserGroup> {
     const communityWithGroups = await this.getCommunityOrFail(community.id, {
@@ -159,7 +159,7 @@ export class CommunityService {
     // Note need to load it in with all contained entities so can remove fully
     const community = await this.getCommunityOrFail(communityID, {
       relations: {
-        roleManager: true,
+        roleSet: true,
         groups: true,
         communication: true,
         guidelines: true,
@@ -168,7 +168,7 @@ export class CommunityService {
     if (
       !community.communication ||
       !community.communication.updates ||
-      !community.roleManager ||
+      !community.roleSet ||
       !community.groups ||
       !community.guidelines
     ) {
@@ -192,7 +192,7 @@ export class CommunityService {
       community.communication.id
     );
 
-    await this.roleManagerService.removeRoleManager(community.roleManager.id);
+    await this.roleSetService.removeRoleSet(community.roleSet.id);
 
     await this.communityGuidelinesService.deleteCommunityGuidelines(
       community.guidelines.id
@@ -202,7 +202,7 @@ export class CommunityService {
     return true;
   }
 
-  async save(community: IRoleManager): Promise<IRoleManager> {
+  async save(community: IRoleSet): Promise<IRoleSet> {
     return await this.communityRepository.save(community);
   }
 
@@ -232,15 +232,15 @@ export class CommunityService {
     }
     community.parentCommunity = parentCommunity;
     // Also update the communityPolicy
-    community.roleManager = this.roleManagerService.inheritParentCredentials(
-      community.roleManager
+    community.roleSet = this.roleSetService.inheritParentCredentials(
+      community.roleSet
     );
 
     return community;
   }
 
   public async getDisplayName(community: ICommunity): Promise<string> {
-    return await this.communityResolverService.getDisplayNameForRoleManagerOrFail(
+    return await this.communityResolverService.getDisplayNameForRoleSetOrFail(
       community.id
     );
   }
@@ -281,21 +281,18 @@ export class CommunityService {
       );
   }
 
-  public async getRoleManager(community: ICommunity): Promise<IRoleManager> {
-    const communityWithRoleManager = await this.getCommunityOrFail(
-      community.id,
-      {
-        relations: { roleManager: true },
-      }
-    );
+  public async getRoleSet(community: ICommunity): Promise<IRoleSet> {
+    const communityWithRoleSet = await this.getCommunityOrFail(community.id, {
+      relations: { roleSet: true },
+    });
 
-    if (!communityWithRoleManager.roleManager) {
+    if (!communityWithRoleSet.roleSet) {
       throw new EntityNotInitializedException(
         `Unable to locate Role Manager for community: ${community.id}`,
         LogContext.COMMUNITY
       );
     }
-    return communityWithRoleManager.roleManager;
+    return communityWithRoleSet.roleSet;
   }
 
   public async getCommunityGuidelines(
@@ -346,7 +343,7 @@ export class CommunityService {
   }
 
   public async getLevelZeroSpaceIdForCommunity(
-    community: IRoleManager
+    community: IRoleSet
   ): Promise<string> {
     return await this.communityResolverService.getLevelZeroSpaceIdForCommunity(
       community.id

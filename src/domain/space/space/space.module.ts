@@ -32,7 +32,7 @@ import { LicenseEngineModule } from '@core/license-engine/license.engine.module'
 import { LicenseIssuerModule } from '@platform/license-issuer/license.issuer.module';
 import { TemplateModule } from '@domain/template/template/template.module';
 import { InputCreatorModule } from '@services/api/input-creator/input.creator.module';
-import { RoleManagerModule } from '@domain/access/role-manager/role.manager.module';
+import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 
 @Module({
   imports: [
@@ -60,7 +60,7 @@ import { RoleManagerModule } from '@domain/access/role-manager/role.manager.modu
     ActivityAdapterModule,
     LoaderCreatorModule,
     TemplateModule,
-    RoleManagerModule,
+    RoleSetModule,
     InputCreatorModule,
     NameReporterModule,
     TypeOrmModule.forFeature([Space]),

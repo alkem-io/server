@@ -4,7 +4,7 @@ import { IInvitation } from './invitation.interface';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { CommunityContributorType } from '@common/enums/community.contributor.type';
 import { ENUM_LENGTH, MID_TEXT_LENGTH, UUID_LENGTH } from '@common/constants';
-import { RoleManager } from '@domain/access/role-manager/role.manager.entity';
+import { RoleSet } from '@domain/access/role-set/role.set.entity';
 @Entity()
 export class Invitation extends AuthorizableEntity implements IInvitation {
   // todo ID in migration is varchar - must be char(36)
@@ -31,10 +31,10 @@ export class Invitation extends AuthorizableEntity implements IInvitation {
   @Column('varchar', { length: ENUM_LENGTH, nullable: false })
   contributorType!: CommunityContributorType;
 
-  @ManyToOne(() => RoleManager, manager => manager.invitations, {
+  @ManyToOne(() => RoleSet, manager => manager.invitations, {
     eager: false,
     cascade: false,
     onDelete: 'CASCADE',
   })
-  roleManager?: RoleManager;
+  roleSet?: RoleSet;
 }

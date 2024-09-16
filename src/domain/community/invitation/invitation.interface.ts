@@ -2,14 +2,14 @@ import { ILifecycle } from '@domain/common/lifecycle/lifecycle.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { CommunityContributorType } from '@common/enums/community.contributor.type';
-import { IRoleManager } from '@domain/access/role-manager';
+import { IRoleSet } from '@domain/access/role-set';
 
 @ObjectType('Invitation')
 export class IInvitation extends IAuthorizable {
   invitedContributor!: string;
   createdBy!: string;
 
-  roleManager?: IRoleManager;
+  roleSet?: IRoleSet;
 
   @Field(() => ILifecycle, { nullable: false })
   lifecycle!: ILifecycle;

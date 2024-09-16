@@ -5,9 +5,9 @@ import { UpdateFormInput } from '@domain/common/form/dto/form.dto.update';
 import { UUID } from '@domain/common/scalars';
 
 @InputType()
-export class UpdateRoleManagerApplicationFormInput {
+export class UpdateRoleSetApplicationFormInput {
   @Field(() => UUID, { nullable: false })
-  roleManagerID!: string;
+  roleSetID!: string;
 
   @Field(() => UpdateFormInput, { nullable: false })
   @ValidateNested()

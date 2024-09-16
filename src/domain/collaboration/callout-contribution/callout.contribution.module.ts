@@ -11,7 +11,7 @@ import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { PostModule } from '../post/post.module';
 import { ContributorLookupModule } from '@services/infrastructure/contributor-lookup/contributor.lookup.module';
 import { LinkModule } from '../link/link.module';
-import { RoleManagerModule } from '@domain/access/role-manager/role.manager.module';
+import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 
 @Module({
   imports: [
@@ -22,7 +22,7 @@ import { RoleManagerModule } from '@domain/access/role-manager/role.manager.modu
     NamingModule,
     LinkModule,
     ContributorLookupModule,
-    RoleManagerModule,
+    RoleSetModule,
     TypeOrmModule.forFeature([CalloutContribution]),
   ],
   providers: [

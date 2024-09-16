@@ -79,7 +79,7 @@ import { CreateInnovationFlowInput } from '@domain/collaboration/innovation-flow
 import { TemplateService } from '@domain/template/template/template.service';
 import { templatesSetDefaults } from '../space.defaults/definitions/space.defaults.templates';
 import { InputCreatorService } from '@services/api/input-creator/input.creator.service';
-import { RoleManagerService } from '@domain/access/role-manager/role.manager.service';
+import { RoleSetService } from '@domain/access/role-set/role.set.service';
 
 @Injectable()
 export class SpaceService {
@@ -101,7 +101,7 @@ export class SpaceService {
     private licensingService: LicensingService,
     private licenseEngineService: LicenseEngineService,
     private templateService: TemplateService,
-    private roleManagerService: RoleManagerService,
+    private roleSetService: RoleSetService,
     private inputCreatorService: InputCreatorService,
     @InjectRepository(Space)
     private spaceRepository: Repository<Space>,
@@ -159,17 +159,16 @@ export class SpaceService {
       );
     space.storageAggregator = storageAggregator;
 
-    const roleManagerRolesData =
-      this.spaceDefaultsService.getRoleManagerCommunityRoles(space.level);
+    const roleSetRolesData = this.spaceDefaultsService.getRoleSetCommunityRoles(
+      space.level
+    );
     const applicationFormData =
-      this.spaceDefaultsService.getRoleManagerCommunityApplicationForm(
-        space.level
-      );
+      this.spaceDefaultsService.getRoleSetCommunityApplicationForm(space.level);
 
     const communityData: CreateCommunityInput = {
       name: spaceData.profileData.displayName,
-      roleManagerData: {
-        roles: roleManagerRolesData,
+      roleSetData: {
+        roles: roleSetRolesData,
         applicationForm: applicationFormData,
       },
       guidelines: {
@@ -257,15 +256,15 @@ export class SpaceService {
 
     ////// Community
     // set immediate community parent + resourceID
-    if (!space.community || !space.community.roleManager) {
+    if (!space.community || !space.community.roleSet) {
       throw new RelationshipNotFoundException(
         `Unable to load community with role manager: ${space.id}`,
         LogContext.SPACES
       );
     }
     space.community.parentID = space.id;
-    space.community.roleManager = this.roleManagerService.updateRoleResourceID(
-      space.community.roleManager,
+    space.community.roleSet = this.roleSetService.updateRoleResourceID(
+      space.community.roleSet,
       space.id
     );
 

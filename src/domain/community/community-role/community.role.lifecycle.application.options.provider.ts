@@ -65,19 +65,19 @@ export class CommunityRoleApplicationLifecycleOptionsProvider {
         const application = await this.applicationService.getApplicationOrFail(
           event.parentID,
           {
-            relations: { roleManager: true, user: true },
+            relations: { roleSet: true, user: true },
           }
         );
         const userID = application.user?.id;
-        const roleManager = application.roleManager;
-        if (!userID || !roleManager)
+        const roleSet = application.roleSet;
+        if (!userID || !roleSet)
           throw new EntityNotInitializedException(
             `Lifecycle not initialized on Application: ${application.id}`,
             LogContext.COMMUNITY
           );
 
         await this.communityRoleService.assignUserToRole(
-          roleManager,
+          roleSet,
           CommunityRoleType.MEMBER,
           userID,
           event.agentInfo,

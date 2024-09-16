@@ -11,14 +11,14 @@ import { PostAuthorizationService } from './post.service.authorization';
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { RoomModule } from '@domain/communication/room/room.module';
 import { ContributorLookupModule } from '@services/infrastructure/contributor-lookup/contributor.lookup.module';
-import { RoleManagerModule } from '@domain/access/role-manager/role.manager.module';
+import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 
 @Module({
   imports: [
     AuthorizationPolicyModule,
     AuthorizationModule,
     RoomModule,
-    RoleManagerModule,
+    RoleSetModule,
     VisualModule,
     ContributorLookupModule,
     ProfileModule,

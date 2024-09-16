@@ -23,7 +23,7 @@ import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 import { RolesVirtualContributorInput } from './dto/roles.dto.input.virtual.contributor';
-import { IRoleManager } from '@domain/access/role-manager';
+import { IRoleSet } from '@domain/access/role-set';
 import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
 
 export class RolesService {
@@ -126,14 +126,14 @@ export class RolesService {
   ): Promise<CommunityApplicationForRoleResult[]> {
     const applicationResults: CommunityApplicationForRoleResult[] = [];
     for (const application of applications) {
-      const roleManager = application.roleManager;
+      const roleSet = application.roleSet;
       const state = await this.applicationService.getApplicationState(
         application.id
       );
-      if (roleManager) {
+      if (roleSet) {
         const applicationResult =
-          await this.buildApplicationResultForRoleManagerApplication(
-            roleManager,
+          await this.buildApplicationResultForRoleSetApplication(
+            roleSet,
             state,
             application
           );
@@ -144,24 +144,23 @@ export class RolesService {
     return applicationResults;
   }
 
-  private async buildApplicationResultForRoleManagerApplication(
-    roleManager: IRoleManager,
+  private async buildApplicationResultForRoleSetApplication(
+    roleSet: IRoleSet,
     state: string,
     application: IApplication
   ): Promise<CommunityApplicationForRoleResult> {
-    const roleManagerDisplayName =
-      await this.communityResolverService.getDisplayNameForRoleManagerOrFail(
-        roleManager.id
+    const roleSetDisplayName =
+      await this.communityResolverService.getDisplayNameForRoleSetOrFail(
+        roleSet.id
       );
 
-    const space =
-      await this.communityResolverService.getSpaceForRoleManagerOrFail(
-        roleManager.id
-      );
+    const space = await this.communityResolverService.getSpaceForRoleSetOrFail(
+      roleSet.id
+    );
 
     const applicationResult = new CommunityApplicationForRoleResult(
-      roleManager.id,
-      roleManagerDisplayName,
+      roleSet.id,
+      roleSetDisplayName,
       state,
       application.id,
       space.id,
@@ -200,14 +199,14 @@ export class RolesService {
   ): Promise<CommunityInvitationForRoleResult[]> {
     const invitationResults: CommunityInvitationForRoleResult[] = [];
     for (const invitation of invitations) {
-      const roleManager = invitation.roleManager;
+      const roleSet = invitation.roleSet;
       const state = await this.invitationService.getInvitationState(
         invitation.id
       );
-      if (roleManager) {
+      if (roleSet) {
         const invitationResult =
-          await this.buildInvitationResultForRoleManagerInvitation(
-            roleManager,
+          await this.buildInvitationResultForRoleSetInvitation(
+            roleSet,
             state,
             invitation
           );
@@ -218,23 +217,22 @@ export class RolesService {
     return invitationResults;
   }
 
-  private async buildInvitationResultForRoleManagerInvitation(
-    roleManager: IRoleManager,
+  private async buildInvitationResultForRoleSetInvitation(
+    roleSet: IRoleSet,
     state: string,
     invitation: IInvitation
   ): Promise<CommunityInvitationForRoleResult> {
     const communityDisplayName =
-      await this.communityResolverService.getDisplayNameForRoleManagerOrFail(
-        roleManager.id
+      await this.communityResolverService.getDisplayNameForRoleSetOrFail(
+        roleSet.id
       );
 
-    const space =
-      await this.communityResolverService.getSpaceForRoleManagerOrFail(
-        roleManager.id
-      );
+    const space = await this.communityResolverService.getSpaceForRoleSetOrFail(
+      roleSet.id
+    );
 
     const invitationResult = new CommunityInvitationForRoleResult(
-      roleManager.id,
+      roleSet.id,
       communityDisplayName,
       state,
       invitation.id,

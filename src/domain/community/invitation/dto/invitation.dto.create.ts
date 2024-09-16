@@ -20,6 +20,6 @@ export class CreateInvitationInput {
 
   createdBy!: string;
 
-  roleManagerID!: string;
+  roleSetID!: string;
   invitedToParent!: boolean;
 }

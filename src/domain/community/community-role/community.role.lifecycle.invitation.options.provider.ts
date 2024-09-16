@@ -88,15 +88,15 @@ export class CommunityRoleInvitationLifecycleOptionsProvider {
               event.parentID,
               {
                 relations: {
-                  roleManager: {
-                    parentRoleManager: true,
+                  roleSet: {
+                    parentRoleSet: true,
                   },
                 },
               }
             );
             const contributorID = invitation.invitedContributor;
-            const roleManager = invitation.roleManager;
-            if (!contributorID || !roleManager) {
+            const roleSet = invitation.roleSet;
+            if (!contributorID || !roleSet) {
               throw new EntityNotInitializedException(
                 `Lifecycle not initialized on Invitation: ${invitation.id}`,
                 LogContext.COMMUNITY
@@ -104,14 +104,14 @@ export class CommunityRoleInvitationLifecycleOptionsProvider {
             }
 
             if (invitation.invitedToParent) {
-              if (!roleManager.parentRoleManager) {
+              if (!roleSet.parentRoleSet) {
                 throw new EntityNotInitializedException(
                   `Unable to load parent community when flag to add is set: ${invitation.id}`,
                   LogContext.COMMUNITY
                 );
               }
               await this.communityRoleService.assignContributorToRole(
-                roleManager.parentRoleManager,
+                roleSet.parentRoleSet,
                 CommunityRoleType.MEMBER,
                 contributorID,
                 invitation.contributorType,
@@ -120,7 +120,7 @@ export class CommunityRoleInvitationLifecycleOptionsProvider {
               );
             }
             await this.communityRoleService.assignContributorToRole(
-              roleManager,
+              roleSet,
               CommunityRoleType.MEMBER,
               contributorID,
               invitation.contributorType,

@@ -3,13 +3,13 @@ import { IUser } from '@domain/community/user/user.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { IQuestion } from '@domain/common/question/question.interface';
-import { IRoleManager } from '@domain/access/role-manager';
+import { IRoleSet } from '@domain/access/role-set';
 
 @ObjectType('Application')
 export abstract class IApplication extends IAuthorizable {
   user?: IUser;
 
-  roleManager?: IRoleManager;
+  roleSet?: IRoleSet;
 
   @Field(() => ILifecycle, { nullable: false })
   lifecycle?: ILifecycle;

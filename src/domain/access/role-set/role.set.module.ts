@@ -5,11 +5,11 @@ import { CommunicationModule } from '@domain/communication/communication/communi
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { TrustRegistryAdapterModule } from '@services/external/trust-registry/trust.registry.adapter/trust.registry.adapter.module';
-import { RoleManager } from './role.manager.entity';
-import { RoleManagerResolverFields } from './role.manager.resolver.fields';
-import { RoleManagerResolverMutations } from './role.manager.resolver.mutations';
-import { RoleManagerService } from './role.manager.service';
-import { RoleManagerAuthorizationService } from './role.manager.service.authorization';
+import { RoleSet } from './role.set.entity';
+import { RoleSetResolverFields } from './role.set.resolver.fields';
+import { RoleSetResolverMutations } from './role.set.resolver.mutations';
+import { RoleSetService } from './role.set.service';
+import { RoleSetAuthorizationService } from './role.set.service.authorization';
 import { FormModule } from '@domain/common/form/form.module';
 import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
 import { LicenseEngineModule } from '@core/license-engine/license.engine.module';
@@ -34,15 +34,15 @@ import { RoleModule } from '../role/role.module';
     ApplicationModule,
     PlatformInvitationModule,
     VirtualContributorModule,
-    TypeOrmModule.forFeature([RoleManager]),
+    TypeOrmModule.forFeature([RoleSet]),
     TrustRegistryAdapterModule,
   ],
   providers: [
-    RoleManagerService,
-    RoleManagerAuthorizationService,
-    RoleManagerResolverMutations,
-    RoleManagerResolverFields,
+    RoleSetService,
+    RoleSetAuthorizationService,
+    RoleSetResolverMutations,
+    RoleSetResolverFields,
   ],
-  exports: [RoleManagerService, RoleManagerAuthorizationService],
+  exports: [RoleSetService, RoleSetAuthorizationService],
 })
-export class RoleManagerModule {}
+export class RoleSetModule {}

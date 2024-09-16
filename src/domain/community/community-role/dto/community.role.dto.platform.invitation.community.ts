@@ -8,5 +8,5 @@ import { CreatePlatformInvitationInput } from '@platform/invitation/dto/platform
 export class CreatePlatformInvitationOnCommunityInput extends CreatePlatformInvitationInput {
   @Field(() => UUID, { nullable: false })
   @MaxLength(UUID_LENGTH)
-  roleManagerID!: string;
+  roleSetID!: string;
 }

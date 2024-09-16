@@ -19,22 +19,22 @@ import { CommunityRoleType } from '@common/enums/community.role';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
-import { IRoleManager } from '@domain/access/role-manager/role.manager.interface';
-import { RoleManagerService } from '@domain/access/role-manager/role.manager.service';
+import { IRoleSet } from '@domain/access/role-set/role.set.interface';
+import { RoleSetService } from '@domain/access/role-set/role.set.service';
 
 @Injectable()
 export class PostAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private roomAuthorizationService: RoomAuthorizationService,
-    private roleManagerService: RoleManagerService,
+    private roleSetService: RoleSetService,
     private profileAuthorizationService: ProfileAuthorizationService
   ) {}
 
   async applyAuthorizationPolicy(
     post: IPost,
     parentAuthorization: IAuthorizationPolicy | undefined,
-    roleManager?: IRoleManager,
+    roleSet?: IRoleSet,
     spaceSettings?: ISpaceSettings
   ): Promise<IAuthorizationPolicy[]> {
     if (!post.profile) {
@@ -73,7 +73,7 @@ export class PostAuthorizationService {
     // Extend to give the user creating the post more rights
     post.authorization = this.appendCredentialRules(
       post,
-      roleManager,
+      roleSet,
       spaceSettings
     );
     updatedAuthorizations.push(post.authorization);
@@ -91,7 +91,7 @@ export class PostAuthorizationService {
 
   private appendCredentialRules(
     post: IPost,
-    roleManager?: IRoleManager,
+    roleSet?: IRoleSet,
     spaceSettings?: ISpaceSettings
   ): IAuthorizationPolicy {
     const authorization = post.authorization;
@@ -124,10 +124,10 @@ export class PostAuthorizationService {
       },
     ];
 
-    if (roleManager && spaceSettings) {
+    if (roleSet && spaceSettings) {
       const roleCredentials =
-        this.roleManagerService.getCredentialsForRoleWithParents(
-          roleManager,
+        this.roleSetService.getCredentialsForRoleWithParents(
+          roleSet,
           CommunityRoleType.ADMIN,
           spaceSettings
         );

@@ -49,10 +49,9 @@ export class CommunityRoleEventsService {
     await this.notificationAdapter.communityNewMember(notificationInput);
 
     // Record the contribution events
-    const space =
-      await this.communityResolverService.getSpaceForRoleManagerOrFail(
-        community.id
-      );
+    const space = await this.communityResolverService.getSpaceForRoleSetOrFail(
+      community.id
+    );
     switch (space.type) {
       case SpaceType.SPACE:
         this.contributionReporter.spaceJoined(

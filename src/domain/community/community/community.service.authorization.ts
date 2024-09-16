@@ -40,9 +40,9 @@ import { VirtualContributorService } from '../virtual-contributor/virtual.contri
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
-import { RoleManagerAuthorizationService } from '@domain/access/role-manager/role.manager.service.authorization';
-import { RoleManagerService } from '@domain/access/role-manager/role.manager.service';
-import { IRoleManager } from '@domain/access/role-manager';
+import { RoleSetAuthorizationService } from '@domain/access/role-set/role.set.service.authorization';
+import { RoleSetService } from '@domain/access/role-set/role.set.service';
+import { IRoleSet } from '@domain/access/role-set';
 
 @Injectable()
 export class CommunityAuthorizationService {
@@ -53,8 +53,8 @@ export class CommunityAuthorizationService {
     private userGroupAuthorizationService: UserGroupAuthorizationService,
     private communicationAuthorizationService: CommunicationAuthorizationService,
     private virtualContributorService: VirtualContributorService,
-    private roleManagerService: RoleManagerService,
-    private roleManagerAuthorizationService: RoleManagerAuthorizationService,
+    private roleSetService: RoleSetService,
+    private roleSetAuthorizationService: RoleSetAuthorizationService,
     private communityGuidelinesAuthorizationService: CommunityGuidelinesAuthorizationService
   ) {}
 
@@ -73,7 +73,7 @@ export class CommunityAuthorizationService {
           communication: {
             updates: true,
           },
-          roleManager: true,
+          roleSet: true,
           groups: true,
           guidelines: {
             profile: true,
@@ -84,7 +84,7 @@ export class CommunityAuthorizationService {
     if (
       !community.communication ||
       !community.communication.updates ||
-      !community.roleManager ||
+      !community.roleSet ||
       !community.groups
     ) {
       throw new RelationshipNotFoundException(
@@ -108,7 +108,7 @@ export class CommunityAuthorizationService {
       community.authorization,
       parentAuthorization?.anonymousReadAccess,
       levelZeroSpaceAgent,
-      community.roleManager,
+      community.roleSet,
       spaceSettings
     );
     community.authorization = this.appendVerifiedCredentialRules(
@@ -117,14 +117,14 @@ export class CommunityAuthorizationService {
     if (spaceMembershipAllowed) {
       community.authorization = this.extendCommunityAuthorizationPolicySpace(
         community.authorization,
-        community.roleManager,
+        community.roleSet,
         spaceSettings
       );
     }
     if (isSubspace) {
       community.authorization = this.extendAuthorizationPolicySubspace(
         community.authorization,
-        community.roleManager,
+        community.roleSet,
         spaceSettings
       );
     }
@@ -151,16 +151,16 @@ export class CommunityAuthorizationService {
       updatedAuthorizations.push(...groupAuthorizations);
     }
 
-    const roleManagerAuthorizations =
-      await this.roleManagerAuthorizationService.applyAuthorizationPolicy(
-        community.roleManager.id,
+    const roleSetAuthorizations =
+      await this.roleSetAuthorizationService.applyAuthorizationPolicy(
+        community.roleSet.id,
         community.authorization,
         levelZeroSpaceAgent,
         spaceSettings,
         spaceMembershipAllowed,
         isSubspace
       );
-    updatedAuthorizations.push(...roleManagerAuthorizations);
+    updatedAuthorizations.push(...roleSetAuthorizations);
 
     if (community.guidelines) {
       const guidelineAuthorizations =
@@ -176,12 +176,12 @@ export class CommunityAuthorizationService {
 
   private extendCommunityAuthorizationPolicySpace(
     communityAuthorization: IAuthorizationPolicy | undefined,
-    roleManager: IRoleManager,
+    roleSet: IRoleSet,
     spaceSettings: ISpaceSettings
   ): IAuthorizationPolicy {
     if (!communityAuthorization)
       throw new EntityNotInitializedException(
-        `Authorization definition not found for: ${JSON.stringify(roleManager)}`,
+        `Authorization definition not found for: ${JSON.stringify(roleSet)}`,
         LogContext.SPACES
       );
 
@@ -239,7 +239,7 @@ export class CommunityAuthorizationService {
     authorization: IAuthorizationPolicy | undefined,
     allowGlobalRegisteredReadAccess: boolean | undefined,
     levelZeroSpaceAgent: IAgent,
-    roleManager: IRoleManager,
+    roleSet: IRoleSet,
     spaceSettings: ISpaceSettings
   ): Promise<IAuthorizationPolicy> {
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
@@ -256,16 +256,16 @@ export class CommunityAuthorizationService {
     newRules.push(globalAdminAddMembers);
 
     const inviteMembersCriterias: ICredentialDefinition[] =
-      this.roleManagerService.getCredentialsForRoleWithParents(
-        roleManager,
+      this.roleSetService.getCredentialsForRoleWithParents(
+        roleSet,
         CommunityRoleType.ADMIN,
         spaceSettings
       );
     if (spaceSettings.membership.allowSubspaceAdminsToInviteMembers) {
       // use the member credential to create subspace admin credential
       const subspaceAdminCredential: ICredentialDefinition =
-        this.roleManagerService.getCredentialForRole(
-          roleManager,
+        this.roleSetService.getCredentialForRole(
+          roleSet,
           CommunityRoleType.MEMBER
         );
       subspaceAdminCredential.type =
@@ -301,8 +301,8 @@ export class CommunityAuthorizationService {
       );
     if (accessVirtualContributors) {
       const criterias: ICredentialDefinition[] =
-        this.roleManagerService.getCredentialsForRoleWithParents(
-          roleManager,
+        this.roleSetService.getCredentialsForRoleWithParents(
+          roleSet,
           CommunityRoleType.ADMIN,
           spaceSettings
         );
@@ -332,7 +332,7 @@ export class CommunityAuthorizationService {
 
   private extendAuthorizationPolicySubspace(
     authorization: IAuthorizationPolicy | undefined,
-    roleManager: IRoleManager,
+    roleSet: IRoleSet,
     spaceSettings: ISpaceSettings
   ): IAuthorizationPolicy {
     if (!authorization)
@@ -344,8 +344,8 @@ export class CommunityAuthorizationService {
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
     const parentCommunityCredential =
-      this.roleManagerService.getDirectParentCredentialForRole(
-        roleManager,
+      this.roleSetService.getDirectParentCredentialForRole(
+        roleSet,
         CommunityRoleType.MEMBER
       );
 
@@ -377,8 +377,8 @@ export class CommunityAuthorizationService {
     }
 
     const adminCredentials =
-      this.roleManagerService.getCredentialsForRoleWithParents(
-        roleManager,
+      this.roleSetService.getCredentialsForRoleWithParents(
+        roleSet,
         CommunityRoleType.ADMIN,
         spaceSettings
       );

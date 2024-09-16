@@ -22,7 +22,7 @@ import { ContributionReporterModule } from '@services/external/elasticsearch/con
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
 import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
 import { LifecycleModule } from '@domain/common/lifecycle/lifecycle.module';
-import { RoleManagerModule } from '@domain/access/role-manager/role.manager.module';
+import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 import { RoleModule } from '@domain/access/role/role.module';
 
 @Module({
@@ -32,7 +32,7 @@ import { RoleModule } from '@domain/access/role/role.module';
     EntityResolverModule,
     AgentModule,
     CommunityModule,
-    RoleManagerModule,
+    RoleSetModule,
     RoleModule,
     UserModule,
     ContributorModule,

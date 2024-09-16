@@ -9,7 +9,7 @@ import { AuthorizationPrivilege } from '@common/enums';
 import { ICommunication } from '@domain/communication/communication/communication.interface';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { ICommunityGuidelines } from '../community-guidelines/community.guidelines.interface';
-import { IRoleManager } from '@domain/access/role-manager';
+import { IRoleSet } from '@domain/access/role-set';
 
 @Resolver(() => ICommunity)
 export class CommunityResolverFields {
@@ -54,12 +54,12 @@ export class CommunityResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('roleManager', () => IRoleManager, {
+  @ResolveField('roleSet', () => IRoleSet, {
     nullable: false,
-    description: 'The RoleManager for this Community.',
+    description: 'The RoleSet for this Community.',
   })
-  async policy(@Parent() community: Community): Promise<IRoleManager> {
-    return this.communityService.getRoleManager(community);
+  async policy(@Parent() community: Community): Promise<IRoleSet> {
+    return this.communityService.getRoleSet(community);
   }
 
   @UseGuards(GraphqlGuard)

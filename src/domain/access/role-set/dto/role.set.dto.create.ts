@@ -1,9 +1,9 @@
 import { CreateRoleInput } from '@domain/access/role/dto/role.dto.create';
 import { CreateFormInput } from '@domain/common/form/dto/form.dto.create';
-import { IRoleManager } from '../role.manager.interface';
+import { IRoleSet } from '../role.set.interface';
 
-export class CreateRoleManagerInput {
-  parentRoleManager?: IRoleManager;
+export class CreateRoleSetInput {
+  parentRoleSet?: IRoleSet;
   roles!: CreateRoleInput[];
   applicationForm!: CreateFormInput;
 }
